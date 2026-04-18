@@ -39,8 +39,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
@@ -71,6 +74,13 @@ fun AlphaRossApp() {
     fun replaceWith(route: AndroidAlphaRoute) {
         backStack.clear()
         backStack += route
+    }
+
+    LaunchedEffect(controller.pendingRoute) {
+        controller.pendingRoute?.let { route ->
+            backStack += route
+            controller.consumePendingRoute()
+        }
     }
 
     BackHandler(enabled = backStack.size > 1) {
@@ -438,6 +448,9 @@ private fun AlphaDocumentListScreen(
 private fun AlphaDocumentViewerScreen(controller: AlphaRossController, caseId: String, documentId: String, pageNumber: Int?, onBack: () -> Unit) {
     val document = controller.document(caseId, documentId)
     val sourcePanel = controller.documentSourcePanel(caseId, documentId, pageNumber)
+    var editingFieldId by remember(documentId) { mutableStateOf<String?>(null) }
+    var draftFieldValue by remember(documentId) { mutableStateOf("") }
+    var editingClassification by remember(documentId) { mutableStateOf(false) }
     AlphaShell(title = "Document Viewer", showBack = true, onBack = onBack) {
         Column(
             modifier = Modifier
@@ -483,6 +496,92 @@ private fun AlphaDocumentViewerScreen(controller: AlphaRossController, caseId: S
                 AlphaCard("Extracted text", "Text available so far for this document.") {
                     Text(doc.extractedText ?: "No extracted text yet. Ross will keep source references visible even when exact highlights are still pending.")
                 }
+                AlphaCard(
+                    "Review extracted details",
+                    doc.extractionRuns.firstOrNull()?.let { run ->
+                        when (run.status) {
+                            AlphaExtractionRunStatus.Running, AlphaExtractionRunStatus.Queued -> "Ross is reviewing this document locally."
+                            else -> "Ross found key details. Please review the uncertain ones."
+                        }
+                    } ?: "Ross found key details. Please review the uncertain ones."
+                ) {
+                    Text(
+                        when {
+                            doc.extractionRuns.firstOrNull()?.status == AlphaExtractionRunStatus.Running -> "Ross is extracting text, checking language, and preparing source-backed fields locally."
+                            else -> "Ross found key details. Please review the uncertain ones."
+                        },
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    doc.classification?.let { classification ->
+                        AlphaCard("Document type", classification.type.name) {
+                            Text("Confidence: ${if (classification.needsReview || classification.confidence < 0.64) "Needs review" else if (classification.confidence >= 0.84) "High" else "Medium"}")
+                            Spacer(modifier = Modifier.height(8.dp))
+                            if (editingClassification) {
+                                AlphaLegalDocumentType.values().forEach { type ->
+                                    Button(
+                                        onClick = {
+                                            controller.updateDocumentClassification(caseId, documentId, type)
+                                            editingClassification = false
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                    ) { Text(type.name) }
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                }
+                            } else {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Button(onClick = { editingClassification = true }) { Text("Edit") }
+                                    Button(onClick = { editingClassification = false }) { Text("Accept") }
+                                }
+                            }
+                        }
+                    }
+
+                    val reviewFields = controller.visibleExtractedFields(caseId, documentId)
+                        .sortedBy { reviewPriority(it.fieldType) }
+                    if (reviewFields.isEmpty()) {
+                        Text("Not found yet. Ross will keep source anchors visible while local extraction improves.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else {
+                        reviewFields.forEach { field ->
+                            AlphaExtractedFieldReviewCard(
+                                field = field,
+                                isEditing = editingFieldId == field.id,
+                                draftValue = draftFieldValue,
+                                onStartEdit = {
+                                    editingFieldId = field.id
+                                    draftFieldValue = field.value
+                                },
+                                onDraftChange = { draftFieldValue = it },
+                                onAccept = { controller.acceptExtractedField(caseId, documentId, field.id) },
+                                onApply = {
+                                    controller.applyFieldCorrection(caseId, documentId, field.id, draftFieldValue)
+                                    editingFieldId = null
+                                },
+                                onCancel = { editingFieldId = null },
+                                onIgnore = {
+                                    controller.ignoreExtractedField(caseId, documentId, field.id)
+                                    editingFieldId = null
+                                },
+                            )
+                        }
+                    }
+
+                    doc.extractionFindings.filterNot { it.resolved }.take(4).forEach { finding ->
+                        Spacer(modifier = Modifier.height(8.dp))
+                        AlphaCard("Needs review", finding.kind.name) {
+                            Text(finding.message, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+
+                    if (controller.persisted.settings.activeTier == null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Better extraction is available with Case Associate.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else if (controller.persisted.settings.activeTier == AlphaCapabilityTier.QuickStart && doc.languageProfile?.primaryLanguage == AlphaDocumentLanguage.Mixed) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("This document has mixed language or poor scan quality. Senior Drafting Support may improve review.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
                 AlphaCard("Source reference", sourcePanel.fallbackMessage ?: "If exact highlight placement is not ready, Ross shows page and snippet metadata here.") {
                     Text("Target page ${sourcePanel.resolvedPage} of ${sourcePanel.pageCount}", fontWeight = FontWeight.SemiBold)
                     Spacer(modifier = Modifier.height(8.dp))
@@ -496,6 +595,66 @@ private fun AlphaDocumentViewerScreen(controller: AlphaRossController, caseId: S
             }
         }
     }
+}
+
+@Composable
+private fun AlphaExtractedFieldReviewCard(
+    field: AlphaExtractedLegalField,
+    isEditing: Boolean,
+    draftValue: String,
+    onStartEdit: () -> Unit,
+    onDraftChange: (String) -> Unit,
+    onAccept: () -> Unit,
+    onApply: () -> Unit,
+    onCancel: () -> Unit,
+    onIgnore: () -> Unit,
+) {
+    AlphaCard(field.label, field.confidenceLabel) {
+        Text(field.value, fontWeight = FontWeight.SemiBold)
+        Spacer(modifier = Modifier.height(6.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            field.sourceRefs.take(2).forEach { source ->
+                FilterChip(
+                    selected = false,
+                    onClick = {},
+                    label = { Text(source.label) },
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        if (isEditing) {
+            OutlinedTextField(
+                value = draftValue,
+                onValueChange = onDraftChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Edit ${field.label.lowercase()}") },
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onApply) { Text("Apply") }
+                Button(onClick = onCancel) { Text("Cancel") }
+            }
+        } else {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onAccept) { Text("Accept") }
+                Button(onClick = onStartEdit) { Text("Edit") }
+                Button(onClick = onIgnore) { Text("Ignore") }
+            }
+        }
+    }
+}
+
+private fun reviewPriority(type: AlphaExtractedLegalFieldType): Int = when (type) {
+    AlphaExtractedLegalFieldType.CaseNumber -> 0
+    AlphaExtractedLegalFieldType.Court -> 1
+    AlphaExtractedLegalFieldType.PartyName -> 2
+    AlphaExtractedLegalFieldType.Date -> 3
+    AlphaExtractedLegalFieldType.NextDate -> 4
+    AlphaExtractedLegalFieldType.OrderDirection -> 5
+    AlphaExtractedLegalFieldType.Section -> 6
+    AlphaExtractedLegalFieldType.ExhibitNumber -> 7
+    AlphaExtractedLegalFieldType.Relief, AlphaExtractedLegalFieldType.Prayer -> 8
+    else -> 9
 }
 
 @Composable
@@ -629,6 +788,8 @@ private fun AlphaExportsScreen(controller: AlphaRossController, caseId: String?,
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(onClick = { controller.generateExport("case_note", caseId) }, modifier = Modifier.fillMaxWidth()) { Text("Generate Case Note") }
                 Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = { controller.generateExport("order_summary", caseId) }, modifier = Modifier.fillMaxWidth()) { Text("Generate Order Summary") }
+                Spacer(modifier = Modifier.height(8.dp))
                 Button(onClick = { controller.generateExport("chat_transcript", caseId) }, modifier = Modifier.fillMaxWidth()) { Text("Generate Chat Transcript") }
             }
             controller.persisted.exports.forEach { report ->
@@ -691,6 +852,23 @@ private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            AlphaCard(
+                "Active pack",
+                controller.persisted.settings.activeTier?.title ?: "No pack selected"
+            ) {
+                val activeTier = controller.persisted.settings.activeTier
+                Text("Extraction quality: ${activeTier?.extractionQuality ?: "Basic"}")
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    when (activeTier) {
+                        null -> "Basic extraction uses local text acquisition, OCR where available, and deterministic review."
+                        AlphaCapabilityTier.QuickStart -> "Quick Start enables standard extraction for short documents and simple summaries."
+                        AlphaCapabilityTier.CaseAssociate -> "Case Associate enables stronger field extraction, chronology support, and mixed English/Hindi review."
+                        AlphaCapabilityTier.SeniorDraftingSupport -> "Senior Drafting Support enables deeper verification, longer bundles, and stronger bilingual workflows."
+                    },
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             AlphaCard("Download policy", "Downloads can wait for Wi-Fi or use mobile data explicitly.") {
                 AlphaToggleRow("Wi-Fi only downloads", controller.persisted.settings.wifiOnlyDownloads) {
                     controller.persisted = controller.persisted.copy(settings = controller.persisted.settings.copy(wifiOnlyDownloads = it))

@@ -108,7 +108,8 @@ object AlphaPayloadShaper {
         }
 
         if (sanitized.isBlank()) {
-            sanitized = "Find current public-law guidance relevant to delay condonation where diligence is documented."
+            sanitized = suggestedPublicLawQuery(case)
+                ?: "Find current public-law guidance relevant to delay condonation where diligence is documented."
             removed += "Private case details"
         }
 
@@ -121,4 +122,17 @@ object AlphaPayloadShaper {
 
     fun buildPublicLawPayload(preview: AlphaPublicLawPreview): AlphaPublicLawSearchPayload =
         AlphaPublicLawSearchPayload(query = preview.query)
+
+    private fun suggestedPublicLawQuery(case: AlphaCaseMatter?): String? {
+        val fields = case?.documents.orEmpty().flatMap { it.extractedFields }
+        val issue = fields.firstOrNull { it.fieldType == AlphaExtractedLegalFieldType.Issue }?.value
+        val section = fields.firstOrNull { it.fieldType == AlphaExtractedLegalFieldType.Section }?.value
+        val documentType = case?.documents?.firstOrNull()?.classification?.type?.name
+        val tokens = listOf(issue, section, documentType, "India")
+            .filterNotNull()
+            .joinToString(" ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+        return tokens.takeIf { it.isNotBlank() }
+    }
 }

@@ -132,25 +132,41 @@ final class AlphaRossModel {
         do {
             let imported = try await store.importDocument(from: sourceURL, into: caseId)
             guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }) else { return }
+            var document = imported.document
+            document.indexingStatus = .extracting
+            document.extractionRuns = [
+                AlphaExtractionRun(
+                    caseId: caseId,
+                    documentId: document.id,
+                    mode: .fromTier(persisted.settings.activeTier),
+                    status: .running,
+                    startedAt: .now,
+                    pagesProcessed: 0,
+                    totalPages: document.pageCount,
+                    fieldsExtracted: 0,
+                    fieldsNeedingReview: 0,
+                    warnings: []
+                )
+            ]
 
-            persisted.cases[caseIndex].documents.insert(imported.document, at: 0)
+            persisted.cases[caseIndex].documents.insert(document, at: 0)
             persisted.cases[caseIndex].updatedAt = .now
 
             let sourceRef = AlphaSourceRef(
                 caseId: caseId,
-                documentId: imported.document.id,
-                documentTitle: imported.document.title,
+                documentId: document.id,
+                documentTitle: document.title,
                 pageNumber: 1,
                 paragraphRange: nil,
-                textSnippet: imported.document.extractedText ?? "Imported source reference",
-                ocrConfidence: imported.document.kind == .image ? nil : 0.92
+                textSnippet: document.dominantSourceSnippet ?? document.extractedText ?? "Imported source reference",
+                ocrConfidence: document.kind == .image ? nil : 0.92
             )
             persisted.cases[caseIndex].sourceRefs.insert(sourceRef, at: 0)
 
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
                     title: "Document imported locally",
-                    detail: "\(imported.document.title) was copied into app-private storage.",
+                    detail: "\(document.title) was copied into app-private storage.",
                     purpose: .local_only,
                     payloadClass: .local_only,
                     endpointLabel: "device://document-import",
@@ -159,6 +175,14 @@ final class AlphaRossModel {
                 at: 0
             )
             persist()
+            path.append(.documentViewer(caseId, document.id, 1))
+
+            let result = await store.runLocalExtraction(
+                caseId: caseId,
+                document: document,
+                activeTier: persisted.settings.activeTier
+            )
+            applyExtractionResult(result, caseId: caseId, documentId: document.id)
         } catch {
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
@@ -211,8 +235,171 @@ final class AlphaRossModel {
         path.append(.documentViewer(ref.caseId, ref.documentId, ref.pageNumber))
     }
 
+    func visibleExtractedFields(caseId: UUID, documentId: UUID) -> [AlphaExtractedLegalField] {
+        let ignored = ignoredFieldIDs(caseId: caseId, documentId: documentId)
+        guard
+            let document = persisted.cases.first(where: { $0.id == caseId })?.documents.first(where: { $0.id == documentId })
+        else { return [] }
+
+        return document.extractedFields
+            .filter { !ignored.contains($0.id) }
+            .sorted {
+                let lhs = alphaFieldSortRank($0.fieldType)
+                let rhs = alphaFieldSortRank($1.fieldType)
+                if lhs == rhs {
+                    return $0.createdAt < $1.createdAt
+                }
+                return lhs < rhs
+            }
+    }
+
+    func reviewFindings(caseId: UUID, documentId: UUID) -> [AlphaExtractionFinding] {
+        guard
+            let document = persisted.cases.first(where: { $0.id == caseId })?.documents.first(where: { $0.id == documentId })
+        else { return [] }
+        return document.extractionFindings.filter { !$0.resolved }
+    }
+
+    func reviewSummary(caseId: UUID, documentId: UUID) -> String? {
+        guard
+            let document = persisted.cases.first(where: { $0.id == caseId })?.documents.first(where: { $0.id == documentId })
+        else { return nil }
+
+        let visibleFields = visibleExtractedFields(caseId: caseId, documentId: documentId)
+        if visibleFields.contains(where: \.needsReview) || !reviewFindings(caseId: caseId, documentId: documentId).isEmpty {
+            return "Ross found key details. Please review the uncertain ones."
+        }
+        if visibleFields.isEmpty, document.classification == nil {
+            return nil
+        }
+        return "Ross found key details."
+    }
+
+    func extractionUpgradeMessage(for document: AlphaCaseDocument) -> String? {
+        let mode = activeExtractionMode
+        if mode == .basic {
+            return "Better extraction is available with Case Associate."
+        }
+        if mode == .quickStart,
+           document.languageProfile?.primaryLanguage == .mixed || document.extractionFindings.contains(where: { $0.kind == .lowConfidenceOcr || $0.kind == .languageUncertain }) {
+            return "This document has mixed language or poor scan quality. Senior Drafting Support may improve review."
+        }
+        return nil
+    }
+
+    func acceptExtractedField(caseId: UUID, documentId: UUID, fieldId: UUID) {
+        guard
+            let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }),
+            let documentIndex = persisted.cases[caseIndex].documents.firstIndex(where: { $0.id == documentId }),
+            let fieldIndex = persisted.cases[caseIndex].documents[documentIndex].extractedFields.firstIndex(where: { $0.id == fieldId })
+        else { return }
+
+        persisted.cases[caseIndex].documents[documentIndex].extractedFields[fieldIndex].needsReview = false
+        persisted.cases[caseIndex].documents[documentIndex].extractedFields[fieldIndex].updatedAt = .now
+        refreshCaseWorkspace(at: caseIndex)
+        persist()
+    }
+
+    func ignoreExtractedField(caseId: UUID, documentId: UUID, fieldId: UUID) {
+        guard
+            let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }),
+            let documentIndex = persisted.cases[caseIndex].documents.firstIndex(where: { $0.id == documentId }),
+            let field = persisted.cases[caseIndex].documents[documentIndex].extractedFields.first(where: { $0.id == fieldId })
+        else { return }
+
+        persisted.cases[caseIndex].advocateCorrections.insert(
+            AlphaAdvocateCorrection(
+                caseId: caseId,
+                documentId: documentId,
+                fieldId: field.id,
+                oldValue: field.value,
+                newValue: "Ignored",
+                correctionType: .ignoreField
+            ),
+            at: 0
+        )
+        refreshCaseWorkspace(at: caseIndex)
+        persist()
+    }
+
+    func applyFieldCorrection(caseId: UUID, documentId: UUID, fieldId: UUID, newValue: String) {
+        let cleaned = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleaned.isEmpty else { return }
+        guard
+            let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }),
+            let documentIndex = persisted.cases[caseIndex].documents.firstIndex(where: { $0.id == documentId }),
+            let fieldIndex = persisted.cases[caseIndex].documents[documentIndex].extractedFields.firstIndex(where: { $0.id == fieldId })
+        else { return }
+
+        let original = persisted.cases[caseIndex].documents[documentIndex].extractedFields[fieldIndex]
+        persisted.cases[caseIndex].documents[documentIndex].extractedFields[fieldIndex].value = cleaned
+        persisted.cases[caseIndex].documents[documentIndex].extractedFields[fieldIndex].normalizedValue = cleaned.lowercased()
+        persisted.cases[caseIndex].documents[documentIndex].extractedFields[fieldIndex].needsReview = false
+        persisted.cases[caseIndex].documents[documentIndex].extractedFields[fieldIndex].userCorrected = true
+        persisted.cases[caseIndex].documents[documentIndex].extractedFields[fieldIndex].extractionPass = .userCorrected
+        persisted.cases[caseIndex].documents[documentIndex].extractedFields[fieldIndex].updatedAt = .now
+        persisted.cases[caseIndex].advocateCorrections.insert(
+            AlphaAdvocateCorrection(
+                caseId: caseId,
+                documentId: documentId,
+                fieldId: fieldId,
+                oldValue: original.value,
+                newValue: cleaned,
+                correctionType: alphaCorrectionType(for: original.fieldType)
+            ),
+            at: 0
+        )
+        persisted.cases[caseIndex].caseMemoryUpdates.insert(
+            AlphaCaseMemoryUpdate(
+                caseId: caseId,
+                source: .userCorrection,
+                summary: "\(original.label) updated to '\(cleaned)' during advocate review.",
+                affectedDocuments: [documentId]
+            ),
+            at: 0
+        )
+        refreshCaseWorkspace(at: caseIndex)
+        persist()
+    }
+
+    func updateDocumentClassification(caseId: UUID, documentId: UUID, type: AlphaLegalDocumentType) {
+        guard
+            let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }),
+            let documentIndex = persisted.cases[caseIndex].documents.firstIndex(where: { $0.id == documentId })
+        else { return }
+
+        if persisted.cases[caseIndex].documents[documentIndex].classification == nil {
+            persisted.cases[caseIndex].documents[documentIndex].classification = AlphaLegalDocumentClassification(
+                documentId: documentId,
+                type: type,
+                subtype: nil,
+                confidence: 0.64,
+                sourceRefs: [],
+                needsReview: false
+            )
+        } else {
+            persisted.cases[caseIndex].documents[documentIndex].classification?.type = type
+            persisted.cases[caseIndex].documents[documentIndex].classification?.needsReview = false
+            persisted.cases[caseIndex].documents[documentIndex].classification?.confidence = max(persisted.cases[caseIndex].documents[documentIndex].classification?.confidence ?? 0.64, 0.64)
+        }
+
+        persisted.cases[caseIndex].advocateCorrections.insert(
+            AlphaAdvocateCorrection(
+                caseId: caseId,
+                documentId: documentId,
+                oldValue: nil,
+                newValue: type.rawValue,
+                correctionType: .documentType
+            ),
+            at: 0
+        )
+        refreshCaseWorkspace(at: caseIndex)
+        persist()
+    }
+
     func buildPublicLawPreview() {
         let text = publicLawDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        let suggestedQuery = suggestedPublicLawQuery() ?? "Find current public-law guidance relevant to delay condonation where diligence is documented."
         let lower = text.lowercased()
         let blockedPatterns = [
             "raghav fakepriv",
@@ -246,7 +433,7 @@ final class AlphaRossModel {
 
         if blockedPatterns.contains(where: { lower.contains($0) }) {
             removed.append("Private details and obvious identifiers")
-            sanitized = "Find current public-law guidance relevant to delay condonation where diligence is documented."
+            sanitized = suggestedQuery
         }
 
         if sanitized.count > 180 {
@@ -255,7 +442,7 @@ final class AlphaRossModel {
         }
 
         publicLawPreview = AlphaPublicLawPreview(
-            query: sanitized.isEmpty ? "Find current public-law guidance relevant to delay condonation where diligence is documented." : sanitized,
+            query: sanitized.isEmpty ? suggestedQuery : sanitized,
             removed: removed.isEmpty ? ["No private case data detected"] : removed,
             confirmationNote: "Public-law search sends only a sanitized query after explicit confirmation."
         )
@@ -347,6 +534,14 @@ final class AlphaRossModel {
             )
             persist()
         }
+    }
+
+    func exportURL(for report: AlphaExportedReport) -> URL {
+        alphaAbsoluteURL(for: report.relativePath)
+    }
+
+    var activeExtractionMode: AlphaExtractionMode {
+        .fromTier(persisted.settings.activeTier)
     }
 
     func pauseJob(_ job: AlphaModelDownloadJob) {
@@ -584,27 +779,327 @@ final class AlphaRossModel {
     private func exportBodyLines(kind: String, caseMatter: AlphaCaseMatter?) -> [String] {
         let title = caseMatter?.title ?? "Ross"
         let generatedDate = Date().formatted(date: .abbreviated, time: .shortened)
-        let refs = caseMatter?.sourceRefs.prefix(6).map { "- \($0.label): \($0.detail)" } ?? ["- No source references available yet."]
-        let notes = caseMatter?.draftTasks.map { "- \($0)" } ?? ["- No tasks yet."]
+        guard let caseMatter else {
+            return [
+                title,
+                "Generated: \(generatedDate)",
+                "Draft for advocate review",
+                "",
+                "No case selected.",
+                "",
+                "Generated locally for advocate review. Verify all citations."
+            ]
+        }
 
-        return [
-            title,
-            "Generated: \(generatedDate)",
-            "Draft for advocate review",
-            "",
-            "Report type: \(kind.replacingOccurrences(of: "_", with: " "))",
-            "",
-            "Summary",
-            caseMatter?.summary ?? "No case selected.",
-            "",
-            "Working notes",
-        ] + notes + [
-            "",
-            "Source references",
-        ] + refs + [
-            "",
-            "Generated locally for advocate review. Verify all citations."
+        let documents = caseMatter.documents
+        let allFields = documents.flatMap(\.extractedFields)
+        let verifiedFields = allFields.filter { !$0.needsReview || $0.userCorrected }
+        let pendingFields = allFields.filter(\.needsReview)
+        let unresolvedFindings = documents.flatMap(\.extractionFindings).filter { !$0.resolved }
+        let refs = caseMatter.sourceRefs.prefix(8).map { "- \($0.label): \($0.detail)" }
+        let documentLines = documents.map { "- \($0.title) (\($0.pageCount) pages, \($0.ocrStatus.title))" }
+
+        func uniqueValues(for type: AlphaExtractedLegalFieldType, in fields: [AlphaExtractedLegalField]) -> [String] {
+            Array(Set(fields.filter { $0.fieldType == type }.map(\.value))).sorted()
+        }
+
+        func sourcedValues(for type: AlphaExtractedLegalFieldType, in fields: [AlphaExtractedLegalField]) -> [String] {
+            fields
+                .filter { $0.fieldType == type }
+                .map { field in
+                    let sourceLabel = field.sourceRefs.first?.label ?? "Source pending"
+                    return "- \(field.value) (\(sourceLabel))"
+                }
+        }
+
+        switch kind {
+        case "chronology_report":
+            let chronologyLines = verifiedFields
+                .filter { $0.fieldType == .date || $0.fieldType == .nextDate }
+                .sorted { ($0.normalizedValue ?? $0.value) < ($1.normalizedValue ?? $1.value) }
+                .map { "- \($0.label): \($0.value) (\($0.sourceRefs.first?.label ?? "Source pending"))" }
+            let warningLines = unresolvedFindings.map { "- \($0.message)" }
+            return [
+                title,
+                "Generated: \(generatedDate)",
+                "Draft for advocate review",
+                "",
+                "Chronology candidates",
+            ] + (chronologyLines.isEmpty ? ["- No verified chronology candidates found yet."] : chronologyLines) + [
+                "",
+                "Review warnings",
+            ] + (warningLines.isEmpty ? ["- No unresolved warnings."] : warningLines) + [
+                "",
+                "Source references",
+            ] + (refs.isEmpty ? ["- No source references available yet."] : refs) + [
+                "",
+                "Generated locally for advocate review. Verify all citations."
+            ]
+
+        case "case_note":
+            let court = uniqueValues(for: .court, in: verifiedFields).joined(separator: " | ").ifEmpty("Not found")
+            let caseNumbers = uniqueValues(for: .caseNumber, in: verifiedFields).joined(separator: " | ").ifEmpty("Not found")
+            let parties = uniqueValues(for: .partyName, in: verifiedFields).joined(separator: " | ").ifEmpty("Not found")
+            let dateLines = sourcedValues(for: .date, in: verifiedFields)
+            let pendingLines = pendingFields.map { "- \($0.label): \($0.value)" }
+
+            return [
+                title,
+                "Generated: \(generatedDate)",
+                "Draft for advocate review",
+                "",
+                "Court / case metadata",
+                "Court: \(court)",
+                "Case number: \(caseNumbers)",
+                "Parties: \(parties)",
+                "",
+                "Document list",
+            ] + (documentLines.isEmpty ? ["- No imported documents yet."] : documentLines) + [
+                "",
+                "Key dates",
+            ] + (dateLines.isEmpty ? ["- No verified key dates found yet."] : dateLines) + [
+                "",
+                "Pending review fields",
+            ] + (pendingLines.isEmpty ? ["- No pending review fields."] : pendingLines) + [
+                "",
+                "Source references",
+            ] + (refs.isEmpty ? ["- No source references available yet."] : refs) + [
+                "",
+                "Generated locally for advocate review. Verify all citations."
+            ]
+
+        case "order_summary":
+            let directions = sourcedValues(for: .orderDirection, in: verifiedFields)
+            let nextDates = sourcedValues(for: .nextDate, in: verifiedFields)
+            let compliance = unresolvedFindings
+                .filter { $0.kind == .ambiguousOrderDirection || $0.kind == .dateConflict }
+                .map { "- \($0.message)" }
+            let pendingLines = pendingFields
+                .filter { $0.fieldType == .orderDirection || $0.fieldType == .nextDate || $0.fieldType == .date }
+                .map { "- \($0.label): \($0.value)" }
+
+            return [
+                title,
+                "Generated: \(generatedDate)",
+                "Draft for advocate review",
+                "",
+                "Operative directions",
+            ] + (directions.isEmpty ? ["- No verified operative directions found yet."] : directions) + [
+                "",
+                "Next date",
+            ] + (nextDates.isEmpty ? ["- Not found"] : nextDates) + [
+                "",
+                "Compliance requirements",
+            ] + (compliance.isEmpty ? ["- Review operative directions against cited source pages."] : compliance) + [
+                "",
+                "Needs review",
+            ] + (pendingLines.isEmpty ? ["- No pending review flags for order details."] : pendingLines) + [
+                "",
+                "Source references",
+            ] + (refs.isEmpty ? ["- No source references available yet."] : refs) + [
+                "",
+                "Generated locally for advocate review. Verify all citations."
+            ]
+
+        default:
+            let notes = caseMatter.draftTasks.map { "- \($0)" }
+            return [
+                title,
+                "Generated: \(generatedDate)",
+                "Draft for advocate review",
+                "",
+                "Summary",
+                caseMatter.summary,
+                "",
+                "Working notes",
+            ] + (notes.isEmpty ? ["- No tasks yet."] : notes) + [
+                "",
+                "Source references",
+            ] + (refs.isEmpty ? ["- No source references available yet."] : refs) + [
+                "",
+                "Generated locally for advocate review. Verify all citations."
+            ]
+        }
+    }
+
+    private func applyExtractionResult(_ result: AlphaLocalExtractionResult, caseId: UUID, documentId: UUID) {
+        guard
+            let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }),
+            let documentIndex = persisted.cases[caseIndex].documents.firstIndex(where: { $0.id == documentId })
+        else { return }
+
+        var caseMatter = persisted.cases[caseIndex]
+        var document = caseMatter.documents[documentIndex]
+        document.pages = result.pages
+        document.languageProfile = result.languageProfile
+        document.classification = result.classification
+        document.extractedFields = result.extractedFields
+        document.extractionRuns.insert(result.extractionRun, at: 0)
+        document.extractionFindings = result.findings
+        document.indexingStatus = {
+            switch result.extractionRun.status {
+            case .failed:
+                return .failed
+            case .needsReview:
+                return .partial
+            default:
+                return .indexed
+            }
+        }()
+        document.lastIndexedAt = .now
+        let fullText = result.pages.compactMap(\.extractedText).joined(separator: "\n\n").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !fullText.isEmpty {
+            document.extractedText = fullText
+        }
+        document.dominantSourceSnippet = result.pages.compactMap { $0.anchorText ?? $0.snippet }.first ?? document.dominantSourceSnippet
+        caseMatter.documents[documentIndex] = document
+
+        if let classification = result.classification {
+            appendSourceRefs(classification.sourceRefs, to: &caseMatter)
+        }
+        appendSourceRefs(result.extractedFields.flatMap(\.sourceRefs), to: &caseMatter)
+        mergeCaseMemoryUpdates(result.caseMemoryUpdates, into: &caseMatter)
+        refreshCaseWorkspace(caseMatter: &caseMatter)
+
+        persisted.cases[caseIndex] = caseMatter
+        persisted.ledgerEntries.insert(
+            AlphaPrivacyLedgerEntry(
+                title: "Local extraction completed",
+                detail: result.reviewQueue.summary,
+                purpose: .local_only,
+                payloadClass: .local_only,
+                endpointLabel: "device://local-extraction",
+                success: result.extractionRun.status != .failed
+            ),
+            at: 0
+        )
+        persist()
+    }
+
+    private func appendSourceRefs(_ refs: [AlphaSourceRef], to caseMatter: inout AlphaCaseMatter) {
+        for ref in refs {
+            let exists = caseMatter.sourceRefs.contains {
+                $0.documentId == ref.documentId &&
+                $0.pageNumber == ref.pageNumber &&
+                ($0.textSnippet ?? "") == (ref.textSnippet ?? "")
+            }
+            if !exists {
+                caseMatter.sourceRefs.insert(ref, at: 0)
+            }
+        }
+    }
+
+    private func mergeCaseMemoryUpdates(_ updates: [AlphaCaseMemoryUpdate], into caseMatter: inout AlphaCaseMatter) {
+        for update in updates.reversed() {
+            let exists = caseMatter.caseMemoryUpdates.contains {
+                $0.summary == update.summary && $0.affectedDocuments == update.affectedDocuments
+            }
+            if !exists {
+                caseMatter.caseMemoryUpdates.insert(update, at: 0)
+            }
+        }
+    }
+
+    private func refreshCaseWorkspace(at caseIndex: Int) {
+        var caseMatter = persisted.cases[caseIndex]
+        refreshCaseWorkspace(caseMatter: &caseMatter)
+        persisted.cases[caseIndex] = caseMatter
+    }
+
+    private func refreshCaseWorkspace(caseMatter: inout AlphaCaseMatter) {
+        let verifiedFields = caseMatter.documents
+            .flatMap(\.extractedFields)
+            .filter { !$0.needsReview || $0.userCorrected }
+        let pendingFields = caseMatter.documents
+            .flatMap(\.extractedFields)
+            .filter(\.needsReview)
+
+        if let forum = verifiedFields.first(where: { $0.fieldType == .court })?.value,
+           caseMatter.forum == "Forum pending" || caseMatter.forum.isEmpty {
+            caseMatter.forum = forum
+        }
+
+        if let nextDate = verifiedFields.first(where: { $0.fieldType == .nextDate })?.value {
+            caseMatter.localNotice = "Case files stay on this device. Next date found: \(nextDate)"
+        }
+
+        let classifications = caseMatter.documents.compactMap { $0.classification?.type.rawValue.replacingOccurrences(of: "_", with: " ") }
+        let classificationText = classifications.isEmpty ? "local legal document review" : classifications.joined(separator: ", ")
+        caseMatter.summary = "Ross indexed \(caseMatter.documents.count) document(s) locally for \(classificationText)."
+
+        let issueCandidates = verifiedFields
+            .filter { $0.fieldType == .issue || $0.fieldType == .orderDirection || $0.fieldType == .relief || $0.fieldType == .prayer }
+            .map(\.value)
+        caseMatter.issueHighlights = issueCandidates.isEmpty ? ["Review extracted legal issues and directions."] : Array(issueCandidates.prefix(4))
+
+        let evidenceCandidates = caseMatter.documents
+            .flatMap(\.extractionFindings)
+            .filter { !$0.resolved }
+            .map(\.message)
+        caseMatter.evidenceNotes = evidenceCandidates.isEmpty ? ["Source-backed extraction is available for this matter."] : Array(evidenceCandidates.prefix(4))
+
+        caseMatter.draftTasks = [
+            pendingFields.isEmpty ? "Review the latest chronology and order summary." : "Review uncertain extracted fields before relying on them.",
+            "Open source chips before sharing or filing.",
+            "Generate a local chronology or order summary draft."
         ]
+        caseMatter.updatedAt = .now
+    }
+
+    private func ignoredFieldIDs(caseId: UUID, documentId: UUID) -> Set<UUID> {
+        guard let caseMatter = persisted.cases.first(where: { $0.id == caseId }) else { return [] }
+        return Set(
+            caseMatter.advocateCorrections
+                .filter { $0.documentId == documentId && $0.correctionType == .ignoreField }
+                .compactMap(\.fieldId)
+        )
+    }
+
+    private func suggestedPublicLawQuery() -> String? {
+        guard let selectedCase else { return nil }
+        let verifiedFields = selectedCase.documents
+            .flatMap(\.extractedFields)
+            .filter { !$0.needsReview || $0.userCorrected }
+        let issues = verifiedFields
+            .filter { $0.fieldType == .issue || $0.fieldType == .orderDirection || $0.fieldType == .relief || $0.fieldType == .section }
+            .flatMap { publicLawKeywords(from: $0.value) }
+        let classifications = selectedCase.documents.compactMap { $0.classification?.type.rawValue.replacingOccurrences(of: "_", with: " ") }
+        let terms = Array(NSOrderedSet(array: issues + classifications)).compactMap { $0 as? String }
+        guard !terms.isEmpty else { return nil }
+        return (terms + ["India"]).joined(separator: " ")
+    }
+
+    private func publicLawKeywords(from value: String) -> [String] {
+        let lowered = value.lowercased()
+        let patterns = [
+            "commercial courts act",
+            "arbitration act",
+            "limitation act",
+            "written statement",
+            "delay condonation",
+            "interim relief",
+            "injunction",
+            "stay",
+            "section \\d+[a-z]*",
+            "order [a-z0-9]+ rule \\d+"
+        ]
+        return patterns.compactMap { pattern in
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else { return nil }
+            let range = NSRange(location: 0, length: lowered.utf16.count)
+            guard let match = regex.firstMatch(in: lowered, range: range) else { return nil }
+            return (lowered as NSString).substring(with: match.range)
+        }
+    }
+
+    private func alphaCorrectionType(for fieldType: AlphaExtractedLegalFieldType) -> AlphaAdvocateCorrectionType {
+        switch fieldType {
+        case .date, .nextDate, .limitationDate:
+            return .date
+        case .partyName:
+            return .party
+        default:
+            return .fieldValue
+        }
     }
 
     private func persist() {
@@ -1281,6 +1776,18 @@ private struct AlphaDocumentViewerScreen: View {
         sourceRefs.filter { $0.pageNumber == resolvedPage }
     }
 
+    private var reviewSummaryText: String? {
+        model.reviewSummary(caseId: caseId, documentId: documentId)
+    }
+
+    private var reviewFields: [AlphaExtractedLegalField] {
+        model.visibleExtractedFields(caseId: caseId, documentId: documentId)
+    }
+
+    private var reviewFindings: [AlphaExtractionFinding] {
+        model.reviewFindings(caseId: caseId, documentId: documentId)
+    }
+
     var body: some View {
         ScrollView {
             if let document {
@@ -1288,7 +1795,7 @@ private struct AlphaDocumentViewerScreen: View {
                     RossHeroCard(
                         eyebrow: document.kind.title,
                         title: document.title,
-                        detail: "Page count: \(document.pageCount) • OCR/indexing: \(document.ocrStatus.title)"
+                        detail: "Page count: \(document.pageCount) • OCR/indexing: \(document.ocrStatus.title) • Extraction: \((document.extractionRuns.first?.mode.qualityLabel ?? model.activeExtractionMode.qualityLabel))"
                     ) {
                         HStack(spacing: 12) {
                             RossInfoPill(title: document.fileName, systemImage: "doc")
@@ -1298,6 +1805,77 @@ private struct AlphaDocumentViewerScreen: View {
 
                     if let preview = AlphaDocumentPreview(document: document, initialPage: resolvedPage) {
                         preview
+                    }
+
+                    if let reviewSummaryText {
+                        RossSectionCard(title: "Review extracted details", subtitle: reviewSummaryText) {
+                            VStack(alignment: .leading, spacing: 14) {
+                                if let classification = document.classification {
+                                    AlphaClassificationReviewCard(
+                                        classification: classification,
+                                        onAccept: {
+                                            model.updateDocumentClassification(
+                                                caseId: caseId,
+                                                documentId: documentId,
+                                                type: classification.type
+                                            )
+                                        },
+                                        onUpdateType: { type in
+                                            model.updateDocumentClassification(
+                                                caseId: caseId,
+                                                documentId: documentId,
+                                                type: type
+                                            )
+                                        },
+                                        onOpenSourceRef: model.openSourceRef
+                                    )
+                                }
+
+                                if let languageProfile = document.languageProfile {
+                                    RossSectionCard(
+                                        title: "Language profile",
+                                        subtitle: "Ross keeps Hindi/English handling local and source-backed."
+                                    ) {
+                                        HStack(spacing: 12) {
+                                            RossInfoPill(title: "Primary: \(languageProfile.primaryLanguage.rawValue.capitalized)", systemImage: "character.book.closed")
+                                            RossInfoPill(title: "Scripts: \(languageProfile.scriptsDetected.joined(separator: ", "))", systemImage: "textformat.abc.dottedunderline")
+                                        }
+                                    }
+                                }
+
+                                ForEach(reviewFields) { field in
+                                    AlphaExtractedFieldReviewCard(
+                                        field: field,
+                                        onAccept: {
+                                            model.acceptExtractedField(caseId: caseId, documentId: documentId, fieldId: field.id)
+                                        },
+                                        onSaveEdit: { newValue in
+                                            model.applyFieldCorrection(caseId: caseId, documentId: documentId, fieldId: field.id, newValue: newValue)
+                                        },
+                                        onIgnore: {
+                                            model.ignoreExtractedField(caseId: caseId, documentId: documentId, fieldId: field.id)
+                                        },
+                                        onOpenSourceRef: model.openSourceRef
+                                    )
+                                }
+
+                                if !reviewFindings.isEmpty {
+                                    VStack(alignment: .leading, spacing: 10) {
+                                        Text("Needs review")
+                                            .font(.headline)
+                                        ForEach(reviewFindings) { finding in
+                                            AlphaFindingCard(finding: finding, onOpenSourceRef: model.openSourceRef)
+                                        }
+                                    }
+                                }
+
+                                if let upgrade = model.extractionUpgradeMessage(for: document) {
+                                    Text(upgrade)
+                                        .font(.footnote.weight(.semibold))
+                                        .foregroundStyle(Color.rossAccent)
+                                }
+                            }
+                        }
                     }
 
                     RossSectionCard(title: "Extracted text", subtitle: "Text available so far for this document.") {
@@ -1358,6 +1936,226 @@ private func AlphaDocumentPreview(document: AlphaCaseDocument, initialPage: Int)
                 .foregroundStyle(Color.rossInk.opacity(0.7))
         }
     )
+}
+
+private struct AlphaClassificationReviewCard: View {
+    let classification: AlphaLegalDocumentClassification
+    let onAccept: () -> Void
+    let onUpdateType: (AlphaLegalDocumentType) -> Void
+    let onOpenSourceRef: (AlphaSourceRef) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Document type")
+                        .font(.headline)
+                    Text(classification.type.rawValue.replacingOccurrences(of: "_", with: " ").capitalized)
+                        .font(.title3.weight(.semibold))
+                }
+                Spacer()
+                AlphaConfidenceBadge(
+                    label: classification.needsReview || classification.confidence < 0.64 ? "Needs review" : (classification.confidence >= 0.84 ? "High" : "Medium"),
+                    tint: classification.needsReview || classification.confidence < 0.64 ? .orange : (classification.confidence >= 0.84 ? .green : Color.rossAccent)
+                )
+            }
+
+            if let subtype = classification.subtype, !subtype.isEmpty {
+                Text(subtype.replacingOccurrences(of: "_", with: " ").capitalized)
+                    .font(.footnote)
+                    .foregroundStyle(Color.rossInk.opacity(0.65))
+            }
+
+            HStack(spacing: 10) {
+                Button("Accept", action: onAccept)
+                    .buttonStyle(.borderedProminent)
+
+                Menu("Edit") {
+                    ForEach([
+                        AlphaLegalDocumentType.pleading,
+                        .order,
+                        .judgment,
+                        .affidavit,
+                        .notice,
+                        .evidence,
+                        .correspondence,
+                        .misc
+                    ], id: \.self) { type in
+                        Button(type.rawValue.replacingOccurrences(of: "_", with: " ").capitalized) {
+                            onUpdateType(type)
+                        }
+                    }
+                }
+            }
+
+            AlphaSourceRefChips(sourceRefs: classification.sourceRefs, onOpenSourceRef: onOpenSourceRef)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(Color.rossCardBackground)
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.rossBorder, lineWidth: 1)
+        }
+    }
+}
+
+private struct AlphaExtractedFieldReviewCard: View {
+    let field: AlphaExtractedLegalField
+    let onAccept: () -> Void
+    let onSaveEdit: (String) -> Void
+    let onIgnore: () -> Void
+    let onOpenSourceRef: (AlphaSourceRef) -> Void
+
+    @State private var isEditing = false
+    @State private var draftValue = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(field.label)
+                        .font(.headline)
+                    if isEditing {
+                        TextField("Edit \(field.label.lowercased())", text: $draftValue)
+                            .textFieldStyle(.roundedBorder)
+                    } else {
+                        Text(field.value)
+                            .font(.body)
+                            .foregroundStyle(Color.rossInk)
+                    }
+                }
+                Spacer()
+                AlphaConfidenceBadge(
+                    label: field.confidenceLabel,
+                    tint: field.confidenceLabel == "High" ? .green : (field.confidenceLabel == "Medium" ? Color.rossAccent : .orange)
+                )
+            }
+
+            AlphaSourceRefChips(sourceRefs: field.sourceRefs, onOpenSourceRef: onOpenSourceRef)
+
+            HStack(spacing: 10) {
+                if isEditing {
+                    Button("Save") {
+                        onSaveEdit(draftValue)
+                        isEditing = false
+                    }
+                    .buttonStyle(.borderedProminent)
+
+                    Button("Cancel") {
+                        draftValue = field.value
+                        isEditing = false
+                    }
+                    .buttonStyle(.bordered)
+                } else {
+                    Button("Accept", action: onAccept)
+                        .buttonStyle(.borderedProminent)
+
+                    Button("Edit") {
+                        draftValue = field.value
+                        isEditing = true
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button("Ignore", role: .destructive, action: onIgnore)
+                        .buttonStyle(.bordered)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(Color.rossCardBackground)
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.rossBorder, lineWidth: 1)
+        }
+        .onAppear {
+            draftValue = field.value
+        }
+    }
+}
+
+private struct AlphaFindingCard: View {
+    let finding: AlphaExtractionFinding
+    let onOpenSourceRef: (AlphaSourceRef) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text(finding.message)
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                AlphaConfidenceBadge(
+                    label: finding.severity.rawValue.capitalized,
+                    tint: finding.severity == .critical ? .red : .orange
+                )
+            }
+
+            AlphaSourceRefChips(sourceRefs: finding.sourceRefs, onOpenSourceRef: onOpenSourceRef)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(Color.rossCardBackground)
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.rossBorder, lineWidth: 1)
+        }
+    }
+}
+
+private struct AlphaSourceRefChips: View {
+    let sourceRefs: [AlphaSourceRef]
+    let onOpenSourceRef: (AlphaSourceRef) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if sourceRefs.isEmpty {
+                Text("Source pending")
+                    .font(.footnote)
+                    .foregroundStyle(Color.rossInk.opacity(0.65))
+            } else {
+                Text("Source")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color.rossInk.opacity(0.65))
+
+                ForEach(sourceRefs.prefix(3)) { sourceRef in
+                    Button {
+                        onOpenSourceRef(sourceRef)
+                    } label: {
+                        HStack {
+                            Text(sourceRef.label)
+                                .font(.footnote.weight(.semibold))
+                            Spacer()
+                            Text(sourceRef.detail)
+                                .font(.caption)
+                                .foregroundStyle(Color.rossInk.opacity(0.65))
+                                .lineLimit(1)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color.rossSecondaryGroupedBackground)
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+}
+
+private struct AlphaConfidenceBadge: View {
+    let label: String
+    let tint: Color
+
+    var body: some View {
+        Text(label)
+            .font(.caption.weight(.bold))
+            .foregroundStyle(tint)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(tint.opacity(0.12))
+            .clipShape(Capsule())
+    }
 }
 
 private struct AlphaAskCaseScreen: View {
@@ -1511,6 +2309,11 @@ private struct AlphaExportsScreen: View {
                         }
                         .buttonStyle(.bordered)
 
+                        Button("Generate Order Summary") {
+                            Task { await model.generateExport(kind: "order_summary", caseId: caseId) }
+                        }
+                        .buttonStyle(.bordered)
+
                         Button("Generate Chat Transcript") {
                             Task { await model.generateExport(kind: "chat_transcript", caseId: caseId) }
                         }
@@ -1520,9 +2323,16 @@ private struct AlphaExportsScreen: View {
 
                 ForEach(model.persisted.exports) { report in
                     RossSectionCard(title: report.title, subtitle: report.kind.replacingOccurrences(of: "_", with: " ").capitalized) {
-                        Text(report.relativePath)
-                            .font(.footnote)
-                            .foregroundStyle(Color.rossInk.opacity(0.7))
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text(report.relativePath)
+                                .font(.footnote)
+                                .foregroundStyle(Color.rossInk.opacity(0.7))
+
+                            ShareLink(item: model.exportURL(for: report)) {
+                                Label("Share local PDF", systemImage: "square.and.arrow.up")
+                            }
+                            .font(.subheadline.weight(.semibold))
+                        }
                     }
                 }
             }
@@ -1545,7 +2355,8 @@ private struct AlphaSettingsScreen: View {
             }
 
             Section("Private AI") {
-                LabeledContent("Active tier", value: model.persisted.settings.activeTier?.title ?? "Not selected")
+                LabeledContent("Active pack", value: model.persisted.settings.activeTier?.title ?? "Not installed")
+                LabeledContent("Extraction quality", value: model.activeExtractionMode.qualityLabel)
                 NavigationLink(value: AlphaRoute.privateAISettings) {
                     Label("Private AI Settings", systemImage: "cpu")
                 }
@@ -1566,6 +2377,14 @@ private struct AlphaPrivateAISettingsScreen: View {
 
     var body: some View {
         List {
+            Section("Active pack") {
+                LabeledContent("Pack", value: model.persisted.settings.activeTier?.title ?? "No Private AI Pack installed")
+                LabeledContent("Extraction quality", value: model.activeExtractionMode.qualityLabel)
+                Text("Technical model names stay hidden unless you open technical details. Ross shows advocate-facing extraction quality instead.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Download policy") {
                 Toggle("Wi-Fi only downloads", isOn: $model.persisted.settings.wifiOnlyDownloads)
                 Toggle("Allow mobile data for large packs", isOn: $model.persisted.settings.allowMobileDataForLargePacks)
@@ -1578,6 +2397,12 @@ private struct AlphaPrivateAISettingsScreen: View {
                             .font(.headline)
                         Text(offer.tier.summary)
                             .font(.footnote)
+                        Text("Extraction quality: \(offer.tier.extractionQuality)")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.rossAccent)
+                        Text(offer.tier.bestFor)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                         HStack {
                             Button("Download / Resume") {
                                 Task { await model.startPackDownload(for: offer.tier, mobileAllowed: model.persisted.settings.allowMobileDataForLargePacks || offer.tier == .quickStart) }
@@ -1646,6 +2471,51 @@ private struct AlphaPrivacyLedgerScreen: View {
             }
         }
         .navigationTitle("Privacy Ledger")
+    }
+}
+
+private func alphaFieldSortRank(_ type: AlphaExtractedLegalFieldType) -> Int {
+    switch type {
+    case .caseNumber:
+        return 0
+    case .court:
+        return 1
+    case .partyName:
+        return 2
+    case .date:
+        return 3
+    case .nextDate:
+        return 4
+    case .orderDirection:
+        return 5
+    case .section:
+        return 6
+    case .exhibitNumber:
+        return 7
+    case .relief:
+        return 8
+    case .prayer:
+        return 9
+    case .amount:
+        return 10
+    case .issue:
+        return 11
+    case .advocateName:
+        return 12
+    case .judgeName:
+        return 13
+    case .limitationDate:
+        return 14
+    case .fact:
+        return 15
+    case .unknown:
+        return 16
+    }
+}
+
+private extension String {
+    func ifEmpty(_ fallback: String) -> String {
+        isEmpty ? fallback : self
     }
 }
 

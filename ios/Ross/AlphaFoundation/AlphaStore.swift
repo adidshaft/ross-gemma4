@@ -178,6 +178,14 @@ actor AlphaRossStore {
         return (relativePath(for: artifactURL), checksum, Int64(data.count))
     }
 
+    func runLocalExtraction(
+        caseId: UUID,
+        document: AlphaCaseDocument,
+        activeTier: AlphaCapabilityTier?
+    ) -> AlphaLocalExtractionResult {
+        AlphaLocalExtractionOrchestrator().extract(caseId: caseId, document: document, activeTier: activeTier)
+    }
+
     func installDownloadedPackArtifact(
         for tier: AlphaCapabilityTier,
         fileName: String,
@@ -529,6 +537,624 @@ private func compactSnippet(from value: String?) -> String? {
     guard let text = compactExtractedText(value) else { return nil }
     return String(text.prefix(180))
 }
+
+struct AlphaReviewQueue: Hashable, Sendable {
+    var fieldIDs: [UUID]
+    var findingIDs: [UUID]
+    var summary: String
+}
+
+struct AlphaLocalExtractionResult: Hashable, Sendable {
+    var pages: [AlphaDocumentPage]
+    var languageProfile: AlphaDocumentLanguageProfile?
+    var classification: AlphaLegalDocumentClassification?
+    var extractedFields: [AlphaExtractedLegalField]
+    var extractionRun: AlphaExtractionRun
+    var findings: [AlphaExtractionFinding]
+    var caseMemoryUpdates: [AlphaCaseMemoryUpdate]
+    var reviewQueue: AlphaReviewQueue
+}
+
+private struct AlphaLocalExtractionOrchestrator {
+    func extract(caseId: UUID, document: AlphaCaseDocument, activeTier: AlphaCapabilityTier?) -> AlphaLocalExtractionResult {
+        let mode = AlphaExtractionMode.fromTier(activeTier)
+        let pages = document.pages.map { page in
+            AlphaDocumentPage(
+                id: page.id,
+                pageNumber: page.pageNumber,
+                snippet: page.snippet ?? compactSnippet(from: page.extractedText),
+                extractedText: page.extractedText ?? page.snippet,
+                anchorText: page.anchorText ?? page.snippet,
+                ocrConfidence: page.ocrConfidence,
+                ocrStatus: page.ocrStatus ?? document.ocrStatus,
+                indexingStatus: page.indexingStatus ?? document.indexingStatus,
+                highlightRects: page.highlightRects
+            )
+        }
+        let languageProfile = detectLanguageProfile(documentID: document.id, pages: pages)
+        let classification = classify(caseId: caseId, document: document, pages: pages, languageProfile: languageProfile)
+        let extracted = extractFields(caseId: caseId, document: document, pages: pages, mode: mode, classification: classification, languageProfile: languageProfile)
+        let verification = verifyFields(caseId: caseId, document: document, pages: pages, fields: extracted)
+        let findings = verification.findings + baseFindings(caseId: caseId, documentID: document.id, pages: pages, languageProfile: languageProfile)
+        let caseMemory = buildCaseMemory(caseId: caseId, documentID: document.id, classification: classification, fields: verification.fields)
+        let reviewQueue = AlphaReviewQueue(
+            fieldIDs: verification.fields.filter(\.needsReview).map(\.id),
+            findingIDs: findings.filter { !$0.resolved }.map(\.id),
+            summary: verification.fields.contains(where: \.needsReview) || findings.contains(where: { !$0.resolved })
+                ? "Ross found key details. Please review the uncertain ones."
+                : "Ross found key details."
+        )
+        let warnings = findings.map(\.message)
+        let status: AlphaExtractionRunStatus = verification.fields.isEmpty
+            ? .failed
+            : (verification.fields.contains(where: \.needsReview) || findings.contains(where: { !$0.resolved }) ? .needsReview : .complete)
+
+        return AlphaLocalExtractionResult(
+            pages: pages,
+            languageProfile: languageProfile,
+            classification: classification,
+            extractedFields: verification.fields,
+            extractionRun: AlphaExtractionRun(
+                caseId: caseId,
+                documentId: document.id,
+                mode: mode,
+                status: status,
+                startedAt: .now,
+                completedAt: .now,
+                pagesProcessed: pages.count,
+                totalPages: document.pageCount,
+                fieldsExtracted: verification.fields.count,
+                fieldsNeedingReview: verification.fields.filter(\.needsReview).count,
+                warnings: warnings,
+                errorMessage: verification.fields.isEmpty ? "Ross could not find supported legal fields in this document yet." : nil
+            ),
+            findings: findings,
+            caseMemoryUpdates: caseMemory,
+            reviewQueue: reviewQueue
+        )
+    }
+
+    private func detectLanguageProfile(documentID: UUID, pages: [AlphaDocumentPage]) -> AlphaDocumentLanguageProfile {
+        let pageProfiles = pages.map { page -> AlphaDocumentLanguageProfilePage in
+            let counts = scriptCounts(in: page.extractedText ?? page.snippet ?? "")
+            let total = counts.latin + counts.devanagari + counts.other
+            if total == 0 {
+                return AlphaDocumentLanguageProfilePage(pageNumber: page.pageNumber, language: .unknown, script: .unknown, confidence: 0)
+            }
+            if counts.latin > 0 && counts.devanagari > 0 {
+                return AlphaDocumentLanguageProfilePage(pageNumber: page.pageNumber, language: .mixed, script: .mixed, confidence: 0.64)
+            }
+            if counts.devanagari > 0 {
+                return AlphaDocumentLanguageProfilePage(pageNumber: page.pageNumber, language: .hindi, script: .devanagari, confidence: 0.88)
+            }
+            if counts.latin > 0 {
+                return AlphaDocumentLanguageProfilePage(pageNumber: page.pageNumber, language: .english, script: .latin, confidence: 0.88)
+            }
+            return AlphaDocumentLanguageProfilePage(pageNumber: page.pageNumber, language: .unknown, script: .other, confidence: 0.42)
+        }
+        let hasLatin = pageProfiles.contains { $0.script == .latin || $0.script == .mixed }
+        let hasDevanagari = pageProfiles.contains { $0.script == .devanagari || $0.script == .mixed }
+        let primary: AlphaDocumentLanguage = {
+            switch (hasLatin, hasDevanagari) {
+            case (true, true):
+                return .mixed
+            case (false, true):
+                return .hindi
+            case (true, false):
+                return .english
+            default:
+                return .unknown
+            }
+        }()
+        let scripts = [
+            hasLatin ? "latin" : nil,
+            hasDevanagari ? "devanagari" : nil,
+            (!hasLatin && !hasDevanagari) ? "other" : nil
+        ].compactMap { $0 }
+
+        return AlphaDocumentLanguageProfile(
+            documentId: documentID,
+            primaryLanguage: primary,
+            scriptsDetected: scripts,
+            confidence: pageProfiles.isEmpty ? 0 : pageProfiles.map(\.confidence).reduce(0, +) / Double(pageProfiles.count),
+            pageProfiles: pageProfiles
+        )
+    }
+
+    private func classify(
+        caseId: UUID,
+        document: AlphaCaseDocument,
+        pages: [AlphaDocumentPage],
+        languageProfile: AlphaDocumentLanguageProfile
+    ) -> AlphaLegalDocumentClassification {
+        let joined = pages.compactMap { $0.extractedText ?? $0.snippet }.joined(separator: "\n").lowercased()
+        let type: AlphaLegalDocumentType
+        switch true {
+        case joined.contains("affidavit"), joined.contains("solemnly affirm"):
+            type = .affidavit
+        case joined.contains("judgment"), joined.contains("coram"), joined.contains("hon'ble"):
+            type = .judgment
+        case joined.contains("show cause notice"), joined.contains("legal notice"):
+            type = .notice
+        case joined.contains("exhibit"), joined.contains("annexure"):
+            type = .evidence
+        case joined.contains("dear sir"), joined.contains("subject:"):
+            type = .correspondence
+        case joined.contains("petition"), joined.contains("written statement"), joined.contains("plaint"):
+            type = .pleading
+        case joined.contains("order"), joined.contains("it is directed"), joined.contains("listed on"):
+            type = .order
+        default:
+            type = .misc
+        }
+        let confidence = type == .misc ? 0.48 : 0.78
+        return AlphaLegalDocumentClassification(
+            documentId: document.id,
+            type: type,
+            subtype: type == .pleading && languageProfile.primaryLanguage == .mixed ? "bilingual_pleading" : nil,
+            confidence: confidence,
+            sourceRefs: pages.prefix(2).map { page in
+                AlphaSourceRef(
+                    caseId: caseId,
+                    documentId: document.id,
+                    documentTitle: document.title,
+                    pageNumber: page.pageNumber,
+                    textSnippet: page.snippet,
+                    ocrConfidence: page.ocrConfidence
+                )
+            },
+            needsReview: confidence < 0.66 || languageProfile.primaryLanguage == .mixed
+        )
+    }
+
+    private func extractFields(
+        caseId: UUID,
+        document: AlphaCaseDocument,
+        pages: [AlphaDocumentPage],
+        mode: AlphaExtractionMode,
+        classification: AlphaLegalDocumentClassification,
+        languageProfile: AlphaDocumentLanguageProfile
+    ) -> [AlphaExtractedLegalField] {
+        var fields: [AlphaExtractedLegalField] = []
+        var seen = Set<String>()
+
+        for page in pages {
+            let source = AlphaSourceRef(
+                caseId: caseId,
+                documentId: document.id,
+                documentTitle: document.title,
+                pageNumber: page.pageNumber,
+                textSnippet: page.anchorText ?? page.snippet,
+                ocrConfidence: page.ocrConfidence
+            )
+            let pageText = page.extractedText ?? page.snippet ?? ""
+
+            for (index, value) in extractCaseNumbers(from: pageText).enumerated() {
+                appendField(&fields, seen: &seen, caseId: caseId, documentId: document.id, mode: mode, source: source, type: .caseNumber, label: "Case number", value: value, normalizedValue: value, confidence: 0.84, pass: .regex, ordinal: index)
+            }
+            for (index, value) in extractCourts(from: pageText).enumerated() {
+                appendField(&fields, seen: &seen, caseId: caseId, documentId: document.id, mode: mode, source: source, type: .court, label: "Court", value: value, normalizedValue: value, confidence: 0.8, pass: .regex, ordinal: index)
+            }
+            for (index, match) in extractDates(from: pageText).enumerated() {
+                let type: AlphaExtractedLegalFieldType = match.isNextDate ? .nextDate : .date
+                appendField(&fields, seen: &seen, caseId: caseId, documentId: document.id, mode: mode, source: source, type: type, label: type.title, value: match.original, normalizedValue: match.normalized, confidence: 0.8, pass: .regex, ordinal: index)
+            }
+            for (index, value) in extractParties(from: pageText).enumerated() {
+                appendField(&fields, seen: &seen, caseId: caseId, documentId: document.id, mode: mode, source: source, type: .partyName, label: "Party", value: value, normalizedValue: normalizeForMatch(value), confidence: 0.76, pass: .regex, ordinal: index)
+            }
+            for (index, value) in extractSections(from: pageText).enumerated() {
+                appendField(&fields, seen: &seen, caseId: caseId, documentId: document.id, mode: mode, source: source, type: .section, label: "Section", value: value, normalizedValue: normalizeForMatch(value), confidence: 0.74, pass: .regex, ordinal: index)
+            }
+            for (index, value) in extractExhibits(from: pageText).enumerated() {
+                appendField(&fields, seen: &seen, caseId: caseId, documentId: document.id, mode: mode, source: source, type: .exhibitNumber, label: "Exhibit", value: value, normalizedValue: normalizeForMatch(value), confidence: 0.72, pass: .regex, ordinal: index)
+            }
+            for (index, value) in extractAmounts(from: pageText).enumerated() {
+                appendField(&fields, seen: &seen, caseId: caseId, documentId: document.id, mode: mode, source: source, type: .amount, label: "Amount", value: value, normalizedValue: normalizeForMatch(value), confidence: 0.68, pass: .regex, ordinal: index)
+            }
+            if mode != .basic {
+                for (index, value) in extractIssues(from: pageText).enumerated() {
+                    appendField(&fields, seen: &seen, caseId: caseId, documentId: document.id, mode: mode, source: source, type: .issue, label: "Issue", value: value, normalizedValue: normalizeForMatch(value), confidence: mode == .quickStart ? 0.58 : 0.68, pass: .llmExtract, ordinal: index)
+                }
+                for (index, value) in extractOrderDirections(from: pageText).enumerated() {
+                    appendField(&fields, seen: &seen, caseId: caseId, documentId: document.id, mode: mode, source: source, type: .orderDirection, label: "Order direction", value: value, normalizedValue: normalizeForMatch(value), confidence: classification.type == .order ? 0.74 : 0.62, pass: .llmExtract, ordinal: index)
+                }
+                for (index, value) in extractReliefs(from: pageText).enumerated() {
+                    let type: AlphaExtractedLegalFieldType = value.lowercased().contains("prayer") ? .prayer : .relief
+                    appendField(&fields, seen: &seen, caseId: caseId, documentId: document.id, mode: mode, source: source, type: type, label: type.title, value: value, normalizedValue: normalizeForMatch(value), confidence: 0.64, pass: .llmExtract, ordinal: index)
+                }
+            }
+        }
+
+        return fields.map { field in
+            var updated = field
+            updated.confidence = scoreFieldConfidence(
+                evidenceStrength: field.confidence,
+                sourceQuality: field.sourceRefs.first?.ocrConfidence,
+                languageConfidence: languageProfile.confidence,
+                verified: field.extractionPass == .llmVerify
+            )
+            updated.needsReview = updated.confidence < 0.64 || updated.sourceRefs.isEmpty
+            return updated
+        }
+    }
+
+    private func verifyFields(
+        caseId: UUID,
+        document: AlphaCaseDocument,
+        pages: [AlphaDocumentPage],
+        fields: [AlphaExtractedLegalField]
+    ) -> (fields: [AlphaExtractedLegalField], findings: [AlphaExtractionFinding]) {
+        var findings: [AlphaExtractionFinding] = []
+        let verified = fields.map { field -> AlphaExtractedLegalField in
+            let supported = field.sourceRefs.contains { ref in
+                pages.first(where: { $0.pageNumber == ref.pageNumber }).map { page in
+                    normalizeForMatch(page.extractedText ?? page.snippet ?? "").contains(field.normalizedValue ?? normalizeForMatch(field.value))
+                } ?? false
+            }
+
+            guard supported else {
+                findings.append(
+                    AlphaExtractionFinding(
+                        caseId: caseId,
+                        documentId: document.id,
+                        kind: field.fieldType == .orderDirection ? .ambiguousOrderDirection : .unsupportedLayout,
+                        message: "\(field.label) needs review because Ross could not confirm it against the cited page text.",
+                        sourceRefs: field.sourceRefs,
+                        severity: .warning
+                    )
+                )
+                var copy = field
+                copy.needsReview = true
+                copy.confidence = max(copy.confidence - 0.24, 0.08)
+                return copy
+            }
+
+            if field.extractionPass == .llmExtract {
+                var copy = field
+                copy.extractionPass = .llmVerify
+                copy.confidence = min(copy.confidence + 0.1, 0.96)
+                return copy
+            }
+
+            return field
+        }
+
+        findings.append(contentsOf: conflictFindings(caseId: caseId, documentID: document.id, fields: verified))
+        return (verified, findings)
+    }
+
+    private func baseFindings(
+        caseId: UUID,
+        documentID: UUID,
+        pages: [AlphaDocumentPage],
+        languageProfile: AlphaDocumentLanguageProfile
+    ) -> [AlphaExtractionFinding] {
+        var findings: [AlphaExtractionFinding] = []
+        if languageProfile.primaryLanguage == .mixed || languageProfile.confidence < 0.62 {
+            findings.append(
+                AlphaExtractionFinding(
+                    caseId: caseId,
+                    documentId: documentID,
+                    kind: .languageUncertain,
+                    message: "Ross detected mixed or uncertain language/script content. Review bilingual fields carefully.",
+                    sourceRefs: pages.prefix(2).map { page in
+                        AlphaSourceRef(caseId: caseId, documentId: documentID, documentTitle: "Imported document", pageNumber: page.pageNumber, textSnippet: page.snippet, ocrConfidence: page.ocrConfidence)
+                    },
+                    severity: .warning
+                )
+            )
+        }
+        if let page = pages.first(where: { ($0.ocrConfidence ?? 0.8) < 0.58 }) {
+            findings.append(
+                AlphaExtractionFinding(
+                    caseId: caseId,
+                    documentId: documentID,
+                    kind: .lowConfidenceOcr,
+                    message: "Ross detected a low-confidence scan on at least one page. Review uncertain fields before relying on them.",
+                    sourceRefs: [AlphaSourceRef(caseId: caseId, documentId: documentID, documentTitle: "Imported document", pageNumber: page.pageNumber, textSnippet: page.snippet, ocrConfidence: page.ocrConfidence)],
+                    severity: .warning
+                )
+            )
+        }
+        return findings
+    }
+
+    private func buildCaseMemory(
+        caseId: UUID,
+        documentID: UUID,
+        classification: AlphaLegalDocumentClassification,
+        fields: [AlphaExtractedLegalField]
+    ) -> [AlphaCaseMemoryUpdate] {
+        let parties = fields.filter { $0.fieldType == .partyName }.map(\.value).joined(separator: " | ").ifEmpty("Not found")
+        let dates = fields.filter { $0.fieldType == .date }.map(\.value).joined(separator: " | ").ifEmpty("Not found")
+        let nextDate = fields.filter { $0.fieldType == .nextDate }.map(\.value).joined(separator: " | ").ifEmpty("Not found")
+        let directions = fields.filter { $0.fieldType == .orderDirection }.map(\.value).joined(separator: " | ").ifEmpty("Not found")
+        let issues = fields.filter { $0.fieldType == .issue }.map(\.value).joined(separator: " | ").ifEmpty("Not found")
+
+        var updates = [
+            AlphaCaseMemoryUpdate(
+                caseId: caseId,
+                source: .extractionRun,
+                summary: "Document classified as \(classification.type.rawValue). Parties: \(parties). Important dates: \(dates).",
+                affectedDocuments: [documentID]
+            )
+        ]
+        if directions != "Not found" || nextDate != "Not found" {
+            updates.append(
+                AlphaCaseMemoryUpdate(
+                    caseId: caseId,
+                    source: .extractionRun,
+                    summary: "Order and compliance candidate. Next date: \(nextDate). Directions: \(directions).",
+                    affectedDocuments: [documentID]
+                )
+            )
+        }
+        if issues != "Not found" {
+            updates.append(
+                AlphaCaseMemoryUpdate(
+                    caseId: caseId,
+                    source: .extractionRun,
+                    summary: "Issue candidate: \(issues).",
+                    affectedDocuments: [documentID]
+                )
+            )
+        }
+        return updates
+    }
+}
+
+private extension AlphaLocalExtractionOrchestrator {
+    struct ScriptCounts {
+        var latin = 0
+        var devanagari = 0
+        var other = 0
+    }
+
+    struct DateMatch {
+        var original: String
+        var normalized: String
+        var isNextDate: Bool
+    }
+
+    func scriptCounts(in value: String) -> ScriptCounts {
+        var counts = ScriptCounts()
+        for scalar in value.unicodeScalars {
+            switch scalar.value {
+            case 0x41 ... 0x5A, 0x61 ... 0x7A:
+                counts.latin += 1
+            case 0x0900 ... 0x097F, 0xA8E0 ... 0xA8FF:
+                counts.devanagari += 1
+            default:
+                if CharacterSet.letters.contains(scalar) {
+                    counts.other += 1
+                }
+            }
+        }
+        return counts
+    }
+
+    func appendField(
+        _ fields: inout [AlphaExtractedLegalField],
+        seen: inout Set<String>,
+        caseId: UUID,
+        documentId: UUID,
+        mode: AlphaExtractionMode,
+        source: AlphaSourceRef,
+        type: AlphaExtractedLegalFieldType,
+        label: String,
+        value: String,
+        normalizedValue: String?,
+        confidence: Double,
+        pass: AlphaExtractionPass,
+        ordinal: Int
+    ) {
+        let cleaned = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleaned.isEmpty else { return }
+        let dedupe = "\(type.rawValue):\(normalizedValue ?? normalizeForMatch(cleaned))"
+        guard seen.insert(dedupe).inserted else { return }
+        fields.append(
+            AlphaExtractedLegalField(
+                id: UUID(),
+                caseId: caseId,
+                documentId: documentId,
+                fieldType: type,
+                label: label,
+                value: cleaned,
+                normalizedValue: normalizedValue,
+                sourceRefs: [source],
+                confidence: confidence,
+                extractionMode: mode,
+                extractionPass: pass,
+                needsReview: confidence < 0.64
+            )
+        )
+    }
+
+    func extractCaseNumbers(from text: String) -> [String] {
+        let matches = regexMatches(CASE_NUMBER_PATTERN, in: text)
+        if !matches.isEmpty { return Array(matches.prefix(3)) }
+        return text
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { $0.contains("/") && $0.contains(where: { $0.isUppercase }) }
+            .prefix(3)
+            .map { $0 }
+    }
+
+    func extractCourts(from text: String) -> [String] {
+        text.components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter {
+                let lowered = $0.lowercased()
+                return lowered.contains("court") || lowered.contains("tribunal") || lowered.contains("commission")
+            }
+            .prefix(3)
+            .map { $0 }
+    }
+
+    func extractDates(from text: String) -> [DateMatch] {
+        text.components(separatedBy: .newlines)
+            .flatMap { line -> [DateMatch] in
+                let normalizedLine = normalizeOCRDigits(line)
+                let nsLine = normalizedLine as NSString
+                guard let regex = try? NSRegularExpression(pattern: DATE_PATTERN, options: [.caseInsensitive]) else { return [] }
+                return regex.matches(in: normalizedLine, range: NSRange(location: 0, length: nsLine.length)).compactMap { match in
+                    let value = nsLine.substring(with: match.range)
+                    let prefix = nsLine.substring(with: NSRange(location: 0, length: match.range.location)).lowercased()
+                    return DateMatch(
+                        original: value.trimmingCharacters(in: .whitespacesAndNewlines),
+                        normalized: value.replacingOccurrences(of: ".", with: "/").replacingOccurrences(of: "-", with: "/").replacingOccurrences(of: " ", with: ""),
+                        isNextDate: prefix.contains("next date") || prefix.contains("listed on")
+                    )
+                }
+            }
+            .prefix(6)
+            .map { $0 }
+    }
+
+    func extractSections(from text: String) -> [String] { regexMatches(SECTION_PATTERN, in: text, options: [.caseInsensitive], limit: 8) }
+    func extractExhibits(from text: String) -> [String] { regexMatches(EXHIBIT_PATTERN, in: text, options: [.caseInsensitive], limit: 8) }
+    func extractAmounts(from text: String) -> [String] { regexMatches(AMOUNT_PATTERN, in: text, options: [.caseInsensitive], limit: 5) }
+
+    func extractParties(from text: String) -> [String] {
+        for line in text.components(separatedBy: .newlines).map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) }) {
+            let lowered = line.lowercased()
+            let separator: String?
+            if lowered.contains(" versus ") {
+                separator = "versus"
+            } else if lowered.contains(" vs ") {
+                separator = "vs"
+            } else if lowered.contains(" v. ") {
+                separator = "v."
+            } else {
+                separator = nil
+            }
+            if let separator {
+                return line.components(separatedBy: separator)
+                    .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: " :-")) }
+                    .filter { !$0.isEmpty }
+                    .prefix(4)
+                    .map { $0 }
+            }
+        }
+        return []
+    }
+
+    func extractIssues(from text: String) -> [String] {
+        text.components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter {
+                let lowered = $0.lowercased()
+                return lowered.hasPrefix("issue") || lowered.hasPrefix("whether") || lowered.contains("point for consideration")
+            }
+            .prefix(4)
+            .map { $0 }
+    }
+
+    func extractOrderDirections(from text: String) -> [String] {
+        text.components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter {
+                let lowered = $0.lowercased()
+                return lowered.contains("it is directed") || lowered.contains("shall") || lowered.contains("listed on") || lowered.contains("next date") || lowered.contains("compliance")
+            }
+            .prefix(5)
+            .map { $0 }
+    }
+
+    func extractReliefs(from text: String) -> [String] {
+        text.components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter {
+                let lowered = $0.lowercased()
+                return lowered.hasPrefix("prayer") || lowered.contains("it is therefore prayed") || lowered.contains("relief sought")
+            }
+            .prefix(4)
+            .map { $0 }
+    }
+
+    func conflictFindings(caseId: UUID, documentID: UUID, fields: [AlphaExtractedLegalField]) -> [AlphaExtractionFinding] {
+        [
+            conflictFinding(caseId: caseId, documentID: documentID, fields: fields, type: .caseNumber, kind: .caseNumberConflict, message: "Ross found multiple competing case numbers. Review the supported value."),
+            conflictFinding(caseId: caseId, documentID: documentID, fields: fields, type: .date, kind: .dateConflict, message: "Ross found multiple important dates that may conflict. Review the supported source pages."),
+            conflictFinding(caseId: caseId, documentID: documentID, fields: fields, type: .partyName, kind: .partyConflict, message: "Ross found party naming variation that needs advocate review.")
+        ].compactMap { $0 }
+    }
+
+    func conflictFinding(
+        caseId: UUID,
+        documentID: UUID,
+        fields: [AlphaExtractedLegalField],
+        type: AlphaExtractedLegalFieldType,
+        kind: AlphaExtractionFindingKind,
+        message: String
+    ) -> AlphaExtractionFinding? {
+        let relevant = fields.filter { $0.fieldType == type }
+        let unique = Set(relevant.map { $0.normalizedValue ?? normalizeForMatch($0.value) })
+        guard relevant.count > 1, unique.count > 1 else { return nil }
+        return AlphaExtractionFinding(
+            caseId: caseId,
+            documentId: documentID,
+            kind: kind,
+            message: message,
+            sourceRefs: Array(relevant.flatMap(\.sourceRefs).prefix(4)),
+            severity: .warning
+        )
+    }
+
+    func regexMatches(_ pattern: String, in text: String, options: NSRegularExpression.Options = [], limit: Int = 3) -> [String] {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: options) else { return [] }
+        let nsText = text as NSString
+        return regex.matches(in: text, range: NSRange(location: 0, length: nsText.length))
+            .compactMap { match in
+                guard match.range.location != NSNotFound else { return nil }
+                return nsText.substring(with: match.range).trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            .prefix(limit)
+            .map { $0 }
+    }
+
+    func normalizeOCRDigits(_ value: String) -> String {
+        value.map { character in
+            switch character {
+            case "O", "o":
+                return "0"
+            case "I", "l", "|":
+                return "1"
+            default:
+                return character
+            }
+        }.reduce(into: "") { partialResult, character in
+            partialResult.append(character)
+        }
+    }
+
+    func normalizeForMatch(_ value: String) -> String {
+        normalizeOCRDigits(value)
+            .lowercased()
+            .map { $0.isLetter || $0.isNumber ? String($0) : " " }
+            .joined()
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    func scoreFieldConfidence(evidenceStrength: Double, sourceQuality: Double?, languageConfidence: Double, verified: Bool) -> Double {
+        let verificationBonus = verified ? 0.12 : -0.06
+        return min(max(evidenceStrength * 0.45 + (sourceQuality ?? 0.56) * 0.35 + languageConfidence * 0.2 + verificationBonus, 0.05), 0.98)
+    }
+}
+
+private extension String {
+    func ifEmpty(_ fallback: String) -> String {
+        isEmpty ? fallback : self
+    }
+}
+
+private let CASE_NUMBER_PATTERN = #"\b((?:[A-Z]{1,10}(?:\([A-Z]+\))?|W\.?P\.?|C\.?S\.?|M\.?A\.?|OA|Case|Petition|Appeal|Application|Suit)\s*(?:No\.?|Number)?\s*[:.-]?\s*[A-Z0-9./() -]{1,30}\d{1,8}/\d{2,4}|[A-Z]{2,12}/\d{1,8}/\d{4})\b"#
+private let DATE_PATTERN = #"\b(\d{1,2}[./-]\d{1,2}[./-]\d{2,4}|\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+\d{2,4})\b"#
+private let SECTION_PATTERN = #"\b(?:section|sections|u/s|under section)\s+[0-9A-Za-z/(), -]{1,40}"#
+private let EXHIBIT_PATTERN = #"\b(?:exhibit|ex\.?|annexure)\s+[A-Za-z0-9/-]{1,20}"#
+private let AMOUNT_PATTERN = #"(?:₹|rs\.?|inr)\s*[\d,]+(?:\.\d{2})?"#
 
 private struct AlphaEncryptedEnvelope: Codable {
     let version: Int

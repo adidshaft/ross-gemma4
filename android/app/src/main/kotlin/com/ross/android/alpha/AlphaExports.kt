@@ -71,29 +71,140 @@ class AlphaExportService(
     }
 
     internal fun buildDraft(kind: String, case: AlphaCaseMatter?, titleBase: String): AlphaExportDraft {
+        val ignoredFieldIds = case?.advocateCorrections.orEmpty()
+            .filter { it.correctionType == AlphaAdvocateCorrectionType.IgnoreField }
+            .mapNotNull { it.fieldId }
+            .toSet()
+        val allFields = case?.documents.orEmpty()
+            .flatMap { it.extractedFields }
+            .filterNot { it.id in ignoredFieldIds }
+        val verifiedFields = allFields.filterNot { it.needsReview }
+        val pendingFields = allFields.filter { it.needsReview }
+        val sourceRefs = if (verifiedFields.isEmpty()) {
+            case?.sourceRefs.orEmpty().take(6)
+        } else {
+            verifiedFields.flatMap { it.sourceRefs }.distinctBy { "${it.documentId}:${it.pageNumber}:${it.textSnippet}" }.take(8)
+        }
+        val verifiedMetadata = listOfNotNull(
+            verifiedFields.firstOrNull { it.fieldType == AlphaExtractedLegalFieldType.Court }?.let { "Court: ${it.value}" },
+            verifiedFields.firstOrNull { it.fieldType == AlphaExtractedLegalFieldType.CaseNumber }?.let { "Case number: ${it.value}" },
+            verifiedFields.filter { it.fieldType == AlphaExtractedLegalFieldType.PartyName }.takeIf { it.isNotEmpty() }?.joinToString(" | ", prefix = "Parties: ") { it.value },
+        )
+        val keyDates = verifiedFields.filter {
+            it.fieldType == AlphaExtractedLegalFieldType.Date || it.fieldType == AlphaExtractedLegalFieldType.NextDate
+        }
+        val orderDirections = allFields.filter { it.fieldType == AlphaExtractedLegalFieldType.OrderDirection }
+        val documents = case?.documents.orEmpty()
+
         val lines = buildList {
             add("Generated: ${now()}")
             add("Draft for advocate review")
             add("")
             add("Report type: ${kind.replace('_', ' ')}")
             add("")
-            add("Summary")
-            add(case?.summary ?: "No case selected.")
-            add("")
-            add("Issue highlights")
-            val issueHighlights = case?.issueHighlights.orEmpty()
-            if (issueHighlights.isEmpty()) {
-                add("- No issue highlights available yet.")
-            } else {
-                issueHighlights.forEach { add("- $it") }
+            when (kind) {
+                "chronology_report" -> {
+                    add("Chronology")
+                    if (keyDates.isEmpty()) {
+                        add("- No verified chronology dates available yet.")
+                    } else {
+                        keyDates.forEach { field ->
+                            val source = field.sourceRefs.firstOrNull()?.label ?: "Source pending"
+                            add("- ${field.label}: ${field.value} ($source)")
+                        }
+                    }
+                    add("")
+                    add("Review warnings")
+                    if (pendingFields.isEmpty()) {
+                        add("- No pending field review items.")
+                    } else {
+                        pendingFields.take(6).forEach { field ->
+                            add("- ${field.label}: ${field.value} (needs review)")
+                        }
+                    }
+                }
+
+                "case_note" -> {
+                    add("Verified case metadata")
+                    if (verifiedMetadata.isEmpty()) {
+                        add("- No verified case metadata available yet.")
+                    } else {
+                        verifiedMetadata.forEach { add("- $it") }
+                    }
+                    add("")
+                    add("Document list")
+                    if (documents.isEmpty()) {
+                        add("- No documents imported yet.")
+                    } else {
+                        documents.forEach { document -> add("- ${document.title} (${document.pageCount} pages)") }
+                    }
+                    add("")
+                    add("Key dates")
+                    if (keyDates.isEmpty()) {
+                        add("- No verified dates available yet.")
+                    } else {
+                        keyDates.forEach { field -> add("- ${field.label}: ${field.value}") }
+                    }
+                    add("")
+                    add("Pending review fields")
+                    if (pendingFields.isEmpty()) {
+                        add("- No pending review fields.")
+                    } else {
+                        pendingFields.take(8).forEach { field -> add("- ${field.label}: ${field.value}") }
+                    }
+                }
+
+                "order_summary" -> {
+                    add("Operative directions")
+                    if (orderDirections.isEmpty()) {
+                        add("- No operative directions found yet.")
+                    } else {
+                        orderDirections.forEach { field ->
+                            add("- ${field.value}${if (field.needsReview) " (needs review)" else ""}")
+                        }
+                    }
+                    add("")
+                    add("Next date")
+                    val nextDate = keyDates.firstOrNull { it.fieldType == AlphaExtractedLegalFieldType.NextDate }
+                    add(nextDate?.value ?: "Not found")
+                    add("")
+                    add("Compliance requirements")
+                    if (orderDirections.isEmpty()) {
+                        add("- Review the order manually for compliance language.")
+                    } else {
+                        orderDirections.forEach { field ->
+                            val source = field.sourceRefs.firstOrNull()?.label ?: "Source pending"
+                            add("- ${field.value} ($source)")
+                        }
+                    }
+                    add("")
+                    add("Needs review")
+                    if (pendingFields.isEmpty()) {
+                        add("- No pending review flags.")
+                    } else {
+                        pendingFields.take(6).forEach { field -> add("- ${field.label}: ${field.value}") }
+                    }
+                }
+
+                else -> {
+                    add("Summary")
+                    add(case?.summary ?: "No case selected.")
+                    add("")
+                    add("Issue highlights")
+                    val issueHighlights = case?.issueHighlights.orEmpty()
+                    if (issueHighlights.isEmpty()) {
+                        add("- No issue highlights available yet.")
+                    } else {
+                        issueHighlights.forEach { add("- $it") }
+                    }
+                }
             }
             add("")
             add("Source references")
-            val sourceRefs = case?.sourceRefs.orEmpty()
             if (sourceRefs.isEmpty()) {
                 add("- No source references available yet.")
             } else {
-                sourceRefs.take(6).forEach { add("- ${it.label}: ${it.detail}") }
+                sourceRefs.forEach { add("- ${it.label}: ${it.detail}") }
             }
             add("")
             add("Generated locally for advocate review. Verify all citations.")

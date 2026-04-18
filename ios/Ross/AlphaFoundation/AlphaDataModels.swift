@@ -34,11 +34,11 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
     var summary: String {
         switch self {
         case .quickStart:
-            "Basic summaries, short-file review, and lighter storage use."
+            "Basic extraction for short documents, simple summaries, and lighter storage use."
         case .caseAssociate:
-            "Source-backed case review, chronology work, and balanced local drafting."
+            "Better document understanding, stronger field extraction, mixed English/Hindi support, and source-backed chronology work."
         case .seniorDraftingSupport:
-            "Longer files, deeper issue analysis, and richer drafting support."
+            "Deeper review, verification pass, longer bilingual bundles, and evidence or issue analysis."
         }
     }
 
@@ -78,11 +78,22 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
     var bestFor: String {
         switch self {
         case .quickStart:
-            "Fast intake, smaller devices, and quick summaries."
+            "Fast intake, smaller devices, and standard extraction for short documents."
         case .caseAssociate:
-            "Most advocates who need source-backed case work on-device."
+            "Most advocates who need source-backed extraction, chronology work, and mixed-language review on-device."
         case .seniorDraftingSupport:
-            "Longer bundles, hearing prep, and deeper drafting support."
+            "Longer bundles, hearing prep, verification passes, and stronger bilingual workflows."
+        }
+    }
+
+    var extractionQuality: String {
+        switch self {
+        case .quickStart:
+            "Standard"
+        case .caseAssociate:
+            "Advanced"
+        case .seniorDraftingSupport:
+            "Advanced Plus"
         }
     }
 
@@ -275,6 +286,395 @@ struct AlphaSourceRef: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
+enum AlphaExtractionMode: String, Codable, Hashable, Sendable {
+    case basic
+    case quickStart = "quick_start"
+    case caseAssociate = "case_associate"
+    case seniorDraftingSupport = "senior_drafting_support"
+
+    static func fromTier(_ tier: AlphaCapabilityTier?) -> AlphaExtractionMode {
+        switch tier {
+        case .none:
+            .basic
+        case .quickStart:
+            .quickStart
+        case .caseAssociate:
+            .caseAssociate
+        case .seniorDraftingSupport:
+            .seniorDraftingSupport
+        }
+    }
+
+    var qualityLabel: String {
+        switch self {
+        case .basic:
+            "Basic"
+        case .quickStart:
+            "Standard"
+        case .caseAssociate:
+            "Advanced"
+        case .seniorDraftingSupport:
+            "Advanced Plus"
+        }
+    }
+}
+
+enum AlphaDocumentLanguage: String, Codable, Hashable, Sendable {
+    case english
+    case hindi
+    case mixed
+    case unknown
+}
+
+enum AlphaDocumentScript: String, Codable, Hashable, Sendable {
+    case latin
+    case devanagari
+    case mixed
+    case other
+    case unknown
+}
+
+struct AlphaDocumentLanguageProfilePage: Codable, Hashable, Sendable {
+    var pageNumber: Int
+    var language: AlphaDocumentLanguage
+    var script: AlphaDocumentScript
+    var confidence: Double
+}
+
+struct AlphaDocumentLanguageProfile: Codable, Hashable, Sendable {
+    var documentId: UUID
+    var primaryLanguage: AlphaDocumentLanguage
+    var scriptsDetected: [String]
+    var confidence: Double
+    var pageProfiles: [AlphaDocumentLanguageProfilePage]
+}
+
+enum AlphaLegalDocumentType: String, Codable, Hashable, Sendable {
+    case pleading
+    case order
+    case judgment
+    case affidavit
+    case notice
+    case evidence
+    case correspondence
+    case misc
+}
+
+struct AlphaLegalDocumentClassification: Codable, Hashable, Sendable {
+    var documentId: UUID
+    var type: AlphaLegalDocumentType
+    var subtype: String?
+    var confidence: Double
+    var sourceRefs: [AlphaSourceRef]
+    var needsReview: Bool
+}
+
+enum AlphaExtractedLegalFieldType: String, Codable, Hashable, Sendable {
+    case court
+    case caseNumber = "case_number"
+    case partyName = "party_name"
+    case advocateName = "advocate_name"
+    case judgeName = "judge_name"
+    case date
+    case nextDate = "next_date"
+    case section
+    case relief
+    case prayer
+    case orderDirection = "order_direction"
+    case limitationDate = "limitation_date"
+    case amount
+    case exhibitNumber = "exhibit_number"
+    case fact
+    case issue
+    case unknown
+
+    var title: String {
+        switch self {
+        case .court:
+            "Court"
+        case .caseNumber:
+            "Case number"
+        case .partyName:
+            "Party"
+        case .advocateName:
+            "Advocate"
+        case .judgeName:
+            "Judge"
+        case .date:
+            "Date"
+        case .nextDate:
+            "Next date"
+        case .section:
+            "Section"
+        case .relief:
+            "Relief"
+        case .prayer:
+            "Prayer"
+        case .orderDirection:
+            "Order direction"
+        case .limitationDate:
+            "Limitation date"
+        case .amount:
+            "Amount"
+        case .exhibitNumber:
+            "Exhibit"
+        case .fact:
+            "Fact"
+        case .issue:
+            "Issue"
+        case .unknown:
+            "Unknown"
+        }
+    }
+}
+
+enum AlphaExtractionPass: String, Codable, Hashable, Sendable {
+    case ocr
+    case regex
+    case llmExtract = "llm_extract"
+    case llmVerify = "llm_verify"
+    case userCorrected = "user_corrected"
+}
+
+struct AlphaExtractedLegalField: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID
+    var caseId: UUID
+    var documentId: UUID
+    var fieldType: AlphaExtractedLegalFieldType
+    var label: String
+    var value: String
+    var normalizedValue: String?
+    var sourceRefs: [AlphaSourceRef]
+    var confidence: Double
+    var extractionMode: AlphaExtractionMode
+    var extractionPass: AlphaExtractionPass
+    var needsReview: Bool
+    var userCorrected: Bool
+    var createdAt: Date
+    var updatedAt: Date
+
+    init(
+        id: UUID = UUID(),
+        caseId: UUID,
+        documentId: UUID,
+        fieldType: AlphaExtractedLegalFieldType,
+        label: String,
+        value: String,
+        normalizedValue: String? = nil,
+        sourceRefs: [AlphaSourceRef],
+        confidence: Double,
+        extractionMode: AlphaExtractionMode,
+        extractionPass: AlphaExtractionPass,
+        needsReview: Bool,
+        userCorrected: Bool = false,
+        createdAt: Date = .now,
+        updatedAt: Date = .now
+    ) {
+        self.id = id
+        self.caseId = caseId
+        self.documentId = documentId
+        self.fieldType = fieldType
+        self.label = label
+        self.value = value
+        self.normalizedValue = normalizedValue
+        self.sourceRefs = sourceRefs
+        self.confidence = confidence
+        self.extractionMode = extractionMode
+        self.extractionPass = extractionPass
+        self.needsReview = needsReview
+        self.userCorrected = userCorrected
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+
+    var confidenceLabel: String {
+        if needsReview || confidence < 0.64 {
+            return "Needs review"
+        }
+        if confidence >= 0.84 {
+            return "High"
+        }
+        return "Medium"
+    }
+}
+
+enum AlphaExtractionRunStatus: String, Codable, Hashable, Sendable {
+    case queued
+    case running
+    case needsReview = "needs_review"
+    case complete
+    case failed
+    case cancelled
+}
+
+struct AlphaExtractionRun: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID
+    var caseId: UUID
+    var documentId: UUID
+    var mode: AlphaExtractionMode
+    var status: AlphaExtractionRunStatus
+    var startedAt: Date?
+    var completedAt: Date?
+    var pagesProcessed: Int
+    var totalPages: Int
+    var fieldsExtracted: Int
+    var fieldsNeedingReview: Int
+    var warnings: [String]
+    var errorMessage: String?
+
+    init(
+        id: UUID = UUID(),
+        caseId: UUID,
+        documentId: UUID,
+        mode: AlphaExtractionMode,
+        status: AlphaExtractionRunStatus,
+        startedAt: Date? = nil,
+        completedAt: Date? = nil,
+        pagesProcessed: Int,
+        totalPages: Int,
+        fieldsExtracted: Int,
+        fieldsNeedingReview: Int,
+        warnings: [String],
+        errorMessage: String? = nil
+    ) {
+        self.id = id
+        self.caseId = caseId
+        self.documentId = documentId
+        self.mode = mode
+        self.status = status
+        self.startedAt = startedAt
+        self.completedAt = completedAt
+        self.pagesProcessed = pagesProcessed
+        self.totalPages = totalPages
+        self.fieldsExtracted = fieldsExtracted
+        self.fieldsNeedingReview = fieldsNeedingReview
+        self.warnings = warnings
+        self.errorMessage = errorMessage
+    }
+}
+
+enum AlphaExtractionFindingKind: String, Codable, Hashable, Sendable {
+    case lowConfidenceOcr = "low_confidence_ocr"
+    case languageUncertain = "language_uncertain"
+    case possibleMissingPage = "possible_missing_page"
+    case dateConflict = "date_conflict"
+    case partyConflict = "party_conflict"
+    case caseNumberConflict = "case_number_conflict"
+    case ambiguousOrderDirection = "ambiguous_order_direction"
+    case possibleHandwriting = "possible_handwriting"
+    case unsupportedLayout = "unsupported_layout"
+}
+
+enum AlphaExtractionFindingSeverity: String, Codable, Hashable, Sendable {
+    case info
+    case warning
+    case critical
+}
+
+struct AlphaExtractionFinding: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID
+    var caseId: UUID
+    var documentId: UUID
+    var kind: AlphaExtractionFindingKind
+    var message: String
+    var sourceRefs: [AlphaSourceRef]
+    var severity: AlphaExtractionFindingSeverity
+    var resolved: Bool
+
+    init(
+        id: UUID = UUID(),
+        caseId: UUID,
+        documentId: UUID,
+        kind: AlphaExtractionFindingKind,
+        message: String,
+        sourceRefs: [AlphaSourceRef],
+        severity: AlphaExtractionFindingSeverity,
+        resolved: Bool = false
+    ) {
+        self.id = id
+        self.caseId = caseId
+        self.documentId = documentId
+        self.kind = kind
+        self.message = message
+        self.sourceRefs = sourceRefs
+        self.severity = severity
+        self.resolved = resolved
+    }
+}
+
+enum AlphaAdvocateCorrectionType: String, Codable, Hashable, Sendable {
+    case fieldValue = "field_value"
+    case documentType = "document_type"
+    case language
+    case date
+    case party
+    case sourceRef = "source_ref"
+    case ignoreField = "ignore_field"
+}
+
+struct AlphaAdvocateCorrection: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID
+    var caseId: UUID
+    var documentId: UUID
+    var fieldId: UUID?
+    var oldValue: String?
+    var newValue: String
+    var correctionType: AlphaAdvocateCorrectionType
+    var createdAt: Date
+
+    init(
+        id: UUID = UUID(),
+        caseId: UUID,
+        documentId: UUID,
+        fieldId: UUID? = nil,
+        oldValue: String? = nil,
+        newValue: String,
+        correctionType: AlphaAdvocateCorrectionType,
+        createdAt: Date = .now
+    ) {
+        self.id = id
+        self.caseId = caseId
+        self.documentId = documentId
+        self.fieldId = fieldId
+        self.oldValue = oldValue
+        self.newValue = newValue
+        self.correctionType = correctionType
+        self.createdAt = createdAt
+    }
+}
+
+enum AlphaCaseMemoryUpdateSource: String, Codable, Hashable, Sendable {
+    case extractionRun = "extraction_run"
+    case userCorrection = "user_correction"
+    case askCase = "ask_case"
+    case manualNote = "manual_note"
+}
+
+struct AlphaCaseMemoryUpdate: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID
+    var caseId: UUID
+    var source: AlphaCaseMemoryUpdateSource
+    var summary: String
+    var affectedDocuments: [UUID]
+    var createdAt: Date
+
+    init(
+        id: UUID = UUID(),
+        caseId: UUID,
+        source: AlphaCaseMemoryUpdateSource,
+        summary: String,
+        affectedDocuments: [UUID],
+        createdAt: Date = .now
+    ) {
+        self.id = id
+        self.caseId = caseId
+        self.source = source
+        self.summary = summary
+        self.affectedDocuments = affectedDocuments
+        self.createdAt = createdAt
+    }
+}
+
 struct AlphaCaseDocument: Identifiable, Codable, Hashable, Sendable {
     let id: UUID
     var title: String
@@ -289,6 +689,11 @@ struct AlphaCaseDocument: Identifiable, Codable, Hashable, Sendable {
     var dominantSourceSnippet: String?
     var lastIndexedAt: Date?
     var pages: [AlphaDocumentPage]
+    var languageProfile: AlphaDocumentLanguageProfile?
+    var classification: AlphaLegalDocumentClassification?
+    var extractedFields: [AlphaExtractedLegalField]
+    var extractionRuns: [AlphaExtractionRun]
+    var extractionFindings: [AlphaExtractionFinding]
 
     init(
         id: UUID = UUID(),
@@ -303,7 +708,12 @@ struct AlphaCaseDocument: Identifiable, Codable, Hashable, Sendable {
         extractedText: String? = nil,
         dominantSourceSnippet: String? = nil,
         lastIndexedAt: Date? = nil,
-        pages: [AlphaDocumentPage]
+        pages: [AlphaDocumentPage],
+        languageProfile: AlphaDocumentLanguageProfile? = nil,
+        classification: AlphaLegalDocumentClassification? = nil,
+        extractedFields: [AlphaExtractedLegalField] = [],
+        extractionRuns: [AlphaExtractionRun] = [],
+        extractionFindings: [AlphaExtractionFinding] = []
     ) {
         self.id = id
         self.title = title
@@ -318,6 +728,11 @@ struct AlphaCaseDocument: Identifiable, Codable, Hashable, Sendable {
         self.dominantSourceSnippet = dominantSourceSnippet
         self.lastIndexedAt = lastIndexedAt
         self.pages = pages
+        self.languageProfile = languageProfile
+        self.classification = classification
+        self.extractedFields = extractedFields
+        self.extractionRuns = extractionRuns
+        self.extractionFindings = extractionFindings
     }
 }
 
@@ -360,6 +775,8 @@ struct AlphaCaseMatter: Identifiable, Codable, Hashable, Sendable {
     var documents: [AlphaCaseDocument]
     var sourceRefs: [AlphaSourceRef]
     var chatTurns: [AlphaChatTurn]
+    var advocateCorrections: [AlphaAdvocateCorrection]
+    var caseMemoryUpdates: [AlphaCaseMemoryUpdate]
     var updatedAt: Date
 
     init(
@@ -376,6 +793,8 @@ struct AlphaCaseMatter: Identifiable, Codable, Hashable, Sendable {
         documents: [AlphaCaseDocument],
         sourceRefs: [AlphaSourceRef],
         chatTurns: [AlphaChatTurn] = [],
+        advocateCorrections: [AlphaAdvocateCorrection] = [],
+        caseMemoryUpdates: [AlphaCaseMemoryUpdate] = [],
         updatedAt: Date = .now
     ) {
         self.id = id
@@ -391,6 +810,8 @@ struct AlphaCaseMatter: Identifiable, Codable, Hashable, Sendable {
         self.documents = documents
         self.sourceRefs = sourceRefs
         self.chatTurns = chatTurns
+        self.advocateCorrections = advocateCorrections
+        self.caseMemoryUpdates = caseMemoryUpdates
         self.updatedAt = updatedAt
     }
 }

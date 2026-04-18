@@ -19,6 +19,11 @@ let package = Package(
             name: "Ross",
             path: "Ross",
             exclude: ["Resources"]
+        ),
+        .testTarget(
+            name: "RossTests",
+            dependencies: ["Ross"],
+            path: "Tests/RossTests"
         )
     ]
 )

@@ -10,6 +10,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -19,13 +23,21 @@ import java.util.UUID
 enum class AlphaOnboardingStage { Onboarding, PrivateAiPack, Completed }
 enum class AlphaAppTab { Cases, PublicLaw, Exports, Settings }
 enum class AlphaCapabilityTier(val tierId: String, val title: String, val summary: String, val downloadSizeLabel: String, val installedSizeLabel: String) {
-    QuickStart("quick_start", "Quick Start", "Basic summaries, short-file review, and lighter storage use.", "1.2 GB", "2.1 GB"),
-    CaseAssociate("case_associate", "Case Associate", "Source-backed case review, chronology work, and balanced local drafting.", "2.8 GB", "4.9 GB"),
-    SeniorDraftingSupport("senior_drafting_support", "Senior Drafting Support", "Longer files, deeper issue analysis, and richer drafting support.", "4.6 GB", "7.4 GB");
+    QuickStart("quick_start", "Quick Start", "Basic extraction for short documents, simple summaries, and lighter storage use.", "1.2 GB", "2.1 GB"),
+    CaseAssociate("case_associate", "Case Associate", "Better document understanding, stronger field extraction, mixed English/Hindi support, and source-backed chronology work.", "2.8 GB", "4.9 GB"),
+    SeniorDraftingSupport("senior_drafting_support", "Senior Drafting Support", "Deeper review, verification pass, longer bilingual bundles, and evidence or issue analysis.", "4.6 GB", "7.4 GB");
+
+    val extractionQuality: String
+        get() = when (this) {
+            QuickStart -> "Standard"
+            CaseAssociate -> "Advanced"
+            SeniorDraftingSupport -> "Advanced Plus"
+        }
 }
 enum class AlphaCaseStage { Intake, Pleadings, Evidence, Arguments, Reserved }
 enum class AlphaDocumentKind { Pdf, Image, Text, Unknown }
-enum class AlphaOcrStatus { NotStarted, Indexed, Placeholder }
+enum class AlphaOcrStatus { NotStarted, Indexed, Placeholder, NativeText, OcrComplete, Partial, Failed }
+enum class AlphaIndexingStatus { NotStarted, Extracting, Indexed, Partial, Failed }
 enum class AlphaDownloadState { NotStarted, Queued, Downloading, PausedWaitingForWifi, PausedUser, PausedNoStorage, PausedError, Verifying, Installed, Failed, Cancelled }
 enum class AlphaDownloadPolicy { WifiOnly, MobileAllowed }
 enum class AlphaPrivacyPurpose { LocalOnly, ModelCatalog, ModelDownload, ModelVerification, PublicLawSearch }
@@ -35,6 +47,11 @@ data class AlphaDocumentPage(
     val id: String = UUID.randomUUID().toString(),
     val pageNumber: Int,
     val snippet: String? = null,
+    val extractedText: String? = null,
+    val anchorText: String? = null,
+    val ocrConfidence: Double? = null,
+    val ocrStatus: AlphaOcrStatus? = null,
+    val indexingStatus: AlphaIndexingStatus? = null,
 )
 
 data class AlphaSourceRef(
@@ -61,7 +78,15 @@ data class AlphaCaseDocument(
     val pageCount: Int,
     val ocrStatus: AlphaOcrStatus,
     val extractedText: String? = null,
+    val indexingStatus: AlphaIndexingStatus? = null,
+    val dominantSourceSnippet: String? = null,
+    val lastIndexedAt: String? = null,
     val pages: List<AlphaDocumentPage>,
+    val languageProfile: AlphaDocumentLanguageProfile? = null,
+    val classification: AlphaLegalDocumentClassification? = null,
+    val extractedFields: List<AlphaExtractedLegalField> = emptyList(),
+    val extractionRuns: List<AlphaExtractionRun> = emptyList(),
+    val extractionFindings: List<AlphaExtractionFinding> = emptyList(),
 )
 
 data class AlphaChatTurn(
@@ -87,6 +112,8 @@ data class AlphaCaseMatter(
     val documents: List<AlphaCaseDocument>,
     val sourceRefs: List<AlphaSourceRef>,
     val chatTurns: List<AlphaChatTurn> = emptyList(),
+    val advocateCorrections: List<AlphaAdvocateCorrection> = emptyList(),
+    val caseMemoryUpdates: List<AlphaCaseMemoryUpdate> = emptyList(),
     val updatedAt: String = nowIso(),
 )
 
@@ -215,8 +242,12 @@ class AlphaRossController(private val context: Context) {
         aadLabel = context.packageName,
     )
     private val exportService = AlphaExportService(rootDir, exportsDir)
+    private val backend = AlphaBackendClient(gson = gson)
+    private val extractionOrchestrator = AlphaLocalExtractionOrchestrator(context)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     var persisted by mutableStateOf(loadState())
+    var pendingRoute by mutableStateOf<AndroidAlphaRoute?>(null)
 
     var selectedCaseId by mutableStateOf(persisted.cases.firstOrNull()?.id)
     var selectedTier by mutableStateOf(persisted.settings.activeTier ?: AlphaCapabilityTier.CaseAssociate)
@@ -239,6 +270,10 @@ class AlphaRossController(private val context: Context) {
     }
 
     fun save() = saveState(persisted)
+
+    fun consumePendingRoute() {
+        pendingRoute = null
+    }
 
     fun advanceOnboarding() {
         persisted = persisted.copy(onboardingStage = AlphaOnboardingStage.PrivateAiPack)
@@ -309,26 +344,58 @@ class AlphaRossController(private val context: Context) {
             AlphaDocumentKind.Pdf -> inferPdfPageCount(target)
             else -> 1
         }
-        val extractedText = if (kind == AlphaDocumentKind.Text) {
-            runCatching { FileInputStream(target).bufferedReader().readText().take(2_000) }.getOrNull()
-        } else {
-            null
+        val seedSnippet = when (kind) {
+            AlphaDocumentKind.Text -> runCatching { target.readText().replace(Regex("\\s+"), " ").take(180) }.getOrNull()
+            AlphaDocumentKind.Image -> "Imported image page. Ross is extracting text locally."
+            AlphaDocumentKind.Pdf -> "Imported PDF. Ross is reviewing pages locally."
+            AlphaDocumentKind.Unknown -> "Imported source reference."
         }
-        val pageSnippet = extractedText?.take(140) ?: if (pageCount > 1) "Imported page 1." else "Imported source reference."
+        val documentId = UUID.randomUUID().toString()
         val document = AlphaCaseDocument(
+            id = documentId,
             title = uri.lastPathSegment?.substringBeforeLast('.') ?: "Imported document",
             fileName = uri.lastPathSegment ?: target.name,
             kind = kind,
             storedRelativePath = target.relativeTo(rootDir).path,
             pageCount = pageCount,
-            ocrStatus = if (kind == AlphaDocumentKind.Text) AlphaOcrStatus.Indexed else AlphaOcrStatus.Placeholder,
-            extractedText = extractedText,
+            ocrStatus = when (kind) {
+                AlphaDocumentKind.Text -> AlphaOcrStatus.NativeText
+                AlphaDocumentKind.Image, AlphaDocumentKind.Pdf -> AlphaOcrStatus.Placeholder
+                AlphaDocumentKind.Unknown -> AlphaOcrStatus.Placeholder
+            },
+            extractedText = if (kind == AlphaDocumentKind.Text) seedSnippet else null,
+            indexingStatus = when (kind) {
+                AlphaDocumentKind.Text -> AlphaIndexingStatus.Indexed
+                AlphaDocumentKind.Image, AlphaDocumentKind.Pdf -> AlphaIndexingStatus.Extracting
+                AlphaDocumentKind.Unknown -> AlphaIndexingStatus.NotStarted
+            },
+            dominantSourceSnippet = seedSnippet,
+            lastIndexedAt = if (kind == AlphaDocumentKind.Text) nowIso() else null,
             pages = (1..pageCount).map { page ->
                 AlphaDocumentPage(
                     pageNumber = page,
-                    snippet = if (page == 1) pageSnippet else "Imported page $page.",
+                    snippet = if (page == 1) seedSnippet else "Imported page $page.",
+                    extractedText = if (page == 1 && kind == AlphaDocumentKind.Text) seedSnippet else null,
+                    anchorText = if (page == 1) seedSnippet else null,
+                    ocrConfidence = if (kind == AlphaDocumentKind.Text) 0.99 else null,
+                    ocrStatus = if (kind == AlphaDocumentKind.Text) AlphaOcrStatus.NativeText else AlphaOcrStatus.Placeholder,
+                    indexingStatus = if (kind == AlphaDocumentKind.Text) AlphaIndexingStatus.Indexed else AlphaIndexingStatus.Extracting,
                 )
             },
+            extractionRuns = listOf(
+                AlphaExtractionRun(
+                    caseId = caseId,
+                    documentId = documentId,
+                    mode = AlphaExtractionMode.fromTier(persisted.settings.activeTier),
+                    status = AlphaExtractionRunStatus.Running,
+                    startedAt = nowIso(),
+                    pagesProcessed = 0,
+                    totalPages = pageCount,
+                    fieldsExtracted = 0,
+                    fieldsNeedingReview = 0,
+                    warnings = emptyList(),
+                )
+            ),
         )
         val sourceRef = AlphaSourceRef(
             caseId = caseId,
@@ -336,7 +403,7 @@ class AlphaRossController(private val context: Context) {
             documentTitle = document.title,
             pageNumber = 1,
             textSnippet = document.extractedText ?: "Imported source reference",
-            ocrConfidence = if (kind == AlphaDocumentKind.Image) null else 0.92,
+            ocrConfidence = if (kind == AlphaDocumentKind.Text) 0.99 else null,
         )
         persisted = persisted.copy(
             cases = persisted.cases.map { case ->
@@ -348,7 +415,11 @@ class AlphaRossController(private val context: Context) {
             },
             ledgerEntries = listOf(localLedger("Document imported locally", "${document.title} was copied into app-private storage.")) + persisted.ledgerEntries,
         )
+        pendingRoute = AndroidAlphaRoute.DocumentViewer(caseId, document.id, 1)
         save()
+        scope.launch {
+            runExtractionForDocument(caseId, document.id)
+        }
         return true
     }
 
@@ -384,34 +455,39 @@ class AlphaRossController(private val context: Context) {
 
     fun runPublicLawSearch() {
         val preview = publicLawPreview ?: return
-        publicLawResults = listOf(
-            AlphaPublicLawResult(
-                title = "Delay condonation and documented diligence",
-                citation = "(2024) 7 SCC 112",
-                snippet = "Diligence, chronology, and the absence of strategic delay remain central to condonation review.",
-                sourceName = "Official or licensed source (preview)",
-            ),
-            AlphaPublicLawResult(
-                title = "Administrative fairness in filing-delay matters",
-                citation = "2023 SCC OnLine SC 881",
-                snippet = "A brief disruption may be weighed differently where the record shows prompt corrective action and contemporaneous documentation.",
-                sourceName = "Official or licensed source (preview)",
-            ),
-        )
-        persisted = persisted.copy(
-            publicLawCache = listOf(AlphaPublicLawCacheItem(query = preview.query, resultTitles = publicLawResults.map { it.title })) + persisted.publicLawCache,
-            ledgerEntries = listOf(
-                AlphaPrivacyLedgerEntry(
-                    title = "Public-law query sent",
-                    detail = "Only a sanitized public query crossed the network boundary.",
-                    purpose = AlphaPrivacyPurpose.PublicLawSearch,
-                    payloadClass = AlphaPayloadClass.SanitizedPublicQuery,
-                    endpointLabel = "/public-law/search",
-                    success = true,
-                )
-            ) + persisted.ledgerEntries,
-        )
-        save()
+        scope.launch {
+            val backendResults = runCatching { backend.searchPublicLaw(preview) }
+            publicLawResults = backendResults.getOrElse {
+                    listOf(
+                        AlphaPublicLawResult(
+                            title = "Delay condonation and documented diligence",
+                            citation = "(2024) 7 SCC 112",
+                            snippet = "Diligence, chronology, and the absence of strategic delay remain central to condonation review.",
+                            sourceName = "Official or licensed source (preview)",
+                        ),
+                        AlphaPublicLawResult(
+                            title = "Administrative fairness in filing-delay matters",
+                            citation = "2023 SCC OnLine SC 881",
+                            snippet = "A brief disruption may be weighed differently where the record shows prompt corrective action and contemporaneous documentation.",
+                            sourceName = "Official or licensed source (preview)",
+                        ),
+                    )
+                }
+            persisted = persisted.copy(
+                publicLawCache = listOf(AlphaPublicLawCacheItem(query = preview.query, resultTitles = publicLawResults.map { it.title })) + persisted.publicLawCache,
+                ledgerEntries = listOf(
+                    AlphaPrivacyLedgerEntry(
+                        title = "Public-law query sent",
+                        detail = "Only a sanitized public query crossed the network boundary.",
+                        purpose = AlphaPrivacyPurpose.PublicLawSearch,
+                        payloadClass = AlphaPayloadClass.SanitizedPublicQuery,
+                        endpointLabel = "/public-law/search",
+                        success = backendResults.isSuccess,
+                    )
+                ) + persisted.ledgerEntries,
+            )
+            save()
+        }
     }
 
     fun generateExport(kind: String, caseId: String?) {
@@ -434,23 +510,9 @@ class AlphaRossController(private val context: Context) {
             now = now,
         )
         val waitingForWifi = stagedJob.state == AlphaDownloadState.PausedWaitingForWifi
-        val installation = if (waitingForWifi) {
-            null
-        } else {
-            AlphaModelPackManager.finalizeInstall(
-                rootDir = rootDir,
-                job = stagedJob.copy(state = AlphaDownloadState.Verifying, updatedAt = now),
-                now = now,
-            )
-        }
         persisted = persisted.copy(
             settings = persisted.settings.copy(activeTier = if (waitingForWifi) persisted.settings.activeTier else tier),
-            modelJobs = listOf(installation?.job ?: stagedJob) + persisted.modelJobs.filterNot { it.tier == tier },
-            installedPacks = if (installation?.installedPack == null) {
-                persisted.installedPacks
-            } else {
-                listOf(installation.installedPack) + persisted.installedPacks.map { it.copy(isActive = false) }.filterNot { it.tier == tier }
-            },
+            modelJobs = listOf(stagedJob) + persisted.modelJobs.filterNot { it.tier == tier },
             ledgerEntries = listOf(
                 AlphaPrivacyLedgerEntry(
                     title = "Model catalog checked",
@@ -461,16 +523,21 @@ class AlphaRossController(private val context: Context) {
                     success = true,
                 ),
                 AlphaPrivacyLedgerEntry(
-                    title = if (waitingForWifi) "Private AI Pack waiting for Wi-Fi" else "Private AI Pack installed",
-                    detail = if (waitingForWifi) "Model delivery is paused until you allow a trusted network." else "Checksum and install metadata were prepared locally.",
-                    purpose = if (waitingForWifi) AlphaPrivacyPurpose.ModelDownload else AlphaPrivacyPurpose.ModelVerification,
+                    title = if (waitingForWifi) "Private AI Pack waiting for Wi-Fi" else "Private AI Pack queued",
+                    detail = if (waitingForWifi) "Model delivery is paused until you allow a trusted network." else "Model delivery started without reading case files.",
+                    purpose = AlphaPrivacyPurpose.ModelDownload,
                     payloadClass = AlphaPayloadClass.NoCaseData,
-                    endpointLabel = if (waitingForWifi) "/model-download/session" else "device://model-verify",
-                    success = installation?.job?.state != AlphaDownloadState.Failed,
+                    endpointLabel = "/model-download/session",
+                    success = true,
                 ),
-            ) + (installation?.ledgerEntries ?: emptyList()) + persisted.ledgerEntries,
+            ) + persisted.ledgerEntries,
         )
         save()
+        if (!waitingForWifi) {
+            scope.launch {
+                runPackInstall(stagedJob)
+            }
+        }
     }
 
     fun pauseJob(jobId: String) {
@@ -510,6 +577,336 @@ class AlphaRossController(private val context: Context) {
         AlphaSourceNavigator.resolve(document(caseId, documentId), sourceRefsForDocument(caseId, documentId), requestedPage)
 
     fun absoluteFile(relativePath: String): File = File(rootDir, relativePath)
+
+    fun visibleExtractedFields(caseId: String, documentId: String): List<AlphaExtractedLegalField> {
+        val ignoredIds = ignoredFieldIds(caseId, documentId)
+        return document(caseId, documentId)?.extractedFields?.filterNot { it.id in ignoredIds } ?: emptyList()
+    }
+
+    fun ignoredFieldIds(caseId: String, documentId: String): Set<String> =
+        persisted.cases.firstOrNull { it.id == caseId }
+            ?.advocateCorrections
+            ?.filter { it.documentId == documentId && it.correctionType == AlphaAdvocateCorrectionType.IgnoreField }
+            ?.mapNotNull { it.fieldId }
+            ?.toSet()
+            ?: emptySet()
+
+    fun acceptExtractedField(caseId: String, documentId: String, fieldId: String) {
+        persisted = persisted.copy(
+            cases = persisted.cases.map { case ->
+                if (case.id == caseId) {
+                    case.copy(
+                        documents = case.documents.map { document ->
+                            if (document.id == documentId) {
+                                document.copy(
+                                    extractedFields = document.extractedFields.map { field ->
+                                        if (field.id == fieldId) field.copy(needsReview = false, updatedAt = nowIso()) else field
+                                    }
+                                )
+                            } else document
+                        },
+                        updatedAt = nowIso(),
+                    )
+                } else case
+            }
+        )
+        save()
+    }
+
+    fun ignoreExtractedField(caseId: String, documentId: String, fieldId: String) {
+        val field = document(caseId, documentId)?.extractedFields?.firstOrNull { it.id == fieldId } ?: return
+        persisted = persisted.copy(
+            cases = persisted.cases.map { case ->
+                if (case.id == caseId) {
+                    case.copy(
+                        advocateCorrections = listOf(
+                            AlphaAdvocateCorrection(
+                                caseId = caseId,
+                                documentId = documentId,
+                                fieldId = fieldId,
+                                oldValue = field.value,
+                                newValue = "",
+                                correctionType = AlphaAdvocateCorrectionType.IgnoreField,
+                            )
+                        ) + case.advocateCorrections,
+                        caseMemoryUpdates = listOf(
+                            AlphaCaseMemoryUpdate(
+                                caseId = caseId,
+                                source = AlphaCaseMemoryUpdateSource.UserCorrection,
+                                summary = "Advocate ignored ${field.label.lowercase()} for local review.",
+                                affectedDocuments = listOf(documentId),
+                            )
+                        ) + case.caseMemoryUpdates,
+                        updatedAt = nowIso(),
+                    )
+                } else case
+            }
+        )
+        save()
+    }
+
+    fun applyFieldCorrection(caseId: String, documentId: String, fieldId: String, newValue: String) {
+        val trimmed = newValue.trim()
+        if (trimmed.isEmpty()) return
+        val previous = document(caseId, documentId)?.extractedFields?.firstOrNull { it.id == fieldId } ?: return
+        persisted = persisted.copy(
+            cases = persisted.cases.map { case ->
+                if (case.id == caseId) {
+                    case.copy(
+                        documents = case.documents.map { document ->
+                            if (document.id == documentId) {
+                                document.copy(
+                                    extractedFields = document.extractedFields.map { field ->
+                                        if (field.id == fieldId) {
+                                            field.copy(
+                                                value = trimmed,
+                                                normalizedValue = trimmed.lowercase(),
+                                                extractionPass = AlphaExtractionPass.UserCorrected,
+                                                needsReview = false,
+                                                userCorrected = true,
+                                                updatedAt = nowIso(),
+                                            )
+                                        } else field
+                                    }
+                                )
+                            } else document
+                        },
+                        advocateCorrections = listOf(
+                            AlphaAdvocateCorrection(
+                                caseId = caseId,
+                                documentId = documentId,
+                                fieldId = fieldId,
+                                oldValue = previous.value,
+                                newValue = trimmed,
+                                correctionType = AlphaAdvocateCorrectionType.FieldValue,
+                            )
+                        ) + case.advocateCorrections,
+                        caseMemoryUpdates = listOf(
+                            AlphaCaseMemoryUpdate(
+                                caseId = caseId,
+                                source = AlphaCaseMemoryUpdateSource.UserCorrection,
+                                summary = "Advocate corrected ${previous.label.lowercase()} to \"$trimmed\".",
+                                affectedDocuments = listOf(documentId),
+                            )
+                        ) + case.caseMemoryUpdates,
+                        updatedAt = nowIso(),
+                    )
+                } else case
+            }
+        )
+        save()
+    }
+
+    fun updateDocumentClassification(caseId: String, documentId: String, newType: AlphaLegalDocumentType) {
+        persisted = persisted.copy(
+            cases = persisted.cases.map { case ->
+                if (case.id == caseId) {
+                    case.copy(
+                        documents = case.documents.map { document ->
+                            if (document.id == documentId) {
+                                document.copy(
+                                    classification = document.classification?.copy(
+                                        type = newType,
+                                        needsReview = false,
+                                    )
+                                )
+                            } else document
+                        },
+                        advocateCorrections = listOf(
+                            AlphaAdvocateCorrection(
+                                caseId = caseId,
+                                documentId = documentId,
+                                newValue = newType.name,
+                                correctionType = AlphaAdvocateCorrectionType.DocumentType,
+                            )
+                        ) + case.advocateCorrections,
+                        updatedAt = nowIso(),
+                    )
+                } else case
+            }
+        )
+        save()
+    }
+
+    private suspend fun runExtractionForDocument(caseId: String, documentId: String) {
+        val currentDocument = document(caseId, documentId) ?: return
+        val file = absoluteFile(currentDocument.storedRelativePath)
+        val result = runCatching {
+            extractionOrchestrator.extract(
+                caseId = caseId,
+                document = currentDocument,
+                file = file,
+                activeTier = persisted.settings.activeTier,
+            )
+        }.getOrNull()
+
+        if (result == null) {
+            persisted = persisted.copy(
+                cases = persisted.cases.map { case ->
+                    if (case.id == caseId) {
+                        case.copy(
+                            documents = case.documents.map { document ->
+                                if (document.id == documentId) {
+                                    document.copy(
+                                        extractionRuns = listOf(
+                                            AlphaExtractionRun(
+                                                caseId = caseId,
+                                                documentId = documentId,
+                                                mode = AlphaExtractionMode.fromTier(persisted.settings.activeTier),
+                                                status = AlphaExtractionRunStatus.Failed,
+                                                startedAt = nowIso(),
+                                                completedAt = nowIso(),
+                                                pagesProcessed = 0,
+                                                totalPages = document.pageCount,
+                                                fieldsExtracted = 0,
+                                                fieldsNeedingReview = 0,
+                                                warnings = listOf("Ross could not complete local extraction on this document."),
+                                                errorMessage = "Local extraction failed.",
+                                            )
+                                        )
+                                    )
+                                } else document
+                            },
+                            updatedAt = nowIso(),
+                        )
+                    } else case
+                }
+            )
+            save()
+            return
+        }
+
+        val pageSourceRefs = result.pages.mapNotNull { page ->
+            val snippet = page.anchorText ?: page.snippet
+            snippet?.let {
+                AlphaSourceRef(
+                    caseId = caseId,
+                    documentId = documentId,
+                    documentTitle = currentDocument.title,
+                    pageNumber = page.pageNumber,
+                    textSnippet = it,
+                    ocrConfidence = page.ocrConfidence,
+                )
+            }
+        }
+
+        persisted = persisted.copy(
+            cases = persisted.cases.map { case ->
+                if (case.id == caseId) {
+                    case.copy(
+                        documents = case.documents.map { document ->
+                            if (document.id == documentId) {
+                                document.copy(
+                                    ocrStatus = result.pages.mapNotNull { it.ocrStatus }.firstOrNull { it != AlphaOcrStatus.Placeholder } ?: document.ocrStatus,
+                                    extractedText = result.pages.mapNotNull { it.extractedText }.joinToString("\n\n").ifBlank { null },
+                                    indexingStatus = result.pages.mapNotNull { it.indexingStatus }.lastOrNull() ?: document.indexingStatus,
+                                    dominantSourceSnippet = result.pages.firstOrNull()?.snippet,
+                                    lastIndexedAt = nowIso(),
+                                    pages = result.pages,
+                                    languageProfile = result.languageProfile,
+                                    classification = result.classification,
+                                    extractedFields = result.extractedFields,
+                                    extractionRuns = listOf(result.extractionRun),
+                                    extractionFindings = result.findings,
+                                )
+                            } else document
+                        },
+                        sourceRefs = (pageSourceRefs + case.sourceRefs).distinctBy { "${it.documentId}:${it.pageNumber}:${it.textSnippet}" },
+                        issueHighlights = mergeHighlights(case.issueHighlights, result.extractedFields.filter { it.fieldType == AlphaExtractedLegalFieldType.Issue }.map { it.value }),
+                        evidenceNotes = mergeHighlights(case.evidenceNotes, result.extractedFields.filter { it.fieldType == AlphaExtractedLegalFieldType.ExhibitNumber }.map { it.value }),
+                        caseMemoryUpdates = result.caseMemoryUpdates + case.caseMemoryUpdates,
+                        updatedAt = nowIso(),
+                    )
+                } else case
+            },
+            ledgerEntries = listOf(localLedger("Local extraction completed", "Ross reviewed the document locally and prepared source-backed fields for advocate review.")) + persisted.ledgerEntries,
+        )
+        save()
+    }
+
+    private suspend fun runPackInstall(initialJob: AlphaModelDownloadJob) {
+        val backendCatalog = runCatching { backend.fetchCatalog(persisted) }
+        val catalog = backendCatalog.getOrNull()
+        val pack = catalog?.packs?.firstOrNull { it.tier == initialJob.tier.tierId }
+        val jobAfterCatalog = initialJob.copy(
+            packId = pack?.packId ?: initialJob.packId,
+            totalBytes = pack?.sizeBytes ?: initialJob.totalBytes,
+            checksumSha256 = pack?.checksumSha256 ?: initialJob.checksumSha256,
+            updatedAt = nowIso(),
+        )
+        persisted = persisted.copy(
+            modelJobs = listOf(jobAfterCatalog) + persisted.modelJobs.filterNot { it.id == initialJob.id }
+        )
+        save()
+
+        val installation = runCatching {
+            val session = backend.createDownloadSession(jobAfterCatalog)
+            val downloaded = backend.downloadArtifact(session) { downloadedBytes ->
+                persisted = persisted.copy(
+                    modelJobs = persisted.modelJobs.map { job ->
+                        if (job.id == initialJob.id) job.copy(
+                            state = AlphaDownloadState.Downloading,
+                            sessionId = session.sessionId,
+                            packId = session.packId,
+                            bytesDownloaded = downloadedBytes,
+                            totalBytes = session.artifact.sizeBytes,
+                            checksumSha256 = session.artifact.finalSha256,
+                            updatedAt = nowIso(),
+                        ) else job
+                    }
+                )
+                save()
+            }
+            val verified = AlphaModelPackManager.finalizeInstall(
+                rootDir = rootDir,
+                job = jobAfterCatalog.copy(
+                    sessionId = session.sessionId,
+                    packId = session.packId,
+                    state = AlphaDownloadState.Verifying,
+                    bytesDownloaded = downloaded.bytes,
+                    totalBytes = session.artifact.sizeBytes,
+                    checksumSha256 = session.artifact.finalSha256,
+                    updatedAt = nowIso(),
+                ),
+                artifactBytes = downloaded.data,
+                now = nowIso(),
+            )
+            Pair(true, verified)
+        }.getOrElse {
+            val fallback = AlphaModelPackManager.finalizeInstall(
+                rootDir = rootDir,
+                job = jobAfterCatalog.copy(state = AlphaDownloadState.Verifying, updatedAt = nowIso()),
+                now = nowIso(),
+            )
+            Pair(false, fallback)
+        }
+
+        val backendWorked = installation.first
+        val progress = installation.second
+        persisted = persisted.copy(
+            settings = persisted.settings.copy(activeTier = progress.installedPack?.tier ?: persisted.settings.activeTier),
+            modelJobs = listOf(progress.job) + persisted.modelJobs.filterNot { it.id == initialJob.id },
+            installedPacks = if (progress.installedPack == null) {
+                persisted.installedPacks
+            } else {
+                listOf(progress.installedPack) + persisted.installedPacks.map { it.copy(isActive = false) }.filterNot { it.tier == progress.installedPack.tier }
+            },
+            ledgerEntries = listOf(
+                AlphaPrivacyLedgerEntry(
+                    title = if (backendWorked) "Private AI Pack verified" else "Private AI Pack fallback installed",
+                    detail = if (backendWorked) "Checksum and install metadata were verified locally after backend delivery." else "The backend was unavailable, so Ross prepared a local development artifact without case data.",
+                    purpose = AlphaPrivacyPurpose.ModelVerification,
+                    payloadClass = AlphaPayloadClass.NoCaseData,
+                    endpointLabel = if (backendWorked) "device://model-verify" else "device://model-verify",
+                    success = progress.job.state != AlphaDownloadState.Failed,
+                )
+            ) + progress.ledgerEntries + persisted.ledgerEntries,
+        )
+        save()
+    }
+
+    private fun mergeHighlights(existing: List<String>, additions: List<String>): List<String> =
+        (additions + existing).filter { it.isNotBlank() }.distinct().take(5)
 
     private fun saveState(state: AlphaPersistedState) {
         encryptedStateStore.save(state)
