@@ -29,6 +29,25 @@ pub enum LocalModelTask {
     IssueExtraction,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LocalRuntimeMode {
+    DeterministicDev,
+    MediapipeLlm,
+    Gemma 4 E4B Q4CppGguf,
+    AppleFoundationModels,
+    Unavailable,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LocalModelArtifactKind {
+    TinyDevArtifact,
+    LocalModelArtifact,
+    SystemModel,
+    ExternalDebugModel,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct SourceTextBlock {
     pub source_ref: SourceRef,
@@ -60,18 +79,68 @@ pub struct LocalModelOutput {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct LocalResourceEstimate {
-    pub estimated_runtime_ms: u64,
-    pub estimated_memory_mb: u32,
+pub struct LocalRuntimeHealth {
+    pub runtime_mode: LocalRuntimeMode,
+    pub available: bool,
+    pub model_path_present: bool,
+    pub checksum_verified: bool,
+    pub supported_tasks: Vec<LocalModelTask>,
+    pub max_input_chars: Option<usize>,
+    pub estimated_context_tokens: Option<u32>,
+    pub last_error_category: Option<String>,
+    pub user_facing_status: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ModelPromptPolicy {
+    pub store_raw_prompt: bool,
+    pub store_raw_source_text: bool,
+    pub allow_network: bool,
+    pub require_source_refs: bool,
+    pub require_schema_validation: bool,
+}
+
+impl Default for ModelPromptPolicy {
+    fn default() -> Self {
+        Self {
+            store_raw_prompt: false,
+            store_raw_source_text: false,
+            allow_network: false,
+            require_source_refs: true,
+            require_schema_validation: true,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct LocalModelResourceEstimate {
+    pub input_chars: usize,
+    pub estimated_tokens: Option<u32>,
+    pub estimated_memory_mb: Option<u32>,
+    pub estimated_duration_seconds: Option<u32>,
+    pub should_run_now: bool,
+    pub reason: Option<String>,
     pub notes: Vec<String>,
 }
+
+pub type LocalResourceEstimate = LocalModelResourceEstimate;
 
 pub trait LocalModelProvider {
     fn is_available(&self) -> bool;
     fn capability_tier(&self) -> CapabilityTierId;
+    fn runtime_mode(&self) -> LocalRuntimeMode;
     fn supported_tasks(&self) -> Vec<LocalModelTask>;
+    fn runtime_health(&self) -> LocalRuntimeHealth;
+    fn context_window_estimate(&self) -> Option<u32>;
+    fn max_input_chars(&self) -> Option<usize>;
+    fn prompt_policy(&self) -> ModelPromptPolicy {
+        ModelPromptPolicy::default()
+    }
     fn run(&self, task_input: &LocalModelInput) -> LocalModelOutput;
-    fn estimate_cost_or_resource_use(&self, input: &LocalModelInput) -> LocalResourceEstimate;
+    fn run_streaming(&self, _task_input: &LocalModelInput) -> Option<Vec<LocalModelOutput>> {
+        None
+    }
+    fn estimate_cost_or_resource_use(&self, input: &LocalModelInput) -> LocalModelResourceEstimate;
     fn cancel(&self, invocation_id: &str) -> bool;
 }
 
@@ -87,6 +156,10 @@ impl LocalModelProvider for DeterministicDevLocalModelProvider {
         CapabilityTierId::CaseAssociate
     }
 
+    fn runtime_mode(&self) -> LocalRuntimeMode {
+        LocalRuntimeMode::DeterministicDev
+    }
+
     fn supported_tasks(&self) -> Vec<LocalModelTask> {
         vec![
             LocalModelTask::OcrCleanup,
@@ -99,6 +172,28 @@ impl LocalModelProvider for DeterministicDevLocalModelProvider {
             LocalModelTask::OrderSummary,
             LocalModelTask::IssueExtraction,
         ]
+    }
+
+    fn runtime_health(&self) -> LocalRuntimeHealth {
+        LocalRuntimeHealth {
+            runtime_mode: self.runtime_mode(),
+            available: true,
+            model_path_present: false,
+            checksum_verified: true,
+            supported_tasks: self.supported_tasks(),
+            max_input_chars: self.max_input_chars(),
+            estimated_context_tokens: self.context_window_estimate(),
+            last_error_category: None,
+            user_facing_status: "Deterministic development runtime active.".to_string(),
+        }
+    }
+
+    fn context_window_estimate(&self) -> Option<u32> {
+        Some(4_096)
+    }
+
+    fn max_input_chars(&self) -> Option<usize> {
+        Some(12_000)
     }
 
     fn run(&self, task_input: &LocalModelInput) -> LocalModelOutput {
@@ -298,10 +393,21 @@ impl LocalModelProvider for DeterministicDevLocalModelProvider {
         }
     }
 
-    fn estimate_cost_or_resource_use(&self, input: &LocalModelInput) -> LocalResourceEstimate {
-        LocalResourceEstimate {
-            estimated_runtime_ms: (input.source_pack.len().max(1) * 120) as u64,
-            estimated_memory_mb: (input.source_pack.len().max(1) * 6) as u32,
+    fn estimate_cost_or_resource_use(&self, input: &LocalModelInput) -> LocalModelResourceEstimate {
+        let input_chars = input.source_pack.iter().map(|block| block.text.chars().count()).sum::<usize>();
+        LocalModelResourceEstimate {
+            input_chars,
+            estimated_tokens: Some(((input_chars as f32) / 4.0).ceil() as u32),
+            estimated_memory_mb: Some((input.source_pack.len().max(1) * 6) as u32),
+            estimated_duration_seconds: Some((input.source_pack.len().max(1) as u32).max(1)),
+            should_run_now: self
+                .max_input_chars()
+                .map(|limit| input_chars <= limit)
+                .unwrap_or(true),
+            reason: self
+                .max_input_chars()
+                .filter(|limit| input_chars > *limit)
+                .map(|limit| format!("Prompt pack exceeded the deterministic safety budget of {limit} characters.")),
             notes: vec!["Deterministic development provider estimate.".to_string()],
         }
     }
@@ -315,6 +421,9 @@ impl LocalModelProvider for DeterministicDevLocalModelProvider {
 pub struct PlatformLocalModelProvider {
     pub capability_tier: CapabilityTierId,
     pub installed_model_path: Option<String>,
+    pub runtime_mode: LocalRuntimeMode,
+    pub artifact_kind: LocalModelArtifactKind,
+    pub checksum_verified: bool,
 }
 
 impl LocalModelProvider for PlatformLocalModelProvider {
@@ -326,8 +435,40 @@ impl LocalModelProvider for PlatformLocalModelProvider {
         self.capability_tier
     }
 
+    fn runtime_mode(&self) -> LocalRuntimeMode {
+        self.runtime_mode
+    }
+
     fn supported_tasks(&self) -> Vec<LocalModelTask> {
         vec![]
+    }
+
+    fn runtime_health(&self) -> LocalRuntimeHealth {
+        LocalRuntimeHealth {
+            runtime_mode: self.runtime_mode(),
+            available: false,
+            model_path_present: self.installed_model_path.is_some(),
+            checksum_verified: self.checksum_verified,
+            supported_tasks: self.supported_tasks(),
+            max_input_chars: self.max_input_chars(),
+            estimated_context_tokens: self.context_window_estimate(),
+            last_error_category: Some("runtime_unavailable".to_string()),
+            user_facing_status: match self.artifact_kind {
+                LocalModelArtifactKind::TinyDevArtifact => {
+                    "Local model runtime unavailable; Ross will fall back to deterministic development behavior."
+                        .to_string()
+                }
+                _ => "Local model runtime unavailable. Install a compatible local runtime or adapter.".to_string(),
+            },
+        }
+    }
+
+    fn context_window_estimate(&self) -> Option<u32> {
+        None
+    }
+
+    fn max_input_chars(&self) -> Option<usize> {
+        None
     }
 
     fn run(&self, task_input: &LocalModelInput) -> LocalModelOutput {
@@ -347,10 +488,15 @@ impl LocalModelProvider for PlatformLocalModelProvider {
         }
     }
 
-    fn estimate_cost_or_resource_use(&self, input: &LocalModelInput) -> LocalResourceEstimate {
-        LocalResourceEstimate {
-            estimated_runtime_ms: 0,
-            estimated_memory_mb: 0,
+    fn estimate_cost_or_resource_use(&self, input: &LocalModelInput) -> LocalModelResourceEstimate {
+        let input_chars = input.source_pack.iter().map(|block| block.text.chars().count()).sum::<usize>();
+        LocalModelResourceEstimate {
+            input_chars,
+            estimated_tokens: Some(((input_chars as f32) / 4.0).ceil() as u32),
+            estimated_memory_mb: None,
+            estimated_duration_seconds: None,
+            should_run_now: false,
+            reason: Some("Runtime unavailable".to_string()),
             notes: vec![format!(
                 "Runtime unavailable for {:?}; Ross will fail safely or fall back deterministically.",
                 input.task

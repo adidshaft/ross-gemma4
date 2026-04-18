@@ -34,6 +34,7 @@ export class ModelDownloadService {
       artifactKind: pack.artifactKind,
       runtimeMode: pack.runtimeMode,
       developmentOnly: pack.developmentOnly,
+      minimumAppVersion: pack.minimumAppVersion,
       artifact: {
         artifactId: artifact.artifactId,
         fileName: artifact.fileName,
@@ -43,6 +44,7 @@ export class ModelDownloadService {
         artifactKind: pack.artifactKind,
         runtimeMode: pack.runtimeMode,
         developmentOnly: pack.developmentOnly,
+        minimumAppVersion: pack.minimumAppVersion,
         segmentSizeBytes: artifact.segmentSizeBytes,
         segmentCount: artifact.segmentCount,
         downloadPath: artifact.path,

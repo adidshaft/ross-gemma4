@@ -4,6 +4,18 @@ import { signPayload } from "../utils/signing.js";
 import { getDevArtifactDescriptor } from "../model_download/dev_artifacts.js";
 
 export type CapabilityTier = "quick_start" | "case_associate" | "senior_drafting_support";
+export type ModelArtifactKind =
+  | "tiny_dev_artifact"
+  | "local_model_artifact"
+  | "system_model"
+  | "external_debug_model";
+
+export type LocalRuntimeMode =
+  | "deterministic_dev"
+  | "mediapipe_llm"
+  | "gemma_local_runtime"
+  | "apple_foundation_models"
+  | "unavailable";
 
 export interface ModelPack {
   packId: string;
@@ -13,9 +25,10 @@ export interface ModelPack {
   segmentSizeBytes: number;
   technicalModels: string[];
   artifactSeed: string;
-  artifactKind: "tiny_dev_artifact";
-  runtimeMode: "deterministic_dev" | "platform_stub";
+  artifactKind: ModelArtifactKind;
+  runtimeMode: LocalRuntimeMode;
   developmentOnly: boolean;
+  minimumAppVersion: string | null;
 }
 
 export const MODEL_PACKS: ModelPack[] = [
@@ -29,7 +42,8 @@ export const MODEL_PACKS: ModelPack[] = [
     artifactSeed: "ross-dev-quick-start-v1",
     artifactKind: "tiny_dev_artifact",
     runtimeMode: "deterministic_dev",
-    developmentOnly: true
+    developmentOnly: true,
+    minimumAppVersion: null
   },
   {
     packId: "case-associate-pack",
@@ -41,7 +55,8 @@ export const MODEL_PACKS: ModelPack[] = [
     artifactSeed: "ross-dev-case-associate-v1",
     artifactKind: "tiny_dev_artifact",
     runtimeMode: "deterministic_dev",
-    developmentOnly: true
+    developmentOnly: true,
+    minimumAppVersion: null
   },
   {
     packId: "senior-drafting-support-pack",
@@ -53,7 +68,8 @@ export const MODEL_PACKS: ModelPack[] = [
     artifactSeed: "ross-dev-senior-drafting-support-v1",
     artifactKind: "tiny_dev_artifact",
     runtimeMode: "deterministic_dev",
-    developmentOnly: true
+    developmentOnly: true,
+    minimumAppVersion: null
   }
 ];
 
@@ -89,6 +105,7 @@ export class ModelCatalogService {
           artifactKind: pack.artifactKind,
           runtimeMode: pack.runtimeMode,
           developmentOnly: pack.developmentOnly,
+          minimumAppVersion: pack.minimumAppVersion,
           resumable: true,
           deliveryBoundary: "no_case_data"
         };

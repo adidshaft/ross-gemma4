@@ -1,11 +1,14 @@
 use ross_core::{
     build_extraction_pipeline_plan, collect_warnings, extraction_mode_for_pack, input_hash_for_input,
     output_hash_for_output, parse_output_json, prompt_hash_for_input, source_ref_for_page,
-    validate_classification, validate_fields, CapabilityTierId, DeterministicDevLocalModelProvider,
-    DocumentExtractionInput, DocumentLanguage, DocumentLanguageProfile, DocumentScript,
-    ExtractionFindingKind, ExtractionMode, ExtractedLegalField, InstalledModelPack, InstallationState,
-    LegalDocumentClassification, LegalDocumentType, LegalFieldType, LocalModelInput, LocalModelProvider,
-    LocalModelInvocation, LocalModelOutput, LocalModelTask, PageText, PlatformLocalModelProvider,
+    validate_case_memory_updates, validate_chronology_entries, validate_classification, validate_fields,
+    validate_order_summary_payload, verified_field_disposition, CapabilityTierId,
+    ChronologyEntry, DeterministicDevLocalModelProvider, DocumentExtractionInput, DocumentLanguage,
+    DocumentLanguageProfile, DocumentScript, EvaluationRun, ExtractionFindingKind, ExtractionMode,
+    ExtractedLegalField, InstalledModelPack, InstallationState, LegalDocumentClassification,
+    LegalDocumentType, LegalFieldType, LocalModelArtifactKind, LocalModelInput, LocalModelProvider,
+    LocalModelInvocation, LocalModelOutput, LocalModelTask, LocalRuntimeMode, OrderSummaryPayload,
+    PageText, PlatformLocalModelProvider, VerifiedFieldDisposition,
 };
 use serde::Deserialize;
 
@@ -304,12 +307,110 @@ fn platform_provider_fails_safely_without_runtime() {
     let provider = PlatformLocalModelProvider {
         capability_tier: CapabilityTierId::CaseAssociate,
         installed_model_path: Some("/tmp/model.bin".to_string()),
+        runtime_mode: LocalRuntimeMode::Unavailable,
+        artifact_kind: LocalModelArtifactKind::LocalModelArtifact,
+        checksum_verified: false,
     };
     let output = provider.run(&sample_input(LocalModelTask::LegalFieldExtraction));
 
     assert!(!provider.is_available());
+    assert_eq!(provider.runtime_mode(), LocalRuntimeMode::Unavailable);
+    assert!(!provider.runtime_health().checksum_verified);
     assert!(!output.schema_valid);
     assert!(!output.warnings.is_empty());
+}
+
+#[test]
+fn deterministic_provider_reports_runtime_health_and_budget() {
+    let provider = DeterministicDevLocalModelProvider;
+    let health = provider.runtime_health();
+    let estimate = provider.estimate_cost_or_resource_use(&sample_input(LocalModelTask::LegalFieldExtraction));
+
+    assert_eq!(health.runtime_mode, LocalRuntimeMode::DeterministicDev);
+    assert!(health.available);
+    assert_eq!(health.user_facing_status, "Deterministic development runtime active.");
+    assert!(estimate.should_run_now);
+    assert!(estimate.input_chars > 0);
+    assert!(estimate.estimated_tokens.unwrap_or_default() > 0);
+}
+
+#[test]
+fn schema_specific_output_validators_reject_missing_source_refs() {
+    let chronology = validate_chronology_entries(vec![ChronologyEntry {
+        label: "Next date".to_string(),
+        value: "26/05/2026".to_string(),
+        source_refs: vec![source(2, "26/05/2026")],
+        needs_review: false,
+    }])
+    .expect("chronology should validate");
+    assert_eq!(chronology.len(), 1);
+
+    let summary = validate_order_summary_payload(OrderSummaryPayload {
+        operative_directions: vec!["Reply within two weeks".to_string()],
+        next_dates: vec!["26/05/2026".to_string()],
+        source_refs: vec![source(2, "Reply within two weeks")],
+    })
+    .expect("summary should validate");
+    assert_eq!(summary.next_dates.len(), 1);
+
+    let updates = validate_case_memory_updates(vec![ross_core::CaseMemoryUpdate {
+        id: "memory-1".to_string(),
+        case_id: "case-1".to_string(),
+        source: ross_core::CaseMemoryUpdateSource::ExtractionRun,
+        summary: "Next date and directions captured.".to_string(),
+        affected_documents: vec!["doc-1".to_string()],
+        created_at: "now".to_string(),
+    }])
+    .expect("case memory should validate");
+    assert_eq!(updates.len(), 1);
+}
+
+#[test]
+fn field_disposition_marks_rejected_and_needs_review_separately() {
+    let provider = DeterministicDevLocalModelProvider;
+    let output = provider.run(&sample_input(LocalModelTask::LegalFieldExtraction));
+    let mut supported =
+        parse_output_json::<Vec<ExtractedLegalField>>(&output).expect("deterministic extraction should parse");
+    let verified = supported.remove(0);
+    assert_eq!(verified_field_disposition(&verified), VerifiedFieldDisposition::Verified);
+
+    let mut needs_review = verified.clone();
+    needs_review.needs_review = true;
+    assert_eq!(
+        verified_field_disposition(&needs_review),
+        VerifiedFieldDisposition::NeedsReview
+    );
+
+    let mut rejected = verified.clone();
+    rejected.source_refs.clear();
+    assert_eq!(
+        verified_field_disposition(&rejected),
+        VerifiedFieldDisposition::Rejected
+    );
+}
+
+#[test]
+fn evaluation_run_invariant_requires_zero_unsupported_acceptance() {
+    let run = EvaluationRun {
+        id: "eval-1".to_string(),
+        runtime_mode: "deterministic_dev".to_string(),
+        extraction_mode: "case_associate".to_string(),
+        fixture_id: "fixture-pleading".to_string(),
+        started_at: "2026-04-19T00:00:00Z".to_string(),
+        completed_at: "2026-04-19T00:00:02Z".to_string(),
+        fields_expected: 8,
+        fields_found: 7,
+        fields_verified: 6,
+        fields_needing_review: 1,
+        unsupported_accepted: 0,
+        schema_valid: true,
+        source_coverage: 0.91,
+        notes: vec!["deterministic fixture regression".to_string()],
+    };
+
+    assert!(run.invariant_holds());
+    assert!(run.field_recall() > 0.8);
+    assert!(run.verified_precision_proxy() > 0.8);
 }
 
 #[test]

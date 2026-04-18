@@ -1,10 +1,34 @@
 use crate::extraction::{
-    field_is_source_backed, DocumentExtractionInput, ExtractionFinding, ExtractedLegalField,
-    LegalDocumentClassification,
+    field_is_source_backed, CaseMemoryUpdate, DocumentExtractionInput, ExtractionFinding,
+    ExtractedLegalField, LegalDocumentClassification, LegalFieldType, SourceRef,
 };
 use crate::legal_fields::{DeterministicLegalFieldVerifier, VerificationResult};
 use crate::local_model::LocalModelOutput;
 use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum VerifiedFieldDisposition {
+    Verified,
+    NeedsReview,
+    Rejected,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ChronologyEntry {
+    pub label: String,
+    pub value: String,
+    pub source_refs: Vec<SourceRef>,
+    pub needs_review: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct OrderSummaryPayload {
+    pub operative_directions: Vec<String>,
+    pub next_dates: Vec<String>,
+    pub source_refs: Vec<SourceRef>,
+}
 
 pub fn parse_output_json<T: DeserializeOwned>(output: &LocalModelOutput) -> Result<T, String> {
     let payload = repair_json_payload(output)
@@ -52,6 +76,46 @@ pub fn validate_fields(
         fields: filtered_fields,
         findings: verification.findings,
     }
+}
+
+pub fn verified_field_disposition(field: &ExtractedLegalField) -> VerifiedFieldDisposition {
+    if field.source_refs.is_empty() || field.value.trim().is_empty() {
+        return VerifiedFieldDisposition::Rejected;
+    }
+    if field.needs_review || matches!(field.field_type, LegalFieldType::Unknown) {
+        return VerifiedFieldDisposition::NeedsReview;
+    }
+    VerifiedFieldDisposition::Verified
+}
+
+pub fn validate_verification_payload(
+    input: &DocumentExtractionInput,
+    fields: Vec<ExtractedLegalField>,
+) -> VerificationResult {
+    validate_fields(input, fields)
+}
+
+pub fn validate_case_memory_updates(updates: Vec<CaseMemoryUpdate>) -> Result<Vec<CaseMemoryUpdate>, String> {
+    if updates.iter().any(|update| update.summary.trim().is_empty()) {
+        return Err("Case memory update summary must not be empty.".to_string());
+    }
+    Ok(updates)
+}
+
+pub fn validate_chronology_entries(entries: Vec<ChronologyEntry>) -> Result<Vec<ChronologyEntry>, String> {
+    if entries.iter().any(|entry| entry.source_refs.is_empty() || entry.value.trim().is_empty()) {
+        return Err("Chronology entries must keep source refs and non-empty values.".to_string());
+    }
+    Ok(entries)
+}
+
+pub fn validate_order_summary_payload(
+    summary: OrderSummaryPayload,
+) -> Result<OrderSummaryPayload, String> {
+    if summary.source_refs.is_empty() {
+        return Err("Order summary must retain source refs.".to_string());
+    }
+    Ok(summary)
 }
 
 pub fn collect_warnings(findings: &[ExtractionFinding]) -> Vec<String> {
