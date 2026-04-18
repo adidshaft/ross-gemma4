@@ -1,50 +1,69 @@
 # Product Overview
 
-Ross is a private legal workbench for Indian advocates. The app is designed to help with chronology extraction, issue spotting, order analysis, evidence matrices, case notes, hearing preparation, and draft work product while keeping case materials local to the device.
+Ross is a privacy-first legal workbench for Indian advocates. It is designed to make legal documents meaningfully useful on-device through layered extraction, source-backed review, chronology building, issue spotting, order analysis, and local drafting support.
 
-## Primary user
+## Product direction
 
-- Individual advocates
-- Small chambers
-- Senior counsel support teams
-- Firm users who need local-first drafting support
+Ross is not a cloud case processor and it is not an OCR-only tool.
+
+The product direction is:
+
+- acquire text locally
+- understand language and document type locally
+- extract legally important fields locally
+- verify important fields locally
+- preserve source anchors
+- show uncertainty honestly
+- ask the advocate to correct only what needs review
+- turn reviewed extraction into local case memory
+
+## Primary users
+
+- individual advocates
+- small chambers
+- senior counsel support teams
+- firm users who need local-first case review and drafting support
 
 ## Product pillars
 
 1. Privacy-first local execution
-2. Clear separation between case data and network traffic
-3. Source-backed outputs for advocate review
-4. Lightweight install with post-install Private AI Pack delivery
-5. Serious, readable, practice-oriented mobile UX
+2. Law-grade source-backed extraction
+3. Clear separation between case data and network traffic
+4. Extraction quality that scales with the installed Private AI Pack
+5. Practical advocate review UX instead of hidden automation
 
 ## Key workflows
 
-1. Install app and complete minimal setup
-2. Pick a friendly `Private AI Pack`
-3. Create a case and import or capture documents
-4. OCR and index documents locally
-5. Ask source-backed questions
-6. Generate chronology, issues, evidence matrix, or drafting support
-7. Optionally run public-law search with a sanitized query preview
-8. Export professional reports and review the Privacy Ledger
+1. Install the app and complete minimal setup.
+2. Choose a Private AI Pack or continue in Basic mode.
+3. Create a case and import or capture documents.
+4. Run local text acquisition and local language detection.
+5. Review extracted details with confidence and source chips.
+6. Correct only the uncertain fields.
+7. Generate chronology, issue, order-summary, and case-note drafts locally.
+8. Optionally run public-law search with a sanitized query preview.
+9. Review the Privacy Ledger and share local exports.
 
 ## Feature set
 
-- Local OCR and indexing
-- Case vault with encrypted local storage
-- Source-cited case Q&A
-- Chronology and issue extraction
-- Order summarization
-- Evidence matrix generation
-- Drafts for advocate review
-- Optional public-law search through a separate proxy flow
-- Model pack management, download resumption, and pack lifecycle
-- Visible Privacy Ledger
+- encrypted local case storage
+- local PDF and image ingestion
+- English/Hindi/mixed script detection
+- source-backed extracted legal fields
+- document classification
+- chronology candidates
+- issue and relief candidates
+- order-direction and next-date extraction
+- advocate review queue with accept/edit/ignore actions
+- local exports with source refs and review warnings
+- Private AI Pack management
+- visible Privacy Ledger
 
 ## Non-goals
 
-- Public legal advice
-- Lead generation or marketplace behavior
-- Silent cloud case processing
-- Bundled giant AI assets in the initial install
-
+- public legal advice
+- silent cloud case processing
+- advocate marketplace behavior
+- analytics-driven case monitoring
+- remote case storage or sync in this phase
+- pretending low-confidence extraction is certain

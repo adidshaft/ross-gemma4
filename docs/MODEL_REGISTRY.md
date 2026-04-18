@@ -1,64 +1,60 @@
 # Model Registry
 
-The onboarding flow shows only user-friendly capability tiers. Technical model names are reserved for internal evaluation, settings technical details, and engineering documentation.
+Ross shows advocate-friendly capability packs in product UI. Technical model names are hidden from onboarding and routine settings because the user-facing promise is extraction quality, not model branding.
 
-## User-facing capability tiers
+## User-facing packs
+
+### Basic
+
+- Available with no Private AI Pack installed.
+- Uses local text acquisition, local OCR where available, heuristics, and deterministic extraction.
+- Best for import, preview, basic extraction, and local review.
 
 ### Quick Start
 
-- Basic document cleanup
-- Short summaries
-- Small-file case Q&A
-- Basic chronology extraction
+- Extraction quality: `Standard`
+- Best for short documents, lighter cleanup, and simple summaries.
+- Some fields may still need manual review.
 
 ### Case Associate
 
-- Source-backed case Q&A
-- 50+ page PDF summarization
-- Chronologies
-- Issue extraction
-- Order summaries
-- Evidence matrix
+- Extraction quality: `Advanced`
+- Best for better document understanding, stronger field extraction, mixed English/Hindi handling, chronologies, and order summaries.
 
 ### Senior Drafting Support
 
-- Longer-document workflows
-- Deeper issue and evidence analysis
-- Better bilingual drafting support
-- Senior counsel briefs
-- Hearing preparation notes
+- Extraction quality: `Advanced Plus`
+- Best for deeper review, verifier/refiner passes, longer bundles, and stronger bilingual workflows.
 
-## Hidden technical registry candidates
+## Registry principles
 
-These are placeholders for packaging and evaluation only. The repo does not ship the model binaries.
+- Do not show technical model names in onboarding.
+- Present capability tiers as advocate workflows, not inference internals.
+- Keep installation separate from the base app.
+- Allow the product to remain usable without a pack.
+- Prefer local model-assisted extraction, verification, and synthesis when a pack is installed.
 
-- `gemma-4-e2b-q4`
-  - candidate default local LLM
-  - summaries, Q&A, chronology, issue extraction
-- `gemma-4-e4b-q4`
-  - stronger local LLM
-  - longer files, richer drafting
-- `embeddinggemma-300m-int8`
-  - local embeddings
-  - semantic search and local RAG
-- `llama-3.2-3b-q4`
-  - lower-end fallback
-  - compact summarization and classification
-- `qwen3-4b-thinking-q4`
-  - experimental internal evaluation candidate
-  - not enabled in onboarding
+## Engineering registry notes
+
+The current architecture supports:
+
+- lightweight local model-assisted extraction interfaces
+- stronger local extraction passes for Case Associate
+- deeper verifier/refiner passes for Senior Drafting Support
+- future local VLM-capable or multimodal passes for scan-heavy documents
+
+The repo does not ship large production binaries in source control.
 
 ## Delivery principles
 
-- Model files download after installation
-- Downloads are signed, resumable, and checksum verified
-- Apps remain usable without the full pack
-- Technical details appear only under `Settings > Private AI > Technical Details`
+- Delivery is signed, resumable, and checksum verified.
+- Model delivery endpoints must never receive case data.
+- Dev-artifact delivery exists so download/install logic can be validated without bundling real model assets.
+- Technical details may be exposed only under advanced settings or engineering documentation.
 
-## Alpha delivery notes
+## Alpha delivery status
 
-- Backend `/model-catalog` now returns tiny dev-artifact metadata for `Quick Start`, `Case Associate`, and `Senior Drafting Support`
-- Backend `/model-download/session` now returns signed segment metadata with SHA-256 for each segment and the final artifact
-- Backend `/dev-artifacts/:artifactId` serves range-request-friendly tiny dev artifacts so resumable delivery logic can be tested without shipping large binaries
-- iOS alpha consumes the backend metadata path and verifies downloaded artifact bytes before marking a pack installed
-- Android alpha currently preserves checksum-aware local dev artifact installs and privacy-safe payload shaping, but still needs runtime backend execution wiring
+- Backend `/model-catalog` returns signed dev-artifact metadata for the visible packs.
+- Backend `/model-download/session` returns signed segmented artifact metadata.
+- Backend `/dev-artifacts/:artifactId` supports byte-range delivery.
+- Android and iOS alpha shells both integrate privacy-safe model-catalog and model-download clients.

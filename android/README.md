@@ -28,14 +28,23 @@ The Android package namespace remains `com.ross.android`.
 ## Current alpha foundation
 
 - Onboarding flows into Private AI Pack setup and then the case list.
-- Cases, documents, source refs, privacy ledger entries, exports, and model-pack jobs persist to encrypted app-private storage metadata under the app files directory.
+- Cases, documents, source refs, extracted fields, extraction runs, findings, case memory updates, exports, and model-pack jobs persist to encrypted app-private storage.
 - PDF, image, and text imports are copied into app-private storage.
-- Source chips deep-link into the document viewer with page-targeted source panels and safe missing-source handling.
+- Android now runs a local extraction orchestrator in the active alpha shell:
+  - PDF page rendering
+  - on-device ML Kit OCR
+  - language/script heuristics
+  - deterministic legal-field fallback
+  - local model-assisted extraction stubs by pack capability
+  - verifier/review queue generation
+- Source chips deep-link into the document viewer with page-targeted source panels.
+- The document workflow now includes a practical `Review extracted details` surface with confidence badges and accept/edit/ignore actions.
 - Local exports are written as real PDF files in app-private storage.
-- Public-law search stays on a sanitized-preview flow and only uses local alpha execution right now.
+- Public-law search keeps the sanitized-preview flow and uses the hardened backend route when available.
+- Model-pack delivery uses `/model-catalog`, `/model-download/session`, and `/dev-artifacts/:artifactId` with checksum verification and local fallback behavior for development.
 
 ## Known caveats
 
-- Android document viewing is MVP-level: it shows metadata, extracted text, source-reference panels, and PDF previews, but exact snippet highlighting is still best-effort only.
-- Model-pack lifecycle is operational at the state-machine level with checksum plumbing, encrypted persistence, and app-private artifacts, but runtime backend execution is still pending in the active alpha shell.
-- Android image OCR via on-device ML Kit and deeper PDF text extraction are still the next implementation step.
+- Android document viewing is still MVP-level for exact highlights: page targeting and source chips are reliable, but precise snippet overlays remain best-effort.
+- The deeper local LLM-assisted extraction and verifier passes are represented by orchestration interfaces and stubs rather than a full production local model runtime in this phase.
+- PDF text acquisition on Android is still centered on rendered pages plus OCR; it is not yet as mature as the iOS native PDF text path for mixed bundles.

@@ -32,9 +32,18 @@ rm -rf tmp/swiftpm
 swift build --scratch-path tmp/swiftpm
 ```
 
+## SwiftPM tests
+
+The local extraction orchestrator has a lightweight SwiftPM test target:
+
+```sh
+cd /Users/amanpandey/projects/ross/ios
+swift test --scratch-path tmp/swiftpm
+```
+
 ## Screenshot export
 
-Screenshot export is currently a macOS-hosted Swift Package workflow, not an iOS Simulator workflow. The iOS app target runs the interactive app UI; the PNG export path still comes from `ScreenshotExporter.swift`, which uses `AppKit` when available.
+Screenshot export is a macOS-hosted Swift Package workflow, not an iOS Simulator workflow.
 
 To export screenshots into `ios/tmp/ui-screenshots`, run from the `ios` directory:
 
@@ -43,27 +52,26 @@ cd /Users/amanpandey/projects/ross/ios
 swift run Ross --generate-screenshots
 ```
 
-That command writes these PNGs into `ios/tmp/ui-screenshots`:
-
-- `ios-onboarding.png`
-- `ios-private-ai-pack.png`
-- `ios-workspace.png`
-- `ios-ask-case.png`
-
-If you instead launch the package from the repo root with `swift run --package-path ios Ross --generate-screenshots`, the same relative `tmp/ui-screenshots` folder is created under the repo root.
-
 ## Current alpha foundation
 
-- Active alpha state is encrypted at rest with Keychain-managed AES.GCM
-- Legacy plaintext state is migrated into encrypted storage on load
-- PDF imports index native page text locally where available
-- Image imports run local Vision OCR where available
-- Source chips open the document viewer with page targeting and source-reference context
-- Local exports are written as real PDF files under app-private storage
-- Public-law search and model-download clients are compiled into the active alpha shell for a local backend at `http://127.0.0.1:8080`, with a local dev-artifact fallback for pack install if the backend is unavailable
+- Active alpha state is encrypted at rest with Keychain-managed AES.GCM.
+- Legacy plaintext state is migrated into encrypted storage on load.
+- PDF imports index native page text locally where available.
+- Image imports run local Vision OCR where available.
+- iOS now runs a local extraction orchestrator in the active alpha shell:
+  - PDF/text acquisition
+  - language/script profiling
+  - document classification
+  - deterministic legal-field extraction fallback
+  - local model-assisted extraction stubs
+  - verification and review queue generation
+- Source-backed extracted fields, extraction runs, findings, advocate corrections, and case-memory updates persist locally.
+- The document workflow now includes `Review extracted details` with confidence badges, source chips, and accept/edit/ignore actions.
+- Local exports are written as real PDF files under app-private storage, and generated PDFs can be shared through the system share sheet.
+- Public-law search and model-download clients are compiled into the active alpha shell for a local backend at `http://127.0.0.1:8080`, with a local dev-artifact fallback for pack install if the backend is unavailable.
 
 ## Known caveats
 
-- Exact text highlighting is still represented through source panels and page targeting rather than reliable per-snippet PDF selection
-- Mobile-to-backend runtime flows were build-validated in this phase but not manually exercised against a live simulator session with a running local backend
-- Export sharing is not yet wired to a share sheet
+- Exact text highlighting is still represented through source panels and page targeting rather than reliable per-snippet PDF selection overlays.
+- The deeper local model passes are architected and stubbed, but this phase does not bundle full production model assets.
+- Backend-connected mobile runtime flows still depend on a local development backend being available when you want to exercise the network boundary interactively.
