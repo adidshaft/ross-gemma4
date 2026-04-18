@@ -113,6 +113,75 @@ test("rejected requests do not echo fake secrets back in errors or logs", async 
   assert.doesNotMatch(JSON.stringify(auditSink), new RegExp(fakeSecret));
 });
 
+test("successful model catalog and download responses stay privacy-safe and exclude request secrets", async (t) => {
+  const accountToken = "acct_test_FAKE_DOWNLOAD_SECRET_1234567890";
+  const deviceIdHash = "feedfacecafebeef1234567890abcd";
+  const appVersion = "secret-build-9.9.9";
+  const auditSink: AuditEvent[] = [];
+  const app = await buildApp({
+    env: readRuntimeEnv({ nodeEnvOverride: "test" }),
+    auditSink,
+    emitLogsToConsole: false
+  });
+
+  t.after(async () => {
+    await app.close();
+  });
+
+  const catalogResponse = await app.inject({
+    method: "GET",
+    url: "/model-catalog?platform=android"
+  });
+
+  const catalogBody = parseJson<{
+    manifest: {
+      payload: {
+        packs: Array<{ packId: string }>;
+      };
+    };
+  }>(catalogResponse.body);
+
+  const downloadResponse = await app.inject({
+    method: "POST",
+    url: "/model-download/session",
+    payload: {
+      accountToken,
+      packId: catalogBody.manifest.payload.packs[0]?.packId ?? "quick-start-pack",
+      platform: "android",
+      appVersion,
+      deviceIdHash
+    }
+  });
+
+  assert.equal(catalogResponse.statusCode, 200);
+  assert.equal(downloadResponse.statusCode, 200);
+
+  const downloadBody = parseJson<{
+    downloadSession: {
+      payload: {
+        artifact: {
+          segments: Array<{ sha256: string }>;
+        };
+        accountTokenHash?: string;
+        deviceIdHash?: string;
+        appVersion?: string;
+      };
+    };
+  }>(downloadResponse.body);
+
+  assert.ok(downloadBody.downloadSession.payload.artifact.segments.length >= 1);
+  assert.equal(downloadBody.downloadSession.payload.accountTokenHash, undefined);
+  assert.equal(downloadBody.downloadSession.payload.deviceIdHash, undefined);
+  assert.equal(downloadBody.downloadSession.payload.appVersion, undefined);
+
+  const serialized = `${catalogResponse.body}\n${downloadResponse.body}\n${JSON.stringify(auditSink)}`;
+  assert.doesNotMatch(serialized, new RegExp(escapeForRegExp(accountToken)));
+  assert.doesNotMatch(serialized, new RegExp(escapeForRegExp(deviceIdHash)));
+  assert.doesNotMatch(serialized, new RegExp(escapeForRegExp(appVersion)));
+  assert.doesNotMatch(serialized, /caseId/i);
+  assert.doesNotMatch(serialized, /caseText/i);
+});
+
 test("public-law search rejects obvious private matter content and fake secrets without echoing them", async (t) => {
   const auditSink: AuditEvent[] = [];
   const app = await buildApp({
@@ -160,6 +229,9 @@ test("public-law search rejects obvious private matter content and fake secrets 
 
   const serializedLogs = JSON.stringify(auditSink);
   assert.match(serializedLogs, /sanitized_public_query/);
+  assert.match(serializedLogs, /public_search_rejected/);
+  assert.match(serializedLogs, /reasonCount/);
+  assert.match(serializedLogs, /queryHash/);
   assert.doesNotMatch(serializedLogs, /Raghav Fakepriv/i);
   assert.doesNotMatch(serializedLogs, /9876501234/);
   assert.doesNotMatch(serializedLogs, /fakepriv@example\.com/i);
@@ -195,6 +267,7 @@ test("production public search logs only hashed query metadata and never the ful
   assert.doesNotMatch(response.body, new RegExp(fakeSecret));
 
   const serializedLogs = JSON.stringify(auditSink);
+  assert.match(response.body, /backend_fixture_index/);
   assert.match(serializedLogs, /queryHash/);
   assert.match(serializedLogs, /queryLength/);
   assert.doesNotMatch(serializedLogs, new RegExp(fakeSecret));

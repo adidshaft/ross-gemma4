@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import test from "node:test";
 
 import { buildApp } from "../src/main.js";
@@ -84,12 +85,27 @@ test("backend scaffold endpoints return coherent stub responses", async (t) => {
     manifest: {
       signature: string;
       payload: {
-        packs: Array<{ packId: string }>;
+        packs: Array<{
+          packId: string;
+          artifactKind: string;
+          checksumSha256: string;
+          segmentCount: number;
+          segmentSizeBytes: number;
+        }>;
       };
     };
   }>(modelCatalog.body);
   assert.match(catalogBody.manifest.signature, /^[a-f0-9]{64}$/);
-  assert.ok(catalogBody.manifest.payload.packs.length >= 1);
+  assert.deepEqual(
+    catalogBody.manifest.payload.packs.map((pack) => pack.packId).sort(),
+    ["case-associate-pack", "quick-start-pack", "senior-drafting-support-pack"]
+  );
+  for (const pack of catalogBody.manifest.payload.packs) {
+    assert.equal(pack.artifactKind, "tiny_dev_artifact");
+    assert.match(pack.checksumSha256, /^[a-f0-9]{64}$/);
+    assert.ok(pack.segmentCount >= 1);
+    assert.ok(pack.segmentSizeBytes >= 1);
+  }
 
   const modelDownload = await app.inject({
     method: "POST",
@@ -106,12 +122,79 @@ test("backend scaffold endpoints return coherent stub responses", async (t) => {
   assert.equal(modelDownload.statusCode, 200);
   const modelDownloadBody = parseJson<{
     downloadSession: {
+      signature: string;
       payload: {
-        downloadUrl: string;
+        deliveryMode: string;
+        artifact: {
+          downloadPath: string;
+          downloadUrl: string;
+          sizeBytes: number;
+          finalSha256: string;
+          segmentSizeBytes: number;
+          segmentCount: number;
+          segments: Array<{
+            index: number;
+            startByte: number;
+            endByteInclusive: number;
+            sizeBytes: number;
+            sha256: string;
+            rangeHeader: string;
+          }>;
+        };
       };
     };
   }>(modelDownload.body);
-  assert.match(modelDownloadBody.downloadSession.payload.downloadUrl, /^https:\/\/downloads\.example\.invalid\//);
+  assert.match(modelDownloadBody.downloadSession.signature, /^[a-f0-9]{64}$/);
+  assert.equal(modelDownloadBody.downloadSession.payload.deliveryMode, "signed_segmented_dev_artifact");
+  assert.match(
+    modelDownloadBody.downloadSession.payload.artifact.downloadPath,
+    /^\/dev-artifacts\//
+  );
+  assert.match(
+    modelDownloadBody.downloadSession.payload.artifact.downloadUrl,
+    /^https:\/\/downloads\.example\.invalid\/dev-artifacts\//
+  );
+  assert.match(modelDownloadBody.downloadSession.payload.artifact.finalSha256, /^[a-f0-9]{64}$/);
+  assert.ok(modelDownloadBody.downloadSession.payload.artifact.segmentSizeBytes >= 1);
+  assert.equal(
+    modelDownloadBody.downloadSession.payload.artifact.segments.length,
+    modelDownloadBody.downloadSession.payload.artifact.segmentCount
+  );
+
+  let expectedStartByte = 0;
+  let totalBytes = 0;
+
+  for (const segment of modelDownloadBody.downloadSession.payload.artifact.segments) {
+    assert.equal(segment.startByte, expectedStartByte);
+    assert.equal(segment.endByteInclusive - segment.startByte + 1, segment.sizeBytes);
+    assert.match(segment.sha256, /^[a-f0-9]{64}$/);
+    assert.equal(segment.rangeHeader, `bytes=${segment.startByte}-${segment.endByteInclusive}`);
+    expectedStartByte = segment.endByteInclusive + 1;
+    totalBytes += segment.sizeBytes;
+  }
+
+  assert.equal(totalBytes, modelDownloadBody.downloadSession.payload.artifact.sizeBytes);
+
+  const firstSegment = modelDownloadBody.downloadSession.payload.artifact.segments[0];
+  assert.ok(firstSegment);
+
+  const artifactRange = await app.inject({
+    method: "GET",
+    url: modelDownloadBody.downloadSession.payload.artifact.downloadPath,
+    headers: {
+      range: firstSegment.rangeHeader
+    }
+  });
+
+  assert.equal(artifactRange.statusCode, 206);
+  assert.equal(
+    artifactRange.headers["content-range"],
+    `bytes ${firstSegment.startByte}-${firstSegment.endByteInclusive}/${modelDownloadBody.downloadSession.payload.artifact.sizeBytes}`
+  );
+  assert.equal(
+    createHash("sha256").update(Buffer.from(artifactRange.rawPayload)).digest("hex"),
+    firstSegment.sha256
+  );
 
   const stripeWebhook = await app.inject({
     method: "POST",
@@ -150,7 +233,11 @@ test("backend scaffold endpoints return coherent stub responses", async (t) => {
 
   assert.equal(publicSearch.statusCode, 200);
   const publicSearchBody = parseJson<{
+    connector: { mode: string };
+    resultCount: number;
     results: Array<{ title: string }>;
   }>(publicSearch.body);
-  assert.equal(publicSearchBody.results[0]?.title, "Public-law search result stub");
+  assert.equal(publicSearchBody.connector.mode, "backend_fixture_index");
+  assert.equal(publicSearchBody.resultCount, publicSearchBody.results.length);
+  assert.match(publicSearchBody.results[0]?.title ?? "", /Act|Procedure|Evidence|injunction/i);
 });

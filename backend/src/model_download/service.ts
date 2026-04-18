@@ -3,6 +3,7 @@ import { AppError } from "../utils/http.js";
 import { createId } from "../utils/ids.js";
 import { signPayload } from "../utils/signing.js";
 import { MODEL_PACKS } from "../model_catalog/service.js";
+import { getDevArtifactDescriptor } from "./dev_artifacts.js";
 
 export interface ModelDownloadSessionInput {
   accountToken: string;
@@ -22,16 +23,29 @@ export class ModelDownloadService {
       throw new AppError(404, "unknown_model_pack", "Requested model pack does not exist.");
     }
 
+    const artifact = getDevArtifactDescriptor(pack);
     const payload = {
       sessionId: createId("mdl"),
-      accountTokenHash: input.accountToken.slice(0, 12),
       packId: pack.packId,
-      platform: input.platform,
-      deviceIdHash: input.deviceIdHash,
-      appVersion: input.appVersion,
-      downloadUrl: `https://downloads.example.invalid/model-packs/${pack.packId}`,
-      checksumSha256: pack.checksumSha256,
-      resumable: true,
+      displayName: pack.displayName,
+      tier: pack.tier,
+      deliveryBoundary: "no_case_data",
+      deliveryMode: "signed_segmented_dev_artifact",
+      artifact: {
+        artifactId: artifact.artifactId,
+        fileName: artifact.fileName,
+        contentType: artifact.contentType,
+        sizeBytes: artifact.sizeBytes,
+        finalSha256: artifact.finalSha256,
+        segmentSizeBytes: artifact.segmentSizeBytes,
+        segmentCount: artifact.segmentCount,
+        downloadPath: artifact.path,
+        downloadUrl: `https://downloads.example.invalid${artifact.path}`,
+        rangeUnit: "bytes",
+        resumeStrategy: "range_request_segments",
+        segments: artifact.segments
+      },
+      issuedAt: new Date().toISOString(),
       expiresAt: new Date(Date.now() + 10 * 60_000).toISOString()
     };
 
