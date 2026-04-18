@@ -1,0 +1,24 @@
+{
+  "fixtureId": "english-civil-order",
+  "mode": "case_associate",
+  "documentTitle": "Civil Interim Order",
+  "pages": [
+    {
+      "pageNumber": 1,
+      "text": "IN THE HIGH COURT OF DELHI\nCS(COMM) No. 245/2026\nRaghav Fakepriv versus South Ward Municipal Corporation\nOrder dated 12/05/2026\nIt is directed that reply be filed within two weeks.\nListed on 26/05/2026.\nCommercial Courts Act section 13.",
+      "ocrConfidence": 0.89
+    }
+  ],
+  "expectedDocumentType": "order",
+  "expectedLanguage": "english",
+  "expectedFields": [
+    "case_number",
+    "court",
+    "date",
+    "next_date",
+    "order_direction",
+    "section"
+  ],
+  "requiredSourcePages": [1],
+  "fieldsNeedingReview": []
+}

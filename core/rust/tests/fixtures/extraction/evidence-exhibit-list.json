@@ -1,0 +1,20 @@
+{
+  "fixtureId": "evidence-exhibit-list",
+  "mode": "case_associate",
+  "documentTitle": "Evidence Exhibit List",
+  "pages": [
+    {
+      "pageNumber": 1,
+      "text": "List of documents and exhibits.\nExhibit P-1: Sale deed dated 01/03/2026.\nExhibit P-2: Bank statement for April 2026.\nAnnexure R-1: Notice dated 04/04/2026.",
+      "ocrConfidence": 0.93
+    }
+  ],
+  "expectedDocumentType": "evidence",
+  "expectedLanguage": "english",
+  "expectedFields": [
+    "exhibit_number",
+    "date"
+  ],
+  "requiredSourcePages": [1],
+  "fieldsNeedingReview": []
+}

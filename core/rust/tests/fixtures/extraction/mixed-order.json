@@ -1,0 +1,25 @@
+{
+  "fixtureId": "mixed-order",
+  "mode": "case_associate",
+  "documentTitle": "Mixed Order",
+  "pages": [
+    {
+      "pageNumber": 1,
+      "text": "IN THE HIGH COURT OF DELHI\nOrder dated 12/05/2026.\nCommercial Courts Act section 13.",
+      "ocrConfidence": 0.86
+    },
+    {
+      "pageNumber": 2,
+      "text": "अगली तारीख 26/05/2026\nयाचिकाकर्ता बनाम प्रतिवादी",
+      "ocrConfidence": 0.83
+    }
+  ],
+  "expectedDocumentType": "order",
+  "expectedLanguage": "mixed",
+  "expectedFields": [
+    "date",
+    "next_date"
+  ],
+  "requiredSourcePages": [1, 2],
+  "fieldsNeedingReview": []
+}

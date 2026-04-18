@@ -13,6 +13,9 @@ export interface ModelPack {
   segmentSizeBytes: number;
   technicalModels: string[];
   artifactSeed: string;
+  artifactKind: "tiny_dev_artifact";
+  runtimeMode: "deterministic_dev" | "platform_stub";
+  developmentOnly: boolean;
 }
 
 export const MODEL_PACKS: ModelPack[] = [
@@ -23,7 +26,10 @@ export const MODEL_PACKS: ModelPack[] = [
     sizeBytes: 25_913,
     segmentSizeBytes: 8_192,
     technicalModels: ["gemma-4-e2b-q4", "embeddinggemma-300m-int8"],
-    artifactSeed: "ross-dev-quick-start-v1"
+    artifactSeed: "ross-dev-quick-start-v1",
+    artifactKind: "tiny_dev_artifact",
+    runtimeMode: "deterministic_dev",
+    developmentOnly: true
   },
   {
     packId: "case-associate-pack",
@@ -32,7 +38,10 @@ export const MODEL_PACKS: ModelPack[] = [
     sizeBytes: 41_287,
     segmentSizeBytes: 8_192,
     technicalModels: ["gemma-4-e4b-q4", "embeddinggemma-300m-int8"],
-    artifactSeed: "ross-dev-case-associate-v1"
+    artifactSeed: "ross-dev-case-associate-v1",
+    artifactKind: "tiny_dev_artifact",
+    runtimeMode: "deterministic_dev",
+    developmentOnly: true
   },
   {
     packId: "senior-drafting-support-pack",
@@ -41,7 +50,10 @@ export const MODEL_PACKS: ModelPack[] = [
     sizeBytes: 58_633,
     segmentSizeBytes: 8_192,
     technicalModels: ["gemma-4-e4b-q4", "qwen3-4b-thinking-q4", "embeddinggemma-300m-int8"],
-    artifactSeed: "ross-dev-senior-drafting-support-v1"
+    artifactSeed: "ross-dev-senior-drafting-support-v1",
+    artifactKind: "tiny_dev_artifact",
+    runtimeMode: "deterministic_dev",
+    developmentOnly: true
   }
 ];
 
@@ -74,8 +86,9 @@ export class ModelCatalogService {
           segmentSizeBytes: artifact.segmentSizeBytes,
           segmentCount: artifact.segmentCount,
           contentType: artifact.contentType,
-          artifactKind: "tiny_dev_artifact",
-          developmentOnly: true,
+          artifactKind: pack.artifactKind,
+          runtimeMode: pack.runtimeMode,
+          developmentOnly: pack.developmentOnly,
           resumable: true,
           deliveryBoundary: "no_case_data"
         };

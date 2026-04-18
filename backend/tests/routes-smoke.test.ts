@@ -88,6 +88,8 @@ test("backend scaffold endpoints return coherent stub responses", async (t) => {
         packs: Array<{
           packId: string;
           artifactKind: string;
+          runtimeMode: string;
+          developmentOnly: boolean;
           checksumSha256: string;
           segmentCount: number;
           segmentSizeBytes: number;
@@ -102,6 +104,8 @@ test("backend scaffold endpoints return coherent stub responses", async (t) => {
   );
   for (const pack of catalogBody.manifest.payload.packs) {
     assert.equal(pack.artifactKind, "tiny_dev_artifact");
+    assert.equal(pack.runtimeMode, "deterministic_dev");
+    assert.equal(pack.developmentOnly, true);
     assert.match(pack.checksumSha256, /^[a-f0-9]{64}$/);
     assert.ok(pack.segmentCount >= 1);
     assert.ok(pack.segmentSizeBytes >= 1);
@@ -125,11 +129,17 @@ test("backend scaffold endpoints return coherent stub responses", async (t) => {
       signature: string;
       payload: {
         deliveryMode: string;
+        artifactKind: string;
+        runtimeMode: string;
+        developmentOnly: boolean;
         artifact: {
           downloadPath: string;
           downloadUrl: string;
           sizeBytes: number;
           finalSha256: string;
+          artifactKind: string;
+          runtimeMode: string;
+          developmentOnly: boolean;
           segmentSizeBytes: number;
           segmentCount: number;
           segments: Array<{
@@ -146,6 +156,9 @@ test("backend scaffold endpoints return coherent stub responses", async (t) => {
   }>(modelDownload.body);
   assert.match(modelDownloadBody.downloadSession.signature, /^[a-f0-9]{64}$/);
   assert.equal(modelDownloadBody.downloadSession.payload.deliveryMode, "signed_segmented_dev_artifact");
+  assert.equal(modelDownloadBody.downloadSession.payload.artifactKind, "tiny_dev_artifact");
+  assert.equal(modelDownloadBody.downloadSession.payload.runtimeMode, "deterministic_dev");
+  assert.equal(modelDownloadBody.downloadSession.payload.developmentOnly, true);
   assert.match(
     modelDownloadBody.downloadSession.payload.artifact.downloadPath,
     /^\/dev-artifacts\//
@@ -155,6 +168,9 @@ test("backend scaffold endpoints return coherent stub responses", async (t) => {
     /^https:\/\/downloads\.example\.invalid\/dev-artifacts\//
   );
   assert.match(modelDownloadBody.downloadSession.payload.artifact.finalSha256, /^[a-f0-9]{64}$/);
+  assert.equal(modelDownloadBody.downloadSession.payload.artifact.artifactKind, "tiny_dev_artifact");
+  assert.equal(modelDownloadBody.downloadSession.payload.artifact.runtimeMode, "deterministic_dev");
+  assert.equal(modelDownloadBody.downloadSession.payload.artifact.developmentOnly, true);
   assert.ok(modelDownloadBody.downloadSession.payload.artifact.segmentSizeBytes >= 1);
   assert.equal(
     modelDownloadBody.downloadSession.payload.artifact.segments.length,

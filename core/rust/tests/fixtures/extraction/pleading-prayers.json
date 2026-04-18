@@ -1,0 +1,23 @@
+{
+  "fixtureId": "pleading-prayers",
+  "mode": "case_associate",
+  "documentTitle": "Pleading with Parties and Prayers",
+  "pages": [
+    {
+      "pageNumber": 1,
+      "text": "IN THE HIGH COURT OF DELHI\nABC Traders Pvt Ltd versus Raghav Fakepriv\nPlaint under the Commercial Courts Act.\nThe plaintiff prays that an injunction be granted and the written statement delay be rejected.\nRelief sought: interim injunction against alienation of stock.",
+      "ocrConfidence": 0.9
+    }
+  ],
+  "expectedDocumentType": "pleading",
+  "expectedLanguage": "english",
+  "expectedFields": [
+    "party_name",
+    "prayer",
+    "relief"
+  ],
+  "requiredSourcePages": [1],
+  "fieldsNeedingReview": [
+    "relief"
+  ]
+}

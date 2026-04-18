@@ -1,0 +1,17 @@
+{
+  "fixtureId": "hallucination-trap",
+  "mode": "case_associate",
+  "documentTitle": "Unsupported Trap",
+  "pages": [
+    {
+      "pageNumber": 1,
+      "text": "This page records only procedural history and does not state the court, case number, or operative directions.",
+      "ocrConfidence": 0.88
+    }
+  ],
+  "expectedDocumentType": "misc",
+  "expectedLanguage": "english",
+  "expectedFields": [],
+  "requiredSourcePages": [1],
+  "fieldsNeedingReview": []
+}

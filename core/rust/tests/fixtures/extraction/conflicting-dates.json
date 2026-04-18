@@ -1,0 +1,27 @@
+{
+  "fixtureId": "conflicting-dates",
+  "mode": "case_associate",
+  "documentTitle": "Conflicting Dates Order",
+  "pages": [
+    {
+      "pageNumber": 1,
+      "text": "Order dated 12/05/2026. Listed on 20/05/2026.",
+      "ocrConfidence": 0.91
+    },
+    {
+      "pageNumber": 2,
+      "text": "Order dated 14/05/2026. Listed on 22/05/2026.",
+      "ocrConfidence": 0.9
+    }
+  ],
+  "expectedDocumentType": "order",
+  "expectedLanguage": "english",
+  "expectedFields": [
+    "date",
+    "next_date"
+  ],
+  "requiredSourcePages": [1, 2],
+  "fieldsNeedingReview": [
+    "date"
+  ]
+}

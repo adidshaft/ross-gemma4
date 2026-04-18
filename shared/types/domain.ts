@@ -52,6 +52,9 @@ export interface ModelPackManifest {
   requiredFreeSpaceBytes: number;
   sha256: string;
   segments: ModelPackManifestSegment[];
+  artifactKind?: "tiny_dev_artifact";
+  runtimeMode?: "deterministic_dev" | "platform_stub";
+  developmentOnly?: boolean;
   version: string;
   releaseDate: string;
   isDeprecated: boolean;
@@ -94,7 +97,90 @@ export interface InstalledModelPack {
   installedAt: string;
   installPath: string;
   checksumSha256: string;
+  artifactKind?: "tiny_dev_artifact";
+  runtimeMode?: "deterministic_dev" | "platform_stub";
+  developmentOnly?: boolean;
   isActive: boolean;
+}
+
+export type LocalModelTask =
+  | "ocr_cleanup"
+  | "language_correction"
+  | "document_classification"
+  | "legal_field_extraction"
+  | "legal_field_verification"
+  | "case_memory_synthesis"
+  | "chronology_generation"
+  | "order_summary"
+  | "issue_extraction";
+
+export type LocalModelInvocationStatus =
+  | "queued"
+  | "running"
+  | "complete"
+  | "failed"
+  | "cancelled";
+
+export interface SourceTextBlock {
+  sourceRef: SourceRef;
+  text: string;
+  pageNumber: number;
+  languageHint?: string;
+  ocrConfidence?: number;
+}
+
+export interface LocalModelInput {
+  task: LocalModelTask;
+  instruction: string;
+  sourcePack: SourceTextBlock[];
+  expectedSchema: string;
+  maxOutputTokens: number;
+  languageProfile?: DocumentLanguageProfile;
+  documentClassification?: LegalDocumentClassification;
+  extractionMode: ExtractionMode;
+}
+
+export interface LocalModelOutput {
+  rawText: string;
+  parsedJson?: string;
+  schemaValid: boolean;
+  warnings: string[];
+  sourceRefs: SourceRef[];
+}
+
+export interface LocalModelInvocation {
+  id: string;
+  task: LocalModelTask;
+  caseId?: string;
+  documentId?: string;
+  extractionRunId?: string;
+  capabilityTier: ModelCapabilityTierId;
+  inputSourceRefs: SourceRef[];
+  promptHash: string;
+  inputHash: string;
+  outputHash?: string;
+  startedAt: string;
+  completedAt?: string;
+  status: LocalModelInvocationStatus;
+  errorCategory?: string;
+  localOnly: true;
+}
+
+export type ExtractionPipelineFallback = "skip" | "deterministic" | "needs_review";
+export type ExtractionPipelineQuality = "Basic" | "Standard" | "Advanced";
+
+export interface ExtractionPipelinePassPlan {
+  task: LocalModelTask;
+  required: boolean;
+  maxPagesPerBatch: number;
+  fallback: ExtractionPipelineFallback;
+}
+
+export interface ExtractionPipelinePlan {
+  mode: ExtractionMode;
+  passes: ExtractionPipelinePassPlan[];
+  requiresInstalledPack: boolean;
+  userFacingQuality: ExtractionPipelineQuality;
 }
 
 export interface DeviceCapabilityProfile {

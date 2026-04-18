@@ -1,0 +1,22 @@
+{
+  "fixtureId": "noisy-affidavit",
+  "mode": "quick_start",
+  "documentTitle": "Noisy Affidavit",
+  "pages": [
+    {
+      "pageNumber": 1,
+      "text": "AFFIDAVIT\nI solemnly affirm that the order dated O1/O2/2O26 was served.\nExhibit P-1 attached.",
+      "ocrConfidence": 0.57
+    }
+  ],
+  "expectedDocumentType": "affidavit",
+  "expectedLanguage": "english",
+  "expectedFields": [
+    "date",
+    "exhibit_number"
+  ],
+  "requiredSourcePages": [1],
+  "fieldsNeedingReview": [
+    "date"
+  ]
+}
