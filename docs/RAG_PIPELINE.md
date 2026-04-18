@@ -13,6 +13,12 @@
 9. Store keyword and semantic indexes locally
 10. Build case memory summaries locally
 
+## Alpha foundation status
+
+- Ross mobile alpha now copies imported files into app-private storage and creates local document/page records immediately.
+- The current document viewer supports title, type, page-count metadata, OCR/indexing state, extracted-text panels, and source-reference context.
+- OCR and metadata extraction still use placeholder plumbing where a platform OCR implementation is not yet wired.
+
 ## Retrieval
 
 - Exact retrieval for dates, sections, exhibit marks, and procedural phrases
@@ -20,6 +26,7 @@
 - Metadata filters by document type and page range
 - Optional reranking
 - Source pack assembly with page and paragraph references
+- Source refs now carry `caseId`, `documentId`, `documentTitle`, `pageNumber`, optional paragraph range, optional snippet text, and optional OCR confidence
 
 ## Generation
 
@@ -37,4 +44,4 @@
 - Do not invent citations
 - State uncertainty
 - Say `Not found in the case file` where appropriate
-
+- If exact highlight placement is not yet available, show a source-reference panel with page and snippet metadata instead of pretending to anchor precisely

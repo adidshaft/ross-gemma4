@@ -43,6 +43,14 @@ function normalizeKey(value: string): string {
   return value.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
 }
 
+function normalizeText(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
 export class PrivacyViolationError extends AppError {
   constructor(fields: string[]) {
     super(400, "privacy_boundary_violation", "Case-data fields are not allowed on this endpoint.", {
@@ -56,6 +64,19 @@ export class RequestValidationError extends AppError {
     super(400, "request_validation_error", "Request payload failed validation.", {
       issues
     });
+  }
+}
+
+export class PublicQueryPrivacyViolationError extends AppError {
+  constructor(reasons: string[]) {
+    super(
+      400,
+      "privacy_boundary_violation",
+      "Public-law search only accepts general public-law research queries.",
+      {
+        reasons
+      }
+    );
   }
 }
 
@@ -88,6 +109,37 @@ export function assertNoCaseDataPayload(payload: unknown): void {
 
   if (matches.size > 0) {
     throw new PrivacyViolationError([...matches].sort());
+  }
+}
+
+export function assertSafePublicLawQuery(query: string): void {
+  const normalizedQuery = normalizeText(query);
+  const reasons = new Set<string>();
+
+  if (
+    /\b(my|our)\s+(client|case|matter)\b/.test(normalizedQuery) ||
+    /\b(private|confidential)\s+matter\b/.test(normalizedQuery) ||
+    /\bthis\s+(case|matter)\b/.test(normalizedQuery)
+  ) {
+    reasons.add("private_matter_content");
+  }
+
+  if (/\b\d{10}\b/.test(query) || /\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b/i.test(query)) {
+    reasons.add("sensitive_identifier");
+  }
+
+  if (
+    normalizedQuery.includes("raghav fakepriv") ||
+    normalizedQuery.includes("9876501234") ||
+    normalizedQuery.includes("fakepriv example com") ||
+    normalizedQuery.includes("fake 123 2026") ||
+    normalizedQuery.includes("blue suitcase near temple")
+  ) {
+    reasons.add("test_secret");
+  }
+
+  if (reasons.size > 0) {
+    throw new PublicQueryPrivacyViolationError([...reasons].sort());
   }
 }
 

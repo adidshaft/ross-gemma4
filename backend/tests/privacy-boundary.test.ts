@@ -9,6 +9,10 @@ function parseJson<T>(payload: string): T {
   return JSON.parse(payload) as T;
 }
 
+function escapeForRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 test("rejects case-data fields on protected entitlement, model, and public search routes", async (t) => {
   const auditSink: AuditEvent[] = [];
   const app = await buildApp({
@@ -107,6 +111,60 @@ test("rejected requests do not echo fake secrets back in errors or logs", async 
   assert.equal(response.statusCode, 400);
   assert.doesNotMatch(response.body, new RegExp(fakeSecret));
   assert.doesNotMatch(JSON.stringify(auditSink), new RegExp(fakeSecret));
+});
+
+test("public-law search rejects obvious private matter content and fake secrets without echoing them", async (t) => {
+  const auditSink: AuditEvent[] = [];
+  const app = await buildApp({
+    env: readRuntimeEnv({ nodeEnvOverride: "test" }),
+    auditSink,
+    emitLogsToConsole: false
+  });
+
+  t.after(async () => {
+    await app.close();
+  });
+
+  const disallowedQueries = [
+    "What public law applies in my client dispute?",
+    "Need guidance for Raghav Fakepriv under public law",
+    "Need guidance tied to 9876501234",
+    "Can fakepriv@example.com be mentioned in a filing?",
+    "Status of FAKE/123/2026",
+    "How should blue suitcase near temple be handled?"
+  ];
+
+  for (const query of disallowedQueries) {
+    const response = await app.inject({
+      method: "POST",
+      url: "/public-law/search",
+      payload: {
+        query,
+        jurisdiction: "IN-ALL",
+        language: "en",
+        confirmedPublicPreview: true
+      }
+    });
+
+    assert.equal(response.statusCode, 400);
+
+    const body = parseJson<{
+      error: string;
+      details?: { reasons?: string[] };
+    }>(response.body);
+
+    assert.equal(body.error, "privacy_boundary_violation");
+    assert.ok(body.details?.reasons && body.details.reasons.length > 0);
+    assert.doesNotMatch(response.body, new RegExp(escapeForRegExp(query), "i"));
+  }
+
+  const serializedLogs = JSON.stringify(auditSink);
+  assert.match(serializedLogs, /sanitized_public_query/);
+  assert.doesNotMatch(serializedLogs, /Raghav Fakepriv/i);
+  assert.doesNotMatch(serializedLogs, /9876501234/);
+  assert.doesNotMatch(serializedLogs, /fakepriv@example\.com/i);
+  assert.doesNotMatch(serializedLogs, /FAKE\/123\/2026/i);
+  assert.doesNotMatch(serializedLogs, /blue suitcase near temple/i);
 });
 
 test("production public search logs only hashed query metadata and never the full query", async (t) => {

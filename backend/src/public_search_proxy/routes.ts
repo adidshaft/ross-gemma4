@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
 import type { AuditLogger } from "../audit/logger.js";
-import { assertNoCaseDataPayload, parseStrict } from "../security/privacy.js";
+import { assertNoCaseDataPayload, assertSafePublicLawQuery, parseStrict } from "../security/privacy.js";
 import { PublicSearchProxyService } from "./service.js";
 import { hashForAudit } from "../utils/signing.js";
 
@@ -40,6 +40,7 @@ export async function registerPublicSearchProxyRoutes(
     async (request, reply) => {
       assertNoCaseDataPayload(request.body);
       const input = parseStrict(publicSearchSchema, request.body);
+      assertSafePublicLawQuery(input.query);
       const response = service.search(input);
 
       deps.auditLogger.info({

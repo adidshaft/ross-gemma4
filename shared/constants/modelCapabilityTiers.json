@@ -32,7 +32,7 @@
     "sortOrder": 2
   },
   {
-    "id": "senior_drafting",
+    "id": "senior_drafting_support",
     "displayName": "Senior Drafting Support",
     "subtitle": "Best for longer files and detailed drafts",
     "userFacingDescription": "Longer-document workflows, more detailed drafting, stronger bilingual handling, senior counsel briefs, and deeper issue analysis.",
@@ -48,4 +48,3 @@
     "sortOrder": 3
   }
 ]
-

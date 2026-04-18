@@ -1,7 +1,7 @@
 export type ModelCapabilityTierId =
   | "quick_start"
   | "case_associate"
-  | "senior_drafting";
+  | "senior_drafting_support";
 
 export interface ModelCapabilityTier {
   id: ModelCapabilityTierId;
@@ -56,6 +56,8 @@ export interface ModelDownloadJob {
   id: string;
   packId: string;
   capabilityTierId: ModelCapabilityTierId;
+  sessionId?: string;
+  checksumSha256?: string;
   state:
     | "not_started"
     | "queued"
@@ -77,6 +79,16 @@ export interface ModelDownloadJob {
   createdAt: string;
   updatedAt: string;
   completedAt?: string;
+}
+
+export interface InstalledModelPack {
+  id: string;
+  packId: string;
+  capabilityTierId: ModelCapabilityTierId;
+  installedAt: string;
+  installPath: string;
+  checksumSha256: string;
+  isActive: boolean;
 }
 
 export interface DeviceCapabilityProfile {
@@ -112,3 +124,27 @@ export interface PrivacyLedgerEntry {
   success: boolean;
 }
 
+export interface SanitizedPublicQuery {
+  query: string;
+  jurisdiction: string;
+  language: "en" | "hi";
+  confirmedPublicPreview: true;
+}
+
+export interface SourceRef {
+  caseId: string;
+  documentId: string;
+  documentTitle: string;
+  pageNumber: number;
+  paragraphRange?: string;
+  textSnippet?: string;
+  ocrConfidence?: number;
+}
+
+export interface PublicLawCacheItem {
+  id: string;
+  queryHash: string;
+  query: string;
+  savedAt: string;
+  resultTitles: string[];
+}
