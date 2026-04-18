@@ -166,11 +166,112 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(invocation.promptHash.count, 64)
         XCTAssertEqual(invocation.inputHash.count, 64)
+        XCTAssertEqual(invocation.runtimeMode, "deterministic_dev")
         XCTAssertFalse(invocation.promptHash.contains("Raghav Fakepriv"))
         XCTAssertFalse(invocation.inputHash.contains("9876501234"))
         XCTAssertFalse(invocation.inputHash.contains("fakepriv@example.com"))
         XCTAssertEqual(invocation.inputSourceRefs.first?.documentTitle, "Source document")
         XCTAssertNil(invocation.inputSourceRefs.first?.textSnippet)
         XCTAssertTrue(invocation.localOnly)
+    }
+
+    func testRealRuntimeSelectionFallsBackSafelyWhenUnavailable() async {
+        let pack = installedPack(.caseAssociate, runtimeMode: .appleFoundationModels)
+        let provider = AlphaLocalModelRuntime.resolveProvider(
+            activePack: pack,
+            requestedTier: pack.tier
+        ) { input in
+            AlphaLocalModelOutput(
+                rawText: input.expectedSchema,
+                parsedJson: input.expectedSchema,
+                schemaValid: true,
+                warnings: [],
+                sourceRefs: input.sourcePack.map(\.sourceRef)
+            )
+        }
+        let health = AlphaLocalModelRuntime.runtimeHealth(activePack: pack, requestedTier: pack.tier)
+
+        XCTAssertNotNil(provider)
+        XCTAssertEqual(provider?.runtimeMode, .deterministicDev)
+        XCTAssertEqual(health?.runtimeMode, .appleFoundationModels)
+        XCTAssertEqual(health?.available, false)
+        XCTAssertNotNil(health?.userFacingStatus)
+    }
+
+    @MainActor
+    func testPublicLawPreviewUsesVerifiedFieldsOnly() {
+        let model = AlphaRossModel()
+        let caseID = UUID()
+        let documentID = UUID()
+        model.persisted.cases = [
+            AlphaCaseMatter(
+                id: caseID,
+                title: "Private Matter",
+                forum: "Forum",
+                stage: .pleadings,
+                summary: "summary",
+                issueHighlights: [],
+                evidenceNotes: [],
+                draftTasks: [],
+                documents: [
+                    AlphaCaseDocument(
+                        id: documentID,
+                        title: "Order",
+                        fileName: "order.pdf",
+                        kind: .pdf,
+                        storedRelativePath: "order.pdf",
+                        importedAt: .now,
+                        pageCount: 1,
+                        ocrStatus: .nativeText,
+                        indexingStatus: .indexed,
+                        extractedText: nil,
+                        dominantSourceSnippet: nil,
+                        lastIndexedAt: .now,
+                        pages: [AlphaDocumentPage(pageNumber: 1, snippet: "snippet")],
+                        classification: AlphaLegalDocumentClassification(
+                            documentId: documentID,
+                            type: .order,
+                            confidence: 0.82,
+                            sourceRefs: [],
+                            needsReview: false
+                        ),
+                        extractedFields: [
+                            AlphaExtractedLegalField(
+                                caseId: caseID,
+                                documentId: documentID,
+                                fieldType: .issue,
+                                label: "Issue",
+                                value: "delay in filing written statement",
+                                sourceRefs: [AlphaSourceRef(caseId: caseID, documentId: documentID, documentTitle: "Order", pageNumber: 1)],
+                                confidence: 0.81,
+                                extractionMode: .caseAssociate,
+                                extractionPass: .llmVerify,
+                                needsReview: false
+                            ),
+                            AlphaExtractedLegalField(
+                                caseId: caseID,
+                                documentId: documentID,
+                                fieldType: .partyName,
+                                label: "Party",
+                                value: "Private Matter",
+                                sourceRefs: [AlphaSourceRef(caseId: caseID, documentId: documentID, documentTitle: "Order", pageNumber: 1)],
+                                confidence: 0.92,
+                                extractionMode: .caseAssociate,
+                                extractionPass: .llmVerify,
+                                needsReview: false
+                            ),
+                        ]
+                    )
+                ],
+                sourceRefs: []
+            )
+        ]
+        model.selectedCaseID = caseID
+        model.publicLawDraft = ""
+
+        model.buildPublicLawPreview()
+
+        XCTAssertTrue(model.publicLawPreview?.query.contains("delay in filing written statement") == true)
+        XCTAssertFalse(model.publicLawPreview?.query.contains("Private Matter") == true)
     }
 }

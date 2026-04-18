@@ -1,5 +1,8 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
+fun escapeBuildConfigString(value: String): String =
+    value.replace("\\", "\\\\").replace("\"", "\\\"")
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -16,6 +19,22 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+        val localModelPath = providers.gradleProperty("ROSS_LOCAL_MODEL_PATH")
+            .orElse(providers.environmentVariable("ROSS_LOCAL_MODEL_PATH"))
+            .orElse("")
+            .get()
+        val localRuntime = providers.gradleProperty("ROSS_LOCAL_RUNTIME")
+            .orElse(providers.environmentVariable("ROSS_LOCAL_RUNTIME"))
+            .orElse("")
+            .get()
+        val enableRealInference = providers.gradleProperty("ROSS_ENABLE_REAL_LOCAL_INFERENCE")
+            .orElse(providers.environmentVariable("ROSS_ENABLE_REAL_LOCAL_INFERENCE"))
+            .orElse("false")
+            .get()
+
+        buildConfigField("String", "ROSS_LOCAL_MODEL_PATH", "\"${escapeBuildConfigString(localModelPath)}\"")
+        buildConfigField("String", "ROSS_LOCAL_RUNTIME", "\"${escapeBuildConfigString(localRuntime)}\"")
+        buildConfigField("boolean", "ROSS_ENABLE_REAL_LOCAL_INFERENCE", enableRealInference.toBoolean().toString())
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -46,6 +65,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     packaging {

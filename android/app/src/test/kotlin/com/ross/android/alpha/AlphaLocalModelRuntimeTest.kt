@@ -105,6 +105,7 @@ class AlphaLocalModelRuntimeTest {
         }
 
         assertTrue(provider.isAvailable())
+        assertEquals(AlphaPackRuntimeMode.DeterministicDev, provider.runtimeMode)
         assertEquals(AlphaLocalModelTask.entries.toSet(), provider.supportedTasks())
 
         val produced = provider.run(input)
@@ -167,6 +168,7 @@ class AlphaLocalModelRuntimeTest {
         assertFalse("expectedSchema" in invocationFieldNames)
         assertEquals(64, invocation.promptHash.length)
         assertEquals(64, invocation.inputHash.length)
+        assertEquals("deterministic_dev", invocation.runtimeMode)
         assertEquals(1, invocation.inputSourceRefs.size)
         assertEquals("Source document", invocation.inputSourceRefs.single().documentTitle)
         assertEquals(null, invocation.inputSourceRefs.single().textSnippet)
@@ -256,6 +258,31 @@ class AlphaLocalModelRuntimeTest {
     }
 
     @Test
+    fun `real runtime selection falls back safely when android adapter is unavailable`() = runBlocking {
+        val pack = installedPack(
+            tier = AlphaCapabilityTier.CaseAssociate,
+            runtimeMode = AlphaPackRuntimeMode.MediapipeLlm,
+            artifactKind = "local_model_artifact",
+        )
+        val provider = AlphaLocalModelRuntime.resolveProvider(pack, pack.tier) { input ->
+            AlphaLocalModelOutput(
+                rawText = input.expectedSchema,
+                parsedJson = input.expectedSchema,
+                schemaValid = true,
+                warnings = emptyList(),
+                sourceRefs = input.sourcePack.map { it.sourceRef },
+            )
+        }
+        val health = AlphaLocalModelRuntime.runtimeHealth(pack, pack.tier)
+
+        assertTrue(provider is DeterministicDevLocalModelProvider)
+        assertEquals(AlphaPackRuntimeMode.DeterministicDev, provider?.runtimeMode)
+        assertEquals(AlphaPackRuntimeMode.MediapipeLlm, health?.runtimeMode)
+        assertFalse(health?.available ?: true)
+        assertTrue(health?.userFacingStatus?.contains("compile-safe adapter skeleton") == true)
+    }
+
+    @Test
     fun `user corrected field values are preserved during merge`() {
         val controller = allocateWithoutConstructor(AlphaRossController::class.java)
         val preserved = AlphaExtractedLegalField(
@@ -319,14 +346,19 @@ class AlphaLocalModelRuntimeTest {
         assertTrue(merged.any { it.id == carriedForward.id && it.userCorrected })
     }
 
-    private fun installedPack(tier: AlphaCapabilityTier): AlphaInstalledPack =
+    private fun installedPack(
+        tier: AlphaCapabilityTier,
+        runtimeMode: AlphaPackRuntimeMode = AlphaPackRuntimeMode.DeterministicDev,
+        artifactKind: String = "tiny_dev_artifact",
+    ): AlphaInstalledPack =
         AlphaInstalledPack(
             packId = "${tier.tierId}-pack",
             tier = tier,
             installRelativePath = "model-packs/${tier.tierId}/pack.dev",
             checksumSha256 = "deadbeef",
-            runtimeMode = AlphaPackRuntimeMode.DeterministicDev,
-            developmentOnly = true,
+            artifactKind = artifactKind,
+            runtimeMode = runtimeMode,
+            developmentOnly = runtimeMode == AlphaPackRuntimeMode.DeterministicDev,
             installedAt = "2026-04-19T00:00:00Z",
             isActive = true,
         )

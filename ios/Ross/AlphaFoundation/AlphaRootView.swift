@@ -71,6 +71,10 @@ final class AlphaRossModel {
         persisted.installedPacks.first(where: \.isActive)
     }
 
+    var activeRuntimeHealth: AlphaLocalRuntimeHealth? {
+        AlphaLocalModelRuntime.runtimeHealth(activePack: activePack, requestedTier: activePack?.tier)
+    }
+
     func advanceOnboarding() {
         persisted.onboardingStage = .privateAIPack
         persist()
@@ -1115,7 +1119,10 @@ final class AlphaRossModel {
         let issues = verifiedFields
             .filter { $0.fieldType == .issue || $0.fieldType == .orderDirection || $0.fieldType == .relief || $0.fieldType == .section }
             .flatMap { publicLawKeywords(from: $0.value) }
-        let classifications = selectedCase.documents.compactMap { $0.classification?.type.rawValue.replacingOccurrences(of: "_", with: " ") }
+        let classifications = selectedCase.documents.compactMap { document in
+            document.classification
+                .flatMap { $0.needsReview ? nil : $0.type.rawValue.replacingOccurrences(of: "_", with: " ") }
+        }
         let terms = Array(NSOrderedSet(array: issues + classifications)).compactMap { $0 as? String }
         guard !terms.isEmpty else { return nil }
         return (terms + ["India"]).joined(separator: " ")
@@ -1125,22 +1132,37 @@ final class AlphaRossModel {
         let lowered = value.lowercased()
         let patterns = [
             "commercial courts act",
+            "negotiable instruments act",
             "arbitration act",
             "limitation act",
             "written statement",
             "delay condonation",
+            "interim maintenance",
             "interim relief",
             "injunction",
             "stay",
+            "cheque dishonour",
             "section \\d+[a-z]*",
             "order [a-z0-9]+ rule \\d+"
         ]
-        return patterns.compactMap { pattern in
+        let matches: [String] = patterns.compactMap { pattern -> String? in
             guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else { return nil }
             let range = NSRange(location: 0, length: lowered.utf16.count)
             guard let match = regex.firstMatch(in: lowered, range: range) else { return nil }
             return (lowered as NSString).substring(with: match.range)
         }
+        let sanitizedPhrase = lowered
+            .replacingOccurrences(of: #"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+"#, with: " ", options: .regularExpression)
+            .replacingOccurrences(of: #"\b\d{2,}\b"#, with: " ", options: .regularExpression)
+            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if !sanitizedPhrase.isEmpty {
+            let tokenCount = sanitizedPhrase.split(separator: " ").count
+            if (3...10).contains(tokenCount) {
+                return Array(NSOrderedSet(array: matches + [sanitizedPhrase])) as? [String] ?? matches + [sanitizedPhrase]
+            }
+        }
+        return matches
     }
 
     private func alphaCorrectionType(for fieldType: AlphaExtractedLegalFieldType) -> AlphaAdvocateCorrectionType {
@@ -2466,6 +2488,20 @@ private struct AlphaPrivateAISettingsScreen: View {
                     )
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Color.rossAccent)
+                }
+            }
+
+            if let runtimeHealth = model.activeRuntimeHealth {
+                Section("Technical details") {
+                    LabeledContent("Runtime mode", value: runtimeHealth.runtimeMode.rawValue)
+                    LabeledContent("Local runtime", value: runtimeHealth.available ? "available" : "unavailable")
+                    LabeledContent("Checksum verified", value: runtimeHealth.checksumVerified ? "yes" : "no")
+                    if let maxInputChars = runtimeHealth.maxInputChars {
+                        LabeledContent("Max input chars", value: "\(maxInputChars)")
+                    }
+                    Text(runtimeHealth.userFacingStatus)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
             }
 

@@ -474,6 +474,7 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
         )
         val invocation = AlphaModelInvocationStore.begin(
             task = AlphaLocalModelTask.OcrCleanup,
+            runtimeMode = provider.runtimeMode,
             capabilityTier = activePack?.tier ?: provider.capabilityTier,
             caseId = caseId,
             documentId = document.id,
@@ -523,6 +524,7 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
         )
         val invocation = AlphaModelInvocationStore.begin(
             task = AlphaLocalModelTask.LanguageCorrection,
+            runtimeMode = provider.runtimeMode,
             capabilityTier = activePack?.tier ?: provider.capabilityTier,
             caseId = caseId,
             documentId = document.id,
@@ -559,6 +561,7 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
         )
         val invocation = AlphaModelInvocationStore.begin(
             task = AlphaLocalModelTask.DocumentClassification,
+            runtimeMode = provider.runtimeMode,
             capabilityTier = activePack?.tier ?: provider.capabilityTier,
             caseId = caseId,
             documentId = document.id,
@@ -600,6 +603,7 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
         )
         val invocation = AlphaModelInvocationStore.begin(
             task = AlphaLocalModelTask.LegalFieldExtraction,
+            runtimeMode = provider.runtimeMode,
             capabilityTier = activePack?.tier ?: provider.capabilityTier,
             caseId = caseId,
             documentId = document.id,
@@ -639,6 +643,7 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
         )
         val invocation = AlphaModelInvocationStore.begin(
             task = AlphaLocalModelTask.IssueExtraction,
+            runtimeMode = provider.runtimeMode,
             capabilityTier = activePack?.tier ?: provider.capabilityTier,
             caseId = caseId,
             documentId = document.id,
@@ -675,6 +680,7 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
         ).encodedExistingFields(gson, fields)
         val invocation = AlphaModelInvocationStore.begin(
             task = AlphaLocalModelTask.LegalFieldVerification,
+            runtimeMode = provider.runtimeMode,
             capabilityTier = activePack?.tier ?: provider.capabilityTier,
             caseId = caseId,
             documentId = document.id,
@@ -715,6 +721,7 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
             .encodedClassification(gson, classification)
         val invocation = AlphaModelInvocationStore.begin(
             task = AlphaLocalModelTask.CaseMemorySynthesis,
+            runtimeMode = provider.runtimeMode,
             capabilityTier = activePack?.tier ?: provider.capabilityTier,
             caseId = caseId,
             documentId = document.id,

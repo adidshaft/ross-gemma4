@@ -892,6 +892,18 @@ private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            controller.activeRuntimeHealth()?.let { health ->
+                AlphaCard("Technical details", "Collapsed runtime status for developer QA.") {
+                    Text("Runtime mode: ${health.runtimeMode.wireValue}")
+                    Text("Local runtime: ${if (health.available) "available" else "unavailable"}")
+                    Text("Checksum verified: ${if (health.checksumVerified) "yes" else "no"}")
+                    health.maxInputChars?.let { Text("Max input chars: $it") }
+                    Text(
+                        health.userFacingStatus,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             AlphaCard("Download policy", "Downloads can wait for Wi-Fi or use mobile data explicitly.") {
                 AlphaToggleRow("Wi-Fi only downloads", controller.persisted.settings.wifiOnlyDownloads) {
                     controller.persisted = controller.persisted.copy(settings = controller.persisted.settings.copy(wifiOnlyDownloads = it))

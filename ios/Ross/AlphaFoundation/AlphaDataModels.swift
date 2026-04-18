@@ -921,7 +921,29 @@ enum AlphaDownloadPolicy: String, Codable, Hashable, Sendable {
 
 enum AlphaPackRuntimeMode: String, Codable, Hashable, Sendable {
     case deterministicDev = "deterministic_dev"
-    case platformStub = "platform_stub"
+    case mediapipeLlm = "mediapipe_llm"
+    case llamaCppGguf = "gemma_local_runtime"
+    case appleFoundationModels = "apple_foundation_models"
+    case unavailable = "unavailable"
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let rawValue = try container.decode(String.self)
+        switch rawValue {
+        case AlphaPackRuntimeMode.deterministicDev.rawValue:
+            self = .deterministicDev
+        case AlphaPackRuntimeMode.mediapipeLlm.rawValue:
+            self = .mediapipeLlm
+        case AlphaPackRuntimeMode.llamaCppGguf.rawValue:
+            self = .llamaCppGguf
+        case AlphaPackRuntimeMode.appleFoundationModels.rawValue:
+            self = .appleFoundationModels
+        case "platform_stub", AlphaPackRuntimeMode.unavailable.rawValue:
+            self = .unavailable
+        default:
+            self = .unavailable
+        }
+    }
 }
 
 struct AlphaModelDownloadJob: Identifiable, Codable, Hashable, Sendable {
@@ -937,6 +959,7 @@ struct AlphaModelDownloadJob: Identifiable, Codable, Hashable, Sendable {
     var artifactKind: String
     var runtimeMode: AlphaPackRuntimeMode
     var developmentOnly: Bool
+    var minimumAppVersion: String
     var failureReason: String?
     var createdAt: Date
     var updatedAt: Date
@@ -955,6 +978,7 @@ struct AlphaModelDownloadJob: Identifiable, Codable, Hashable, Sendable {
         artifactKind: String = "tiny_dev_artifact",
         runtimeMode: AlphaPackRuntimeMode = .deterministicDev,
         developmentOnly: Bool = true,
+        minimumAppVersion: String = "0.1.0",
         failureReason: String? = nil,
         createdAt: Date = .now,
         updatedAt: Date = .now,
@@ -972,6 +996,7 @@ struct AlphaModelDownloadJob: Identifiable, Codable, Hashable, Sendable {
         self.artifactKind = artifactKind
         self.runtimeMode = runtimeMode
         self.developmentOnly = developmentOnly
+        self.minimumAppVersion = minimumAppVersion
         self.failureReason = failureReason
         self.createdAt = createdAt
         self.updatedAt = updatedAt
@@ -981,6 +1006,47 @@ struct AlphaModelDownloadJob: Identifiable, Codable, Hashable, Sendable {
     var progress: Double {
         guard totalBytes > 0 else { return 0 }
         return Double(bytesDownloaded) / Double(totalBytes)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case sessionId
+        case packId
+        case tier
+        case state
+        case networkPolicy
+        case bytesDownloaded
+        case totalBytes
+        case checksumSha256
+        case artifactKind
+        case runtimeMode
+        case developmentOnly
+        case minimumAppVersion
+        case failureReason
+        case createdAt
+        case updatedAt
+        case completedAt
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        sessionId = try container.decode(String.self, forKey: .sessionId)
+        packId = try container.decode(String.self, forKey: .packId)
+        tier = try container.decode(AlphaCapabilityTier.self, forKey: .tier)
+        state = try container.decode(AlphaDownloadState.self, forKey: .state)
+        networkPolicy = try container.decode(AlphaDownloadPolicy.self, forKey: .networkPolicy)
+        bytesDownloaded = try container.decode(Int64.self, forKey: .bytesDownloaded)
+        totalBytes = try container.decode(Int64.self, forKey: .totalBytes)
+        checksumSha256 = try container.decode(String.self, forKey: .checksumSha256)
+        artifactKind = try container.decodeIfPresent(String.self, forKey: .artifactKind) ?? "tiny_dev_artifact"
+        runtimeMode = try container.decodeIfPresent(AlphaPackRuntimeMode.self, forKey: .runtimeMode) ?? .deterministicDev
+        developmentOnly = try container.decodeIfPresent(Bool.self, forKey: .developmentOnly) ?? true
+        minimumAppVersion = try container.decodeIfPresent(String.self, forKey: .minimumAppVersion) ?? "0.1.0"
+        failureReason = try container.decodeIfPresent(String.self, forKey: .failureReason)
+        createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? .now
+        updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? createdAt
+        completedAt = try container.decodeIfPresent(Date.self, forKey: .completedAt)
     }
 }
 
@@ -993,6 +1059,8 @@ struct AlphaInstalledModelPack: Identifiable, Codable, Hashable, Sendable {
     var artifactKind: String
     var runtimeMode: AlphaPackRuntimeMode
     var developmentOnly: Bool
+    var checksumVerified: Bool
+    var minimumAppVersion: String
     var installedAt: Date
     var isActive: Bool
 
@@ -1005,6 +1073,8 @@ struct AlphaInstalledModelPack: Identifiable, Codable, Hashable, Sendable {
         artifactKind: String = "tiny_dev_artifact",
         runtimeMode: AlphaPackRuntimeMode = .deterministicDev,
         developmentOnly: Bool = true,
+        checksumVerified: Bool = true,
+        minimumAppVersion: String = "0.1.0",
         installedAt: Date = .now,
         isActive: Bool
     ) {
@@ -1016,8 +1086,41 @@ struct AlphaInstalledModelPack: Identifiable, Codable, Hashable, Sendable {
         self.artifactKind = artifactKind
         self.runtimeMode = runtimeMode
         self.developmentOnly = developmentOnly
+        self.checksumVerified = checksumVerified
+        self.minimumAppVersion = minimumAppVersion
         self.installedAt = installedAt
         self.isActive = isActive
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case packId
+        case tier
+        case installPath
+        case checksumSha256
+        case artifactKind
+        case runtimeMode
+        case developmentOnly
+        case checksumVerified
+        case minimumAppVersion
+        case installedAt
+        case isActive
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        packId = try container.decode(String.self, forKey: .packId)
+        tier = try container.decode(AlphaCapabilityTier.self, forKey: .tier)
+        installPath = try container.decode(String.self, forKey: .installPath)
+        checksumSha256 = try container.decode(String.self, forKey: .checksumSha256)
+        artifactKind = try container.decodeIfPresent(String.self, forKey: .artifactKind) ?? "tiny_dev_artifact"
+        runtimeMode = try container.decodeIfPresent(AlphaPackRuntimeMode.self, forKey: .runtimeMode) ?? .deterministicDev
+        developmentOnly = try container.decodeIfPresent(Bool.self, forKey: .developmentOnly) ?? true
+        checksumVerified = try container.decodeIfPresent(Bool.self, forKey: .checksumVerified) ?? true
+        minimumAppVersion = try container.decodeIfPresent(String.self, forKey: .minimumAppVersion) ?? "0.1.0"
+        installedAt = try container.decodeIfPresent(Date.self, forKey: .installedAt) ?? .now
+        isActive = try container.decodeIfPresent(Bool.self, forKey: .isActive) ?? false
     }
 }
 

@@ -4,6 +4,7 @@ import Foundation
 struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     var task: AlphaLocalModelTask
+    var runtimeMode: String
     var caseId: UUID?
     var documentId: UUID?
     var extractionRunId: UUID?
@@ -21,6 +22,7 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
     init(
         id: UUID = UUID(),
         task: AlphaLocalModelTask,
+        runtimeMode: String,
         caseId: UUID?,
         documentId: UUID?,
         extractionRunId: UUID?,
@@ -37,6 +39,7 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
     ) {
         self.id = id
         self.task = task
+        self.runtimeMode = runtimeMode
         self.caseId = caseId
         self.documentId = documentId
         self.extractionRunId = extractionRunId
@@ -56,6 +59,7 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
 enum AlphaModelInvocationStore {
     static func begin(
         task: AlphaLocalModelTask,
+        runtimeMode: AlphaPackRuntimeMode = .deterministicDev,
         capabilityTier: AlphaCapabilityTier,
         caseId: UUID?,
         documentId: UUID?,
@@ -64,6 +68,7 @@ enum AlphaModelInvocationStore {
     ) -> AlphaLocalModelInvocation {
         AlphaLocalModelInvocation(
             task: task,
+            runtimeMode: runtimeMode.rawValue,
             caseId: caseId,
             documentId: documentId,
             extractionRunId: extractionRunId,

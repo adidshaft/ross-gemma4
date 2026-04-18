@@ -124,15 +124,59 @@ object AlphaPayloadShaper {
         AlphaPublicLawSearchPayload(query = preview.query)
 
     private fun suggestedPublicLawQuery(case: AlphaCaseMatter?): String? {
-        val fields = case?.documents.orEmpty().flatMap { it.extractedFields }
-        val issue = fields.firstOrNull { it.fieldType == AlphaExtractedLegalFieldType.Issue }?.value
-        val section = fields.firstOrNull { it.fieldType == AlphaExtractedLegalFieldType.Section }?.value
-        val documentType = case?.documents?.firstOrNull()?.classification?.type?.name
-        val tokens = listOf(issue, section, documentType, "India")
-            .filterNotNull()
-            .joinToString(" ")
+        val verifiedFields = case?.documents.orEmpty()
+            .flatMap { it.extractedFields }
+            .filter { !it.needsReview || it.userCorrected }
+        val conceptTerms = verifiedFields
+            .filter {
+                it.fieldType == AlphaExtractedLegalFieldType.Issue ||
+                    it.fieldType == AlphaExtractedLegalFieldType.OrderDirection ||
+                    it.fieldType == AlphaExtractedLegalFieldType.Relief ||
+                    it.fieldType == AlphaExtractedLegalFieldType.Section
+            }
+            .flatMap { publicLawKeywords(it.value) }
+        val documentTypes = case?.documents.orEmpty()
+            .mapNotNull { document ->
+                document.classification
+                    ?.takeIf { !it.needsReview }
+                    ?.type
+                    ?.name
+                    ?.replace("_", " ")
+            }
+        val tokens = linkedSetOf<String>()
+        (conceptTerms + documentTypes + listOf("India")).forEach { token ->
+            val trimmed = token.trim()
+            if (trimmed.isNotBlank()) {
+                tokens += trimmed
+            }
+        }
+        return tokens.joinToString(" ").takeIf { it.isNotBlank() }
+    }
+
+    private fun publicLawKeywords(value: String): List<String> {
+        val lowered = value.lowercase()
+        val patterns = listOf(
+            "commercial courts act",
+            "negotiable instruments act",
+            "written statement",
+            "delay condonation",
+            "interim maintenance",
+            "injunction",
+            "section \\d+[a-z]*",
+            "order [a-z0-9]+ rule \\d+",
+            "cheque dishonour",
+        )
+        val matched = patterns.mapNotNull { pattern ->
+            Regex(pattern, RegexOption.IGNORE_CASE).find(lowered)?.value
+        }.distinct().toMutableList()
+        val sanitizedPhrase = lowered
+            .replace(Regex("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+"), " ")
+            .replace(Regex("\\b\\d{2,}\\b"), " ")
             .replace(Regex("\\s+"), " ")
             .trim()
-        return tokens.takeIf { it.isNotBlank() }
+        if (sanitizedPhrase.isNotBlank() && sanitizedPhrase.split(" ").size in 3..10) {
+            matched += sanitizedPhrase
+        }
+        return matched.distinct()
     }
 }

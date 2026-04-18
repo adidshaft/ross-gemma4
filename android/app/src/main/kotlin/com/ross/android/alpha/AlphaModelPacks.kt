@@ -40,6 +40,7 @@ object AlphaModelPackManager {
             artifactKind = existingJob?.artifactKind ?: "tiny_dev_artifact",
             runtimeMode = existingJob?.runtimeMode ?: AlphaPackRuntimeMode.DeterministicDev,
             developmentOnly = existingJob?.developmentOnly ?: true,
+            minimumAppVersion = existingJob?.minimumAppVersion ?: "0.1.0",
             failureReason = null,
             createdAt = existingJob?.createdAt ?: now,
             updatedAt = now,
@@ -86,6 +87,8 @@ object AlphaModelPackManager {
             artifactKind = job.artifactKind,
             runtimeMode = job.runtimeMode,
             developmentOnly = job.developmentOnly,
+            checksumVerified = true,
+            minimumAppVersion = job.minimumAppVersion,
             installedAt = now,
             isActive = true,
         )

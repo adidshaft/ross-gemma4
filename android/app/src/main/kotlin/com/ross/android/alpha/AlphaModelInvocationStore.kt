@@ -6,6 +6,7 @@ import java.util.UUID
 data class AlphaLocalModelInvocation(
     val id: String = UUID.randomUUID().toString(),
     val task: AlphaLocalModelTask,
+    val runtimeMode: String,
     val caseId: String? = null,
     val documentId: String? = null,
     val extractionRunId: String? = null,
@@ -24,6 +25,7 @@ data class AlphaLocalModelInvocation(
 object AlphaModelInvocationStore {
     fun begin(
         task: AlphaLocalModelTask,
+        runtimeMode: AlphaPackRuntimeMode = AlphaPackRuntimeMode.DeterministicDev,
         capabilityTier: AlphaCapabilityTier,
         caseId: String?,
         documentId: String?,
@@ -31,6 +33,7 @@ object AlphaModelInvocationStore {
         input: AlphaLocalModelInput,
     ): AlphaLocalModelInvocation = AlphaLocalModelInvocation(
         task = task,
+        runtimeMode = runtimeMode.wireValue,
         caseId = caseId,
         documentId = documentId,
         extractionRunId = extractionRunId,

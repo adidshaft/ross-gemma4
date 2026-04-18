@@ -801,6 +801,7 @@ private struct AlphaLocalExtractionOrchestrator {
         )
         let invocation = AlphaModelInvocationStore.begin(
             task: .ocrCleanup,
+            runtimeMode: provider.runtimeMode,
             capabilityTier: activePack?.tier ?? provider.capabilityTier,
             caseId: caseId,
             documentId: document.id,
@@ -861,6 +862,7 @@ private struct AlphaLocalExtractionOrchestrator {
         )
         let invocation = AlphaModelInvocationStore.begin(
             task: .languageCorrection,
+            runtimeMode: provider.runtimeMode,
             capabilityTier: activePack?.tier ?? provider.capabilityTier,
             caseId: caseId,
             documentId: document.id,
@@ -899,6 +901,7 @@ private struct AlphaLocalExtractionOrchestrator {
         )
         let invocation = AlphaModelInvocationStore.begin(
             task: .documentClassification,
+            runtimeMode: provider.runtimeMode,
             capabilityTier: activePack?.tier ?? provider.capabilityTier,
             caseId: caseId,
             documentId: document.id,
@@ -947,6 +950,7 @@ private struct AlphaLocalExtractionOrchestrator {
         ).encodedClassification(classification, encoder: encoder)
         let invocation = AlphaModelInvocationStore.begin(
             task: .legalFieldExtraction,
+            runtimeMode: provider.runtimeMode,
             capabilityTier: activePack?.tier ?? provider.capabilityTier,
             caseId: caseId,
             documentId: document.id,
@@ -991,6 +995,7 @@ private struct AlphaLocalExtractionOrchestrator {
         ).encodedClassification(classification, encoder: encoder)
         let invocation = AlphaModelInvocationStore.begin(
             task: .issueExtraction,
+            runtimeMode: provider.runtimeMode,
             capabilityTier: activePack?.tier ?? provider.capabilityTier,
             caseId: caseId,
             documentId: document.id,
@@ -1030,6 +1035,7 @@ private struct AlphaLocalExtractionOrchestrator {
         ).encodedExistingFields(fields, encoder: encoder)
         let invocation = AlphaModelInvocationStore.begin(
             task: .legalFieldVerification,
+            runtimeMode: provider.runtimeMode,
             capabilityTier: activePack?.tier ?? provider.capabilityTier,
             caseId: caseId,
             documentId: document.id,
@@ -1079,6 +1085,7 @@ private struct AlphaLocalExtractionOrchestrator {
         .encodedClassification(classification, encoder: encoder)
         let invocation = AlphaModelInvocationStore.begin(
             task: .caseMemorySynthesis,
+            runtimeMode: provider.runtimeMode,
             capabilityTier: activePack?.tier ?? provider.capabilityTier,
             caseId: caseId,
             documentId: document.id,

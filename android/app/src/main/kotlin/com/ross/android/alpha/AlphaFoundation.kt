@@ -47,7 +47,16 @@ enum class AlphaOcrStatus { NotStarted, Indexed, Placeholder, NativeText, OcrCom
 enum class AlphaIndexingStatus { NotStarted, Extracting, Indexed, Partial, Failed }
 enum class AlphaDownloadState { NotStarted, Queued, Downloading, PausedWaitingForWifi, PausedUser, PausedNoStorage, PausedError, Verifying, Installed, Failed, Cancelled }
 enum class AlphaDownloadPolicy { WifiOnly, MobileAllowed }
-enum class AlphaPackRuntimeMode { DeterministicDev, PlatformStub }
+enum class AlphaPackRuntimeMode(val wireValue: String) {
+    DeterministicDev("deterministic_dev"),
+    MediapipeLlm("mediapipe_llm"),
+    Gemma 4 E4B Q4CppGguf("gemma_local_runtime"),
+    AppleFoundationModels("apple_foundation_models"),
+    Unavailable("unavailable");
+
+    val title: String
+        get() = wireValue.replace("_", " ")
+}
 enum class AlphaPrivacyPurpose { LocalOnly, ModelCatalog, ModelDownload, ModelVerification, PublicLawSearch }
 enum class AlphaPayloadClass { LocalOnly, NoCaseData, SanitizedPublicQuery, AccountToken }
 
@@ -150,6 +159,7 @@ data class AlphaModelDownloadJob(
     val artifactKind: String = "tiny_dev_artifact",
     val runtimeMode: AlphaPackRuntimeMode = AlphaPackRuntimeMode.DeterministicDev,
     val developmentOnly: Boolean = true,
+    val minimumAppVersion: String = "0.1.0",
     val failureReason: String? = null,
     val createdAt: String = nowIso(),
     val updatedAt: String = nowIso(),
@@ -165,6 +175,8 @@ data class AlphaInstalledPack(
     val artifactKind: String = "tiny_dev_artifact",
     val runtimeMode: AlphaPackRuntimeMode = AlphaPackRuntimeMode.DeterministicDev,
     val developmentOnly: Boolean = true,
+    val checksumVerified: Boolean = true,
+    val minimumAppVersion: String = "0.1.0",
     val installedAt: String = nowIso(),
     val isActive: Boolean,
 )
@@ -276,6 +288,9 @@ class AlphaRossController(private val context: Context) {
     fun activePack(): AlphaInstalledPack? = persisted.installedPacks.firstOrNull { it.isActive }
 
     fun activeExtractionMode(): AlphaExtractionMode = AlphaExtractionMode.fromInstalledPack(activePack())
+
+    fun activeRuntimeHealth(): AlphaLocalRuntimeHealth? =
+        AlphaLocalModelRuntime.runtimeHealth(activePack(), activePack()?.tier)
 
     private fun loadState(): AlphaPersistedState {
         ensureFolders()
@@ -1109,5 +1124,9 @@ fun nowIso(): String = java.time.Instant.now().toString()
 private fun sha256(value: String): String = MessageDigest.getInstance("SHA-256").digest(value.toByteArray()).joinToString("") { "%02x".format(it) }
 private fun String.toRuntimeMode(): AlphaPackRuntimeMode = when (lowercase()) {
     "deterministic_dev" -> AlphaPackRuntimeMode.DeterministicDev
-    else -> AlphaPackRuntimeMode.PlatformStub
+    "mediapipe_llm" -> AlphaPackRuntimeMode.MediapipeLlm
+    "gemma_local_runtime" -> AlphaPackRuntimeMode.Gemma 4 E4B Q4CppGguf
+    "apple_foundation_models" -> AlphaPackRuntimeMode.AppleFoundationModels
+    "unavailable" -> AlphaPackRuntimeMode.Unavailable
+    else -> AlphaPackRuntimeMode.Unavailable
 }
