@@ -1,22 +1,9 @@
-# Ross Mobile Alpha Foundation Report
+# Ross Private Document Intelligence Alpha Report
 
 ## Branch
 
-- `alpha-mobile-foundation`
-
-## What changed
-
-- Added a checked-in Android Gradle wrapper and fixed the current Android build script issues so `:app:assembleDebug` works.
-- Added a real iOS Xcode app project at `ios/Ross.xcodeproj` and wired the app entry to the new alpha foundation root.
-- Added new Android and iOS alpha-foundation layers with:
-  - typed route objects
-  - file-backed local persistence for cases, documents, source refs, exports, model-pack jobs, installed packs, and privacy-ledger entries
-  - document import into app-private storage
-  - source-chip navigation into document viewer
-  - basic local export generation
-  - persisted Private AI Pack lifecycle state
-- Hardened backend public-law query validation to reject obvious private matter content and the specified fake secrets without echoing them back.
-- Updated platform runbooks and architecture docs for the new alpha behavior.
+- Started from `alpha-mobile-foundation`
+- Continued work on new branch `alpha-document-intelligence`
 
 ## Commands run
 
@@ -24,88 +11,100 @@
 
 - `git status --short`
 - `git log --oneline -n 8`
-- Inspected `README.md`, product/privacy/model/legal docs, Android/iOS/backend/core/shared paths, `SCRIPT.md`, and `artifacts/`
+- Inspected active alpha shell paths, backend routes/tests, `SCRIPT.md`, and `artifacts/`
 
-### Rust core
+### Baseline validation run before changes
 
-- `cd core/rust && cargo test`
+- `cd /Users/amanpandey/projects/ross/core/rust && cargo test`
+- `cd /Users/amanpandey/projects/ross/backend && npm install`
+- `cd /Users/amanpandey/projects/ross/backend && npm test`
+- `cd /Users/amanpandey/projects/ross/backend && npm run typecheck`
+- `cd /Users/amanpandey/projects/ross/backend && npm run build`
+- `cd /Users/amanpandey/projects/ross && ./scripts/dev/verify-boundaries.sh`
+- `cd /Users/amanpandey/projects/ross && ./scripts/ci/check-no-cloud-llm.sh`
+- `cd /Users/amanpandey/projects/ross && ./scripts/ci/check-no-analytics.sh`
+- `cd /Users/amanpandey/projects/ross && ./scripts/ci/check-no-large-model-assets.sh`
+- `cd /Users/amanpandey/projects/ross && ./scripts/ci/check-onboarding-copy-boundary.sh`
+- `cd /Users/amanpandey/projects/ross/android && ./gradlew :app:testDebugUnitTest :app:assembleDebug`
+- `cd /Users/amanpandey/projects/ross/ios && swift build --scratch-path tmp/swiftpm`
+- `cd /Users/amanpandey/projects/ross/ios && xcodebuild -project Ross.xcodeproj -scheme Ross -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath tmp/DerivedData build`
+- `cd /Users/amanpandey/projects/ross/ios && swift run --scratch-path tmp/swiftpm Ross --generate-screenshots`
 
-### Backend
+### Final validation run after changes
 
-- `cd backend && npm install`
-- `cd backend && npm test`
-- `cd backend && npm run typecheck`
-- `cd backend && npm run build`
-
-### Privacy guards
-
-- `./scripts/dev/verify-boundaries.sh`
-- `./scripts/ci/check-no-cloud-llm.sh`
-- `./scripts/ci/check-no-analytics.sh`
-- `./scripts/ci/check-no-large-model-assets.sh`
-- `./scripts/ci/check-onboarding-copy-boundary.sh`
-
-### Android
-
-- `/Users/amanpandey/.gradle/wrapper/dists/gradle-8.14.3-bin/cv11ve7ro1n3o1j4so8xd9n66/gradle-8.14.3/bin/gradle -p android wrapper --gradle-version 8.14.3`
-- `cd android && ./gradlew :app:assembleDebug`
-- `cd android && ./gradlew :app:testDebugUnitTest :app:assembleDebug`
-
-### iOS
-
-- `cd ios && swift build`
-- `cd ios && swift build --scratch-path tmp/swiftpm`
-- `xcodebuild -project ios/Ross.xcodeproj -scheme Ross -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath ios/tmp/DerivedData build`
-- `cd ios && swift run --scratch-path tmp/swiftpm Ross --generate-screenshots`
+- `cd /Users/amanpandey/projects/ross/core/rust && cargo test`
+- `cd /Users/amanpandey/projects/ross/backend && npm test`
+- `cd /Users/amanpandey/projects/ross/backend && npm run typecheck`
+- `cd /Users/amanpandey/projects/ross/backend && npm run build`
+- `cd /Users/amanpandey/projects/ross && ./scripts/dev/verify-boundaries.sh`
+- `cd /Users/amanpandey/projects/ross && ./scripts/ci/check-no-cloud-llm.sh`
+- `cd /Users/amanpandey/projects/ross && ./scripts/ci/check-no-analytics.sh`
+- `cd /Users/amanpandey/projects/ross && ./scripts/ci/check-no-large-model-assets.sh`
+- `cd /Users/amanpandey/projects/ross && ./scripts/ci/check-onboarding-copy-boundary.sh`
+- `cd /Users/amanpandey/projects/ross/android && ./gradlew :app:testDebugUnitTest :app:assembleDebug`
+- `cd /Users/amanpandey/projects/ross/ios && rm -rf tmp/swiftpm && swift build --scratch-path tmp/swiftpm`
+- `cd /Users/amanpandey/projects/ross/ios && xcodebuild -project Ross.xcodeproj -scheme Ross -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath tmp/DerivedData build`
+- `cd /Users/amanpandey/projects/ross/ios && swift run --scratch-path tmp/swiftpm Ross --generate-screenshots`
 
 ## Pass / fail status
 
-### Passed
+- Rust: passed
+- Backend tests: passed
+- Backend typecheck: passed
+- Backend build: passed
+- Privacy guards: passed
+- Android unit tests and debug assemble: passed
+- iOS simulator build: passed
+- iOS screenshot export: passed
 
-- Rust tests
-- Backend tests
-- Backend typecheck
-- Backend build
-- Privacy guard scripts
-- Android `:app:assembleDebug`
-- Android `:app:testDebugUnitTest`
-- iOS simulator build through `xcodebuild`
-- Screenshot export through `swift run --scratch-path tmp/swiftpm Ross --generate-screenshots`
+## Platform status
 
-### Build failures encountered and resolved
+### Android
 
-- Android wrapper generation initially failed because `android/app/build.gradle.kts` still used `kotlinOptions.jvmTarget = "17"`. Fixed by migrating to the current Kotlin compiler DSL.
-- Android `:app:assembleDebug` then failed because the XML theme referenced `Theme.Material3.DayNight.NoActionBar` without the Material dependency on the classpath. Fixed by adding `com.google.android.material:material`.
-- Android compile then failed on an experimental Material API use in `WorkbenchScreen`. Fixed with the required `@OptIn(ExperimentalMaterial3Api::class)`.
-- `swift build` on the package path intermittently failed with a local SwiftPM build-database disk I/O error under `.build`. The package compiled successfully when redirected to `--scratch-path tmp/swiftpm`.
-- The first iOS simulator build failed because the new `AlphaFoundation` files had been added to the Xcode project with the wrong path. Fixed by correcting the file references in `ios/Ross.xcodeproj/project.pbxproj`.
+- Encrypted app-private persistence now wraps the active alpha state store and migrates legacy plaintext `state.json` into encrypted `state.enc`
+- Local PDF export now writes real PDF files under app-private storage
+- Source-chip routing now resolves page-targeted source panels and safe missing-source handling
+- PDF preview uses `PdfRenderer` for in-app page preview
+- Model catalog/download payload shapers and checksum-guarded dev pack install plumbing are covered by unit tests
 
-## Privacy guard status
+### iOS
 
-- `verify-boundaries.sh`: passed
-- `check-no-cloud-llm.sh`: passed
-- `check-no-analytics.sh`: passed
-- `check-no-large-model-assets.sh`: passed
-- `check-onboarding-copy-boundary.sh`: passed
+- Encrypted app-private persistence now wraps the active alpha store and migrates legacy plaintext state into AES.GCM-encrypted state blobs
+- PDF imports now index native PDF text page-by-page through PDFKit where present
+- Image imports now run local Vision text recognition where available
+- Document viewer now accepts initial page targeting and shows source-reference context
+- Local export generation now writes real PDF files instead of plain text
+- Public-law and model-download backend clients now compile into the active alpha shell, with local dev-artifact fallback if the backend is unavailable
 
-## What builds now
+### Backend
 
-- Android app from CLI through the checked-in Gradle wrapper
-- Android unit tests
-- iOS app for simulator through `ios/Ross.xcodeproj`
-- iOS screenshot export through the Swift package path
+- `/model-catalog` now returns signed tiny dev-artifact metadata with checksum, segment size, and segment count
+- `/model-download/session` now returns signed segmented download metadata with `downloadPath`
+- `/dev-artifacts/:artifactId` now serves real tiny dev artifacts with byte-range support for resumable development downloads
+- `/public-law/search` returns sanitized fixture-index results and logs only hashed query metadata on rejection/production flows
 
-## Remaining gaps and stubs
+## Screenshots
 
-- Android document viewing is still MVP-level and placeholder-heavy for PDF page rendering.
-- iOS document viewing uses a real PDF preview path, but precise snippet highlighting is still represented through source-reference panels rather than exact text highlights.
-- OCR remains interface/placeholder level where platform OCR is not yet wired.
-- Mobile public-law search stays privacy-safe and explicit, but the current mobile results are still stub-backed rather than running a true backend-connected in-app search flow.
-- Model-pack lifecycle is now persisted and checksum-aware, but the installed artifact is still a small local development artifact rather than a real segmented model payload.
-- Real encrypted persistence, real local model inference, and a full export PDF renderer remain future steps.
+- Regenerated under `/Users/amanpandey/projects/ross/ios/tmp/ui-screenshots`
+- `ios-onboarding.png`
+- `ios-private-ai-pack.png`
+- `ios-workspace.png`
+- `ios-ask-case.png`
 
-## Manual next steps if a developer machine differs
+## Remaining stubs
 
-- If Android Studio does not have the required SDK/toolchain, open `/Users/amanpandey/projects/ross/android`, let it sync via the checked-in wrapper, and install any requested SDK components.
-- If SwiftPM hits a local `.build` database issue, use `cd /Users/amanpandey/projects/ross/ios && swift build --scratch-path tmp/swiftpm`.
-- To run the iOS app interactively, open `/Users/amanpandey/projects/ross/ios/Ross.xcodeproj`, select the shared `Ross` scheme, and run it on any iOS Simulator.
+- Android active alpha shell still uses local dev/stub behavior for public-law execution and model-download execution; only the privacy-safe payload shaping, checksum plumbing, and persistence/tests are fully landed there
+- Android image OCR through on-device ML Kit is not wired yet
+- Android PDF text extraction remains page-record and preview oriented rather than true text extraction
+- Exact snippet highlighting is still best-effort source-panel UX on both platforms rather than precise text selection overlays
+- iOS backend-connected public-law/model-download paths compile and can run against a local backend, but they were not exercised end-to-end against a live mobile simulator session in this turn
+- Share-sheet/FileProvider export sharing is not wired yet; exports are generated locally and persisted safely
+
+## Environment notes
+
+- `swift build --scratch-path tmp/swiftpm` succeeded after clearing the generated scratch directory once; the earlier failure mode was a local SwiftPM build-database disk I/O error inside `tmp/swiftpm/build.db`
+- No live backend server was launched for simulator/device interaction during this turn, so mobile-to-backend runtime flows were validated by build/test coverage and backend endpoint tests rather than full interactive end-to-end sessions
+
+## Exact next recommended step
+
+- Wire the Android alpha shell to the hardened backend endpoints with background-safe clients for `/model-catalog`, `/model-download/session`, `/dev-artifacts/:artifactId`, and `/public-law/search`, then add on-device ML Kit OCR for imported images so both mobile platforms reach the same functional document-intelligence baseline.

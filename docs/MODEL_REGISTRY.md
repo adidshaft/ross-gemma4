@@ -55,3 +55,10 @@ These are placeholders for packaging and evaluation only. The repo does not ship
 - Apps remain usable without the full pack
 - Technical details appear only under `Settings > Private AI > Technical Details`
 
+## Alpha delivery notes
+
+- Backend `/model-catalog` now returns tiny dev-artifact metadata for `Quick Start`, `Case Associate`, and `Senior Drafting Support`
+- Backend `/model-download/session` now returns signed segment metadata with SHA-256 for each segment and the final artifact
+- Backend `/dev-artifacts/:artifactId` serves range-request-friendly tiny dev artifacts so resumable delivery logic can be tested without shipping large binaries
+- iOS alpha consumes the backend metadata path and verifies downloaded artifact bytes before marking a pack installed
+- Android alpha currently preserves checksum-aware local dev artifact installs and privacy-safe payload shaping, but still needs runtime backend execution wiring

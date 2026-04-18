@@ -28,13 +28,14 @@ The Android package namespace remains `com.ross.android`.
 ## Current alpha foundation
 
 - Onboarding flows into Private AI Pack setup and then the case list.
-- Cases, documents, source refs, privacy ledger entries, exports, and model-pack jobs persist to app-private JSON storage under the app files directory.
+- Cases, documents, source refs, privacy ledger entries, exports, and model-pack jobs persist to encrypted app-private storage metadata under the app files directory.
 - PDF, image, and text imports are copied into app-private storage.
-- Source chips deep-link into the document viewer.
-- Public-law search stays on a sanitized-preview flow and only uses stub preview results locally right now.
+- Source chips deep-link into the document viewer with page-targeted source panels and safe missing-source handling.
+- Local exports are written as real PDF files in app-private storage.
+- Public-law search stays on a sanitized-preview flow and only uses local alpha execution right now.
 
 ## Known caveats
 
-- Android document viewing is MVP-level: it shows metadata, extracted text, and source-reference panels, but PDF page rendering is still placeholder-based.
-- Model-pack lifecycle is operational at the state-machine level with checksum plumbing and app-private artifacts, but the actual download/install uses a development artifact rather than a real large pack.
-- Public-law search is privacy-safe and explicit, but still stub-backed on the mobile side until the backend/stub environment is connected in-device.
+- Android document viewing is MVP-level: it shows metadata, extracted text, source-reference panels, and PDF previews, but exact snippet highlighting is still best-effort only.
+- Model-pack lifecycle is operational at the state-machine level with checksum plumbing, encrypted persistence, and app-private artifacts, but runtime backend execution is still pending in the active alpha shell.
+- Android image OCR via on-device ML Kit and deeper PDF text extraction are still the next implementation step.

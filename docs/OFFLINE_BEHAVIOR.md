@@ -4,10 +4,10 @@
 
 - Complete onboarding and reach the case list
 - Create a case matter
-- Import PDF, image, or text files into app-private storage
+- Import PDF, image, or text files into encrypted app-private storage metadata and app-private file storage
 - Open the document list and document viewer
 - Review source refs and jump from source chips into document context
-- Generate local text exports that remain on-device
+- Generate local PDF exports that remain on-device
 - Review prior Privacy Ledger entries
 
 ## Works with Quick Start
@@ -35,6 +35,7 @@
 
 - Model catalog checks
 - Model-download session setup
+- Dev-artifact byte delivery for backend-connected download flows
 - Entitlement refresh
 - Public-law search after the user approves the sanitized preview
 
@@ -44,6 +45,9 @@
 - If Quick Start is installed, Ross can keep short local review flows available while larger packs are still pending.
 - Public-law search remains blocked until the user confirms the sanitized preview.
 - Larger model-pack installs can pause for Wi-Fi or explicit mobile-data approval.
+- Android currently keeps public-law execution and pack delivery on local alpha/dev paths even though the backend contracts and tests are in place.
+- iOS can call the hardened backend for sanitized public-law search and model-download metadata, then falls back to a local dev artifact if the backend is unavailable.
+- iOS extracts native PDF text locally where available and runs Vision OCR for images; Android still needs ML Kit wiring for real image OCR.
 
 ## User messaging
 

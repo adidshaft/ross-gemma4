@@ -24,6 +24,14 @@ xcodebuild \
   build
 ```
 
+If SwiftPM scratch data becomes corrupt locally, clear it and rerun:
+
+```sh
+cd /Users/amanpandey/projects/ross/ios
+rm -rf tmp/swiftpm
+swift build --scratch-path tmp/swiftpm
+```
+
 ## Screenshot export
 
 Screenshot export is currently a macOS-hosted Swift Package workflow, not an iOS Simulator workflow. The iOS app target runs the interactive app UI; the PNG export path still comes from `ScreenshotExporter.swift`, which uses `AppKit` when available.
@@ -43,3 +51,19 @@ That command writes these PNGs into `ios/tmp/ui-screenshots`:
 - `ios-ask-case.png`
 
 If you instead launch the package from the repo root with `swift run --package-path ios Ross --generate-screenshots`, the same relative `tmp/ui-screenshots` folder is created under the repo root.
+
+## Current alpha foundation
+
+- Active alpha state is encrypted at rest with Keychain-managed AES.GCM
+- Legacy plaintext state is migrated into encrypted storage on load
+- PDF imports index native page text locally where available
+- Image imports run local Vision OCR where available
+- Source chips open the document viewer with page targeting and source-reference context
+- Local exports are written as real PDF files under app-private storage
+- Public-law search and model-download clients are compiled into the active alpha shell for a local backend at `http://127.0.0.1:8080`, with a local dev-artifact fallback for pack install if the backend is unavailable
+
+## Known caveats
+
+- Exact text highlighting is still represented through source panels and page targeting rather than reliable per-snippet PDF selection
+- Mobile-to-backend runtime flows were build-validated in this phase but not manually exercised against a live simulator session with a running local backend
+- Export sharing is not yet wired to a share sheet

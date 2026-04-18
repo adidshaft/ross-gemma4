@@ -17,7 +17,8 @@
 
 - Ross mobile alpha now copies imported files into app-private storage and creates local document/page records immediately.
 - The current document viewer supports title, type, page-count metadata, OCR/indexing state, extracted-text panels, and source-reference context.
-- OCR and metadata extraction still use placeholder plumbing where a platform OCR implementation is not yet wired.
+- iOS extracts native PDF text through PDFKit page strings and runs Vision OCR on imported images where available.
+- Android creates page records, PDF previews, source panels, and encrypted persistence, but still needs ML Kit wiring for real image OCR and deeper PDF text extraction.
 
 ## Retrieval
 
@@ -27,6 +28,7 @@
 - Optional reranking
 - Source pack assembly with page and paragraph references
 - Source refs now carry `caseId`, `documentId`, `documentTitle`, `pageNumber`, optional paragraph range, optional snippet text, and optional OCR confidence
+- iOS page records now also retain optional extracted text, anchor text, indexing status, and highlight placeholders for future exact anchoring
 
 ## Generation
 
@@ -45,3 +47,4 @@
 - State uncertainty
 - Say `Not found in the case file` where appropriate
 - If exact highlight placement is not yet available, show a source-reference panel with page and snippet metadata instead of pretending to anchor precisely
+- Do not send OCR text, page text, filenames, or source chunks to public-law or model-delivery endpoints
