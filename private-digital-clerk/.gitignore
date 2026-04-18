@@ -7,6 +7,7 @@ build/
 .gradle/
 .kotlin/
 .swiftpm/
+.build/
 DerivedData/
 Pods/
 *.xcworkspace/xcuserdata/
@@ -34,4 +35,3 @@ tmp/
 *.trace
 model-cache/
 downloads/
-
