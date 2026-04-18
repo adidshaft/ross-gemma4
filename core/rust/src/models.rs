@@ -224,7 +224,7 @@ impl CapabilityTierId {
         match self {
             Self::QuickStart => "quick_start",
             Self::CaseAssociate => "case_associate",
-            Self::SeniorDrafting => "senior_drafting",
+            Self::SeniorDrafting => "senior_drafting_support",
         }
     }
 

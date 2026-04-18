@@ -88,5 +88,5 @@ fn advanced_drafting_requires_senior_tier() {
     assert!(decision
         .reasons
         .iter()
-        .any(|reason| reason.contains("senior_drafting")));
+        .any(|reason| reason.contains("senior_drafting_support")));
 }

@@ -9,8 +9,338 @@
       "enum": [
         "quick_start",
         "case_associate",
-        "senior_drafting"
+        "senior_drafting_support"
       ]
+    },
+    "extractionMode": {
+      "type": "string",
+      "enum": [
+        "basic",
+        "quick_start",
+        "case_associate",
+        "senior_drafting_support"
+      ]
+    },
+    "documentLanguage": {
+      "type": "string",
+      "enum": [
+        "english",
+        "hindi",
+        "mixed",
+        "unknown"
+      ]
+    },
+    "documentScript": {
+      "type": "string",
+      "enum": [
+        "latin",
+        "devanagari",
+        "mixed",
+        "other",
+        "unknown"
+      ]
+    },
+    "sourceRef": {
+      "type": "object",
+      "required": [
+        "caseId",
+        "documentId",
+        "documentTitle",
+        "pageNumber"
+      ],
+      "properties": {
+        "caseId": { "type": "string" },
+        "documentId": { "type": "string" },
+        "documentTitle": { "type": "string" },
+        "pageNumber": { "type": "integer", "minimum": 1 },
+        "paragraphRange": { "type": "string" },
+        "textSnippet": { "type": "string" },
+        "ocrConfidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "documentLanguageProfile": {
+      "type": "object",
+      "required": [
+        "documentId",
+        "primaryLanguage",
+        "scriptsDetected",
+        "confidence",
+        "pageProfiles"
+      ],
+      "properties": {
+        "documentId": { "type": "string" },
+        "primaryLanguage": { "$ref": "#/definitions/documentLanguage" },
+        "scriptsDetected": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["latin", "devanagari", "other"]
+          }
+        },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "pageProfiles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["pageNumber", "language", "script", "confidence"],
+            "properties": {
+              "pageNumber": { "type": "integer", "minimum": 1 },
+              "language": { "$ref": "#/definitions/documentLanguage" },
+              "script": { "$ref": "#/definitions/documentScript" },
+              "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+            }
+          }
+        }
+      }
+    },
+    "legalDocumentClassification": {
+      "type": "object",
+      "required": [
+        "documentId",
+        "type",
+        "confidence",
+        "sourceRefs",
+        "needsReview"
+      ],
+      "properties": {
+        "documentId": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": [
+            "pleading",
+            "order",
+            "judgment",
+            "affidavit",
+            "notice",
+            "evidence",
+            "correspondence",
+            "misc"
+          ]
+        },
+        "subtype": { "type": "string" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "sourceRefs": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/sourceRef" }
+        },
+        "needsReview": { "type": "boolean" }
+      }
+    },
+    "extractedLegalField": {
+      "type": "object",
+      "required": [
+        "id",
+        "caseId",
+        "documentId",
+        "fieldType",
+        "label",
+        "value",
+        "sourceRefs",
+        "confidence",
+        "extractionMode",
+        "extractionPass",
+        "needsReview",
+        "userCorrected",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "caseId": { "type": "string" },
+        "documentId": { "type": "string" },
+        "fieldType": {
+          "type": "string",
+          "enum": [
+            "court",
+            "case_number",
+            "party_name",
+            "advocate_name",
+            "judge_name",
+            "date",
+            "next_date",
+            "section",
+            "relief",
+            "prayer",
+            "order_direction",
+            "limitation_date",
+            "amount",
+            "exhibit_number",
+            "fact",
+            "issue",
+            "unknown"
+          ]
+        },
+        "label": { "type": "string" },
+        "value": { "type": "string" },
+        "normalizedValue": { "type": "string" },
+        "sourceRefs": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/sourceRef" }
+        },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "extractionMode": { "$ref": "#/definitions/extractionMode" },
+        "extractionPass": {
+          "type": "string",
+          "enum": [
+            "ocr",
+            "regex",
+            "llm_extract",
+            "llm_verify",
+            "user_corrected"
+          ]
+        },
+        "needsReview": { "type": "boolean" },
+        "userCorrected": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "extractionRun": {
+      "type": "object",
+      "required": [
+        "id",
+        "caseId",
+        "documentId",
+        "mode",
+        "status",
+        "pagesProcessed",
+        "totalPages",
+        "fieldsExtracted",
+        "fieldsNeedingReview",
+        "warnings"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "caseId": { "type": "string" },
+        "documentId": { "type": "string" },
+        "mode": { "$ref": "#/definitions/extractionMode" },
+        "status": {
+          "type": "string",
+          "enum": [
+            "queued",
+            "running",
+            "needs_review",
+            "complete",
+            "failed",
+            "cancelled"
+          ]
+        },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "completedAt": { "type": "string", "format": "date-time" },
+        "pagesProcessed": { "type": "integer", "minimum": 0 },
+        "totalPages": { "type": "integer", "minimum": 0 },
+        "fieldsExtracted": { "type": "integer", "minimum": 0 },
+        "fieldsNeedingReview": { "type": "integer", "minimum": 0 },
+        "warnings": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "errorMessage": { "type": "string" }
+      }
+    },
+    "extractionFinding": {
+      "type": "object",
+      "required": [
+        "id",
+        "caseId",
+        "documentId",
+        "kind",
+        "message",
+        "sourceRefs",
+        "severity",
+        "resolved"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "caseId": { "type": "string" },
+        "documentId": { "type": "string" },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "low_confidence_ocr",
+            "language_uncertain",
+            "possible_missing_page",
+            "date_conflict",
+            "party_conflict",
+            "case_number_conflict",
+            "ambiguous_order_direction",
+            "possible_handwriting",
+            "unsupported_layout"
+          ]
+        },
+        "message": { "type": "string" },
+        "sourceRefs": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/sourceRef" }
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["info", "warning", "critical"]
+        },
+        "resolved": { "type": "boolean" }
+      }
+    },
+    "advocateCorrection": {
+      "type": "object",
+      "required": [
+        "id",
+        "caseId",
+        "documentId",
+        "newValue",
+        "correctionType",
+        "createdAt"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "caseId": { "type": "string" },
+        "documentId": { "type": "string" },
+        "fieldId": { "type": "string" },
+        "oldValue": { "type": "string" },
+        "newValue": { "type": "string" },
+        "correctionType": {
+          "type": "string",
+          "enum": [
+            "field_value",
+            "document_type",
+            "language",
+            "date",
+            "party",
+            "source_ref",
+            "ignore_field"
+          ]
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "caseMemoryUpdate": {
+      "type": "object",
+      "required": [
+        "id",
+        "caseId",
+        "source",
+        "summary",
+        "affectedDocuments",
+        "createdAt"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "caseId": { "type": "string" },
+        "source": {
+          "type": "string",
+          "enum": [
+            "extraction_run",
+            "user_correction",
+            "ask_case",
+            "manual_note"
+          ]
+        },
+        "summary": { "type": "string" },
+        "affectedDocuments": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
     },
     "privacyLedgerEntry": {
       "type": "object",
@@ -49,4 +379,3 @@
     }
   }
 }
-

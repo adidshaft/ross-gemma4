@@ -3,6 +3,12 @@ export type ModelCapabilityTierId =
   | "case_associate"
   | "senior_drafting_support";
 
+export type ExtractionMode =
+  | "basic"
+  | "quick_start"
+  | "case_associate"
+  | "senior_drafting_support";
+
 export interface ModelCapabilityTier {
   id: ModelCapabilityTierId;
   displayName: string;
@@ -139,6 +145,162 @@ export interface SourceRef {
   paragraphRange?: string;
   textSnippet?: string;
   ocrConfidence?: number;
+}
+
+export type DocumentLanguage = "english" | "hindi" | "mixed" | "unknown";
+export type DocumentScript = "latin" | "devanagari" | "mixed" | "other" | "unknown";
+export type LegalDocumentType =
+  | "pleading"
+  | "order"
+  | "judgment"
+  | "affidavit"
+  | "notice"
+  | "evidence"
+  | "correspondence"
+  | "misc";
+export type ExtractedLegalFieldType =
+  | "court"
+  | "case_number"
+  | "party_name"
+  | "advocate_name"
+  | "judge_name"
+  | "date"
+  | "next_date"
+  | "section"
+  | "relief"
+  | "prayer"
+  | "order_direction"
+  | "limitation_date"
+  | "amount"
+  | "exhibit_number"
+  | "fact"
+  | "issue"
+  | "unknown";
+export type ExtractionPass =
+  | "ocr"
+  | "regex"
+  | "llm_extract"
+  | "llm_verify"
+  | "user_corrected";
+export type ExtractionRunStatus =
+  | "queued"
+  | "running"
+  | "needs_review"
+  | "complete"
+  | "failed"
+  | "cancelled";
+export type ExtractionFindingKind =
+  | "low_confidence_ocr"
+  | "language_uncertain"
+  | "possible_missing_page"
+  | "date_conflict"
+  | "party_conflict"
+  | "case_number_conflict"
+  | "ambiguous_order_direction"
+  | "possible_handwriting"
+  | "unsupported_layout";
+export type ExtractionFindingSeverity = "info" | "warning" | "critical";
+export type AdvocateCorrectionType =
+  | "field_value"
+  | "document_type"
+  | "language"
+  | "date"
+  | "party"
+  | "source_ref"
+  | "ignore_field";
+export type CaseMemoryUpdateSource =
+  | "extraction_run"
+  | "user_correction"
+  | "ask_case"
+  | "manual_note";
+
+export interface DocumentLanguageProfilePage {
+  pageNumber: number;
+  language: DocumentLanguage;
+  script: DocumentScript;
+  confidence: number;
+}
+
+export interface DocumentLanguageProfile {
+  documentId: string;
+  primaryLanguage: DocumentLanguage;
+  scriptsDetected: Array<"latin" | "devanagari" | "other">;
+  confidence: number;
+  pageProfiles: DocumentLanguageProfilePage[];
+}
+
+export interface LegalDocumentClassification {
+  documentId: string;
+  type: LegalDocumentType;
+  subtype?: string;
+  confidence: number;
+  sourceRefs: SourceRef[];
+  needsReview: boolean;
+}
+
+export interface ExtractedLegalField {
+  id: string;
+  caseId: string;
+  documentId: string;
+  fieldType: ExtractedLegalFieldType;
+  label: string;
+  value: string;
+  normalizedValue?: string;
+  sourceRefs: SourceRef[];
+  confidence: number;
+  extractionMode: ExtractionMode;
+  extractionPass: ExtractionPass;
+  needsReview: boolean;
+  userCorrected: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ExtractionRun {
+  id: string;
+  caseId: string;
+  documentId: string;
+  mode: ExtractionMode;
+  status: ExtractionRunStatus;
+  startedAt?: string;
+  completedAt?: string;
+  pagesProcessed: number;
+  totalPages: number;
+  fieldsExtracted: number;
+  fieldsNeedingReview: number;
+  warnings: string[];
+  errorMessage?: string;
+}
+
+export interface ExtractionFinding {
+  id: string;
+  caseId: string;
+  documentId: string;
+  kind: ExtractionFindingKind;
+  message: string;
+  sourceRefs: SourceRef[];
+  severity: ExtractionFindingSeverity;
+  resolved: boolean;
+}
+
+export interface AdvocateCorrection {
+  id: string;
+  caseId: string;
+  documentId: string;
+  fieldId?: string;
+  oldValue?: string;
+  newValue: string;
+  correctionType: AdvocateCorrectionType;
+  createdAt: string;
+}
+
+export interface CaseMemoryUpdate {
+  id: string;
+  caseId: string;
+  source: CaseMemoryUpdateSource;
+  summary: string;
+  affectedDocuments: string[];
+  createdAt: string;
 }
 
 export interface PublicLawCacheItem {
