@@ -93,12 +93,23 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
         case .caseAssociate:
             "Advanced"
         case .seniorDraftingSupport:
-            "Advanced Plus"
+            "Advanced"
         }
     }
 
     var quickStartFriendly: Bool {
         self != .seniorDraftingSupport
+    }
+
+    var rank: Int {
+        switch self {
+        case .quickStart:
+            1
+        case .caseAssociate:
+            2
+        case .seniorDraftingSupport:
+            3
+        }
     }
 }
 
@@ -305,6 +316,10 @@ enum AlphaExtractionMode: String, Codable, Hashable, Sendable {
         }
     }
 
+    static func fromInstalledPack(_ pack: AlphaInstalledModelPack?) -> AlphaExtractionMode {
+        fromTier(pack?.tier)
+    }
+
     var qualityLabel: String {
         switch self {
         case .basic:
@@ -314,7 +329,7 @@ enum AlphaExtractionMode: String, Codable, Hashable, Sendable {
         case .caseAssociate:
             "Advanced"
         case .seniorDraftingSupport:
-            "Advanced Plus"
+            "Advanced"
         }
     }
 }
@@ -507,12 +522,24 @@ enum AlphaExtractionRunStatus: String, Codable, Hashable, Sendable {
     case cancelled
 }
 
+enum AlphaExtractionProgressState: String, Codable, Hashable, Sendable {
+    case acquiringText = "acquiring_text"
+    case detectingLanguage = "detecting_language"
+    case extractingFields = "extracting_fields"
+    case verifyingFields = "verifying_fields"
+    case preparingReview = "preparing_review"
+    case complete
+    case needsReview = "needs_review"
+    case failed
+}
+
 struct AlphaExtractionRun: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     var caseId: UUID
     var documentId: UUID
     var mode: AlphaExtractionMode
     var status: AlphaExtractionRunStatus
+    var progressState: AlphaExtractionProgressState
     var startedAt: Date?
     var completedAt: Date?
     var pagesProcessed: Int
@@ -528,6 +555,7 @@ struct AlphaExtractionRun: Identifiable, Codable, Hashable, Sendable {
         documentId: UUID,
         mode: AlphaExtractionMode,
         status: AlphaExtractionRunStatus,
+        progressState: AlphaExtractionProgressState,
         startedAt: Date? = nil,
         completedAt: Date? = nil,
         pagesProcessed: Int,
@@ -542,6 +570,7 @@ struct AlphaExtractionRun: Identifiable, Codable, Hashable, Sendable {
         self.documentId = documentId
         self.mode = mode
         self.status = status
+        self.progressState = progressState
         self.startedAt = startedAt
         self.completedAt = completedAt
         self.pagesProcessed = pagesProcessed
@@ -694,6 +723,7 @@ struct AlphaCaseDocument: Identifiable, Codable, Hashable, Sendable {
     var extractedFields: [AlphaExtractedLegalField]
     var extractionRuns: [AlphaExtractionRun]
     var extractionFindings: [AlphaExtractionFinding]
+    var modelInvocations: [AlphaLocalModelInvocation]
 
     init(
         id: UUID = UUID(),
@@ -713,7 +743,8 @@ struct AlphaCaseDocument: Identifiable, Codable, Hashable, Sendable {
         classification: AlphaLegalDocumentClassification? = nil,
         extractedFields: [AlphaExtractedLegalField] = [],
         extractionRuns: [AlphaExtractionRun] = [],
-        extractionFindings: [AlphaExtractionFinding] = []
+        extractionFindings: [AlphaExtractionFinding] = [],
+        modelInvocations: [AlphaLocalModelInvocation] = []
     ) {
         self.id = id
         self.title = title
@@ -733,6 +764,7 @@ struct AlphaCaseDocument: Identifiable, Codable, Hashable, Sendable {
         self.extractedFields = extractedFields
         self.extractionRuns = extractionRuns
         self.extractionFindings = extractionFindings
+        self.modelInvocations = modelInvocations
     }
 }
 
@@ -887,6 +919,11 @@ enum AlphaDownloadPolicy: String, Codable, Hashable, Sendable {
     case mobileAllowed = "mobile_allowed"
 }
 
+enum AlphaPackRuntimeMode: String, Codable, Hashable, Sendable {
+    case deterministicDev = "deterministic_dev"
+    case platformStub = "platform_stub"
+}
+
 struct AlphaModelDownloadJob: Identifiable, Codable, Hashable, Sendable {
     let id: UUID
     var sessionId: String
@@ -897,6 +934,9 @@ struct AlphaModelDownloadJob: Identifiable, Codable, Hashable, Sendable {
     var bytesDownloaded: Int64
     var totalBytes: Int64
     var checksumSha256: String
+    var artifactKind: String
+    var runtimeMode: AlphaPackRuntimeMode
+    var developmentOnly: Bool
     var failureReason: String?
     var createdAt: Date
     var updatedAt: Date
@@ -912,6 +952,9 @@ struct AlphaModelDownloadJob: Identifiable, Codable, Hashable, Sendable {
         bytesDownloaded: Int64,
         totalBytes: Int64,
         checksumSha256: String,
+        artifactKind: String = "tiny_dev_artifact",
+        runtimeMode: AlphaPackRuntimeMode = .deterministicDev,
+        developmentOnly: Bool = true,
         failureReason: String? = nil,
         createdAt: Date = .now,
         updatedAt: Date = .now,
@@ -926,6 +969,9 @@ struct AlphaModelDownloadJob: Identifiable, Codable, Hashable, Sendable {
         self.bytesDownloaded = bytesDownloaded
         self.totalBytes = totalBytes
         self.checksumSha256 = checksumSha256
+        self.artifactKind = artifactKind
+        self.runtimeMode = runtimeMode
+        self.developmentOnly = developmentOnly
         self.failureReason = failureReason
         self.createdAt = createdAt
         self.updatedAt = updatedAt
@@ -944,6 +990,9 @@ struct AlphaInstalledModelPack: Identifiable, Codable, Hashable, Sendable {
     var tier: AlphaCapabilityTier
     var installPath: String
     var checksumSha256: String
+    var artifactKind: String
+    var runtimeMode: AlphaPackRuntimeMode
+    var developmentOnly: Bool
     var installedAt: Date
     var isActive: Bool
 
@@ -953,6 +1002,9 @@ struct AlphaInstalledModelPack: Identifiable, Codable, Hashable, Sendable {
         tier: AlphaCapabilityTier,
         installPath: String,
         checksumSha256: String,
+        artifactKind: String = "tiny_dev_artifact",
+        runtimeMode: AlphaPackRuntimeMode = .deterministicDev,
+        developmentOnly: Bool = true,
         installedAt: Date = .now,
         isActive: Bool
     ) {
@@ -961,6 +1013,9 @@ struct AlphaInstalledModelPack: Identifiable, Codable, Hashable, Sendable {
         self.tier = tier
         self.installPath = installPath
         self.checksumSha256 = checksumSha256
+        self.artifactKind = artifactKind
+        self.runtimeMode = runtimeMode
+        self.developmentOnly = developmentOnly
         self.installedAt = installedAt
         self.isActive = isActive
     }

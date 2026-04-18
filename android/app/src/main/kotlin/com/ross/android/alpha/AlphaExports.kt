@@ -93,7 +93,7 @@ class AlphaExportService(
         val keyDates = verifiedFields.filter {
             it.fieldType == AlphaExtractedLegalFieldType.Date || it.fieldType == AlphaExtractedLegalFieldType.NextDate
         }
-        val orderDirections = allFields.filter { it.fieldType == AlphaExtractedLegalFieldType.OrderDirection }
+        val orderDirections = verifiedFields.filter { it.fieldType == AlphaExtractedLegalFieldType.OrderDirection }
         val documents = case?.documents.orEmpty()
 
         val lines = buildList {

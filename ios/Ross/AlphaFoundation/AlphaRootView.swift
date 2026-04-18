@@ -138,8 +138,9 @@ final class AlphaRossModel {
                 AlphaExtractionRun(
                     caseId: caseId,
                     documentId: document.id,
-                    mode: .fromTier(persisted.settings.activeTier),
+                    mode: .fromInstalledPack(activePack),
                     status: .running,
+                    progressState: .acquiringText,
                     startedAt: .now,
                     pagesProcessed: 0,
                     totalPages: document.pageCount,
@@ -180,7 +181,7 @@ final class AlphaRossModel {
             let result = await store.runLocalExtraction(
                 caseId: caseId,
                 document: document,
-                activeTier: persisted.settings.activeTier
+                activePack: activePack
             )
             applyExtractionResult(result, caseId: caseId, documentId: document.id)
         } catch {
@@ -266,13 +267,16 @@ final class AlphaRossModel {
         else { return nil }
 
         let visibleFields = visibleExtractedFields(caseId: caseId, documentId: documentId)
-        if visibleFields.contains(where: \.needsReview) || !reviewFindings(caseId: caseId, documentId: documentId).isEmpty {
-            return "Ross found key details. Please review the uncertain ones."
-        }
-        if visibleFields.isEmpty, document.classification == nil {
+        let verifiedCount = visibleFields.count { !$0.needsReview || $0.userCorrected }
+        let pendingCount = visibleFields.filter(\.needsReview).count
+        switch (visibleFields.isEmpty, document.classification == nil, pendingCount > 0 || document.extractionFindings.contains(where: { !$0.resolved })) {
+        case (true, true, _):
             return nil
+        case (_, _, true):
+            return "Fields found: \(visibleFields.count) • Verified: \(verifiedCount) • Needs review: \(pendingCount)"
+        default:
+            return "Fields found: \(visibleFields.count) • Verified: \(verifiedCount) • Needs review: 0"
         }
-        return "Ross found key details."
     }
 
     func extractionUpgradeMessage(for document: AlphaCaseDocument) -> String? {
@@ -282,7 +286,14 @@ final class AlphaRossModel {
         }
         if mode == .quickStart,
            document.languageProfile?.primaryLanguage == .mixed || document.extractionFindings.contains(where: { $0.kind == .lowConfidenceOcr || $0.kind == .languageUncertain }) {
-            return "This document has mixed language or poor scan quality. Senior Drafting Support may improve review."
+            return "This scan has mixed language or low OCR confidence. Senior Drafting Support may improve review."
+        }
+        if mode == .quickStart {
+            return "Better extraction is available with Case Associate."
+        }
+        if mode == .caseAssociate,
+           document.extractionFindings.contains(where: { $0.kind == .lowConfidenceOcr || $0.kind == .languageUncertain }) {
+            return "This scan has mixed language or low OCR confidence. Senior Drafting Support may improve review."
         }
         return nil
     }
@@ -541,7 +552,7 @@ final class AlphaRossModel {
     }
 
     var activeExtractionMode: AlphaExtractionMode {
-        .fromTier(persisted.settings.activeTier)
+        .fromInstalledPack(activePack)
     }
 
     func pauseJob(_ job: AlphaModelDownloadJob) {
@@ -614,6 +625,9 @@ final class AlphaRossModel {
                 $0.packId = pack.packId
                 $0.totalBytes = pack.sizeBytes
                 $0.checksumSha256 = pack.checksumSha256
+                $0.artifactKind = pack.artifactKind
+                $0.runtimeMode = pack.runtimeMode
+                $0.developmentOnly = pack.developmentOnly
                 $0.updatedAt = .now
             }
             persisted.ledgerEntries.insert(
@@ -651,6 +665,9 @@ final class AlphaRossModel {
                 $0.packId = session.packId
                 $0.totalBytes = session.artifact.sizeBytes
                 $0.checksumSha256 = session.artifact.finalSha256
+                $0.artifactKind = session.artifact.artifactKind
+                $0.runtimeMode = session.artifact.runtimeMode
+                $0.developmentOnly = session.artifact.developmentOnly
                 $0.state = .downloading
                 $0.updatedAt = .now
             }
@@ -696,6 +713,9 @@ final class AlphaRossModel {
                 tier: tier,
                 installPath: artifact.relativePath,
                 checksumSha256: artifact.checksum,
+                artifactKind: session.artifact.artifactKind,
+                runtimeMode: session.artifact.runtimeMode,
+                developmentOnly: session.artifact.developmentOnly,
                 isActive: true
             )
             persisted.installedPacks = persisted.installedPacks.map {
@@ -711,6 +731,9 @@ final class AlphaRossModel {
                 $0.bytesDownloaded = artifact.bytes
                 $0.totalBytes = artifact.bytes
                 $0.checksumSha256 = artifact.checksum
+                $0.artifactKind = installed.artifactKind
+                $0.runtimeMode = installed.runtimeMode
+                $0.developmentOnly = installed.developmentOnly
                 $0.updatedAt = .now
                 $0.completedAt = .now
             }
@@ -734,6 +757,9 @@ final class AlphaRossModel {
                     tier: tier,
                     installPath: fallback.relativePath,
                     checksumSha256: fallback.checksum,
+                    artifactKind: "tiny_dev_artifact",
+                    runtimeMode: .deterministicDev,
+                    developmentOnly: true,
                     isActive: true
                 )
                 persisted.installedPacks = persisted.installedPacks.map {
@@ -750,6 +776,9 @@ final class AlphaRossModel {
                     $0.bytesDownloaded = fallback.bytes
                     $0.totalBytes = fallback.bytes
                     $0.checksumSha256 = fallback.checksum
+                    $0.artifactKind = installed.artifactKind
+                    $0.runtimeMode = installed.runtimeMode
+                    $0.developmentOnly = installed.developmentOnly
                     $0.updatedAt = .now
                     $0.completedAt = .now
                 }
@@ -933,9 +962,10 @@ final class AlphaRossModel {
         document.pages = result.pages
         document.languageProfile = result.languageProfile
         document.classification = result.classification
-        document.extractedFields = result.extractedFields
+        document.extractedFields = mergeUserCorrectedFields(previousFields: document.extractedFields, newFields: result.extractedFields)
         document.extractionRuns.insert(result.extractionRun, at: 0)
         document.extractionFindings = result.findings
+        document.modelInvocations = result.modelInvocations
         document.indexingStatus = {
             switch result.extractionRun.status {
             case .failed:
@@ -998,6 +1028,28 @@ final class AlphaRossModel {
                 caseMatter.caseMemoryUpdates.insert(update, at: 0)
             }
         }
+    }
+
+    private func mergeUserCorrectedFields(
+        previousFields: [AlphaExtractedLegalField],
+        newFields: [AlphaExtractedLegalField]
+    ) -> [AlphaExtractedLegalField] {
+        let corrected = previousFields
+            .filter(\.userCorrected)
+            .reduce(into: [String: AlphaExtractedLegalField]()) { result, field in
+                result["\(field.fieldType.rawValue):\(field.normalizedValue ?? field.value.lowercased())"] = field
+            }
+
+        let merged = newFields.map { field in
+            corrected["\(field.fieldType.rawValue):\(field.normalizedValue ?? field.value.lowercased())"] ?? field
+        }
+        let preserved = corrected.values.filter { correctedField in
+            !newFields.contains {
+                $0.fieldType == correctedField.fieldType &&
+                ($0.normalizedValue ?? $0.value.lowercased()) == (correctedField.normalizedValue ?? correctedField.value.lowercased())
+            }
+        }
+        return merged + preserved
     }
 
     private func refreshCaseWorkspace(at caseIndex: Int) {
@@ -1298,6 +1350,9 @@ private struct AlphaBackendCatalogPack: Codable {
     let tier: AlphaCapabilityTier
     let sizeBytes: Int64
     let checksumSha256: String
+    let artifactKind: String
+    let runtimeMode: AlphaPackRuntimeMode
+    let developmentOnly: Bool
 }
 
 private struct AlphaBackendDownloadSessionRequest: Codable {
@@ -1322,6 +1377,9 @@ private struct AlphaBackendArtifact: Codable {
     let fileName: String
     let sizeBytes: Int64
     let finalSha256: String
+    let artifactKind: String
+    let runtimeMode: AlphaPackRuntimeMode
+    let developmentOnly: Bool
     let downloadPath: String?
     let downloadUrl: String
     let segments: [AlphaBackendArtifactSegment]
@@ -1788,6 +1846,10 @@ private struct AlphaDocumentViewerScreen: View {
         model.reviewFindings(caseId: caseId, documentId: documentId)
     }
 
+    private var needsReviewCount: Int {
+        reviewFields.filter(\.needsReview).count + reviewFindings.count
+    }
+
     var body: some View {
         ScrollView {
             if let document {
@@ -1795,7 +1857,7 @@ private struct AlphaDocumentViewerScreen: View {
                     RossHeroCard(
                         eyebrow: document.kind.title,
                         title: document.title,
-                        detail: "Page count: \(document.pageCount) • OCR/indexing: \(document.ocrStatus.title) • Extraction: \((document.extractionRuns.first?.mode.qualityLabel ?? model.activeExtractionMode.qualityLabel))"
+                        detail: "Page count: \(document.pageCount) • OCR/indexing: \(document.ocrStatus.title) • Extraction: \((document.extractionRuns.first?.mode.qualityLabel ?? model.activeExtractionMode.qualityLabel)) • Needs review: \(needsReviewCount)"
                     ) {
                         HStack(spacing: 12) {
                             RossInfoPill(title: document.fileName, systemImage: "doc")
@@ -1870,9 +1932,16 @@ private struct AlphaDocumentViewerScreen: View {
                                 }
 
                                 if let upgrade = model.extractionUpgradeMessage(for: document) {
-                                    Text(upgrade)
-                                        .font(.footnote.weight(.semibold))
-                                        .foregroundStyle(Color.rossAccent)
+                                    VStack(alignment: .leading, spacing: 10) {
+                                        Text(upgrade)
+                                            .font(.footnote.weight(.semibold))
+                                            .foregroundStyle(Color.rossAccent)
+
+                                        Button("Run better extraction") {
+                                            model.path.append(.privateAISettings)
+                                        }
+                                        .buttonStyle(.bordered)
+                                    }
                                 }
                             }
                         }
@@ -1952,6 +2021,9 @@ private struct AlphaClassificationReviewCard: View {
                         .font(.headline)
                     Text(classification.type.rawValue.replacingOccurrences(of: "_", with: " ").capitalized)
                         .font(.title3.weight(.semibold))
+                    Text(classification.needsReview ? "Needs advocate review" : "Verified from source")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(classification.needsReview ? Color.orange : Color.rossSuccess)
                 }
                 Spacer()
                 AlphaConfidenceBadge(
@@ -2024,6 +2096,9 @@ private struct AlphaExtractedFieldReviewCard: View {
                             .font(.body)
                             .foregroundStyle(Color.rossInk)
                     }
+                    Text(field.needsReview ? "Needs advocate review" : "Verified from source")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(field.needsReview ? Color.orange : Color.rossSuccess)
                 }
                 Spacer()
                 AlphaConfidenceBadge(
@@ -2355,7 +2430,7 @@ private struct AlphaSettingsScreen: View {
             }
 
             Section("Private AI") {
-                LabeledContent("Active pack", value: model.persisted.settings.activeTier?.title ?? "Not installed")
+                LabeledContent("Active pack", value: model.activePack?.tier.title ?? "Not installed")
                 LabeledContent("Extraction quality", value: model.activeExtractionMode.qualityLabel)
                 NavigationLink(value: AlphaRoute.privateAISettings) {
                     Label("Private AI Settings", systemImage: "cpu")
@@ -2378,11 +2453,20 @@ private struct AlphaPrivateAISettingsScreen: View {
     var body: some View {
         List {
             Section("Active pack") {
-                LabeledContent("Pack", value: model.persisted.settings.activeTier?.title ?? "No Private AI Pack installed")
+                LabeledContent("Pack", value: model.activePack?.tier.title ?? "No Private AI Pack installed")
                 LabeledContent("Extraction quality", value: model.activeExtractionMode.qualityLabel)
                 Text("Technical model names stay hidden unless you open technical details. Ross shows advocate-facing extraction quality instead.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+                if let activePack = model.activePack {
+                    Text(
+                        activePack.tier == .quickStart
+                            ? "Quick Start is best for shorter documents."
+                            : "Better extraction for mixed-language or poor scans is enabled with this pack."
+                    )
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color.rossAccent)
+                }
             }
 
             Section("Download policy") {

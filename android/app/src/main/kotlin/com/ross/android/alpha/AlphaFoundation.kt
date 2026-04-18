@@ -31,7 +31,14 @@ enum class AlphaCapabilityTier(val tierId: String, val title: String, val summar
         get() = when (this) {
             QuickStart -> "Standard"
             CaseAssociate -> "Advanced"
-            SeniorDraftingSupport -> "Advanced Plus"
+            SeniorDraftingSupport -> "Advanced"
+        }
+
+    val rank: Int
+        get() = when (this) {
+            QuickStart -> 1
+            CaseAssociate -> 2
+            SeniorDraftingSupport -> 3
         }
 }
 enum class AlphaCaseStage { Intake, Pleadings, Evidence, Arguments, Reserved }
@@ -40,6 +47,7 @@ enum class AlphaOcrStatus { NotStarted, Indexed, Placeholder, NativeText, OcrCom
 enum class AlphaIndexingStatus { NotStarted, Extracting, Indexed, Partial, Failed }
 enum class AlphaDownloadState { NotStarted, Queued, Downloading, PausedWaitingForWifi, PausedUser, PausedNoStorage, PausedError, Verifying, Installed, Failed, Cancelled }
 enum class AlphaDownloadPolicy { WifiOnly, MobileAllowed }
+enum class AlphaPackRuntimeMode { DeterministicDev, PlatformStub }
 enum class AlphaPrivacyPurpose { LocalOnly, ModelCatalog, ModelDownload, ModelVerification, PublicLawSearch }
 enum class AlphaPayloadClass { LocalOnly, NoCaseData, SanitizedPublicQuery, AccountToken }
 
@@ -87,6 +95,7 @@ data class AlphaCaseDocument(
     val extractedFields: List<AlphaExtractedLegalField> = emptyList(),
     val extractionRuns: List<AlphaExtractionRun> = emptyList(),
     val extractionFindings: List<AlphaExtractionFinding> = emptyList(),
+    val modelInvocations: List<AlphaLocalModelInvocation> = emptyList(),
 )
 
 data class AlphaChatTurn(
@@ -138,6 +147,9 @@ data class AlphaModelDownloadJob(
     val bytesDownloaded: Long,
     val totalBytes: Long,
     val checksumSha256: String,
+    val artifactKind: String = "tiny_dev_artifact",
+    val runtimeMode: AlphaPackRuntimeMode = AlphaPackRuntimeMode.DeterministicDev,
+    val developmentOnly: Boolean = true,
     val failureReason: String? = null,
     val createdAt: String = nowIso(),
     val updatedAt: String = nowIso(),
@@ -150,6 +162,9 @@ data class AlphaInstalledPack(
     val tier: AlphaCapabilityTier,
     val installRelativePath: String,
     val checksumSha256: String,
+    val artifactKind: String = "tiny_dev_artifact",
+    val runtimeMode: AlphaPackRuntimeMode = AlphaPackRuntimeMode.DeterministicDev,
+    val developmentOnly: Boolean = true,
     val installedAt: String = nowIso(),
     val isActive: Boolean,
 )
@@ -257,6 +272,10 @@ class AlphaRossController(private val context: Context) {
     var publicLawDraft by mutableStateOf("Find Supreme Court guidance on delay condonation where diligence is documented but filing was disrupted.")
     var publicLawPreview by mutableStateOf<AlphaPublicLawPreview?>(null)
     var publicLawResults by mutableStateOf<List<AlphaPublicLawResult>>(emptyList())
+
+    fun activePack(): AlphaInstalledPack? = persisted.installedPacks.firstOrNull { it.isActive }
+
+    fun activeExtractionMode(): AlphaExtractionMode = AlphaExtractionMode.fromInstalledPack(activePack())
 
     private fun loadState(): AlphaPersistedState {
         ensureFolders()
@@ -386,8 +405,9 @@ class AlphaRossController(private val context: Context) {
                 AlphaExtractionRun(
                     caseId = caseId,
                     documentId = documentId,
-                    mode = AlphaExtractionMode.fromTier(persisted.settings.activeTier),
+                    mode = activeExtractionMode(),
                     status = AlphaExtractionRunStatus.Running,
+                    progressState = AlphaExtractionProgressState.AcquiringText,
                     startedAt = nowIso(),
                     pagesProcessed = 0,
                     totalPages = pageCount,
@@ -567,6 +587,38 @@ class AlphaRossController(private val context: Context) {
 
     fun selectedCase(): AlphaCaseMatter? = selectedCaseId?.let { id -> persisted.cases.firstOrNull { it.id == id } } ?: persisted.cases.firstOrNull()
 
+    fun strongerInstalledPackAvailable(): Boolean {
+        val activeRank = activePack()?.tier?.rank ?: 0
+        return persisted.installedPacks.any { it.isActive.not() && it.tier.rank > activeRank }
+    }
+
+    fun strongerPackMessageFor(document: AlphaCaseDocument): String? {
+        val mode = activeExtractionMode()
+        return when {
+            mode == AlphaExtractionMode.Basic -> "Better extraction is available with Case Associate."
+            mode == AlphaExtractionMode.QuickStart && (document.languageProfile?.primaryLanguage == AlphaDocumentLanguage.Mixed ||
+                document.extractionFindings.any { it.kind == AlphaExtractionFindingKind.LowConfidenceOcr || it.kind == AlphaExtractionFindingKind.LanguageUncertain }) ->
+                "This scan has mixed language or low OCR confidence. Senior Drafting Support may improve review."
+            mode == AlphaExtractionMode.QuickStart -> "Better extraction is available with Case Associate."
+            mode == AlphaExtractionMode.CaseAssociate && document.extractionFindings.any { it.kind == AlphaExtractionFindingKind.LowConfidenceOcr || it.kind == AlphaExtractionFindingKind.LanguageUncertain } ->
+                "This scan has mixed language or low OCR confidence. Senior Drafting Support may improve review."
+            else -> null
+        }
+    }
+
+    fun reviewSummary(caseId: String, documentId: String): String? {
+        val document = document(caseId, documentId) ?: return null
+        val visibleFields = visibleExtractedFields(caseId, documentId)
+        val verifiedCount = visibleFields.count { !it.needsReview || it.userCorrected }
+        val pendingCount = visibleFields.count { it.needsReview }
+        return when {
+            visibleFields.isEmpty() && document.classification == null -> null
+            pendingCount > 0 || document.extractionFindings.any { !it.resolved } ->
+                "Fields found: ${visibleFields.size} • Verified: $verifiedCount • Needs review: $pendingCount"
+            else -> "Fields found: ${visibleFields.size} • Verified: $verifiedCount • Needs review: 0"
+        }
+    }
+
     fun document(caseId: String, documentId: String): AlphaCaseDocument? =
         persisted.cases.firstOrNull { it.id == caseId }?.documents?.firstOrNull { it.id == documentId }
 
@@ -736,7 +788,7 @@ class AlphaRossController(private val context: Context) {
                 caseId = caseId,
                 document = currentDocument,
                 file = file,
-                activeTier = persisted.settings.activeTier,
+                activePack = activePack(),
             )
         }.getOrNull()
 
@@ -752,8 +804,9 @@ class AlphaRossController(private val context: Context) {
                                             AlphaExtractionRun(
                                                 caseId = caseId,
                                                 documentId = documentId,
-                                                mode = AlphaExtractionMode.fromTier(persisted.settings.activeTier),
+                                                mode = activeExtractionMode(),
                                                 status = AlphaExtractionRunStatus.Failed,
+                                                progressState = AlphaExtractionProgressState.Failed,
                                                 startedAt = nowIso(),
                                                 completedAt = nowIso(),
                                                 pagesProcessed = 0,
@@ -805,9 +858,10 @@ class AlphaRossController(private val context: Context) {
                                     pages = result.pages,
                                     languageProfile = result.languageProfile,
                                     classification = result.classification,
-                                    extractedFields = result.extractedFields,
+                                    extractedFields = mergeUserCorrectedFields(document.extractedFields, result.extractedFields),
                                     extractionRuns = listOf(result.extractionRun),
                                     extractionFindings = result.findings,
+                                    modelInvocations = result.modelInvocations,
                                 )
                             } else document
                         },
@@ -832,6 +886,9 @@ class AlphaRossController(private val context: Context) {
             packId = pack?.packId ?: initialJob.packId,
             totalBytes = pack?.sizeBytes ?: initialJob.totalBytes,
             checksumSha256 = pack?.checksumSha256 ?: initialJob.checksumSha256,
+            artifactKind = pack?.artifactKind ?: initialJob.artifactKind,
+            runtimeMode = pack?.runtimeMode?.toRuntimeMode() ?: initialJob.runtimeMode,
+            developmentOnly = pack?.developmentOnly ?: initialJob.developmentOnly,
             updatedAt = nowIso(),
         )
         persisted = persisted.copy(
@@ -851,6 +908,9 @@ class AlphaRossController(private val context: Context) {
                             bytesDownloaded = downloadedBytes,
                             totalBytes = session.artifact.sizeBytes,
                             checksumSha256 = session.artifact.finalSha256,
+                            artifactKind = session.artifact.artifactKind,
+                            runtimeMode = session.artifact.runtimeMode.toRuntimeMode(),
+                            developmentOnly = session.artifact.developmentOnly,
                             updatedAt = nowIso(),
                         ) else job
                     }
@@ -866,6 +926,9 @@ class AlphaRossController(private val context: Context) {
                     bytesDownloaded = downloaded.bytes,
                     totalBytes = session.artifact.sizeBytes,
                     checksumSha256 = session.artifact.finalSha256,
+                    artifactKind = session.artifact.artifactKind,
+                    runtimeMode = session.artifact.runtimeMode.toRuntimeMode(),
+                    developmentOnly = session.artifact.developmentOnly,
                     updatedAt = nowIso(),
                 ),
                 artifactBytes = downloaded.data,
@@ -907,6 +970,18 @@ class AlphaRossController(private val context: Context) {
 
     private fun mergeHighlights(existing: List<String>, additions: List<String>): List<String> =
         (additions + existing).filter { it.isNotBlank() }.distinct().take(5)
+
+    private fun mergeUserCorrectedFields(
+        previousFields: List<AlphaExtractedLegalField>,
+        newFields: List<AlphaExtractedLegalField>,
+    ): List<AlphaExtractedLegalField> {
+        val corrected = previousFields.filter { it.userCorrected }.associateBy { "${it.fieldType.name}:${it.normalizedValue ?: it.value.lowercase()}" }
+        return newFields.map { field ->
+            corrected["${field.fieldType.name}:${field.normalizedValue ?: field.value.lowercase()}"] ?: field
+        } + corrected.values.filter { preserved ->
+            newFields.none { incoming -> incoming.fieldType == preserved.fieldType && (incoming.normalizedValue ?: incoming.value.lowercase()) == (preserved.normalizedValue ?: preserved.value.lowercase()) }
+        }
+    }
 
     private fun saveState(state: AlphaPersistedState) {
         encryptedStateStore.save(state)
@@ -1032,3 +1107,7 @@ private fun seedCases(): List<AlphaCaseMatter> {
 
 fun nowIso(): String = java.time.Instant.now().toString()
 private fun sha256(value: String): String = MessageDigest.getInstance("SHA-256").digest(value.toByteArray()).joinToString("") { "%02x".format(it) }
+private fun String.toRuntimeMode(): AlphaPackRuntimeMode = when (lowercase()) {
+    "deterministic_dev" -> AlphaPackRuntimeMode.DeterministicDev
+    else -> AlphaPackRuntimeMode.PlatformStub
+}

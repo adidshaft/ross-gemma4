@@ -149,6 +149,7 @@ fun AlphaRossApp() {
             caseId = currentRoute.caseId,
             documentId = currentRoute.documentId,
             pageNumber = currentRoute.pageNumber,
+            onOpenPrivateAi = { push(AndroidAlphaRoute.PrivateAiSettings) },
             onBack = { backStack.removeLast() },
         )
 
@@ -445,7 +446,14 @@ private fun AlphaDocumentListScreen(
 }
 
 @Composable
-private fun AlphaDocumentViewerScreen(controller: AlphaRossController, caseId: String, documentId: String, pageNumber: Int?, onBack: () -> Unit) {
+private fun AlphaDocumentViewerScreen(
+    controller: AlphaRossController,
+    caseId: String,
+    documentId: String,
+    pageNumber: Int?,
+    onOpenPrivateAi: () -> Unit,
+    onBack: () -> Unit,
+) {
     val document = controller.document(caseId, documentId)
     val sourcePanel = controller.documentSourcePanel(caseId, documentId, pageNumber)
     var editingFieldId by remember(documentId) { mutableStateOf<String?>(null) }
@@ -469,7 +477,12 @@ private fun AlphaDocumentViewerScreen(controller: AlphaRossController, caseId: S
                 }
             } else {
                 val doc = document
-                AlphaHero(eyebrow = doc.kind.name.uppercase(), title = doc.title, body = "Page count: ${doc.pageCount} • OCR/indexing: ${doc.ocrStatus.name}")
+                val reviewCount = controller.visibleExtractedFields(caseId, documentId).count { it.needsReview }
+                AlphaHero(
+                    eyebrow = doc.kind.name.uppercase(),
+                    title = doc.title,
+                    body = "Page count: ${doc.pageCount} • OCR/indexing: ${doc.ocrStatus.name} • Extraction: ${(doc.extractionRuns.firstOrNull()?.mode?.qualityLabel ?: controller.activeExtractionMode().qualityLabel)} • Needs review: $reviewCount"
+                )
                 val file = controller.absoluteFile(doc.storedRelativePath).takeIf { it.exists() }
                 when {
                     doc.kind == AlphaDocumentKind.Image && file != null -> {
@@ -498,12 +511,14 @@ private fun AlphaDocumentViewerScreen(controller: AlphaRossController, caseId: S
                 }
                 AlphaCard(
                     "Review extracted details",
-                    doc.extractionRuns.firstOrNull()?.let { run ->
-                        when (run.status) {
-                            AlphaExtractionRunStatus.Running, AlphaExtractionRunStatus.Queued -> "Ross is reviewing this document locally."
-                            else -> "Ross found key details. Please review the uncertain ones."
+                    controller.reviewSummary(caseId, documentId)
+                        ?: doc.extractionRuns.firstOrNull()?.let { run ->
+                            when (run.status) {
+                                AlphaExtractionRunStatus.Running, AlphaExtractionRunStatus.Queued -> "Ross is reviewing this document locally."
+                                else -> "Ross found key details. Please review the uncertain ones."
+                            }
                         }
-                    } ?: "Ross found key details. Please review the uncertain ones."
+                        ?: "Ross found key details. Please review the uncertain ones."
                 ) {
                     Text(
                         when {
@@ -532,7 +547,10 @@ private fun AlphaDocumentViewerScreen(controller: AlphaRossController, caseId: S
                             } else {
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Button(onClick = { editingClassification = true }) { Text("Edit") }
-                                    Button(onClick = { editingClassification = false }) { Text("Accept") }
+                                    Button(onClick = {
+                                        controller.updateDocumentClassification(caseId, documentId, classification.type)
+                                        editingClassification = false
+                                    }) { Text("Accept") }
                                 }
                             }
                         }
@@ -574,12 +592,11 @@ private fun AlphaDocumentViewerScreen(controller: AlphaRossController, caseId: S
                         }
                     }
 
-                    if (controller.persisted.settings.activeTier == null) {
+                    controller.strongerPackMessageFor(doc)?.let { message ->
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("Better extraction is available with Case Associate.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    } else if (controller.persisted.settings.activeTier == AlphaCapabilityTier.QuickStart && doc.languageProfile?.primaryLanguage == AlphaDocumentLanguage.Mixed) {
+                        Text(message, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("This document has mixed language or poor scan quality. Senior Drafting Support may improve review.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Button(onClick = onOpenPrivateAi, modifier = Modifier.fillMaxWidth()) { Text("Run better extraction") }
                     }
                 }
                 AlphaCard("Source reference", sourcePanel.fallbackMessage ?: "If exact highlight placement is not ready, Ross shows page and snippet metadata here.") {
@@ -611,6 +628,12 @@ private fun AlphaExtractedFieldReviewCard(
 ) {
     AlphaCard(field.label, field.confidenceLabel) {
         Text(field.value, fontWeight = FontWeight.SemiBold)
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            if (field.needsReview) "Needs advocate review" else "Verified from source",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall,
+        )
         Spacer(modifier = Modifier.height(6.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             field.sourceRefs.take(2).forEach { source ->
@@ -832,7 +855,7 @@ private fun AlphaSettingsScreen(
                     controller.save()
                 }
             }
-            AlphaCard("Private AI", controller.persisted.settings.activeTier?.title ?: "Not selected") {
+            AlphaCard("Private AI", controller.activePack()?.tier?.title ?: "Not selected") {
                 Button(onClick = onOpenPrivateAi, modifier = Modifier.fillMaxWidth()) { Text("Open Private AI Settings") }
             }
             AlphaCard("Privacy ledger", "Review visible network and local actions.") {
@@ -854,10 +877,10 @@ private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack
         ) {
             AlphaCard(
                 "Active pack",
-                controller.persisted.settings.activeTier?.title ?: "No pack selected"
+                controller.activePack()?.tier?.title ?: "No pack selected"
             ) {
-                val activeTier = controller.persisted.settings.activeTier
-                Text("Extraction quality: ${activeTier?.extractionQuality ?: "Basic"}")
+                val activeTier = controller.activePack()?.tier
+                Text("Extraction quality: ${controller.activeExtractionMode().qualityLabel}")
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     when (activeTier) {
@@ -901,6 +924,17 @@ private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack
             }
             controller.persisted.installedPacks.forEach { pack ->
                 AlphaCard(pack.tier.title, pack.installRelativePath) {
+                    Text("Extraction quality: ${AlphaExtractionMode.fromInstalledPack(pack).qualityLabel}")
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        when (pack.tier) {
+                            AlphaCapabilityTier.QuickStart -> "Best for shorter documents. Longer files fall back to cautious deterministic review."
+                            AlphaCapabilityTier.CaseAssociate -> "Better extraction for mixed-language or poor scans."
+                            AlphaCapabilityTier.SeniorDraftingSupport -> "Better extraction for mixed-language or poor scans, with deeper review passes."
+                        },
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = { controller.activatePack(pack.id) }) { Text("Make Active") }
                         Button(onClick = { controller.removeInstalledPack(pack.id) }) { Text("Remove") }

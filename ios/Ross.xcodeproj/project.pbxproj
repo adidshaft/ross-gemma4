@@ -21,6 +21,10 @@
 		73095EB2BC0BE123916D7FE8 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD58892F62FBC4A3F2EA3817 /* AppState.swift */; };
 		7518FE643509A42F3FAC9F2D /* AskCaseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 959915FBA4BE9F83B8984B48 /* AskCaseView.swift */; };
 		762FC2EFCA6F7FAD2AE84BED /* AlphaRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A64616242F098492C6821152 /* AlphaRootView.swift */; };
+		A1B2C3D4E5F60718293A4B50 /* AlphaExtractionPipelinePlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B60 /* AlphaExtractionPipelinePlan.swift */; };
+		A1B2C3D4E5F60718293A4B51 /* AlphaLocalModelRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B61 /* AlphaLocalModelRuntime.swift */; };
+		A1B2C3D4E5F60718293A4B52 /* AlphaModelInvocationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B62 /* AlphaModelInvocationStore.swift */; };
+		A1B2C3D4E5F60718293A4B53 /* AlphaModelOutputValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B63 /* AlphaModelOutputValidator.swift */; };
 		79665FD65AED0703B4E6CE18 /* PublicLawSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B78B6D618FCC9AB6389E9840 /* PublicLawSearchService.swift */; };
 		8ADED04F785C7104364942AB /* AlphaStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6263477CDD4DB63E41096E91 /* AlphaStore.swift */; };
 		8B7F66DA22ECB93AC82BA945 /* PrivateAISettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFD5D672549B5EE7B9F3C952 /* PrivateAISettingsView.swift */; };
@@ -58,6 +62,10 @@
 		64DE66B33156149EA2DB94E5 /* Ross.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ross.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		734B164CAB7FDE236793522F /* CaseModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CaseModels.swift; sourceTree = "<group>"; };
 		7BDF2721944CAB65DC4F629C /* AlphaDataModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaDataModels.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B60 /* AlphaExtractionPipelinePlan.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaExtractionPipelinePlan.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B61 /* AlphaLocalModelRuntime.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaLocalModelRuntime.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B62 /* AlphaModelInvocationStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaModelInvocationStore.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B63 /* AlphaModelOutputValidator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaModelOutputValidator.swift; sourceTree = "<group>"; };
 		87D0913ED9B148CC8BE59F4A /* AppDesignSystem.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppDesignSystem.swift; sourceTree = "<group>"; };
 		9500C3C48AB19DA431C6DB9E /* ModelDownloadService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ModelDownloadService.swift; sourceTree = "<group>"; };
 		959915FBA4BE9F83B8984B48 /* AskCaseView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AskCaseView.swift; sourceTree = "<group>"; };
@@ -162,6 +170,10 @@
 			isa = PBXGroup;
 			children = (
 				7BDF2721944CAB65DC4F629C /* AlphaDataModels.swift */,
+				A1B2C3D4E5F60718293A4B60 /* AlphaExtractionPipelinePlan.swift */,
+				A1B2C3D4E5F60718293A4B61 /* AlphaLocalModelRuntime.swift */,
+				A1B2C3D4E5F60718293A4B62 /* AlphaModelInvocationStore.swift */,
+				A1B2C3D4E5F60718293A4B63 /* AlphaModelOutputValidator.swift */,
 				6263477CDD4DB63E41096E91 /* AlphaStore.swift */,
 				A64616242F098492C6821152 /* AlphaRootView.swift */,
 			);
@@ -384,6 +396,10 @@
 				79665FD65AED0703B4E6CE18 /* PublicLawSearchService.swift in Sources */,
 				AD17F6CACC0518174C6E81FC /* SettingsStore.swift in Sources */,
 				CCEFEC94E7BC87A862C8F913 /* AlphaDataModels.swift in Sources */,
+				A1B2C3D4E5F60718293A4B50 /* AlphaExtractionPipelinePlan.swift in Sources */,
+				A1B2C3D4E5F60718293A4B51 /* AlphaLocalModelRuntime.swift in Sources */,
+				A1B2C3D4E5F60718293A4B52 /* AlphaModelInvocationStore.swift in Sources */,
+				A1B2C3D4E5F60718293A4B53 /* AlphaModelOutputValidator.swift in Sources */,
 				8ADED04F785C7104364942AB /* AlphaStore.swift in Sources */,
 				762FC2EFCA6F7FAD2AE84BED /* AlphaRootView.swift in Sources */,
 			);
