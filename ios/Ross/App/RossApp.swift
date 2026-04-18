@@ -12,10 +12,7 @@ struct RossApp: App {
         WindowGroup {
             switch launchMode {
             case .interactive:
-                RossRootView(
-                    services: services,
-                    state: appState
-                )
+                AlphaRossRootView()
             case .screenshotExport:
                 ScreenshotExportView()
             }

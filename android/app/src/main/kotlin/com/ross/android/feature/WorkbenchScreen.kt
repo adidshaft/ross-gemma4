@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
@@ -43,6 +44,7 @@ import com.ross.android.core.model.SettingsSnapshot
 import com.ross.android.core.model.WorkbenchSection
 import com.ross.android.theme.RossHighlight
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkbenchScreen(
     state: WorkbenchUiState,
