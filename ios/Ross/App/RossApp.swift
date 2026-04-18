@@ -6,13 +6,19 @@ struct RossApp: App {
     @State private var appState = AppState()
 
     private let services = AppServices.bootstrap()
+    private let launchMode = RossLaunchMode.current
 
     var body: some Scene {
         WindowGroup {
-            RossRootView(
-                services: services,
-                state: appState
-            )
+            switch launchMode {
+            case .interactive:
+                RossRootView(
+                    services: services,
+                    state: appState
+                )
+            case .screenshotExport:
+                ScreenshotExportView()
+            }
         }
     }
 }

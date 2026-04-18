@@ -9,23 +9,61 @@ struct AskCaseView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                InstantModeCard(assessment: instantModeAssessment)
+                RossHeroCard(
+                    eyebrow: "Local case review",
+                    title: "Ask a focused question and keep the answer grounded in the indexed file.",
+                    detail: "Ross treats the output as a draft for advocate review, keeps the question on-device, and only cites what is actually present in the selected case."
+                ) {
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 10) {
+                            RossInfoPill(title: activePackTitle, systemImage: "cpu")
+                            RossInfoPill(title: "Draft for advocate review", systemImage: "doc.text")
+                            RossInfoPill(title: "Source-backed output", systemImage: "paperclip")
+                        }
 
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Ask this case")
-                        .font(.headline)
-                    TextEditor(text: $state.askCaseInput)
-                        .frame(minHeight: 120)
-                        .padding(12)
-                        .background(Color.rossSecondaryGroupedBackground)
-                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    Text("Source-backed output")
-                        .font(.footnote)
+                        VStack(alignment: .leading, spacing: 10) {
+                            RossInfoPill(title: activePackTitle, systemImage: "cpu")
+                            RossInfoPill(title: "Draft for advocate review", systemImage: "doc.text")
+                            RossInfoPill(title: "Source-backed output", systemImage: "paperclip")
+                        }
+                    }
+                }
+
+                RossSectionCard(
+                    title: instantModeAssessment.title,
+                    subtitle: instantModeAssessment.detail
+                ) {
+                    Text(instantModeAssessment.guidance)
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
-                .padding(22)
-                .background(.background)
-                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+
+                RossSectionCard(
+                    title: "Question prompt",
+                    subtitle: "Keep the ask precise. The answer should be something you could carry into a hearing prep note."
+                ) {
+                    VStack(alignment: .leading, spacing: 14) {
+                        TextEditor(text: $state.askCaseInput)
+                            .frame(minHeight: 140)
+                            .padding(12)
+                            .background(Color.rossSecondaryGroupedBackground)
+                            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+
+                        ViewThatFits(in: .horizontal) {
+                            HStack(spacing: 10) {
+                                RossInfoPill(title: "Chronology posture", systemImage: "calendar")
+                                RossInfoPill(title: "Next hearing issues", systemImage: "text.alignleft")
+                                RossInfoPill(title: "Source chip check", systemImage: "checklist")
+                            }
+
+                            VStack(alignment: .leading, spacing: 8) {
+                                RossInfoPill(title: "Chronology posture", systemImage: "calendar")
+                                RossInfoPill(title: "Next hearing issues", systemImage: "text.alignleft")
+                                RossInfoPill(title: "Source chip check", systemImage: "checklist")
+                            }
+                        }
+                    }
+                }
 
                 Button(action: runLocalReview) {
                     if isRunning {
@@ -51,6 +89,10 @@ struct AskCaseView: View {
         .background(Color.rossGroupedBackground)
         .navigationTitle("Ask Case")
         .rossInlineNavigationTitle()
+    }
+
+    private var activePackTitle: String {
+        settingsStore.settings.activePackTier?.title ?? "No pack selected"
     }
 
     private var instantModeAssessment: InstantModeAssessment {
@@ -84,72 +126,46 @@ struct AskCaseView: View {
     }
 }
 
-private struct InstantModeCard: View {
-    let assessment: InstantModeAssessment
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(assessment.title)
-                    .font(.headline)
-                Spacer()
-                Image(systemName: assessment.isAvailable ? "bolt.fill" : "bolt.slash")
-                    .foregroundStyle(assessment.isAvailable ? .yellow : .secondary)
-            }
-
-            Text(assessment.detail)
-                .foregroundStyle(.secondary)
-
-            Text(assessment.guidance)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-        }
-        .padding(22)
-        .background(.background)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-    }
-}
-
 private struct AskCaseResponseCard: View {
     let response: AskCaseResponse
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(response.headline)
-                .font(.title3.weight(.semibold))
+        RossSectionCard(
+            title: response.headline,
+            subtitle: response.draftNotice
+        ) {
+            VStack(alignment: .leading, spacing: 16) {
+                ForEach(response.sections) { section in
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(section.title)
+                            .font(.headline)
+                            .foregroundStyle(Color.rossInk)
 
-            Text(response.draftNotice)
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.secondary)
-
-            ForEach(response.sections) { section in
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(section.title)
-                        .font(.headline)
-                    Text(section.body)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Sources")
-                    .font(.headline)
-                ForEach(response.citations) { citation in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(citation.label)
-                            .font(.footnote.weight(.semibold))
-                        Text(citation.note)
-                            .font(.footnote)
+                        Text(section.body)
                             .foregroundStyle(.secondary)
                     }
-                    .padding(12)
-                    .background(Color.rossSecondaryGroupedBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Source chips")
+                        .font(.headline)
+
+                    ForEach(response.citations) { citation in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(citation.label)
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(Color.rossInk)
+                            Text(citation.note)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.rossSecondaryGroupedBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    }
                 }
             }
         }
-        .padding(22)
-        .background(.background)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 }
