@@ -1,0 +1,783 @@
+{
+  "builtTestProducts" : [
+
+  ],
+  "copyCommands" : {
+
+  },
+  "explicitTargetDependencyImportCheckingMode" : {
+    "none" : {
+
+    }
+  },
+  "generatedSourceTargetSet" : [
+
+  ],
+  "pluginDescriptions" : [
+
+  ],
+  "swiftCommands" : {
+    "C.PrivateDigitalClerk-arm64-apple-macosx-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/sources",
+      "importPath" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/App/AppColors.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/App/AppServices.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/App/AppState.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/App/PrivateDigitalClerkApp.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/App/PrivateDigitalClerkRootView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/App/WorkbenchRootView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/AskCase/AskCaseView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/Capture/QuickCaptureReviewView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/Onboarding/OnboardingView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/PrivacyLedger/PrivacyLedgerView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/PrivateAI/PrivateAIPackSetupView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/PublicLaw/PublicLawSearchPreviewView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/Settings/PrivateAISettingsView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/Settings/SettingsView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/Workspace/CaseWorkspaceView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Models/AIInteractionModels.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Models/CapabilityTier.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Models/CaseModels.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Models/DeviceCapability.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Models/PrivacyLedgerModels.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Models/SettingsModels.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/CaseRepository.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/DeviceCapabilityService.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/LocalRuntimeService.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/ModelCatalogService.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/ModelDownloadService.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/PrivacyLedgerService.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/PublicLawSearchService.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/SettingsStore.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/sources"
+        }
+      ],
+      "isLibrary" : false,
+      "moduleName" : "PrivateDigitalClerk",
+      "moduleOutputPath" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/Modules/PrivateDigitalClerk.swiftmodule",
+      "objects" : [
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/AppColors.swift.o",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/AppServices.swift.o",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/AppState.swift.o",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/PrivateDigitalClerkApp.swift.o",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/PrivateDigitalClerkRootView.swift.o",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/WorkbenchRootView.swift.o",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/AskCaseView.swift.o",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/QuickCaptureReviewView.swift.o",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/OnboardingView.swift.o",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/PrivacyLedgerView.swift.o",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/PrivateAIPackSetupView.swift.o",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/PublicLawSearchPreviewView.swift.o",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/PrivateAISettingsView.swift.o",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/SettingsView.swift.o",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/CaseWorkspaceView.swift.o",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/AIInteractionModels.swift.o",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/CapabilityTier.swift.o",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/CaseModels.swift.o",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/DeviceCapability.swift.o",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/PrivacyLedgerModels.swift.o",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/SettingsModels.swift.o",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/CaseRepository.swift.o",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/DeviceCapabilityService.swift.o",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/LocalRuntimeService.swift.o",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/ModelCatalogService.swift.o",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/ModelDownloadService.swift.o",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/PrivacyLedgerService.swift.o",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/PublicLawSearchService.swift.o",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/SettingsStore.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-j14",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-Xfrontend",
+        "-entry-point-function-name",
+        "-Xfrontend",
+        "PrivateDigitalClerk_main",
+        "-swift-version",
+        "6",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "ios"
+      ],
+      "outputFileMapPath" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/AppColors.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/AppServices.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/AppState.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/PrivateDigitalClerkApp.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/PrivateDigitalClerkRootView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/WorkbenchRootView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/AskCaseView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/QuickCaptureReviewView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/OnboardingView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/PrivacyLedgerView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/PrivateAIPackSetupView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/PublicLawSearchPreviewView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/PrivateAISettingsView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/SettingsView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/CaseWorkspaceView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/AIInteractionModels.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/CapabilityTier.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/CaseModels.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/DeviceCapability.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/PrivacyLedgerModels.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/SettingsModels.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/CaseRepository.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/DeviceCapabilityService.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/LocalRuntimeService.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/ModelCatalogService.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/ModelDownloadService.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/PrivacyLedgerService.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/PublicLawSearchService.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/SettingsStore.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/Modules/PrivateDigitalClerk.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/App/AppColors.swift",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/App/AppServices.swift",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/App/AppState.swift",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/App/PrivateDigitalClerkApp.swift",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/App/PrivateDigitalClerkRootView.swift",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/App/WorkbenchRootView.swift",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/AskCase/AskCaseView.swift",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/Capture/QuickCaptureReviewView.swift",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/Onboarding/OnboardingView.swift",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/PrivacyLedger/PrivacyLedgerView.swift",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/PrivateAI/PrivateAIPackSetupView.swift",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/PublicLaw/PublicLawSearchPreviewView.swift",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/Settings/PrivateAISettingsView.swift",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/Settings/SettingsView.swift",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/Workspace/CaseWorkspaceView.swift",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Models/AIInteractionModels.swift",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Models/CapabilityTier.swift",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Models/CaseModels.swift",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Models/DeviceCapability.swift",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Models/PrivacyLedgerModels.swift",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Models/SettingsModels.swift",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/CaseRepository.swift",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/DeviceCapabilityService.swift",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/LocalRuntimeService.swift",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/ModelCatalogService.swift",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/ModelDownloadService.swift",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/PrivacyLedgerService.swift",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/PublicLawSearchService.swift",
+        "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/SettingsStore.swift"
+      ],
+      "tempsPath" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build",
+      "wholeModuleOptimization" : false
+    }
+  },
+  "swiftFrontendCommands" : {
+
+  },
+  "swiftTargetScanArgs" : {
+    "PrivateDigitalClerk" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "PrivateDigitalClerk",
+      "-package-name",
+      "ios",
+      "-c",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/App/AppColors.swift",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/App/AppServices.swift",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/App/AppState.swift",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/App/PrivateDigitalClerkApp.swift",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/App/PrivateDigitalClerkRootView.swift",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/App/WorkbenchRootView.swift",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/AskCase/AskCaseView.swift",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/Capture/QuickCaptureReviewView.swift",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/Onboarding/OnboardingView.swift",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/PrivacyLedger/PrivacyLedgerView.swift",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/PrivateAI/PrivateAIPackSetupView.swift",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/PublicLaw/PublicLawSearchPreviewView.swift",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/Settings/PrivateAISettingsView.swift",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/Settings/SettingsView.swift",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/Workspace/CaseWorkspaceView.swift",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Models/AIInteractionModels.swift",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Models/CapabilityTier.swift",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Models/CaseModels.swift",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Models/DeviceCapability.swift",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Models/PrivacyLedgerModels.swift",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Models/SettingsModels.swift",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/CaseRepository.swift",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/DeviceCapabilityService.swift",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/LocalRuntimeService.swift",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/ModelCatalogService.swift",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/ModelDownloadService.swift",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/PrivacyLedgerService.swift",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/PublicLawSearchService.swift",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/SettingsStore.swift",
+      "-I",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-j14",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-Xfrontend",
+      "-entry-point-function-name",
+      "-Xfrontend",
+      "PrivateDigitalClerk_main",
+      "-swift-version",
+      "6",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "ios",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ]
+  },
+  "targetDependencyMap" : {
+    "PrivateDigitalClerk" : [
+
+    ]
+  },
+  "testDiscoveryCommands" : {
+
+  },
+  "testEntryPointCommands" : {
+
+  },
+  "traitConfiguration" : {
+    "default" : {
+
+    }
+  },
+  "writeCommands" : {
+    "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk-entitlement.plist" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<entitlement-plist>"
+        },
+        {
+          "kind" : "virtual",
+          "name" : "<com.apple.security.get-task-allow>"
+        }
+      ],
+      "outputFilePath" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk-entitlement.plist"
+    },
+    "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/App/AppColors.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/App/AppServices.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/App/AppState.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/App/PrivateDigitalClerkApp.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/App/PrivateDigitalClerkRootView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/App/WorkbenchRootView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/AskCase/AskCaseView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/Capture/QuickCaptureReviewView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/Onboarding/OnboardingView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/PrivacyLedger/PrivacyLedgerView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/PrivateAI/PrivateAIPackSetupView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/PublicLaw/PublicLawSearchPreviewView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/Settings/PrivateAISettingsView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/Settings/SettingsView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Features/Workspace/CaseWorkspaceView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Models/AIInteractionModels.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Models/CapabilityTier.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Models/CaseModels.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Models/DeviceCapability.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Models/PrivacyLedgerModels.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Models/SettingsModels.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/CaseRepository.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/DeviceCapabilityService.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/LocalRuntimeService.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/ModelCatalogService.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/ModelDownloadService.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/PrivacyLedgerService.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/PublicLawSearchService.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/PrivateDigitalClerk/Services/SettingsStore.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/sources"
+    },
+    "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.product/Objects.LinkFileList" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<link-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/AIInteractionModels.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/AppColors.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/AppServices.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/AppState.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/AskCaseView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/CapabilityTier.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/CaseModels.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/CaseRepository.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/CaseWorkspaceView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/DeviceCapability.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/DeviceCapabilityService.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/LocalRuntimeService.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/ModelCatalogService.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/ModelDownloadService.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/OnboardingView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/PrivacyLedgerModels.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/PrivacyLedgerService.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/PrivacyLedgerView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/PrivateAIPackSetupView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/PrivateAISettingsView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/PrivateDigitalClerkApp.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/PrivateDigitalClerkRootView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/PublicLawSearchPreviewView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/PublicLawSearchService.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/QuickCaptureReviewView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/SettingsModels.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/SettingsStore.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/SettingsView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.build/WorkbenchRootView.swift.o"
+        }
+      ],
+      "outputFilePath" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/PrivateDigitalClerk.product/Objects.LinkFileList"
+    },
+    "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt" : {
+      "alwaysOutOfDate" : true,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<swift-get-version>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+        }
+      ],
+      "outputFilePath" : "/Users/amanpandey/projects/ross/private-digital-clerk/ios/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+    }
+  }
+}

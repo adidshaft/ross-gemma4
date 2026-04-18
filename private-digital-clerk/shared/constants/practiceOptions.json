@@ -1,0 +1,34 @@
+{
+  "preferredLanguages": [
+    "English",
+    "Hindi",
+    "Both"
+  ],
+  "mainCourts": [
+    "District Court",
+    "High Court",
+    "Supreme Court",
+    "Tribunal",
+    "Arbitration",
+    "Consumer Forum"
+  ],
+  "practiceAreas": [
+    "Civil",
+    "Criminal",
+    "Commercial",
+    "Family",
+    "Labour",
+    "Consumer",
+    "Arbitration",
+    "Property",
+    "Constitutional",
+    "Tax"
+  ],
+  "draftingTones": [
+    "concise",
+    "detailed",
+    "conservative",
+    "bilingual"
+  ]
+}
+
