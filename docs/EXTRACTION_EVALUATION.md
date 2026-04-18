@@ -2,93 +2,95 @@
 
 Ross uses an alpha extraction evaluation harness to measure whether the local extraction pipeline stays conservative, source-backed, and privacy-safe.
 
-This harness does not prove production-model accuracy. It is a local regression safety net.
+This harness is a regression safety net. It does not prove production legal accuracy.
 
-## Why this harness exists
+## Why the harness exists
 
 Legal extraction can fail in dangerous ways:
 
 - inventing a case number
 - normalizing the wrong date
 - turning noisy OCR into false certainty
-- misreading mixed Hindi/English text
-- following malicious instructions embedded in documents
-- exporting unsupported facts as if they were verified
+- misreading mixed Hindi and English text
+- following malicious instructions embedded inside a document
+- emitting invalid JSON that slips through as accepted data
 
-The harness exists to catch those failures early.
+The harness exists to catch those failures early and keep unsupported accepted fields at zero.
 
-## Fixture set
+## Fixture coverage
 
 Synthetic or anonymized fixtures cover:
 
-- English civil order
-- Hindi/English mixed order
+- English civil orders
+- Hindi and English mixed orders
 - noisy OCR affidavit text
-- pleading with parties and prayers
-- evidence and exhibit list
+- pleadings with prayers
+- evidence and exhibit lists
 - prompt-injection text
 - conflicting dates
-- hallucination trap
+- hallucination traps
 
-Each fixture defines:
+## Evaluation run shape
 
-- source text
-- expected document type
-- expected language profile
-- expected extracted fields
-- required source refs
-- values that must remain in review
+Ross now models fixture runs with an `EvaluationRun` shape that records:
 
-## What the report measures
-
-Ross can summarize fixture runs with an `ExtractionQualityReport` shape:
-
+- `id`
+- `runtimeMode`
+- `extractionMode`
 - `fixtureId`
-- `mode`
+- `startedAt`
+- `completedAt`
 - `fieldsExpected`
 - `fieldsFound`
 - `fieldsVerified`
 - `fieldsNeedingReview`
 - `unsupportedAccepted`
+- `schemaValid`
 - `sourceCoverage`
 - `notes`
 
-The most important alpha metric is simple:
+The required invariant is unchanged:
 
 - `unsupportedAccepted` must stay `0`
 
-## Assertions
+## What the harness now checks
 
-The current harness asserts:
-
-- every accepted field has source refs
-- unsupported values are pushed into review
-- invalid model JSON fails safely
+- prompt packs stay inside the configured budget
+- accepted fields keep source refs
+- invalid JSON fails safely
+- repair paths stay conservative
+- unsupported values become `needs_review` or `rejected`
+- verifier categorization stays stable
 - prompt injection does not change extraction behavior
 - mixed-language detection remains intact
-- verifier logic catches hallucinated court, case number, and date values
-- deterministic development runtime output stays stable
 - invocation metadata excludes raw prompt and raw source text
 
-## Relation to pack quality
+## Relation to runtime modes
 
-The harness helps validate that pack-aware planning changes the extraction path:
+The harness is designed to work in two modes:
+
+- deterministic development evaluation
+- optional real local evaluation when a developer explicitly provides a compatible local runtime
+
+If `ROSS_LOCAL_MODEL_PATH` or another explicit debug runtime configuration is absent, Ross should run deterministic evaluation and skip real-runtime claims.
+
+## Pack-quality coverage
+
+The evaluation harness helps validate that pack-aware planning changes the extraction path:
 
 - Basic stays deterministic and review-heavy
-- Quick Start stays lighter and gated for shorter documents
-- Case Associate enables deeper verifier behavior
-- Senior Drafting Support adds deeper-pass scaffolding
+- Quick Start stays lighter and budget-gated
+- Case Associate runs the deeper extraction and verification chain
+- Senior Drafting Support keeps stronger synthesis scaffolding without accepting unsupported fields
 
-That means Ross can test the pipeline shape before shipping real device-side model assets.
-
-## Privacy boundaries
+## Privacy boundary
 
 Fixture data is local test data only.
 
-The harness is designed so it does not require:
+The harness does not require:
 
 - cloud OCR
-- cloud models
+- cloud model calls
 - case upload
 - remote evaluation services
 

@@ -1,64 +1,63 @@
 # Model Registry
 
-Ross shows advocate-friendly capability packs in product UI. Technical model names are hidden from onboarding and routine settings because the user-facing promise is extraction quality, not model branding.
+Ross shows advocate-friendly capability packs in product UI. Technical model names stay out of onboarding because the user-facing promise is extraction quality, not model branding.
 
 ## User-facing packs
 
 ### Basic
 
-- Available with no Private AI Pack installed.
-- Uses local text acquisition, local OCR where available, heuristics, and deterministic extraction.
-- Best for import, preview, basic extraction, and local review.
+- available with no Private AI Pack installed
+- uses local acquisition, OCR where available, heuristics, and deterministic extraction
 
 ### Quick Start
 
-- Extraction quality: `Standard`
-- Best for short documents, lighter cleanup, and simple summaries.
-- Introduces stronger local multi-pass behavior, but still falls back deterministically when the local runtime is not truly available.
+- extraction quality: `Standard`
+- best for short documents and lighter cleanup
 
 ### Case Associate
 
-- Extraction quality: `Advanced`
-- Best for better document understanding, stronger field extraction, mixed English/Hindi handling, chronologies, order summaries, and source-backed verification.
+- extraction quality: `Advanced`
+- best for stronger field extraction, mixed-language handling, chronology support, and review queues
 
 ### Senior Drafting Support
 
-- Extraction quality: `Advanced`
-- Best for deeper review, verifier/refiner passes, longer bundles, and stronger bilingual workflows.
-- Still expected to stay source-grounded and review-aware.
+- extraction quality: `Advanced`
+- best for deeper synthesis and longer bundle workflows
+
+## Runtime registry notes
+
+Ross now tracks runtime metadata separately from user-facing pack labels.
+
+Supported runtime-mode values:
+
+- `deterministic_dev`
+- `mediapipe_llm`
+- `gemma_local_runtime`
+- `apple_foundation_models`
+- `unavailable`
+
+Supported artifact-kind values:
+
+- `tiny_dev_artifact`
+- `local_model_artifact`
+- `system_model`
+- `external_debug_model`
+
+The current alpha catalog still serves only `tiny_dev_artifact` packs with `deterministic_dev` runtime metadata for normal development installs.
 
 ## Registry principles
 
-- Do not show technical model names in onboarding.
-- Present capability tiers as advocate workflows, not inference internals.
-- Keep installation separate from the base app.
-- Allow the product to remain usable without a pack.
-- Prefer local model-assisted extraction, verification, and synthesis when a pack is installed.
-- Never imply that every pack already includes a real on-device LLM if the runtime is still a deterministic dev implementation or a platform stub.
-
-## Engineering registry notes
-
-The current architecture supports:
-
-- lightweight local model-assisted extraction interfaces
-- stronger local extraction passes for Case Associate
-- deeper verifier/refiner passes for Senior Drafting Support
-- future local VLM-capable or multimodal passes for scan-heavy documents
-- deterministic development runtime behavior for pack-aware validation
-- platform stubs where a true on-device inference engine is not yet bundled
-
-The repo does not ship large production binaries in source control.
-
-## Delivery principles
-
-- Delivery is signed, resumable, and checksum verified.
-- Model delivery endpoints must never receive case data.
-- Dev-artifact delivery exists so download/install logic can be validated without bundling real model assets.
-- Technical details may be exposed only under advanced settings or engineering documentation.
+- do not show technical model names in onboarding
+- present packs as advocate workflows
+- keep installation separate from the base app
+- keep the app usable without a pack
+- prefer real local inference when a compatible local runtime is available
+- fall back deterministically when it is not
+- never imply that every pack already includes a running local model
 
 ## Alpha delivery status
 
-- Backend `/model-catalog` returns signed dev-artifact metadata for the visible packs.
-- Backend `/model-download/session` returns signed segmented artifact metadata.
-- Backend `/dev-artifacts/:artifactId` supports byte-range delivery.
-- Android and iOS alpha shells both integrate privacy-safe model-catalog and model-download clients.
+- backend `/model-catalog` returns signed dev-artifact metadata
+- backend `/model-download/session` returns signed segmented dev-artifact metadata
+- Android and iOS both use this delivery path without sending case data
+- real local model artifacts remain developer-provided and outside the repo in this alpha

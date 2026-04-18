@@ -1,6 +1,8 @@
 # Privacy Architecture
 
-Ross is built around a hard local-first boundary for advocate case work. The active product does not upload case files, OCR text, prompts, embeddings, filenames, party names, client facts, or extracted legal fields to cloud AI services.
+Ross is built around a hard local-first boundary for advocate case work.
+
+The active product does not upload case files, OCR text, prompts, embeddings, filenames, party names, client facts, or extracted legal fields to cloud AI services.
 
 ## Core boundary
 
@@ -23,22 +25,15 @@ The Case Vault contains:
 - extraction runs and findings
 - advocate corrections
 - case memory updates
-- chat turns
-- exports
+- local exports
 - local privacy ledger history
 
 Rules:
 
-- Must stay local to the device.
-- Must not import cloud inference clients.
-- Must not send raw case text to public-law search.
-- Must not expose prompts, OCR text, embeddings, or filenames across the network boundary.
-
-Alpha storage status:
-
-- Android alpha encrypts persisted state at rest with Keystore-backed AES-GCM.
-- iOS alpha encrypts persisted state at rest with Keychain-managed AES.GCM.
-- Legacy plaintext alpha state is migrated locally and then removed after successful encrypted save.
+- stays local to the device
+- never imports network inference clients
+- never sends raw case text to public-law search
+- never exposes prompts, OCR text, embeddings, or filenames across the network boundary
 
 ## Local Extraction and AI Runtime
 
@@ -48,32 +43,32 @@ It includes:
 
 - text acquisition
 - OCR cleanup
-- English/Hindi/mixed language heuristics
-- script detection
-- layout-aware segmentation
+- language and script detection
+- prompt packing
 - document classification
 - legal field extraction
 - verifier/refiner pass
 - confidence scoring
 - advocate review queues
 - case-memory synthesis
-- local chunking, retrieval, and drafting support
 
 Rules:
 
-- OCR is acquisition, not reasoning.
-- No cloud LLM APIs.
-- No cloud OCR.
-- No analytics or telemetry SDKs.
-- Uploaded documents are treated as data, not instructions.
-- Every extracted value must keep source support.
-- Unsupported or weakly supported values must be marked `needs review`, not silently accepted.
-- Synthesis must stay grounded in the same local sources that produced the candidate fields.
+- OCR is acquisition, not reasoning
+- no cloud model calls
+- no cloud OCR
+- no analytics or telemetry SDKs
+- uploaded documents are treated as data, not instructions
+- every accepted value must keep source support
+- unsupported values must become `needs review` or `rejected`
+- the runtime itself must not use the network
 
-Runtime status:
+Runtime status in this alpha:
 
-- The active alpha uses deterministic development runtime behavior plus platform stubs where a real local model is not bundled.
-- The architecture is prepared for a true on-device inference adapter, but orchestration interfaces alone are not proof that a local LLM is already running.
+- deterministic development runtime is active and real
+- Android real-runtime adapters are scaffolded but unavailable
+- iOS has a real Apple Foundation Models adapter path behind explicit developer opt-in
+- raw prompts and raw source text are not persisted in invocation metadata by default
 
 ## Public Law Layer
 
@@ -82,66 +77,41 @@ The Public Law Layer is the only outward-facing legal research boundary.
 It contains:
 
 - local sanitization
-- preview/confirmation UI
+- preview and confirmation UI
 - approved backend client
 - local cache of approved public-law results
 
 Rules:
 
-- Accepts only a sanitized public query object.
-- Must not receive case IDs, filenames, OCR text, extracted field values, party names, or client facts.
-- Requires explicit user confirmation before a network request.
-- Every request is visible in the Privacy Ledger.
-- The backend rejects unsafe/private queries and avoids raw-query logging in protected paths.
+- accepts only sanitized public query objects
+- never receives case IDs, filenames, OCR text, party names, client facts, or raw extracted values
+- requires explicit user confirmation before a network request
+- logs only sanitized public query activity in the Privacy Ledger
 
-Ross may propose a public-law query locally from extracted legal concepts, but the preview remains mandatory.
+Ross may suggest a public-law query from extracted legal concepts, but the preview remains mandatory.
 
 ## Entitlement and Delivery Layer
 
 This layer contains:
 
-- auth/account token handling
-- entitlements
+- auth and entitlement handling
 - model catalog
 - model-download session setup
-- byte-range dev-artifact delivery
+- byte-range development artifact delivery
 - checksum verification
 - pack install metadata
 
 Rules:
 
-- Must not read case files.
-- Must not accept case-data payloads.
-- Must remain limited to `no_case_data`, `account_token`, or `sanitized_public_query` payload classes.
-- Every request is visible in the Privacy Ledger.
+- must not read case files
+- must not accept case-data payloads
+- remains limited to `no_case_data`, `account_token`, or `sanitized_public_query` payload classes
 
 Alpha status:
 
-- Backend `/model-catalog` returns signed tiny dev-artifact metadata.
-- Backend `/model-download/session` returns signed segment metadata.
-- Backend `/dev-artifacts/:artifactId` supports byte ranges for resumable development installs.
-- Android and iOS alpha shells both shape and use privacy-safe backend payloads for model delivery and public-law search.
-
-## Boundary summary
-
-- Case data stays local.
-- OCR stays local.
-- Extraction is local-first and source-backed.
-- Model delivery is separate from case data.
-- Public-law search is separate from private-case extraction.
-- Development runtime validation is not the same thing as a bundled production local model.
-
-## Network allowlist
-
-The intended network surface stays restricted to:
-
-- `/auth/*`
-- `/entitlements/*`
-- `/model-catalog`
-- `/model-download/*`
-- `/billing/*`
-- `/public-law/search`
-- `/dev-artifacts/*`
+- backend model catalog and download flows remain dev-artifact only
+- delivery metadata now includes runtime mode, artifact kind, and minimum app-version compatibility fields
+- no large model file is stored in source control or served as part of the normal alpha flow
 
 ## Logging limits
 

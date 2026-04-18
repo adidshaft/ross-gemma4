@@ -7,72 +7,57 @@
 3. Pick any iOS Simulator destination.
 4. Press Run.
 
-The Xcode project reuses the existing SwiftUI sources in `/Users/amanpandey/projects/ross/ios/Ross` directly. `RossApp.swift` remains the app entry point for the iOS target.
-
-## Command-line simulator build
-
-From the repo root:
-
-```sh
-xcodebuild \
-  -project ios/Ross.xcodeproj \
-  -scheme Ross \
-  -configuration Debug \
-  -sdk iphonesimulator \
-  -destination 'generic/platform=iOS Simulator' \
-  -derivedDataPath ios/tmp/DerivedData \
-  build
-```
-
-If SwiftPM scratch data becomes corrupt locally, clear it and rerun:
+## Command-line build
 
 ```sh
 cd /Users/amanpandey/projects/ross/ios
-rm -rf tmp/swiftpm
 swift build --scratch-path tmp/swiftpm
+xcodebuild -project Ross.xcodeproj -scheme Ross -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath tmp/DerivedData build
 ```
 
-## SwiftPM tests
-
-The local extraction orchestrator has a lightweight SwiftPM test target:
+## Tests and screenshot export
 
 ```sh
 cd /Users/amanpandey/projects/ross/ios
 swift test --scratch-path tmp/swiftpm
-```
-
-## Screenshot export
-
-Screenshot export is a macOS-hosted Swift Package workflow, not an iOS Simulator workflow.
-
-To export screenshots into `ios/tmp/ui-screenshots`, run from the `ios` directory:
-
-```sh
-cd /Users/amanpandey/projects/ross/ios
-swift run Ross --generate-screenshots
+swift run --scratch-path tmp/swiftpm Ross --generate-screenshots
 ```
 
 ## Current alpha foundation
 
-- Active alpha state is encrypted at rest with Keychain-managed AES.GCM.
-- Legacy plaintext state is migrated into encrypted storage on load.
-- PDF imports index native page text locally where available.
-- Image imports run local Vision OCR where available.
-- iOS now runs a local extraction orchestrator in the active alpha shell:
-  - PDF/text acquisition
-  - language/script profiling
-  - document classification
-  - deterministic legal-field extraction fallback
-  - local model-assisted extraction stubs
+- active alpha state is encrypted at rest
+- PDF imports index native page text locally where available
+- image imports run local Vision OCR where available
+- iOS runs a local extraction orchestrator with:
+  - acquisition
+  - language profiling
+  - prompt packing
+  - deterministic fallback extraction
+  - schema validation
   - verification and review queue generation
-- Source-backed extracted fields, extraction runs, findings, advocate corrections, and case-memory updates persist locally.
-- The document workflow now includes `Review extracted details` with confidence badges, source chips, and accept/edit/ignore actions.
-- Local exports are written as real PDF files under app-private storage, and generated PDFs can be shared through the system share sheet.
-- Public-law search and model-download clients are compiled into the active alpha shell for a local backend at `http://127.0.0.1:8080`, with a local dev-artifact fallback for pack install if the backend is unavailable.
+- public-law search and model-download clients remain privacy-safe
+
+## Real local inference alpha status
+
+- iOS now has a real-provider abstraction behind the installed-pack provider contract.
+- An Apple Foundation Models adapter path exists behind availability checks.
+- Real-runtime probing is disabled by default so CI and simulator runs stay deterministic.
+- When the configured real runtime is unavailable, iOS falls back safely to the deterministic development provider.
+- Invocation metadata stores hashes and runtime mode, not raw prompts or raw source text.
+
+## Debug configuration
+
+To exercise the real iOS runtime path manually, use scheme environment variables such as:
+
+- `ROSS_ENABLE_REAL_LOCAL_INFERENCE=1`
+- `ROSS_LOCAL_RUNTIME=apple_foundation_models`
+- `ROSS_LOCAL_MODEL_PATH=/absolute/path/to/local/model` when an external adapter file is required
+- `ROSS_BACKEND_URL=http://127.0.0.1:8080`
+
+No model file is committed to the repo, and CI does not require a real model artifact.
 
 ## Known caveats
 
-- Exact text highlighting is still represented through source panels and page targeting rather than reliable per-snippet PDF selection overlays.
-- The deeper local model passes are architected and stubbed, but this phase does not bundle full production model assets or a confirmed production on-device LLM runtime.
-- Backend-connected mobile runtime flows still depend on a local development backend being available when you want to exercise the network boundary interactively.
-- Fixture-driven tests validate the orchestrator contract, but they are not a proof of real-device inference quality.
+- The Apple Foundation Models path is the only real inference path in this branch.
+- It should not be claimed as active unless it actually ran on a compatible device or simulator host.
+- Exact PDF snippet highlights remain best-effort, with source chips as the primary trust surface.

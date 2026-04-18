@@ -1,140 +1,145 @@
-# Ross Local Model Extraction Runtime Alpha Report
+# Ross Real Local Inference Adapter Alpha Report
 
 ## Branch
 
-- Working branch: `alpha-local-model-extraction`
-- Base branch preserved: `alpha-law-grade-extraction`
+- Working branch: `alpha-real-local-inference`
+- Base branch preserved: `alpha-local-model-extraction`
 
 ## Scope completed
 
-This phase connects the existing law-grade extraction architecture to a real local runtime abstraction, pack-aware multi-pass planning, deterministic development execution, mobile orchestration, and source-grounding validation.
+This phase moves Ross from a runtime contract plus deterministic development provider toward a real local inference adapter alpha.
 
-The product line remains the same:
+What is now true:
 
-- OCR is acquisition only.
-- Extraction quality depends on the installed `Private AI Pack`.
-- Unsupported fields are not silently accepted.
-- Low-confidence or weakly supported values are pushed into advocate review.
-- No cloud model calls or cloud OCR were added.
+- the deterministic development provider remains intact for CI and fallback
+- runtime metadata can represent real local runtime modes
+- prompt packing exists
+- schema validation exists
+- verifier gating remains strict
+- Android and iOS both select real-or-fallback providers behind the installed-pack abstraction
+- iOS has one real local adapter path behind explicit developer opt-in
 
-## What is implemented now
+What is not yet true:
+
+- no large model file is committed or bundled
+- Android does not yet execute a real local model in this branch
+- no real local model execution was validated in the final matrix because no developer-provided model runtime was supplied during this run
+
+## Implemented in this phase
 
 ### Shared and Rust core
 
-- Added platform-neutral local runtime contracts for:
-  - `LocalModelTask`
-  - `LocalModelInput`
-  - `LocalModelOutput`
-  - `LocalModelInvocation`
-  - `ExtractionPipelinePlan`
-- Added Rust runtime/orchestration modules for:
-  - `local_model`
-  - `model_invocation`
-  - `extraction_plan`
-  - `output_validation`
-- Added a deterministic local provider for tests and CI.
-- Added a platform runtime stub that fails safely when a true on-device runtime is unavailable.
-- Added prompt and validation rules that treat documents as data, reject instruction-following from document text, and require source support.
-- Added invocation hashing so prompt and input bodies are not persisted in invocation metadata.
-
-### Extraction pipeline behavior
-
-- Basic mode remains deterministic and review-heavy.
-- Quick Start can run the local runtime chain for shorter documents and otherwise fails safely into deterministic review-oriented behavior.
-- Case Associate now plans and runs a deeper extraction path:
-  - cleanup
-  - language correction
-  - document classification
-  - legal field extraction
-  - verifier/refiner pass
-  - case memory synthesis
-- Senior Drafting Support adds deeper-pass placeholders and stronger plan steps without pretending a real bundled local LLM is already present.
-- Every accepted extracted field must keep at least one source reference.
-- Unsupported or weakly grounded values are marked `needs review`.
-- User-corrected fields are preserved on reruns.
+- added runtime metadata for:
+  - `LocalRuntimeMode`
+  - `LocalModelArtifactKind`
+  - `LocalRuntimeHealth`
+  - `LocalModelResourceEstimate`
+  - `ModelPromptPolicy`
+- extended `LocalModelProvider` with:
+  - availability and runtime-mode reporting
+  - context-window and input-budget estimates
+  - runtime health
+  - optional streaming hook
+- added `PromptPackBuilder`
+- added schema-specific output validation helpers
+- added verifier disposition helpers for:
+  - `verified`
+  - `needs_review`
+  - `rejected`
+- added `EvaluationRun` regression reporting
 
 ### Android
 
-- Added Android runtime and validation files:
-  - `AlphaLocalModelRuntime.kt`
-  - `AlphaExtractionPipelinePlan.kt`
-  - `AlphaModelInvocationStore.kt`
-  - `AlphaModelOutputValidator.kt`
-- Updated `AlphaExtraction.kt` to execute pack-aware multi-pass extraction.
-- Persisted pipeline plans and model invocation metadata locally.
-- Redacted prompt/source bodies from invocation records.
-- Updated review/export flows so verified values and review-needed values stay distinct.
-- Added UI refinements for:
-  - extraction quality
-  - needs-review counts
-  - verified vs needs-review field labels
-  - `Run better extraction`
+- added runtime metadata and prompt-packing support to the Android local runtime layer
+- added compile-safe real-provider scaffolding for:
+  - `mediapipe_llm`
+  - `gemma_local_runtime`
+- added debug configuration support for:
+  - `ROSS_ENABLE_REAL_LOCAL_INFERENCE`
+  - `ROSS_LOCAL_RUNTIME`
+  - `ROSS_LOCAL_MODEL_PATH`
+- preserved deterministic fallback when a real adapter is unavailable
+- persisted runtime mode in invocation metadata without persisting raw prompt or raw source text
+- strengthened extracted-field public-law suggestion sanitization
+- exposed technical runtime details only inside Private AI technical details
 
 ### iOS
 
-- Added iOS runtime and validation files:
-  - `AlphaLocalModelRuntime.swift`
-  - `AlphaExtractionPipelinePlan.swift`
-  - `AlphaModelInvocationStore.swift`
-  - `AlphaModelOutputValidator.swift`
-- Updated `AlphaStore` orchestration to execute the same conceptual pack-aware multi-pass flow as Android.
-- Persisted local invocation metadata without raw prompt/source bodies.
-- Preserved user corrections when rerunning extraction.
-- Updated the iOS review shell to show quality, review counts, verified status, and upgrade messaging.
+- added runtime metadata and prompt-packing support to the iOS local runtime layer
+- added a real Apple Foundation Models adapter path behind availability checks
+- made real-runtime probing explicit so CI and simulator tests stay deterministic unless a developer opts in
+- preserved deterministic fallback when the real runtime is unavailable
+- persisted runtime mode in invocation metadata without persisting raw prompt or raw source text
+- strengthened extracted-field public-law suggestion sanitization
+- exposed technical runtime details only inside Private AI technical details
 
-### Backend and model-pack linkage
+### Backend
 
-- Extended catalog/download metadata with:
-  - `artifactKind`
-  - `runtimeMode`
-  - `developmentOnly`
-- Dev artifacts are explicitly marked:
-  - `artifactKind: tiny_dev_artifact`
-  - `runtimeMode: deterministic_dev`
-  - `developmentOnly: true`
-- Android and iOS now use installed-pack metadata to choose extraction mode and pipeline shape.
-- No real model binaries were added to the repo or app bundles.
+- widened runtime and artifact metadata enums to support:
+  - `deterministic_dev`
+  - `mediapipe_llm`
+  - `gemma_local_runtime`
+  - `apple_foundation_models`
+  - `unavailable`
+  - `tiny_dev_artifact`
+  - `local_model_artifact`
+  - `system_model`
+  - `external_debug_model`
+- added `minimumAppVersion` metadata to catalog and download payloads
+- kept actual delivered artifacts as tiny deterministic development artifacts only
 
-### Evaluation harness
+### Documentation
 
-- Added synthetic extraction fixtures in Rust for:
-  - English civil order
-  - Hindi/English mixed order
-  - noisy OCR affidavit text
-  - pleading with prayers
-  - evidence and exhibit list
-  - prompt-injection text
-  - conflicting dates
-  - hallucination trap
-- Added runtime and source-grounding tests that assert:
-  - every accepted field has source refs
-  - unsupported accepted count stays zero
-  - prompt injection does not change extraction behavior
-  - mixed-language signals are preserved
-  - invocation metadata excludes raw prompt/source text
+- updated runtime, privacy, extraction, registry, offline-behavior, and product docs
+- added `docs/MANUAL_LOCAL_INFERENCE_QA.md`
+- documented that deterministic development runtime is not a real LLM
+- documented that real local inference requires explicit developer-provided local configuration in this alpha
 
-## What is real versus stubbed
+## Real versus stubbed
 
-### Real in this branch
+### Real now
 
-- The local runtime contract is real.
-- The deterministic development provider is real.
-- Pack-aware pipeline planning is real.
-- Mobile extraction orchestration now follows the runtime contract.
-- Source validation is real.
-- Review gating for unsupported fields is real.
-- Model-pack download/install metadata now changes extraction mode and quality messaging.
+- deterministic development runtime
+- prompt packing
+- schema validation
+- verifier/refiner categorization
+- runtime health and resource estimates
+- real-or-fallback provider selection
+- iOS Apple Foundation Models adapter path
 
 ### Still stubbed
 
-- A true bundled on-device inference engine is not yet integrated.
-- `InstalledPackLocalModelProvider` remains a safe platform stub for future native inference runtimes.
-- Senior Drafting Support deeper passes are planned and scaffolded, but they still rely on deterministic/runtime-stub behavior until a real local engine is integrated.
-- The evaluation harness is an alpha safety harness, not a claim of production-model accuracy.
+- Android real local inference execution
+- MediaPipe integration on either platform
+- Gemma 4 Q4 runtime integration on either platform
+- production pack delivery of large local model artifacts
 
-## Validation run in this phase
+## Baseline validation before edits
 
-### Baseline before edits
+These all passed before any code changes:
+
+- Rust: `cargo test`
+- Backend:
+  - `npm test`
+  - `npm run typecheck`
+  - `npm run build`
+- Privacy guards:
+  - `./scripts/dev/verify-boundaries.sh`
+  - `./scripts/ci/check-no-cloud-llm.sh`
+  - `./scripts/ci/check-no-analytics.sh`
+  - `./scripts/ci/check-no-large-model-assets.sh`
+  - `./scripts/ci/check-onboarding-copy-boundary.sh`
+- Android:
+  - `./gradlew :app:testDebugUnitTest :app:assembleDebug`
+- iOS:
+  - `swift build --scratch-path tmp/swiftpm`
+  - `xcodebuild -project Ross.xcodeproj -scheme Ross -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath tmp/DerivedData build`
+  - `swift test --scratch-path tmp/swiftpm`
+  - `swift run --scratch-path tmp/swiftpm Ross --generate-screenshots`
+
+## Final validation after changes
+
+These all passed after implementation:
 
 - Rust: `cargo test`
 - Backend:
@@ -155,48 +160,59 @@ The product line remains the same:
   - `swift test --scratch-path tmp/swiftpm`
   - `swift run --scratch-path tmp/swiftpm Ross --generate-screenshots`
 
-### Final after changes
+## Backend smoke
 
-- Rust: `cargo test`
-- Backend:
-  - `npm test`
-  - `npm run typecheck`
-  - `npm run build`
-- Privacy guards:
-  - `./scripts/dev/verify-boundaries.sh`
-  - `./scripts/ci/check-no-cloud-llm.sh`
-  - `./scripts/ci/check-no-analytics.sh`
-  - `./scripts/ci/check-no-large-model-assets.sh`
-  - `./scripts/ci/check-onboarding-copy-boundary.sh`
-- Android:
-  - `./gradlew :app:testDebugUnitTest :app:assembleDebug`
-- iOS:
-  - `swift build --scratch-path tmp/swiftpm`
-  - `xcodebuild -project Ross.xcodeproj -scheme Ross -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath tmp/DerivedData build`
-  - `swift test --scratch-path tmp/swiftpm`
-  - `swift run --scratch-path tmp/swiftpm Ross --generate-screenshots`
-- Backend smoke:
-  - `GET /model-catalog`
-  - `POST /model-download/session`
-  - `GET /dev-artifacts/:artifactId` with `Range`
-  - `POST /public-law/search`
+Live backend smoke passed against a locally started built server on port `8091`.
 
-## Privacy notes
+Port `8080` was already occupied on this machine, so the smoke was rerun on `8091` without changing backend code.
 
-- No raw prompts are persisted by default.
-- No raw model input text is stored in invocation metadata.
-- Source refs inside invocation metadata are redacted to avoid leaking snippets.
-- No cloud model calls were added.
-- No cloud OCR was added.
-- No analytics or telemetry SDKs were added.
-- Case/document repositories remain separate from model delivery and public-law search boundaries.
+Validated:
+
+- `GET /model-catalog`
+- `POST /model-download/session`
+- `GET /dev-artifacts/:artifactId` with `Range`
+- `POST /public-law/search`
+
+Observed smoke payload state:
+
+- catalog `artifactKind`: `tiny_dev_artifact`
+- catalog `runtimeMode`: `deterministic_dev`
+- catalog `minimumAppVersion`: `null`
+- download session `artifactKind`: `tiny_dev_artifact`
+- download session `runtimeMode`: `deterministic_dev`
+- download session `minimumAppVersion`: `null`
+- ranged artifact download returned `206`
+- sanitized public-law search returned `200`
+
+## Privacy status
+
+- no cloud model calls were added
+- no cloud OCR was added
+- no analytics or telemetry SDKs were added
+- raw prompts are not persisted by default
+- raw source text is not persisted in invocation metadata by default
+- invocation metadata uses hashes and redacted source refs
+- public-law suggestions now use verified or user-corrected legal concepts only
+
+## Manual real-runtime status
+
+- Real local inference adapter implemented: `Yes`
+- Real local inference actually ran during this validation pass: `No`
+- Runtime mode exercised in final validation: `deterministic_dev`
+
+To manually exercise the real iOS path in a future run:
+
+- set `ROSS_ENABLE_REAL_LOCAL_INFERENCE=1`
+- set `ROSS_LOCAL_RUNTIME=apple_foundation_models`
+- optionally set `ROSS_LOCAL_MODEL_PATH=/absolute/path/to/local/model` if an external adapter file is required
+- run the manual QA flow in `docs/MANUAL_LOCAL_INFERENCE_QA.md`
 
 ## Repository hygiene
 
-- `SCRIPT.md` was inspected but left untouched.
-- `artifacts/` was inspected but left untouched.
-- Neither was modified or committed in this phase.
+- `SCRIPT.md` was inspected and left untouched
+- `artifacts/` was inspected and left untouched
+- neither was modified or committed
 
 ## Exact next recommended step
 
-Integrate a real local on-device inference adapter behind the existing `InstalledPackLocalModelProvider` contract for Case Associate first, then reuse that same adapter contract on Android and iOS so the existing cleanup, extraction, verifier, and case-memory passes run on true local inference instead of deterministic development behavior.
+Implement one production-grade real Android adapter path for `Case Associate`, preferably MediaPipe local inference if it compiles reliably in this environment, and run a manual end-to-end extraction on a developer-provided local artifact so Ross can validate true on-device extraction, verification, and review behavior outside the deterministic fallback path.

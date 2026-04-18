@@ -2,8 +2,6 @@
 
 ## Build from CLI
 
-From the repo root:
-
 ```sh
 cd /Users/amanpandey/projects/ross/android
 ./gradlew :app:assembleDebug
@@ -16,36 +14,43 @@ cd /Users/amanpandey/projects/ross/android
 ./gradlew :app:testDebugUnitTest
 ```
 
-## Open in Android Studio
-
-1. Open `/Users/amanpandey/projects/ross/android` as the project root.
-2. Let Android Studio use the checked-in Gradle wrapper.
-3. Sync the project.
-4. Run the `app` configuration on an emulator or attached device.
-
-The Android package namespace remains `com.ross.android`.
-
 ## Current alpha foundation
 
-- Onboarding flows into Private AI Pack setup and then the case list.
-- Cases, documents, source refs, extracted fields, extraction runs, findings, case memory updates, exports, and model-pack jobs persist to encrypted app-private storage.
-- PDF, image, and text imports are copied into app-private storage.
-- Android now runs a local extraction orchestrator in the active alpha shell:
+- onboarding flows into Private AI Pack setup and then the case list
+- cases, documents, extracted fields, findings, review state, and pack-install metadata persist to encrypted app-private storage
+- Android runs a local extraction orchestrator with:
   - PDF page rendering
   - on-device ML Kit OCR
-  - language/script heuristics
-  - deterministic legal-field fallback
-  - local model-assisted extraction stubs by pack capability
-  - verifier/review queue generation
-- Source chips deep-link into the document viewer with page-targeted source panels.
-- The document workflow now includes a practical `Review extracted details` surface with confidence badges and accept/edit/ignore actions.
-- Local exports are written as real PDF files in app-private storage.
-- Public-law search keeps the sanitized-preview flow and uses the hardened backend route when available.
-- Model-pack delivery uses `/model-catalog`, `/model-download/session`, and `/dev-artifacts/:artifactId` with checksum verification and local fallback behavior for development.
+  - language and script heuristics
+  - deterministic fallback extraction
+  - prompt packing
+  - schema validation
+  - verification and review queue generation
+- source chips deep-link into the document viewer
+- public-law search keeps the sanitized-preview flow
+- pack delivery uses `/model-catalog`, `/model-download/session`, and `/dev-artifacts/:artifactId`
+
+## Real local inference alpha status
+
+- Android now has a real-provider abstraction behind the installed-pack provider contract.
+- Runtime metadata supports `deterministic_dev`, `mediapipe_llm`, `gemma_local_runtime`, `apple_foundation_models`, and `unavailable`.
+- MediaPipe and Gemma 4 Q4 paths are compile-safe adapter skeletons in this alpha.
+- If a configured real runtime is unavailable, Android falls back safely to the deterministic development provider.
+- Invocation metadata stores hashes and runtime mode, not raw prompts or raw source text.
+
+## Debug configuration
+
+These debug-only values are supported through Gradle properties or environment variables:
+
+- `ROSS_ENABLE_REAL_LOCAL_INFERENCE`
+- `ROSS_LOCAL_RUNTIME`
+- `ROSS_LOCAL_MODEL_PATH`
+- `ROSS_BACKEND_URL`
+
+No model file is committed to the repo, and CI does not require a real model artifact.
 
 ## Known caveats
 
-- Android document viewing is still MVP-level for exact highlights: page targeting and source chips are reliable, but precise snippet overlays remain best-effort.
-- The deeper local model-assisted extraction and verifier passes are represented by orchestration interfaces and deterministic dev/runtime stubs rather than a full production local on-device LLM runtime in this phase.
-- PDF text acquisition on Android is still centered on rendered pages plus OCR; it is not yet as mature as the iOS native PDF text path for mixed bundles.
-- Current tests validate routing, source-ref safety, and review behavior, but they are not a substitute for running a real shipped model on device.
+- Android does not yet execute a real local model in this branch.
+- Exact snippet highlights remain best-effort.
+- The real-runtime scaffolding is present so MediaPipe or Gemma 4 Q4 integration can be added without changing the extraction contract.
