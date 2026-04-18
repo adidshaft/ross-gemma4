@@ -2,7 +2,7 @@
 
 Ross does not treat OCR as the core intelligence.
 
-OCR is only one local text-acquisition input. The useful system is the layered legal-document extraction pipeline that sits above text acquisition and below advocate review.
+OCR is only a text-acquisition step. The useful system is the layered legal-document extraction pipeline that sits above acquisition and below advocate review.
 
 ## Why plain OCR is not enough
 
@@ -18,7 +18,7 @@ Indian legal documents frequently include:
 - inconsistent party, court, and date formats
 - document-specific procedural meaning
 
-A reliable legal workbench therefore needs more than raw OCR text.
+A reliable legal workbench therefore needs more than raw OCR text. It needs page-aware acquisition, local normalization, source grounding, verification, and a review loop that surfaces uncertainty instead of hiding it.
 
 ## Layered pipeline
 
@@ -42,18 +42,22 @@ Ross uses this local-first flow:
 
 - No pack required.
 - Embedded text, local OCR where available, heuristics, and deterministic extraction only.
+- Best for import, preview, and conservative review.
 
 ### Quick Start
 
-- Adds lightweight local model-assisted extraction for shorter documents.
+- Adds a stronger local extraction pass for shorter documents and lighter cleanup.
+- Still uses the local runtime contract, but not a bundled production on-device LLM.
 
 ### Case Associate
 
-- Adds stronger local extraction, better mixed English/Hindi handling, chronology support, and a verification pass suitable for daily workflows.
+- Adds stronger multi-pass local extraction, better mixed English/Hindi handling, chronology support, and a verification pass suitable for daily workflows.
+- This is the first quality tier intended to feel like an assistant, but it still must keep source refs and review flags honest.
 
 ### Senior Drafting Support
 
 - Adds deeper multi-pass extraction, stronger verifier/refiner behavior, and stronger bilingual bundle support.
+- It is still source-grounded; it does not get to invent citations or skip review on weak support.
 
 ## Trust model
 
@@ -91,6 +95,12 @@ Rules:
 - every field must keep source support
 - do not translate legal text unless asked
 - do not provide final legal advice
+
+## Runtime status
+
+- The alpha ships deterministic development runtime behavior and platform stubs for pack-aware orchestration.
+- The code can plan and validate the pipeline shape locally, but that is not the same as shipping a real bundled on-device LLM.
+- Until a real local inference adapter is bundled, the safe behavior is deterministic fallback or `needs review`.
 
 ## Advocate review
 

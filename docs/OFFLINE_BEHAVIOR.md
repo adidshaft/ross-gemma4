@@ -24,7 +24,7 @@ Ross is designed so that legal work can continue even when no network is availab
 ## Works with Quick Start
 
 - Everything in Basic mode.
-- Short-document cleanup and lightweight model-assisted extraction through the local extraction interface.
+- Short-document cleanup and stronger local multi-pass extraction through the local extraction interface.
 - Simple document classification.
 - Better short-document field extraction.
 - Better language correction on shorter pages.
@@ -38,6 +38,7 @@ Ross is designed so that legal work can continue even when no network is availab
 - Source-backed document classification, field extraction, chronology candidates, issue candidates, and order-direction extraction.
 - Second-pass local verifier/refiner behavior through the orchestrated pipeline.
 - Better review queues so the advocate only corrects uncertain fields.
+- This is the tier where the app should feel most assistant-like, but it still must not overclaim if the runtime path is deterministic or stubbed on a given platform.
 
 ## Works with Senior Drafting Support
 
@@ -63,6 +64,12 @@ Ross is designed so that legal work can continue even when no network is availab
 - Larger pack installs can pause for Wi-Fi or explicit mobile-data approval.
 - If the backend is unavailable during development, pack install can fall back to a local dev artifact without touching case data.
 - Exact PDF highlight placement is still best-effort. Ross always falls back to visible source chips instead of pretending to anchor a missing quote.
+
+## Evaluation limits
+
+- The current test harness is useful for boundary, source-ref, and review-queue checks.
+- It does not prove that a production-grade on-device LLM is running.
+- Fixture-driven tests can confirm orchestration behavior, but they do not measure real local inference quality, latency, or memory use on shipped model assets.
 
 ## User-facing messaging
 

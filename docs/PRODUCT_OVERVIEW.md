@@ -16,6 +16,8 @@ The product direction is:
 - show uncertainty honestly
 - ask the advocate to correct only what needs review
 - turn reviewed extraction into local case memory
+- keep OCR in the acquisition layer, not the reasoning layer
+- use multi-pass local extraction and verification before synthesis
 
 ## Primary users
 
@@ -31,6 +33,7 @@ The product direction is:
 3. Clear separation between case data and network traffic
 4. Extraction quality that scales with the installed Private AI Pack
 5. Practical advocate review UX instead of hidden automation
+6. Honest runtime messaging when the alpha is still using deterministic development behavior or platform stubs
 
 ## Key workflows
 
@@ -67,3 +70,4 @@ The product direction is:
 - analytics-driven case monitoring
 - remote case storage or sync in this phase
 - pretending low-confidence extraction is certain
+- implying that deterministic dev runtime behavior is the same as a bundled on-device LLM

@@ -33,7 +33,7 @@ Ross does not treat OCR as the product. OCR is only one acquisition input inside
 
 ### Quick Start
 
-- Adds lightweight local model-assisted behavior through the orchestrator.
+- Adds lightweight local multi-pass behavior through the orchestrator.
 - Best for short documents and lighter cleanup.
 
 ### Case Associate
@@ -59,6 +59,7 @@ The orchestrated pipeline is designed around these modules:
 - `AdvocateReviewQueue`
 
 The interfaces already reflect the intended law-grade architecture even when a deeper local model pass is still stubbed in a given mode or platform path.
+That means the pipeline can be tested end-to-end without claiming that a production on-device model is already running.
 
 ## Retrieval
 

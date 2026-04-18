@@ -14,17 +14,18 @@ Ross shows advocate-friendly capability packs in product UI. Technical model nam
 
 - Extraction quality: `Standard`
 - Best for short documents, lighter cleanup, and simple summaries.
-- Some fields may still need manual review.
+- Introduces stronger local multi-pass behavior, but still falls back deterministically when the local runtime is not truly available.
 
 ### Case Associate
 
 - Extraction quality: `Advanced`
-- Best for better document understanding, stronger field extraction, mixed English/Hindi handling, chronologies, and order summaries.
+- Best for better document understanding, stronger field extraction, mixed English/Hindi handling, chronologies, order summaries, and source-backed verification.
 
 ### Senior Drafting Support
 
-- Extraction quality: `Advanced Plus`
+- Extraction quality: `Advanced`
 - Best for deeper review, verifier/refiner passes, longer bundles, and stronger bilingual workflows.
+- Still expected to stay source-grounded and review-aware.
 
 ## Registry principles
 
@@ -33,6 +34,7 @@ Ross shows advocate-friendly capability packs in product UI. Technical model nam
 - Keep installation separate from the base app.
 - Allow the product to remain usable without a pack.
 - Prefer local model-assisted extraction, verification, and synthesis when a pack is installed.
+- Never imply that every pack already includes a real on-device LLM if the runtime is still a deterministic dev implementation or a platform stub.
 
 ## Engineering registry notes
 
@@ -42,6 +44,8 @@ The current architecture supports:
 - stronger local extraction passes for Case Associate
 - deeper verifier/refiner passes for Senior Drafting Support
 - future local VLM-capable or multimodal passes for scan-heavy documents
+- deterministic development runtime behavior for pack-aware validation
+- platform stubs where a true on-device inference engine is not yet bundled
 
 The repo does not ship large production binaries in source control.
 

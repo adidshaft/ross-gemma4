@@ -73,5 +73,6 @@ swift run Ross --generate-screenshots
 ## Known caveats
 
 - Exact text highlighting is still represented through source panels and page targeting rather than reliable per-snippet PDF selection overlays.
-- The deeper local model passes are architected and stubbed, but this phase does not bundle full production model assets.
+- The deeper local model passes are architected and stubbed, but this phase does not bundle full production model assets or a confirmed production on-device LLM runtime.
 - Backend-connected mobile runtime flows still depend on a local development backend being available when you want to exercise the network boundary interactively.
+- Fixture-driven tests validate the orchestrator contract, but they are not a proof of real-device inference quality.

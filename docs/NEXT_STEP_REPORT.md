@@ -1,179 +1,202 @@
-# Ross Law-Grade Local Extraction Alpha Report
+# Ross Local Model Extraction Runtime Alpha Report
 
 ## Branch
 
-- Started from `alpha-document-intelligence`
-- Continued work on new branch `alpha-law-grade-extraction`
+- Working branch: `alpha-local-model-extraction`
+- Base branch preserved: `alpha-law-grade-extraction`
 
-## Repository inspection
+## Scope completed
 
-- Ran `git status --short`
-- Ran `git log --oneline -n 10`
-- Inspected `SCRIPT.md`
-- Inspected `artifacts/`
-- Decision: leave `SCRIPT.md` and `artifacts/` untouched in this phase
+This phase connects the existing law-grade extraction architecture to a real local runtime abstraction, pack-aware multi-pass planning, deterministic development execution, mobile orchestration, and source-grounding validation.
 
-## Baseline validation run before edits
+The product line remains the same:
 
-All baseline commands completed successfully before implementation work:
+- OCR is acquisition only.
+- Extraction quality depends on the installed `Private AI Pack`.
+- Unsupported fields are not silently accepted.
+- Low-confidence or weakly supported values are pushed into advocate review.
+- No cloud model calls or cloud OCR were added.
 
-- `cd /Users/amanpandey/projects/ross/core/rust && cargo test`
-- `cd /Users/amanpandey/projects/ross/backend && npm test`
-- `cd /Users/amanpandey/projects/ross/backend && npm run typecheck`
-- `cd /Users/amanpandey/projects/ross/backend && npm run build`
-- `cd /Users/amanpandey/projects/ross && ./scripts/dev/verify-boundaries.sh`
-- `cd /Users/amanpandey/projects/ross && ./scripts/ci/check-no-cloud-llm.sh`
-- `cd /Users/amanpandey/projects/ross && ./scripts/ci/check-no-analytics.sh`
-- `cd /Users/amanpandey/projects/ross && ./scripts/ci/check-no-large-model-assets.sh`
-- `cd /Users/amanpandey/projects/ross && ./scripts/ci/check-onboarding-copy-boundary.sh`
-- `cd /Users/amanpandey/projects/ross/android && ./gradlew :app:testDebugUnitTest :app:assembleDebug`
-- `cd /Users/amanpandey/projects/ross/ios && swift build --scratch-path tmp/swiftpm`
-- `cd /Users/amanpandey/projects/ross/ios && xcodebuild -project Ross.xcodeproj -scheme Ross -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath tmp/DerivedData build`
-- `cd /Users/amanpandey/projects/ross/ios && swift run --scratch-path tmp/swiftpm Ross --generate-screenshots`
-
-## Major implementation outcomes
+## What is implemented now
 
 ### Shared and Rust core
 
-- Added shared extraction domain types for:
-  - extraction mode
-  - language profiles
+- Added platform-neutral local runtime contracts for:
+  - `LocalModelTask`
+  - `LocalModelInput`
+  - `LocalModelOutput`
+  - `LocalModelInvocation`
+  - `ExtractionPipelinePlan`
+- Added Rust runtime/orchestration modules for:
+  - `local_model`
+  - `model_invocation`
+  - `extraction_plan`
+  - `output_validation`
+- Added a deterministic local provider for tests and CI.
+- Added a platform runtime stub that fails safely when a true on-device runtime is unavailable.
+- Added prompt and validation rules that treat documents as data, reject instruction-following from document text, and require source support.
+- Added invocation hashing so prompt and input bodies are not persisted in invocation metadata.
+
+### Extraction pipeline behavior
+
+- Basic mode remains deterministic and review-heavy.
+- Quick Start can run the local runtime chain for shorter documents and otherwise fails safely into deterministic review-oriented behavior.
+- Case Associate now plans and runs a deeper extraction path:
+  - cleanup
+  - language correction
   - document classification
-  - extracted legal fields
-  - extraction runs
-  - extraction findings
-  - advocate corrections
-  - case memory updates
-- Added Rust modules for:
-  - extraction domain modeling
-  - English/Hindi/mixed language heuristics
-  - deterministic legal-field extraction fallback
-  - prompt building for extraction, verification, classification, and synthesis
-  - local extraction orchestration
-- Added tests covering:
-  - Hindi detection
-  - mixed English/Hindi detection
-  - noisy OCR date extraction
-  - case-number extraction
-  - source-ref validation
-  - no extracted field without source refs
-  - verifier marks unsupported fields as review-needed
-  - prompt-injection handling
-  - local-only prompt rules
+  - legal field extraction
+  - verifier/refiner pass
+  - case memory synthesis
+- Senior Drafting Support adds deeper-pass placeholders and stronger plan steps without pretending a real bundled local LLM is already present.
+- Every accepted extracted field must keep at least one source reference.
+- Unsupported or weakly grounded values are marked `needs review`.
+- User-corrected fields are preserved on reruns.
 
 ### Android
 
-- Wired the active Android alpha shell to:
-  - `/model-catalog`
-  - `/model-download/session`
-  - `/dev-artifacts/:artifactId`
-  - `/public-law/search`
-- Added on-device ML Kit OCR dependencies and local OCR execution for imported images and rendered PDF pages.
-- Added Android local extraction orchestration with:
-  - language/script heuristics
-  - classification fallback
-  - deterministic extraction fallback
-  - model-assisted extraction stubs by pack capability
-  - verifier/review queue behavior
-- Added `Review extracted details` inside the document workflow with:
-  - document type
-  - court
-  - case number
-  - parties
-  - dates
-  - next date
-  - order directions
-  - confidence badges
-  - source chips
-  - accept/edit/ignore actions
-- Updated local exports so chronology, case note, and order summary can use extracted fields and warnings.
-- Added Android extraction/privacy regression tests.
+- Added Android runtime and validation files:
+  - `AlphaLocalModelRuntime.kt`
+  - `AlphaExtractionPipelinePlan.kt`
+  - `AlphaModelInvocationStore.kt`
+  - `AlphaModelOutputValidator.kt`
+- Updated `AlphaExtraction.kt` to execute pack-aware multi-pass extraction.
+- Persisted pipeline plans and model invocation metadata locally.
+- Redacted prompt/source bodies from invocation records.
+- Updated review/export flows so verified values and review-needed values stay distinct.
+- Added UI refinements for:
+  - extraction quality
+  - needs-review counts
+  - verified vs needs-review field labels
+  - `Run better extraction`
 
 ### iOS
 
-- Added local extraction orchestration on top of the stronger existing PDFKit/Vision acquisition path.
-- Persisted:
-  - language profiles
-  - document classification
-  - extracted fields
-  - extraction runs
-  - extraction findings
-  - advocate corrections
-  - case memory updates
-- Updated the iOS document workflow to show:
-  - `Review extracted details`
-  - confidence badges
-  - source chips
-  - accept/edit/ignore actions
-- Added local order-summary export support and share-sheet integration for generated PDFs.
-- Added SwiftPM extraction tests for the iOS orchestrator.
+- Added iOS runtime and validation files:
+  - `AlphaLocalModelRuntime.swift`
+  - `AlphaExtractionPipelinePlan.swift`
+  - `AlphaModelInvocationStore.swift`
+  - `AlphaModelOutputValidator.swift`
+- Updated `AlphaStore` orchestration to execute the same conceptual pack-aware multi-pass flow as Android.
+- Persisted local invocation metadata without raw prompt/source bodies.
+- Preserved user corrections when rerunning extraction.
+- Updated the iOS review shell to show quality, review counts, verified status, and upgrade messaging.
 
-### Documentation
+### Backend and model-pack linkage
 
-- Updated:
-  - `docs/OFFLINE_BEHAVIOR.md`
-  - `docs/PRIVACY_ARCHITECTURE.md`
-  - `docs/RAG_PIPELINE.md`
-  - `docs/MODEL_REGISTRY.md`
-  - `docs/PRODUCT_OVERVIEW.md`
-  - `android/README.md`
-  - `ios/README.md`
-- Added:
-  - `docs/LEGAL_EXTRACTION_PIPELINE.md`
+- Extended catalog/download metadata with:
+  - `artifactKind`
+  - `runtimeMode`
+  - `developmentOnly`
+- Dev artifacts are explicitly marked:
+  - `artifactKind: tiny_dev_artifact`
+  - `runtimeMode: deterministic_dev`
+  - `developmentOnly: true`
+- Android and iOS now use installed-pack metadata to choose extraction mode and pipeline shape.
+- No real model binaries were added to the repo or app bundles.
 
-## Final validation run after changes
+### Evaluation harness
 
-Completed successfully:
+- Added synthetic extraction fixtures in Rust for:
+  - English civil order
+  - Hindi/English mixed order
+  - noisy OCR affidavit text
+  - pleading with prayers
+  - evidence and exhibit list
+  - prompt-injection text
+  - conflicting dates
+  - hallucination trap
+- Added runtime and source-grounding tests that assert:
+  - every accepted field has source refs
+  - unsupported accepted count stays zero
+  - prompt injection does not change extraction behavior
+  - mixed-language signals are preserved
+  - invocation metadata excludes raw prompt/source text
 
-- `cd /Users/amanpandey/projects/ross/core/rust && cargo test`
-- `cd /Users/amanpandey/projects/ross/backend && npm test`
-- `cd /Users/amanpandey/projects/ross/backend && npm run typecheck`
-- `cd /Users/amanpandey/projects/ross/backend && npm run build`
-- `cd /Users/amanpandey/projects/ross && ./scripts/dev/verify-boundaries.sh`
-- `cd /Users/amanpandey/projects/ross && ./scripts/ci/check-no-cloud-llm.sh`
-- `cd /Users/amanpandey/projects/ross && ./scripts/ci/check-no-analytics.sh`
-- `cd /Users/amanpandey/projects/ross && ./scripts/ci/check-no-large-model-assets.sh`
-- `cd /Users/amanpandey/projects/ross && ./scripts/ci/check-onboarding-copy-boundary.sh`
-- `cd /Users/amanpandey/projects/ross/android && ./gradlew :app:testDebugUnitTest :app:assembleDebug`
-- `cd /Users/amanpandey/projects/ross/ios && swift build --scratch-path tmp/swiftpm`
-- `cd /Users/amanpandey/projects/ross/ios && xcodebuild -project Ross.xcodeproj -scheme Ross -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath tmp/DerivedData build`
-- `cd /Users/amanpandey/projects/ross/ios && swift run --scratch-path tmp/swiftpm Ross --generate-screenshots`
+## What is real versus stubbed
 
-Additional validation completed:
+### Real in this branch
 
-- `cd /Users/amanpandey/projects/ross/ios && swift test --scratch-path tmp/swiftpm`
-- Started backend on `PORT=8787` and exercised:
+- The local runtime contract is real.
+- The deterministic development provider is real.
+- Pack-aware pipeline planning is real.
+- Mobile extraction orchestration now follows the runtime contract.
+- Source validation is real.
+- Review gating for unsupported fields is real.
+- Model-pack download/install metadata now changes extraction mode and quality messaging.
+
+### Still stubbed
+
+- A true bundled on-device inference engine is not yet integrated.
+- `InstalledPackLocalModelProvider` remains a safe platform stub for future native inference runtimes.
+- Senior Drafting Support deeper passes are planned and scaffolded, but they still rely on deterministic/runtime-stub behavior until a real local engine is integrated.
+- The evaluation harness is an alpha safety harness, not a claim of production-model accuracy.
+
+## Validation run in this phase
+
+### Baseline before edits
+
+- Rust: `cargo test`
+- Backend:
+  - `npm test`
+  - `npm run typecheck`
+  - `npm run build`
+- Privacy guards:
+  - `./scripts/dev/verify-boundaries.sh`
+  - `./scripts/ci/check-no-cloud-llm.sh`
+  - `./scripts/ci/check-no-analytics.sh`
+  - `./scripts/ci/check-no-large-model-assets.sh`
+  - `./scripts/ci/check-onboarding-copy-boundary.sh`
+- Android:
+  - `./gradlew :app:testDebugUnitTest :app:assembleDebug`
+- iOS:
+  - `swift build --scratch-path tmp/swiftpm`
+  - `xcodebuild -project Ross.xcodeproj -scheme Ross -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath tmp/DerivedData build`
+  - `swift test --scratch-path tmp/swiftpm`
+  - `swift run --scratch-path tmp/swiftpm Ross --generate-screenshots`
+
+### Final after changes
+
+- Rust: `cargo test`
+- Backend:
+  - `npm test`
+  - `npm run typecheck`
+  - `npm run build`
+- Privacy guards:
+  - `./scripts/dev/verify-boundaries.sh`
+  - `./scripts/ci/check-no-cloud-llm.sh`
+  - `./scripts/ci/check-no-analytics.sh`
+  - `./scripts/ci/check-no-large-model-assets.sh`
+  - `./scripts/ci/check-onboarding-copy-boundary.sh`
+- Android:
+  - `./gradlew :app:testDebugUnitTest :app:assembleDebug`
+- iOS:
+  - `swift build --scratch-path tmp/swiftpm`
+  - `xcodebuild -project Ross.xcodeproj -scheme Ross -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath tmp/DerivedData build`
+  - `swift test --scratch-path tmp/swiftpm`
+  - `swift run --scratch-path tmp/swiftpm Ross --generate-screenshots`
+- Backend smoke:
   - `GET /model-catalog`
   - `POST /model-download/session`
-  - `GET /dev-artifacts/:artifactId` with byte-range request
+  - `GET /dev-artifacts/:artifactId` with `Range`
   - `POST /public-law/search`
 
-## Validation notes
+## Privacy notes
 
-- An intermediate run of `./scripts/ci/check-no-cloud-llm.sh` failed after implementation because a Rust test contained a forbidden provider string in a literal assertion. The assertion was rewritten to keep the guard green, and the full Rust/privacy checks were rerun successfully.
-- Attempting to start the backend on ports `8080` and `8081` failed because those ports were already occupied in the local environment. A live smoke pass was completed instead on `PORT=8787`.
-- No interactive iOS Simulator or Android emulator end-to-end document-import session was run against the live backend during this turn. Mobile backend integration was validated through builds, tests, and direct backend HTTP smoke coverage.
+- No raw prompts are persisted by default.
+- No raw model input text is stored in invocation metadata.
+- Source refs inside invocation metadata are redacted to avoid leaking snippets.
+- No cloud model calls were added.
+- No cloud OCR was added.
+- No analytics or telemetry SDKs were added.
+- Case/document repositories remain separate from model delivery and public-law search boundaries.
 
-## Current status
+## Repository hygiene
 
-### Functional now
-
-- Shared law-grade extraction domain exists across the stack.
-- Rust core prompt builders and extraction helpers are live.
-- Android backend wiring is live.
-- Android ML Kit OCR is live.
-- iOS extraction orchestrator is live.
-- Source-backed extracted fields are persisted on both mobile alpha shells.
-- Review UI exists on both mobile alpha shells.
-- Local chronology, case note, and order-summary exports use extracted field context.
-- Public-law search still requires a sanitized preview.
-
-### Still stubbed or intentionally limited
-
-- The deeper local model-assisted extraction, verifier, and synthesis passes are architected and surfaced through the orchestrator, but still use stub/lightweight behavior in this phase rather than bundled production-grade local model assets.
-- Exact snippet highlight placement remains best-effort; Ross uses page/source chips instead of pretending to provide exact anchors where they are not available.
-- No cloud-assisted extraction mode is implemented.
+- `SCRIPT.md` was inspected but left untouched.
+- `artifacts/` was inspected but left untouched.
+- Neither was modified or committed in this phase.
 
 ## Exact next recommended step
 
-- Replace the current model-assisted extraction stubs with a first real on-device local inference adapter for Case Associate, then reuse the same adapter in both mobile shells so bilingual extraction quality, verifier behavior, and review-queue decisions are driven by the same local runtime contract.
+Integrate a real local on-device inference adapter behind the existing `InstalledPackLocalModelProvider` contract for Case Associate first, then reuse that same adapter contract on Android and iOS so the existing cleanup, extraction, verifier, and case-memory passes run on true local inference instead of deterministic development behavior.

@@ -61,12 +61,19 @@ It includes:
 
 Rules:
 
+- OCR is acquisition, not reasoning.
 - No cloud LLM APIs.
 - No cloud OCR.
 - No analytics or telemetry SDKs.
 - Uploaded documents are treated as data, not instructions.
 - Every extracted value must keep source support.
 - Unsupported or weakly supported values must be marked `needs review`, not silently accepted.
+- Synthesis must stay grounded in the same local sources that produced the candidate fields.
+
+Runtime status:
+
+- The active alpha uses deterministic development runtime behavior plus platform stubs where a real local model is not bundled.
+- The architecture is prepared for a true on-device inference adapter, but orchestration interfaces alone are not proof that a local LLM is already running.
 
 ## Public Law Layer
 
@@ -114,6 +121,15 @@ Alpha status:
 - Backend `/model-download/session` returns signed segment metadata.
 - Backend `/dev-artifacts/:artifactId` supports byte ranges for resumable development installs.
 - Android and iOS alpha shells both shape and use privacy-safe backend payloads for model delivery and public-law search.
+
+## Boundary summary
+
+- Case data stays local.
+- OCR stays local.
+- Extraction is local-first and source-backed.
+- Model delivery is separate from case data.
+- Public-law search is separate from private-case extraction.
+- Development runtime validation is not the same thing as a bundled production local model.
 
 ## Network allowlist
 

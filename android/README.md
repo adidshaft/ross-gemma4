@@ -46,5 +46,6 @@ The Android package namespace remains `com.ross.android`.
 ## Known caveats
 
 - Android document viewing is still MVP-level for exact highlights: page targeting and source chips are reliable, but precise snippet overlays remain best-effort.
-- The deeper local LLM-assisted extraction and verifier passes are represented by orchestration interfaces and stubs rather than a full production local model runtime in this phase.
+- The deeper local model-assisted extraction and verifier passes are represented by orchestration interfaces and deterministic dev/runtime stubs rather than a full production local on-device LLM runtime in this phase.
 - PDF text acquisition on Android is still centered on rendered pages plus OCR; it is not yet as mature as the iOS native PDF text path for mixed bundles.
+- Current tests validate routing, source-ref safety, and review behavior, but they are not a substitute for running a real shipped model on device.
