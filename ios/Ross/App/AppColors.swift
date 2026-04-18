@@ -7,13 +7,29 @@ import AppKit
 #endif
 
 extension Color {
-    static let rossInk = Color(red: 0.11, green: 0.18, blue: 0.27)
-    static let rossAccent = Color(red: 0.12, green: 0.34, blue: 0.55)
-    static let rossHighlight = Color(red: 0.70, green: 0.56, blue: 0.32)
-    static let rossSuccess = Color(red: 0.23, green: 0.45, blue: 0.35)
-    static let rossHeroTop = Color(red: 0.95, green: 0.97, blue: 0.99)
-    static let rossHeroBottom = Color(red: 0.88, green: 0.93, blue: 0.97)
-    static let rossBorder = Color.black.opacity(0.06)
+    // Modern Legal Premiere Palette
+    static let rossInk = Color(red: 0.05, green: 0.07, blue: 0.10)        // Deep Onyx
+    static let rossAccent = Color(red: 0.18, green: 0.22, blue: 0.40)      // Deep Indigo
+    static let rossHighlight = Color(red: 0.85, green: 0.65, blue: 0.25)   // Refined Gold/Camel
+    static let rossSuccess = Color(red: 0.15, green: 0.35, blue: 0.25)
+    
+    // Backgrounds for Hero
+    static let rossHeroTop = Color(red: 0.98, green: 0.98, blue: 0.99)
+    static let rossHeroBottom = Color(red: 0.91, green: 0.92, blue: 0.95)
+    
+    // Gradients
+    static var rossPillGradient: LinearGradient {
+        LinearGradient(
+            colors: [
+                Color(red: 0.20, green: 0.25, blue: 0.45), // Lighter Indigo
+                Color(red: 0.15, green: 0.18, blue: 0.35)  // Darker Indigo
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+    
+    static let rossBorder = Color.primary.opacity(0.08)
 
     static var rossCardBackground: Color {
         #if canImport(UIKit)
@@ -31,7 +47,7 @@ extension Color {
         #elseif canImport(AppKit)
         Color(nsColor: .windowBackgroundColor)
         #else
-        Color(.sRGB, red: 0.95, green: 0.95, blue: 0.97, opacity: 1)
+        Color(.sRGB, red: 0.97, green: 0.97, blue: 0.98, opacity: 1)
         #endif
     }
 
@@ -41,7 +57,7 @@ extension Color {
         #elseif canImport(AppKit)
         Color(nsColor: .controlBackgroundColor)
         #else
-        Color(.sRGB, red: 0.92, green: 0.93, blue: 0.95, opacity: 1)
+        Color(.sRGB, red: 0.94, green: 0.95, blue: 0.96, opacity: 1)
         #endif
     }
 
@@ -51,7 +67,7 @@ extension Color {
         #elseif canImport(AppKit)
         Color(nsColor: .underPageBackgroundColor)
         #else
-        Color(.sRGB, red: 0.94, green: 0.94, blue: 0.96, opacity: 1)
+        Color(.sRGB, red: 0.95, green: 0.95, blue: 0.97, opacity: 1)
         #endif
     }
 }

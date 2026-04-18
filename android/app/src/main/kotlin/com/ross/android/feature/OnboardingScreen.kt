@@ -1,5 +1,6 @@
 package com.ross.android.feature
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
@@ -39,18 +41,18 @@ fun OnboardingScreen(
         bottomBar = {
             Surface(
                 color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 2.dp,
-                shadowElevation = 6.dp,
+                shadowElevation = 8.dp,
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                        .padding(horizontal = 24.dp, vertical = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Button(
                         onClick = onContinue,
                         modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Text("Prepare private workbench")
                     }
@@ -74,7 +76,7 @@ fun OnboardingScreen(
                 .fillMaxWidth()
                 .widthIn(max = 1180.dp)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 20.dp)
+                .padding(horizontal = 24.dp, vertical = 32.dp)
 
             androidx.compose.foundation.layout.Box(
                 modifier = Modifier.fillMaxSize(),
@@ -83,18 +85,18 @@ fun OnboardingScreen(
                 if (wideLayout) {
                     Row(
                         modifier = scrollModifier,
-                        horizontalArrangement = Arrangement.spacedBy(24.dp),
+                        horizontalArrangement = Arrangement.spacedBy(32.dp),
                     ) {
                         Column(
                             modifier = Modifier.weight(1.05f),
-                            verticalArrangement = Arrangement.spacedBy(20.dp),
+                            verticalArrangement = Arrangement.spacedBy(32.dp),
                         ) {
                             OnboardingHero(state = state)
                             PromiseDeck(promises = state.copy.promises)
                         }
                         Column(
                             modifier = Modifier.weight(0.95f),
-                            verticalArrangement = Arrangement.spacedBy(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(24.dp),
                         ) {
                             OfferSection(
                                 state = state,
@@ -105,7 +107,7 @@ fun OnboardingScreen(
                 } else {
                     Column(
                         modifier = scrollModifier.widthIn(max = 720.dp),
-                        verticalArrangement = Arrangement.spacedBy(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(32.dp),
                     ) {
                         OnboardingHero(state = state)
                         PromiseDeck(promises = state.copy.promises)
@@ -124,15 +126,16 @@ fun OnboardingScreen(
 private fun OnboardingHero(state: OnboardingUiState) {
     Surface(
         color = MaterialTheme.colorScheme.primaryContainer,
-        shape = RoundedCornerShape(30.dp),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(32.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            HeaderBadge(text = "Ross")
+            HeaderBadge(text = "ROSS SYSTEM")
             Text(
                 text = state.copy.title,
                 style = MaterialTheme.typography.headlineMedium,
@@ -146,7 +149,7 @@ private fun OnboardingHero(state: OnboardingUiState) {
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 InfoChip(
                     text = "Works locally on this device",
@@ -164,15 +167,15 @@ private fun OnboardingHero(state: OnboardingUiState) {
 
             Surface(
                 color = MaterialTheme.colorScheme.surface,
-                shape = RoundedCornerShape(24.dp),
-                tonalElevation = 1.dp,
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
             ) {
                 Column(
-                    modifier = Modifier.padding(18.dp),
+                    modifier = Modifier.padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
-                        text = "Recommended starting desk",
+                        text = "RECOMMENDED DESK",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.secondary,
                     )
@@ -197,11 +200,12 @@ private fun PromiseDeck(promises: List<String>) {
         colors = CardDefaults.outlinedCardColors(
             containerColor = MaterialTheme.colorScheme.surface,
         ),
-        shape = RoundedCornerShape(28.dp),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier.padding(32.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
                 text = "Setup promises",
@@ -212,14 +216,15 @@ private fun PromiseDeck(promises: List<String>) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Spacer(modifier = Modifier.padding(4.dp))
             promises.forEach { promise ->
                 Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
-                    shape = RoundedCornerShape(22.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(12.dp),
                 ) {
                     Text(
                         text = promise,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
@@ -233,7 +238,7 @@ private fun OfferSection(
     state: OnboardingUiState,
     onSelectOffer: (String) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
             text = "Choose a starting desk",
             style = MaterialTheme.typography.titleLarge,
@@ -265,15 +270,15 @@ private fun PackSelectionCard(
         else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
     }
     val containerColor = if (selected) {
-        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.35f)
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
     } else {
         MaterialTheme.colorScheme.surface
     }
 
     OutlinedCard(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().animateContentSize(),
         onClick = onSelect,
-        shape = RoundedCornerShape(28.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.outlinedCardColors(containerColor = containerColor),
         border = BorderStroke(
             width = if (selected) 2.dp else 1.dp,
@@ -281,16 +286,16 @@ private fun PackSelectionCard(
         ),
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
                         text = card.title,
@@ -303,20 +308,17 @@ private fun PackSelectionCard(
                     )
                 }
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     if (card.recommended) {
-                        HeaderBadge(text = "Recommended")
-                    }
-                    if (selected) {
-                        HeaderBadge(text = "Selected")
+                        HeaderBadge(text = "RECOMMENDED", color = MaterialTheme.colorScheme.secondary)
                     }
                 }
             }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 InfoChip(
                     text = card.storageNote,
@@ -332,16 +334,16 @@ private fun PackSelectionCard(
 }
 
 @Composable
-private fun HeaderBadge(text: String) {
+private fun HeaderBadge(text: String, color: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface) {
     Surface(
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        shape = RoundedCornerShape(999.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(6.dp),
     ) {
         Text(
             text = text,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+            color = color,
         )
     }
 }
@@ -353,12 +355,12 @@ private fun InfoChip(
 ) {
     Surface(
         modifier = modifier,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        shape = RoundedCornerShape(8.dp),
     ) {
         Text(
             text = text,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
         )

@@ -16,33 +16,28 @@ struct RossSectionCard<Content: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: 20) {
             if title != nil || subtitle != nil {
                 VStack(alignment: .leading, spacing: 6) {
                     if let title {
                         Text(title)
-                            .font(.headline)
+                            .font(.rossSerifHeadline())
+                            .foregroundStyle(Color.rossInk)
                     }
 
                     if let subtitle {
                         Text(subtitle)
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.rossInk.opacity(0.65))
+                            .lineSpacing(4)
                     }
                 }
+                .padding(.bottom, 4)
             }
 
             content
         }
-        .padding(22)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.background)
-        .overlay {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color.rossBorder, lineWidth: 1)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .shadow(color: Color.black.opacity(0.04), radius: 12, y: 4)
+        .rossCardStyle()
     }
 }
 
@@ -65,22 +60,26 @@ struct RossHeroCard<Content: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: 24) {
             Text(eyebrow.uppercased())
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Color.rossAccent)
+                .font(.caption.weight(.bold))
+                .tracking(2)
+                .foregroundStyle(Color.rossHighlight)
 
             Text(title)
-                .font(.system(size: 32, weight: .bold, design: .rounded))
+                .font(.rossSerifTitle())
                 .foregroundStyle(Color.rossInk)
+                .lineSpacing(2)
 
             Text(detail)
                 .font(.title3)
-                .foregroundStyle(Color.rossInk.opacity(0.78))
+                .foregroundStyle(Color.rossInk.opacity(0.8))
+                .lineSpacing(6)
 
             content
+                .padding(.top, 8)
         }
-        .padding(24)
+        .padding(32)
         .background(
             LinearGradient(
                 colors: [Color.rossHeroTop, Color.rossHeroBottom],
@@ -89,10 +88,11 @@ struct RossHeroCard<Content: View>: View {
             )
         )
         .overlay {
-            RoundedRectangle(cornerRadius: 30, style: .continuous)
-                .stroke(Color.white.opacity(0.42), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 32, style: .continuous)
+                .stroke(Color.white.opacity(0.6), lineWidth: 1.5)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+        .shadow(color: Color.rossAccent.opacity(0.08), radius: 24, y: 12)
     }
 }
 
@@ -102,12 +102,15 @@ struct RossInfoPill: View {
 
     var body: some View {
         Label(title, systemImage: systemImage)
-            .font(.subheadline.weight(.medium))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(Color.white.opacity(0.82))
+            .font(.footnote.weight(.medium))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(.thinMaterial)
             .foregroundStyle(Color.rossInk)
             .clipShape(Capsule())
+            .overlay {
+                Capsule().stroke(Color.black.opacity(0.05), lineWidth: 1)
+            }
     }
 }
 
@@ -117,23 +120,24 @@ struct RossMetricTile: View {
     let tint: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(label.uppercased())
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .font(.caption.weight(.bold))
+                .tracking(1.5)
+                .foregroundStyle(tint.opacity(0.8))
 
             Text(value)
-                .font(.headline)
+                .font(.title3.weight(.medium))
                 .foregroundStyle(Color.rossInk)
         }
-        .padding(16)
+        .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(tint.opacity(0.10))
+        .background(tint.opacity(0.05))
         .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(tint.opacity(0.18), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(tint.opacity(0.12), lineWidth: 1)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
@@ -146,27 +150,42 @@ struct RossActionTile: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 12) {
-                Image(systemName: systemImage)
-                    .font(.title2.weight(.semibold))
-                    .foregroundStyle(tint)
+            HStack(alignment: .center, spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(tint.opacity(0.12))
+                        .frame(width: 48, height: 48)
+                    
+                    Image(systemName: systemImage)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(tint)
+                }
 
-                Text(title)
-                    .font(.headline)
-                    .foregroundStyle(Color.rossInk)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.headline)
+                        .foregroundStyle(Color.rossInk)
 
-                Text(detail)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    Text(detail)
+                        .font(.subheadline)
+                        .foregroundStyle(Color.rossInk.opacity(0.6))
+                        .lineLimit(2)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Color.rossInk.opacity(0.3))
             }
-            .padding(18)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(tint.opacity(0.08))
+            .padding(16)
+            .background(Color.rossCardBackground)
             .overlay {
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(tint.opacity(0.16), lineWidth: 1)
+                    .stroke(Color.rossBorder, lineWidth: 1)
             }
             .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .shadow(color: Color.black.opacity(0.02), radius: 8, y: 2)
         }
         .buttonStyle(.plain)
     }
@@ -176,14 +195,17 @@ struct RossBulletRow: View {
     let text: String
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Circle()
-                .fill(Color.rossAccent)
-                .frame(width: 8, height: 8)
-                .padding(.top, 6)
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: "checkmark.circle.fill")
+                .resizable()
+                .frame(width: 14, height: 14)
+                .foregroundStyle(Color.rossHighlight)
+                .padding(.top, 3)
 
             Text(text)
-                .foregroundStyle(.secondary)
+                .font(.subheadline)
+                .foregroundStyle(Color.rossInk.opacity(0.75))
+                .lineSpacing(4)
         }
     }
 }
@@ -194,21 +216,23 @@ struct RossStepTile: View {
     let detail: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             Text(number)
-                .font(.headline)
-                .frame(width: 34, height: 34)
+                .font(.subheadline.weight(.bold))
+                .frame(width: 32, height: 32)
                 .background(Color.rossAccent)
                 .foregroundStyle(.white)
                 .clipShape(Circle())
+                .shadow(color: Color.rossAccent.opacity(0.3), radius: 4, y: 2)
 
             Text(title)
-                .font(.subheadline.weight(.semibold))
+                .font(.headline)
                 .foregroundStyle(Color.rossInk)
 
             Text(detail)
                 .font(.footnote)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.rossInk.opacity(0.65))
+                .lineSpacing(3)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

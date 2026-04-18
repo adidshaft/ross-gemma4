@@ -7,14 +7,14 @@ struct PrivateAIPackSetupView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 32) {
                 RossHeroCard(
                     eyebrow: "Private AI setup",
                     title: "Choose the local work tier that fits this device.",
                     detail: "The pack download happens after installation so Ross can stay light at install time and still explain storage, network posture, and Instant Mode clearly."
                 ) {
                     ViewThatFits(in: .horizontal) {
-                        HStack(spacing: 10) {
+                        HStack(spacing: 12) {
                             RossInfoPill(title: state.deviceCapability.recommendedTier.title, systemImage: "sparkles")
                             RossInfoPill(title: "\(state.deviceCapability.freeStorageGB) GB free", systemImage: "internaldrive")
                             RossInfoPill(title: state.deviceCapability.instantModeReason, systemImage: "bolt.horizontal")
@@ -33,13 +33,13 @@ struct PrivateAIPackSetupView: View {
                     subtitle: state.deviceCapability.recommendationReason
                 ) {
                     ViewThatFits(in: .horizontal) {
-                        HStack(spacing: 12) {
+                        HStack(spacing: 16) {
                             RossMetricTile(label: "Recommended", value: state.deviceCapability.recommendedTier.title, tint: .rossAccent)
                             RossMetricTile(label: "Memory", value: "\(state.deviceCapability.totalMemoryGB) GB", tint: .rossHighlight)
                             RossMetricTile(label: "Thermal", value: state.deviceCapability.thermalCondition, tint: .rossSuccess)
                         }
 
-                        VStack(spacing: 12) {
+                        VStack(spacing: 16) {
                             RossMetricTile(label: "Recommended", value: state.deviceCapability.recommendedTier.title, tint: .rossAccent)
                             RossMetricTile(label: "Memory", value: "\(state.deviceCapability.totalMemoryGB) GB", tint: .rossHighlight)
                             RossMetricTile(label: "Thermal", value: state.deviceCapability.thermalCondition, tint: .rossSuccess)
@@ -51,10 +51,12 @@ struct PrivateAIPackSetupView: View {
                     title: "Choose a capability tier",
                     subtitle: "The onboarding flow stays user-facing here. Technical model names remain hidden until settings."
                 ) {
-                    VStack(alignment: .leading, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 16) {
                         ForEach(state.availablePacks) { pack in
                             Button {
-                                state.selectedPackTier = pack.tier
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    state.selectedPackTier = pack.tier
+                                }
                             } label: {
                                 PackSelectionCard(
                                     pack: pack,
@@ -71,7 +73,7 @@ struct PrivateAIPackSetupView: View {
                     title: "What stays available while delivery continues",
                     subtitle: "You do not have to wait for the largest pack before opening the workbench."
                 ) {
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 16) {
                         RossBulletRow(text: "Capture papers, sort documents, and review what is already stored locally.")
                         RossBulletRow(text: "Let larger downloads continue in the background when the network policy allows it.")
                         RossBulletRow(text: "Switch to a smaller tier later if the current footprint no longer fits the device.")
@@ -80,20 +82,21 @@ struct PrivateAIPackSetupView: View {
 
                 Button(action: activateSelection) {
                     Text("Continue to Workbench")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
                 }
-                .buttonStyle(.borderedProminent)
+                .rossPrimaryButtonStyle()
+                .padding(.top, 8)
 
                 Text("The app remains usable for capture and organization while background delivery is staged for a trusted network.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-                    .padding(.horizontal, 4)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
             }
-            .padding(20)
+            .padding(24)
         }
-        .background(Color.rossGroupedBackground)
+        .background(Color.rossGroupedBackground.ignoresSafeArea())
     }
 
     private func activateSelection() {
@@ -112,16 +115,17 @@ private struct PackSelectionCard: View {
     let isRecommended: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(pack.tier.title)
-                        .font(.title3.weight(.semibold))
+                        .font(.title3.weight(.bold))
                         .foregroundStyle(Color.rossInk)
 
                     Text(pack.tier.summary)
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.rossInk.opacity(0.65))
+                        .lineSpacing(4)
                 }
 
                 Spacer()
@@ -129,49 +133,61 @@ private struct PackSelectionCard: View {
                 VStack(alignment: .trailing, spacing: 8) {
                     if isRecommended {
                         Text("Recommended")
-                            .font(.caption.weight(.semibold))
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(Color.rossAccent.opacity(0.12))
-                            .foregroundStyle(Color.rossAccent)
+                            .font(.caption.weight(.bold))
+                            .tracking(1.2)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.rossHighlight.opacity(0.15))
+                            .foregroundStyle(Color.rossHighlight)
                             .clipShape(Capsule())
                     }
 
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                        .font(.title3)
-                        .foregroundStyle(isSelected ? Color.rossAccent : .secondary)
+                        .font(.title2)
+                        .foregroundStyle(isSelected ? Color.rossAccent : Color.rossInk.opacity(0.15))
                 }
             }
 
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 10) {
+                HStack(spacing: 12) {
                     RossInfoPill(title: pack.downloadSize, systemImage: "arrow.down.circle")
                     RossInfoPill(title: pack.installedFootprint, systemImage: "shippingbox")
                     RossInfoPill(title: pack.tier.storageGuidance, systemImage: "internaldrive")
                 }
 
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 10) {
                     RossInfoPill(title: pack.downloadSize, systemImage: "arrow.down.circle")
                     RossInfoPill(title: pack.installedFootprint, systemImage: "shippingbox")
                     RossInfoPill(title: pack.tier.storageGuidance, systemImage: "internaldrive")
                 }
             }
 
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
                 ForEach(pack.tier.focusAreas, id: \.self) { focus in
-                    Label(focus, systemImage: "checkmark.circle")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.rossInk)
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(Color.rossSuccess)
+                            .font(.subheadline)
+                        
+                        Text(focus)
+                            .font(.subheadline)
+                            .foregroundStyle(Color.rossInk.opacity(0.8))
+                    }
                 }
             }
+
+            Rectangle()
+                .fill(Color.rossBorder)
+                .frame(height: 1)
+                .padding(.vertical, 4)
 
             Text("Best for: \(pack.recommendedFor)")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(Color.rossInk.opacity(0.5))
         }
-        .padding(20)
+        .padding(24)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(isSelected ? Color.rossAccent.opacity(0.07) : Color.rossCardBackground)
+        .background(isSelected ? Color.rossAccent.opacity(0.04) : Color.rossCardBackground)
         .overlay {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .stroke(
@@ -180,5 +196,6 @@ private struct PackSelectionCard: View {
                 )
         }
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .shadow(color: isSelected ? Color.rossAccent.opacity(0.1) : Color.black.opacity(0.03), radius: isSelected ? 16 : 8, y: isSelected ? 8 : 4)
     }
 }

@@ -8,17 +8,17 @@ struct AskCaseView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 32) {
                 RossHeroCard(
                     eyebrow: "Local case review",
-                    title: "Ask a focused question and keep the answer grounded in the indexed file.",
+                    title: "Ask a focused question grounded in the indexed file.",
                     detail: "Ross treats the output as a draft for advocate review, keeps the question on-device, and only cites what is actually present in the selected case."
                 ) {
                     ViewThatFits(in: .horizontal) {
-                        HStack(spacing: 10) {
+                        HStack(spacing: 12) {
                             RossInfoPill(title: activePackTitle, systemImage: "cpu")
-                            RossInfoPill(title: "Draft for advocate review", systemImage: "doc.text")
-                            RossInfoPill(title: "Source-backed output", systemImage: "paperclip")
+                            RossInfoPill(title: "Draft for review", systemImage: "doc.text")
+                            RossInfoPill(title: "Source-backed", systemImage: "paperclip")
                         }
 
                         VStack(alignment: .leading, spacing: 10) {
@@ -35,28 +35,33 @@ struct AskCaseView: View {
                 ) {
                     Text(instantModeAssessment.guidance)
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.rossInk.opacity(0.8))
                 }
 
                 RossSectionCard(
                     title: "Question prompt",
                     subtitle: "Keep the ask precise. The answer should be something you could carry into a hearing prep note."
                 ) {
-                    VStack(alignment: .leading, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 16) {
                         TextEditor(text: $state.askCaseInput)
-                            .frame(minHeight: 140)
-                            .padding(12)
-                            .background(Color.rossSecondaryGroupedBackground)
-                            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-
+                            .frame(minHeight: 160)
+                            .padding(16)
+                            .background(Color.rossGroupedBackground)
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                    .stroke(Color.rossBorder, lineWidth: 1.5)
+                            }
+                            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                            .shadow(color: Color.black.opacity(0.02), radius: 8, y: 2)
+                        
                         ViewThatFits(in: .horizontal) {
-                            HStack(spacing: 10) {
+                            HStack(spacing: 12) {
                                 RossInfoPill(title: "Chronology posture", systemImage: "calendar")
                                 RossInfoPill(title: "Next hearing issues", systemImage: "text.alignleft")
                                 RossInfoPill(title: "Source chip check", systemImage: "checklist")
                             }
 
-                            VStack(alignment: .leading, spacing: 8) {
+                            VStack(alignment: .leading, spacing: 10) {
                                 RossInfoPill(title: "Chronology posture", systemImage: "calendar")
                                 RossInfoPill(title: "Next hearing issues", systemImage: "text.alignleft")
                                 RossInfoPill(title: "Source chip check", systemImage: "checklist")
@@ -70,23 +75,24 @@ struct AskCaseView: View {
                         ProgressView()
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
+                            .tint(.white)
                     } else {
                         Text("Run Local Review")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
                     }
                 }
-                .buttonStyle(.borderedProminent)
+                .rossPrimaryButtonStyle()
                 .disabled(state.selectedCase == nil || isRunning)
+                .opacity(state.selectedCase == nil || isRunning ? 0.6 : 1.0)
+                .padding(.top, 8)
 
                 if let response = state.askCaseResponse {
                     AskCaseResponseCard(response: response)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
-            .padding(20)
+            .padding(24)
         }
-        .background(Color.rossGroupedBackground)
+        .background(Color.rossGroupedBackground.ignoresSafeArea())
         .navigationTitle("Ask Case")
         .rossInlineNavigationTitle()
     }
@@ -108,7 +114,10 @@ struct AskCaseView: View {
             return
         }
 
-        isRunning = true
+        withAnimation(.easeInOut(duration: 0.3)) {
+            isRunning = true
+            state.askCaseResponse = nil 
+        }
 
         Task {
             let response = await localRuntimeService.askCase(
@@ -119,8 +128,10 @@ struct AskCaseView: View {
             )
 
             await MainActor.run {
-                state.askCaseResponse = response
-                isRunning = false
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                    state.askCaseResponse = response
+                    isRunning = false
+                }
             }
         }
     }
@@ -134,34 +145,46 @@ private struct AskCaseResponseCard: View {
             title: response.headline,
             subtitle: response.draftNotice
         ) {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 24) {
                 ForEach(response.sections) { section in
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 10) {
                         Text(section.title)
                             .font(.headline)
                             .foregroundStyle(Color.rossInk)
 
                         Text(section.body)
-                            .foregroundStyle(.secondary)
+                            .font(.body)
+                            .lineSpacing(6)
+                            .foregroundStyle(Color.rossInk.opacity(0.85))
                     }
                 }
 
-                VStack(alignment: .leading, spacing: 10) {
+                Divider()
+                    .overlay(Color.rossBorder)
+
+                VStack(alignment: .leading, spacing: 12) {
                     Text("Source chips")
-                        .font(.headline)
+                        .font(.rossSerifHeadline())
+                        .foregroundStyle(Color.rossInk)
+                        .padding(.bottom, 4)
 
                     ForEach(response.citations) { citation in
-                        VStack(alignment: .leading, spacing: 4) {
+                        VStack(alignment: .leading, spacing: 6) {
                             Text(citation.label)
-                                .font(.footnote.weight(.semibold))
+                                .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(Color.rossInk)
                             Text(citation.note)
                                 .font(.footnote)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color.rossInk.opacity(0.6))
+                                .lineSpacing(3)
                         }
-                        .padding(12)
+                        .padding(16)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.rossSecondaryGroupedBackground)
+                        .background(Color.rossGroupedBackground)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .stroke(Color.rossBorder, lineWidth: 1)
+                        }
                         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                     }
                 }

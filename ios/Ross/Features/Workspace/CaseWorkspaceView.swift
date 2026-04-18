@@ -18,14 +18,18 @@ struct CaseWorkspaceView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 32) {
                     if let selectedCase {
                         WorkspaceHeroCard(caseFile: selectedCase)
 
                         CaseSwitcherRail(
                             caseFiles: state.caseFiles,
                             selectedCaseID: state.selectedCaseID,
-                            onSelect: { state.selectedCaseID = $0 }
+                            onSelect: { selectedId in
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    state.selectedCaseID = selectedId 
+                                }
+                            }
                         )
 
                         WorkspaceStatusStrip(caseFile: selectedCase)
@@ -37,12 +41,12 @@ struct CaseWorkspaceView: View {
                         )
 
                         ViewThatFits(in: .horizontal) {
-                            HStack(alignment: .top, spacing: 16) {
+                            HStack(alignment: .top, spacing: 20) {
                                 WorkspaceSummaryCard(snapshot: selectedCase.workspace)
                                 WorkspaceSourcesCard(snapshot: selectedCase.workspace)
                             }
 
-                            VStack(spacing: 16) {
+                            VStack(spacing: 20) {
                                 WorkspaceSummaryCard(snapshot: selectedCase.workspace)
                                 WorkspaceSourcesCard(snapshot: selectedCase.workspace)
                             }
@@ -59,9 +63,9 @@ struct CaseWorkspaceView: View {
                         .padding(.top, 80)
                     }
                 }
-                .padding(20)
+                .padding(24)
             }
-            .background(Color.rossGroupedBackground)
+            .background(Color.rossGroupedBackground.ignoresSafeArea())
             .navigationTitle("Workspace")
             .rossInlineNavigationTitle()
             .navigationDestination(item: $route) { route in
@@ -98,7 +102,7 @@ private struct WorkspaceHeroCard: View {
             detail: "A private case dashboard with source-backed working notes, local status, and the next hearing posture kept close at hand."
         ) {
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 10) {
+                HStack(spacing: 12) {
                     RossInfoPill(title: caseFile.stage.title, systemImage: "briefcase")
                     RossInfoPill(title: nextHearingText, systemImage: "calendar")
                     RossInfoPill(title: caseFile.localNotice, systemImage: "lock")
@@ -128,46 +132,57 @@ private struct CaseSwitcherRail: View {
     let onSelect: (CaseFile.ID) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             Text("Open matters")
-                .font(.headline)
+                .font(.rossSerifHeadline())
+                .foregroundStyle(Color.rossInk)
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 14) {
+                HStack(spacing: 16) {
                     ForEach(caseFiles) { caseFile in
                         Button {
                             onSelect(caseFile.id)
                         } label: {
-                            VStack(alignment: .leading, spacing: 10) {
+                            VStack(alignment: .leading, spacing: 12) {
                                 Text(caseFile.title)
-                                    .font(.subheadline.weight(.semibold))
+                                    .font(.headline)
                                     .foregroundStyle(Color.rossInk)
                                     .lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
 
-                                Text(caseFile.stage.title)
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.secondary)
+                                Spacer()
 
-                                Text(caseFile.lastUpdated.formatted(date: .abbreviated, time: .shortened))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(caseFile.stage.title)
+                                        .font(.caption.weight(.bold))
+                                        .tracking(1)
+                                        .foregroundStyle(Color.rossAccent)
+
+                                    Text(caseFile.lastUpdated.formatted(date: .abbreviated, time: .shortened))
+                                        .font(.caption2)
+                                        .foregroundStyle(Color.rossInk.opacity(0.5))
+                                }
                             }
-                            .padding(16)
-                            .frame(width: 230, alignment: .leading)
-                            .background(caseFile.id == selectedCaseID ? Color.rossAccent.opacity(0.08) : Color.rossCardBackground)
+                            .padding(20)
+                            .frame(width: 240, height: 160, alignment: .leading)
+                            .background(caseFile.id == selectedCaseID ? Color.rossAccent.opacity(0.04) : Color.rossCardBackground)
                             .overlay {
-                                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                RoundedRectangle(cornerRadius: 24, style: .continuous)
                                     .stroke(
                                         caseFile.id == selectedCaseID ? Color.rossAccent : Color.rossBorder,
                                         lineWidth: caseFile.id == selectedCaseID ? 2 : 1
                                     )
                             }
-                            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                            .shadow(color: caseFile.id == selectedCaseID ? Color.rossAccent.opacity(0.1) : Color.black.opacity(0.03), radius: caseFile.id == selectedCaseID ? 12 : 8, y: caseFile.id == selectedCaseID ? 6 : 4)
                         }
                         .buttonStyle(.plain)
                     }
                 }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 4)
             }
+            .padding(.horizontal, -4)
         }
     }
 }
@@ -179,13 +194,13 @@ private struct WorkspaceStatusStrip: View {
         let indexedCount = caseFile.documents.filter(\.isIndexedLocally).count
 
         ViewThatFits(in: .horizontal) {
-            HStack(spacing: 12) {
+            HStack(spacing: 16) {
                 RossMetricTile(label: "Indexed", value: "\(indexedCount)/\(caseFile.documents.count) docs", tint: .rossAccent)
                 RossMetricTile(label: "Pending capture", value: "\(caseFile.captureInboxCount)", tint: .rossHighlight)
                 RossMetricTile(label: "Updated", value: caseFile.lastUpdated.formatted(date: .abbreviated, time: .shortened), tint: .rossSuccess)
             }
 
-            VStack(spacing: 12) {
+            VStack(spacing: 16) {
                 RossMetricTile(label: "Indexed", value: "\(indexedCount)/\(caseFile.documents.count) docs", tint: .rossAccent)
                 RossMetricTile(label: "Pending capture", value: "\(caseFile.captureInboxCount)", tint: .rossHighlight)
                 RossMetricTile(label: "Updated", value: caseFile.lastUpdated.formatted(date: .abbreviated, time: .shortened), tint: .rossSuccess)
@@ -205,7 +220,7 @@ private struct WorkspaceActionRow: View {
             subtitle: "Jump into the two tasks advocates tend to need most during a live matter review."
         ) {
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 12) {
+                HStack(spacing: 16) {
                     RossActionTile(
                         title: "Quick Capture Review",
                         detail: captureCount == 0 ? "No pending captures right now." : "\(captureCount) capture item(s) waiting for filing.",
@@ -223,7 +238,7 @@ private struct WorkspaceActionRow: View {
                     )
                 }
 
-                VStack(spacing: 12) {
+                VStack(spacing: 16) {
                     RossActionTile(
                         title: "Quick Capture Review",
                         detail: captureCount == 0 ? "No pending captures right now." : "\(captureCount) capture item(s) waiting for filing.",
@@ -253,7 +268,7 @@ private struct WorkspaceSummaryCard: View {
             title: "Working summary",
             subtitle: snapshot.chronologySummary
         ) {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 24) {
                 WorkspaceListBlock(
                     title: "Issue highlights",
                     items: snapshot.issueHighlights
@@ -279,20 +294,24 @@ private struct WorkspaceSourcesCard: View {
             title: "Source chips",
             subtitle: "Tap-through references should stay close to the working answer."
         ) {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 12) {
                 ForEach(snapshot.sourceAnchors) { source in
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 6) {
                         Text(source.label)
-                            .font(.footnote.weight(.semibold))
+                            .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Color.rossInk)
 
                         Text(source.note)
                             .font(.footnote)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.rossInk.opacity(0.6))
                     }
-                    .padding(14)
+                    .padding(16)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.rossSecondaryGroupedBackground)
+                    .background(Color.rossGroupedBackground)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(Color.rossBorder, lineWidth: 1)
+                    }
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }
             }
@@ -305,7 +324,7 @@ private struct WorkspaceListBlock: View {
     let items: [String]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             Text(title)
                 .font(.headline)
                 .foregroundStyle(Color.rossInk)
@@ -325,35 +344,46 @@ private struct WorkspaceDocumentsCard: View {
             title: "Documents",
             subtitle: "A quick scan of what is already indexed locally and what still needs attention."
         ) {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 14) {
                 ForEach(documents) { document in
-                    HStack(alignment: .top, spacing: 12) {
-                        VStack(alignment: .leading, spacing: 6) {
+                    HStack(alignment: .top, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 8) {
                             Text(document.title)
-                                .font(.subheadline.weight(.semibold))
+                                .font(.headline)
                                 .foregroundStyle(Color.rossInk)
 
                             Text("\(document.category) • \(document.pageCount) pages")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
+                                .font(.subheadline)
+                                .foregroundStyle(Color.rossInk.opacity(0.6))
 
                             Text(document.importedAt.formatted(date: .abbreviated, time: .omitted))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(Color.rossInk.opacity(0.4))
                         }
 
                         Spacer()
 
-                        Image(systemName: document.isIndexedLocally ? "checkmark.shield.fill" : "clock.badge")
-                            .font(.title3)
-                            .foregroundStyle(document.isIndexedLocally ? Color.rossSuccess : Color.rossHighlight)
+                        ZStack {
+                            Circle()
+                                .fill(document.isIndexedLocally ? Color.rossSuccess.opacity(0.1) : Color.rossHighlight.opacity(0.1))
+                                .frame(width: 40, height: 40)
+                                
+                            Image(systemName: document.isIndexedLocally ? "checkmark.shield.fill" : "clock.badge")
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(document.isIndexedLocally ? Color.rossSuccess : Color.rossHighlight)
+                        }
                     }
-                    .padding(14)
+                    .padding(16)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.rossSecondaryGroupedBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .background(Color.rossGroupedBackground)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(Color.rossBorder, lineWidth: 1)
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                 }
             }
         }
     }
 }
+

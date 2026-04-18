@@ -1,5 +1,7 @@
 package com.ross.android.feature
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -39,7 +41,7 @@ import com.ross.android.core.model.PrivacyLedgerEntry
 import com.ross.android.core.model.PublicLawPreview
 import com.ross.android.core.model.SettingsSnapshot
 import com.ross.android.core.model.WorkbenchSection
-import com.ross.android.theme.AlertAmber
+import com.ross.android.theme.RossHighlight
 
 @Composable
 fun WorkbenchScreen(
@@ -58,7 +60,7 @@ fun WorkbenchScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("Ross Workbench")
+                        Text("Ross Workbench", style = MaterialTheme.typography.titleLarge)
                         Text(
                             text = "Private-first case operations",
                             style = MaterialTheme.typography.bodyMedium,
@@ -80,16 +82,16 @@ fun WorkbenchScreen(
                 .fillMaxWidth()
                 .widthIn(max = 1180.dp)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp)
+                .padding(horizontal = 24.dp, vertical = 20.dp)
 
             if (wideLayout) {
                 Row(
                     modifier = contentModifier,
-                    horizontalArrangement = Arrangement.spacedBy(20.dp),
+                    horizontalArrangement = Arrangement.spacedBy(32.dp),
                 ) {
                     Column(
                         modifier = Modifier.weight(1.2f),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(24.dp),
                     ) {
                         WorkbenchHeaderDeck(
                             instantModeBanner = state.instantModeBanner,
@@ -103,7 +105,7 @@ fun WorkbenchScreen(
 
                     Column(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(24.dp),
                     ) {
                         ActiveSectionPane(
                             state = state,
@@ -121,7 +123,7 @@ fun WorkbenchScreen(
             } else {
                 Column(
                     modifier = contentModifier.widthIn(max = 720.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(24.dp),
                 ) {
                     WorkbenchHeaderDeck(
                         instantModeBanner = state.instantModeBanner,
@@ -181,7 +183,7 @@ private fun WorkbenchHeaderDeck(
                     modifier = Modifier.weight(1f),
                 )
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = session.progressNote,
                 style = MaterialTheme.typography.bodyMedium,
@@ -208,6 +210,7 @@ private fun SectionSelector(
                 selected = activeSection == section,
                 onClick = { onSectionSelected(section) },
                 label = { Text(section.label) },
+                shape = RoundedCornerShape(8.dp)
             )
         }
     }
@@ -261,7 +264,7 @@ private fun CasesPane(
 ) {
     val selectedCase = state.cases.firstOrNull { it.id == state.selectedCaseId } ?: state.cases.firstOrNull()
 
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
         HeroCard(
             eyebrow = selectedCase?.urgencyLabel ?: "Case desk",
             title = selectedCase?.title ?: "No active matter selected",
@@ -273,7 +276,7 @@ private fun CasesPane(
             title = "Open matters",
             subtitle = "Switch quickly between active files without losing the current dashboard context.",
         ) {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 items(state.cases) { caseSummary ->
                     CaseRailCard(
                         caseSummary = caseSummary,
@@ -287,7 +290,7 @@ private fun CasesPane(
         selectedCase?.let { caseSummary ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 MetricCard(
                     label = "Sensitivity",
@@ -310,13 +313,13 @@ private fun CasesPane(
                 text = state.workspace.summary,
                 style = MaterialTheme.typography.bodyLarge,
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = "Parties: ${state.workspace.parties}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(20.dp))
             TwoColumnLists(
                 leftTitle = "Upcoming tasks",
                 leftItems = state.workspace.upcomingTasks,
@@ -331,17 +334,19 @@ private fun CasesPane(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Button(
                     onClick = { onSectionSelected(WorkbenchSection.Capture) },
                     modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Text("Open Quick Capture")
                 }
                 Button(
                     onClick = { onSectionSelected(WorkbenchSection.Law) },
                     modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Text("Check Public Law")
                 }
@@ -357,7 +362,7 @@ private fun CapturePane(
     onBodyChanged: (String) -> Unit,
     onSave: () -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
         HeroCard(
             eyebrow = "Quick capture",
             title = "Stage paper notes and annexure details before they disappear into the day.",
@@ -374,8 +379,9 @@ private fun CapturePane(
                 label = { Text("Capture label") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
+                shape = RoundedCornerShape(8.dp)
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             OutlinedTextField(
                 value = state.captureDraft.body,
                 onValueChange = onBodyChanged,
@@ -383,15 +389,19 @@ private fun CapturePane(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(220.dp),
+                shape = RoundedCornerShape(8.dp)
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = state.captureDraft.sensitivityLabel,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.tertiary,
             )
-            Spacer(modifier = Modifier.height(14.dp))
-            Button(onClick = onSave) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = onSave,
+                shape = RoundedCornerShape(12.dp)
+            ) {
                 Text("Save locally")
             }
         }
@@ -404,7 +414,7 @@ private fun LawPane(
     onLawQueryChanged: (String) -> Unit,
     onRunLawPreview: () -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
         HeroCard(
             eyebrow = "Public boundary",
             title = "Preview the public-law query before any network request leaves the device.",
@@ -421,9 +431,13 @@ private fun LawPane(
                 label = { Text("Preview topic") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
+                shape = RoundedCornerShape(8.dp)
             )
-            Spacer(modifier = Modifier.height(14.dp))
-            Button(onClick = onRunLawPreview) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = onRunLawPreview,
+                shape = RoundedCornerShape(12.dp)
+            ) {
                 Text("Run safe preview")
             }
         }
@@ -434,7 +448,7 @@ private fun LawPane(
 
 @Composable
 private fun LedgerPane(state: WorkbenchUiState) {
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
             text = "Privacy ledger",
             style = MaterialTheme.typography.titleLarge,
@@ -458,7 +472,7 @@ private fun SettingsPane(
     settings: SettingsSnapshot,
     onUpdateSettings: ((SettingsSnapshot) -> SettingsSnapshot) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
             text = "Settings",
             style = MaterialTheme.typography.titleLarge,
@@ -512,6 +526,7 @@ private fun SettingToggleRow(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
         ) {
             Text(
                 text = if (checked) "Enabled" else "Disabled",
@@ -533,15 +548,16 @@ private fun SectionCard(
     content: @Composable () -> Unit,
 ) {
     OutlinedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
+        modifier = Modifier.fillMaxWidth().animateContentSize(),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.outlinedCardColors(
             containerColor = MaterialTheme.colorScheme.surface,
         ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
                 text = title,
@@ -553,7 +569,7 @@ private fun SectionCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             content()
         }
     }
@@ -567,13 +583,14 @@ private fun HeroCard(
 ) {
     Surface(
         color = MaterialTheme.colorScheme.primaryContainer,
-        shape = RoundedCornerShape(30.dp),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(28.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
                 text = eyebrow.uppercase(),
@@ -602,21 +619,22 @@ private fun MetricCard(
 ) {
     Surface(
         modifier = modifier,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        shape = RoundedCornerShape(12.dp),
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
                 text = label.uppercase(),
                 style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.secondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
                 text = value,
                 style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }
@@ -629,20 +647,24 @@ private fun CaseRailCard(
     onSelect: () -> Unit,
 ) {
     val containerColor = if (selected) {
-        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.32f)
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
     } else {
         MaterialTheme.colorScheme.surface
     }
 
     OutlinedCard(
-        modifier = Modifier.widthIn(min = 220.dp, max = 260.dp),
+        modifier = Modifier.widthIn(min = 260.dp, max = 280.dp),
         onClick = onSelect,
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.outlinedCardColors(containerColor = containerColor),
+        border = BorderStroke(
+            width = if (selected) 2.dp else 1.dp,
+            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+        ),
     ) {
         Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
                 text = caseSummary.title,
@@ -676,7 +698,7 @@ private fun TwoColumnLists(
         if (wideLayout) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 BulletListCard(
                     title = leftTitle,
@@ -690,7 +712,7 @@ private fun TwoColumnLists(
                 )
             }
         } else {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 BulletListCard(
                     title = leftTitle,
                     items = leftItems,
@@ -712,12 +734,12 @@ private fun BulletListCard(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.40f),
-        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        shape = RoundedCornerShape(12.dp),
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
                 text = title,
@@ -744,15 +766,15 @@ private fun PublicLawResultCard(preview: PublicLawPreview) {
             text = preview.summary,
             style = MaterialTheme.typography.bodyMedium,
         )
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         preview.highlights.forEach { highlight ->
             Text("• $highlight", style = MaterialTheme.typography.bodyMedium)
         }
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = preview.cautionLabel,
             style = MaterialTheme.typography.labelLarge,
-            color = AlertAmber,
+            color = RossHighlight,
         )
     }
 }
