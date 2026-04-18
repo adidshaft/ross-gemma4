@@ -134,6 +134,10 @@ enum AlphaOcrStatus: String, Codable, Hashable, Sendable {
     case notStarted
     case indexed
     case placeholder
+    case nativeText = "native_text"
+    case ocrComplete = "ocr_complete"
+    case partial
+    case failed
 
     var title: String {
         switch self {
@@ -143,7 +147,52 @@ enum AlphaOcrStatus: String, Codable, Hashable, Sendable {
             "Indexed locally"
         case .placeholder:
             "Placeholder indexing"
+        case .nativeText:
+            "Native text indexed"
+        case .ocrComplete:
+            "OCR complete"
+        case .partial:
+            "Partial OCR"
+        case .failed:
+            "OCR unavailable"
         }
+    }
+}
+
+enum AlphaIndexingStatus: String, Codable, Hashable, Sendable {
+    case notStarted = "not_started"
+    case extracting
+    case indexed
+    case partial
+    case failed
+
+    var title: String {
+        switch self {
+        case .notStarted:
+            "Not started"
+        case .extracting:
+            "Extracting locally"
+        case .indexed:
+            "Indexed locally"
+        case .partial:
+            "Partially indexed"
+        case .failed:
+            "Indexing failed"
+        }
+    }
+}
+
+struct AlphaNormalizedRect: Codable, Hashable, Sendable {
+    var x: Double
+    var y: Double
+    var width: Double
+    var height: Double
+
+    init(x: Double, y: Double, width: Double, height: Double) {
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
     }
 }
 
@@ -151,11 +200,33 @@ struct AlphaDocumentPage: Identifiable, Codable, Hashable, Sendable {
     let id: UUID
     let pageNumber: Int
     let snippet: String?
+    var extractedText: String?
+    var anchorText: String?
+    var ocrConfidence: Double?
+    var ocrStatus: AlphaOcrStatus?
+    var indexingStatus: AlphaIndexingStatus?
+    var highlightRects: [AlphaNormalizedRect]?
 
-    init(id: UUID = UUID(), pageNumber: Int, snippet: String? = nil) {
+    init(
+        id: UUID = UUID(),
+        pageNumber: Int,
+        snippet: String? = nil,
+        extractedText: String? = nil,
+        anchorText: String? = nil,
+        ocrConfidence: Double? = nil,
+        ocrStatus: AlphaOcrStatus? = nil,
+        indexingStatus: AlphaIndexingStatus? = nil,
+        highlightRects: [AlphaNormalizedRect]? = nil
+    ) {
         self.id = id
         self.pageNumber = pageNumber
         self.snippet = snippet
+        self.extractedText = extractedText
+        self.anchorText = anchorText
+        self.ocrConfidence = ocrConfidence
+        self.ocrStatus = ocrStatus
+        self.indexingStatus = indexingStatus
+        self.highlightRects = highlightRects
     }
 }
 
@@ -168,6 +239,8 @@ struct AlphaSourceRef: Identifiable, Codable, Hashable, Sendable {
     let paragraphRange: String?
     let textSnippet: String?
     let ocrConfidence: Double?
+    var highlightText: String?
+    var highlightRects: [AlphaNormalizedRect]?
 
     init(
         id: UUID = UUID(),
@@ -177,7 +250,9 @@ struct AlphaSourceRef: Identifiable, Codable, Hashable, Sendable {
         pageNumber: Int,
         paragraphRange: String? = nil,
         textSnippet: String? = nil,
-        ocrConfidence: Double? = nil
+        ocrConfidence: Double? = nil,
+        highlightText: String? = nil,
+        highlightRects: [AlphaNormalizedRect]? = nil
     ) {
         self.id = id
         self.caseId = caseId
@@ -187,6 +262,8 @@ struct AlphaSourceRef: Identifiable, Codable, Hashable, Sendable {
         self.paragraphRange = paragraphRange
         self.textSnippet = textSnippet
         self.ocrConfidence = ocrConfidence
+        self.highlightText = highlightText
+        self.highlightRects = highlightRects
     }
 
     var label: String {
@@ -207,7 +284,10 @@ struct AlphaCaseDocument: Identifiable, Codable, Hashable, Sendable {
     var importedAt: Date
     var pageCount: Int
     var ocrStatus: AlphaOcrStatus
+    var indexingStatus: AlphaIndexingStatus?
     var extractedText: String?
+    var dominantSourceSnippet: String?
+    var lastIndexedAt: Date?
     var pages: [AlphaDocumentPage]
 
     init(
@@ -219,7 +299,10 @@ struct AlphaCaseDocument: Identifiable, Codable, Hashable, Sendable {
         importedAt: Date,
         pageCount: Int,
         ocrStatus: AlphaOcrStatus,
+        indexingStatus: AlphaIndexingStatus? = nil,
         extractedText: String? = nil,
+        dominantSourceSnippet: String? = nil,
+        lastIndexedAt: Date? = nil,
         pages: [AlphaDocumentPage]
     ) {
         self.id = id
@@ -230,7 +313,10 @@ struct AlphaCaseDocument: Identifiable, Codable, Hashable, Sendable {
         self.importedAt = importedAt
         self.pageCount = pageCount
         self.ocrStatus = ocrStatus
+        self.indexingStatus = indexingStatus
         self.extractedText = extractedText
+        self.dominantSourceSnippet = dominantSourceSnippet
+        self.lastIndexedAt = lastIndexedAt
         self.pages = pages
     }
 }
@@ -539,7 +625,11 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
     var ledgerEntries: [AlphaPrivacyLedgerEntry]
     var modelJobs: [AlphaModelDownloadJob]
     var installedPacks: [AlphaInstalledModelPack]
+    var lastModelCatalogRefresh: Date?
     var publicLawCache: [AlphaPublicLawCacheItem]
+    var publicLawDraft: String?
+    var publicLawPreview: AlphaPublicLawPreview?
+    var publicLawResults: [AlphaPublicLawResult]?
     var exports: [AlphaExportedReport]
 
     static func seed() -> AlphaPersistedState {
@@ -558,8 +648,11 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
                 storedRelativePath: "seed/writ-petition-draft.pdf",
                 importedAt: Calendar.current.date(byAdding: .day, value: -8, to: .now) ?? .now,
                 pageCount: 28,
-                ocrStatus: .indexed,
+                ocrStatus: .nativeText,
+                indexingStatus: .indexed,
                 extractedText: "Representation chronology, demand challenge, and hearing posture.",
+                dominantSourceSnippet: "Representation chronology, demand challenge, and hearing posture.",
+                lastIndexedAt: Calendar.current.date(byAdding: .day, value: -8, to: .now) ?? .now,
                 pages: (1...3).map { AlphaDocumentPage(pageNumber: $0, snippet: "Draft reference page \($0).") }
             ),
             AlphaCaseDocument(
@@ -570,8 +663,11 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
                 storedRelativePath: "seed/impugned-notice.pdf",
                 importedAt: Calendar.current.date(byAdding: .day, value: -12, to: .now) ?? .now,
                 pageCount: 6,
-                ocrStatus: .indexed,
+                ocrStatus: .nativeText,
+                indexingStatus: .indexed,
                 extractedText: "Inspection grounds and compliance window.",
+                dominantSourceSnippet: "Inspection grounds and compliance window.",
+                lastIndexedAt: Calendar.current.date(byAdding: .day, value: -12, to: .now) ?? .now,
                 pages: (1...2).map { AlphaDocumentPage(pageNumber: $0, snippet: "Notice page \($0).") }
             )
         ]
@@ -615,8 +711,11 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
                 storedRelativePath: "seed/assessment-order.pdf",
                 importedAt: Calendar.current.date(byAdding: .day, value: -15, to: .now) ?? .now,
                 pageCount: 19,
-                ocrStatus: .indexed,
+                ocrStatus: .nativeText,
+                indexingStatus: .indexed,
                 extractedText: "Assessment reasoning and discrepancy notes.",
+                dominantSourceSnippet: "Assessment reasoning and discrepancy notes.",
+                lastIndexedAt: Calendar.current.date(byAdding: .day, value: -15, to: .now) ?? .now,
                 pages: (1...2).map { AlphaDocumentPage(pageNumber: $0, snippet: "Assessment page \($0).") }
             )
         ]
@@ -667,8 +766,37 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
             ],
             modelJobs: [],
             installedPacks: [],
+            lastModelCatalogRefresh: nil,
             publicLawCache: [],
+            publicLawDraft: "Find Supreme Court guidance on delay condonation where diligence is documented but filing was disrupted.",
+            publicLawPreview: nil,
+            publicLawResults: [],
             exports: []
         )
+    }
+}
+
+extension AlphaCaseDocument {
+    var effectiveIndexingStatus: AlphaIndexingStatus {
+        if let indexingStatus {
+            return indexingStatus
+        }
+
+        switch ocrStatus {
+        case .indexed, .nativeText, .ocrComplete:
+            return .indexed
+        case .partial:
+            return .partial
+        case .failed:
+            return .failed
+        case .placeholder, .notStarted:
+            return .notStarted
+        }
+    }
+
+    var displaySourceSnippet: String? {
+        dominantSourceSnippet
+            ?? pages.first(where: { ($0.snippet ?? "").isEmpty == false })?.snippet
+            ?? extractedText
     }
 }

@@ -1,7 +1,9 @@
 package com.ross.android.alpha
 
 import android.content.Context
+import android.graphics.pdf.PdfRenderer
 import android.net.Uri
+import android.os.ParcelFileDescriptor
 import android.webkit.MimeTypeMap
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -204,10 +206,15 @@ sealed interface AndroidAlphaRoute {
 class AlphaRossController(private val context: Context) {
     private val gson: Gson = GsonBuilder().setPrettyPrinting().create()
     private val rootDir = File(context.filesDir, "ross-alpha")
-    private val stateFile = File(rootDir, "state.json")
     private val documentsDir = File(rootDir, "documents")
     private val modelPackDir = File(rootDir, "model-packs")
     private val exportsDir = File(rootDir, "exports")
+    private val encryptedStateStore = AlphaEncryptedStateStore(
+        gson = gson,
+        rootDir = rootDir,
+        aadLabel = context.packageName,
+    )
+    private val exportService = AlphaExportService(rootDir, exportsDir)
 
     var persisted by mutableStateOf(loadState())
 
@@ -222,14 +229,7 @@ class AlphaRossController(private val context: Context) {
 
     private fun loadState(): AlphaPersistedState {
         ensureFolders()
-        if (!stateFile.exists()) {
-            val seed = AlphaPersistedState()
-            saveState(seed)
-            return seed
-        }
-        return runCatching {
-            stateFile.reader().use { reader -> gson.fromJson(reader, AlphaPersistedState::class.java) ?: AlphaPersistedState() }
-        }.getOrElse { AlphaPersistedState() }
+        return encryptedStateStore.load { AlphaPersistedState() }
     }
 
     fun startRoute(): AndroidAlphaRoute = when (persisted.onboardingStage) {
@@ -305,16 +305,30 @@ class AlphaRossController(private val context: Context) {
             "txt", "md" -> AlphaDocumentKind.Text
             else -> AlphaDocumentKind.Unknown
         }
-        val extractedText = if (kind == AlphaDocumentKind.Text) runCatching { FileInputStream(target).bufferedReader().readText().take(2000) }.getOrNull() else null
+        val pageCount = when (kind) {
+            AlphaDocumentKind.Pdf -> inferPdfPageCount(target)
+            else -> 1
+        }
+        val extractedText = if (kind == AlphaDocumentKind.Text) {
+            runCatching { FileInputStream(target).bufferedReader().readText().take(2_000) }.getOrNull()
+        } else {
+            null
+        }
+        val pageSnippet = extractedText?.take(140) ?: if (pageCount > 1) "Imported page 1." else "Imported source reference."
         val document = AlphaCaseDocument(
             title = uri.lastPathSegment?.substringBeforeLast('.') ?: "Imported document",
             fileName = uri.lastPathSegment ?: target.name,
             kind = kind,
             storedRelativePath = target.relativeTo(rootDir).path,
-            pageCount = 1,
+            pageCount = pageCount,
             ocrStatus = if (kind == AlphaDocumentKind.Text) AlphaOcrStatus.Indexed else AlphaOcrStatus.Placeholder,
             extractedText = extractedText,
-            pages = listOf(AlphaDocumentPage(pageNumber = 1, snippet = extractedText?.take(140) ?: "Imported source reference.")),
+            pages = (1..pageCount).map { page ->
+                AlphaDocumentPage(
+                    pageNumber = page,
+                    snippet = if (page == 1) pageSnippet else "Imported page $page.",
+                )
+            },
         )
         val sourceRef = AlphaSourceRef(
             caseId = caseId,
@@ -364,43 +378,7 @@ class AlphaRossController(private val context: Context) {
     }
 
     fun buildPublicLawPreview() {
-        val lower = publicLawDraft.lowercase()
-        val blocked = listOf(
-            "raghav fakepriv",
-            "9876501234",
-            "fakepriv@example.com",
-            "fake/123/2026",
-            "blue suitcase near temple",
-            "@",
-            "case number",
-            "client",
-            "party",
-            "ocr",
-        )
-        val removed = mutableListOf<String>()
-        var sanitized = publicLawDraft
-            .replace(Regex("\\b\\d{2,}\\b"), "")
-            .replace(Regex("\\s+"), " ")
-            .trim()
-        selectedCase()?.let { case ->
-            if (lower.contains(case.title.lowercase()) || lower.contains(case.forum.lowercase())) {
-                removed += "Case title and forum references"
-                sanitized = sanitized.replace(case.title, "", true).replace(case.forum, "", true).replace(Regex("\\s+"), " ").trim()
-            }
-        }
-        if (blocked.any { lower.contains(it) }) {
-            removed += "Private details and obvious identifiers"
-            sanitized = "Find current public-law guidance relevant to delay condonation where diligence is documented."
-        }
-        if (sanitized.length > 180) {
-            removed += "Long factual narrative"
-            sanitized = sanitized.take(180).trim()
-        }
-        publicLawPreview = AlphaPublicLawPreview(
-            query = sanitized.ifBlank { "Find current public-law guidance relevant to delay condonation where diligence is documented." },
-            removed = if (removed.isEmpty()) listOf("No private case data detected") else removed,
-            confirmationNote = "Public-law search sends only a sanitized query after explicit confirmation.",
-        )
+        publicLawPreview = AlphaPayloadShaper.buildPublicLawPreview(publicLawDraft, selectedCase())
         publicLawResults = emptyList()
     }
 
@@ -437,30 +415,10 @@ class AlphaRossController(private val context: Context) {
     }
 
     fun generateExport(kind: String, caseId: String?) {
-        ensureFolders()
         val case = caseId?.let { id -> persisted.cases.firstOrNull { it.id == id } }
-        val titleBase = case?.title ?: "Ross Report"
-        val file = File(exportsDir, "${slug(titleBase)}-${kind}-${UUID.randomUUID().toString().take(8)}.txt")
-        val body = """
-            $titleBase
-            Generated: ${nowIso()}
-            Draft for advocate review
-            
-            Report type: $kind
-            
-            Summary
-            ${case?.summary ?: "No case selected."}
-            
-            Source references
-            ${case?.sourceRefs?.take(3)?.joinToString("\n") { "- ${it.label}: ${it.detail}" } ?: "- No source references available yet."}
-            
-            Generated locally for advocate review. Verify all citations.
-        """.trimIndent()
-        file.writeText(body)
+        val report = exportService.generate(kind, case)
         persisted = persisted.copy(
-            exports = listOf(
-                AlphaExportRecord(caseId = caseId, title = "$titleBase $kind", kind = kind, relativePath = file.relativeTo(rootDir).path)
-            ) + persisted.exports,
+            exports = listOf(report) + persisted.exports,
             ledgerEntries = listOf(localLedger("Local export generated", "$kind was generated locally for advocate review.")) + persisted.ledgerEntries,
         )
         save()
@@ -468,39 +426,31 @@ class AlphaRossController(private val context: Context) {
 
     fun startPackInstall(tier: AlphaCapabilityTier, mobileAllowed: Boolean) {
         ensureFolders()
-        val waitingForWifi = !mobileAllowed && tier != AlphaCapabilityTier.QuickStart
-        val checksumSeed = sha256("${tier.tierId}-${UUID.randomUUID()}")
-        val totalBytes = when (tier) {
-            AlphaCapabilityTier.QuickStart -> 1_200_000_000L
-            AlphaCapabilityTier.CaseAssociate -> 2_800_000_000L
-            AlphaCapabilityTier.SeniorDraftingSupport -> 4_600_000_000L
-        }
-        val job = AlphaModelDownloadJob(
-            sessionId = "mdl-${UUID.randomUUID().toString().take(8)}",
-            packId = "${tier.tierId}-pack",
+        val now = nowIso()
+        val stagedJob = AlphaModelPackManager.stageJob(
             tier = tier,
-            state = if (waitingForWifi) AlphaDownloadState.PausedWaitingForWifi else AlphaDownloadState.Installed,
-            networkPolicy = if (mobileAllowed) AlphaDownloadPolicy.MobileAllowed else AlphaDownloadPolicy.WifiOnly,
-            bytesDownloaded = if (waitingForWifi) 0 else 256,
-            totalBytes = if (waitingForWifi) totalBytes else 256,
-            checksumSha256 = checksumSeed,
-            completedAt = if (waitingForWifi) null else nowIso(),
+            mobileAllowed = mobileAllowed,
+            existingJob = persisted.modelJobs.firstOrNull { it.tier == tier },
+            now = now,
         )
-        val installedPack = if (waitingForWifi) null else {
-            val folder = File(modelPackDir, tier.tierId).apply { mkdirs() }
-            val artifact = File(folder, "pack.dev").apply { writeText("Ross dev artifact for ${tier.tierId}") }
-            AlphaInstalledPack(
-                packId = job.packId,
-                tier = tier,
-                installRelativePath = artifact.relativeTo(rootDir).path,
-                checksumSha256 = sha256(artifact.readText()),
-                isActive = true,
+        val waitingForWifi = stagedJob.state == AlphaDownloadState.PausedWaitingForWifi
+        val installation = if (waitingForWifi) {
+            null
+        } else {
+            AlphaModelPackManager.finalizeInstall(
+                rootDir = rootDir,
+                job = stagedJob.copy(state = AlphaDownloadState.Verifying, updatedAt = now),
+                now = now,
             )
         }
         persisted = persisted.copy(
             settings = persisted.settings.copy(activeTier = if (waitingForWifi) persisted.settings.activeTier else tier),
-            modelJobs = listOf(job) + persisted.modelJobs.filterNot { it.tier == tier },
-            installedPacks = if (installedPack == null) persisted.installedPacks else listOf(installedPack) + persisted.installedPacks.map { it.copy(isActive = false) }.filterNot { it.tier == tier },
+            modelJobs = listOf(installation?.job ?: stagedJob) + persisted.modelJobs.filterNot { it.tier == tier },
+            installedPacks = if (installation?.installedPack == null) {
+                persisted.installedPacks
+            } else {
+                listOf(installation.installedPack) + persisted.installedPacks.map { it.copy(isActive = false) }.filterNot { it.tier == tier }
+            },
             ledgerEntries = listOf(
                 AlphaPrivacyLedgerEntry(
                     title = "Model catalog checked",
@@ -516,9 +466,9 @@ class AlphaRossController(private val context: Context) {
                     purpose = if (waitingForWifi) AlphaPrivacyPurpose.ModelDownload else AlphaPrivacyPurpose.ModelVerification,
                     payloadClass = AlphaPayloadClass.NoCaseData,
                     endpointLabel = if (waitingForWifi) "/model-download/session" else "device://model-verify",
-                    success = true,
+                    success = installation?.job?.state != AlphaDownloadState.Failed,
                 ),
-            ) + persisted.ledgerEntries,
+            ) + (installation?.ledgerEntries ?: emptyList()) + persisted.ledgerEntries,
         )
         save()
     }
@@ -556,11 +506,13 @@ class AlphaRossController(private val context: Context) {
     fun sourceRefsForDocument(caseId: String, documentId: String): List<AlphaSourceRef> =
         persisted.cases.firstOrNull { it.id == caseId }?.sourceRefs?.filter { it.documentId == documentId } ?: emptyList()
 
+    fun documentSourcePanel(caseId: String, documentId: String, requestedPage: Int?): AlphaResolvedSourcePanel =
+        AlphaSourceNavigator.resolve(document(caseId, documentId), sourceRefsForDocument(caseId, documentId), requestedPage)
+
     fun absoluteFile(relativePath: String): File = File(rootDir, relativePath)
 
     private fun saveState(state: AlphaPersistedState) {
-        ensureFolders()
-        stateFile.writer().use { writer -> gson.toJson(state, writer) }
+        encryptedStateStore.save(state)
     }
 
     private fun ensureFolders() {
@@ -579,7 +531,11 @@ class AlphaRossController(private val context: Context) {
         success = true,
     )
 
-    private fun slug(value: String) = value.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-')
+    private fun inferPdfPageCount(file: File): Int = runCatching {
+        ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
+            PdfRenderer(descriptor).use { renderer -> renderer.pageCount.coerceAtLeast(1) }
+        }
+    }.getOrDefault(1)
 }
 
 private fun seedCases(): List<AlphaCaseMatter> {
@@ -677,5 +633,5 @@ private fun seedCases(): List<AlphaCaseMatter> {
     return listOf(petitionCase, taxCase)
 }
 
-private fun nowIso(): String = java.time.Instant.now().toString()
+fun nowIso(): String = java.time.Instant.now().toString()
 private fun sha256(value: String): String = MessageDigest.getInstance("SHA-256").digest(value.toByteArray()).joinToString("") { "%02x".format(it) }

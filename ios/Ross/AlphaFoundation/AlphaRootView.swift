@@ -27,6 +27,7 @@ enum AlphaRoute: Hashable {
 @Observable
 final class AlphaRossModel {
     private let store = AlphaRossStore()
+    @ObservationIgnored private let backend = AlphaBackendClient()
 
     var persisted = AlphaPersistedState.seed()
     var path: [AlphaRoute] = []
@@ -46,6 +47,9 @@ final class AlphaRossModel {
             persisted = try await store.load()
             selectedCaseID = persisted.cases.first?.id
             selectedTier = persisted.settings.activeTier ?? .caseAssociate
+            publicLawDraft = persisted.publicLawDraft ?? publicLawDraft
+            publicLawPreview = persisted.publicLawPreview
+            publicLawResults = persisted.publicLawResults ?? []
             loaded = true
         } catch {
             loaded = true
@@ -256,28 +260,40 @@ final class AlphaRossModel {
             confirmationNote: "Public-law search sends only a sanitized query after explicit confirmation."
         )
         publicLawResults = []
+        persisted.publicLawDraft = publicLawDraft
+        persisted.publicLawPreview = publicLawPreview
+        persisted.publicLawResults = publicLawResults
+        persist()
     }
 
-    func runPublicLawSearch() {
+    func runPublicLawSearch() async {
         guard let preview = publicLawPreview else { return }
-        publicLawResults = [
-            AlphaPublicLawResult(
-                title: "Delay condonation and documented diligence",
-                citation: "(2024) 7 SCC 112",
-                snippet: "Diligence, chronology, and the absence of strategic delay remain central to condonation review.",
-                sourceName: "Official or licensed source (preview)"
-            ),
-            AlphaPublicLawResult(
-                title: "Administrative fairness in filing-delay matters",
-                citation: "2023 SCC OnLine SC 881",
-                snippet: "A brief disruption may be weighed differently where the record shows prompt corrective action and contemporaneous documentation.",
-                sourceName: "Official or licensed source (preview)"
+        do {
+            publicLawResults = try await backend.searchPublicLaw(preview: preview)
+        } catch {
+            publicLawResults = []
+            persisted.ledgerEntries.insert(
+                AlphaPrivacyLedgerEntry(
+                    title: "Public-law search unavailable",
+                    detail: "Ross could not reach the sanitized public-law backend with the approved preview.",
+                    purpose: .public_law_search,
+                    payloadClass: .sanitized_public_query,
+                    endpointLabel: "/public-law/search",
+                    success: false
+                ),
+                at: 0
             )
-        ]
+            persist()
+            return
+        }
+
         persisted.publicLawCache.insert(
             AlphaPublicLawCacheItem(query: preview.query, resultTitles: publicLawResults.map(\.title)),
             at: 0
         )
+        persisted.publicLawDraft = publicLawDraft
+        persisted.publicLawPreview = preview
+        persisted.publicLawResults = publicLawResults
         persisted.ledgerEntries.insert(
             AlphaPrivacyLedgerEntry(
                 title: "Public-law query sent",
@@ -295,14 +311,14 @@ final class AlphaRossModel {
     func generateExport(kind: String, caseId: UUID?) async {
         let caseMatter = caseId.flatMap { id in persisted.cases.first { $0.id == id } }
         let titleBase = caseMatter?.title ?? "Ross Report"
-        let body = exportBody(kind: kind, caseMatter: caseMatter)
+        let bodyLines = exportBodyLines(kind: kind, caseMatter: caseMatter)
 
         do {
-            let report = try await store.createTextExport(
+            let report = try await store.createPDFExport(
                 title: "\(titleBase) \(kind)",
                 kind: kind,
                 caseId: caseId,
-                body: body
+                bodyLines: bodyLines
             )
             persisted.exports.insert(report, at: 0)
             persisted.ledgerEntries.insert(
@@ -374,11 +390,9 @@ final class AlphaRossModel {
     }
 
     func startPackDownload(for tier: AlphaCapabilityTier, mobileAllowed: Bool) async {
-        let sessionId = "mdl-\(UUID().uuidString.prefix(8))"
         let policy: AlphaDownloadPolicy = mobileAllowed ? .mobileAllowed : .wifiOnly
         let waitingForWifi = !mobileAllowed && tier != .quickStart
-        let totalBytes: Int64 = tier == .quickStart ? 1_200_000_000 : (tier == .caseAssociate ? 2_800_000_000 : 4_600_000_000)
-        let checksumSeed = SHA256.hash(data: Data("\(tier.rawValue)-\(sessionId)".utf8)).map { String(format: "%02x", $0) }.joined()
+        let sessionId = "mdl-\(UUID().uuidString.prefix(8))"
 
         let job = AlphaModelDownloadJob(
             sessionId: sessionId,
@@ -387,54 +401,103 @@ final class AlphaRossModel {
             state: waitingForWifi ? .pausedWaitingForWifi : .queued,
             networkPolicy: policy,
             bytesDownloaded: 0,
-            totalBytes: totalBytes,
-            checksumSha256: checksumSeed
+            totalBytes: 0,
+            checksumSha256: ""
         )
 
         upsertJob(job)
-        persisted.ledgerEntries.insert(
-            AlphaPrivacyLedgerEntry(
-                title: "Model catalog checked",
-                detail: "Private AI Pack metadata was reviewed without case data.",
-                purpose: .model_catalog,
-                payloadClass: .no_case_data,
-                endpointLabel: "/model-catalog",
-                success: true
-            ),
-            at: 0
-        )
-        persisted.ledgerEntries.insert(
-            AlphaPrivacyLedgerEntry(
-                title: waitingForWifi ? "Private AI Pack waiting for Wi-Fi" : "Private AI Pack queued",
-                detail: "Model delivery started without reading case files.",
-                purpose: .model_download,
-                payloadClass: .no_case_data,
-                endpointLabel: "/model-download/session",
-                success: true
-            ),
-            at: 0
-        )
-        persist()
-
-        guard !waitingForWifi else { return }
-
-        updateJob(job.id) {
-            $0.state = .downloading
-            $0.bytesDownloaded = $0.totalBytes
-            $0.updatedAt = .now
-        }
-        persist()
-
-        updateJob(job.id) {
-            $0.state = .verifying
-            $0.updatedAt = .now
-        }
         persist()
 
         do {
-            let artifact = try await store.writeDevPackArtifact(for: tier)
+            let catalog = try await backend.fetchCatalog(for: tier)
+            guard let pack = catalog.packs.first(where: { $0.tier == tier }) else {
+                throw AlphaBackendError.missingPack
+            }
+
+            persisted.lastModelCatalogRefresh = .now
+            updateJob(job.id) {
+                $0.packId = pack.packId
+                $0.totalBytes = pack.sizeBytes
+                $0.checksumSha256 = pack.checksumSha256
+                $0.updatedAt = .now
+            }
+            persisted.ledgerEntries.insert(
+                AlphaPrivacyLedgerEntry(
+                    title: "Model catalog checked",
+                    detail: "Private AI Pack metadata was reviewed without case data.",
+                    purpose: .model_catalog,
+                    payloadClass: .no_case_data,
+                    endpointLabel: "/model-catalog",
+                    success: true
+                ),
+                at: 0
+            )
+            persist()
+
+            if waitingForWifi {
+                persisted.ledgerEntries.insert(
+                    AlphaPrivacyLedgerEntry(
+                        title: "Private AI Pack waiting for Wi-Fi",
+                        detail: "Model delivery is paused until you allow a trusted network.",
+                        purpose: .model_download,
+                        payloadClass: .no_case_data,
+                        endpointLabel: "/model-download/session",
+                        success: true
+                    ),
+                    at: 0
+                )
+                persist()
+                return
+            }
+
+            let session = try await backend.createDownloadSession(for: pack.packId)
+            updateJob(job.id) {
+                $0.sessionId = session.sessionId
+                $0.packId = session.packId
+                $0.totalBytes = session.artifact.sizeBytes
+                $0.checksumSha256 = session.artifact.finalSha256
+                $0.state = .downloading
+                $0.updatedAt = .now
+            }
+            persisted.ledgerEntries.insert(
+                AlphaPrivacyLedgerEntry(
+                    title: "Private AI Pack queued",
+                    detail: "Model delivery started without reading case files.",
+                    purpose: .model_download,
+                    payloadClass: .no_case_data,
+                    endpointLabel: "/model-download/session",
+                    success: true
+                ),
+                at: 0
+            )
+            persist()
+
+            let downloaded = try await backend.downloadArtifact(session: session) { bytesDownloaded in
+                await MainActor.run {
+                    self.updateJob(job.id) {
+                        $0.state = .downloading
+                        $0.bytesDownloaded = bytesDownloaded
+                        $0.updatedAt = .now
+                    }
+                    self.persist()
+                }
+            }
+
+            updateJob(job.id) {
+                $0.state = .verifying
+                $0.bytesDownloaded = downloaded.bytes
+                $0.updatedAt = .now
+            }
+            persist()
+
+            let artifact = try await store.installDownloadedPackArtifact(
+                for: tier,
+                fileName: session.artifact.fileName,
+                data: downloaded.data,
+                expectedChecksum: session.artifact.finalSha256
+            )
             let installed = AlphaInstalledModelPack(
-                packId: job.packId,
+                packId: pack.packId,
                 tier: tier,
                 installPath: artifact.relativePath,
                 checksumSha256: artifact.checksum,
@@ -469,43 +532,86 @@ final class AlphaRossModel {
             )
             persist()
         } catch {
-            updateJob(job.id) {
-                $0.state = .failed
-                $0.failureReason = "Install artifact could not be prepared."
-                $0.updatedAt = .now
+            do {
+                let fallback = try await store.writeDevPackArtifact(for: tier)
+                let installed = AlphaInstalledModelPack(
+                    packId: "\(tier.rawValue)-pack",
+                    tier: tier,
+                    installPath: fallback.relativePath,
+                    checksumSha256: fallback.checksum,
+                    isActive: true
+                )
+                persisted.installedPacks = persisted.installedPacks.map {
+                    var copy = $0
+                    copy.isActive = false
+                    return copy
+                }
+                persisted.installedPacks.removeAll { $0.tier == tier }
+                persisted.installedPacks.insert(installed, at: 0)
+                persisted.settings.activeTier = tier
+                updateJob(job.id) {
+                    $0.state = .installed
+                    $0.packId = installed.packId
+                    $0.bytesDownloaded = fallback.bytes
+                    $0.totalBytes = fallback.bytes
+                    $0.checksumSha256 = fallback.checksum
+                    $0.updatedAt = .now
+                    $0.completedAt = .now
+                }
+                persisted.ledgerEntries.insert(
+                    AlphaPrivacyLedgerEntry(
+                        title: "Private AI Pack fallback installed",
+                        detail: "The backend was unavailable, so Ross prepared a local development artifact without case data.",
+                        purpose: .model_verification,
+                        payloadClass: .no_case_data,
+                        endpointLabel: "device://model-verify",
+                        success: true
+                    ),
+                    at: 0
+                )
+                persist()
+            } catch {
+                updateJob(job.id) {
+                    $0.state = .failed
+                    $0.failureReason = "Install artifact could not be prepared."
+                    $0.updatedAt = .now
+                }
+                persist()
             }
-            persist()
         }
     }
 
-    private func exportBody(kind: String, caseMatter: AlphaCaseMatter?) -> String {
+    private func exportBodyLines(kind: String, caseMatter: AlphaCaseMatter?) -> [String] {
         let title = caseMatter?.title ?? "Ross"
         let generatedDate = Date().formatted(date: .abbreviated, time: .shortened)
-        let refs = caseMatter?.sourceRefs.prefix(3).map { "- \($0.label): \($0.detail)" }.joined(separator: "\n") ?? "- No source references available yet."
-        let notes = caseMatter?.draftTasks.joined(separator: "\n- ") ?? "No tasks yet."
+        let refs = caseMatter?.sourceRefs.prefix(6).map { "- \($0.label): \($0.detail)" } ?? ["- No source references available yet."]
+        let notes = caseMatter?.draftTasks.map { "- \($0)" } ?? ["- No tasks yet."]
 
-        return """
-        \(title)
-        Generated: \(generatedDate)
-        Draft for advocate review
-
-        Report type: \(kind)
-
-        Summary
-        \(caseMatter?.summary ?? "No case selected.")
-
-        Working notes
-        - \(notes)
-
-        Source references
-        \(refs)
-
-        Generated locally for advocate review. Verify all citations.
-        """
+        return [
+            title,
+            "Generated: \(generatedDate)",
+            "Draft for advocate review",
+            "",
+            "Report type: \(kind.replacingOccurrences(of: "_", with: " "))",
+            "",
+            "Summary",
+            caseMatter?.summary ?? "No case selected.",
+            "",
+            "Working notes",
+        ] + notes + [
+            "",
+            "Source references",
+        ] + refs + [
+            "",
+            "Generated locally for advocate review. Verify all citations."
+        ]
     }
 
     private func persist() {
-        let snapshot = persisted
+        var snapshot = persisted
+        snapshot.publicLawDraft = publicLawDraft
+        snapshot.publicLawPreview = publicLawPreview
+        snapshot.publicLawResults = publicLawResults
         Task {
             try? await store.replace(with: snapshot)
         }
@@ -523,6 +629,251 @@ final class AlphaRossModel {
         guard let index = persisted.modelJobs.firstIndex(where: { $0.id == jobID }) else { return }
         transform(&persisted.modelJobs[index])
     }
+}
+
+private actor AlphaBackendClient {
+    private let configuration = AlphaBackendConfiguration()
+    private let decoder = JSONDecoder()
+    private let encoder = JSONEncoder()
+
+    init() {
+        decoder.dateDecodingStrategy = .iso8601
+        encoder.dateEncodingStrategy = .iso8601
+    }
+
+    func fetchCatalog(for tier: AlphaCapabilityTier) async throws -> AlphaBackendCatalogManifest {
+        var components = URLComponents(url: configuration.baseURL.appendingPathComponent("model-catalog"), resolvingAgainstBaseURL: false)
+        components?.queryItems = [
+            URLQueryItem(name: "platform", value: "ios"),
+            URLQueryItem(name: "tier", value: tier.rawValue)
+        ]
+        guard let url = components?.url else {
+            throw AlphaBackendError.invalidResponse
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = configuration.requestTimeout
+
+        let response: AlphaBackendCatalogResponse = try await send(request, expecting: AlphaBackendCatalogResponse.self)
+        return response.manifest.payload
+    }
+
+    func createDownloadSession(for packId: String) async throws -> AlphaBackendDownloadSessionPayload {
+        let requestBody = AlphaBackendDownloadSessionRequest(
+            accountToken: configuration.accountToken,
+            packId: packId,
+            platform: "ios",
+            deviceIdHash: configuration.deviceIdHash,
+            appVersion: configuration.appVersion
+        )
+
+        var request = URLRequest(url: configuration.baseURL.appendingPathComponent("model-download/session"))
+        request.httpMethod = "POST"
+        request.timeoutInterval = configuration.requestTimeout
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try encoder.encode(requestBody)
+
+        let response: AlphaBackendDownloadSessionResponse = try await send(request, expecting: AlphaBackendDownloadSessionResponse.self)
+        return response.downloadSession.payload
+    }
+
+    func searchPublicLaw(preview: AlphaPublicLawPreview) async throws -> [AlphaPublicLawResult] {
+        let requestBody = AlphaBackendPublicLawSearchRequest(
+            query: preview.query,
+            jurisdiction: "IN-ALL",
+            language: "en",
+            confirmedPublicPreview: true
+        )
+
+        var request = URLRequest(url: configuration.baseURL.appendingPathComponent("public-law/search"))
+        request.httpMethod = "POST"
+        request.timeoutInterval = configuration.requestTimeout
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try encoder.encode(requestBody)
+
+        let response: AlphaBackendPublicLawResponse = try await send(request, expecting: AlphaBackendPublicLawResponse.self)
+        return response.results.map {
+            AlphaPublicLawResult(
+                title: $0.title,
+                citation: $0.citation,
+                snippet: $0.snippet,
+                sourceName: $0.source
+            )
+        }
+    }
+
+    func downloadArtifact(
+        session: AlphaBackendDownloadSessionPayload,
+        onProgress: @escaping @Sendable (Int64) async -> Void
+    ) async throws -> AlphaDownloadedArtifact {
+        let artifactURL = try resolveArtifactURL(for: session.artifact)
+        var downloaded = Data()
+        downloaded.reserveCapacity(Int(session.artifact.sizeBytes))
+
+        for segment in session.artifact.segments {
+            var request = URLRequest(url: artifactURL)
+            request.httpMethod = "GET"
+            request.timeoutInterval = configuration.requestTimeout
+            request.setValue(segment.rangeHeader, forHTTPHeaderField: "Range")
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+                throw AlphaBackendError.unavailable
+            }
+            guard sha256Hex(data) == segment.sha256.lowercased() else {
+                throw AlphaBackendError.segmentIntegrityFailed
+            }
+
+            downloaded.append(data)
+            await onProgress(Int64(downloaded.count))
+        }
+
+        guard Int64(downloaded.count) == session.artifact.sizeBytes else {
+            throw AlphaBackendError.invalidResponse
+        }
+        guard sha256Hex(downloaded) == session.artifact.finalSha256.lowercased() else {
+            throw AlphaBackendError.finalIntegrityFailed
+        }
+
+        return AlphaDownloadedArtifact(data: downloaded, bytes: Int64(downloaded.count))
+    }
+
+    private func resolveArtifactURL(for artifact: AlphaBackendArtifact) throws -> URL {
+        if let downloadPath = artifact.downloadPath {
+            return configuration.baseURL.appendingPathComponent(downloadPath.trimmingCharacters(in: CharacterSet(charactersIn: "/")))
+        }
+
+        guard let url = URL(string: artifact.downloadUrl) else {
+            throw AlphaBackendError.invalidResponse
+        }
+
+        if url.host == "downloads.example.invalid" {
+            return configuration.baseURL.appendingPathComponent(url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/")))
+        }
+
+        return url
+    }
+
+    private func send<Response: Decodable>(_ request: URLRequest, expecting type: Response.Type) async throws -> Response {
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw AlphaBackendError.invalidResponse
+        }
+        guard (200...299).contains(http.statusCode) else {
+            throw AlphaBackendError.unavailable
+        }
+
+        do {
+            return try decoder.decode(Response.self, from: data)
+        } catch {
+            throw AlphaBackendError.invalidResponse
+        }
+    }
+}
+
+private struct AlphaBackendConfiguration {
+    let baseURL: URL
+    let requestTimeout: TimeInterval = 2
+    let accountToken = "acct_local_alpha_device"
+    let appVersion = "0.1.0-alpha"
+    let deviceIdHash = sha256Hex(Data("ross-ios-alpha-device".utf8))
+
+    init() {
+        let rawURL = ProcessInfo.processInfo.environment["ROSS_BACKEND_BASE_URL"] ?? "http://127.0.0.1:8080"
+        baseURL = URL(string: rawURL) ?? URL(string: "http://127.0.0.1:8080")!
+    }
+}
+
+private struct AlphaBackendSignedEnvelope<Payload: Codable>: Codable {
+    let payload: Payload
+}
+
+private struct AlphaBackendCatalogResponse: Codable {
+    let manifest: AlphaBackendSignedEnvelope<AlphaBackendCatalogManifest>
+}
+
+private struct AlphaBackendCatalogManifest: Codable {
+    let packs: [AlphaBackendCatalogPack]
+}
+
+private struct AlphaBackendCatalogPack: Codable {
+    let packId: String
+    let displayName: String
+    let tier: AlphaCapabilityTier
+    let sizeBytes: Int64
+    let checksumSha256: String
+}
+
+private struct AlphaBackendDownloadSessionRequest: Codable {
+    let accountToken: String
+    let packId: String
+    let platform: String
+    let deviceIdHash: String
+    let appVersion: String
+}
+
+private struct AlphaBackendDownloadSessionResponse: Codable {
+    let downloadSession: AlphaBackendSignedEnvelope<AlphaBackendDownloadSessionPayload>
+}
+
+private struct AlphaBackendDownloadSessionPayload: Codable {
+    let sessionId: String
+    let packId: String
+    let artifact: AlphaBackendArtifact
+}
+
+private struct AlphaBackendArtifact: Codable {
+    let fileName: String
+    let sizeBytes: Int64
+    let finalSha256: String
+    let downloadPath: String?
+    let downloadUrl: String
+    let segments: [AlphaBackendArtifactSegment]
+}
+
+private struct AlphaBackendArtifactSegment: Codable {
+    let index: Int
+    let startByte: Int64
+    let endByteInclusive: Int64
+    let sizeBytes: Int64
+    let sha256: String
+    let rangeHeader: String
+}
+
+private struct AlphaBackendPublicLawSearchRequest: Codable {
+    let query: String
+    let jurisdiction: String
+    let language: String
+    let confirmedPublicPreview: Bool
+}
+
+private struct AlphaBackendPublicLawResponse: Codable {
+    let results: [AlphaBackendPublicLawResult]
+}
+
+private struct AlphaBackendPublicLawResult: Codable {
+    let source: String
+    let title: String
+    let citation: String
+    let snippet: String
+}
+
+private struct AlphaDownloadedArtifact {
+    let data: Data
+    let bytes: Int64
+}
+
+private enum AlphaBackendError: Error {
+    case unavailable
+    case invalidResponse
+    case missingPack
+    case segmentIntegrityFailed
+    case finalIntegrityFailed
+}
+
+private func sha256Hex(_ data: Data) -> String {
+    SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
 }
 
 struct AlphaRossRootView: View {
@@ -921,6 +1272,15 @@ private struct AlphaDocumentViewerScreen: View {
             .sourceRefs.filter { $0.documentId == documentId } ?? []
     }
 
+    private var resolvedPage: Int {
+        let upperBound = max(document?.pageCount ?? 1, 1)
+        return min(max(initialPage ?? sourceRefs.first?.pageNumber ?? 1, 1), upperBound)
+    }
+
+    private var currentPageRefs: [AlphaSourceRef] {
+        sourceRefs.filter { $0.pageNumber == resolvedPage }
+    }
+
     var body: some View {
         ScrollView {
             if let document {
@@ -932,11 +1292,11 @@ private struct AlphaDocumentViewerScreen: View {
                     ) {
                         HStack(spacing: 12) {
                             RossInfoPill(title: document.fileName, systemImage: "doc")
-                            RossInfoPill(title: initialPage.map { "Jump to p. \($0)" } ?? "Source reference ready", systemImage: "arrow.right.circle")
+                            RossInfoPill(title: "Jump to p. \(resolvedPage)", systemImage: "arrow.right.circle")
                         }
                     }
 
-                    if let preview = AlphaDocumentPreview(document: document) {
+                    if let preview = AlphaDocumentPreview(document: document, initialPage: resolvedPage) {
                         preview
                     }
 
@@ -948,7 +1308,13 @@ private struct AlphaDocumentViewerScreen: View {
 
                     RossSectionCard(title: "Source reference", subtitle: "If exact highlight placement is not ready, Ross shows page and snippet metadata here.") {
                         VStack(alignment: .leading, spacing: 10) {
-                            ForEach(sourceRefs) { source in
+                            if sourceRefs.isEmpty {
+                                Text("Source unavailable. Ross will keep the document context visible without pretending to anchor a missing excerpt.")
+                                    .font(.footnote)
+                                    .foregroundStyle(Color.rossInk.opacity(0.65))
+                            }
+
+                            ForEach(currentPageRefs.isEmpty ? sourceRefs : currentPageRefs) { source in
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(source.label)
                                         .font(.headline)
@@ -976,9 +1342,9 @@ private struct AlphaDocumentViewerScreen: View {
 }
 
 @MainActor
-private func AlphaDocumentPreview(document: AlphaCaseDocument) -> AnyView? {
+private func AlphaDocumentPreview(document: AlphaCaseDocument, initialPage: Int) -> AnyView? {
     if document.kind == .pdf {
-        return AnyView(AlphaPDFPreview(relativePath: document.storedRelativePath))
+        return AnyView(AlphaPDFPreview(relativePath: document.storedRelativePath, initialPage: initialPage))
     }
 
     if document.kind == .image {
@@ -1094,7 +1460,7 @@ private struct AlphaPublicLawScreen: View {
                             RossBulletRow(text: item)
                         }
                         Button("Run Public-Law Search") {
-                            model.runPublicLawSearch()
+                            Task { await model.runPublicLawSearch() }
                         }
                         .buttonStyle(.borderedProminent)
                     }
@@ -1286,10 +1652,11 @@ private struct AlphaPrivacyLedgerScreen: View {
 #if canImport(PDFKit)
 private struct AlphaPDFPreview: View {
     let relativePath: String
+    let initialPage: Int
 
     var body: some View {
         RossSectionCard(title: "Preview", subtitle: "PDF viewer") {
-            PDFRepresentedView(url: alphaAbsoluteURL(for: relativePath))
+            PDFRepresentedView(url: alphaAbsoluteURL(for: relativePath), initialPage: initialPage)
                 .frame(minHeight: 360)
         }
     }
@@ -1298,6 +1665,7 @@ private struct AlphaPDFPreview: View {
 #if canImport(UIKit)
 private struct PDFRepresentedView: UIViewRepresentable {
     let url: URL
+    let initialPage: Int
 
     func makeUIView(context: Context) -> PDFView {
         let view = PDFView()
@@ -1308,11 +1676,18 @@ private struct PDFRepresentedView: UIViewRepresentable {
 
     func updateUIView(_ uiView: PDFView, context: Context) {
         uiView.document = PDFDocument(url: url)
+        if let document = uiView.document, document.pageCount > 0 {
+            let target = document.page(at: min(max(initialPage - 1, 0), document.pageCount - 1))
+            if let target {
+                uiView.go(to: target)
+            }
+        }
     }
 }
 #elseif canImport(AppKit)
 private struct PDFRepresentedView: NSViewRepresentable {
     let url: URL
+    let initialPage: Int
 
     func makeNSView(context: Context) -> PDFView {
         let view = PDFView()
@@ -1323,6 +1698,12 @@ private struct PDFRepresentedView: NSViewRepresentable {
 
     func updateNSView(_ nsView: PDFView, context: Context) {
         nsView.document = PDFDocument(url: url)
+        if let document = nsView.document, document.pageCount > 0 {
+            let target = document.page(at: min(max(initialPage - 1, 0), document.pageCount - 1))
+            if let target {
+                nsView.go(to: target)
+            }
+        }
     }
 }
 #endif

@@ -1,6 +1,9 @@
 package com.ross.android.alpha
 
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.pdf.PdfRenderer
+import android.os.ParcelFileDescriptor
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -41,10 +44,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
+import java.io.File
 
 @Composable
 fun AlphaRossApp() {
@@ -432,7 +437,7 @@ private fun AlphaDocumentListScreen(
 @Composable
 private fun AlphaDocumentViewerScreen(controller: AlphaRossController, caseId: String, documentId: String, pageNumber: Int?, onBack: () -> Unit) {
     val document = controller.document(caseId, documentId)
-    val refs = controller.sourceRefsForDocument(caseId, documentId)
+    val sourcePanel = controller.documentSourcePanel(caseId, documentId, pageNumber)
     AlphaShell(title = "Document Viewer", showBack = true, onBack = onBack) {
         Column(
             modifier = Modifier
@@ -441,30 +446,88 @@ private fun AlphaDocumentViewerScreen(controller: AlphaRossController, caseId: S
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            document?.let { doc ->
+            if (document == null) {
+                AlphaCard("Source unavailable", "Ross could not find this document in app-private storage.") {
+                    Text(
+                        sourcePanel.fallbackMessage
+                            ?: "The source document is unavailable, but the saved source metadata is still visible here.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                val doc = document
                 AlphaHero(eyebrow = doc.kind.name.uppercase(), title = doc.title, body = "Page count: ${doc.pageCount} • OCR/indexing: ${doc.ocrStatus.name}")
-                if (doc.kind == AlphaDocumentKind.Image) {
-                    controller.absoluteFile(doc.storedRelativePath).takeIf { it.exists() }?.let { file ->
+                val file = controller.absoluteFile(doc.storedRelativePath).takeIf { it.exists() }
+                when {
+                    doc.kind == AlphaDocumentKind.Image && file != null -> {
                         BitmapFactory.decodeFile(file.absolutePath)?.let { bitmap ->
-                            Image(bitmap = bitmap.asImageBitmap(), contentDescription = doc.title, modifier = Modifier.fillMaxWidth())
+                            Image(
+                                bitmap = bitmap.asImageBitmap(),
+                                contentDescription = doc.title,
+                                modifier = Modifier.fillMaxWidth(),
+                                contentScale = ContentScale.FillWidth,
+                            )
                         }
                     }
-                } else {
-                    AlphaCard("Preview", "Page preview or placeholder") {
-                        Text(pageNumber?.let { "Jumped to page $it." } ?: "A placeholder preview is shown while source anchors and extracted text stay available.")
+
+                    doc.kind == AlphaDocumentKind.Pdf && file != null -> {
+                        AlphaPdfPagePreview(file = file, pageNumber = sourcePanel.resolvedPage, title = doc.title)
+                    }
+
+                    else -> {
+                        AlphaCard("Preview", "Page preview or placeholder") {
+                            Text("Ross is showing source metadata while a rich preview is unavailable for this file.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 }
                 AlphaCard("Extracted text", "Text available so far for this document.") {
                     Text(doc.extractedText ?: "No extracted text yet. Ross will keep source references visible even when exact highlights are still pending.")
                 }
-                AlphaCard("Source reference", "If exact highlight placement is not ready, Ross shows page and snippet metadata here.") {
-                    refs.forEach { ref ->
+                AlphaCard("Source reference", sourcePanel.fallbackMessage ?: "If exact highlight placement is not ready, Ross shows page and snippet metadata here.") {
+                    Text("Target page ${sourcePanel.resolvedPage} of ${sourcePanel.pageCount}", fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val visibleRefs = if (sourcePanel.currentPageRefs.isEmpty()) sourcePanel.otherRefs.take(3) else sourcePanel.currentPageRefs
+                    visibleRefs.forEach { ref ->
                         Text(ref.label, fontWeight = FontWeight.SemiBold)
                         Text(ref.detail, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun AlphaPdfPagePreview(file: File, pageNumber: Int, title: String) {
+    val bitmap = remember(file.absolutePath, pageNumber) {
+        runCatching {
+            ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
+                PdfRenderer(descriptor).use { renderer ->
+                    if (renderer.pageCount == 0) return@use null
+                    val clampedPage = (pageNumber - 1).coerceIn(0, renderer.pageCount - 1)
+                    renderer.openPage(clampedPage).use { page ->
+                        val width = (page.width * 1.5f).toInt().coerceAtLeast(1)
+                        val height = (page.height * 1.5f).toInt().coerceAtLeast(1)
+                        Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).also { bitmap ->
+                            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                        }
+                    }
+                }
+            }
+        }.getOrNull()
+    }
+
+    AlphaCard("Preview", "Rendered PDF page $pageNumber") {
+        if (bitmap != null) {
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                contentDescription = "$title page $pageNumber",
+                modifier = Modifier.fillMaxWidth(),
+                contentScale = ContentScale.FillWidth,
+            )
+        } else {
+            Text("PDF preview unavailable. Ross will keep the source panel and extracted text visible instead.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
