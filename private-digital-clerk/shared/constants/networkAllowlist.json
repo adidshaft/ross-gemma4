@@ -1,0 +1,51 @@
+[
+  {
+    "endpointLabel": "auth_otp_start",
+    "method": "POST",
+    "path": "/auth/otp/start",
+    "payloadClass": "account_token"
+  },
+  {
+    "endpointLabel": "auth_otp_verify",
+    "method": "POST",
+    "path": "/auth/otp/verify",
+    "payloadClass": "account_token"
+  },
+  {
+    "endpointLabel": "entitlements_refresh",
+    "method": "POST",
+    "path": "/entitlements/refresh",
+    "payloadClass": "account_token"
+  },
+  {
+    "endpointLabel": "model_catalog",
+    "method": "GET",
+    "path": "/model-catalog",
+    "payloadClass": "no_case_data"
+  },
+  {
+    "endpointLabel": "model_download_session",
+    "method": "POST",
+    "path": "/model-download/session",
+    "payloadClass": "no_case_data"
+  },
+  {
+    "endpointLabel": "billing_stripe_webhook",
+    "method": "POST",
+    "path": "/billing/stripe/webhook",
+    "payloadClass": "account_token"
+  },
+  {
+    "endpointLabel": "billing_razorpay_webhook",
+    "method": "POST",
+    "path": "/billing/razorpay/webhook",
+    "payloadClass": "account_token"
+  },
+  {
+    "endpointLabel": "public_law_search",
+    "method": "POST",
+    "path": "/public-law/search",
+    "payloadClass": "sanitized_public_query"
+  }
+]
+

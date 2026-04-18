@@ -1,0 +1,77 @@
+[
+  {
+    "id": "gemma-4-e2b-q4",
+    "displayName": "Gemma 4 E2B Q4",
+    "family": "gemma",
+    "runtimeCandidates": [
+      "gemma_local_runtime",
+      "mediapipe",
+      "custom"
+    ],
+    "useCases": [
+      "summaries",
+      "case_qa",
+      "chronology",
+      "issue_extraction"
+    ],
+    "licenseName": "Placeholder evaluation license"
+  },
+  {
+    "id": "gemma-4-e4b-q4",
+    "displayName": "Gemma 4 E4B Q4",
+    "family": "gemma",
+    "runtimeCandidates": [
+      "gemma_local_runtime",
+      "coreml",
+      "custom"
+    ],
+    "useCases": [
+      "advanced_drafting",
+      "long_document_analysis",
+      "bilingual_outputs"
+    ],
+    "licenseName": "Placeholder evaluation license"
+  },
+  {
+    "id": "embeddinggemma-300m-int8",
+    "displayName": "EmbeddingGemma 300M INT8",
+    "family": "gemma",
+    "runtimeCandidates": [
+      "mediapipe",
+      "custom"
+    ],
+    "useCases": [
+      "local_rag",
+      "semantic_search"
+    ],
+    "licenseName": "Placeholder evaluation license"
+  },
+  {
+    "id": "llama-3.2-3b-q4",
+    "displayName": "Gemma 4 E4B Q4 3.2 3B Q4",
+    "family": "llama",
+    "runtimeCandidates": [
+      "gemma_local_runtime",
+      "custom"
+    ],
+    "useCases": [
+      "compact_summaries",
+      "basic_classification"
+    ],
+    "licenseName": "Placeholder evaluation license"
+  },
+  {
+    "id": "qwen3-4b-thinking-q4",
+    "displayName": "Gemma 4 E2B Q4 3 4B Thinking Q4",
+    "family": "qwen",
+    "runtimeCandidates": [
+      "gemma_local_runtime",
+      "custom"
+    ],
+    "useCases": [
+      "internal_evaluation_only"
+    ],
+    "licenseName": "Placeholder internal evaluation license"
+  }
+]
+

@@ -1,0 +1,51 @@
+[
+  {
+    "id": "quick_start",
+    "displayName": "Quick Start",
+    "subtitle": "Start using private AI sooner",
+    "userFacingDescription": "Basic document cleanup, short summaries, simple case questions over small files, and basic chronology extraction.",
+    "approxDownloadSizeMb": 850,
+    "requiredFreeSpaceMb": 1600,
+    "recommendedOnWifi": true,
+    "minRamGb": 4,
+    "minOsVersion": "Android 12 / iOS 17",
+    "supportsLongDocuments": false,
+    "supportsAdvancedDrafting": false,
+    "supportsBilingualMode": false,
+    "hiddenTechnicalModelId": "llama-3.2-3b-q4",
+    "sortOrder": 1
+  },
+  {
+    "id": "case_associate",
+    "displayName": "Case Associate",
+    "subtitle": "Recommended for most advocates",
+    "userFacingDescription": "Source-backed case Q&A, 50+ page PDF summarization, chronologies, issue extraction, order summaries, and evidence review.",
+    "approxDownloadSizeMb": 3800,
+    "requiredFreeSpaceMb": 6200,
+    "recommendedOnWifi": true,
+    "minRamGb": 6,
+    "minOsVersion": "Android 13 / iOS 18",
+    "supportsLongDocuments": true,
+    "supportsAdvancedDrafting": false,
+    "supportsBilingualMode": true,
+    "hiddenTechnicalModelId": "gemma-4-e2b-q4",
+    "sortOrder": 2
+  },
+  {
+    "id": "senior_drafting",
+    "displayName": "Senior Drafting Support",
+    "subtitle": "Best for longer files and detailed drafts",
+    "userFacingDescription": "Longer-document workflows, more detailed drafting, stronger bilingual handling, senior counsel briefs, and deeper issue analysis.",
+    "approxDownloadSizeMb": 6400,
+    "requiredFreeSpaceMb": 9800,
+    "recommendedOnWifi": true,
+    "minRamGb": 8,
+    "minOsVersion": "Android 14 / iOS 18",
+    "supportsLongDocuments": true,
+    "supportsAdvancedDrafting": true,
+    "supportsBilingualMode": true,
+    "hiddenTechnicalModelId": "gemma-4-e4b-q4",
+    "sortOrder": 3
+  }
+]
+
