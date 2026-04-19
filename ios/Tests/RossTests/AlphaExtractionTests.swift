@@ -228,6 +228,25 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNotNil(health?.userFacingStatus)
     }
 
+    func testRuntimeHealthRedactsConfiguredModelPathToBasename() {
+        let pack = installedPack(.caseAssociate, runtimeMode: .appleFoundationModels)
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: .appleFoundationModels,
+            modelPath: "/tmp/private/device/debug/foundation-adapter.bundle",
+            modelChecksum: String(repeating: "a", count: 64),
+            modelKind: "foundation_adapter"
+        )
+
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: environment
+        )
+
+        XCTAssertEqual(health?.modelPathLabel, "foundation-adapter.bundle")
+    }
+
     @MainActor
     func testPublicLawPreviewUsesVerifiedFieldsOnly() {
         let model = AlphaRossModel()

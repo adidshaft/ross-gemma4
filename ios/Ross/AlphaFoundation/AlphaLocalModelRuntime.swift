@@ -81,6 +81,7 @@ struct AlphaLocalRuntimeHealth: Codable, Hashable, Sendable {
     var runtimeMode: AlphaPackRuntimeMode
     var available: Bool
     var modelPathPresent: Bool
+    var modelPathLabel: String? = nil
     var checksumVerified: Bool
     var supportedTasks: [AlphaLocalModelTask]
     var maxInputChars: Int?
@@ -242,6 +243,7 @@ struct DeterministicDevLocalModelProvider: AlphaLocalModelProvider {
             runtimeMode: runtimeMode,
             available: true,
             modelPathPresent: false,
+            modelPathLabel: nil,
             checksumVerified: true,
             supportedTasks: Array(supportedTasks()),
             maxInputChars: maxInputChars(),
@@ -296,6 +298,7 @@ struct AlphaUnavailableRealLocalModelProvider: AlphaRealLocalModelProvider {
             runtimeMode: runtimeMode,
             available: false,
             modelPathPresent: modelPathLabel != nil,
+            modelPathLabel: modelPathLabel,
             checksumVerified: checksumVerified,
             supportedTasks: Array(plannedTasks),
             maxInputChars: maxInputChars(),
@@ -377,6 +380,7 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
             runtimeMode: runtimeMode,
             available: status.available,
             modelPathPresent: modelPath != nil,
+            modelPathLabel: modelPathLabel,
             checksumVerified: checksumVerified,
             supportedTasks: Array(plannedTasks),
             maxInputChars: maxInputChars(),
@@ -408,7 +412,7 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
                 schemaValid: false,
                 warnings: [runtimeHealth().userFacingStatus],
                 sourceRefs: promptPack.includedSourceRefs,
-                errorCategory: "runtime_unavailable"
+                errorCategory: "unsupported_runtime"
             )
         }
 
@@ -437,7 +441,7 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
                 schemaValid: false,
                 warnings: ["The Apple Foundation Models runtime could not finish this request and Ross kept the request local."],
                 sourceRefs: promptPack.includedSourceRefs,
-                errorCategory: "runtime_generate_failed"
+                errorCategory: "unknown_runtime_error"
             )
         }
     }
@@ -480,12 +484,12 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
             case .available:
                 return (true, "Apple Foundation Models local runtime is available.", nil)
             case .unavailable(let reason):
-                return (false, "Foundation Models runtime unavailable: \(String(describing: reason)).", "runtime_unavailable")
+                return (false, "Foundation Models runtime unavailable: \(String(describing: reason)).", "unsupported_runtime")
             @unknown default:
-                return (false, "Foundation Models runtime availability is unknown.", "runtime_unavailable")
+                return (false, "Foundation Models runtime availability is unknown.", "unsupported_runtime")
             }
         } catch {
-            return (false, "Foundation Models adapter could not be loaded from the configured local path.", "adapter_load_failed")
+            return (false, "Foundation Models adapter could not be loaded from the configured local path.", "runtime_dependency_unavailable")
         }
     }
 
@@ -585,7 +589,7 @@ enum AlphaLocalModelRuntime {
             checksumVerified: checksumVerified,
             statusMessage: "Real local inference is configured for this pack, but remains disabled until a developer explicitly sets ROSS_ENABLE_REAL_LOCAL_INFERENCE=1 for manual QA.",
             plannedTasks: plannedTasks,
-            errorCategory: "runtime_disabled",
+            errorCategory: "unsupported_runtime",
             fallbackActive: true,
             explicitOptInEnabled: explicitOptInEnabled
         )
@@ -630,7 +634,7 @@ enum AlphaLocalModelRuntime {
                 checksumVerified: checksumVerified,
                 statusMessage: "MediaPipe local runtime remains unavailable on iOS in this alpha. Ross will keep deterministic fallback active.",
                 plannedTasks: [.documentClassification, .legalFieldExtraction, .legalFieldVerification, .caseMemorySynthesis, .chronologyGeneration, .orderSummary],
-                errorCategory: "runtime_unavailable",
+                errorCategory: "unsupported_runtime",
                 fallbackActive: true,
                 explicitOptInEnabled: debug.enableRealInference
             )
@@ -642,7 +646,7 @@ enum AlphaLocalModelRuntime {
                 checksumVerified: checksumVerified,
                 statusMessage: "Gemma 4 Q4 local runtime remains unavailable on iOS in this alpha. Ross will keep deterministic fallback active.",
                 plannedTasks: [.documentClassification, .legalFieldExtraction, .legalFieldVerification, .caseMemorySynthesis, .chronologyGeneration, .orderSummary],
-                errorCategory: "runtime_unavailable",
+                errorCategory: "unsupported_runtime",
                 fallbackActive: true,
                 explicitOptInEnabled: debug.enableRealInference
             )
@@ -664,7 +668,7 @@ enum AlphaLocalModelRuntime {
                 checksumVerified: checksumVerified,
                 statusMessage: "Apple Foundation Models require iOS 26 or macOS 26 with a compatible local runtime.",
                 plannedTasks: [.documentClassification, .legalFieldExtraction, .legalFieldVerification, .caseMemorySynthesis, .chronologyGeneration, .orderSummary],
-                errorCategory: "runtime_unavailable",
+                errorCategory: "unsupported_runtime",
                 fallbackActive: true,
                 explicitOptInEnabled: debug.enableRealInference
             )
@@ -692,11 +696,12 @@ enum AlphaLocalModelRuntime {
                 runtimeMode: .unavailable,
                 available: false,
                 modelPathPresent: false,
+                modelPathLabel: nil,
                 checksumVerified: activePack?.checksumVerified ?? false,
                 supportedTasks: [],
                 maxInputChars: nil,
                 estimatedContextTokens: nil,
-                lastErrorCategory: "runtime_unavailable",
+                lastErrorCategory: "unsupported_runtime",
                 userFacingStatus: "Local model runtime unavailable.",
                 fallbackActive: true,
                 explicitOptInEnabled: runtimeEnvironment.enableRealInference

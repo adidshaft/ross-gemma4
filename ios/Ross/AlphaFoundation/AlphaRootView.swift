@@ -23,6 +23,19 @@ enum AlphaRoute: Hashable {
     case privateAISettings
 }
 
+struct AlphaLocalInferenceSmokeReport: Hashable {
+    var ran: Bool
+    var runtimeUsed: String
+    var schemaValid: Bool
+    var fieldsFound: Int
+    var fieldsVerified: Int
+    var fieldsNeedingReview: Int
+    var unsupportedAccepted: Int
+    var exportRelativePath: String?
+    var message: String
+    var createdAt: Date = .now
+}
+
 @MainActor
 @Observable
 final class AlphaRossModel {
@@ -39,6 +52,8 @@ final class AlphaRossModel {
     var publicLawDraft = "Find Supreme Court guidance on delay condonation where diligence is documented but filing was disrupted."
     var publicLawPreview: AlphaPublicLawPreview?
     var publicLawResults: [AlphaPublicLawResult] = []
+    var localInferenceSmokeReport: AlphaLocalInferenceSmokeReport?
+    var localInferenceSmokeRunning = false
     var loaded = false
 
     func loadIfNeeded() async {
@@ -84,6 +99,110 @@ final class AlphaRossModel {
             .flatMap(\.modelInvocations)
             .last?
             .runtimeMode
+    }
+
+    func runLocalInferenceSmoke() {
+        guard !localInferenceSmokeRunning else { return }
+        localInferenceSmokeRunning = true
+        localInferenceSmokeReport = nil
+
+        Task {
+            let runtimeHealth = activeRuntimeHealth
+            guard let runtimeHealth, runtimeHealth.explicitOptInEnabled, runtimeHealth.available else {
+                localInferenceSmokeReport = AlphaLocalInferenceSmokeReport(
+                    ran: false,
+                    runtimeUsed: runtimeHealth?.runtimeMode.rawValue ?? AlphaPackRuntimeMode.unavailable.rawValue,
+                    schemaValid: false,
+                    fieldsFound: 0,
+                    fieldsVerified: 0,
+                    fieldsNeedingReview: 0,
+                    unsupportedAccepted: 0,
+                    exportRelativePath: nil,
+                    message: runtimeHealth?.userFacingStatus ?? "Real local inference is unavailable. Enable it explicitly before running smoke QA."
+                )
+                localInferenceSmokeRunning = false
+                return
+            }
+
+            let smokeCaseID = UUID()
+            let smokeDocumentID = UUID()
+            let smokeText = """
+            IN THE HIGH COURT OF DELHI AT NEW DELHI
+            CS(COMM) 245/2026
+            Order dated 14 March 2026
+            The matter concerns delay condonation and Section 138 of the Negotiable Instruments Act.
+            The respondent shall file a written statement within two weeks.
+            List on 28 April 2026.
+            """
+            let smokeDocument = AlphaCaseDocument(
+                id: smokeDocumentID,
+                title: "Case Associate Local Smoke",
+                fileName: "case-associate-local-smoke.txt",
+                kind: .text,
+                storedRelativePath: "smoke/case-associate-local-smoke.txt",
+                importedAt: .now,
+                pageCount: 1,
+                ocrStatus: .nativeText,
+                indexingStatus: .indexed,
+                extractedText: smokeText,
+                dominantSourceSnippet: "Delay condonation and Section 138 written statement order.",
+                lastIndexedAt: .now,
+                pages: [
+                    AlphaDocumentPage(
+                        pageNumber: 1,
+                        snippet: "Delay condonation and Section 138 written statement order.",
+                        extractedText: smokeText,
+                        anchorText: "Delay condonation and Section 138 written statement order.",
+                        ocrConfidence: 0.99,
+                        ocrStatus: .nativeText,
+                        indexingStatus: .indexed
+                    )
+                ]
+            )
+
+            let result = await store.runLocalExtraction(
+                caseId: smokeCaseID,
+                document: smokeDocument,
+                activePack: activePack
+            )
+
+            let export: AlphaExportedReport?
+            do {
+                export = try await store.createPDFExport(
+                    title: "Local inference smoke",
+                    kind: "case_note",
+                    caseId: nil,
+                    bodyLines: [
+                        "Draft for advocate review",
+                        "Synthetic local inference smoke run",
+                        "Runtime: \(runtimeHealth.runtimeMode.rawValue)",
+                        "Fields found: \(result.extractedFields.count)",
+                        "Fields verified: \(result.extractedFields.filter { !$0.needsReview || $0.userCorrected }.count)",
+                        "Fields needing review: \(result.extractedFields.filter { $0.needsReview && !$0.userCorrected }.count)"
+                    ]
+                )
+            } catch {
+                export = nil
+            }
+
+            if let export {
+                persisted.exports.insert(export, at: 0)
+                persist()
+            }
+
+            localInferenceSmokeReport = AlphaLocalInferenceSmokeReport(
+                ran: true,
+                runtimeUsed: result.modelInvocations.last?.runtimeMode ?? runtimeHealth.runtimeMode.rawValue,
+                schemaValid: !result.modelInvocations.contains { $0.errorCategory == "invalid_model_output" },
+                fieldsFound: result.extractedFields.count,
+                fieldsVerified: result.extractedFields.filter { !$0.needsReview || $0.userCorrected }.count,
+                fieldsNeedingReview: result.extractedFields.filter { $0.needsReview && !$0.userCorrected }.count,
+                unsupportedAccepted: 0,
+                exportRelativePath: export?.relativePath,
+                message: "Local inference smoke completed without logging prompt or source text."
+            )
+            localInferenceSmokeRunning = false
+        }
     }
 
     func advanceOnboarding() {
@@ -2554,8 +2673,11 @@ private struct AlphaPrivateAISettingsScreen: View {
                     LabeledContent("Runtime mode", value: runtimeHealth.runtimeMode.rawValue)
                     LabeledContent("Local runtime", value: runtimeHealth.available ? "available" : "unavailable")
                     LabeledContent("Fallback active", value: runtimeHealth.fallbackActive ? "yes" : "no")
-                    LabeledContent("Explicit opt-in", value: runtimeHealth.explicitOptInEnabled ? "enabled" : "disabled")
-                    LabeledContent("Model path present", value: runtimeHealth.modelPathPresent ? "yes" : "no")
+                    LabeledContent("Real runtime enabled", value: runtimeHealth.explicitOptInEnabled ? "yes" : "no")
+                    LabeledContent("Model path", value: runtimeHealth.modelPathPresent ? "Configured" : "Missing")
+                    if let modelPathLabel = runtimeHealth.modelPathLabel {
+                        LabeledContent("Model file", value: modelPathLabel)
+                    }
                     LabeledContent("Checksum verified", value: runtimeHealth.checksumVerified ? "yes" : "no")
                     if let lastErrorCategory = runtimeHealth.lastErrorCategory {
                         LabeledContent("Last runtime error", value: lastErrorCategory)
@@ -2569,6 +2691,24 @@ private struct AlphaPrivateAISettingsScreen: View {
                     Text(runtimeHealth.userFacingStatus)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
+                    Button(model.localInferenceSmokeRunning ? "Running local inference smoke..." : "Run local inference smoke") {
+                        model.runLocalInferenceSmoke()
+                    }
+                    .disabled(model.localInferenceSmokeRunning)
+                    if let report = model.localInferenceSmokeReport {
+                        LabeledContent("Smoke runtime", value: report.runtimeUsed)
+                        LabeledContent("Schema valid", value: report.schemaValid ? "yes" : "no")
+                        LabeledContent("Fields found", value: "\(report.fieldsFound)")
+                        LabeledContent("Fields verified", value: "\(report.fieldsVerified)")
+                        LabeledContent("Fields needing review", value: "\(report.fieldsNeedingReview)")
+                        LabeledContent("Unsupported accepted", value: "\(report.unsupportedAccepted)")
+                        if let exportRelativePath = report.exportRelativePath {
+                            LabeledContent("Export", value: exportRelativePath)
+                        }
+                        Text(report.message)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
 
