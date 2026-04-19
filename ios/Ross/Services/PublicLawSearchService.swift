@@ -19,21 +19,21 @@ struct StubPublicLawSearchService: PublicLawSearchServicing {
 
         return SanitizedPublicQueryPreview(
             publicQuery: sanitizedQuery,
-            purpose: "Public-law search remains optional and distinct from private case work.",
+            purpose: "Ross will search only the legal topic shown below.",
             removedElements: [
                 "Case title and forum references",
                 "Any long factual passage or raw local text",
                 "Case identifiers and personal contact details"
             ],
-            confirmationNote: "Review this query before any network request. Only the sanitized public query should leave the device."
+            confirmationNote: "No case files or document text will be sent."
         )
     }
 
     func search(for preview: SanitizedPublicQueryPreview) async -> [PublicLawResult] {
         await MainActor.run {
             privacyLedger.recordNetwork(
-                title: "Public-law query sent",
-                detail: "Only the sanitized public query crossed the network boundary.",
+                title: "Looked up a law",
+                detail: "Ross sent only a generic public-law query. Your case files stayed on this device.",
                 boundary: .publicLaw,
                 dataClass: .sanitizedPublicQuery,
                 direction: .outbound

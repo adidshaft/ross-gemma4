@@ -11,7 +11,7 @@ class DefaultDeviceCapabilityRecommender : DeviceCapabilityRecommender {
     override fun recommend(snapshot: DeviceCapabilitySnapshot): DeviceCapabilityRecommendation {
         return when {
             snapshot.batterySaverEnabled || snapshot.memoryGb <= 6 -> DeviceCapabilityRecommendation(
-                headline = "Instant mode is the safest default for this device.",
+                headline = "Quick responses are the safest default for this device.",
                 reason = "We will keep the desk responsive, defer heavier downloads, and let you begin intakes immediately.",
                 recommendedMode = SetupMode.Instant,
                 suggestedOfferId = "intake-ready",
@@ -20,7 +20,7 @@ class DefaultDeviceCapabilityRecommender : DeviceCapabilityRecommender {
 
             snapshot.prefersOfflineOnly && snapshot.freeStorageGb >= 18 -> DeviceCapabilityRecommendation(
                 headline = "This device can keep the full desk local.",
-                reason = "There is enough room for a deeper offline pack without exposing case notes during setup.",
+                reason = "There is enough room for a deeper offline assistant without exposing case notes during setup.",
                 recommendedMode = SetupMode.FullLocal,
                 suggestedOfferId = "full-library",
                 showInstantModeBanner = false,
@@ -44,8 +44,8 @@ class DefaultInstantModeAdvisor : InstantModeAdvisor {
         }
 
         return InstantModeBanner(
-            title = "Instant mode is active",
-            body = "Core intake, capture, and ledger tools stay available while heavier local packs finish in the background.",
+            title = "Quick responses are ready",
+            body = "Core intake, capture, and activity tools stay available while larger assistant files finish in the background.",
             actionLabel = "Keep working",
         )
     }

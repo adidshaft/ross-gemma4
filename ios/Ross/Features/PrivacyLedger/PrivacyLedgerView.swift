@@ -14,13 +14,13 @@ private enum LedgerFilter: String, CaseIterable, Identifiable {
         case .all:
             "All"
         case .localOnly:
-            "Local"
+            "On this phone"
         case .modelDelivery:
-            "Model"
+            "App setup"
         case .entitlement:
-            "Delivery"
+            "Account check"
         case .publicLaw:
-            "Public law"
+            "Law search"
         }
     }
 }
@@ -47,7 +47,7 @@ struct PrivacyLedgerView: View {
                     }
                 }
             }
-            .navigationTitle("Privacy Ledger")
+            .navigationTitle("Activity Log")
         }
     }
 
@@ -88,7 +88,6 @@ private struct PrivacyLedgerRow: View {
             HStack {
                 Label(entry.dataClass.title, systemImage: "lock")
                 Spacer()
-                Text(entry.direction.title)
                 Text(entry.timestamp.formatted(date: .abbreviated, time: .shortened))
             }
             .font(.caption)

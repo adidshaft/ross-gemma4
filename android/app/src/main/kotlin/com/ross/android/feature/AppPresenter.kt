@@ -23,14 +23,14 @@ class AppPresenter(
     private var captureDraft = container.quickCaptureService.draft()
     private var lawQuery = "public records response deadline"
     private var lawPreview = PublicLawPreview(
-        title = "Ready for a network-safe preview",
+        title = "Ready to look up a law",
         jurisdiction = "Public-law reference",
-        summary = "Run a preview when you need statutes, deadlines, or procedure language without carrying case facts across the network boundary.",
+        summary = "Check a legal topic when you need statutes, deadlines, or procedure language without sending your case facts.",
         highlights = listOf(
             "Use neutral legal topics instead of client identifiers.",
             "Review the ledger after each outward preview.",
         ),
-        cautionLabel = "No preview has been sent yet.",
+        cautionLabel = "No search has been sent yet.",
     )
 
     var uiState by mutableStateOf(buildState())

@@ -9,7 +9,6 @@ struct PrivateAISettingsView: View {
         List {
             Section("Device recommendation") {
                 LabeledContent("Recommended tier", value: state.deviceCapability.recommendedTier.title)
-                LabeledContent("Memory", value: "\(state.deviceCapability.totalMemoryGB) GB")
                 LabeledContent("Free storage", value: "\(state.deviceCapability.freeStorageGB) GB")
                 Text(state.deviceCapability.recommendationReason)
                     .font(.footnote)
@@ -40,7 +39,7 @@ struct PrivateAISettingsView: View {
                     }
                 }
 
-                Button("Stage Recommended Pack") {
+                Button("Download recommended assistant") {
                     guard let pack = state.availablePacks.first(where: { $0.tier == state.deviceCapability.recommendedTier }) else {
                         return
                     }
@@ -50,11 +49,7 @@ struct PrivateAISettingsView: View {
             }
 
             Section("Runtime") {
-                Toggle("Instant Mode", isOn: $settingsStore.settings.instantModeEnabled)
-                Toggle("Show technical details", isOn: $settingsStore.settings.showTechnicalDetails)
-                Text(state.deviceCapability.instantModeReason)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                Toggle("Quick responses (uses less battery)", isOn: $settingsStore.settings.instantModeEnabled)
             }
 
             Section("Download queue") {
@@ -68,7 +63,7 @@ struct PrivateAISettingsView: View {
                                 Text(job.packTier.title)
                                     .font(.subheadline.weight(.semibold))
                                 Spacer()
-                                Text(job.phase.title)
+                                Text(job.phase.displayTitle)
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(.secondary)
                             }
@@ -81,30 +76,9 @@ struct PrivateAISettingsView: View {
                                 Button("Resume") {
                                     modelDownloadService.resume(jobID: job.id)
                                 }
-                            } else if job.phase == .queued || job.phase == .scheduled {
+                            } else if job.phase == .queued || job.phase == .scheduled || job.phase == .running {
                                 Button("Pause") {
                                     modelDownloadService.pause(jobID: job.id)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if settingsStore.settings.showTechnicalDetails {
-                Section("Technical details") {
-                    ForEach(state.availablePacks) { pack in
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(pack.tier.title)
-                                .font(.subheadline.weight(.semibold))
-
-                            ForEach(pack.technicalDetails) { detail in
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(detail.name)
-                                        .font(.footnote.weight(.semibold))
-                                    Text(detail.purpose)
-                                        .font(.footnote)
-                                        .foregroundStyle(.secondary)
                                 }
                             }
                         }

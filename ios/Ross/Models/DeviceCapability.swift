@@ -39,6 +39,6 @@ struct DeviceCapability: Hashable, Sendable {
         recommendedTier: .caseAssociate,
         recommendationReason: "Balanced local review with room for source-backed case questions and chronologies.",
         supportsInstantMode: true,
-        instantModeReason: "Short local prompts can run immediately with a lighter pack."
+        instantModeReason: "Short local prompts can run immediately with a lighter assistant."
     )
 }

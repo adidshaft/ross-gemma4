@@ -2,9 +2,9 @@ package com.ross.android.core.model
 
 enum class WorkbenchSection(val label: String) {
     Cases("Cases"),
-    Capture("Quick capture"),
-    Law("Public law"),
-    Ledger("Privacy ledger"),
+    Capture("Notes"),
+    Law("Look up a law"),
+    Ledger("Activity"),
     Settings("Settings"),
 }
 
@@ -18,6 +18,15 @@ enum class DownloadPhase {
     Queued,
     Preparing,
     Ready,
+
+    ;
+
+    val displayTitle: String
+        get() = when (this) {
+            Queued -> "Waiting to start"
+            Preparing -> "Ready to download"
+            Ready -> "Downloading..."
+        }
 }
 
 enum class LedgerLocality(val label: String) {

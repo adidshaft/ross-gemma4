@@ -38,7 +38,7 @@ struct DefaultDeviceCapabilityService: DeviceCapabilityProviding {
         if supportsInstantMode {
             instantModeReason = "Short local prompts can stay responsive on this device."
         } else if lowPowerModeEnabled {
-            instantModeReason = "Instant Mode is reduced while Low Power Mode is on."
+            instantModeReason = "Quick responses are reduced while Low Power Mode is on."
         } else {
             instantModeReason = "This device is better suited to deeper local review than the fastest short-turn mode."
         }

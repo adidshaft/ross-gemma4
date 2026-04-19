@@ -17,13 +17,13 @@ class StubPublicLawGateway : PublicLawGateway {
         return PublicLawPreview(
             title = "Preview for $safeQuery",
             jurisdiction = "Public-law reference",
-            summary = "This preview isolates statute and procedure language from the broader case workspace so legal research crosses the network boundary without client notes attached.",
+            summary = "Ross keeps this search separate from your case notes so you can look up a law without sending private matter details.",
             highlights = listOf(
                 "Check filing or response deadlines before drafting escalation language.",
                 "Prefer jurisdiction-specific triggers over broad constitutional framing on first pass.",
                 "Keep factual identifiers out of outward research prompts unless strictly necessary.",
             ),
-            cautionLabel = "Network boundary used: no case facts attached.",
+            cautionLabel = "Your case notes stay on this phone.",
         )
     }
 }
@@ -50,8 +50,8 @@ class NetworkBackedPublicLawPreviewService(
         ledgerService.record(
             PrivacyLedgerEntry(
                 id = "ledger-law-${System.currentTimeMillis()}",
-                title = "Public-law preview requested",
-                detail = "Sent a network-safe preview request for '${query.ifBlank { "default topic" }}'.",
+                title = "Looked up a law",
+                detail = "Ross checked '${query.ifBlank { "a legal topic" }}' without sending case notes.",
                 occurredAt = "Just now",
                 locality = LedgerLocality.Escorted,
             ),

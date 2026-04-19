@@ -177,7 +177,7 @@ final class BackgroundModelDownloadService: NSObject, ModelDownloadManaging, URL
             }
 
             self.updateJob(jobID) { job in
-                job.phase = .scheduled
+                job.phase = .running
                 job.progress = progress
                 job.deliveryNote = "Background delivery is in progress and can resume if interrupted."
             }

@@ -32,7 +32,7 @@ enum CapabilityTier: String, CaseIterable, Codable, Hashable, Identifiable, Send
     var focusAreas: [String] {
         switch self {
         case .quickStart:
-            ["Quick capture review", "Short summaries", "Instant Mode for short prompts"]
+            ["Quick capture review", "Short summaries", "Quick responses for short prompts"]
         case .caseAssociate:
             ["Source-backed case Q&A", "Chronologies and issues", "Order and evidence review"]
         case .seniorDraftingSupport:
@@ -87,22 +87,25 @@ struct ModelPack: Identifiable, Hashable, Sendable {
 enum ModelDownloadPhase: String, Hashable, Sendable {
     case queued
     case scheduled
+    case running
     case paused
     case completed
     case failed
 
-    var title: String {
+    var displayTitle: String {
         switch self {
         case .queued:
-            "Queued"
+            "Waiting to start"
         case .scheduled:
-            "Scheduled"
+            "Ready to download"
+        case .running:
+            "Downloading..."
         case .paused:
             "Paused"
         case .completed:
-            "Completed"
+            "Complete"
         case .failed:
-            "Needs review"
+            "Failed - tap to retry"
         }
     }
 }

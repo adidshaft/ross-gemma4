@@ -70,6 +70,7 @@ struct InstantModeAssessment: Hashable, Sendable {
     let title: String
     let detail: String
     let isAvailable: Bool
+    let isBlocking: Bool
     let guidance: String
 }
 

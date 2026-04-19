@@ -159,7 +159,7 @@ private fun WorkbenchHeaderDeck(
 ) {
     instantModeBanner?.let { banner ->
         HeroCard(
-            eyebrow = "Instant Mode",
+            eyebrow = "Quick responses",
             title = banner.title,
             body = banner.body,
         )
@@ -167,8 +167,8 @@ private fun WorkbenchHeaderDeck(
 
     downloadSession?.let { session ->
         SectionCard(
-            title = "Private AI Pack",
-            subtitle = "Background delivery stays visible and resumable.",
+            title = "Assistant setup",
+            subtitle = "Your assistant is downloading. You can use Ross in the meantime.",
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -181,7 +181,7 @@ private fun WorkbenchHeaderDeck(
                 )
                 MetricCard(
                     label = "State",
-                    value = session.phase.name.lowercase().replaceFirstChar(Char::titlecase),
+                    value = session.phase.displayTitle,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -207,7 +207,7 @@ private fun SectionSelector(
     onSectionSelected: (WorkbenchSection) -> Unit,
 ) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(WorkbenchSection.entries) { section ->
+        items(WorkbenchSection.entries.filterNot { it == WorkbenchSection.Law }) { section ->
             FilterChip(
                 selected = activeSection == section,
                 onClick = { onSectionSelected(section) },
@@ -271,7 +271,7 @@ private fun CasesPane(
             eyebrow = selectedCase?.urgencyLabel ?: "Case desk",
             title = selectedCase?.title ?: "No active matter selected",
             body = selectedCase?.nextStep
-                ?: "Pick a matter to open the local dashboard and review the current next step.",
+                ?: "Tap any matter below to open it.",
         )
 
         SectionCard(
@@ -289,26 +289,8 @@ private fun CasesPane(
             }
         }
 
-        selectedCase?.let { caseSummary ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                MetricCard(
-                    label = "Sensitivity",
-                    value = caseSummary.sensitivity,
-                    modifier = Modifier.weight(1f),
-                )
-                MetricCard(
-                    label = "Urgency",
-                    value = caseSummary.urgencyLabel,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-
         SectionCard(
-            title = "Active workspace",
+            title = "Case summary",
             subtitle = "A concise working view of the matter, with the next actions closer than the raw bundle.",
         ) {
             Text(
@@ -343,14 +325,14 @@ private fun CasesPane(
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Open Quick Capture")
+                    Text("File a note")
                 }
                 Button(
                     onClick = { onSectionSelected(WorkbenchSection.Law) },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Check Public Law")
+                    Text("Look up a law")
                 }
             }
         }
@@ -418,19 +400,19 @@ private fun LawPane(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
         HeroCard(
-            eyebrow = "Public boundary",
-            title = "Preview the public-law query before any network request leaves the device.",
-            body = "This surface is for neutral legal topics only. It stays separate from the private case workspace.",
+            eyebrow = "Look up a law",
+            title = "Preview what Ross will search before anything goes online.",
+            body = "This screen is only for general legal topics. Your case notes stay on this phone.",
         )
 
         SectionCard(
-            title = "Sanitized query preview",
-            subtitle = "Use neutral legal language instead of case facts, names, or file content.",
+            title = "What legal topic do you want to look up?",
+            subtitle = "Ross removes your case details before searching.",
         ) {
             OutlinedTextField(
                 value = state.lawQuery,
                 onValueChange = onLawQueryChanged,
-                label = { Text("Preview topic") },
+                label = { Text("Law topic") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(8.dp)
@@ -440,7 +422,7 @@ private fun LawPane(
                 onClick = onRunLawPreview,
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Run safe preview")
+                Text("Check before searching")
             }
         }
 
@@ -452,7 +434,7 @@ private fun LawPane(
 private fun LedgerPane(state: WorkbenchUiState) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
-            text = "Privacy ledger",
+            text = "Activity",
             style = MaterialTheme.typography.titleLarge,
         )
         state.ledgerEntries.forEach { entry ->
@@ -480,32 +462,32 @@ private fun SettingsPane(
             style = MaterialTheme.typography.titleLarge,
         )
         SettingToggleRow(
-            title = "Allow instant mode",
-            body = "Keep lightweight intake tools available while heavier packs stage in the background.",
+            title = "Enable quick responses",
+            body = "Keeps Ross responsive while larger files load in the background.",
             checked = settings.instantModeAllowed,
             onCheckedChange = { checked ->
                 onUpdateSettings { current -> current.copy(instantModeAllowed = checked) }
             },
         )
         SettingToggleRow(
-            title = "Require biometric gate",
-            body = "Prompt for device auth before returning to the workbench after backgrounding.",
+            title = "Lock with fingerprint / Face unlock",
+            body = "Asks for device unlock when returning to Ross.",
             checked = settings.biometricGateEnabled,
             onCheckedChange = { checked ->
                 onUpdateSettings { current -> current.copy(biometricGateEnabled = checked) }
             },
         )
         SettingToggleRow(
-            title = "Escort network requests",
-            body = "Keep outward requests limited to law previews and setup checks that exclude case facts.",
+            title = "Only use internet for law search",
+            body = "Ross will not send anything online except when you look up a law.",
             checked = settings.escortNetworkRequests,
             onCheckedChange = { checked ->
                 onUpdateSettings { current -> current.copy(escortNetworkRequests = checked) }
             },
         )
         SettingToggleRow(
-            title = "Wi-Fi only downloads",
-            body = "Reserve staged local pack downloads for unmetered connections when possible.",
+            title = "Download on Wi-Fi only",
+            body = "Ross will only download its assistant files on Wi-Fi.",
             checked = settings.wifiOnlyDownloads,
             onCheckedChange = { checked ->
                 onUpdateSettings { current -> current.copy(wifiOnlyDownloads = checked) }
@@ -521,25 +503,33 @@ private fun SettingToggleRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
-    SectionCard(
-        title = title,
-        subtitle = body,
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = 16.dp)
         ) {
             Text(
-                text = if (checked) "Enabled" else "Disabled",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.secondary,
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
             )
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
+            Text(
+                text = body,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+        )
     }
 }
 

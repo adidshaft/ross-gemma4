@@ -11,13 +11,13 @@ enum PrivacyBoundaryKind: String, CaseIterable, Hashable, Identifiable, Sendable
     var title: String {
         switch self {
         case .localOnly:
-            "Local only"
+            "Stayed on phone"
         case .entitlementDelivery:
-            "Entitlement and delivery"
+            "Account check"
         case .modelDelivery:
-            "Model delivery"
+            "App setup"
         case .publicLaw:
-            "Public-law search"
+            "Law search only"
         }
     }
 }
@@ -31,13 +31,13 @@ enum PrivacyDataClass: String, Hashable, Sendable {
     var title: String {
         switch self {
         case .localOnly:
-            "Local only"
+            "On this phone"
         case .noCaseData:
-            "No case data"
+            "No case details"
         case .accountToken:
             "Account token"
         case .sanitizedPublicQuery:
-            "Sanitized public query"
+            "Law topic only"
         }
     }
 }
@@ -91,24 +91,24 @@ extension PrivacyLedgerEntry {
     static let seedEntries: [PrivacyLedgerEntry] = [
         PrivacyLedgerEntry(
             timestamp: Calendar.current.date(byAdding: .hour, value: -6, to: .now) ?? .now,
-            title: "Local indexing pass completed",
-            detail: "Document indexing stayed on-device and refreshed the case workspace.",
+            title: "Reviewed case files on this phone",
+            detail: "Ross checked your documents on this device and refreshed the case workspace.",
             boundary: .localOnly,
             dataClass: .localOnly,
             direction: .onDevice
         ),
         PrivacyLedgerEntry(
             timestamp: Calendar.current.date(byAdding: .hour, value: -4, to: .now) ?? .now,
-            title: "Model catalog checked",
-            detail: "Pack availability was checked without sending case materials.",
+            title: "Checked assistant availability",
+            detail: "Ross checked setup availability without sending case materials.",
             boundary: .entitlementDelivery,
             dataClass: .noCaseData,
             direction: .outbound
         ),
         PrivacyLedgerEntry(
             timestamp: Calendar.current.date(byAdding: .minute, value: -35, to: .now) ?? .now,
-            title: "Prior public-law search cached",
-            detail: "A sanitized public query returned citations and snippets for later local review.",
+            title: "Looked up a law",
+            detail: "Ross returned public-law references without sending anything from your case files.",
             boundary: .publicLaw,
             dataClass: .sanitizedPublicQuery,
             direction: .inbound

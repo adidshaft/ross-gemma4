@@ -114,14 +114,14 @@ extension CaseFile {
                 )
             ],
             workspace: WorkspaceSnapshot(
-                chronologySummary: "The file shows an inspection notice, a follow-up representation, and a recent municipal demand. The chronology is sufficiently complete for a next-hearing note, but the compliance sequence still needs one clean page reference set.",
+                chronologySummary: "Last updated today. Hearing in 6 days. Ross has the notice, representation, and demand ready for a hearing note, but the compliance sequence still needs one clean reference set.",
                 issueHighlights: [
                     "Whether the demand proceeds without addressing the representation already on record.",
                     "Whether the inspection materials and notice timing support a procedural fairness argument."
                 ],
                 evidenceNotes: [
-                    "Photographs are present but not yet indexed locally.",
-                    "Representation acknowledgment page should be surfaced as a source chip for the hearing note."
+                    "Photographs are present but Ross has not read them yet.",
+                    "Representation acknowledgment page should be surfaced as a reference for the hearing note."
                 ],
                 draftTasks: [
                     "Prepare a short chronology for the next hearing.",
@@ -161,13 +161,13 @@ extension CaseFile {
                 )
             ],
             workspace: WorkspaceSnapshot(
-                chronologySummary: "The file is ready for an evidence-focused review. The latest local indexing pass captured the assessment order and the reconciliation note, making this a strong candidate for source-backed issue extraction.",
+                chronologySummary: "Last updated yesterday. Hearing in 14 days. The order and reconciliation note are ready for an evidence-focused review.",
                 issueHighlights: [
                     "Mismatch between the assessment reasoning and the reconciliation schedule.",
                     "Need to isolate whether the authority engaged with the clarification already supplied."
                 ],
                 evidenceNotes: [
-                    "Reconciliation statement is indexed locally.",
+                    "Reconciliation statement is ready for review on this phone.",
                     "A short hearing-preparation note can be generated once the discrepancy pages are pinned."
                 ],
                 draftTasks: [

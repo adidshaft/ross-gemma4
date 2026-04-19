@@ -36,8 +36,8 @@ struct StubLocalRuntimeService: LocalRuntimeServicing {
             )
         }
 
-        let packSummary = activePack?.title ?? "Capture-first mode"
-        let firstIssue = caseFile.workspace.issueHighlights.first ?? "Reconfirm the strongest issue from the indexed bundle."
+        let packSummary = activePack?.title ?? "basic local review"
+        let firstIssue = caseFile.workspace.issueHighlights.first ?? "Reconfirm the strongest issue from the case file."
         let firstTask = caseFile.workspace.draftTasks.first ?? "Prepare a short source-backed note."
         let instantModeLine = instantModeAssessment(
             deviceCapability: .placeholder,
@@ -51,11 +51,11 @@ struct StubLocalRuntimeService: LocalRuntimeServicing {
             sections: [
                 AskCaseSection(
                     title: "Question focus",
-                    body: question.isEmpty ? "Review the indexed workspace and restate the next hearing objective." : question
+                    body: question.isEmpty ? "Review the case file and restate the next hearing objective." : question
                 ),
                 AskCaseSection(
                     title: "Working answer",
-                    body: "The current file suggests the leading point is: \(firstIssue) The safest next step is to anchor the answer to the source chips already surfaced in the workspace before expanding into a longer draft."
+                    body: "The current file suggests the leading point is: \(firstIssue) The safest next step is to anchor the answer to the references already surfaced in the workspace before expanding into a longer draft."
                 ),
                 AskCaseSection(
                     title: "Preparation note",
@@ -73,36 +73,40 @@ struct StubLocalRuntimeService: LocalRuntimeServicing {
     ) -> InstantModeAssessment {
         guard settings.instantModeEnabled else {
             return InstantModeAssessment(
-                title: "Instant Mode off",
-                detail: "Short local turns are disabled in settings.",
+                title: "Quick responses are off",
+                detail: "Ross will still answer from your case files.",
                 isAvailable: false,
-                guidance: "Turn Instant Mode on in Private AI settings when you want faster short reviews."
+                isBlocking: false,
+                guidance: "Turn quick responses back on in Settings if you want faster short reviews."
             )
         }
 
         guard let activePack else {
             return InstantModeAssessment(
-                title: "Install a Private AI Pack",
-                detail: "The app can still capture and organize locally, but instant review is limited without a pack.",
+                title: "Set up your private assistant",
+                detail: "Ross can organize case files now, but answering case questions needs assistant setup.",
                 isAvailable: false,
-                guidance: "Choose a Private AI Pack to enable fuller local review."
+                isBlocking: true,
+                guidance: "Choose an assistant in Settings to answer questions from your case files."
             )
         }
 
         guard activePack.supportsInstantMode, deviceCapability.supportsInstantMode else {
             return InstantModeAssessment(
-                title: "Instant Mode limited",
+                title: "Quick responses are unavailable",
                 detail: deviceCapability.instantModeReason,
                 isAvailable: false,
-                guidance: "Use standard local review for deeper tasks on this device."
+                isBlocking: false,
+                guidance: "Ross can still review this case on this device."
             )
         }
 
         return InstantModeAssessment(
-            title: "Instant Mode available",
+            title: "Quick responses are ready",
             detail: activePack.instantModeSummary,
             isAvailable: true,
-            guidance: "Use Instant Mode for short, source-backed questions and keep longer drafting in the full workspace."
+            isBlocking: false,
+            guidance: "Use quick responses for short, source-backed questions and keep longer drafting in the full workspace."
         )
     }
 }

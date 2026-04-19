@@ -24,12 +24,12 @@ struct QuickCaptureReviewView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
 
                 ReviewSection(
-                    title: "Detected highlights",
+                    title: "Ross noticed these things - please check",
                     items: state.quickCaptureDraft.extractedHighlights
                 )
 
                 ReviewSection(
-                    title: "Review before filing",
+                    title: "Check before filing",
                     items: state.quickCaptureDraft.redactionChecklist
                 )
 
@@ -73,7 +73,7 @@ struct QuickCaptureReviewView: View {
                     )
                     confirmationMessage = "The capture remains local and was kept in the review inbox."
                 } label: {
-                    Text("Keep In Capture Inbox")
+                    Text("Save for later")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
@@ -81,7 +81,7 @@ struct QuickCaptureReviewView: View {
             .padding(20)
         }
         .background(Color.rossGroupedBackground)
-        .navigationTitle("Quick Capture Review")
+        .navigationTitle("Review Capture")
         .rossInlineNavigationTitle()
     }
 

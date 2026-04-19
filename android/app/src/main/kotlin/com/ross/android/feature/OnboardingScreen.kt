@@ -54,10 +54,10 @@ fun OnboardingScreen(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Prepare private workbench")
+                        Text("Set up my private assistant")
                     }
                     Text(
-                        text = "You can change setup choices later. Ross keeps onboarding focused on outcomes and privacy posture, not technical model names.",
+                        text = "You can change this later in Settings.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -92,7 +92,6 @@ fun OnboardingScreen(
                             verticalArrangement = Arrangement.spacedBy(32.dp),
                         ) {
                             OnboardingHero(state = state)
-                            PromiseDeck(promises = state.copy.promises)
                         }
                         Column(
                             modifier = Modifier.weight(0.95f),
@@ -110,7 +109,6 @@ fun OnboardingScreen(
                         verticalArrangement = Arrangement.spacedBy(32.dp),
                     ) {
                         OnboardingHero(state = state)
-                        PromiseDeck(promises = state.copy.promises)
                         OfferSection(
                             state = state,
                             onSelectOffer = onSelectOffer,
@@ -135,7 +133,6 @@ private fun OnboardingHero(state: OnboardingUiState) {
                 .padding(32.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            HeaderBadge(text = "ROSS SYSTEM")
             Text(
                 text = state.copy.title,
                 style = MaterialTheme.typography.headlineMedium,
@@ -156,12 +153,12 @@ private fun OnboardingHero(state: OnboardingUiState) {
                     modifier = Modifier.weight(1f),
                 )
                 InfoChip(
-                    text = "Visible Privacy Ledger",
+                    text = "Activity log included",
                     modifier = Modifier.weight(1f),
                 )
             }
             InfoChip(
-                text = "Model downloads, account checks, and optional public-law search stay separate from case files.",
+                text = "Your case files never leave this phone.",
                 modifier = Modifier.fillMaxWidth(),
             )
 
@@ -195,45 +192,6 @@ private fun OnboardingHero(state: OnboardingUiState) {
 }
 
 @Composable
-private fun PromiseDeck(promises: List<String>) {
-    OutlinedCard(
-        colors = CardDefaults.outlinedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
-    ) {
-        Column(
-            modifier = Modifier.padding(32.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Text(
-                text = "Setup promises",
-                style = MaterialTheme.typography.titleLarge,
-            )
-            Text(
-                text = "The first run explains the privacy boundary in plain language before any pack download begins.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.padding(4.dp))
-            promises.forEach { promise ->
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Text(
-                        text = promise,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun OfferSection(
     state: OnboardingUiState,
     onSelectOffer: (String) -> Unit,
@@ -244,7 +202,7 @@ private fun OfferSection(
             style = MaterialTheme.typography.titleLarge,
         )
         Text(
-            text = "Friendly capability tiers stay visible here so a busy advocate can decide quickly. Technical pack details stay tucked away until settings.",
+            text = "Pick one and start using Ross. You can change this later in Settings.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

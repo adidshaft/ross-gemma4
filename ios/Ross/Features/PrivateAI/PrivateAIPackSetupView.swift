@@ -11,45 +11,29 @@ struct PrivateAIPackSetupView: View {
                 RossHeroCard(
                     eyebrow: "Private AI setup",
                     title: "Choose the local work tier that fits this device.",
-                    detail: "The pack download happens after installation so Ross can stay light at install time and still explain storage, network posture, and Instant Mode clearly."
+                    detail: "Ross stays light at install time and adds stronger private review as setup completes."
                 ) {
                     ViewThatFits(in: .horizontal) {
                         HStack(spacing: 12) {
                             RossInfoPill(title: state.deviceCapability.recommendedTier.title, systemImage: "sparkles")
                             RossInfoPill(title: "\(state.deviceCapability.freeStorageGB) GB free", systemImage: "internaldrive")
-                            RossInfoPill(title: state.deviceCapability.instantModeReason, systemImage: "bolt.horizontal")
                         }
 
                         VStack(alignment: .leading, spacing: 10) {
                             RossInfoPill(title: state.deviceCapability.recommendedTier.title, systemImage: "sparkles")
                             RossInfoPill(title: "\(state.deviceCapability.freeStorageGB) GB free", systemImage: "internaldrive")
-                            RossInfoPill(title: state.deviceCapability.instantModeReason, systemImage: "bolt.horizontal")
                         }
                     }
                 }
 
-                RossSectionCard(
-                    title: "Recommendation for this device",
-                    subtitle: state.deviceCapability.recommendationReason
-                ) {
-                    ViewThatFits(in: .horizontal) {
-                        HStack(spacing: 16) {
-                            RossMetricTile(label: "Recommended", value: state.deviceCapability.recommendedTier.title, tint: .rossAccent)
-                            RossMetricTile(label: "Memory", value: "\(state.deviceCapability.totalMemoryGB) GB", tint: .rossHighlight)
-                            RossMetricTile(label: "Thermal", value: state.deviceCapability.thermalCondition, tint: .rossSuccess)
-                        }
-
-                        VStack(spacing: 16) {
-                            RossMetricTile(label: "Recommended", value: state.deviceCapability.recommendedTier.title, tint: .rossAccent)
-                            RossMetricTile(label: "Memory", value: "\(state.deviceCapability.totalMemoryGB) GB", tint: .rossHighlight)
-                            RossMetricTile(label: "Thermal", value: state.deviceCapability.thermalCondition, tint: .rossSuccess)
-                        }
-                    }
-                }
+                Text("This phone works best with \(state.deviceCapability.recommendedTier.title).")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.rossInk.opacity(0.7))
+                    .padding(.horizontal, 4)
 
                 RossSectionCard(
-                    title: "Choose a capability tier",
-                    subtitle: "The onboarding flow stays user-facing here. Technical model names remain hidden until settings."
+                    title: "Choose your assistant's power level",
+                    subtitle: "Pick one - you can change this later in Settings."
                 ) {
                     VStack(alignment: .leading, spacing: 16) {
                         ForEach(state.availablePacks) { pack in
@@ -69,24 +53,13 @@ struct PrivateAIPackSetupView: View {
                     }
                 }
 
-                RossSectionCard(
-                    title: "What stays available while delivery continues",
-                    subtitle: "You do not have to wait for the largest pack before opening the workbench."
-                ) {
-                    VStack(alignment: .leading, spacing: 16) {
-                        RossBulletRow(text: "Capture papers, sort documents, and review what is already stored locally.")
-                        RossBulletRow(text: "Let larger downloads continue in the background when the network policy allows it.")
-                        RossBulletRow(text: "Switch to a smaller tier later if the current footprint no longer fits the device.")
-                    }
-                }
-
                 Button(action: activateSelection) {
-                    Text("Continue to Workbench")
+                    Text("Start using Ross")
                 }
                 .rossPrimaryButtonStyle()
                 .padding(.top, 8)
 
-                Text("The app remains usable for capture and organization while background delivery is staged for a trusted network.")
+                Text("You can start using Ross right away. The assistant improves as setup completes in the background.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -151,43 +124,24 @@ private struct PackSelectionCard: View {
                 }
             }
 
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 12) {
-                    RossInfoPill(title: pack.downloadSize, systemImage: "arrow.down.circle")
-                    RossInfoPill(title: pack.installedFootprint, systemImage: "shippingbox")
-                    RossInfoPill(title: pack.tier.storageGuidance, systemImage: "internaldrive")
-                }
-
-                VStack(alignment: .leading, spacing: 10) {
-                    RossInfoPill(title: pack.downloadSize, systemImage: "arrow.down.circle")
-                    RossInfoPill(title: pack.installedFootprint, systemImage: "shippingbox")
-                    RossInfoPill(title: pack.tier.storageGuidance, systemImage: "internaldrive")
-                }
-            }
+            Text("Takes about \(pack.installedFootprint) on your phone")
+                .font(.footnote)
+                .foregroundStyle(Color.rossInk.opacity(0.55))
 
             VStack(alignment: .leading, spacing: 10) {
-                ForEach(pack.tier.focusAreas, id: \.self) { focus in
+                ForEach(pack.tier.focusAreas.prefix(2), id: \.self) { focus in
                     HStack(spacing: 8) {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundStyle(Color.rossSuccess)
                             .font(.subheadline)
-                        
+
                         Text(focus)
                             .font(.subheadline)
                             .foregroundStyle(Color.rossInk.opacity(0.8))
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
             }
-
-            Rectangle()
-                .fill(Color.rossBorder)
-                .frame(height: 1)
-                .padding(.vertical, 4)
-
-            Text("Best for: \(pack.recommendedFor)")
-                .font(.footnote.weight(.medium))
-                .foregroundStyle(Color.rossInk.opacity(0.5))
-                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)

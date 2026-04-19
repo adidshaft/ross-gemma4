@@ -10,17 +10,23 @@ struct PublicLawSearchPreviewView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    PublicLawBoundaryCard(requireApproval: settingsStore.settings.requirePublicLawApproval)
+                    Label("Ross removes your case details before any search goes online.", systemImage: "lock.shield.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.rossInk.opacity(0.75))
+                        .padding(16)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.rossSuccess.opacity(0.07))
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
 
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Prepare a public-law query")
+                        Text("What legal topic do you want to look up?")
                             .font(.headline)
                         TextEditor(text: $state.publicLawDraftText)
                             .frame(minHeight: 120)
                             .padding(12)
                             .background(Color.rossSecondaryGroupedBackground)
                             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                        Text("Never send case identifiers, filenames, OCR text, or chat history.")
+                        Text("Ross automatically removes your case details before searching.")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
@@ -29,12 +35,12 @@ struct PublicLawSearchPreviewView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
 
                     Button(action: buildPreview) {
-                        Text("Generate Query Preview")
+                        Text("Check before searching")
                             .font(.headline)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.bordered)
 
                     if let preview = state.publicLawPreview {
                         PublicLawPreviewCard(preview: preview)
@@ -45,13 +51,13 @@ struct PublicLawSearchPreviewView: View {
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 14)
                             } else {
-                                Text("Run Public-Law Search")
+                                Text("Search now")
                                     .font(.headline)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 16)
                             }
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.borderedProminent)
                         .disabled(isRunningSearch)
                     }
 
@@ -62,7 +68,7 @@ struct PublicLawSearchPreviewView: View {
                 .padding(20)
             }
             .background(Color.rossGroupedBackground)
-            .navigationTitle("Public-Law Search")
+            .navigationTitle("Look up a law")
         }
     }
 
@@ -98,31 +104,12 @@ struct PublicLawSearchPreviewView: View {
     }
 }
 
-private struct PublicLawBoundaryCard: View {
-    let requireApproval: Bool
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Public boundary")
-                .font(.headline)
-            Text("Public-law search is optional and distinct from private case work.")
-                .foregroundStyle(.secondary)
-            Text(requireApproval ? "Approval is required before every query leaves the device." : "Approval is currently relaxed in settings.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-        }
-        .padding(22)
-        .background(.background)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-    }
-}
-
 private struct PublicLawPreviewCard: View {
     let preview: SanitizedPublicQueryPreview
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Sanitized query preview")
+            Text("Public-law query to be sent")
                 .font(.headline)
 
             Text(preview.publicQuery)
@@ -131,18 +118,9 @@ private struct PublicLawPreviewCard: View {
             Text(preview.purpose)
                 .foregroundStyle(.secondary)
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Removed before network")
-                    .font(.subheadline.weight(.semibold))
-                ForEach(preview.removedElements, id: \.self) { removed in
-                    Label(removed, systemImage: "minus.circle")
-                        .font(.footnote)
-                }
-            }
-
-            Text(preview.confirmationNote)
+            Label("Nothing from your case files will be sent.", systemImage: "checkmark.shield")
                 .font(.footnote)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.rossSuccess)
         }
         .padding(22)
         .background(.background)
@@ -155,7 +133,7 @@ private struct PublicLawResultsCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Preview results")
+            Text("Results")
                 .font(.headline)
 
             ForEach(results) { result in

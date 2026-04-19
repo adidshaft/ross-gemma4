@@ -26,12 +26,12 @@ class LocalOnboardingService : OnboardingService {
 
     override fun onboardingCopy(): OnboardingCopy {
         return OnboardingCopy(
-            title = "Set up a private advocate desk",
-            body = "Choose the setup that matches your device and begin with a case-safe workspace. Technical model names stay hidden here so the focus remains on capability and privacy posture.",
+            title = "A private file room for your practice",
+            body = "Choose the setup that matches your phone and start with a calm, case-safe workspace.",
             promises = listOf(
-                "Case notes stay on-device until you deliberately escort them outward.",
-                "Downloads resume in protected segments instead of blocking first-use.",
-                "The privacy ledger records sensitive actions in plain language.",
+                "Your case files never leave this phone.",
+                "Ross reads only the documents you add to a matter.",
+                "Ross asks before anything goes online.",
             ),
         )
     }
@@ -118,7 +118,7 @@ class LocalCaseWorkspaceService : CaseWorkspaceService {
             title = "Neighborhood records request",
             sensitivity = "Community strategy",
             urgencyLabel = "Monitoring",
-            nextStep = "Track agency response deadline and public-law hooks.",
+            nextStep = "Track the response deadline and likely legal grounds.",
         ),
     )
 
@@ -203,15 +203,15 @@ class InMemoryPrivacyLedgerService : PrivacyLedgerService {
     private val entries = mutableListOf(
         PrivacyLedgerEntry(
             id = "ledger-01",
-            title = "Workspace opened",
-            detail = "Case summaries were loaded without contacting external services.",
+            title = "Opened Ross",
+            detail = "Ross showed your case summaries without contacting external services.",
             occurredAt = "Today 09:10",
             locality = LedgerLocality.DeviceOnly,
         ),
         PrivacyLedgerEntry(
             id = "ledger-02",
-            title = "Law preview escorted",
-            detail = "A public-law preview request was sent through the network boundary without case notes attached.",
+            title = "Looked up a law",
+            detail = "Ross looked up a law online without sending case notes.",
             occurredAt = "Today 08:42",
             locality = LedgerLocality.Escorted,
         ),

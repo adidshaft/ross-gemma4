@@ -46,13 +46,13 @@ struct RossSectionCard<Content: View>: View {
 struct RossHeroCard<Content: View>: View {
     let eyebrow: String
     let title: String
-    let detail: String
+    let detail: String?
     let content: Content
 
     init(
         eyebrow: String,
         title: String,
-        detail: String,
+        detail: String? = nil,
         @ViewBuilder content: () -> Content
     ) {
         self.eyebrow = eyebrow
@@ -74,11 +74,13 @@ struct RossHeroCard<Content: View>: View {
                 .lineSpacing(2)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text(detail)
-                .font(.title3)
-                .foregroundStyle(Color.rossInk.opacity(0.8))
-                .lineSpacing(6)
-                .fixedSize(horizontal: false, vertical: true)
+            if let detail {
+                Text(detail)
+                    .font(.title3)
+                    .foregroundStyle(Color.rossInk.opacity(0.8))
+                    .lineSpacing(6)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             content
                 .padding(.top, 8)

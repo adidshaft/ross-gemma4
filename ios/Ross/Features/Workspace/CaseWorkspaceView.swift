@@ -34,11 +34,26 @@ struct CaseWorkspaceView: View {
 
                         WorkspaceStatusStrip(caseFile: selectedCase)
 
-                        WorkspaceActionRow(
-                            captureCount: selectedCase.captureInboxCount,
-                            onOpenCapture: { route = .quickCapture },
-                            onAskCase: { route = .askCase }
-                        )
+                        if selectedCase.captureInboxCount > 0 {
+                            Button {
+                                route = .quickCapture
+                            } label: {
+                                Label(
+                                    "You have \(selectedCase.captureInboxCount) captured note\(selectedCase.captureInboxCount == 1 ? "" : "s") to file",
+                                    systemImage: "doc.viewfinder"
+                                )
+                                .font(.subheadline.weight(.medium))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(16)
+                                .background(Color.rossHighlight.opacity(0.08))
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                        .stroke(Color.rossHighlight.opacity(0.3), lineWidth: 1)
+                                }
+                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            }
+                            .buttonStyle(.plain)
+                        }
 
                         ViewThatFits(in: .horizontal) {
                             HStack(alignment: .top, spacing: 20) {
@@ -68,27 +83,50 @@ struct CaseWorkspaceView: View {
             .background(Color.rossGroupedBackground.ignoresSafeArea())
             .navigationTitle("Workspace")
             .rossInlineNavigationTitle()
-            .navigationDestination(item: $route) { route in
-                switch route {
-                case .quickCapture:
-                    QuickCaptureReviewView(
-                        caseRepository: caseRepository,
-                        privacyLedger: privacyLedger,
-                        state: state
-                    )
-                case .askCase:
-                    AskCaseView(
-                        localRuntimeService: localRuntimeService,
-                        state: state,
-                        settingsStore: settingsStore
-                    )
+            .toolbar {
+                ToolbarItem(placement: askRossToolbarPlacement) {
+                    Button {
+                        route = .askCase
+                    } label: {
+                        Label("Ask Ross", systemImage: "bubble.left.and.text.bubble.right")
+                            .labelStyle(.titleAndIcon)
+                            .font(.subheadline.weight(.semibold))
+                    }
                 }
+            }
+            .sheet(isPresented: Binding(
+                get: { route == .askCase },
+                set: { if !$0 { route = nil } }
+            )) {
+                AskCaseView(
+                    localRuntimeService: localRuntimeService,
+                    state: state,
+                    settingsStore: settingsStore
+                )
+            }
+            .navigationDestination(isPresented: Binding(
+                get: { route == .quickCapture },
+                set: { if !$0, route == .quickCapture { route = nil } }
+            )) {
+                QuickCaptureReviewView(
+                    caseRepository: caseRepository,
+                    privacyLedger: privacyLedger,
+                    state: state
+                )
             }
         }
     }
 
     private var selectedCase: CaseFile? {
         state.selectedCase
+    }
+
+    private var askRossToolbarPlacement: ToolbarItemPlacement {
+        #if os(macOS)
+        .primaryAction
+        #else
+        .navigationBarTrailing
+        #endif
     }
 }
 
@@ -99,19 +137,19 @@ private struct WorkspaceHeroCard: View {
         RossHeroCard(
             eyebrow: caseFile.forum,
             title: caseFile.title,
-            detail: "A private case dashboard with source-backed working notes, local status, and the next hearing posture kept close at hand."
+            detail: nil
         ) {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 12) {
                     RossInfoPill(title: caseFile.stage.title, systemImage: "briefcase")
                     RossInfoPill(title: nextHearingText, systemImage: "calendar")
-                    RossInfoPill(title: caseFile.localNotice, systemImage: "lock")
+                    RossInfoPill(title: "Stored on this phone", systemImage: "lock.shield")
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
                     RossInfoPill(title: caseFile.stage.title, systemImage: "briefcase")
                     RossInfoPill(title: nextHearingText, systemImage: "calendar")
-                    RossInfoPill(title: caseFile.localNotice, systemImage: "lock")
+                    RossInfoPill(title: "Stored on this phone", systemImage: "lock.shield")
                 }
             }
         }
@@ -192,69 +230,17 @@ private struct WorkspaceStatusStrip: View {
 
     var body: some View {
         let indexedCount = caseFile.documents.filter(\.isIndexedLocally).count
+        let total = caseFile.documents.count
+        let allReady = indexedCount == total
 
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 16) {
-                RossMetricTile(label: "Indexed", value: "\(indexedCount)/\(caseFile.documents.count) docs", tint: .rossAccent)
-                RossMetricTile(label: "Pending capture", value: "\(caseFile.captureInboxCount)", tint: .rossHighlight)
-                RossMetricTile(label: "Updated", value: caseFile.lastUpdated.formatted(date: .abbreviated, time: .shortened), tint: .rossSuccess)
-            }
-
-            VStack(spacing: 16) {
-                RossMetricTile(label: "Indexed", value: "\(indexedCount)/\(caseFile.documents.count) docs", tint: .rossAccent)
-                RossMetricTile(label: "Pending capture", value: "\(caseFile.captureInboxCount)", tint: .rossHighlight)
-                RossMetricTile(label: "Updated", value: caseFile.lastUpdated.formatted(date: .abbreviated, time: .shortened), tint: .rossSuccess)
-            }
-        }
-    }
-}
-
-private struct WorkspaceActionRow: View {
-    let captureCount: Int
-    let onOpenCapture: () -> Void
-    let onAskCase: () -> Void
-
-    var body: some View {
-        RossSectionCard(
-            title: "Workbench actions",
-            subtitle: "Jump into the two tasks advocates tend to need most during a live matter review."
-        ) {
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 16) {
-                    RossActionTile(
-                        title: "Quick Capture Review",
-                        detail: captureCount == 0 ? "No pending captures right now." : "\(captureCount) capture item(s) waiting for filing.",
-                        systemImage: "doc.viewfinder",
-                        tint: .rossHighlight,
-                        action: onOpenCapture
-                    )
-
-                    RossActionTile(
-                        title: "Ask This Case",
-                        detail: "Run a source-backed local review over the indexed file.",
-                        systemImage: "text.bubble",
-                        tint: .rossAccent,
-                        action: onAskCase
-                    )
-                }
-
-                VStack(spacing: 16) {
-                    RossActionTile(
-                        title: "Quick Capture Review",
-                        detail: captureCount == 0 ? "No pending captures right now." : "\(captureCount) capture item(s) waiting for filing.",
-                        systemImage: "doc.viewfinder",
-                        tint: .rossHighlight,
-                        action: onOpenCapture
-                    )
-
-                    RossActionTile(
-                        title: "Ask This Case",
-                        detail: "Run a source-backed local review over the indexed file.",
-                        systemImage: "text.bubble",
-                        tint: .rossAccent,
-                        action: onAskCase
-                    )
-                }
+        VStack(alignment: .leading, spacing: 6) {
+            if !allReady {
+                Label(
+                    "Ross has read \(indexedCount) of \(total) documents",
+                    systemImage: "doc.text.magnifyingglass"
+                )
+                .font(.subheadline)
+                .foregroundStyle(Color.rossInk.opacity(0.7))
             }
         }
     }
@@ -291,8 +277,8 @@ private struct WorkspaceSourcesCard: View {
 
     var body: some View {
         RossSectionCard(
-            title: "Source chips",
-            subtitle: "Tap-through references should stay close to the working answer."
+            title: "References",
+            subtitle: nil
         ) {
             VStack(alignment: .leading, spacing: 12) {
                 ForEach(snapshot.sourceAnchors) { source in
@@ -342,7 +328,7 @@ private struct WorkspaceDocumentsCard: View {
     var body: some View {
         RossSectionCard(
             title: "Documents",
-            subtitle: "A quick scan of what is already indexed locally and what still needs attention."
+            subtitle: "A quick scan of what Ross has read and what still needs attention."
         ) {
             VStack(alignment: .leading, spacing: 14) {
                 ForEach(documents) { document in
@@ -363,14 +349,22 @@ private struct WorkspaceDocumentsCard: View {
 
                         Spacer()
 
-                        ZStack {
-                            Circle()
-                                .fill(document.isIndexedLocally ? Color.rossSuccess.opacity(0.1) : Color.rossHighlight.opacity(0.1))
-                                .frame(width: 40, height: 40)
-                                
-                            Image(systemName: document.isIndexedLocally ? "checkmark.shield.fill" : "clock.badge")
-                                .font(.body.weight(.semibold))
-                                .foregroundStyle(document.isIndexedLocally ? Color.rossSuccess : Color.rossHighlight)
+                        VStack(alignment: .trailing, spacing: 8) {
+                            ZStack {
+                                Circle()
+                                    .fill(document.isIndexedLocally ? Color.rossSuccess.opacity(0.1) : Color.rossHighlight.opacity(0.1))
+                                    .frame(width: 40, height: 40)
+
+                                Image(systemName: document.isIndexedLocally ? "checkmark.shield.fill" : "clock.badge")
+                                    .font(.body.weight(.semibold))
+                                    .foregroundStyle(document.isIndexedLocally ? Color.rossSuccess : Color.rossHighlight)
+                            }
+
+                            if !document.isIndexedLocally {
+                                Text("Not yet read by Ross")
+                                    .font(.caption.weight(.medium))
+                                    .foregroundStyle(Color.rossHighlight)
+                            }
                         }
                     }
                     .padding(16)
@@ -386,4 +380,3 @@ private struct WorkspaceDocumentsCard: View {
         }
     }
 }
-

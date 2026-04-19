@@ -14,9 +14,8 @@ struct SettingsView: View {
                     Button("Restore privacy defaults", action: settingsStore.resetPrivacyDefaults)
                 }
 
-                Section("Private AI") {
-                    LabeledContent("Installed pack", value: settingsStore.settings.activePackTier?.title ?? "Not selected")
-                    Toggle("Instant Mode", isOn: $settingsStore.settings.instantModeEnabled)
+                Section("My assistant") {
+                    LabeledContent("Status", value: settingsStore.settings.activePackTier != nil ? "Ready" : "Not set up")
                     NavigationLink {
                         PrivateAISettingsView(
                             modelDownloadService: modelDownloadService,
@@ -24,13 +23,12 @@ struct SettingsView: View {
                             settingsStore: settingsStore
                         )
                     } label: {
-                        Label("Private AI Settings", systemImage: "cpu")
+                        Label("My AI assistant settings", systemImage: "brain")
                     }
                 }
 
                 Section("Downloads") {
-                    Toggle("Background model downloads", isOn: $settingsStore.settings.backgroundModelDownloadsEnabled)
-                    Toggle("Wi-Fi only downloads", isOn: $settingsStore.settings.wifiOnlyDownloads)
+                    Toggle("Download on Wi-Fi only", isOn: $settingsStore.settings.wifiOnlyDownloads)
                 }
             }
             .navigationTitle("Settings")
