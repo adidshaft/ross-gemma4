@@ -40,13 +40,29 @@ struct AskCaseView: View {
 
                             ViewThatFits(in: .horizontal) {
                                 HStack(spacing: 12) {
-                                    RossInfoPill(title: "What is the next court date?", systemImage: "calendar")
-                                    RossInfoPill(title: "Summarise the main facts", systemImage: "text.alignleft")
+                                    AskSuggestionPill(
+                                        title: "What is the next court date?",
+                                        systemImage: "calendar",
+                                        action: { state.askCaseInput = "What is the next court date?" }
+                                    )
+                                    AskSuggestionPill(
+                                        title: "Summarise the main facts",
+                                        systemImage: "text.alignleft",
+                                        action: { state.askCaseInput = "Summarise the main facts" }
+                                    )
                                 }
 
                                 VStack(alignment: .leading, spacing: 10) {
-                                    RossInfoPill(title: "What is the next court date?", systemImage: "calendar")
-                                    RossInfoPill(title: "Summarise the main facts", systemImage: "text.alignleft")
+                                    AskSuggestionPill(
+                                        title: "What is the next court date?",
+                                        systemImage: "calendar",
+                                        action: { state.askCaseInput = "What is the next court date?" }
+                                    )
+                                    AskSuggestionPill(
+                                        title: "Summarise the main facts",
+                                        systemImage: "text.alignleft",
+                                        action: { state.askCaseInput = "Summarise the main facts" }
+                                    )
                                 }
                             }
                         }
@@ -113,6 +129,19 @@ struct AskCaseView: View {
                 }
             }
         }
+    }
+}
+
+private struct AskSuggestionPill: View {
+    let title: String
+    let systemImage: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            RossInfoPill(title: title, systemImage: systemImage)
+        }
+        .buttonStyle(.plain)
     }
 }
 

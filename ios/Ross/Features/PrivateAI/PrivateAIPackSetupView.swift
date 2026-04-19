@@ -9,8 +9,8 @@ struct PrivateAIPackSetupView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 32) {
                 RossHeroCard(
-                    eyebrow: "Private AI setup",
-                    title: "Choose the local work tier that fits this device.",
+                    eyebrow: "Almost ready",
+                    title: "How powerful should your assistant be?",
                     detail: "Ross stays light at install time and adds stronger private review as setup completes."
                 ) {
                     ViewThatFits(in: .horizontal) {

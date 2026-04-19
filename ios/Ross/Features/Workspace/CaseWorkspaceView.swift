@@ -142,22 +142,26 @@ private struct WorkspaceHeroCard: View {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 12) {
                     RossInfoPill(title: caseFile.stage.title, systemImage: "briefcase")
-                    RossInfoPill(title: nextHearingText, systemImage: "calendar")
+                    if let nextHearingText {
+                        RossInfoPill(title: nextHearingText, systemImage: "calendar")
+                    }
                     RossInfoPill(title: "Stored on this phone", systemImage: "lock.shield")
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
                     RossInfoPill(title: caseFile.stage.title, systemImage: "briefcase")
-                    RossInfoPill(title: nextHearingText, systemImage: "calendar")
+                    if let nextHearingText {
+                        RossInfoPill(title: nextHearingText, systemImage: "calendar")
+                    }
                     RossInfoPill(title: "Stored on this phone", systemImage: "lock.shield")
                 }
             }
         }
     }
 
-    private var nextHearingText: String {
+    private var nextHearingText: String? {
         guard let nextHearing = caseFile.nextHearing else {
-            return "Next hearing not extracted"
+            return nil
         }
 
         return "Next hearing \(nextHearing.formatted(date: .abbreviated, time: .omitted))"
@@ -196,7 +200,7 @@ private struct CaseSwitcherRail: View {
                                         .tracking(1)
                                         .foregroundStyle(Color.rossAccent)
 
-                                    Text(caseFile.lastUpdated.formatted(date: .abbreviated, time: .shortened))
+                                    Text(caseFile.lastUpdated.formatted(date: .abbreviated, time: .omitted))
                                         .font(.caption2)
                                         .foregroundStyle(Color.rossInk.opacity(0.5))
                                 }
@@ -233,8 +237,17 @@ private struct WorkspaceStatusStrip: View {
         let total = caseFile.documents.count
         let allReady = indexedCount == total
 
-        VStack(alignment: .leading, spacing: 6) {
-            if !allReady {
+        Group {
+            if total == 0 {
+                EmptyView()
+            } else if allReady {
+                Label(
+                    "Ross has read all your documents",
+                    systemImage: "checkmark.circle.fill"
+                )
+                .font(.subheadline)
+                .foregroundStyle(Color.rossSuccess)
+            } else {
                 Label(
                     "Ross has read \(indexedCount) of \(total) documents",
                     systemImage: "doc.text.magnifyingglass"
@@ -264,7 +277,7 @@ private struct WorkspaceSummaryCard: View {
                     items: snapshot.evidenceNotes
                 )
                 WorkspaceListBlock(
-                    title: "Draft tasks",
+                    title: "Things to do",
                     items: snapshot.draftTasks
                 )
             }

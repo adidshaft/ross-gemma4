@@ -22,6 +22,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
@@ -175,7 +176,7 @@ private fun WorkbenchHeaderDeck(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 MetricCard(
-                    label = "Pack",
+                    label = "Assistant",
                     value = session.publicName,
                     modifier = Modifier.weight(1f),
                 )
@@ -193,7 +194,11 @@ private fun WorkbenchHeaderDeck(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = if (session.resumable) "Resumable after interruptions." else "Restart may be required if the transfer fails.",
+                text = if (session.resumable) {
+                    "Download will continue automatically."
+                } else {
+                    "If it stops, open Settings to restart."
+                },
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.secondary,
             )
@@ -314,7 +319,7 @@ private fun CasesPane(
 
         SectionCard(
             title = "Next actions",
-            subtitle = "Move directly into the two common follow-up tasks for the selected case.",
+            subtitle = null,
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -349,18 +354,18 @@ private fun CapturePane(
     Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
         HeroCard(
             eyebrow = "Quick capture",
-            title = "Stage paper notes and annexure details before they disappear into the day.",
-            body = state.captureDraft.promptHint,
+            title = "Jot something down before you forget it.",
+            body = "You can move it into the right case later.",
         )
 
         SectionCard(
-            title = "Capture draft",
-            subtitle = "Keep the note terse and local, then file it back into the matter.",
+            title = "New note",
+            subtitle = "Write a quick note now and file it to a case later.",
         ) {
             OutlinedTextField(
                 value = state.captureDraft.headline,
                 onValueChange = onHeadlineChanged,
-                label = { Text("Capture label") },
+                label = { Text("What is this about?") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(8.dp)
@@ -437,15 +442,39 @@ private fun LedgerPane(state: WorkbenchUiState) {
             text = "Activity",
             style = MaterialTheme.typography.titleLarge,
         )
-        state.ledgerEntries.forEach { entry ->
-            SectionCard(
-                title = entry.title,
-                subtitle = "${entry.occurredAt} • ${entry.locality.label}",
+        state.ledgerEntries.forEachIndexed { index, entry ->
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = entry.title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Text(
+                        text = entry.occurredAt,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Text(
+                    text = entry.locality.label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
                 Text(
                     text = entry.detail,
                     style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+            if (index != state.ledgerEntries.lastIndex) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
             }
         }
     }
@@ -536,7 +565,7 @@ private fun SettingToggleRow(
 @Composable
 private fun SectionCard(
     title: String,
-    subtitle: String,
+    subtitle: String? = null,
     content: @Composable () -> Unit,
 ) {
     OutlinedCard(
@@ -556,12 +585,14 @@ private fun SectionCard(
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
             )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+            if (!subtitle.isNullOrBlank()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
             content()
         }
     }
