@@ -471,7 +471,13 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
     }
 
     private func adapter(from path: String) throws -> SystemLanguageModel.Adapter {
-        try SystemLanguageModel.Adapter(fileURL: URL(fileURLWithPath: path))
+        guard FileManager.default.fileExists(atPath: path) else {
+            throw CocoaError(.fileNoSuchFile)
+        }
+        guard FileManager.default.isReadableFile(atPath: path) else {
+            throw CocoaError(.fileReadNoPermission)
+        }
+        return try SystemLanguageModel.Adapter(fileURL: URL(fileURLWithPath: path))
     }
 
     private func availabilityStatus() -> (available: Bool, userFacingStatus: String, lastErrorCategory: String?) {

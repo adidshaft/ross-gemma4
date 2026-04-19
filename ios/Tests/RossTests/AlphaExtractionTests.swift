@@ -247,6 +247,27 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.modelPathLabel, "foundation-adapter.bundle")
     }
 
+    func testRuntimeHealthMarksMissingConfiguredAdapterPathUnavailable() {
+        let pack = installedPack(.caseAssociate, runtimeMode: .appleFoundationModels)
+        let environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: true,
+            runtimeModeOverride: .appleFoundationModels,
+            modelPath: "/tmp/private/device/debug/missing-foundation-adapter.bundle",
+            modelChecksum: String(repeating: "a", count: 64),
+            modelKind: "foundation_adapter"
+        )
+
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: environment
+        )
+
+        XCTAssertEqual(health?.available, false)
+        XCTAssertEqual(health?.fallbackActive, true)
+        XCTAssertEqual(health?.lastErrorCategory, "runtime_dependency_unavailable")
+    }
+
     @MainActor
     func testPublicLawPreviewUsesVerifiedFieldsOnly() {
         let model = AlphaRossModel()
