@@ -8,14 +8,43 @@ data class AlphaVerificationPayload(
 )
 
 object AlphaModelOutputValidator {
+    fun extractJsonCandidate(rawText: String): String? {
+        val raw = rawText.trim()
+        if (raw.isEmpty()) {
+            return null
+        }
+        if ((raw.startsWith("{") && raw.endsWith("}")) || (raw.startsWith("[") && raw.endsWith("]"))) {
+            return raw
+        }
+        listOf("```json", "```").forEach { fence ->
+            val start = raw.indexOf(fence)
+            if (start >= 0) {
+                val afterFence = raw.substring(start + fence.length)
+                val end = afterFence.indexOf("```")
+                if (end > 0) {
+                    val candidate = afterFence.substring(0, end).trim()
+                    if ((candidate.startsWith("{") && candidate.endsWith("}")) || (candidate.startsWith("[") && candidate.endsWith("]"))) {
+                        return candidate
+                    }
+                }
+            }
+        }
+        val arrayStart = raw.indexOf('[')
+        val arrayEnd = raw.lastIndexOf(']')
+        if (arrayStart >= 0 && arrayEnd > arrayStart) {
+            return raw.substring(arrayStart, arrayEnd + 1)
+        }
+        val objectStart = raw.indexOf('{')
+        val objectEnd = raw.lastIndexOf('}')
+        if (objectStart >= 0 && objectEnd > objectStart) {
+            return raw.substring(objectStart, objectEnd + 1)
+        }
+        return null
+    }
+
     fun repairedJson(output: AlphaLocalModelOutput): String? {
         output.parsedJson?.let { return it }
-        val raw = output.rawText.trim()
-        return when {
-            raw.startsWith("{") && raw.endsWith("}") -> raw
-            raw.startsWith("[") && raw.endsWith("]") -> raw
-            else -> null
-        }
+        return extractJsonCandidate(output.rawText)
     }
 
     fun parseClassification(gson: Gson, output: AlphaLocalModelOutput): AlphaLegalDocumentClassification? =

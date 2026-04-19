@@ -19,8 +19,22 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+        val backendBaseUrl = providers.gradleProperty("ROSS_BACKEND_BASE_URL")
+            .orElse(providers.environmentVariable("ROSS_BACKEND_BASE_URL"))
+            .orElse(providers.gradleProperty("ROSS_BACKEND_URL"))
+            .orElse(providers.environmentVariable("ROSS_BACKEND_URL"))
+            .orElse("http://10.0.2.2:8080")
+            .get()
         val localModelPath = providers.gradleProperty("ROSS_LOCAL_MODEL_PATH")
             .orElse(providers.environmentVariable("ROSS_LOCAL_MODEL_PATH"))
+            .orElse("")
+            .get()
+        val localModelChecksum = providers.gradleProperty("ROSS_LOCAL_MODEL_CHECKSUM")
+            .orElse(providers.environmentVariable("ROSS_LOCAL_MODEL_CHECKSUM"))
+            .orElse("")
+            .get()
+        val localModelKind = providers.gradleProperty("ROSS_LOCAL_MODEL_KIND")
+            .orElse(providers.environmentVariable("ROSS_LOCAL_MODEL_KIND"))
             .orElse("")
             .get()
         val localRuntime = providers.gradleProperty("ROSS_LOCAL_RUNTIME")
@@ -32,7 +46,10 @@ android {
             .orElse("false")
             .get()
 
+        buildConfigField("String", "ROSS_BACKEND_BASE_URL", "\"${escapeBuildConfigString(backendBaseUrl)}\"")
         buildConfigField("String", "ROSS_LOCAL_MODEL_PATH", "\"${escapeBuildConfigString(localModelPath)}\"")
+        buildConfigField("String", "ROSS_LOCAL_MODEL_CHECKSUM", "\"${escapeBuildConfigString(localModelChecksum)}\"")
+        buildConfigField("String", "ROSS_LOCAL_MODEL_KIND", "\"${escapeBuildConfigString(localModelKind)}\"")
         buildConfigField("String", "ROSS_LOCAL_RUNTIME", "\"${escapeBuildConfigString(localRuntime)}\"")
         buildConfigField("boolean", "ROSS_ENABLE_REAL_LOCAL_INFERENCE", enableRealInference.toBoolean().toString())
 
@@ -91,6 +108,7 @@ dependencies {
     implementation("com.google.android.material:material:1.13.0")
     implementation("com.google.code.gson:gson:2.11.0")
     implementation("com.google.mlkit:text-recognition:16.0.1")
+    implementation("com.google.mediapipe:tasks-genai:0.10.27")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
 

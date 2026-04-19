@@ -2,6 +2,7 @@ package com.ross.android.alpha
 
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
+import com.ross.android.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
@@ -130,7 +131,7 @@ internal class AlphaBackendClient(
 }
 
 internal data class AlphaBackendConfiguration(
-    val baseUrl: String = System.getProperty("ross.backend.baseUrl") ?: "http://10.0.2.2:8080",
+    val baseUrl: String = resolveRossBackendBaseUrl(),
     val timeoutMs: Int = 10_000,
     val accountToken: String = "acct_alpha_ross_local",
     val deviceIdHash: String = "a1b2c3d4e5f6a7b8",
@@ -264,3 +265,19 @@ private fun AlphaPublicLawSearchPayload.toRequest() = AlphaBackendPublicLawReque
 
 private fun sha256(bytes: ByteArray): String =
     MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+
+internal fun resolveRossBackendBaseUrl(
+    systemPropertyValue: String? = System.getProperty("ross.backend.baseUrl"),
+    canonicalSystemPropertyValue: String? = System.getProperty("ROSS_BACKEND_BASE_URL"),
+    buildConfigValue: String = BuildConfig.ROSS_BACKEND_BASE_URL,
+): String =
+    systemPropertyValue
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
+        ?: canonicalSystemPropertyValue
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
+        ?: buildConfigValue
+            .trim()
+            .takeIf { it.isNotBlank() }
+        ?: "http://10.0.2.2:8080"

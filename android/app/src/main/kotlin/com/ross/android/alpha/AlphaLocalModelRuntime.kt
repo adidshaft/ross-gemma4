@@ -1,8 +1,19 @@
 package com.ross.android.alpha
 
+import android.content.Context
+import android.os.Build
 import com.google.gson.Gson
+import com.google.mediapipe.tasks.genai.llminference.LlmInference
 import com.ross.android.BuildConfig
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileInputStream
+import java.security.MessageDigest
+import java.util.Locale
 
 enum class AlphaLocalModelTask(val wireValue: String) {
     OcrCleanup("ocr_cleanup"),
@@ -43,6 +54,7 @@ data class AlphaLocalModelOutput(
     val schemaValid: Boolean,
     val warnings: List<String>,
     val sourceRefs: List<AlphaSourceRef>,
+    val errorCategory: String? = null,
 )
 
 data class AlphaModelPromptPolicy(
@@ -63,6 +75,8 @@ data class AlphaLocalRuntimeHealth(
     val estimatedContextTokens: Int? = null,
     val lastErrorCategory: String? = null,
     val userFacingStatus: String,
+    val fallbackActive: Boolean = false,
+    val explicitOptInEnabled: Boolean = false,
 )
 
 data class AlphaLocalModelResourceEstimate(
@@ -215,6 +229,8 @@ class DeterministicDevLocalModelProvider(
             maxInputChars = maxInputChars(),
             estimatedContextTokens = contextWindowEstimate(),
             userFacingStatus = "Deterministic development runtime active.",
+            fallbackActive = false,
+            explicitOptInEnabled = false,
         )
 
     override fun contextWindowEstimate(): Int? = 4_096
@@ -240,13 +256,17 @@ class DeterministicDevLocalModelProvider(
     override fun cancel(invocationId: String): Boolean = true
 }
 
-internal abstract class AlphaStubbedRealLocalModelProvider(
+internal class AlphaUnavailableRealLocalModelProvider(
     override val capabilityTier: AlphaCapabilityTier,
     override val runtimeMode: AlphaPackRuntimeMode,
     override val modelPathLabel: String?,
-    private val checksumVerified: Boolean,
+    private val checksumVerifiedValue: Boolean,
+    private val modelPathPresentValue: Boolean,
     private val statusMessage: String,
     private val supported: Set<AlphaLocalModelTask>,
+    private val errorCategory: String,
+    private val fallbackActive: Boolean,
+    private val explicitOptInEnabled: Boolean,
 ) : AlphaRealLocalModelProvider {
     private val promptBuilder = AlphaPromptPackBuilder(maxInputChars = maxInputChars() ?: 14_000)
 
@@ -258,13 +278,15 @@ internal abstract class AlphaStubbedRealLocalModelProvider(
         AlphaLocalRuntimeHealth(
             runtimeMode = runtimeMode,
             available = false,
-            modelPathPresent = !modelPathLabel.isNullOrBlank(),
-            checksumVerified = checksumVerified,
+            modelPathPresent = modelPathPresentValue,
+            checksumVerified = checksumVerifiedValue,
             supportedTasks = supported.toList(),
             maxInputChars = maxInputChars(),
             estimatedContextTokens = contextWindowEstimate(),
-            lastErrorCategory = "runtime_unavailable",
+            lastErrorCategory = errorCategory,
             userFacingStatus = statusMessage,
+            fallbackActive = fallbackActive,
+            explicitOptInEnabled = explicitOptInEnabled,
         )
 
     override fun contextWindowEstimate(): Int? = 4_096
@@ -283,6 +305,7 @@ internal abstract class AlphaStubbedRealLocalModelProvider(
                 if (pack.truncated) "Prompt pack was truncated to stay inside the local runtime budget." else "Prompt pack stayed within the local runtime budget.",
             ),
             sourceRefs = pack.includedSourceRefs.ifEmpty { taskInput.sourcePack.map { it.sourceRef } },
+            errorCategory = errorCategory,
         )
     }
 
@@ -303,120 +326,539 @@ internal abstract class AlphaStubbedRealLocalModelProvider(
     override fun cancel(invocationId: String): Boolean = false
 }
 
+internal fun interface AlphaMediaPipeRunner {
+    fun generate(context: Context, modelPath: String, promptText: String, maxTokens: Int): String
+}
+
+internal object AlphaDefaultMediaPipeRunner : AlphaMediaPipeRunner {
+    override fun generate(context: Context, modelPath: String, promptText: String, maxTokens: Int): String {
+        val options = LlmInference.LlmInferenceOptions.builder()
+            .setModelPath(modelPath)
+            .setMaxTokens(maxTokens)
+            .build()
+        val runtime = LlmInference.createFromOptions(context, options)
+        return try {
+            runtime.generateResponse(promptText)
+        } finally {
+            runtime.close()
+        }
+    }
+}
+
 internal class AlphaMediaPipeLocalModelProvider(
-    capabilityTier: AlphaCapabilityTier,
-    modelPathLabel: String?,
-    checksumVerified: Boolean,
-) : AlphaStubbedRealLocalModelProvider(
-    capabilityTier = capabilityTier,
-    runtimeMode = AlphaPackRuntimeMode.MediapipeLlm,
-    modelPathLabel = modelPathLabel,
-    checksumVerified = checksumVerified,
-    statusMessage = "MediaPipe local runtime is configured, but this Android alpha still uses a compile-safe adapter skeleton until the device-side dependency is integrated.",
-    supported = setOf(
+    private val context: Context,
+    override val capabilityTier: AlphaCapabilityTier,
+    private val modelFile: File,
+    override val modelPathLabel: String?,
+    private val expectedChecksum: String?,
+    private val checksumVerifiedFromPack: Boolean,
+    private val modelKind: String?,
+    private val explicitOptInEnabled: Boolean,
+    private val runner: AlphaMediaPipeRunner = AlphaDefaultMediaPipeRunner,
+    private val deviceSupported: Boolean = AlphaMediaPipeDeviceSupport.isSupported(),
+) : AlphaRealLocalModelProvider {
+    override val runtimeMode: AlphaPackRuntimeMode = AlphaPackRuntimeMode.MediapipeLlm
+
+    private val promptBuilder = AlphaPromptPackBuilder(maxInputChars = maxInputChars() ?: 14_000)
+    private val plannedTasks = setOf(
         AlphaLocalModelTask.DocumentClassification,
         AlphaLocalModelTask.LegalFieldExtraction,
         AlphaLocalModelTask.LegalFieldVerification,
         AlphaLocalModelTask.CaseMemorySynthesis,
         AlphaLocalModelTask.ChronologyGeneration,
         AlphaLocalModelTask.OrderSummary,
-    ),
+        AlphaLocalModelTask.IssueExtraction,
+    )
+    private val availability by lazy(LazyThreadSafetyMode.SYNCHRONIZED) { probeAvailability() }
+
+    override fun isAvailable(): Boolean = availability.available
+
+    override fun supportedTasks(): Set<AlphaLocalModelTask> = if (availability.available) plannedTasks else emptySet()
+
+    override fun runtimeHealth(): AlphaLocalRuntimeHealth =
+        AlphaLocalRuntimeHealth(
+            runtimeMode = runtimeMode,
+            available = availability.available,
+            modelPathPresent = availability.modelPathPresent,
+            checksumVerified = availability.checksumVerified,
+            supportedTasks = plannedTasks.toList(),
+            maxInputChars = maxInputChars(),
+            estimatedContextTokens = contextWindowEstimate(),
+            lastErrorCategory = availability.lastErrorCategory,
+            userFacingStatus = availability.userFacingStatus,
+            fallbackActive = !availability.available,
+            explicitOptInEnabled = explicitOptInEnabled,
+        )
+
+    override fun contextWindowEstimate(): Int? = 4_096
+
+    override fun maxInputChars(): Int? = 14_000
+
+    override suspend fun run(taskInput: AlphaLocalModelInput): AlphaLocalModelOutput = withContext(Dispatchers.Default) {
+        currentCoroutineContext().ensureActive()
+
+        val status = availability
+        if (!status.available) {
+            return@withContext unavailableOutput(taskInput, status.lastErrorCategory ?: "runtime_unavailable", status.userFacingStatus)
+        }
+        if (!plannedTasks.contains(taskInput.task)) {
+            return@withContext unavailableOutput(
+                taskInput = taskInput,
+                errorCategory = "task_not_supported",
+                statusMessage = "This local runtime does not support the requested Case Associate task.",
+            )
+        }
+
+        val promptPack = promptBuilder.build(taskInput)
+        if (promptPack.truncated) {
+            return@withContext unavailableOutput(
+                taskInput = taskInput,
+                errorCategory = "budget_exceeded",
+                statusMessage = "This document segment exceeded the local runtime budget and needs advocate review.",
+                promptPack = promptPack,
+            )
+        }
+
+        val tokenBudget = ((promptPack.estimatedTokens ?: 512) + taskInput.maxOutputTokens)
+            .coerceIn(1_024, 4_096)
+
+        try {
+            currentCoroutineContext().ensureActive()
+            val raw = runner.generate(context, modelFile.absolutePath, promptPack.promptText, tokenBudget)
+            currentCoroutineContext().ensureActive()
+            val jsonCandidate = AlphaModelOutputValidator.extractJsonCandidate(raw)
+            if (jsonCandidate == null) {
+                AlphaLocalModelOutput(
+                    rawText = raw,
+                    parsedJson = null,
+                    schemaValid = false,
+                    warnings = listOf("The local runtime returned output that did not match the required JSON contract."),
+                    sourceRefs = promptPack.includedSourceRefs,
+                    errorCategory = "invalid_model_output",
+                )
+            } else {
+                AlphaLocalModelOutput(
+                    rawText = raw,
+                    parsedJson = jsonCandidate,
+                    schemaValid = true,
+                    warnings = emptyList(),
+                    sourceRefs = promptPack.includedSourceRefs,
+                    errorCategory = null,
+                )
+            }
+        } catch (_: CancellationException) {
+            AlphaLocalModelOutput(
+                rawText = "",
+                parsedJson = null,
+                schemaValid = false,
+                warnings = listOf("The local runtime request was cancelled before completion."),
+                sourceRefs = promptPack.includedSourceRefs,
+                errorCategory = "cancelled",
+            )
+        } catch (_: OutOfMemoryError) {
+            AlphaLocalModelOutput(
+                rawText = "",
+                parsedJson = null,
+                schemaValid = false,
+                warnings = listOf("The local runtime ran out of memory on this device and Ross kept the request local."),
+                sourceRefs = promptPack.includedSourceRefs,
+                errorCategory = "memory_limit",
+            )
+        } catch (error: Throwable) {
+            AlphaLocalModelOutput(
+                rawText = "",
+                parsedJson = null,
+                schemaValid = false,
+                warnings = listOf(sanitizedRuntimeFailureMessage(error)),
+                sourceRefs = promptPack.includedSourceRefs,
+                errorCategory = classifyRuntimeFailure(error),
+            )
+        }
+    }
+
+    override fun estimateCostOrResourceUse(input: AlphaLocalModelInput): AlphaLocalModelResourceEstimate {
+        val pack = promptBuilder.build(input)
+        val overBudget = pack.truncated
+        return AlphaLocalModelResourceEstimate(
+            inputChars = pack.inputChars,
+            estimatedTokens = pack.estimatedTokens,
+            estimatedRuntimeMs = (pack.inputChars / 10L).coerceAtLeast(650L),
+            estimatedMemoryMb = 768,
+            estimatedDurationSeconds = ((pack.inputChars / 1_200).coerceAtLeast(1)),
+            shouldRunNow = !overBudget,
+            reason = if (overBudget) "Prompt pack exceeded the MediaPipe local runtime budget." else null,
+            notes = listOf("MediaPipe local runtime estimate."),
+        )
+    }
+
+    override fun cancel(invocationId: String): Boolean = false
+
+    private fun unavailableOutput(
+        taskInput: AlphaLocalModelInput,
+        errorCategory: String,
+        statusMessage: String,
+        promptPack: AlphaLocalPromptPack = promptBuilder.build(taskInput),
+    ): AlphaLocalModelOutput =
+        AlphaLocalModelOutput(
+            rawText = "",
+            parsedJson = null,
+            schemaValid = false,
+            warnings = listOf(statusMessage),
+            sourceRefs = promptPack.includedSourceRefs.ifEmpty { taskInput.sourcePack.map { it.sourceRef } },
+            errorCategory = errorCategory,
+        )
+
+    private fun probeAvailability(): AlphaRuntimeAvailability {
+        val checksumVerified = expectedChecksum
+            ?.takeIf { it.isNotBlank() }
+            ?.let { verifyChecksum(modelFile, it) }
+            ?: checksumVerifiedFromPack
+        val modelPathPresent = modelFile.exists() && modelFile.isFile
+
+        return when {
+            !deviceSupported ->
+                AlphaRuntimeAvailability(
+                    available = false,
+                    modelPathPresent = modelPathPresent,
+                    checksumVerified = checksumVerified,
+                    lastErrorCategory = "unsupported_device",
+                    userFacingStatus = "MediaPipe local runtime needs a compatible physical Android device and does not reliably support emulators.",
+                )
+
+            !modelPathPresent ->
+                AlphaRuntimeAvailability(
+                    available = false,
+                    modelPathPresent = false,
+                    checksumVerified = checksumVerified,
+                    lastErrorCategory = "model_file_missing",
+                    userFacingStatus = "The configured local model file is not present on this device.",
+                )
+
+            !modelFile.name.lowercase(Locale.ROOT).endsWith(".task") ->
+                AlphaRuntimeAvailability(
+                    available = false,
+                    modelPathPresent = true,
+                    checksumVerified = checksumVerified,
+                    lastErrorCategory = "unsupported_model_kind",
+                    userFacingStatus = "MediaPipe local runtime expects a developer-provided .task model artifact.",
+                )
+
+            !isSupportedModelKind(modelKind) ->
+                AlphaRuntimeAvailability(
+                    available = false,
+                    modelPathPresent = true,
+                    checksumVerified = checksumVerified,
+                    lastErrorCategory = "unsupported_model_kind",
+                    userFacingStatus = "The configured local model kind is not supported by the Android MediaPipe adapter.",
+                )
+
+            expectedChecksum != null && !checksumVerified ->
+                AlphaRuntimeAvailability(
+                    available = false,
+                    modelPathPresent = true,
+                    checksumVerified = false,
+                    lastErrorCategory = "checksum_mismatch",
+                    userFacingStatus = "The configured local model checksum did not match the developer-provided artifact.",
+                )
+
+            else ->
+                AlphaRuntimeAvailability(
+                    available = true,
+                    modelPathPresent = true,
+                    checksumVerified = checksumVerified,
+                    lastErrorCategory = null,
+                    userFacingStatus = "MediaPipe local runtime is available for manual QA on this device.",
+                )
+        }
+    }
+
+    private fun sanitizedRuntimeFailureMessage(error: Throwable): String = when (classifyRuntimeFailure(error)) {
+        "runtime_dependency_unavailable" -> "The MediaPipe local runtime dependency could not be initialized on this device."
+        "invalid_model_configuration" -> "The configured local model artifact could not be opened by the MediaPipe adapter."
+        "runtime_generate_failed" -> "The local runtime could not finish this request and Ross kept the request local."
+        else -> "The local runtime could not finish this request and Ross kept the request local."
+    }
+
+    private fun classifyRuntimeFailure(error: Throwable): String = when (error) {
+        is UnsatisfiedLinkError, is NoClassDefFoundError -> "runtime_dependency_unavailable"
+        is IllegalArgumentException, is IllegalStateException -> "invalid_model_configuration"
+        else -> "runtime_generate_failed"
+    }
+
+    private fun verifyChecksum(file: File, expectedChecksum: String): Boolean =
+        runCatching { sha256File(file).equals(expectedChecksum.lowercase(Locale.ROOT), ignoreCase = true) }
+            .getOrDefault(false)
+
+    private fun isSupportedModelKind(rawKind: String?): Boolean {
+        val normalized = rawKind?.trim()?.lowercase(Locale.ROOT).orEmpty()
+        if (normalized.isBlank()) {
+            return true
+        }
+        return normalized in setOf(
+            "mediapipe_llm",
+            "mediapipe_task",
+            "local_model_artifact",
+            "external_debug_model",
+        )
+    }
+}
+
+private data class AlphaRuntimeAvailability(
+    val available: Boolean,
+    val modelPathPresent: Boolean,
+    val checksumVerified: Boolean,
+    val lastErrorCategory: String?,
+    val userFacingStatus: String,
 )
 
-internal class AlphaGemmaLocalModelProvider(
-    capabilityTier: AlphaCapabilityTier,
-    modelPathLabel: String?,
-    checksumVerified: Boolean,
-) : AlphaStubbedRealLocalModelProvider(
-    capabilityTier = capabilityTier,
-    runtimeMode = AlphaPackRuntimeMode.Gemma 4 E4B Q4CppGguf,
-    modelPathLabel = modelPathLabel,
-    checksumVerified = checksumVerified,
-    statusMessage = "Gemma 4 Q4 local runtime is configured, but this Android alpha still uses a compile-safe adapter skeleton until the native runtime is wired.",
-    supported = setOf(
-        AlphaLocalModelTask.DocumentClassification,
-        AlphaLocalModelTask.LegalFieldExtraction,
-        AlphaLocalModelTask.LegalFieldVerification,
-        AlphaLocalModelTask.CaseMemorySynthesis,
-        AlphaLocalModelTask.ChronologyGeneration,
-        AlphaLocalModelTask.OrderSummary,
-    ),
-)
+internal object AlphaMediaPipeDeviceSupport {
+    fun isSupported(
+        fingerprint: String = Build.FINGERPRINT.orEmpty(),
+        hardware: String = Build.HARDWARE.orEmpty(),
+        model: String = Build.MODEL.orEmpty(),
+    ): Boolean {
+        val combined = listOf(fingerprint, hardware, model).joinToString(" ").lowercase(Locale.ROOT)
+        val emulatorMarkers = listOf("generic", "emulator", "goldfish", "ranchu", "sdk_gphone")
+        return emulatorMarkers.none { it in combined }
+    }
+}
 
-private data class AlphaRuntimeDebugConfig(
+internal data class AlphaRuntimeDebugConfig(
     val enableRealInference: Boolean,
     val runtimeModeOverride: AlphaPackRuntimeMode?,
     val modelPath: String?,
+    val modelChecksum: String?,
+    val modelKind: String?,
 )
 
-object AlphaLocalModelRuntime {
-    private fun parseRuntimeMode(value: String): AlphaPackRuntimeMode = when (value.trim().lowercase()) {
-        AlphaPackRuntimeMode.DeterministicDev.wireValue -> AlphaPackRuntimeMode.DeterministicDev
-        AlphaPackRuntimeMode.MediapipeLlm.wireValue -> AlphaPackRuntimeMode.MediapipeLlm
-        AlphaPackRuntimeMode.Gemma 4 E4B Q4CppGguf.wireValue -> AlphaPackRuntimeMode.Gemma 4 E4B Q4CppGguf
-        AlphaPackRuntimeMode.AppleFoundationModels.wireValue -> AlphaPackRuntimeMode.AppleFoundationModels
-        AlphaPackRuntimeMode.Unavailable.wireValue -> AlphaPackRuntimeMode.Unavailable
-        else -> AlphaPackRuntimeMode.Unavailable
-    }
+internal data class AlphaLocalRuntimeEnvironment(
+    val enableRealInference: Boolean,
+    val runtimeModeOverride: AlphaPackRuntimeMode?,
+    val modelPath: String?,
+    val modelChecksum: String?,
+    val modelKind: String?,
+) {
+    companion object {
+        fun fromBuildConfig(runtimeOverrides: Map<String, String?> = emptyMap()): AlphaLocalRuntimeEnvironment =
+            AlphaLocalRuntimeEnvironment(
+                enableRealInference = parseBoolean(
+                    runtimeOverrides["ROSS_ENABLE_REAL_LOCAL_INFERENCE"]
+                        ?: System.getProperty("ROSS_ENABLE_REAL_LOCAL_INFERENCE")
+                        ?: BuildConfig.ROSS_ENABLE_REAL_LOCAL_INFERENCE.toString(),
+                ),
+                runtimeModeOverride = parseRuntimeMode(
+                    runtimeOverrides["ROSS_LOCAL_RUNTIME"]
+                        ?: System.getProperty("ROSS_LOCAL_RUNTIME")
+                        ?: BuildConfig.ROSS_LOCAL_RUNTIME,
+                ),
+                modelPath = runtimeOverrides["ROSS_LOCAL_MODEL_PATH"]
+                    ?: System.getProperty("ROSS_LOCAL_MODEL_PATH")
+                    ?: BuildConfig.ROSS_LOCAL_MODEL_PATH
+                        .trim()
+                        .takeIf { it.isNotBlank() },
+                modelChecksum = runtimeOverrides["ROSS_LOCAL_MODEL_CHECKSUM"]
+                    ?: System.getProperty("ROSS_LOCAL_MODEL_CHECKSUM")
+                    ?: BuildConfig.ROSS_LOCAL_MODEL_CHECKSUM
+                        .trim()
+                        .takeIf { it.isNotBlank() },
+                modelKind = runtimeOverrides["ROSS_LOCAL_MODEL_KIND"]
+                    ?: System.getProperty("ROSS_LOCAL_MODEL_KIND")
+                    ?: BuildConfig.ROSS_LOCAL_MODEL_KIND
+                        .trim()
+                        .takeIf { it.isNotBlank() },
+            )
 
-    private fun debugConfig(activePack: AlphaInstalledPack?): AlphaRuntimeDebugConfig =
+        fun parseBoolean(value: String?): Boolean =
+            parseBooleanValue(value ?: "false")
+
+        fun parseRuntimeMode(value: String?): AlphaPackRuntimeMode? = parseRuntimeModeValue(value)
+
+        private fun parseBooleanValue(raw: String): Boolean =
+            raw.trim().lowercase(Locale.ROOT) in setOf("1", "true", "yes", "on")
+
+        private fun parseRuntimeModeValue(raw: String?): AlphaPackRuntimeMode? {
+            val normalized = raw?.trim()?.lowercase(Locale.ROOT).orEmpty()
+            return when (normalized) {
+                AlphaPackRuntimeMode.DeterministicDev.wireValue -> AlphaPackRuntimeMode.DeterministicDev
+                AlphaPackRuntimeMode.MediapipeLlm.wireValue -> AlphaPackRuntimeMode.MediapipeLlm
+                AlphaPackRuntimeMode.Gemma 4 E4B Q4CppGguf.wireValue -> AlphaPackRuntimeMode.Gemma 4 E4B Q4CppGguf
+                AlphaPackRuntimeMode.AppleFoundationModels.wireValue -> AlphaPackRuntimeMode.AppleFoundationModels
+                AlphaPackRuntimeMode.Unavailable.wireValue -> AlphaPackRuntimeMode.Unavailable
+                else -> null
+            }
+        }
+    }
+}
+
+internal object AlphaLocalModelRuntime {
+    private fun debugConfig(
+        runtimeEnvironment: AlphaLocalRuntimeEnvironment = AlphaLocalRuntimeEnvironment.fromBuildConfig(),
+    ): AlphaRuntimeDebugConfig =
         AlphaRuntimeDebugConfig(
-            enableRealInference = BuildConfig.ROSS_ENABLE_REAL_LOCAL_INFERENCE,
-            runtimeModeOverride = BuildConfig.ROSS_LOCAL_RUNTIME
-                .trim()
-                .takeIf { it.isNotBlank() }
-                ?.let(::parseRuntimeMode),
-            modelPath = BuildConfig.ROSS_LOCAL_MODEL_PATH
-                .trim()
-                .takeIf { it.isNotBlank() }
-                ?: activePack
-                    ?.takeIf { it.artifactKind != "tiny_dev_artifact" }
-                    ?.installRelativePath,
+            enableRealInference = runtimeEnvironment.enableRealInference,
+            runtimeModeOverride = runtimeEnvironment.runtimeModeOverride,
+            modelPath = runtimeEnvironment.modelPath?.trim()?.takeIf { it.isNotBlank() },
+            modelChecksum = runtimeEnvironment.modelChecksum?.trim()?.takeIf { it.isNotBlank() },
+            modelKind = runtimeEnvironment.modelKind?.trim()?.takeIf { it.isNotBlank() },
         )
 
-    private fun desiredRuntimeMode(activePack: AlphaInstalledPack?): AlphaPackRuntimeMode? {
-        val debug = debugConfig(activePack)
-        return if (debug.enableRealInference) {
-            debug.runtimeModeOverride ?: activePack?.runtimeMode
-        } else {
-            activePack?.runtimeMode
+    private fun AlphaPackRuntimeMode?.isRealLocal(): Boolean =
+        this == AlphaPackRuntimeMode.MediapipeLlm ||
+            this == AlphaPackRuntimeMode.Gemma 4 E4B Q4CppGguf ||
+            this == AlphaPackRuntimeMode.AppleFoundationModels
+
+    private fun requestedRuntimeMode(
+        activePack: AlphaInstalledPack?,
+        debug: AlphaRuntimeDebugConfig,
+    ): AlphaPackRuntimeMode? {
+        if (debug.enableRealInference && debug.runtimeModeOverride != null) {
+            return debug.runtimeModeOverride
         }
+        return activePack?.runtimeMode
+    }
+
+    private fun resolveModelFile(path: String?, appPrivateRoot: File?): File? {
+        val trimmed = path?.trim()?.takeIf { it.isNotBlank() } ?: return null
+        val file = File(trimmed)
+        return if (file.isAbsolute || appPrivateRoot == null) file else File(appPrivateRoot, trimmed)
+    }
+
+    private fun resolvePackModelFile(activePack: AlphaInstalledPack?, appPrivateRoot: File?): File? {
+        val pack = activePack ?: return null
+        if (pack.artifactKind !in setOf("local_model_artifact", "external_debug_model")) {
+            return null
+        }
+        val root = appPrivateRoot ?: return null
+        return File(root, pack.installRelativePath)
+    }
+
+    private fun modelPathLabel(path: String?, file: File?, activePack: AlphaInstalledPack?): String? =
+        file?.name?.takeIf { it.isNotBlank() }
+            ?: path?.let { File(it).name.takeIf(String::isNotBlank) }
+            ?: activePack?.installRelativePath?.let { File(it).name.takeIf(String::isNotBlank) }
+
+    private fun unavailableProviderFor(
+        activePack: AlphaInstalledPack?,
+        tier: AlphaCapabilityTier,
+        debug: AlphaRuntimeDebugConfig,
+        requestedRuntimeMode: AlphaPackRuntimeMode,
+        explicitFile: File?,
+        packFile: File?,
+    ): AlphaUnavailableRealLocalModelProvider {
+        val modelPathPresent = explicitFile?.exists() == true || packFile?.exists() == true
+        val selectedFile = if (debug.enableRealInference && explicitFile != null) explicitFile else packFile ?: explicitFile
+        val checksumVerified = when {
+            !debug.modelChecksum.isNullOrBlank() && selectedFile != null -> {
+                runCatching { sha256File(selectedFile).equals(debug.modelChecksum.lowercase(Locale.ROOT), ignoreCase = true) }.getOrDefault(false)
+            }
+            else -> activePack?.checksumVerified ?: false
+        }
+        val label = modelPathLabel(debug.modelPath, selectedFile, activePack)
+        val supportedTasks = setOf(
+            AlphaLocalModelTask.DocumentClassification,
+            AlphaLocalModelTask.LegalFieldExtraction,
+            AlphaLocalModelTask.LegalFieldVerification,
+            AlphaLocalModelTask.CaseMemorySynthesis,
+            AlphaLocalModelTask.ChronologyGeneration,
+            AlphaLocalModelTask.OrderSummary,
+            AlphaLocalModelTask.IssueExtraction,
+        )
+        val (message, errorCategory) = when {
+            debug.enableRealInference && explicitFile == null ->
+                "Real local inference is enabled, but ROSS_LOCAL_MODEL_PATH is missing or blank." to "model_path_missing"
+
+            debug.enableRealInference && explicitFile?.exists() == false ->
+                "Ross could not find the developer-provided local model file at the configured path." to "model_file_missing"
+
+            activePack?.runtimeMode?.isRealLocal() == true && packFile == null ->
+                "This pack is marked for real local inference, but no installed local model artifact is present." to "model_path_missing"
+
+            activePack?.runtimeMode?.isRealLocal() == true && packFile?.exists() == false ->
+                "This pack is marked for real local inference, but the installed local model artifact is missing on disk." to "model_file_missing"
+
+            requestedRuntimeMode == AlphaPackRuntimeMode.Gemma 4 E4B Q4CppGguf ->
+                "Gemma 4 Q4 local runtime remains blocked in this alpha because the Android native runtime is not wired yet." to "runtime_blocked"
+
+            requestedRuntimeMode == AlphaPackRuntimeMode.AppleFoundationModels ->
+                "Apple Foundation Models remain unavailable on Android. Ross kept the request local and will fall back safely." to "runtime_unavailable"
+
+            else ->
+                "The requested local runtime is unavailable on this device, so Ross will keep deterministic fallback active." to "runtime_unavailable"
+        }
+
+        return AlphaUnavailableRealLocalModelProvider(
+            capabilityTier = tier,
+            runtimeMode = requestedRuntimeMode,
+            modelPathLabel = label,
+            checksumVerifiedValue = checksumVerified,
+            modelPathPresentValue = modelPathPresent,
+            statusMessage = message,
+            supported = supportedTasks,
+            errorCategory = errorCategory,
+            fallbackActive = true,
+            explicitOptInEnabled = debug.enableRealInference,
+        )
     }
 
     private fun realProviderFor(
         activePack: AlphaInstalledPack?,
         tier: AlphaCapabilityTier,
+        context: Context?,
+        appPrivateRoot: File?,
+        runtimeEnvironment: AlphaLocalRuntimeEnvironment = AlphaLocalRuntimeEnvironment.fromBuildConfig(),
+        mediaPipeRunner: AlphaMediaPipeRunner = AlphaDefaultMediaPipeRunner,
+        deviceSupported: Boolean = AlphaMediaPipeDeviceSupport.isSupported(),
     ): AlphaRealLocalModelProvider? {
-        val debug = debugConfig(activePack)
-        val checksumVerified = activePack?.checksumVerified ?: false
-        val modelPathLabel = debug.modelPath?.let { path ->
-            val file = File(path)
-            if (file.name.isNotBlank()) file.name else "debug-model"
+        val debug = debugConfig(runtimeEnvironment)
+        val requestedRuntimeMode = requestedRuntimeMode(activePack, debug) ?: return null
+        if (!requestedRuntimeMode.isRealLocal()) {
+            return null
         }
-        return when (desiredRuntimeMode(activePack)) {
-            AlphaPackRuntimeMode.MediapipeLlm ->
-                AlphaMediaPipeLocalModelProvider(tier, modelPathLabel, checksumVerified)
 
-            AlphaPackRuntimeMode.Gemma 4 E4B Q4CppGguf ->
-                AlphaGemmaLocalModelProvider(tier, modelPathLabel, checksumVerified)
-
-            AlphaPackRuntimeMode.AppleFoundationModels ->
-                AlphaMediaPipeLocalModelProvider(
-                    tier,
-                    modelPathLabel,
-                    checksumVerified,
-                )
-
+        val explicitFile = resolveModelFile(debug.modelPath, appPrivateRoot)
+        val packFile = resolvePackModelFile(activePack, appPrivateRoot)
+        val selectedFile = when {
+            debug.enableRealInference && explicitFile != null -> explicitFile
+            activePack?.runtimeMode == requestedRuntimeMode && packFile != null -> packFile
+            activePack == null && explicitFile != null -> explicitFile
             else -> null
         }
+
+        if (requestedRuntimeMode != AlphaPackRuntimeMode.MediapipeLlm || selectedFile == null || context == null) {
+            return unavailableProviderFor(
+                activePack = activePack,
+                tier = tier,
+                debug = debug,
+                requestedRuntimeMode = requestedRuntimeMode,
+                explicitFile = explicitFile,
+                packFile = packFile,
+            )
+        }
+
+        return AlphaMediaPipeLocalModelProvider(
+            context = context,
+            capabilityTier = tier,
+            modelFile = selectedFile,
+            modelPathLabel = modelPathLabel(debug.modelPath, selectedFile, activePack),
+            expectedChecksum = debug.modelChecksum,
+            checksumVerifiedFromPack = activePack?.checksumVerified ?: false,
+            modelKind = debug.modelKind ?: activePack?.artifactKind,
+            explicitOptInEnabled = debug.enableRealInference,
+            runner = mediaPipeRunner,
+            deviceSupported = deviceSupported,
+        )
     }
 
     fun runtimeHealth(
         activePack: AlphaInstalledPack?,
         requestedTier: AlphaCapabilityTier?,
+        context: Context? = null,
+        appPrivateRoot: File? = null,
+        runtimeEnvironment: AlphaLocalRuntimeEnvironment = AlphaLocalRuntimeEnvironment.fromBuildConfig(),
     ): AlphaLocalRuntimeHealth? {
         val tier = activePack?.tier ?: requestedTier ?: return null
-        return when (desiredRuntimeMode(activePack)) {
+        val requestedRuntimeMode = requestedRuntimeMode(activePack, debugConfig(runtimeEnvironment))
+        return when (requestedRuntimeMode) {
             null -> null
             AlphaPackRuntimeMode.DeterministicDev ->
                 DeterministicDevLocalModelProvider(tier) {
@@ -434,9 +876,18 @@ object AlphaLocalModelRuntime {
                     estimatedContextTokens = null,
                     lastErrorCategory = "runtime_unavailable",
                     userFacingStatus = "Local model runtime unavailable.",
+                    fallbackActive = true,
+                    explicitOptInEnabled = runtimeEnvironment.enableRealInference,
                 )
 
-            else -> realProviderFor(activePack, tier)?.runtimeHealth()
+            else ->
+                realProviderFor(
+                    activePack = activePack,
+                    tier = tier,
+                    context = context,
+                    appPrivateRoot = appPrivateRoot,
+                    runtimeEnvironment = runtimeEnvironment,
+                )?.runtimeHealth()
         }
     }
 
@@ -444,9 +895,15 @@ object AlphaLocalModelRuntime {
         activePack: AlphaInstalledPack?,
         requestedTier: AlphaCapabilityTier?,
         executor: suspend (AlphaLocalModelInput) -> AlphaLocalModelOutput,
+        context: Context? = null,
+        appPrivateRoot: File? = null,
+        runtimeEnvironment: AlphaLocalRuntimeEnvironment = AlphaLocalRuntimeEnvironment.fromBuildConfig(),
+        mediaPipeRunner: AlphaMediaPipeRunner = AlphaDefaultMediaPipeRunner,
+        deviceSupported: Boolean = AlphaMediaPipeDeviceSupport.isSupported(),
     ): AlphaLocalModelProvider? {
         val tier = activePack?.tier ?: requestedTier ?: return null
-        return when (desiredRuntimeMode(activePack)) {
+        val requestedRuntimeMode = requestedRuntimeMode(activePack, debugConfig(runtimeEnvironment))
+        return when (requestedRuntimeMode) {
             null -> null
             AlphaPackRuntimeMode.DeterministicDev ->
                 DeterministicDevLocalModelProvider(tier, executor)
@@ -455,7 +912,15 @@ object AlphaLocalModelRuntime {
             AlphaPackRuntimeMode.Gemma 4 E4B Q4CppGguf,
             AlphaPackRuntimeMode.AppleFoundationModels,
             AlphaPackRuntimeMode.Unavailable -> {
-                val realProvider = realProviderFor(activePack, tier)
+                val realProvider = realProviderFor(
+                    activePack = activePack,
+                    tier = tier,
+                    context = context,
+                    appPrivateRoot = appPrivateRoot,
+                    runtimeEnvironment = runtimeEnvironment,
+                    mediaPipeRunner = mediaPipeRunner,
+                    deviceSupported = deviceSupported,
+                )
                 if (realProvider?.isAvailable() == true) {
                     realProvider
                 } else {
@@ -487,3 +952,17 @@ internal fun AlphaLocalModelInput.encodedClassification(
         "$instruction\nclassification_json=${gson.toJson(classification)}"
     },
 )
+
+private fun sha256File(file: File): String =
+    FileInputStream(file).use { input ->
+        val digest = MessageDigest.getInstance("SHA-256")
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        while (true) {
+            val read = input.read(buffer)
+            if (read < 0) {
+                break
+            }
+            digest.update(buffer, 0, read)
+        }
+        digest.digest().joinToString("") { "%02x".format(it) }
+    }

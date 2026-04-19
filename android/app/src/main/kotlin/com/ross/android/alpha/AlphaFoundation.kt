@@ -290,7 +290,19 @@ class AlphaRossController(private val context: Context) {
     fun activeExtractionMode(): AlphaExtractionMode = AlphaExtractionMode.fromInstalledPack(activePack())
 
     fun activeRuntimeHealth(): AlphaLocalRuntimeHealth? =
-        AlphaLocalModelRuntime.runtimeHealth(activePack(), activePack()?.tier)
+        AlphaLocalModelRuntime.runtimeHealth(
+            activePack = activePack(),
+            requestedTier = activePack()?.tier ?: persisted.settings.activeTier,
+            context = context,
+            appPrivateRoot = rootDir,
+        )
+
+    fun lastModelInvocationRuntimeMode(): String? =
+        persisted.cases
+            .flatMap { it.documents }
+            .flatMap { it.modelInvocations }
+            .lastOrNull()
+            ?.runtimeMode
 
     private fun loadState(): AlphaPersistedState {
         ensureFolders()

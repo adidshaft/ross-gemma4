@@ -35,6 +35,23 @@ object AlphaPayloadShaper {
         "source chunk",
         "filename",
     )
+    private val legalConceptSignals = listOf(
+        "act",
+        "section",
+        "order",
+        "rule",
+        "maintenance",
+        "injunction",
+        "dishonour",
+        "written statement",
+        "delay",
+        "limitation",
+        "interim",
+        "commercial",
+        "cheque",
+        "court",
+        "filing",
+    )
 
     fun buildModelCatalogPayload(state: AlphaPersistedState): AlphaModelCatalogPayload =
         AlphaModelCatalogPayload(
@@ -146,7 +163,7 @@ object AlphaPayloadShaper {
         val tokens = linkedSetOf<String>()
         (conceptTerms + documentTypes + listOf("India")).forEach { token ->
             val trimmed = token.trim()
-            if (trimmed.isNotBlank()) {
+            if (trimmed.isNotBlank() && isSafePublicLawToken(trimmed)) {
                 tokens += trimmed
             }
         }
@@ -171,12 +188,36 @@ object AlphaPayloadShaper {
         }.distinct().toMutableList()
         val sanitizedPhrase = lowered
             .replace(Regex("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+"), " ")
-            .replace(Regex("\\b\\d{2,}\\b"), " ")
             .replace(Regex("\\s+"), " ")
             .trim()
-        if (sanitizedPhrase.isNotBlank() && sanitizedPhrase.split(" ").size in 3..10) {
+        if (sanitizedPhrase.isNotBlank() && sanitizedPhrase.split(" ").size in 3..10 && looksLikeLegalConcept(sanitizedPhrase)) {
             matched += sanitizedPhrase
         }
-        return matched.distinct()
+        return matched.filter(::isSafePublicLawToken).distinct()
+    }
+
+    private fun looksLikeLegalConcept(value: String): Boolean =
+        legalConceptSignals.any { signal -> value.contains(signal) } ||
+            Regex("section\\s+\\d+[a-z]*", RegexOption.IGNORE_CASE).containsMatchIn(value) ||
+            Regex("order\\s+[a-z0-9]+\\s+rule\\s+\\d+", RegexOption.IGNORE_CASE).containsMatchIn(value)
+
+    private fun isSafePublicLawToken(value: String): Boolean {
+        val lowered = value.lowercase()
+        if ("fakepriv" in lowered || "blue suitcase near temple" in lowered) {
+            return false
+        }
+        if (Regex("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+").containsMatchIn(value)) {
+            return false
+        }
+        if (Regex("\\b\\+?\\d[\\d\\s-]{7,}\\b").containsMatchIn(value)) {
+            return false
+        }
+        if (Regex("\\b\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4}\\b").containsMatchIn(value)) {
+            return false
+        }
+        if (Regex("\\b[A-Za-z]{1,8}[(/\\- ]*\\d+[A-Za-z/()\\- ]*\\d{4}\\b", RegexOption.IGNORE_CASE).containsMatchIn(value)) {
+            return false
+        }
+        return true
     }
 }

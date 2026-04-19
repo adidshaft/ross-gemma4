@@ -6,6 +6,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
+import java.nio.file.Files
 
 class AlphaLocalModelRuntimeTest {
     @Test
@@ -116,6 +118,70 @@ class AlphaLocalModelRuntimeTest {
         assertEquals(6, estimate.estimatedMemoryMb)
         assertTrue(estimate.notes.single().contains("deterministic", ignoreCase = true))
         assertTrue(provider.cancel("invocation-1"))
+    }
+
+    @Test
+    fun `canonical local runtime config parses debug overrides`() {
+        val environment = AlphaLocalRuntimeEnvironment.fromBuildConfig(
+            runtimeOverrides = mapOf(
+                "ROSS_ENABLE_REAL_LOCAL_INFERENCE" to "1",
+                "ROSS_LOCAL_RUNTIME" to "mediapipe_llm",
+                "ROSS_LOCAL_MODEL_PATH" to "/tmp/ross/model.task",
+                "ROSS_LOCAL_MODEL_CHECKSUM" to "a".repeat(64),
+                "ROSS_LOCAL_MODEL_KIND" to "mediapipe_task",
+            ),
+        )
+
+        assertTrue(environment.enableRealInference)
+        assertEquals(AlphaPackRuntimeMode.MediapipeLlm, environment.runtimeModeOverride)
+        assertEquals("/tmp/ross/model.task", environment.modelPath)
+        assertEquals("a".repeat(64), environment.modelChecksum)
+        assertEquals("mediapipe_task", environment.modelKind)
+    }
+
+    @Test
+    fun `runtime selection uses real provider when debug model path exists`() {
+        val root = Files.createTempDirectory("ross-mediapipe-runtime").toFile()
+        val modelFile = File(root, "case-associate.task").apply { writeText("developer supplied model bytes") }
+        val environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference = true,
+            runtimeModeOverride = AlphaPackRuntimeMode.MediapipeLlm,
+            modelPath = modelFile.absolutePath,
+            modelChecksum = null,
+            modelKind = "mediapipe_task",
+        )
+
+        val provider = AlphaLocalModelRuntime.resolveProvider(
+            activePack = null,
+            requestedTier = AlphaCapabilityTier.CaseAssociate,
+            executor = { input ->
+                AlphaLocalModelOutput(
+                    rawText = input.expectedSchema,
+                    parsedJson = input.expectedSchema,
+                    schemaValid = true,
+                    warnings = emptyList(),
+                    sourceRefs = input.sourcePack.map { it.sourceRef },
+                )
+            },
+            context = Application(),
+            appPrivateRoot = root,
+            runtimeEnvironment = environment,
+            mediaPipeRunner = AlphaMediaPipeRunner { _, _, _, _ -> """[]""" },
+            deviceSupported = true,
+        )
+        val health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack = null,
+            requestedTier = AlphaCapabilityTier.CaseAssociate,
+            context = Application(),
+            appPrivateRoot = root,
+            runtimeEnvironment = environment,
+        )
+
+        assertTrue(provider is AlphaMediaPipeLocalModelProvider)
+        assertEquals(AlphaPackRuntimeMode.MediapipeLlm, provider?.runtimeMode)
+        assertTrue(health?.available == true)
+        assertTrue(health?.modelPathPresent == true)
+        assertFalse(health?.fallbackActive ?: true)
     }
 
     @Test
@@ -264,22 +330,162 @@ class AlphaLocalModelRuntimeTest {
             runtimeMode = AlphaPackRuntimeMode.MediapipeLlm,
             artifactKind = "local_model_artifact",
         )
-        val provider = AlphaLocalModelRuntime.resolveProvider(pack, pack.tier) { input ->
-            AlphaLocalModelOutput(
-                rawText = input.expectedSchema,
-                parsedJson = input.expectedSchema,
-                schemaValid = true,
-                warnings = emptyList(),
-                sourceRefs = input.sourcePack.map { it.sourceRef },
-            )
-        }
-        val health = AlphaLocalModelRuntime.runtimeHealth(pack, pack.tier)
+        val provider = AlphaLocalModelRuntime.resolveProvider(
+            activePack = pack,
+            requestedTier = pack.tier,
+            executor = { input ->
+                AlphaLocalModelOutput(
+                    rawText = input.expectedSchema,
+                    parsedJson = input.expectedSchema,
+                    schemaValid = true,
+                    warnings = emptyList(),
+                    sourceRefs = input.sourcePack.map { it.sourceRef },
+                )
+            },
+            context = Application(),
+            appPrivateRoot = Files.createTempDirectory("ross-missing-runtime").toFile(),
+        )
+        val health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack = pack,
+            requestedTier = pack.tier,
+            context = Application(),
+            appPrivateRoot = Files.createTempDirectory("ross-missing-runtime-health").toFile(),
+        )
 
         assertTrue(provider is DeterministicDevLocalModelProvider)
         assertEquals(AlphaPackRuntimeMode.DeterministicDev, provider?.runtimeMode)
         assertEquals(AlphaPackRuntimeMode.MediapipeLlm, health?.runtimeMode)
         assertFalse(health?.available ?: true)
-        assertTrue(health?.userFacingStatus?.contains("compile-safe adapter skeleton") == true)
+        assertTrue(health?.fallbackActive == true)
+        assertEquals("model_file_missing", health?.lastErrorCategory)
+    }
+
+    @Test
+    fun `missing debug model path reports unavailable health`() {
+        val environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference = true,
+            runtimeModeOverride = AlphaPackRuntimeMode.MediapipeLlm,
+            modelPath = "/tmp/ross/does-not-exist.task",
+            modelChecksum = null,
+            modelKind = "mediapipe_task",
+        )
+
+        val health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack = null,
+            requestedTier = AlphaCapabilityTier.CaseAssociate,
+            context = Application(),
+            appPrivateRoot = null,
+            runtimeEnvironment = environment,
+        )
+
+        assertEquals(AlphaPackRuntimeMode.MediapipeLlm, health?.runtimeMode)
+        assertFalse(health?.available ?: true)
+        assertTrue(health?.fallbackActive ?: false)
+        assertEquals("model_file_missing", health?.lastErrorCategory)
+    }
+
+    @Test
+    fun `invalid model output is rejected before extraction can trust it`() = runBlocking {
+        val modelFile = Files.createTempFile("ross-invalid-output", ".task").toFile().apply {
+            writeText("developer supplied model bytes")
+        }
+        val provider = AlphaMediaPipeLocalModelProvider(
+            context = Application(),
+            capabilityTier = AlphaCapabilityTier.CaseAssociate,
+            modelFile = modelFile,
+            modelPathLabel = modelFile.name,
+            expectedChecksum = null,
+            checksumVerifiedFromPack = false,
+            modelKind = "mediapipe_task",
+            explicitOptInEnabled = true,
+            runner = AlphaMediaPipeRunner { _, _, _, _ -> "The court is likely Delhi High Court." },
+            deviceSupported = true,
+        )
+        val output = provider.run(
+            AlphaLocalModelInput(
+                task = AlphaLocalModelTask.LegalFieldExtraction,
+                instruction = "Extract only source-backed legal fields.",
+                sourcePack = listOf(
+                    AlphaSourceTextBlock(
+                        sourceRef = AlphaSourceRef(
+                            caseId = "case-invalid",
+                            documentId = "doc-invalid",
+                            documentTitle = "Order",
+                            pageNumber = 1,
+                            textSnippet = "Order text",
+                        ),
+                        text = "Order text",
+                        pageNumber = 1,
+                    ),
+                ),
+                expectedSchema = "array<AlphaExtractedLegalField>",
+                maxOutputTokens = 256,
+                extractionMode = AlphaExtractionMode.CaseAssociate,
+            ),
+        )
+
+        assertFalse(output.schemaValid)
+        assertEquals("invalid_model_output", output.errorCategory)
+    }
+
+    @Test
+    fun `prompt pack budget enforcement returns needs review style failure`() = runBlocking {
+        val modelFile = Files.createTempFile("ross-budget", ".task").toFile().apply {
+            writeText("developer supplied model bytes")
+        }
+        val provider = AlphaMediaPipeLocalModelProvider(
+            context = Application(),
+            capabilityTier = AlphaCapabilityTier.CaseAssociate,
+            modelFile = modelFile,
+            modelPathLabel = modelFile.name,
+            expectedChecksum = null,
+            checksumVerifiedFromPack = false,
+            modelKind = "mediapipe_task",
+            explicitOptInEnabled = true,
+            runner = AlphaMediaPipeRunner { _, _, _, _ -> """[]""" },
+            deviceSupported = true,
+        )
+        val hugeBlock = "A".repeat(25_000)
+        val output = provider.run(
+            AlphaLocalModelInput(
+                task = AlphaLocalModelTask.LegalFieldExtraction,
+                instruction = "Extract only source-backed legal fields.",
+                sourcePack = listOf(
+                    AlphaSourceTextBlock(
+                        sourceRef = AlphaSourceRef(
+                            caseId = "case-budget",
+                            documentId = "doc-budget",
+                            documentTitle = "Order",
+                            pageNumber = 1,
+                            textSnippet = "snippet",
+                        ),
+                        text = hugeBlock,
+                        pageNumber = 1,
+                    ),
+                ),
+                expectedSchema = "array<AlphaExtractedLegalField>",
+                maxOutputTokens = 512,
+                extractionMode = AlphaExtractionMode.CaseAssociate,
+            ),
+        )
+
+        assertFalse(output.schemaValid)
+        assertEquals("budget_exceeded", output.errorCategory)
+    }
+
+    @Test
+    fun `android local model runtime source keeps network imports out of provider`() {
+        val workingDir = File(requireNotNull(System.getProperty("user.dir")))
+        val sourceFile = listOf(
+            File(workingDir, "app/src/main/kotlin/com/ross/android/alpha/AlphaLocalModelRuntime.kt"),
+            File(workingDir, "src/main/kotlin/com/ross/android/alpha/AlphaLocalModelRuntime.kt"),
+        ).firstOrNull { it.exists() }
+            ?: error("Could not locate AlphaLocalModelRuntime.kt from ${workingDir.absolutePath}")
+        val source = sourceFile.readText()
+
+        assertFalse(source.contains("java.net."))
+        assertFalse(source.contains("HttpURLConnection"))
+        assertFalse(source.contains("URLSession"))
     }
 
     @Test

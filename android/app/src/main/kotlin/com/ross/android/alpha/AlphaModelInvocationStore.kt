@@ -56,8 +56,12 @@ object AlphaModelInvocationStore {
     ): AlphaLocalModelInvocation = invocation.copy(
         outputHash = sha256(output.parsedJson ?: output.rawText),
         completedAt = nowIso(),
-        status = AlphaLocalModelInvocationStatus.Complete,
-        errorCategory = null,
+        status = when (output.errorCategory) {
+            "cancelled" -> AlphaLocalModelInvocationStatus.Cancelled
+            null -> AlphaLocalModelInvocationStatus.Complete
+            else -> AlphaLocalModelInvocationStatus.Failed
+        },
+        errorCategory = output.errorCategory,
     )
 
     fun fail(

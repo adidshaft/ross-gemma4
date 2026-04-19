@@ -896,7 +896,12 @@ private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack
                 AlphaCard("Technical details", "Collapsed runtime status for developer QA.") {
                     Text("Runtime mode: ${health.runtimeMode.wireValue}")
                     Text("Local runtime: ${if (health.available) "available" else "unavailable"}")
+                    Text("Fallback active: ${if (health.fallbackActive) "yes" else "no"}")
+                    Text("Explicit opt-in: ${if (health.explicitOptInEnabled) "enabled" else "disabled"}")
+                    Text("Model path present: ${if (health.modelPathPresent) "yes" else "no"}")
                     Text("Checksum verified: ${if (health.checksumVerified) "yes" else "no"}")
+                    health.lastErrorCategory?.let { Text("Last runtime error: $it") }
+                    controller.lastModelInvocationRuntimeMode()?.let { Text("Last invocation runtime: $it") }
                     health.maxInputChars?.let { Text("Max input chars: $it") }
                     Text(
                         health.userFacingStatus,
