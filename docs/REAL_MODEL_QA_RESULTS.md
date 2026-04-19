@@ -1,31 +1,60 @@
 # Real Model QA Results
 
 - Date: 2026-04-19
-- Branch/commit: `alpha-real-model-proof` / pending final commit hash
-- Platform: Android + iOS alpha readiness review
-- Device model: Not available in this environment
-- OS version: Not available in this environment
-- Runtime mode: `mediapipe_llm` planned for Android proof, `apple_foundation_models` planned for iOS proof
-- Model artifact source: developer-provided local artifact expected
-- Model artifact checksum: not recorded because no artifact was available here
+- Branch: `alpha-android-real-proof`
+- Commit observed during validation: `e10c7f4`
+- Platform: Android physical-device proof attempt with repo-wide validation
+- Device model: Not available. No physical Android device was connected.
+- Android version: Not available. No physical Android device was connected.
+- Runtime mode: Not run. Requested proof target remains `mediapipe_llm`.
+- Model artifact kind: developer-provided local `.task` artifact
+- Model artifact source: Not provided in this session
+- Model checksum status: Not configured in this session
 - Whether model file was committed: No
 - Whether inference actually ran: No
-- Document fixture used: synthetic smoke fixtures only
+- Whether deterministic fallback was used: Not applicable for a physical-device proof run because no Android extraction was executed on-device
+- Runtime health result: Not observed on a physical Android device
+- Fixture used: none for a real-device Android run
 - Extraction mode: `Case Associate`
-- Duration: not recorded for a real-device model run
-- Fields found: not recorded for a real-device model run
-- Fields verified: not recorded for a real-device model run
-- Fields needing review: not recorded for a real-device model run
-- Unsupported accepted count: not recorded for a real-device model run
-- Schema valid: not recorded for a real-device model run
-- Source refs present: not recorded for a real-device model run
-- Export generated: smoke/export paths are present in-app, but no physical-device proof export was captured here
-- Privacy ledger checked: baseline behavior preserved by tests and local app flows
-- Logs checked for raw prompt/source: regression coverage added; no real-device log capture was available here
-- Network checked for model calls: baseline boundary tests passed; no real-device capture was available here
+- Duration: not recorded because no real-device inference ran
+- Fields found: not recorded because no real-device inference ran
+- Fields verified: not recorded because no real-device inference ran
+- Fields needing review: not recorded because no real-device inference ran
+- Unsupported accepted count: not recorded because no real-device inference ran
+- Schema valid: not recorded because no real-device inference ran
+- Source refs present: not recorded because no real-device inference ran
+- Export generated: not recorded because no real-device inference ran
+- Privacy ledger checked: not checked on a physical Android device in this session
+- Logs checked for raw prompt/source: not checked on a physical Android device in this session
+- Network checked for model calls: not checked on a physical Android device in this session
+- Exact blocker:
+  - no physical Android device connected
+  - no developer-provided compatible `.task` model artifact configured or supplied
+- What was validated instead:
+  - `scripts/dev/android-real-inference-smoke.sh` cleanly skipped with `Skipping: no physical Android device is connected.`
+  - `adb devices -l` returned no attached devices
+  - no `ROSS_ENABLE_REAL_LOCAL_INFERENCE`, `ROSS_LOCAL_RUNTIME`, or `ROSS_LOCAL_MODEL_*` environment variables were configured in this session
+  - Android baseline validation passed: `./gradlew :app:testDebugUnitTest :app:assembleDebug`
+  - Rust, backend, privacy-guard, and iOS validation suites passed after a small iOS runtime-health safety fix
+  - backend live smoke passed for:
+    - `GET /model-catalog`
+    - `POST /model-download/session`
+    - `GET /dev-artifacts/:artifactId` with `Range`
+    - `POST /public-law/search`
+  - optional backend external-model metadata and serving smoke passed with a safe temporary file outside the repo, and the backend did not expose the local file path
 - Failures/blockers:
-  - no physical Android device attached for this session
-  - no developer-provided `.task` artifact available to this session
-  - no compatible Apple device/runtime available to this session
-- Next action:
-  - run `/Users/amanpandey/projects/ross/scripts/dev/android-real-inference-smoke.sh` with a connected physical Android device and developer-provided `.task` artifact, then record one honest `mediapipe_llm` run in this file
+  - Android real local inference was not run, so there is still no proof yet that `mediapipe_llm` executed on a physical device for Ross
+- Next exact manual step:
+  - connect one physical Android device
+  - supply one compatible developer-provided `.task` model artifact outside the repo
+  - set:
+    - `ROSS_ENABLE_REAL_LOCAL_INFERENCE=1`
+    - `ROSS_LOCAL_RUNTIME=mediapipe_llm`
+    - `ROSS_LOCAL_MODEL_PATH=<app-readable device path>`
+    - `ROSS_LOCAL_MODEL_PUSH_SOURCE=<absolute source path outside the repo>` when using the smoke helper
+    - optional `ROSS_LOCAL_MODEL_CHECKSUM=<sha256>`
+  - rerun `/Users/amanpandey/projects/ross/scripts/dev/android-real-inference-smoke.sh`
+  - install and launch the Android debug APK
+  - confirm `Settings > Private AI > Technical details` shows real runtime available with fallback inactive
+  - run `Run local inference smoke`
+  - complete one synthetic `Case Associate` extraction, verify source-backed fields, confirm unsupported accepted count stays `0`, generate one export, inspect the Privacy Ledger, inspect `adb logcat`, and record the observed result here without pasting prompt text, source text, or model output

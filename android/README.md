@@ -41,6 +41,11 @@ cd /Users/amanpandey/projects/ross/android
 - Local-only runtime metrics now record counts and timings without storing content.
 - All model output still flows through prompt packing, JSON extraction, schema validation, source-ref validation, verifier gating, and advocate review.
 - Unsupported fields are not silently accepted.
+- Latest observed proof state on 2026-04-19:
+  - `adb devices -l` returned no connected Android device
+  - `/Users/amanpandey/projects/ross/scripts/dev/android-real-inference-smoke.sh` skipped cleanly because no physical Android device was connected
+  - no developer-provided compatible `.task` artifact was configured in this session
+  - result: Android real local inference was not run
 
 ## Debug configuration
 
@@ -52,6 +57,7 @@ These debug-only values are supported through Gradle properties or environment v
 - `ROSS_LOCAL_MODEL_CHECKSUM`
 - `ROSS_LOCAL_MODEL_KIND`
 - `ROSS_BACKEND_BASE_URL`
+- optional `ROSS_LOCAL_MODEL_PUSH_SOURCE` when using the smoke helper to copy a developer artifact from an absolute path outside the repo
 
 No model file is committed to the repo, and CI does not require a real model artifact.
 

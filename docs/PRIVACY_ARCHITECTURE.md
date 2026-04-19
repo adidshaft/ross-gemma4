@@ -13,6 +13,7 @@ The active product does not upload case files, OCR text, prompts, embeddings, fi
 - Local runtime metrics store only runtime mode, counts, hashes, and timings.
 - Public-law search still sends only a sanitized query.
 - Model files are not committed and are not bundled.
+- Android physical-device proof is still pending, so no on-device model-network capture was available in this session.
 
 ## Core boundary
 
@@ -122,6 +123,7 @@ Alpha status:
 - backend model catalog and download flows remain dev-artifact only
 - delivery metadata now includes runtime mode, artifact kind, and minimum app-version compatibility fields
 - no large model file is stored in source control or served as part of the normal alpha flow
+- optional external debug-model serving was live-smoked with a safe temporary file outside the repo and did not expose the local file path
 
 ## Logging limits
 

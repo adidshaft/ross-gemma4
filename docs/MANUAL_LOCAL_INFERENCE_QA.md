@@ -6,6 +6,14 @@ This runbook exists to keep the repo honest about what was actually proven.
 - Real local inference requires a compatible runtime and a developer-provided model artifact.
 - Do not claim a real local inference run unless Technical details recorded the real runtime mode.
 
+## Latest observed status
+
+Observed on 2026-04-19:
+
+- Android real local inference was not run because no physical Android device was connected and no developer-provided compatible `.task` artifact was configured.
+- iOS real local inference was not run because no compatible Apple device/runtime was used in this session.
+- Backend live smoke passed for the default deterministic model catalog/download flow and the optional external debug-model flow with a safe temporary file outside the repo.
+
 ## Canonical environment names
 
 - `ROSS_BACKEND_BASE_URL`
@@ -21,6 +29,7 @@ For any platform:
 
 - model files are not committed to git
 - model files are not bundled in app assets or app bundles
+- model artifacts used for manual proof must stay outside the repo until copied into app-private storage during QA
 - no cloud inference is used
 - raw prompts are not persisted by default
 - raw source text is not persisted in invocation metadata
@@ -62,6 +71,7 @@ Current status:
 - Android is the preferred first proof path.
 - A physical device is likely required for meaningful MediaPipe QA.
 - The app now includes `Settings > Private AI > Technical details > Run local inference smoke`.
+- If `adb devices -l` is empty or no `.task` artifact is configured, stop and record `Not run`.
 
 ## iOS QA
 
@@ -95,6 +105,10 @@ If the runtime is unavailable:
 - record the sanitized reason
 - keep deterministic fallback active
 - mark the QA result as not run
+
+Current decision:
+
+- persisted iOS metric parity is deferred until after the Android physical-device proof exists
 
 ## Public-law sanitation checks
 

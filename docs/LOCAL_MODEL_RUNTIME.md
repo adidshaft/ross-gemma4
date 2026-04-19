@@ -17,6 +17,12 @@ OCR is only acquisition. The runtime sits between source-packed local text and a
 - Unsupported fields are not silently accepted.
 - Local-only runtime metrics now record counts and timings without storing content.
 
+Latest observed proof state on 2026-04-19:
+
+- Android `mediapipe_llm` was not run because there was no connected physical device and no developer-provided compatible `.task` artifact configured in this session.
+- iOS `apple_foundation_models` was not run on compatible hardware in this session.
+- iOS runtime health now fails safely when a configured external adapter path is missing or unreadable, so validation stays non-interactive.
+
 ## Design goals
 
 - keep case files on-device
@@ -101,6 +107,7 @@ Current behavior:
 - expects `ROSS_LOCAL_RUNTIME=apple_foundation_models`
 - reports availability only in technical details
 - falls back safely to `deterministic_dev` when the runtime is unavailable or opt-in is missing
+- if a configured external adapter path is missing or unreadable, runtime health reports the failure instead of trying to open an interactive system prompt
 
 ## Prompt packing
 

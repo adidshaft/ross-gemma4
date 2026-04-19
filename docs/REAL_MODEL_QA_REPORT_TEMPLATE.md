@@ -1,16 +1,20 @@
 # Real Model QA Report Template
 
 - Date:
-- Branch/commit:
+- Branch:
+- Commit observed during validation:
 - Platform:
 - Device model:
-- OS version:
+- Android version / OS version:
 - Runtime mode:
+- Model artifact kind:
 - Model artifact source:
-- Model artifact checksum:
+- Model checksum status:
 - Whether model file was committed: No
 - Whether inference actually ran: Yes/No
-- Document fixture used:
+- Whether deterministic fallback was used:
+- Runtime health result:
+- Fixture used:
 - Extraction mode:
 - Duration:
 - Fields found:
@@ -23,5 +27,7 @@
 - Privacy ledger checked:
 - Logs checked for raw prompt/source:
 - Network checked for model calls:
+- Exact blocker:
+- What was validated instead:
 - Failures/blockers:
-- Next action:
+- Next exact manual step:

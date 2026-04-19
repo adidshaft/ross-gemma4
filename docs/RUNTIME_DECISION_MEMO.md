@@ -14,6 +14,13 @@ Ross Real Local Model Proof & QA Alpha
 - Do not commit model files.
 - Do not add any cloud inference path.
 
+## Latest observed outcome
+
+- Android physical-device proof remains blocked in this session.
+- `adb devices -l` returned no physical Android device.
+- No developer-provided `.task` artifact was configured in this session.
+- The repo stayed validated after one narrow iOS safety fix for missing Foundation Models adapter paths.
+
 ## Why Android is the first proof target
 
 - The Android branch already has a concrete MediaPipe-backed provider path.
@@ -27,6 +34,7 @@ Ross Real Local Model Proof & QA Alpha
 - Real-runtime probing remains off unless `ROSS_ENABLE_REAL_LOCAL_INFERENCE=1`.
 - The canonical real-runtime value remains `ROSS_LOCAL_RUNTIME=apple_foundation_models`.
 - If unavailable, Ross must say so clearly and keep deterministic fallback active.
+- A missing configured Foundation Models adapter path must fail safely without opening an interactive system prompt.
 
 ## Backend decision
 
@@ -87,3 +95,4 @@ Ross Real Local Model Proof & QA Alpha
 
 - Use the new Android smoke tooling and Technical details screen first.
 - Record one honest physical-device `Case Associate` run before expanding runtime architecture any further.
+- Defer iOS metric-parity work until after that Android proof exists.

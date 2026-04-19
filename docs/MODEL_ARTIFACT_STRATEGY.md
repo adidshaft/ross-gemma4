@@ -2,6 +2,15 @@
 
 Ross needs a model artifact strategy that proves real local inference without weakening privacy or committing binaries.
 
+## Current proof status
+
+Latest observed state on 2026-04-19:
+
+- Android real local inference was not run.
+- No physical Android device was connected.
+- No developer-provided compatible `.task` model artifact was supplied in this session.
+- The next proof attempt still needs one artifact outside the repo and outside Android app assets.
+
 ## Non-negotiable rules
 
 - no large model files in git
@@ -16,7 +25,9 @@ Recommended first proof path.
 
 - the developer places a compatible local model artifact on the device
 - the app reads `ROSS_LOCAL_MODEL_PATH`
+- the source artifact stays outside the repo and outside `android/app/src/main/assets` or `res/raw`
 - `ROSS_LOCAL_MODEL_CHECKSUM` is optional but recommended
+- `ROSS_LOCAL_MODEL_PUSH_SOURCE` can point to an absolute source path outside the repo when using the Android smoke helper
 - no backend delivery is required
 - fastest way to prove the Android real provider on a physical device
 
@@ -84,3 +95,4 @@ Not for this alpha:
 2. Use backend external metadata only when you need to validate metadata plumbing.
 3. Use backend dev serving only as a clearly disabled-by-default developer feature.
 4. Do not add broader delivery architecture until a real physical-device proof run exists.
+5. Record `Not run` immediately if either the physical device or the external `.task` artifact is missing.

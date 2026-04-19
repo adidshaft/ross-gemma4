@@ -47,6 +47,10 @@ swift run --scratch-path tmp/swiftpm Ross --generate-screenshots
 - A developer smoke action now reports runtime used, schema validity, and review counts without exposing prompt or source text.
 - All model output still flows through prompt packing, JSON extraction, schema validation, source-ref validation, verifier gating, and advocate review.
 - Unsupported fields are not silently accepted.
+- If a configured external adapter path is missing or unreadable, runtime health now reports the failure safely instead of hanging validation.
+- Latest observed proof state on 2026-04-19:
+  - no compatible Apple real-runtime device was used in this session
+  - result: iOS real local inference was not run
 
 ## Debug configuration
 

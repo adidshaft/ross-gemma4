@@ -4,6 +4,11 @@ This script validates the `Case Associate` workflow from setup through privacy r
 
 Use it whether you are running the deterministic development runtime or an optional real local runtime. Only call the run "real local inference" if the runtime details explicitly show the real runtime mode.
 
+Latest observed status on 2026-04-19:
+
+- no Android physical-device real-runtime run happened in this session
+- no compatible Android `.task` artifact was provided in this session
+
 ## Alpha proof update
 
 - Use the Technical details screen to confirm runtime mode before making any claim.
@@ -54,6 +59,7 @@ Expected:
 
 - deterministic runs show `deterministic_dev`
 - real runs show the configured real runtime mode
+- if the Android smoke helper skips because no physical device is connected, stop here and record `Not run`
 
 ## 4. Confirm extraction quality changes
 

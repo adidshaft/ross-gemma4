@@ -6,12 +6,22 @@ This runbook proves the Android `mediapipe_llm` path on a physical device.
 - Do not claim success from emulator-only runs.
 - Do not claim success unless `Last invocation runtime` or the smoke report shows `mediapipe_llm`.
 
+## Latest observed status
+
+Observed on 2026-04-19:
+
+- `adb devices -l` returned no connected Android devices.
+- `/Users/amanpandey/projects/ross/scripts/dev/android-real-inference-smoke.sh` cleanly skipped because no physical Android device was connected.
+- No developer-provided `.task` artifact was configured in this session.
+- Result: Android real local inference was not run.
+
 ## Prerequisites
 
 - physical Android device
 - developer-provided `.task` model artifact
 - debug build of Ross
 - optional local backend for catalog/download/public-law checks
+- the `.task` artifact must stay outside the repo and outside Android bundled assets
 
 Model files:
 
@@ -40,6 +50,7 @@ What the script does:
 - lists connected devices
 - looks for a physical device
 - checks required env vars
+- never pulls a model from the network
 - builds the debug APK
 - optionally pushes the model file
 - prints install/run instructions
@@ -65,6 +76,7 @@ What the script does:
 7. Import a short synthetic or non-sensitive legal fixture.
 8. Run `Case Associate` extraction.
 9. Return to Technical details and confirm the last invocation runtime still shows `mediapipe_llm`.
+10. Record device model and Android version in `docs/REAL_MODEL_QA_RESULTS.md` without including personal device identifiers.
 
 ## What to verify in extraction
 
@@ -91,6 +103,7 @@ Mark the run as blocked if any of the following is true:
 - checksum mismatch
 - runtime dependency unavailable
 - local runtime unavailable on the device
+- the model source path is inside the repo or inside Android bundled assets
 
 ## Result language
 
