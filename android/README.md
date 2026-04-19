@@ -7,70 +7,56 @@ cd /Users/amanpandey/projects/ross/android
 ./gradlew :app:assembleDebug
 ```
 
-To run the current JVM tests:
+## Run unit tests
 
 ```sh
 cd /Users/amanpandey/projects/ross/android
 ./gradlew :app:testDebugUnitTest
 ```
 
-## Current alpha foundation
+## Current Android usability alpha
 
-- onboarding flows into Private AI Pack setup and then the case list
-- cases, documents, extracted fields, findings, review state, and pack-install metadata persist to encrypted app-private storage
-- Android runs a local extraction orchestrator with:
-  - PDF page rendering
-  - on-device ML Kit OCR
-  - language and script heuristics
-  - deterministic fallback extraction
-  - prompt packing
-  - schema validation
-  - verification and review queue generation
-- source chips deep-link into the document viewer
-- public-law search keeps the sanitized-preview flow
-- pack delivery uses `/model-catalog`, `/model-download/session`, and `/dev-artifacts/:artifactId`
+The active Android shell is lawyer-facing and organized around:
 
-## Real local inference alpha status
+- Home
+- Cases
+- Capture / Import
+- Ask Ross
+- Settings
 
-- Android now has a real-provider abstraction behind the installed-pack provider contract.
-- Android now has a concrete MediaPipe local inference adapter path for developer-supplied `.task` artifacts.
-- Runtime metadata supports `deterministic_dev`, `mediapipe_llm`, `gemma_local_runtime`, `apple_foundation_models`, and `unavailable`.
-- Gemma 4 Q4 remains blocked in this alpha.
-- If a configured real runtime is unavailable, Android falls back safely to the deterministic development provider.
-- Invocation metadata stores hashes and runtime mode, not raw prompts or raw source text.
-- Local-only runtime metrics now record counts and timings without storing content.
-- All model output still flows through prompt packing, JSON extraction, schema validation, source-ref validation, verifier gating, and advocate review.
-- Unsupported fields are not silently accepted.
-- Latest observed proof state on 2026-04-19:
-  - `adb devices -l` returned no connected Android device
-  - `/Users/amanpandey/projects/ross/scripts/dev/android-real-inference-smoke.sh` skipped cleanly because no physical Android device was connected
-  - no developer-provided compatible `.task` artifact was configured in this session
-  - result: Android real local inference was not run
+Key Android behaviors in this phase:
 
-## Debug configuration
+- Home dashboard with cases, tasks, dates, review items, and recent documents
+- local task persistence
+- case workspaces with documents, tasks, review, and exports
+- plain-language document status copy
+- sticky Ask Ross bar
+- Web toggle with sanitized preview and confirmation
+- privacy ledger in plain language
+- technical diagnostics hidden under advanced Private AI settings
 
-These debug-only values are supported through Gradle properties or environment variables:
+## Privacy and Web search
 
-- `ROSS_ENABLE_REAL_LOCAL_INFERENCE`
-- `ROSS_LOCAL_RUNTIME`
-- `ROSS_LOCAL_MODEL_PATH`
-- `ROSS_LOCAL_MODEL_CHECKSUM`
-- `ROSS_LOCAL_MODEL_KIND`
-- `ROSS_BACKEND_BASE_URL`
-- optional `ROSS_LOCAL_MODEL_PUSH_SOURCE` when using the smoke helper to copy a developer artifact from an absolute path outside the repo
+Android keeps these rules:
 
-No model file is committed to the repo, and CI does not require a real model artifact.
+- case files stay on this device
+- Web is off by default
+- no public-law request is made when Web is off
+- when Web is on, Ross shows a sanitized preview before search
+- public-law results stay labeled separately from case-file sources
 
-Android physical-device proof tooling now exists at:
+## Private AI note
 
-- `/Users/amanpandey/projects/ross/scripts/dev/android-real-inference-smoke.sh`
+Private AI Pack setup remains available with:
 
-The app also includes:
+- Quick Start
+- Case Associate
+- Senior Drafting Support
 
-- `Settings > Private AI > Technical details > Run local inference smoke`
+Normal Android screens should not expose runtime identifiers. Technical diagnostics remain under advanced settings.
 
-## Known caveats
+## Real local inference note
 
-- Android real local inference still requires a physical-device run plus a developer-provided model artifact before it can be claimed as exercised.
-- Exact snippet highlights remain best-effort.
-- Technical runtime details remain inside Private AI settings and should not move into onboarding.
+Real local-model proof is still separate from this usability alpha.
+
+This README documents the Android product shell now in place, not a claim that a real Android runtime has already been proven on hardware in this phase.

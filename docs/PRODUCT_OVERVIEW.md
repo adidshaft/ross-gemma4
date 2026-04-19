@@ -1,64 +1,104 @@
 # Product Overview
 
-Ross is a privacy-first legal workbench for Indian advocates. It is designed to make legal documents useful on-device through layered extraction, source-backed review, chronology building, issue spotting, order analysis, and local drafting support.
+Ross is a privacy-first legal workbench for Indian advocates.
 
-## Alpha proof update
+The current alpha is designed to feel like a simple private mobile app for day-to-day legal work, not a technical AI runtime showcase.
 
-- Ross keeps `Case files stay on this device` as the core promise.
-- `Quick Start`, `Case Associate`, and `Senior Drafting Support` remain the advocate-facing pack labels.
-- The deterministic dev provider is a local test runtime, not a real model.
-- Real local inference now has an Android proof path plus iOS opt-in readiness, but a claim still requires a real device run.
-- No cloud inference is used.
+## Core product shape
 
-## Product direction
+The normal app experience is organized around:
 
-Ross is not a cloud case processor and it is not an OCR-only tool.
+- Home
+- Cases
+- Capture / Import
+- Ask Ross
+- Settings
 
-The product direction is:
+The main product loop is:
 
-- acquire text locally
-- understand language and document type locally
-- extract legally important fields locally
-- verify important fields locally
-- preserve source anchors
-- show uncertainty honestly
-- ask the advocate to correct only what needs review
-- turn reviewed extraction into local case memory
-- keep case files on this device
+1. Create a case.
+2. Add or import documents.
+3. Review uncertain extracted details.
+4. Track tasks, dates, and reminders.
+5. Ask Ross from local case files.
+6. Optionally run a sanitized public-law search.
+7. Export a chronology, case note, or order summary.
 
-## Product pillars
+## Home-first experience
 
-1. Privacy-first local execution
-2. Law-grade source-backed extraction
-3. Clear separation between case data and network traffic
-4. Extraction quality that scales with the installed Private AI Pack
-5. Practical advocate review UX instead of hidden automation
-6. Honest runtime messaging when deterministic fallback is active
+Home is the primary dashboard.
 
-## Key workflows
+It is expected to show:
 
-1. Install the app and complete minimal setup.
-2. Choose a Private AI Pack or continue in Basic mode.
-3. Create a case and import documents.
-4. Run local acquisition and local language detection.
-5. Review extracted details with source chips.
-6. Correct only the uncertain fields.
-7. Generate chronology, issue, order-summary, and case-note drafts locally.
-8. Optionally run public-law search with a sanitized query preview.
+- greeting and day summary
+- items due today
+- upcoming dates
+- active cases
+- open tasks
+- review-required items
+- recent documents
+- a bottom Ask Ross bar
 
-## Current alpha status
+## Ask Ross
 
-- deterministic local runtime remains the default for CI and fallback
-- Case Associate is the first tier wired for the deeper extraction and verification chain
-- Android now has a concrete MediaPipe adapter path for developer-supplied local artifacts
-- iOS has an Apple Foundation Models adapter path behind explicit developer opt-in
-- no large model files are committed
-- no cloud inference is used
+Ask Ross is designed as a simple bottom input pattern, available globally and within a case.
 
-## Non-goals
+Default behavior:
 
-- public legal advice
-- silent cloud case processing
-- analytics-driven case monitoring
-- remote case sync in this phase
-- pretending deterministic output is the same as real local inference
+- Web is off
+- Ross answers from local case files only
+- if Ross cannot find the answer locally, it says `I could not find this in your case files.`
+
+Optional Web behavior:
+
+- the user turns on `Web`
+- Ross builds a generic public-law query locally
+- Ross shows the query preview
+- Ross requires explicit confirmation before sending anything
+- Ross labels public-law results separately from case-file sources
+
+## Privacy promises
+
+Ross keeps these user-facing promises:
+
+- `Case files stay on this device`
+- `Draft for advocate review`
+- `Source-backed`
+- `Verified from source`
+- `Needs review`
+- `Public-law search sends only a sanitized query`
+
+## Private AI positioning
+
+Private AI Pack options remain:
+
+- Quick Start
+- Case Associate
+- Senior Drafting Support
+
+Normal users see:
+
+- what each pack helps with
+- how much space it needs
+- whether Wi-Fi is recommended
+- whether it is ready, downloading, waiting, or needs attention
+
+Normal users should not need to see runtime identifiers or artifact details.
+
+## Technical diagnostics
+
+Technical diagnostics still exist, but they are not part of the normal product narrative.
+
+They remain hidden under advanced settings and are used for QA, debugging, and real-runtime proof work.
+
+## What this alpha is not
+
+Ross is not:
+
+- a cloud AI case processor
+- an AI lawyer
+- a developer console
+- a remote case-sync product
+- a claim of proven real local model performance
+
+Real local model proof remains a separate effort from this usability alpha.

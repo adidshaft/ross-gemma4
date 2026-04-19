@@ -1,195 +1,156 @@
 # Manual Case Associate E2E
 
-This script validates the `Case Associate` workflow from setup through privacy review.
+This script validates the lawyer-facing `Case Associate` workflow in the current usability alpha.
 
-Use it whether you are running the deterministic development runtime or an optional real local runtime. Only call the run "real local inference" if the runtime details explicitly show the real runtime mode.
+Use it for a manual app pass, not for claiming a real local-model proof.
 
-Latest observed status on 2026-04-19:
-
-- no Android physical-device real-runtime run happened in this session
-- no compatible Android `.task` artifact was provided in this session
-
-## Alpha proof update
-
-- Use the Technical details screen to confirm runtime mode before making any claim.
-- For Android, prefer the built-in `Run local inference smoke` action before a full document run.
-- For iOS, keep the smoke action behind explicit opt-in and compatible runtime availability.
-- Accepted fields must remain source-backed and verifier-gated.
-
-## 1. Fresh install
-
-- Install a fresh debug build on Android or iOS.
-- Launch Ross.
+## 1. Launch the app
 
 Expected:
 
-- onboarding loads cleanly
-- the app still says `Case files stay on this device`
+- onboarding is short
+- Ross says `Case files stay on this device`
 - no technical model names appear in onboarding
-
-Fail if:
-
-- the app crashes
-- onboarding promises cloud processing
-- onboarding shows technical runtime names
 
 ## 2. Complete or skip Private AI Pack setup
 
-- Continue through `Quick Start`, `Case Associate`, or `Senior Drafting Support`
-- Or skip the pack flow and confirm Basic mode still works
+Expected:
+
+- Quick Start, Case Associate, and Senior Drafting Support are shown with user-facing descriptions
+- the app can continue even if pack setup is skipped
+- technical diagnostics are not shown here
+
+## 3. Land on Home
 
 Expected:
 
-- the workbench loads either way
-- extraction quality labels stay user-facing
+- Home feels like a clean private case dashboard
+- Home shows cases, tasks, dates, recent documents, and review-required items
+- the Ask Ross bar is visible at the bottom
 
-## 3. Configure the runtime path
+## 4. Create a case
 
-Choose one:
+Steps:
 
-- Deterministic baseline:
-  - install the normal dev artifact
-  - do not enable real local inference
-- Optional real Android runtime:
-  - follow [ANDROID_REAL_INFERENCE_QA.md](/Users/amanpandey/projects/ross/docs/ANDROID_REAL_INFERENCE_QA.md)
-- Optional real iOS runtime:
-  - follow [MANUAL_LOCAL_INFERENCE_QA.md](/Users/amanpandey/projects/ross/docs/MANUAL_LOCAL_INFERENCE_QA.md)
+- tap `Create Case`
+- save a case title and forum
 
 Expected:
 
-- deterministic runs show `deterministic_dev`
-- real runs show the configured real runtime mode
-- if the Android smoke helper skips because no physical device is connected, stop here and record `Not run`
+- the case appears on Home
+- the case appears in Cases
+- the case opens as a private workspace
 
-## 4. Confirm extraction quality changes
+## 5. Add a task
 
-- Open `Settings > Private AI`
-- Review the active pack and technical details
+Steps:
 
-Expected:
-
-- `Case Associate` shows deeper extraction quality than Basic
-- fallback state is explicit
-- runtime availability is explicit
-
-Fail if:
-
-- the app hides fallback state during manual QA
-- runtime mode is ambiguous
-
-## 5. Import a PDF or image sample
-
-- Import a short legal fixture
-- Confirm the file lands in the local case workspace
+- add a task from Home or a case workspace
+- mark it done
 
 Expected:
 
-- import succeeds without uploading the file
-- the document viewer shows source chips or source panel metadata
+- the task appears under Today or Tasks
+- the task can be marked done and reopened
+- the task remains local
 
-## 6. Run extraction
+## 6. Import a document
 
-- Start extraction under `Case Associate`
-- Wait for acquisition, extraction, and verification to finish
+Steps:
+
+- open a case
+- import a PDF, image, or text file
 
 Expected:
 
-- the app does not freeze or crash
-- extraction completes or falls back safely
-- long files do not cause a fatal failure
+- the document appears in Documents
+- the status is shown in plain language
+- the viewer opens
+
+Expected plain-language statuses:
+
+- `Ready`
+- `Still reading`
+- `Needs review`
+- `Low confidence scan`
+- `Could not read this clearly`
 
 ## 7. Review extracted details
 
-Check:
+Steps:
 
-- court
-- case number
-- dates and next date
-- sections
-- order directions
-- issues or relief candidates if present
+- open Review or the document viewer
+- accept one field
+- edit one field
+- ignore one field if needed
 
 Expected:
 
-- accepted fields are source-backed
-- weak fields show `Needs advocate review`
-- unsupported values are not silently accepted
+- review counts update
+- corrected values remain local
+- source references remain visible
 
-## 8. Accept, edit, or ignore fields
+## 8. Ask Ross with Web off
 
-- Accept a correct field
-- Edit one uncertain field
-- Ignore one field if needed
+Steps:
 
-Expected:
-
-- the review queue updates
-- corrected values stay local
-- later public-law suggestions use verified or user-corrected legal concepts only
-
-## 9. Tap source chips
-
-- Open at least one source chip from a reviewed field
+- keep `Web` off
+- ask about a case or document
 
 Expected:
 
-- the app lands on the cited page or source panel
-- source references remain visible even when exact highlight placement is best-effort
+- Ross answers from local case files only
+- case-file sources are shown separately
+- if Ross does not find the answer, it says `I could not find this in your case files.`
 
-## 10. Generate a case note or order summary
+## 9. Ask Ross with Web on
 
-- Create a local note or summary from the reviewed document
+Steps:
 
-Expected:
-
-- the result is framed as `Draft for advocate review`
-- the output remains `Source-backed`
-
-## 11. Export PDF or report output
-
-- Export a report or summary artifact
+- turn `Web` on
+- ask a public-law question
 
 Expected:
 
-- export completes locally
-- output remains in app-private storage or the local export surface
-
-## 12. Open Privacy Ledger
-
-- Review the most recent ledger entries
-
-Expected:
-
-- no model-network event exists
-- public-law search entries, if any, say only a sanitized query crossed the boundary
-
-## 13. Validate sanitized public-law preview
-
-- Open Public Law
-- Generate a preview from reviewed extraction or a manual query
-
-Expected:
-
-- preview is mandatory before the backend request
-- preview keeps legal concepts but strips party names, case numbers, phone numbers, email addresses, and private narrative facts
+- Ross explains that only a generic public-law query will be sent
+- Ross shows `Public-law query to be sent`
+- Ross requires explicit confirmation before sending anything
+- public-law results are shown separately from case-file sources
 
 Fail if:
 
-- the request sends without a preview
-- the preview includes private identifiers
+- the search runs without preview
+- case text or document text is sent
 
-## 14. Record the runtime honestly
+## 10. Export
 
-Record one of these outcomes:
+Steps:
 
-- `deterministic_dev`
-- `mediapipe_llm`
-- `apple_foundation_models`
-- `fallback_active`
+- generate a chronology, case note, or order summary
 
-Only record a real local inference success if:
+Expected:
 
-- the technical details show the real runtime as available
-- `Last invocation runtime` matches the real runtime
-- schema validation and verifier checks still passed
-- no network model request occurred
+- output is framed as `Draft for advocate review`
+- export stays local
+
+## 11. Privacy Ledger
+
+Steps:
+
+- open Privacy Ledger
+
+Expected:
+
+- entries are understandable to a lawyer
+- no raw payloads appear
+- a public-law search entry says only that a sanitized query crossed the boundary
+
+## 12. What not to claim from this pass
+
+Do not claim from this manual pass alone:
+
+- a real local model proof
+- legal advice
+- proven legal accuracy without advocate review
+
+That proof work remains separate from this usability-alpha checklist.

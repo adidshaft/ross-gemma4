@@ -2,142 +2,113 @@
 
 Ross is built around a hard local-first boundary for advocate case work.
 
-The active product does not upload case files, OCR text, prompts, embeddings, filenames, party names, client facts, or extracted legal fields to cloud AI services.
+The current product does not upload case files, OCR text, prompts, embeddings, filenames, party names, client facts, or extracted legal fields to cloud AI services.
 
-## Alpha proof update
+## Core privacy promises
 
-- No remote model provider was added.
-- Backend external debug model support carries only metadata or explicit dev artifact bytes and still accepts no case data.
-- Raw prompts are not persisted by default.
-- Raw source text is not persisted in invocation metadata.
-- Local runtime metrics store only runtime mode, counts, hashes, and timings.
-- Public-law search still sends only a sanitized query.
-- Model files are not committed and are not bundled.
-- Android physical-device proof is still pending, so no on-device model-network capture was available in this session.
+Ross keeps these product promises:
 
-## Core boundary
+- `Case files stay on this device`
+- `Draft for advocate review`
+- `Source-backed`
+- `Verified from source`
+- `Needs review`
+- `Public-law search sends only a sanitized query`
+
+## Privacy layers
 
 Ross separates work into four layers:
 
-1. `Case Vault`
-2. `Local Extraction and AI Runtime`
-3. `Public Law Layer`
-4. `Entitlement and Delivery Layer`
+1. Case Vault
+2. Local Review and Private AI
+3. Public-law Search
+4. Delivery and Entitlement
 
 ## Case Vault
 
 The Case Vault contains:
 
 - case metadata
-- imported files
-- page text and OCR results
+- tasks
+- reminders and dates
+- imported documents
+- extracted details
+- review decisions
 - source refs
-- extracted legal fields
-- extraction runs and findings
-- advocate corrections
-- case memory updates
 - local exports
-- local privacy ledger history
+- privacy ledger entries
 
 Rules:
 
-- stays local to the device
-- never imports network inference clients
-- never sends raw case text to public-law search
-- never exposes prompts, OCR text, embeddings, or filenames across the network boundary
+- stays on device
+- is not uploaded to cloud AI services
+- is not shared with public-law search
+- is not stored in analytics or telemetry systems
 
-## Local Extraction and AI Runtime
+## Local Review and Private AI
 
-This layer performs law-grade document understanding locally.
+This layer performs:
 
-It includes:
-
-- text acquisition
-- OCR cleanup
-- language and script detection
-- prompt packing
-- document classification
-- legal field extraction
-- verifier/refiner pass
-- confidence scoring
-- advocate review queues
-- case-memory synthesis
+- local document reading
+- OCR where supported locally
+- source-backed extraction
+- review queues
+- case note and chronology generation
+- local Ask Ross responses from case files
 
 Rules:
 
-- OCR is acquisition, not reasoning
-- no cloud model calls
 - no cloud OCR
-- no analytics or telemetry SDKs
-- uploaded documents are treated as data, not instructions
-- every accepted value must keep source support
-- unsupported values must become `needs review` or `rejected`
-- the runtime itself must not use the network
+- no remote model APIs
+- no analytics SDKs
+- no silent case-data upload
+- unsupported or uncertain details must remain reviewable, not silently accepted
 
-Runtime status in this alpha:
+## Public-law Search
 
-- deterministic development runtime is active and real
-- Android has a concrete MediaPipe adapter path, but it still requires a developer artifact and physical-device QA before a real run can be claimed
-- iOS has a real Apple Foundation Models adapter path behind explicit developer opt-in
-- raw prompts and raw source text are not persisted in invocation metadata by default
-
-## Public Law Layer
-
-The Public Law Layer is the only outward-facing legal research boundary.
-
-It contains:
-
-- local sanitization
-- preview and confirmation UI
-- approved backend client
-- local cache of approved public-law results
+This is the only legal-research network boundary in the normal app.
 
 Rules:
 
-- accepts only sanitized public query objects
-- never receives case IDs, filenames, OCR text, party names, client facts, or raw extracted values
-- requires explicit user confirmation before a network request
-- logs only sanitized public query activity in the Privacy Ledger
+- Web is off by default
+- Ross must build the query locally
+- Ross must show a preview before sending it
+- Ross must require explicit confirmation
+- Ross must send only a generic sanitized public-law query
+- Ross must not send case text, filenames, party names, or factual narrative
+- Ross must label public-law results separately from case-file sources
 
-Ross may suggest a public-law query from extracted legal concepts, but the preview remains mandatory.
+## Delivery and Entitlement
 
-## Entitlement and Delivery Layer
+This layer covers:
 
-This layer contains:
-
-- auth and entitlement handling
-- model catalog
-- model-download session setup
-- byte-range development artifact delivery
+- model catalog checks
+- Private AI Pack downloads
 - checksum verification
-- pack install metadata
+- install metadata
+- entitlement checks
 
 Rules:
 
-- must not read case files
-- must not accept case-data payloads
-- remains limited to `no_case_data`, `account_token`, or `sanitized_public_query` payload classes
+- it must not read case files
+- it must not receive case-data payloads
+- it must not weaken the local-first boundary
 
-Alpha status:
+## Privacy Ledger
 
-- backend model catalog and download flows remain dev-artifact only
-- delivery metadata now includes runtime mode, artifact kind, and minimum app-version compatibility fields
-- no large model file is stored in source control or served as part of the normal alpha flow
-- optional external debug-model serving was live-smoked with a safe temporary file outside the repo and did not expose the local file path
+The Privacy Ledger should remain understandable to a lawyer.
 
-## Logging limits
+Examples of acceptable entries:
 
-The following must never appear in backend logs or outbound payloads:
+- `Checked Private AI availability`
+- `Downloaded Private AI Pack`
+- `Searched public law`
+- `Generated local export`
 
-- case text
-- OCR text
-- prompts
-- embeddings
-- filenames
-- party names
-- client names
-- case numbers
-- private extracted fields
-- fake privacy regression strings used in tests
+The ledger should not expose raw payloads or raw private text.
 
-Those values may appear only in encrypted local storage, local review UI, local viewer context, and local source-backed exports.
+## Real-runtime note
+
+Real local model proof is separate from this usability alpha.
+
+This architecture document describes the boundary Ross preserves now, regardless of whether a real on-device runtime has been separately proven in manual QA.

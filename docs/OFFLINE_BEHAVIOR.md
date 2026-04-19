@@ -1,78 +1,77 @@
 # Offline Behavior
 
-Ross is designed so legal work can continue even when no network is available.
+Ross is useful even when the network is unavailable.
 
-The useful offline behavior is not only OCR. It is the combination of local text acquisition, local extraction, local verification, local review, and local exports.
+The current usability alpha is built so the main case workflow still works locally.
 
-## Alpha proof update
+## Works offline
 
-- Real local inference remains local-only and does not require cloud inference.
-- Android real-runtime QA is expected on a physical device.
-- iOS real-runtime QA requires explicit opt-in and compatible hardware.
-- Model files are not bundled and are not committed.
-- If the real runtime is unavailable, Ross keeps deterministic fallback intact and honest.
+The following flows are designed to work without network access:
 
-## Works with no Private AI Pack installed
+- create a case
+- open Home and Cases
+- add and complete tasks
+- import PDF, image, and text documents into app-private storage
+- run local document reading and review
+- open document viewer and source-backed review UI
+- accept, edit, or ignore extracted details
+- ask Ross from local case files with Web off
+- generate local exports
+- inspect the Privacy Ledger
 
-- create and manage cases locally
-- import PDF, image, and text files into encrypted app-private storage
-- acquire embedded PDF text locally where available
-- run on-device OCR locally where available
-- detect English, Hindi, and mixed-script documents locally
-- run Basic extraction mode with deterministic heuristics
-- review extracted details locally
-- generate local chronology, case-note, and order-summary exports
-- inspect the Privacy Ledger locally
+## Works offline with no Private AI Pack installed
 
-## Works with Quick Start
+Ross still supports:
 
-- everything in Basic mode
-- lighter prompt packing and local extraction orchestration for shorter documents
-- conservative local classification and extraction improvements
-- deterministic fallback if the runtime is unavailable or the source pack is too large
+- basic local document reading
+- plain-language review status
+- local task management
+- local-only case answers where enough case data exists
+- local exports
 
-## Works with Case Associate
-
-- everything in Quick Start
-- deeper extraction and verifier chain
-- stronger mixed-language handling
-- review queues so the advocate only corrects uncertain fields
-- optional real local inference when a compatible runtime is available and explicitly enabled for manual QA
-
-## Works with Senior Drafting Support
-
-- everything in Case Associate
-- deeper synthesis planning for longer bundles
-- stronger bilingual and multi-pass review behavior
-- the same runtime safety rules and deterministic fallback behavior
+In that state, Ross should present itself as using `basic local mode`, not as a failed technical runtime.
 
 ## Requires network
 
+These flows remain network-dependent:
+
 - model catalog checks
-- model-download session setup
-- dev-artifact byte delivery for development pack installs
+- Private AI Pack download setup
+- development artifact delivery
 - entitlement refresh
-- public-law search after the user approves the sanitized preview
+- public-law search after the user approves a sanitized preview
 
-## Degraded or waiting behavior
+## Public-law search behavior
 
-- If no pack is installed, Ross still remains useful for import, OCR, deterministic extraction, review, and export.
-- If a real local runtime is configured but unavailable, Ross falls back safely to deterministic behavior.
-- If a prompt pack is too large for the current runtime budget, Ross batches or falls back instead of crashing.
-- If the backend is unavailable during development, already-imported case files remain local and accessible.
-- Public-law search stays blocked until the user confirms the sanitized preview.
+Public-law Web search is not automatic.
 
-## Real local inference limits in this alpha
+If Web is off:
 
-- No large model file is committed to the repo.
-- No model file is bundled into the app.
-- Android now has a concrete MediaPipe adapter path, but it still needs a developer artifact and physical-device QA before a real run can be claimed.
-- iOS can use Apple Foundation Models when a compatible runtime is explicitly enabled.
-- If no real runtime actually ran, Ross must not claim that it did.
+- no public-law network request is made
+- Ross answers from local case files only
 
-## User-facing messaging
+If Web is on:
 
-- Say when extraction quality is `Basic`, `Standard`, or `Advanced`.
-- Show `Verified from source` and `Needs advocate review`.
-- Keep `Case files stay on this device` explicit.
-- Keep technical runtime status inside advanced or debug surfaces, not onboarding.
+- Ross builds the public-law query locally
+- Ross shows the sanitized preview
+- Ross requires explicit user confirmation before sending it
+- no case files or document text are sent
+
+## Degraded behavior
+
+If Ross cannot complete a richer private review path, the app should still remain useful and calm.
+
+Expected degraded states include:
+
+- `Using basic local mode`
+- `Still reading`
+- `Needs review`
+- `Could not read this clearly`
+
+The app should avoid exposing runtime jargon in these normal user flows.
+
+## Real-runtime note
+
+Real local model proof remains separate from offline product usability.
+
+This document describes the offline product behavior the lawyer can rely on today, not a claim that a real runtime has been proven on hardware in this phase.

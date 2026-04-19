@@ -4,7 +4,7 @@
 
 1. Open `/Users/amanpandey/projects/ross/ios/Ross.xcodeproj` in Xcode.
 2. Select the shared `Ross` scheme.
-3. Pick any iOS Simulator destination.
+3. Pick an iOS Simulator destination.
 4. Press Run.
 
 ## Command-line build
@@ -23,50 +23,49 @@ swift test --scratch-path tmp/swiftpm
 swift run --scratch-path tmp/swiftpm Ross --generate-screenshots
 ```
 
-## Current alpha foundation
+## Current iOS usability alpha
 
-- active alpha state is encrypted at rest
-- PDF imports index native page text locally where available
-- image imports run local Vision OCR where available
-- iOS runs a local extraction orchestrator with:
-  - acquisition
-  - language profiling
-  - prompt packing
-  - deterministic fallback extraction
-  - schema validation
-  - verification and review queue generation
-- public-law search and model-download clients remain privacy-safe
+The active iOS shell is lawyer-facing and organized around:
 
-## Real local inference alpha status
+- Home
+- Cases
+- Capture / Import
+- Ask Ross
+- Settings
 
-- iOS now has a real-provider abstraction behind the installed-pack provider contract.
-- An Apple Foundation Models adapter path exists behind availability checks.
-- Real-runtime probing is disabled by default so CI and simulator runs stay deterministic.
-- When the configured real runtime is unavailable, iOS falls back safely to the deterministic development provider.
-- Invocation metadata stores hashes and runtime mode, not raw prompts or raw source text.
-- A developer smoke action now reports runtime used, schema validity, and review counts without exposing prompt or source text.
-- All model output still flows through prompt packing, JSON extraction, schema validation, source-ref validation, verifier gating, and advocate review.
-- Unsupported fields are not silently accepted.
-- If a configured external adapter path is missing or unreadable, runtime health now reports the failure safely instead of hanging validation.
-- Latest observed proof state on 2026-04-19:
-  - no compatible Apple real-runtime device was used in this session
-  - result: iOS real local inference was not run
+Key iOS behaviors in this phase:
 
-## Debug configuration
+- Home dashboard with cases, tasks, dates, review items, and recent documents
+- local task model and case-scoped task views
+- case workspaces with overview, documents, tasks, review, and exports
+- plain-language document statuses
+- bottom Ask Ross composer
+- Web toggle with sanitized preview and confirmation
+- privacy ledger in plain language
+- technical diagnostics hidden under advanced Private AI settings
 
-To exercise the real iOS runtime path manually, use scheme environment variables such as:
+## Privacy and Web search
 
-- `ROSS_ENABLE_REAL_LOCAL_INFERENCE=1`
-- `ROSS_LOCAL_RUNTIME=apple_foundation_models`
-- `ROSS_LOCAL_MODEL_PATH=/absolute/path/to/local/model` when an external adapter file is required
-- `ROSS_LOCAL_MODEL_CHECKSUM=<optional sha256>`
-- `ROSS_LOCAL_MODEL_KIND=<optional adapter label>`
-- `ROSS_BACKEND_BASE_URL=http://127.0.0.1:8080`
+iOS keeps these rules:
 
-No model file is committed to the repo, and CI does not require a real model artifact.
+- case files stay on this device
+- Web is off by default
+- no public-law request is made when Web is off
+- when Web is on, Ross shows a sanitized preview before search
+- public-law results stay separate from case-file sources
 
-## Known caveats
+## Private AI note
 
-- The Apple Foundation Models path is the only real inference path in this branch.
-- It should not be claimed as active unless it actually ran on a compatible device.
-- Exact PDF snippet highlights remain best-effort, with source chips as the primary trust surface.
+Private AI Pack setup remains available with:
+
+- Quick Start
+- Case Associate
+- Senior Drafting Support
+
+Normal iOS screens should avoid runtime jargon. Technical diagnostics remain in advanced settings for QA and proof work.
+
+## Real local inference note
+
+Real local-model proof is still separate from this usability alpha.
+
+This README describes the current iOS product shell and validation entry points, not a claim that a real iOS runtime has already been proven on hardware in this phase.
