@@ -2,8 +2,8 @@ import type { RuntimeEnv } from "../security/env.js";
 import { AppError } from "../utils/http.js";
 import { createId } from "../utils/ids.js";
 import { signPayload } from "../utils/signing.js";
-import { MODEL_PACKS } from "../model_catalog/service.js";
-import { getDevArtifactDescriptor } from "./dev_artifacts.js";
+import { listModelPacks } from "../model_catalog/service.js";
+import { getDevArtifactDescriptor, getExternalArtifactRecord } from "./dev_artifacts.js";
 
 export interface ModelDownloadSessionInput {
   accountToken: string;
@@ -16,21 +16,27 @@ export interface ModelDownloadSessionInput {
 export class ModelDownloadService {
   constructor(private readonly env: RuntimeEnv) {}
 
-  createSession(input: ModelDownloadSessionInput) {
-    const pack = MODEL_PACKS.find((candidate) => candidate.packId === input.packId);
+  async createSession(input: ModelDownloadSessionInput) {
+    const pack = listModelPacks(this.env).find((candidate) => candidate.packId === input.packId);
 
     if (!pack) {
       throw new AppError(404, "unknown_model_pack", "Requested model pack does not exist.");
     }
 
-    const artifact = getDevArtifactDescriptor(pack);
+    const artifact =
+      pack.artifactKind === "external_debug_model"
+        ? (await getExternalArtifactRecord(this.env, pack)).descriptor
+        : getDevArtifactDescriptor(pack);
     const payload = {
       sessionId: createId("mdl"),
       packId: pack.packId,
       displayName: pack.displayName,
       tier: pack.tier,
       deliveryBoundary: "no_case_data",
-      deliveryMode: "signed_segmented_dev_artifact",
+      deliveryMode:
+        pack.artifactKind === "external_debug_model"
+          ? "signed_segmented_external_debug_artifact"
+          : "signed_segmented_dev_artifact",
       artifactKind: pack.artifactKind,
       runtimeMode: pack.runtimeMode,
       developmentOnly: pack.developmentOnly,

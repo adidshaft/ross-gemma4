@@ -4,11 +4,12 @@ import { z } from "zod";
 import type { AuditLogger } from "../audit/logger.js";
 import type { RuntimeEnv } from "../security/env.js";
 import { assertNoCaseDataPayload, hashValueSchema, parseStrict, platformSchema } from "../security/privacy.js";
-import { MODEL_PACKS } from "../model_catalog/service.js";
-import { findDevArtifactRecord } from "./dev_artifacts.js";
+import { listModelPacks } from "../model_catalog/service.js";
+import { findArtifactRecord } from "./dev_artifacts.js";
 import { hashForAudit } from "../utils/signing.js";
 import { AppError } from "../utils/http.js";
 import { ModelDownloadService } from "./service.js";
+import { createReadStream } from "node:fs";
 
 interface RouteDeps {
   env: RuntimeEnv;
@@ -41,7 +42,7 @@ export async function registerModelDownloadRoutes(
     async (request, reply) => {
       assertNoCaseDataPayload(request.body);
       const input = parseStrict(modelDownloadSessionSchema, request.body);
-      const response = service.createSession(input);
+      const response = await service.createSession(input);
       reply.header("Cache-Control", "private, no-store");
 
       deps.auditLogger.info({
@@ -77,13 +78,14 @@ export async function registerModelDownloadRoutes(
         request.params
       );
 
-      const record = findDevArtifactRecord(MODEL_PACKS, params.artifactId);
+      const record = await findArtifactRecord(deps.env, listModelPacks(deps.env), params.artifactId);
 
       if (!record) {
         throw new AppError(404, "unknown_dev_artifact", "Requested development artifact does not exist.");
       }
 
-      const totalBytes = record.bytes.length;
+      const totalBytes =
+        "bytes" in record ? record.bytes.length : record.descriptor.sizeBytes;
       const rangeHeader = request.headers.range;
       let startByte = 0;
       let endByteInclusive = totalBytes - 1;
@@ -115,13 +117,12 @@ export async function registerModelDownloadRoutes(
         reply.header("Content-Range", `bytes ${startByte}-${endByteInclusive}/${totalBytes}`);
       }
 
-      const chunk = record.bytes.subarray(startByte, endByteInclusive + 1);
       reply
         .code(statusCode)
         .header("Accept-Ranges", "bytes")
         .header("Cache-Control", "private, no-store")
         .header("Content-Type", record.descriptor.contentType)
-        .header("Content-Length", String(chunk.length))
+        .header("Content-Length", String(endByteInclusive - startByte + 1))
         .header("Content-Disposition", `attachment; filename="${record.descriptor.fileName}"`);
 
       deps.auditLogger.info({
@@ -137,7 +138,17 @@ export async function registerModelDownloadRoutes(
         }
       });
 
-      return reply.send(chunk);
+      if ("bytes" in record) {
+        const chunk = record.bytes.subarray(startByte, endByteInclusive + 1);
+        return reply.send(chunk);
+      }
+
+      return reply.send(
+        createReadStream(record.absolutePath, {
+          start: startByte,
+          end: endByteInclusive
+        })
+      );
     }
   );
 }

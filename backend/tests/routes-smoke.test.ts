@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import test from "node:test";
 
 import { buildApp } from "../src/main.js";
@@ -9,9 +12,19 @@ function parseJson<T>(payload: string): T {
   return JSON.parse(payload) as T;
 }
 
+function buildTestEnv(overrides: Record<string, string | undefined> = {}) {
+  return readRuntimeEnv({
+    nodeEnvOverride: "test",
+    environment: {
+      ...process.env,
+      ...overrides
+    }
+  });
+}
+
 test("backend scaffold endpoints return coherent stub responses", async (t) => {
   const app = await buildApp({
-    env: readRuntimeEnv({ nodeEnvOverride: "test" }),
+    env: buildTestEnv(),
     emitLogsToConsole: false
   });
 
@@ -256,4 +269,211 @@ test("backend scaffold endpoints return coherent stub responses", async (t) => {
   assert.equal(publicSearchBody.connector.mode, "backend_fixture_index");
   assert.equal(publicSearchBody.resultCount, publicSearchBody.results.length);
   assert.match(publicSearchBody.results[0]?.title ?? "", /Act|Procedure|Evidence|injunction/i);
+});
+
+test("external debug model metadata appears only when explicitly enabled", async (t) => {
+  const disabledApp = await buildApp({
+    env: buildTestEnv(),
+    emitLogsToConsole: false
+  });
+  const enabledApp = await buildApp({
+    env: buildTestEnv({
+      ROSS_ENABLE_EXTERNAL_MODEL_METADATA: "1",
+      ROSS_EXTERNAL_MODEL_RUNTIME: "mediapipe_llm",
+      ROSS_EXTERNAL_MODEL_KIND: "external_debug_model",
+      ROSS_EXTERNAL_MODEL_SHA256: "a".repeat(64),
+      ROSS_EXTERNAL_MODEL_SIZE_BYTES: "4096",
+      ROSS_EXTERNAL_MODEL_DISPLAY_NAME: "Case Associate Local Debug Model",
+      ROSS_EXTERNAL_MODEL_MIN_APP_VERSION: "0.2.0"
+    }),
+    emitLogsToConsole: false
+  });
+
+  t.after(async () => {
+    await disabledApp.close();
+    await enabledApp.close();
+  });
+
+  const disabledCatalog = await disabledApp.inject({
+    method: "GET",
+    url: "/model-catalog?platform=android"
+  });
+  const enabledCatalog = await enabledApp.inject({
+    method: "GET",
+    url: "/model-catalog?platform=android"
+  });
+
+  const disabledBody = parseJson<{
+    manifest: { payload: { packs: Array<{ artifactKind: string }> } };
+  }>(disabledCatalog.body);
+  const enabledBody = parseJson<{
+    manifest: {
+      payload: {
+        packs: Array<{
+          packId: string;
+          displayName: string;
+          artifactKind: string;
+          runtimeMode: string;
+          developmentOnly: boolean;
+          checksumSha256: string;
+          sizeBytes: number;
+          minimumAppVersion: string | null;
+        }>;
+      };
+    };
+  }>(enabledCatalog.body);
+
+  assert.equal(disabledBody.manifest.payload.packs.some((pack) => pack.artifactKind === "external_debug_model"), false);
+
+  const externalPack = enabledBody.manifest.payload.packs.find((pack) => pack.packId === "case-associate-local-debug-pack");
+  assert.ok(externalPack);
+  assert.equal(externalPack.displayName, "Case Associate Local Debug Model");
+  assert.equal(externalPack.artifactKind, "external_debug_model");
+  assert.equal(externalPack.runtimeMode, "mediapipe_llm");
+  assert.equal(externalPack.developmentOnly, true);
+  assert.equal(externalPack.checksumSha256, "a".repeat(64));
+  assert.equal(externalPack.sizeBytes, 4096);
+  assert.equal(externalPack.minimumAppVersion, "0.2.0");
+});
+
+test("external debug model serving stays disabled by default", async (t) => {
+  const app = await buildApp({
+    env: buildTestEnv({
+      ROSS_ENABLE_EXTERNAL_MODEL_METADATA: "1",
+      ROSS_EXTERNAL_MODEL_RUNTIME: "mediapipe_llm",
+      ROSS_EXTERNAL_MODEL_KIND: "external_debug_model",
+      ROSS_EXTERNAL_MODEL_SHA256: "a".repeat(64),
+      ROSS_EXTERNAL_MODEL_SIZE_BYTES: "4096"
+    }),
+    emitLogsToConsole: false
+  });
+
+  t.after(async () => {
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "POST",
+    url: "/model-download/session",
+    payload: {
+      accountToken: "acct_test_token_1234567890",
+      packId: "case-associate-local-debug-pack",
+      platform: "android",
+      appVersion: "1.0.0",
+      deviceIdHash: "a1b2c3d4e5f6a7b8"
+    }
+  });
+
+  assert.equal(response.statusCode, 403);
+  assert.match(response.body, /external_model_serving_disabled/);
+});
+
+test("external debug model serving rejects unsafe in-repo paths", async (t) => {
+  const app = await buildApp({
+    env: buildTestEnv({
+      ROSS_ENABLE_EXTERNAL_MODEL_METADATA: "1",
+      ROSS_ENABLE_EXTERNAL_MODEL_SERVING: "1",
+      ROSS_EXTERNAL_MODEL_RUNTIME: "mediapipe_llm",
+      ROSS_EXTERNAL_MODEL_KIND: "external_debug_model",
+      ROSS_EXTERNAL_MODEL_SHA256: "a".repeat(64),
+      ROSS_EXTERNAL_MODEL_SIZE_BYTES: "4096",
+      ROSS_EXTERNAL_MODEL_FILE_PATH: path.resolve(process.cwd(), "src/main.ts")
+    }),
+    emitLogsToConsole: false
+  });
+
+  t.after(async () => {
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "POST",
+    url: "/model-download/session",
+    payload: {
+      accountToken: "acct_test_token_1234567890",
+      packId: "case-associate-local-debug-pack",
+      platform: "android",
+      appVersion: "1.0.0",
+      deviceIdHash: "a1b2c3d4e5f6a7b8"
+    }
+  });
+
+  assert.equal(response.statusCode, 400);
+  assert.match(response.body, /external_model_path_invalid/);
+  assert.doesNotMatch(response.body, /src\/main\.ts/);
+});
+
+test("external debug model range serving works with a safe temporary file", async (t) => {
+  const externalDir = mkdtempSync(path.join(tmpdir(), "ross-external-model-"));
+  const externalPath = path.join(externalDir, "case-associate.task");
+  const bytes = Buffer.from("ross external debug model bytes");
+  writeFileSync(externalPath, bytes);
+
+  const app = await buildApp({
+    env: buildTestEnv({
+      ROSS_ENABLE_EXTERNAL_MODEL_METADATA: "1",
+      ROSS_ENABLE_EXTERNAL_MODEL_SERVING: "1",
+      ROSS_EXTERNAL_MODEL_RUNTIME: "mediapipe_llm",
+      ROSS_EXTERNAL_MODEL_KIND: "external_debug_model",
+      ROSS_EXTERNAL_MODEL_SHA256: createHash("sha256").update(bytes).digest("hex"),
+      ROSS_EXTERNAL_MODEL_SIZE_BYTES: String(bytes.length),
+      ROSS_EXTERNAL_MODEL_FILE_PATH: externalPath
+    }),
+    emitLogsToConsole: false
+  });
+
+  t.after(async () => {
+    await app.close();
+    rmSync(externalDir, { recursive: true, force: true });
+  });
+
+  const sessionResponse = await app.inject({
+    method: "POST",
+    url: "/model-download/session",
+    payload: {
+      accountToken: "acct_test_token_1234567890",
+      packId: "case-associate-local-debug-pack",
+      platform: "android",
+      appVersion: "1.0.0",
+      deviceIdHash: "a1b2c3d4e5f6a7b8"
+    }
+  });
+
+  assert.equal(sessionResponse.statusCode, 200);
+  const sessionBody = parseJson<{
+    downloadSession: {
+      payload: {
+        artifact: {
+          downloadPath: string;
+          finalSha256: string;
+          sizeBytes: number;
+          segments: Array<{
+            sha256: string;
+            rangeHeader: string;
+            startByte: number;
+            endByteInclusive: number;
+          }>;
+        };
+      };
+    };
+  }>(sessionResponse.body);
+
+  const firstSegment = sessionBody.downloadSession.payload.artifact.segments[0];
+  assert.ok(firstSegment);
+
+  const rangeResponse = await app.inject({
+    method: "GET",
+    url: sessionBody.downloadSession.payload.artifact.downloadPath,
+    headers: {
+      range: firstSegment.rangeHeader
+    }
+  });
+
+  assert.equal(rangeResponse.statusCode, 206);
+  assert.equal(
+    createHash("sha256").update(Buffer.from(rangeResponse.rawPayload)).digest("hex"),
+    firstSegment.sha256
+  );
+  assert.equal(sessionBody.downloadSession.payload.artifact.finalSha256, createHash("sha256").update(bytes).digest("hex"));
+  assert.equal(sessionBody.downloadSession.payload.artifact.sizeBytes, bytes.length);
 });

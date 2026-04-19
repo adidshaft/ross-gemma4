@@ -31,6 +31,9 @@ export interface ModelPack {
   minimumAppVersion: string | null;
 }
 
+export const EXTERNAL_DEBUG_PACK_ID = "case-associate-local-debug-pack";
+const EXTERNAL_DEBUG_SEGMENT_SIZE_BYTES = 1_048_576;
+
 export const MODEL_PACKS: ModelPack[] = [
   {
     packId: "quick-start-pack",
@@ -73,6 +76,40 @@ export const MODEL_PACKS: ModelPack[] = [
   }
 ];
 
+function buildExternalDebugPack(env: RuntimeEnv): ModelPack | null {
+  if (!env.enableExternalModelMetadata) {
+    return null;
+  }
+
+  if (
+    env.externalModelRuntime !== "mediapipe_llm" ||
+    env.externalModelKind !== "external_debug_model" ||
+    !env.externalModelSha256?.match(/^[a-f0-9]{64}$/i) ||
+    env.externalModelSizeBytes === undefined
+  ) {
+    return null;
+  }
+
+  return {
+    packId: EXTERNAL_DEBUG_PACK_ID,
+    displayName: env.externalModelDisplayName ?? "Case Associate Local Debug Model",
+    tier: "case_associate",
+    sizeBytes: env.externalModelSizeBytes,
+    segmentSizeBytes: EXTERNAL_DEBUG_SEGMENT_SIZE_BYTES,
+    technicalModels: [],
+    artifactSeed: `external-debug-${env.externalModelSha256.slice(0, 12)}`,
+    artifactKind: "external_debug_model",
+    runtimeMode: "mediapipe_llm",
+    developmentOnly: true,
+    minimumAppVersion: env.externalModelMinAppVersion ?? null
+  };
+}
+
+export function listModelPacks(env: RuntimeEnv): ModelPack[] {
+  const externalPack = buildExternalDebugPack(env);
+  return externalPack ? [...MODEL_PACKS, externalPack] : MODEL_PACKS;
+}
+
 export interface ModelCatalogQuery {
   platform: "android" | "ios";
   tier?: CapabilityTier | undefined;
@@ -82,7 +119,8 @@ export class ModelCatalogService {
   constructor(private readonly env: RuntimeEnv) {}
 
   listCatalog(input: ModelCatalogQuery) {
-    const packs = input.tier ? MODEL_PACKS.filter((pack) => pack.tier === input.tier) : MODEL_PACKS;
+    const allPacks = listModelPacks(this.env);
+    const packs = input.tier ? allPacks.filter((pack) => pack.tier === input.tier) : allPacks;
 
     const payload = {
       manifestId: createId("manifest"),
@@ -90,7 +128,16 @@ export class ModelCatalogService {
       issuedAt: new Date().toISOString(),
       expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(),
       packs: packs.map((pack) => {
-        const artifact = getDevArtifactDescriptor(pack);
+        const artifact =
+          pack.artifactKind === "tiny_dev_artifact"
+            ? getDevArtifactDescriptor(pack)
+            : {
+                sizeBytes: pack.sizeBytes,
+                finalSha256: this.env.externalModelSha256 ?? "",
+                segmentSizeBytes: pack.segmentSizeBytes,
+                segmentCount: Math.ceil(pack.sizeBytes / pack.segmentSizeBytes),
+                contentType: "application/octet-stream" as const
+              };
 
         return {
           packId: pack.packId,

@@ -1,4 +1,8 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import test from "node:test";
 
 import type { AuditEvent } from "../src/audit/logger.js";
@@ -13,10 +17,23 @@ function escapeForRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function buildTestEnv(
+  overrides: Record<string, string | undefined> = {},
+  nodeEnvOverride: string = "test"
+) {
+  return readRuntimeEnv({
+    nodeEnvOverride,
+    environment: {
+      ...process.env,
+      ...overrides
+    }
+  });
+}
+
 test("rejects case-data fields on protected entitlement, model, and public search routes", async (t) => {
   const auditSink: AuditEvent[] = [];
   const app = await buildApp({
-    env: readRuntimeEnv({ nodeEnvOverride: "test" }),
+    env: buildTestEnv(),
     auditSink,
     emitLogsToConsole: false
   });
@@ -86,7 +103,7 @@ test("rejected requests do not echo fake secrets back in errors or logs", async 
   const fakeSecret = "sk_live_FAKE_SECRET_DO_NOT_LEAK_123";
   const auditSink: AuditEvent[] = [];
   const app = await buildApp({
-    env: readRuntimeEnv({ nodeEnvOverride: "test" }),
+    env: buildTestEnv(),
     auditSink,
     emitLogsToConsole: false
   });
@@ -119,7 +136,7 @@ test("successful model catalog and download responses stay privacy-safe and excl
   const appVersion = "secret-build-9.9.9";
   const auditSink: AuditEvent[] = [];
   const app = await buildApp({
-    env: readRuntimeEnv({ nodeEnvOverride: "test" }),
+    env: buildTestEnv(),
     auditSink,
     emitLogsToConsole: false
   });
@@ -185,7 +202,7 @@ test("successful model catalog and download responses stay privacy-safe and excl
 test("public-law search rejects obvious private matter content and fake secrets without echoing them", async (t) => {
   const auditSink: AuditEvent[] = [];
   const app = await buildApp({
-    env: readRuntimeEnv({ nodeEnvOverride: "test" }),
+    env: buildTestEnv(),
     auditSink,
     emitLogsToConsole: false
   });
@@ -243,7 +260,7 @@ test("production public search logs only hashed query metadata and never the ful
   const fakeSecret = "FAKE_SECRET_MUST_NOT_APPEAR";
   const auditSink: AuditEvent[] = [];
   const app = await buildApp({
-    env: readRuntimeEnv({ nodeEnvOverride: "production" }),
+    env: buildTestEnv({}, "production"),
     auditSink,
     emitLogsToConsole: false
   });
@@ -271,4 +288,52 @@ test("production public search logs only hashed query metadata and never the ful
   assert.match(serializedLogs, /queryHash/);
   assert.match(serializedLogs, /queryLength/);
   assert.doesNotMatch(serializedLogs, new RegExp(fakeSecret));
+});
+
+test("external model serving never logs the configured local file path or fake-secret filename", async (t) => {
+  const externalDir = mkdtempSync(path.join(tmpdir(), "ross-external-secret-"));
+  const fakeSecretName = "Raghav Fakepriv-9876501234-fakepriv@example.com.task";
+  const externalPath = path.join(externalDir, fakeSecretName);
+  const bytes = Buffer.from("external model bytes");
+  writeFileSync(externalPath, bytes);
+
+  const auditSink: AuditEvent[] = [];
+  const app = await buildApp({
+    env: buildTestEnv({
+      ROSS_ENABLE_EXTERNAL_MODEL_METADATA: "1",
+      ROSS_ENABLE_EXTERNAL_MODEL_SERVING: "1",
+      ROSS_EXTERNAL_MODEL_RUNTIME: "mediapipe_llm",
+      ROSS_EXTERNAL_MODEL_KIND: "external_debug_model",
+      ROSS_EXTERNAL_MODEL_SHA256: createHash("sha256").update(bytes).digest("hex"),
+      ROSS_EXTERNAL_MODEL_SIZE_BYTES: String(bytes.length),
+      ROSS_EXTERNAL_MODEL_FILE_PATH: externalPath
+    }),
+    auditSink,
+    emitLogsToConsole: false
+  });
+
+  t.after(async () => {
+    await app.close();
+    rmSync(externalDir, { recursive: true, force: true });
+  });
+
+  const sessionResponse = await app.inject({
+    method: "POST",
+    url: "/model-download/session",
+    payload: {
+      accountToken: "acct_test_token_1234567890",
+      packId: "case-associate-local-debug-pack",
+      platform: "android",
+      appVersion: "1.0.0",
+      deviceIdHash: "a1b2c3d4e5f6a7b8"
+    }
+  });
+
+  assert.equal(sessionResponse.statusCode, 200);
+
+  const serializedLogs = `${sessionResponse.body}\n${JSON.stringify(auditSink)}`;
+  assert.doesNotMatch(serializedLogs, /Raghav Fakepriv/i);
+  assert.doesNotMatch(serializedLogs, /9876501234/);
+  assert.doesNotMatch(serializedLogs, /fakepriv@example\.com/i);
+  assert.doesNotMatch(serializedLogs, new RegExp(escapeForRegExp(externalPath)));
 });
