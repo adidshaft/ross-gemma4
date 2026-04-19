@@ -23,48 +23,33 @@ struct AskCaseView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
 
-                    RossSectionCard(
-                        title: "Ask something about this case",
-                        subtitle: "Ross will only use your case documents to answer."
-                    ) {
-                        VStack(alignment: .leading, spacing: 16) {
-                            TextEditor(text: $state.askCaseInput)
-                                .frame(minHeight: 160)
-                                .padding(16)
-                                .background(Color.rossGroupedBackground)
-                                .overlay {
-                                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                        .stroke(Color.rossBorder, lineWidth: 1.5)
-                                }
-                                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Ross will only use your case documents to answer.")
+                            .font(.caption)
+                            .foregroundStyle(Color.rossInk.opacity(0.45))
 
-                            ViewThatFits(in: .horizontal) {
-                                HStack(spacing: 12) {
-                                    AskSuggestionPill(
-                                        title: "What is the next court date?",
-                                        systemImage: "calendar",
-                                        action: { state.askCaseInput = "What is the next court date?" }
-                                    )
-                                    AskSuggestionPill(
-                                        title: "Summarise the main facts",
-                                        systemImage: "text.alignleft",
-                                        action: { state.askCaseInput = "Summarise the main facts" }
-                                    )
-                                }
-
-                                VStack(alignment: .leading, spacing: 10) {
-                                    AskSuggestionPill(
-                                        title: "What is the next court date?",
-                                        systemImage: "calendar",
-                                        action: { state.askCaseInput = "What is the next court date?" }
-                                    )
-                                    AskSuggestionPill(
-                                        title: "Summarise the main facts",
-                                        systemImage: "text.alignleft",
-                                        action: { state.askCaseInput = "Summarise the main facts" }
-                                    )
-                                }
+                        TextEditor(text: $state.askCaseInput)
+                            .frame(minHeight: 120)
+                            .padding(14)
+                            .background(Color.rossGroupedBackground)
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .stroke(Color.rossBorder, lineWidth: 1.5)
                             }
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+                        HStack(spacing: 8) {
+                            AskSuggestionPill(
+                                title: "Next court date?",
+                                systemImage: "calendar",
+                                action: { state.askCaseInput = "What is the next court date?" }
+                            )
+                            AskSuggestionPill(
+                                title: "Summarise facts",
+                                systemImage: "text.alignleft",
+                                action: { state.askCaseInput = "Summarise the main facts" }
+                            )
+                            Spacer()
                         }
                     }
 
@@ -87,7 +72,7 @@ struct AskCaseView: View {
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }
-                .padding(.vertical, 24)
+                .padding(.vertical, 16)
                 .padding(.horizontal, 16)
             }
             .background(Color.rossGroupedBackground.ignoresSafeArea())
@@ -149,61 +134,61 @@ private struct AskCaseResponseCard: View {
     let response: AskCaseResponse
 
     var body: some View {
-        RossSectionCard(
-            title: response.headline,
-            subtitle: nil
-        ) {
-            VStack(alignment: .leading, spacing: 24) {
-                ForEach(response.sections) { section in
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(section.title)
-                            .font(.headline)
-                            .foregroundStyle(Color.rossInk)
+        VStack(alignment: .leading, spacing: 20) {
+            Text(response.headline)
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(Color.rossInk)
 
-                        Text(section.body)
-                            .font(.body)
-                            .lineSpacing(6)
-                            .foregroundStyle(Color.rossInk.opacity(0.85))
+            ForEach(response.sections) { section in
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(section.title)
+                        .font(.headline)
+                        .foregroundStyle(Color.rossInk)
+
+                    Text(section.body)
+                        .font(.body)
+                        .lineSpacing(6)
+                        .foregroundStyle(Color.rossInk.opacity(0.85))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            Divider()
+                .overlay(Color.rossBorder)
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Where this came from")
+                    .font(.rossSerifHeadline())
+                    .foregroundStyle(Color.rossInk)
+                    .padding(.bottom, 4)
+
+                ForEach(response.citations) { citation in
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(citation.label)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.rossInk)
+                        Text(citation.note)
+                            .font(.footnote)
+                            .foregroundStyle(Color.rossInk.opacity(0.6))
+                            .lineSpacing(3)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                }
-
-                Divider()
-                    .overlay(Color.rossBorder)
-
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Where this came from")
-                        .font(.rossSerifHeadline())
-                        .foregroundStyle(Color.rossInk)
-                        .padding(.bottom, 4)
-
-                    ForEach(response.citations) { citation in
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(citation.label)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(Color.rossInk)
-                            Text(citation.note)
-                                .font(.footnote)
-                                .foregroundStyle(Color.rossInk.opacity(0.6))
-                                .lineSpacing(3)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .padding(16)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.rossGroupedBackground)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(Color.rossBorder, lineWidth: 1)
-                        }
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.rossGroupedBackground)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(Color.rossBorder, lineWidth: 1)
                     }
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
-
-                Text(response.draftNotice)
-                    .font(.caption)
-                    .foregroundStyle(Color.rossInk.opacity(0.4))
-                    .padding(.top, 8)
             }
+
+            Text(response.draftNotice)
+                .font(.caption)
+                .foregroundStyle(Color.rossInk.opacity(0.4))
+                .padding(.top, 8)
         }
+        .padding(.top, 8)
     }
 }

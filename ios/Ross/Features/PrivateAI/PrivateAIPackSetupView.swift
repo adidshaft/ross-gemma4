@@ -7,49 +7,36 @@ struct PrivateAIPackSetupView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 32) {
-                RossHeroCard(
-                    eyebrow: "Almost ready",
-                    title: "How powerful should your assistant be?",
-                    detail: "Ross stays light at install time and adds stronger private review as setup completes."
-                ) {
-                    ViewThatFits(in: .horizontal) {
-                        HStack(spacing: 12) {
-                            RossInfoPill(title: state.deviceCapability.recommendedTier.title, systemImage: "sparkles")
-                            RossInfoPill(title: "\(state.deviceCapability.freeStorageGB) GB free", systemImage: "internaldrive")
-                        }
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Almost ready")
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(Color.rossInk)
 
-                        VStack(alignment: .leading, spacing: 10) {
-                            RossInfoPill(title: state.deviceCapability.recommendedTier.title, systemImage: "sparkles")
-                            RossInfoPill(title: "\(state.deviceCapability.freeStorageGB) GB free", systemImage: "internaldrive")
-                        }
-                    }
+                    Text("This phone works best with \(state.deviceCapability.recommendedTier.title). You can change this later.")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.rossInk.opacity(0.55))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
-                Text("This phone works best with \(state.deviceCapability.recommendedTier.title).")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.rossInk.opacity(0.7))
-                    .padding(.horizontal, 4)
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Choose your assistant's power level")
+                        .font(.headline)
+                        .foregroundStyle(Color.rossInk)
 
-                RossSectionCard(
-                    title: "Choose your assistant's power level",
-                    subtitle: "Pick one - you can change this later in Settings."
-                ) {
-                    VStack(alignment: .leading, spacing: 16) {
-                        ForEach(state.availablePacks) { pack in
-                            Button {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                    state.selectedPackTier = pack.tier
-                                }
-                            } label: {
-                                PackSelectionCard(
-                                    pack: pack,
-                                    isSelected: state.selectedPackTier == pack.tier,
-                                    isRecommended: state.deviceCapability.recommendedTier == pack.tier
-                                )
+                    ForEach(state.availablePacks) { pack in
+                        Button {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                state.selectedPackTier = pack.tier
                             }
-                            .buttonStyle(.plain)
+                        } label: {
+                            PackSelectionCard(
+                                pack: pack,
+                                isSelected: state.selectedPackTier == pack.tier,
+                                isRecommended: state.deviceCapability.recommendedTier == pack.tier
+                            )
                         }
+                        .buttonStyle(.plain)
                     }
                 }
 
@@ -143,7 +130,7 @@ private struct PackSelectionCard: View {
                 }
             }
         }
-        .padding(20)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(isSelected ? Color.rossAccent.opacity(0.04) : Color.rossCardBackground)
         .overlay {

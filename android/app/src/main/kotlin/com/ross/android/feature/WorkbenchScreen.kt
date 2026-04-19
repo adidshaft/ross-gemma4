@@ -25,6 +25,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -43,7 +44,6 @@ import com.ross.android.core.model.PrivacyLedgerEntry
 import com.ross.android.core.model.PublicLawPreview
 import com.ross.android.core.model.SettingsSnapshot
 import com.ross.android.core.model.WorkbenchSection
-import com.ross.android.theme.RossHighlight
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,14 +62,7 @@ fun WorkbenchScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text("Ross Workbench", style = MaterialTheme.typography.titleLarge)
-                        Text(
-                            text = "Private-first case operations",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                    Text("Ross", style = MaterialTheme.typography.titleLarge)
                 },
             )
         },
@@ -94,7 +87,7 @@ fun WorkbenchScreen(
                 ) {
                     Column(
                         modifier = Modifier.weight(1.2f),
-                        verticalArrangement = Arrangement.spacedBy(24.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         WorkbenchHeaderDeck(
                             instantModeBanner = state.instantModeBanner,
@@ -108,7 +101,7 @@ fun WorkbenchScreen(
 
                     Column(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(24.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         ActiveSectionPane(
                             state = state,
@@ -126,7 +119,7 @@ fun WorkbenchScreen(
             } else {
                 Column(
                     modifier = contentModifier.widthIn(max = 720.dp),
-                    verticalArrangement = Arrangement.spacedBy(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     WorkbenchHeaderDeck(
                         instantModeBanner = state.instantModeBanner,
@@ -279,11 +272,13 @@ private fun CasesPane(
                 ?: "Tap any matter below to open it.",
         )
 
-        SectionCard(
-            title = "Open matters",
-            subtitle = "Switch quickly between active files without losing the current dashboard context.",
-        ) {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "Open matters",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(state.cases) { caseSummary ->
                     CaseRailCard(
                         caseSummary = caseSummary,
@@ -294,21 +289,12 @@ private fun CasesPane(
             }
         }
 
-        SectionCard(
-            title = "Case summary",
-            subtitle = "A concise working view of the matter, with the next actions closer than the raw bundle.",
-        ) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(
                 text = state.workspace.summary,
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Parties: ${state.workspace.parties}",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurface,
             )
-            Spacer(modifier = Modifier.height(20.dp))
             TwoColumnLists(
                 leftTitle = "Upcoming tasks",
                 leftItems = state.workspace.upcomingTasks,
@@ -317,28 +303,23 @@ private fun CasesPane(
             )
         }
 
-        SectionCard(
-            title = "Next actions",
-            subtitle = null,
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            Button(
+                onClick = { onSectionSelected(WorkbenchSection.Capture) },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(10.dp)
             ) {
-                Button(
-                    onClick = { onSectionSelected(WorkbenchSection.Capture) },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("File a note")
-                }
-                Button(
-                    onClick = { onSectionSelected(WorkbenchSection.Law) },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Look up a law")
-                }
+                Text("File a note")
+            }
+            OutlinedButton(
+                onClick = { onSectionSelected(WorkbenchSection.Law) },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text("Look up a law")
             }
         }
     }
@@ -577,12 +558,12 @@ private fun SectionCard(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
     ) {
         Column(
-            modifier = Modifier.padding(24.dp),
+            modifier = Modifier.padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
             if (!subtitle.isNullOrBlank()) {
@@ -612,7 +593,7 @@ private fun HeroCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(28.dp),
+                .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
@@ -622,7 +603,7 @@ private fun HeroCard(
             )
             Text(
                 text = title,
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
             Text(
@@ -676,7 +657,7 @@ private fun CaseRailCard(
     }
 
     OutlinedCard(
-        modifier = Modifier.widthIn(min = 260.dp, max = 280.dp),
+        modifier = Modifier.widthIn(min = 180.dp, max = 200.dp),
         onClick = onSelect,
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.outlinedCardColors(containerColor = containerColor),
@@ -686,13 +667,14 @@ private fun CaseRailCard(
         ),
     ) {
         Column(
-            modifier = Modifier.padding(20.dp),
+            modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
                 text = caseSummary.title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
             )
             Text(
                 text = "${caseSummary.urgencyLabel} • ${caseSummary.sensitivity}",

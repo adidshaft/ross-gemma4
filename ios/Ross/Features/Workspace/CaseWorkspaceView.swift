@@ -18,7 +18,7 @@ struct CaseWorkspaceView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 32) {
+                VStack(alignment: .leading, spacing: 20) {
                     if let selectedCase {
                         WorkspaceHeroCard(caseFile: selectedCase)
 
@@ -32,40 +32,28 @@ struct CaseWorkspaceView: View {
                             }
                         )
 
-                        WorkspaceStatusStrip(caseFile: selectedCase)
+                        VStack(alignment: .leading, spacing: 8) {
+                            WorkspaceStatusStrip(caseFile: selectedCase)
 
-                        if selectedCase.captureInboxCount > 0 {
-                            Button {
-                                route = .quickCapture
-                            } label: {
-                                Label(
-                                    "You have \(selectedCase.captureInboxCount) captured note\(selectedCase.captureInboxCount == 1 ? "" : "s") to file",
-                                    systemImage: "doc.viewfinder"
-                                )
-                                .font(.subheadline.weight(.medium))
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(16)
-                                .background(Color.rossHighlight.opacity(0.08))
-                                .overlay {
-                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .stroke(Color.rossHighlight.opacity(0.3), lineWidth: 1)
+                            if selectedCase.captureInboxCount > 0 {
+                                Button {
+                                    route = .quickCapture
+                                } label: {
+                                    Label(
+                                        "You have \(selectedCase.captureInboxCount) captured note\(selectedCase.captureInboxCount == 1 ? "" : "s") to file",
+                                        systemImage: "doc.viewfinder"
+                                    )
+                                    .font(.subheadline.weight(.medium))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(16)
+                                    .background(Color.rossHighlight.opacity(0.08))
+                                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                                 }
-                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            }
-                            .buttonStyle(.plain)
-                        }
-
-                        ViewThatFits(in: .horizontal) {
-                            HStack(alignment: .top, spacing: 20) {
-                                WorkspaceSummaryCard(snapshot: selectedCase.workspace)
-                                WorkspaceSourcesCard(snapshot: selectedCase.workspace)
-                            }
-
-                            VStack(spacing: 20) {
-                                WorkspaceSummaryCard(snapshot: selectedCase.workspace)
-                                WorkspaceSourcesCard(snapshot: selectedCase.workspace)
+                                .buttonStyle(.plain)
                             }
                         }
+
+                        WorkspaceSummaryCard(snapshot: selectedCase.workspace)
 
                         WorkspaceDocumentsCard(documents: selectedCase.documents)
                     } else {
@@ -78,7 +66,7 @@ struct CaseWorkspaceView: View {
                         .padding(.top, 80)
                     }
                 }
-                .padding(24)
+                .padding(20)
             }
             .background(Color.rossGroupedBackground.ignoresSafeArea())
             .navigationTitle("Workspace")
@@ -134,37 +122,26 @@ private struct WorkspaceHeroCard: View {
     let caseFile: CaseFile
 
     var body: some View {
-        RossHeroCard(
-            eyebrow: caseFile.forum,
-            title: caseFile.title,
-            detail: nil
-        ) {
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 12) {
-                    RossInfoPill(title: caseFile.stage.title, systemImage: "briefcase")
-                    if let nextHearingText {
-                        RossInfoPill(title: nextHearingText, systemImage: "calendar")
-                    }
-                    RossInfoPill(title: "Stored on this phone", systemImage: "lock.shield")
-                }
+        VStack(alignment: .leading, spacing: 4) {
+            Text(caseFile.title)
+                .font(.title2.weight(.bold))
+                .foregroundStyle(Color.rossInk)
+                .fixedSize(horizontal: false, vertical: true)
 
-                VStack(alignment: .leading, spacing: 10) {
-                    RossInfoPill(title: caseFile.stage.title, systemImage: "briefcase")
-                    if let nextHearingText {
-                        RossInfoPill(title: nextHearingText, systemImage: "calendar")
-                    }
-                    RossInfoPill(title: "Stored on this phone", systemImage: "lock.shield")
+            HStack(spacing: 6) {
+                Text(caseFile.forum)
+                Text("·")
+                Text(caseFile.stage.title)
+                if let nextHearing = caseFile.nextHearing {
+                    Text("·")
+                    Text("Hearing \(nextHearing.formatted(date: .abbreviated, time: .omitted))")
+                        .foregroundStyle(Color.rossAccent)
                 }
             }
+            .font(.caption)
+            .foregroundStyle(Color.rossInk.opacity(0.55))
         }
-    }
-
-    private var nextHearingText: String? {
-        guard let nextHearing = caseFile.nextHearing else {
-            return nil
-        }
-
-        return "Next hearing \(nextHearing.formatted(date: .abbreviated, time: .omitted))"
+        .padding(.bottom, 4)
     }
 }
 
@@ -174,57 +151,42 @@ private struct CaseSwitcherRail: View {
     let onSelect: (CaseFile.ID) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Open matters")
-                .font(.rossSerifHeadline())
-                .foregroundStyle(Color.rossInk)
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                ForEach(caseFiles) { caseFile in
+                    Button {
+                        onSelect(caseFile.id)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(caseFile.title)
+                                .font(.headline)
+                                .foregroundStyle(Color.rossInk)
+                                .lineLimit(1)
+                                .fixedSize(horizontal: false, vertical: true)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 16) {
-                    ForEach(caseFiles) { caseFile in
-                        Button {
-                            onSelect(caseFile.id)
-                        } label: {
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text(caseFile.title)
-                                    .font(.headline)
-                                    .foregroundStyle(Color.rossInk)
-                                    .lineLimit(2)
-                                    .fixedSize(horizontal: false, vertical: true)
-
-                                Spacer()
-
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(caseFile.stage.title)
-                                        .font(.caption.weight(.bold))
-                                        .tracking(1)
-                                        .foregroundStyle(Color.rossAccent)
-
-                                    Text(caseFile.lastUpdated.formatted(date: .abbreviated, time: .omitted))
-                                        .font(.caption2)
-                                        .foregroundStyle(Color.rossInk.opacity(0.5))
-                                }
-                            }
-                            .padding(20)
-                            .frame(width: 240, height: 160, alignment: .leading)
-                            .background(caseFile.id == selectedCaseID ? Color.rossAccent.opacity(0.04) : Color.rossCardBackground)
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                                    .stroke(
-                                        caseFile.id == selectedCaseID ? Color.rossAccent : Color.rossBorder,
-                                        lineWidth: caseFile.id == selectedCaseID ? 2 : 1
-                                    )
-                            }
-                            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-                            .shadow(color: caseFile.id == selectedCaseID ? Color.rossAccent.opacity(0.1) : Color.black.opacity(0.03), radius: caseFile.id == selectedCaseID ? 12 : 8, y: caseFile.id == selectedCaseID ? 6 : 4)
+                            Text(caseFile.stage.title)
+                                .font(.caption.weight(.bold))
+                                .tracking(1)
+                                .foregroundStyle(Color.rossAccent)
                         }
-                        .buttonStyle(.plain)
+                        .padding(14)
+                        .frame(width: 160, height: 90, alignment: .leading)
+                        .background(caseFile.id == selectedCaseID ? Color.rossAccent.opacity(0.04) : Color.rossCardBackground)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .stroke(
+                                    caseFile.id == selectedCaseID ? Color.rossAccent : Color.rossBorder,
+                                    lineWidth: caseFile.id == selectedCaseID ? 2 : 1
+                                )
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .shadow(color: caseFile.id == selectedCaseID ? Color.rossAccent.opacity(0.1) : Color.black.opacity(0.03), radius: caseFile.id == selectedCaseID ? 10 : 6, y: caseFile.id == selectedCaseID ? 4 : 2)
                     }
+                    .buttonStyle(.plain)
                 }
-                .padding(.vertical, 8)
-                .padding(.horizontal, 4)
             }
-            .padding(.horizontal, -4)
+            .padding(.vertical, 4)
+            .padding(.horizontal, 2)
         }
     }
 }
@@ -237,10 +199,8 @@ private struct WorkspaceStatusStrip: View {
         let total = caseFile.documents.count
         let allReady = indexedCount == total
 
-        Group {
-            if total == 0 {
-                EmptyView()
-            } else if allReady {
+        if total > 0 {
+            if allReady {
                 Label(
                     "Ross has read all your documents",
                     systemImage: "checkmark.circle.fill"
@@ -263,73 +223,35 @@ private struct WorkspaceSummaryCard: View {
     let snapshot: WorkspaceSnapshot
 
     var body: some View {
-        RossSectionCard(
-            title: "Working summary",
-            subtitle: snapshot.chronologySummary
-        ) {
-            VStack(alignment: .leading, spacing: 24) {
-                WorkspaceListBlock(
-                    title: "Issue highlights",
-                    items: snapshot.issueHighlights
-                )
-                WorkspaceListBlock(
-                    title: "Evidence notes",
-                    items: snapshot.evidenceNotes
-                )
-                WorkspaceListBlock(
-                    title: "Things to do",
-                    items: snapshot.draftTasks
-                )
-            }
+        VStack(alignment: .leading, spacing: 20) {
+            Text(snapshot.chronologySummary)
+                .font(.subheadline)
+                .foregroundStyle(Color.rossInk.opacity(0.75))
+                .fixedSize(horizontal: false, vertical: true)
+
+            SummaryBlock(title: "Issue highlights", items: snapshot.issueHighlights)
+            SummaryBlock(title: "Evidence notes", items: snapshot.evidenceNotes)
+            SummaryBlock(title: "Things to do", items: snapshot.draftTasks)
         }
     }
 }
 
-private struct WorkspaceSourcesCard: View {
-    let snapshot: WorkspaceSnapshot
-
-    var body: some View {
-        RossSectionCard(
-            title: "References",
-            subtitle: nil
-        ) {
-            VStack(alignment: .leading, spacing: 12) {
-                ForEach(snapshot.sourceAnchors) { source in
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(source.label)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Color.rossInk)
-
-                        Text(source.note)
-                            .font(.footnote)
-                            .foregroundStyle(Color.rossInk.opacity(0.6))
-                    }
-                    .padding(16)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.rossGroupedBackground)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(Color.rossBorder, lineWidth: 1)
-                    }
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                }
-            }
-        }
-    }
-}
-
-private struct WorkspaceListBlock: View {
+private struct SummaryBlock: View {
     let title: String
     let items: [String]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(Color.rossInk)
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title.uppercased())
+                .font(.caption.weight(.semibold))
+                .tracking(0.8)
+                .foregroundStyle(Color.rossInk.opacity(0.4))
 
-            ForEach(items, id: \.self) { item in
-                RossBulletRow(text: item)
+            ForEach(Array(items.prefix(2)), id: \.self) { item in
+                Text("· \(item)")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.rossInk.opacity(0.85))
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -339,55 +261,48 @@ private struct WorkspaceDocumentsCard: View {
     let documents: [CaseDocument]
 
     var body: some View {
-        RossSectionCard(
-            title: "Documents",
-            subtitle: "A quick scan of what Ross has read and what still needs attention."
-        ) {
-            VStack(alignment: .leading, spacing: 14) {
-                ForEach(documents) { document in
-                    HStack(alignment: .top, spacing: 16) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(document.title)
-                                .font(.headline)
-                                .foregroundStyle(Color.rossInk)
+        VStack(alignment: .leading, spacing: 0) {
+            Text("DOCUMENTS")
+                .font(.caption.weight(.semibold))
+                .tracking(0.8)
+                .foregroundStyle(Color.rossInk.opacity(0.4))
+                .padding(.bottom, 10)
 
-                            Text("\(document.category) • \(document.pageCount) pages")
+            ForEach(documents) { document in
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(document.title)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(Color.rossInk)
+                            .lineLimit(1)
+
+                        Text("\(document.category) · \(document.pageCount) pages")
+                            .font(.caption)
+                            .foregroundStyle(Color.rossInk.opacity(0.45))
+                    }
+
+                    Spacer()
+
+                    if document.isIndexedLocally {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.rossSuccess)
+                    } else {
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Image(systemName: "clock")
                                 .font(.subheadline)
-                                .foregroundStyle(Color.rossInk.opacity(0.6))
-
-                            Text(document.importedAt.formatted(date: .abbreviated, time: .omitted))
-                                .font(.caption.weight(.medium))
-                                .foregroundStyle(Color.rossInk.opacity(0.4))
-                        }
-
-                        Spacer()
-
-                        VStack(alignment: .trailing, spacing: 8) {
-                            ZStack {
-                                Circle()
-                                    .fill(document.isIndexedLocally ? Color.rossSuccess.opacity(0.1) : Color.rossHighlight.opacity(0.1))
-                                    .frame(width: 40, height: 40)
-
-                                Image(systemName: document.isIndexedLocally ? "checkmark.shield.fill" : "clock.badge")
-                                    .font(.body.weight(.semibold))
-                                    .foregroundStyle(document.isIndexedLocally ? Color.rossSuccess : Color.rossHighlight)
-                            }
-
-                            if !document.isIndexedLocally {
-                                Text("Not yet read by Ross")
-                                    .font(.caption.weight(.medium))
-                                    .foregroundStyle(Color.rossHighlight)
-                            }
+                                .foregroundStyle(Color.rossInk.opacity(0.3))
+                            Text("Not yet read")
+                                .font(.caption2)
+                                .foregroundStyle(Color.rossInk.opacity(0.45))
                         }
                     }
-                    .padding(16)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.rossGroupedBackground)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(Color.rossBorder, lineWidth: 1)
-                    }
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                }
+                .padding(.vertical, 10)
+
+                if document.id != documents.last?.id {
+                    Divider()
+                        .overlay(Color.rossBorder.opacity(0.5))
                 }
             }
         }

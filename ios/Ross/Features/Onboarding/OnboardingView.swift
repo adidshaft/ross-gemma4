@@ -26,15 +26,14 @@ struct OnboardingView: View {
                     }
                 }
 
-                RossSectionCard(
-                    title: "How it works",
-                    subtitle: nil
-                ) {
-                    VStack(alignment: .leading, spacing: 16) {
-                        RossBulletRow(text: "Your case files never leave this device.")
-                        RossBulletRow(text: "The assistant reads only the documents you add to a matter.")
-                        RossBulletRow(text: "If you want to look up a law online, Ross will ask before sending anything.")
-                    }
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("How it works")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.rossInk.opacity(0.5))
+
+                    RossBulletRow(text: "Your case files never leave this device.")
+                    RossBulletRow(text: "The assistant reads only the documents you add to a matter.")
+                    RossBulletRow(text: "If you want to look up a law online, Ross will ask first.")
                 }
 
                 Button {
