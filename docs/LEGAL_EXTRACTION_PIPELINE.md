@@ -81,7 +81,7 @@ Rejected values do not appear as accepted extracted fields in normal UI.
 ## Runtime status in this alpha
 
 - The deterministic development runtime remains real and active.
-- Android has real-provider scaffolding with compile-safe unavailable adapters.
+- Android has a concrete MediaPipe adapter path for developer-supplied `.task` artifacts.
 - iOS has an Apple Foundation Models adapter path behind explicit developer opt-in.
 - Real local inference should not be claimed unless it actually ran with a compatible runtime on-device.
 

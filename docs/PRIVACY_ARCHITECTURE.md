@@ -66,7 +66,7 @@ Rules:
 Runtime status in this alpha:
 
 - deterministic development runtime is active and real
-- Android real-runtime adapters are scaffolded but unavailable
+- Android has a concrete MediaPipe adapter path, but it still requires a developer artifact and physical-device QA before a real run can be claimed
 - iOS has a real Apple Foundation Models adapter path behind explicit developer opt-in
 - raw prompts and raw source text are not persisted in invocation metadata by default
 

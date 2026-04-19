@@ -42,7 +42,7 @@ The product direction is:
 
 - deterministic local runtime remains the default for CI and fallback
 - Case Associate is the first tier wired for the deeper extraction and verification chain
-- Android has real-runtime scaffolding but not a shipping inference engine yet
+- Android now has a concrete MediaPipe adapter path for developer-supplied local artifacts
 - iOS has an Apple Foundation Models adapter path behind explicit developer opt-in
 - no large model files are committed
 - no cloud inference is used

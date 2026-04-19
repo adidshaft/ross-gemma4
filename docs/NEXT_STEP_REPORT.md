@@ -1,124 +1,111 @@
-# Ross Real Local Inference Adapter Alpha Report
+# Ross Real Device Local Inference Proof Alpha Report
 
 ## Branch
 
-- Working branch: `alpha-real-local-inference`
-- Base branch preserved: `alpha-local-model-extraction`
+- Working branch: `alpha-real-device-inference`
+- Base branch preserved: `alpha-real-local-inference`
 
 ## Scope completed
 
-This phase moves Ross from a runtime contract plus deterministic development provider toward a real local inference adapter alpha.
+This phase focused on proving a concrete local inference path without weakening privacy, deterministic fallback, or CI stability.
 
 What is now true:
 
-- the deterministic development provider remains intact for CI and fallback
-- runtime metadata can represent real local runtime modes
-- prompt packing exists
-- schema validation exists
-- verifier gating remains strict
-- Android and iOS both select real-or-fallback providers behind the installed-pack abstraction
-- iOS has one real local adapter path behind explicit developer opt-in
+- canonical debug configuration names are normalized across Android, iOS, and docs
+- Android has a concrete real local inference adapter path for developer-supplied model artifacts
+- Android runtime selection can distinguish deterministic, real local, unavailable, and fallback-active states
+- iOS keeps the Foundation Models path behind explicit opt-in with safer health reporting and fallback behavior
+- Case Associate output still flows through prompt packing, JSON extraction, schema validation, source validation, verifier gating, and advocate review
+- deterministic development runtime remains the CI default and the safety fallback
+- verified-field public-law suggestions are hardened to avoid private facts
 
 What is not yet true:
 
-- no large model file is committed or bundled
-- Android does not yet execute a real local model in this branch
-- no real local model execution was validated in the final matrix because no developer-provided model runtime was supplied during this run
+- no real Android model execution was validated in this environment because no physical Android device and compatible developer model artifact were provided
+- no real iOS Foundation Models execution was validated in this environment because no compatible Apple Intelligence device/runtime was available here
+- backend delivery still serves tiny deterministic development artifacts only
 
 ## Implemented in this phase
 
-### Shared and Rust core
+### Shared behavior
 
-- added runtime metadata for:
-  - `LocalRuntimeMode`
-  - `LocalModelArtifactKind`
-  - `LocalRuntimeHealth`
-  - `LocalModelResourceEstimate`
-  - `ModelPromptPolicy`
-- extended `LocalModelProvider` with:
-  - availability and runtime-mode reporting
-  - context-window and input-budget estimates
-  - runtime health
-  - optional streaming hook
-- added `PromptPackBuilder`
-- added schema-specific output validation helpers
-- added verifier disposition helpers for:
-  - `verified`
-  - `needs_review`
-  - `rejected`
-- added `EvaluationRun` regression reporting
-
-### Android
-
-- added runtime metadata and prompt-packing support to the Android local runtime layer
-- added compile-safe real-provider scaffolding for:
-  - `mediapipe_llm`
-  - `gemma_local_runtime`
-- added debug configuration support for:
+- normalized canonical debug configuration names:
+  - `ROSS_BACKEND_BASE_URL`
   - `ROSS_ENABLE_REAL_LOCAL_INFERENCE`
   - `ROSS_LOCAL_RUNTIME`
   - `ROSS_LOCAL_MODEL_PATH`
-- preserved deterministic fallback when a real adapter is unavailable
-- persisted runtime mode in invocation metadata without persisting raw prompt or raw source text
-- strengthened extracted-field public-law suggestion sanitization
-- exposed technical runtime details only inside Private AI technical details
+  - `ROSS_LOCAL_MODEL_CHECKSUM`
+  - `ROSS_LOCAL_MODEL_KIND`
+- kept `ROSS_BACKEND_URL` as a legacy alias only where needed for compatibility
+- preserved deterministic fallback when real runtime is unavailable or unsafe
+- continued to avoid raw prompt persistence and raw source-text persistence in invocation metadata
+
+### Android
+
+- added a concrete `AlphaMediaPipeLocalModelProvider`
+- added the MediaPipe GenAI dependency behind the provider boundary
+- supported model loading from:
+  - canonical debug model path
+  - supported installed-pack artifact paths
+  - app-private imported paths
+- added sanitized real-runtime health reporting:
+  - runtime mode
+  - fallback active
+  - explicit opt-in enabled
+  - model path present
+  - checksum verified
+  - last runtime error category
+  - last invocation runtime
+- added safe error categories instead of leaking raw runtime failures
+- kept the provider off the main thread and away from network imports
+- added batching and input-budget enforcement for extraction, issue extraction, classification, and verification passes
 
 ### iOS
 
-- added runtime metadata and prompt-packing support to the iOS local runtime layer
-- added a real Apple Foundation Models adapter path behind availability checks
-- made real-runtime probing explicit so CI and simulator tests stay deterministic unless a developer opts in
-- preserved deterministic fallback when the real runtime is unavailable
-- persisted runtime mode in invocation metadata without persisting raw prompt or raw source text
-- strengthened extracted-field public-law suggestion sanitization
-- exposed technical runtime details only inside Private AI technical details
+- refined canonical runtime configuration parsing for the explicit opt-in Foundation Models path
+- preserved explicit opt-in behavior for `ROSS_ENABLE_REAL_LOCAL_INFERENCE=1`
+- required `ROSS_LOCAL_RUNTIME=apple_foundation_models` for the system-model path
+- added safer runtime health reporting with fallback and unavailability reasons
+- sanitized runtime failures and invalid output handling
+- preserved deterministic fallback in CI and simulator environments
 
-### Backend
+### Public-law suggestions
 
-- widened runtime and artifact metadata enums to support:
-  - `deterministic_dev`
-  - `mediapipe_llm`
-  - `gemma_local_runtime`
-  - `apple_foundation_models`
-  - `unavailable`
-  - `tiny_dev_artifact`
-  - `local_model_artifact`
-  - `system_model`
-  - `external_debug_model`
-- added `minimumAppVersion` metadata to catalog and download payloads
-- kept actual delivered artifacts as tiny deterministic development artifacts only
+- restricted public-law previews to verified or user-corrected legal concepts
+- stripped fake secrets, emails, phone numbers, case-like identifiers, and private-date-like fragments from preview candidates
+- preserved preview confirmation as mandatory before backend search
 
-### Documentation
+### QA and docs
 
-- updated runtime, privacy, extraction, registry, offline-behavior, and product docs
-- added `docs/MANUAL_LOCAL_INFERENCE_QA.md`
-- documented that deterministic development runtime is not a real LLM
-- documented that real local inference requires explicit developer-provided local configuration in this alpha
+- added `docs/ANDROID_REAL_INFERENCE_QA.md`
+- added `docs/RUNTIME_DECISION_MEMO.md`
+- added `docs/MANUAL_CASE_ASSOCIATE_E2E.md`
+- updated local runtime, privacy, offline, extraction, registry, product, Android, and iOS docs
+- added `scripts/dev/run-local-inference-smoke.sh`
 
-## Real versus stubbed
+## Android adapter status
 
-### Real now
+- Android real local inference adapter status: `Concrete`
+- Selected real runtime path: `MediaPipe local model provider via developer-supplied external or app-private model artifact`
+- Required artifact policy:
+  - model file is developer-provided
+  - model file is not committed to git
+  - model file is not bundled in app assets
+- Real Android local inference actually ran in this phase: `No`
 
-- deterministic development runtime
-- prompt packing
-- schema validation
-- verifier/refiner categorization
-- runtime health and resource estimates
-- real-or-fallback provider selection
-- iOS Apple Foundation Models adapter path
+## iOS adapter status
 
-### Still stubbed
-
-- Android real local inference execution
-- MediaPipe integration on either platform
-- Gemma 4 Q4 runtime integration on either platform
-- production pack delivery of large local model artifacts
+- iOS real local inference path status: `Explicit opt-in Foundation Models adapter preserved and refined`
+- Selected real runtime path: `apple_foundation_models`
+- Compatible device and runtime still required for real execution
+- Real iOS local inference actually ran in this phase: `No`
 
 ## Baseline validation before edits
 
-These all passed before any code changes:
+These passed before code changes:
 
-- Rust: `cargo test`
+- Rust:
+  - `cargo test`
 - Backend:
   - `npm test`
   - `npm run typecheck`
@@ -139,9 +126,10 @@ These all passed before any code changes:
 
 ## Final validation after changes
 
-These all passed after implementation:
+These passed after implementation:
 
-- Rust: `cargo test`
+- Rust:
+  - `cargo test`
 - Backend:
   - `npm test`
   - `npm run typecheck`
@@ -159,12 +147,14 @@ These all passed after implementation:
   - `xcodebuild -project Ross.xcodeproj -scheme Ross -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath tmp/DerivedData build`
   - `swift test --scratch-path tmp/swiftpm`
   - `swift run --scratch-path tmp/swiftpm Ross --generate-screenshots`
+- Local smoke helper:
+  - `scripts/dev/run-local-inference-smoke.sh`
+  - deterministic smoke passed
+  - real-runtime smoke skipped cleanly when no developer model path was configured
 
 ## Backend smoke
 
-Live backend smoke passed against a locally started built server on port `8091`.
-
-Port `8080` was already occupied on this machine, so the smoke was rerun on `8091` without changing backend code.
+Backend smoke passed against a locally started built server on port `8091`.
 
 Validated:
 
@@ -173,46 +163,31 @@ Validated:
 - `GET /dev-artifacts/:artifactId` with `Range`
 - `POST /public-law/search`
 
-Observed smoke payload state:
+Observed results:
 
-- catalog `artifactKind`: `tiny_dev_artifact`
-- catalog `runtimeMode`: `deterministic_dev`
-- catalog `minimumAppVersion`: `null`
-- download session `artifactKind`: `tiny_dev_artifact`
-- download session `runtimeMode`: `deterministic_dev`
-- download session `minimumAppVersion`: `null`
-- ranged artifact download returned `206`
+- catalog response returned `artifactKind=tiny_dev_artifact`
+- catalog response returned `runtimeMode=deterministic_dev`
+- download session response returned `artifactKind=tiny_dev_artifact`
+- download session response returned `runtimeMode=deterministic_dev`
+- ranged dev artifact request returned `206 Partial Content`
 - sanitized public-law search returned `200`
 
 ## Privacy status
 
-- no cloud model calls were added
+- no cloud inference was added
 - no cloud OCR was added
 - no analytics or telemetry SDKs were added
 - raw prompts are not persisted by default
-- raw source text is not persisted in invocation metadata by default
-- invocation metadata uses hashes and redacted source refs
-- public-law suggestions now use verified or user-corrected legal concepts only
-
-## Manual real-runtime status
-
-- Real local inference adapter implemented: `Yes`
-- Real local inference actually ran during this validation pass: `No`
-- Runtime mode exercised in final validation: `deterministic_dev`
-
-To manually exercise the real iOS path in a future run:
-
-- set `ROSS_ENABLE_REAL_LOCAL_INFERENCE=1`
-- set `ROSS_LOCAL_RUNTIME=apple_foundation_models`
-- optionally set `ROSS_LOCAL_MODEL_PATH=/absolute/path/to/local/model` if an external adapter file is required
-- run the manual QA flow in `docs/MANUAL_LOCAL_INFERENCE_QA.md`
+- raw source text is not stored in invocation metadata
+- runtime health surfaces use sanitized error categories
+- fake-secret regression coverage protects backend and public-law payload boundaries
 
 ## Repository hygiene
 
 - `SCRIPT.md` was inspected and left untouched
 - `artifacts/` was inspected and left untouched
-- neither was modified or committed
+- neither is to be committed as part of this phase
 
 ## Exact next recommended step
 
-Implement one production-grade real Android adapter path for `Case Associate`, preferably MediaPipe local inference if it compiles reliably in this environment, and run a manual end-to-end extraction on a developer-provided local artifact so Ross can validate true on-device extraction, verification, and review behavior outside the deterministic fallback path.
+Run the Android manual physical-device QA flow with a compatible developer-provided `.task` model artifact and `ROSS_ENABLE_REAL_LOCAL_INFERENCE=1`, then capture one real `Case Associate` extraction where runtime health shows real availability, invocation metadata records a non-deterministic runtime mode, schema validation passes, source chips render, Privacy Ledger shows no model-network event, and logs contain no raw prompt or source text.

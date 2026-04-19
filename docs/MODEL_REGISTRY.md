@@ -61,3 +61,4 @@ The current alpha catalog still serves only `tiny_dev_artifact` packs with `dete
 - backend `/model-download/session` returns signed segmented dev-artifact metadata
 - Android and iOS both use this delivery path without sending case data
 - real local model artifacts remain developer-provided and outside the repo in this alpha
+- the Android app can now load a developer-provided MediaPipe `.task` artifact from debug or app-private storage without bundling the model into the app

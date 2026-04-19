@@ -1,12 +1,25 @@
 # Manual Local Inference QA
 
-This runbook is for manual alpha QA of pack install, runtime availability, document import, extraction, review, export, and privacy boundaries.
+This runbook tracks what can and cannot be claimed for local inference in the current alpha.
 
-The deterministic development provider remains the default. Real local inference should only be claimed if a compatible developer-provided runtime actually runs.
+Deterministic development runtime remains the default. It is not a real LLM. Do not claim a real local inference success unless a compatible runtime actually ran and the app recorded the real runtime mode in technical details.
+
+## Canonical debug configuration
+
+Use these names across Android and iOS:
+
+- `ROSS_BACKEND_BASE_URL`
+- `ROSS_ENABLE_REAL_LOCAL_INFERENCE`
+- `ROSS_LOCAL_RUNTIME`
+- `ROSS_LOCAL_MODEL_PATH`
+- `ROSS_LOCAL_MODEL_CHECKSUM`
+- `ROSS_LOCAL_MODEL_KIND`
+
+Legacy `ROSS_BACKEND_URL` is tolerated only as a compatibility alias. New docs and new manual QA should use `ROSS_BACKEND_BASE_URL`.
 
 ## Backend
 
-Start the backend from the repo root:
+Start the backend if you want to exercise catalog, download-session, or public-law flows:
 
 ```sh
 cd /Users/amanpandey/projects/ross/backend
@@ -14,132 +27,114 @@ npm install
 npm run dev
 ```
 
-Confirm the development endpoints:
+Optional smoke checks:
 
 ```sh
 curl http://127.0.0.1:8080/model-catalog?platform=ios
 curl -X POST http://127.0.0.1:8080/model-download/session -H 'content-type: application/json' -d '{"accountToken":"dev-account","packId":"case-associate-pack","platform":"ios","deviceIdHash":"dev-device","appVersion":"0.0.0-dev"}'
-curl -H 'Range: bytes=0-1023' http://127.0.0.1:8080/dev-artifacts/<artifactId>
+curl -X POST http://127.0.0.1:8080/public-law/search -H 'content-type: application/json' -d '{"query":"Section 138 cheque dishonour notice limitation India","jurisdiction":"IN-ALL","language":"en","confirmedPublicPreview":true}'
 ```
 
-Expected result:
+Expected:
 
-- model catalog returns signed pack metadata
-- download session returns signed segment metadata
-- ranged artifact delivery succeeds
-- no case data appears in requests
+- only metadata or sanitized public-law previews cross the boundary
+- no case data appears in backend requests
 
-## Android QA
+## Android
 
-1. Build and install the Android app.
-2. Point the app at the local backend if needed.
-3. Install `Quick Start` or `Case Associate`.
-4. Verify that extraction quality changes in Private AI settings.
-5. Import a sample document.
-6. Wait for extraction to finish.
-7. Open `Review extracted details`.
-8. Confirm fields are shown as `Verified from source` or `Needs advocate review`.
-9. Export a report.
-10. Confirm the Privacy Ledger shows only local activity and sanitized public-law activity.
+For the concrete Android MediaPipe path, use:
 
-Optional Android real-runtime debug path:
+- [ANDROID_REAL_INFERENCE_QA.md](/Users/amanpandey/projects/ross/docs/ANDROID_REAL_INFERENCE_QA.md)
 
-- Set `ROSS_ENABLE_REAL_LOCAL_INFERENCE=1`
-- Set `ROSS_LOCAL_RUNTIME=mediapipe_llm` or `ROSS_LOCAL_RUNTIME=gemma_local_runtime`
-- Set `ROSS_LOCAL_MODEL_PATH=/absolute/path/to/local/model`
+Current honest status:
 
-Expected current alpha result:
+- Android now has a concrete `mediapipe_llm` adapter path
+- Android still needs a physical-device run plus developer model artifact before any real-runtime claim can be made
+- if the runtime is unavailable, Ross must stay on deterministic fallback
 
-- Android reports runtime metadata correctly
-- Android falls back safely to deterministic execution because the real adapter remains scaffolded only
+## iOS
 
-## iOS QA
-
-1. Open the shared `Ross` scheme in Xcode.
-2. Set `ROSS_BACKEND_URL=http://127.0.0.1:8080` if needed.
-3. Run the app on a simulator.
-4. Install `Quick Start` or `Case Associate`.
-5. Import a sample document.
-6. Wait for extraction to finish.
-7. Open `Review extracted details`.
-8. Confirm fields are shown as `Verified from source` or `Needs advocate review`.
-9. Export a report.
-10. Confirm the Privacy Ledger shows only local activity and sanitized public-law activity.
-
-Optional iOS real-runtime debug path:
+Use a compatible Apple Intelligence device and explicit opt-in:
 
 - `ROSS_ENABLE_REAL_LOCAL_INFERENCE=1`
 - `ROSS_LOCAL_RUNTIME=apple_foundation_models`
-- `ROSS_LOCAL_MODEL_PATH=/absolute/path/to/local/model` when an external adapter file is required
+- `ROSS_LOCAL_MODEL_PATH=/absolute/path/to/local/model` only if an external adapter file is required
+- `ROSS_BACKEND_BASE_URL=http://127.0.0.1:8080`
 
-Expected current alpha result:
+Manual steps:
 
-- on compatible Apple platforms, the Apple Foundation Models path may become available
-- if unavailable, the app reports local runtime unavailability only in technical details and falls back deterministically
+1. Open `/Users/amanpandey/projects/ross/ios/Ross.xcodeproj` in Xcode.
+2. Add the canonical environment variables to the scheme.
+3. Run on a compatible device.
+4. Open `Settings > Private AI > Technical details`.
+5. Confirm:
+   - `Runtime mode` is `apple_foundation_models`
+   - `Local runtime` is `available`
+   - `Fallback active` is `no`
+6. Import a short legal fixture.
+7. Run `Case Associate` extraction.
+8. Confirm `Last invocation runtime` is `apple_foundation_models`.
+9. Confirm outputs still pass schema validation, source refs remain visible, and uncertain values stay in review.
+10. Confirm no model-network event appeared.
 
-## What to verify in extraction
+If the device or OS is incompatible:
 
-Use a short sample document first.
+- technical details must say the runtime is unavailable
+- deterministic fallback must remain active
+- no real-runtime claim should be recorded
 
-Confirm that Ross can extract or review:
+## Shared extraction checks
 
-- document type
-- court
-- case number
-- parties
-- dates
-- next date
-- sections
-- order directions
+Use a short sample document first and confirm:
 
-Every accepted field should keep a visible source reference.
+- every accepted field keeps a visible source reference
+- unsupported values are not silently accepted
+- raw prompts are not shown in logs or metadata
+- raw OCR text is not shown in logs or metadata
+- deterministic fallback is obvious when active
 
-Unsupported values should not appear as silently accepted fields.
+## Public-law suggestion checks
 
-## Public-law suggestion QA
+Use only verified or user-corrected legal concepts and confirm:
 
-1. Use verified or user-corrected extracted fields.
-2. Open the public-law suggestion preview.
-3. Confirm the preview keeps legal concepts but strips private values such as:
-   - party names
-   - case numbers
-   - phone numbers
-   - email addresses
-   - addresses
-4. Confirm the user must approve the preview before the backend request is sent.
+- party names are removed
+- case numbers are removed
+- phone numbers are removed
+- email addresses are removed
+- private narrative phrases are removed
+- the preview remains mandatory before any backend request
 
-## Privacy checks
+## Fake privacy regression strings
 
-During QA, confirm that the following do not appear in backend logs, model metadata, or public-law payloads:
+These values may appear only in encrypted local storage, local document viewing, local review UI, and local source-backed outputs:
 
-- raw prompts
-- raw OCR text
-- filenames
-- party names
-- client facts
-- fake privacy regression strings
+- `Raghav Fakepriv`
+- `9876501234`
+- `fakepriv@example.com`
+- `FAKE/123/2026`
+- `blue suitcase near temple`
 
-During local QA, these values may appear only in:
+They must not appear in:
 
-- encrypted local storage
-- local document viewer
-- extraction review UI
-- source-backed local outputs
+- backend logs
+- model invocation metadata as raw text
+- public-law payloads
+- runtime health details
+- diagnostics
 
-## How to record a real-runtime result
-
-Only record a real local inference success if all of the following are true:
-
-- a developer-provided local runtime was explicitly enabled
-- the reported runtime mode matched the intended adapter
-- inference actually executed locally
-- output passed schema validation
-- no network model call occurred
+## How to record the result honestly
 
 Record:
 
 - platform
 - runtime mode
-- whether a local model path was used
+- whether a developer model artifact was used
 - whether schema validation passed
-- whether deterministic fallback was used instead
+- whether deterministic fallback stayed active
+
+Do not record a real local inference success unless:
+
+- the real runtime was explicitly enabled
+- the runtime reported itself as available
+- `Last invocation runtime` matched the real runtime
+- no network model request occurred

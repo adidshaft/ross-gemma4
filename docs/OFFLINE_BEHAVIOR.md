@@ -58,7 +58,7 @@ The useful offline behavior is not only OCR. It is the combination of local text
 
 - No large model file is committed to the repo.
 - No model file is bundled into the app.
-- Android currently exposes compile-safe adapter skeletons only.
+- Android now has a concrete MediaPipe adapter path, but it still needs a developer artifact and physical-device QA before a real run can be claimed.
 - iOS can use Apple Foundation Models when a compatible runtime is explicitly enabled.
 - If no real runtime actually ran, Ross must not claim that it did.
 

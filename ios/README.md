@@ -44,6 +44,7 @@ swift run --scratch-path tmp/swiftpm Ross --generate-screenshots
 - Real-runtime probing is disabled by default so CI and simulator runs stay deterministic.
 - When the configured real runtime is unavailable, iOS falls back safely to the deterministic development provider.
 - Invocation metadata stores hashes and runtime mode, not raw prompts or raw source text.
+- All model output still flows through prompt packing, JSON extraction, schema validation, source-ref validation, verifier gating, and advocate review.
 
 ## Debug configuration
 
@@ -52,7 +53,9 @@ To exercise the real iOS runtime path manually, use scheme environment variables
 - `ROSS_ENABLE_REAL_LOCAL_INFERENCE=1`
 - `ROSS_LOCAL_RUNTIME=apple_foundation_models`
 - `ROSS_LOCAL_MODEL_PATH=/absolute/path/to/local/model` when an external adapter file is required
-- `ROSS_BACKEND_URL=http://127.0.0.1:8080`
+- `ROSS_LOCAL_MODEL_CHECKSUM=<optional sha256>`
+- `ROSS_LOCAL_MODEL_KIND=<optional adapter label>`
+- `ROSS_BACKEND_BASE_URL=http://127.0.0.1:8080`
 
 No model file is committed to the repo, and CI does not require a real model artifact.
 

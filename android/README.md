@@ -33,10 +33,12 @@ cd /Users/amanpandey/projects/ross/android
 ## Real local inference alpha status
 
 - Android now has a real-provider abstraction behind the installed-pack provider contract.
+- Android now has a concrete MediaPipe local inference adapter path for developer-supplied `.task` artifacts.
 - Runtime metadata supports `deterministic_dev`, `mediapipe_llm`, `gemma_local_runtime`, `apple_foundation_models`, and `unavailable`.
-- MediaPipe and Gemma 4 Q4 paths are compile-safe adapter skeletons in this alpha.
+- Gemma 4 Q4 remains blocked in this alpha.
 - If a configured real runtime is unavailable, Android falls back safely to the deterministic development provider.
 - Invocation metadata stores hashes and runtime mode, not raw prompts or raw source text.
+- All model output still flows through prompt packing, JSON extraction, schema validation, source-ref validation, verifier gating, and advocate review.
 
 ## Debug configuration
 
@@ -45,12 +47,14 @@ These debug-only values are supported through Gradle properties or environment v
 - `ROSS_ENABLE_REAL_LOCAL_INFERENCE`
 - `ROSS_LOCAL_RUNTIME`
 - `ROSS_LOCAL_MODEL_PATH`
-- `ROSS_BACKEND_URL`
+- `ROSS_LOCAL_MODEL_CHECKSUM`
+- `ROSS_LOCAL_MODEL_KIND`
+- `ROSS_BACKEND_BASE_URL`
 
 No model file is committed to the repo, and CI does not require a real model artifact.
 
 ## Known caveats
 
-- Android does not yet execute a real local model in this branch.
+- Android real local inference still requires a physical-device run plus a developer-provided model artifact before it can be claimed as exercised.
 - Exact snippet highlights remain best-effort.
-- The real-runtime scaffolding is present so MediaPipe or Gemma 4 Q4 integration can be added without changing the extraction contract.
+- Technical runtime details remain inside Private AI settings and should not move into onboarding.

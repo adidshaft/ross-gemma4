@@ -54,6 +54,12 @@ The orchestrated pipeline is designed around:
 
 The interfaces reflect the intended law-grade architecture even when a deeper local-model pass is still deterministic or stubbed on a given platform path.
 
+Current alpha note:
+
+- Android can now route eligible `Case Associate` extraction and verification passes through a concrete MediaPipe adapter when a compatible local artifact is present.
+- iOS keeps the Apple Foundation Models path behind explicit opt-in.
+- deterministic fallback remains the default automated path.
+
 ## Retrieval
 
 Ross retrieval is built on source-backed local data:

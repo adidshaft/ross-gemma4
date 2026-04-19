@@ -74,6 +74,12 @@ The harness is designed to work in two modes:
 
 If `ROSS_LOCAL_MODEL_PATH` or another explicit debug runtime configuration is absent, Ross should run deterministic evaluation and skip real-runtime claims.
 
+Current alpha note:
+
+- Android CI now validates a concrete MediaPipe adapter path at compile time and through fallback tests.
+- iOS CI still validates the explicit opt-in and safe fallback path only.
+- No real device execution is implied by the automated harness.
+
 ## Pack-quality coverage
 
 The evaluation harness helps validate that pack-aware planning changes the extraction path:

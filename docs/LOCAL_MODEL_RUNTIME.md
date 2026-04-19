@@ -2,13 +2,13 @@
 
 Ross uses a local model runtime contract so extraction quality can improve without weakening the privacy boundary.
 
-The runtime is not the same thing as OCR. OCR only acquires text. The runtime sits between source-packed text acquisition and advocate review.
+OCR is only acquisition. The runtime sits between source-packed local text and advocate review.
 
 ## Design goals
 
 - keep case files on-device
 - keep deterministic development behavior for CI
-- allow a real local inference adapter when a compatible local model artifact is available
+- allow a real local inference adapter when a compatible runtime and developer artifact are available
 - keep prompt packing and output validation strict
 - require source refs for accepted fields
 - avoid storing raw prompts or raw source text in invocation metadata
@@ -16,7 +16,7 @@ The runtime is not the same thing as OCR. OCR only acquires text. The runtime si
 
 ## Runtime modes
 
-Ross runtime metadata now distinguishes between:
+Ross runtime metadata distinguishes between:
 
 - `deterministic_dev`
 - `mediapipe_llm`
@@ -31,49 +31,26 @@ Artifact metadata distinguishes between:
 - `system_model`
 - `external_debug_model`
 
-The current backend still serves only checksum-verified tiny development artifacts for CI and development installs. No large model files are committed to the repo.
+The backend still serves only checksum-verified tiny development artifacts for normal CI and development installs. No large model file is committed to the repo.
 
-## Core contract
+## Canonical debug configuration
 
-The shared runtime contract now centers on:
+Use these names in docs and manual QA:
 
-- `LocalModelTask`
-- `LocalModelInput`
-- `LocalModelOutput`
-- `LocalModelInvocation`
-- `LocalModelProvider`
-- `LocalRuntimeHealth`
-- `LocalModelResourceEstimate`
-- `ModelPromptPolicy`
-- `PromptPackBuilder`
+- `ROSS_BACKEND_BASE_URL`
+- `ROSS_ENABLE_REAL_LOCAL_INFERENCE`
+- `ROSS_LOCAL_RUNTIME`
+- `ROSS_LOCAL_MODEL_PATH`
+- `ROSS_LOCAL_MODEL_CHECKSUM`
+- `ROSS_LOCAL_MODEL_KIND`
 
-`LocalModelProvider` exposes:
-
-- availability checks
-- runtime mode
-- supported tasks
-- context-window and input-budget estimates
-- full-run execution
-- optional streaming
-- cancellation
-
-`LocalRuntimeHealth` reports:
-
-- runtime mode
-- whether the runtime is actually available
-- whether a model path is present
-- whether checksum verification succeeded
-- supported tasks
-- max input budget
-- estimated context window
-- last error category
-- user-facing status text
+If these values are absent, Ross keeps deterministic fallback behavior.
 
 ## Providers
 
 ### Deterministic development provider
 
-This provider is real and remains the default for CI, tests, and safe fallback behavior.
+This provider remains real and remains the default for CI, tests, and safe fallback behavior.
 
 It:
 
@@ -82,29 +59,39 @@ It:
 - returns schema-shaped outputs for deterministic validation
 - keeps the end-to-end extraction pipeline testable
 
-### Real local provider layer
+### Android MediaPipe path
 
-Ross now has an adapter-first real-provider layer behind the existing provider contract.
+Android now has a concrete `mediapipe_llm` adapter path behind the installed-pack provider contract.
 
-Current alpha status:
+Current behavior:
 
-- Android has compile-safe MediaPipe and Gemma 4 Q4 adapter skeletons plus runtime-health reporting and deterministic fallback.
-- iOS has a real Apple Foundation Models adapter path behind availability checks and explicit developer opt-in.
-- Real-runtime probing is disabled by default so CI and simulator runs remain deterministic.
+- compiles against `com.google.mediapipe:tasks-genai:0.10.27`
+- loads only developer-provided `.task` artifacts from debug or app-private storage
+- never loads models from bundled app assets
+- never imports network clients into the local runtime provider
+- reports runtime availability, model-path presence, checksum status, fallback state, and last error category in technical details
+- falls back safely to `deterministic_dev` when runtime availability is false
 
-To exercise a real runtime in this alpha, a developer must explicitly opt in with local debug configuration such as:
+Real Android inference still requires:
 
-- `ROSS_ENABLE_REAL_LOCAL_INFERENCE=1`
-- `ROSS_LOCAL_RUNTIME=apple_foundation_models`
-- `ROSS_LOCAL_MODEL_PATH=/absolute/path/to/local/model` where the runtime needs an external file
+- a physical device
+- a developer-provided compatible model artifact
+- a manual QA run that proves `Last invocation runtime` was `mediapipe_llm`
 
-If no compatible local runtime is available, Ross falls back safely to the deterministic provider and surfaces runtime unavailability only in technical or debug details.
+### iOS Apple Foundation Models path
+
+iOS keeps a Foundation Models adapter path behind explicit opt-in.
+
+Current behavior:
+
+- requires `ROSS_ENABLE_REAL_LOCAL_INFERENCE=1`
+- expects `ROSS_LOCAL_RUNTIME=apple_foundation_models`
+- reports availability only in technical details
+- falls back safely to `deterministic_dev` when the runtime is unavailable or opt-in is missing
 
 ## Prompt packing
 
-Real local inference is only useful if the prompt pack is tightly controlled.
-
-`PromptPackBuilder` now:
+`PromptPackBuilder`:
 
 - selects page-aware source blocks
 - enforces an input character budget
@@ -115,11 +102,11 @@ Real local inference is only useful if the prompt pack is tightly controlled.
 - includes refusal rules
 - treats uploaded documents as quoted data rather than instructions
 
-Prompt injection inside a document is therefore contained inside source data instead of being treated as executable instruction text.
+For large documents, Ross chunks real extraction and verification passes by page budget and falls back safely when the runtime cannot process a safe prompt pack.
 
 ## Output handling
 
-Ross now treats model output as untrusted until it passes several gates:
+Ross treats model output as untrusted until it passes several gates:
 
 1. raw model output capture
 2. JSON candidate extraction
@@ -128,11 +115,11 @@ Ross now treats model output as untrusted until it passes several gates:
 5. source-ref validation
 6. verifier categorization into `verified`, `needs_review`, or `rejected`
 
+Free-form model text is not accepted as extracted legal fields.
+
 Unsupported values must never be accepted silently.
 
 ## Invocation metadata
-
-Ross records local invocation metadata so extraction runs can be audited without leaking case content.
 
 Invocation metadata includes:
 
@@ -150,23 +137,28 @@ Ross does not persist raw prompts by default.
 
 Ross does not persist raw source text in invocation metadata by default.
 
-## Alpha status
+## Current alpha status
 
 What is real now:
 
 - shared runtime contracts
 - deterministic development provider
-- runtime health and resource estimates
+- Android MediaPipe adapter path
+- iOS Apple Foundation Models adapter path behind explicit opt-in
 - prompt packing
 - schema-specific output validation
+- runtime health and resource estimates
 - pack-aware provider selection on Android and iOS
-- iOS Apple Foundation Models adapter path behind explicit developer opt-in
+
+What still requires manual proof:
+
+- Android real device execution with a developer model artifact
+- iOS real device execution on compatible Apple Intelligence hardware
 
 What remains stubbed:
 
-- Android real inference execution
-- MediaPipe integration on either platform
-- Gemma 4 Q4 runtime integration on either platform
-- shipping production local model artifacts
+- Android Gemma 4 Q4 runtime
+- iOS MediaPipe and Gemma 4 Q4 runtimes
+- shipping production local model artifacts through normal pack delivery
 
-Ross should be described precisely: this alpha contains a real adapter layer and a real iOS system-model path, but deterministic fallback remains the default unless a developer explicitly enables local real inference.
+Ross should be described precisely: this alpha contains a real Android adapter path and a real iOS opt-in path, but deterministic fallback remains the default unless a compatible real runtime actually runs.
