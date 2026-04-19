@@ -109,7 +109,8 @@ struct OnboardingView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
             }
-            .padding(24)
+            .padding(.vertical, 24)
+            .padding(.horizontal, 16)
         }
         .background(Color.rossGroupedBackground.ignoresSafeArea())
     }

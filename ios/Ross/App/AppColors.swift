@@ -7,15 +7,58 @@ import AppKit
 #endif
 
 extension Color {
+    private static func dynamicColor(
+        lightRed: CGFloat, lightGreen: CGFloat, lightBlue: CGFloat,
+        darkRed: CGFloat, darkGreen: CGFloat, darkBlue: CGFloat
+    ) -> Color {
+        #if canImport(UIKit)
+        return Color(UIColor { t in
+            t.userInterfaceStyle == .dark
+                ? UIColor(red: darkRed, green: darkGreen, blue: darkBlue, alpha: 1)
+                : UIColor(red: lightRed, green: lightGreen, blue: lightBlue, alpha: 1)
+        })
+        #elseif canImport(AppKit)
+        return Color(NSColor(name: nil, dynamicProvider: { a in
+            a.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+                ? NSColor(red: darkRed, green: darkGreen, blue: darkBlue, alpha: 1)
+                : NSColor(red: lightRed, green: lightGreen, blue: lightBlue, alpha: 1)
+        }))
+        #else
+        return Color(red: lightRed, green: lightGreen, blue: lightBlue)
+        #endif
+    }
+
     // Modern Legal Premiere Palette
-    static let rossInk = Color(red: 0.05, green: 0.07, blue: 0.10)        // Deep Onyx
-    static let rossAccent = Color(red: 0.18, green: 0.22, blue: 0.40)      // Deep Indigo
-    static let rossHighlight = Color(red: 0.85, green: 0.65, blue: 0.25)   // Refined Gold/Camel
-    static let rossSuccess = Color(red: 0.15, green: 0.35, blue: 0.25)
+    static var rossInk: Color {
+        dynamicColor(lightRed: 0.05, lightGreen: 0.07, lightBlue: 0.10,
+                     darkRed: 0.95, darkGreen: 0.95, darkBlue: 0.95)
+    }
+
+    static var rossAccent: Color {
+        dynamicColor(lightRed: 0.18, lightGreen: 0.22, lightBlue: 0.40,
+                     darkRed: 0.50, darkGreen: 0.55, darkBlue: 0.85)
+    }
+
+    static var rossHighlight: Color {
+        dynamicColor(lightRed: 0.85, lightGreen: 0.65, lightBlue: 0.25,
+                     darkRed: 0.95, darkGreen: 0.75, darkBlue: 0.35)
+    }
+
+    static var rossSuccess: Color {
+        dynamicColor(lightRed: 0.15, lightGreen: 0.35, lightBlue: 0.25,
+                     darkRed: 0.35, darkGreen: 0.70, darkBlue: 0.55)
+    }
     
     // Backgrounds for Hero
-    static let rossHeroTop = Color(red: 0.98, green: 0.98, blue: 0.99)
-    static let rossHeroBottom = Color(red: 0.91, green: 0.92, blue: 0.95)
+    static var rossHeroTop: Color {
+        dynamicColor(lightRed: 0.98, lightGreen: 0.98, lightBlue: 0.99,
+                     darkRed: 0.14, darkGreen: 0.15, darkBlue: 0.18)
+    }
+
+    static var rossHeroBottom: Color {
+        dynamicColor(lightRed: 0.91, lightGreen: 0.92, lightBlue: 0.95,
+                     darkRed: 0.08, darkGreen: 0.09, darkBlue: 0.12)
+    }
     
     // Gradients
     static var rossPillGradient: LinearGradient {

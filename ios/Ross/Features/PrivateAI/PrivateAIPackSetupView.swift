@@ -94,7 +94,8 @@ struct PrivateAIPackSetupView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
             }
-            .padding(24)
+            .padding(.vertical, 24)
+            .padding(.horizontal, 16)
         }
         .background(Color.rossGroupedBackground.ignoresSafeArea())
     }
@@ -121,11 +122,13 @@ private struct PackSelectionCard: View {
                     Text(pack.tier.title)
                         .font(.title3.weight(.bold))
                         .foregroundStyle(Color.rossInk)
+                        .fixedSize(horizontal: false, vertical: true)
 
                     Text(pack.tier.summary)
                         .font(.subheadline)
                         .foregroundStyle(Color.rossInk.opacity(0.65))
                         .lineSpacing(4)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Spacer()
@@ -184,8 +187,9 @@ private struct PackSelectionCard: View {
             Text("Best for: \(pack.recommendedFor)")
                 .font(.footnote.weight(.medium))
                 .foregroundStyle(Color.rossInk.opacity(0.5))
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(24)
+        .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(isSelected ? Color.rossAccent.opacity(0.04) : Color.rossCardBackground)
         .overlay {

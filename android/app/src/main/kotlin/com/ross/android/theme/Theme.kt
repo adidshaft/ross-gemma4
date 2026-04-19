@@ -28,15 +28,15 @@ private val LightColors = lightColorScheme(
 )
 
 private val DarkColors = darkColorScheme(
-    primary = RossAccent,
+    primary = RossAccentDark,
     onPrimary = RossWhite,
     primaryContainer = RossDarkSurface,
     onPrimaryContainer = RossWhite,
-    secondary = RossHighlight,
+    secondary = RossHighlightDark,
     onSecondary = RossWhite,
     secondaryContainer = RossDarkSurface,
-    onSecondaryContainer = RossHighlight,
-    tertiary = RossSuccess,
+    onSecondaryContainer = RossHighlightDark,
+    tertiary = RossSuccessDark,
     onTertiary = RossWhite,
     background = RossDarkBg,
     onBackground = RossWhite,

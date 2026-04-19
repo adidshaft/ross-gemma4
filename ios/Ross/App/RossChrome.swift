@@ -23,6 +23,7 @@ struct RossSectionCard<Content: View>: View {
                         Text(title)
                             .font(.rossSerifHeadline())
                             .foregroundStyle(Color.rossInk)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
 
                     if let subtitle {
@@ -30,6 +31,7 @@ struct RossSectionCard<Content: View>: View {
                             .font(.subheadline)
                             .foregroundStyle(Color.rossInk.opacity(0.65))
                             .lineSpacing(4)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 .padding(.bottom, 4)
@@ -70,16 +72,18 @@ struct RossHeroCard<Content: View>: View {
                 .font(.rossSerifTitle())
                 .foregroundStyle(Color.rossInk)
                 .lineSpacing(2)
+                .fixedSize(horizontal: false, vertical: true)
 
             Text(detail)
                 .font(.title3)
                 .foregroundStyle(Color.rossInk.opacity(0.8))
                 .lineSpacing(6)
+                .fixedSize(horizontal: false, vertical: true)
 
             content
                 .padding(.top, 8)
         }
-        .padding(32)
+        .padding(24)
         .background(
             LinearGradient(
                 colors: [Color.rossHeroTop, Color.rossHeroBottom],
@@ -165,11 +169,13 @@ struct RossActionTile: View {
                     Text(title)
                         .font(.headline)
                         .foregroundStyle(Color.rossInk)
+                        .fixedSize(horizontal: false, vertical: true)
 
                     Text(detail)
                         .font(.subheadline)
                         .foregroundStyle(Color.rossInk.opacity(0.6))
                         .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 
                 Spacer()
@@ -206,6 +212,7 @@ struct RossBulletRow: View {
                 .font(.subheadline)
                 .foregroundStyle(Color.rossInk.opacity(0.75))
                 .lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
@@ -228,11 +235,13 @@ struct RossStepTile: View {
             Text(title)
                 .font(.headline)
                 .foregroundStyle(Color.rossInk)
+                .fixedSize(horizontal: false, vertical: true)
 
             Text(detail)
                 .font(.footnote)
                 .foregroundStyle(Color.rossInk.opacity(0.65))
                 .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

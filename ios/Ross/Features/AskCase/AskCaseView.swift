@@ -90,7 +90,8 @@ struct AskCaseView: View {
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
-            .padding(24)
+            .padding(.vertical, 24)
+            .padding(.horizontal, 16)
         }
         .background(Color.rossGroupedBackground.ignoresSafeArea())
         .navigationTitle("Ask Case")
@@ -156,6 +157,7 @@ private struct AskCaseResponseCard: View {
                             .font(.body)
                             .lineSpacing(6)
                             .foregroundStyle(Color.rossInk.opacity(0.85))
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
 
@@ -177,6 +179,7 @@ private struct AskCaseResponseCard: View {
                                 .font(.footnote)
                                 .foregroundStyle(Color.rossInk.opacity(0.6))
                                 .lineSpacing(3)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                         .padding(16)
                         .frame(maxWidth: .infinity, alignment: .leading)

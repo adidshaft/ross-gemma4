@@ -776,7 +776,7 @@ private fun PublicLawResultCard(preview: PublicLawPreview) {
         Text(
             text = preview.cautionLabel,
             style = MaterialTheme.typography.labelLarge,
-            color = RossHighlight,
+            color = MaterialTheme.colorScheme.secondary,
         )
     }
 }
