@@ -897,16 +897,42 @@ private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack
                     Text("Runtime mode: ${health.runtimeMode.wireValue}")
                     Text("Local runtime: ${if (health.available) "available" else "unavailable"}")
                     Text("Fallback active: ${if (health.fallbackActive) "yes" else "no"}")
-                    Text("Explicit opt-in: ${if (health.explicitOptInEnabled) "enabled" else "disabled"}")
-                    Text("Model path present: ${if (health.modelPathPresent) "yes" else "no"}")
+                    Text("Real runtime enabled: ${if (health.explicitOptInEnabled) "yes" else "no"}")
+                    Text("Model path: ${if (health.modelPathPresent) "Configured" else "Missing"}")
+                    health.modelPathLabel?.let { Text("Model file: $it") }
                     Text("Checksum verified: ${if (health.checksumVerified) "yes" else "no"}")
                     health.lastErrorCategory?.let { Text("Last runtime error: $it") }
                     controller.lastModelInvocationRuntimeMode()?.let { Text("Last invocation runtime: $it") }
+                    controller.lastLocalInferenceMetrics()?.let { metric ->
+                        Text("Last local run: ${metric.task.wireValue} • ${metric.durationMs} ms • schema ${if (metric.schemaValid) "valid" else "invalid"}")
+                    }
                     health.maxInputChars?.let { Text("Max input chars: $it") }
                     Text(
                         health.userFacingStatus,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(
+                        onClick = { controller.runLocalInferenceSmoke() },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !controller.localInferenceSmokeRunning,
+                    ) {
+                        Text(if (controller.localInferenceSmokeRunning) "Running local inference smoke..." else "Run local inference smoke")
+                    }
+                    controller.localInferenceSmokeReport?.let { report ->
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Runtime used: ${report.runtimeUsed}")
+                        Text("Schema valid: ${if (report.schemaValid) "yes" else "no"}")
+                        Text("Fields found: ${report.fieldsFound}")
+                        Text("Fields verified: ${report.fieldsVerified}")
+                        Text("Fields needing review: ${report.fieldsNeedingReview}")
+                        Text("Unsupported accepted: ${report.unsupportedAccepted}")
+                        report.exportRelativePath?.let { Text("Export: $it") }
+                        Text(
+                            report.message,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
             AlphaCard("Download policy", "Downloads can wait for Wi-Fi or use mobile data explicitly.") {

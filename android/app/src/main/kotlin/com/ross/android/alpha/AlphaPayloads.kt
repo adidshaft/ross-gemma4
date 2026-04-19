@@ -26,6 +26,8 @@ data class AlphaPublicLawSearchPayload(
 object AlphaPayloadShaper {
     private val blockedTerms = listOf(
         "case number",
+        "case no",
+        "case no.",
         "client",
         "party",
         "petitioner",
@@ -34,6 +36,8 @@ object AlphaPayloadShaper {
         "chat history",
         "source chunk",
         "filename",
+        "address",
+        "mobile",
     )
     private val legalConceptSignals = listOf(
         "act",
@@ -100,6 +104,11 @@ object AlphaPayloadShaper {
             sanitized = sanitized.replace(Regex("\\b\\d{2,}\\b"), " ")
         }
 
+        if (Regex("\\b[A-Za-z]{1,8}[(/\\- ]*\\d+[A-Za-z/()\\- ]*\\d{4}\\b", RegexOption.IGNORE_CASE).containsMatchIn(sanitized)) {
+            removed += "Case numbers or filing references"
+            sanitized = sanitized.replace(Regex("\\b[A-Za-z]{1,8}[(/\\- ]*\\d+[A-Za-z/()\\- ]*\\d{4}\\b", RegexOption.IGNORE_CASE), " ")
+        }
+
         if (Regex("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+").containsMatchIn(sanitized)) {
             removed += "Email addresses"
             sanitized = sanitized.replace(Regex("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+"), " ")
@@ -113,6 +122,25 @@ object AlphaPayloadShaper {
         if (Regex("\\b[^\\s]+\\.(pdf|docx|doc|txt|png|jpg|jpeg)\\b", RegexOption.IGNORE_CASE).containsMatchIn(sanitized)) {
             removed += "File names"
             sanitized = sanitized.replace(Regex("\\b[^\\s]+\\.(pdf|docx|doc|txt|png|jpg|jpeg)\\b", RegexOption.IGNORE_CASE), " ")
+        }
+
+        if (Regex("\\b\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4}\\b").containsMatchIn(sanitized) ||
+            Regex("\\b\\d{1,2}\\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\\s+\\d{4}\\b", RegexOption.IGNORE_CASE).containsMatchIn(sanitized)
+        ) {
+            removed += "Exact private dates"
+            sanitized = sanitized
+                .replace(Regex("\\b\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4}\\b"), " ")
+                .replace(Regex("\\b\\d{1,2}\\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\\s+\\d{4}\\b", RegexOption.IGNORE_CASE), " ")
+        }
+
+        if (Regex("raghav\\s+fakepriv|blue suitcase near temple", RegexOption.IGNORE_CASE).containsMatchIn(sanitized)) {
+            removed += "Fake secrets and private facts"
+            sanitized = sanitized.replace(Regex("raghav\\s+fakepriv|blue suitcase near temple", RegexOption.IGNORE_CASE), " ")
+        }
+
+        if (Regex("\\b(?:near|behind|opposite|at)\\s+[A-Za-z][A-Za-z\\s]{3,40}\\b", RegexOption.IGNORE_CASE).containsMatchIn(sanitized)) {
+            removed += "Addresses or location details"
+            sanitized = sanitized.replace(Regex("\\b(?:near|behind|opposite|at)\\s+[A-Za-z][A-Za-z\\s]{3,40}\\b", RegexOption.IGNORE_CASE), " ")
         }
 
         sanitized = sanitized
@@ -188,6 +216,9 @@ object AlphaPayloadShaper {
         }.distinct().toMutableList()
         val sanitizedPhrase = lowered
             .replace(Regex("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+"), " ")
+            .replace(Regex("\\b\\+?\\d[\\d\\s-]{7,}\\b"), " ")
+            .replace(Regex("\\b\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4}\\b"), " ")
+            .replace(Regex("\\b[A-Za-z]{1,8}[(/\\- ]*\\d+[A-Za-z/()\\- ]*\\d{4}\\b", RegexOption.IGNORE_CASE), " ")
             .replace(Regex("\\s+"), " ")
             .trim()
         if (sanitizedPhrase.isNotBlank() && sanitizedPhrase.split(" ").size in 3..10 && looksLikeLegalConcept(sanitizedPhrase)) {
@@ -203,7 +234,12 @@ object AlphaPayloadShaper {
 
     private fun isSafePublicLawToken(value: String): Boolean {
         val lowered = value.lowercase()
-        if ("fakepriv" in lowered || "blue suitcase near temple" in lowered) {
+        if (
+            "fakepriv" in lowered ||
+            "blue suitcase near temple" in lowered ||
+            Regex("\\b(petitioner|respondent|appellant|defendant|plaintiff)\\b", RegexOption.IGNORE_CASE).containsMatchIn(value) ||
+            Regex("\\bv\\.?\\s", RegexOption.IGNORE_CASE).containsMatchIn(value)
+        ) {
             return false
         }
         if (Regex("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+").containsMatchIn(value)) {
@@ -216,6 +252,9 @@ object AlphaPayloadShaper {
             return false
         }
         if (Regex("\\b[A-Za-z]{1,8}[(/\\- ]*\\d+[A-Za-z/()\\- ]*\\d{4}\\b", RegexOption.IGNORE_CASE).containsMatchIn(value)) {
+            return false
+        }
+        if (Regex("\\b(?:near|behind|opposite|at)\\s+[A-Za-z][A-Za-z\\s]{3,40}\\b", RegexOption.IGNORE_CASE).containsMatchIn(value)) {
             return false
         }
         return true

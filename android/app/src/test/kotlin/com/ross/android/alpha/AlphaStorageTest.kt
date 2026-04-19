@@ -29,6 +29,7 @@ class AlphaStorageTest {
         val encryptedText = rootDir.resolve("state.enc").readText()
 
         assertEquals(state.cases.first().title, restored.cases.first().title)
+        assertEquals(1, restored.localInferenceMetrics.size)
         assertFalse(encryptedText.contains("Raghav Fakepriv"))
         assertFalse(encryptedText.contains("9876501234"))
         assertFalse(encryptedText.contains("fakepriv@example.com"))
@@ -106,5 +107,27 @@ private fun fakeSecretState(): AlphaPersistedState {
         ),
         sourceRefs = emptyList(),
     )
-    return AlphaPersistedState(cases = listOf(case), ledgerEntries = emptyList())
+    return AlphaPersistedState(
+        cases = listOf(case),
+        ledgerEntries = emptyList(),
+        localInferenceMetrics = listOf(
+            AlphaLocalInferenceMetrics(
+                invocationId = "invocation-1",
+                runtimeMode = AlphaPackRuntimeMode.DeterministicDev.wireValue,
+                task = AlphaLocalModelTask.LegalFieldExtraction,
+                extractionMode = AlphaExtractionMode.CaseAssociate,
+                inputChars = 420,
+                estimatedTokens = 105,
+                outputChars = 88,
+                durationMs = 32,
+                schemaValid = true,
+                fieldsFound = 3,
+                fieldsVerified = 2,
+                fieldsNeedingReview = 1,
+                unsupportedAccepted = 0,
+                fallbackActive = false,
+                errorCategory = null,
+            )
+        )
+    )
 }

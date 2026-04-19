@@ -186,6 +186,33 @@ class AlphaPayloadsTest {
     }
 
     @Test
+    fun `public law preview strips exact dates and address-like private details`() {
+        val preview = AlphaPayloadShaper.buildPublicLawPreview(
+            rawQuery = "Find law on delay condonation for hearing fixed on 14 March 2026 at blue suitcase near temple and contact 9876501234",
+            case = null,
+        )
+
+        assertFalse(preview.query.contains("14 March 2026", ignoreCase = true))
+        assertFalse(preview.query.contains("blue suitcase near temple", ignoreCase = true))
+        assertFalse(preview.query.contains("9876501234"))
+        assertTrue(preview.query.contains("delay condonation", ignoreCase = true))
+    }
+
+    @Test
+    fun `public law backend request always marks explicit confirmation`() {
+        val preview = AlphaPayloadShaper.buildPublicLawPreview(
+            rawQuery = "Find Section 138 cheque dishonour limitation law",
+            case = null,
+        )
+
+        val request = AlphaPayloadShaper.buildPublicLawPayload(preview).toRequest()
+
+        assertEquals(true, request.confirmedPublicPreview)
+        assertEquals("IN-ALL", request.jurisdiction)
+        assertEquals("en", request.language)
+    }
+
+    @Test
     fun `backend base url prefers canonical config name`() {
         val resolved = resolveRossBackendBaseUrl(
             systemPropertyValue = null,

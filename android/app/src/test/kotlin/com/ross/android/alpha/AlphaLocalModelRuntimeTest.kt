@@ -357,7 +357,7 @@ class AlphaLocalModelRuntimeTest {
         assertEquals(AlphaPackRuntimeMode.MediapipeLlm, health?.runtimeMode)
         assertFalse(health?.available ?: true)
         assertTrue(health?.fallbackActive == true)
-        assertEquals("model_file_missing", health?.lastErrorCategory)
+        assertEquals("model_file_not_found", health?.lastErrorCategory)
     }
 
     @Test
@@ -381,7 +381,34 @@ class AlphaLocalModelRuntimeTest {
         assertEquals(AlphaPackRuntimeMode.MediapipeLlm, health?.runtimeMode)
         assertFalse(health?.available ?: true)
         assertTrue(health?.fallbackActive ?: false)
-        assertEquals("model_file_missing", health?.lastErrorCategory)
+        assertEquals("model_file_not_found", health?.lastErrorCategory)
+    }
+
+    @Test
+    fun `checksum mismatch is surfaced without exposing the full model path`() {
+        val root = Files.createTempDirectory("ross-checksum-mismatch").toFile()
+        val modelFile = File(root, "developer-case-associate.task").apply {
+            writeText("developer supplied model bytes")
+        }
+        val environment = AlphaLocalRuntimeEnvironment(
+            enableRealInference = true,
+            runtimeModeOverride = AlphaPackRuntimeMode.MediapipeLlm,
+            modelPath = modelFile.absolutePath,
+            modelChecksum = "f".repeat(64),
+            modelKind = "mediapipe_task",
+        )
+
+        val health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack = null,
+            requestedTier = AlphaCapabilityTier.CaseAssociate,
+            context = Application(),
+            appPrivateRoot = root,
+            runtimeEnvironment = environment,
+        )
+
+        assertFalse(health?.available ?: true)
+        assertEquals("checksum_mismatch", health?.lastErrorCategory)
+        assertEquals("developer-case-associate.task", health?.modelPathLabel)
     }
 
     @Test
@@ -470,7 +497,7 @@ class AlphaLocalModelRuntimeTest {
         )
 
         assertFalse(output.schemaValid)
-        assertEquals("budget_exceeded", output.errorCategory)
+        assertEquals("unsupported_runtime", output.errorCategory)
     }
 
     @Test

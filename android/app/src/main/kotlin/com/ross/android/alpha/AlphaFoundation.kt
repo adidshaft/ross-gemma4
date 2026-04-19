@@ -211,6 +211,19 @@ data class AlphaExportRecord(
     val createdAt: String = nowIso(),
 )
 
+data class AlphaLocalInferenceSmokeReport(
+    val ran: Boolean,
+    val runtimeUsed: String,
+    val schemaValid: Boolean,
+    val fieldsFound: Int,
+    val fieldsVerified: Int,
+    val fieldsNeedingReview: Int,
+    val unsupportedAccepted: Int,
+    val exportRelativePath: String?,
+    val message: String,
+    val createdAt: String = nowIso(),
+)
+
 data class AlphaSettings(
     val activeTier: AlphaCapabilityTier? = null,
     val wifiOnlyDownloads: Boolean = true,
@@ -237,6 +250,7 @@ data class AlphaPersistedState(
     ),
     val modelJobs: List<AlphaModelDownloadJob> = emptyList(),
     val installedPacks: List<AlphaInstalledPack> = emptyList(),
+    val localInferenceMetrics: List<AlphaLocalInferenceMetrics> = emptyList(),
     val publicLawCache: List<AlphaPublicLawCacheItem> = emptyList(),
     val exports: List<AlphaExportRecord> = emptyList(),
 )
@@ -284,6 +298,8 @@ class AlphaRossController(private val context: Context) {
     var publicLawDraft by mutableStateOf("Find Supreme Court guidance on delay condonation where diligence is documented but filing was disrupted.")
     var publicLawPreview by mutableStateOf<AlphaPublicLawPreview?>(null)
     var publicLawResults by mutableStateOf<List<AlphaPublicLawResult>>(emptyList())
+    var localInferenceSmokeReport by mutableStateOf<AlphaLocalInferenceSmokeReport?>(null)
+    var localInferenceSmokeRunning by mutableStateOf(false)
 
     fun activePack(): AlphaInstalledPack? = persisted.installedPacks.firstOrNull { it.isActive }
 
@@ -303,6 +319,155 @@ class AlphaRossController(private val context: Context) {
             .flatMap { it.modelInvocations }
             .lastOrNull()
             ?.runtimeMode
+
+    fun lastLocalInferenceMetrics(): AlphaLocalInferenceMetrics? =
+        persisted.localInferenceMetrics.maxByOrNull { it.createdAt }
+
+    fun runLocalInferenceSmoke() {
+        if (localInferenceSmokeRunning) {
+            return
+        }
+        localInferenceSmokeRunning = true
+        localInferenceSmokeReport = null
+
+        scope.launch {
+            val runtimeHealth = activeRuntimeHealth()
+            if (runtimeHealth == null || !runtimeHealth.explicitOptInEnabled || !runtimeHealth.available) {
+                localInferenceSmokeReport = AlphaLocalInferenceSmokeReport(
+                    ran = false,
+                    runtimeUsed = runtimeHealth?.runtimeMode?.wireValue ?: AlphaPackRuntimeMode.Unavailable.wireValue,
+                    schemaValid = false,
+                    fieldsFound = 0,
+                    fieldsVerified = 0,
+                    fieldsNeedingReview = 0,
+                    unsupportedAccepted = 0,
+                    exportRelativePath = null,
+                    message = runtimeHealth?.userFacingStatus
+                        ?: "Real local inference is unavailable. Enable it explicitly and configure a compatible Private AI Pack before running smoke QA.",
+                )
+                localInferenceSmokeRunning = false
+                return@launch
+            }
+
+            val smokeDir = File(rootDir, "smoke").apply { mkdirs() }
+            val smokeFile = File(smokeDir, "case-associate-smoke.txt").apply {
+                writeText(
+                    """
+                    IN THE HIGH COURT OF DELHI AT NEW DELHI
+                    CS(COMM) 245/2026
+                    Order dated 14 March 2026
+                    The matter concerns delay condonation and an application under Section 138 of the Negotiable Instruments Act.
+                    The court directed the respondent to file a written statement within two weeks.
+                    List the matter on 28 April 2026.
+                    """.trimIndent()
+                )
+            }
+            val smokeCaseId = "smoke-case-associate"
+            val smokeDocumentId = "smoke-document-case-associate"
+            val smokeDocument = AlphaCaseDocument(
+                id = smokeDocumentId,
+                title = "Case Associate Local Smoke",
+                fileName = smokeFile.name,
+                kind = AlphaDocumentKind.Text,
+                storedRelativePath = smokeFile.relativeTo(rootDir).path,
+                pageCount = 1,
+                ocrStatus = AlphaOcrStatus.NativeText,
+                extractedText = smokeFile.readText(),
+                indexingStatus = AlphaIndexingStatus.Indexed,
+                dominantSourceSnippet = "Delay condonation and Section 138 written statement order.",
+                lastIndexedAt = nowIso(),
+                pages = listOf(
+                    AlphaDocumentPage(
+                        pageNumber = 1,
+                        snippet = "Delay condonation and Section 138 written statement order.",
+                        extractedText = smokeFile.readText(),
+                        anchorText = "Delay condonation and Section 138 written statement order.",
+                        ocrConfidence = 0.99,
+                        ocrStatus = AlphaOcrStatus.NativeText,
+                        indexingStatus = AlphaIndexingStatus.Indexed,
+                    )
+                ),
+            )
+
+            val result = runCatching {
+                extractionOrchestrator.extract(
+                    caseId = smokeCaseId,
+                    document = smokeDocument,
+                    file = smokeFile,
+                    activePack = activePack(),
+                )
+            }.getOrNull()
+
+            if (result == null) {
+                localInferenceSmokeReport = AlphaLocalInferenceSmokeReport(
+                    ran = false,
+                    runtimeUsed = runtimeHealth.runtimeMode.wireValue,
+                    schemaValid = false,
+                    fieldsFound = 0,
+                    fieldsVerified = 0,
+                    fieldsNeedingReview = 0,
+                    unsupportedAccepted = 0,
+                    exportRelativePath = null,
+                    message = "Ross could not complete the local inference smoke run on this device.",
+                )
+                localInferenceSmokeRunning = false
+                return@launch
+            }
+
+            val smokeCase = AlphaCaseMatter(
+                id = smokeCaseId,
+                title = "Local inference smoke",
+                forum = "Delhi High Court",
+                stage = AlphaCaseStage.Pleadings,
+                summary = "Synthetic Case Associate smoke fixture for local QA.",
+                issueHighlights = result.extractedFields.filter { it.fieldType == AlphaExtractedLegalFieldType.Issue }.map { it.value },
+                evidenceNotes = result.extractedFields.filter { it.fieldType == AlphaExtractedLegalFieldType.ExhibitNumber }.map { it.value },
+                draftTasks = listOf("Review smoke extraction output."),
+                documents = listOf(
+                    smokeDocument.copy(
+                        languageProfile = result.languageProfile,
+                        classification = result.classification,
+                        extractedFields = result.extractedFields,
+                        extractionRuns = listOf(result.extractionRun),
+                        extractionFindings = result.findings,
+                        modelInvocations = result.modelInvocations,
+                    )
+                ),
+                sourceRefs = result.extractedFields.flatMap { it.sourceRefs }
+                    .distinctBy { "${it.documentId}:${it.pageNumber}:${it.textSnippet}" },
+            )
+            val export = exportService.generate("case_note", smokeCase)
+            val newestMetric = result.localInferenceMetrics.maxByOrNull { it.createdAt }
+
+            persisted = persisted.copy(
+                localInferenceMetrics = (result.localInferenceMetrics + persisted.localInferenceMetrics)
+                    .sortedByDescending { it.createdAt }
+                    .take(120),
+                exports = listOf(export) + persisted.exports,
+                ledgerEntries = listOf(
+                    localLedger(
+                        "Local inference smoke completed",
+                        "Ross ran a synthetic Case Associate local smoke test without storing prompt or source text in metrics."
+                    )
+                ) + persisted.ledgerEntries,
+            )
+            localInferenceSmokeReport = AlphaLocalInferenceSmokeReport(
+                ran = true,
+                runtimeUsed = newestMetric?.runtimeMode ?: runtimeHealth.runtimeMode.wireValue,
+                schemaValid = result.localInferenceMetrics.all { it.schemaValid || it.errorCategory != null },
+                fieldsFound = result.extractedFields.size,
+                fieldsVerified = result.extractedFields.count { !it.needsReview || it.userCorrected },
+                fieldsNeedingReview = result.extractedFields.count { it.needsReview && !it.userCorrected },
+                unsupportedAccepted = result.localInferenceMetrics.maxOfOrNull { it.unsupportedAccepted } ?: 0,
+                exportRelativePath = export.relativePath,
+                message = newestMetric?.errorCategory?.let {
+                    "Smoke completed with runtime warning: $it"
+                } ?: "Local inference smoke completed. Ross did not log prompt text or source text.",
+            )
+            save()
+            localInferenceSmokeRunning = false
+        }
+    }
 
     private fun loadState(): AlphaPersistedState {
         ensureFolders()
@@ -900,6 +1065,9 @@ class AlphaRossController(private val context: Context) {
                     )
                 } else case
             },
+            localInferenceMetrics = (result.localInferenceMetrics + persisted.localInferenceMetrics)
+                .sortedByDescending { it.createdAt }
+                .take(120),
             ledgerEntries = listOf(localLedger("Local extraction completed", "Ross reviewed the document locally and prepared source-backed fields for advocate review.")) + persisted.ledgerEntries,
         )
         save()

@@ -194,6 +194,7 @@ data class AlphaLocalExtractionResult(
     val caseMemoryUpdates: List<AlphaCaseMemoryUpdate>,
     val reviewQueue: AlphaReviewQueue,
     val modelInvocations: List<AlphaLocalModelInvocation>,
+    val localInferenceMetrics: List<AlphaLocalInferenceMetrics>,
     val pipelinePlan: AlphaExtractionPipelinePlan,
 )
 
@@ -256,6 +257,13 @@ private data class AlphaPageAcquisition(
     val indexingStatus: AlphaIndexingStatus,
 )
 
+private data class AlphaModelPassExecution(
+    val output: AlphaLocalModelOutput,
+    val invocation: AlphaLocalModelInvocation,
+    val estimate: AlphaLocalModelResourceEstimate,
+    val durationMs: Long,
+)
+
 class AlphaLocalExtractionOrchestrator(private val context: Context) {
     private val gson = Gson()
 
@@ -270,6 +278,7 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
         val extractionRunId = UUID.randomUUID().toString()
         val acquiredPages = acquirePages(document, file)
         val quickStartTooLong = mode == AlphaExtractionMode.QuickStart && acquiredPages.size > 12
+        val appPrivateRoot = File(context.filesDir, "ross-alpha")
         val provider = if (quickStartTooLong) {
             null
         } else {
@@ -280,10 +289,22 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
                     deterministicRuntimeOutput(caseId, document, taskInput)
                 },
                 context = context,
-                appPrivateRoot = File(context.filesDir, "ross-alpha"),
+                appPrivateRoot = appPrivateRoot,
+            )
+        }
+        val runtimeHealth = if (quickStartTooLong) {
+            null
+        } else {
+            AlphaLocalModelRuntime.runtimeHealth(
+                activePack = activePack,
+                requestedTier = activePack?.tier,
+                context = context,
+                appPrivateRoot = appPrivateRoot,
             )
         }
         val modelInvocations = mutableListOf<AlphaLocalModelInvocation>()
+        val localInferenceMetrics = mutableListOf<AlphaLocalInferenceMetrics>()
+        val fallbackActive = runtimeHealth?.fallbackActive == true && runtimeHealth.runtimeMode != AlphaPackRuntimeMode.DeterministicDev
 
         val cleanedPages = runCleanupPass(
             provider = provider,
@@ -294,6 +315,8 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
             document = document,
             caseId = caseId,
             modelInvocations = modelInvocations,
+            localInferenceMetrics = localInferenceMetrics,
+            fallbackActive = fallbackActive,
         )
         val languageProfile = detectLanguageProfile(document.id, cleanedPages)
         maybeRunLanguagePass(
@@ -306,6 +329,8 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
             document = document,
             caseId = caseId,
             modelInvocations = modelInvocations,
+            localInferenceMetrics = localInferenceMetrics,
+            fallbackActive = fallbackActive,
         )
         val classification = runClassificationPass(
             provider = provider,
@@ -317,6 +342,8 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
             document = document,
             caseId = caseId,
             modelInvocations = modelInvocations,
+            localInferenceMetrics = localInferenceMetrics,
+            fallbackActive = fallbackActive,
         )
         var rawFields = runExtractionPass(
             provider = provider,
@@ -329,6 +356,8 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
             document = document,
             caseId = caseId,
             modelInvocations = modelInvocations,
+            localInferenceMetrics = localInferenceMetrics,
+            fallbackActive = fallbackActive,
         )
         if (pipelinePlan.passes.any { it.task == AlphaLocalModelTask.IssueExtraction }) {
             rawFields = mergeFields(
@@ -344,6 +373,8 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
                     document = document,
                     caseId = caseId,
                     modelInvocations = modelInvocations,
+                    localInferenceMetrics = localInferenceMetrics,
+                    fallbackActive = fallbackActive,
                 )
             )
         }
@@ -357,6 +388,8 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
             document = document,
             caseId = caseId,
             modelInvocations = modelInvocations,
+            localInferenceMetrics = localInferenceMetrics,
+            fallbackActive = fallbackActive,
         )
         val findings = buildList {
             addAll(verification.findings)
@@ -382,6 +415,27 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
                     )
                 )
             }
+            if (fallbackActive) {
+                add(
+                    AlphaExtractionFinding(
+                        caseId = caseId,
+                        documentId = document.id,
+                        kind = AlphaExtractionFindingKind.UnsupportedLayout,
+                        message = "Ross used the available local extraction mode. Better extraction requires a compatible Private AI Pack.",
+                        sourceRefs = cleanedPages.take(1).map { page ->
+                            AlphaSourceRef(
+                                caseId = caseId,
+                                documentId = document.id,
+                                documentTitle = document.title,
+                                pageNumber = page.pageNumber,
+                                textSnippet = page.snippet,
+                                ocrConfidence = page.ocrConfidence,
+                            )
+                        },
+                        severity = AlphaExtractionFindingSeverity.Warning,
+                    )
+                )
+            }
         }
         val caseMemoryUpdates = runCaseMemoryPass(
             provider = provider,
@@ -394,6 +448,8 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
             document = document,
             caseId = caseId,
             modelInvocations = modelInvocations,
+            localInferenceMetrics = localInferenceMetrics,
+            fallbackActive = fallbackActive,
         )
         val reviewQueue = AlphaReviewQueues.build(verification.fields, findings)
         val warnings = findings.map { it.message }
@@ -446,7 +502,73 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
             caseMemoryUpdates = caseMemoryUpdates,
             reviewQueue = reviewQueue,
             modelInvocations = modelInvocations.toList(),
+            localInferenceMetrics = localInferenceMetrics.toList(),
             pipelinePlan = pipelinePlan,
+        )
+    }
+
+    private suspend fun executeModelPass(
+        provider: AlphaLocalModelProvider,
+        activePack: AlphaInstalledPack?,
+        task: AlphaLocalModelTask,
+        extractionRunId: String,
+        caseId: String,
+        documentId: String,
+        input: AlphaLocalModelInput,
+        modelInvocations: MutableList<AlphaLocalModelInvocation>,
+    ): AlphaModelPassExecution {
+        val invocation = AlphaModelInvocationStore.begin(
+            task = task,
+            runtimeMode = provider.runtimeMode,
+            capabilityTier = activePack?.tier ?: provider.capabilityTier,
+            caseId = caseId,
+            documentId = documentId,
+            extractionRunId = extractionRunId,
+            input = input,
+        )
+        val estimate = provider.estimateCostOrResourceUse(input)
+        val startedAt = System.nanoTime()
+        val output = provider.run(input)
+        val durationMs = (System.nanoTime() - startedAt) / 1_000_000
+        val completed = AlphaModelInvocationStore.complete(invocation, output)
+        modelInvocations += completed
+        return AlphaModelPassExecution(
+            output = output,
+            invocation = completed,
+            estimate = estimate,
+            durationMs = durationMs,
+        )
+    }
+
+    private fun recordLocalInferenceMetrics(
+        input: AlphaLocalModelInput,
+        execution: AlphaModelPassExecution,
+        localInferenceMetrics: MutableList<AlphaLocalInferenceMetrics>,
+        fallbackActive: Boolean,
+        fieldsFound: Int = 0,
+        fieldsVerified: Int = 0,
+        fieldsNeedingReview: Int = 0,
+        unsupportedAccepted: Int = 0,
+    ) {
+        val outputChars = execution.output.rawText.ifBlank { execution.output.parsedJson.orEmpty() }
+            .takeIf { it.isNotBlank() }
+            ?.length
+        localInferenceMetrics += AlphaLocalInferenceMetrics(
+            invocationId = execution.invocation.id,
+            runtimeMode = execution.invocation.runtimeMode,
+            task = input.task,
+            extractionMode = input.extractionMode,
+            inputChars = execution.estimate.inputChars,
+            estimatedTokens = execution.estimate.estimatedTokens,
+            outputChars = outputChars,
+            durationMs = execution.durationMs,
+            schemaValid = execution.output.schemaValid,
+            fieldsFound = fieldsFound,
+            fieldsVerified = fieldsVerified,
+            fieldsNeedingReview = fieldsNeedingReview,
+            unsupportedAccepted = unsupportedAccepted,
+            fallbackActive = fallbackActive,
+            errorCategory = execution.output.errorCategory,
         )
     }
 
@@ -459,6 +581,8 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
         document: AlphaCaseDocument,
         caseId: String,
         modelInvocations: MutableList<AlphaLocalModelInvocation>,
+        localInferenceMetrics: MutableList<AlphaLocalInferenceMetrics>,
+        fallbackActive: Boolean,
     ): List<AlphaPageAcquisition> {
         if (provider == null || !provider.supportedTasks().contains(AlphaLocalModelTask.OcrCleanup)) {
             return pages.map { page ->
@@ -478,18 +602,23 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
             maxOutputTokens = 2048,
             extractionMode = mode,
         )
-        val invocation = AlphaModelInvocationStore.begin(
+        val execution = executeModelPass(
+            provider = provider,
+            activePack = activePack,
             task = AlphaLocalModelTask.OcrCleanup,
-            runtimeMode = provider.runtimeMode,
-            capabilityTier = activePack?.tier ?: provider.capabilityTier,
+            extractionRunId = extractionRunId,
             caseId = caseId,
             documentId = document.id,
-            extractionRunId = extractionRunId,
             input = input,
+            modelInvocations = modelInvocations,
         )
-        val output = provider.run(input)
-        modelInvocations += AlphaModelInvocationStore.complete(invocation, output)
-        val cleaned = AlphaModelOutputValidator.repairedJson(output)
+        recordLocalInferenceMetrics(
+            input = input,
+            execution = execution,
+            localInferenceMetrics = localInferenceMetrics,
+            fallbackActive = fallbackActive,
+        )
+        val cleaned = AlphaModelOutputValidator.repairedJson(execution.output)
             ?.let { runCatching { gson.fromJson(it, Array<String>::class.java)?.toList().orEmpty() }.getOrNull() }
             .orEmpty()
         if (cleaned.isEmpty()) {
@@ -515,6 +644,8 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
         document: AlphaCaseDocument,
         caseId: String,
         modelInvocations: MutableList<AlphaLocalModelInvocation>,
+        localInferenceMetrics: MutableList<AlphaLocalInferenceMetrics>,
+        fallbackActive: Boolean,
     ) {
         if (provider == null || !provider.supportedTasks().contains(AlphaLocalModelTask.LanguageCorrection)) {
             return
@@ -528,17 +659,22 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
             languageProfile = languageProfile,
             extractionMode = mode,
         )
-        val invocation = AlphaModelInvocationStore.begin(
+        val execution = executeModelPass(
+            provider = provider,
+            activePack = activePack,
             task = AlphaLocalModelTask.LanguageCorrection,
-            runtimeMode = provider.runtimeMode,
-            capabilityTier = activePack?.tier ?: provider.capabilityTier,
+            extractionRunId = extractionRunId,
             caseId = caseId,
             documentId = document.id,
-            extractionRunId = extractionRunId,
             input = input,
+            modelInvocations = modelInvocations,
         )
-        val output = provider.run(input)
-        modelInvocations += AlphaModelInvocationStore.complete(invocation, output)
+        recordLocalInferenceMetrics(
+            input = input,
+            execution = execution,
+            localInferenceMetrics = localInferenceMetrics,
+            fallbackActive = fallbackActive,
+        )
     }
 
     private suspend fun runClassificationPass(
@@ -551,6 +687,8 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
         document: AlphaCaseDocument,
         caseId: String,
         modelInvocations: MutableList<AlphaLocalModelInvocation>,
+        localInferenceMetrics: MutableList<AlphaLocalInferenceMetrics>,
+        fallbackActive: Boolean,
     ): AlphaLegalDocumentClassification {
         val deterministic = classifyDocument(document, pages, languageProfile)
         if (provider == null || !provider.supportedTasks().contains(AlphaLocalModelTask.DocumentClassification)) {
@@ -566,20 +704,28 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
             languageProfile = languageProfile,
             extractionMode = mode,
         )
-        val invocation = AlphaModelInvocationStore.begin(
+        val execution = executeModelPass(
+            provider = provider,
+            activePack = activePack,
             task = AlphaLocalModelTask.DocumentClassification,
-            runtimeMode = provider.runtimeMode,
-            capabilityTier = activePack?.tier ?: provider.capabilityTier,
+            extractionRunId = extractionRunId,
             caseId = caseId,
             documentId = document.id,
-            extractionRunId = extractionRunId,
             input = input,
+            modelInvocations = modelInvocations,
         )
-        val output = provider.run(input)
-        modelInvocations += AlphaModelInvocationStore.complete(invocation, output)
-        return AlphaModelOutputValidator.parseClassification(gson, output)
+        val parsed = AlphaModelOutputValidator.parseClassification(gson, execution.output)
             ?.takeIf { it.sourceRefs.isNotEmpty() }
-            ?: deterministic
+        recordLocalInferenceMetrics(
+            input = input,
+            execution = execution,
+            localInferenceMetrics = localInferenceMetrics,
+            fallbackActive = fallbackActive,
+            fieldsFound = if (parsed == null) 0 else 1,
+            fieldsVerified = if (parsed != null && !parsed.needsReview) 1 else 0,
+            fieldsNeedingReview = if (parsed?.needsReview == true) 1 else 0,
+        )
+        return parsed ?: deterministic
     }
 
     private suspend fun runExtractionPass(
@@ -593,6 +739,8 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
         document: AlphaCaseDocument,
         caseId: String,
         modelInvocations: MutableList<AlphaLocalModelInvocation>,
+        localInferenceMetrics: MutableList<AlphaLocalInferenceMetrics>,
+        fallbackActive: Boolean,
     ): List<AlphaExtractedLegalField> {
         val deterministic = extractFields(caseId, document, pages, languageProfile, classification, mode)
         if (provider == null || !provider.supportedTasks().contains(AlphaLocalModelTask.LegalFieldExtraction)) {
@@ -612,18 +760,27 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
                 documentClassification = classification,
                 extractionMode = mode,
             )
-            val invocation = AlphaModelInvocationStore.begin(
+            val encodedInput = input.encodedClassification(gson, classification)
+            val execution = executeModelPass(
+                provider = provider,
+                activePack = activePack,
                 task = AlphaLocalModelTask.LegalFieldExtraction,
-                runtimeMode = provider.runtimeMode,
-                capabilityTier = activePack?.tier ?: provider.capabilityTier,
+                extractionRunId = extractionRunId,
                 caseId = caseId,
                 documentId = document.id,
-                extractionRunId = extractionRunId,
-                input = input,
+                input = encodedInput,
+                modelInvocations = modelInvocations,
             )
-            val output = provider.run(input.encodedClassification(gson, classification))
-            modelInvocations += AlphaModelInvocationStore.complete(invocation, output)
-            val fields = AlphaModelOutputValidator.parseFields(gson, output)
+            val fields = AlphaModelOutputValidator.parseFields(gson, execution.output)
+            recordLocalInferenceMetrics(
+                input = encodedInput,
+                execution = execution,
+                localInferenceMetrics = localInferenceMetrics,
+                fallbackActive = fallbackActive,
+                fieldsFound = fields.size,
+                fieldsVerified = 0,
+                fieldsNeedingReview = fields.size,
+            )
             if (fields.isEmpty() || !AlphaModelOutputValidator.fieldsHaveSourceRefs(fields)) {
                 return deterministic
             }
@@ -644,6 +801,8 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
         document: AlphaCaseDocument,
         caseId: String,
         modelInvocations: MutableList<AlphaLocalModelInvocation>,
+        localInferenceMetrics: MutableList<AlphaLocalInferenceMetrics>,
+        fallbackActive: Boolean,
     ): List<AlphaExtractedLegalField> {
         if (provider == null || !provider.supportedTasks().contains(AlphaLocalModelTask.IssueExtraction)) {
             return emptyList()
@@ -662,18 +821,28 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
                 documentClassification = classification,
                 extractionMode = mode,
             )
-            val invocation = AlphaModelInvocationStore.begin(
+            val encodedInput = input.encodedClassification(gson, classification)
+            val execution = executeModelPass(
+                provider = provider,
+                activePack = activePack,
                 task = AlphaLocalModelTask.IssueExtraction,
-                runtimeMode = provider.runtimeMode,
-                capabilityTier = activePack?.tier ?: provider.capabilityTier,
+                extractionRunId = extractionRunId,
                 caseId = caseId,
                 documentId = document.id,
-                extractionRunId = extractionRunId,
-                input = input,
+                input = encodedInput,
+                modelInvocations = modelInvocations,
             )
-            val output = provider.run(input.encodedClassification(gson, classification))
-            modelInvocations += AlphaModelInvocationStore.complete(invocation, output)
-            batchedFields += AlphaModelOutputValidator.parseFields(gson, output)
+            val fields = AlphaModelOutputValidator.parseFields(gson, execution.output)
+            recordLocalInferenceMetrics(
+                input = encodedInput,
+                execution = execution,
+                localInferenceMetrics = localInferenceMetrics,
+                fallbackActive = fallbackActive,
+                fieldsFound = fields.size,
+                fieldsVerified = 0,
+                fieldsNeedingReview = fields.size,
+            )
+            batchedFields += fields
         }
 
         return mergeFields(batchedFields, emptyList())
@@ -689,6 +858,8 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
         document: AlphaCaseDocument,
         caseId: String,
         modelInvocations: MutableList<AlphaLocalModelInvocation>,
+        localInferenceMetrics: MutableList<AlphaLocalInferenceMetrics>,
+        fallbackActive: Boolean,
     ): VerificationBundle {
         val deterministic = verifyFields(caseId, document, pages, fields)
         if (provider == null || !provider.supportedTasks().contains(AlphaLocalModelTask.LegalFieldVerification)) {
@@ -713,18 +884,27 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
                 maxOutputTokens = 3072,
                 extractionMode = mode,
             ).encodedExistingFields(gson, relevantFields)
-            val invocation = AlphaModelInvocationStore.begin(
+            val execution = executeModelPass(
+                provider = provider,
+                activePack = activePack,
                 task = AlphaLocalModelTask.LegalFieldVerification,
-                runtimeMode = provider.runtimeMode,
-                capabilityTier = activePack?.tier ?: provider.capabilityTier,
+                extractionRunId = extractionRunId,
                 caseId = caseId,
                 documentId = document.id,
-                extractionRunId = extractionRunId,
                 input = input,
+                modelInvocations = modelInvocations,
             )
-            val output = provider.run(input)
-            modelInvocations += AlphaModelInvocationStore.complete(invocation, output)
-            val payload = AlphaModelOutputValidator.parseVerification(gson, output)
+            val payload = AlphaModelOutputValidator.parseVerification(gson, execution.output)
+            recordLocalInferenceMetrics(
+                input = input,
+                execution = execution,
+                localInferenceMetrics = localInferenceMetrics,
+                fallbackActive = fallbackActive,
+                fieldsFound = payload?.fields?.size ?: 0,
+                fieldsVerified = payload?.fields?.count { !it.needsReview || it.userCorrected } ?: 0,
+                fieldsNeedingReview = payload?.fields?.count { it.needsReview && !it.userCorrected } ?: 0,
+                unsupportedAccepted = 0,
+            )
             if (payload == null || payload.fields.isEmpty()) {
                 return deterministic
             }
@@ -750,6 +930,8 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
         document: AlphaCaseDocument,
         caseId: String,
         modelInvocations: MutableList<AlphaLocalModelInvocation>,
+        localInferenceMetrics: MutableList<AlphaLocalInferenceMetrics>,
+        fallbackActive: Boolean,
     ): List<AlphaCaseMemoryUpdate> {
         val deterministic = buildCaseMemory(caseId, document.id, classification, fields)
         if (provider == null || !provider.supportedTasks().contains(AlphaLocalModelTask.CaseMemorySynthesis)) {
@@ -765,18 +947,24 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
             extractionMode = mode,
         ).encodedExistingFields(gson, fields)
             .encodedClassification(gson, classification)
-        val invocation = AlphaModelInvocationStore.begin(
+        val execution = executeModelPass(
+            provider = provider,
+            activePack = activePack,
             task = AlphaLocalModelTask.CaseMemorySynthesis,
-            runtimeMode = provider.runtimeMode,
-            capabilityTier = activePack?.tier ?: provider.capabilityTier,
+            extractionRunId = extractionRunId,
             caseId = caseId,
             documentId = document.id,
-            extractionRunId = extractionRunId,
             input = input,
+            modelInvocations = modelInvocations,
         )
-        val output = provider.run(input)
-        modelInvocations += AlphaModelInvocationStore.complete(invocation, output)
-        return AlphaModelOutputValidator.parseCaseMemory(gson, output).ifEmpty { deterministic }
+        val updates = AlphaModelOutputValidator.parseCaseMemory(gson, execution.output)
+        recordLocalInferenceMetrics(
+            input = input,
+            execution = execution,
+            localInferenceMetrics = localInferenceMetrics,
+            fallbackActive = fallbackActive,
+        )
+        return updates.ifEmpty { deterministic }
     }
 
     private suspend fun acquirePages(document: AlphaCaseDocument, file: File): List<AlphaPageAcquisition> = when (document.kind) {

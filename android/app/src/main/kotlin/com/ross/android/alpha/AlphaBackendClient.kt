@@ -256,7 +256,7 @@ private fun AlphaModelDownloadPayload.toRequest(configuration: AlphaBackendConfi
     appVersion = configuration.appVersion,
 )
 
-private fun AlphaPublicLawSearchPayload.toRequest() = AlphaBackendPublicLawRequest(
+internal fun AlphaPublicLawSearchPayload.toRequest() = AlphaBackendPublicLawRequest(
     query = query,
     jurisdiction = "IN-ALL",
     language = "en",
