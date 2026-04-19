@@ -7,10 +7,26 @@ enum AlphaOnboardingStage: String, Codable, Hashable, Sendable {
 }
 
 enum AlphaAppTab: String, Codable, Hashable, CaseIterable, Sendable {
+    case home
     case cases
-    case publicLaw
-    case exports
+    case capture
+    case ask
     case settings
+    case publicLawLegacy = "publicLaw"
+    case exportsLegacy = "exports"
+}
+
+extension AlphaAppTab {
+    var normalizedForLawyerShell: AlphaAppTab {
+        switch self {
+        case .home, .cases, .capture, .ask, .settings:
+            self
+        case .publicLawLegacy:
+            .ask
+        case .exportsLegacy:
+            .home
+        }
+    }
 }
 
 enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable, Sendable {
@@ -138,6 +154,71 @@ enum AlphaCaseStage: String, Codable, CaseIterable, Identifiable, Hashable, Send
 
     var title: String {
         rawValue.capitalized
+    }
+}
+
+enum AlphaTaskPriority: String, Codable, CaseIterable, Hashable, Sendable {
+    case low
+    case normal
+    case high
+
+    var title: String {
+        switch self {
+        case .low:
+            "Low"
+        case .normal:
+            "Normal"
+        case .high:
+            "High"
+        }
+    }
+}
+
+enum AlphaTaskStatus: String, Codable, Hashable, Sendable {
+    case open
+    case done
+}
+
+enum AlphaTaskSource: String, Codable, Hashable, Sendable {
+    case manual
+    case extraction
+    case system
+}
+
+struct AlphaTaskItem: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID
+    var caseId: UUID?
+    var title: String
+    var notes: String?
+    var dueDate: Date?
+    var priority: AlphaTaskPriority
+    var status: AlphaTaskStatus
+    var source: AlphaTaskSource
+    var createdAt: Date
+    var updatedAt: Date
+
+    init(
+        id: UUID = UUID(),
+        caseId: UUID? = nil,
+        title: String,
+        notes: String? = nil,
+        dueDate: Date? = nil,
+        priority: AlphaTaskPriority = .normal,
+        status: AlphaTaskStatus = .open,
+        source: AlphaTaskSource = .manual,
+        createdAt: Date = .now,
+        updatedAt: Date = .now
+    ) {
+        self.id = id
+        self.caseId = caseId
+        self.title = title
+        self.notes = notes
+        self.dueDate = dueDate
+        self.priority = priority
+        self.status = status
+        self.source = source
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
     }
 }
 
@@ -1201,6 +1282,7 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
     var selectedTab: AlphaAppTab
     var settings: AlphaSettings
     var cases: [AlphaCaseMatter]
+    var tasks: [AlphaTaskItem]?
     var ledgerEntries: [AlphaPrivacyLedgerEntry]
     var modelJobs: [AlphaModelDownloadJob]
     var installedPacks: [AlphaInstalledModelPack]
@@ -1327,11 +1409,47 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
             updatedAt: Calendar.current.date(byAdding: .day, value: -1, to: .now) ?? .now
         )
 
+        let seededTasks = [
+            AlphaTaskItem(
+                caseId: petitionId,
+                title: "Prepare chronology",
+                notes: "Tie the representation timeline to the demand pages before the next hearing.",
+                dueDate: Calendar.current.date(byAdding: .day, value: 1, to: .now),
+                priority: .high,
+                source: .manual
+            ),
+            AlphaTaskItem(
+                caseId: petitionId,
+                title: "Review order direction",
+                notes: "Confirm whether the notice timing supports the procedural fairness point.",
+                dueDate: Calendar.current.date(byAdding: .day, value: 3, to: .now),
+                priority: .normal,
+                source: .extraction
+            ),
+            AlphaTaskItem(
+                caseId: taxCaseId,
+                title: "Confirm next date",
+                notes: "Check the latest order before sharing hearing notes.",
+                dueDate: Calendar.current.date(byAdding: .day, value: 5, to: .now),
+                priority: .high,
+                source: .system
+            ),
+            AlphaTaskItem(
+                caseId: nil,
+                title: "Call client",
+                notes: "Share the review-ready hearing note after source checks.",
+                dueDate: Calendar.current.date(byAdding: .day, value: 2, to: .now),
+                priority: .normal,
+                source: .manual
+            )
+        ]
+
         return AlphaPersistedState(
             onboardingStage: .onboarding,
-            selectedTab: .cases,
+            selectedTab: .home,
             settings: .default,
             cases: [petitionCase, taxCase],
+            tasks: seededTasks,
             ledgerEntries: [
                 AlphaPrivacyLedgerEntry(
                     timestamp: Calendar.current.date(byAdding: .hour, value: -4, to: .now) ?? .now,
@@ -1377,5 +1495,63 @@ extension AlphaCaseDocument {
         dominantSourceSnippet
             ?? pages.first(where: { ($0.snippet ?? "").isEmpty == false })?.snippet
             ?? extractedText
+    }
+
+    var lawyerStatusTitle: String {
+        let hasReviewWork = extractedFields.contains(where: \.needsReview) || extractionFindings.contains(where: { !$0.resolved })
+        let hasLowConfidenceScan = extractionFindings.contains {
+            $0.kind == .lowConfidenceOcr || $0.kind == .languageUncertain || $0.kind == .possibleHandwriting
+        }
+
+        if extractionRuns.first?.status == .running || effectiveIndexingStatus == .extracting {
+            return "Still reading"
+        }
+        if effectiveIndexingStatus == .failed || ocrStatus == .failed {
+            return "Could not read this clearly"
+        }
+        if hasLowConfidenceScan {
+            return "Low confidence scan"
+        }
+        if hasReviewWork {
+            return "Needs review"
+        }
+        if effectiveIndexingStatus == .indexed || ocrStatus == .nativeText || ocrStatus == .ocrComplete {
+            return "Ready"
+        }
+        return "Still reading"
+    }
+}
+
+extension AlphaPrivacyLedgerEntry {
+    var lawyerTitle: String {
+        switch title {
+        case "Model catalog checked":
+            "Checked Private AI availability"
+        case "Private AI Pack queued", "Private AI Pack verified", "Private AI Pack fallback installed":
+            "Downloaded Private AI Pack"
+        case "Public-law query sent":
+            "Searched public law"
+        case "Local export generated":
+            "Generated local export"
+        case "Local case review run":
+            "Reviewed case locally"
+        case "Document imported locally":
+            "Imported document"
+        case "Case created locally":
+            "Created case"
+        default:
+            title
+        }
+    }
+
+    var lawyerDetail: String {
+        switch title {
+        case "Public-law query sent":
+            "Ross sent only a generic public-law query. Your case files stayed on this device."
+        case "Private AI Pack verified", "Private AI Pack fallback installed":
+            "A Private AI Pack was prepared on this device."
+        default:
+            detail
+        }
     }
 }

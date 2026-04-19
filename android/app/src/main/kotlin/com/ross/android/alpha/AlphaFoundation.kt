@@ -21,7 +21,7 @@ import java.security.MessageDigest
 import java.util.UUID
 
 enum class AlphaOnboardingStage { Onboarding, PrivateAiPack, Completed }
-enum class AlphaAppTab { Cases, PublicLaw, Exports, Settings }
+enum class AlphaAppTab { Home, Cases, Capture, Ask, Settings, PublicLaw, Exports }
 enum class AlphaCapabilityTier(val tierId: String, val title: String, val summary: String, val downloadSizeLabel: String, val installedSizeLabel: String) {
     QuickStart("quick_start", "Quick Start", "Basic extraction for short documents, simple summaries, and lighter storage use.", "1.2 GB", "2.1 GB"),
     CaseAssociate("case_associate", "Case Associate", "Better document understanding, stronger field extraction, mixed English/Hindi support, and source-backed chronology work.", "2.8 GB", "4.9 GB"),
@@ -42,11 +42,22 @@ enum class AlphaCapabilityTier(val tierId: String, val title: String, val summar
         }
 }
 enum class AlphaCaseStage { Intake, Pleadings, Evidence, Arguments, Reserved }
+enum class AlphaTaskPriority { Low, Normal, High }
+enum class AlphaTaskStatus { Open, Done }
+enum class AlphaTaskSource { Manual, Extraction, System }
 enum class AlphaDocumentKind { Pdf, Image, Text, Unknown }
 enum class AlphaOcrStatus { NotStarted, Indexed, Placeholder, NativeText, OcrComplete, Partial, Failed }
 enum class AlphaIndexingStatus { NotStarted, Extracting, Indexed, Partial, Failed }
 enum class AlphaDownloadState { NotStarted, Queued, Downloading, PausedWaitingForWifi, PausedUser, PausedNoStorage, PausedError, Verifying, Installed, Failed, Cancelled }
 enum class AlphaDownloadPolicy { WifiOnly, MobileAllowed }
+
+val AlphaDocumentKind.title: String
+    get() = when (this) {
+        AlphaDocumentKind.Pdf -> "PDF"
+        AlphaDocumentKind.Image -> "IMAGE"
+        AlphaDocumentKind.Text -> "TEXT"
+        AlphaDocumentKind.Unknown -> "FILE"
+    }
 enum class AlphaPackRuntimeMode(val wireValue: String) {
     DeterministicDev("deterministic_dev"),
     MediapipeLlm("mediapipe_llm"),
@@ -105,6 +116,42 @@ data class AlphaCaseDocument(
     val extractionRuns: List<AlphaExtractionRun> = emptyList(),
     val extractionFindings: List<AlphaExtractionFinding> = emptyList(),
     val modelInvocations: List<AlphaLocalModelInvocation> = emptyList(),
+)
+
+data class AlphaTaskItem(
+    val id: String = UUID.randomUUID().toString(),
+    val caseId: String? = null,
+    val title: String,
+    val notes: String? = null,
+    val dueDate: String? = null,
+    val priority: AlphaTaskPriority = AlphaTaskPriority.Normal,
+    val status: AlphaTaskStatus = AlphaTaskStatus.Open,
+    val source: AlphaTaskSource = AlphaTaskSource.Manual,
+    val createdAt: String = nowIso(),
+    val updatedAt: String = nowIso(),
+)
+
+data class AlphaReviewQueueItem(
+    val id: String = UUID.randomUUID().toString(),
+    val caseId: String,
+    val documentId: String,
+    val caseTitle: String,
+    val title: String,
+    val detail: String,
+    val sourceRef: AlphaSourceRef? = null,
+)
+
+data class AlphaAskResult(
+    val question: String,
+    val scopeCaseId: String?,
+    val scopeLabel: String,
+    val answerTitle: String,
+    val answerSections: List<String>,
+    val caseFileSources: List<AlphaSourceRef>,
+    val publicLawPreview: AlphaPublicLawPreview? = null,
+    val publicLawResults: List<AlphaPublicLawResult> = emptyList(),
+    val statusNote: String? = null,
+    val needsReviewWarning: String? = null,
 )
 
 data class AlphaChatTurn(
@@ -235,9 +282,10 @@ data class AlphaSettings(
 
 data class AlphaPersistedState(
     val onboardingStage: AlphaOnboardingStage = AlphaOnboardingStage.Onboarding,
-    val selectedTab: AlphaAppTab = AlphaAppTab.Cases,
+    val selectedTab: AlphaAppTab = AlphaAppTab.Home,
     val settings: AlphaSettings = AlphaSettings(),
     val cases: List<AlphaCaseMatter> = seedCases(),
+    val tasks: List<AlphaTaskItem>? = null,
     val ledgerEntries: List<AlphaPrivacyLedgerEntry> = listOf(
         AlphaPrivacyLedgerEntry(
             title = "Model catalog checked",
@@ -258,7 +306,10 @@ data class AlphaPersistedState(
 sealed interface AndroidAlphaRoute {
     data object Onboarding : AndroidAlphaRoute
     data object PrivateAiPack : AndroidAlphaRoute
+    data object Home : AndroidAlphaRoute
     data object CaseList : AndroidAlphaRoute
+    data object Capture : AndroidAlphaRoute
+    data object AskRoss : AndroidAlphaRoute
     data object CreateCase : AndroidAlphaRoute
     data class CaseWorkspace(val caseId: String) : AndroidAlphaRoute
     data class DocumentList(val caseId: String) : AndroidAlphaRoute
@@ -271,7 +322,11 @@ sealed interface AndroidAlphaRoute {
     data object PrivateAiSettings : AndroidAlphaRoute
 }
 
-class AlphaRossController(private val context: Context) {
+internal class AlphaRossController(
+    private val context: Context,
+    private val publicLawSearchOverride: (suspend (AlphaPublicLawPreview) -> List<AlphaPublicLawResult>)? = null,
+    private val secretKeyProvider: AlphaSecretKeyProvider = AndroidKeystoreAlphaSecretKeyProvider(),
+) {
     private val gson: Gson = GsonBuilder().setPrettyPrinting().create()
     private val rootDir = File(context.filesDir, "ross-alpha")
     private val documentsDir = File(rootDir, "documents")
@@ -281,9 +336,12 @@ class AlphaRossController(private val context: Context) {
         gson = gson,
         rootDir = rootDir,
         aadLabel = context.packageName,
+        secretKeyProvider = secretKeyProvider,
     )
     private val exportService = AlphaExportService(rootDir, exportsDir)
     private val backend = AlphaBackendClient(gson = gson)
+    private val publicLawSearchAction: suspend (AlphaPublicLawPreview) -> List<AlphaPublicLawResult> =
+        publicLawSearchOverride ?: { preview -> backend.searchPublicLaw(preview) }
     private val extractionOrchestrator = AlphaLocalExtractionOrchestrator(context)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
@@ -295,6 +353,12 @@ class AlphaRossController(private val context: Context) {
     var caseDraftTitle by mutableStateOf("")
     var caseDraftForum by mutableStateOf("")
     var askDrafts by mutableStateOf<Map<String, String>>(emptyMap())
+    var globalAskDraft by mutableStateOf("What needs my attention today?")
+    var askSelectedScopeCaseId by mutableStateOf<String?>(null)
+    var askWebEnabled by mutableStateOf(false)
+    var pendingPublicLawQuestion by mutableStateOf<String?>(null)
+    var pendingPublicLawScopeCaseId by mutableStateOf<String?>(null)
+    var latestAskResult by mutableStateOf<AlphaAskResult?>(null)
     var publicLawDraft by mutableStateOf("Find Supreme Court guidance on delay condonation where diligence is documented but filing was disrupted.")
     var publicLawPreview by mutableStateOf<AlphaPublicLawPreview?>(null)
     var publicLawResults by mutableStateOf<List<AlphaPublicLawResult>>(emptyList())
@@ -322,6 +386,38 @@ class AlphaRossController(private val context: Context) {
 
     fun lastLocalInferenceMetrics(): AlphaLocalInferenceMetrics? =
         persisted.localInferenceMetrics.maxByOrNull { it.createdAt }
+
+    fun tasks(caseId: String? = null): List<AlphaTaskItem> =
+        (persisted.tasks ?: emptyList())
+            .filter { caseId == null || it.caseId == caseId }
+            .sortedWith(
+                compareBy<AlphaTaskItem> { it.status != AlphaTaskStatus.Open }
+                    .thenBy { it.dueDate ?: "9999-12-31T00:00:00Z" }
+                    .thenByDescending { it.updatedAt }
+            )
+
+    fun openTasks(caseId: String? = null): List<AlphaTaskItem> =
+        tasks(caseId).filter { it.status == AlphaTaskStatus.Open }
+
+    fun todayTasks(caseId: String? = null): List<AlphaTaskItem> =
+        openTasks(caseId).filter { it.dueDate?.startsWith(nowIso().substring(0, 10)) == true }
+
+    fun upcomingTasks(caseId: String? = null): List<AlphaTaskItem> =
+        openTasks(caseId).filter { it.dueDate != null && !it.dueDate.startsWith(nowIso().substring(0, 10)) }
+
+    fun askDraft(scopeCaseId: String?): String =
+        scopeCaseId?.let { askDrafts[it] ?: "Ask Ross about this case..." } ?: globalAskDraft
+
+    fun setAskDraft(scopeCaseId: String?, value: String) {
+        if (scopeCaseId == null) {
+            globalAskDraft = value
+        } else {
+            askDrafts = askDrafts + (scopeCaseId to value)
+        }
+    }
+
+    fun scopeLabel(caseId: String?): String =
+        caseId?.let { id -> persisted.cases.firstOrNull { it.id == id }?.title } ?: "All cases"
 
     fun runLocalInferenceSmoke() {
         if (localInferenceSmokeRunning) {
@@ -471,13 +567,13 @@ class AlphaRossController(private val context: Context) {
 
     private fun loadState(): AlphaPersistedState {
         ensureFolders()
-        return encryptedStateStore.load { AlphaPersistedState() }
+        return normalizeLoadedState(encryptedStateStore.load { AlphaPersistedState() })
     }
 
     fun startRoute(): AndroidAlphaRoute = when (persisted.onboardingStage) {
         AlphaOnboardingStage.Onboarding -> AndroidAlphaRoute.Onboarding
         AlphaOnboardingStage.PrivateAiPack -> AndroidAlphaRoute.PrivateAiPack
-        AlphaOnboardingStage.Completed -> AndroidAlphaRoute.CaseList
+        AlphaOnboardingStage.Completed -> AndroidAlphaRoute.Home
     }
 
     fun save() = saveState(persisted)
@@ -492,21 +588,21 @@ class AlphaRossController(private val context: Context) {
     }
 
     fun skipPackSetup() {
-        persisted = persisted.copy(onboardingStage = AlphaOnboardingStage.Completed, selectedTab = AlphaAppTab.Cases)
+        persisted = persisted.copy(onboardingStage = AlphaOnboardingStage.Completed, selectedTab = AlphaAppTab.Home)
         save()
     }
 
     fun finishPackSetup() {
         persisted = persisted.copy(
             onboardingStage = AlphaOnboardingStage.Completed,
-            selectedTab = AlphaAppTab.Cases,
+            selectedTab = AlphaAppTab.Home,
             settings = persisted.settings.copy(activeTier = selectedTier),
         )
         save()
         startPackInstall(selectedTier, selectedTier == AlphaCapabilityTier.QuickStart)
     }
 
-    fun createCase(): String? {
+    fun createCase(openWorkspace: Boolean = true): String? {
         val title = caseDraftTitle.trim()
         if (title.isEmpty()) return null
         val case = AlphaCaseMatter(
@@ -520,14 +616,26 @@ class AlphaRossController(private val context: Context) {
             documents = emptyList(),
             sourceRefs = emptyList(),
         )
+        val seedTask = AlphaTaskItem(
+            caseId = case.id,
+            title = "Import first document",
+            notes = "Add the first order, pleading, or note for this case.",
+            dueDate = java.time.Instant.now().plusSeconds(86_400).toString(),
+            priority = AlphaTaskPriority.High,
+            source = AlphaTaskSource.System,
+        )
         persisted = persisted.copy(
             cases = listOf(case) + persisted.cases,
+            tasks = listOf(seedTask) + (persisted.tasks ?: emptyList()),
             ledgerEntries = listOf(localLedger("Case created locally", "A new case matter was created on this device.")) + persisted.ledgerEntries,
         )
         selectedCaseId = case.id
         caseDraftTitle = ""
         caseDraftForum = ""
         save()
+        if (openWorkspace) {
+            pendingRoute = AndroidAlphaRoute.CaseWorkspace(case.id)
+        }
         return case.id
     }
 
@@ -635,29 +743,149 @@ class AlphaRossController(private val context: Context) {
         return true
     }
 
-    fun askCase(caseId: String) {
-        val question = askDrafts[caseId]?.takeIf { it.isNotBlank() }
-            ?: "Summarize the next hearing posture and identify the strongest source-backed issue."
+    fun rerunReview(caseId: String, documentId: String) {
+        val existingDocument = document(caseId, documentId) ?: return
         persisted = persisted.copy(
             cases = persisted.cases.map { case ->
                 if (case.id == caseId) {
-                    val refs = case.sourceRefs.take(2)
+                    case.copy(
+                        documents = case.documents.map { document ->
+                            if (document.id == documentId) {
+                                document.copy(
+                                    extractionRuns = listOf(
+                                        AlphaExtractionRun(
+                                            caseId = caseId,
+                                            documentId = documentId,
+                                            mode = activeExtractionMode(),
+                                            status = AlphaExtractionRunStatus.Running,
+                                            progressState = AlphaExtractionProgressState.AcquiringText,
+                                            startedAt = nowIso(),
+                                            pagesProcessed = 0,
+                                            totalPages = existingDocument.pageCount,
+                                            fieldsExtracted = 0,
+                                            fieldsNeedingReview = 0,
+                                            warnings = emptyList(),
+                                        )
+                                    )
+                                )
+                            } else document
+                        },
+                        updatedAt = nowIso(),
+                    )
+                } else case
+            },
+            ledgerEntries = listOf(localLedger("Document review restarted", "${existingDocument.title} is being reviewed again on this device.")) + persisted.ledgerEntries,
+        )
+        save()
+        scope.launch {
+            runExtractionForDocument(caseId, documentId)
+        }
+    }
+
+    fun deleteDocument(caseId: String, documentId: String) {
+        val existingDocument = document(caseId, documentId) ?: return
+        runCatching {
+            absoluteFile(existingDocument.storedRelativePath).takeIf { it.exists() }?.delete()
+        }
+        persisted = persisted.copy(
+            cases = persisted.cases.map { case ->
+                if (case.id == caseId) {
+                    case.copy(
+                        documents = case.documents.filterNot { it.id == documentId },
+                        sourceRefs = case.sourceRefs.filterNot { it.documentId == documentId },
+                        updatedAt = nowIso(),
+                    )
+                } else case
+            },
+            tasks = (persisted.tasks ?: emptyList()).filterNot {
+                it.caseId == caseId && (it.notes?.contains(documentId) == true)
+            },
+            ledgerEntries = listOf(localLedger("Document deleted locally", "${existingDocument.title} was removed from this device.")) + persisted.ledgerEntries,
+        )
+        save()
+    }
+
+    fun askCase(caseId: String) {
+        val question = askDrafts[caseId]?.takeIf { it.isNotBlank() }
+            ?: "Ask Ross about this case..."
+        val localResult = buildLocalAskResult(question, caseId)
+        persisted = persisted.copy(
+            cases = persisted.cases.map { case ->
+                if (case.id == caseId) {
                     val turn = AlphaChatTurn(
                         question = question,
-                        answerTitle = "Local review completed",
-                        answerSections = listOf(
-                            case.issueHighlights.firstOrNull() ?: "Confirm the main issue from the indexed bundle.",
-                            "Keep the hearing note tied to the source chips already surfaced in this case.",
-                            case.draftTasks.firstOrNull() ?: "Prepare a short chronology note.",
-                        ),
-                        sourceRefs = refs,
+                        answerTitle = localResult.answerTitle,
+                        answerSections = localResult.answerSections,
+                        sourceRefs = localResult.caseFileSources,
                     )
                     case.copy(chatTurns = listOf(turn) + case.chatTurns, updatedAt = nowIso())
                 } else case
             },
             ledgerEntries = listOf(localLedger("Local case review run", "The case question and source-backed draft stayed on-device.")) + persisted.ledgerEntries,
         )
+        latestAskResult = localResult
         save()
+    }
+
+    fun submitAsk(question: String, scopeCaseId: String?, webEnabled: Boolean) {
+        val cleaned = question.trim()
+        if (cleaned.isEmpty()) return
+        latestAskResult = buildLocalAskResult(cleaned, scopeCaseId)
+        askSelectedScopeCaseId = scopeCaseId
+        setAskDraft(scopeCaseId, cleaned)
+
+        if (webEnabled) {
+            val preview = buildAskPublicLawPreview(cleaned, scopeCaseId)
+            pendingPublicLawQuestion = cleaned
+            pendingPublicLawScopeCaseId = scopeCaseId
+            publicLawPreview = preview
+            latestAskResult = latestAskResult?.copy(publicLawPreview = preview, statusNote = "Web search preview ready")
+        } else {
+            pendingPublicLawQuestion = null
+            pendingPublicLawScopeCaseId = null
+            publicLawPreview = null
+        }
+    }
+
+    fun cancelPendingPublicLawSearch() {
+        pendingPublicLawQuestion = null
+        pendingPublicLawScopeCaseId = null
+        publicLawPreview = null
+        latestAskResult = latestAskResult?.copy(statusNote = "Web search off")
+    }
+
+    fun confirmPendingPublicLawSearch() {
+        val preview = publicLawPreview ?: return
+        scope.launch {
+            val backendResults = runCatching { publicLawSearchAction(preview) }
+            val results = backendResults.getOrElse { emptyList() }
+            publicLawResults = results
+            latestAskResult = latestAskResult?.copy(
+                publicLawPreview = preview,
+                publicLawResults = results,
+                statusNote = if (results.isEmpty()) "Public-law results are unavailable right now." else "Public-law results",
+            )
+            persisted = persisted.copy(
+                publicLawCache = listOf(AlphaPublicLawCacheItem(query = preview.query, resultTitles = results.map { it.title })) + persisted.publicLawCache,
+                ledgerEntries = listOf(
+                    AlphaPrivacyLedgerEntry(
+                        title = if (results.isEmpty()) "Public-law search unavailable" else "Public-law query sent",
+                        detail = if (results.isEmpty()) {
+                            "Ross could not reach the sanitized public-law backend with the approved preview."
+                        } else {
+                            "Only a sanitized public query crossed the network boundary."
+                        },
+                        purpose = AlphaPrivacyPurpose.PublicLawSearch,
+                        payloadClass = AlphaPayloadClass.SanitizedPublicQuery,
+                        endpointLabel = "/public-law/search",
+                        success = results.isNotEmpty(),
+                    )
+                ) + persisted.ledgerEntries,
+            )
+            save()
+            pendingPublicLawQuestion = null
+            pendingPublicLawScopeCaseId = null
+        }
     }
 
     fun buildPublicLawPreview() {
@@ -779,6 +1007,136 @@ class AlphaRossController(private val context: Context) {
 
     fun selectedCase(): AlphaCaseMatter? = selectedCaseId?.let { id -> persisted.cases.firstOrNull { it.id == id } } ?: persisted.cases.firstOrNull()
 
+    fun openTaskCount(caseId: String? = null): Int = openTasks(caseId).size
+
+    fun toggleTaskDone(taskId: String) {
+        persisted = persisted.copy(
+            tasks = (persisted.tasks ?: emptyList()).map { task ->
+                if (task.id == taskId) {
+                    task.copy(
+                        status = if (task.status == AlphaTaskStatus.Open) AlphaTaskStatus.Done else AlphaTaskStatus.Open,
+                        updatedAt = nowIso(),
+                    )
+                } else {
+                    task
+                }
+            }
+        )
+        save()
+    }
+
+    fun addTask(
+        title: String,
+        caseId: String?,
+        dueDate: String? = null,
+        priority: AlphaTaskPriority = AlphaTaskPriority.Normal,
+        source: AlphaTaskSource = AlphaTaskSource.Manual,
+        notes: String? = null,
+    ) {
+        val cleaned = title.trim()
+        if (cleaned.isEmpty()) return
+        persisted = persisted.copy(
+            tasks = listOf(
+                AlphaTaskItem(
+                    caseId = caseId,
+                    title = cleaned,
+                    notes = notes,
+                    dueDate = dueDate,
+                    priority = priority,
+                    source = source,
+                )
+            ) + (persisted.tasks ?: emptyList()),
+            ledgerEntries = listOf(localLedger("Task saved locally", "$cleaned was added on this device.")) + persisted.ledgerEntries,
+        )
+        save()
+    }
+
+    fun reviewQueue(caseId: String? = null): List<AlphaReviewQueueItem> {
+        val visibleCases = persisted.cases.filter { caseId == null || it.id == caseId }
+        return visibleCases.flatMap { case ->
+            case.documents.flatMap { document ->
+                val fields = visibleExtractedFields(case.id, document.id)
+                    .filter { it.needsReview }
+                    .map { field ->
+                        AlphaReviewQueueItem(
+                            caseId = case.id,
+                            documentId = document.id,
+                            caseTitle = case.title,
+                            title = alphaReviewTitle(field.fieldType),
+                            detail = field.value,
+                            sourceRef = field.sourceRefs.firstOrNull(),
+                        )
+                    }
+                val findings = document.extractionFindings
+                    .filterNot { it.resolved }
+                    .map { finding ->
+                        AlphaReviewQueueItem(
+                            caseId = case.id,
+                            documentId = document.id,
+                            caseTitle = case.title,
+                            title = alphaReviewTitle(finding.kind),
+                            detail = finding.message,
+                            sourceRef = finding.sourceRefs.firstOrNull(),
+                        )
+                    }
+                fields + findings
+            }
+        }
+    }
+
+    private fun refreshDerivedCaseState(caseId: String, documentId: String) {
+        val refreshedCases = updateCaseNextHearing(persisted.cases, caseId, documentId)
+        val refreshedTasks = syncReviewTasks(caseId, documentId, persisted.tasks ?: emptyList(), refreshedCases)
+        persisted = persisted.copy(cases = refreshedCases, tasks = refreshedTasks)
+    }
+
+    private fun buildLocalAskResult(question: String, scopeCaseId: String?): AlphaAskResult {
+        val visibleCases = persisted.cases.filter { scopeCaseId == null || it.id == scopeCaseId }
+        val lowered = question.lowercase()
+        val asksAboutSchedule = lowered.contains("next date") || lowered.contains("hearing")
+        val asksAboutTasks = lowered.contains("task") || lowered.contains("today") || lowered.contains("reminder") || lowered.contains("due")
+        val asksAboutReview = lowered.contains("review") || lowered.contains("document") || lowered.contains("order") || lowered.contains("party")
+        val matchedSources = visibleCases
+            .flatMap { it.sourceRefs }
+            .filter {
+                asksAboutSchedule ||
+                    asksAboutTasks ||
+                    asksAboutReview ||
+                    lowered.contains(it.documentTitle.lowercase()) ||
+                    lowered.contains((it.textSnippet ?: "").lowercase())
+            }
+        val sections = mutableListOf<String>()
+        if (asksAboutSchedule) {
+            visibleCases.mapNotNull { case ->
+                case.nextHearing?.let { nextDate -> "${case.title}: ${nextDate.take(10)}" }
+            }.take(2).forEach(sections::add)
+        }
+        if (asksAboutTasks) {
+            openTasks(scopeCaseId).take(3).forEach { task ->
+                sections += task.dueDate?.let { "${task.title} by ${it.take(10)}" } ?: task.title
+            }
+        }
+        if (asksAboutReview) {
+            reviewQueue(scopeCaseId).take(3).forEach { sections += "${it.title}: ${it.detail}" }
+        }
+        val notFound = sections.isEmpty() && matchedSources.isEmpty()
+        return AlphaAskResult(
+            question = question,
+            scopeCaseId = scopeCaseId,
+            scopeLabel = scopeLabel(scopeCaseId),
+            answerTitle = if (notFound) "I could not find this in your case files." else "Draft for advocate review",
+            answerSections = if (notFound) listOf("I could not find this in your case files.") else sections.take(3),
+            caseFileSources = matchedSources.take(3),
+            statusNote = if (notFound) "Web search off" else "Case-file sources",
+            needsReviewWarning = reviewQueue(scopeCaseId).takeIf { it.isNotEmpty() }?.size?.let { "$it item(s) still need review." },
+        )
+    }
+
+    private fun buildAskPublicLawPreview(question: String, scopeCaseId: String?): AlphaPublicLawPreview {
+        val case = scopeCaseId?.let { id -> persisted.cases.firstOrNull { it.id == id } }
+        return AlphaPayloadShaper.buildPublicLawPreview(question, case)
+    }
+
     fun strongerInstalledPackAvailable(): Boolean {
         val activeRank = activePack()?.tier?.rank ?: 0
         return persisted.installedPacks.any { it.isActive.not() && it.tier.rank > activeRank }
@@ -854,6 +1212,7 @@ class AlphaRossController(private val context: Context) {
                 } else case
             }
         )
+        refreshDerivedCaseState(caseId, documentId)
         save()
     }
 
@@ -886,6 +1245,7 @@ class AlphaRossController(private val context: Context) {
                 } else case
             }
         )
+        refreshDerivedCaseState(caseId, documentId)
         save()
     }
 
@@ -938,6 +1298,7 @@ class AlphaRossController(private val context: Context) {
                 } else case
             }
         )
+        refreshDerivedCaseState(caseId, documentId)
         save()
     }
 
@@ -969,6 +1330,7 @@ class AlphaRossController(private val context: Context) {
                 } else case
             }
         )
+        refreshDerivedCaseState(caseId, documentId)
         save()
     }
 
@@ -1070,6 +1432,7 @@ class AlphaRossController(private val context: Context) {
                 .take(120),
             ledgerEntries = listOf(localLedger("Local extraction completed", "Ross reviewed the document locally and prepared source-backed fields for advocate review.")) + persisted.ledgerEntries,
         )
+        refreshDerivedCaseState(caseId, documentId)
         save()
     }
 
@@ -1198,11 +1561,162 @@ class AlphaRossController(private val context: Context) {
         success = true,
     )
 
+    private fun normalizeLoadedState(state: AlphaPersistedState): AlphaPersistedState {
+        val normalizedTab = when (state.selectedTab) {
+            AlphaAppTab.PublicLaw -> AlphaAppTab.Ask
+            AlphaAppTab.Exports -> AlphaAppTab.Home
+            else -> state.selectedTab
+        }
+        val normalizedTasks = state.tasks ?: seedTasks(state.cases)
+        return state.copy(selectedTab = normalizedTab, tasks = normalizedTasks)
+    }
+
     private fun inferPdfPageCount(file: File): Int = runCatching {
         ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
             PdfRenderer(descriptor).use { renderer -> renderer.pageCount.coerceAtLeast(1) }
         }
     }.getOrDefault(1)
+
+    private fun syncReviewTasks(
+        caseId: String,
+        documentId: String,
+        tasks: List<AlphaTaskItem>,
+        cases: List<AlphaCaseMatter>,
+    ): List<AlphaTaskItem> {
+        val reviewItems = reviewQueueForDocument(cases, caseId, documentId)
+        val reviewNotesPrefix = "review-sync::$documentId::"
+        val preservedTasks = tasks.filterNot {
+            it.caseId == caseId &&
+                it.source == AlphaTaskSource.Extraction &&
+                (it.notes?.startsWith(reviewNotesPrefix) == true)
+        }
+        val generatedTasks = reviewItems
+            .distinctBy { "${it.documentId}:${it.title}" }
+            .map { item ->
+                val note = reviewTaskNote(item.documentId, item.title)
+                val existing = tasks.firstOrNull {
+                    it.caseId == caseId &&
+                        it.source == AlphaTaskSource.Extraction &&
+                        it.notes == note
+                }
+                existing?.copy(
+                    title = item.title,
+                    status = AlphaTaskStatus.Open,
+                    updatedAt = nowIso(),
+                ) ?: AlphaTaskItem(
+                    caseId = caseId,
+                    title = item.title,
+                    notes = note,
+                    priority = when (item.title) {
+                        "Confirm next date", "Check order direction" -> AlphaTaskPriority.High
+                        else -> AlphaTaskPriority.Normal
+                    },
+                    source = AlphaTaskSource.Extraction,
+                )
+            }
+        return generatedTasks + preservedTasks
+    }
+
+    private fun reviewQueueForDocument(
+        cases: List<AlphaCaseMatter>,
+        caseId: String,
+        documentId: String,
+    ): List<AlphaReviewQueueItem> {
+        val case = cases.firstOrNull { it.id == caseId } ?: return emptyList()
+        val document = case.documents.firstOrNull { it.id == documentId } ?: return emptyList()
+        val ignoredFieldIds = case.advocateCorrections
+            .filter { it.documentId == documentId && it.correctionType == AlphaAdvocateCorrectionType.IgnoreField }
+            .mapNotNull { it.fieldId }
+            .toSet()
+
+        val fieldItems = document.extractedFields
+            .filterNot { it.id in ignoredFieldIds }
+            .filter { it.needsReview }
+            .map { field ->
+                AlphaReviewQueueItem(
+                    caseId = caseId,
+                    documentId = documentId,
+                    caseTitle = case.title,
+                    title = alphaReviewTitle(field.fieldType),
+                    detail = field.value,
+                    sourceRef = field.sourceRefs.firstOrNull(),
+                )
+            }
+        val findingItems = document.extractionFindings
+            .filterNot { it.resolved }
+            .map { finding ->
+                AlphaReviewQueueItem(
+                    caseId = caseId,
+                    documentId = documentId,
+                    caseTitle = case.title,
+                    title = alphaReviewTitle(finding.kind),
+                    detail = finding.message,
+                    sourceRef = finding.sourceRefs.firstOrNull(),
+                )
+            }
+        return fieldItems + findingItems
+    }
+
+    private fun updateCaseNextHearing(
+        cases: List<AlphaCaseMatter>,
+        caseId: String,
+        documentId: String,
+    ): List<AlphaCaseMatter> {
+        val case = cases.firstOrNull { it.id == caseId } ?: return cases
+        val document = case.documents.firstOrNull { it.id == documentId } ?: return cases
+        val nextDateValue = document.extractedFields.firstOrNull {
+            it.fieldType == AlphaExtractedLegalFieldType.NextDate && !it.needsReview
+        }?.value ?: document.extractedFields.firstOrNull {
+            it.fieldType == AlphaExtractedLegalFieldType.Date && !it.needsReview
+        }?.value
+        val parsedDate = alphaParsedDate(nextDateValue) ?: return cases
+        return cases.map { matter ->
+            if (matter.id == caseId) matter.copy(nextHearing = parsedDate, updatedAt = nowIso()) else matter
+        }
+    }
+
+    private fun reviewTaskNote(documentId: String, title: String): String =
+        "review-sync::$documentId::$title"
+
+    private fun alphaParsedDate(rawValue: String?): String? {
+        val raw = rawValue?.trim().orEmpty()
+        if (raw.isEmpty()) return null
+
+        runCatching { return java.time.Instant.parse(raw).toString() }
+
+        val normalized = raw
+            .replace(",", "")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+        val supportedPatterns = listOf(
+            "yyyy-MM-dd",
+            "d/M/yyyy",
+            "dd/MM/yyyy",
+            "d-M-yyyy",
+            "dd-MM-yyyy",
+            "d MMM yyyy",
+            "dd MMM yyyy",
+            "d MMMM yyyy",
+            "dd MMMM yyyy",
+        )
+        val zoneId = java.time.ZoneId.systemDefault()
+
+        supportedPatterns.forEach { pattern ->
+            val formatter = java.time.format.DateTimeFormatter.ofPattern(pattern, java.util.Locale.ENGLISH)
+            runCatching {
+                return java.time.LocalDate.parse(normalized, formatter)
+                    .atStartOfDay(zoneId)
+                    .toInstant()
+                    .toString()
+            }
+        }
+
+        val inlineDate = Regex("""\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b""").find(normalized)?.value
+        if (inlineDate != null) {
+            return alphaParsedDate(inlineDate)
+        }
+        return null
+    }
 }
 
 private fun seedCases(): List<AlphaCaseMatter> {
@@ -1309,4 +1823,107 @@ private fun String.toRuntimeMode(): AlphaPackRuntimeMode = when (lowercase()) {
     "apple_foundation_models" -> AlphaPackRuntimeMode.AppleFoundationModels
     "unavailable" -> AlphaPackRuntimeMode.Unavailable
     else -> AlphaPackRuntimeMode.Unavailable
+}
+
+private fun seedTasks(cases: List<AlphaCaseMatter>): List<AlphaTaskItem> {
+    val petitionId = cases.firstOrNull()?.id
+    val taxCaseId = cases.drop(1).firstOrNull()?.id
+    return listOfNotNull(
+        petitionId?.let {
+            AlphaTaskItem(
+                caseId = it,
+                title = "Prepare chronology",
+                notes = "Tie the representation timeline to the demand pages before the next hearing.",
+                dueDate = java.time.Instant.now().plusSeconds(86_400).toString(),
+                priority = AlphaTaskPriority.High,
+                source = AlphaTaskSource.Manual,
+            )
+        },
+        petitionId?.let {
+            AlphaTaskItem(
+                caseId = it,
+                title = "Review order direction",
+                notes = "Confirm whether the notice timing supports the procedural fairness point.",
+                dueDate = java.time.Instant.now().plusSeconds(3 * 86_400L).toString(),
+                priority = AlphaTaskPriority.Normal,
+                source = AlphaTaskSource.Extraction,
+            )
+        },
+        taxCaseId?.let {
+            AlphaTaskItem(
+                caseId = it,
+                title = "Confirm next date",
+                notes = "Check the latest order before sharing hearing notes.",
+                dueDate = java.time.Instant.now().plusSeconds(5 * 86_400L).toString(),
+                priority = AlphaTaskPriority.High,
+                source = AlphaTaskSource.System,
+            )
+        },
+        AlphaTaskItem(
+            caseId = null,
+            title = "Call client",
+            notes = "Share the review-ready hearing note after source checks.",
+            dueDate = java.time.Instant.now().plusSeconds(2 * 86_400L).toString(),
+            priority = AlphaTaskPriority.Normal,
+            source = AlphaTaskSource.Manual,
+        )
+    )
+}
+
+private fun alphaReviewTitle(type: AlphaExtractedLegalFieldType): String = when (type) {
+    AlphaExtractedLegalFieldType.NextDate -> "Confirm next date"
+    AlphaExtractedLegalFieldType.PartyName -> "Review party name"
+    AlphaExtractedLegalFieldType.OrderDirection -> "Check order direction"
+    else -> "Needs review"
+}
+
+private fun alphaReviewTitle(kind: AlphaExtractionFindingKind): String = when (kind) {
+    AlphaExtractionFindingKind.LowConfidenceOcr,
+    AlphaExtractionFindingKind.LanguageUncertain,
+    AlphaExtractionFindingKind.PossibleHandwriting -> "Low confidence scan"
+    AlphaExtractionFindingKind.AmbiguousOrderDirection -> "Check order direction"
+    AlphaExtractionFindingKind.DateConflict -> "Confirm next date"
+    AlphaExtractionFindingKind.PartyConflict -> "Review party name"
+    else -> "Needs review"
+}
+
+fun AlphaCaseDocument.lawyerStatusTitle(): String {
+    val hasReviewWork = extractedFields.any { it.needsReview } || extractionFindings.any { !it.resolved }
+    val hasLowConfidenceScan = extractionFindings.any {
+        it.kind == AlphaExtractionFindingKind.LowConfidenceOcr ||
+            it.kind == AlphaExtractionFindingKind.LanguageUncertain ||
+            it.kind == AlphaExtractionFindingKind.PossibleHandwriting
+    }
+
+    return when {
+        extractionRuns.firstOrNull()?.status == AlphaExtractionRunStatus.Running ||
+            indexingStatus == AlphaIndexingStatus.Extracting -> "Still reading"
+        indexingStatus == AlphaIndexingStatus.Failed || ocrStatus == AlphaOcrStatus.Failed -> "Could not read this clearly"
+        hasLowConfidenceScan -> "Low confidence scan"
+        hasReviewWork -> "Needs review"
+        indexingStatus == AlphaIndexingStatus.Indexed || ocrStatus == AlphaOcrStatus.NativeText || ocrStatus == AlphaOcrStatus.OcrComplete -> "Ready"
+        else -> "Still reading"
+    }
+}
+
+fun AlphaPrivacyLedgerEntry.lawyerTitle(): String = when (title) {
+    "Model catalog checked" -> "Checked Private AI availability"
+    "Private AI Pack queued", "Private AI Pack verified", "Private AI Pack fallback installed" -> "Downloaded Private AI Pack"
+    "Public-law query sent" -> "Searched public law"
+    "Public-law search unavailable" -> "Public-law search needs attention"
+    "Local export generated" -> "Generated local export"
+    "Local case review run" -> "Reviewed case locally"
+    "Document imported locally" -> "Imported document"
+    "Case created locally" -> "Created case"
+    else -> title
+}
+
+fun AlphaPrivacyLedgerEntry.lawyerDetail(): String = when (title) {
+    "Public-law query sent" ->
+        "Ross sent only a generic public-law query. Your case files stayed on this device."
+    "Public-law search unavailable" ->
+        "Ross could not complete the approved public-law search. Your case files stayed on this device."
+    "Private AI Pack verified", "Private AI Pack fallback installed" ->
+        "A Private AI Pack was prepared on this device."
+    else -> detail
 }
