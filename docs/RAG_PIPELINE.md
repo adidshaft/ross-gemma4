@@ -2,6 +2,13 @@
 
 Ross does not treat OCR as the product. OCR is only one acquisition input inside a broader local legal-document understanding pipeline.
 
+## Alpha proof update
+
+- Real local inference, when available, still sits behind the same source-backed extraction and review pipeline.
+- Deterministic development runtime remains the default and is not a real model.
+- Real local runtime requires compatible hardware/runtime plus a developer-provided artifact or explicit system runtime.
+- Unsupported fields are rejected or moved into advocate review rather than silently accepted.
+
 ## Layered local pipeline
 
 1. Import file or capture image.

@@ -4,6 +4,19 @@ Ross uses a local model runtime contract so extraction quality can improve witho
 
 OCR is only acquisition. The runtime sits between source-packed local text and advocate review.
 
+## Alpha proof update
+
+- `deterministic_dev` remains the default and is not a real model.
+- Real local inference now requires both a compatible runtime and a developer-provided model artifact.
+- Android proof is expected to come from a physical device plus a `.task` artifact.
+- iOS proof requires explicit opt-in plus a compatible Apple device/runtime.
+- Model files are not committed and are not bundled.
+- No cloud inference is used.
+- Raw prompts and raw source text are not persisted in invocation metadata.
+- Accepted output remains schema-validated, source-validated, and verifier-gated.
+- Unsupported fields are not silently accepted.
+- Local-only runtime metrics now record counts and timings without storing content.
+
 ## Design goals
 
 - keep case files on-device

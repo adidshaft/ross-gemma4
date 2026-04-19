@@ -4,6 +4,14 @@ Ross uses an alpha extraction evaluation harness to measure whether the local ex
 
 This harness is a regression safety net. It does not prove production legal accuracy.
 
+## Alpha proof update
+
+- Real-device proof is still separate from this harness.
+- `deterministic_dev` is not a real model result.
+- Evaluation remains conservative only if `unsupportedAccepted` stays `0`.
+- Local inference metrics now capture runtime mode, duration, schema validity, and review counts without storing prompt text, source text, or raw model output.
+- Real local inference claims require a compatible runtime and developer-provided artifact in addition to passing these evaluation checks.
+
 ## Why the harness exists
 
 Legal extraction can fail in dangerous ways:

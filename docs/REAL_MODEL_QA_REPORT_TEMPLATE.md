@@ -1,0 +1,27 @@
+# Real Model QA Report Template
+
+- Date:
+- Branch/commit:
+- Platform:
+- Device model:
+- OS version:
+- Runtime mode:
+- Model artifact source:
+- Model artifact checksum:
+- Whether model file was committed: No
+- Whether inference actually ran: Yes/No
+- Document fixture used:
+- Extraction mode:
+- Duration:
+- Fields found:
+- Fields verified:
+- Fields needing review:
+- Unsupported accepted count:
+- Schema valid:
+- Source refs present:
+- Export generated:
+- Privacy ledger checked:
+- Logs checked for raw prompt/source:
+- Network checked for model calls:
+- Failures/blockers:
+- Next action:

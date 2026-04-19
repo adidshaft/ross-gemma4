@@ -1,12 +1,12 @@
 # Manual Local Inference QA
 
-This runbook tracks what can and cannot be claimed for local inference in the current alpha.
+This runbook exists to keep the repo honest about what was actually proven.
 
-Deterministic development runtime remains the default. It is not a real LLM. Do not claim a real local inference success unless a compatible runtime actually ran and the app recorded the real runtime mode in technical details.
+- `deterministic_dev` is not a real model.
+- Real local inference requires a compatible runtime and a developer-provided model artifact.
+- Do not claim a real local inference run unless Technical details recorded the real runtime mode.
 
-## Canonical debug configuration
-
-Use these names across Android and iOS:
+## Canonical environment names
 
 - `ROSS_BACKEND_BASE_URL`
 - `ROSS_ENABLE_REAL_LOCAL_INFERENCE`
@@ -15,98 +15,109 @@ Use these names across Android and iOS:
 - `ROSS_LOCAL_MODEL_CHECKSUM`
 - `ROSS_LOCAL_MODEL_KIND`
 
-Legacy `ROSS_BACKEND_URL` is tolerated only as a compatibility alias. New docs and new manual QA should use `ROSS_BACKEND_BASE_URL`.
+## Shared truth checks
 
-## Backend
+For any platform:
 
-Start the backend if you want to exercise catalog, download-session, or public-law flows:
+- model files are not committed to git
+- model files are not bundled in app assets or app bundles
+- no cloud inference is used
+- raw prompts are not persisted by default
+- raw source text is not persisted in invocation metadata
+- accepted output must be schema-valid, source-backed, and verifier-gated
+- unsupported fields must not be silently accepted
+
+## Backend QA
+
+Baseline:
 
 ```sh
 cd /Users/amanpandey/projects/ross/backend
-npm install
-npm run dev
+npm test
+npm run typecheck
+npm run build
 ```
 
-Optional smoke checks:
+Optional alpha metadata QA:
 
-```sh
-curl http://127.0.0.1:8080/model-catalog?platform=ios
-curl -X POST http://127.0.0.1:8080/model-download/session -H 'content-type: application/json' -d '{"accountToken":"dev-account","packId":"case-associate-pack","platform":"ios","deviceIdHash":"dev-device","appVersion":"0.0.0-dev"}'
-curl -X POST http://127.0.0.1:8080/public-law/search -H 'content-type: application/json' -d '{"query":"Section 138 cheque dishonour notice limitation India","jurisdiction":"IN-ALL","language":"en","confirmedPublicPreview":true}'
-```
+- enable `ROSS_ENABLE_EXTERNAL_MODEL_METADATA=1`
+- verify `/model-catalog` includes the `external_debug_model` entry
+- confirm no local path is exposed
 
-Expected:
+Optional alpha serving QA:
 
-- only metadata or sanitized public-law previews cross the boundary
-- no case data appears in backend requests
+- enable `ROSS_ENABLE_EXTERNAL_MODEL_SERVING=1`
+- set `ROSS_EXTERNAL_MODEL_FILE_PATH` to an absolute path outside the repo
+- verify `/model-download/session` works only in this explicit dev mode
+- verify ranged artifact delivery works
 
-## Android
+## Android QA
 
-For the concrete Android MediaPipe path, use:
+Use the Android-specific runbook:
 
 - [ANDROID_REAL_INFERENCE_QA.md](/Users/amanpandey/projects/ross/docs/ANDROID_REAL_INFERENCE_QA.md)
 
-Current honest status:
+Current status:
 
-- Android now has a concrete `mediapipe_llm` adapter path
-- Android still needs a physical-device run plus developer model artifact before any real-runtime claim can be made
-- if the runtime is unavailable, Ross must stay on deterministic fallback
+- Android is the preferred first proof path.
+- A physical device is likely required for meaningful MediaPipe QA.
+- The app now includes `Settings > Private AI > Technical details > Run local inference smoke`.
 
-## iOS
+## iOS QA
 
-Use a compatible Apple Intelligence device and explicit opt-in:
+Requirements:
 
 - `ROSS_ENABLE_REAL_LOCAL_INFERENCE=1`
 - `ROSS_LOCAL_RUNTIME=apple_foundation_models`
-- `ROSS_LOCAL_MODEL_PATH=/absolute/path/to/local/model` only if an external adapter file is required
-- `ROSS_BACKEND_BASE_URL=http://127.0.0.1:8080`
+- compatible Apple device/runtime
 
 Manual steps:
 
-1. Open `/Users/amanpandey/projects/ross/ios/Ross.xcodeproj` in Xcode.
-2. Add the canonical environment variables to the scheme.
+1. Open `/Users/amanpandey/projects/ross/ios/Ross.xcodeproj`.
+2. Add the environment variables to the scheme.
 3. Run on a compatible device.
 4. Open `Settings > Private AI > Technical details`.
 5. Confirm:
    - `Runtime mode` is `apple_foundation_models`
+   - `Real runtime enabled` is `yes`
    - `Local runtime` is `available`
    - `Fallback active` is `no`
-6. Import a short legal fixture.
-7. Run `Case Associate` extraction.
-8. Confirm `Last invocation runtime` is `apple_foundation_models`.
-9. Confirm outputs still pass schema validation, source refs remain visible, and uncertain values stay in review.
-10. Confirm no model-network event appeared.
+6. Run `Run local inference smoke`.
+7. Confirm the smoke report shows:
+   - runtime used
+   - schema valid
+   - fields found
+   - fields verified
+   - unsupported accepted `0`
 
-If the device or OS is incompatible:
+If the runtime is unavailable:
 
-- technical details must say the runtime is unavailable
-- deterministic fallback must remain active
-- no real-runtime claim should be recorded
+- record the sanitized reason
+- keep deterministic fallback active
+- mark the QA result as not run
 
-## Shared extraction checks
+## Public-law sanitation checks
 
-Use a short sample document first and confirm:
+Confirm the preview still removes:
 
-- every accepted field keeps a visible source reference
-- unsupported values are not silently accepted
-- raw prompts are not shown in logs or metadata
-- raw OCR text is not shown in logs or metadata
-- deterministic fallback is obvious when active
+- party names
+- case numbers
+- phone numbers
+- email addresses
+- addresses and private locations
+- exact private dates
+- fake secrets
+- long factual narrative
 
-## Public-law suggestion checks
+Confirm the preview keeps only legal concepts such as:
 
-Use only verified or user-corrected legal concepts and confirm:
+- statutory sections
+- generic procedural issues
+- court-neutral legal concepts
 
-- party names are removed
-- case numbers are removed
-- phone numbers are removed
-- email addresses are removed
-- private narrative phrases are removed
-- the preview remains mandatory before any backend request
+## Fake-secret regression strings
 
-## Fake privacy regression strings
-
-These values may appear only in encrypted local storage, local document viewing, local review UI, and local source-backed outputs:
+These values must not appear in backend requests, logs, runtime metrics, runtime health details, or crash messages:
 
 - `Raghav Fakepriv`
 - `9876501234`
@@ -114,27 +125,16 @@ These values may appear only in encrypted local storage, local document viewing,
 - `FAKE/123/2026`
 - `blue suitcase near temple`
 
-They must not appear in:
+## Honest outcome recording
 
-- backend logs
-- model invocation metadata as raw text
-- public-law payloads
-- runtime health details
-- diagnostics
+Record either:
 
-## How to record the result honestly
+- `Real inference ran`
+- or `Not run`
 
-Record:
+If `Not run`, list the exact blocker, such as:
 
-- platform
-- runtime mode
-- whether a developer model artifact was used
-- whether schema validation passed
-- whether deterministic fallback stayed active
-
-Do not record a real local inference success unless:
-
-- the real runtime was explicitly enabled
-- the runtime reported itself as available
-- `Last invocation runtime` matched the real runtime
-- no network model request occurred
+- no compatible physical device
+- no compatible runtime
+- no developer-provided model artifact
+- checksum mismatch

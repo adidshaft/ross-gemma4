@@ -4,6 +4,16 @@ Ross is built around a hard local-first boundary for advocate case work.
 
 The active product does not upload case files, OCR text, prompts, embeddings, filenames, party names, client facts, or extracted legal fields to cloud AI services.
 
+## Alpha proof update
+
+- No remote model provider was added.
+- Backend external debug model support carries only metadata or explicit dev artifact bytes and still accepts no case data.
+- Raw prompts are not persisted by default.
+- Raw source text is not persisted in invocation metadata.
+- Local runtime metrics store only runtime mode, counts, hashes, and timings.
+- Public-law search still sends only a sanitized query.
+- Model files are not committed and are not bundled.
+
 ## Core boundary
 
 Ross separates work into four layers:

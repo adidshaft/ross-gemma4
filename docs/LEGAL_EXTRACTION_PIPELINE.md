@@ -4,6 +4,13 @@ Ross does not treat OCR as the core intelligence.
 
 OCR is only a text-acquisition step. The useful system is the layered legal-document extraction pipeline that sits above acquisition and below advocate review.
 
+## Alpha proof update
+
+- The pipeline now distinguishes deterministic runtime, real local runtime available, real local runtime unavailable, and fallback active.
+- `Case Associate` can run through the real provider when available, but accepted output still must pass schema validation, source validation, and verifier gating.
+- Unsupported fields are never silently accepted.
+- When the real runtime is unavailable, Ross uses the available local extraction mode and keeps fallback explicit.
+
 ## Layered flow
 
 Ross now follows this local-first flow:

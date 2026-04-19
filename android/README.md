@@ -38,7 +38,9 @@ cd /Users/amanpandey/projects/ross/android
 - Gemma 4 Q4 remains blocked in this alpha.
 - If a configured real runtime is unavailable, Android falls back safely to the deterministic development provider.
 - Invocation metadata stores hashes and runtime mode, not raw prompts or raw source text.
+- Local-only runtime metrics now record counts and timings without storing content.
 - All model output still flows through prompt packing, JSON extraction, schema validation, source-ref validation, verifier gating, and advocate review.
+- Unsupported fields are not silently accepted.
 
 ## Debug configuration
 
@@ -52,6 +54,14 @@ These debug-only values are supported through Gradle properties or environment v
 - `ROSS_BACKEND_BASE_URL`
 
 No model file is committed to the repo, and CI does not require a real model artifact.
+
+Android physical-device proof tooling now exists at:
+
+- `/Users/amanpandey/projects/ross/scripts/dev/android-real-inference-smoke.sh`
+
+The app also includes:
+
+- `Settings > Private AI > Technical details > Run local inference smoke`
 
 ## Known caveats
 

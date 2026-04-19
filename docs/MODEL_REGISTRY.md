@@ -2,6 +2,14 @@
 
 Ross shows advocate-friendly capability packs in product UI. Technical model names stay out of onboarding because the user-facing promise is extraction quality, not model branding.
 
+## Alpha proof update
+
+- `Case Associate` is the primary alpha tier for real local inference proof.
+- Backend can now optionally advertise an `external_debug_model` entry for developer QA.
+- The default registry remains the tiny deterministic development artifacts used by CI.
+- Model files are not committed and are not bundled.
+- Real local inference still requires compatible runtime availability and explicit QA.
+
 ## User-facing packs
 
 ### Basic

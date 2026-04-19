@@ -4,6 +4,13 @@ This script validates the `Case Associate` workflow from setup through privacy r
 
 Use it whether you are running the deterministic development runtime or an optional real local runtime. Only call the run "real local inference" if the runtime details explicitly show the real runtime mode.
 
+## Alpha proof update
+
+- Use the Technical details screen to confirm runtime mode before making any claim.
+- For Android, prefer the built-in `Run local inference smoke` action before a full document run.
+- For iOS, keep the smoke action behind explicit opt-in and compatible runtime availability.
+- Accepted fields must remain source-backed and verifier-gated.
+
 ## 1. Fresh install
 
 - Install a fresh debug build on Android or iOS.

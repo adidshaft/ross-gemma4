@@ -44,7 +44,9 @@ swift run --scratch-path tmp/swiftpm Ross --generate-screenshots
 - Real-runtime probing is disabled by default so CI and simulator runs stay deterministic.
 - When the configured real runtime is unavailable, iOS falls back safely to the deterministic development provider.
 - Invocation metadata stores hashes and runtime mode, not raw prompts or raw source text.
+- A developer smoke action now reports runtime used, schema validity, and review counts without exposing prompt or source text.
 - All model output still flows through prompt packing, JSON extraction, schema validation, source-ref validation, verifier gating, and advocate review.
+- Unsupported fields are not silently accepted.
 
 ## Debug configuration
 
@@ -62,5 +64,5 @@ No model file is committed to the repo, and CI does not require a real model art
 ## Known caveats
 
 - The Apple Foundation Models path is the only real inference path in this branch.
-- It should not be claimed as active unless it actually ran on a compatible device or simulator host.
+- It should not be claimed as active unless it actually ran on a compatible device.
 - Exact PDF snippet highlights remain best-effort, with source chips as the primary trust surface.

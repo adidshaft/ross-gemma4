@@ -2,6 +2,14 @@
 
 Ross is a privacy-first legal workbench for Indian advocates. It is designed to make legal documents useful on-device through layered extraction, source-backed review, chronology building, issue spotting, order analysis, and local drafting support.
 
+## Alpha proof update
+
+- Ross keeps `Case files stay on this device` as the core promise.
+- `Quick Start`, `Case Associate`, and `Senior Drafting Support` remain the advocate-facing pack labels.
+- The deterministic dev provider is a local test runtime, not a real model.
+- Real local inference now has an Android proof path plus iOS opt-in readiness, but a claim still requires a real device run.
+- No cloud inference is used.
+
 ## Product direction
 
 Ross is not a cloud case processor and it is not an OCR-only tool.

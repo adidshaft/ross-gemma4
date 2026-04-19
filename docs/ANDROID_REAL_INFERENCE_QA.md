@@ -1,164 +1,102 @@
 # Android Real Inference QA
 
-This runbook is for proving the Android `mediapipe_llm` path on a physical device.
+This runbook proves the Android `mediapipe_llm` path on a physical device.
 
-Do not claim a real local inference success unless the app actually records `mediapipe_llm` as the last invocation runtime.
+- Do not claim success from `deterministic_dev`.
+- Do not claim success from emulator-only runs.
+- Do not claim success unless `Last invocation runtime` or the smoke report shows `mediapipe_llm`.
 
 ## Prerequisites
 
-- A physical Android device, preferably high-end
-- A developer-provided MediaPipe `.task` model artifact
-- A debug build of Ross
-- Optional local backend if you also want to exercise pack metadata or public-law search
-- No model file committed to the repo
+- physical Android device
+- developer-provided `.task` model artifact
+- debug build of Ross
+- optional local backend for catalog/download/public-law checks
 
-## Canonical debug configuration
+Model files:
 
-Use these names when building the debug app:
+- are not committed
+- are not bundled
+- stay outside the repo unless copied into app-private storage during manual QA
 
-- `ROSS_BACKEND_BASE_URL`
-- `ROSS_ENABLE_REAL_LOCAL_INFERENCE`
-- `ROSS_LOCAL_RUNTIME`
-- `ROSS_LOCAL_MODEL_PATH`
-- `ROSS_LOCAL_MODEL_CHECKSUM`
-- `ROSS_LOCAL_MODEL_KIND`
+## Recommended path
 
-Recommended Android real-runtime values:
-
-- `ROSS_ENABLE_REAL_LOCAL_INFERENCE=1`
-- `ROSS_LOCAL_RUNTIME=mediapipe_llm`
-- `ROSS_LOCAL_MODEL_PATH=debug-models/case-associate.task`
-- `ROSS_LOCAL_MODEL_KIND=mediapipe_task`
-- `ROSS_LOCAL_MODEL_CHECKSUM=<optional sha256>`
-
-## 1. Build the debug APK
+Use the smoke helper first:
 
 ```sh
-cd /Users/amanpandey/projects/ross/android
-export ROSS_BACKEND_BASE_URL=http://10.0.2.2:8080
+cd /Users/amanpandey/projects/ross
 export ROSS_ENABLE_REAL_LOCAL_INFERENCE=1
 export ROSS_LOCAL_RUNTIME=mediapipe_llm
 export ROSS_LOCAL_MODEL_PATH=debug-models/case-associate.task
 export ROSS_LOCAL_MODEL_KIND=mediapipe_task
-./gradlew :app:assembleDebug
+export ROSS_LOCAL_MODEL_CHECKSUM=<optional sha256>
+export ROSS_LOCAL_MODEL_PUSH_SOURCE=/absolute/path/to/case-associate.task
+./scripts/dev/android-real-inference-smoke.sh
 ```
 
-If you want checksum enforcement, compute it first and export it:
+What the script does:
 
-```sh
-shasum -a 256 /absolute/path/to/case-associate.task
-export ROSS_LOCAL_MODEL_CHECKSUM=<paste_sha256_here>
-```
+- checks `adb`
+- lists connected devices
+- looks for a physical device
+- checks required env vars
+- builds the debug APK
+- optionally pushes the model file
+- prints install/run instructions
+- never prints case text or prompt text
 
-## 2. Install the app
+## Manual app flow
 
-```sh
-adb install -r /Users/amanpandey/projects/ross/android/app/build/outputs/apk/debug/app-debug.apk
-```
+1. Install the debug APK.
+2. Launch Ross on the physical device.
+3. Open `Settings > Private AI > Technical details`.
+4. Confirm:
+   - `Runtime mode` is `mediapipe_llm`
+   - `Real runtime enabled` is `yes`
+   - `Model path` is `Configured`
+   - `Checksum verified` is `yes` if configured
+   - `Local runtime` is `available`
+   - `Fallback active` is `no`
+5. Run `Run local inference smoke`.
+6. Confirm the smoke report shows:
+   - runtime used `mediapipe_llm`
+   - schema valid `yes`
+   - unsupported accepted `0`
+7. Import a short synthetic or non-sensitive legal fixture.
+8. Run `Case Associate` extraction.
+9. Return to Technical details and confirm the last invocation runtime still shows `mediapipe_llm`.
 
-## 3. Copy the model into app-private storage
+## What to verify in extraction
 
-Push the model to a temporary device-visible location:
+- extracted fields remain source-backed
+- weak or unsupported fields remain in `Needs advocate review`
+- invalid/free-form model output is not silently accepted
+- no crash occurs for larger files; Ross batches or falls back safely
+- exports still generate locally
 
-```sh
-adb push /absolute/path/to/case-associate.task /data/local/tmp/ross-case-associate.task
-```
+## Privacy checks
 
-Copy it into Ross app-private storage:
+- Privacy Ledger shows no model-network event
+- raw prompts do not appear in logs
+- raw source text does not appear in logs
+- runtime health does not expose the full model path
+- runtime metrics contain counts and timings only
 
-```sh
-adb shell run-as com.ross.android mkdir -p files/ross-alpha/debug-models
-adb shell "run-as com.ross.android sh -c 'cat /data/local/tmp/ross-case-associate.task > files/ross-alpha/debug-models/case-associate.task'"
-```
+## Blocked status
 
-The relative path `debug-models/case-associate.task` matches the recommended `ROSS_LOCAL_MODEL_PATH` value above because Ross resolves relative debug paths under its app-private root.
+Mark the run as blocked if any of the following is true:
 
-## 4. Launch Ross
+- no physical device
+- no compatible `.task` artifact
+- checksum mismatch
+- runtime dependency unavailable
+- local runtime unavailable on the device
 
-Open the installed debug app on the device.
+## Result language
 
-## 5. Open Settings > Private AI > Technical details
+Use precise wording:
 
-Confirm all of the following:
+- `Real Android local inference ran on a physical device`
+- or `Android real local inference was not run`
 
-- `Runtime mode` shows `mediapipe_llm`
-- `Local runtime` shows `available`
-- `Fallback active` shows `no`
-- `Model path present` shows `yes`
-- `Checksum verified` shows `yes` if you supplied `ROSS_LOCAL_MODEL_CHECKSUM`
-
-If `Local runtime` is `unavailable`, do not proceed with a real-runtime claim. Record the exact `Last runtime error` value instead.
-
-## 6. Import a fixture document
-
-Use a short source-backed legal fixture first. Avoid large bundles for the first proof run.
-
-Recommended initial fixture shape:
-
-- one short order or pleading
-- 1 to 5 pages
-- clear case number, date, section, and order-direction text
-
-## 7. Run Case Associate extraction
-
-- Open the document
-- Start extraction under `Case Associate`
-- Wait for extraction and verification to finish
-
-## 8. Confirm the run actually used the real runtime
-
-Return to `Settings > Private AI > Technical details`.
-
-You may record a real local inference success only if:
-
-- `Last invocation runtime` is `mediapipe_llm`
-- `Fallback active` is still `no`
-- the app did not crash or silently switch back to `deterministic_dev`
-
-## 9. Review extracted details
-
-Confirm:
-
-- extracted fields still show source chips
-- unsupported or weak fields are marked `Needs advocate review`
-- free-form model text did not slip through as accepted fields
-- schema-invalid output was not silently accepted
-
-## 10. Export a case note or summary
-
-Confirm the export completes locally and remains source-backed.
-
-## 11. Inspect Privacy Ledger
-
-Confirm:
-
-- no model-network event exists
-- any public-law search event still says only a sanitized query crossed the boundary
-
-## 12. Check logs for privacy regressions
-
-Do not record success if raw prompts, OCR text, or raw page text appear in logs or diagnostics.
-
-The following values must not appear outside local storage and local review UI:
-
-- `Raghav Fakepriv`
-- `9876501234`
-- `fakepriv@example.com`
-- `FAKE/123/2026`
-- `blue suitcase near temple`
-
-## Expected pass result
-
-- `mediapipe_llm` is available in technical details
-- `Last invocation runtime` is `mediapipe_llm`
-- extraction remains source-backed
-- `Needs advocate review` appears where support is weak
-- Privacy Ledger shows no model-network activity
-
-## Fail conditions
-
-- runtime remains unavailable
-- last invocation runtime is `deterministic_dev`
-- checksum mismatch blocks the run
-- schema-invalid free-form output is accepted as extracted fields
-- raw prompts or source text leak into logs or invocation metadata
+If not run, include the exact blocker.

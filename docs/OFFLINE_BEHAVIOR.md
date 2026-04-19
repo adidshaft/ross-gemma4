@@ -4,6 +4,14 @@ Ross is designed so legal work can continue even when no network is available.
 
 The useful offline behavior is not only OCR. It is the combination of local text acquisition, local extraction, local verification, local review, and local exports.
 
+## Alpha proof update
+
+- Real local inference remains local-only and does not require cloud inference.
+- Android real-runtime QA is expected on a physical device.
+- iOS real-runtime QA requires explicit opt-in and compatible hardware.
+- Model files are not bundled and are not committed.
+- If the real runtime is unavailable, Ross keeps deterministic fallback intact and honest.
+
 ## Works with no Private AI Pack installed
 
 - create and manage cases locally
