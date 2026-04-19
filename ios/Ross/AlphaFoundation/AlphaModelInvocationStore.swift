@@ -97,8 +97,15 @@ enum AlphaModelInvocationStore {
         var copy = invocation
         copy.outputHash = sha256Hex(output.parsedJson ?? output.rawText)
         copy.completedAt = .now
-        copy.status = .complete
-        copy.errorCategory = nil
+        copy.status = switch output.errorCategory {
+        case "cancelled":
+            .cancelled
+        case nil:
+            .complete
+        default:
+            .failed
+        }
+        copy.errorCategory = output.errorCategory
         return copy
     }
 

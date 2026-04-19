@@ -175,11 +175,35 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(invocation.localOnly)
     }
 
+    func testCanonicalRuntimeConfigParsesEnvironment() {
+        let environment = AlphaLocalRuntimeEnvironment.fromEnvironment([
+            "ROSS_ENABLE_REAL_LOCAL_INFERENCE": "1",
+            "ROSS_LOCAL_RUNTIME": "apple_foundation_models",
+            "ROSS_LOCAL_MODEL_PATH": "/tmp/ross/model.bundle",
+            "ROSS_LOCAL_MODEL_CHECKSUM": String(repeating: "a", count: 64),
+            "ROSS_LOCAL_MODEL_KIND": "foundation_adapter",
+        ])
+
+        XCTAssertTrue(environment.enableRealInference)
+        XCTAssertEqual(environment.runtimeModeOverride, .appleFoundationModels)
+        XCTAssertEqual(environment.modelPath, "/tmp/ross/model.bundle")
+        XCTAssertEqual(environment.modelChecksum, String(repeating: "a", count: 64))
+        XCTAssertEqual(environment.modelKind, "foundation_adapter")
+    }
+
     func testRealRuntimeSelectionFallsBackSafelyWhenUnavailable() async {
         let pack = installedPack(.caseAssociate, runtimeMode: .appleFoundationModels)
+        let runtimeEnvironment = AlphaLocalRuntimeEnvironment(
+            enableRealInference: false,
+            runtimeModeOverride: nil,
+            modelPath: nil,
+            modelChecksum: nil,
+            modelKind: nil
+        )
         let provider = AlphaLocalModelRuntime.resolveProvider(
             activePack: pack,
-            requestedTier: pack.tier
+            requestedTier: pack.tier,
+            runtimeEnvironment: runtimeEnvironment
         ) { input in
             AlphaLocalModelOutput(
                 rawText: input.expectedSchema,
@@ -189,12 +213,18 @@ final class AlphaExtractionTests: XCTestCase {
                 sourceRefs: input.sourcePack.map(\.sourceRef)
             )
         }
-        let health = AlphaLocalModelRuntime.runtimeHealth(activePack: pack, requestedTier: pack.tier)
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: runtimeEnvironment
+        )
 
         XCTAssertNotNil(provider)
         XCTAssertEqual(provider?.runtimeMode, .deterministicDev)
         XCTAssertEqual(health?.runtimeMode, .appleFoundationModels)
         XCTAssertEqual(health?.available, false)
+        XCTAssertEqual(health?.fallbackActive, true)
+        XCTAssertEqual(health?.explicitOptInEnabled, false)
         XCTAssertNotNil(health?.userFacingStatus)
     }
 
@@ -273,5 +303,6 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertTrue(model.publicLawPreview?.query.contains("delay in filing written statement") == true)
         XCTAssertFalse(model.publicLawPreview?.query.contains("Private Matter") == true)
+        XCTAssertFalse(model.publicLawPreview?.query.contains("Raghav Fakepriv") == true)
     }
 }

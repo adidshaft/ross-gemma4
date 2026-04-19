@@ -66,6 +66,7 @@ struct AlphaLocalModelOutput: Codable, Hashable, Sendable {
     var schemaValid: Bool
     var warnings: [String]
     var sourceRefs: [AlphaSourceRef]
+    var errorCategory: String? = nil
 }
 
 struct AlphaModelPromptPolicy: Codable, Hashable, Sendable {
@@ -86,6 +87,8 @@ struct AlphaLocalRuntimeHealth: Codable, Hashable, Sendable {
     var estimatedContextTokens: Int?
     var lastErrorCategory: String?
     var userFacingStatus: String
+    var fallbackActive: Bool = false
+    var explicitOptInEnabled: Bool = false
 }
 
 struct AlphaLocalModelResourceEstimate: Codable, Hashable, Sendable {
@@ -280,6 +283,9 @@ struct AlphaUnavailableRealLocalModelProvider: AlphaRealLocalModelProvider {
     let checksumVerified: Bool
     let statusMessage: String
     let plannedTasks: Set<AlphaLocalModelTask>
+    let errorCategory: String
+    let fallbackActive: Bool
+    let explicitOptInEnabled: Bool
 
     func isAvailable() -> Bool { false }
 
@@ -294,8 +300,10 @@ struct AlphaUnavailableRealLocalModelProvider: AlphaRealLocalModelProvider {
             supportedTasks: Array(plannedTasks),
             maxInputChars: maxInputChars(),
             estimatedContextTokens: contextWindowEstimate(),
-            lastErrorCategory: "runtime_unavailable",
-            userFacingStatus: statusMessage
+            lastErrorCategory: errorCategory,
+            userFacingStatus: statusMessage,
+            fallbackActive: fallbackActive,
+            explicitOptInEnabled: explicitOptInEnabled
         )
     }
 
@@ -314,7 +322,8 @@ struct AlphaUnavailableRealLocalModelProvider: AlphaRealLocalModelProvider {
                 "Ross kept the request local and did not send any network model call.",
                 pack.truncated ? "Prompt pack was truncated to stay inside the local runtime budget." : "Prompt pack stayed inside the local runtime budget."
             ],
-            sourceRefs: pack.includedSourceRefs.isEmpty ? taskInput.sourcePack.map(\.sourceRef) : pack.includedSourceRefs
+            sourceRefs: pack.includedSourceRefs.isEmpty ? taskInput.sourcePack.map(\.sourceRef) : pack.includedSourceRefs,
+            errorCategory: errorCategory
         )
     }
 
@@ -373,7 +382,9 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
             maxInputChars: maxInputChars(),
             estimatedContextTokens: contextWindowEstimate(),
             lastErrorCategory: status.lastErrorCategory,
-            userFacingStatus: status.userFacingStatus
+            userFacingStatus: status.userFacingStatus,
+            fallbackActive: !status.available,
+            explicitOptInEnabled: true
         )
     }
 
@@ -396,7 +407,8 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
                 parsedJson: nil,
                 schemaValid: false,
                 warnings: [runtimeHealth().userFacingStatus],
-                sourceRefs: promptPack.includedSourceRefs
+                sourceRefs: promptPack.includedSourceRefs,
+                errorCategory: "runtime_unavailable"
             )
         }
 
@@ -415,15 +427,17 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
                 parsedJson: extractJSONCandidate(from: raw),
                 schemaValid: extractJSONCandidate(from: raw) != nil,
                 warnings: promptPack.truncated ? ["Prompt pack was truncated to stay inside the local runtime budget."] : [],
-                sourceRefs: promptPack.includedSourceRefs
+                sourceRefs: promptPack.includedSourceRefs,
+                errorCategory: extractJSONCandidate(from: raw) == nil ? "invalid_model_output" : nil
             )
         } catch {
             return AlphaLocalModelOutput(
                 rawText: "",
                 parsedJson: nil,
                 schemaValid: false,
-                warnings: [String(describing: error)],
-                sourceRefs: promptPack.includedSourceRefs
+                warnings: ["The Apple Foundation Models runtime could not finish this request and Ross kept the request local."],
+                sourceRefs: promptPack.includedSourceRefs,
+                errorCategory: "runtime_generate_failed"
             )
         }
     }
@@ -500,27 +514,51 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
 }
 #endif
 
+struct AlphaLocalRuntimeEnvironment: Sendable {
+    let enableRealInference: Bool
+    let runtimeModeOverride: AlphaPackRuntimeMode?
+    let modelPath: String?
+    let modelChecksum: String?
+    let modelKind: String?
+
+    static func fromEnvironment(_ environment: [String: String]) -> AlphaLocalRuntimeEnvironment {
+        func trimmedValue(_ key: String) -> String? {
+            environment[key]?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        }
+
+        return AlphaLocalRuntimeEnvironment(
+            enableRealInference: ["1", "true", "yes", "on"].contains(trimmedValue("ROSS_ENABLE_REAL_LOCAL_INFERENCE")?.lowercased()),
+            runtimeModeOverride: parseRuntimeMode(trimmedValue("ROSS_LOCAL_RUNTIME")),
+            modelPath: trimmedValue("ROSS_LOCAL_MODEL_PATH"),
+            modelChecksum: trimmedValue("ROSS_LOCAL_MODEL_CHECKSUM"),
+            modelKind: trimmedValue("ROSS_LOCAL_MODEL_KIND")
+        )
+    }
+
+    private static func parseRuntimeMode(_ raw: String?) -> AlphaPackRuntimeMode? {
+        guard let raw else { return nil }
+        return AlphaPackRuntimeMode(rawValue: raw)
+    }
+}
+
 private struct AlphaRuntimeDebugConfig {
     let enableRealInference: Bool
     let runtimeModeOverride: AlphaPackRuntimeMode?
     let modelPath: String?
+    let modelChecksum: String?
+    let modelKind: String?
 }
 
 enum AlphaLocalModelRuntime {
-    private static func parseRuntimeMode(_ raw: String?) -> AlphaPackRuntimeMode? {
-        guard let raw, !raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
-        return AlphaPackRuntimeMode(rawValue: raw.trimmingCharacters(in: .whitespacesAndNewlines))
-    }
-
-    private static func debugConfig(activePack: AlphaInstalledModelPack?) -> AlphaRuntimeDebugConfig {
-        let environment = ProcessInfo.processInfo.environment
-        let enableRealInference = ["1", "true", "yes"].contains(environment["ROSS_ENABLE_REAL_LOCAL_INFERENCE"]?.lowercased())
-        let runtimeOverride = parseRuntimeMode(environment["ROSS_LOCAL_RUNTIME"])
-        let envModelPath = environment["ROSS_LOCAL_MODEL_PATH"]?.trimmingCharacters(in: .whitespacesAndNewlines)
-        return AlphaRuntimeDebugConfig(
-            enableRealInference: enableRealInference,
-            runtimeModeOverride: runtimeOverride,
-            modelPath: envModelPath?.isEmpty == false ? envModelPath : nil
+    private static func debugConfig(
+        runtimeEnvironment: AlphaLocalRuntimeEnvironment = .fromEnvironment(ProcessInfo.processInfo.environment)
+    ) -> AlphaRuntimeDebugConfig {
+        AlphaRuntimeDebugConfig(
+            enableRealInference: runtimeEnvironment.enableRealInference,
+            runtimeModeOverride: runtimeEnvironment.runtimeModeOverride,
+            modelPath: runtimeEnvironment.modelPath,
+            modelChecksum: runtimeEnvironment.modelChecksum,
+            modelKind: runtimeEnvironment.modelKind
         )
     }
 
@@ -528,7 +566,8 @@ enum AlphaLocalModelRuntime {
         runtimeMode: AlphaPackRuntimeMode,
         tier: AlphaCapabilityTier,
         checksumVerified: Bool,
-        modelPathLabel: String?
+        modelPathLabel: String?,
+        explicitOptInEnabled: Bool
     ) -> AlphaUnavailableRealLocalModelProvider {
         let plannedTasks: Set<AlphaLocalModelTask> = [
             .documentClassification,
@@ -545,12 +584,18 @@ enum AlphaLocalModelRuntime {
             modelPathLabel: modelPathLabel,
             checksumVerified: checksumVerified,
             statusMessage: "Real local inference is configured for this pack, but remains disabled until a developer explicitly sets ROSS_ENABLE_REAL_LOCAL_INFERENCE=1 for manual QA.",
-            plannedTasks: plannedTasks
+            plannedTasks: plannedTasks,
+            errorCategory: "runtime_disabled",
+            fallbackActive: true,
+            explicitOptInEnabled: explicitOptInEnabled
         )
     }
 
-    private static func desiredRuntimeMode(activePack: AlphaInstalledModelPack?) -> AlphaPackRuntimeMode? {
-        let debug = debugConfig(activePack: activePack)
+    private static func desiredRuntimeMode(
+        activePack: AlphaInstalledModelPack?,
+        runtimeEnvironment: AlphaLocalRuntimeEnvironment
+    ) -> AlphaPackRuntimeMode? {
+        let debug = debugConfig(runtimeEnvironment: runtimeEnvironment)
         if debug.enableRealInference {
             return debug.runtimeModeOverride ?? activePack?.runtimeMode
         }
@@ -559,19 +604,21 @@ enum AlphaLocalModelRuntime {
 
     private static func realProvider(
         activePack: AlphaInstalledModelPack?,
-        tier: AlphaCapabilityTier
+        tier: AlphaCapabilityTier,
+        runtimeEnvironment: AlphaLocalRuntimeEnvironment
     ) -> (any AlphaRealLocalModelProvider)? {
-        let debug = debugConfig(activePack: activePack)
-        let checksumVerified = activePack?.checksumVerified ?? false
-        let modelPathLabel = debug.modelPath.flatMap { URL(fileURLWithPath: $0).lastPathComponent.isEmpty ? nil : URL(fileURLWithPath: $0).lastPathComponent }
-        let runtimeMode = desiredRuntimeMode(activePack: activePack)
+        let debug = debugConfig(runtimeEnvironment: runtimeEnvironment)
+        let checksumVerified = activePack?.checksumVerified ?? (debug.modelChecksum == nil)
+        let modelPathLabel = debug.modelPath.flatMap { URL(fileURLWithPath: $0).lastPathComponent.nilIfEmpty }
+        let runtimeMode = desiredRuntimeMode(activePack: activePack, runtimeEnvironment: runtimeEnvironment)
         guard let runtimeMode else { return nil }
         guard debug.enableRealInference || runtimeMode == .deterministicDev || runtimeMode == .unavailable else {
             return disabledRuntimeProvider(
                 runtimeMode: runtimeMode,
                 tier: tier,
                 checksumVerified: checksumVerified,
-                modelPathLabel: modelPathLabel
+                modelPathLabel: modelPathLabel,
+                explicitOptInEnabled: false
             )
         }
         switch runtimeMode {
@@ -581,8 +628,11 @@ enum AlphaLocalModelRuntime {
                 runtimeMode: .mediapipeLlm,
                 modelPathLabel: modelPathLabel,
                 checksumVerified: checksumVerified,
-                statusMessage: "MediaPipe local runtime is configured, but this alpha still uses a compile-safe adapter skeleton until the iOS dependency is integrated.",
-                plannedTasks: [.documentClassification, .legalFieldExtraction, .legalFieldVerification, .caseMemorySynthesis, .chronologyGeneration, .orderSummary]
+                statusMessage: "MediaPipe local runtime remains unavailable on iOS in this alpha. Ross will keep deterministic fallback active.",
+                plannedTasks: [.documentClassification, .legalFieldExtraction, .legalFieldVerification, .caseMemorySynthesis, .chronologyGeneration, .orderSummary],
+                errorCategory: "runtime_unavailable",
+                fallbackActive: true,
+                explicitOptInEnabled: debug.enableRealInference
             )
         case .llamaCppGguf:
             return AlphaUnavailableRealLocalModelProvider(
@@ -590,8 +640,11 @@ enum AlphaLocalModelRuntime {
                 runtimeMode: .llamaCppGguf,
                 modelPathLabel: modelPathLabel,
                 checksumVerified: checksumVerified,
-                statusMessage: "Gemma 4 Q4 local runtime is configured, but this alpha still uses a compile-safe adapter skeleton until the native runtime is wired.",
-                plannedTasks: [.documentClassification, .legalFieldExtraction, .legalFieldVerification, .caseMemorySynthesis, .chronologyGeneration, .orderSummary]
+                statusMessage: "Gemma 4 Q4 local runtime remains unavailable on iOS in this alpha. Ross will keep deterministic fallback active.",
+                plannedTasks: [.documentClassification, .legalFieldExtraction, .legalFieldVerification, .caseMemorySynthesis, .chronologyGeneration, .orderSummary],
+                errorCategory: "runtime_unavailable",
+                fallbackActive: true,
+                explicitOptInEnabled: debug.enableRealInference
             )
         case .appleFoundationModels:
             #if canImport(FoundationModels)
@@ -610,7 +663,10 @@ enum AlphaLocalModelRuntime {
                 modelPathLabel: modelPathLabel,
                 checksumVerified: checksumVerified,
                 statusMessage: "Apple Foundation Models require iOS 26 or macOS 26 with a compatible local runtime.",
-                plannedTasks: [.documentClassification, .legalFieldExtraction, .legalFieldVerification, .caseMemorySynthesis, .chronologyGeneration, .orderSummary]
+                plannedTasks: [.documentClassification, .legalFieldExtraction, .legalFieldVerification, .caseMemorySynthesis, .chronologyGeneration, .orderSummary],
+                errorCategory: "runtime_unavailable",
+                fallbackActive: true,
+                explicitOptInEnabled: debug.enableRealInference
             )
         default:
             return nil
@@ -619,11 +675,12 @@ enum AlphaLocalModelRuntime {
 
     static func runtimeHealth(
         activePack: AlphaInstalledModelPack?,
-        requestedTier: AlphaCapabilityTier?
+        requestedTier: AlphaCapabilityTier?,
+        runtimeEnvironment: AlphaLocalRuntimeEnvironment = .fromEnvironment(ProcessInfo.processInfo.environment)
     ) -> AlphaLocalRuntimeHealth? {
         let tier = activePack?.tier ?? requestedTier
         guard let tier else { return nil }
-        switch desiredRuntimeMode(activePack: activePack) {
+        switch desiredRuntimeMode(activePack: activePack, runtimeEnvironment: runtimeEnvironment) {
         case nil:
             return nil
         case .deterministicDev:
@@ -640,27 +697,34 @@ enum AlphaLocalModelRuntime {
                 maxInputChars: nil,
                 estimatedContextTokens: nil,
                 lastErrorCategory: "runtime_unavailable",
-                userFacingStatus: "Local model runtime unavailable."
+                userFacingStatus: "Local model runtime unavailable.",
+                fallbackActive: true,
+                explicitOptInEnabled: runtimeEnvironment.enableRealInference
             )
         default:
-            return realProvider(activePack: activePack, tier: tier)?.runtimeHealth()
+            return realProvider(
+                activePack: activePack,
+                tier: tier,
+                runtimeEnvironment: runtimeEnvironment
+            )?.runtimeHealth()
         }
     }
 
     static func resolveProvider(
         activePack: AlphaInstalledModelPack?,
         requestedTier: AlphaCapabilityTier?,
+        runtimeEnvironment: AlphaLocalRuntimeEnvironment = .fromEnvironment(ProcessInfo.processInfo.environment),
         executor: @escaping @Sendable (AlphaLocalModelInput) async -> AlphaLocalModelOutput
     ) -> (any AlphaLocalModelProvider)? {
         let tier = activePack?.tier ?? requestedTier
         guard let tier else { return nil }
-        switch desiredRuntimeMode(activePack: activePack) {
+        switch desiredRuntimeMode(activePack: activePack, runtimeEnvironment: runtimeEnvironment) {
         case nil:
             return nil
         case .deterministicDev:
             return DeterministicDevLocalModelProvider(capabilityTier: tier, executor: executor)
         case .mediapipeLlm, .llamaCppGguf, .appleFoundationModels, .unavailable:
-            if let real = realProvider(activePack: activePack, tier: tier), real.isAvailable() {
+            if let real = realProvider(activePack: activePack, tier: tier, runtimeEnvironment: runtimeEnvironment), real.isAvailable() {
                 return real
             }
             return DeterministicDevLocalModelProvider(capabilityTier: tier, executor: executor)
@@ -669,3 +733,9 @@ enum AlphaLocalModelRuntime {
 }
 
 extension AlphaLocalModelTask: CaseIterable {}
+
+private extension String {
+    var nilIfEmpty: String? {
+        isEmpty ? nil : self
+    }
+}

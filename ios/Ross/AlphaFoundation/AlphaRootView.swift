@@ -72,7 +72,18 @@ final class AlphaRossModel {
     }
 
     var activeRuntimeHealth: AlphaLocalRuntimeHealth? {
-        AlphaLocalModelRuntime.runtimeHealth(activePack: activePack, requestedTier: activePack?.tier)
+        AlphaLocalModelRuntime.runtimeHealth(
+            activePack: activePack,
+            requestedTier: activePack?.tier ?? persisted.settings.activeTier
+        )
+    }
+
+    var lastModelInvocationRuntimeMode: String? {
+        persisted.cases
+            .flatMap(\.documents)
+            .flatMap(\.modelInvocations)
+            .last?
+            .runtimeMode
     }
 
     func advanceOnboarding() {
@@ -1123,7 +1134,9 @@ final class AlphaRossModel {
             document.classification
                 .flatMap { $0.needsReview ? nil : $0.type.rawValue.replacingOccurrences(of: "_", with: " ") }
         }
-        let terms = Array(NSOrderedSet(array: issues + classifications)).compactMap { $0 as? String }
+        let terms = Array(NSOrderedSet(array: issues + classifications))
+            .compactMap { $0 as? String }
+            .filter(isSafePublicLawTerm)
         guard !terms.isEmpty else { return nil }
         return (terms + ["India"]).joined(separator: " ")
     }
@@ -1153,16 +1166,60 @@ final class AlphaRossModel {
         }
         let sanitizedPhrase = lowered
             .replacingOccurrences(of: #"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+"#, with: " ", options: .regularExpression)
-            .replacingOccurrences(of: #"\b\d{2,}\b"#, with: " ", options: .regularExpression)
             .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        if !sanitizedPhrase.isEmpty {
+        if !sanitizedPhrase.isEmpty, looksLikeLegalConcept(sanitizedPhrase) {
             let tokenCount = sanitizedPhrase.split(separator: " ").count
             if (3...10).contains(tokenCount) {
-                return Array(NSOrderedSet(array: matches + [sanitizedPhrase])) as? [String] ?? matches + [sanitizedPhrase]
+                return (Array(NSOrderedSet(array: matches + [sanitizedPhrase])) as? [String] ?? matches + [sanitizedPhrase]).filter(isSafePublicLawTerm)
             }
         }
-        return matches
+        return matches.filter(isSafePublicLawTerm)
+    }
+
+    private func looksLikeLegalConcept(_ value: String) -> Bool {
+        let legalSignals = [
+            "act",
+            "section",
+            "order",
+            "rule",
+            "maintenance",
+            "injunction",
+            "dishonour",
+            "written statement",
+            "delay",
+            "limitation",
+            "interim",
+            "commercial",
+            "cheque",
+            "court",
+            "filing",
+        ]
+        if legalSignals.contains(where: { value.contains($0) }) {
+            return true
+        }
+        return value.range(of: #"section\s+\d+[a-z]*"#, options: .regularExpression) != nil ||
+            value.range(of: #"order\s+[a-z0-9]+\s+rule\s+\d+"#, options: .regularExpression) != nil
+    }
+
+    private func isSafePublicLawTerm(_ value: String) -> Bool {
+        let lowered = value.lowercased()
+        if lowered.contains("fakepriv") || lowered.contains("blue suitcase near temple") {
+            return false
+        }
+        if value.range(of: #"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+"#, options: .regularExpression) != nil {
+            return false
+        }
+        if value.range(of: #"\b\+?\d[\d\s-]{7,}\b"#, options: .regularExpression) != nil {
+            return false
+        }
+        if value.range(of: #"\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b"#, options: .regularExpression) != nil {
+            return false
+        }
+        if value.range(of: #"\b[A-Za-z]{1,8}[(/\- ]*\d+[A-Za-z/()\- ]*\d{4}\b"#, options: .regularExpression) != nil {
+            return false
+        }
+        return true
     }
 
     private func alphaCorrectionType(for fieldType: AlphaExtractedLegalFieldType) -> AlphaAdvocateCorrectionType {
@@ -1349,7 +1406,8 @@ private struct AlphaBackendConfiguration {
     let deviceIdHash = sha256Hex(Data("ross-ios-alpha-device".utf8))
 
     init() {
-        let rawURL = ProcessInfo.processInfo.environment["ROSS_BACKEND_BASE_URL"] ?? "http://127.0.0.1:8080"
+        let environment = ProcessInfo.processInfo.environment
+        let rawURL = environment["ROSS_BACKEND_BASE_URL"] ?? environment["ROSS_BACKEND_URL"] ?? "http://127.0.0.1:8080"
         baseURL = URL(string: rawURL) ?? URL(string: "http://127.0.0.1:8080")!
     }
 }
@@ -2495,7 +2553,16 @@ private struct AlphaPrivateAISettingsScreen: View {
                 Section("Technical details") {
                     LabeledContent("Runtime mode", value: runtimeHealth.runtimeMode.rawValue)
                     LabeledContent("Local runtime", value: runtimeHealth.available ? "available" : "unavailable")
+                    LabeledContent("Fallback active", value: runtimeHealth.fallbackActive ? "yes" : "no")
+                    LabeledContent("Explicit opt-in", value: runtimeHealth.explicitOptInEnabled ? "enabled" : "disabled")
+                    LabeledContent("Model path present", value: runtimeHealth.modelPathPresent ? "yes" : "no")
                     LabeledContent("Checksum verified", value: runtimeHealth.checksumVerified ? "yes" : "no")
+                    if let lastErrorCategory = runtimeHealth.lastErrorCategory {
+                        LabeledContent("Last runtime error", value: lastErrorCategory)
+                    }
+                    if let lastInvocationRuntimeMode = model.lastModelInvocationRuntimeMode {
+                        LabeledContent("Last invocation runtime", value: lastInvocationRuntimeMode)
+                    }
                     if let maxInputChars = runtimeHealth.maxInputChars {
                         LabeledContent("Max input chars", value: "\(maxInputChars)")
                     }
