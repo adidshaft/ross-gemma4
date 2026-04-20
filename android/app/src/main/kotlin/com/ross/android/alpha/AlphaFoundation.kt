@@ -13,6 +13,7 @@ import com.google.gson.GsonBuilder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileInputStream
@@ -20,12 +21,42 @@ import java.io.FileOutputStream
 import java.security.MessageDigest
 import java.util.UUID
 
+private const val ALPHA_ROSS_SUGGESTED_TASK_NOTE_PREFIX = "ross-overview::"
+
 enum class AlphaOnboardingStage { Onboarding, PrivateAiPack, Completed }
 enum class AlphaAppTab { Home, Cases, Capture, Ask, Settings, PublicLaw, Exports }
 enum class AlphaCapabilityTier(val tierId: String, val title: String, val summary: String, val downloadSizeLabel: String, val installedSizeLabel: String) {
     QuickStart("quick_start", "Quick Start", "Basic extraction for short documents, simple summaries, and lighter storage use.", "1.2 GB", "2.1 GB"),
     CaseAssociate("case_associate", "Case Associate", "Better document understanding, stronger field extraction, mixed English/Hindi support, and source-backed chronology work.", "2.8 GB", "4.9 GB"),
     SeniorDraftingSupport("senior_drafting_support", "Senior Drafting Support", "Deeper review, verification pass, longer bilingual bundles, and evidence or issue analysis.", "4.6 GB", "7.4 GB");
+
+    val compactSetupSummary: String
+        get() = when (this) {
+            QuickStart -> "Short files"
+            CaseAssociate -> "Most matters"
+            SeniorDraftingSupport -> "Longer bundles"
+        }
+
+    val storageNote: String
+        get() = when (this) {
+            QuickStart -> "Light footprint"
+            CaseAssociate -> "Balanced footprint"
+            SeniorDraftingSupport -> "Largest footprint"
+        }
+
+    val bestFor: String
+        get() = when (this) {
+            QuickStart -> "Fast intake, smaller devices, and standard extraction for short documents."
+            CaseAssociate -> "Most advocates who need source-backed extraction, chronology work, and mixed-language review on-device."
+            SeniorDraftingSupport -> "Longer bundles, hearing prep, verification passes, and stronger bilingual workflows."
+        }
+
+    val setupTimeLabel: String
+        get() = when (this) {
+            QuickStart -> "about 2 min"
+            CaseAssociate -> "about 4 min"
+            SeniorDraftingSupport -> "about 7 min"
+        }
 
     val extractionQuality: String
         get() = when (this) {
@@ -355,6 +386,8 @@ internal class AlphaRossController(
     var askDrafts by mutableStateOf<Map<String, String>>(emptyMap())
     var globalAskDraft by mutableStateOf("What needs my attention today?")
     var askSelectedScopeCaseId by mutableStateOf<String?>(null)
+    var askDocumentTitles by mutableStateOf<Map<String, String>>(emptyMap())
+    var globalAskDocumentTitle by mutableStateOf<String?>(null)
     var askWebEnabled by mutableStateOf(false)
     var pendingPublicLawQuestion by mutableStateOf<String?>(null)
     var pendingPublicLawScopeCaseId by mutableStateOf<String?>(null)
@@ -365,6 +398,7 @@ internal class AlphaRossController(
     var publicLawResults by mutableStateOf<List<AlphaPublicLawResult>>(emptyList())
     var localInferenceSmokeReport by mutableStateOf<AlphaLocalInferenceSmokeReport?>(null)
     var localInferenceSmokeRunning by mutableStateOf(false)
+    var refreshingCaseOverviewIds by mutableStateOf<Set<String>>(emptySet())
 
     fun activePack(): AlphaInstalledPack? = persisted.installedPacks.firstOrNull { it.isActive }
 
@@ -417,8 +451,28 @@ internal class AlphaRossController(
         }
     }
 
+    fun askDocumentTitle(scopeCaseId: String?): String? =
+        scopeCaseId?.let { askDocumentTitles[it] } ?: globalAskDocumentTitle
+
+    fun setAskDocumentTitle(scopeCaseId: String?, value: String?) {
+        if (scopeCaseId == null) {
+            globalAskDocumentTitle = value
+        } else {
+            askDocumentTitles = if (value.isNullOrBlank()) {
+                askDocumentTitles - scopeCaseId
+            } else {
+                askDocumentTitles + (scopeCaseId to value)
+            }
+        }
+    }
+
+    fun openAsk(scopeCaseId: String? = null, documentTitle: String? = null) {
+        setAskDocumentTitle(scopeCaseId, documentTitle)
+        pendingRoute = scopeCaseId?.let(AndroidAlphaRoute::AskCase) ?: AndroidAlphaRoute.AskRoss
+    }
+
     fun scopeLabel(caseId: String?): String =
-        caseId?.let { id -> persisted.cases.firstOrNull { it.id == id }?.title } ?: "All cases"
+        caseId?.let { id -> persisted.cases.firstOrNull { it.id == id }?.title } ?: "All matters"
 
     fun askConversation(scopeCaseId: String?): List<AlphaAskResult> =
         askHistory.filter { it.scopeCaseId == scopeCaseId }
@@ -1069,12 +1123,26 @@ internal class AlphaRossController(
 
     fun selectedCase(): AlphaCaseMatter? = selectedCaseId?.let { id -> persisted.cases.firstOrNull { it.id == id } } ?: persisted.cases.firstOrNull()
 
+    fun focusCase(caseId: String) {
+        selectedCaseId = caseId
+        persisted = persisted.copy(
+            cases = persisted.cases.map { matter ->
+                if (matter.id == caseId) matter.copy(updatedAt = nowIso()) else matter
+            }
+        )
+        save()
+    }
+
     fun openTaskCount(caseId: String? = null): Int = openTasks(caseId).size
 
+    fun isRefreshingCaseOverview(caseId: String): Boolean = refreshingCaseOverviewIds.contains(caseId)
+
     fun toggleTaskDone(taskId: String) {
+        var affectedCaseId: String? = null
         persisted = persisted.copy(
             tasks = (persisted.tasks ?: emptyList()).map { task ->
                 if (task.id == taskId) {
+                    affectedCaseId = task.caseId
                     task.copy(
                         status = if (task.status == AlphaTaskStatus.Open) AlphaTaskStatus.Done else AlphaTaskStatus.Open,
                         updatedAt = nowIso(),
@@ -1084,6 +1152,7 @@ internal class AlphaRossController(
                 }
             }
         )
+        affectedCaseId?.let(::rebuildCaseWorkspace)
         save()
     }
 
@@ -1110,7 +1179,28 @@ internal class AlphaRossController(
             ) + (persisted.tasks ?: emptyList()),
             ledgerEntries = listOf(localLedger("Task saved locally", "$cleaned was added on this device.")) + persisted.ledgerEntries,
         )
+        caseId?.let(::rebuildCaseWorkspace)
         save()
+    }
+
+    fun refreshCaseOverview(caseId: String) {
+        if (refreshingCaseOverviewIds.contains(caseId)) return
+        refreshingCaseOverviewIds = refreshingCaseOverviewIds + caseId
+
+        scope.launch {
+            delay(250)
+            rebuildCaseWorkspace(caseId)
+            persisted = persisted.copy(
+                ledgerEntries = listOf(
+                    localLedger(
+                        "Local matter overview refreshed",
+                        "Ross reviewed the matter files, tasks, and progress on this device.",
+                    )
+                ) + persisted.ledgerEntries,
+            )
+            save()
+            refreshingCaseOverviewIds = refreshingCaseOverviewIds - caseId
+        }
     }
 
     fun reviewQueue(caseId: String? = null): List<AlphaReviewQueueItem> {
@@ -1150,6 +1240,149 @@ internal class AlphaRossController(
         val refreshedCases = updateCaseNextHearing(persisted.cases, caseId, documentId)
         val refreshedTasks = syncReviewTasks(caseId, documentId, persisted.tasks ?: emptyList(), refreshedCases)
         persisted = persisted.copy(cases = refreshedCases, tasks = refreshedTasks)
+        rebuildCaseWorkspace(caseId)
+    }
+
+    private fun rebuildCaseWorkspace(caseId: String) {
+        val case = persisted.cases.firstOrNull { it.id == caseId } ?: return
+        val verifiedFields = case.documents
+            .flatMap { it.extractedFields }
+            .filter { !it.needsReview || it.userCorrected }
+        val pendingFields = case.documents
+            .flatMap { it.extractedFields }
+            .filter { it.needsReview }
+        val allOpenTaskItems = tasks(caseId).filter { it.status == AlphaTaskStatus.Open }
+        val planningTaskItems = allOpenTaskItems.filterNot { it.isRossSuggestedTask() }
+        val nextOpenTask = planningTaskItems.firstOrNull()
+        val ignoredFieldIds = case.advocateCorrections
+            .filter { it.correctionType == AlphaAdvocateCorrectionType.IgnoreField }
+            .mapNotNull { it.fieldId }
+            .toSet()
+        val reviewItemCount = case.documents.sumOf { document ->
+            document.extractedFields.count { it.needsReview && it.id !in ignoredFieldIds } +
+                document.extractionFindings.count { !it.resolved }
+        }
+
+        var refreshedForum = case.forum
+        if ((refreshedForum == "Forum pending" || refreshedForum.isBlank())) {
+            verifiedFields.firstOrNull { it.fieldType == AlphaExtractedLegalFieldType.Court }?.value?.let {
+                refreshedForum = it
+            }
+        }
+
+        val detectedNextDate = verifiedFields.firstOrNull { it.fieldType == AlphaExtractedLegalFieldType.NextDate }?.value
+        val refreshedNextHearing = alphaParsedDate(detectedNextDate) ?: case.nextHearing
+        val refreshedLocalNotice = if (detectedNextDate != null) {
+            "Case files stay on this device. Next date found: $detectedNextDate"
+        } else {
+            case.localNotice
+        }
+
+        val classificationText = case.documents
+            .mapNotNull { it.classification?.type?.name?.lowercase()?.replace('_', ' ') }
+            .takeIf { it.isNotEmpty() }
+            ?.joinToString(", ")
+
+        val refreshedSummary = if (case.documents.isEmpty()) {
+            "Ross is ready to build this matter once the first document is imported on this device."
+        } else {
+            buildList {
+                add("Ross reviewed ${case.documents.size} document(s) locally.")
+                classificationText?.let { add("File types seen: $it.") }
+                refreshedNextHearing?.let { add("Next date ${alphaMatterDateLabel(it)} is already captured.") }
+                when {
+                    reviewItemCount > 0 -> add("$reviewItemCount item(s) still need advocate review.")
+                    allOpenTaskItems.isNotEmpty() -> add("${allOpenTaskItems.size} open task(s) are saved for this matter.")
+                }
+                case.documents.maxByOrNull { it.importedAt }?.title?.let { add("Latest file: $it.") }
+            }.joinToString(" ")
+        }
+
+        val issueCandidates = verifiedFields
+            .filter {
+                it.fieldType == AlphaExtractedLegalFieldType.Issue ||
+                    it.fieldType == AlphaExtractedLegalFieldType.OrderDirection ||
+                    it.fieldType == AlphaExtractedLegalFieldType.Relief ||
+                    it.fieldType == AlphaExtractedLegalFieldType.Prayer
+            }
+            .map { it.value }
+        val refreshedHighlights = if (issueCandidates.isEmpty()) {
+            buildList {
+                refreshedNextHearing?.let { add("Prepare the file for ${alphaMatterDateLabel(it)}.") }
+                nextOpenTask?.let { add(it.title) }
+                if (reviewItemCount > 0) {
+                    add("Resolve $reviewItemCount review item(s) before relying on extracted details.")
+                }
+            }
+                .ifEmpty { listOf("Review extracted legal issues and directions.") }
+                .take(4)
+        } else {
+            issueCandidates.take(4)
+        }
+
+        val refreshedEvidenceNotes = case.documents
+            .flatMap { it.extractionFindings }
+            .filterNot { it.resolved }
+            .map { it.message }
+            .ifEmpty { listOf("Source-backed extraction is available for this matter.") }
+            .take(4)
+
+        val generatedTasks = buildList {
+            refreshedNextHearing?.let { add("Prepare this matter for ${alphaMatterDateLabel(it)}.") }
+            nextOpenTask?.let { task ->
+                add(task.dueDate?.let { "${task.title} by ${alphaMatterDateLabel(it)}." } ?: task.title)
+            }
+            when {
+                reviewItemCount > 0 -> add("Resolve $reviewItemCount review item(s) before relying on extracted details.")
+                pendingFields.isNotEmpty() -> add("Review uncertain extracted fields before relying on them.")
+            }
+            if (case.documents.isEmpty()) {
+                add("Import the first pleading, order, or note for this matter.")
+            } else {
+                add("Open source chips before sharing or filing.")
+            }
+            add("Generate a local chronology or order summary draft.")
+        }.distinct().take(3)
+
+        val refreshedCase = case.copy(
+            forum = refreshedForum,
+            nextHearing = refreshedNextHearing,
+            localNotice = refreshedLocalNotice,
+            summary = refreshedSummary,
+            issueHighlights = refreshedHighlights,
+            evidenceNotes = refreshedEvidenceNotes,
+            draftTasks = generatedTasks,
+            updatedAt = nowIso(),
+        )
+
+        persisted = persisted.copy(
+            cases = persisted.cases.map { existing ->
+                if (existing.id == caseId) refreshedCase else existing
+            }
+        )
+        syncRossSuggestedTasks(refreshedCase)
+    }
+
+    private fun syncRossSuggestedTasks(case: AlphaCaseMatter) {
+        val existingTasks = persisted.tasks ?: emptyList()
+        val preservedTasks = existingTasks.filterNot {
+            it.caseId == case.id && it.status == AlphaTaskStatus.Open && it.isRossSuggestedTask()
+        }
+        val generatedTasks = case.draftTasks.mapIndexedNotNull { index, title ->
+            if (preservedTasks.any { it.caseId == case.id && it.title == title }) {
+                null
+            } else {
+                AlphaTaskItem(
+                    caseId = case.id,
+                    title = title,
+                    notes = rossSuggestedTaskNote(case.id, index),
+                    dueDate = if (index == 0) case.nextHearing else null,
+                    priority = if (index == 0) AlphaTaskPriority.High else AlphaTaskPriority.Normal,
+                    source = AlphaTaskSource.System,
+                )
+            }
+        }
+        persisted = persisted.copy(tasks = generatedTasks + preservedTasks)
     }
 
     private fun buildLocalAskResult(question: String, scopeCaseId: String?): AlphaAskResult {
@@ -1186,10 +1419,10 @@ internal class AlphaRossController(
             question = question,
             scopeCaseId = scopeCaseId,
             scopeLabel = scopeLabel(scopeCaseId),
-            answerTitle = if (notFound) "I could not find this in your case files." else "Draft for advocate review",
-            answerSections = if (notFound) listOf("I could not find this in your case files.") else sections.take(3),
+            answerTitle = if (notFound) "Ross could not find this in local matter files yet." else "Ross draft for advocate review",
+            answerSections = if (notFound) listOf("Ross could not find this in local matter files yet.") else sections.take(3),
             caseFileSources = matchedSources.take(3),
-            statusNote = if (notFound) "Web search off" else "Case-file sources",
+            statusNote = if (notFound) "Web search off" else "Ross thread · local matter sources",
             needsReviewWarning = reviewQueue(scopeCaseId).takeIf { it.isNotEmpty() }?.size?.let { "$it item(s) still need review." },
         )
     }
@@ -1623,8 +1856,15 @@ internal class AlphaRossController(
         success = true,
     )
 
+    private fun rossSuggestedTaskNote(caseId: String, slot: Int): String =
+        "$ALPHA_ROSS_SUGGESTED_TASK_NOTE_PREFIX$caseId::$slot"
+
+    private fun AlphaTaskItem.isRossSuggestedTask(): Boolean =
+        notes?.startsWith(ALPHA_ROSS_SUGGESTED_TASK_NOTE_PREFIX) == true
+
     private fun normalizeLoadedState(state: AlphaPersistedState): AlphaPersistedState {
         val normalizedTab = when (state.selectedTab) {
+            AlphaAppTab.Capture -> AlphaAppTab.Home
             AlphaAppTab.Ask -> AlphaAppTab.Home
             AlphaAppTab.PublicLaw -> AlphaAppTab.Home
             AlphaAppTab.Exports -> AlphaAppTab.Home
@@ -1892,6 +2132,13 @@ private fun seedCases(): List<AlphaCaseMatter> {
 }
 
 fun nowIso(): String = java.time.Instant.now().toString()
+private fun alphaMatterDateLabel(rawDate: String): String {
+    val instant = runCatching { java.time.Instant.parse(rawDate) }.getOrNull() ?: return rawDate.take(10)
+    val formatter = java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy")
+    return instant
+        .atZone(java.time.ZoneId.systemDefault())
+        .format(formatter)
+}
 private fun sha256(value: String): String = MessageDigest.getInstance("SHA-256").digest(value.toByteArray()).joinToString("") { "%02x".format(it) }
 private fun String.toRuntimeMode(): AlphaPackRuntimeMode = when (lowercase()) {
     "deterministic_dev" -> AlphaPackRuntimeMode.DeterministicDev

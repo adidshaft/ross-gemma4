@@ -2,11 +2,11 @@ import SwiftUI
 
 public extension Font {
     static func rossSerifTitle() -> Font {
-        .custom("Baskerville", size: 34, relativeTo: .largeTitle)
+        .custom("Baskerville", size: 30, relativeTo: .title)
     }
     
     static func rossSerifHeadline() -> Font {
-        .custom("Baskerville", size: 24, relativeTo: .title2)
+        .custom("Baskerville", size: 21, relativeTo: .title3)
     }
 }
 
@@ -27,10 +27,10 @@ public struct RossCardStyle: ViewModifier {
 public struct RossPrimaryButtonStyle: ButtonStyle {
     public func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.headline)
+            .font(.subheadline.weight(.semibold))
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
+            .padding(.vertical, 14)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(Color.rossPillGradient.opacity(configuration.isPressed ? 0.9 : 1))

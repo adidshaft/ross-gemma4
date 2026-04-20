@@ -28,9 +28,9 @@ struct RossSectionCard<Content: View>: View {
 
                     if let subtitle {
                         Text(subtitle)
-                            .font(.subheadline)
+                            .font(.footnote)
                             .foregroundStyle(Color.rossInk.opacity(0.65))
-                            .lineSpacing(4)
+                            .lineSpacing(3)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
@@ -76,9 +76,9 @@ struct RossHeroCard<Content: View>: View {
 
             if let detail {
                 Text(detail)
-                    .font(.title3)
+                    .font(.body)
                     .foregroundStyle(Color.rossInk.opacity(0.8))
-                    .lineSpacing(6)
+                    .lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -108,9 +108,9 @@ struct RossInfoPill: View {
 
     var body: some View {
         Label(title, systemImage: systemImage)
-            .font(.footnote.weight(.medium))
+            .font(.caption.weight(.medium))
             .padding(.horizontal, 14)
-            .padding(.vertical, 10)
+            .padding(.vertical, 9)
             .background(.thinMaterial)
             .foregroundStyle(Color.rossInk)
             .clipShape(Capsule())
@@ -128,15 +128,18 @@ struct RossMetricTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label.uppercased())
-                .font(.caption.weight(.bold))
-                .tracking(1.5)
+                .font(.caption2.weight(.bold))
+                .tracking(1.1)
                 .foregroundStyle(tint.opacity(0.8))
+                .lineLimit(1)
+                .minimumScaleFactor(0.55)
+                .allowsTightening(true)
 
             Text(value)
-                .font(.title3.weight(.medium))
+                .font(.headline.weight(.medium))
                 .foregroundStyle(Color.rossInk)
         }
-        .padding(20)
+        .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(tint.opacity(0.05))
         .overlay {
@@ -169,12 +172,12 @@ struct RossActionTile: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
-                        .font(.headline)
+                        .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.rossInk)
                         .fixedSize(horizontal: false, vertical: true)
 
                     Text(detail)
-                        .font(.subheadline)
+                        .font(.footnote)
                         .foregroundStyle(Color.rossInk.opacity(0.6))
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
@@ -211,9 +214,9 @@ struct RossBulletRow: View {
                 .padding(.top, 3)
 
             Text(text)
-                .font(.subheadline)
+                .font(.footnote)
                 .foregroundStyle(Color.rossInk.opacity(0.75))
-                .lineSpacing(4)
+                .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }

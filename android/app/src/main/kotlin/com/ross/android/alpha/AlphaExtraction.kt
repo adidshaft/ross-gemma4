@@ -124,9 +124,9 @@ data class AlphaExtractedLegalField(
 ) {
     val confidenceLabel: String
         get() = when {
-            needsReview || confidence < 0.64 -> "Needs review"
-            confidence >= 0.84 -> "High"
-            else -> "Medium"
+            needsReview -> "Needs review"
+            confidence < 0.84 -> "Low confidence"
+            else -> "Verified"
         }
 }
 

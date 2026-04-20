@@ -19,13 +19,9 @@ enum AlphaAppTab: String, Codable, Hashable, CaseIterable, Sendable {
 extension AlphaAppTab {
     var normalizedForLawyerShell: AlphaAppTab {
         switch self {
-        case .home, .cases, .capture, .settings:
+        case .home, .cases, .settings:
             self
-        case .ask:
-            .home
-        case .publicLawLegacy:
-            .home
-        case .exportsLegacy:
+        case .ask, .capture, .publicLawLegacy, .exportsLegacy:
             .home
         }
     }
@@ -101,6 +97,28 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
             "Most advocates who need source-backed extraction, chronology work, and mixed-language review on-device."
         case .seniorDraftingSupport:
             "Longer bundles, hearing prep, verification passes, and stronger bilingual workflows."
+        }
+    }
+
+    var compactSetupSummary: String {
+        switch self {
+        case .quickStart:
+            "Short files"
+        case .caseAssociate:
+            "Most matters"
+        case .seniorDraftingSupport:
+            "Longer bundles"
+        }
+    }
+
+    var setupTimeLabel: String {
+        switch self {
+        case .quickStart:
+            "about 2 min"
+        case .caseAssociate:
+            "about 4 min"
+        case .seniorDraftingSupport:
+            "about 7 min"
         }
     }
 
@@ -586,13 +604,13 @@ struct AlphaExtractedLegalField: Identifiable, Codable, Hashable, Sendable {
     }
 
     var confidenceLabel: String {
-        if needsReview || confidence < 0.64 {
+        if needsReview {
             return "Needs review"
         }
-        if confidence >= 0.84 {
-            return "High"
+        if confidence < 0.84 {
+            return "Low confidence"
         }
-        return "Medium"
+        return "Verified"
     }
 }
 
