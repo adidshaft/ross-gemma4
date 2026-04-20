@@ -9,9 +9,8 @@ enum OnboardingStage: String, Sendable {
 
 enum WorkbenchTab: String, Hashable, Sendable {
     case workspace
-    case publicLaw
-    case privacyLedger
-    case settings
+    case capture
+    case more
 }
 
 @MainActor

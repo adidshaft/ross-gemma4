@@ -6,6 +6,7 @@ struct WorkbenchRootView: View {
 
     var body: some View {
         TabView(selection: $state.selectedTab) {
+
             CaseWorkspaceView(
                 caseRepository: services.caseRepository,
                 privacyLedger: services.privacyLedgerService,
@@ -13,37 +14,27 @@ struct WorkbenchRootView: View {
                 state: state,
                 settingsStore: services.settingsStore
             )
-            .tabItem {
-                Label("Workspace", systemImage: "folder")
-            }
+            .tabItem { Label("Cases", systemImage: "doc.text") }
             .tag(WorkbenchTab.workspace)
 
-            PublicLawSearchPreviewView(
-                publicLawSearchService: services.publicLawSearchService,
-                settingsStore: services.settingsStore,
+            QuickCaptureTabView(
+                caseRepository: services.caseRepository,
+                privacyLedger: services.privacyLedgerService,
                 state: state
             )
-            .tabItem {
-                Label("Public Law", systemImage: "magnifyingglass")
-            }
-            .tag(WorkbenchTab.publicLaw)
+            .tabItem { Label("Capture", systemImage: "pencil") }
+            .tag(WorkbenchTab.capture)
 
-            PrivacyLedgerView(privacyLedger: services.privacyLedgerService)
-                .tabItem {
-                    Label("Ledger", systemImage: "checklist")
-                }
-                .tag(WorkbenchTab.privacyLedger)
-
-            SettingsView(
+            MoreView(
+                publicLawSearchService: services.publicLawSearchService,
                 modelDownloadService: services.modelDownloadService,
+                privacyLedger: services.privacyLedgerService,
                 state: state,
                 settingsStore: services.settingsStore
             )
-            .tabItem {
-                Label("Settings", systemImage: "gearshape")
-            }
-            .tag(WorkbenchTab.settings)
+            .tabItem { Label("More", systemImage: "ellipsis") }
+            .tag(WorkbenchTab.more)
         }
-        .tint(Color(red: 0.08, green: 0.33, blue: 0.55))
+        .tint(Color.rossAccent)
     }
 }
