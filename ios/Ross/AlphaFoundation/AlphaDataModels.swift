@@ -19,10 +19,12 @@ enum AlphaAppTab: String, Codable, Hashable, CaseIterable, Sendable {
 extension AlphaAppTab {
     var normalizedForLawyerShell: AlphaAppTab {
         switch self {
-        case .home, .cases, .capture, .ask, .settings:
+        case .home, .cases, .capture, .settings:
             self
+        case .ask:
+            .home
         case .publicLawLegacy:
-            .ask
+            .home
         case .exportsLegacy:
             .home
         }

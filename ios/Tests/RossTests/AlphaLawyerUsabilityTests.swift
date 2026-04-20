@@ -229,6 +229,32 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    func testFinishPackSetupStartsAssistantSetup() async throws {
+        try await withRestoredStore { store in
+            try await store.replace(with: AlphaPersistedState.seed())
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+
+            await MainActor.run {
+                model.selectedTier = .caseAssociate
+                model.finishPackSetup()
+            }
+
+            try await Task.sleep(nanoseconds: 150_000_000)
+
+            let snapshot = await MainActor.run { model.persisted }
+            let hasAssistantSetupState = snapshot.modelJobs.contains(where: { $0.tier == .caseAssociate })
+                || snapshot.installedPacks.contains(where: { $0.tier == .caseAssociate })
+
+            XCTAssertEqual(snapshot.onboardingStage, .completed)
+            XCTAssertEqual(snapshot.selectedTab, .home)
+            XCTAssertTrue(hasAssistantSetupState)
+        }
+    }
+
     private func withRestoredStore(
         _ body: (AlphaRossStore) async throws -> Void
     ) async throws {

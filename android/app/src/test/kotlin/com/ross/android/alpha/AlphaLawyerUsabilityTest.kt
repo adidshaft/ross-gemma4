@@ -210,6 +210,22 @@ class AlphaLawyerUsabilityTest {
         assertEquals("2026-05-15", resolvedDate)
     }
 
+    @Test
+    fun `finish pack setup starts assistant setup`() {
+        val controller = buildController(secretKeyProvider = InMemorySecretKeyProvider())
+
+        controller.selectedTier = AlphaCapabilityTier.CaseAssociate
+        controller.finishPackSetup()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        val hasAssistantSetupState = controller.persisted.modelJobs.any { it.tier == AlphaCapabilityTier.CaseAssociate }
+            || controller.persisted.installedPacks.any { it.tier == AlphaCapabilityTier.CaseAssociate }
+
+        assertEquals(AlphaOnboardingStage.Completed, controller.persisted.onboardingStage)
+        assertEquals(AlphaAppTab.Home, controller.persisted.selectedTab)
+        assertTrue(hasAssistantSetupState)
+    }
+
     private fun buildController(
         secretKeyProvider: AlphaSecretKeyProvider,
         publicLawSearchOverride: (suspend (AlphaPublicLawPreview) -> List<AlphaPublicLawResult>)? = null,

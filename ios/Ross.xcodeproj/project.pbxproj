@@ -9,31 +9,22 @@
 /* Begin PBXBuildFile section */
 		0ECCBB7AFD2564D438417E4C /* PrivacyLedgerModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9791BC5E68F179CB5B4CF7F2 /* PrivacyLedgerModels.swift */; };
 		0EDB9F7CC43DFFD0087DF346 /* AppColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33E32AA2139827A918D6F370 /* AppColors.swift */; };
-		19E7058D6576F5678297EDF8 /* WorkbenchRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C58160A720B5A29084F373D4 /* WorkbenchRootView.swift */; };
 		240379AAA597D8305ADB7E74 /* CapabilityTier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B1B86C4EA73F7EFEB2A2957 /* CapabilityTier.swift */; };
 		28559E6CD047907D7EC5BCE7 /* LocalRuntimeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44F9771029315078F6814ED /* LocalRuntimeService.swift */; };
-		363B1DD7B6620B6D6528868C /* AppServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2540A98E02A0D9CA0ABCF0CB /* AppServices.swift */; };
-		36E4A6057AFCB3301CB04D7C /* CaseWorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E1E449A8BB46C1B7E45A885 /* CaseWorkspaceView.swift */; };
 		3A0D92B1EBC4BCEF456D7CBA /* AIInteractionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96933B6A6262C9829C993B58 /* AIInteractionModels.swift */; };
-		3E7670A1C9611B7D44B05BF3 /* PrivateAIPackSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6E5A10D5D4B51F2C5821BDE /* PrivateAIPackSetupView.swift */; };
 		5411194E81EF04A19C89CC5E /* RossChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = A36625048660A9BEF1C77916 /* RossChrome.swift */; };
 		5EB6D4908BD6084EA7D6504F /* PrivacyLedgerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E8BFA313EEFE8B4B54875F9 /* PrivacyLedgerService.swift */; };
-		73095EB2BC0BE123916D7FE8 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD58892F62FBC4A3F2EA3817 /* AppState.swift */; };
-		7518FE643509A42F3FAC9F2D /* AskCaseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 959915FBA4BE9F83B8984B48 /* AskCaseView.swift */; };
 		762FC2EFCA6F7FAD2AE84BED /* AlphaRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A64616242F098492C6821152 /* AlphaRootView.swift */; };
+		79665FD65AED0703B4E6CE18 /* PublicLawSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B78B6D618FCC9AB6389E9840 /* PublicLawSearchService.swift */; };
+		8ADED04F785C7104364942AB /* AlphaStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6263477CDD4DB63E41096E91 /* AlphaStore.swift */; };
+		9574008E6F558766CA89AADC /* ModelDownloadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9500C3C48AB19DA431C6DB9E /* ModelDownloadService.swift */; };
 		A1B2C3D4E5F60718293A4B50 /* AlphaExtractionPipelinePlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B60 /* AlphaExtractionPipelinePlan.swift */; };
 		A1B2C3D4E5F60718293A4B51 /* AlphaLocalModelRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B61 /* AlphaLocalModelRuntime.swift */; };
 		A1B2C3D4E5F60718293A4B52 /* AlphaModelInvocationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B62 /* AlphaModelInvocationStore.swift */; };
 		A1B2C3D4E5F60718293A4B53 /* AlphaModelOutputValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B63 /* AlphaModelOutputValidator.swift */; };
-		79665FD65AED0703B4E6CE18 /* PublicLawSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B78B6D618FCC9AB6389E9840 /* PublicLawSearchService.swift */; };
-		8ADED04F785C7104364942AB /* AlphaStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6263477CDD4DB63E41096E91 /* AlphaStore.swift */; };
-		8B7F66DA22ECB93AC82BA945 /* PrivateAISettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFD5D672549B5EE7B9F3C952 /* PrivateAISettingsView.swift */; };
-		9574008E6F558766CA89AADC /* ModelDownloadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9500C3C48AB19DA431C6DB9E /* ModelDownloadService.swift */; };
-		9A1E09BBB9667C38FACE4FA3 /* PrivacyLedgerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 208F177DC5FE83AAD338FE5B /* PrivacyLedgerView.swift */; };
 		AA0DB8A5AC9BCEE123B57793 /* AppDesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87D0913ED9B148CC8BE59F4A /* AppDesignSystem.swift */; };
 		AD17F6CACC0518174C6E81FC /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4528894965524281324A1463 /* SettingsStore.swift */; };
 		AFD74FC92C786DC292EAB85C /* SettingsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90D3BC98733B6000CDDD236 /* SettingsModels.swift */; };
-		B0B4593D34CA732F15082783 /* QuickCaptureReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC3E44F81110A183C42CAA16 /* QuickCaptureReviewView.swift */; };
 		BB144B21D65F62290733E7B4 /* DeviceCapability.swift in Sources */ = {isa = PBXBuildFile; fileRef = B079B9809A778D83A52CDD22 /* DeviceCapability.swift */; };
 		BBCA838D7254A844119D400C /* CaseModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 734B164CAB7FDE236793522F /* CaseModels.swift */; };
 		C30FD444D05D2776411C759B /* ScreenshotExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91DF8B765C4CFD91368F7CB /* ScreenshotExporter.swift */; };
@@ -41,54 +32,37 @@
 		CCEFEC94E7BC87A862C8F913 /* AlphaDataModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BDF2721944CAB65DC4F629C /* AlphaDataModels.swift */; };
 		CF913D4FB64C57942D3BA1BA /* CaseRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = E74DB047A5F457623AD25580 /* CaseRepository.swift */; };
 		D59528BC93111C2F548C1C55 /* DeviceCapabilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF026A2C0B93DFBD17AEFF9A /* DeviceCapabilityService.swift */; };
-		D5A84AC7697140AEBE01EBC4 /* PublicLawSearchPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2551D80D5F8EE2F7BD3173AA /* PublicLawSearchPreviewView.swift */; };
-		E8A03E6161868A6ADE16F559 /* RossRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A285CC52BDC749193DCA4EC /* RossRootView.swift */; };
-		E999681794EA2A48C5F3BCA1 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C328EE1C7C1206C8482A89EF /* SettingsView.swift */; };
-		F17BA558AE729BE0019BF212 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 286217CBE1D1B244D3D7175B /* OnboardingView.swift */; };
 		FC118081573E2805C554D5A8 /* RossApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04E71658210E395C620C6267 /* RossApp.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		04E71658210E395C620C6267 /* RossApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RossApp.swift; sourceTree = "<group>"; };
 		1E8BFA313EEFE8B4B54875F9 /* PrivacyLedgerService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PrivacyLedgerService.swift; sourceTree = "<group>"; };
-		208F177DC5FE83AAD338FE5B /* PrivacyLedgerView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PrivacyLedgerView.swift; sourceTree = "<group>"; };
-		2540A98E02A0D9CA0ABCF0CB /* AppServices.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppServices.swift; sourceTree = "<group>"; };
-		2551D80D5F8EE2F7BD3173AA /* PublicLawSearchPreviewView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PublicLawSearchPreviewView.swift; sourceTree = "<group>"; };
-		286217CBE1D1B244D3D7175B /* OnboardingView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		33E32AA2139827A918D6F370 /* AppColors.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppColors.swift; sourceTree = "<group>"; };
-		3A285CC52BDC749193DCA4EC /* RossRootView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RossRootView.swift; sourceTree = "<group>"; };
 		4528894965524281324A1463 /* SettingsStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
 		6263477CDD4DB63E41096E91 /* AlphaStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaStore.swift; sourceTree = "<group>"; };
 		64DE66B33156149EA2DB94E5 /* Ross.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ross.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		734B164CAB7FDE236793522F /* CaseModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CaseModels.swift; sourceTree = "<group>"; };
 		7BDF2721944CAB65DC4F629C /* AlphaDataModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaDataModels.swift; sourceTree = "<group>"; };
+		87D0913ED9B148CC8BE59F4A /* AppDesignSystem.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppDesignSystem.swift; sourceTree = "<group>"; };
+		9500C3C48AB19DA431C6DB9E /* ModelDownloadService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ModelDownloadService.swift; sourceTree = "<group>"; };
+		96933B6A6262C9829C993B58 /* AIInteractionModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AIInteractionModels.swift; sourceTree = "<group>"; };
+		9791BC5E68F179CB5B4CF7F2 /* PrivacyLedgerModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PrivacyLedgerModels.swift; sourceTree = "<group>"; };
+		9B1B86C4EA73F7EFEB2A2957 /* CapabilityTier.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CapabilityTier.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B60 /* AlphaExtractionPipelinePlan.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaExtractionPipelinePlan.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B61 /* AlphaLocalModelRuntime.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaLocalModelRuntime.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B62 /* AlphaModelInvocationStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaModelInvocationStore.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B63 /* AlphaModelOutputValidator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaModelOutputValidator.swift; sourceTree = "<group>"; };
-		87D0913ED9B148CC8BE59F4A /* AppDesignSystem.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppDesignSystem.swift; sourceTree = "<group>"; };
-		9500C3C48AB19DA431C6DB9E /* ModelDownloadService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ModelDownloadService.swift; sourceTree = "<group>"; };
-		959915FBA4BE9F83B8984B48 /* AskCaseView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AskCaseView.swift; sourceTree = "<group>"; };
-		96933B6A6262C9829C993B58 /* AIInteractionModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AIInteractionModels.swift; sourceTree = "<group>"; };
-		9791BC5E68F179CB5B4CF7F2 /* PrivacyLedgerModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PrivacyLedgerModels.swift; sourceTree = "<group>"; };
-		9B1B86C4EA73F7EFEB2A2957 /* CapabilityTier.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CapabilityTier.swift; sourceTree = "<group>"; };
-		9E1E449A8BB46C1B7E45A885 /* CaseWorkspaceView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CaseWorkspaceView.swift; sourceTree = "<group>"; };
 		A36625048660A9BEF1C77916 /* RossChrome.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RossChrome.swift; sourceTree = "<group>"; };
 		A64616242F098492C6821152 /* AlphaRootView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaRootView.swift; sourceTree = "<group>"; };
 		A90D3BC98733B6000CDDD236 /* SettingsModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SettingsModels.swift; sourceTree = "<group>"; };
-		AC3E44F81110A183C42CAA16 /* QuickCaptureReviewView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = QuickCaptureReviewView.swift; sourceTree = "<group>"; };
 		B079B9809A778D83A52CDD22 /* DeviceCapability.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeviceCapability.swift; sourceTree = "<group>"; };
 		B44F9771029315078F6814ED /* LocalRuntimeService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LocalRuntimeService.swift; sourceTree = "<group>"; };
-		B6E5A10D5D4B51F2C5821BDE /* PrivateAIPackSetupView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PrivateAIPackSetupView.swift; sourceTree = "<group>"; };
 		B78B6D618FCC9AB6389E9840 /* PublicLawSearchService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PublicLawSearchService.swift; sourceTree = "<group>"; };
 		B91DF8B765C4CFD91368F7CB /* ScreenshotExporter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ScreenshotExporter.swift; sourceTree = "<group>"; };
-		BD58892F62FBC4A3F2EA3817 /* AppState.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
-		C328EE1C7C1206C8482A89EF /* SettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		C58160A720B5A29084F373D4 /* WorkbenchRootView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkbenchRootView.swift; sourceTree = "<group>"; };
 		CF026A2C0B93DFBD17AEFF9A /* DeviceCapabilityService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeviceCapabilityService.swift; sourceTree = "<group>"; };
 		E74DB047A5F457623AD25580 /* CaseRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CaseRepository.swift; sourceTree = "<group>"; };
 		EA11EC2983D1813DE6D0B242 /* ModelCatalogService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ModelCatalogService.swift; sourceTree = "<group>"; };
-		EFD5D672549B5EE7B9F3C952 /* PrivateAISettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PrivateAISettingsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -106,12 +80,10 @@
 			isa = PBXGroup;
 			children = (
 				9B8B81CAFA52D8D752470B13 /* App */,
-				B21320AD826580ED4B7CE4F0 /* Features */,
 				B3EC5C7A40F0811C8AE85E70 /* Models */,
 				45827E9368D3FC6B92F449D2 /* Services */,
 				4F9C87718BA96D9B939104A1 /* AlphaFoundation */,
 			);
-			name = Ross;
 			path = Ross;
 			sourceTree = "<group>";
 		};
@@ -122,25 +94,6 @@
 				8F1434972BB058919DE1A56E /* Frameworks */,
 				0643A5B8F57367B55641A9AD /* Ross */,
 			);
-			sourceTree = "<group>";
-		};
-		0B7C7BD23DE1AE9AF5239C41 /* Settings */ = {
-			isa = PBXGroup;
-			children = (
-				EFD5D672549B5EE7B9F3C952 /* PrivateAISettingsView.swift */,
-				C328EE1C7C1206C8482A89EF /* SettingsView.swift */,
-			);
-			name = Settings;
-			path = Settings;
-			sourceTree = "<group>";
-		};
-		1899F453AC36B5BAA9B5D31D /* Workspace */ = {
-			isa = PBXGroup;
-			children = (
-				9E1E449A8BB46C1B7E45A885 /* CaseWorkspaceView.swift */,
-			);
-			name = Workspace;
-			path = Workspace;
 			sourceTree = "<group>";
 		};
 		21411E6D08C5AB212E75D7FB /* iOS */ = {
@@ -162,7 +115,6 @@
 				B78B6D618FCC9AB6389E9840 /* PublicLawSearchService.swift */,
 				4528894965524281324A1463 /* SettingsStore.swift */,
 			);
-			name = Services;
 			path = Services;
 			sourceTree = "<group>";
 		};
@@ -177,7 +129,6 @@
 				6263477CDD4DB63E41096E91 /* AlphaStore.swift */,
 				A64616242F098492C6821152 /* AlphaRootView.swift */,
 			);
-			name = AlphaFoundation;
 			path = AlphaFoundation;
 			sourceTree = "<group>";
 		};
@@ -187,33 +138,6 @@
 				64DE66B33156149EA2DB94E5 /* Ross.app */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		74C075C4B25ECA15962DFD74 /* PrivacyLedger */ = {
-			isa = PBXGroup;
-			children = (
-				208F177DC5FE83AAD338FE5B /* PrivacyLedgerView.swift */,
-			);
-			name = PrivacyLedger;
-			path = PrivacyLedger;
-			sourceTree = "<group>";
-		};
-		75857BF10DC0876E633C0610 /* PrivateAI */ = {
-			isa = PBXGroup;
-			children = (
-				B6E5A10D5D4B51F2C5821BDE /* PrivateAIPackSetupView.swift */,
-			);
-			name = PrivateAI;
-			path = PrivateAI;
-			sourceTree = "<group>";
-		};
-		7ABE8CA5A6E23105BB82D18A /* Capture */ = {
-			isa = PBXGroup;
-			children = (
-				AC3E44F81110A183C42CAA16 /* QuickCaptureReviewView.swift */,
-			);
-			name = Capture;
-			path = Capture;
 			sourceTree = "<group>";
 		};
 		8F1434972BB058919DE1A56E /* Frameworks */ = {
@@ -229,32 +153,11 @@
 			children = (
 				33E32AA2139827A918D6F370 /* AppColors.swift */,
 				87D0913ED9B148CC8BE59F4A /* AppDesignSystem.swift */,
-				2540A98E02A0D9CA0ABCF0CB /* AppServices.swift */,
-				BD58892F62FBC4A3F2EA3817 /* AppState.swift */,
 				04E71658210E395C620C6267 /* RossApp.swift */,
 				A36625048660A9BEF1C77916 /* RossChrome.swift */,
-				3A285CC52BDC749193DCA4EC /* RossRootView.swift */,
 				B91DF8B765C4CFD91368F7CB /* ScreenshotExporter.swift */,
-				C58160A720B5A29084F373D4 /* WorkbenchRootView.swift */,
 			);
-			name = App;
 			path = App;
-			sourceTree = "<group>";
-		};
-		B21320AD826580ED4B7CE4F0 /* Features */ = {
-			isa = PBXGroup;
-			children = (
-				FE5575A23F92C4A6821B7C0E /* AskCase */,
-				7ABE8CA5A6E23105BB82D18A /* Capture */,
-				E8297E8EA0A65E15DC5A0E7B /* Onboarding */,
-				74C075C4B25ECA15962DFD74 /* PrivacyLedger */,
-				75857BF10DC0876E633C0610 /* PrivateAI */,
-				E5EAF0033D9BE3A3C298EA44 /* PublicLaw */,
-				0B7C7BD23DE1AE9AF5239C41 /* Settings */,
-				1899F453AC36B5BAA9B5D31D /* Workspace */,
-			);
-			name = Features;
-			path = Features;
 			sourceTree = "<group>";
 		};
 		B3EC5C7A40F0811C8AE85E70 /* Models */ = {
@@ -267,35 +170,7 @@
 				9791BC5E68F179CB5B4CF7F2 /* PrivacyLedgerModels.swift */,
 				A90D3BC98733B6000CDDD236 /* SettingsModels.swift */,
 			);
-			name = Models;
 			path = Models;
-			sourceTree = "<group>";
-		};
-		E5EAF0033D9BE3A3C298EA44 /* PublicLaw */ = {
-			isa = PBXGroup;
-			children = (
-				2551D80D5F8EE2F7BD3173AA /* PublicLawSearchPreviewView.swift */,
-			);
-			name = PublicLaw;
-			path = PublicLaw;
-			sourceTree = "<group>";
-		};
-		E8297E8EA0A65E15DC5A0E7B /* Onboarding */ = {
-			isa = PBXGroup;
-			children = (
-				286217CBE1D1B244D3D7175B /* OnboardingView.swift */,
-			);
-			name = Onboarding;
-			path = Onboarding;
-			sourceTree = "<group>";
-		};
-		FE5575A23F92C4A6821B7C0E /* AskCase */ = {
-			isa = PBXGroup;
-			children = (
-				959915FBA4BE9F83B8984B48 /* AskCaseView.swift */,
-			);
-			name = AskCase;
-			path = AskCase;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -324,9 +199,14 @@
 		C44803352A3A9F4944B0D510 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				BuildIndependentTargetsInParallel = YES;
 				LastSwiftUpdateCheck = 2600;
 				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					F8CED3779CE18F8EDEDFD086 = {
+						DevelopmentTeam = JP4HU7X6G7;
+						ProvisioningStyle = Automatic;
+					};
+				};
 			};
 			buildConfigurationList = 70696EE77B0E1C0B43EC6FF5 /* Build configuration list for PBXProject "Ross" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -337,8 +217,6 @@
 				Base,
 			);
 			mainGroup = 06FD77852FCA4461DC46B020;
-			minimizedProjectReferenceProxies = 0;
-			preferredProjectObjectVersion = 77;
 			productRefGroup = 5735844495CBC90D3295DF8A /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -365,22 +243,9 @@
 			files = (
 				0EDB9F7CC43DFFD0087DF346 /* AppColors.swift in Sources */,
 				AA0DB8A5AC9BCEE123B57793 /* AppDesignSystem.swift in Sources */,
-				363B1DD7B6620B6D6528868C /* AppServices.swift in Sources */,
-				73095EB2BC0BE123916D7FE8 /* AppState.swift in Sources */,
 				FC118081573E2805C554D5A8 /* RossApp.swift in Sources */,
 				5411194E81EF04A19C89CC5E /* RossChrome.swift in Sources */,
-				E8A03E6161868A6ADE16F559 /* RossRootView.swift in Sources */,
 				C30FD444D05D2776411C759B /* ScreenshotExporter.swift in Sources */,
-				19E7058D6576F5678297EDF8 /* WorkbenchRootView.swift in Sources */,
-				7518FE643509A42F3FAC9F2D /* AskCaseView.swift in Sources */,
-				B0B4593D34CA732F15082783 /* QuickCaptureReviewView.swift in Sources */,
-				F17BA558AE729BE0019BF212 /* OnboardingView.swift in Sources */,
-				9A1E09BBB9667C38FACE4FA3 /* PrivacyLedgerView.swift in Sources */,
-				3E7670A1C9611B7D44B05BF3 /* PrivateAIPackSetupView.swift in Sources */,
-				D5A84AC7697140AEBE01EBC4 /* PublicLawSearchPreviewView.swift in Sources */,
-				8B7F66DA22ECB93AC82BA945 /* PrivateAISettingsView.swift in Sources */,
-				E999681794EA2A48C5F3BCA1 /* SettingsView.swift in Sources */,
-				36E4A6057AFCB3301CB04D7C /* CaseWorkspaceView.swift in Sources */,
 				3A0D92B1EBC4BCEF456D7CBA /* AIInteractionModels.swift in Sources */,
 				240379AAA597D8305ADB7E74 /* CapabilityTier.swift in Sources */,
 				BBCA838D7254A844119D400C /* CaseModels.swift in Sources */,
@@ -417,7 +282,7 @@
 				"CODE_SIGNING_ALLOWED[sdk=iphonesimulator*]" = NO;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = JP4HU7X6G7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Ross;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -483,8 +348,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_COMPILATION_MODE = wholemodule;
-				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -562,7 +426,7 @@
 				"CODE_SIGNING_ALLOWED[sdk=iphonesimulator*]" = NO;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = JP4HU7X6G7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Ross;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

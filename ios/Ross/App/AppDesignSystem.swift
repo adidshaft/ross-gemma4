@@ -24,16 +24,24 @@ public struct RossCardStyle: ViewModifier {
     }
 }
 
-public struct RossPrimaryButtonStyle: ViewModifier {
-    public func body(content: Content) -> some View {
-        content
+public struct RossPrimaryButtonStyle: ButtonStyle {
+    public func makeBody(configuration: Configuration) -> some View {
+        configuration.label
             .font(.headline)
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
-            .background(Color.rossPillGradient)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .shadow(color: Color.rossAccent.opacity(0.3), radius: 10, y: 4)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.rossPillGradient.opacity(configuration.isPressed ? 0.9 : 1))
+            )
+            .shadow(
+                color: Color.rossAccent.opacity(configuration.isPressed ? 0.18 : 0.3),
+                radius: configuration.isPressed ? 6 : 10,
+                y: configuration.isPressed ? 2 : 4
+            )
+            .scaleEffect(configuration.isPressed ? 0.99 : 1)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }
 
@@ -43,6 +51,6 @@ public extension View {
     }
     
     func rossPrimaryButtonStyle() -> some View {
-        self.modifier(RossPrimaryButtonStyle())
+        self.buttonStyle(RossPrimaryButtonStyle())
     }
 }

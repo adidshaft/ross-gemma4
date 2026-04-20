@@ -14,7 +14,7 @@ enum RossLaunchMode {
 }
 
 struct ScreenshotExportView: View {
-    @State private var status = "Rendering screenshots…"
+    @State private var status = "Rendering screenshots..."
 
     var body: some View {
         VStack(spacing: 16) {
@@ -57,67 +57,246 @@ private struct RossScreenshotExporter {
         .appending(path: "tmp/ui-screenshots", directoryHint: .isDirectory)
 
     func export() async throws -> Int {
-        try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
+        let fileManager = FileManager.default
+        try fileManager.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
+        try clearExistingScreenshots(using: fileManager)
 
-        let onboardingContext = await makeContext(stage: .welcome)
-        let packContext = await makeContext(stage: .privateAIPack)
-        let workspaceContext = await makeContext(stage: .completed, activePack: .caseAssociate)
-        let askCaseContext = await makeContext(stage: .completed, activePack: .caseAssociate)
+        let onboardingState = makePreviewState(stage: .onboarding)
+        let assistantSetupState = makePreviewState(stage: .privateAIPack)
+        let homeState = makePreviewState(stage: .completed, selectedTab: .home, activePack: .caseAssociate)
+        let importState = makePreviewState(stage: .completed, selectedTab: .capture, activePack: .caseAssociate)
+        let workspaceState = makePreviewState(stage: .completed, selectedTab: .home, activePack: .caseAssociate)
+        let reviewFixture = makeReviewFixtureState()
+
+        var exportedCount = 0
 
         try render(
-            OnboardingView(state: onboardingContext.state),
+            AlphaRossRootView(initialModel: AlphaRossModel(previewState: onboardingState)),
             name: "ios-onboarding",
             size: CGSize(width: 430, height: 932)
         )
+        exportedCount += 1
+
         try render(
-            PrivateAIPackSetupView(
-                modelDownloadService: packContext.services.modelDownloadService,
-                state: packContext.state,
-                settingsStore: packContext.services.settingsStore
-            ),
-            name: "ios-private-ai-pack",
+            AlphaRossRootView(initialModel: AlphaRossModel(previewState: assistantSetupState)),
+            name: "ios-private-assistant",
             size: CGSize(width: 430, height: 932)
         )
+        exportedCount += 1
+
         try render(
-            CaseWorkspaceView(
-                caseRepository: workspaceContext.services.caseRepository,
-                privacyLedger: workspaceContext.services.privacyLedgerService,
-                localRuntimeService: workspaceContext.services.localRuntimeService,
-                state: workspaceContext.state,
-                settingsStore: workspaceContext.services.settingsStore
-            ),
-            name: "ios-workspace",
+            AlphaRossRootView(initialModel: AlphaRossModel(previewState: homeState)),
+            name: "ios-home",
             size: CGSize(width: 430, height: 1180)
         )
+        exportedCount += 1
+
         try render(
-            NavigationStack {
-                AskCaseView(
-                    localRuntimeService: askCaseContext.services.localRuntimeService,
-                    state: askCaseContext.state,
-                    settingsStore: askCaseContext.services.settingsStore
-                )
-            },
-            name: "ios-ask-case",
+            AlphaRossRootView(initialModel: AlphaRossModel(previewState: importState)),
+            name: "ios-import",
             size: CGSize(width: 430, height: 1180)
         )
+        exportedCount += 1
 
-        return 4
-    }
-
-    private func makeContext(
-        stage: OnboardingStage,
-        activePack: CapabilityTier? = nil
-    ) async -> (services: AppServices, state: AppState) {
-        let services = AppServices.bootstrap()
-        let state = AppState()
-        await state.bootstrap(using: services)
-        state.onboardingStage = stage
-
-        if let activePack {
-            services.settingsStore.activatePack(activePack)
+        if let workspaceCaseID = workspaceState.cases.first?.id {
+            try render(
+                AlphaRossRootView(
+                    initialModel: AlphaRossModel(
+                        previewState: workspaceState,
+                        previewPath: [.caseWorkspace(workspaceCaseID)]
+                    )
+                ),
+                name: "ios-case-workspace",
+                size: CGSize(width: 430, height: 1180)
+            )
+            exportedCount += 1
         }
 
-        return (services, state)
+        try render(
+            AlphaRossRootView(
+                initialModel: AlphaRossModel(
+                    previewState: reviewFixture.state,
+                    previewPath: [.documentViewer(reviewFixture.caseID, reviewFixture.documentID, 4)]
+                )
+            ),
+            name: "ios-document-review",
+            size: CGSize(width: 430, height: 1320)
+        )
+        exportedCount += 1
+
+        return exportedCount
+    }
+
+    private func clearExistingScreenshots(using fileManager: FileManager) throws {
+        let existingFiles = try fileManager.contentsOfDirectory(at: outputDirectory, includingPropertiesForKeys: nil)
+        for file in existingFiles where file.pathExtension.lowercased() == "png" {
+            try fileManager.removeItem(at: file)
+        }
+    }
+
+    private func makePreviewState(
+        stage: AlphaOnboardingStage,
+        selectedTab: AlphaAppTab = .home,
+        activePack: AlphaCapabilityTier? = nil
+    ) -> AlphaPersistedState {
+        var state = AlphaPersistedState.seed()
+        state.onboardingStage = stage
+        state.selectedTab = selectedTab
+
+        if let activePack {
+            state.settings.activeTier = activePack
+            state.installedPacks = [
+                AlphaInstalledModelPack(
+                    packId: "\(activePack.rawValue)-pack",
+                    tier: activePack,
+                    installPath: "preview/\(activePack.rawValue).pack",
+                    checksumSha256: String(repeating: "a", count: 64),
+                    isActive: true
+                )
+            ]
+            state.modelJobs = []
+        }
+
+        return state
+    }
+
+    private func makeReviewFixtureState() -> (state: AlphaPersistedState, caseID: UUID, documentID: UUID) {
+        var state = makePreviewState(stage: .completed, selectedTab: .home, activePack: .caseAssociate)
+        guard var caseMatter = state.cases.first, var document = state.cases.first?.documents.first else {
+            return (state, UUID(), UUID())
+        }
+
+        let reviewDateSource = AlphaSourceRef(
+            caseId: caseMatter.id,
+            documentId: document.id,
+            documentTitle: document.title,
+            pageNumber: 4,
+            paragraphRange: "¶2",
+            textSnippet: "List the matter on 28 April 2026 for compliance and hearing directions.",
+            ocrConfidence: 0.94
+        )
+        let reviewDirectionSource = AlphaSourceRef(
+            caseId: caseMatter.id,
+            documentId: document.id,
+            documentTitle: document.title,
+            pageNumber: 6,
+            paragraphRange: "¶4",
+            textSnippet: "Reply shall be filed within two weeks with indexed annexures.",
+            ocrConfidence: 0.91
+        )
+
+        document.languageProfile = AlphaDocumentLanguageProfile(
+            documentId: document.id,
+            primaryLanguage: .english,
+            scriptsDetected: ["latin"],
+            confidence: 0.97,
+            pageProfiles: [
+                AlphaDocumentLanguageProfilePage(pageNumber: 4, language: .english, script: .latin, confidence: 0.97),
+                AlphaDocumentLanguageProfilePage(pageNumber: 6, language: .english, script: .latin, confidence: 0.95)
+            ]
+        )
+        document.classification = AlphaLegalDocumentClassification(
+            documentId: document.id,
+            type: .order,
+            subtype: "interim order",
+            confidence: 0.73,
+            sourceRefs: [reviewDateSource],
+            needsReview: true
+        )
+        document.extractedFields = [
+            AlphaExtractedLegalField(
+                caseId: caseMatter.id,
+                documentId: document.id,
+                fieldType: .nextDate,
+                label: "Next date",
+                value: "28 April 2026",
+                sourceRefs: [reviewDateSource],
+                confidence: 0.58,
+                extractionMode: .caseAssociate,
+                extractionPass: .llmExtract,
+                needsReview: true
+            ),
+            AlphaExtractedLegalField(
+                caseId: caseMatter.id,
+                documentId: document.id,
+                fieldType: .orderDirection,
+                label: "Order direction",
+                value: "Reply to be filed within two weeks with indexed annexures.",
+                sourceRefs: [reviewDirectionSource],
+                confidence: 0.86,
+                extractionMode: .caseAssociate,
+                extractionPass: .llmVerify,
+                needsReview: false
+            )
+        ]
+        document.extractionFindings = [
+            AlphaExtractionFinding(
+                caseId: caseMatter.id,
+                documentId: document.id,
+                kind: .dateConflict,
+                message: "The next date should be confirmed against the signed order page before final use.",
+                sourceRefs: [reviewDateSource],
+                severity: .warning
+            )
+        ]
+        document.extractionRuns = [
+            AlphaExtractionRun(
+                caseId: caseMatter.id,
+                documentId: document.id,
+                mode: .caseAssociate,
+                status: .needsReview,
+                progressState: .needsReview,
+                startedAt: .now.addingTimeInterval(-420),
+                completedAt: .now.addingTimeInterval(-120),
+                pagesProcessed: document.pageCount,
+                totalPages: document.pageCount,
+                fieldsExtracted: document.extractedFields.count,
+                fieldsNeedingReview: 1,
+                warnings: ["Next date still needs advocate confirmation."]
+            )
+        ]
+        document.extractedText = """
+        Interim order. Reply shall be filed within two weeks with indexed annexures.
+        List the matter on 28 April 2026 for compliance and further hearing.
+        """
+        document.indexingStatus = .indexed
+        document.ocrStatus = .nativeText
+        document.lastIndexedAt = .now.addingTimeInterval(-120)
+        document.dominantSourceSnippet = "Reply shall be filed within two weeks with indexed annexures."
+
+        caseMatter.documents[0] = document
+        caseMatter.sourceRefs = [reviewDateSource, reviewDirectionSource] + caseMatter.sourceRefs.filter { $0.documentId != document.id }
+        caseMatter.issueHighlights = [
+            "Confirm the next date directly from the signed order page.",
+            "Use the order direction when preparing the short compliance note."
+        ]
+        caseMatter.draftTasks = [
+            "Confirm the next date in the signed order.",
+            "Prepare a short compliance note for reply filing."
+        ]
+        caseMatter.caseMemoryUpdates.insert(
+            AlphaCaseMemoryUpdate(
+                caseId: caseMatter.id,
+                source: .extractionRun,
+                summary: "Ross found an order direction and a next date that still needs advocate confirmation.",
+                affectedDocuments: [document.id]
+            ),
+            at: 0
+        )
+        caseMatter.updatedAt = .now
+        state.cases[0] = caseMatter
+        state.tasks = (state.tasks ?? []) + [
+            AlphaTaskItem(
+                caseId: caseMatter.id,
+                title: "Confirm next date in order",
+                notes: "Verify the next date from the signed order page before sharing it.",
+                dueDate: .now,
+                priority: .high,
+                source: .extraction
+            )
+        ]
+
+        return (state, caseMatter.id, document.id)
     }
 
     private func render<V: View>(
@@ -142,22 +321,13 @@ private struct RossScreenshotExporter {
         bitmap.size = size
         hostingView.cacheDisplay(in: hostingView.bounds, to: bitmap)
 
-        guard let pngData = bitmap.representation(using: .png, properties: [:])
-        else {
+        guard let pngData = bitmap.representation(using: .png, properties: [:]) else {
             throw ScreenshotExportError.renderFailed(name)
         }
 
         try pngData.write(to: outputDirectory.appending(path: "\(name).png"))
         #else
         throw ScreenshotExportError.unsupportedPlatform
-        #endif
-    }
-
-    private var screenshotScale: CGFloat {
-        #if canImport(AppKit)
-        NSScreen.main?.backingScaleFactor ?? 2
-        #else
-        2
         #endif
     }
 }

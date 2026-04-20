@@ -359,6 +359,7 @@ internal class AlphaRossController(
     var pendingPublicLawQuestion by mutableStateOf<String?>(null)
     var pendingPublicLawScopeCaseId by mutableStateOf<String?>(null)
     var latestAskResult by mutableStateOf<AlphaAskResult?>(null)
+    var askHistory by mutableStateOf(seedAskHistory(persisted.cases))
     var publicLawDraft by mutableStateOf("Find Supreme Court guidance on delay condonation where diligence is documented but filing was disrupted.")
     var publicLawPreview by mutableStateOf<AlphaPublicLawPreview?>(null)
     var publicLawResults by mutableStateOf<List<AlphaPublicLawResult>>(emptyList())
@@ -418,6 +419,9 @@ internal class AlphaRossController(
 
     fun scopeLabel(caseId: String?): String =
         caseId?.let { id -> persisted.cases.firstOrNull { it.id == id }?.title } ?: "All cases"
+
+    fun askConversation(scopeCaseId: String?): List<AlphaAskResult> =
+        askHistory.filter { it.scopeCaseId == scopeCaseId }
 
     fun runLocalInferenceSmoke() {
         if (localInferenceSmokeRunning) {
@@ -830,7 +834,9 @@ internal class AlphaRossController(
     fun submitAsk(question: String, scopeCaseId: String?, webEnabled: Boolean) {
         val cleaned = question.trim()
         if (cleaned.isEmpty()) return
-        latestAskResult = buildLocalAskResult(cleaned, scopeCaseId)
+        val localResult = buildLocalAskResult(cleaned, scopeCaseId)
+        appendAskResult(localResult, scopeCaseId)
+        latestAskResult = localResult
         askSelectedScopeCaseId = scopeCaseId
         setAskDraft(scopeCaseId, cleaned)
 
@@ -840,6 +846,9 @@ internal class AlphaRossController(
             pendingPublicLawScopeCaseId = scopeCaseId
             publicLawPreview = preview
             latestAskResult = latestAskResult?.copy(publicLawPreview = preview, statusNote = "Web search preview ready")
+            updateLatestAskHistory(scopeCaseId, cleaned) { result ->
+                result.copy(publicLawPreview = preview, statusNote = "Web search preview ready")
+            }
         } else {
             pendingPublicLawQuestion = null
             pendingPublicLawScopeCaseId = null
@@ -848,10 +857,17 @@ internal class AlphaRossController(
     }
 
     fun cancelPendingPublicLawSearch() {
+        val pendingQuestion = pendingPublicLawQuestion
+        val pendingScope = pendingPublicLawScopeCaseId
         pendingPublicLawQuestion = null
         pendingPublicLawScopeCaseId = null
         publicLawPreview = null
         latestAskResult = latestAskResult?.copy(statusNote = "Web search off")
+        if (pendingQuestion != null) {
+            updateLatestAskHistory(pendingScope, pendingQuestion) { result ->
+                result.copy(publicLawPreview = null, statusNote = "Web search off")
+            }
+        }
     }
 
     fun confirmPendingPublicLawSearch() {
@@ -865,6 +881,15 @@ internal class AlphaRossController(
                 publicLawResults = results,
                 statusNote = if (results.isEmpty()) "Public-law results are unavailable right now." else "Public-law results",
             )
+            pendingPublicLawQuestion?.let { pendingQuestion ->
+                updateLatestAskHistory(pendingPublicLawScopeCaseId, pendingQuestion) { result ->
+                    result.copy(
+                        publicLawPreview = preview,
+                        publicLawResults = results,
+                        statusNote = if (results.isEmpty()) "Public-law results are unavailable right now." else "Public-law results",
+                    )
+                }
+            }
             persisted = persisted.copy(
                 publicLawCache = listOf(AlphaPublicLawCacheItem(query = preview.query, resultTitles = results.map { it.title })) + persisted.publicLawCache,
                 ledgerEntries = listOf(
@@ -885,6 +910,43 @@ internal class AlphaRossController(
             save()
             pendingPublicLawQuestion = null
             pendingPublicLawScopeCaseId = null
+        }
+    }
+
+    private fun appendAskResult(result: AlphaAskResult, scopeCaseId: String?) {
+        askHistory = askHistory + result
+        val updatedCases = if (scopeCaseId == null) {
+            persisted.cases
+        } else {
+            persisted.cases.map { case ->
+                if (case.id == scopeCaseId) {
+                    val turn = AlphaChatTurn(
+                        question = result.question,
+                        answerTitle = result.answerTitle,
+                        answerSections = result.answerSections,
+                        sourceRefs = result.caseFileSources,
+                    )
+                    case.copy(chatTurns = listOf(turn) + case.chatTurns, updatedAt = nowIso())
+                } else case
+            }
+        }
+        persisted = persisted.copy(
+            cases = updatedCases,
+            ledgerEntries = listOf(
+                localLedger(
+                    if (scopeCaseId == null) "Local review run" else "Local case review run",
+                    "The question and source-backed draft stayed on-device.",
+                )
+            ) + persisted.ledgerEntries,
+        )
+        save()
+    }
+
+    private fun updateLatestAskHistory(scopeCaseId: String?, question: String, update: (AlphaAskResult) -> AlphaAskResult) {
+        val index = askHistory.indexOfLast { it.scopeCaseId == scopeCaseId && it.question == question }
+        if (index == -1) return
+        askHistory = askHistory.toMutableList().also { items ->
+            items[index] = update(items[index])
         }
     }
 
@@ -1563,13 +1625,28 @@ internal class AlphaRossController(
 
     private fun normalizeLoadedState(state: AlphaPersistedState): AlphaPersistedState {
         val normalizedTab = when (state.selectedTab) {
-            AlphaAppTab.PublicLaw -> AlphaAppTab.Ask
+            AlphaAppTab.Ask -> AlphaAppTab.Home
+            AlphaAppTab.PublicLaw -> AlphaAppTab.Home
             AlphaAppTab.Exports -> AlphaAppTab.Home
             else -> state.selectedTab
         }
         val normalizedTasks = state.tasks ?: seedTasks(state.cases)
         return state.copy(selectedTab = normalizedTab, tasks = normalizedTasks)
     }
+
+    private fun seedAskHistory(cases: List<AlphaCaseMatter>): List<AlphaAskResult> =
+        cases.flatMap { case ->
+            case.chatTurns.asReversed().map { turn ->
+                AlphaAskResult(
+                    question = turn.question,
+                    scopeCaseId = case.id,
+                    scopeLabel = case.title,
+                    answerTitle = turn.answerTitle,
+                    answerSections = turn.answerSections,
+                    caseFileSources = turn.sourceRefs,
+                )
+            }
+        }
 
     private fun inferPdfPageCount(file: File): Int = runCatching {
         ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
