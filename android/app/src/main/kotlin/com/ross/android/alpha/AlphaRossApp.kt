@@ -13,6 +13,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
@@ -55,7 +56,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -488,6 +488,7 @@ private fun AlphaChromeIconButton(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AlphaRootWorkspaceDrawer(
     drawerState: androidx.compose.material3.DrawerState,
@@ -499,7 +500,13 @@ private fun AlphaRootWorkspaceDrawer(
     onOpenRecentDocument: (String, String) -> Unit,
     content: @Composable () -> Unit,
 ) {
-    val recentDocuments = alphaRecentDocumentItems(controller.persisted.cases)
+    val recentDocuments = alphaRecentDocumentItems(controller.cases)
+    var mattersExpanded by rememberSaveable { mutableStateOf(true) }
+    var recentFilesExpanded by rememberSaveable { mutableStateOf(true) }
+    var actionTarget by remember { mutableStateOf<AlphaCaseMatter?>(null) }
+    var renameTarget by remember { mutableStateOf<AlphaCaseMatter?>(null) }
+    var renameDraft by rememberSaveable { mutableStateOf("") }
+    var deleteTarget by remember { mutableStateOf<AlphaCaseMatter?>(null) }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -517,78 +524,437 @@ private fun AlphaRootWorkspaceDrawer(
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
-                        Text("Matters", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Button(onClick = onCreateCase, modifier = Modifier.fillMaxWidth()) {
-                            Text("Create matter")
-                        }
-
-                        if (controller.persisted.cases.isEmpty()) {
-                            Text(
-                                "No matters yet. Create the first matter and Ross will keep it here.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        } else {
-                            controller.persisted.cases
-                                .sortedByDescending { it.updatedAt }
-                                .take(6)
-                                .forEach { case ->
-                                    NavigationDrawerItem(
-                                        label = {
-                                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                                Text(case.title, maxLines = 1)
-                                                Text(
-                                                    "${controller.openTaskCount(case.id)} open tasks • ${case.documents.size} docs",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                )
-                                            }
-                                        },
-                                        selected = false,
-                                        onClick = { onOpenCase(case.id) },
-                                    )
-                                }
+                        AlphaDrawerSectionCard(
+                            title = "Matters",
+                            expanded = mattersExpanded,
+                            onToggle = { mattersExpanded = !mattersExpanded },
+                            trailing = {
+                                AlphaChromeIconButton(
+                                    icon = Icons.Outlined.Add,
+                                    label = "Create matter",
+                                    onClick = onCreateCase,
+                                )
+                            },
+                        ) {
+                            if (controller.cases.isEmpty()) {
+                                Text(
+                                    "No matters yet. Create the first matter and Ross will keep it here.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            } else {
+                                controller.cases
+                                    .take(6)
+                                    .forEach { case ->
+                                        AlphaDrawerMatterRow(
+                                            case = case,
+                                            openTasks = controller.openTaskCount(case.id),
+                                            onOpen = { onOpenCase(case.id) },
+                                            onLongPress = { actionTarget = case },
+                                        )
+                                    }
+                            }
                         }
 
                         if (recentDocuments.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text("Recent files", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            recentDocuments.take(5).forEach { entry ->
-                                NavigationDrawerItem(
-                                    label = {
-                                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                            Text(entry.document.title, maxLines = 1)
-                                            Text(
-                                                entry.caseTitle,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                maxLines = 1,
-                                            )
-                                        }
-                                    },
-                                    selected = false,
-                                    onClick = { onOpenRecentDocument(entry.caseId, entry.document.id) },
-                                )
+                            AlphaDrawerSectionCard(
+                                title = "Recent files",
+                                expanded = recentFilesExpanded,
+                                onToggle = { recentFilesExpanded = !recentFilesExpanded },
+                            ) {
+                                recentDocuments.take(5).forEach { entry ->
+                                    AlphaDrawerRecentFileRow(
+                                        entry = entry,
+                                        onOpen = { onOpenRecentDocument(entry.caseId, entry.document.id) },
+                                    )
+                                }
                             }
                         }
                     }
 
-                    NavigationDrawerItem(
-                        label = { Text("Settings") },
+                    AlphaDrawerFooterButton(
+                        title = "Settings",
                         selected = selectedRoot == AndroidAlphaRoute.Settings,
                         onClick = { onSelectRoot(AndroidAlphaRoute.Settings) },
-                        icon = {
-                            Icon(
-                                imageVector = if (selectedRoot == AndroidAlphaRoute.Settings) Icons.Filled.Settings else Icons.Outlined.Settings,
-                                contentDescription = null,
-                            )
-                        },
                     )
                 }
             }
         },
     ) {
         content()
+    }
+
+    actionTarget?.let { case ->
+        ModalBottomSheet(
+            onDismissRequest = { actionTarget = null },
+            containerColor = MaterialTheme.colorScheme.surface,
+        ) {
+            AlphaMatterActionsSheet(
+                controller = controller,
+                caseMatter = case,
+                onRename = {
+                    renameTarget = case
+                    renameDraft = case.title
+                    actionTarget = null
+                },
+                onDelete = {
+                    deleteTarget = case
+                    actionTarget = null
+                },
+                onDismiss = { actionTarget = null },
+            )
+        }
+    }
+
+    renameTarget?.let {
+        AlertDialog(
+            onDismissRequest = { renameTarget = null },
+            title = { Text("Rename matter") },
+            text = {
+                OutlinedTextField(
+                    value = renameDraft,
+                    onValueChange = { renameDraft = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Matter name") },
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    controller.renameCase(it.id, renameDraft)
+                    renameTarget = null
+                }) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { renameTarget = null }) {
+                    Text("Cancel")
+                }
+            },
+        )
+    }
+
+    deleteTarget?.let { case ->
+        AlertDialog(
+            onDismissRequest = { deleteTarget = null },
+            title = { Text("Delete matter?") },
+            text = {
+                Text("Deleting ${case.title} removes its files, tasks, chat context, and saved reports from this device.")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    controller.deleteCase(case.id)
+                    deleteTarget = null
+                }) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteTarget = null }) {
+                    Text("Cancel")
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun AlphaDrawerSectionCard(
+    title: String,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    trailing: (@Composable RowScope.() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    AlphaCard {
+        Column(verticalArrangement = Arrangement.spacedBy(if (expanded) 12.dp else 0.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(
+                    onClick = onToggle,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            title,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Icon(
+                            imageVector = if (expanded) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
+                trailing?.invoke(this)
+            }
+
+            if (expanded) {
+                content()
+            }
+        }
+    }
+}
+
+@Composable
+private fun AlphaDrawerFooterButton(title: String, selected: Boolean, onClick: () -> Unit) {
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.outlinedCardColors(
+            containerColor = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface,
+        ),
+        onClick = onClick,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = if (selected) Icons.Filled.Settings else Icons.Outlined.Settings,
+                    contentDescription = null,
+                    tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun AlphaMatterFolderGlyph(tint: AlphaMatterTint, modifier: Modifier = Modifier, size: Int = 42) {
+    val tintColor = alphaMatterTintColor(tint)
+
+    Box(
+        modifier = modifier
+            .size(size.dp)
+            .background(tintColor.copy(alpha = 0.14f), shape = RoundedCornerShape((size * 0.32f).dp))
+            .border(1.dp, tintColor.copy(alpha = 0.16f), RoundedCornerShape((size * 0.32f).dp)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Folder,
+            contentDescription = null,
+            tint = tintColor,
+            modifier = Modifier.size((size * 0.48f).dp),
+        )
+    }
+}
+
+@Composable
+private fun AlphaDrawerMatterRow(
+    case: AlphaCaseMatter,
+    openTasks: Int,
+    onOpen: () -> Unit,
+    onLongPress: () -> Unit,
+) {
+    OutlinedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(onClick = onOpen, onLongClick = onLongPress),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AlphaMatterFolderGlyph(tint = case.folderTint, size = 38)
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
+                Text(case.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                Text(
+                    "$openTasks open tasks • ${case.documents.size} docs",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
+
+            case.nextHearing?.let { nextDate ->
+                Text(
+                    alphaDateLabel(nextDate),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = alphaMatterTintColor(case.folderTint),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AlphaDrawerRecentFileRow(entry: AlphaRecentDocumentItem, onOpen: () -> Unit) {
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+        onClick = onOpen,
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            Text(entry.document.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
+            Text(
+                entry.caseTitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+@Composable
+private fun AlphaMatterActionsSheet(
+    controller: AlphaRossController,
+    caseMatter: AlphaCaseMatter,
+    onRename: () -> Unit,
+    onDelete: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AlphaMatterFolderGlyph(tint = caseMatter.folderTint, size = 44)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(caseMatter.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text("Choose what to do with this matter on this device.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+
+        AlphaMatterActionRow(
+            title = "Rename matter",
+            detail = "Update the visible name in the workspace.",
+            icon = Icons.Outlined.Edit,
+            onClick = onRename,
+        )
+
+        AlphaMatterActionRow(
+            title = "Archive matter",
+            detail = "Hide it from the active list without deleting files.",
+            icon = Icons.Outlined.Archive,
+            onClick = {
+                controller.archiveCase(caseMatter.id)
+                onDismiss()
+            },
+        )
+
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(
+                "Folder color",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                AlphaMatterTint.values().forEach { tint ->
+                    FilterChip(
+                        selected = caseMatter.folderTint == tint,
+                        onClick = { controller.setCaseFolderTint(caseMatter.id, tint) },
+                        label = { Text(alphaMatterTintLabel(tint)) },
+                        leadingIcon = {
+                            Box(
+                                modifier = Modifier
+                                    .size(12.dp)
+                                    .background(alphaMatterTintColor(tint), shape = RoundedCornerShape(999.dp))
+                            )
+                        },
+                    )
+                }
+            }
+        }
+
+        AlphaMatterActionRow(
+            title = "Delete matter",
+            detail = "Delete files, tasks, chat context, and saved reports for this matter.",
+            icon = Icons.Outlined.Delete,
+            onClick = onDelete,
+            destructive = true,
+        )
+
+        Spacer(modifier = Modifier.height(6.dp))
+    }
+}
+
+@Composable
+private fun AlphaMatterActionRow(
+    title: String,
+    detail: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    destructive: Boolean = false,
+) {
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+        onClick = onClick,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp),
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                )
+                Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
     }
 }
 
@@ -649,7 +1015,7 @@ private fun AlphaRootStrip(
     onSelect: (AndroidAlphaRoute) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val tabs = listOf(AndroidAlphaRoute.Home, AndroidAlphaRoute.CaseList, AndroidAlphaRoute.Settings)
+    val tabs = listOf(AndroidAlphaRoute.Home, AndroidAlphaRoute.CaseList)
     val chromeBackground = alphaChromeBackgroundColor()
     val chromeForeground = alphaChromeForegroundColor()
     val chromeMuted = alphaChromeMutedColor()
@@ -883,7 +1249,7 @@ private fun AlphaRootAskDock(controller: AlphaRossController, fixedScopeCaseId: 
                 if (fixedScopeCaseId == null) {
                     AlphaCaseScopeSelector(
                         selectedCaseId = controller.askSelectedScopeCaseId,
-                        cases = controller.persisted.cases,
+                        cases = controller.cases,
                         allLabel = "All matters",
                         includeAllCases = true,
                     ) { selectedCaseId ->
@@ -1226,9 +1592,9 @@ private fun AlphaHomeScreen(
     var dueTodayExpanded by rememberSaveable { mutableStateOf(false) }
     var upcomingExpanded by rememberSaveable { mutableStateOf(false) }
     var matterActivityExpanded by rememberSaveable { mutableStateOf(false) }
-    val todayDateLines = alphaTodayDateLines(controller.persisted.cases)
-    val upcomingDateLines = alphaUpcomingDateLines(controller.persisted.cases)
-    val recentDocuments = alphaRecentDocumentItems(controller.persisted.cases)
+    val todayDateLines = alphaTodayDateLines(controller.cases)
+    val upcomingDateLines = alphaUpcomingDateLines(controller.cases)
+    val recentDocuments = alphaRecentDocumentItems(controller.cases)
     val attentionCount = todayDateLines.size + controller.todayTasks().size + controller.reviewQueue().size
 
     AlphaShell(
@@ -1271,7 +1637,7 @@ private fun AlphaHomeScreen(
                 )
             }
 
-            if (controller.persisted.cases.isEmpty()) {
+            if (controller.cases.isEmpty()) {
                 AlphaMatterStarterCard(controller = controller)
             }
 
@@ -1332,20 +1698,22 @@ private fun AlphaHomeScreen(
 
             AlphaExpandableCard(
                 title = "Active matters and recent files",
-                badge = "${controller.persisted.cases.size}",
+                badge = "${controller.cases.size}",
                 expanded = matterActivityExpanded,
                 onToggle = { matterActivityExpanded = !matterActivityExpanded },
             ) {
-                if (controller.persisted.cases.isEmpty() && recentDocuments.isEmpty()) {
+                if (controller.cases.isEmpty() && recentDocuments.isEmpty()) {
                     Text("No matters yet. Save the first matter above and Ross will show it here with recent files.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                controller.persisted.cases
-                    .sortedByDescending { it.updatedAt }
+                controller.cases
                     .take(4)
                     .forEach { case ->
-                        AlphaCaseSummaryRow(case = case, openTasks = controller.openTaskCount(case.id), reviewCount = controller.reviewQueue(case.id).size) {
-                            onOpenCase(case.id)
-                        }
+                        AlphaCaseSummaryRow(
+                            case = case,
+                            openTasks = controller.openTaskCount(case.id),
+                            reviewCount = controller.reviewQueue(case.id).size,
+                            onOpen = { onOpenCase(case.id) },
+                        )
                     }
                 if (recentDocuments.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(6.dp))
@@ -1368,6 +1736,7 @@ private fun AlphaHomeScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AlphaCaseListScreen(
     controller: AlphaRossController,
@@ -1379,6 +1748,10 @@ private fun AlphaCaseListScreen(
 ) {
     var sortMode by rememberSaveable { mutableStateOf(AlphaCaseSortMode.RecentlyViewed) }
     var viewMode by rememberSaveable { mutableStateOf(AlphaMatterListViewMode.Expanded) }
+    var actionTarget by remember { mutableStateOf<AlphaCaseMatter?>(null) }
+    var renameTarget by remember { mutableStateOf<AlphaCaseMatter?>(null) }
+    var renameDraft by rememberSaveable { mutableStateOf("") }
+    var deleteTarget by remember { mutableStateOf<AlphaCaseMatter?>(null) }
     val sortedCases = alphaSortedCases(sortMode, controller)
 
     AlphaShell(
@@ -1408,7 +1781,7 @@ private fun AlphaCaseListScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        "${controller.persisted.cases.size} matter(s) on this device",
+                        "${controller.cases.size} matter(s) on this device",
                         modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1424,7 +1797,14 @@ private fun AlphaCaseListScreen(
                             )
                         }
                     }
-                    AlphaIconMenuButton(icon = if (viewMode == AlphaMatterListViewMode.Expanded) Icons.Outlined.ViewAgenda else Icons.Outlined.ViewHeadline, label = "Change matter view") { closeMenu ->
+                    AlphaIconMenuButton(
+                        icon = when (viewMode) {
+                            AlphaMatterListViewMode.Expanded -> Icons.Outlined.ViewAgenda
+                            AlphaMatterListViewMode.Summary -> Icons.Outlined.ViewHeadline
+                            AlphaMatterListViewMode.Folder -> Icons.Outlined.Folder
+                        },
+                        label = "Change matter view"
+                    ) { closeMenu ->
                         AlphaMatterListViewMode.values().forEach { option ->
                             DropdownMenuItem(
                                 text = { Text(option.label) },
@@ -1439,7 +1819,7 @@ private fun AlphaCaseListScreen(
                 }
             }
 
-            if (controller.persisted.cases.isEmpty()) {
+            if (controller.cases.isEmpty()) {
                 item {
                     AlphaCard {
                         Text(
@@ -1450,23 +1830,110 @@ private fun AlphaCaseListScreen(
                 }
             } else {
                 items(sortedCases, key = { it.id }) { case ->
-                    if (viewMode == AlphaMatterListViewMode.Expanded) {
-                        AlphaCaseSummaryRow(
-                            case = case,
-                            openTasks = controller.openTaskCount(case.id),
-                            reviewCount = controller.reviewQueue(case.id).size,
-                            onOpen = { onOpenCase(case.id) },
-                        )
-                    } else {
-                        AlphaCaseCompactRow(
-                            case = case,
-                            openTasks = controller.openTaskCount(case.id),
-                            onOpen = { onOpenCase(case.id) },
-                        )
+                    when (viewMode) {
+                        AlphaMatterListViewMode.Expanded -> {
+                            AlphaCaseSummaryRow(
+                                case = case,
+                                openTasks = controller.openTaskCount(case.id),
+                                reviewCount = controller.reviewQueue(case.id).size,
+                                onOpen = { onOpenCase(case.id) },
+                                onLongPress = { actionTarget = case },
+                            )
+                        }
+                        AlphaMatterListViewMode.Summary -> {
+                            AlphaCaseCompactRow(
+                                case = case,
+                                openTasks = controller.openTaskCount(case.id),
+                                onOpen = { onOpenCase(case.id) },
+                                onLongPress = { actionTarget = case },
+                            )
+                        }
+                        AlphaMatterListViewMode.Folder -> {
+                            AlphaCaseFolderRow(
+                                case = case,
+                                openTasks = controller.openTaskCount(case.id),
+                                reviewCount = controller.reviewQueue(case.id).size,
+                                onOpen = { onOpenCase(case.id) },
+                                onLongPress = { actionTarget = case },
+                            )
+                        }
                     }
                 }
             }
         }
+    }
+
+    actionTarget?.let { case ->
+        ModalBottomSheet(
+            onDismissRequest = { actionTarget = null },
+            containerColor = MaterialTheme.colorScheme.surface,
+        ) {
+            AlphaMatterActionsSheet(
+                controller = controller,
+                caseMatter = case,
+                onRename = {
+                    renameTarget = case
+                    renameDraft = case.title
+                    actionTarget = null
+                },
+                onDelete = {
+                    deleteTarget = case
+                    actionTarget = null
+                },
+                onDismiss = { actionTarget = null },
+            )
+        }
+    }
+
+    renameTarget?.let {
+        AlertDialog(
+            onDismissRequest = { renameTarget = null },
+            title = { Text("Rename matter") },
+            text = {
+                OutlinedTextField(
+                    value = renameDraft,
+                    onValueChange = { renameDraft = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Matter name") },
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    controller.renameCase(it.id, renameDraft)
+                    renameTarget = null
+                }) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { renameTarget = null }) {
+                    Text("Cancel")
+                }
+            },
+        )
+    }
+
+    deleteTarget?.let { case ->
+        AlertDialog(
+            onDismissRequest = { deleteTarget = null },
+            title = { Text("Delete matter?") },
+            text = {
+                Text("Deleting ${case.title} removes its files, tasks, chat context, and saved reports from this device.")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    controller.deleteCase(case.id)
+                    deleteTarget = null
+                }) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteTarget = null }) {
+                    Text("Cancel")
+                }
+            },
+        )
     }
 }
 
@@ -1477,11 +1944,11 @@ private fun AlphaCaptureScreen(
     onOpenAsk: () -> Unit,
 ) {
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        val caseId = controller.selectedCaseId ?: controller.persisted.cases.firstOrNull()?.id
+        val caseId = controller.selectedCaseId ?: controller.cases.firstOrNull()?.id
         if (uri != null && caseId != null) controller.importDocument(caseId, uri)
     }
-    val activeCase = controller.persisted.cases.firstOrNull { it.id == controller.selectedCaseId }
-        ?: controller.persisted.cases.firstOrNull()
+    val activeCase = controller.cases.firstOrNull { it.id == controller.selectedCaseId }
+        ?: controller.cases.firstOrNull()
     AlphaShell(title = "Import File", showBack = true, onBack = onBack, actionLabel = "Ask", onAction = onOpenAsk) {
         Column(
             modifier = Modifier
@@ -1502,8 +1969,8 @@ private fun AlphaCaptureScreen(
             if (activeCase != null) {
                 AlphaCard("Import into", activeCase.title) {
                     AlphaCaseScopeSelector(
-                        selectedCaseId = controller.selectedCaseId ?: controller.persisted.cases.firstOrNull()?.id,
-                        cases = controller.persisted.cases,
+                        selectedCaseId = controller.selectedCaseId ?: controller.cases.firstOrNull()?.id,
+                        cases = controller.cases,
                         allLabel = "Select matter",
                         includeAllCases = false,
                     ) { selected ->
@@ -1532,7 +1999,7 @@ private fun AlphaCaptureScreen(
             }
             AlphaCard("Recent files") {
                 val recentDocuments = alphaRecentDocumentItems(
-                    controller.persisted.cases,
+                    controller.cases,
                     controller.selectedCaseId,
                 )
                 if (recentDocuments.isEmpty()) {
@@ -2884,6 +3351,7 @@ private enum class AlphaCaseSortMode(val label: String) {
 private enum class AlphaMatterListViewMode(val label: String) {
     Expanded("Expanded"),
     Summary("Summary"),
+    Folder("Folder"),
 }
 
 private enum class AlphaWorkspaceSection(val label: String) {
@@ -3173,21 +3641,33 @@ private fun AlphaReviewRow(item: AlphaReviewQueueItem, onOpen: () -> Unit) {
 }
 
 @Composable
-private fun AlphaCaseSummaryRow(case: AlphaCaseMatter, openTasks: Int, reviewCount: Int, onOpen: () -> Unit) {
+private fun AlphaCaseSummaryRow(
+    case: AlphaCaseMatter,
+    openTasks: Int,
+    reviewCount: Int,
+    onOpen: () -> Unit,
+    onLongPress: (() -> Unit)? = null,
+) {
     OutlinedCard(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(onClick = onOpen, onLongClick = onLongPress),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface),
-        onClick = onOpen,
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.Top,
+            ) {
+                AlphaMatterFolderGlyph(tint = case.folderTint)
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(case.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                     Text("${case.forum} • ${case.stage.name.lowercase().replaceFirstChar(Char::titlecase)}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 case.nextHearing?.let { nextDate ->
-                    Text(alphaDateLabel(nextDate), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
+                    Text(alphaDateLabel(nextDate), style = MaterialTheme.typography.labelMedium, color = alphaMatterTintColor(case.folderTint))
                 }
             }
             Text(
@@ -3207,12 +3687,18 @@ private fun AlphaCaseSummaryRow(case: AlphaCaseMatter, openTasks: Int, reviewCou
 }
 
 @Composable
-private fun AlphaCaseCompactRow(case: AlphaCaseMatter, openTasks: Int, onOpen: () -> Unit) {
+private fun AlphaCaseCompactRow(
+    case: AlphaCaseMatter,
+    openTasks: Int,
+    onOpen: () -> Unit,
+    onLongPress: (() -> Unit)? = null,
+) {
     OutlinedCard(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(onClick = onOpen, onLongClick = onLongPress),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface),
-        onClick = onOpen,
     ) {
         Row(
             modifier = Modifier
@@ -3221,6 +3707,8 @@ private fun AlphaCaseCompactRow(case: AlphaCaseMatter, openTasks: Int, onOpen: (
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            AlphaMatterFolderGlyph(tint = case.folderTint, size = 34)
+            Spacer(modifier = Modifier.width(10.dp))
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -3237,8 +3725,70 @@ private fun AlphaCaseCompactRow(case: AlphaCaseMatter, openTasks: Int, onOpen: (
             Text(
                 case.nextHearing?.let { alphaDateLabel(it) } ?: "$openTasks open",
                 style = MaterialTheme.typography.labelMedium,
-                color = if (case.nextHearing == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.secondary,
+                color = if (case.nextHearing == null) MaterialTheme.colorScheme.onSurfaceVariant else alphaMatterTintColor(case.folderTint),
             )
+        }
+    }
+}
+
+@Composable
+private fun AlphaCaseFolderRow(
+    case: AlphaCaseMatter,
+    openTasks: Int,
+    reviewCount: Int,
+    onOpen: () -> Unit,
+    onLongPress: (() -> Unit)? = null,
+) {
+    val tint = alphaMatterTintColor(case.folderTint)
+
+    OutlinedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(onClick = onOpen, onLongClick = onLongPress),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.outlinedCardColors(containerColor = tint.copy(alpha = 0.06f)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, tint.copy(alpha = 0.14f)),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 15.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            AlphaMatterFolderGlyph(tint = case.folderTint, size = 50)
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    Text(
+                        case.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    case.nextHearing?.let { nextDate ->
+                        Text(alphaDateLabel(nextDate), style = MaterialTheme.typography.labelMedium, color = tint)
+                    }
+                }
+                Text(
+                    "$openTasks open tasks • $reviewCount review items • ${case.documents.size} documents",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    case.summary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                )
+            }
         }
     }
 }
@@ -3526,7 +4076,7 @@ private fun AlphaAskComposerPanel(controller: AlphaRossController, fixedScopeCas
                                         attachExpanded = false
                                     },
                                 )
-                                controller.persisted.cases.forEach { case ->
+                                controller.cases.forEach { case ->
                                     DropdownMenuItem(
                                         text = { Text(case.title) },
                                         onClick = {
@@ -3623,6 +4173,25 @@ private fun alphaAskSuggestions(scopeLabel: String?, documentTitle: String? = nu
             "What is the next court date and why does it matter?",
             "What should I prepare next for this matter?",
         )
+    }
+
+@Composable
+private fun alphaMatterTintColor(tint: AlphaMatterTint): Color =
+    when (tint) {
+        AlphaMatterTint.Indigo -> MaterialTheme.colorScheme.primary
+        AlphaMatterTint.Amber -> AlphaAmberStatus
+        AlphaMatterTint.Emerald -> Color(0xFF44795C)
+        AlphaMatterTint.Rose -> Color(0xFFC65C78)
+        AlphaMatterTint.Slate -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+private fun alphaMatterTintLabel(tint: AlphaMatterTint): String =
+    when (tint) {
+        AlphaMatterTint.Indigo -> "Indigo"
+        AlphaMatterTint.Amber -> "Amber"
+        AlphaMatterTint.Emerald -> "Emerald"
+        AlphaMatterTint.Rose -> "Rose"
+        AlphaMatterTint.Slate -> "Slate"
     }
 
 @Composable
@@ -3742,9 +4311,9 @@ private fun alphaUpcomingDateLines(cases: List<AlphaCaseMatter>): List<String> =
 
 private fun alphaSortedCases(sortMode: AlphaCaseSortMode, controller: AlphaRossController): List<AlphaCaseMatter> =
     when (sortMode) {
-        AlphaCaseSortMode.RecentlyViewed -> controller.persisted.cases.sortedByDescending { it.updatedAt }
-        AlphaCaseSortMode.LastAdded -> controller.persisted.cases
-        AlphaCaseSortMode.EarliestActionNeeded -> controller.persisted.cases.sortedWith(
+        AlphaCaseSortMode.RecentlyViewed -> controller.cases.sortedByDescending { it.updatedAt }
+        AlphaCaseSortMode.LastAdded -> controller.cases
+        AlphaCaseSortMode.EarliestActionNeeded -> controller.cases.sortedWith(
             compareBy<AlphaCaseMatter> { alphaNextActionInstant(it, controller) == null }
                 .thenBy { alphaNextActionInstant(it, controller) ?: java.time.Instant.MAX }
                 .thenByDescending { it.updatedAt }

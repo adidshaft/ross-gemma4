@@ -73,6 +73,7 @@ enum class AlphaCapabilityTier(val tierId: String, val title: String, val summar
         }
 }
 enum class AlphaCaseStage { Intake, Pleadings, Evidence, Arguments, Reserved }
+enum class AlphaMatterTint { Indigo, Amber, Emerald, Rose, Slate }
 enum class AlphaTaskPriority { Low, Normal, High }
 enum class AlphaTaskStatus { Open, Done }
 enum class AlphaTaskSource { Manual, Extraction, System }
@@ -199,6 +200,7 @@ data class AlphaCaseMatter(
     val title: String,
     val forum: String,
     val stage: AlphaCaseStage,
+    val folderTint: AlphaMatterTint = AlphaMatterTint.Indigo,
     val nextHearing: String? = null,
     val localNotice: String = "Case files stay on this device",
     val summary: String,
@@ -211,6 +213,7 @@ data class AlphaCaseMatter(
     val advocateCorrections: List<AlphaAdvocateCorrection> = emptyList(),
     val caseMemoryUpdates: List<AlphaCaseMemoryUpdate> = emptyList(),
     val updatedAt: String = nowIso(),
+    val archivedAt: String? = null,
 )
 
 data class AlphaPrivacyLedgerEntry(
@@ -400,6 +403,14 @@ internal class AlphaRossController(
     var localInferenceSmokeRunning by mutableStateOf(false)
     var refreshingCaseOverviewIds by mutableStateOf<Set<String>>(emptySet())
 
+    val cases: List<AlphaCaseMatter>
+        get() = persisted.cases
+            .filter { it.archivedAt == null }
+            .sortedByDescending { it.updatedAt }
+
+    private val activeCaseIds: Set<String>
+        get() = cases.mapTo(linkedSetOf()) { it.id }
+
     fun activePack(): AlphaInstalledPack? = persisted.installedPacks.firstOrNull { it.isActive }
 
     fun activeExtractionMode(): AlphaExtractionMode = AlphaExtractionMode.fromInstalledPack(activePack())
@@ -424,6 +435,9 @@ internal class AlphaRossController(
 
     fun tasks(caseId: String? = null): List<AlphaTaskItem> =
         (persisted.tasks ?: emptyList())
+            .filter { task ->
+                task.caseId == null || task.caseId in activeCaseIds
+            }
             .filter { caseId == null || it.caseId == caseId }
             .sortedWith(
                 compareBy<AlphaTaskItem> { it.status != AlphaTaskStatus.Open }
@@ -472,7 +486,7 @@ internal class AlphaRossController(
     }
 
     fun scopeLabel(caseId: String?): String =
-        caseId?.let { id -> persisted.cases.firstOrNull { it.id == id }?.title } ?: "All matters"
+        caseId?.let { id -> cases.firstOrNull { it.id == id }?.title } ?: "All matters"
 
     fun askConversation(scopeCaseId: String?): List<AlphaAskResult> =
         askHistory.filter { it.scopeCaseId == scopeCaseId }
@@ -695,6 +709,68 @@ internal class AlphaRossController(
             pendingRoute = AndroidAlphaRoute.CaseWorkspace(case.id)
         }
         return case.id
+    }
+
+    fun renameCase(caseId: String, title: String) {
+        val cleaned = title.trim()
+        if (cleaned.isEmpty()) return
+        persisted = persisted.copy(
+            cases = persisted.cases.map { matter ->
+                if (matter.id == caseId) matter.copy(title = cleaned, updatedAt = nowIso()) else matter
+            },
+            ledgerEntries = listOf(localLedger("Matter renamed locally", "A matter name was updated on this device.")) + persisted.ledgerEntries,
+        )
+        askHistory = askHistory.map { result ->
+            if (result.scopeCaseId == caseId) result.copy(scopeLabel = cleaned) else result
+        }
+        if (latestAskResult?.scopeCaseId == caseId) {
+            latestAskResult = latestAskResult?.copy(scopeLabel = cleaned)
+        }
+        save()
+    }
+
+    fun archiveCase(caseId: String) {
+        persisted = persisted.copy(
+            cases = persisted.cases.map { matter ->
+                if (matter.id == caseId) matter.copy(archivedAt = nowIso(), updatedAt = nowIso()) else matter
+            },
+            ledgerEntries = listOf(localLedger("Matter archived locally", "A matter was archived on this device.")) + persisted.ledgerEntries,
+        )
+        clearCaseSelectionState(caseId)
+        save()
+    }
+
+    fun setCaseFolderTint(caseId: String, tint: AlphaMatterTint) {
+        persisted = persisted.copy(
+            cases = persisted.cases.map { matter ->
+                if (matter.id == caseId) matter.copy(folderTint = tint, updatedAt = nowIso()) else matter
+            }
+        )
+        save()
+    }
+
+    fun deleteCase(caseId: String) {
+        val removedCase = persisted.cases.firstOrNull { it.id == caseId } ?: return
+        removedCase.documents.forEach { document ->
+            runCatching { absoluteFile(document.storedRelativePath).takeIf { it.exists() }?.delete() }
+        }
+        runCatching { File(documentsDir, caseId).takeIf { it.exists() }?.deleteRecursively() }
+        val removedExports = persisted.exports.filter { it.caseId == caseId }
+        removedExports.forEach { report ->
+            runCatching { absoluteFile(report.relativePath).takeIf { it.exists() }?.delete() }
+        }
+        persisted = persisted.copy(
+            cases = persisted.cases.filterNot { it.id == caseId },
+            tasks = (persisted.tasks ?: emptyList()).filterNot { it.caseId == caseId },
+            exports = persisted.exports.filterNot { it.caseId == caseId },
+            ledgerEntries = listOf(localLedger("Matter deleted locally", "A matter and its stored context were removed from this device.")) + persisted.ledgerEntries,
+        )
+        askHistory = askHistory.filterNot { it.scopeCaseId == caseId }
+        if (latestAskResult?.scopeCaseId == caseId) {
+            latestAskResult = null
+        }
+        clearCaseSelectionState(caseId)
+        save()
     }
 
     fun importDocument(caseId: String, uri: Uri): Boolean {
@@ -1121,9 +1197,10 @@ internal class AlphaRossController(
         save()
     }
 
-    fun selectedCase(): AlphaCaseMatter? = selectedCaseId?.let { id -> persisted.cases.firstOrNull { it.id == id } } ?: persisted.cases.firstOrNull()
+    fun selectedCase(): AlphaCaseMatter? = selectedCaseId?.let { id -> cases.firstOrNull { it.id == id } } ?: cases.firstOrNull()
 
     fun focusCase(caseId: String) {
+        if (caseId !in activeCaseIds) return
         selectedCaseId = caseId
         persisted = persisted.copy(
             cases = persisted.cases.map { matter ->
@@ -1204,7 +1281,7 @@ internal class AlphaRossController(
     }
 
     fun reviewQueue(caseId: String? = null): List<AlphaReviewQueueItem> {
-        val visibleCases = persisted.cases.filter { caseId == null || it.id == caseId }
+        val visibleCases = cases.filter { caseId == null || it.id == caseId }
         return visibleCases.flatMap { case ->
             case.documents.flatMap { document ->
                 val fields = visibleExtractedFields(case.id, document.id)
@@ -1838,6 +1915,32 @@ internal class AlphaRossController(
 
     private fun saveState(state: AlphaPersistedState) {
         encryptedStateStore.save(state)
+    }
+
+    private fun clearCaseSelectionState(caseId: String) {
+        if (selectedCaseId == caseId) {
+            selectedCaseId = cases.firstOrNull { it.id != caseId }?.id
+        }
+        if (askSelectedScopeCaseId == caseId) {
+            askSelectedScopeCaseId = null
+        }
+        askDrafts = askDrafts - caseId
+        askDocumentTitles = askDocumentTitles - caseId
+        if (pendingRoute is AndroidAlphaRoute.CaseWorkspace && (pendingRoute as AndroidAlphaRoute.CaseWorkspace).caseId == caseId) {
+            pendingRoute = AndroidAlphaRoute.CaseList
+        }
+        if (pendingRoute is AndroidAlphaRoute.DocumentList && (pendingRoute as AndroidAlphaRoute.DocumentList).caseId == caseId) {
+            pendingRoute = AndroidAlphaRoute.CaseList
+        }
+        if (pendingRoute is AndroidAlphaRoute.DocumentViewer && (pendingRoute as AndroidAlphaRoute.DocumentViewer).caseId == caseId) {
+            pendingRoute = AndroidAlphaRoute.CaseList
+        }
+        if (pendingRoute is AndroidAlphaRoute.AskCase && (pendingRoute as AndroidAlphaRoute.AskCase).caseId == caseId) {
+            pendingRoute = AndroidAlphaRoute.CaseList
+        }
+        if (pendingRoute is AndroidAlphaRoute.DraftsExports && (pendingRoute as AndroidAlphaRoute.DraftsExports).caseId == caseId) {
+            pendingRoute = AndroidAlphaRoute.CaseList
+        }
     }
 
     private fun ensureFolders() {

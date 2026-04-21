@@ -147,7 +147,7 @@ final class AlphaRossModel {
     }
 
     private func syncDerivedStateFromPersisted() {
-        selectedCaseID = persisted.cases.first?.id
+        selectedCaseID = cases.first?.id
         selectedTier = persisted.settings.activeTier ?? .caseAssociate
         publicLawDraft = persisted.publicLawDraft ?? publicLawDraft
         publicLawPreview = persisted.publicLawPreview
@@ -171,11 +171,21 @@ final class AlphaRossModel {
     }
 
     var cases: [AlphaCaseMatter] {
-        persisted.cases.sorted { $0.updatedAt > $1.updatedAt }
+        persisted.cases
+            .filter { $0.archivedAt == nil }
+            .sorted { $0.updatedAt > $1.updatedAt }
+    }
+
+    private var activeCaseIDs: Set<UUID> {
+        Set(cases.map(\.id))
     }
 
     var tasks: [AlphaTaskItem] {
         (persisted.tasks ?? [])
+            .filter { task in
+                guard let caseId = task.caseId else { return true }
+                return activeCaseIDs.contains(caseId)
+            }
             .sorted {
                 if $0.status != $1.status {
                     return $0.status == .open
@@ -195,12 +205,13 @@ final class AlphaRossModel {
 
     var selectedCase: AlphaCaseMatter? {
         if let selectedCaseID {
-            return persisted.cases.first { $0.id == selectedCaseID }
+            return cases.first { $0.id == selectedCaseID }
         }
-        return persisted.cases.first
+        return cases.first
     }
 
     func focusCase(_ caseID: UUID) {
+        guard activeCaseIDs.contains(caseID) else { return }
         selectedCaseID = caseID
         guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseID }) else { return }
         persisted.cases[caseIndex].updatedAt = .now
@@ -258,7 +269,7 @@ final class AlphaRossModel {
     }
 
     func scopeLabel(for caseId: UUID?) -> String {
-        guard let caseId, let caseMatter = persisted.cases.first(where: { $0.id == caseId }) else {
+        guard let caseId, let caseMatter = cases.first(where: { $0.id == caseId }) else {
             return "All matters"
         }
         return caseMatter.title
@@ -364,14 +375,14 @@ final class AlphaRossModel {
     }
 
     func recentDocuments(for caseId: UUID? = nil) -> [AlphaCaseDocument] {
-        let visibleCases = caseId.map { id in persisted.cases.filter { $0.id == id } } ?? persisted.cases
+        let visibleCases = caseId.map { id in cases.filter { $0.id == id } } ?? cases
         return visibleCases
             .flatMap(\.documents)
             .sorted { $0.importedAt > $1.importedAt }
     }
 
     func reviewQueue(caseId: UUID? = nil) -> [AlphaReviewQueueItem] {
-        let visibleCases = caseId.map { id in persisted.cases.filter { $0.id == id } } ?? persisted.cases
+        let visibleCases = caseId.map { id in cases.filter { $0.id == id } } ?? cases
         return visibleCases.flatMap { caseMatter in
             caseMatter.documents.flatMap { document -> [AlphaReviewQueueItem] in
                 let fields = visibleExtractedFields(caseId: caseMatter.id, documentId: document.id)
@@ -744,6 +755,95 @@ final class AlphaRossModel {
             path.removeAll()
             path.append(.caseWorkspace(matter.id))
         }
+    }
+
+    func renameCase(_ caseID: UUID, title: String) {
+        let cleaned = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleaned.isEmpty, let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseID }) else { return }
+        persisted.cases[caseIndex].title = cleaned
+        persisted.cases[caseIndex].updatedAt = .now
+        askHistory = askHistory.map { result in
+            guard result.scopeCaseID == caseID else { return result }
+            var updated = result
+            updated.scopeLabel = cleaned
+            return updated
+        }
+        if latestAskResult?.scopeCaseID == caseID {
+            latestAskResult?.scopeLabel = cleaned
+        }
+        persisted.ledgerEntries.insert(
+            AlphaPrivacyLedgerEntry(
+                title: "Matter renamed locally",
+                detail: "A matter name was updated on this device.",
+                purpose: .local_only,
+                payloadClass: .local_only,
+                endpointLabel: "device://matter-rename",
+                success: true
+            ),
+            at: 0
+        )
+        persist()
+    }
+
+    func archiveCase(_ caseID: UUID) {
+        guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseID }) else { return }
+        persisted.cases[caseIndex].archivedAt = .now
+        persisted.cases[caseIndex].updatedAt = .now
+        clearCaseSelectionState(for: caseID)
+        persisted.ledgerEntries.insert(
+            AlphaPrivacyLedgerEntry(
+                title: "Matter archived locally",
+                detail: "A matter was archived on this device.",
+                purpose: .local_only,
+                payloadClass: .local_only,
+                endpointLabel: "device://matter-archive",
+                success: true
+            ),
+            at: 0
+        )
+        persist()
+    }
+
+    func setFolderTint(_ tint: AlphaMatterTint, for caseID: UUID) {
+        guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseID }) else { return }
+        persisted.cases[caseIndex].folderTint = tint
+        persisted.cases[caseIndex].updatedAt = .now
+        persist()
+    }
+
+    func deleteCase(_ caseID: UUID) {
+        guard let removedCase = persisted.cases.first(where: { $0.id == caseID }) else { return }
+
+        removedCase.documents.forEach { document in
+            try? FileManager.default.removeItem(at: alphaAbsoluteURL(for: document.storedRelativePath))
+        }
+        try? FileManager.default.removeItem(at: alphaAbsoluteURL(for: "documents/\(caseID.uuidString)"))
+
+        let removedExports = persisted.exports.filter { $0.caseId == caseID }
+        removedExports.forEach { report in
+            try? FileManager.default.removeItem(at: alphaAbsoluteURL(for: report.relativePath))
+        }
+
+        persisted.cases.removeAll { $0.id == caseID }
+        persisted.tasks = (persisted.tasks ?? []).filter { $0.caseId != caseID }
+        persisted.exports.removeAll { $0.caseId == caseID }
+        askHistory.removeAll { $0.scopeCaseID == caseID }
+        if latestAskResult?.scopeCaseID == caseID {
+            latestAskResult = nil
+        }
+        clearCaseSelectionState(for: caseID)
+        persisted.ledgerEntries.insert(
+            AlphaPrivacyLedgerEntry(
+                title: "Matter deleted locally",
+                detail: "A matter and its stored context were removed from this device.",
+                purpose: .local_only,
+                payloadClass: .local_only,
+                endpointLabel: "device://matter-delete",
+                success: true
+            ),
+            at: 0
+        )
+        persist()
     }
 
     func importDocument(caseId: UUID, from sourceURL: URL) async {
@@ -2205,6 +2305,29 @@ final class AlphaRossModel {
         }
     }
 
+    private func clearCaseSelectionState(for caseID: UUID) {
+        if selectedCaseID == caseID {
+            selectedCaseID = cases.first(where: { $0.id != caseID })?.id
+        }
+        if askSelectedScopeCaseID == caseID {
+            askSelectedScopeCaseID = nil
+        }
+        askDrafts.removeValue(forKey: caseID)
+        askDocumentTitles.removeValue(forKey: caseID)
+        path.removeAll { route in
+            switch route {
+            case .caseWorkspace(let id), .documentList(let id), .askCase(let id):
+                return id == caseID
+            case .documentViewer(let id, _, _):
+                return id == caseID
+            case .exports(let id):
+                return id == caseID
+            default:
+                return false
+            }
+        }
+    }
+
     private func upsertJob(_ job: AlphaModelDownloadJob) {
         if let index = persisted.modelJobs.firstIndex(where: { $0.id == job.id }) {
             persisted.modelJobs[index] = job
@@ -2775,7 +2898,7 @@ private struct AlphaRootWorkspaceStrip: View {
     let selectedTab: AlphaAppTab
     let onSelect: (AlphaAppTab) -> Void
 
-    private let tabs: [AlphaAppTab] = [.home, .cases, .settings]
+    private let tabs: [AlphaAppTab] = [.home, .cases]
 
     var body: some View {
         HStack(spacing: 6) {
@@ -3343,6 +3466,11 @@ private struct AlphaWorkspaceDrawerButton: View {
 
 private struct AlphaWorkspaceDrawerPanel: View {
     @Bindable var model: AlphaRossModel
+    @State private var mattersExpanded = true
+    @State private var recentFilesExpanded = true
+    @State private var renameTarget: AlphaCaseMatter?
+    @State private var renameDraft = ""
+    @State private var deleteTarget: AlphaCaseMatter?
 
     private var recentDocuments: [AlphaRecentDocumentItem] {
         alphaRecentDocumentItems(from: model.cases)
@@ -3396,38 +3524,88 @@ private struct AlphaWorkspaceDrawerPanel: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    RossSectionCard(title: "Matters") {
-                        VStack(spacing: 10) {
-                            Button("Create matter", action: createMatter)
-                                .rossPrimaryButtonStyle()
-
-                            if model.cases.isEmpty {
-                                Text("No matters yet. Create the first matter and Ross will keep it here.")
-                                    .font(.footnote)
-                                    .foregroundStyle(Color.rossInk.opacity(0.7))
-                            } else {
-                                ForEach(Array(model.cases.prefix(6))) { caseMatter in
-                                    Button {
-                                        openCase(caseMatter.id)
-                                    } label: {
-                                        AlphaWorkspaceDrawerMatterRow(caseMatter: caseMatter, model: model)
+                    RossSectionCard {
+                        VStack(alignment: .leading, spacing: mattersExpanded ? 12 : 0) {
+                            HStack(spacing: 12) {
+                                Button {
+                                    withAnimation(.snappy(duration: 0.2)) {
+                                        mattersExpanded.toggle()
                                     }
-                                    .buttonStyle(.plain)
+                                } label: {
+                                    HStack(spacing: 8) {
+                                        Text("Matters")
+                                            .font(.rossSerifHeadline())
+                                            .foregroundStyle(Color.rossInk)
+
+                                        Image(systemName: mattersExpanded ? "chevron.up" : "chevron.down")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(Color.rossInk.opacity(0.4))
+                                    }
+                                }
+                                .buttonStyle(.plain)
+
+                                Spacer(minLength: 0)
+
+                                AlphaGlassPlusButton(action: createMatter)
+                            }
+
+                            if mattersExpanded {
+                                if model.cases.isEmpty {
+                                    Text("No matters yet. Create the first matter and Ross will keep it here.")
+                                        .font(.footnote)
+                                        .foregroundStyle(Color.rossInk.opacity(0.7))
+                                } else {
+                                    ForEach(Array(model.cases.prefix(6))) { caseMatter in
+                                        Button {
+                                            openCase(caseMatter.id)
+                                        } label: {
+                                            AlphaWorkspaceDrawerMatterRow(caseMatter: caseMatter, model: model)
+                                        }
+                                        .buttonStyle(.plain)
+                                        .contextMenu {
+                                            AlphaMatterContextMenu(
+                                                model: model,
+                                                caseMatter: caseMatter,
+                                                renameTarget: $renameTarget,
+                                                renameDraft: $renameDraft,
+                                                deleteTarget: $deleteTarget
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
 
                     if !recentDocuments.isEmpty {
-                        RossSectionCard(title: "Recent files") {
-                            VStack(spacing: 10) {
-                                ForEach(Array(recentDocuments.prefix(5))) { entry in
-                                    Button {
-                                        openDocument(caseId: entry.caseId, documentId: entry.document.id)
-                                    } label: {
-                                        AlphaWorkspaceDrawerDocumentRow(entry: entry)
+                        RossSectionCard {
+                            VStack(alignment: .leading, spacing: recentFilesExpanded ? 12 : 0) {
+                                Button {
+                                    withAnimation(.snappy(duration: 0.2)) {
+                                        recentFilesExpanded.toggle()
                                     }
-                                    .buttonStyle(.plain)
+                                } label: {
+                                    HStack(spacing: 8) {
+                                        Text("Recent files")
+                                            .font(.rossSerifHeadline())
+                                            .foregroundStyle(Color.rossInk)
+
+                                        Image(systemName: recentFilesExpanded ? "chevron.up" : "chevron.down")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(Color.rossInk.opacity(0.4))
+                                    }
+                                }
+                                .buttonStyle(.plain)
+
+                                if recentFilesExpanded {
+                                    ForEach(Array(recentDocuments.prefix(5))) { entry in
+                                        Button {
+                                            openDocument(caseId: entry.caseId, documentId: entry.document.id)
+                                        } label: {
+                                            AlphaWorkspaceDrawerDocumentRow(entry: entry)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
                                 }
                             }
                         }
@@ -3452,6 +3630,37 @@ private struct AlphaWorkspaceDrawerPanel: View {
         }
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .shadow(color: Color.black.opacity(0.08), radius: 18, x: 8, y: 6)
+        .alert("Rename matter", isPresented: Binding(
+            get: { renameTarget != nil },
+            set: { if !$0 { renameTarget = nil } }
+        )) {
+            TextField("Matter name", text: $renameDraft)
+            Button("Save") {
+                if let renameTarget {
+                    model.renameCase(renameTarget.id, title: renameDraft)
+                }
+                renameTarget = nil
+            }
+            Button("Cancel", role: .cancel) {
+                renameTarget = nil
+            }
+        } message: {
+            Text("Update the matter name on this device.")
+        }
+        .alert("Delete matter?", isPresented: Binding(
+            get: { deleteTarget != nil },
+            set: { if !$0 { deleteTarget = nil } }
+        ), presenting: deleteTarget) { caseMatter in
+            Button("Delete", role: .destructive) {
+                model.deleteCase(caseMatter.id)
+                deleteTarget = nil
+            }
+            Button("Cancel", role: .cancel) {
+                deleteTarget = nil
+            }
+        } message: { caseMatter in
+            Text("Deleting \(caseMatter.title) removes its files, tasks, chat context, and saved reports from this device.")
+        }
     }
 }
 
@@ -3498,6 +3707,8 @@ private struct AlphaWorkspaceDrawerMatterRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
+            AlphaMatterFolderGlyph(tint: caseMatter.folderTint, size: 38)
+
             VStack(alignment: .leading, spacing: 3) {
                 Text(caseMatter.title)
                     .font(.subheadline.weight(.semibold))
@@ -3729,6 +3940,9 @@ private struct AlphaCaseListScreen: View {
     @Bindable var model: AlphaRossModel
     @State private var sortMode: AlphaCaseSortMode = .recentlyViewed
     @State private var viewMode: AlphaMatterListViewMode = .expanded
+    @State private var renameTarget: AlphaCaseMatter?
+    @State private var renameDraft = ""
+    @State private var deleteTarget: AlphaCaseMatter?
 
     private var sortedCases: [AlphaCaseMatter] {
         alphaSortedCases(for: sortMode, model: model)
@@ -3738,7 +3952,7 @@ private struct AlphaCaseListScreen: View {
         ScrollView {
             VStack(alignment: .leading, spacing: alphaSectionSpacing) {
                 HStack(spacing: 10) {
-                    Text("\(model.persisted.cases.count) matter(s) on this device")
+                    Text("\(model.cases.count) matter(s) on this device")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Color.rossInk.opacity(0.62))
 
@@ -3760,29 +3974,29 @@ private struct AlphaCaseListScreen: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel("Sort matters")
 
-                    Button {
-                        viewMode = viewMode == .expanded ? .summary : .expanded
+                    Menu {
+                        ForEach(AlphaMatterListViewMode.allCases) { option in
+                            Button(option.title) {
+                                viewMode = option
+                            }
+                        }
                     } label: {
                         Image(systemName: viewMode.systemImage)
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(Color.rossInk)
                             .frame(width: 34, height: 34)
-                            .background(Color.rossSecondaryGroupedBackground, in: Circle())
+                            .background(.ultraThinMaterial, in: Circle())
+                            .overlay {
+                                Circle()
+                                    .stroke(Color.rossBorder, lineWidth: 0.8)
+                            }
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(viewMode == .expanded ? "Switch to summary matter view" : "Switch to expanded matter view")
+                    .accessibilityLabel("Choose matter view")
 
-                    Button {
+                    AlphaGlassPlusButton {
                         model.path.append(.createCase)
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundStyle(Color.white)
-                            .frame(width: 36, height: 36)
-                            .background(Color.rossAccent, in: Circle())
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Create matter")
                 }
 
                 if model.cases.isEmpty {
@@ -3792,26 +4006,40 @@ private struct AlphaCaseListScreen: View {
                                 .font(.subheadline)
                                 .foregroundStyle(Color.rossInk.opacity(0.7))
 
-                            Button("Create matter") {
+                            Button {
                                 model.path.append(.createCase)
+                            } label: {
+                                Label("Create matter", systemImage: "plus")
                             }
-                            .rossPrimaryButtonStyle()
+                            .buttonStyle(.borderedProminent)
                         }
                     }
                 } else {
-                    VStack(spacing: viewMode == .expanded ? 12 : 8) {
+                    VStack(spacing: viewMode == .folder ? 14 : (viewMode == .expanded ? 12 : 8)) {
                         ForEach(sortedCases) { caseMatter in
                             Button {
                                 model.focusCase(caseMatter.id)
                                 model.path.append(.caseWorkspace(caseMatter.id))
                             } label: {
-                                if viewMode == .expanded {
+                                switch viewMode {
+                                case .expanded:
                                     AlphaCaseSummaryCard(model: model, caseMatter: caseMatter)
-                                } else {
+                                case .summary:
                                     AlphaCaseSummaryLine(model: model, caseMatter: caseMatter)
+                                case .folder:
+                                    AlphaCaseFolderCard(model: model, caseMatter: caseMatter)
                                 }
                             }
                             .buttonStyle(.plain)
+                            .contextMenu {
+                                AlphaMatterContextMenu(
+                                    model: model,
+                                    caseMatter: caseMatter,
+                                    renameTarget: $renameTarget,
+                                    renameDraft: $renameDraft,
+                                    deleteTarget: $deleteTarget
+                                )
+                            }
                         }
                     }
                 }
@@ -3819,6 +4047,37 @@ private struct AlphaCaseListScreen: View {
             .padding(alphaScreenPadding)
         }
         .toolbar(.hidden, for: .navigationBar)
+        .alert("Rename matter", isPresented: Binding(
+            get: { renameTarget != nil },
+            set: { if !$0 { renameTarget = nil } }
+        )) {
+            TextField("Matter name", text: $renameDraft)
+            Button("Save") {
+                if let renameTarget {
+                    model.renameCase(renameTarget.id, title: renameDraft)
+                }
+                renameTarget = nil
+            }
+            Button("Cancel", role: .cancel) {
+                renameTarget = nil
+            }
+        } message: {
+            Text("Update the matter name on this device.")
+        }
+        .alert("Delete matter?", isPresented: Binding(
+            get: { deleteTarget != nil },
+            set: { if !$0 { deleteTarget = nil } }
+        ), presenting: deleteTarget) { caseMatter in
+            Button("Delete", role: .destructive) {
+                model.deleteCase(caseMatter.id)
+                deleteTarget = nil
+            }
+            Button("Cancel", role: .cancel) {
+                deleteTarget = nil
+            }
+        } message: { caseMatter in
+            Text("Deleting \(caseMatter.title) removes its files, tasks, chat context, and saved reports from this device.")
+        }
     }
 }
 
@@ -3844,6 +4103,7 @@ private enum AlphaCaseSortMode: String, CaseIterable, Identifiable {
 private enum AlphaMatterListViewMode: String, CaseIterable, Identifiable {
     case expanded
     case summary
+    case folder
 
     var id: String { rawValue }
 
@@ -3853,6 +4113,8 @@ private enum AlphaMatterListViewMode: String, CaseIterable, Identifiable {
             "Expanded"
         case .summary:
             "Summary"
+        case .folder:
+            "Folder"
         }
     }
 
@@ -3862,6 +4124,124 @@ private enum AlphaMatterListViewMode: String, CaseIterable, Identifiable {
             "rectangle.grid.1x2"
         case .summary:
             "list.bullet"
+        case .folder:
+            "folder"
+        }
+    }
+}
+
+private func alphaMatterTintColor(_ tint: AlphaMatterTint) -> Color {
+    switch tint {
+    case .indigo:
+        return Color.rossAccent
+    case .amber:
+        return Color.rossHighlight
+    case .emerald:
+        return Color.rossSuccess
+    case .rose:
+        return Color(red: 0.76, green: 0.36, blue: 0.48)
+    case .slate:
+        return Color.rossInk.opacity(0.68)
+    }
+}
+
+private func alphaMatterTintTitle(_ tint: AlphaMatterTint) -> String {
+    switch tint {
+    case .indigo:
+        return "Indigo"
+    case .amber:
+        return "Amber"
+    case .emerald:
+        return "Emerald"
+    case .rose:
+        return "Rose"
+    case .slate:
+        return "Slate"
+    }
+}
+
+private struct AlphaGlassPlusButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "plus")
+                .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(Color.rossAccent)
+                .frame(width: 34, height: 34)
+                .background(.ultraThinMaterial, in: Circle())
+                .overlay {
+                    Circle()
+                        .stroke(Color.rossAccent.opacity(0.18), lineWidth: 1)
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Create matter")
+    }
+}
+
+private struct AlphaMatterFolderGlyph: View {
+    let tint: AlphaMatterTint
+    var size: CGFloat = 44
+
+    var body: some View {
+        let color = alphaMatterTintColor(tint)
+
+        ZStack {
+            RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
+                .fill(color.opacity(0.14))
+
+            Image(systemName: "folder.fill")
+                .symbolRenderingMode(.hierarchical)
+                .font(.system(size: size * 0.42, weight: .semibold))
+                .foregroundStyle(color)
+        }
+        .frame(width: size, height: size)
+        .overlay {
+            RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
+                .stroke(color.opacity(0.16), lineWidth: 1)
+        }
+    }
+}
+
+private struct AlphaMatterContextMenu: View {
+    @Bindable var model: AlphaRossModel
+    let caseMatter: AlphaCaseMatter
+    @Binding var renameTarget: AlphaCaseMatter?
+    @Binding var renameDraft: String
+    @Binding var deleteTarget: AlphaCaseMatter?
+
+    var body: some View {
+        Button {
+            renameTarget = caseMatter
+            renameDraft = caseMatter.title
+        } label: {
+            Label("Rename matter", systemImage: "pencil")
+        }
+
+        Menu("Folder color") {
+            ForEach(AlphaMatterTint.allCases) { tint in
+                Button {
+                    model.setFolderTint(tint, for: caseMatter.id)
+                } label: {
+                    Label(
+                        alphaMatterTintTitle(tint),
+                        systemImage: tint == caseMatter.folderTint ? "checkmark.circle.fill" : "circle"
+                    )
+                }
+            }
+        }
+
+        Button {
+            model.archiveCase(caseMatter.id)
+        } label: {
+            Label("Archive matter", systemImage: "archivebox")
+        }
+
+        Button(role: .destructive) {
+            deleteTarget = caseMatter
+        } label: {
+            Label("Delete matter", systemImage: "trash")
         }
     }
 }
@@ -4216,9 +4596,9 @@ private func alphaSortedCases(for sortMode: AlphaCaseSortMode, model: AlphaRossM
     case .recentlyViewed:
         return model.cases
     case .lastAdded:
-        return model.persisted.cases
+        return model.cases
     case .earliestActionNeeded:
-        return model.persisted.cases.sorted { lhs, rhs in
+        return model.cases.sorted { lhs, rhs in
             let lhsDate = alphaNextActionDate(for: lhs, model: model)
             let rhsDate = alphaNextActionDate(for: rhs, model: model)
             switch (lhsDate, rhsDate) {
@@ -4576,6 +4956,8 @@ private struct AlphaCaseSummaryCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 12) {
+                AlphaMatterFolderGlyph(tint: caseMatter.folderTint)
+
                 VStack(alignment: .leading, spacing: 4) {
                     Text(caseMatter.title)
                         .font(.subheadline.weight(.semibold))
@@ -4625,6 +5007,8 @@ private struct AlphaCaseSummaryLine: View {
 
     var body: some View {
         HStack(spacing: 12) {
+            AlphaMatterFolderGlyph(tint: caseMatter.folderTint, size: 34)
+
             VStack(alignment: .leading, spacing: 3) {
                 Text(caseMatter.title)
                     .font(.subheadline.weight(.semibold))
@@ -4659,6 +5043,54 @@ private struct AlphaCaseSummaryLine: View {
                 .stroke(Color.rossBorder, lineWidth: 0.8)
         }
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
+private struct AlphaCaseFolderCard: View {
+    @Bindable var model: AlphaRossModel
+    let caseMatter: AlphaCaseMatter
+
+    var body: some View {
+        let tint = alphaMatterTintColor(caseMatter.folderTint)
+
+        HStack(alignment: .top, spacing: 14) {
+            AlphaMatterFolderGlyph(tint: caseMatter.folderTint, size: 52)
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(caseMatter.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.rossInk)
+                        .lineLimit(2)
+
+                    Spacer(minLength: 8)
+
+                    if let nextHearing = caseMatter.nextHearing {
+                        Text(nextHearing.formatted(date: .abbreviated, time: .omitted))
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(tint)
+                    }
+                }
+
+                Text("\(model.openTaskCount(for: caseMatter.id)) open tasks • \(caseMatter.documents.count) documents")
+                    .font(.caption)
+                    .foregroundStyle(Color.rossInk.opacity(0.64))
+                    .lineLimit(1)
+
+                Text(caseMatter.summary)
+                    .font(.footnote)
+                    .foregroundStyle(Color.rossInk.opacity(0.72))
+                    .lineLimit(2)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(tint.opacity(0.06))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(tint.opacity(0.16), lineWidth: 1)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 }
 

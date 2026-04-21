@@ -177,6 +177,20 @@ enum AlphaCaseStage: String, Codable, CaseIterable, Identifiable, Hashable, Send
     }
 }
 
+enum AlphaMatterTint: String, Codable, CaseIterable, Identifiable, Hashable, Sendable {
+    case indigo
+    case amber
+    case emerald
+    case rose
+    case slate
+
+    var id: String { rawValue }
+
+    var title: String {
+        rawValue.capitalized
+    }
+}
+
 enum AlphaTaskPriority: String, Codable, CaseIterable, Hashable, Sendable {
     case low
     case normal
@@ -899,6 +913,7 @@ struct AlphaCaseMatter: Identifiable, Codable, Hashable, Sendable {
     var title: String
     var forum: String
     var stage: AlphaCaseStage
+    var folderTint: AlphaMatterTint
     var nextHearing: Date?
     var localNotice: String
     var summary: String
@@ -911,12 +926,14 @@ struct AlphaCaseMatter: Identifiable, Codable, Hashable, Sendable {
     var advocateCorrections: [AlphaAdvocateCorrection]
     var caseMemoryUpdates: [AlphaCaseMemoryUpdate]
     var updatedAt: Date
+    var archivedAt: Date?
 
     init(
         id: UUID = UUID(),
         title: String,
         forum: String,
         stage: AlphaCaseStage,
+        folderTint: AlphaMatterTint = .indigo,
         nextHearing: Date? = nil,
         localNotice: String = "Case files stay on this device",
         summary: String,
@@ -928,12 +945,14 @@ struct AlphaCaseMatter: Identifiable, Codable, Hashable, Sendable {
         chatTurns: [AlphaChatTurn] = [],
         advocateCorrections: [AlphaAdvocateCorrection] = [],
         caseMemoryUpdates: [AlphaCaseMemoryUpdate] = [],
-        updatedAt: Date = .now
+        updatedAt: Date = .now,
+        archivedAt: Date? = nil
     ) {
         self.id = id
         self.title = title
         self.forum = forum
         self.stage = stage
+        self.folderTint = folderTint
         self.nextHearing = nextHearing
         self.localNotice = localNotice
         self.summary = summary
@@ -946,6 +965,7 @@ struct AlphaCaseMatter: Identifiable, Codable, Hashable, Sendable {
         self.advocateCorrections = advocateCorrections
         self.caseMemoryUpdates = caseMemoryUpdates
         self.updatedAt = updatedAt
+        self.archivedAt = archivedAt
     }
 }
 
