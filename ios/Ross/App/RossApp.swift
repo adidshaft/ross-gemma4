@@ -21,6 +21,23 @@ func rossSaveLanguageSelection(code: String) {
     UserDefaults.standard.set(code, forKey: rossSelectedLanguageCodeKey)
 }
 
+private struct RossDemoProfile {
+    let email: String
+    let displayName: String
+    let subject: String
+}
+
+private let rossDemoProfiles: [RossDemoProfile] = [
+    RossDemoProfile(email: "advocate@ross.ai", displayName: "Advocate Ross", subject: "local_demo_advocate"),
+    RossDemoProfile(email: "test@ross.ai", displayName: "Ross Test Profile", subject: "local_demo_test"),
+    RossDemoProfile(email: "admin@ross.ai", displayName: "Ross Admin Profile", subject: "local_demo_admin")
+]
+
+private func rossDemoProfile(for email: String) -> RossDemoProfile? {
+    let normalized = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    return rossDemoProfiles.first { $0.email == normalized }
+}
+
 func rossBackendBaseURL() -> URL {
     let environment = ProcessInfo.processInfo.environment
     let rawURL = environment["ROSS_BACKEND_BASE_URL"] ?? environment["ROSS_BACKEND_URL"] ?? "http://127.0.0.1:8080"
@@ -53,6 +70,11 @@ enum RossAuthPhase: Equatable {
     case signedOut
     case unlockRequired(RossAuthSession)
     case signedIn(RossAuthSession)
+}
+
+fileprivate enum RossExternalSignInProvider: Equatable {
+    case google
+    case apple
 }
 
 final class RossAuthSessionSnapshot: @unchecked Sendable {
@@ -177,16 +199,21 @@ private struct RossRefreshSessionPayload: Decodable {
 
 @MainActor
 @Observable
-final class RossAuthController: NSObject, ASWebAuthenticationPresentationContextProviding {
+final class RossAuthController: NSObject, ASWebAuthenticationPresentationContextProviding, ASAuthorizationControllerPresentationContextProviding, ASAuthorizationControllerDelegate {
     @ObservationIgnored private let store = RossAuthSessionStore()
     @ObservationIgnored private var webAuthenticationSession: ASWebAuthenticationSession?
+    @ObservationIgnored private var appleAuthorizationController: ASAuthorizationController?
     @ObservationIgnored private let isoFormatter = ISO8601DateFormatter()
     @ObservationIgnored private var didLoad = false
 
     var phase: RossAuthPhase = .loading
-    var isStartingSignIn = false
+    fileprivate var activeExternalProvider: RossExternalSignInProvider?
     var authErrorMessage: String?
     var hasSelectedLanguage: Bool = rossHasSelectedLanguage()
+
+    var isStartingSignIn: Bool {
+        activeExternalProvider != nil
+    }
 
     func markLanguageSelected(code: String) {
         rossSaveLanguageSelection(code: code)
@@ -254,12 +281,12 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
     }
 
     func startGoogleSignIn() {
-        guard !isStartingSignIn else { return }
+        guard activeExternalProvider == nil else { return }
         authErrorMessage = nil
-        isStartingSignIn = true
+        activeExternalProvider = .google
 
         guard let callbackScheme = rossMobileAuthRedirectURL().scheme else {
-            isStartingSignIn = false
+            activeExternalProvider = nil
             authErrorMessage = "Ross could not prepare the mobile sign-in callback."
             return
         }
@@ -275,7 +302,7 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
         components?.queryItems = queryItems
 
         guard let startURL = components?.url else {
-            isStartingSignIn = false
+            activeExternalProvider = nil
             authErrorMessage = "Ross could not prepare sign-in."
             return
         }
@@ -294,9 +321,47 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
 
         if !authenticationSession.start() {
             webAuthenticationSession = nil
-            isStartingSignIn = false
+            activeExternalProvider = nil
             authErrorMessage = "Ross could not open sign-in."
         }
+    }
+
+    func startAppleSignIn() {
+        guard activeExternalProvider == nil else { return }
+        authErrorMessage = nil
+        activeExternalProvider = .apple
+
+        let request = ASAuthorizationAppleIDProvider().createRequest()
+        request.requestedScopes = [.fullName, .email]
+
+        let controller = ASAuthorizationController(authorizationRequests: [request])
+        controller.delegate = self
+        controller.presentationContextProvider = self
+        appleAuthorizationController = controller
+        controller.performRequests()
+    }
+
+    func signInWithDemoEmail(_ email: String) {
+        authErrorMessage = nil
+
+        guard let profile = rossDemoProfile(for: email) else {
+            authErrorMessage = "Use `advocate@ross.ai`, `test@ross.ai`, or `admin@ross.ai` to open the local demo profile."
+            return
+        }
+
+        let session = RossAuthSession(
+            accessToken: "local_demo_access_\(profile.subject)",
+            refreshToken: "local_demo_refresh_\(profile.subject)",
+            accountToken: "local_demo_account_\(profile.subject)",
+            email: profile.email,
+            displayName: profile.displayName,
+            subject: profile.subject,
+            expiresAt: Date().addingTimeInterval(3600 * 24 * 365)
+        )
+
+        try? store.saveSession(session)
+        RossAuthSessionSnapshot.shared.update(session)
+        phase = .signedIn(session)
     }
 
     func unlockSession() {
@@ -331,6 +396,8 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
     func signOut() {
         webAuthenticationSession?.cancel()
         webAuthenticationSession = nil
+        appleAuthorizationController = nil
+        activeExternalProvider = nil
         store.clearSession()
         RossAuthSessionSnapshot.shared.update(nil)
         authErrorMessage = nil
@@ -345,6 +412,62 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
     }
 
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        activePresentationAnchor()
+    }
+
+    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        activePresentationAnchor()
+    }
+
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
+        defer {
+            appleAuthorizationController = nil
+            activeExternalProvider = nil
+        }
+
+        guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
+            authErrorMessage = "Ross could not complete Apple sign-in."
+            return
+        }
+
+        let displayName = PersonNameComponentsFormatter().string(from: credential.fullName ?? PersonNameComponents())
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let fallbackAlias = "apple-\(credential.user.prefix(6))@local.ross"
+
+        let session = RossAuthSession(
+            accessToken: "apple_local_access_\(credential.user)",
+            refreshToken: "apple_local_refresh_\(credential.user)",
+            accountToken: "apple_local_account_\(credential.user)",
+            email: credential.email ?? fallbackAlias,
+            displayName: displayName.isEmpty ? "Apple profile" : displayName,
+            subject: "apple_\(credential.user)",
+            expiresAt: Date().addingTimeInterval(3600 * 24 * 365)
+        )
+
+        do {
+            try store.saveSession(session)
+            RossAuthSessionSnapshot.shared.update(session)
+            authErrorMessage = nil
+            phase = .signedIn(session)
+        } catch {
+            authErrorMessage = "Ross could not save the Apple sign-in session on this device."
+        }
+    }
+
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: any Error) {
+        defer {
+            appleAuthorizationController = nil
+            activeExternalProvider = nil
+        }
+
+        if let authError = error as? ASAuthorizationError, authError.code == .canceled {
+            return
+        }
+
+        authErrorMessage = error.localizedDescription
+    }
+
+    private func activePresentationAnchor() -> ASPresentationAnchor {
         #if canImport(UIKit)
         if let window = UIApplication.shared.connectedScenes
             .compactMap({ $0 as? UIWindowScene })
@@ -393,7 +516,7 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
     private func finishGoogleSignIn(callbackURL: URL?, error: Error?) {
         defer {
             webAuthenticationSession = nil
-            isStartingSignIn = false
+            activeExternalProvider = nil
         }
 
         if let authError = error as? ASWebAuthenticationSessionError, authError.code == .canceledLogin {
@@ -729,10 +852,9 @@ private struct RossLanguageTile: View {
 private struct RossSignInScreen: View {
     @Bindable var authController: RossAuthController
     @State private var appeared = false
-
-    private var anyAuthInProgress: Bool {
-        authController.isStartingSignIn
-    }
+    @State private var demoEmail = "advocate@ross.ai"
+    @State private var signInCardExpanded = false
+    @State private var emailOptionExpanded = false
 
     var body: some View {
         GeometryReader { proxy in
@@ -743,7 +865,7 @@ private struct RossSignInScreen: View {
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 18) {
                         HStack(spacing: 14) {
-                            RossAuthHeroMark(size: 62)
+                            RossAuthHeroMark(size: 58)
 
                             Text("ROSS")
                                 .font(.system(size: 15, weight: .semibold))
@@ -752,20 +874,20 @@ private struct RossSignInScreen: View {
 
                             Spacer(minLength: 0)
                         }
-                        .padding(.top, max(proxy.safeAreaInsets.top + 12, 28))
+                        .padding(.top, max(proxy.safeAreaInsets.top + 8, 20))
                         .opacity(appeared ? 1 : 0)
                         .offset(y: appeared ? 0 : -10)
 
-                        RossAuthGlassPanel(cornerRadius: 36, padding: 24) {
-                            VStack(alignment: .leading, spacing: 18) {
+                        RossAuthGlassPanel(cornerRadius: 34, padding: 22) {
+                            VStack(alignment: .leading, spacing: 14) {
                                 Text("Private legal work.\nOn this phone.")
-                                    .font(.system(size: 46, weight: .light))
-                                    .tracking(-1.8)
+                                    .font(.system(size: 40, weight: .light))
+                                    .tracking(-1.6)
                                     .foregroundStyle(Color.rossInk)
                                     .fixedSize(horizontal: false, vertical: true)
 
-                                Text("Sign in once and keep every matter, file, and chat on this device.")
-                                    .font(.system(size: 16, weight: .regular))
+                                Text("Matters, files, chats, and drafts stay on this device. Nothing from your legal work leaves your phone.")
+                                    .font(.system(size: 15, weight: .regular))
                                     .foregroundStyle(Color.rossInk.opacity(0.66))
                                     .fixedSize(horizontal: false, vertical: true)
                             }
@@ -779,7 +901,7 @@ private struct RossSignInScreen: View {
                                 variant: .highlight,
                                 fallbackSystemImage: "lock.fill",
                                 title: "Files stay local",
-                                detail: "Matters, files, and chats stay on this device."
+                                detail: "Private work stays on this device."
                             )
 
                             RossAuthFeatureTile(
@@ -787,53 +909,30 @@ private struct RossSignInScreen: View {
                                 variant: .accent,
                                 fallbackSystemImage: "faceid",
                                 title: "Quick unlock",
-                                detail: "Use Face ID, Touch ID, or your passcode when you return."
+                                detail: "Open again with Face ID or Touch ID."
                             )
                         }
                         .opacity(appeared ? 1 : 0)
                         .offset(y: appeared ? 0 : 12)
 
-                        if let errorMessage = authController.authErrorMessage, !errorMessage.isEmpty {
-                            RossAuthGlassPanel(cornerRadius: 24, padding: 14) {
-                                HStack(alignment: .top, spacing: 10) {
-                                    RossGlassIconView(
-                                        .triangleWarning,
-                                        variant: .highlight,
-                                        size: 16,
-                                        fallbackSystemImage: "exclamationmark.triangle.fill"
-                                    )
+                        Spacer(minLength: emailOptionExpanded ? 8 : (signInCardExpanded ? 24 : 54))
 
-                                    Text(errorMessage)
-                                        .font(.system(size: 14, weight: .medium))
-                                        .foregroundStyle(Color.red)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                        }
-
-                        Button {
-                            authController.startGoogleSignIn()
-                        } label: {
-                            HStack(spacing: 12) {
-                                RossGlassIconView(.earth, variant: .highlight, size: 18, fallbackSystemImage: "globe")
-                                    .frame(width: 22, height: 22)
-
-                                Text(authController.isStartingSignIn ? "Opening secure sign-in..." : "Continue with Google")
-                                    .frame(maxWidth: .infinity, alignment: .center)
-
-                                Color.clear
-                                    .frame(width: 22, height: 22)
-                            }
-                        }
-                        .rossPrimaryButtonStyle()
-                        .disabled(anyAuthInProgress)
-                        .opacity(anyAuthInProgress ? 0.82 : 1)
+                        RossAuthSignInSheet(
+                            authController: authController,
+                            demoEmail: $demoEmail,
+                            isExpanded: $signInCardExpanded,
+                            isEmailExpanded: $emailOptionExpanded
+                        )
                         .opacity(appeared ? 1 : 0)
-                        .offset(y: appeared ? 0 : 16)
+                        .offset(y: appeared ? 0 : 90)
                     }
+                    .frame(
+                        maxWidth: .infinity,
+                        minHeight: proxy.size.height - max(proxy.safeAreaInsets.bottom, 12),
+                        alignment: .top
+                    )
                     .padding(.horizontal, 20)
-                    .padding(.bottom, max(proxy.safeAreaInsets.bottom + 20, 32))
+                    .padding(.bottom, max(proxy.safeAreaInsets.bottom, 12))
                 }
             }
         }
@@ -842,6 +941,239 @@ private struct RossSignInScreen: View {
                 appeared = true
             }
         }
+        .onChange(of: authController.authErrorMessage) { _, newValue in
+            guard let newValue, !newValue.isEmpty else { return }
+            withAnimation(.spring(response: 0.34, dampingFraction: 0.84)) {
+                signInCardExpanded = true
+            }
+        }
+    }
+}
+
+private struct RossAuthSignInSheet: View {
+    @Bindable var authController: RossAuthController
+    @Binding var demoEmail: String
+    @Binding var isExpanded: Bool
+    @Binding var isEmailExpanded: Bool
+
+    private var externalSignInDisabled: Bool {
+        authController.isStartingSignIn
+    }
+
+    var body: some View {
+        RossAuthGlassPanel(cornerRadius: 32, padding: 18) {
+            VStack(alignment: .leading, spacing: isExpanded ? 14 : 10) {
+                Button {
+                    withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) {
+                        isExpanded.toggle()
+                    }
+                } label: {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Capsule()
+                            .fill(Color.white.opacity(0.32))
+                            .frame(width: 46, height: 5)
+                            .frame(maxWidth: .infinity)
+
+                        HStack(alignment: .top, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(isExpanded ? "Sign in" : "Get Started")
+                                    .font(.system(size: isExpanded ? 18 : 24, weight: isExpanded ? .medium : .semibold))
+                                    .foregroundStyle(Color.rossInk)
+
+                                Text(
+                                    isExpanded
+                                        ? "Choose Google, Apple, or Email. Everything after sign-in stays on this phone."
+                                        : "Tap to choose Google, Apple, or Email."
+                                )
+                                .font(.system(size: isExpanded ? 13 : 14, weight: .regular))
+                                .foregroundStyle(Color.rossInk.opacity(0.62))
+                                .fixedSize(horizontal: false, vertical: true)
+                            }
+
+                            Spacer(minLength: 10)
+
+                            Image(systemName: isExpanded ? "chevron.down" : "chevron.up")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(Color.rossInk.opacity(0.4))
+                                .padding(.top, 2)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                if isExpanded {
+                    VStack(alignment: .leading, spacing: 12) {
+                        if isEmailExpanded {
+                            VStack(alignment: .leading, spacing: 10) {
+                                HStack {
+                                    Text("Email")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(Color.rossInk)
+
+                                    Spacer(minLength: 10)
+
+                                    Button("Back") {
+                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.84)) {
+                                            isEmailExpanded = false
+                                        }
+                                    }
+                                    .buttonStyle(.plain)
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(Color.rossAccent)
+                                }
+
+                                RossAuthInputField(
+                                    title: "Email",
+                                    text: $demoEmail,
+                                    placeholder: "advocate@ross.ai",
+                                    iconSystemName: "envelope.fill",
+                                    onSubmit: {
+                                        authController.signInWithDemoEmail(demoEmail)
+                                    }
+                                )
+
+                                Text("Use `advocate@ross.ai` for the local demo.")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundStyle(Color.rossInk.opacity(0.5))
+
+                                Button {
+                                    authController.signInWithDemoEmail(demoEmail)
+                                } label: {
+                                    Text("Continue with Email")
+                                }
+                                .rossPrimaryButtonStyle()
+                            }
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                        } else {
+                            HStack(spacing: 10) {
+                                RossAuthOptionButton(
+                                    title: "Google",
+                                    isActive: authController.activeExternalProvider == .google,
+                                    action: {
+                                        authController.startGoogleSignIn()
+                                    }
+                                ) {
+                                    RossGlassIconView(.earth, variant: .highlight, size: 18, fallbackSystemImage: "globe")
+                                }
+                                .disabled(externalSignInDisabled)
+                                .opacity(externalSignInDisabled && authController.activeExternalProvider != .google ? 0.78 : 1)
+
+                                RossAuthOptionButton(
+                                    title: "Apple",
+                                    isActive: authController.activeExternalProvider == .apple,
+                                    action: {
+                                        authController.startAppleSignIn()
+                                    }
+                                ) {
+                                    Image(systemName: "applelogo")
+                                        .font(.system(size: 17, weight: .semibold))
+                                        .foregroundStyle(Color.rossInk.opacity(0.86))
+                                }
+                                .disabled(externalSignInDisabled)
+                                .opacity(externalSignInDisabled && authController.activeExternalProvider != .apple ? 0.78 : 1)
+
+                                RossAuthOptionButton(
+                                    title: "Email",
+                                    isActive: false,
+                                    action: {
+                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.84)) {
+                                            isEmailExpanded = true
+                                        }
+                                    }
+                                ) {
+                                    RossGlassIconView(.userMsg, variant: .neutral, size: 18, fallbackSystemImage: "envelope.fill")
+                                }
+                            }
+                        }
+                    }
+
+                    if let errorMessage = authController.authErrorMessage, !errorMessage.isEmpty {
+                        HStack(alignment: .top, spacing: 10) {
+                            RossGlassIconView(
+                                .triangleWarning,
+                                variant: .highlight,
+                                size: 16,
+                                fallbackSystemImage: "exclamationmark.triangle.fill"
+                            )
+
+                            Text(errorMessage)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(Color.red)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .fill(Color.white.opacity(0.12))
+                        )
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                        }
+                    }
+                }
+            }
+            .animation(.spring(response: 0.32, dampingFraction: 0.84), value: isExpanded)
+            .animation(.spring(response: 0.32, dampingFraction: 0.84), value: isEmailExpanded)
+        }
+    }
+}
+
+private struct RossAuthOptionButton<Icon: View>: View {
+    let title: String
+    let isActive: Bool
+    let action: () -> Void
+    let icon: Icon
+
+    init(
+        title: String,
+        isActive: Bool = false,
+        action: @escaping () -> Void,
+        @ViewBuilder icon: () -> Icon
+    ) {
+        self.title = title
+        self.isActive = isActive
+        self.action = action
+        self.icon = icon()
+    }
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 10) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 13, style: .continuous)
+                        .fill(Color.white.opacity(0.16))
+                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+
+                    icon
+                }
+                .frame(width: 34, height: 34)
+
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.rossInk)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+            }
+            .frame(maxWidth: .infinity, minHeight: 78)
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(isActive ? Color.rossAccent.opacity(0.12) : Color.white.opacity(0.12))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(
+                    isActive ? Color.rossAccent.opacity(0.34) : Color.white.opacity(0.18),
+                    lineWidth: 1
+                )
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -1106,6 +1438,69 @@ private struct RossAuthFeatureTile: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+}
+
+private struct RossAuthInputField: View {
+    let title: String
+    @Binding var text: String
+    let placeholder: String
+    let iconSystemName: String
+    let onSubmit: () -> Void
+
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color.rossInk.opacity(0.6))
+
+            HStack(spacing: 12) {
+                Image(systemName: iconSystemName)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color.rossInk.opacity(0.44))
+                    .frame(width: 18, height: 18)
+
+                TextField(placeholder, text: $text)
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundStyle(Color.rossInk)
+                    .rossEmailFieldInputBehavior()
+                    .focused($isFocused)
+                    .onSubmit(onSubmit)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color.white.opacity(0.12))
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(
+                        isFocused
+                            ? Color.white.opacity(0.42)
+                            : Color.white.opacity(0.18),
+                        lineWidth: 1
+                    )
+            }
+        }
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func rossEmailFieldInputBehavior() -> some View {
+        #if os(iOS)
+        self
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+            .keyboardType(.emailAddress)
+            .submitLabel(.done)
+        #else
+        self
+        #endif
     }
 }
 

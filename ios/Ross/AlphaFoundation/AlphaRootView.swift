@@ -3927,6 +3927,7 @@ private func alphaAskMentionSuggestions(
 }
 
 private struct AlphaRootAskDock: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Bindable var model: AlphaRossModel
     let fixedScopeCaseID: UUID?
     let fixedDocumentIDs: Set<UUID>
@@ -3968,6 +3969,44 @@ private struct AlphaRootAskDock: View {
 
     private var canSend: Bool {
         !draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var dockPrimaryText: Color {
+        colorScheme == .dark ? Color.white.opacity(0.88) : Color.rossInk.opacity(0.84)
+    }
+
+    private var dockSecondaryText: Color {
+        colorScheme == .dark ? Color.white.opacity(0.62) : Color.rossInk.opacity(0.58)
+    }
+
+    private var dockMutedText: Color {
+        colorScheme == .dark ? Color.white.opacity(0.52) : Color.rossInk.opacity(0.48)
+    }
+
+    private var dockBadgeFill: Color {
+        colorScheme == .dark ? Color.white.opacity(0.08) : Color.white.opacity(0.54)
+    }
+
+    private var dockGradient: [Color] {
+        if colorScheme == .dark {
+            return [
+                Color.rossChromeBackground.opacity(0.78),
+                Color.rossChromeBackground.opacity(0.66)
+            ]
+        }
+
+        return [
+            Color.white.opacity(0.84),
+            Color(red: 0.86, green: 0.89, blue: 0.96).opacity(0.78)
+        ]
+    }
+
+    private var dockStroke: Color {
+        colorScheme == .dark ? Color.white.opacity(0.16) : Color.rossGlassStroke.opacity(0.92)
+    }
+
+    private var dockShadow: Color {
+        colorScheme == .dark ? Color.black.opacity(0.16) : Color.rossShadow.opacity(0.12)
     }
 
     private var mentionSuggestions: [AlphaAskDocumentOption] {
@@ -4076,16 +4115,16 @@ private struct AlphaRootAskDock: View {
                         } label: {
                             AlphaAskScopePill(
                                 title: model.scopeLabel(for: activeScopeCaseID),
-                                foregroundStyle: Color.white.opacity(0.8),
-                                backgroundOpacity: 0.1,
+                                foregroundStyle: dockPrimaryText,
+                                backgroundOpacity: colorScheme == .dark ? 0.1 : 0.16,
                                 showsChevron: true
                             )
                         }
                     } else {
                         AlphaAskScopePill(
                             title: model.scopeLabel(for: activeScopeCaseID),
-                            foregroundStyle: Color.white.opacity(0.8),
-                            backgroundOpacity: 0.08,
+                            foregroundStyle: dockPrimaryText,
+                            backgroundOpacity: colorScheme == .dark ? 0.08 : 0.16,
                             showsChevron: false
                         )
                     }
@@ -4095,7 +4134,7 @@ private struct AlphaRootAskDock: View {
                             RossGlassIconView(.earth, variant: .highlight, size: 14, fallbackSystemImage: "globe")
                             Text("Web Search")
                                 .font(.caption2.weight(.semibold))
-                                .foregroundStyle(Color.white.opacity(0.72))
+                                .foregroundStyle(dockSecondaryText)
                         }
                     }
                 }
@@ -4124,7 +4163,7 @@ private struct AlphaRootAskDock: View {
                     } label: {
                         RossGlassIconView(.badgeSparkle, variant: .neutral, size: 18, fallbackSystemImage: "plus")
                             .frame(width: 34, height: 34)
-                            .background(Color.white.opacity(0.08), in: Circle())
+                            .background(dockBadgeFill, in: Circle())
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Ask Ross tools")
@@ -4132,8 +4171,8 @@ private struct AlphaRootAskDock: View {
                     TextField("Ask Ross about dates, files, or next steps", text: draftBinding, axis: .vertical)
                         .lineLimit(1...2)
                         .textFieldStyle(.plain)
-                        .font(.footnote)
-                        .foregroundStyle(Color.white.opacity(0.88))
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(dockPrimaryText)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                     Button {
@@ -4141,9 +4180,9 @@ private struct AlphaRootAskDock: View {
                     } label: {
                         Image(systemName: "arrow.up.left.and.arrow.down.right")
                             .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(Color.white.opacity(0.82))
+                            .foregroundStyle(dockPrimaryText.opacity(0.92))
                             .frame(width: 28, height: 28)
-                            .background(Color.white.opacity(0.08), in: Circle())
+                            .background(dockBadgeFill, in: Circle())
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Open full composer")
@@ -4169,7 +4208,7 @@ private struct AlphaRootAskDock: View {
                         } label: {
                             RossGlassIconView(.userMsg, variant: .accent, size: 20, fallbackSystemImage: "bubble.left.and.text.bubble.right.fill")
                                 .frame(width: 34, height: 34)
-                                .background(Color.white.opacity(0.08), in: Circle())
+                                .background(dockBadgeFill, in: Circle())
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Open Ask Ross conversation")
@@ -4188,17 +4227,17 @@ private struct AlphaRootAskDock: View {
                 if let selectionSubtitle, fixedDocumentIDs.isEmpty {
                     Text(selectionSubtitle)
                         .font(.caption2.weight(.semibold))
-                        .foregroundStyle(Color.white.opacity(0.6))
+                        .foregroundStyle(dockSecondaryText)
                 } else if fixedDocumentIDs.isEmpty {
                     Text("Type @ to add a file.")
                         .font(.caption2.weight(.semibold))
-                        .foregroundStyle(Color.white.opacity(0.52))
+                        .foregroundStyle(dockMutedText)
                 }
 
                 if model.askWebEnabled {
                     Text("Web Search only sends a generic public-law query, never your case files or document text.")
                         .font(.caption2)
-                        .foregroundStyle(Color.white.opacity(0.62))
+                        .foregroundStyle(dockSecondaryText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -4212,10 +4251,7 @@ private struct AlphaRootAskDock: View {
                     RoundedRectangle(cornerRadius: 22, style: .continuous)
                         .fill(
                             LinearGradient(
-                                colors: [
-                                    Color.rossChromeBackground.opacity(0.78),
-                                    Color.rossChromeBackground.opacity(0.66)
-                                ],
+                                colors: dockGradient,
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -4224,9 +4260,9 @@ private struct AlphaRootAskDock: View {
         )
         .overlay {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(Color.white.opacity(0.16), lineWidth: 1)
+                .stroke(dockStroke, lineWidth: 1)
         }
-        .shadow(color: Color.black.opacity(0.16), radius: 16, x: 0, y: 8)
+        .shadow(color: dockShadow, radius: 16, x: 0, y: 8)
         .sheet(isPresented: $showingExpandedComposer) {
             AlphaAskComposerSheet(
                 model: model,
@@ -4379,6 +4415,7 @@ private enum AlphaAskSurfaceTone {
 }
 
 private struct AlphaAskSelectionChip: View {
+    @Environment(\.colorScheme) private var colorScheme
     let title: String
     let detail: String?
     let isShared: Bool
@@ -4400,6 +4437,11 @@ private struct AlphaAskSelectionChip: View {
     }
 
     var body: some View {
+        let dockForeground = colorScheme == .dark ? Color.white.opacity(0.76) : Color.rossInk.opacity(0.82)
+        let dockDetail = colorScheme == .dark ? Color.white.opacity(0.46) : Color.rossInk.opacity(0.46)
+        let dockBackground = colorScheme == .dark ? Color.black.opacity(0.18) : Color.white.opacity(0.6)
+        let dockStroke = colorScheme == .dark ? Color.white.opacity(0.08) : Color.rossGlassStroke.opacity(0.9)
+
         HStack(spacing: 8) {
             Group {
                 if isShared {
@@ -4416,12 +4458,12 @@ private struct AlphaAskSelectionChip: View {
 
                 if let detail, !detail.isEmpty {
                     Circle()
-                        .fill(tone == .dock ? Color.white.opacity(0.26) : Color.rossInk.opacity(0.18))
+                        .fill(tone == .dock ? dockDetail.opacity(0.6) : Color.rossInk.opacity(0.18))
                         .frame(width: 3, height: 3)
 
                     Text(detail)
                         .lineLimit(1)
-                        .foregroundStyle(tone == .dock ? Color.white.opacity(0.46) : Color.rossInk.opacity(0.46))
+                        .foregroundStyle(tone == .dock ? dockDetail : Color.rossInk.opacity(0.46))
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -4430,24 +4472,24 @@ private struct AlphaAskSelectionChip: View {
                 Button(action: onRemove) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(tone == .dock ? Color.white.opacity(0.52) : Color.rossInk.opacity(0.32))
+                        .foregroundStyle(tone == .dock ? dockDetail : Color.rossInk.opacity(0.32))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Remove \(title)")
             }
         }
         .font(.caption2.weight(.semibold))
-        .foregroundStyle(tone == .dock ? Color.white.opacity(0.76) : Color.rossInk.opacity(0.82))
+        .foregroundStyle(tone == .dock ? dockForeground : Color.rossInk.opacity(0.82))
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(
-            tone == .dock ? Color.black.opacity(0.18) : Color.rossGlassSubtleFill,
+            tone == .dock ? dockBackground : Color.rossGlassSubtleFill,
             in: RoundedRectangle(cornerRadius: 12, style: .continuous)
         )
         .overlay {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(
-                    tone == .dock ? Color.white.opacity(0.08) : Color.rossGlassStroke.opacity(0.82),
+                    tone == .dock ? dockStroke : Color.rossGlassStroke.opacity(0.82),
                     lineWidth: 1
                 )
         }
@@ -4455,6 +4497,7 @@ private struct AlphaAskSelectionChip: View {
 }
 
 private struct AlphaAskSuggestionBadge: View {
+    @Environment(\.colorScheme) private var colorScheme
     let title: String
     let tone: AlphaAskSurfaceTone
 
@@ -4462,17 +4505,24 @@ private struct AlphaAskSuggestionBadge: View {
         Text(title)
             .font(.system(size: 10, weight: .bold, design: .rounded))
             .tracking(0.4)
-            .foregroundStyle(tone == .dock ? Color.white.opacity(0.74) : Color.rossAccent.opacity(0.86))
+            .foregroundStyle(
+                tone == .dock
+                    ? (colorScheme == .dark ? Color.white.opacity(0.74) : Color.rossAccent.opacity(0.82))
+                    : Color.rossAccent.opacity(0.86)
+            )
             .padding(.horizontal, 8)
             .padding(.vertical, 5)
             .background(
-                tone == .dock ? Color.white.opacity(0.08) : Color.rossAccent.opacity(0.08),
+                tone == .dock
+                    ? (colorScheme == .dark ? Color.white.opacity(0.08) : Color.rossAccent.opacity(0.08))
+                    : Color.rossAccent.opacity(0.08),
                 in: Capsule()
             )
     }
 }
 
 private struct AlphaAskMentionSuggestionsCard: View {
+    @Environment(\.colorScheme) private var colorScheme
     let documents: [AlphaAskDocumentOption]
     let scopeCaseID: UUID?
     let tone: AlphaAskSurfaceTone
@@ -4507,18 +4557,24 @@ private struct AlphaAskMentionSuggestionsCard: View {
         }
         .padding(8)
         .background(
-            tone == .dock ? Color.black.opacity(0.22) : Color.rossGlassSubtleFill,
+            tone == .dock
+                ? (colorScheme == .dark ? Color.black.opacity(0.22) : Color.white.opacity(0.68))
+                : Color.rossGlassSubtleFill,
             in: RoundedRectangle(cornerRadius: 16, style: .continuous)
         )
         .overlay {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(
-                    tone == .dock ? Color.white.opacity(0.08) : Color.rossGlassStroke.opacity(0.82),
+                    tone == .dock
+                        ? (colorScheme == .dark ? Color.white.opacity(0.08) : Color.rossGlassStroke.opacity(0.9))
+                        : Color.rossGlassStroke.opacity(0.82),
                     lineWidth: 1
                 )
         }
         .shadow(
-            color: tone == .dock ? Color.black.opacity(0.12) : Color.rossShadow.opacity(0.14),
+            color: tone == .dock
+                ? (colorScheme == .dark ? Color.black.opacity(0.12) : Color.rossShadow.opacity(0.12))
+                : Color.rossShadow.opacity(0.14),
             radius: 10,
             x: 0,
             y: 4
@@ -4527,31 +4583,35 @@ private struct AlphaAskMentionSuggestionsCard: View {
 }
 
 private struct AlphaAskMentionSuggestionRow: View {
+    @Environment(\.colorScheme) private var colorScheme
     let document: AlphaAskDocumentOption
     let scopeCaseID: UUID?
     let tone: AlphaAskSurfaceTone
 
     var body: some View {
         let icon = alphaDocumentGlassIcon(document.kind)
+        let dockPrimary = colorScheme == .dark ? Color.white.opacity(0.88) : Color.rossInk.opacity(0.9)
+        let dockSecondary = colorScheme == .dark ? Color.white.opacity(0.52) : Color.rossInk.opacity(0.56)
+        let dockBackground = colorScheme == .dark ? Color.white.opacity(0.05) : Color.white.opacity(0.54)
 
         HStack(spacing: 10) {
             RossGlassIconView(icon.0, variant: icon.1, size: 16, fallbackSystemImage: icon.2)
                 .frame(width: 26, height: 26)
                 .background(
-                    tone == .dock ? Color.white.opacity(0.06) : Color.rossGlassFill,
+                    tone == .dock ? dockBackground : Color.rossGlassFill,
                     in: RoundedRectangle(cornerRadius: 9, style: .continuous)
                 )
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(document.displayTitle)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(tone == .dock ? Color.white.opacity(0.88) : Color.rossInk.opacity(0.9))
+                    .foregroundStyle(tone == .dock ? dockPrimary : Color.rossInk.opacity(0.9))
                     .lineLimit(1)
                     .multilineTextAlignment(.leading)
 
                 Text(document.compactDetail(scopeCaseID: scopeCaseID))
                     .font(.caption2.weight(.medium))
-                    .foregroundStyle(tone == .dock ? Color.white.opacity(0.52) : Color.rossInk.opacity(0.56))
+                    .foregroundStyle(tone == .dock ? dockSecondary : Color.rossInk.opacity(0.56))
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -4561,14 +4621,17 @@ private struct AlphaAskMentionSuggestionRow: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .background(
-            tone == .dock ? Color.white.opacity(0.05) : Color.rossGlassFill,
+            tone == .dock ? dockBackground : Color.rossGlassFill,
             in: RoundedRectangle(cornerRadius: 14, style: .continuous)
         )
         .overlay {
-            if tone == .sheet {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.rossGlassStroke.opacity(0.82), lineWidth: 1)
-            }
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(
+                    tone == .dock
+                        ? (colorScheme == .dark ? Color.white.opacity(0.06) : Color.rossGlassStroke.opacity(0.86))
+                        : Color.rossGlassStroke.opacity(0.82),
+                    lineWidth: 1
+                )
         }
     }
 }
@@ -5354,10 +5417,10 @@ private struct AlphaWorkspaceDrawerSection<Content: View>: View {
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(Color.rossInk.opacity(0.4))
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-
-                Spacer(minLength: 0)
 
                 if let trailing {
                     trailing
@@ -5400,6 +5463,7 @@ private struct AlphaWorkspaceDrawerFooterButton: View {
 }
 
 private struct AlphaWorkspaceDrawerMatterEntry: View {
+    @Environment(\.colorScheme) private var colorScheme
     let caseMatter: AlphaCaseMatter
     let sessions: [AlphaChatSession]
     let activeSessionID: UUID?
@@ -5412,7 +5476,7 @@ private struct AlphaWorkspaceDrawerMatterEntry: View {
     @Bindable var model: AlphaRossModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 10) {
                 Button(action: openCase) {
                     AlphaWorkspaceDrawerMatterRow(
@@ -5425,17 +5489,17 @@ private struct AlphaWorkspaceDrawerMatterEntry: View {
 
                 Button(action: toggleThreads) {
                     Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(Color.rossInk.opacity(0.56))
                         .frame(width: 28, height: 28)
-                        .background(Color.rossSecondaryGroupedBackground.opacity(0.9), in: Circle())
+                        .background(Color.white.opacity(colorScheme == .dark ? 0.08 : 0.52), in: Circle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(isExpanded ? "Collapse chats" : "Expand chats")
             }
 
             if isExpanded {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 8) {
                     if !sessions.isEmpty {
                         ForEach(sessions) { session in
                             Button {
@@ -5459,6 +5523,24 @@ private struct AlphaWorkspaceDrawerMatterEntry: View {
                 }
             }
         }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(
+                    isSelected
+                        ? Color.rossAccent.opacity(colorScheme == .dark ? 0.14 : 0.1)
+                        : Color.rossGlassSubtleFill.opacity(colorScheme == .dark ? 0.46 : 0.92)
+                )
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(
+                    isSelected
+                        ? Color.rossAccent.opacity(colorScheme == .dark ? 0.24 : 0.18)
+                        : Color.rossGlassStroke.opacity(colorScheme == .dark ? 0.18 : 0.7),
+                    lineWidth: 1
+                )
+        }
     }
 }
 
@@ -5468,8 +5550,8 @@ private struct AlphaWorkspaceDrawerMatterRow: View {
     let isSelected: Bool
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            AlphaMatterFolderGlyph(tint: caseMatter.folderTint, size: 38)
+        HStack(alignment: .top, spacing: 10) {
+            AlphaMatterFolderGlyph(tint: caseMatter.folderTint, size: 36)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(caseMatter.title)
@@ -5477,6 +5559,8 @@ private struct AlphaWorkspaceDrawerMatterRow: View {
                     .foregroundStyle(Color.rossInk)
                     .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
+                    .layoutPriority(1)
+
                 Text("\(openTaskCount) open tasks • \(caseMatter.documents.count) docs")
                     .font(.caption)
                     .foregroundStyle(Color.rossInk.opacity(0.62))
@@ -5487,35 +5571,37 @@ private struct AlphaWorkspaceDrawerMatterRow: View {
 
             if let nextHearing = caseMatter.nextHearing {
                 Text(nextHearing.formatted(date: .abbreviated, time: .omitted))
-                    .font(.caption.weight(.semibold))
+                    .font(.caption2.weight(.bold))
                     .foregroundStyle(Color.rossAccent)
                     .multilineTextAlignment(.trailing)
                     .fixedSize(horizontal: false, vertical: true)
-                    .frame(width: 72, alignment: .trailing)
+                    .frame(width: 60, alignment: .trailing)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 2)
+        .padding(.vertical, 2)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(isSelected ? Color.rossAccent.opacity(0.08) : Color.clear)
+                .fill(isSelected ? Color.rossAccent.opacity(0.06) : Color.clear)
         )
     }
 }
 
 private struct AlphaWorkspaceDrawerNewChatRow: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: "square.and.pencil")
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Color.rossAccent)
                 .frame(width: 24, height: 24)
                 .background(Color.rossAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
 
             Text("New chat…")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(Color.rossInk)
+                .foregroundStyle(Color.rossInk.opacity(0.9))
                 .lineLimit(1)
 
             Spacer(minLength: 8)
@@ -5526,11 +5612,19 @@ private struct AlphaWorkspaceDrawerNewChatRow: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(Color.rossSecondaryGroupedBackground.opacity(0.78), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.white.opacity(colorScheme == .dark ? 0.05 : 0.44))
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.rossGlassStroke.opacity(colorScheme == .dark ? 0.14 : 0.68), lineWidth: 1)
+        }
     }
 }
 
 private struct AlphaWorkspaceDrawerChatRow: View {
+    @Environment(\.colorScheme) private var colorScheme
     let title: String
     let subtitle: String
     let isSelected: Bool
@@ -5560,11 +5654,14 @@ private struct AlphaWorkspaceDrawerChatRow: View {
         .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(isSelected ? Color.rossAccent.opacity(0.08) : Color.rossGlassSubtleFill.opacity(0.36))
+                .fill(
+                    isSelected
+                        ? Color.rossAccent.opacity(0.08)
+                        : Color.white.opacity(colorScheme == .dark ? 0.04 : 0.28)
+                )
         )
     }
 }
-
 private struct AlphaWorkspaceDrawerDocumentRow: View {
     let entry: AlphaRecentDocumentItem
 
@@ -6789,6 +6886,8 @@ private struct AlphaDisclosureCard<Content: View>: View {
                                 .foregroundStyle(Color.rossInk.opacity(0.45))
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
 
