@@ -440,7 +440,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             let clearedSelection = await MainActor.run { model.selectedAskDocumentIDs(for: caseMatter.id) }
             let clearedDraft = await MainActor.run { model.askDraft(for: caseMatter.id) }
             XCTAssertTrue(clearedSelection.isEmpty)
-            XCTAssertEqual(clearedDraft, "Ask Ross about this matter...")
+            XCTAssertEqual(clearedDraft, "")
 
             await MainActor.run {
                 model.openDocumentInChat(caseId: caseMatter.id, documentId: secondDocument.id, startNewThread: false)

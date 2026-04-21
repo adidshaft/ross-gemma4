@@ -27,7 +27,7 @@ public struct RossCardStyle: ViewModifier {
                     .stroke(Color.rossBorder.opacity(0.9), lineWidth: 0.75)
             }
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .shadow(color: Color.black.opacity(0.07), radius: 14, x: 0, y: 8)
+            .shadow(color: Color.rossShadow.opacity(0.45), radius: 14, x: 0, y: 8)
     }
 }
 
@@ -85,9 +85,9 @@ public struct RossGlassButtonStyle: ButtonStyle {
                         .fill(
                             LinearGradient(
                                 colors: [
-                                    Color.white.opacity(isPressed ? 0.12 : 0.22),
+                                    Color.rossGlassFill.opacity(isPressed ? 0.72 : 0.94),
                                     tint.opacity(isPressed ? 0.05 : 0.1),
-                                    Color.rossGroupedBackground.opacity(isPressed ? 0.16 : 0.28)
+                                    Color.rossGlassSubtleFill.opacity(isPressed ? 0.7 : 0.88)
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
@@ -100,7 +100,7 @@ public struct RossGlassButtonStyle: ButtonStyle {
                     .strokeBorder(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(isPressed ? 0.35 : 0.62),
+                                Color.rossGlassStroke.opacity(isPressed ? 0.42 : 0.72),
                                 tint.opacity(isPressed ? 0.14 : 0.24)
                             ],
                             startPoint: .topLeading,
@@ -110,7 +110,7 @@ public struct RossGlassButtonStyle: ButtonStyle {
                     )
             }
             .shadow(
-                color: tint.opacity(isPressed ? 0.1 : 0.18),
+                color: Color.rossShadow.opacity(isPressed ? 0.12 : 0.22),
                 radius: isPressed ? 8 : 18,
                 y: isPressed ? 4 : 10
             )

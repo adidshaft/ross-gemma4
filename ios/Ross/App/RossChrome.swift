@@ -101,7 +101,7 @@ struct RossLaunchSplashView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 138, height: 138)
-                    .shadow(color: Color.black.opacity(0.18), radius: 16, y: 8)
+                    .shadow(color: Color.rossShadow.opacity(0.9), radius: 16, y: 8)
 
                 Text("Ross")
                     .font(.system(size: 28, weight: .semibold, design: .rounded))
@@ -300,7 +300,7 @@ struct RossHeroCard<Content: View>: View {
         )
         .overlay {
             RoundedRectangle(cornerRadius: 32, style: .continuous)
-                .stroke(Color.white.opacity(0.5), lineWidth: 1)
+                .stroke(Color.rossGlassStroke.opacity(0.85), lineWidth: 1)
         }
         .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
         .shadow(color: Color.rossAccent.opacity(0.08), radius: 18, y: 10)
@@ -334,14 +334,15 @@ struct RossInfoPill: View {
         .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(Color.rossGlassSubtleFill)
+                .background(.ultraThinMaterial)
         )
         .overlay {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                .stroke(Color.rossGlassStroke.opacity(0.42), lineWidth: 1)
         }
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-        .shadow(color: Color.black.opacity(0.03), radius: 10, y: 4)
+        .shadow(color: Color.rossShadow.opacity(0.24), radius: 10, y: 4)
     }
 }
 
@@ -423,7 +424,7 @@ struct RossActionTile: View {
                     .stroke(Color.rossBorder, lineWidth: 1)
             }
             .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .shadow(color: Color.black.opacity(0.02), radius: 8, y: 2)
+            .shadow(color: Color.rossShadow.opacity(0.18), radius: 8, y: 2)
         }
         .buttonStyle(.plain)
     }
