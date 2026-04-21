@@ -862,78 +862,52 @@ private struct RossSignInScreen: View {
                 RossAuthBackdrop()
                     .frame(width: proxy.size.width, height: proxy.size.height)
 
-                ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 18) {
-                        HStack(spacing: 14) {
-                            RossAuthHeroMark(size: 58)
+                VStack(alignment: .leading, spacing: 18) {
+                    HStack(spacing: 14) {
+                        RossAuthHeroMark(size: 58)
 
-                            Text("ROSS")
-                                .font(.system(size: 15, weight: .semibold))
-                                .tracking(3.6)
-                                .foregroundStyle(Color.rossAccent)
+                        Text("ROSS")
+                            .font(.system(size: 15, weight: .semibold))
+                            .tracking(3.6)
+                            .foregroundStyle(Color.rossAccent)
 
-                            Spacer(minLength: 0)
-                        }
-                        .padding(.top, max(proxy.safeAreaInsets.top + 8, 20))
-                        .opacity(appeared ? 1 : 0)
-                        .offset(y: appeared ? 0 : -10)
-
-                        RossAuthGlassPanel(cornerRadius: 34, padding: 22) {
-                            VStack(alignment: .leading, spacing: 14) {
-                                Text("Private legal work.\nOn this phone.")
-                                    .font(.system(size: 40, weight: .light))
-                                    .tracking(-1.6)
-                                    .foregroundStyle(Color.rossInk)
-                                    .fixedSize(horizontal: false, vertical: true)
-
-                                Text("Matters, files, chats, and drafts stay on this device. Nothing from your legal work leaves your phone.")
-                                    .font(.system(size: 15, weight: .regular))
-                                    .foregroundStyle(Color.rossInk.opacity(0.66))
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                        }
-                        .opacity(appeared ? 1 : 0)
-                        .offset(y: appeared ? 0 : 10)
-
-                        HStack(spacing: 12) {
-                            RossAuthFeatureTile(
-                                icon: .lock,
-                                variant: .highlight,
-                                fallbackSystemImage: "lock.fill",
-                                title: "Files stay local",
-                                detail: "Private work stays on this device."
-                            )
-
-                            RossAuthFeatureTile(
-                                icon: .gearKeyhole,
-                                variant: .accent,
-                                fallbackSystemImage: "faceid",
-                                title: "Quick unlock",
-                                detail: "Open again with Face ID or Touch ID."
-                            )
-                        }
-                        .opacity(appeared ? 1 : 0)
-                        .offset(y: appeared ? 0 : 12)
-
-                        Spacer(minLength: emailOptionExpanded ? 8 : (signInCardExpanded ? 24 : 54))
-
-                        RossAuthSignInSheet(
-                            authController: authController,
-                            demoEmail: $demoEmail,
-                            isExpanded: $signInCardExpanded,
-                            isEmailExpanded: $emailOptionExpanded
-                        )
-                        .opacity(appeared ? 1 : 0)
-                        .offset(y: appeared ? 0 : 90)
+                        Spacer(minLength: 0)
                     }
-                    .frame(
-                        maxWidth: .infinity,
-                        minHeight: proxy.size.height - max(proxy.safeAreaInsets.bottom, 12),
-                        alignment: .top
+                    .padding(.top, max(proxy.safeAreaInsets.top + 6, 18))
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : -10)
+
+                    RossAuthGlassPanel(cornerRadius: 34, padding: 22) {
+                        VStack(alignment: .leading, spacing: 14) {
+                            Text("Private legal work.\nOn this phone.")
+                                .font(.system(size: 42, weight: .light))
+                                .tracking(-1.8)
+                                .foregroundStyle(Color.rossInk)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            Text("Everything from your legal work stays local. Nothing from your matters, files, chats, or drafts leaves your phone.")
+                                .font(.system(size: 15, weight: .regular))
+                                .foregroundStyle(Color.rossInk.opacity(0.66))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 10)
+
+                    Spacer(minLength: 0)
+
+                    RossAuthSignInSheet(
+                        authController: authController,
+                        demoEmail: $demoEmail,
+                        isExpanded: $signInCardExpanded,
+                        isEmailExpanded: $emailOptionExpanded
                     )
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, max(proxy.safeAreaInsets.bottom, 12))
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 80)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .padding(.horizontal, 20)
+                .padding(.bottom, max(proxy.safeAreaInsets.bottom + 8, 18))
             }
         }
         .onAppear {
@@ -982,8 +956,8 @@ private struct RossAuthSignInSheet: View {
 
                                 Text(
                                     isExpanded
-                                        ? "Choose Google, Apple, or Email. Everything after sign-in stays on this phone."
-                                        : "Tap to choose Google, Apple, or Email."
+                                        ? "Choose a sign-in method. Ross keeps your legal work on this phone."
+                                        : "Tap to choose how you want to sign in."
                                 )
                                 .font(.system(size: isExpanded ? 13 : 14, weight: .regular))
                                 .foregroundStyle(Color.rossInk.opacity(0.62))
@@ -1041,50 +1015,66 @@ private struct RossAuthSignInSheet: View {
                                 Button {
                                     authController.signInWithDemoEmail(demoEmail)
                                 } label: {
-                                    Text("Continue with Email")
+                                    RossAuthActionLabel(
+                                        title: "Continue with Email",
+                                        subtitle: "Use the local demo profile on this phone",
+                                        tone: .primary
+                                    ) {
+                                        Image(systemName: "envelope.fill")
+                                            .font(.system(size: 15, weight: .semibold))
+                                    }
                                 }
                                 .rossPrimaryButtonStyle()
                             }
                             .transition(.move(edge: .top).combined(with: .opacity))
                         } else {
-                            HStack(spacing: 10) {
-                                RossAuthOptionButton(
-                                    title: "Google",
-                                    isActive: authController.activeExternalProvider == .google,
-                                    action: {
-                                        authController.startGoogleSignIn()
+                            VStack(spacing: 10) {
+                                Button {
+                                    authController.startGoogleSignIn()
+                                } label: {
+                                    RossAuthActionLabel(
+                                        title: authController.activeExternalProvider == .google ? "Connecting to Google" : "Continue with Google",
+                                        subtitle: "Start your local Ross session",
+                                        tone: .primary
+                                    ) {
+                                        RossGlassIconView(.earth, variant: .highlight, size: 17, fallbackSystemImage: "globe")
+                                            .foregroundStyle(Color.white.opacity(0.94))
                                     }
-                                ) {
-                                    RossGlassIconView(.earth, variant: .highlight, size: 18, fallbackSystemImage: "globe")
                                 }
+                                .rossPrimaryButtonStyle()
                                 .disabled(externalSignInDisabled)
                                 .opacity(externalSignInDisabled && authController.activeExternalProvider != .google ? 0.78 : 1)
 
-                                RossAuthOptionButton(
-                                    title: "Apple",
-                                    isActive: authController.activeExternalProvider == .apple,
-                                    action: {
-                                        authController.startAppleSignIn()
+                                Button {
+                                    authController.startAppleSignIn()
+                                } label: {
+                                    RossAuthActionLabel(
+                                        title: authController.activeExternalProvider == .apple ? "Connecting to Apple" : "Continue with Apple",
+                                        subtitle: "Use the account already on this phone",
+                                        tone: .secondary
+                                    ) {
+                                        Image(systemName: "applelogo")
+                                            .font(.system(size: 16, weight: .semibold))
                                     }
-                                ) {
-                                    Image(systemName: "applelogo")
-                                        .font(.system(size: 17, weight: .semibold))
-                                        .foregroundStyle(Color.rossInk.opacity(0.86))
                                 }
+                                .rossGlassButtonStyle(cornerRadius: 20)
                                 .disabled(externalSignInDisabled)
                                 .opacity(externalSignInDisabled && authController.activeExternalProvider != .apple ? 0.78 : 1)
 
-                                RossAuthOptionButton(
-                                    title: "Email",
-                                    isActive: false,
-                                    action: {
-                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.84)) {
-                                            isEmailExpanded = true
-                                        }
+                                Button {
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.84)) {
+                                        isEmailExpanded = true
                                     }
-                                ) {
-                                    RossGlassIconView(.userMsg, variant: .neutral, size: 18, fallbackSystemImage: "envelope.fill")
+                                } label: {
+                                    RossAuthActionLabel(
+                                        title: "Continue with Email",
+                                        subtitle: "Use the local demo profile",
+                                        tone: .secondary
+                                    ) {
+                                        RossGlassIconView(.userMsg, variant: .neutral, size: 17, fallbackSystemImage: "envelope.fill")
+                                    }
                                 }
+                                .rossGlassButtonStyle(cornerRadius: 20)
                             }
                         }
                     }
@@ -1123,57 +1113,57 @@ private struct RossAuthSignInSheet: View {
     }
 }
 
-private struct RossAuthOptionButton<Icon: View>: View {
+private enum RossAuthActionTone {
+    case primary
+    case secondary
+}
+
+private struct RossAuthActionLabel<Icon: View>: View {
     let title: String
-    let isActive: Bool
-    let action: () -> Void
+    let subtitle: String?
+    let tone: RossAuthActionTone
     let icon: Icon
 
     init(
         title: String,
-        isActive: Bool = false,
-        action: @escaping () -> Void,
+        subtitle: String? = nil,
+        tone: RossAuthActionTone,
         @ViewBuilder icon: () -> Icon
     ) {
         self.title = title
-        self.isActive = isActive
-        self.action = action
+        self.subtitle = subtitle
+        self.tone = tone
         self.icon = icon()
     }
 
     var body: some View {
-        Button(action: action) {
-            VStack(spacing: 10) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 13, style: .continuous)
-                        .fill(Color.white.opacity(0.16))
-                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+        HStack(spacing: 12) {
+            icon
+                .frame(width: 18, height: 18)
 
-                    icon
-                }
-                .frame(width: 34, height: 34)
-
+            VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color.rossInk)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.82)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(tone == .primary ? Color.white : Color.rossInk)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let subtitle, !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(
+                            tone == .primary
+                                ? Color.white.opacity(0.76)
+                                : Color.rossInk.opacity(0.58)
+                        )
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
-            .frame(maxWidth: .infinity, minHeight: 78)
+
+            Spacer(minLength: 10)
         }
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(isActive ? Color.rossAccent.opacity(0.12) : Color.white.opacity(0.12))
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(
-                    isActive ? Color.rossAccent.opacity(0.34) : Color.white.opacity(0.18),
-                    lineWidth: 1
-                )
-        }
-        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -1404,40 +1394,6 @@ private struct RossAuthGlassPanel<Content: View>: View {
                 radius: colorScheme == .dark ? 18 : 28,
                 y: colorScheme == .dark ? 10 : 18
             )
-    }
-}
-
-private struct RossAuthFeatureTile: View {
-    let icon: RossGlassIconName
-    let variant: RossGlassIconVariant
-    let fallbackSystemImage: String
-    let title: String
-    let detail: String
-
-    var body: some View {
-        RossAuthGlassPanel(cornerRadius: 26, padding: 16) {
-            VStack(alignment: .leading, spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color.white.opacity(0.16))
-                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-
-                    RossGlassIconView(icon, variant: variant, size: 16, fallbackSystemImage: fallbackSystemImage)
-                }
-                .frame(width: 34, height: 34)
-
-                Text(title)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(Color.rossInk)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text(detail)
-                    .font(.system(size: 13, weight: .regular))
-                    .foregroundStyle(Color.rossInk.opacity(0.58))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
     }
 }
 
