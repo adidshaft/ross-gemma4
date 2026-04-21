@@ -330,6 +330,7 @@ struct RossInfoPill: View {
                 .layoutPriority(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(minHeight: 62, alignment: .topLeading)
         .padding(.horizontal, 13)
         .padding(.vertical, 10)
         .background(

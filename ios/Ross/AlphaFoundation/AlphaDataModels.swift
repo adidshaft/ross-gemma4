@@ -27,6 +27,36 @@ extension AlphaAppTab {
     }
 }
 
+enum AlphaAppearanceMode: String, Codable, CaseIterable, Identifiable, Hashable, Sendable {
+    case auto
+    case dark
+    case light
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .auto:
+            "Auto (Default)"
+        case .dark:
+            "Dark"
+        case .light:
+            "Light"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .auto:
+            "Follow this phone"
+        case .dark:
+            "Always use dark"
+        case .light:
+            "Always use light"
+        }
+    }
+}
+
 enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable, Sendable {
     case quickStart = "quick_start"
     case caseAssociate = "case_associate"
@@ -1491,6 +1521,7 @@ struct AlphaExportedReport: Identifiable, Codable, Hashable, Sendable {
 
 struct AlphaSettings: Codable, Hashable, Sendable {
     var activeTier: AlphaCapabilityTier?
+    var appearanceMode: AlphaAppearanceMode
     var wifiOnlyDownloads: Bool
     var allowMobileDataForLargePacks: Bool
     var requirePublicLawApproval: Bool
@@ -1499,6 +1530,7 @@ struct AlphaSettings: Codable, Hashable, Sendable {
 
     static let `default` = AlphaSettings(
         activeTier: nil,
+        appearanceMode: .auto,
         wifiOnlyDownloads: true,
         allowMobileDataForLargePacks: false,
         requirePublicLawApproval: true,
