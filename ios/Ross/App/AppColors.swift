@@ -161,16 +161,6 @@ extension Color {
         #endif
     }
 
-    static var rossSecondaryBackground: Color {
-        #if canImport(UIKit)
-        Color(uiColor: .secondarySystemBackground)
-        #elseif canImport(AppKit)
-        Color(nsColor: .controlBackgroundColor)
-        #else
-        Color(.sRGB, red: 0.94, green: 0.95, blue: 0.96, opacity: 1)
-        #endif
-    }
-
     static var rossSecondaryGroupedBackground: Color {
         #if canImport(UIKit)
         Color(uiColor: .secondarySystemGroupedBackground)

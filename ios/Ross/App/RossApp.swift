@@ -55,12 +55,6 @@ final class RossAuthSessionSnapshot: @unchecked Sendable {
         lock.unlock()
     }
 
-    func currentSession() -> RossAuthSession? {
-        lock.lock()
-        defer { lock.unlock() }
-        return cachedSession
-    }
-
     func accountToken(fallback: String) -> String {
         lock.lock()
         defer { lock.unlock() }
