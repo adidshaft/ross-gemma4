@@ -72,7 +72,7 @@ extension Color {
             lightRed: 1, lightGreen: 1, lightBlue: 1,
             darkRed: 0.16, darkGreen: 0.18, darkBlue: 0.23,
             lightAlpha: 0.74,
-            darkAlpha: 0.8
+            darkAlpha: 0.84
         )
     }
 
@@ -81,7 +81,7 @@ extension Color {
             lightRed: 1, lightGreen: 1, lightBlue: 1,
             darkRed: 0.19, darkGreen: 0.21, darkBlue: 0.27,
             lightAlpha: 0.56,
-            darkAlpha: 0.66
+            darkAlpha: 0.74
         )
     }
 
@@ -90,7 +90,7 @@ extension Color {
             lightRed: 1, lightGreen: 1, lightBlue: 1,
             darkRed: 0.84, darkGreen: 0.88, darkBlue: 0.96,
             lightAlpha: 0.64,
-            darkAlpha: 0.16
+            darkAlpha: 0.24
         )
     }
 
@@ -99,7 +99,7 @@ extension Color {
             lightRed: 1, lightGreen: 1, lightBlue: 1,
             darkRed: 0.34, darkGreen: 0.40, darkBlue: 0.54,
             lightAlpha: 0.62,
-            darkAlpha: 0.16
+            darkAlpha: 0.26
         )
     }
 

@@ -18,8 +18,11 @@ let package = Package(
         .executableTarget(
             name: "Ross",
             path: "Ross",
+            exclude: [
+                "Resources/Info.plist"
+            ],
             resources: [
-                .process("Resources")
+                .process("Resources/Assets.xcassets")
             ]
         ),
         .testTarget(
