@@ -7575,21 +7575,113 @@ private struct AlphaAskRossScreen: View {
 private struct AlphaCreateCaseScreen: View {
     @Bindable var model: AlphaRossModel
 
-    var body: some View {
-        Form {
-            Section {
-                TextField("Matter name", text: $model.caseDraftTitle)
-                TextField("Court or forum", text: $model.caseDraftForum)
-            }
+    private var trimmedTitle: String {
+        model.caseDraftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
-            Section {
+    private var trimmedForum: String {
+        model.caseDraftForum.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var canCreate: Bool {
+        !trimmedTitle.isEmpty
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: alphaSectionSpacing) {
+                RossSectionCard {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Create a matter")
+                            .font(.rossSerifTitle())
+                            .foregroundStyle(Color.rossInk)
+
+                        Text("Ross creates the matter on this phone only, prepares the first import task, and keeps future chats scoped to it.")
+                            .font(.footnote)
+                            .foregroundStyle(Color.rossInk.opacity(0.66))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                RossSectionCard(title: "Matter details") {
+                    VStack(alignment: .leading, spacing: 14) {
+                        AlphaMatterEditorField(
+                            title: "Matter name",
+                            placeholder: "Kaveri Developers v. South Ward Municipal Corporation",
+                            text: $model.caseDraftTitle
+                        )
+
+                        AlphaMatterEditorField(
+                            title: "Court or forum",
+                            placeholder: "Delhi High Court",
+                            text: $model.caseDraftForum
+                        )
+                    }
+                }
+
+                if canCreate {
+                    RossSectionCard(title: "Ross will start with") {
+                        VStack(alignment: .leading, spacing: 10) {
+                            RossBulletRow(text: "\(trimmedTitle) gets its own private workspace and chat history.")
+                            RossBulletRow(text: "The first task will be to import the first document or order.")
+                            RossBulletRow(
+                                text: trimmedForum.isEmpty
+                                    ? "You can add the forum now or later."
+                                    : "The forum will be saved as \(trimmedForum)."
+                            )
+                        }
+                    }
+                }
+
                 Button("Create matter") {
                     model.createCase()
                 }
-                .disabled(model.caseDraftTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .rossPrimaryButtonStyle()
+                .disabled(!canCreate)
+                .opacity(canCreate ? 1 : 0.48)
             }
+            .padding(alphaScreenPadding)
         }
         .navigationTitle("Create Matter")
+        .rossInlineNavigationTitle()
+    }
+}
+
+private struct AlphaMatterEditorField: View {
+    let title: String
+    let placeholder: String
+    @Binding var text: String
+
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.rossInk.opacity(0.62))
+
+            TextField(placeholder, text: $text)
+                .textFieldStyle(.plain)
+                .font(.body.weight(.medium))
+                .foregroundStyle(Color.rossInk)
+                .focused($isFocused)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(Color.rossGlassSubtleFill)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(
+                            isFocused
+                                ? Color.rossAccent.opacity(0.28)
+                                : Color.rossGlassStroke.opacity(0.72),
+                            lineWidth: 1
+                        )
+                }
+        }
     }
 }
 
