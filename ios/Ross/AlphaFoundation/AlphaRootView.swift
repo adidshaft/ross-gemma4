@@ -148,7 +148,11 @@ final class AlphaRossModel {
     @ObservationIgnored private let backend: AlphaBackendClient
     @ObservationIgnored private let publicLawSearchAction: AlphaPublicLawSearchAction
 
-    var persisted = AlphaPersistedState.seed()
+    var persisted = AlphaPersistedState.seed() {
+        didSet {
+            invalidateWorkspaceDerivedState()
+        }
+    }
     var path: [AlphaRoute] = []
     var selectedCaseID: UUID?
     var selectedTier: AlphaCapabilityTier = .caseAssociate
@@ -174,6 +178,9 @@ final class AlphaRossModel {
     var refreshingCaseOverviewIDs: Set<UUID> = []
     var workspaceDrawerPresented = false
     var loaded = false
+    @ObservationIgnored private var workspaceRevision: UInt64 = 0
+    @ObservationIgnored private var cachedWorkspaceRevision: UInt64 = .max
+    @ObservationIgnored private var workspaceDerivedState = AlphaWorkspaceDerivedState()
 
     init(
         store: AlphaRossStore = AlphaRossStore(),
@@ -191,6 +198,7 @@ final class AlphaRossModel {
 
         if let previewState {
             persisted = normalizeLoadedState(previewState)
+            invalidateWorkspaceDerivedState()
             path = previewPath
             syncDerivedStateFromPersisted()
             loaded = true
@@ -201,6 +209,7 @@ final class AlphaRossModel {
         guard !loaded else { return }
         do {
             persisted = normalizeLoadedState(try await store.load())
+            invalidateWorkspaceDerivedState()
             syncDerivedStateFromPersisted()
             loaded = true
         } catch {
@@ -223,6 +232,270 @@ final class AlphaRossModel {
                 session.turns.reversed().map { turn in
                     askResult(from: turn, in: caseMatter, chatSessionID: session.id)
                 }
+            }
+        }
+    }
+
+    private func invalidateWorkspaceDerivedState() {
+        workspaceRevision &+= 1
+    }
+
+    private func ensureWorkspaceDerivedState() {
+        guard cachedWorkspaceRevision != workspaceRevision else { return }
+        workspaceDerivedState = AlphaWorkspaceDerivedState.build(from: persisted)
+        cachedWorkspaceRevision = workspaceRevision
+    }
+
+    private struct AlphaWorkspaceDerivedState {
+        var visibleCases: [AlphaCaseMatter] = []
+        var activeCaseIDs: Set<UUID> = []
+        var tasks: [AlphaTaskItem] = []
+        var tasksByCase: [UUID: [AlphaTaskItem]] = [:]
+        var openTasks: [AlphaTaskItem] = []
+        var openTaskCountByCase: [UUID: Int] = [:]
+        var todayTasks: [AlphaTaskItem] = []
+        var todayTasksByCase: [UUID: [AlphaTaskItem]] = [:]
+        var upcomingTasks: [AlphaTaskItem] = []
+        var upcomingTasksByCase: [UUID: [AlphaTaskItem]] = [:]
+        var reviewQueue: [AlphaReviewQueueItem] = []
+        var reviewQueueByCase: [UUID: [AlphaReviewQueueItem]] = [:]
+        var availableAskDocumentsAll: [AlphaAskDocumentOption] = []
+        var availableAskDocumentsByScope: [UUID: [AlphaAskDocumentOption]] = [:]
+        var recentDocumentItems: [AlphaRecentDocumentItem] = []
+        var recentDocumentItemsByCase: [UUID: [AlphaRecentDocumentItem]] = [:]
+        var todayDateRows: [AlphaUpcomingDateRow] = []
+        var upcomingDateRows: [AlphaUpcomingDateRow] = []
+
+        static func build(from persisted: AlphaPersistedState) -> Self {
+            let visibleCases = persisted.cases
+                .filter { $0.archivedAt == nil && $0.id != alphaSharedWorkspaceID }
+                .sorted { $0.updatedAt > $1.updatedAt }
+            let activeCaseIDs = Set(visibleCases.map(\.id))
+
+            let allTasks = (persisted.tasks ?? [])
+                .filter { task in
+                    guard let caseId = task.caseId else { return true }
+                    return activeCaseIDs.contains(caseId)
+                }
+                .sorted(by: sortTasks)
+
+            let calendar = Calendar.current
+            let startOfDay = calendar.startOfDay(for: .now)
+
+            var tasksByCase: [UUID: [AlphaTaskItem]] = [:]
+            var openTaskCountByCase: [UUID: Int] = [:]
+            var todayTasksByCase: [UUID: [AlphaTaskItem]] = [:]
+            var upcomingTasksByCase: [UUID: [AlphaTaskItem]] = [:]
+            var openTasks: [AlphaTaskItem] = []
+            var todayTasks: [AlphaTaskItem] = []
+            var upcomingTasks: [AlphaTaskItem] = []
+
+            for task in allTasks {
+                if let caseId = task.caseId, caseId != alphaSharedWorkspaceID {
+                    tasksByCase[caseId, default: []].append(task)
+                }
+
+                guard task.status == .open else { continue }
+                openTasks.append(task)
+
+                if let caseId = task.caseId, caseId != alphaSharedWorkspaceID {
+                    openTaskCountByCase[caseId, default: 0] += 1
+                }
+
+                guard let dueDate = task.dueDate else { continue }
+                if calendar.isDateInToday(dueDate) {
+                    todayTasks.append(task)
+                    if let caseId = task.caseId, caseId != alphaSharedWorkspaceID {
+                        todayTasksByCase[caseId, default: []].append(task)
+                    }
+                } else if dueDate >= startOfDay {
+                    upcomingTasks.append(task)
+                    if let caseId = task.caseId, caseId != alphaSharedWorkspaceID {
+                        upcomingTasksByCase[caseId, default: []].append(task)
+                    }
+                }
+            }
+
+            var reviewQueueByCase: [UUID: [AlphaReviewQueueItem]] = [:]
+            var reviewQueue: [AlphaReviewQueueItem] = []
+            var recentDocumentItemsByCase: [UUID: [AlphaRecentDocumentItem]] = [:]
+            var recentDocumentItems: [AlphaRecentDocumentItem] = []
+            var todayDateRows: [AlphaUpcomingDateRow] = []
+            var upcomingDateRows: [AlphaUpcomingDateRow] = []
+
+            for caseMatter in visibleCases {
+                let caseReviewQueue = buildReviewQueue(for: caseMatter)
+                reviewQueueByCase[caseMatter.id] = caseReviewQueue
+                reviewQueue.append(contentsOf: caseReviewQueue)
+
+                let caseRecentItems = caseMatter.documents
+                    .map { document in
+                        AlphaRecentDocumentItem(caseId: caseMatter.id, caseTitle: caseMatter.title, document: document)
+                    }
+                    .sorted { $0.document.importedAt > $1.document.importedAt }
+                recentDocumentItemsByCase[caseMatter.id] = caseRecentItems
+                recentDocumentItems.append(contentsOf: caseRecentItems)
+
+                if let nextHearing = caseMatter.nextHearing {
+                    let row = AlphaUpcomingDateRow(
+                        title: caseMatter.title,
+                        detail: calendar.isDateInToday(nextHearing)
+                            ? "Hearing today"
+                            : "Next date: \(nextHearing.formatted(date: .abbreviated, time: .omitted))",
+                        date: nextHearing
+                    )
+                    if calendar.isDateInToday(nextHearing) {
+                        todayDateRows.append(row)
+                    } else if nextHearing >= startOfDay {
+                        upcomingDateRows.append(row)
+                    }
+                }
+            }
+
+            recentDocumentItems.sort { $0.document.importedAt > $1.document.importedAt }
+            todayDateRows.sort { $0.date < $1.date }
+            upcomingDateRows.sort { $0.date < $1.date }
+
+            var availableAskDocumentsByScope: [UUID: [AlphaAskDocumentOption]] = [:]
+            for caseMatter in visibleCases {
+                let scopedCases = persisted.cases.filter { $0.id == caseMatter.id || $0.id == alphaSharedWorkspaceID }
+                availableAskDocumentsByScope[caseMatter.id] = buildAskDocumentOptions(from: scopedCases)
+            }
+
+            var state = AlphaWorkspaceDerivedState()
+            state.visibleCases = visibleCases
+            state.activeCaseIDs = activeCaseIDs
+            state.tasks = allTasks
+            state.tasksByCase = tasksByCase
+            state.openTasks = openTasks
+            state.openTaskCountByCase = openTaskCountByCase
+            state.todayTasks = todayTasks
+            state.todayTasksByCase = todayTasksByCase
+            state.upcomingTasks = upcomingTasks
+            state.upcomingTasksByCase = upcomingTasksByCase
+            state.reviewQueue = reviewQueue
+            state.reviewQueueByCase = reviewQueueByCase
+            state.availableAskDocumentsAll = buildAskDocumentOptions(from: persisted.cases)
+            state.availableAskDocumentsByScope = availableAskDocumentsByScope
+            state.recentDocumentItems = recentDocumentItems
+            state.recentDocumentItemsByCase = recentDocumentItemsByCase
+            state.todayDateRows = todayDateRows
+            state.upcomingDateRows = upcomingDateRows
+            return state
+        }
+
+        private static func sortTasks(lhs: AlphaTaskItem, rhs: AlphaTaskItem) -> Bool {
+            if lhs.status != rhs.status {
+                return lhs.status == .open
+            }
+            let lhsDate = lhs.dueDate ?? .distantFuture
+            let rhsDate = rhs.dueDate ?? .distantFuture
+            if lhsDate != rhsDate {
+                return lhsDate < rhsDate
+            }
+            return lhs.updatedAt > rhs.updatedAt
+        }
+
+        private static func buildAskDocumentOptions(from cases: [AlphaCaseMatter]) -> [AlphaAskDocumentOption] {
+            cases
+                .flatMap { caseMatter in
+                    caseMatter.documents.map { document in
+                        AlphaAskDocumentOption(
+                            id: document.id,
+                            caseId: caseMatter.id,
+                            caseTitle: caseMatter.title,
+                            title: document.title,
+                            fileName: document.fileName,
+                            kind: document.kind,
+                            isShared: caseMatter.id == alphaSharedWorkspaceID
+                        )
+                    }
+                }
+                .sorted { lhs, rhs in
+                    if lhs.isShared != rhs.isShared {
+                        return lhs.isShared && !rhs.isShared
+                    }
+                    if lhs.caseTitle != rhs.caseTitle {
+                        return lhs.caseTitle.localizedCaseInsensitiveCompare(rhs.caseTitle) == .orderedAscending
+                    }
+                    return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
+                }
+        }
+
+        private static func buildReviewQueue(for caseMatter: AlphaCaseMatter) -> [AlphaReviewQueueItem] {
+            let ignoredFieldIDs = Set(
+                caseMatter.advocateCorrections
+                    .filter { $0.correctionType == .ignoreField }
+                    .compactMap(\.fieldId)
+            )
+
+            return caseMatter.documents.flatMap { document in
+                let visibleFields = document.extractedFields
+                    .filter { !ignoredFieldIDs.contains($0.id) }
+                    .sorted { lhs, rhs in
+                        let lhsRank = alphaFieldSortRank(lhs.fieldType)
+                        let rhsRank = alphaFieldSortRank(rhs.fieldType)
+                        if lhsRank == rhsRank {
+                            return lhs.createdAt < rhs.createdAt
+                        }
+                        return lhsRank < rhsRank
+                    }
+
+                let fields = visibleFields
+                    .filter(\.needsReview)
+                    .map { field in
+                        AlphaReviewQueueItem(
+                            caseId: caseMatter.id,
+                            documentId: document.id,
+                            caseTitle: caseMatter.title,
+                            title: reviewTitle(for: field.fieldType),
+                            detail: field.value,
+                            sourceRef: field.sourceRefs.first
+                        )
+                    }
+
+                let findings = document.extractionFindings
+                    .filter { !$0.resolved }
+                    .map { finding in
+                        AlphaReviewQueueItem(
+                            caseId: caseMatter.id,
+                            documentId: document.id,
+                            caseTitle: caseMatter.title,
+                            title: reviewTitle(for: finding.kind),
+                            detail: finding.message,
+                            sourceRef: finding.sourceRefs.first
+                        )
+                    }
+
+                return fields + findings
+            }
+        }
+
+        private static func reviewTitle(for fieldType: AlphaExtractedLegalFieldType) -> String {
+            switch fieldType {
+            case .nextDate:
+                "Confirm next date"
+            case .partyName:
+                "Review party name"
+            case .orderDirection:
+                "Check order direction"
+            default:
+                "Needs review"
+            }
+        }
+
+        private static func reviewTitle(for findingKind: AlphaExtractionFindingKind) -> String {
+            switch findingKind {
+            case .lowConfidenceOcr, .languageUncertain, .possibleHandwriting:
+                "Low confidence scan"
+            case .ambiguousOrderDirection:
+                "Check order direction"
+            case .dateConflict:
+                "Confirm next date"
+            case .partyConflict:
+                "Review party name"
+            default:
+                "Needs review"
             }
         }
     }
@@ -252,9 +525,8 @@ final class AlphaRossModel {
     }
 
     var cases: [AlphaCaseMatter] {
-        persisted.cases
-            .filter { $0.archivedAt == nil && $0.id != alphaSharedWorkspaceID }
-            .sorted { $0.updatedAt > $1.updatedAt }
+        ensureWorkspaceDerivedState()
+        return workspaceDerivedState.visibleCases
     }
 
     var sharedWorkspace: AlphaCaseMatter? {
@@ -262,30 +534,18 @@ final class AlphaRossModel {
     }
 
     private var activeCaseIDs: Set<UUID> {
-        Set(cases.map(\.id))
+        ensureWorkspaceDerivedState()
+        return workspaceDerivedState.activeCaseIDs
     }
 
     var tasks: [AlphaTaskItem] {
-        (persisted.tasks ?? [])
-            .filter { task in
-                guard let caseId = task.caseId else { return true }
-                return activeCaseIDs.contains(caseId)
-            }
-            .sorted {
-                if $0.status != $1.status {
-                    return $0.status == .open
-                }
-                let lhsDate = $0.dueDate ?? .distantFuture
-                let rhsDate = $1.dueDate ?? .distantFuture
-                if lhsDate != rhsDate {
-                    return lhsDate < rhsDate
-                }
-                return $0.updatedAt > $1.updatedAt
-            }
+        ensureWorkspaceDerivedState()
+        return workspaceDerivedState.tasks
     }
 
     var openTasks: [AlphaTaskItem] {
-        tasks.filter { $0.status == .open }
+        ensureWorkspaceDerivedState()
+        return workspaceDerivedState.openTasks
     }
 
     var selectedCase: AlphaCaseMatter? {
@@ -301,15 +561,14 @@ final class AlphaRossModel {
         askSelectedScopeCaseID = caseID
         guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseID }) else { return }
         persisted.cases[caseIndex].updatedAt = .now
-        persist()
+        persist(workspaceChanged: true)
     }
 
     func tasks(for caseId: UUID? = nil) -> [AlphaTaskItem] {
-        tasks.filter { task in
-            guard let caseId else { return true }
-            guard caseId != alphaSharedWorkspaceID else { return false }
-            return task.caseId == caseId
-        }
+        ensureWorkspaceDerivedState()
+        guard let caseId else { return workspaceDerivedState.tasks }
+        guard caseId != alphaSharedWorkspaceID else { return [] }
+        return workspaceDerivedState.tasksByCase[caseId] ?? []
     }
 
     func askDraft(for scopeCaseID: UUID?) -> String {
@@ -362,36 +621,11 @@ final class AlphaRossModel {
     }
 
     fileprivate func availableAskDocuments(for scopeCaseID: UUID?) -> [AlphaAskDocumentOption] {
-        let scopedCases: [AlphaCaseMatter]
+        ensureWorkspaceDerivedState()
         if let scopeCaseID {
-            scopedCases = persisted.cases.filter { $0.id == scopeCaseID || $0.id == alphaSharedWorkspaceID }
-        } else {
-            scopedCases = persisted.cases
+            return workspaceDerivedState.availableAskDocumentsByScope[scopeCaseID] ?? []
         }
-
-        return scopedCases
-            .flatMap { caseMatter in
-                caseMatter.documents.map { document in
-                    AlphaAskDocumentOption(
-                        id: document.id,
-                        caseId: caseMatter.id,
-                        caseTitle: caseMatter.title,
-                        title: document.title,
-                        fileName: document.fileName,
-                        kind: document.kind,
-                        isShared: caseMatter.id == alphaSharedWorkspaceID
-                    )
-                }
-            }
-            .sorted { lhs, rhs in
-                if lhs.isShared != rhs.isShared {
-                    return lhs.isShared && !rhs.isShared
-                }
-                if lhs.caseTitle != rhs.caseTitle {
-                    return lhs.caseTitle.localizedCaseInsensitiveCompare(rhs.caseTitle) == .orderedAscending
-                }
-                return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
-            }
+        return workspaceDerivedState.availableAskDocumentsAll
     }
 
     func toggleAskDocumentSelection(_ documentID: UUID, for scopeCaseID: UUID?) {
@@ -480,7 +714,7 @@ final class AlphaRossModel {
         askSelectedScopeCaseID = caseId
         restoreComposerContext(for: caseId)
         rebuildAskHistory()
-        persist()
+        persist(workspaceChanged: true)
     }
 
     func startNewChat(for caseId: UUID, openConversation: Bool = true) {
@@ -493,7 +727,7 @@ final class AlphaRossModel {
         askSelectedScopeCaseID = caseId
         restoreComposerContext(for: caseId)
         rebuildAskHistory()
-        persist()
+        persist(workspaceChanged: true)
         if openConversation {
             path.removeAll { route in
                 if case .askCase(let existingCaseID) = route {
@@ -574,23 +808,27 @@ final class AlphaRossModel {
     }
 
     func todayTasks(for caseId: UUID? = nil) -> [AlphaTaskItem] {
-        let calendar = Calendar.current
-        return tasks(for: caseId).filter {
-            $0.status == .open && ($0.dueDate.map { calendar.isDateInToday($0) } ?? false)
-        }
+        ensureWorkspaceDerivedState()
+        guard let caseId else { return workspaceDerivedState.todayTasks }
+        return workspaceDerivedState.todayTasksByCase[caseId] ?? []
     }
 
     func upcomingTasks(for caseId: UUID? = nil) -> [AlphaTaskItem] {
-        let calendar = Calendar.current
-        let start = calendar.startOfDay(for: .now)
-        return tasks(for: caseId).filter {
-            guard $0.status == .open, let dueDate = $0.dueDate else { return false }
-            return dueDate >= start && !calendar.isDateInToday(dueDate)
-        }
+        ensureWorkspaceDerivedState()
+        guard let caseId else { return workspaceDerivedState.upcomingTasks }
+        return workspaceDerivedState.upcomingTasksByCase[caseId] ?? []
     }
 
     func openTaskCount(for caseId: UUID? = nil) -> Int {
-        tasks(for: caseId).count { $0.status == .open }
+        ensureWorkspaceDerivedState()
+        guard let caseId else { return workspaceDerivedState.openTasks.count }
+        return workspaceDerivedState.openTaskCountByCase[caseId] ?? 0
+    }
+
+    func reviewQueueCount(for caseId: UUID? = nil) -> Int {
+        ensureWorkspaceDerivedState()
+        guard let caseId else { return workspaceDerivedState.reviewQueue.count }
+        return workspaceDerivedState.reviewQueueByCase[caseId]?.count ?? 0
     }
 
     func toggleTaskDone(_ taskID: UUID) {
@@ -599,10 +837,11 @@ final class AlphaRossModel {
         taskList[index].updatedAt = .now
         let caseId = taskList[index].caseId
         persisted.tasks = taskList
+        invalidateWorkspaceDerivedState()
         if let caseId, let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }) {
             refreshCaseWorkspace(at: caseIndex)
         }
-        persist()
+        persist(workspaceChanged: true)
     }
 
     func addTask(
@@ -628,6 +867,7 @@ final class AlphaRossModel {
             at: 0
         )
         persisted.tasks = taskList
+        invalidateWorkspaceDerivedState()
         if let caseId, let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }) {
             refreshCaseWorkspace(at: caseIndex)
         }
@@ -642,7 +882,7 @@ final class AlphaRossModel {
             ),
             at: 0
         )
-        persist()
+        persist(workspaceChanged: true)
     }
 
     func refreshCaseOverview(caseId: UUID) async {
@@ -665,45 +905,35 @@ final class AlphaRossModel {
             ),
             at: 0
         )
-        persist()
+        persist(workspaceChanged: true)
     }
 
     func recentDocuments(for caseId: UUID? = nil) -> [AlphaCaseDocument] {
-        let visibleCases = caseId.map { id in cases.filter { $0.id == id } } ?? cases
-        return visibleCases
-            .flatMap(\.documents)
-            .sorted { $0.importedAt > $1.importedAt }
+        recentDocumentItems(for: caseId).map(\.document)
+    }
+
+    fileprivate func recentDocumentItems(for caseId: UUID? = nil) -> [AlphaRecentDocumentItem] {
+        ensureWorkspaceDerivedState()
+        if let caseId {
+            return workspaceDerivedState.recentDocumentItemsByCase[caseId] ?? []
+        }
+        return workspaceDerivedState.recentDocumentItems
     }
 
     func reviewQueue(caseId: UUID? = nil) -> [AlphaReviewQueueItem] {
-        let visibleCases = caseId.map { id in cases.filter { $0.id == id } } ?? cases
-        return visibleCases.flatMap { caseMatter in
-            caseMatter.documents.flatMap { document -> [AlphaReviewQueueItem] in
-                let fields = visibleExtractedFields(caseId: caseMatter.id, documentId: document.id)
-                    .filter(\.needsReview)
-                    .map { field in
-                        AlphaReviewQueueItem(
-                            caseId: caseMatter.id,
-                            documentId: document.id,
-                            caseTitle: caseMatter.title,
-                            title: alphaReviewTitle(for: field.fieldType),
-                            detail: field.value,
-                            sourceRef: field.sourceRefs.first
-                        )
-                    }
-                let findings = reviewFindings(caseId: caseMatter.id, documentId: document.id).map { finding in
-                    AlphaReviewQueueItem(
-                        caseId: caseMatter.id,
-                        documentId: document.id,
-                        caseTitle: caseMatter.title,
-                        title: alphaReviewTitle(for: finding.kind),
-                        detail: finding.message,
-                        sourceRef: finding.sourceRefs.first
-                    )
-                }
-                return fields + findings
-            }
-        }
+        ensureWorkspaceDerivedState()
+        guard let caseId else { return workspaceDerivedState.reviewQueue }
+        return workspaceDerivedState.reviewQueueByCase[caseId] ?? []
+    }
+
+    fileprivate func todayDateRows() -> [AlphaUpcomingDateRow] {
+        ensureWorkspaceDerivedState()
+        return workspaceDerivedState.todayDateRows
+    }
+
+    fileprivate func upcomingDateRows() -> [AlphaUpcomingDateRow] {
+        ensureWorkspaceDerivedState()
+        return workspaceDerivedState.upcomingDateRows
     }
 
     var activePack: AlphaInstalledModelPack? {
@@ -893,7 +1123,7 @@ final class AlphaRossModel {
                 ),
                 at: 0
             )
-            persist()
+            persist(workspaceChanged: true)
             return storedResult
         }
 
@@ -959,7 +1189,7 @@ final class AlphaRossModel {
             needsReviewWarning: needsReviewWarning
         )
         _ = appendStoredTurn(turn, to: storageCaseID, contextDocumentIDs: selectedDocumentIDs)
-        persist()
+        persist(workspaceChanged: true)
     }
 
     private func updateAskHistory(turnID: UUID?, mutate: (inout AlphaAskResult) -> Void) {
@@ -992,7 +1222,7 @@ final class AlphaRossModel {
         updateAskHistory(turnID: turnID) { updated in
             mutateAskResult(&updated, from: persisted.cases[caseIndex].chatSessions[0].turns[turnIndex], caseMatter: persisted.cases[caseIndex], chatSessionID: sessionID)
         }
-        persist()
+        persist(workspaceChanged: true)
     }
 
     private func mutateAskResult(
@@ -1182,7 +1412,7 @@ final class AlphaRossModel {
             ),
             at: 0
         )
-        persist()
+        persist(workspaceChanged: true)
         if openWorkspace {
             path.removeAll()
             path.append(.caseWorkspace(matter.id))
@@ -1210,7 +1440,7 @@ final class AlphaRossModel {
             ),
             at: 0
         )
-        persist()
+        persist(workspaceChanged: true)
     }
 
     func archiveCase(_ caseID: UUID) {
@@ -1218,6 +1448,7 @@ final class AlphaRossModel {
         guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseID }) else { return }
         persisted.cases[caseIndex].archivedAt = .now
         persisted.cases[caseIndex].updatedAt = .now
+        invalidateWorkspaceDerivedState()
         clearCaseSelectionState(for: caseID)
         persisted.ledgerEntries.insert(
             AlphaPrivacyLedgerEntry(
@@ -1230,7 +1461,7 @@ final class AlphaRossModel {
             ),
             at: 0
         )
-        persist()
+        persist(workspaceChanged: true)
     }
 
     func setFolderTint(_ tint: AlphaMatterTint, for caseID: UUID) {
@@ -1238,7 +1469,7 @@ final class AlphaRossModel {
         guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseID }) else { return }
         persisted.cases[caseIndex].folderTint = tint
         persisted.cases[caseIndex].updatedAt = .now
-        persist()
+        persist(workspaceChanged: true)
     }
 
     func deleteCase(_ caseID: UUID) {
@@ -1258,6 +1489,7 @@ final class AlphaRossModel {
         persisted.cases.removeAll { $0.id == caseID }
         persisted.tasks = (persisted.tasks ?? []).filter { $0.caseId != caseID }
         persisted.exports.removeAll { $0.caseId == caseID }
+        invalidateWorkspaceDerivedState()
         rebuildAskHistory()
         if latestAskResult?.scopeCaseID == caseID {
             latestAskResult = nil
@@ -1274,7 +1506,7 @@ final class AlphaRossModel {
             ),
             at: 0
         )
-        persist()
+        persist(workspaceChanged: true)
     }
 
     func importDocument(caseId: UUID?, from sourceURL: URL) async {
@@ -1332,7 +1564,7 @@ final class AlphaRossModel {
                 ),
                 at: 0
             )
-            persist()
+            persist(workspaceChanged: true)
             appendMatterThreadUpdate(
                 caseId: targetCaseID == alphaSharedWorkspaceID ? nil : targetCaseID,
                 title: "File added to this matter",
@@ -1400,7 +1632,7 @@ final class AlphaRossModel {
             ),
             at: 0
         )
-        persist()
+        persist(workspaceChanged: true)
     }
 
     func moveDocument(caseId: UUID, documentId: UUID, by offset: Int) {
@@ -1415,7 +1647,7 @@ final class AlphaRossModel {
         let movedDocument = persisted.cases[caseIndex].documents.remove(at: currentIndex)
         persisted.cases[caseIndex].documents.insert(movedDocument, at: targetIndex)
         persisted.cases[caseIndex].updatedAt = .now
-        persist()
+        persist(workspaceChanged: true)
     }
 
     func askCase(caseId: UUID) {
@@ -1500,7 +1732,7 @@ final class AlphaRossModel {
         persisted.cases[caseIndex].documents[documentIndex].extractedFields[fieldIndex].updatedAt = .now
         refreshCaseWorkspace(at: caseIndex)
         syncReviewTasks(caseId: caseId, documentId: documentId)
-        persist()
+        persist(workspaceChanged: true)
     }
 
     func ignoreExtractedField(caseId: UUID, documentId: UUID, fieldId: UUID) {
@@ -1523,7 +1755,7 @@ final class AlphaRossModel {
         )
         refreshCaseWorkspace(at: caseIndex)
         syncReviewTasks(caseId: caseId, documentId: documentId)
-        persist()
+        persist(workspaceChanged: true)
     }
 
     func applyFieldCorrection(caseId: UUID, documentId: UUID, fieldId: UUID, newValue: String) {
@@ -1564,7 +1796,7 @@ final class AlphaRossModel {
         )
         refreshCaseWorkspace(at: caseIndex)
         syncReviewTasks(caseId: caseId, documentId: documentId)
-        persist()
+        persist(workspaceChanged: true)
     }
 
     func updateDocumentClassification(caseId: UUID, documentId: UUID, type: AlphaLegalDocumentType) {
@@ -1600,7 +1832,7 @@ final class AlphaRossModel {
         )
         refreshCaseWorkspace(at: caseIndex)
         syncReviewTasks(caseId: caseId, documentId: documentId)
-        persist()
+        persist(workspaceChanged: true)
     }
 
     func buildPublicLawPreview() {
@@ -2314,7 +2546,7 @@ final class AlphaRossModel {
             statusNote: reviewItemCount == 0 ? "Matter chat updated · ready to use" : "Matter chat updated · needs review",
             needsReviewWarning: reviewItemCount == 0 ? nil : "\(reviewItemCount) review item(s) still need advocate review."
         )
-        persist()
+        persist(workspaceChanged: true)
     }
 
     private func appendSourceRefs(_ refs: [AlphaSourceRef], to caseMatter: inout AlphaCaseMatter) {
@@ -2836,6 +3068,8 @@ final class AlphaRossModel {
                     lowered.contains(($0.textSnippet ?? "").lowercased())
             }
         let openScopedTasks = tasks(for: scopeCaseID).filter { $0.status == .open }
+        let scopedReviewItems = reviewQueue(caseId: scopeCaseID)
+            .filter { selectedDocumentIDs.isEmpty || selectedDocumentIDs.contains($0.documentId) }
 
         var sections: [String] = []
         if asksAboutSchedule {
@@ -2857,8 +3091,7 @@ final class AlphaRossModel {
             sections.append(contentsOf: taskLines)
         }
         if asksAboutReview {
-            let reviewItems = reviewQueue(caseId: scopeCaseID)
-                .filter { selectedDocumentIDs.isEmpty || selectedDocumentIDs.contains($0.documentId) }
+            let reviewItems = scopedReviewItems
                 .prefix(3)
                 .map { "\($0.title): \($0.detail)" }
             sections.append(contentsOf: reviewItems)
@@ -2870,8 +3103,7 @@ final class AlphaRossModel {
             })
         }
 
-        let warnings = reviewQueue(caseId: scopeCaseID)
-            .filter { selectedDocumentIDs.isEmpty || selectedDocumentIDs.contains($0.documentId) }
+        let warnings = scopedReviewItems
         let notFound = sections.isEmpty && matchedSources.isEmpty
         return AlphaAskResult(
             chatSessionID: nil,
@@ -2983,7 +3215,10 @@ final class AlphaRossModel {
         }
     }
 
-    private func persist() {
+    private func persist(workspaceChanged: Bool = false) {
+        if workspaceChanged {
+            invalidateWorkspaceDerivedState()
+        }
         var snapshot = persisted
         snapshot.publicLawDraft = publicLawDraft
         snapshot.publicLawPreview = publicLawPreview
@@ -4354,8 +4589,8 @@ private struct AlphaInlineAskResponseCard: View {
                 .buttonStyle(.plain)
             }
 
-            ForEach(Array(result.answerSections.prefix(2).enumerated()), id: \.offset) { _, section in
-                Text(section)
+            ForEach(result.answerSectionItems(limit: 2)) { section in
+                Text(section.text)
                     .font(.footnote)
                     .foregroundStyle(Color.rossInk.opacity(0.78))
                     .fixedSize(horizontal: false, vertical: true)
@@ -5168,7 +5403,7 @@ private struct AlphaWorkspaceDrawerPanel: View {
     @State private var deleteTarget: AlphaCaseMatter?
 
     private var recentDocuments: [AlphaRecentDocumentItem] {
-        alphaRecentDocumentItems(from: model.cases)
+        model.recentDocumentItems()
     }
 
     private func closeDrawer() {
@@ -5703,9 +5938,9 @@ private struct AlphaHomeScreen: View {
         let reviewItems = model.reviewQueue()
         let upcomingTasks = model.upcomingTasks()
         let todayTasks = model.todayTasks()
-        let todayDates = alphaTodayDateRows(from: model.cases)
-        let upcomingDates = alphaUpcomingDateRows(from: model.cases)
-        let recentDocuments = alphaRecentDocumentItems(from: model.cases)
+        let todayDates = model.todayDateRows()
+        let upcomingDates = model.upcomingDateRows()
+        let recentDocuments = model.recentDocumentItems()
         let assistantStatus = alphaAssistantStatusSnapshot(model)
         let attentionCount = todayDates.count + todayTasks.count + reviewItems.count
 
@@ -7028,7 +7263,7 @@ private struct AlphaCaptureScreen: View {
 
                 RossSectionCard(title: "Recent files") {
                     VStack(alignment: .leading, spacing: 12) {
-                        let recentItems = alphaRecentDocumentItems(from: model.cases, caseId: selectedCaseID)
+                        let recentItems = model.recentDocumentItems(for: selectedCaseID)
                         if recentItems.isEmpty {
                             Text("No files added yet.")
                                 .font(.subheadline)
@@ -7277,7 +7512,7 @@ private struct AlphaCaseSummaryCard: View {
                 }
             }
 
-            Text("\(model.openTaskCount(for: caseMatter.id)) open tasks · \(model.reviewQueue(caseId: caseMatter.id).count) review items · \(caseMatter.documents.count) documents")
+            Text("\(model.openTaskCount(for: caseMatter.id)) open tasks · \(model.reviewQueueCount(for: caseMatter.id)) review items · \(caseMatter.documents.count) documents")
                 .font(.caption)
                 .foregroundStyle(Color.rossInk.opacity(0.7))
 
@@ -7799,7 +8034,7 @@ private struct AlphaAskConversationScreen: View {
                     .frame(maxWidth: .infinity, minHeight: 420, alignment: .center)
                 } else {
                     VStack(alignment: .leading, spacing: 18) {
-                        ForEach(Array(conversation.enumerated()), id: \.offset) { _, result in
+                        ForEach(conversation, id: \.stableIdentity) { result in
                             AlphaAskTurnCard(result: result, onOpenSource: model.openSourceRef)
                         }
                     }
@@ -7918,9 +8153,9 @@ private struct AlphaAskTurnCard: View {
                     Text(result.answerTitle)
                         .font(.headline)
 
-                    ForEach(Array(result.answerSections.enumerated()), id: \.offset) { index, section in
+                    ForEach(Array(result.answerSectionItems().enumerated()), id: \.element.id) { index, section in
                         VStack(alignment: .leading, spacing: 10) {
-                            Text(section)
+                            Text(section.text)
                                 .font(.body)
                                 .foregroundStyle(Color.rossInk.opacity(0.92))
                             if index < result.answerSections.count - 1 {
@@ -8036,6 +8271,27 @@ private struct AlphaAskToolbarButton: View {
     }
 }
 
+private struct AlphaAnswerSectionItem: Identifiable {
+    let id: String
+    let text: String
+}
+
+private extension AlphaAskResult {
+    var stableIdentity: String {
+        if let chatTurnID {
+            return chatTurnID.uuidString
+        }
+        return "\(kind.rawValue)|\(question)|\(answerTitle)"
+    }
+
+    func answerSectionItems(limit: Int? = nil) -> [AlphaAnswerSectionItem] {
+        let sections = limit.map { Array(answerSections.prefix($0)) } ?? answerSections
+        return sections.enumerated().map { index, section in
+            AlphaAnswerSectionItem(id: "\(stableIdentity)-section-\(index)", text: section)
+        }
+    }
+}
+
 private func alphaAskSuggestions(for scopeLabel: String?, documentTitle: String? = nil) -> [String] {
     if let documentTitle, !documentTitle.isEmpty {
         return [
@@ -8111,7 +8367,7 @@ private struct AlphaCaseWorkspaceScreen: View {
                                     Text("Next date: \(nextHearing.formatted(date: .abbreviated, time: .omitted))")
                                         .font(.headline)
                                 }
-                                Text("\(caseMatter.documents.count) documents • \(model.reviewQueue(caseId: caseId).count) review items")
+                                Text("\(caseMatter.documents.count) documents • \(model.reviewQueueCount(for: caseId)) review items")
                                     .font(.subheadline)
                                     .foregroundStyle(Color.rossInk.opacity(0.7))
 
