@@ -2566,25 +2566,6 @@ private struct AlphaPackSetupScreen: View {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 18) {
                     VStack(alignment: .leading, spacing: 14) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Color(white: 0.09), Color(white: 0.14)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 152)
-
-                            Image("RossLogo")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 92, height: 92)
-                                .shadow(color: Color.black.opacity(0.28), radius: 14, y: 6)
-                        }
-
                         AlphaInlineHeader(
                             eyebrow: "Assistant setup",
                             title: "Choose the private assistant for this device",
@@ -2734,11 +2715,11 @@ private extension AlphaAppTab {
     var workspaceStripSymbol: String {
         switch self {
         case .home:
-            "calendar"
+            "house"
         case .cases:
             "folder"
         case .ask:
-            "bubble.left.and.text.bubble.right.fill"
+            "bubble.left.and.text.bubble.right"
         case .settings:
             "gearshape"
         case .capture:
@@ -2747,6 +2728,25 @@ private extension AlphaAppTab {
             "text.magnifyingglass"
         case .exportsLegacy:
             "doc.text"
+        }
+    }
+
+    var workspaceStripSelectedSymbol: String {
+        switch self {
+        case .home:
+            "house.fill"
+        case .cases:
+            "folder.fill"
+        case .ask:
+            "bubble.left.and.text.bubble.right.fill"
+        case .settings:
+            "gearshape.fill"
+        case .capture:
+            "square.and.arrow.down.fill"
+        case .publicLawLegacy:
+            "text.magnifyingglass"
+        case .exportsLegacy:
+            "doc.text.fill"
         }
     }
 }
@@ -2806,7 +2806,7 @@ private struct AlphaRootWorkspaceTabButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: tab.workspaceStripSymbol)
+            Image(systemName: isSelected ? tab.workspaceStripSelectedSymbol : tab.workspaceStripSymbol)
                 .symbolRenderingMode(.hierarchical)
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(isSelected ? Color.white : Color.rossInk.opacity(0.58))
@@ -2829,11 +2829,17 @@ private struct AlphaRootWorkspaceTabButton: View {
 
 private struct AlphaRootAskDock: View {
     @Bindable var model: AlphaRossModel
+    let fixedScopeCaseID: UUID?
     @State private var showingTools = false
     @State private var dismissedInlineQuestion: String?
 
+    init(model: AlphaRossModel, fixedScopeCaseID: UUID? = nil) {
+        self.model = model
+        self.fixedScopeCaseID = fixedScopeCaseID
+    }
+
     private var activeScopeCaseID: UUID? {
-        model.askSelectedScopeCaseID
+        fixedScopeCaseID ?? model.askSelectedScopeCaseID
     }
 
     private var draftBinding: Binding<String> {
@@ -2845,6 +2851,7 @@ private struct AlphaRootAskDock: View {
 
     private var inlineResult: AlphaAskResult? {
         guard let latest = model.latestAskResult else { return nil }
+        guard latest.scopeCaseID == activeScopeCaseID else { return nil }
         return dismissedInlineQuestion == latest.question ? nil : latest
     }
 
@@ -2868,27 +2875,31 @@ private struct AlphaRootAskDock: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {
-                    Menu {
-                        Button("All matters") {
-                            model.askSelectedScopeCaseID = nil
-                        }
-                        ForEach(model.cases) { caseMatter in
-                            Button(caseMatter.title) {
-                                model.askSelectedScopeCaseID = caseMatter.id
+                    if fixedScopeCaseID == nil {
+                        Menu {
+                            Button("All matters") {
+                                model.askSelectedScopeCaseID = nil
                             }
+                            ForEach(model.cases) { caseMatter in
+                                Button(caseMatter.title) {
+                                    model.askSelectedScopeCaseID = caseMatter.id
+                                }
+                            }
+                        } label: {
+                            AlphaAskScopePill(
+                                title: model.scopeLabel(for: activeScopeCaseID),
+                                foregroundStyle: Color.white.opacity(0.8),
+                                backgroundOpacity: 0.1,
+                                showsChevron: true
+                            )
                         }
-                    } label: {
-                        HStack(spacing: 5) {
-                            Text(model.scopeLabel(for: activeScopeCaseID))
-                                .lineLimit(1)
-                            Image(systemName: "chevron.down")
-                                .font(.caption2.weight(.bold))
-                        }
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.white.opacity(0.78))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(Color.white.opacity(0.08), in: Capsule())
+                    } else {
+                        AlphaAskScopePill(
+                            title: model.scopeLabel(for: activeScopeCaseID),
+                            foregroundStyle: Color.white.opacity(0.8),
+                            backgroundOpacity: 0.08,
+                            showsChevron: false
+                        )
                     }
 
                     if model.askWebEnabled {
@@ -2954,15 +2965,28 @@ private struct AlphaRootAskDock: View {
         .padding(.vertical, 9)
         .background(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(Color.rossChromeBackground.opacity(0.98))
+                .fill(.ultraThinMaterial)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.rossChromeBackground.opacity(0.78),
+                                    Color.rossChromeBackground.opacity(0.66)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                }
         )
         .overlay {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                .stroke(Color.white.opacity(0.16), lineWidth: 1)
         }
         .shadow(color: Color.black.opacity(0.16), radius: 16, x: 0, y: 8)
         .sheet(isPresented: $showingTools) {
-            AlphaRootAskToolsSheet(model: model)
+            AlphaRootAskToolsSheet(model: model, fixedScopeCaseID: fixedScopeCaseID)
                 .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: Binding(
@@ -3054,9 +3078,34 @@ private struct AlphaInlineAskResponseCard: View {
     }
 }
 
+private struct AlphaAskScopePill: View {
+    let title: String
+    let foregroundStyle: Color
+    let backgroundOpacity: Double
+    let showsChevron: Bool
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Text(title)
+                .lineLimit(1)
+
+            if showsChevron {
+                Image(systemName: "chevron.down")
+                    .font(.caption2.weight(.bold))
+            }
+        }
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(foregroundStyle)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(Color.white.opacity(backgroundOpacity), in: Capsule())
+    }
+}
+
 private struct AlphaRootAskToolsSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var model: AlphaRossModel
+    let fixedScopeCaseID: UUID?
 
     var body: some View {
         ScrollView {
@@ -3102,12 +3151,18 @@ private struct AlphaRootAskToolsSheet: View {
                 VStack(spacing: 10) {
                     AlphaRootAskToolRow(
                         title: "Add file",
-                        detail: "Import a PDF, image, or note into this device.",
+                        detail: fixedScopeCaseID == nil
+                            ? "Import a PDF, image, or note into this device."
+                            : "Open this matter's file list and import another document.",
                         accentLabel: "Open",
                         iconName: "doc.badge.plus"
                     ) {
                         dismiss()
-                        model.path.append(.captureImport)
+                        if let fixedScopeCaseID {
+                            model.path.append(.documentList(fixedScopeCaseID))
+                        } else {
+                            model.path.append(.captureImport)
+                        }
                     }
 
                     AlphaRootAskToolRow(
@@ -3122,31 +3177,47 @@ private struct AlphaRootAskToolsSheet: View {
                     }
                 }
 
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Ask in")
-                        .font(.caption.weight(.bold))
-                        .tracking(1.2)
-                        .foregroundStyle(Color.rossInk.opacity(0.64))
+                if let fixedScopeCaseID {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("This matter")
+                            .font(.caption.weight(.bold))
+                            .tracking(1.2)
+                            .foregroundStyle(Color.rossInk.opacity(0.64))
 
-                    AlphaRootAskScopeRow(
-                        title: "All matters",
-                        isSelected: model.askSelectedScopeCaseID == nil,
-                        iconName: "square.stack.3d.up.fill"
-                    ) {
-                        model.setAskDocumentTitle(nil, for: nil)
-                        model.askSelectedScopeCaseID = nil
-                        dismiss()
-                    }
-
-                    ForEach(model.cases) { caseMatter in
                         AlphaRootAskScopeRow(
-                            title: caseMatter.title,
-                            isSelected: model.askSelectedScopeCaseID == caseMatter.id,
-                            iconName: "folder.badge.gearshape"
+                            title: model.scopeLabel(for: fixedScopeCaseID),
+                            isSelected: true,
+                            iconName: "folder.fill",
+                            action: { }
+                        )
+                    }
+                } else {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Ask in")
+                            .font(.caption.weight(.bold))
+                            .tracking(1.2)
+                            .foregroundStyle(Color.rossInk.opacity(0.64))
+
+                        AlphaRootAskScopeRow(
+                            title: "All matters",
+                            isSelected: model.askSelectedScopeCaseID == nil,
+                            iconName: "square.stack.3d.up.fill"
                         ) {
-                            model.setAskDocumentTitle(nil, for: caseMatter.id)
-                            model.askSelectedScopeCaseID = caseMatter.id
+                            model.setAskDocumentTitle(nil, for: nil)
+                            model.askSelectedScopeCaseID = nil
                             dismiss()
+                        }
+
+                        ForEach(model.cases) { caseMatter in
+                            AlphaRootAskScopeRow(
+                                title: caseMatter.title,
+                                isSelected: model.askSelectedScopeCaseID == caseMatter.id,
+                                iconName: "folder.badge.gearshape"
+                            ) {
+                                model.setAskDocumentTitle(nil, for: caseMatter.id)
+                                model.askSelectedScopeCaseID = caseMatter.id
+                                dismiss()
+                            }
                         }
                     }
                 }
@@ -3283,16 +3354,6 @@ private struct AlphaWorkspaceDrawerPanel: View {
         }
     }
 
-    private func openTab(_ tab: AlphaAppTab) {
-        model.persisted.selectedTab = tab
-        closeDrawer()
-    }
-
-    private func openAsk() {
-        closeDrawer()
-        model.openAsk()
-    }
-
     private func openCase(_ caseId: UUID) {
         closeDrawer()
         model.persisted.selectedTab = .cases
@@ -3312,101 +3373,77 @@ private struct AlphaWorkspaceDrawerPanel: View {
         model.path.append(.createCase)
     }
 
+    private func openSettings() {
+        closeDrawer()
+        model.persisted.selectedTab = .settings
+    }
+
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack(alignment: .center) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Workspace")
-                            .font(.headline.weight(.semibold))
-                            .foregroundStyle(Color.rossInk)
-                        Text("Jump between the main work areas, matters, and recent files.")
-                            .font(.footnote)
-                            .foregroundStyle(Color.rossInk.opacity(0.66))
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Spacer(minLength: 0)
 
-                    Spacer(minLength: 12)
-
-                    Button(action: closeDrawer) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(Color.rossInk.opacity(0.72))
-                            .frame(width: 30, height: 30)
-                            .background(Color.white.opacity(0.72), in: Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Close workspace drawer")
+                Button(action: closeDrawer) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(Color.rossInk.opacity(0.72))
+                        .frame(width: 30, height: 30)
+                        .background(Color.white.opacity(0.72), in: Circle())
                 }
-
-                RossSectionCard(title: "Go to") {
-                    VStack(spacing: 10) {
-                        AlphaWorkspaceDrawerNavRow(
-                            title: "Today",
-                            detail: "Dates, priorities, and the daily overview",
-                            isSelected: model.persisted.selectedTab == .home,
-                            action: { openTab(.home) }
-                        )
-                        AlphaWorkspaceDrawerNavRow(
-                            title: "Matters",
-                            detail: "Each matter, its files, and work summary",
-                            isSelected: model.persisted.selectedTab == .cases,
-                            action: { openTab(.cases) }
-                        )
-                        AlphaWorkspaceDrawerNavRow(
-                            title: "Ask Ross",
-                            detail: "Matter threads and device-wide questions",
-                            isSelected: false,
-                            action: openAsk
-                        )
-                        AlphaWorkspaceDrawerNavRow(
-                            title: "Settings",
-                            detail: "Privacy, device setup, and reports",
-                            isSelected: model.persisted.selectedTab == .settings,
-                            action: { openTab(.settings) }
-                        )
-                    }
-                }
-
-                RossSectionCard(title: "Matters") {
-                    VStack(spacing: 10) {
-                        Button("Create matter", action: createMatter)
-                            .rossPrimaryButtonStyle()
-
-                        if model.cases.isEmpty {
-                            Text("No matters yet. Create the first matter and Ross will keep it here.")
-                                .font(.footnote)
-                                .foregroundStyle(Color.rossInk.opacity(0.7))
-                        } else {
-                            ForEach(Array(model.cases.prefix(5))) { caseMatter in
-                                Button {
-                                    openCase(caseMatter.id)
-                                } label: {
-                                    AlphaWorkspaceDrawerMatterRow(caseMatter: caseMatter, model: model)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                    }
-                }
-
-                if !recentDocuments.isEmpty {
-                    RossSectionCard(title: "Recent files") {
-                        VStack(spacing: 10) {
-                            ForEach(Array(recentDocuments.prefix(4))) { entry in
-                                Button {
-                                    openDocument(caseId: entry.caseId, documentId: entry.document.id)
-                                } label: {
-                                    AlphaWorkspaceDrawerDocumentRow(entry: entry)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                    }
-                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Close workspace drawer")
             }
-            .padding(18)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    RossSectionCard(title: "Matters") {
+                        VStack(spacing: 10) {
+                            Button("Create matter", action: createMatter)
+                                .rossPrimaryButtonStyle()
+
+                            if model.cases.isEmpty {
+                                Text("No matters yet. Create the first matter and Ross will keep it here.")
+                                    .font(.footnote)
+                                    .foregroundStyle(Color.rossInk.opacity(0.7))
+                            } else {
+                                ForEach(Array(model.cases.prefix(6))) { caseMatter in
+                                    Button {
+                                        openCase(caseMatter.id)
+                                    } label: {
+                                        AlphaWorkspaceDrawerMatterRow(caseMatter: caseMatter, model: model)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                    }
+
+                    if !recentDocuments.isEmpty {
+                        RossSectionCard(title: "Recent files") {
+                            VStack(spacing: 10) {
+                                ForEach(Array(recentDocuments.prefix(5))) { entry in
+                                    Button {
+                                        openDocument(caseId: entry.caseId, documentId: entry.document.id)
+                                    } label: {
+                                        AlphaWorkspaceDrawerDocumentRow(entry: entry)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+
+            AlphaWorkspaceDrawerFooterButton(
+                title: "Settings",
+                systemImage: "gearshape",
+                isSelected: model.persisted.selectedTab == .settings,
+                action: openSettings
+            )
         }
+        .padding(18)
         .frame(maxHeight: .infinity, alignment: .top)
         .background(.ultraThinMaterial)
         .overlay {
@@ -3418,32 +3455,29 @@ private struct AlphaWorkspaceDrawerPanel: View {
     }
 }
 
-private struct AlphaWorkspaceDrawerNavRow: View {
+private struct AlphaWorkspaceDrawerFooterButton: View {
     let title: String
-    let detail: String
+    let systemImage: String
     let isSelected: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.rossInk)
-                    Text(detail)
-                        .font(.caption)
-                        .foregroundStyle(Color.rossInk.opacity(0.62))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                Image(systemName: isSelected ? "gearshape.fill" : systemImage)
+                    .symbolRenderingMode(.hierarchical)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(isSelected ? Color.rossAccent : Color.rossInk.opacity(0.72))
+
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.rossInk)
 
                 Spacer(minLength: 10)
 
-                if isSelected {
-                    Text("Open")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(Color.rossAccent)
-                }
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Color.rossInk.opacity(0.34))
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
@@ -3530,9 +3564,10 @@ private struct AlphaWorkspaceDrawerDocumentRow: View {
 
 private struct AlphaHomeScreen: View {
     @Bindable var model: AlphaRossModel
-    @State private var dueTodayExpanded = true
-    @State private var upcomingExpanded = true
-    @State private var matterActivityExpanded = true
+    @State private var dueTodayExpanded = false
+    @State private var upcomingExpanded = false
+    @State private var needsReviewExpanded = false
+    @State private var matterActivityExpanded = false
 
     var body: some View {
         let reviewItems = model.reviewQueue()
@@ -3552,6 +3587,7 @@ private struct AlphaHomeScreen: View {
                     detail: attentionCount == 0
                         ? "Nothing urgent is waiting. Ross grouped the day so the next action stays easy to spot."
                         : "Ross grouped today, nearby dates, and matter activity below so the next action stays obvious.",
+                    showsMedia: false,
                     mediaHeight: 108,
                     logoSize: 58
                 ) {
@@ -3615,7 +3651,11 @@ private struct AlphaHomeScreen: View {
                     }
                 }
 
-                RossSectionCard(title: "Needs review") {
+                AlphaDisclosureCard(
+                    title: "Needs review",
+                    badge: "\(reviewItems.count)",
+                    isExpanded: $needsReviewExpanded
+                ) {
                     VStack(alignment: .leading, spacing: 12) {
                         if reviewItems.isEmpty {
                             Text("Nothing is waiting for manual review right now.")
@@ -5580,15 +5620,14 @@ private struct AlphaCaseWorkspaceScreen: View {
                 .padding(alphaScreenPadding)
             }
         }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            AlphaRootAskDock(model: model, fixedScopeCaseID: caseId)
+                .padding(.horizontal, 12)
+                .padding(.top, 6)
+                .padding(.bottom, 6)
+        }
         .navigationTitle("Case")
         .rossInlineNavigationTitle()
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                AlphaAskToolbarButton(systemImage: "bubble.right", accessibilityLabel: "Open Ask Ross") {
-                    model.openAsk(scopeCaseID: caseId)
-                }
-            }
-        }
     }
 }
 

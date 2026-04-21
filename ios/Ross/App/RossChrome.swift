@@ -47,6 +47,7 @@ struct RossHeroCard<Content: View>: View {
     let eyebrow: String
     let title: String
     let detail: String?
+    let showsMedia: Bool
     let mediaHeight: CGFloat
     let logoSize: CGFloat
     let content: Content
@@ -55,6 +56,7 @@ struct RossHeroCard<Content: View>: View {
         eyebrow: String,
         title: String,
         detail: String? = nil,
+        showsMedia: Bool = true,
         mediaHeight: CGFloat = 120,
         logoSize: CGFloat = 70,
         @ViewBuilder content: () -> Content
@@ -62,6 +64,7 @@ struct RossHeroCard<Content: View>: View {
         self.eyebrow = eyebrow
         self.title = title
         self.detail = detail
+        self.showsMedia = showsMedia
         self.mediaHeight = mediaHeight
         self.logoSize = logoSize
         self.content = content()
@@ -69,40 +72,42 @@ struct RossHeroCard<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ZStack(alignment: .center) {
-                Rectangle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color(white: 0.08), Color(white: 0.13)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+            if showsMedia {
+                ZStack(alignment: .center) {
+                    Rectangle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(white: 0.08), Color(white: 0.13)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
-                    )
-                    .frame(maxWidth: .infinity)
-                    .frame(height: mediaHeight)
-                
-                Group {
-                    if let _ = UIImage(named: "RossLogo") {
-                        Image("RossLogo")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: logoSize, height: logoSize)
-                            .shadow(color: Color.black.opacity(0.38), radius: 14, y: 6)
-                    } else {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                                .fill(Color(white: 0.16))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: mediaHeight)
+
+                    Group {
+                        if let _ = UIImage(named: "RossLogo") {
+                            Image("RossLogo")
+                                .resizable()
+                                .scaledToFit()
                                 .frame(width: logoSize, height: logoSize)
-                                .shadow(color: Color.black.opacity(0.5), radius: 20, y: 8)
-                            Text("R")
-                                .font(.system(size: logoSize * 0.54, weight: .black, design: .rounded))
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: [Color(white: 0.42), Color(white: 0.26)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
+                                .shadow(color: Color.black.opacity(0.38), radius: 14, y: 6)
+                        } else {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                    .fill(Color(white: 0.16))
+                                    .frame(width: logoSize, height: logoSize)
+                                    .shadow(color: Color.black.opacity(0.5), radius: 20, y: 8)
+                                Text("R")
+                                    .font(.system(size: logoSize * 0.54, weight: .black, design: .rounded))
+                                    .foregroundStyle(
+                                        LinearGradient(
+                                            colors: [Color(white: 0.42), Color(white: 0.26)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
                                     )
-                                )
+                            }
                         }
                     }
                 }
