@@ -88,8 +88,43 @@ private struct AlphaAskDocumentOption: Identifiable, Hashable {
     let caseId: UUID
     let caseTitle: String
     let title: String
+    let fileName: String
     let kind: AlphaDocumentKind
     let isShared: Bool
+
+    var displayTitle: String {
+        let trimmedFileName = fileName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedFileName.isEmpty ? title : trimmedFileName
+    }
+
+    var badgeTitle: String {
+        let ext = (displayTitle as NSString).pathExtension.uppercased()
+        if !ext.isEmpty {
+            return ext
+        }
+        switch kind {
+        case .pdf:
+            return "PDF"
+        case .image:
+            return "IMG"
+        case .text:
+            return "TXT"
+        case .unknown:
+            return "FILE"
+        }
+    }
+
+    func compactDetail(scopeCaseID: UUID?) -> String {
+        let location: String
+        if isShared {
+            location = "Shared files"
+        } else if scopeCaseID == nil {
+            location = caseTitle
+        } else {
+            location = "This matter"
+        }
+        return "\(kind.title) · \(location)"
+    }
 }
 
 private struct AlphaRecentDocumentItem: Identifiable {
@@ -342,6 +377,7 @@ final class AlphaRossModel {
                         caseId: caseMatter.id,
                         caseTitle: caseMatter.title,
                         title: document.title,
+                        fileName: document.fileName,
                         kind: document.kind,
                         isShared: caseMatter.id == alphaSharedWorkspaceID
                     )
@@ -1770,6 +1806,36 @@ final class AlphaRossModel {
             guard let pack = catalog.packs.first(where: { $0.tier == tier }) else {
                 throw AlphaBackendError.missingPack
             }
+            if let unsupportedReason = alphaUnsupportedPackReason(
+                for: tier,
+                runtimeMode: pack.runtimeMode,
+                developmentOnly: pack.developmentOnly
+            ) {
+                updateJob(job.id) {
+                    $0.state = .failed
+                    $0.packId = pack.packId
+                    $0.totalBytes = pack.sizeBytes
+                    $0.checksumSha256 = pack.checksumSha256
+                    $0.artifactKind = pack.artifactKind
+                    $0.runtimeMode = pack.runtimeMode
+                    $0.developmentOnly = pack.developmentOnly
+                    $0.failureReason = unsupportedReason
+                    $0.updatedAt = .now
+                }
+                persisted.ledgerEntries.insert(
+                    AlphaPrivacyLedgerEntry(
+                        title: "Private AI Pack blocked",
+                        detail: unsupportedReason,
+                        purpose: .model_catalog,
+                        payloadClass: .no_case_data,
+                        endpointLabel: "/model-catalog",
+                        success: false
+                    ),
+                    at: 0
+                )
+                persist()
+                return
+            }
 
             persisted.lastModelCatalogRefresh = .now
             updateJob(job.id) {
@@ -1811,6 +1877,37 @@ final class AlphaRossModel {
             }
 
             let session = try await backend.createDownloadSession(for: pack.packId)
+            if let unsupportedReason = alphaUnsupportedPackReason(
+                for: tier,
+                runtimeMode: session.artifact.runtimeMode,
+                developmentOnly: session.artifact.developmentOnly
+            ) {
+                updateJob(job.id) {
+                    $0.state = .failed
+                    $0.sessionId = session.sessionId
+                    $0.packId = session.packId
+                    $0.totalBytes = session.artifact.sizeBytes
+                    $0.checksumSha256 = session.artifact.finalSha256
+                    $0.artifactKind = session.artifact.artifactKind
+                    $0.runtimeMode = session.artifact.runtimeMode
+                    $0.developmentOnly = session.artifact.developmentOnly
+                    $0.failureReason = unsupportedReason
+                    $0.updatedAt = .now
+                }
+                persisted.ledgerEntries.insert(
+                    AlphaPrivacyLedgerEntry(
+                        title: "Private AI Pack blocked",
+                        detail: unsupportedReason,
+                        purpose: .model_download,
+                        payloadClass: .no_case_data,
+                        endpointLabel: "/model-download/session",
+                        success: false
+                    ),
+                    at: 0
+                )
+                persist()
+                return
+            }
             updateJob(job.id) {
                 $0.sessionId = session.sessionId
                 $0.packId = session.packId
@@ -1901,56 +1998,78 @@ final class AlphaRossModel {
             )
             persist()
         } catch {
-            do {
-                let fallback = try await store.writeDevPackArtifact(for: tier)
-                let installed = AlphaInstalledModelPack(
-                    packId: "\(tier.rawValue)-pack",
-                    tier: tier,
-                    installPath: fallback.relativePath,
-                    checksumSha256: fallback.checksum,
-                    artifactKind: "tiny_dev_artifact",
-                    runtimeMode: .deterministicDev,
-                    developmentOnly: true,
-                    isActive: true
-                )
-                persisted.installedPacks = persisted.installedPacks.map {
-                    var copy = $0
-                    copy.isActive = false
-                    return copy
+            if alphaAllowsDevelopmentModelArtifacts() {
+                do {
+                    let fallback = try await store.writeDevPackArtifact(for: tier)
+                    let installed = AlphaInstalledModelPack(
+                        packId: "\(tier.rawValue)-pack",
+                        tier: tier,
+                        installPath: fallback.relativePath,
+                        checksumSha256: fallback.checksum,
+                        artifactKind: "tiny_dev_artifact",
+                        runtimeMode: .deterministicDev,
+                        developmentOnly: true,
+                        isActive: true
+                    )
+                    persisted.installedPacks = persisted.installedPacks.map {
+                        var copy = $0
+                        copy.isActive = false
+                        return copy
+                    }
+                    persisted.installedPacks.removeAll { $0.tier == tier }
+                    persisted.installedPacks.insert(installed, at: 0)
+                    persisted.settings.activeTier = tier
+                    updateJob(job.id) {
+                        $0.state = .installed
+                        $0.packId = installed.packId
+                        $0.bytesDownloaded = fallback.bytes
+                        $0.totalBytes = fallback.bytes
+                        $0.checksumSha256 = fallback.checksum
+                        $0.artifactKind = installed.artifactKind
+                        $0.runtimeMode = installed.runtimeMode
+                        $0.developmentOnly = installed.developmentOnly
+                        $0.updatedAt = .now
+                        $0.completedAt = .now
+                    }
+                    persisted.ledgerEntries.insert(
+                        AlphaPrivacyLedgerEntry(
+                            title: "Private AI Pack fallback installed",
+                            detail: "The backend was unavailable, so Ross prepared a local development artifact without case data.",
+                            purpose: .model_verification,
+                            payloadClass: .no_case_data,
+                            endpointLabel: "device://model-verify",
+                            success: true
+                        ),
+                        at: 0
+                    )
+                    persist()
+                    return
+                } catch {
+                    updateJob(job.id) {
+                        $0.state = .failed
+                        $0.failureReason = "Install artifact could not be prepared."
+                        $0.updatedAt = .now
+                    }
+                    persist()
+                    return
                 }
-                persisted.installedPacks.removeAll { $0.tier == tier }
-                persisted.installedPacks.insert(installed, at: 0)
-                persisted.settings.activeTier = tier
+            } else {
                 updateJob(job.id) {
-                    $0.state = .installed
-                    $0.packId = installed.packId
-                    $0.bytesDownloaded = fallback.bytes
-                    $0.totalBytes = fallback.bytes
-                    $0.checksumSha256 = fallback.checksum
-                    $0.artifactKind = installed.artifactKind
-                    $0.runtimeMode = installed.runtimeMode
-                    $0.developmentOnly = installed.developmentOnly
+                    $0.state = .failed
+                    $0.failureReason = "Ross could not verify a production-ready on-device assistant for this iPhone."
                     $0.updatedAt = .now
-                    $0.completedAt = .now
                 }
                 persisted.ledgerEntries.insert(
                     AlphaPrivacyLedgerEntry(
-                        title: "Private AI Pack fallback installed",
-                        detail: "The backend was unavailable, so Ross prepared a local development artifact without case data.",
+                        title: "Private AI Pack unavailable",
+                        detail: "Ross did not install a development fallback because this build is treating model setup as production-only.",
                         purpose: .model_verification,
                         payloadClass: .no_case_data,
                         endpointLabel: "device://model-verify",
-                        success: true
+                        success: false
                     ),
                     at: 0
                 )
-                persist()
-            } catch {
-                updateJob(job.id) {
-                    $0.state = .failed
-                    $0.failureReason = "Install artifact could not be prepared."
-                    $0.updatedAt = .now
-                }
                 persist()
             }
         }
@@ -3155,6 +3274,34 @@ private func sha256Hex(_ data: Data) -> String {
     SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
 }
 
+private func alphaAllowsDevelopmentModelArtifacts() -> Bool {
+    let environment = ProcessInfo.processInfo.environment
+    return environment["ROSS_ALLOW_DEVELOPMENT_MODEL_ARTIFACTS"] == "1"
+}
+
+private func alphaUnsupportedPackReason(
+    for tier: AlphaCapabilityTier,
+    runtimeMode: AlphaPackRuntimeMode,
+    developmentOnly: Bool
+) -> String? {
+    guard !alphaAllowsDevelopmentModelArtifacts() else { return nil }
+    if developmentOnly {
+        return "\(tier.title) is still packaged as a development-only assistant in this build."
+    }
+    switch runtimeMode {
+    case .appleFoundationModels:
+        return nil
+    case .deterministicDev:
+        return "\(tier.title) is still pointing at a deterministic development fallback."
+    case .mediapipeLlm:
+        return "\(tier.title) is packaged for MediaPipe, which is not active in the iOS build."
+    case .llamaCppGguf:
+        return "\(tier.title) is packaged for llama.cpp, which is not active in the iOS build."
+    case .unavailable:
+        return "\(tier.title) does not have an available on-device runtime in this build."
+    }
+}
+
 struct AlphaRossRootView: View {
     @State private var model: AlphaRossModel
     @State private var showingLaunchSplash = true
@@ -3469,7 +3616,7 @@ private struct AlphaPackSetupScreen: View {
 
                         AlphaAssistantActivityStrip(
                             title: "Setup continues in the background",
-                            detail: "You can start matters and chats while setup finishes.",
+                            detail: "Ross only keeps a verified on-device assistant marked ready on this phone.",
                             statusLabel: "Background",
                             tint: .orange
                         )
@@ -3744,6 +3891,8 @@ private func alphaAskMentionSuggestions(
         guard !selectedDocumentIDs.contains(document.id) else { return false }
         guard !trimmedQuery.isEmpty else { return true }
         return document.title.localizedCaseInsensitiveContains(trimmedQuery)
+            || document.fileName.localizedCaseInsensitiveContains(trimmedQuery)
+            || document.displayTitle.localizedCaseInsensitiveContains(trimmedQuery)
             || document.caseTitle.localizedCaseInsensitiveContains(trimmedQuery)
     }
     return Array(matchingDocuments.prefix(limit))
@@ -3858,7 +4007,7 @@ private struct AlphaRootAskDock: View {
         var selected = model.selectedAskDocumentIDs(for: activeScopeCaseID)
         selected.insert(document.id)
         model.setSelectedAskDocumentIDs(selected, for: activeScopeCaseID)
-        model.setAskDraft(alphaAskReplacingTrailingMention(in: draftText, with: document.title), for: activeScopeCaseID)
+        model.setAskDraft(alphaAskReplacingTrailingMention(in: draftText, with: document.displayTitle), for: activeScopeCaseID)
     }
 
     private func handleImport(_ result: Result<[URL], any Error>) {
@@ -3928,7 +4077,8 @@ private struct AlphaRootAskDock: View {
                         HStack(spacing: 8) {
                             ForEach(activeSelectedDocuments) { document in
                                 AlphaAskSelectionChip(
-                                    title: document.title,
+                                    title: document.displayTitle,
+                                    detail: activeScopeCaseID == nil ? (document.isShared ? "shared" : document.caseTitle) : (document.isShared ? "shared" : nil),
                                     isShared: document.isShared,
                                     tone: .dock,
                                     onRemove: fixedDocumentIDs.isEmpty ? {
@@ -4202,31 +4352,51 @@ private enum AlphaAskSurfaceTone {
 
 private struct AlphaAskSelectionChip: View {
     let title: String
+    let detail: String?
     let isShared: Bool
     let tone: AlphaAskSurfaceTone
     let onRemove: (() -> Void)?
 
     init(
         title: String,
+        detail: String? = nil,
         isShared: Bool,
         tone: AlphaAskSurfaceTone = .dock,
         onRemove: (() -> Void)?
     ) {
         self.title = title
+        self.detail = detail
         self.isShared = isShared
         self.tone = tone
         self.onRemove = onRemove
     }
 
     var body: some View {
-        HStack(spacing: 6) {
-            if isShared {
-                RossGlassIconView(.earth, variant: .highlight, size: 12, fallbackSystemImage: "globe")
-            } else {
-                RossGlassIconView(.folder, variant: .neutral, size: 12, fallbackSystemImage: "folder.fill")
+        HStack(spacing: 8) {
+            Group {
+                if isShared {
+                    RossGlassIconView(.earth, variant: .highlight, size: 12, fallbackSystemImage: "globe")
+                } else {
+                    RossGlassIconView(.folder, variant: .neutral, size: 12, fallbackSystemImage: "folder.fill")
+                }
             }
-            Text(title)
-                .lineLimit(1)
+            .frame(width: 18, height: 18)
+
+            HStack(spacing: 5) {
+                Text(title)
+                    .lineLimit(1)
+
+                if let detail, !detail.isEmpty {
+                    Circle()
+                        .fill(tone == .dock ? Color.white.opacity(0.26) : Color.rossInk.opacity(0.18))
+                        .frame(width: 3, height: 3)
+
+                    Text(detail)
+                        .lineLimit(1)
+                        .foregroundStyle(tone == .dock ? Color.white.opacity(0.46) : Color.rossInk.opacity(0.46))
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             if let onRemove {
                 Button(action: onRemove) {
@@ -4241,17 +4411,36 @@ private struct AlphaAskSelectionChip: View {
         .font(.caption2.weight(.semibold))
         .foregroundStyle(tone == .dock ? Color.white.opacity(0.76) : Color.rossInk.opacity(0.82))
         .padding(.horizontal, 10)
-        .padding(.vertical, 5)
+        .padding(.vertical, 6)
         .background(
-            tone == .dock ? Color.white.opacity(0.08) : Color.rossGlassSubtleFill,
-            in: Capsule()
+            tone == .dock ? Color.black.opacity(0.18) : Color.rossGlassSubtleFill,
+            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
         )
         .overlay {
-            if tone == .sheet {
-                Capsule()
-                    .stroke(Color.rossGlassStroke.opacity(0.82), lineWidth: 1)
-            }
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(
+                    tone == .dock ? Color.white.opacity(0.08) : Color.rossGlassStroke.opacity(0.82),
+                    lineWidth: 1
+                )
         }
+    }
+}
+
+private struct AlphaAskSuggestionBadge: View {
+    let title: String
+    let tone: AlphaAskSurfaceTone
+
+    var body: some View {
+        Text(title)
+            .font(.system(size: 10, weight: .bold, design: .rounded))
+            .tracking(0.4)
+            .foregroundStyle(tone == .dock ? Color.white.opacity(0.74) : Color.rossAccent.opacity(0.86))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(
+                tone == .dock ? Color.white.opacity(0.08) : Color.rossAccent.opacity(0.08),
+                in: Capsule()
+            )
     }
 }
 
@@ -4274,12 +4463,7 @@ private struct AlphaAskMentionSuggestionsCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Mention a file")
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(tone == .dock ? Color.white.opacity(0.58) : Color.rossInk.opacity(0.48))
-                .tracking(0.8)
-
+        VStack(alignment: .leading, spacing: 6) {
             ForEach(documents) { document in
                 Button {
                     onSelect(document)
@@ -4293,9 +4477,9 @@ private struct AlphaAskMentionSuggestionsCard: View {
                 .buttonStyle(.plain)
             }
         }
-        .padding(10)
+        .padding(8)
         .background(
-            tone == .dock ? Color.white.opacity(0.08) : Color.rossGlassSubtleFill,
+            tone == .dock ? Color.black.opacity(0.22) : Color.rossGlassSubtleFill,
             in: RoundedRectangle(cornerRadius: 16, style: .continuous)
         )
         .overlay {
@@ -4305,6 +4489,12 @@ private struct AlphaAskMentionSuggestionsCard: View {
                     lineWidth: 1
                 )
         }
+        .shadow(
+            color: tone == .dock ? Color.black.opacity(0.12) : Color.rossShadow.opacity(0.14),
+            radius: 10,
+            x: 0,
+            y: 4
+        )
     }
 }
 
@@ -4313,40 +4503,32 @@ private struct AlphaAskMentionSuggestionRow: View {
     let scopeCaseID: UUID?
     let tone: AlphaAskSurfaceTone
 
-    private var detail: String {
-        if document.isShared {
-            return "Shared file"
-        }
-        if scopeCaseID == nil {
-            return document.caseTitle
-        }
-        return "This matter"
-    }
-
     var body: some View {
         let icon = alphaDocumentGlassIcon(document.kind)
 
         HStack(spacing: 10) {
             RossGlassIconView(icon.0, variant: icon.1, size: 16, fallbackSystemImage: icon.2)
-                .frame(width: 24, height: 24)
+                .frame(width: 26, height: 26)
+                .background(
+                    tone == .dock ? Color.white.opacity(0.06) : Color.rossGlassFill,
+                    in: RoundedRectangle(cornerRadius: 9, style: .continuous)
+                )
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(document.title)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(tone == .dock ? Color.white.opacity(0.82) : Color.rossInk.opacity(0.84))
+                Text(document.displayTitle)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(tone == .dock ? Color.white.opacity(0.88) : Color.rossInk.opacity(0.9))
+                    .lineLimit(1)
                     .multilineTextAlignment(.leading)
 
-                Text(detail)
-                    .font(.caption2)
+                Text(document.compactDetail(scopeCaseID: scopeCaseID))
+                    .font(.caption2.weight(.medium))
                     .foregroundStyle(tone == .dock ? Color.white.opacity(0.52) : Color.rossInk.opacity(0.56))
                     .lineLimit(1)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
-            Spacer(minLength: 8)
-
-            Text("@")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(tone == .dock ? Color.white.opacity(0.34) : Color.rossAccent.opacity(0.62))
+            AlphaAskSuggestionBadge(title: document.badgeTitle, tone: tone)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
@@ -4357,7 +4539,7 @@ private struct AlphaAskMentionSuggestionRow: View {
         .overlay {
             if tone == .sheet {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.rossGlassStroke.opacity(0.72), lineWidth: 1)
+                    .stroke(Color.rossGlassStroke.opacity(0.82), lineWidth: 1)
             }
         }
     }
@@ -4476,7 +4658,8 @@ private struct AlphaAskComposerSheet: View {
                         HStack(spacing: 8) {
                             ForEach(activeSelectedDocuments) { document in
                                 AlphaAskSelectionChip(
-                                    title: document.title,
+                                    title: document.displayTitle,
+                                    detail: activeScopeCaseID == nil ? (document.isShared ? "shared" : document.caseTitle) : (document.isShared ? "shared" : nil),
                                     isShared: document.isShared,
                                     tone: .sheet,
                                     onRemove: fixedDocumentIDs.isEmpty ? {
@@ -9034,15 +9217,20 @@ private struct AlphaPrivateAISettingsScreen: View {
                 }
             }
 
-            Section("Ready on this device") {
+            Section("Installed on this device") {
                 ForEach(model.persisted.installedPacks) { pack in
                     VStack(alignment: .leading, spacing: 8) {
                         Text(pack.tier.title)
                             .font(.headline)
-                        Text("Ready on this device")
+                        Text(pack.developmentOnly ? "Development artifact only" : "Ready on this device")
                             .font(.caption)
+                            .foregroundStyle(pack.developmentOnly ? Color.orange : .secondary)
+                        Text("Runtime: \(pack.runtimeMode.rawValue)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
                         HStack {
                             Button("Use this level") { model.activateInstalledPack(pack) }
+                                .disabled(pack.developmentOnly && !alphaAllowsDevelopmentModelArtifacts())
                             Button("Remove", role: .destructive) { model.removeInstalledPack(pack) }
                         }
                     }
