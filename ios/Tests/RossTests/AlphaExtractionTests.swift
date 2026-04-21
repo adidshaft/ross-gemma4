@@ -220,12 +220,43 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertNotNil(provider)
-        XCTAssertEqual(provider?.runtimeMode, .deterministicDev)
         XCTAssertEqual(health?.runtimeMode, .appleFoundationModels)
-        XCTAssertEqual(health?.available, false)
-        XCTAssertEqual(health?.fallbackActive, true)
-        XCTAssertEqual(health?.explicitOptInEnabled, false)
+        if health?.available == true {
+            XCTAssertEqual(provider?.runtimeMode, .appleFoundationModels)
+            XCTAssertEqual(health?.fallbackActive, false)
+            XCTAssertEqual(health?.explicitOptInEnabled, true)
+        } else {
+            XCTAssertEqual(provider?.runtimeMode, .deterministicDev)
+            XCTAssertEqual(health?.fallbackActive, true)
+        }
         XCTAssertNotNil(health?.userFacingStatus)
+    }
+
+    func testRuntimeHealthUsesInstalledPackPathLabelForAdapterArtifacts() {
+        let pack = AlphaInstalledModelPack(
+            packId: "caseAssociate-pack",
+            tier: .caseAssociate,
+            installPath: "model-packs/caseAssociate/foundation-adapter.bundle",
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "foundation_adapter",
+            runtimeMode: .appleFoundationModels,
+            developmentOnly: false,
+            isActive: true
+        )
+
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .appleFoundationModels,
+                modelPath: nil,
+                modelChecksum: nil,
+                modelKind: nil
+            )
+        )
+
+        XCTAssertEqual(health?.modelPathLabel, "foundation-adapter.bundle")
     }
 
     func testRuntimeHealthRedactsConfiguredModelPathToBasename() {

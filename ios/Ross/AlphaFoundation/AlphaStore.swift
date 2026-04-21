@@ -1236,7 +1236,7 @@ private struct AlphaLocalExtractionOrchestrator {
             }
             encodedPayload = encodeJSON(issueFields)
 
-        case .chronologyGeneration, .orderSummary:
+        case .chronologyGeneration, .orderSummary, .matterQuestionAnswer:
             warnings = ["Deterministic development runtime does not synthesize standalone chronology or order summary outputs in this alpha build."]
             encodedPayload = nil
         }

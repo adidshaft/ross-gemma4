@@ -13,6 +13,7 @@ enum AlphaLocalModelTask: String, Codable, Hashable, Sendable {
     case chronologyGeneration = "chronology_generation"
     case orderSummary = "order_summary"
     case issueExtraction = "issue_extraction"
+    case matterQuestionAnswer = "matter_question_answer"
 }
 
 enum AlphaLocalModelInvocationStatus: String, Codable, Hashable, Sendable {
@@ -205,7 +206,7 @@ struct AlphaPromptPackBuilder {
     }
 }
 
-protocol AlphaLocalModelProvider {
+protocol AlphaLocalModelProvider: Sendable {
     var capabilityTier: AlphaCapabilityTier { get }
     var runtimeMode: AlphaPackRuntimeMode { get }
     var promptPolicy: AlphaModelPromptPolicy { get }
@@ -364,6 +365,7 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
         .chronologyGeneration,
         .orderSummary,
         .issueExtraction,
+        .matterQuestionAnswer,
     ]
 
     func isAvailable() -> Bool {
@@ -587,6 +589,7 @@ enum AlphaLocalModelRuntime {
             .chronologyGeneration,
             .orderSummary,
             .issueExtraction,
+            .matterQuestionAnswer,
         ]
         return AlphaUnavailableRealLocalModelProvider(
             capabilityTier: tier,
@@ -619,10 +622,12 @@ enum AlphaLocalModelRuntime {
     ) -> (any AlphaRealLocalModelProvider)? {
         let debug = debugConfig(runtimeEnvironment: runtimeEnvironment)
         let checksumVerified = activePack?.checksumVerified ?? (debug.modelChecksum == nil)
-        let modelPathLabel = debug.modelPath.flatMap { URL(fileURLWithPath: $0).lastPathComponent.nilIfEmpty }
+        let modelPath = resolvedModelPath(activePack: activePack, runtimeEnvironment: runtimeEnvironment)
+        let modelPathLabel = modelPath.flatMap { URL(fileURLWithPath: $0).lastPathComponent.nilIfEmpty }
         let runtimeMode = desiredRuntimeMode(activePack: activePack, runtimeEnvironment: runtimeEnvironment)
         guard let runtimeMode else { return nil }
-        guard debug.enableRealInference || runtimeMode == .deterministicDev || runtimeMode == .unavailable else {
+        let productionRuntimeAllowed = activePack?.developmentOnly == false
+        guard debug.enableRealInference || productionRuntimeAllowed || runtimeMode == .deterministicDev || runtimeMode == .unavailable else {
             return disabledRuntimeProvider(
                 runtimeMode: runtimeMode,
                 tier: tier,
@@ -633,11 +638,11 @@ enum AlphaLocalModelRuntime {
         }
         switch runtimeMode {
         case .mediapipeLlm:
-            return AlphaUnavailableRealLocalModelProvider(
-                capabilityTier: tier,
-                runtimeMode: .mediapipeLlm,
-                modelPathLabel: modelPathLabel,
-                checksumVerified: checksumVerified,
+                return AlphaUnavailableRealLocalModelProvider(
+                    capabilityTier: tier,
+                    runtimeMode: .mediapipeLlm,
+                    modelPathLabel: modelPathLabel,
+                    checksumVerified: checksumVerified,
                 statusMessage: "MediaPipe local runtime remains unavailable on iOS in this alpha. Ross will keep deterministic fallback active.",
                 plannedTasks: [.documentClassification, .legalFieldExtraction, .legalFieldVerification, .caseMemorySynthesis, .chronologyGeneration, .orderSummary],
                 errorCategory: "unsupported_runtime",
@@ -645,11 +650,11 @@ enum AlphaLocalModelRuntime {
                 explicitOptInEnabled: debug.enableRealInference
             )
         case .llamaCppGguf:
-            return AlphaUnavailableRealLocalModelProvider(
-                capabilityTier: tier,
-                runtimeMode: .llamaCppGguf,
-                modelPathLabel: modelPathLabel,
-                checksumVerified: checksumVerified,
+                return AlphaUnavailableRealLocalModelProvider(
+                    capabilityTier: tier,
+                    runtimeMode: .llamaCppGguf,
+                    modelPathLabel: modelPathLabel,
+                    checksumVerified: checksumVerified,
                 statusMessage: "Gemma 4 Q4 local runtime remains unavailable on iOS in this alpha. Ross will keep deterministic fallback active.",
                 plannedTasks: [.documentClassification, .legalFieldExtraction, .legalFieldVerification, .caseMemorySynthesis, .chronologyGeneration, .orderSummary],
                 errorCategory: "unsupported_runtime",
@@ -662,7 +667,7 @@ enum AlphaLocalModelRuntime {
                 return AlphaFoundationModelsLocalProvider(
                     capabilityTier: tier,
                     modelPathLabel: modelPathLabel ?? "system-model",
-                    modelPath: debug.modelPath,
+                    modelPath: modelPath,
                     checksumVerified: checksumVerified
                 )
             }
@@ -681,6 +686,31 @@ enum AlphaLocalModelRuntime {
         default:
             return nil
         }
+    }
+
+    private static func resolvedModelPath(
+        activePack: AlphaInstalledModelPack?,
+        runtimeEnvironment: AlphaLocalRuntimeEnvironment
+    ) -> String? {
+        let debug = debugConfig(runtimeEnvironment: runtimeEnvironment)
+        if let debugPath = debug.modelPath, !debugPath.isEmpty {
+            return debugPath
+        }
+        guard let activePack else { return nil }
+        switch activePack.runtimeMode {
+        case .appleFoundationModels:
+            guard usesBundledAdapterArtifact(activePack) else { return nil }
+        case .mediapipeLlm, .llamaCppGguf:
+            break
+        case .deterministicDev, .unavailable:
+            return nil
+        }
+        return alphaAbsoluteURL(for: activePack.installPath).path
+    }
+
+    private static func usesBundledAdapterArtifact(_ pack: AlphaInstalledModelPack) -> Bool {
+        let normalizedKind = pack.artifactKind.lowercased()
+        return normalizedKind.contains("adapter") || normalizedKind.contains("bundle")
     }
 
     static func runtimeHealth(
