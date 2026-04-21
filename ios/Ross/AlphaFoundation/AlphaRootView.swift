@@ -1119,14 +1119,6 @@ final class AlphaRossModel {
         persist()
     }
 
-    func updateSettings(_ mutate: (inout AlphaSettings) -> Void) {
-        mutate(&persisted.settings)
-        if let activeTier = persisted.settings.activeTier {
-            selectedTier = activeTier
-        }
-        persist()
-    }
-
     func finishPackSetup() {
         persisted.settings.activeTier = selectedTier
         persisted.onboardingStage = .completed
@@ -1277,16 +1269,11 @@ final class AlphaRossModel {
         persist()
     }
 
-    @discardableResult
-    func importDocument(
-        caseId: UUID?,
-        from sourceURL: URL,
-        mode: AlphaDocumentImportMode = .standard
-    ) async -> AlphaCaseDocument? {
+    func importDocument(caseId: UUID?, from sourceURL: URL) async {
         let targetCaseID = caseId ?? alphaSharedWorkspaceID
         do {
             let imported = try await store.importDocument(from: sourceURL, into: targetCaseID)
-            guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == targetCaseID }) else { return nil }
+            guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == targetCaseID }) else { return }
             var document = imported.document
             document.indexingStatus = .extracting
             document.extractionRuns = [
@@ -1307,23 +1294,12 @@ final class AlphaRossModel {
 
             persisted.cases[caseIndex].documents.insert(document, at: 0)
             persisted.cases[caseIndex].updatedAt = .now
-            switch mode {
-            case .standard:
-                if targetCaseID != alphaSharedWorkspaceID {
-                    selectedCaseID = targetCaseID
-                    askSelectedScopeCaseID = targetCaseID
-                    setSelectedAskDocumentIDs([document.id], for: targetCaseID)
-                } else {
-                    askSelectedScopeCaseID = nil
-                    setSelectedAskDocumentIDs([document.id], for: nil)
-                }
-            case .chatAttachment:
-                if targetCaseID != alphaSharedWorkspaceID {
-                    selectedCaseID = targetCaseID
-                    askSelectedScopeCaseID = targetCaseID
-                } else {
-                    askSelectedScopeCaseID = nil
-                }
+            if targetCaseID != alphaSharedWorkspaceID {
+                selectedCaseID = targetCaseID
+                askSelectedScopeCaseID = targetCaseID
+                setSelectedAskDocumentIDs([document.id], for: targetCaseID)
+            } else {
+                setSelectedAskDocumentIDs([document.id], for: nil)
             }
 
             let sourceRef = AlphaSourceRef(
@@ -1349,37 +1325,19 @@ final class AlphaRossModel {
                 at: 0
             )
             persist()
-            switch mode {
-            case .standard:
-                appendMatterThreadUpdate(
-                    caseId: targetCaseID == alphaSharedWorkspaceID ? nil : targetCaseID,
-                    title: "File added to this matter",
-                    sections: [
-                        "\(document.title) was copied into private storage and linked to the current matter.",
-                        "Ross started local review so the active chat can pick up dates, directions, and follow-up work from this file."
-                    ],
-                    sourceRefs: [sourceRef],
-                    selectedDocumentIDs: [document.id],
-                    selectedDocumentTitles: [document.title],
-                    statusNote: "Matter chat updated · review starting"
-                )
-                path.append(.documentViewer(targetCaseID, document.id, 1))
-            case .chatAttachment(let addsMatterUpdate):
-                if addsMatterUpdate {
-                    appendMatterThreadUpdate(
-                        caseId: targetCaseID == alphaSharedWorkspaceID ? nil : targetCaseID,
-                        title: "File added to this matter",
-                        sections: [
-                            "\(document.title) was copied into private storage and linked to the current matter.",
-                            "Ross started local review so the active chat can pick up dates, directions, and follow-up work from this file."
-                        ],
-                        sourceRefs: [sourceRef],
-                        selectedDocumentIDs: [document.id],
-                        selectedDocumentTitles: [document.title],
-                        statusNote: "Matter chat updated · review starting"
-                    )
-                }
-            }
+            appendMatterThreadUpdate(
+                caseId: targetCaseID == alphaSharedWorkspaceID ? nil : targetCaseID,
+                title: "File added to this matter",
+                sections: [
+                    "\(document.title) was copied into private storage and linked to the current matter.",
+                    "Ross started local review so the active chat can pick up dates, directions, and follow-up work from this file."
+                ],
+                sourceRefs: [sourceRef],
+                selectedDocumentIDs: [document.id],
+                selectedDocumentTitles: [document.title],
+                statusNote: "Matter chat updated · review starting"
+            )
+            path.append(.documentViewer(targetCaseID, document.id, 1))
 
             let result = await store.runLocalExtraction(
                 caseId: targetCaseID,
@@ -1387,7 +1345,6 @@ final class AlphaRossModel {
                 activePack: activePack
             )
             applyExtractionResult(result, caseId: targetCaseID, documentId: document.id)
-            return document
         } catch {
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
@@ -1401,7 +1358,6 @@ final class AlphaRossModel {
                 at: 0
             )
             persist()
-            return nil
         }
     }
 
@@ -3089,7 +3045,6 @@ private actor AlphaBackendClient {
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.timeoutInterval = configuration.requestTimeout
-        applySessionHeaders(to: &request)
 
         let response: AlphaBackendCatalogResponse = try await send(request, expecting: AlphaBackendCatalogResponse.self)
         return response.manifest.payload
@@ -3109,7 +3064,6 @@ private actor AlphaBackendClient {
         request.timeoutInterval = configuration.requestTimeout
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try encoder.encode(requestBody)
-        applySessionHeaders(to: &request)
 
         let response: AlphaBackendDownloadSessionResponse = try await send(request, expecting: AlphaBackendDownloadSessionResponse.self)
         return response.downloadSession.payload
@@ -3128,7 +3082,6 @@ private actor AlphaBackendClient {
         request.timeoutInterval = configuration.requestTimeout
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try encoder.encode(requestBody)
-        applySessionHeaders(to: &request)
 
         let response: AlphaBackendPublicLawResponse = try await send(request, expecting: AlphaBackendPublicLawResponse.self)
         return response.results.map {
@@ -3193,13 +3146,6 @@ private actor AlphaBackendClient {
         return url
     }
 
-    private func applySessionHeaders(to request: inout URLRequest) {
-        request.setValue(configuration.accountToken, forHTTPHeaderField: "X-Ross-Account-Token")
-        if let accessToken = configuration.accessToken {
-            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        }
-    }
-
     private func send<Response: Decodable>(_ request: URLRequest, expecting type: Response.Type) async throws -> Response {
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else {
@@ -3220,15 +3166,14 @@ private actor AlphaBackendClient {
 private struct AlphaBackendConfiguration {
     let baseURL: URL
     let requestTimeout: TimeInterval = 2
-    let accountToken: String
-    let accessToken: String?
+    let accountToken = "acct_local_alpha_device"
     let appVersion = "0.1.0-alpha"
     let deviceIdHash = sha256Hex(Data("ross-ios-alpha-device".utf8))
 
     init() {
-        baseURL = rossBackendBaseURL()
-        accountToken = RossAuthSessionSnapshot.shared.accountToken(fallback: "acct_local_alpha_device")
-        accessToken = RossAuthSessionSnapshot.shared.accessToken()
+        let environment = ProcessInfo.processInfo.environment
+        let rawURL = environment["ROSS_BACKEND_BASE_URL"] ?? environment["ROSS_BACKEND_URL"] ?? "http://127.0.0.1:8080"
+        baseURL = URL(string: rawURL) ?? URL(string: "http://127.0.0.1:8080")!
     }
 }
 
@@ -3360,11 +3305,9 @@ private func alphaUnsupportedPackReason(
 struct AlphaRossRootView: View {
     @State private var model: AlphaRossModel
     @State private var showingLaunchSplash = true
-    private let authController: RossAuthController?
 
-    init(initialModel: AlphaRossModel = AlphaRossModel(), authController: RossAuthController? = nil) {
+    init(initialModel: AlphaRossModel = AlphaRossModel()) {
         _model = State(initialValue: initialModel)
-        self.authController = authController
     }
 
     var body: some View {
@@ -3377,7 +3320,7 @@ struct AlphaRossRootView: View {
                     case .privateAIPack:
                         AlphaPackSetupScreen(model: model)
                     case .completed:
-                        AlphaTabShell(model: model, authController: authController)
+                        AlphaTabShell(model: model)
                     }
                 }
                 .background(Color.rossGroupedBackground.ignoresSafeArea())
@@ -3421,20 +3364,6 @@ struct AlphaRossRootView: View {
             withAnimation(.spring(response: 0.75, dampingFraction: 0.92)) {
                 showingLaunchSplash = false
             }
-        }
-        .preferredColorScheme(model.persisted.settings.appearanceMode.preferredColorScheme)
-    }
-}
-
-private extension AlphaAppearanceMode {
-    var preferredColorScheme: ColorScheme? {
-        switch self {
-        case .auto:
-            nil
-        case .dark:
-            .dark
-        case .light:
-            .light
         }
     }
 }
@@ -3564,10 +3493,6 @@ private struct AlphaOnboardingScreen: View {
         ("Source-backed drafts", "paperclip"),
         ("Web search is opt-in", "shield")
     ]
-    private let featureColumns = [
-        GridItem(.flexible(minimum: 0, maximum: .infinity), spacing: 12),
-        GridItem(.flexible(minimum: 0, maximum: .infinity), spacing: 12)
-    ]
 
     var body: some View {
         GeometryReader { proxy in
@@ -3575,23 +3500,23 @@ private struct AlphaOnboardingScreen: View {
                 AlphaSetupBackdrop()
 
                 ScrollView(.vertical, showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 22) {
+                    VStack(alignment: .leading, spacing: 26) {
                         AlphaSetupWordmarkRow(title: "Ross")
 
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Private legal work, on this phone")
+                        VStack(alignment: .leading, spacing: 14) {
+                            Text("Private legal work on this phone")
                                 .font(.system(size: 29, weight: .semibold, design: .rounded))
                                 .foregroundStyle(Color.rossInk)
                                 .fixedSize(horizontal: false, vertical: true)
 
-                            Text("Create matters, tag files, and ask Ross without moving case data off this device.")
+                            Text("Create matters, add files, and ask Ross privately.")
                                 .font(.title3)
                                 .foregroundStyle(Color.rossInk.opacity(0.7))
                                 .fixedSize(horizontal: false, vertical: true)
                         }
 
                         LazyVGrid(
-                            columns: featureColumns,
+                            columns: [GridItem(.adaptive(minimum: 168), spacing: 12)],
                             alignment: .leading,
                             spacing: 12
                         ) {
@@ -3602,11 +3527,11 @@ private struct AlphaOnboardingScreen: View {
                         }
 
                         VStack(alignment: .leading, spacing: 14) {
-                            RossBulletRow(text: "Ross picks a sensible local setup for this phone.")
+                            RossBulletRow(text: "Ross recommends the best setup for this phone.")
                             RossBulletRow(text: "Setup can finish in the background.")
                             RossBulletRow(text: "Each matter keeps its own files and chats.")
                         }
-                        .padding(18)
+                        .padding(20)
                         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
                         .overlay {
                             RoundedRectangle(cornerRadius: 28, style: .continuous)
@@ -3626,8 +3551,8 @@ private struct AlphaOnboardingScreen: View {
                         alignment: .top
                     )
                     .padding(.horizontal, 24)
-                    .padding(.top, 12)
-                    .padding(.bottom, max(proxy.safeAreaInsets.bottom, 18))
+                    .padding(.top, proxy.safeAreaInsets.top + 28)
+                    .padding(.bottom, max(proxy.safeAreaInsets.bottom, 24))
                 }
             }
         }
@@ -3648,7 +3573,7 @@ private struct AlphaPackSetupScreen: View {
                 AlphaSetupBackdrop()
 
                 ScrollView(.vertical, showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 18) {
+                    VStack(alignment: .leading, spacing: 22) {
                         AlphaSetupWordmarkRow(title: "Assistant setup")
 
                         VStack(alignment: .leading, spacing: 12) {
@@ -3657,10 +3582,24 @@ private struct AlphaPackSetupScreen: View {
                                 .foregroundStyle(Color.rossInk)
                                 .fixedSize(horizontal: false, vertical: true)
 
-                            Text("Ross picked a good default. Change it anytime.")
+                            Text("Recommended is selected, but you can choose any level.")
                                 .font(.title3)
                                 .foregroundStyle(Color.rossInk.opacity(0.7))
                                 .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        HStack(spacing: 10) {
+                            RossGlassIconView(.badgeSparkle, variant: .accent, size: 20, fallbackSystemImage: "checkmark.shield.fill")
+                            Text("Recommended: \(recommendedTier.title)")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Color.rossAccent)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .stroke(Color.rossGlassStroke.opacity(0.92), lineWidth: 1)
                         }
 
                         VStack(spacing: 10) {
@@ -3677,7 +3616,7 @@ private struct AlphaPackSetupScreen: View {
 
                         AlphaAssistantActivityStrip(
                             title: "Setup continues in the background",
-                            detail: "Ross only marks an assistant ready after the local download and verification pass finishes.",
+                            detail: "Ross only keeps a verified on-device assistant marked ready on this phone.",
                             statusLabel: "Background",
                             tint: .orange
                         )
@@ -3701,8 +3640,8 @@ private struct AlphaPackSetupScreen: View {
                         alignment: .top
                     )
                     .padding(.horizontal, 24)
-                    .padding(.top, 12)
-                    .padding(.bottom, max(proxy.safeAreaInsets.bottom, 18))
+                    .padding(.top, proxy.safeAreaInsets.top + 28)
+                    .padding(.bottom, max(proxy.safeAreaInsets.bottom, 24))
                 }
             }
         }
@@ -3719,7 +3658,6 @@ private struct AlphaPackSetupScreen: View {
 
 private struct AlphaTabShell: View {
     @Bindable var model: AlphaRossModel
-    let authController: RossAuthController?
 
     private var shouldShowGlobalAskDock: Bool {
         let selectedTab = model.persisted.selectedTab.normalizedForLawyerShell
@@ -3740,7 +3678,7 @@ private struct AlphaTabShell: View {
                     case .ask:
                         AlphaAskRossScreen(model: model)
                     case .settings:
-                        AlphaSettingsScreen(model: model, authController: authController)
+                        AlphaSettingsScreen(model: model)
                     case .capture, .publicLawLegacy, .exportsLegacy:
                         AlphaHomeScreen(model: model)
                     }
@@ -3770,7 +3708,7 @@ private struct AlphaTabShell: View {
                         }
 
                     AlphaWorkspaceDrawerPanel(model: model)
-                        .frame(width: min(356, max(332, proxy.size.width - 24)))
+                        .frame(width: min(320, proxy.size.width * 0.82))
                         .padding(.leading, 12)
                         .padding(.vertical, 10)
                         .transition(.move(edge: .leading).combined(with: .opacity))
@@ -3928,44 +3866,6 @@ private enum AlphaDockImportKind {
     }
 }
 
-enum AlphaDocumentImportMode {
-    case standard
-    case chatAttachment(addsMatterUpdate: Bool)
-}
-
-private struct AlphaPendingDockAttachment: Identifiable, Hashable {
-    let id = UUID()
-    let sourceURL: URL
-    let title: String
-    let fileName: String
-    let kind: AlphaDocumentKind
-
-    init(sourceURL: URL) {
-        self.sourceURL = sourceURL
-        self.title = sourceURL.deletingPathExtension().lastPathComponent
-        self.fileName = sourceURL.lastPathComponent
-        self.kind = alphaDocumentKind(for: sourceURL)
-    }
-
-    var displayTitle: String {
-        let trimmedFileName = fileName.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmedFileName.isEmpty ? title : trimmedFileName
-    }
-}
-
-private func alphaDocumentKind(for sourceURL: URL) -> AlphaDocumentKind {
-    switch sourceURL.pathExtension.lowercased() {
-    case "pdf":
-        return .pdf
-    case "png", "jpg", "jpeg", "heic":
-        return .image
-    case "txt", "md":
-        return .text
-    default:
-        return .unknown
-    }
-}
-
 private func alphaAskMentionTokenRange(in draft: String) -> Range<String.Index>? {
     draft.range(of: #"(?<!\S)@[^\s@]*$"#, options: .regularExpression)
 }
@@ -4008,7 +3908,6 @@ private struct AlphaRootAskDock: View {
     @State private var dismissedInlineQuestion: String?
     @State private var pendingImportKind: AlphaDockImportKind?
     @State private var showingExpandedComposer = false
-    @State private var stagedAttachment: AlphaPendingDockAttachment?
 
     init(
         model: AlphaRossModel,
@@ -4035,16 +3934,12 @@ private struct AlphaRootAskDock: View {
         return model.availableAskDocuments(for: activeScopeCaseID).filter { fixedDocumentIDs.contains($0.id) }
     }
 
-    private var visibleSelectedDocuments: [AlphaAskDocumentOption] {
-        fixedDocumentIDs.isEmpty ? activeSelectedDocuments : []
-    }
-
     private var draftText: String {
         model.askDraft(for: activeScopeCaseID)
     }
 
     private var canSend: Bool {
-        !draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || stagedAttachment != nil
+        !draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private var mentionSuggestions: [AlphaAskDocumentOption] {
@@ -4076,42 +3971,28 @@ private struct AlphaRootAskDock: View {
     }
 
     private var selectionSubtitle: String? {
-        guard stagedAttachment == nil, fixedDocumentIDs.isEmpty else { return nil }
-        return model.askSelectionSubtitle(for: activeScopeCaseID)
+        if fixedDocumentIDs.isEmpty {
+            return model.askSelectionSubtitle(for: activeScopeCaseID)
+        }
+        let selected = activeSelectedDocuments
+        guard !selected.isEmpty else { return nil }
+        if selected.count == 1, let first = selected.first {
+            return first.isShared ? "\(first.title) · shared file" : first.title
+        }
+        return "\(selected.count) files selected"
     }
 
     private func send(dismissingExpandedComposer: Bool = false) {
         let question = draftText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let scopeCaseID = activeScopeCaseID
-        let stagedAttachment = stagedAttachment
-        guard !question.isEmpty || stagedAttachment != nil else { return }
+        guard !question.isEmpty else { return }
+        if !fixedDocumentIDs.isEmpty {
+            model.setSelectedAskDocumentIDs(fixedDocumentIDs, for: activeScopeCaseID)
+        }
         dismissedInlineQuestion = nil
         if dismissingExpandedComposer {
             showingExpandedComposer = false
         }
-        Task { @MainActor in
-            var selectedDocumentIDs = fixedDocumentIDs.isEmpty
-                ? model.selectedAskDocumentIDs(for: scopeCaseID)
-                : fixedDocumentIDs
-
-            if let stagedAttachment {
-                guard let importedDocument = await model.importDocument(
-                    caseId: scopeCaseID,
-                    from: stagedAttachment.sourceURL,
-                    mode: .chatAttachment(addsMatterUpdate: question.isEmpty)
-                ) else {
-                    return
-                }
-                selectedDocumentIDs.insert(importedDocument.id)
-                model.setSelectedAskDocumentIDs(selectedDocumentIDs, for: scopeCaseID)
-                self.stagedAttachment = nil
-            } else if !fixedDocumentIDs.isEmpty {
-                model.setSelectedAskDocumentIDs(selectedDocumentIDs, for: scopeCaseID)
-            }
-
-            guard !question.isEmpty else { return }
-            model.submitAsk(question: question, scopeCaseID: scopeCaseID, webEnabled: model.askWebEnabled)
-        }
+        model.submitAsk(question: question, scopeCaseID: activeScopeCaseID, webEnabled: model.askWebEnabled)
     }
 
     private func removeDocumentSelection(_ documentID: UUID) {
@@ -4119,10 +4000,6 @@ private struct AlphaRootAskDock: View {
         var selected = model.selectedAskDocumentIDs(for: activeScopeCaseID)
         selected.remove(documentID)
         model.setSelectedAskDocumentIDs(selected, for: activeScopeCaseID)
-    }
-
-    private func removePendingAttachment() {
-        stagedAttachment = nil
     }
 
     private func applyMention(_ document: AlphaAskDocumentOption) {
@@ -4136,7 +4013,7 @@ private struct AlphaRootAskDock: View {
     private func handleImport(_ result: Result<[URL], any Error>) {
         defer { pendingImportKind = nil }
         guard case let .success(urls) = result, let url = urls.first else { return }
-        stagedAttachment = AlphaPendingDockAttachment(sourceURL: url)
+        Task { await model.importDocument(caseId: activeScopeCaseID, from: url) }
     }
 
     var body: some View {
@@ -4195,20 +4072,10 @@ private struct AlphaRootAskDock: View {
                     }
                 }
 
-                if stagedAttachment != nil || !visibleSelectedDocuments.isEmpty {
+                if !activeSelectedDocuments.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
-                            if let stagedAttachment {
-                                AlphaAskSelectionChip(
-                                    title: stagedAttachment.displayTitle,
-                                    detail: "Add on send",
-                                    isShared: false,
-                                    tone: .dock,
-                                    onRemove: removePendingAttachment
-                                )
-                            }
-
-                            ForEach(visibleSelectedDocuments) { document in
+                            ForEach(activeSelectedDocuments) { document in
                                 AlphaAskSelectionChip(
                                     title: document.displayTitle,
                                     detail: activeScopeCaseID == nil ? (document.isShared ? "shared" : document.caseTitle) : (document.isShared ? "shared" : nil),
@@ -4235,9 +4102,9 @@ private struct AlphaRootAskDock: View {
                     .accessibilityLabel("Ask Ross tools")
 
                     TextField("Ask Ross about dates, files, or next steps", text: draftBinding, axis: .vertical)
-                        .lineLimit(1...3)
+                        .lineLimit(1...2)
                         .textFieldStyle(.plain)
-                        .font(.caption)
+                        .font(.footnote)
                         .foregroundStyle(Color.white.opacity(0.88))
                         .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -4294,7 +4161,7 @@ private struct AlphaRootAskDock: View {
                     Text(selectionSubtitle)
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(Color.white.opacity(0.6))
-                } else if fixedDocumentIDs.isEmpty, stagedAttachment == nil {
+                } else if fixedDocumentIDs.isEmpty {
                     Text("Type @ to add a file.")
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(Color.white.opacity(0.52))
@@ -4337,10 +4204,8 @@ private struct AlphaRootAskDock: View {
                 model: model,
                 fixedScopeCaseID: fixedScopeCaseID,
                 fixedDocumentIDs: fixedDocumentIDs,
-                pendingAttachment: stagedAttachment,
                 onSelectMention: applyMention,
                 onRemoveDocumentSelection: removeDocumentSelection,
-                onRemovePendingAttachment: removePendingAttachment,
                 onSend: { send(dismissingExpandedComposer: true) }
             )
             .presentationDetents([.medium, .large])
@@ -4537,12 +4402,7 @@ private struct AlphaAskSelectionChip: View {
                 Button(action: onRemove) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(tone == .dock ? Color.white.opacity(0.82) : Color.rossInk.opacity(0.56))
-                        .background(
-                            Circle()
-                                .fill(tone == .dock ? Color.white.opacity(0.08) : Color.rossInk.opacity(0.08))
-                                .frame(width: 16, height: 16)
-                        )
+                        .foregroundStyle(tone == .dock ? Color.white.opacity(0.52) : Color.rossInk.opacity(0.32))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Remove \(title)")
@@ -4690,10 +4550,8 @@ private struct AlphaAskComposerSheet: View {
     @Bindable var model: AlphaRossModel
     let fixedScopeCaseID: UUID?
     let fixedDocumentIDs: Set<UUID>
-    let pendingAttachment: AlphaPendingDockAttachment?
     let onSelectMention: (AlphaAskDocumentOption) -> Void
     let onRemoveDocumentSelection: (UUID) -> Void
-    let onRemovePendingAttachment: () -> Void
     let onSend: () -> Void
 
     private var activeScopeCaseID: UUID? {
@@ -4714,10 +4572,6 @@ private struct AlphaAskComposerSheet: View {
         return model.availableAskDocuments(for: activeScopeCaseID).filter { fixedDocumentIDs.contains($0.id) }
     }
 
-    private var visibleSelectedDocuments: [AlphaAskDocumentOption] {
-        fixedDocumentIDs.isEmpty ? activeSelectedDocuments : []
-    }
-
     private var draftText: String {
         model.askDraft(for: activeScopeCaseID)
     }
@@ -4732,7 +4586,7 @@ private struct AlphaAskComposerSheet: View {
     }
 
     private var canSend: Bool {
-        !draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || pendingAttachment != nil
+        !draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var body: some View {
@@ -4799,20 +4653,10 @@ private struct AlphaAskComposerSheet: View {
                     .buttonStyle(.plain)
                 }
 
-                if pendingAttachment != nil || !visibleSelectedDocuments.isEmpty {
+                if !activeSelectedDocuments.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
-                            if let pendingAttachment {
-                                AlphaAskSelectionChip(
-                                    title: pendingAttachment.displayTitle,
-                                    detail: "Add on send",
-                                    isShared: false,
-                                    tone: .sheet,
-                                    onRemove: onRemovePendingAttachment
-                                )
-                            }
-
-                            ForEach(visibleSelectedDocuments) { document in
+                            ForEach(activeSelectedDocuments) { document in
                                 AlphaAskSelectionChip(
                                     title: document.displayTitle,
                                     detail: activeScopeCaseID == nil ? (document.isShared ? "shared" : document.caseTitle) : (document.isShared ? "shared" : nil),
@@ -4837,7 +4681,7 @@ private struct AlphaAskComposerSheet: View {
 
                     if draftText.isEmpty {
                         Text("Ask Ross about this matter, a tagged file, or your next drafting step.")
-                            .font(.subheadline)
+                            .font(.body)
                             .foregroundStyle(Color.rossInk.opacity(0.34))
                             .padding(.horizontal, 18)
                             .padding(.vertical, 18)
@@ -4845,7 +4689,7 @@ private struct AlphaAskComposerSheet: View {
 
                     TextEditor(text: draftBinding)
                         .scrollContentBackground(.hidden)
-                        .font(.subheadline)
+                        .font(.body)
                         .foregroundStyle(Color.rossInk)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         .padding(.horizontal, 14)
@@ -5540,8 +5384,8 @@ private struct AlphaWorkspaceDrawerMatterEntry: View {
     @Bindable var model: AlphaRossModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top, spacing: 10) {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
                 Button(action: openCase) {
                     AlphaWorkspaceDrawerMatterRow(
                         caseMatter: caseMatter,
@@ -5563,7 +5407,7 @@ private struct AlphaWorkspaceDrawerMatterEntry: View {
             }
 
             if isExpanded {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 4) {
                     if !sessions.isEmpty {
                         ForEach(sessions) { session in
                             Button {
@@ -5599,19 +5443,19 @@ private struct AlphaWorkspaceDrawerMatterRow: View {
         HStack(alignment: .top, spacing: 12) {
             AlphaMatterFolderGlyph(tint: caseMatter.folderTint, size: 38)
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(caseMatter.title)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color.rossInk)
-                    .lineLimit(3)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(2)
                 Text("\(openTaskCount) open tasks • \(caseMatter.documents.count) docs")
                     .font(.caption)
                     .foregroundStyle(Color.rossInk.opacity(0.62))
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+
+            Spacer(minLength: 8)
 
             if let nextHearing = caseMatter.nextHearing {
                 Text(nextHearing.formatted(date: .abbreviated, time: .omitted))
@@ -5619,7 +5463,6 @@ private struct AlphaWorkspaceDrawerMatterRow: View {
                     .foregroundStyle(Color.rossAccent)
                     .multilineTextAlignment(.trailing)
                     .fixedSize(horizontal: false, vertical: true)
-                    .frame(width: 72, alignment: .trailing)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -5638,13 +5481,12 @@ private struct AlphaWorkspaceDrawerNewChatRow: View {
             Image(systemName: "square.and.pencil")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Color.rossAccent)
-                .frame(width: 24, height: 24)
-                .background(Color.rossAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .frame(width: 22, height: 22)
+                .background(Color.rossAccent.opacity(0.12), in: Circle())
 
-            Text("New chat…")
+            Text("New chat")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(Color.rossInk)
-                .lineLimit(1)
 
             Spacer(minLength: 8)
 
@@ -5652,9 +5494,14 @@ private struct AlphaWorkspaceDrawerNewChatRow: View {
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(Color.rossInk.opacity(0.34))
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(Color.rossSecondaryGroupedBackground.opacity(0.78), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .padding(.horizontal, 6)
+        .padding(.vertical, 8)
+        .overlay {
+            Rectangle()
+                .fill(Color.rossBorder.opacity(0.38))
+                .frame(height: 1)
+                .offset(y: -17)
+        }
     }
 }
 
@@ -5665,16 +5512,15 @@ private struct AlphaWorkspaceDrawerChatRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: isSelected ? "bubble.left.fill" : "bubble.left")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(isSelected ? Color.rossAccent : Color.rossInk.opacity(0.42))
-                .frame(width: 20, height: 20)
+            Circle()
+                .fill(isSelected ? Color.rossAccent : Color.rossInk.opacity(0.24))
+                .frame(width: 6, height: 6)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Color.rossInk)
-                    .lineLimit(2)
+                    .lineLimit(1)
 
                 Text(subtitle)
                     .font(.caption2)
@@ -5685,10 +5531,10 @@ private struct AlphaWorkspaceDrawerChatRow: View {
             Spacer(minLength: 8)
         }
         .padding(.horizontal, 10)
-        .padding(.vertical, 8)
+        .padding(.vertical, 7)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(isSelected ? Color.rossAccent.opacity(0.08) : Color.rossGlassSubtleFill.opacity(0.36))
+                .fill(isSelected ? Color.rossAccent.opacity(0.08) : Color.clear)
         )
     }
 }
@@ -6630,62 +6476,61 @@ private struct AlphaPackTierSelectionBar: View {
     let onInfo: () -> Void
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(spacing: 8) {
             Button(action: onSelect) {
-                HStack(alignment: .top, spacing: 12) {
+                HStack(spacing: 12) {
                     AlphaTierGlyph(tier: tier)
 
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(tier.title)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Color.rossInk)
-                            .lineLimit(2)
-                            .fixedSize(horizontal: false, vertical: true)
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 8) {
+                            Text(tier.title)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Color.rossInk)
+                                .lineLimit(1)
 
-                        if let badge {
-                            Text(badge)
-                                .font(.caption2.weight(.bold))
-                                .foregroundStyle(alphaTierTint(tier))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(alphaTierTint(tier).opacity(0.12), in: Capsule())
+                            if let badge {
+                                Text(badge)
+                                    .font(.caption2.weight(.bold))
+                                    .foregroundStyle(alphaTierTint(tier))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(alphaTierTint(tier).opacity(0.12), in: Capsule())
+                            }
                         }
 
                         Text("\(tier.compactSetupSummary) • \(tier.downloadSizeLabel) • \(tier.setupTimeLabel)")
                             .font(.caption)
                             .foregroundStyle(Color.rossInk.opacity(0.68))
-                            .lineLimit(2)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
 
                     Spacer(minLength: 10)
+
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(isSelected ? alphaTierTint(tier) : Color.rossInk.opacity(0.2))
                 }
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
-            VStack(spacing: 10) {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(isSelected ? alphaTierTint(tier) : Color.rossInk.opacity(0.2))
-
-                Button(action: onInfo) {
-                    RossGlassIconView(.circleInfo, variant: .highlight, size: 22, fallbackSystemImage: "info.circle")
-                        .frame(width: 32, height: 32)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("About \(tier.title)")
+            Button(action: onInfo) {
+                RossGlassIconView(.circleInfo, variant: .highlight, size: 22, fallbackSystemImage: "info.circle")
+                    .frame(width: 32, height: 32)
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel("About \(tier.title)")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(isSelected ? alphaTierTint(tier).opacity(0.08) : Color.rossCardBackground)
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(isSelected ? alphaTierTint(tier).opacity(0.28) : Color.rossBorder, lineWidth: 1)
-        }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(isSelected ? alphaTierTint(tier).opacity(0.08) : Color.rossCardBackground)
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(isSelected ? alphaTierTint(tier).opacity(0.28) : Color.rossBorder, lineWidth: 1)
+            }
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 }
@@ -7916,19 +7761,13 @@ private struct AlphaAskTurnCard: View {
     let result: AlphaAskResult
     let onOpenSource: (AlphaSourceRef) -> Void
 
-    private var visibleSelectedDocumentTitles: [String] {
-        guard result.kind == .userAsk else { return [] }
-        let sourceTitles = Set(result.caseFileSources.map(\.documentTitle))
-        return result.selectedDocumentTitles.filter { !sourceTitles.contains($0) }
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             if result.kind == .userAsk {
                 HStack {
                     Spacer(minLength: 48)
                     Text(result.question)
-                        .font(.footnote)
+                        .font(.subheadline)
                         .foregroundStyle(Color.rossInk)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
@@ -7952,12 +7791,12 @@ private struct AlphaAskTurnCard: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 14) {
                     Text(result.answerTitle)
-                        .font(.title3.weight(.semibold))
+                        .font(.headline)
 
                     ForEach(Array(result.answerSections.enumerated()), id: \.offset) { index, section in
                         VStack(alignment: .leading, spacing: 10) {
                             Text(section)
-                                .font(.subheadline)
+                                .font(.body)
                                 .foregroundStyle(Color.rossInk.opacity(0.92))
                             if index < result.answerSections.count - 1 {
                                 Divider().overlay(Color.rossBorder.opacity(0.4))
@@ -7971,10 +7810,10 @@ private struct AlphaAskTurnCard: View {
                             .foregroundStyle(Color.rossAccent)
                     }
 
-                    if !visibleSelectedDocumentTitles.isEmpty {
+                    if !result.selectedDocumentTitles.isEmpty {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
-                                ForEach(visibleSelectedDocumentTitles, id: \.self) { title in
+                                ForEach(result.selectedDocumentTitles, id: \.self) { title in
                                     Text(title)
                                         .font(.caption2.weight(.semibold))
                                         .foregroundStyle(Color.rossInk.opacity(0.74))
@@ -9181,29 +9020,6 @@ private struct AlphaExportsScreen: View {
 
 private struct AlphaSettingsScreen: View {
     @Bindable var model: AlphaRossModel
-    let authController: RossAuthController?
-
-    private var publicLawApprovalBinding: Binding<Bool> {
-        Binding(
-            get: { model.persisted.settings.requirePublicLawApproval },
-            set: { newValue in
-                model.updateSettings { settings in
-                    settings.requirePublicLawApproval = newValue
-                }
-            }
-        )
-    }
-
-    private var privateByDefaultBinding: Binding<Bool> {
-        Binding(
-            get: { model.persisted.settings.privateByDefault },
-            set: { newValue in
-                model.updateSettings { settings in
-                    settings.privateByDefault = newValue
-                }
-            }
-        )
-    }
 
     var body: some View {
         ScrollView {
@@ -9220,63 +9036,14 @@ private struct AlphaSettingsScreen: View {
                     .buttonStyle(.plain)
                 }
 
-                if let authController, let session = authController.session {
-                    RossSectionCard(title: "Account") {
-                        VStack(alignment: .leading, spacing: 12) {
-                            AlphaSettingsValueRow(label: "Google", value: session.email)
-                            Divider()
-                            AlphaSettingsValueRow(label: "Quick unlock", value: authController.quickUnlockSummary)
-                            Divider()
-                            Button(role: .destructive, action: authController.signOut) {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "rectangle.portrait.and.arrow.right")
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundStyle(.red)
-                                        .frame(width: 30, height: 30)
-                                        .background(Color.red.opacity(0.1), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-
-                                    Text("Sign out")
-                                        .font(.footnote.weight(.semibold))
-                                        .foregroundStyle(Color.rossInk)
-
-                                    Spacer(minLength: 8)
-                                }
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
-
                 RossSectionCard(title: "Privacy") {
                     VStack(alignment: .leading, spacing: 14) {
-                        Toggle("Ask before Web search", isOn: publicLawApprovalBinding)
+                        Toggle("Ask before Web search", isOn: $model.persisted.settings.requirePublicLawApproval)
                         Divider()
-                        Toggle("Keep Ross private by default", isOn: privateByDefaultBinding)
-                        Text("Matter files stay on this device. Web search only sends a sanitized public-law query after you approve it.")
+                        Toggle("Keep Ross private by default", isOn: $model.persisted.settings.privateByDefault)
+                        Text("Matter files stay on this device. Web search sends only a sanitized public-law query after you approve it.")
                             .font(.footnote)
                             .foregroundStyle(Color.rossInk.opacity(0.64))
-                    }
-                }
-
-                RossSectionCard(title: "Appearance") {
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(AlphaAppearanceMode.allCases.enumerated()), id: \.element) { index, mode in
-                            Button {
-                                model.updateSettings { settings in
-                                    settings.appearanceMode = mode
-                                }
-                            } label: {
-                                AlphaAppearanceOptionRow(
-                                    mode: mode,
-                                    isSelected: model.persisted.settings.appearanceMode == mode
-                                )
-                            }
-                            .buttonStyle(.plain)
-
-                            if index < AlphaAppearanceMode.allCases.count - 1 {
-                                Divider()
-                            }
-                        }
                     }
                 }
 
@@ -9290,8 +9057,8 @@ private struct AlphaSettingsScreen: View {
                         Divider()
                         NavigationLink(value: AlphaRoute.privateAISettings) {
                             AlphaSettingsNavigationRow(
-                                title: "Assistant setup",
-                                detail: "Downloads, setup progress, and local assistant status.",
+                                title: "Open device setup",
+                                detail: "Review downloads, setup progress, and diagnostics.",
                                 systemImage: "gearshape.2"
                             )
                         }
@@ -9302,6 +9069,15 @@ private struct AlphaSettingsScreen: View {
                                 title: "Open Privacy Ledger",
                                 detail: "See visible network and local actions.",
                                 systemImage: "checklist"
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        Divider()
+                        NavigationLink(value: AlphaRoute.privateAISettings) {
+                            AlphaSettingsNavigationRow(
+                                title: "Diagnostics",
+                                detail: "Use this only if setup or on-device review needs attention.",
+                                systemImage: "wrench.and.screwdriver"
                             )
                         }
                         .buttonStyle(.plain)
@@ -9331,32 +9107,6 @@ private struct AlphaSettingsValueRow: View {
                 .foregroundStyle(Color.rossInk.opacity(0.62))
                 .multilineTextAlignment(.trailing)
         }
-    }
-}
-
-private struct AlphaAppearanceOptionRow: View {
-    let mode: AlphaAppearanceMode
-    let isSelected: Bool
-
-    var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(mode.title)
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Color.rossInk)
-
-                Text(mode.detail)
-                    .font(.caption2)
-                    .foregroundStyle(Color.rossInk.opacity(0.62))
-            }
-
-            Spacer(minLength: 8)
-
-            Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(isSelected ? Color.rossAccent : Color.rossInk.opacity(0.18))
-        }
-        .padding(.vertical, 10)
     }
 }
 
@@ -9422,28 +9172,8 @@ private struct AlphaPrivateAISettingsScreen: View {
             }
 
             Section("Download settings") {
-                Toggle(
-                    "Wi-Fi only downloads",
-                    isOn: Binding(
-                        get: { model.persisted.settings.wifiOnlyDownloads },
-                        set: { newValue in
-                            model.updateSettings { settings in
-                                settings.wifiOnlyDownloads = newValue
-                            }
-                        }
-                    )
-                )
-                Toggle(
-                    "Allow mobile data for large packs",
-                    isOn: Binding(
-                        get: { model.persisted.settings.allowMobileDataForLargePacks },
-                        set: { newValue in
-                            model.updateSettings { settings in
-                                settings.allowMobileDataForLargePacks = newValue
-                            }
-                        }
-                    )
-                )
+                Toggle("Wi-Fi only downloads", isOn: $model.persisted.settings.wifiOnlyDownloads)
+                Toggle("Allow mobile data for large packs", isOn: $model.persisted.settings.allowMobileDataForLargePacks)
             }
 
             Section("Choose a review level") {
