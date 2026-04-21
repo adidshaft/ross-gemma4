@@ -5,10 +5,12 @@ import UIKit
 #endif
 
 protocol DeviceCapabilityProviding {
+    @MainActor
     func currentCapability() -> DeviceCapability
 }
 
 struct DefaultDeviceCapabilityService: DeviceCapabilityProviding {
+    @MainActor
     func currentCapability() -> DeviceCapability {
         let totalMemoryGB = max(2, Int(ProcessInfo.processInfo.physicalMemory / 1_073_741_824))
         let freeStorageGB = max(4, availableStorageInGigabytes())
@@ -84,6 +86,7 @@ struct DefaultDeviceCapabilityService: DeviceCapabilityProviding {
         }
     }
 
+    @MainActor
     private func currentDeviceLabel() -> String {
         #if canImport(UIKit)
         UIDevice.current.model

@@ -39,9 +39,13 @@ struct AlphaLocalInferenceSmokeReport: Hashable {
 }
 
 struct AlphaAskResult: Hashable {
+    var chatSessionID: UUID?
+    var chatTurnID: UUID?
+    var kind: AlphaChatTurnKind
     var question: String
     var scopeCaseID: UUID?
     var scopeLabel: String
+    var selectedDocumentTitles: [String]
     var answerTitle: String
     var answerSections: [String]
     var caseFileSources: [AlphaSourceRef]
@@ -66,6 +70,16 @@ typealias AlphaPublicLawSearchAction = @Sendable (AlphaPublicLawPreview) async t
 private let alphaScreenPadding: CGFloat = 18
 private let alphaSectionSpacing: CGFloat = 14
 private let alphaRossSuggestedTaskNotePrefix = "ross-overview::"
+private let alphaSharedWorkspaceID = UUID(uuidString: "0D9E5220-4D3C-4B49-9A67-10B42B593B7D")!
+
+private struct AlphaAskDocumentOption: Identifiable, Hashable {
+    let id: UUID
+    let caseId: UUID
+    let caseTitle: String
+    let title: String
+    let kind: AlphaDocumentKind
+    let isShared: Bool
+}
 
 private struct AlphaRecentDocumentItem: Identifiable {
     let caseId: UUID
@@ -97,11 +111,13 @@ final class AlphaRossModel {
     var askDrafts: [UUID: String] = [:]
     var globalAskDraft = ""
     var askSelectedScopeCaseID: UUID?
-    var askDocumentTitles: [UUID: String] = [:]
-    var globalAskDocumentTitle: String?
+    var askSelectedDocumentIDs: [UUID: Set<UUID>] = [:]
+    var globalAskSelectedDocumentIDs: Set<UUID> = []
     var askWebEnabled = false
     var pendingPublicLawQuestion: String?
     var pendingPublicLawScopeCaseID: UUID?
+    var pendingPublicLawSessionID: UUID?
+    var pendingPublicLawTurnID: UUID?
     var latestAskResult: AlphaAskResult?
     var askHistory: [AlphaAskResult] = []
     var publicLawDraft = "Find Supreme Court guidance on delay condonation where diligence is documented but filing was disrupted."
@@ -148,32 +164,55 @@ final class AlphaRossModel {
 
     private func syncDerivedStateFromPersisted() {
         selectedCaseID = cases.first?.id
-        selectedTier = persisted.settings.activeTier ?? .caseAssociate
+        selectedTier = persisted.settings.activeTier ?? recommendedOnDeviceTier()
         publicLawDraft = persisted.publicLawDraft ?? publicLawDraft
         publicLawPreview = persisted.publicLawPreview
         publicLawResults = persisted.publicLawResults ?? []
+        rebuildAskHistory()
+    }
+
+    private func rebuildAskHistory() {
         askHistory = persisted.cases.flatMap { caseMatter in
-            caseMatter.chatTurns.reversed().map { turn in
-                AlphaAskResult(
-                    question: turn.question,
-                    scopeCaseID: caseMatter.id,
-                    scopeLabel: caseMatter.title,
-                    answerTitle: turn.answerTitle,
-                    answerSections: turn.answerSections,
-                    caseFileSources: turn.sourceRefs,
-                    publicLawPreview: nil,
-                    publicLawResults: [],
-                    statusNote: nil,
-                    needsReviewWarning: nil
-                )
+            caseMatter.chatSessions.flatMap { session in
+                session.turns.reversed().map { turn in
+                    askResult(from: turn, in: caseMatter, chatSessionID: session.id)
+                }
             }
         }
     }
 
+    private func askResult(
+        from turn: AlphaChatTurn,
+        in caseMatter: AlphaCaseMatter,
+        chatSessionID: UUID
+    ) -> AlphaAskResult {
+        let isSharedWorkspace = caseMatter.id == alphaSharedWorkspaceID
+        return AlphaAskResult(
+            chatSessionID: chatSessionID,
+            chatTurnID: turn.id,
+            kind: turn.kind,
+            question: turn.question,
+            scopeCaseID: isSharedWorkspace ? nil : caseMatter.id,
+            scopeLabel: isSharedWorkspace ? "All work" : caseMatter.title,
+            selectedDocumentTitles: turn.selectedDocumentTitles ?? [],
+            answerTitle: turn.answerTitle,
+            answerSections: turn.answerSections,
+            caseFileSources: turn.sourceRefs,
+            publicLawPreview: turn.publicLawPreview,
+            publicLawResults: turn.publicLawResults,
+            statusNote: turn.statusNote,
+            needsReviewWarning: turn.needsReviewWarning
+        )
+    }
+
     var cases: [AlphaCaseMatter] {
         persisted.cases
-            .filter { $0.archivedAt == nil }
+            .filter { $0.archivedAt == nil && $0.id != alphaSharedWorkspaceID }
             .sorted { $0.updatedAt > $1.updatedAt }
+    }
+
+    var sharedWorkspace: AlphaCaseMatter? {
+        persisted.cases.first(where: { $0.id == alphaSharedWorkspaceID })
     }
 
     private var activeCaseIDs: Set<UUID> {
@@ -213,6 +252,7 @@ final class AlphaRossModel {
     func focusCase(_ caseID: UUID) {
         guard activeCaseIDs.contains(caseID) else { return }
         selectedCaseID = caseID
+        askSelectedScopeCaseID = caseID
         guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseID }) else { return }
         persisted.cases[caseIndex].updatedAt = .now
         persist()
@@ -221,13 +261,14 @@ final class AlphaRossModel {
     func tasks(for caseId: UUID? = nil) -> [AlphaTaskItem] {
         tasks.filter { task in
             guard let caseId else { return true }
+            guard caseId != alphaSharedWorkspaceID else { return false }
             return task.caseId == caseId
         }
     }
 
     func askDraft(for scopeCaseID: UUID?) -> String {
         if let scopeCaseID {
-            return askDrafts[scopeCaseID, default: "Ask Ross about this case..."]
+            return askDrafts[scopeCaseID, default: "Ask Ross about this matter..."]
         }
         return globalAskDraft
     }
@@ -240,28 +281,108 @@ final class AlphaRossModel {
         }
     }
 
-    func askDocumentTitle(for scopeCaseID: UUID?) -> String? {
+    func selectedAskDocumentIDs(for scopeCaseID: UUID?) -> Set<UUID> {
         if let scopeCaseID {
-            return askDocumentTitles[scopeCaseID]
+            return askSelectedDocumentIDs[scopeCaseID, default: []]
         }
-        return globalAskDocumentTitle
+        return globalAskSelectedDocumentIDs
     }
 
-    func setAskDocumentTitle(_ title: String?, for scopeCaseID: UUID?) {
+    func setSelectedAskDocumentIDs(_ documentIDs: Set<UUID>, for scopeCaseID: UUID?) {
         if let scopeCaseID {
-            if let title, !title.isEmpty {
-                askDocumentTitles[scopeCaseID] = title
+            if documentIDs.isEmpty {
+                askSelectedDocumentIDs.removeValue(forKey: scopeCaseID)
             } else {
-                askDocumentTitles.removeValue(forKey: scopeCaseID)
+                askSelectedDocumentIDs[scopeCaseID] = documentIDs
             }
         } else {
-            globalAskDocumentTitle = title
+            globalAskSelectedDocumentIDs = documentIDs
         }
+        updateActiveChatContext(documentIDs: documentIDs, for: scopeCaseID)
     }
 
-    func openAsk(scopeCaseID: UUID? = nil, documentTitle: String? = nil) {
-        setAskDocumentTitle(documentTitle, for: scopeCaseID)
+    func askDocumentTitle(for scopeCaseID: UUID?) -> String? {
+        let titles = selectedAskDocuments(for: scopeCaseID).map(\.title)
+        if titles.count == 1 {
+            return titles.first
+        }
+        return nil
+    }
+
+    fileprivate func selectedAskDocuments(for scopeCaseID: UUID?) -> [AlphaAskDocumentOption] {
+        let selectedIDs = selectedAskDocumentIDs(for: scopeCaseID)
+        guard !selectedIDs.isEmpty else { return [] }
+        return availableAskDocuments(for: scopeCaseID).filter { selectedIDs.contains($0.id) }
+    }
+
+    fileprivate func availableAskDocuments(for scopeCaseID: UUID?) -> [AlphaAskDocumentOption] {
+        let scopedCases: [AlphaCaseMatter]
         if let scopeCaseID {
+            scopedCases = persisted.cases.filter { $0.id == scopeCaseID || $0.id == alphaSharedWorkspaceID }
+        } else {
+            scopedCases = persisted.cases
+        }
+
+        return scopedCases
+            .flatMap { caseMatter in
+                caseMatter.documents.map { document in
+                    AlphaAskDocumentOption(
+                        id: document.id,
+                        caseId: caseMatter.id,
+                        caseTitle: caseMatter.title,
+                        title: document.title,
+                        kind: document.kind,
+                        isShared: caseMatter.id == alphaSharedWorkspaceID
+                    )
+                }
+            }
+            .sorted { lhs, rhs in
+                if lhs.isShared != rhs.isShared {
+                    return lhs.isShared && !rhs.isShared
+                }
+                if lhs.caseTitle != rhs.caseTitle {
+                    return lhs.caseTitle.localizedCaseInsensitiveCompare(rhs.caseTitle) == .orderedAscending
+                }
+                return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
+            }
+    }
+
+    func toggleAskDocumentSelection(_ documentID: UUID, for scopeCaseID: UUID?) {
+        var selected = selectedAskDocumentIDs(for: scopeCaseID)
+        if selected.contains(documentID) {
+            selected.remove(documentID)
+        } else {
+            selected.insert(documentID)
+        }
+        setSelectedAskDocumentIDs(selected, for: scopeCaseID)
+    }
+
+    func askSelectionSubtitle(for scopeCaseID: UUID?) -> String? {
+        let selected = selectedAskDocuments(for: scopeCaseID)
+        guard !selected.isEmpty else { return nil }
+        if selected.count == 1, let first = selected.first {
+            if first.isShared {
+                return "\(first.title) · shared file"
+            }
+            if scopeCaseID == nil {
+                return "\(first.title) · \(first.caseTitle)"
+            }
+            return first.title
+        }
+        let sharedCount = selected.filter(\.isShared).count
+        if sharedCount > 0 {
+            return "\(selected.count) files selected · \(sharedCount) shared"
+        }
+        return "\(selected.count) files selected"
+    }
+
+    func openAsk(scopeCaseID: UUID? = nil, documentID: UUID? = nil) {
+        if let documentID {
+            setSelectedAskDocumentIDs([documentID], for: scopeCaseID)
+        }
+        if let scopeCaseID {
+            askSelectedScopeCaseID = scopeCaseID
+            selectedCaseID = scopeCaseID
             path.append(.askCase(scopeCaseID))
         } else {
             path.append(.askRoss)
@@ -269,14 +390,140 @@ final class AlphaRossModel {
     }
 
     func scopeLabel(for caseId: UUID?) -> String {
+        if caseId == alphaSharedWorkspaceID {
+            return "Shared files"
+        }
         guard let caseId, let caseMatter = cases.first(where: { $0.id == caseId }) else {
-            return "All matters"
+            return "All work"
         }
         return caseMatter.title
     }
 
     func askConversation(for scopeCaseID: UUID?) -> [AlphaAskResult] {
-        askHistory.filter { $0.scopeCaseID == scopeCaseID }
+        let storageCaseID = scopeCaseID ?? alphaSharedWorkspaceID
+        guard let caseMatter = persisted.cases.first(where: { $0.id == storageCaseID }) else { return [] }
+        guard let sessionID = caseMatter.activeChatSessionID ?? caseMatter.chatSessions.first?.id else { return [] }
+        guard let session = caseMatter.chatSessions.first(where: { $0.id == sessionID }) else { return [] }
+        return session.turns.map { askResult(from: $0, in: caseMatter, chatSessionID: session.id) }
+    }
+
+    func chatSessions(for caseId: UUID) -> [AlphaChatSession] {
+        guard let caseMatter = persisted.cases.first(where: { $0.id == caseId }) else { return [] }
+        return caseMatter.chatSessions.sorted { $0.updatedAt > $1.updatedAt }
+    }
+
+    func activeChatSession(for caseId: UUID?) -> AlphaChatSession? {
+        let storageCaseID = caseId ?? alphaSharedWorkspaceID
+        guard let caseMatter = persisted.cases.first(where: { $0.id == storageCaseID }) else { return nil }
+        guard let sessionID = caseMatter.activeChatSessionID ?? caseMatter.chatSessions.first?.id else { return nil }
+        return caseMatter.chatSessions.first(where: { $0.id == sessionID })
+    }
+
+    func activeChatSessionID(for caseId: UUID?) -> UUID? {
+        let storageCaseID = caseId ?? alphaSharedWorkspaceID
+        return persisted.cases.first(where: { $0.id == storageCaseID })?.activeChatSessionID
+    }
+
+    func setActiveChatSession(_ sessionID: UUID, for caseId: UUID) {
+        guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }) else { return }
+        guard persisted.cases[caseIndex].chatSessions.contains(where: { $0.id == sessionID }) else { return }
+        persisted.cases[caseIndex].activeChatSessionID = sessionID
+        persisted.cases[caseIndex].updatedAt = .now
+        selectedCaseID = caseId
+        askSelectedScopeCaseID = caseId
+        restoreComposerContext(for: caseId)
+        rebuildAskHistory()
+        persist()
+    }
+
+    func startNewChat(for caseId: UUID, openConversation: Bool = true) {
+        guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }) else { return }
+        let session = AlphaChatSession()
+        persisted.cases[caseIndex].chatSessions.insert(session, at: 0)
+        persisted.cases[caseIndex].activeChatSessionID = session.id
+        persisted.cases[caseIndex].updatedAt = .now
+        selectedCaseID = caseId
+        askSelectedScopeCaseID = caseId
+        restoreComposerContext(for: caseId)
+        rebuildAskHistory()
+        persist()
+        if openConversation {
+            path.removeAll { route in
+                if case .askCase(let existingCaseID) = route {
+                    return existingCaseID == caseId
+                }
+                return false
+            }
+            path.append(.askCase(caseId))
+        }
+    }
+
+    func chatSessionTitle(_ session: AlphaChatSession) -> String {
+        guard let question = session.turns.first?.question.trimmingCharacters(in: .whitespacesAndNewlines), !question.isEmpty else {
+            return "New chat"
+        }
+        let compact = question.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+        return String(compact.prefix(44))
+    }
+
+    func chatSessionSubtitle(_ session: AlphaChatSession) -> String {
+        if let latestTurn = session.turns.first {
+            return latestTurn.askedAt.formatted(date: .abbreviated, time: .shortened)
+        }
+        return "No messages yet"
+    }
+
+    private func updateActiveChatContext(documentIDs: Set<UUID>, for scopeCaseID: UUID?) {
+        let storageCaseID = scopeCaseID ?? alphaSharedWorkspaceID
+        guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == storageCaseID }) else { return }
+        guard let sessionID = persisted.cases[caseIndex].activeChatSessionID ?? persisted.cases[caseIndex].chatSessions.first?.id else { return }
+        guard let sessionIndex = persisted.cases[caseIndex].chatSessions.firstIndex(where: { $0.id == sessionID }) else { return }
+        persisted.cases[caseIndex].chatSessions[sessionIndex].contextDocumentIDs = documentIDs.sorted { $0.uuidString < $1.uuidString }
+    }
+
+    private func restoreComposerContext(for scopeCaseID: UUID?) {
+        let availableDocuments = availableAskDocuments(for: scopeCaseID)
+        let validDocumentIDs = Set(availableDocuments.map(\.id))
+        let restoredDocumentIDs = Set(activeChatSession(for: scopeCaseID)?.contextDocumentIDs ?? []).intersection(validDocumentIDs)
+        setSelectedAskDocumentIDs(restoredDocumentIDs, for: scopeCaseID)
+
+        if restoredDocumentIDs.count == 1,
+           let restoredDocumentID = restoredDocumentIDs.first,
+           let document = availableDocuments.first(where: { $0.id == restoredDocumentID }) {
+            setAskDraft("What should I note from \(document.title)?", for: scopeCaseID)
+            return
+        }
+
+        clearAskDraft(for: scopeCaseID)
+    }
+
+    private func clearAskDraft(for scopeCaseID: UUID?) {
+        if let scopeCaseID {
+            askDrafts.removeValue(forKey: scopeCaseID)
+        } else {
+            globalAskDraft = "What needs my attention today?"
+        }
+    }
+
+    func openDocumentInChat(caseId: UUID, documentId: UUID, startNewThread: Bool) {
+        guard let caseMatter = persisted.cases.first(where: { $0.id == caseId }),
+              let document = caseMatter.documents.first(where: { $0.id == documentId }) else { return }
+
+        if startNewThread || activeChatSession(for: caseId) == nil {
+            startNewChat(for: caseId, openConversation: false)
+        }
+
+        selectedCaseID = caseId
+        askSelectedScopeCaseID = caseId
+        setSelectedAskDocumentIDs([documentId], for: caseId)
+        setAskDraft("What should I note from \(document.title)?", for: caseId)
+        path.removeAll { route in
+            if case .askCase(let existingCaseID) = route {
+                return existingCaseID == caseId
+            }
+            return false
+        }
+        path.append(.askCase(caseId))
     }
 
     func todayTasks(for caseId: UUID? = nil) -> [AlphaTaskItem] {
@@ -436,8 +683,8 @@ final class AlphaRossModel {
         guard !cleaned.isEmpty else { return }
 
         let localResult = buildLocalAskResult(question: cleaned, scopeCaseID: scopeCaseID)
-        appendAskResult(localResult, persistToCase: scopeCaseID)
-        latestAskResult = localResult
+        let storedResult = appendAskResult(localResult, persistToCase: scopeCaseID)
+        latestAskResult = storedResult
         askSelectedScopeCaseID = scopeCaseID
 
         if let scopeCaseID {
@@ -450,35 +697,55 @@ final class AlphaRossModel {
             let preview = buildAskPublicLawPreview(question: cleaned, scopeCaseID: scopeCaseID)
             pendingPublicLawQuestion = cleaned
             pendingPublicLawScopeCaseID = scopeCaseID
+            pendingPublicLawSessionID = storedResult.chatSessionID
+            pendingPublicLawTurnID = storedResult.chatTurnID
             publicLawPreview = preview
             latestAskResult?.publicLawPreview = preview
             latestAskResult?.statusNote = "Web search preview ready"
-            updateLatestAskHistory(scopeCaseID: scopeCaseID, question: cleaned) { result in
-                result.publicLawPreview = preview
-                result.statusNote = "Web search preview ready"
+            updateStoredAskTurn(
+                scopeCaseID: scopeCaseID,
+                sessionID: storedResult.chatSessionID,
+                turnID: storedResult.chatTurnID
+            ) { turn in
+                turn.publicLawPreview = preview
+                turn.statusNote = "Web search preview ready"
             }
         } else {
             pendingPublicLawQuestion = nil
             pendingPublicLawScopeCaseID = nil
+            pendingPublicLawSessionID = nil
+            pendingPublicLawTurnID = nil
             publicLawPreview = nil
+            latestAskResult?.statusNote = "Web search off"
+            updateStoredAskTurn(
+                scopeCaseID: scopeCaseID,
+                sessionID: storedResult.chatSessionID,
+                turnID: storedResult.chatTurnID
+            ) { turn in
+                turn.publicLawPreview = nil
+                turn.publicLawResults = []
+                turn.statusNote = "Web search off"
+            }
         }
     }
 
     func cancelPendingPublicLawSearch() {
-        let pendingQuestion = pendingPublicLawQuestion
-        let pendingScopeCaseID = pendingPublicLawScopeCaseID
         pendingPublicLawQuestion = nil
-        pendingPublicLawScopeCaseID = nil
         publicLawPreview = nil
-        if latestAskResult?.publicLawResults.isEmpty == true {
+        if latestAskResult?.chatTurnID == pendingPublicLawTurnID, latestAskResult?.publicLawResults.isEmpty == true {
             latestAskResult?.statusNote = "Web search off"
-            if let pendingQuestion {
-                updateLatestAskHistory(scopeCaseID: pendingScopeCaseID, question: pendingQuestion) { result in
-                    result.publicLawPreview = nil
-                    result.statusNote = "Web search off"
-                }
-            }
         }
+        updateStoredAskTurn(
+            scopeCaseID: pendingPublicLawScopeCaseID,
+            sessionID: pendingPublicLawSessionID,
+            turnID: pendingPublicLawTurnID
+        ) { turn in
+            turn.publicLawPreview = nil
+            turn.statusNote = "Web search off"
+        }
+        pendingPublicLawScopeCaseID = nil
+        pendingPublicLawSessionID = nil
+        pendingPublicLawTurnID = nil
     }
 
     func confirmPendingPublicLawSearch() async {
@@ -488,12 +755,14 @@ final class AlphaRossModel {
             latestAskResult?.publicLawPreview = preview
             latestAskResult?.publicLawResults = results
             latestAskResult?.statusNote = "Public-law results"
-            if let pendingPublicLawQuestion {
-                updateLatestAskHistory(scopeCaseID: pendingPublicLawScopeCaseID, question: pendingPublicLawQuestion) { result in
-                    result.publicLawPreview = preview
-                    result.publicLawResults = results
-                    result.statusNote = "Public-law results"
-                }
+            updateStoredAskTurn(
+                scopeCaseID: pendingPublicLawScopeCaseID,
+                sessionID: pendingPublicLawSessionID,
+                turnID: pendingPublicLawTurnID
+            ) { turn in
+                turn.publicLawPreview = preview
+                turn.publicLawResults = results
+                turn.statusNote = "Public-law results"
             }
             publicLawResults = results
             persisted.publicLawCache.insert(
@@ -519,12 +788,14 @@ final class AlphaRossModel {
             latestAskResult?.publicLawPreview = preview
             latestAskResult?.publicLawResults = []
             latestAskResult?.statusNote = "Public-law results are unavailable right now."
-            if let pendingPublicLawQuestion {
-                updateLatestAskHistory(scopeCaseID: pendingPublicLawScopeCaseID, question: pendingPublicLawQuestion) { result in
-                    result.publicLawPreview = preview
-                    result.publicLawResults = []
-                    result.statusNote = "Public-law results are unavailable right now."
-                }
+            updateStoredAskTurn(
+                scopeCaseID: pendingPublicLawScopeCaseID,
+                sessionID: pendingPublicLawSessionID,
+                turnID: pendingPublicLawTurnID
+            ) { turn in
+                turn.publicLawPreview = preview
+                turn.publicLawResults = []
+                turn.statusNote = "Public-law results are unavailable right now."
             }
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
@@ -542,43 +813,148 @@ final class AlphaRossModel {
 
         pendingPublicLawQuestion = nil
         pendingPublicLawScopeCaseID = nil
+        pendingPublicLawSessionID = nil
+        pendingPublicLawTurnID = nil
     }
 
-    private func appendAskResult(_ result: AlphaAskResult, persistToCase caseID: UUID?) {
-        askHistory.append(result)
+    @discardableResult
+    private func appendAskResult(_ result: AlphaAskResult, persistToCase caseID: UUID?) -> AlphaAskResult {
+        let storageCaseID = caseID ?? alphaSharedWorkspaceID
+        let contextDocumentIDs = selectedAskDocumentIDs(for: caseID)
+        let turn = AlphaChatTurn(
+            kind: result.kind,
+            question: result.question,
+            answerTitle: result.answerTitle,
+            answerSections: result.answerSections,
+            sourceRefs: result.caseFileSources,
+            selectedDocumentTitles: result.selectedDocumentTitles.isEmpty ? nil : result.selectedDocumentTitles,
+            publicLawPreview: result.publicLawPreview,
+            publicLawResults: result.publicLawResults,
+            statusNote: result.statusNote,
+            needsReviewWarning: result.needsReviewWarning
+        )
 
-        if let caseID, let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseID }) {
-            let turn = AlphaChatTurn(
-                question: result.question,
-                answerTitle: result.answerTitle,
-                answerSections: result.answerSections,
-                sourceRefs: result.caseFileSources
+        if let storedResult = appendStoredTurn(turn, to: storageCaseID, contextDocumentIDs: contextDocumentIDs) {
+            persisted.ledgerEntries.insert(
+                AlphaPrivacyLedgerEntry(
+                    title: caseID == nil ? "Local review run" : "Local case review run",
+                    detail: "The question and source-backed draft stayed on this device.",
+                    purpose: .local_only,
+                    payloadClass: .local_only,
+                    endpointLabel: caseID == nil ? "device://ask" : "device://ask-case",
+                    success: true
+                ),
+                at: 0
             )
-            persisted.cases[caseIndex].chatTurns.insert(turn, at: 0)
-            persisted.cases[caseIndex].updatedAt = .now
+            persist()
+            return storedResult
         }
 
-        persisted.ledgerEntries.insert(
-            AlphaPrivacyLedgerEntry(
-                title: caseID == nil ? "Local review run" : "Local case review run",
-                detail: "The question and source-backed draft stayed on this device.",
-                purpose: .local_only,
-                payloadClass: .local_only,
-                endpointLabel: caseID == nil ? "device://ask" : "device://ask-case",
-                success: true
-            ),
-            at: 0
+        let fallback = result
+        askHistory.append(fallback)
+        return fallback
+    }
+
+    @discardableResult
+    private func appendStoredTurn(
+        _ turn: AlphaChatTurn,
+        to storageCaseID: UUID,
+        contextDocumentIDs: Set<UUID> = []
+    ) -> AlphaAskResult? {
+        guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == storageCaseID }) else { return nil }
+
+        let sessionID: UUID
+        if let activeSessionID = persisted.cases[caseIndex].activeChatSessionID,
+           persisted.cases[caseIndex].chatSessions.contains(where: { $0.id == activeSessionID }) {
+            sessionID = activeSessionID
+        } else {
+            let session = AlphaChatSession(contextDocumentIDs: contextDocumentIDs.sorted { $0.uuidString < $1.uuidString })
+            persisted.cases[caseIndex].chatSessions.insert(session, at: 0)
+            persisted.cases[caseIndex].activeChatSessionID = session.id
+            sessionID = session.id
+        }
+
+        if let sessionIndex = persisted.cases[caseIndex].chatSessions.firstIndex(where: { $0.id == sessionID }) {
+            persisted.cases[caseIndex].chatSessions[sessionIndex].turns.insert(turn, at: 0)
+            persisted.cases[caseIndex].chatSessions[sessionIndex].updatedAt = turn.askedAt
+            persisted.cases[caseIndex].chatSessions[sessionIndex].contextDocumentIDs = contextDocumentIDs.sorted { $0.uuidString < $1.uuidString }
+            let updatedSession = persisted.cases[caseIndex].chatSessions.remove(at: sessionIndex)
+            persisted.cases[caseIndex].chatSessions.insert(updatedSession, at: 0)
+        }
+        persisted.cases[caseIndex].activeChatSessionID = sessionID
+        persisted.cases[caseIndex].updatedAt = .now
+        let storedResult = askResult(from: turn, in: persisted.cases[caseIndex], chatSessionID: sessionID)
+        askHistory.append(storedResult)
+        return storedResult
+    }
+
+    private func appendMatterThreadUpdate(
+        caseId: UUID?,
+        title: String,
+        sections: [String],
+        sourceRefs: [AlphaSourceRef] = [],
+        selectedDocumentIDs: Set<UUID> = [],
+        selectedDocumentTitles: [String] = [],
+        statusNote: String? = nil,
+        needsReviewWarning: String? = nil
+    ) {
+        let storageCaseID = caseId ?? alphaSharedWorkspaceID
+        let turn = AlphaChatTurn(
+            kind: .matterUpdate,
+            question: "",
+            answerTitle: title,
+            answerSections: sections,
+            sourceRefs: sourceRefs,
+            selectedDocumentTitles: selectedDocumentTitles.isEmpty ? nil : selectedDocumentTitles,
+            publicLawPreview: nil,
+            publicLawResults: [],
+            statusNote: statusNote,
+            needsReviewWarning: needsReviewWarning
         )
+        _ = appendStoredTurn(turn, to: storageCaseID, contextDocumentIDs: selectedDocumentIDs)
         persist()
     }
 
-    private func updateLatestAskHistory(scopeCaseID: UUID?, question: String, mutate: (inout AlphaAskResult) -> Void) {
-        guard let index = askHistory.lastIndex(where: { $0.scopeCaseID == scopeCaseID && $0.question == question }) else {
+    private func updateAskHistory(turnID: UUID?, mutate: (inout AlphaAskResult) -> Void) {
+        guard let turnID, let index = askHistory.lastIndex(where: { $0.chatTurnID == turnID }) else {
             return
         }
         var updated = askHistory[index]
         mutate(&updated)
         askHistory[index] = updated
+    }
+
+    private func updateStoredAskTurn(
+        scopeCaseID: UUID?,
+        sessionID: UUID?,
+        turnID: UUID?,
+        mutate: (inout AlphaChatTurn) -> Void
+    ) {
+        guard let sessionID, let turnID else { return }
+        let storageCaseID = scopeCaseID ?? alphaSharedWorkspaceID
+        guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == storageCaseID }) else { return }
+        guard let sessionIndex = persisted.cases[caseIndex].chatSessions.firstIndex(where: { $0.id == sessionID }) else { return }
+        guard let turnIndex = persisted.cases[caseIndex].chatSessions[sessionIndex].turns.firstIndex(where: { $0.id == turnID }) else { return }
+
+        mutate(&persisted.cases[caseIndex].chatSessions[sessionIndex].turns[turnIndex])
+        persisted.cases[caseIndex].chatSessions[sessionIndex].updatedAt = .now
+        persisted.cases[caseIndex].updatedAt = .now
+        let updatedSession = persisted.cases[caseIndex].chatSessions.remove(at: sessionIndex)
+        persisted.cases[caseIndex].chatSessions.insert(updatedSession, at: 0)
+        rebuildAskHistory()
+        updateAskHistory(turnID: turnID) { updated in
+            mutateAskResult(&updated, from: persisted.cases[caseIndex].chatSessions[0].turns[turnIndex], caseMatter: persisted.cases[caseIndex], chatSessionID: sessionID)
+        }
+        persist()
+    }
+
+    private func mutateAskResult(
+        _ result: inout AlphaAskResult,
+        from turn: AlphaChatTurn,
+        caseMatter: AlphaCaseMatter,
+        chatSessionID: UUID
+    ) {
+        result = askResult(from: turn, in: caseMatter, chatSessionID: chatSessionID)
     }
 
     func runLocalInferenceSmoke() {
@@ -686,6 +1062,7 @@ final class AlphaRossModel {
     }
 
     func advanceOnboarding() {
+        selectedTier = recommendedOnDeviceTier()
         persisted.onboardingStage = .privateAIPack
         persist()
     }
@@ -697,6 +1074,7 @@ final class AlphaRossModel {
     }
 
     func finishPackSetup() {
+        selectedTier = recommendedOnDeviceTier()
         persisted.settings.activeTier = selectedTier
         persisted.onboardingStage = .completed
         persisted.selectedTab = .home
@@ -737,6 +1115,7 @@ final class AlphaRossModel {
         )
         persisted.tasks = taskList
         selectedCaseID = matter.id
+        askSelectedScopeCaseID = matter.id
         caseDraftTitle = ""
         caseDraftForum = ""
         persisted.ledgerEntries.insert(
@@ -759,15 +1138,11 @@ final class AlphaRossModel {
 
     func renameCase(_ caseID: UUID, title: String) {
         let cleaned = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard caseID != alphaSharedWorkspaceID else { return }
         guard !cleaned.isEmpty, let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseID }) else { return }
         persisted.cases[caseIndex].title = cleaned
         persisted.cases[caseIndex].updatedAt = .now
-        askHistory = askHistory.map { result in
-            guard result.scopeCaseID == caseID else { return result }
-            var updated = result
-            updated.scopeLabel = cleaned
-            return updated
-        }
+        rebuildAskHistory()
         if latestAskResult?.scopeCaseID == caseID {
             latestAskResult?.scopeLabel = cleaned
         }
@@ -786,6 +1161,7 @@ final class AlphaRossModel {
     }
 
     func archiveCase(_ caseID: UUID) {
+        guard caseID != alphaSharedWorkspaceID else { return }
         guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseID }) else { return }
         persisted.cases[caseIndex].archivedAt = .now
         persisted.cases[caseIndex].updatedAt = .now
@@ -805,6 +1181,7 @@ final class AlphaRossModel {
     }
 
     func setFolderTint(_ tint: AlphaMatterTint, for caseID: UUID) {
+        guard caseID != alphaSharedWorkspaceID else { return }
         guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseID }) else { return }
         persisted.cases[caseIndex].folderTint = tint
         persisted.cases[caseIndex].updatedAt = .now
@@ -812,6 +1189,7 @@ final class AlphaRossModel {
     }
 
     func deleteCase(_ caseID: UUID) {
+        guard caseID != alphaSharedWorkspaceID else { return }
         guard let removedCase = persisted.cases.first(where: { $0.id == caseID }) else { return }
 
         removedCase.documents.forEach { document in
@@ -827,7 +1205,7 @@ final class AlphaRossModel {
         persisted.cases.removeAll { $0.id == caseID }
         persisted.tasks = (persisted.tasks ?? []).filter { $0.caseId != caseID }
         persisted.exports.removeAll { $0.caseId == caseID }
-        askHistory.removeAll { $0.scopeCaseID == caseID }
+        rebuildAskHistory()
         if latestAskResult?.scopeCaseID == caseID {
             latestAskResult = nil
         }
@@ -846,15 +1224,16 @@ final class AlphaRossModel {
         persist()
     }
 
-    func importDocument(caseId: UUID, from sourceURL: URL) async {
+    func importDocument(caseId: UUID?, from sourceURL: URL) async {
+        let targetCaseID = caseId ?? alphaSharedWorkspaceID
         do {
-            let imported = try await store.importDocument(from: sourceURL, into: caseId)
-            guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }) else { return }
+            let imported = try await store.importDocument(from: sourceURL, into: targetCaseID)
+            guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == targetCaseID }) else { return }
             var document = imported.document
             document.indexingStatus = .extracting
             document.extractionRuns = [
                 AlphaExtractionRun(
-                    caseId: caseId,
+                    caseId: targetCaseID,
                     documentId: document.id,
                     mode: .fromInstalledPack(activePack),
                     status: .running,
@@ -870,9 +1249,16 @@ final class AlphaRossModel {
 
             persisted.cases[caseIndex].documents.insert(document, at: 0)
             persisted.cases[caseIndex].updatedAt = .now
+            if targetCaseID != alphaSharedWorkspaceID {
+                selectedCaseID = targetCaseID
+                askSelectedScopeCaseID = targetCaseID
+                setSelectedAskDocumentIDs([document.id], for: targetCaseID)
+            } else {
+                setSelectedAskDocumentIDs([document.id], for: nil)
+            }
 
             let sourceRef = AlphaSourceRef(
-                caseId: caseId,
+                caseId: targetCaseID,
                 documentId: document.id,
                 documentTitle: document.title,
                 pageNumber: 1,
@@ -894,14 +1280,26 @@ final class AlphaRossModel {
                 at: 0
             )
             persist()
-            path.append(.documentViewer(caseId, document.id, 1))
+            appendMatterThreadUpdate(
+                caseId: targetCaseID == alphaSharedWorkspaceID ? nil : targetCaseID,
+                title: "File added to this matter",
+                sections: [
+                    "\(document.title) was copied into private storage and linked to the current matter.",
+                    "Ross started local review so the active chat can pick up dates, directions, and follow-up work from this file."
+                ],
+                sourceRefs: [sourceRef],
+                selectedDocumentIDs: [document.id],
+                selectedDocumentTitles: [document.title],
+                statusNote: "Matter chat updated · review starting"
+            )
+            path.append(.documentViewer(targetCaseID, document.id, 1))
 
             let result = await store.runLocalExtraction(
-                caseId: caseId,
+                caseId: targetCaseID,
                 document: document,
                 activePack: activePack
             )
-            applyExtractionResult(result, caseId: caseId, documentId: document.id)
+            applyExtractionResult(result, caseId: targetCaseID, documentId: document.id)
         } catch {
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
@@ -932,6 +1330,12 @@ final class AlphaRossModel {
         persisted.cases[caseIndex].documents.removeAll { $0.id == documentId }
         persisted.cases[caseIndex].sourceRefs.removeAll { $0.documentId == documentId }
         persisted.tasks = (persisted.tasks ?? []).filter { $0.caseId != caseId || !($0.notes?.contains(removedDocument?.title ?? "") ?? false) }
+        globalAskSelectedDocumentIDs.remove(documentId)
+        askSelectedDocumentIDs = askSelectedDocumentIDs.mapValues { ids in
+            var updated = ids
+            updated.remove(documentId)
+            return updated
+        }.filter { !$0.value.isEmpty }
         persisted.ledgerEntries.insert(
             AlphaPrivacyLedgerEntry(
                 title: "Document removed locally",
@@ -962,30 +1366,8 @@ final class AlphaRossModel {
     }
 
     func askCase(caseId: UUID) {
-        guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }) else { return }
-        let question = askDrafts[caseId, default: "Ask Ross about this case..."]
-        let localResult = buildLocalAskResult(question: question, scopeCaseID: caseId)
-        let turn = AlphaChatTurn(
-            question: question,
-            answerTitle: localResult.answerTitle,
-            answerSections: localResult.answerSections,
-            sourceRefs: localResult.caseFileSources
-        )
-        persisted.cases[caseIndex].chatTurns.insert(turn, at: 0)
-        persisted.cases[caseIndex].updatedAt = .now
-        latestAskResult = localResult
-        persisted.ledgerEntries.insert(
-            AlphaPrivacyLedgerEntry(
-                title: "Local case review run",
-                detail: "The case question and source-backed draft stayed on-device.",
-                purpose: .local_only,
-                payloadClass: .local_only,
-                endpointLabel: "device://ask-case",
-                success: true
-            ),
-            at: 0
-        )
-        persist()
+        let question = askDrafts[caseId, default: "Ask Ross about this matter..."]
+        submitAsk(question: question, scopeCaseID: caseId, webEnabled: false)
     }
 
     func openSourceRef(_ ref: AlphaSourceRef) {
@@ -1768,6 +2150,34 @@ final class AlphaRossModel {
             ),
             at: 0
         )
+        let nextDateValue = result.extractedFields.first(where: { $0.fieldType == .nextDate && (!$0.needsReview || $0.userCorrected) })?.value
+        let reviewItemCount = result.reviewQueue.fieldIDs.count + result.reviewQueue.findingIDs.count
+        let reviewSummary = reviewItemCount == 0
+            ? "This file is ready to use in the matter chat."
+            : "\(reviewItemCount) review item(s) still need advocate confirmation before relying on this file."
+        let classificationSummary = result.classification.map {
+            "Ross classified \(document.title) as \($0.type.rawValue.replacingOccurrences(of: "_", with: " "))."
+        } ?? "Ross refreshed the local review for \(document.title)."
+        var threadSections = [classificationSummary, reviewSummary]
+        if let nextDateValue {
+            threadSections.insert("Next date captured: \(nextDateValue).", at: 1)
+        }
+        let threadSourceRefs = Array(
+            (
+                (result.classification?.sourceRefs ?? [])
+                + result.extractedFields.flatMap(\.sourceRefs)
+            ).prefix(3)
+        )
+        appendMatterThreadUpdate(
+            caseId: caseId == alphaSharedWorkspaceID ? nil : caseId,
+            title: "Review updated for \(document.title)",
+            sections: threadSections,
+            sourceRefs: threadSourceRefs,
+            selectedDocumentIDs: [document.id],
+            selectedDocumentTitles: [document.title],
+            statusNote: reviewItemCount == 0 ? "Matter chat updated · ready to use" : "Matter chat updated · needs review",
+            needsReviewWarning: reviewItemCount == 0 ? nil : "\(reviewItemCount) review item(s) still need advocate review."
+        )
         persist()
     }
 
@@ -2135,6 +2545,9 @@ final class AlphaRossModel {
     private func normalizeLoadedState(_ state: AlphaPersistedState) -> AlphaPersistedState {
         var normalized = state
         normalized.selectedTab = normalized.selectedTab.normalizedForLawyerShell
+        if !normalized.cases.contains(where: { $0.id == alphaSharedWorkspaceID }) {
+            normalized.cases.append(sharedWorkspaceMatter())
+        }
         if normalized.tasks == nil {
             normalized.tasks = initialTasks(from: normalized.cases)
         }
@@ -2142,7 +2555,7 @@ final class AlphaRossModel {
     }
 
     private func initialTasks(from cases: [AlphaCaseMatter]) -> [AlphaTaskItem] {
-        cases.flatMap { caseMatter in
+        cases.filter { $0.id != alphaSharedWorkspaceID }.flatMap { caseMatter in
             caseMatter.draftTasks.enumerated().map { offset, task in
                 AlphaTaskItem(
                     caseId: caseMatter.id,
@@ -2163,14 +2576,122 @@ final class AlphaRossModel {
         task.notes?.hasPrefix(alphaRossSuggestedTaskNotePrefix) == true
     }
 
+    private func sharedWorkspaceMatter() -> AlphaCaseMatter {
+        AlphaCaseMatter(
+            id: alphaSharedWorkspaceID,
+            title: "Shared files",
+            forum: "Available across matters",
+            stage: .intake,
+            nextHearing: nil,
+            summary: "Files placed here stay available anywhere on this device.",
+            issueHighlights: ["Use shared files when a document should support more than one matter."],
+            evidenceNotes: ["Ross keeps these files local and ready for device-wide questions."],
+            draftTasks: [],
+            documents: [],
+            sourceRefs: [],
+            updatedAt: .now
+        )
+    }
+
+    func recommendedOnDeviceTier() -> AlphaCapabilityTier {
+        let totalMemoryGB = max(2, Int(ProcessInfo.processInfo.physicalMemory / 1_073_741_824))
+        let freeStorageGB = max(4, alphaAvailableStorageInGigabytes())
+        let lowPowerModeEnabled = alphaCurrentLowPowerMode()
+        let thermalCondition = alphaCurrentThermalCondition()
+
+        if lowPowerModeEnabled || totalMemoryGB <= 4 || freeStorageGB < 14 {
+            return .quickStart
+        }
+        if totalMemoryGB >= 12 && freeStorageGB >= 32 && thermalCondition == "Nominal" {
+            return .seniorDraftingSupport
+        }
+        return .caseAssociate
+    }
+
+    var recommendedAssistantTitle: String {
+        switch recommendedOnDeviceTier() {
+        case .quickStart:
+            return "Phone-optimized local review"
+        case .caseAssociate:
+            return "Balanced local matter review"
+        case .seniorDraftingSupport:
+            return "Deeper drafting and review"
+        }
+    }
+
+    var recommendedAssistantDetail: String {
+        let totalMemoryGB = max(2, Int(ProcessInfo.processInfo.physicalMemory / 1_073_741_824))
+        let freeStorageGB = max(4, alphaAvailableStorageInGigabytes())
+        let summary: String
+        switch recommendedOnDeviceTier() {
+        case .quickStart:
+            summary = "Ross will keep setup lighter on this phone so imports, case review, and short legal questions stay responsive."
+        case .caseAssociate:
+            summary = "Ross will use a balanced on-device assistant for matter summaries, chronology work, source-backed Q&A, and everyday legal review."
+        case .seniorDraftingSupport:
+            summary = "Ross can prepare a deeper on-device assistant on this phone for longer bundles, hearing prep, and richer drafting support."
+        }
+        return "\(summary) (\(totalMemoryGB) GB memory · \(freeStorageGB) GB free)"
+    }
+
+    var recommendedAssistantSetupNote: String {
+        switch recommendedOnDeviceTier() {
+        case .quickStart:
+            return "Setup stays smaller and mobile-friendly for this device."
+        case .caseAssociate:
+            return "This is the best default for most day-to-day legal work on phone."
+        case .seniorDraftingSupport:
+            return "Ross found enough room on this device for longer local drafting sessions."
+        }
+    }
+
+    private func alphaAvailableStorageInGigabytes() -> Int {
+        let values = try? URL.homeDirectory.resourceValues(
+            forKeys: [.volumeAvailableCapacityForImportantUsageKey]
+        )
+        let bytes = values?.volumeAvailableCapacityForImportantUsage ?? 0
+        return Int(bytes / 1_073_741_824)
+    }
+
+    private func alphaCurrentLowPowerMode() -> Bool {
+        #if canImport(UIKit)
+        ProcessInfo.processInfo.isLowPowerModeEnabled
+        #else
+        false
+        #endif
+    }
+
+    private func alphaCurrentThermalCondition() -> String {
+        switch ProcessInfo.processInfo.thermalState {
+        case .nominal:
+            "Nominal"
+        case .fair:
+            "Fair"
+        case .serious:
+            "Serious"
+        case .critical:
+            "Critical"
+        @unknown default:
+            "Unknown"
+        }
+    }
+
     private func buildLocalAskResult(question: String, scopeCaseID: UUID?) -> AlphaAskResult {
-        let visibleCases = scopeCaseID.map { id in persisted.cases.filter { $0.id == id } } ?? persisted.cases
+        let selectedDocuments = selectedAskDocuments(for: scopeCaseID)
+        let selectedDocumentIDs = Set(selectedDocuments.map(\.id))
+        let scopedCases: [AlphaCaseMatter]
+        if let scopeCaseID {
+            scopedCases = persisted.cases.filter { $0.id == scopeCaseID || $0.id == alphaSharedWorkspaceID }
+        } else {
+            scopedCases = persisted.cases
+        }
         let lowered = question.lowercased()
         let asksAboutSchedule = lowered.contains("next date") || lowered.contains("hearing")
         let asksAboutTasks = lowered.contains("task") || lowered.contains("today") || lowered.contains("reminder") || lowered.contains("due")
         let asksAboutReview = lowered.contains("review") || lowered.contains("document") || lowered.contains("order") || lowered.contains("party")
-        let matchedSources = visibleCases
+        let matchedSources = scopedCases
             .flatMap(\.sourceRefs)
+            .filter { selectedDocumentIDs.isEmpty || selectedDocumentIDs.contains($0.documentId) }
             .filter {
                 asksAboutSchedule ||
                     asksAboutTasks ||
@@ -2182,7 +2703,9 @@ final class AlphaRossModel {
 
         var sections: [String] = []
         if asksAboutSchedule {
-            let dateLines = visibleCases.compactMap { caseMatter -> String? in
+            let dateLines = cases
+                .filter { scopeCaseID == nil || $0.id == scopeCaseID }
+                .compactMap { caseMatter -> String? in
                 guard let nextDate = caseMatter.nextHearing else { return nil }
                 return "\(caseMatter.title): \(nextDate.formatted(date: .abbreviated, time: .omitted))"
             }
@@ -2198,22 +2721,36 @@ final class AlphaRossModel {
             sections.append(contentsOf: taskLines)
         }
         if asksAboutReview {
-            let reviewItems = reviewQueue(caseId: scopeCaseID).prefix(3).map { "\($0.title): \($0.detail)" }
+            let reviewItems = reviewQueue(caseId: scopeCaseID)
+                .filter { selectedDocumentIDs.isEmpty || selectedDocumentIDs.contains($0.documentId) }
+                .prefix(3)
+                .map { "\($0.title): \($0.detail)" }
             sections.append(contentsOf: reviewItems)
         }
 
+        if sections.isEmpty, !selectedDocuments.isEmpty {
+            sections.append(contentsOf: selectedDocuments.prefix(3).map { option in
+                option.isShared ? "\(option.title): shared across matters." : "\(option.title): included for this answer."
+            })
+        }
+
         let warnings = reviewQueue(caseId: scopeCaseID)
+            .filter { selectedDocumentIDs.isEmpty || selectedDocumentIDs.contains($0.documentId) }
         let notFound = sections.isEmpty && matchedSources.isEmpty
         return AlphaAskResult(
+            chatSessionID: nil,
+            chatTurnID: nil,
+            kind: .userAsk,
             question: question,
             scopeCaseID: scopeCaseID,
             scopeLabel: scopeLabel(for: scopeCaseID),
-            answerTitle: notFound ? "Ross could not find this in local matter files yet." : "Ross draft for advocate review",
-            answerSections: notFound ? ["Ross could not find this in local matter files yet."] : Array(sections.prefix(3)),
+            selectedDocumentTitles: selectedDocuments.map(\.title),
+            answerTitle: notFound ? "I could not find this in your case files." : "Ross drafted this from your files",
+            answerSections: notFound ? ["I could not find this in your case files."] : Array(sections.prefix(3)),
             caseFileSources: Array(matchedSources.prefix(3)),
             publicLawPreview: nil,
             publicLawResults: [],
-            statusNote: notFound ? "Web search off" : "Ross thread · local matter sources",
+            statusNote: notFound ? "Web Search is off" : selectedDocuments.isEmpty ? "Chat · local files" : "Chat · selected files only",
             needsReviewWarning: warnings.isEmpty ? nil : "\(warnings.count) item(s) still need review."
         )
     }
@@ -2328,7 +2865,7 @@ final class AlphaRossModel {
             askSelectedScopeCaseID = nil
         }
         askDrafts.removeValue(forKey: caseID)
-        askDocumentTitles.removeValue(forKey: caseID)
+        askSelectedDocumentIDs.removeValue(forKey: caseID)
         path.removeAll { route in
             switch route {
             case .caseWorkspace(let id), .documentList(let id), .askCase(let id):
@@ -2611,51 +3148,66 @@ private func sha256Hex(_ data: Data) -> String {
 
 struct AlphaRossRootView: View {
     @State private var model: AlphaRossModel
+    @State private var showingLaunchSplash = true
 
     init(initialModel: AlphaRossModel = AlphaRossModel()) {
         _model = State(initialValue: initialModel)
     }
 
     var body: some View {
-        NavigationStack(path: $model.path) {
-            Group {
-                switch model.persisted.onboardingStage {
-                case .onboarding:
-                    AlphaOnboardingScreen(model: model)
-                case .privateAIPack:
-                    AlphaPackSetupScreen(model: model)
-                case .completed:
-                    AlphaTabShell(model: model)
+        ZStack {
+            NavigationStack(path: $model.path) {
+                Group {
+                    switch model.persisted.onboardingStage {
+                    case .onboarding:
+                        AlphaOnboardingScreen(model: model)
+                    case .privateAIPack:
+                        AlphaPackSetupScreen(model: model)
+                    case .completed:
+                        AlphaTabShell(model: model)
+                    }
+                }
+                .background(Color.rossGroupedBackground.ignoresSafeArea())
+                .navigationDestination(for: AlphaRoute.self) { route in
+                    switch route {
+                    case .createCase:
+                        AlphaCreateCaseScreen(model: model)
+                    case .caseWorkspace(let caseId):
+                        AlphaCaseWorkspaceScreen(model: model, caseId: caseId)
+                    case .documentList(let caseId):
+                        AlphaDocumentListScreen(model: model, caseId: caseId)
+                    case .documentViewer(let caseId, let documentId, let page):
+                        AlphaDocumentViewerScreen(model: model, caseId: caseId, documentId: documentId, initialPage: page)
+                    case .captureImport:
+                        AlphaCaptureScreen(model: model)
+                    case .askRoss:
+                        AlphaAskRossScreen(model: model)
+                    case .askCase(let caseId):
+                        AlphaAskCaseScreen(model: model, caseId: caseId)
+                    case .exports(let caseId):
+                        AlphaExportsScreen(model: model, caseId: caseId)
+                    case .privacyLedger:
+                        AlphaPrivacyLedgerScreen(model: model)
+                    case .privateAISettings:
+                        AlphaPrivateAISettingsScreen(model: model)
+                    }
                 }
             }
-            .background(Color.rossGroupedBackground.ignoresSafeArea())
-            .navigationDestination(for: AlphaRoute.self) { route in
-                switch route {
-                case .createCase:
-                    AlphaCreateCaseScreen(model: model)
-                case .caseWorkspace(let caseId):
-                    AlphaCaseWorkspaceScreen(model: model, caseId: caseId)
-                case .documentList(let caseId):
-                    AlphaDocumentListScreen(model: model, caseId: caseId)
-                case .documentViewer(let caseId, let documentId, let page):
-                    AlphaDocumentViewerScreen(model: model, caseId: caseId, documentId: documentId, initialPage: page)
-                case .captureImport:
-                    AlphaCaptureScreen(model: model)
-                case .askRoss:
-                    AlphaAskRossScreen(model: model)
-                case .askCase(let caseId):
-                    AlphaAskCaseScreen(model: model, caseId: caseId)
-                case .exports(let caseId):
-                    AlphaExportsScreen(model: model, caseId: caseId)
-                case .privacyLedger:
-                    AlphaPrivacyLedgerScreen(model: model)
-                case .privateAISettings:
-                    AlphaPrivateAISettingsScreen(model: model)
-                }
+
+            if showingLaunchSplash {
+                RossLaunchSplashView()
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .zIndex(1)
             }
         }
         .task {
             await model.loadIfNeeded()
+        }
+        .task {
+            try? await Task.sleep(for: .seconds(1.15))
+            withAnimation(.spring(response: 0.75, dampingFraction: 0.92)) {
+                showingLaunchSplash = false
+            }
         }
     }
 }
@@ -2666,12 +3218,14 @@ private struct AlphaOnboardingScreen: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                RossHeroCard(
+                AlphaInlineHeader(
                     eyebrow: "Ross",
                     title: "A private case workbench for daily legal work",
-                    detail: "Choose the private assistant for this device, open Today, and start the first matter when you are ready."
-                ) {
-                    VStack(alignment: .leading, spacing: 10) {
+                    detail: "Ross will choose the right private assistant for this phone, open Today, and help you start the first matter when you are ready."
+                )
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
                         RossInfoPill(title: "Case files stay on this device", systemImage: "lock")
                         RossInfoPill(title: "Source-backed drafts", systemImage: "paperclip")
                         RossInfoPill(title: "Public-law search needs approval", systemImage: "shield")
@@ -2679,8 +3233,8 @@ private struct AlphaOnboardingScreen: View {
                 }
 
                 RossSectionCard {
-                    VStack(spacing: 12) {
-                        RossBulletRow(text: "Choose the private assistant for this device.")
+                    VStack(alignment: .leading, spacing: 12) {
+                        RossBulletRow(text: "Ross chooses the private assistant best suited to this phone.")
                         RossBulletRow(text: "Open Today after setup finishes or runs in the background.")
                         RossBulletRow(text: "Start the first matter from Home when you are ready.")
                         Button("Continue") {
@@ -2697,7 +3251,6 @@ private struct AlphaOnboardingScreen: View {
 
 private struct AlphaPackSetupScreen: View {
     @Bindable var model: AlphaRossModel
-    @State private var infoTier: AlphaCapabilityTier?
 
     var body: some View {
         GeometryReader { proxy in
@@ -2706,28 +3259,40 @@ private struct AlphaPackSetupScreen: View {
                     VStack(alignment: .leading, spacing: 14) {
                         AlphaInlineHeader(
                             eyebrow: "Assistant setup",
-                            title: "Choose the private assistant for this device",
-                            detail: "Setup runs in the background after you continue."
+                            title: "Ross picked the right private assistant for this phone",
+                            detail: "Setup runs in the background after you continue, and Ross can keep improving the matter workspace while it finishes."
                         )
                     }
 
-                    VStack(spacing: 10) {
-                        ForEach(AlphaPackOffer.catalog) { offer in
-                            AlphaPackTierSelectionBar(
-                                tier: offer.tier,
-                                isSelected: model.selectedTier == offer.tier,
-                                onSelect: {
-                                    model.selectedTier = offer.tier
-                                },
-                                onInfo: {
-                                    infoTier = offer.tier
-                                }
-                            )
+                    RossSectionCard {
+                        VStack(alignment: .leading, spacing: 14) {
+                            HStack(spacing: 10) {
+                                RossGlassIconView(.badgeSparkle, variant: .accent, size: 24, fallbackSystemImage: "checkmark.shield.fill")
+                                Text("Recommended for this phone")
+                                    .font(.caption.weight(.bold))
+                                    .tracking(1)
+                                    .foregroundStyle(Color.rossAccent)
+                            }
+
+                            Text(model.recommendedAssistantTitle)
+                                .font(.title3.weight(.semibold))
+                                .foregroundStyle(Color.rossInk)
+
+                            Text(model.recommendedAssistantDetail)
+                                .font(.subheadline)
+                                .foregroundStyle(Color.rossInk.opacity(0.72))
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            VStack(alignment: .leading, spacing: 10) {
+                                RossBulletRow(text: "Matter creation and document import stay local to this device.")
+                                RossBulletRow(text: "Matter chats stay scoped to the selected case and its files.")
+                                RossBulletRow(text: model.recommendedAssistantSetupNote)
+                            }
                         }
                     }
 
                     AlphaAssistantActivityStrip(
-                        title: "\(model.selectedTier.title) keeps preparing in the background",
+                        title: "Ross keeps preparing this assistant in the background",
                         detail: "Settings shows a small amber light while Ross finishes setup.",
                         statusLabel: "In Settings",
                         tint: .orange
@@ -2764,16 +3329,8 @@ private struct AlphaPackSetupScreen: View {
                 .ignoresSafeArea()
             )
         }
-        .sheet(item: $infoTier) { tier in
-            AlphaPackTierInfoSheet(
-                tier: tier,
-                isSelected: model.selectedTier == tier,
-                onUseTier: {
-                    model.selectedTier = tier
-                }
-            )
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.hidden)
+        .onAppear {
+            model.selectedTier = model.recommendedOnDeviceTier()
         }
     }
 
@@ -2806,10 +3363,12 @@ private struct AlphaTabShell: View {
                         .padding(.bottom, 2)
                 }
                 .safeAreaInset(edge: .bottom, spacing: 0) {
-                    AlphaRootAskDock(model: model)
-                        .padding(.horizontal, 12)
-                        .padding(.top, 6)
-                        .padding(.bottom, 6)
+                    if model.persisted.selectedTab.normalizedForLawyerShell != .settings {
+                        AlphaRootAskDock(model: model)
+                            .padding(.horizontal, 12)
+                            .padding(.top, 6)
+                            .padding(.bottom, 6)
+                    }
                 }
 
                 if model.workspaceDrawerPresented {
@@ -2966,19 +3525,44 @@ private struct AlphaRootWorkspaceTabButton: View {
     }
 }
 
+private enum AlphaDockImportKind {
+    case file
+    case image
+
+    var allowedTypes: [UTType] {
+        switch self {
+        case .file:
+            return [.pdf, .plainText]
+        case .image:
+            return [.image]
+        }
+    }
+}
+
 private struct AlphaRootAskDock: View {
     @Bindable var model: AlphaRossModel
     let fixedScopeCaseID: UUID?
+    let fixedDocumentIDs: Set<UUID>
     @State private var showingTools = false
     @State private var dismissedInlineQuestion: String?
+    @State private var pendingImportKind: AlphaDockImportKind?
+    @State private var expandedComposer = false
 
-    init(model: AlphaRossModel, fixedScopeCaseID: UUID? = nil) {
+    init(model: AlphaRossModel, fixedScopeCaseID: UUID? = nil, fixedDocumentIDs: Set<UUID> = []) {
         self.model = model
         self.fixedScopeCaseID = fixedScopeCaseID
+        self.fixedDocumentIDs = fixedDocumentIDs
     }
 
     private var activeScopeCaseID: UUID? {
         fixedScopeCaseID ?? model.askSelectedScopeCaseID
+    }
+
+    private var activeSelectedDocuments: [AlphaAskDocumentOption] {
+        if fixedDocumentIDs.isEmpty {
+            return model.selectedAskDocuments(for: activeScopeCaseID)
+        }
+        return model.availableAskDocuments(for: activeScopeCaseID).filter { fixedDocumentIDs.contains($0.id) }
     }
 
     private var draftBinding: Binding<String> {
@@ -2991,14 +3575,40 @@ private struct AlphaRootAskDock: View {
     private var inlineResult: AlphaAskResult? {
         guard let latest = model.latestAskResult else { return nil }
         guard latest.scopeCaseID == activeScopeCaseID else { return nil }
+        if !fixedDocumentIDs.isEmpty {
+            let latestTitles = Set(latest.selectedDocumentTitles)
+            let currentTitles = Set(activeSelectedDocuments.map(\.title))
+            guard latestTitles == currentTitles else { return nil }
+        }
         return dismissedInlineQuestion == latest.question ? nil : latest
+    }
+
+    private var selectionSubtitle: String? {
+        if fixedDocumentIDs.isEmpty {
+            return model.askSelectionSubtitle(for: activeScopeCaseID)
+        }
+        let selected = activeSelectedDocuments
+        guard !selected.isEmpty else { return nil }
+        if selected.count == 1, let first = selected.first {
+            return first.isShared ? "\(first.title) · shared file" : first.title
+        }
+        return "\(selected.count) files selected"
     }
 
     private func send() {
         let question = model.askDraft(for: activeScopeCaseID).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !question.isEmpty else { return }
+        if !fixedDocumentIDs.isEmpty {
+            model.setSelectedAskDocumentIDs(fixedDocumentIDs, for: activeScopeCaseID)
+        }
         dismissedInlineQuestion = nil
         model.submitAsk(question: question, scopeCaseID: activeScopeCaseID, webEnabled: model.askWebEnabled)
+    }
+
+    private func handleImport(_ result: Result<[URL], any Error>) {
+        defer { pendingImportKind = nil }
+        guard case let .success(urls) = result, let url = urls.first else { return }
+        Task { await model.importDocument(caseId: activeScopeCaseID, from: url) }
     }
 
     var body: some View {
@@ -3007,7 +3617,13 @@ private struct AlphaRootAskDock: View {
                 AlphaInlineAskResponseCard(
                     result: inlineResult,
                     onOpenSource: model.openSourceRef,
-                    onOpenConversation: { model.openAsk(scopeCaseID: activeScopeCaseID) },
+                    onOpenConversation: {
+                        if fixedDocumentIDs.count == 1, let documentID = fixedDocumentIDs.first {
+                            model.openAsk(scopeCaseID: activeScopeCaseID, documentID: documentID)
+                        } else {
+                            model.openAsk(scopeCaseID: activeScopeCaseID)
+                        }
+                    },
                     onClose: { dismissedInlineQuestion = inlineResult.question }
                 )
             }
@@ -3016,7 +3632,7 @@ private struct AlphaRootAskDock: View {
                 HStack(spacing: 8) {
                     if fixedScopeCaseID == nil {
                         Menu {
-                            Button("All matters") {
+                            Button("All work") {
                                 model.askSelectedScopeCaseID = nil
                             }
                             ForEach(model.cases) { caseMatter in
@@ -3042,9 +3658,25 @@ private struct AlphaRootAskDock: View {
                     }
 
                     if model.askWebEnabled {
-                        Label("Web Search", systemImage: "globe")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(Color.white.opacity(0.72))
+                        HStack(spacing: 4) {
+                            RossGlassIconView(.earth, variant: .highlight, size: 14, fallbackSystemImage: "globe")
+                            Text("Web Search")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(Color.white.opacity(0.72))
+                        }
+                    }
+                }
+
+                if !activeSelectedDocuments.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(activeSelectedDocuments) { document in
+                                AlphaAskSelectionChip(
+                                    title: document.title,
+                                    isShared: document.isShared
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -3052,21 +3684,31 @@ private struct AlphaRootAskDock: View {
                     Button {
                         showingTools = true
                     } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(Color.white.opacity(0.96))
+                        RossGlassIconView(.badgeSparkle, variant: .neutral, size: 18, fallbackSystemImage: "plus")
                             .frame(width: 34, height: 34)
                             .background(Color.white.opacity(0.08), in: Circle())
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Ask Ross tools")
 
-                    TextField("Ask Ross about today", text: draftBinding, axis: .vertical)
-                        .lineLimit(1...2)
+                    TextField("Ask Ross about dates, files, or next steps", text: draftBinding, axis: .vertical)
+                        .lineLimit(expandedComposer ? 4...8 : 1...2)
                         .textFieldStyle(.plain)
                         .font(.footnote)
                         .foregroundStyle(Color.white.opacity(0.88))
                         .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Button {
+                        expandedComposer.toggle()
+                    } label: {
+                        Image(systemName: expandedComposer ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(Color.white.opacity(0.82))
+                            .frame(width: 28, height: 28)
+                            .background(Color.white.opacity(0.08), in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(expandedComposer ? "Collapse composer" : "Expand composer")
 
                     Button(action: send) {
                         Image(systemName: "arrow.up")
@@ -3080,16 +3722,24 @@ private struct AlphaRootAskDock: View {
                     .opacity(model.askDraft(for: activeScopeCaseID).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.42 : 1)
 
                     Button {
-                        model.openAsk(scopeCaseID: activeScopeCaseID)
+                        if fixedDocumentIDs.count == 1, let documentID = fixedDocumentIDs.first {
+                            model.openAsk(scopeCaseID: activeScopeCaseID, documentID: documentID)
+                        } else {
+                            model.openAsk(scopeCaseID: activeScopeCaseID)
+                        }
                     } label: {
-                        Image(systemName: "bubble.left.and.text.bubble.right.fill")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(Color.white.opacity(0.92))
+                        RossGlassIconView(.userMsg, variant: .accent, size: 20, fallbackSystemImage: "bubble.left.and.text.bubble.right.fill")
                             .frame(width: 34, height: 34)
                             .background(Color.white.opacity(0.08), in: Circle())
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Open Ask Ross conversation")
+                }
+
+                if let selectionSubtitle, fixedDocumentIDs.isEmpty {
+                    Text(selectionSubtitle)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(Color.white.opacity(0.6))
                 }
 
                 if model.askWebEnabled {
@@ -3125,10 +3775,25 @@ private struct AlphaRootAskDock: View {
         }
         .shadow(color: Color.black.opacity(0.16), radius: 16, x: 0, y: 8)
         .sheet(isPresented: $showingTools) {
-            AlphaRootAskToolsSheet(model: model, fixedScopeCaseID: fixedScopeCaseID)
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.hidden)
+            AlphaRootAskToolsSheet(
+                model: model,
+                fixedScopeCaseID: fixedScopeCaseID,
+                fixedDocumentIDs: fixedDocumentIDs,
+                onAddFile: { pendingImportKind = .file },
+                onAddImage: { pendingImportKind = .image }
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.hidden)
         }
+        .fileImporter(
+            isPresented: Binding(
+                get: { pendingImportKind != nil },
+                set: { if !$0 { pendingImportKind = nil } }
+            ),
+            allowedContentTypes: pendingImportKind?.allowedTypes ?? [.pdf, .plainText, .image],
+            allowsMultipleSelection: false,
+            onCompletion: handleImport
+        )
         .sheet(isPresented: Binding(
             get: { model.publicLawPreview != nil && model.pendingPublicLawQuestion != nil },
             set: { if !$0 { model.cancelPendingPublicLawSearch() } }
@@ -3206,7 +3871,7 @@ private struct AlphaInlineAskResponseCard: View {
                         .foregroundStyle(Color.rossAccent)
                 }
                 Spacer(minLength: 8)
-                Button("Open thread", action: onOpenConversation)
+                Button("Open chat", action: onOpenConversation)
                     .font(.caption.weight(.semibold))
             }
         }
@@ -3243,10 +3908,43 @@ private struct AlphaAskScopePill: View {
     }
 }
 
+private struct AlphaAskSelectionChip: View {
+    let title: String
+    let isShared: Bool
+
+    var body: some View {
+        HStack(spacing: 6) {
+            if isShared {
+                RossGlassIconView(.earth, variant: .highlight, size: 12, fallbackSystemImage: "globe")
+            } else {
+                RossGlassIconView(.folder, variant: .neutral, size: 12, fallbackSystemImage: "folder.fill")
+            }
+            Text(title)
+                .lineLimit(1)
+        }
+        .font(.caption2.weight(.semibold))
+        .foregroundStyle(Color.white.opacity(0.76))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(Color.white.opacity(0.08), in: Capsule())
+    }
+}
+
 private struct AlphaRootAskToolsSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var model: AlphaRossModel
     let fixedScopeCaseID: UUID?
+    let fixedDocumentIDs: Set<UUID>
+    let onAddFile: () -> Void
+    let onAddImage: () -> Void
+
+    private var activeScopeCaseID: UUID? {
+        fixedScopeCaseID ?? model.askSelectedScopeCaseID
+    }
+
+    private var availableDocuments: [AlphaAskDocumentOption] {
+        model.availableAskDocuments(for: activeScopeCaseID)
+    }
 
     var body: some View {
         ScrollView {
@@ -3260,15 +3958,12 @@ private struct AlphaRootAskToolsSheet: View {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(spacing: 10) {
-                            Image(systemName: "bubble.left.and.text.bubble.right.fill")
-                                .symbolRenderingMode(.hierarchical)
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundStyle(Color.rossAccent)
+                            RossGlassIconView(.userMsg, variant: .accent, size: 22, fallbackSystemImage: "bubble.left.and.text.bubble.right.fill")
                             Text("Ask Ross")
                                 .font(.title3.weight(.semibold))
                                 .foregroundStyle(Color.rossInk)
                         }
-                        Text("Choose the matter, add a file, or decide if Ross can use Web Search.")
+                        Text("Choose where Ross should work, add a file or image, and decide if Web Search can help.")
                             .font(.subheadline)
                             .foregroundStyle(Color.rossInk.opacity(0.66))
                             .fixedSize(horizontal: false, vertical: true)
@@ -3292,18 +3987,30 @@ private struct AlphaRootAskToolsSheet: View {
                 VStack(spacing: 10) {
                     AlphaRootAskToolRow(
                         title: "Add file",
-                        detail: fixedScopeCaseID == nil
-                            ? "Import a PDF, image, or note into this device."
-                            : "Open this matter's file list and import another document.",
+                        detail: activeScopeCaseID == nil
+                            ? "Add a PDF or note to shared files."
+                            : "Add a PDF or note to this matter.",
                         accentLabel: "Open",
-                        iconName: "doc.badge.plus"
+                        icon: .fileUpload,
+                        variant: .accent,
+                        fallbackSystemImage: "doc.badge.plus"
                     ) {
                         dismiss()
-                        if let fixedScopeCaseID {
-                            model.path.append(.documentList(fixedScopeCaseID))
-                        } else {
-                            model.path.append(.captureImport)
-                        }
+                        onAddFile()
+                    }
+
+                    AlphaRootAskToolRow(
+                        title: "Add image",
+                        detail: activeScopeCaseID == nil
+                            ? "Add a photo, scan, or screenshot to shared files."
+                            : "Add a photo, scan, or screenshot to this matter.",
+                        accentLabel: "Open",
+                        icon: .files,
+                        variant: .neutral,
+                        fallbackSystemImage: "photo.stack"
+                    ) {
+                        dismiss()
+                        onAddImage()
                     }
 
                     AlphaRootAskToolRow(
@@ -3312,7 +4019,9 @@ private struct AlphaRootAskToolsSheet: View {
                             ? "On. Ross only sends a sanitized public-law query."
                             : "Off. Ross stays fully local until you turn it on.",
                         accentLabel: model.askWebEnabled ? "On" : "Off",
-                        iconName: model.askWebEnabled ? "globe.badge.chevron.backward" : "globe.slash"
+                        icon: .earth,
+                        variant: model.askWebEnabled ? .highlight : .neutral,
+                        fallbackSystemImage: model.askWebEnabled ? "globe.badge.chevron.backward" : "globe.slash"
                     ) {
                         model.askWebEnabled.toggle()
                     }
@@ -3320,7 +4029,7 @@ private struct AlphaRootAskToolsSheet: View {
 
                 if let fixedScopeCaseID {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("This matter")
+                        Text(fixedScopeCaseID == alphaSharedWorkspaceID ? "This space" : "This matter")
                             .font(.caption.weight(.bold))
                             .tracking(1.2)
                             .foregroundStyle(Color.rossInk.opacity(0.64))
@@ -3328,7 +4037,9 @@ private struct AlphaRootAskToolsSheet: View {
                         AlphaRootAskScopeRow(
                             title: model.scopeLabel(for: fixedScopeCaseID),
                             isSelected: true,
-                            iconName: "folder.fill",
+                            icon: .folder,
+                            variant: .neutral,
+                            fallbackSystemImage: "folder.fill",
                             action: { }
                         )
                     }
@@ -3340,11 +4051,12 @@ private struct AlphaRootAskToolsSheet: View {
                             .foregroundStyle(Color.rossInk.opacity(0.64))
 
                         AlphaRootAskScopeRow(
-                            title: "All matters",
+                            title: "All work",
                             isSelected: model.askSelectedScopeCaseID == nil,
-                            iconName: "square.stack.3d.up.fill"
+                            icon: .files,
+                            variant: .neutral,
+                            fallbackSystemImage: "square.stack.3d.up.fill"
                         ) {
-                            model.setAskDocumentTitle(nil, for: nil)
                             model.askSelectedScopeCaseID = nil
                             dismiss()
                         }
@@ -3353,11 +4065,42 @@ private struct AlphaRootAskToolsSheet: View {
                             AlphaRootAskScopeRow(
                                 title: caseMatter.title,
                                 isSelected: model.askSelectedScopeCaseID == caseMatter.id,
-                                iconName: "folder.badge.gearshape"
+                                icon: .folder,
+                                variant: .neutral,
+                                fallbackSystemImage: "folder.fill"
                             ) {
-                                model.setAskDocumentTitle(nil, for: caseMatter.id)
                                 model.askSelectedScopeCaseID = caseMatter.id
                                 dismiss()
+                            }
+                        }
+                    }
+                }
+
+                if fixedDocumentIDs.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Use uploaded files")
+                            .font(.caption.weight(.bold))
+                            .tracking(1.2)
+                            .foregroundStyle(Color.rossInk.opacity(0.64))
+
+                        if availableDocuments.isEmpty {
+                            Text("No files are ready here yet.")
+                                .font(.subheadline)
+                                .foregroundStyle(Color.rossInk.opacity(0.62))
+                        }
+
+                        ForEach(availableDocuments) { document in
+                            AlphaRootAskDocumentRow(
+                                title: document.title,
+                                detail: document.isShared
+                                    ? "Shared file"
+                                    : (activeScopeCaseID == nil ? document.caseTitle : "This matter"),
+                                isSelected: model.selectedAskDocumentIDs(for: activeScopeCaseID).contains(document.id),
+                                icon: alphaDocumentGlassIcon(document.kind).0,
+                                variant: alphaDocumentGlassIcon(document.kind).1,
+                                fallbackSystemImage: alphaDocumentGlassIcon(document.kind).2
+                            ) {
+                                model.toggleAskDocumentSelection(document.id, for: activeScopeCaseID)
                             }
                         }
                     }
@@ -3368,27 +4111,66 @@ private struct AlphaRootAskToolsSheet: View {
     }
 }
 
-private struct AlphaRootAskToolRow: View {
+private struct AlphaRootAskDocumentRow: View {
     let title: String
     let detail: String
-    let accentLabel: String
-    let iconName: String
+    let isSelected: Bool
+    let icon: RossGlassIconName
+    let variant: RossGlassIconVariant
+    let fallbackSystemImage: String
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 14) {
-                // Nucleo-style icon cell
-                Image(systemName: iconName)
-                    .symbolRenderingMode(.hierarchical)
-                    .font(.system(size: 22, weight: .medium))
-                    .foregroundStyle(Color.rossAccent)
-                    .frame(width: 46, height: 46)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(Color.white.opacity(0.12), lineWidth: 1)
-                    }
+            HStack(spacing: 12) {
+                RossGlassIconView(icon, variant: variant, size: 20, fallbackSystemImage: fallbackSystemImage)
+                    .frame(width: 28, height: 28)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.rossInk)
+                        .multilineTextAlignment(.leading)
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundStyle(Color.rossInk.opacity(0.62))
+                }
+
+                Spacer(minLength: 8)
+
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(Color.rossAccent)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(Color.rossCardBackground)
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(isSelected ? Color.rossAccent.opacity(0.36) : Color.rossBorder, lineWidth: 1)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct AlphaRootAskToolRow: View {
+    let title: String
+    let detail: String
+    let accentLabel: String
+    let icon: RossGlassIconName
+    let variant: RossGlassIconVariant
+    let fallbackSystemImage: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                RossGlassIconView(icon, variant: variant, size: 28, fallbackSystemImage: fallbackSystemImage)
+                    .frame(width: 30, height: 30)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
@@ -3425,18 +4207,16 @@ private struct AlphaRootAskToolRow: View {
 private struct AlphaRootAskScopeRow: View {
     let title: String
     let isSelected: Bool
-    let iconName: String
+    let icon: RossGlassIconName
+    let variant: RossGlassIconVariant
+    let fallbackSystemImage: String
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                Image(systemName: iconName)
-                    .symbolRenderingMode(.hierarchical)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(isSelected ? Color.rossAccent : Color.rossInk.opacity(0.5))
-                    .frame(width: 32, height: 32)
-                    .background(isSelected ? Color.rossAccent.opacity(0.12) : Color.clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                RossGlassIconView(icon, variant: variant, size: 24, fallbackSystemImage: fallbackSystemImage)
+                    .frame(width: 28, height: 28)
 
                 Text(title)
                     .font(.subheadline.weight(.semibold))
@@ -3484,8 +4264,8 @@ private struct AlphaWorkspaceDrawerButton: View {
 
 private struct AlphaWorkspaceDrawerPanel: View {
     @Bindable var model: AlphaRossModel
-    @State private var mattersExpanded = true
-    @State private var recentFilesExpanded = true
+    @State private var expandedMatterIDs: Set<UUID> = []
+    @State private var recentFilesExpanded = false
     @State private var renameTarget: AlphaCaseMatter?
     @State private var renameDraft = ""
     @State private var deleteTarget: AlphaCaseMatter?
@@ -3505,6 +4285,29 @@ private struct AlphaWorkspaceDrawerPanel: View {
         model.persisted.selectedTab = .cases
         model.focusCase(caseId)
         model.path.append(.caseWorkspace(caseId))
+    }
+
+    private func openChat(caseId: UUID, sessionId: UUID) {
+        closeDrawer()
+        model.persisted.selectedTab = .cases
+        model.setActiveChatSession(sessionId, for: caseId)
+        model.path.append(.askCase(caseId))
+    }
+
+    private func toggleThreads(for caseId: UUID) {
+        withAnimation(.snappy(duration: 0.2)) {
+            if expandedMatterIDs.contains(caseId) {
+                expandedMatterIDs.remove(caseId)
+            } else {
+                expandedMatterIDs.insert(caseId)
+            }
+        }
+    }
+
+    private func startNewChat(for caseId: UUID) {
+        closeDrawer()
+        model.persisted.selectedTab = .cases
+        model.startNewChat(for: caseId)
     }
 
     private func openDocument(caseId: UUID, documentId: UUID) {
@@ -3541,88 +4344,89 @@ private struct AlphaWorkspaceDrawerPanel: View {
             }
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    RossSectionCard {
-                        VStack(alignment: .leading, spacing: mattersExpanded ? 12 : 0) {
-                            HStack(spacing: 12) {
-                                Button {
-                                    withAnimation(.snappy(duration: 0.2)) {
-                                        mattersExpanded.toggle()
+                VStack(alignment: .leading, spacing: 18) {
+                    HStack(spacing: 12) {
+                        Text("Matters")
+                            .font(.rossSerifHeadline())
+                            .foregroundStyle(Color.rossInk)
+
+                        Spacer(minLength: 0)
+
+                        AlphaGlassPlusButton(action: createMatter)
+                    }
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        if model.cases.isEmpty {
+                            Text("No matters yet. Create the first matter and Ross will keep it here.")
+                                .font(.footnote)
+                                .foregroundStyle(Color.rossInk.opacity(0.7))
+                        } else {
+                            ForEach(Array(model.cases.enumerated()), id: \.element.id) { index, caseMatter in
+                                VStack(spacing: 0) {
+                                    AlphaWorkspaceDrawerMatterEntry(
+                                        caseMatter: caseMatter,
+                                        sessions: model.chatSessions(for: caseMatter.id),
+                                        activeSessionID: model.activeChatSessionID(for: caseMatter.id),
+                                        isSelected: model.selectedCaseID == caseMatter.id,
+                                        isExpanded: expandedMatterIDs.contains(caseMatter.id),
+                                        openCase: { openCase(caseMatter.id) },
+                                        toggleThreads: { toggleThreads(for: caseMatter.id) },
+                                        startNewChat: { startNewChat(for: caseMatter.id) },
+                                        openChat: { sessionId in openChat(caseId: caseMatter.id, sessionId: sessionId) },
+                                        model: model
+                                    )
+                                    .contextMenu {
+                                        AlphaMatterContextMenu(
+                                            model: model,
+                                            caseMatter: caseMatter,
+                                            renameTarget: $renameTarget,
+                                            renameDraft: $renameDraft,
+                                            deleteTarget: $deleteTarget
+                                        )
                                     }
-                                } label: {
-                                    HStack(spacing: 8) {
-                                        Text("Matters")
-                                            .font(.rossSerifHeadline())
-                                            .foregroundStyle(Color.rossInk)
 
-                                        Image(systemName: mattersExpanded ? "chevron.up" : "chevron.down")
-                                            .font(.caption.weight(.semibold))
-                                            .foregroundStyle(Color.rossInk.opacity(0.4))
-                                    }
-                                }
-                                .buttonStyle(.plain)
-
-                                Spacer(minLength: 0)
-
-                                AlphaGlassPlusButton(action: createMatter)
-                            }
-
-                            if mattersExpanded {
-                                if model.cases.isEmpty {
-                                    Text("No matters yet. Create the first matter and Ross will keep it here.")
-                                        .font(.footnote)
-                                        .foregroundStyle(Color.rossInk.opacity(0.7))
-                                } else {
-                                    ForEach(Array(model.cases.prefix(6))) { caseMatter in
-                                        Button {
-                                            openCase(caseMatter.id)
-                                        } label: {
-                                            AlphaWorkspaceDrawerMatterRow(caseMatter: caseMatter, model: model)
-                                        }
-                                        .buttonStyle(.plain)
-                                        .contextMenu {
-                                            AlphaMatterContextMenu(
-                                                model: model,
-                                                caseMatter: caseMatter,
-                                                renameTarget: $renameTarget,
-                                                renameDraft: $renameDraft,
-                                                deleteTarget: $deleteTarget
-                                            )
-                                        }
+                                    if index < min(model.cases.count, 6) - 1 {
+                                        Divider()
+                                            .padding(.leading, 50)
                                     }
                                 }
                             }
                         }
                     }
+                    .onAppear {
+                        guard expandedMatterIDs.isEmpty else { return }
+                        expandedMatterIDs = Set(
+                            model.cases.compactMap { caseMatter in
+                                if caseMatter.id == model.selectedCaseID || !caseMatter.chatSessions.isEmpty {
+                                    return caseMatter.id
+                                }
+                                return nil
+                            }
+                        )
+                    }
 
                     if !recentDocuments.isEmpty {
-                        RossSectionCard {
-                            VStack(alignment: .leading, spacing: recentFilesExpanded ? 12 : 0) {
-                                Button {
-                                    withAnimation(.snappy(duration: 0.2)) {
-                                        recentFilesExpanded.toggle()
-                                    }
-                                } label: {
-                                    HStack(spacing: 8) {
-                                        Text("Recent files")
-                                            .font(.rossSerifHeadline())
-                                            .foregroundStyle(Color.rossInk)
-
-                                        Image(systemName: recentFilesExpanded ? "chevron.up" : "chevron.down")
-                                            .font(.caption.weight(.semibold))
-                                            .foregroundStyle(Color.rossInk.opacity(0.4))
-                                    }
+                        AlphaWorkspaceDrawerSection(
+                            title: "Recent files",
+                            isExpanded: recentFilesExpanded,
+                            toggle: {
+                                withAnimation(.snappy(duration: 0.2)) {
+                                    recentFilesExpanded.toggle()
                                 }
-                                .buttonStyle(.plain)
+                            }
+                        ) {
+                            ForEach(Array(recentDocuments.prefix(5).enumerated()), id: \.element.document.id) { index, entry in
+                                VStack(spacing: 0) {
+                                    Button {
+                                        openDocument(caseId: entry.caseId, documentId: entry.document.id)
+                                    } label: {
+                                        AlphaWorkspaceDrawerDocumentRow(entry: entry)
+                                    }
+                                    .buttonStyle(.plain)
 
-                                if recentFilesExpanded {
-                                    ForEach(Array(recentDocuments.prefix(5))) { entry in
-                                        Button {
-                                            openDocument(caseId: entry.caseId, documentId: entry.document.id)
-                                        } label: {
-                                            AlphaWorkspaceDrawerDocumentRow(entry: entry)
-                                        }
-                                        .buttonStyle(.plain)
+                                    if index < min(recentDocuments.count, 5) - 1 {
+                                        Divider()
+                                            .padding(.leading, 40)
                                     }
                                 }
                             }
@@ -3634,7 +4438,6 @@ private struct AlphaWorkspaceDrawerPanel: View {
 
             AlphaWorkspaceDrawerFooterButton(
                 title: "Settings",
-                systemImage: "gearshape",
                 isSelected: model.persisted.selectedTab == .settings,
                 action: openSettings
             )
@@ -3682,19 +4485,66 @@ private struct AlphaWorkspaceDrawerPanel: View {
     }
 }
 
+private struct AlphaWorkspaceDrawerSection<Content: View>: View {
+    let title: String
+    let isExpanded: Bool
+    let toggle: () -> Void
+    let trailing: AnyView?
+    let content: Content
+
+    init(
+        title: String,
+        isExpanded: Bool,
+        toggle: @escaping () -> Void,
+        trailing: AnyView? = nil,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.title = title
+        self.isExpanded = isExpanded
+        self.toggle = toggle
+        self.trailing = trailing
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: isExpanded ? 12 : 0) {
+            HStack(spacing: 12) {
+                Button(action: toggle) {
+                    HStack(spacing: 8) {
+                        Text(title)
+                            .font(.rossSerifHeadline())
+                            .foregroundStyle(Color.rossInk)
+
+                        Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.rossInk.opacity(0.4))
+                    }
+                }
+                .buttonStyle(.plain)
+
+                Spacer(minLength: 0)
+
+                if let trailing {
+                    trailing
+                }
+            }
+
+            if isExpanded {
+                content
+            }
+        }
+    }
+}
+
 private struct AlphaWorkspaceDrawerFooterButton: View {
     let title: String
-    let systemImage: String
     let isSelected: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                Image(systemName: isSelected ? "gearshape.fill" : systemImage)
-                    .symbolRenderingMode(.hierarchical)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(isSelected ? Color.rossAccent : Color.rossInk.opacity(0.72))
+                RossGlassIconView(.gearKeyhole, variant: isSelected ? .accent : .neutral, size: 22, fallbackSystemImage: isSelected ? "gearshape.fill" : "gearshape")
 
                 Text(title)
                     .font(.subheadline.weight(.semibold))
@@ -3707,21 +4557,91 @@ private struct AlphaWorkspaceDrawerFooterButton: View {
                     .foregroundStyle(Color.rossInk.opacity(0.34))
             }
             .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(isSelected ? Color.rossAccent.opacity(0.08) : Color.rossCardBackground)
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(isSelected ? Color.rossAccent.opacity(0.18) : Color.rossBorder, lineWidth: 1)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .padding(.vertical, 10)
+            .background(isSelected ? Color.rossAccent.opacity(0.08) : Color.clear, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)
     }
 }
 
+private struct AlphaWorkspaceDrawerMatterEntry: View {
+    let caseMatter: AlphaCaseMatter
+    let sessions: [AlphaChatSession]
+    let activeSessionID: UUID?
+    let isSelected: Bool
+    let isExpanded: Bool
+    let openCase: () -> Void
+    let toggleThreads: () -> Void
+    let startNewChat: () -> Void
+    let openChat: (UUID) -> Void
+    @Bindable var model: AlphaRossModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Button(action: openCase) {
+                    AlphaWorkspaceDrawerMatterRow(
+                        caseMatter: caseMatter,
+                        openTaskCount: model.openTaskCount(for: caseMatter.id),
+                        isSelected: isSelected
+                    )
+                }
+                .buttonStyle(.plain)
+
+                Button(action: startNewChat) {
+                    Image(systemName: "square.and.pencil")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.rossAccent)
+                        .frame(width: 28, height: 28)
+                        .background(Color.rossAccent.opacity(0.1), in: Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Start a new chat for \(caseMatter.title)")
+
+                Button(action: toggleThreads) {
+                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(Color.rossInk.opacity(0.56))
+                        .frame(width: 28, height: 28)
+                        .background(Color.rossSecondaryGroupedBackground.opacity(0.9), in: Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(isExpanded ? "Collapse chats" : "Expand chats")
+            }
+
+            if isExpanded {
+                VStack(alignment: .leading, spacing: 6) {
+                    if sessions.isEmpty {
+                        Text("No chats yet. Start one for this matter.")
+                            .font(.caption)
+                            .foregroundStyle(Color.rossInk.opacity(0.58))
+                            .padding(.leading, 50)
+                            .padding(.top, 2)
+                    } else {
+                        ForEach(sessions) { session in
+                            Button {
+                                openChat(session.id)
+                            } label: {
+                                AlphaWorkspaceDrawerChatRow(
+                                    title: model.chatSessionTitle(session),
+                                    subtitle: model.chatSessionSubtitle(session),
+                                    isSelected: activeSessionID == session.id
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+                .padding(.leading, 50)
+            }
+        }
+    }
+}
+
 private struct AlphaWorkspaceDrawerMatterRow: View {
     let caseMatter: AlphaCaseMatter
-    @Bindable var model: AlphaRossModel
+    let openTaskCount: Int
+    let isSelected: Bool
 
     var body: some View {
         HStack(spacing: 12) {
@@ -3732,7 +4652,7 @@ private struct AlphaWorkspaceDrawerMatterRow: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color.rossInk)
                     .lineLimit(1)
-                Text("\(model.openTaskCount(for: caseMatter.id)) open tasks • \(caseMatter.documents.count) docs")
+                Text("\(openTaskCount) open tasks • \(caseMatter.documents.count) docs")
                     .font(.caption)
                     .foregroundStyle(Color.rossInk.opacity(0.62))
             }
@@ -3746,14 +4666,46 @@ private struct AlphaWorkspaceDrawerMatterRow: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background(Color.rossCardBackground)
-        .overlay {
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.rossBorder, lineWidth: 1)
+                .fill(isSelected ? Color.rossAccent.opacity(0.08) : Color.clear)
+        )
+    }
+}
+
+private struct AlphaWorkspaceDrawerChatRow: View {
+    let title: String
+    let subtitle: String
+    let isSelected: Bool
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Circle()
+                .fill(isSelected ? Color.rossAccent : Color.rossInk.opacity(0.24))
+                .frame(width: 6, height: 6)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.rossInk)
+                    .lineLimit(1)
+
+                Text(subtitle)
+                    .font(.caption2)
+                    .foregroundStyle(Color.rossInk.opacity(0.54))
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 8)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(isSelected ? Color.rossAccent.opacity(0.08) : Color.clear)
+        )
     }
 }
 
@@ -3762,6 +4714,9 @@ private struct AlphaWorkspaceDrawerDocumentRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
+            RossGlassIconView(.file, size: 24, fallbackSystemImage: alphaDocumentFallbackSymbolName(entry.document.kind))
+                .frame(width: 28, height: 28)
+
             VStack(alignment: .leading, spacing: 3) {
                 Text(entry.document.title)
                     .font(.subheadline.weight(.semibold))
@@ -3780,14 +4735,7 @@ private struct AlphaWorkspaceDrawerDocumentRow: View {
                 .foregroundStyle(Color.rossHighlight)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background(Color.rossCardBackground)
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.rossBorder, lineWidth: 1)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(.vertical, 8)
     }
 }
 
@@ -3950,7 +4898,7 @@ private struct AlphaHomeScreen: View {
             }
             .padding(alphaScreenPadding)
         }
-        .toolbar(.hidden, for: .navigationBar)
+        .rossHideNavigationBarIfSupported()
     }
 }
 
@@ -4091,7 +5039,7 @@ private struct AlphaCaseListScreen: View {
             }
             .padding(alphaScreenPadding)
         }
-        .toolbar(.hidden, for: .navigationBar)
+        .rossHideNavigationBarIfSupported()
         .alert("Rename matter", isPresented: Binding(
             get: { renameTarget != nil },
             set: { if !$0 { renameTarget = nil } }
@@ -4257,20 +5205,20 @@ private struct AlphaMatterFolderGlyph: View {
     var body: some View {
         let color = alphaMatterTintColor(tint)
 
-        ZStack {
-            RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
-                .fill(color.opacity(0.14))
+        ZStack(alignment: .bottomTrailing) {
+            RossGlassIconView(.folder, size: size * 0.8, fallbackSystemImage: "folder.fill")
+                .frame(width: size, height: size, alignment: .center)
 
-            Image(systemName: "folder.fill")
-                .symbolRenderingMode(.hierarchical)
-                .font(.system(size: size * 0.42, weight: .semibold))
-                .foregroundStyle(color)
+            Circle()
+                .fill(color)
+                .frame(width: max(8, size * 0.22), height: max(8, size * 0.22))
+                .overlay {
+                    Circle()
+                        .stroke(Color.white.opacity(0.9), lineWidth: 2)
+                }
+                .offset(x: -2, y: -2)
         }
         .frame(width: size, height: size)
-        .overlay {
-            RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
-                .stroke(color.opacity(0.16), lineWidth: 1)
-        }
     }
 }
 
@@ -4287,7 +5235,7 @@ private func alphaDocumentTint(_ kind: AlphaDocumentKind) -> Color {
     }
 }
 
-private func alphaDocumentSymbolName(_ kind: AlphaDocumentKind) -> String {
+private func alphaDocumentFallbackSymbolName(_ kind: AlphaDocumentKind) -> String {
     switch kind {
     case .pdf:
         return "doc.richtext.fill"
@@ -4300,78 +5248,47 @@ private func alphaDocumentSymbolName(_ kind: AlphaDocumentKind) -> String {
     }
 }
 
+private func alphaTierGlassIcon(_ tier: AlphaCapabilityTier) -> (RossGlassIconName, RossGlassIconVariant, String) {
+    switch tier {
+    case .quickStart:
+        return (.badgeSparkle, .accent, "sparkles")
+    case .caseAssociate:
+        return (.bookOpen, .neutral, "books.vertical.fill")
+    case .seniorDraftingSupport:
+        return (.timelineVertical, .neutral, "square.and.pencil")
+    }
+}
+
+private func alphaDocumentGlassIcon(_ kind: AlphaDocumentKind) -> (RossGlassIconName, RossGlassIconVariant, String) {
+    switch kind {
+    case .pdf:
+        return (.file, .neutral, alphaDocumentFallbackSymbolName(kind))
+    case .image:
+        return (.files, .neutral, alphaDocumentFallbackSymbolName(kind))
+    case .text:
+        return (.file, .neutral, alphaDocumentFallbackSymbolName(kind))
+    case .unknown:
+        return (.file, .neutral, alphaDocumentFallbackSymbolName(kind))
+    }
+}
+
 private func alphaDocumentImportedLabel(_ document: AlphaCaseDocument) -> String {
     document.importedAt.formatted(date: .abbreviated, time: .omitted)
 }
 
 private struct AlphaFolderArtwork: View {
     let tint: Color
-    let symbolName: String
+    let icon: RossGlassIconName
+    let variant: RossGlassIconVariant
+    let fallbackSystemImage: String
     let badgeText: String?
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            RoundedRectangle(cornerRadius: 11, style: .continuous)
-                .fill(tint.opacity(0.22))
-                .frame(width: 52, height: 18)
-                .padding(.leading, 14)
-                .padding(.top, 8)
-
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.96),
-                            tint.opacity(0.16)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(height: 88)
-                .padding(.top, 16)
-                .overlay(alignment: .topLeading) {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(tint.opacity(0.18))
-                        .frame(width: 58, height: 18)
-                        .padding(.leading, 14)
-                        .padding(.top, 6)
-                }
-                .overlay {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(tint.opacity(0.18), lineWidth: 1)
-                        .padding(.top, 16)
-                }
-
-            HStack(spacing: 6) {
-                ForEach(0..<3, id: \.self) { index in
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.white.opacity(index == 2 ? 0.68 : 0.88))
-                        .frame(width: 24, height: 34)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .stroke(tint.opacity(0.08), lineWidth: 0.8)
-                        }
-                        .rotationEffect(.degrees(Double(index - 1) * 4))
-                        .offset(y: CGFloat(index.isMultiple(of: 2) ? 0 : 4))
-                }
-            }
-            .padding(.leading, 18)
-            .padding(.top, 2)
-
-            Image(systemName: symbolName)
-                .symbolRenderingMode(.hierarchical)
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(tint.opacity(0.9))
-                .frame(width: 34, height: 34)
-                .background(Color.white.opacity(0.84), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(tint.opacity(0.12), lineWidth: 1)
-                }
-                .padding(.trailing, 12)
-                .padding(.bottom, 10)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+        ZStack(alignment: .bottomLeading) {
+            RossGlassIconView(icon, variant: variant, size: 64, fallbackSystemImage: fallbackSystemImage)
+                .padding(.leading, 2)
+                .padding(.top, 2)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
             if let badgeText {
                 Text(badgeText)
@@ -4379,14 +5296,18 @@ private struct AlphaFolderArtwork: View {
                     .foregroundStyle(tint.opacity(0.92))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(Color.white.opacity(0.92), in: Capsule())
-                    .padding(.leading, 12)
-                    .padding(.bottom, 12)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .overlay {
+                        Capsule()
+                            .stroke(Color.white.opacity(0.45), lineWidth: 0.7)
+                    }
+                    .padding(.leading, 2)
+                    .padding(.bottom, 2)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 108)
+        .frame(height: 76)
     }
 }
 
@@ -4423,6 +5344,8 @@ private struct AlphaDocumentCollectionView: View {
     @Binding var expandedDocumentIDs: Set<UUID>
     let onOpen: (UUID) -> Void
     let onMoveDocument: (UUID, Int) -> Void
+    var onOpenChat: ((UUID) -> Void)? = nil
+    var onStartReviewChat: ((UUID) -> Void)? = nil
 
     var body: some View {
         switch layoutMode {
@@ -4442,6 +5365,18 @@ private struct AlphaDocumentCollectionView: View {
                     .contextMenu {
                         Button("Open document") {
                             onOpen(document.id)
+                        }
+
+                        if let onOpenChat {
+                            Button("Continue in chat") {
+                                onOpenChat(document.id)
+                            }
+                        }
+
+                        if let onStartReviewChat {
+                            Button("Start review chat") {
+                                onStartReviewChat(document.id)
+                            }
                         }
 
                         if index > 0 {
@@ -4477,6 +5412,8 @@ private struct AlphaDocumentCollectionView: View {
                             }
                         },
                         onOpen: { onOpen(document.id) },
+                        onOpenChat: { onOpenChat?(document.id) },
+                        onStartReviewChat: { onStartReviewChat?(document.id) },
                         onMoveEarlier: { onMoveDocument(document.id, -1) },
                         onMoveLater: { onMoveDocument(document.id, 1) }
                     )
@@ -4491,11 +5428,14 @@ private struct AlphaDocumentFolderTile: View {
 
     var body: some View {
         let tint = alphaDocumentTint(document.kind)
+        let glassIcon = alphaDocumentGlassIcon(document.kind)
 
         VStack(alignment: .leading, spacing: 9) {
             AlphaFolderArtwork(
                 tint: tint,
-                symbolName: alphaDocumentSymbolName(document.kind),
+                icon: glassIcon.0,
+                variant: glassIcon.1,
+                fallbackSystemImage: glassIcon.2,
                 badgeText: document.pageCount == 1 ? "1 page" : "\(document.pageCount)"
             )
 
@@ -4510,12 +5450,12 @@ private struct AlphaDocumentFolderTile: View {
                 .foregroundStyle(tint.opacity(0.92))
                 .lineLimit(1)
         }
-        .frame(maxWidth: .infinity, minHeight: 170, alignment: .topLeading)
-        .padding(10)
+        .frame(maxWidth: .infinity, minHeight: 150, alignment: .topLeading)
+        .padding(11)
         .background(Color.rossCardBackground)
         .overlay {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(tint.opacity(0.14), lineWidth: 0.9)
+                .stroke(tint.opacity(0.08), lineWidth: 0.9)
         }
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
@@ -4529,25 +5469,20 @@ private struct AlphaExpandableDocumentRow: View {
     let canMoveLater: Bool
     let onToggle: () -> Void
     let onOpen: () -> Void
+    let onOpenChat: () -> Void
+    let onStartReviewChat: () -> Void
     let onMoveEarlier: () -> Void
     let onMoveLater: () -> Void
 
     var body: some View {
         let tint = alphaDocumentTint(document.kind)
+        let glassIcon = alphaDocumentGlassIcon(document.kind)
 
         VStack(alignment: .leading, spacing: 12) {
             Button(action: onToggle) {
                 HStack(alignment: .top, spacing: 12) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(tint.opacity(0.12))
-
-                        Image(systemName: alphaDocumentSymbolName(document.kind))
-                            .symbolRenderingMode(.hierarchical)
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(tint)
-                    }
-                    .frame(width: 42, height: 42)
+                    RossGlassIconView(glassIcon.0, variant: glassIcon.1, size: 28, fallbackSystemImage: glassIcon.2)
+                        .frame(width: 42, height: 42)
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(document.title)
@@ -4595,6 +5530,12 @@ private struct AlphaExpandableDocumentRow: View {
                     HStack(spacing: 8) {
                         Button("Open", action: onOpen)
                             .buttonStyle(.borderedProminent)
+
+                        Button("Chat", action: onOpenChat)
+                            .buttonStyle(.bordered)
+
+                        Button("New review chat", action: onStartReviewChat)
+                            .buttonStyle(.bordered)
 
                         if canMoveEarlier {
                             Button {
@@ -4684,27 +5625,14 @@ private func alphaTierTint(_ tier: AlphaCapabilityTier) -> Color {
     }
 }
 
-private func alphaTierSetupIconName(_ tier: AlphaCapabilityTier) -> String {
-    switch tier {
-    case .quickStart:
-        return "chart.bar.fill"
-    case .caseAssociate:
-        return "books.vertical.fill"
-    case .seniorDraftingSupport:
-        return "square.and.pencil"
-    }
-}
-
 private struct AlphaTierGlyph: View {
     let tier: AlphaCapabilityTier
 
     var body: some View {
         let tint = alphaTierTint(tier)
+        let glassIcon = alphaTierGlassIcon(tier)
 
-        Image(systemName: alphaTierSetupIconName(tier))
-            .symbolRenderingMode(.hierarchical)
-            .font(.system(size: 16, weight: .semibold))
-            .foregroundStyle(tint)
+        RossGlassIconView(glassIcon.0, variant: glassIcon.1, size: 22, fallbackSystemImage: glassIcon.2)
             .frame(width: 38, height: 38)
             .background(tint.opacity(0.1), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
     }
@@ -4747,15 +5675,8 @@ private struct AlphaPackTierSelectionBar: View {
             .buttonStyle(.plain)
 
             Button(action: onInfo) {
-                Image(systemName: "info.circle")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(Color.rossInk.opacity(0.6))
+                RossGlassIconView(.circleInfo, variant: .highlight, size: 22, fallbackSystemImage: "info.circle")
                     .frame(width: 32, height: 32)
-                    .background(Color.white.opacity(0.6), in: Circle())
-                    .overlay {
-                        Circle()
-                            .stroke(Color.rossBorder.opacity(0.75), lineWidth: 1)
-                    }
             }
             .buttonStyle(.plain)
             .accessibilityLabel("About \(tier.title)")
@@ -4857,8 +5778,9 @@ private struct AlphaPackTierInfoSheet: View {
             }
             .padding(alphaScreenPadding)
             .navigationTitle(tier.title)
-            .navigationBarTitleDisplayMode(.inline)
+            .rossInlineNavigationTitle()
             .toolbar {
+                #if os(iOS)
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         dismiss()
@@ -4867,6 +5789,7 @@ private struct AlphaPackTierInfoSheet: View {
                     }
                     .accessibilityLabel("Close")
                 }
+                #endif
             }
         }
     }
@@ -4900,16 +5823,8 @@ private struct AlphaAssistantActivityStrip: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 14) {
-            // Nucleo-style glass status icon
-            ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(tint.opacity(0.14))
-                    .frame(width: 40, height: 40)
-                Image(systemName: "brain.head.profile")
-                    .symbolRenderingMode(.hierarchical)
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(tint)
-            }
+            RossGlassIconView(.sparkle3, variant: .accent, size: 30, fallbackSystemImage: "brain.head.profile")
+                .frame(width: 40, height: 40)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
@@ -5122,7 +6037,7 @@ private struct AlphaCaptureScreen: View {
                                 RossInfoPill(title: "Stays on this device", systemImage: "lock")
                             }
 
-                            Button("Import document") {
+                            Button("Import file or image") {
                                 showingImporter = true
                             }
                             .rossPrimaryButtonStyle()
@@ -5483,7 +6398,9 @@ private struct AlphaCaseFolderCard: View {
         VStack(alignment: .leading, spacing: 10) {
             AlphaFolderArtwork(
                 tint: tint,
-                symbolName: "folder.fill",
+                icon: .folder,
+                variant: .neutral,
+                fallbackSystemImage: "folder.fill",
                 badgeText: caseMatter.documents.isEmpty ? "New" : "\(caseMatter.documents.count)"
             )
 
@@ -5501,12 +6418,12 @@ private struct AlphaCaseFolderCard: View {
             .foregroundStyle(tint.opacity(0.9))
             .lineLimit(1)
         }
-        .frame(maxWidth: .infinity, minHeight: 158, alignment: .topLeading)
-        .padding(12)
+        .frame(maxWidth: .infinity, minHeight: 144, alignment: .topLeading)
+        .padding(11)
         .background(Color.rossCardBackground)
         .overlay {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(tint.opacity(0.16), lineWidth: 0.9)
+                .stroke(tint.opacity(0.08), lineWidth: 0.9)
         }
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
@@ -5727,6 +6644,70 @@ private struct AlphaCompactAssistantStatusRow: View {
     }
 }
 
+private struct AlphaActiveMatterChatCard: View {
+    let session: AlphaChatSession?
+    let sessionTitle: String?
+    let sessionSubtitle: String?
+    let onOpenChat: () -> Void
+    let onStartNewChat: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Active chat")
+                    .font(.headline)
+                Text(
+                    session == nil
+                        ? "Ross will keep imported files and review updates in the current matter chat."
+                        : "Imports, review updates, and next-step work stay anchored to the current matter chat."
+                )
+                .font(.footnote)
+                .foregroundStyle(Color.rossInk.opacity(0.65))
+                .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if let session, let sessionTitle {
+                HStack(alignment: .top, spacing: 12) {
+                    RossGlassIconView(.userMsg, variant: .accent, size: 20, fallbackSystemImage: "bubble.left.and.text.bubble.right.fill")
+                        .frame(width: 32, height: 32)
+                        .background(Color.rossAccent.opacity(0.1), in: Circle())
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(sessionTitle)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.rossInk)
+
+                        Text("\(session.turns.count) update(s) · \(sessionSubtitle ?? "Recent activity")")
+                            .font(.caption)
+                            .foregroundStyle(Color.rossInk.opacity(0.62))
+                    }
+                }
+            } else {
+                Text("No active chat yet. Ross will start one as soon as you import a file, review a document, or ask the first question for this matter.")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.rossInk.opacity(0.72))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            HStack(spacing: 10) {
+                Button(session == nil ? "Open matter chat" : "Continue in active chat", action: onOpenChat)
+                    .rossPrimaryButtonStyle()
+
+                Button("Start new chat", action: onStartNewChat)
+                    .buttonStyle(.bordered)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(Color.rossCardBackground)
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.rossBorder, lineWidth: 1)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+}
+
 private struct AlphaTaskRow: View {
     let task: AlphaTaskItem
     let onToggle: () -> Void
@@ -5829,13 +6810,17 @@ private struct AlphaAskConversationScreen: View {
     }
 
     private var introDetail: String {
+        let selectedDocuments = model.selectedAskDocuments(for: activeScopeCaseID)
         if let documentTitle = model.askDocumentTitle(for: activeScopeCaseID) {
-            return "Ask about \(documentTitle), the matter timeline, missing details, or what Ross should prepare next."
+            return "Ask about \(documentTitle), what it means, or what to do next."
+        }
+        if !selectedDocuments.isEmpty {
+            return "Ask using only the files you selected here."
         }
         if activeScopeCaseID != nil {
-            return "Ask about this matter's documents, dates, tasks, and what Ross should prepare next."
+            return "Ask about this matter, its files, and what to do next."
         }
-        return "Ask about your upcoming dates, recent files, open tasks, and anything Ross has read on this device."
+        return "Ask about today, shared files, or any matter on this device."
     }
 
     var body: some View {
@@ -5864,10 +6849,11 @@ private struct AlphaAskConversationScreen: View {
             .padding(alphaScreenPadding)
             .padding(.bottom, 112)
         }
-        .navigationTitle("Ask Ross")
+        .navigationTitle("Chat")
         .rossInlineNavigationTitle()
         .toolbar {
             if fixedScopeCaseID == nil {
+                #if os(iOS)
                 ToolbarItem(placement: .topBarLeading) {
                     AlphaWorkspaceDrawerButton {
                         withAnimation(.snappy(duration: 0.24)) {
@@ -5875,10 +6861,11 @@ private struct AlphaAskConversationScreen: View {
                         }
                     }
                 }
+                #endif
             }
         }
         .safeAreaInset(edge: .bottom) {
-            AlphaAskComposerPanel(model: model, fixedScopeCaseID: fixedScopeCaseID)
+            AlphaRootAskDock(model: model, fixedScopeCaseID: fixedScopeCaseID)
                 .padding(.horizontal, 12)
                 .padding(.top, 8)
                 .background(.ultraThinMaterial)
@@ -5896,7 +6883,7 @@ private struct AlphaAskEmptyState: View {
     var body: some View {
         VStack(spacing: 20) {
             VStack(spacing: 8) {
-                Text("Ask about the work in front of you")
+                Text("Ask Ross what's next")
                     .font(.system(size: 32, weight: .bold, design: .rounded))
                     .multilineTextAlignment(.center)
                 Text(detail)
@@ -5937,19 +6924,29 @@ private struct AlphaAskTurnCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Spacer(minLength: 48)
-                Text(result.question)
-                    .font(.subheadline)
-                    .foregroundStyle(Color.rossInk)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(Color.rossCardBackground.opacity(0.92))
-                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .stroke(Color.rossBorder.opacity(0.6), lineWidth: 1)
-                    }
+            if result.kind == .userAsk {
+                HStack {
+                    Spacer(minLength: 48)
+                    Text(result.question)
+                        .font(.subheadline)
+                        .foregroundStyle(Color.rossInk)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(Color.rossCardBackground.opacity(0.92))
+                        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                .stroke(Color.rossBorder.opacity(0.6), lineWidth: 1)
+                        }
+                }
+            } else {
+                HStack(spacing: 8) {
+                    RossGlassIconView(.badgeSparkle, variant: .accent, size: 16, fallbackSystemImage: "sparkles")
+                    Text("Matter update")
+                        .font(.caption.weight(.bold))
+                        .tracking(0.8)
+                        .foregroundStyle(Color.rossAccent)
+                }
             }
 
             HStack(alignment: .top) {
@@ -5974,6 +6971,21 @@ private struct AlphaAskTurnCard: View {
                             .foregroundStyle(Color.rossAccent)
                     }
 
+                    if !result.selectedDocumentTitles.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(result.selectedDocumentTitles, id: \.self) { title in
+                                    Text(title)
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(Color.rossInk.opacity(0.74))
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 6)
+                                        .background(Color.rossSecondaryGroupedBackground, in: Capsule())
+                                }
+                            }
+                        }
+                    }
+
                     if let warning = result.needsReviewWarning {
                         Text(warning)
                             .font(.footnote)
@@ -5981,7 +6993,7 @@ private struct AlphaAskTurnCard: View {
                     }
 
                     if !result.caseFileSources.isEmpty {
-                        Text("Local matter sources")
+                        Text("Local sources")
                             .font(.footnote.weight(.semibold))
                             .foregroundStyle(Color.rossInk.opacity(0.65))
                         AlphaSourceRefChips(sourceRefs: result.caseFileSources, onOpenSourceRef: onOpenSource)
@@ -6035,193 +7047,6 @@ private struct AlphaAskTurnCard: View {
     }
 }
 
-private struct AlphaAskComposerPanel: View {
-    @Bindable var model: AlphaRossModel
-    let fixedScopeCaseID: UUID?
-    @State private var showingAttachOptions = false
-
-    private var activeScopeCaseID: UUID? {
-        fixedScopeCaseID ?? model.askSelectedScopeCaseID
-    }
-
-    private var draftBinding: Binding<String> {
-        Binding(
-            get: { model.askDraft(for: activeScopeCaseID) },
-            set: { model.setAskDraft($0, for: activeScopeCaseID) }
-        )
-    }
-
-    private func openCapture() {
-        if let fixedScopeCaseID {
-            model.path.append(.documentList(fixedScopeCaseID))
-            return
-        }
-        if model.path.last == .askRoss {
-            model.path.removeLast()
-        }
-        model.path.append(.captureImport)
-    }
-
-    private func openUploadTarget() {
-        guard let activeScopeCaseID else {
-            openCapture()
-            return
-        }
-        model.path.append(.documentList(activeScopeCaseID))
-    }
-
-    private func send() {
-        model.submitAsk(
-            question: model.askDraft(for: activeScopeCaseID),
-            scopeCaseID: activeScopeCaseID,
-            webEnabled: model.askWebEnabled
-        )
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if fixedScopeCaseID == nil {
-                Menu {
-                    Button("All matters") {
-                        model.askSelectedScopeCaseID = nil
-                    }
-                    ForEach(model.cases) { caseMatter in
-                        Button(caseMatter.title) {
-                            model.askSelectedScopeCaseID = caseMatter.id
-                        }
-                    }
-                } label: {
-                    HStack(spacing: 6) {
-                        Text(model.scopeLabel(for: activeScopeCaseID))
-                            .lineLimit(1)
-
-                        Image(systemName: "chevron.down")
-                            .font(.caption.weight(.bold))
-                    }
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Color.white.opacity(0.76))
-                    .padding(.horizontal, 11)
-                    .padding(.vertical, 6)
-                    .background(Color.white.opacity(0.08), in: Capsule())
-                }
-            } else {
-                Text(model.scopeLabel(for: fixedScopeCaseID))
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.white.opacity(0.72))
-            }
-
-            HStack(alignment: .center, spacing: 8) {
-                TextField("Ask Ross about dates, files, or next steps", text: draftBinding, axis: .vertical)
-                    .lineLimit(1...3)
-                    .textFieldStyle(.plain)
-                    .font(.footnote)
-                    .foregroundStyle(Color.white.opacity(0.9))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                AlphaAskToolbarButton(
-                    systemImage: "arrow.up",
-                    tint: Color.black.opacity(0.88),
-                    fillColor: .white,
-                    strokeColor: Color.white.opacity(0),
-                    accessibilityLabel: "Send question",
-                    action: send
-                )
-                    .disabled(model.askDraft(for: activeScopeCaseID).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    .opacity(model.askDraft(for: activeScopeCaseID).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.45 : 1)
-            }
-
-            HStack(spacing: 8) {
-                AlphaAskChipButton(
-                    label: "Add file",
-                    systemImage: "paperclip",
-                    tint: Color.white.opacity(0.86),
-                    backgroundColor: Color.white.opacity(0.08),
-                    strokeColor: Color.white.opacity(0.08)
-                ) {
-                    showingAttachOptions = true
-                }
-
-                AlphaAskChipButton(
-                    label: "Web Search",
-                    systemImage: "globe",
-                    tint: Color.white.opacity(model.askWebEnabled ? 0.92 : 0.72),
-                    backgroundColor: model.askWebEnabled ? Color.white.opacity(0.14) : Color.white.opacity(0.08),
-                    strokeColor: Color.white.opacity(model.askWebEnabled ? 0.18 : 0.08)
-                ) {
-                    model.askWebEnabled.toggle()
-                }
-            }
-
-            if model.askWebEnabled {
-                HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: "info.circle.fill")
-                        .font(.caption)
-                        .foregroundStyle(Color.rossAccent)
-                        .padding(.top, 2)
-
-                    Text("Web Search only sends a generic public-law query. Ross does not send your case files or document text.")
-                        .font(.caption2)
-                        .foregroundStyle(Color.white.opacity(0.66))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(.horizontal, 4)
-            }
-        }
-        .padding(12)
-        .background(Color.rossChromeBackground.opacity(0.98), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color.white.opacity(0.1), lineWidth: 1)
-        }
-        .confirmationDialog("Add a file", isPresented: $showingAttachOptions, titleVisibility: .visible) {
-            Button("Open import") {
-                openCapture()
-            }
-            if activeScopeCaseID != nil {
-                Button("Upload to selected case") {
-                    openUploadTarget()
-                }
-            }
-            Button("Cancel", role: .cancel) {}
-        }
-        .sheet(isPresented: Binding(
-            get: { model.publicLawPreview != nil && model.pendingPublicLawQuestion != nil },
-            set: { if !$0 { model.cancelPendingPublicLawSearch() } }
-        )) {
-            if let preview = model.publicLawPreview {
-                NavigationStack {
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Public-law query to be sent")
-                            .font(.headline)
-                        Text(preview.query)
-                            .font(.body.weight(.semibold))
-                        Text("No case files or document text will be sent.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                        VStack(alignment: .leading, spacing: 8) {
-                            ForEach(preview.removed, id: \.self) { item in
-                                RossBulletRow(text: item)
-                            }
-                        }
-                        Spacer()
-                        Button("Search public law") {
-                            Task { await model.confirmPendingPublicLawSearch() }
-                        }
-                        .rossPrimaryButtonStyle()
-                        Button("Cancel") {
-                            model.cancelPendingPublicLawSearch()
-                        }
-                        .buttonStyle(.bordered)
-                    }
-                    .padding(alphaScreenPadding)
-                }
-                .presentationDetents([.medium])
-                .presentationDragIndicator(.hidden)
-            }
-        }
-    }
-}
-
 private struct AlphaAskToolbarButton: View {
     let systemImage: String
     var tint: Color = Color.rossInk
@@ -6247,50 +7072,24 @@ private struct AlphaAskToolbarButton: View {
     }
 }
 
-private struct AlphaAskChipButton: View {
-    let label: String
-    let systemImage: String
-    var tint: Color = Color.rossInk
-    var backgroundColor: Color = Color.white.opacity(0.55)
-    var strokeColor: Color = Color.rossBorder.opacity(0.7)
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Label(label, systemImage: systemImage)
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(tint)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(backgroundColor)
-                .clipShape(Capsule())
-                .overlay {
-                    Capsule()
-                        .stroke(strokeColor, lineWidth: 1)
-                }
-        }
-        .buttonStyle(.plain)
-    }
-}
-
 private func alphaAskSuggestions(for scopeLabel: String?, documentTitle: String? = nil) -> [String] {
     if let documentTitle, !documentTitle.isEmpty {
         return [
             "What should I note from \(documentTitle)?",
-            "Which parts of \(documentTitle) still need my review?",
-            "What should I prepare next after reading \(documentTitle)?"
+            "What in \(documentTitle) still needs review?",
+            "What should I do next after this file?"
         ]
     }
     if let scopeLabel, !scopeLabel.isEmpty {
         return [
-            "Summarise \(scopeLabel) in one hearing note.",
-            "What is the next court date and why does it matter?",
-            "What should I prepare next for this matter?"
+            "Summarise this matter in one note.",
+            "What is the next date and why does it matter?",
+            "What should I do next for this matter?"
         ]
     }
     return [
         "What needs my attention today?",
-        "Which matter has the next date?",
+        "What should I prepare this week?",
         "Which files still need review?"
     ]
 }
@@ -6336,11 +7135,8 @@ private struct AlphaCaseWorkspaceScreen: View {
                                     Button {
                                         Task { await model.refreshCaseOverview(caseId: caseId) }
                                     } label: {
-                                        Image(systemName: model.refreshingCaseOverviewIDs.contains(caseId) ? "arrow.triangle.2.circlepath.circle.fill" : "arrow.clockwise")
-                                            .font(.system(size: 14, weight: .semibold))
-                                            .foregroundStyle(Color.rossAccent)
+                                        RossGlassIconView(.refresh, variant: .accent, size: 24, fallbackSystemImage: model.refreshingCaseOverviewIDs.contains(caseId) ? "arrow.triangle.2.circlepath.circle.fill" : "arrow.clockwise")
                                             .frame(width: 34, height: 34)
-                                            .background(Color.rossAccent.opacity(0.1), in: Circle())
                                     }
                                     .buttonStyle(.plain)
                                     .disabled(model.refreshingCaseOverviewIDs.contains(caseId))
@@ -6410,6 +7206,14 @@ private struct AlphaCaseWorkspaceScreen: View {
                         }
                     case .documents:
                         VStack(alignment: .leading, spacing: 12) {
+                            AlphaActiveMatterChatCard(
+                                session: model.activeChatSession(for: caseId),
+                                sessionTitle: model.activeChatSession(for: caseId).map(model.chatSessionTitle),
+                                sessionSubtitle: model.activeChatSession(for: caseId).map(model.chatSessionSubtitle),
+                                onOpenChat: { model.openAsk(scopeCaseID: caseId) },
+                                onStartNewChat: { model.startNewChat(for: caseId) }
+                            )
+
                             HStack(spacing: 10) {
                                 Text("\(caseMatter.documents.count) file(s) on this matter")
                                     .font(.caption.weight(.semibold))
@@ -6442,6 +7246,12 @@ private struct AlphaCaseWorkspaceScreen: View {
                                     },
                                     onMoveDocument: { documentId, offset in
                                         model.moveDocument(caseId: caseId, documentId: documentId, by: offset)
+                                    },
+                                    onOpenChat: { documentId in
+                                        model.openDocumentInChat(caseId: caseId, documentId: documentId, startNewThread: false)
+                                    },
+                                    onStartReviewChat: { documentId in
+                                        model.openDocumentInChat(caseId: caseId, documentId: documentId, startNewThread: true)
                                     }
                                 )
                             }
@@ -6571,6 +7381,12 @@ private struct AlphaDocumentListScreen: View {
                         },
                         onMoveDocument: { documentId, offset in
                             model.moveDocument(caseId: caseId, documentId: documentId, by: offset)
+                        },
+                        onOpenChat: { documentId in
+                            model.openDocumentInChat(caseId: caseId, documentId: documentId, startNewThread: false)
+                        },
+                        onStartReviewChat: { documentId in
+                            model.openDocumentInChat(caseId: caseId, documentId: documentId, startNewThread: true)
                         }
                     )
                 }
@@ -6603,6 +7419,10 @@ private struct AlphaDocumentViewerScreen: View {
     let caseId: UUID
     let documentId: UUID
     let initialPage: Int?
+
+    private var isSharedDocument: Bool {
+        caseId == alphaSharedWorkspaceID
+    }
 
     private var caseMatter: AlphaCaseMatter? {
         model.persisted.cases.first(where: { $0.id == caseId })
@@ -6677,14 +7497,34 @@ private struct AlphaDocumentViewerScreen: View {
 
                     RossSectionCard(title: "Actions") {
                         VStack(spacing: 12) {
+                            AlphaActiveMatterChatCard(
+                                session: model.activeChatSession(for: caseId),
+                                sessionTitle: model.activeChatSession(for: caseId).map(model.chatSessionTitle),
+                                sessionSubtitle: model.activeChatSession(for: caseId).map(model.chatSessionSubtitle),
+                                onOpenChat: {
+                                    model.openDocumentInChat(caseId: caseId, documentId: document.id, startNewThread: false)
+                                },
+                                onStartNewChat: {
+                                    model.openDocumentInChat(caseId: caseId, documentId: document.id, startNewThread: true)
+                                }
+                            )
+
                             RossActionTile(
-                                title: "Ask about this document",
-                                detail: "Open the matter ask view with this document already in mind.",
+                                title: "Continue in active matter chat",
+                                detail: "Use the current matter thread with this document already selected.",
                                 systemImage: "bubble.left.and.text.bubble.right",
                                 tint: Color.rossAccent
                             ) {
-                                model.setAskDraft("What should I note from \(document.title)?", for: caseId)
-                                model.openAsk(scopeCaseID: caseId, documentTitle: document.title)
+                                model.openDocumentInChat(caseId: caseId, documentId: document.id, startNewThread: false)
+                            }
+
+                            RossActionTile(
+                                title: "Start review chat for this document",
+                                detail: "Open a fresh matter thread dedicated to this file and its review.",
+                                systemImage: "square.and.pencil",
+                                tint: Color.rossHighlight
+                            ) {
+                                model.openDocumentInChat(caseId: caseId, documentId: document.id, startNewThread: true)
                             }
 
                             RossActionTile(
@@ -6874,12 +7714,69 @@ private struct AlphaDocumentViewerScreen: View {
         }
         .navigationTitle("Document")
         .rossInlineNavigationTitle()
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                AlphaAskToolbarButton(systemImage: "bubble.right", accessibilityLabel: "Open Ask Ross") {
-                    model.openAsk(scopeCaseID: caseId)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            VStack(spacing: 10) {
+                if let document {
+                    AlphaDocumentQuickAskStrip(
+                        title: document.title,
+                        detail: reviewSummaryText
+                            ?? document.dominantSourceSnippet
+                            ?? "Ross will answer from this file only while you stay here.",
+                        isShared: isSharedDocument
+                    )
                 }
+
+                AlphaRootAskDock(model: model, fixedScopeCaseID: caseId, fixedDocumentIDs: [documentId])
             }
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
+            .padding(.bottom, 6)
+            .background(.ultraThinMaterial)
+        }
+    }
+}
+
+private struct AlphaDocumentQuickAskStrip: View {
+    let title: String
+    let detail: String
+    let isShared: Bool
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            RossGlassIconView(
+                isShared ? .earth : .file,
+                variant: isShared ? .highlight : .neutral,
+                size: 18,
+                fallbackSystemImage: isShared ? "globe" : "doc.text"
+            )
+            .frame(width: 28, height: 28)
+            .background(Color.rossCardBackground, in: Circle())
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.rossInk)
+                    .lineLimit(1)
+                Text(detail)
+                    .font(.caption2)
+                    .foregroundStyle(Color.rossInk.opacity(0.66))
+                    .lineLimit(2)
+            }
+
+            Spacer(minLength: 0)
+
+            Text(isShared ? "Shared file" : "This file")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(Color.rossAccent)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(Color.rossAccent.opacity(0.1), in: Capsule())
+        }
+        .padding(12)
+        .background(Color.rossCardBackground.opacity(0.96), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.rossBorder, lineWidth: 1)
         }
     }
 }
@@ -7350,7 +8247,7 @@ private struct AlphaSettingsScreen: View {
             }
             .padding(alphaScreenPadding)
         }
-        .toolbar(.hidden, for: .navigationBar)
+        .rossHideNavigationBarIfSupported()
     }
 }
 

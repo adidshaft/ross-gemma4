@@ -883,28 +883,143 @@ struct AlphaCaseDocument: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
+enum AlphaChatTurnKind: String, Codable, Hashable, Sendable {
+    case userAsk = "user_ask"
+    case matterUpdate = "matter_update"
+}
+
 struct AlphaChatTurn: Identifiable, Codable, Hashable, Sendable {
-    let id: UUID
-    let askedAt: Date
-    let question: String
-    let answerTitle: String
-    let answerSections: [String]
-    let sourceRefs: [AlphaSourceRef]
+    var id: UUID
+    var kind: AlphaChatTurnKind
+    var askedAt: Date
+    var question: String
+    var answerTitle: String
+    var answerSections: [String]
+    var sourceRefs: [AlphaSourceRef]
+    var selectedDocumentTitles: [String]?
+    var publicLawPreview: AlphaPublicLawPreview?
+    var publicLawResults: [AlphaPublicLawResult]
+    var statusNote: String?
+    var needsReviewWarning: String?
 
     init(
         id: UUID = UUID(),
+        kind: AlphaChatTurnKind = .userAsk,
         askedAt: Date = .now,
         question: String,
         answerTitle: String,
         answerSections: [String],
-        sourceRefs: [AlphaSourceRef]
+        sourceRefs: [AlphaSourceRef],
+        selectedDocumentTitles: [String]? = nil,
+        publicLawPreview: AlphaPublicLawPreview? = nil,
+        publicLawResults: [AlphaPublicLawResult] = [],
+        statusNote: String? = nil,
+        needsReviewWarning: String? = nil
     ) {
         self.id = id
+        self.kind = kind
         self.askedAt = askedAt
         self.question = question
         self.answerTitle = answerTitle
         self.answerSections = answerSections
         self.sourceRefs = sourceRefs
+        self.selectedDocumentTitles = selectedDocumentTitles
+        self.publicLawPreview = publicLawPreview
+        self.publicLawResults = publicLawResults
+        self.statusNote = statusNote
+        self.needsReviewWarning = needsReviewWarning
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case kind
+        case askedAt
+        case question
+        case answerTitle
+        case answerSections
+        case sourceRefs
+        case selectedDocumentTitles
+        case publicLawPreview
+        case publicLawResults
+        case statusNote
+        case needsReviewWarning
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        kind = try container.decodeIfPresent(AlphaChatTurnKind.self, forKey: .kind) ?? .userAsk
+        askedAt = try container.decodeIfPresent(Date.self, forKey: .askedAt) ?? .now
+        question = try container.decode(String.self, forKey: .question)
+        answerTitle = try container.decode(String.self, forKey: .answerTitle)
+        answerSections = try container.decode([String].self, forKey: .answerSections)
+        sourceRefs = try container.decodeIfPresent([AlphaSourceRef].self, forKey: .sourceRefs) ?? []
+        selectedDocumentTitles = try container.decodeIfPresent([String].self, forKey: .selectedDocumentTitles)
+        publicLawPreview = try container.decodeIfPresent(AlphaPublicLawPreview.self, forKey: .publicLawPreview)
+        publicLawResults = try container.decodeIfPresent([AlphaPublicLawResult].self, forKey: .publicLawResults) ?? []
+        statusNote = try container.decodeIfPresent(String.self, forKey: .statusNote)
+        needsReviewWarning = try container.decodeIfPresent(String.self, forKey: .needsReviewWarning)
+    }
+}
+
+struct AlphaChatSession: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID
+    var createdAt: Date
+    var updatedAt: Date
+    var contextDocumentIDs: [UUID]
+    var turns: [AlphaChatTurn]
+
+    init(
+        id: UUID = UUID(),
+        createdAt: Date = .now,
+        updatedAt: Date = .now,
+        contextDocumentIDs: [UUID] = [],
+        turns: [AlphaChatTurn] = []
+    ) {
+        self.id = id
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.contextDocumentIDs = contextDocumentIDs
+        self.turns = turns
+    }
+
+    init(legacyTurns: [AlphaChatTurn]) {
+        let sortedTurns = legacyTurns.sorted { $0.askedAt > $1.askedAt }
+        self.init(
+            createdAt: sortedTurns.last?.askedAt ?? .now,
+            updatedAt: sortedTurns.first?.askedAt ?? .now,
+            turns: sortedTurns
+        )
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case createdAt
+        case updatedAt
+        case contextDocumentIDs
+        case turns
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedTurns = try container.decodeIfPresent([AlphaChatTurn].self, forKey: .turns) ?? []
+        let decodedCreatedAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? decodedTurns.last?.askedAt ?? .now
+        let decodedUpdatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? decodedTurns.first?.askedAt ?? decodedCreatedAt
+
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        createdAt = decodedCreatedAt
+        updatedAt = decodedUpdatedAt
+        contextDocumentIDs = try container.decodeIfPresent([UUID].self, forKey: .contextDocumentIDs) ?? []
+        turns = decodedTurns
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(createdAt, forKey: .createdAt)
+        try container.encode(updatedAt, forKey: .updatedAt)
+        try container.encode(contextDocumentIDs, forKey: .contextDocumentIDs)
+        try container.encode(turns, forKey: .turns)
     }
 }
 
@@ -922,7 +1037,8 @@ struct AlphaCaseMatter: Identifiable, Codable, Hashable, Sendable {
     var draftTasks: [String]
     var documents: [AlphaCaseDocument]
     var sourceRefs: [AlphaSourceRef]
-    var chatTurns: [AlphaChatTurn]
+    var chatSessions: [AlphaChatSession]
+    var activeChatSessionID: UUID?
     var advocateCorrections: [AlphaAdvocateCorrection]
     var caseMemoryUpdates: [AlphaCaseMemoryUpdate]
     var updatedAt: Date
@@ -942,7 +1058,8 @@ struct AlphaCaseMatter: Identifiable, Codable, Hashable, Sendable {
         draftTasks: [String],
         documents: [AlphaCaseDocument],
         sourceRefs: [AlphaSourceRef],
-        chatTurns: [AlphaChatTurn] = [],
+        chatSessions: [AlphaChatSession] = [],
+        activeChatSessionID: UUID? = nil,
         advocateCorrections: [AlphaAdvocateCorrection] = [],
         caseMemoryUpdates: [AlphaCaseMemoryUpdate] = [],
         updatedAt: Date = .now,
@@ -961,11 +1078,90 @@ struct AlphaCaseMatter: Identifiable, Codable, Hashable, Sendable {
         self.draftTasks = draftTasks
         self.documents = documents
         self.sourceRefs = sourceRefs
-        self.chatTurns = chatTurns
+        self.chatSessions = chatSessions.sorted { $0.updatedAt > $1.updatedAt }
+        self.activeChatSessionID = activeChatSessionID ?? self.chatSessions.first?.id
         self.advocateCorrections = advocateCorrections
         self.caseMemoryUpdates = caseMemoryUpdates
         self.updatedAt = updatedAt
         self.archivedAt = archivedAt
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case forum
+        case stage
+        case folderTint
+        case nextHearing
+        case localNotice
+        case summary
+        case issueHighlights
+        case evidenceNotes
+        case draftTasks
+        case documents
+        case sourceRefs
+        case chatSessions
+        case activeChatSessionID
+        case chatTurns
+        case advocateCorrections
+        case caseMemoryUpdates
+        case updatedAt
+        case archivedAt
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        forum = try container.decode(String.self, forKey: .forum)
+        stage = try container.decode(AlphaCaseStage.self, forKey: .stage)
+        folderTint = try container.decodeIfPresent(AlphaMatterTint.self, forKey: .folderTint) ?? .indigo
+        nextHearing = try container.decodeIfPresent(Date.self, forKey: .nextHearing)
+        localNotice = try container.decodeIfPresent(String.self, forKey: .localNotice) ?? "Case files stay on this device"
+        summary = try container.decode(String.self, forKey: .summary)
+        issueHighlights = try container.decodeIfPresent([String].self, forKey: .issueHighlights) ?? []
+        evidenceNotes = try container.decodeIfPresent([String].self, forKey: .evidenceNotes) ?? []
+        draftTasks = try container.decodeIfPresent([String].self, forKey: .draftTasks) ?? []
+        documents = try container.decodeIfPresent([AlphaCaseDocument].self, forKey: .documents) ?? []
+        sourceRefs = try container.decodeIfPresent([AlphaSourceRef].self, forKey: .sourceRefs) ?? []
+
+        let decodedSessions = try container.decodeIfPresent([AlphaChatSession].self, forKey: .chatSessions) ?? []
+        let legacyTurns = try container.decodeIfPresent([AlphaChatTurn].self, forKey: .chatTurns) ?? []
+        if decodedSessions.isEmpty, !legacyTurns.isEmpty {
+            chatSessions = [AlphaChatSession(legacyTurns: legacyTurns)]
+        } else {
+            chatSessions = decodedSessions.sorted { $0.updatedAt > $1.updatedAt }
+        }
+        let decodedActiveSessionID = try container.decodeIfPresent(UUID.self, forKey: .activeChatSessionID)
+        activeChatSessionID = chatSessions.contains(where: { $0.id == decodedActiveSessionID }) ? decodedActiveSessionID : chatSessions.first?.id
+
+        advocateCorrections = try container.decodeIfPresent([AlphaAdvocateCorrection].self, forKey: .advocateCorrections) ?? []
+        caseMemoryUpdates = try container.decodeIfPresent([AlphaCaseMemoryUpdate].self, forKey: .caseMemoryUpdates) ?? []
+        updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? .now
+        archivedAt = try container.decodeIfPresent(Date.self, forKey: .archivedAt)
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(title, forKey: .title)
+        try container.encode(forum, forKey: .forum)
+        try container.encode(stage, forKey: .stage)
+        try container.encode(folderTint, forKey: .folderTint)
+        try container.encodeIfPresent(nextHearing, forKey: .nextHearing)
+        try container.encode(localNotice, forKey: .localNotice)
+        try container.encode(summary, forKey: .summary)
+        try container.encode(issueHighlights, forKey: .issueHighlights)
+        try container.encode(evidenceNotes, forKey: .evidenceNotes)
+        try container.encode(draftTasks, forKey: .draftTasks)
+        try container.encode(documents, forKey: .documents)
+        try container.encode(sourceRefs, forKey: .sourceRefs)
+        try container.encode(chatSessions, forKey: .chatSessions)
+        try container.encodeIfPresent(activeChatSessionID, forKey: .activeChatSessionID)
+        try container.encode(advocateCorrections, forKey: .advocateCorrections)
+        try container.encode(caseMemoryUpdates, forKey: .caseMemoryUpdates)
+        try container.encode(updatedAt, forKey: .updatedAt)
+        try container.encodeIfPresent(archivedAt, forKey: .archivedAt)
     }
 }
 
@@ -1334,6 +1530,7 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
     var exports: [AlphaExportedReport]
 
     static func seed() -> AlphaPersistedState {
+        let sharedWorkspaceID = UUID(uuidString: "0D9E5220-4D3C-4B49-9A67-10B42B593B7D")!
         let petitionId = UUID()
         let noticeDocId = UUID()
         let draftDocId = UUID()
@@ -1449,6 +1646,25 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
             updatedAt: Calendar.current.date(byAdding: .day, value: -1, to: .now) ?? .now
         )
 
+        let sharedWorkspace = AlphaCaseMatter(
+            id: sharedWorkspaceID,
+            title: "Shared files",
+            forum: "Available across matters",
+            stage: .intake,
+            nextHearing: nil,
+            summary: "Files placed here stay available anywhere on this device.",
+            issueHighlights: [
+                "Use shared files when a document should support more than one matter."
+            ],
+            evidenceNotes: [
+                "Ross keeps these files local and ready for device-wide questions."
+            ],
+            draftTasks: [],
+            documents: [],
+            sourceRefs: [],
+            updatedAt: .now
+        )
+
         let seededTasks = [
             AlphaTaskItem(
                 caseId: petitionId,
@@ -1488,7 +1704,7 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
             onboardingStage: .onboarding,
             selectedTab: .home,
             settings: .default,
-            cases: [petitionCase, taxCase],
+            cases: [petitionCase, taxCase, sharedWorkspace],
             tasks: seededTasks,
             ledgerEntries: [
                 AlphaPrivacyLedgerEntry(
