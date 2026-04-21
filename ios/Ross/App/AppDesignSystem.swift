@@ -52,6 +52,73 @@ public struct RossPrimaryButtonStyle: ButtonStyle {
     }
 }
 
+public struct RossGlassButtonStyle: ButtonStyle {
+    public var tint: Color
+    public var cornerRadius: CGFloat
+    public var expandsHorizontally: Bool
+
+    public init(
+        tint: Color? = nil,
+        cornerRadius: CGFloat = 18,
+        expandsHorizontally: Bool = true
+    ) {
+        self.tint = tint ?? Color.rossAccent
+        self.cornerRadius = cornerRadius
+        self.expandsHorizontally = expandsHorizontally
+    }
+
+    public func makeBody(configuration: Configuration) -> some View {
+        let isPressed = configuration.isPressed
+
+        configuration.label
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(Color.rossInk)
+            .frame(maxWidth: expandsHorizontally ? .infinity : nil)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background {
+                ZStack {
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .fill(.ultraThinMaterial)
+
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(isPressed ? 0.12 : 0.22),
+                                    tint.opacity(isPressed ? 0.05 : 0.1),
+                                    Color.rossGroupedBackground.opacity(isPressed ? 0.16 : 0.28)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                }
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(isPressed ? 0.35 : 0.62),
+                                tint.opacity(isPressed ? 0.14 : 0.24)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            }
+            .shadow(
+                color: tint.opacity(isPressed ? 0.1 : 0.18),
+                radius: isPressed ? 8 : 18,
+                y: isPressed ? 4 : 10
+            )
+            .scaleEffect(isPressed ? 0.985 : 1)
+            .animation(.easeOut(duration: 0.18), value: isPressed)
+    }
+}
+
 public extension View {
     func rossCardStyle() -> some View {
         self.modifier(RossCardStyle())
@@ -59,5 +126,19 @@ public extension View {
     
     func rossPrimaryButtonStyle() -> some View {
         self.buttonStyle(RossPrimaryButtonStyle())
+    }
+
+    func rossGlassButtonStyle(
+        tint: Color? = nil,
+        cornerRadius: CGFloat = 18,
+        expandsHorizontally: Bool = true
+    ) -> some View {
+        self.buttonStyle(
+            RossGlassButtonStyle(
+                tint: tint ?? Color.rossAccent,
+                cornerRadius: cornerRadius,
+                expandsHorizontally: expandsHorizontally
+            )
+        )
     }
 }

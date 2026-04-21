@@ -276,7 +276,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
-    func testFinishPackSetupStartsAssistantSetup() async throws {
+    func testFinishPackSetupUsesExplicitlySelectedNonRecommendedTier() async throws {
         try await withRestoredStore { store in
             try await store.replace(with: AlphaPersistedState.seed())
 
@@ -284,21 +284,52 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
             }
             await model.loadIfNeeded()
+            let recommendedTier = await MainActor.run { model.recommendedOnDeviceTier() }
+            let selectedTier = assistantSetupRegressionTier(recommendedTier: recommendedTier)
 
             await MainActor.run {
-                model.selectedTier = .caseAssociate
+                model.selectedTier = selectedTier
                 model.finishPackSetup()
             }
 
-            try await Task.sleep(nanoseconds: 150_000_000)
+            let snapshot = try await waitForAssistantSetupState(model: model, tier: selectedTier)
+            let hasAssistantSetupState = snapshot.modelJobs.contains(where: { $0.tier == selectedTier })
+                || snapshot.installedPacks.contains(where: { $0.tier == selectedTier })
 
-            let snapshot = await MainActor.run { model.persisted }
-            let hasAssistantSetupState = snapshot.modelJobs.contains(where: { $0.tier == .caseAssociate })
-                || snapshot.installedPacks.contains(where: { $0.tier == .caseAssociate })
-
+            XCTAssertNotEqual(selectedTier, recommendedTier)
+            XCTAssertEqual(snapshot.settings.activeTier, selectedTier)
             XCTAssertEqual(snapshot.onboardingStage, .completed)
             XCTAssertEqual(snapshot.selectedTab, .home)
             XCTAssertTrue(hasAssistantSetupState)
+            XCTAssertFalse(snapshot.modelJobs.contains(where: { $0.tier == recommendedTier }))
+            XCTAssertFalse(snapshot.installedPacks.contains(where: { $0.tier == recommendedTier }))
+        }
+    }
+
+    func testLoadIfNeededKeepsPersistedAssistantTierSelection() async throws {
+        try await withRestoredStore { store in
+            var state = AlphaPersistedState.seed()
+            let referenceModel = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            let recommendedTier = await MainActor.run { referenceModel.recommendedOnDeviceTier() }
+            let selectedTier = assistantSetupRegressionTier(recommendedTier: recommendedTier)
+            state.settings.activeTier = selectedTier
+            try await store.replace(with: state)
+            let storedState = try await store.load()
+            XCTAssertEqual(storedState.settings.activeTier, selectedTier)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+
+            let restoredSelectedTier = await MainActor.run { model.selectedTier }
+            let persistedTier = await MainActor.run { model.persisted.settings.activeTier }
+
+            XCTAssertNotEqual(selectedTier, recommendedTier)
+            XCTAssertEqual(restoredSelectedTier, selectedTier)
+            XCTAssertEqual(persistedTier, selectedTier)
         }
     }
 
@@ -495,6 +526,34 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             .appendingPathComponent("\(UUID().uuidString)-\(name)")
         try contents.write(to: url, atomically: true, encoding: .utf8)
         return url
+    }
+
+    private func assistantSetupRegressionTier(recommendedTier: AlphaCapabilityTier) -> AlphaCapabilityTier {
+        if recommendedTier != .quickStart {
+            return .quickStart
+        }
+        return .caseAssociate
+    }
+
+    private func waitForAssistantSetupState(
+        model: AlphaRossModel,
+        tier: AlphaCapabilityTier,
+        attempts: Int = 20,
+        intervalNanoseconds: UInt64 = 50_000_000
+    ) async throws -> AlphaPersistedState {
+        for attempt in 0..<attempts {
+            let snapshot = await MainActor.run { model.persisted }
+            let hasAssistantSetupState = snapshot.modelJobs.contains(where: { $0.tier == tier })
+                || snapshot.installedPacks.contains(where: { $0.tier == tier })
+            if hasAssistantSetupState {
+                return snapshot
+            }
+            if attempt < attempts - 1 {
+                try await Task.sleep(nanoseconds: intervalNanoseconds)
+            }
+        }
+
+        return await MainActor.run { model.persisted }
     }
 }
 

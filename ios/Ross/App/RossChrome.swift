@@ -1,4 +1,115 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
+
+enum RossGlassIconVariant: String {
+    case neutral
+    case accent
+    case success
+    case highlight
+}
+
+enum RossGlassIconName: String {
+    case badgeSparkle = "badge-sparkle"
+    case bookOpen = "book-open"
+    case circleInfo = "circle-info"
+    case clipboardCheck = "clipboard-check"
+    case docFolder = "doc-folder"
+    case earth
+    case file
+    case fileDownload = "file-download"
+    case fileUpload = "file-upload"
+    case files
+    case folder
+    case gearKeyhole = "gear-keyhole"
+    case lock
+    case magnifier
+    case refresh
+    case sparkle3 = "sparkle-3"
+    case storage
+    case tasks
+    case timelineVertical = "timeline-vertical"
+    case triangleWarning = "triangle-warning"
+    case userMsg = "user-msg"
+}
+
+private func rossGlassAssetName(_ icon: RossGlassIconName, variant: RossGlassIconVariant) -> String {
+    "ng_\(variant.rawValue)_\(icon.rawValue.replacingOccurrences(of: "-", with: "_"))"
+}
+
+private func rossGlassAssetAvailable(_ assetName: String) -> Bool {
+    #if canImport(UIKit)
+    return UIImage(named: assetName) != nil
+    #elseif canImport(AppKit)
+    return NSImage(named: assetName) != nil
+    #else
+    return false
+    #endif
+}
+
+struct RossGlassIconView: View {
+    let icon: RossGlassIconName
+    let variant: RossGlassIconVariant
+    let size: CGFloat
+    let fallbackSystemImage: String?
+
+    init(
+        _ icon: RossGlassIconName,
+        variant: RossGlassIconVariant = .neutral,
+        size: CGFloat = 20,
+        fallbackSystemImage: String? = nil
+    ) {
+        self.icon = icon
+        self.variant = variant
+        self.size = size
+        self.fallbackSystemImage = fallbackSystemImage
+    }
+
+    var body: some View {
+        let assetName = rossGlassAssetName(icon, variant: variant)
+
+        Group {
+            if rossGlassAssetAvailable(assetName) {
+                Image(assetName)
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFit()
+            } else if let fallbackSystemImage {
+                Image(systemName: fallbackSystemImage)
+                    .symbolRenderingMode(.hierarchical)
+            }
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+struct RossLaunchSplashView: View {
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [Color.rossGroupedBackground, Color.rossSecondaryGroupedBackground],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            VStack(spacing: 18) {
+                Image("RossLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 138, height: 138)
+                    .shadow(color: Color.black.opacity(0.18), radius: 16, y: 8)
+
+                Text("Ross")
+                    .font(.system(size: 28, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color.rossInk)
+            }
+        }
+    }
+}
 
 struct RossSectionCard<Content: View>: View {
     let title: String?
@@ -86,6 +197,7 @@ struct RossHeroCard<Content: View>: View {
                         .frame(height: mediaHeight)
 
                     Group {
+                        #if canImport(UIKit)
                         if let _ = UIImage(named: "RossLogo") {
                             Image("RossLogo")
                                 .resizable()
@@ -109,6 +221,47 @@ struct RossHeroCard<Content: View>: View {
                                     )
                             }
                         }
+                        #elseif canImport(AppKit)
+                        if let _ = NSImage(named: "RossLogo") {
+                            Image("RossLogo")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: logoSize, height: logoSize)
+                                .shadow(color: Color.black.opacity(0.38), radius: 14, y: 6)
+                        } else {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                    .fill(Color(white: 0.16))
+                                    .frame(width: logoSize, height: logoSize)
+                                    .shadow(color: Color.black.opacity(0.5), radius: 20, y: 8)
+                                Text("R")
+                                    .font(.system(size: logoSize * 0.54, weight: .black, design: .rounded))
+                                    .foregroundStyle(
+                                        LinearGradient(
+                                            colors: [Color(white: 0.42), Color(white: 0.26)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                            }
+                        }
+                        #else
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                .fill(Color(white: 0.16))
+                                .frame(width: logoSize, height: logoSize)
+                                .shadow(color: Color.black.opacity(0.5), radius: 20, y: 8)
+                            Text("R")
+                                .font(.system(size: logoSize * 0.54, weight: .black, design: .rounded))
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        colors: [Color(white: 0.42), Color(white: 0.26)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                        }
+                        #endif
                     }
                 }
             }
@@ -157,26 +310,38 @@ struct RossHeroCard<Content: View>: View {
 struct RossInfoPill: View {
     let title: String
     let systemImage: String
+    private let cornerRadius: CGFloat = 18
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(alignment: .top, spacing: 12) {
             Image(systemName: systemImage)
                 .symbolRenderingMode(.hierarchical)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Color.rossHighlight)
-                .frame(width: 24, height: 24)
-                .background(Color.rossHighlight.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .frame(width: 28, height: 28)
+                .background(Color.rossHighlight.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .padding(.top, 1)
             Text(title)
                 .font(.caption.weight(.medium))
                 .foregroundStyle(Color.rossInk)
+                .lineLimit(nil)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .layoutPriority(1)
         }
-        .padding(.horizontal, 11)
-        .padding(.vertical, 7)
-        .background(.ultraThinMaterial)
-        .clipShape(Capsule())
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 13)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .fill(.ultraThinMaterial)
+        )
         .overlay {
-            Capsule().stroke(Color.white.opacity(0.1), lineWidth: 1)
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .stroke(Color.white.opacity(0.12), lineWidth: 1)
         }
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .shadow(color: Color.black.opacity(0.03), radius: 10, y: 4)
     }
 }
 

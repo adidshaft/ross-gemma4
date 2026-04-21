@@ -12,9 +12,25 @@ import Vision
 
 func alphaSupportRootURL() -> URL {
     let fileManager = FileManager.default
+    let environment = ProcessInfo.processInfo.environment
+    if let overridePath = environment["ROSS_ALPHA_SUPPORT_ROOT"], !overridePath.isEmpty {
+        return URL(fileURLWithPath: overridePath, isDirectory: true)
+    }
+    if alphaIsRunningTests() {
+        return URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+            .appendingPathComponent("RossAlphaTests", isDirectory: true)
+    }
     let supportURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
         ?? URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
     return supportURL.appendingPathComponent("RossAlpha", isDirectory: true)
+}
+
+private func alphaIsRunningTests() -> Bool {
+    let environment = ProcessInfo.processInfo.environment
+    if environment["XCTestConfigurationFilePath"] != nil || environment["ROSS_RUNNING_TESTS"] == "1" {
+        return true
+    }
+    return Bundle.allBundles.contains { $0.bundlePath.hasSuffix(".xctest") }
 }
 
 func alphaAbsoluteURL(for relativePath: String) -> URL {
@@ -31,24 +47,41 @@ actor AlphaRossStore {
     private let rootURL: URL
     private let encryptedStateURL: URL
     private let legacyStateURL: URL
+    private let stateKeyFallbackURL: URL
     private let recoveryURL: URL
     private let documentsURL: URL
     private let modelPacksURL: URL
     private let exportsURL: URL
-    private let keychainAccount = "ross.ios.alpha.state"
+    private let keychainAccount: String
+    private let usePlaintextStateStorage: Bool
 
     init() {
+        let isRunningTests = alphaIsRunningTests()
         rootURL = alphaSupportRootURL()
         encryptedStateURL = rootURL.appendingPathComponent("state.enc")
         legacyStateURL = rootURL.appendingPathComponent("state.json")
+        stateKeyFallbackURL = rootURL.appendingPathComponent("state.key")
         recoveryURL = rootURL.appendingPathComponent("recovery", isDirectory: true)
         documentsURL = rootURL.appendingPathComponent("documents", isDirectory: true)
         modelPacksURL = rootURL.appendingPathComponent("model-packs", isDirectory: true)
         exportsURL = rootURL.appendingPathComponent("exports", isDirectory: true)
+        keychainAccount = isRunningTests ? "ross.ios.alpha.state.tests" : "ross.ios.alpha.state"
+        usePlaintextStateStorage = isRunningTests || ProcessInfo.processInfo.environment["ROSS_USE_PLAINTEXT_STATE"] == "1"
     }
 
     func load() throws -> AlphaPersistedState {
         try ensureFolders()
+
+        if usePlaintextStateStorage {
+            if fileManager.fileExists(atPath: legacyStateURL.path()) {
+                let data = try Data(contentsOf: legacyStateURL)
+                return try JSONDecoder.ross.decode(AlphaPersistedState.self, from: data)
+            }
+
+            let seed = AlphaPersistedState.seed()
+            try save(seed)
+            return seed
+        }
 
         if fileManager.fileExists(atPath: encryptedStateURL.path()) {
             do {
@@ -215,6 +248,16 @@ actor AlphaRossStore {
 
     private func save(_ state: AlphaPersistedState) throws {
         try ensureFolders()
+
+        if usePlaintextStateStorage {
+            let data = try JSONEncoder.ross.encode(state)
+            try data.write(to: legacyStateURL, options: .atomic)
+            if fileManager.fileExists(atPath: encryptedStateURL.path()) {
+                try? fileManager.removeItem(at: encryptedStateURL)
+            }
+            return
+        }
+
         let data = try JSONEncoder.ross.encode(state)
         try encryptState(data).write(to: encryptedStateURL, options: .atomic)
         if fileManager.fileExists(atPath: legacyStateURL.path()) {
@@ -490,7 +533,12 @@ actor AlphaRossStore {
         var result: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         if status == errSecSuccess, let data = result as? Data {
+            try? persistFallbackStateKey(data)
             return SymmetricKey(data: data)
+        }
+
+        if let fallbackKey = try loadFallbackStateKey() {
+            return SymmetricKey(data: fallbackKey)
         }
 
         let keyData = Data((0..<32).map { _ in UInt8.random(in: .min ... .max) })
@@ -504,11 +552,25 @@ actor AlphaRossStore {
         if addStatus == errSecDuplicateItem {
             return try fetchOrCreateStateKey()
         }
-        guard addStatus == errSecSuccess else {
-            throw NSError(domain: NSOSStatusErrorDomain, code: Int(addStatus))
+
+        if addStatus == errSecSuccess {
+            try? persistFallbackStateKey(keyData)
+            return SymmetricKey(data: keyData)
         }
 
+        try persistFallbackStateKey(keyData)
         return SymmetricKey(data: keyData)
+    }
+
+    private func loadFallbackStateKey() throws -> Data? {
+        guard fileManager.fileExists(atPath: stateKeyFallbackURL.path()) else { return nil }
+        let data = try Data(contentsOf: stateKeyFallbackURL)
+        return data.isEmpty ? nil : data
+    }
+
+    private func persistFallbackStateKey(_ keyData: Data) throws {
+        try ensureFolders()
+        try keyData.write(to: stateKeyFallbackURL, options: .atomic)
     }
 
     private func stashCorruptState() throws {
