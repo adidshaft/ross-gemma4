@@ -31,8 +31,9 @@
 		C704A78AF33415BCC6CF20E6 /* ModelCatalogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA11EC2983D1813DE6D0B242 /* ModelCatalogService.swift */; };
 		CCEFEC94E7BC87A862C8F913 /* AlphaDataModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BDF2721944CAB65DC4F629C /* AlphaDataModels.swift */; };
 		CF913D4FB64C57942D3BA1BA /* CaseRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = E74DB047A5F457623AD25580 /* CaseRepository.swift */; };
-		D59528BC93111C2F548C1C55 /* DeviceCapabilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF026A2C0B93DFBD17AEFF9A /* DeviceCapabilityService.swift */; };
-		FC118081573E2805C554D5A8 /* RossApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04E71658210E395C620C6267 /* RossApp.swift */; };
+			D59528BC93111C2F548C1C55 /* DeviceCapabilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF026A2C0B93DFBD17AEFF9A /* DeviceCapabilityService.swift */; };
+			F1A1B2C3D4E5F60718293A40 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F1A1B2C3D4E5F60718293A41 /* Assets.xcassets */; };
+			FC118081573E2805C554D5A8 /* RossApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04E71658210E395C620C6267 /* RossApp.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -60,9 +61,10 @@
 		B44F9771029315078F6814ED /* LocalRuntimeService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LocalRuntimeService.swift; sourceTree = "<group>"; };
 		B78B6D618FCC9AB6389E9840 /* PublicLawSearchService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PublicLawSearchService.swift; sourceTree = "<group>"; };
 		B91DF8B765C4CFD91368F7CB /* ScreenshotExporter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ScreenshotExporter.swift; sourceTree = "<group>"; };
-		CF026A2C0B93DFBD17AEFF9A /* DeviceCapabilityService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeviceCapabilityService.swift; sourceTree = "<group>"; };
-		E74DB047A5F457623AD25580 /* CaseRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CaseRepository.swift; sourceTree = "<group>"; };
-		EA11EC2983D1813DE6D0B242 /* ModelCatalogService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ModelCatalogService.swift; sourceTree = "<group>"; };
+			CF026A2C0B93DFBD17AEFF9A /* DeviceCapabilityService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeviceCapabilityService.swift; sourceTree = "<group>"; };
+			E74DB047A5F457623AD25580 /* CaseRepository.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CaseRepository.swift; sourceTree = "<group>"; };
+			EA11EC2983D1813DE6D0B242 /* ModelCatalogService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ModelCatalogService.swift; sourceTree = "<group>"; };
+			F1A1B2C3D4E5F60718293A41 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Resources/Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -76,17 +78,18 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		0643A5B8F57367B55641A9AD /* Ross */ = {
-			isa = PBXGroup;
-			children = (
-				9B8B81CAFA52D8D752470B13 /* App */,
-				B3EC5C7A40F0811C8AE85E70 /* Models */,
-				45827E9368D3FC6B92F449D2 /* Services */,
-				4F9C87718BA96D9B939104A1 /* AlphaFoundation */,
-			);
-			path = Ross;
-			sourceTree = "<group>";
-		};
+			0643A5B8F57367B55641A9AD /* Ross */ = {
+				isa = PBXGroup;
+				children = (
+					9B8B81CAFA52D8D752470B13 /* App */,
+					B3EC5C7A40F0811C8AE85E70 /* Models */,
+					45827E9368D3FC6B92F449D2 /* Services */,
+					4F9C87718BA96D9B939104A1 /* AlphaFoundation */,
+					F1A1B2C3D4E5F60718293A41 /* Assets.xcassets */,
+				);
+				path = Ross;
+				sourceTree = "<group>";
+			};
 		06FD77852FCA4461DC46B020 = {
 			isa = PBXGroup;
 			children = (
@@ -227,13 +230,14 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		BFAEA347A4DDA39AFBBC9653 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
+			BFAEA347A4DDA39AFBBC9653 /* Resources */ = {
+				isa = PBXResourcesBuildPhase;
+				buildActionMask = 2147483647;
+				files = (
+					F1A1B2C3D4E5F60718293A40 /* Assets.xcassets in Resources */,
+				);
+				runOnlyForDeploymentPostprocessing = 0;
+			};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */

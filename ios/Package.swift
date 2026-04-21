@@ -18,7 +18,9 @@ let package = Package(
         .executableTarget(
             name: "Ross",
             path: "Ross",
-            exclude: ["Resources"]
+            resources: [
+                .process("Resources")
+            ]
         ),
         .testTarget(
             name: "RossTests",

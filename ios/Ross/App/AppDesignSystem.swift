@@ -2,25 +2,28 @@ import SwiftUI
 
 public extension Font {
     static func rossSerifTitle() -> Font {
-        .custom("Baskerville", size: 30, relativeTo: .title)
+        .custom("Baskerville", size: 26, relativeTo: .title)
     }
     
     static func rossSerifHeadline() -> Font {
-        .custom("Baskerville", size: 21, relativeTo: .title3)
+        .custom("Baskerville", size: 18, relativeTo: .title3)
     }
 }
 
 public struct RossCardStyle: ViewModifier {
     public func body(content: Content) -> some View {
         content
-            .padding(24)
-            .background(Color.rossCardBackground)
+            .padding(16)
+            .background(
+                Color.rossCardBackground.opacity(0.88)
+                    .background(.ultraThinMaterial)
+            )
             .overlay {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(Color.rossBorder, lineWidth: 0.5)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.rossBorder.opacity(0.9), lineWidth: 0.75)
             }
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(color: Color.black.opacity(0.04), radius: 16, x: 0, y: 8)
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .shadow(color: Color.black.opacity(0.07), radius: 14, x: 0, y: 8)
     }
 }
 
@@ -30,7 +33,7 @@ public struct RossPrimaryButtonStyle: ButtonStyle {
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
+            .padding(.vertical, 13)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(Color.rossPillGradient.opacity(configuration.isPressed ? 0.9 : 1))

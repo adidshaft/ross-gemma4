@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
+import com.ross.android.R
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -13,6 +14,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -21,18 +23,24 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -41,6 +49,7 @@ import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalDrawerSheet
@@ -65,17 +74,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.sp
 import java.io.File
 import kotlinx.coroutines.launch
 
-private val alphaScreenPadding = 16.dp
+private val alphaScreenPadding = 18.dp
 private val alphaSectionSpacing = 14.dp
 private val AlphaAmberStatus = Color(0xFFD18C00)
 
@@ -176,7 +192,6 @@ fun AlphaRossApp() {
                 selectedRoot = rootRoute,
                 onRootSelected = { replaceWith(it) },
                 onOpenWorkspaceDrawer = { openRootDrawer() },
-                onOpenCapture = { push(AndroidAlphaRoute.Capture) },
                 onCreateCase = { push(AndroidAlphaRoute.CreateCase) },
                 onOpenCase = { caseId ->
                     controller.focusCase(caseId)
@@ -356,6 +371,7 @@ fun AlphaRossApp() {
 @Composable
 private fun AlphaShell(
     title: String,
+    showTopBar: Boolean = true,
     showBack: Boolean = false,
     onBack: (() -> Unit)? = null,
     showMenu: Boolean = false,
@@ -369,16 +385,18 @@ private fun AlphaShell(
 ) {
     Scaffold(
         topBar = {
-            AlphaTopBar(
-                title = title,
-                showBack = showBack,
-                onBack = onBack,
-                showMenu = showMenu,
-                onMenu = onMenu,
-                actionLabel = actionLabel,
-                onAction = onAction,
-                actions = actions,
-            )
+            if (showTopBar) {
+                AlphaTopBar(
+                    title = title,
+                    showBack = showBack,
+                    onBack = onBack,
+                    showMenu = showMenu,
+                    onMenu = onMenu,
+                    actionLabel = actionLabel,
+                    onAction = onAction,
+                    actions = actions,
+                )
+            }
         },
         bottomBar = {
             bottomBar?.invoke()
@@ -414,73 +432,59 @@ private fun AlphaTopBar(
         title = { Text(title, style = MaterialTheme.typography.titleLarge) },
         navigationIcon = {
             if (showBack && onBack != null) {
-                Button(onClick = onBack, modifier = Modifier.padding(start = 12.dp)) { Text("Back") }
-            } else if (showMenu && onMenu != null) {
-                OutlinedCard(
+                AlphaChromeIconButton(
+                    icon = Icons.AutoMirrored.Outlined.ArrowBack,
+                    label = "Back",
+                    onClick = onBack,
                     modifier = Modifier.padding(start = 12.dp),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f)),
+                )
+            } else if (showMenu && onMenu != null) {
+                AlphaChromeIconButton(
+                    icon = Icons.AutoMirrored.Outlined.MenuOpen,
+                    label = "Open workspace drawer",
                     onClick = onMenu,
-                ) {
-                    Text(
-                        "Menu",
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
+                    modifier = Modifier.padding(start = 12.dp),
+                )
             }
         },
         actions = {
             if (actions != null) {
                 actions()
             } else if (actionLabel != null && onAction != null) {
-                OutlinedCard(
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f)),
+                AlphaChromeIconButton(
+                    icon = if (actionLabel.equals("Ask", ignoreCase = true)) {
+                        Icons.Outlined.ChatBubbleOutline
+                    } else {
+                        Icons.Outlined.ChevronRight
+                    },
+                    label = actionLabel,
                     onClick = onAction,
-                ) {
-                    Text(
-                        actionLabel,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
+                    modifier = Modifier.padding(end = 6.dp),
+                )
             }
         }
     )
 }
 
 @Composable
-private fun AlphaTopBarMenuAction(
+private fun AlphaChromeIconButton(
+    icon: ImageVector,
     label: String,
-    content: @Composable (closeMenu: () -> Unit) -> Unit,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Box {
-        OutlinedCard(
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f)),
-            onClick = { expanded = true },
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    label,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text("v", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            content { expanded = false }
-        }
+    OutlinedCard(
+        modifier = modifier,
+        shape = RoundedCornerShape(999.dp),
+        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.84f)),
+        onClick = onClick,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            tint = MaterialTheme.colorScheme.onSurface,
+        )
     }
 }
 
@@ -595,60 +599,105 @@ private fun AlphaRootWorkspaceDrawer(
 }
 
 @Composable
-private fun AlphaRootStrip(selectedRoute: AndroidAlphaRoute, onSelect: (AndroidAlphaRoute) -> Unit) {
-    val tabs = listOf(
-        AndroidAlphaRoute.Home to "Today",
-        AndroidAlphaRoute.CaseList to "Matters",
-        AndroidAlphaRoute.Settings to "Settings",
-    )
+private fun alphaChromeBackgroundColor(): Color =
+    if (isSystemInDarkTheme()) Color(0xFF0E131D) else Color(0xFF111724)
 
-    OutlinedCard(
+@Composable
+private fun alphaChromeForegroundColor(): Color =
+    Color.White.copy(alpha = 0.95f)
+
+@Composable
+private fun alphaChromeMutedColor(): Color =
+    Color.White.copy(alpha = if (isSystemInDarkTheme()) 0.62f else 0.68f)
+
+@Composable
+private fun alphaChromeStrokeColor(): Color =
+    Color.White.copy(alpha = if (isSystemInDarkTheme()) 0.08f else 0.1f)
+
+private fun alphaRootIcon(route: AndroidAlphaRoute): ImageVector =
+    when (route) {
+        AndroidAlphaRoute.Home -> Icons.Outlined.CalendarToday
+        AndroidAlphaRoute.CaseList -> Icons.Outlined.Folder
+        AndroidAlphaRoute.Settings, AndroidAlphaRoute.PrivateAiSettings -> Icons.Outlined.Settings
+        else -> Icons.Outlined.CalendarToday
+    }
+
+@Composable
+private fun AlphaRootTopRail(
+    selectedRoute: AndroidAlphaRoute,
+    onOpenWorkspaceDrawer: () -> Unit,
+    onSelect: (AndroidAlphaRoute) -> Unit,
+) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(30.dp),
-        colors = CardDefaults.outlinedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
-        ),
+            .statusBarsPadding()
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        AlphaChromeIconButton(
+            icon = Icons.AutoMirrored.Outlined.MenuOpen,
+            label = "Open workspace drawer",
+            onClick = onOpenWorkspaceDrawer,
+        )
+        AlphaRootStrip(
+            modifier = Modifier.weight(1f),
+            selectedRoute = selectedRoute,
+            onSelect = onSelect,
+        )
+    }
+}
+
+@Composable
+private fun AlphaRootStrip(
+    selectedRoute: AndroidAlphaRoute,
+    onSelect: (AndroidAlphaRoute) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val tabs = listOf(AndroidAlphaRoute.Home, AndroidAlphaRoute.CaseList, AndroidAlphaRoute.Settings)
+    val chromeBackground = alphaChromeBackgroundColor()
+    val chromeForeground = alphaChromeForegroundColor()
+    val chromeMuted = alphaChromeMutedColor()
+
+    OutlinedCard(
+        modifier = modifier,
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.outlinedCardColors(containerColor = chromeBackground),
+        border = androidx.compose.foundation.BorderStroke(1.dp, alphaChromeStrokeColor()),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 6.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(horizontal = 4.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            tabs.forEach { (route, label) ->
+            tabs.forEach { route ->
                 val selected = selectedRoute::class == route::class
-
                 OutlinedCard(
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(22.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.outlinedCardColors(
-                        containerColor = if (selected) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.16f)
-                        },
+                        containerColor = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
                     ),
+                    border = androidx.compose.foundation.BorderStroke(0.dp, Color.Transparent),
                     onClick = { onSelect(route) },
                 ) {
-                    Row(
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 10.dp, vertical = 11.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically,
+                            .height(36.dp),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Text(
-                            label,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (selected) {
-                                MaterialTheme.colorScheme.onPrimary
-                            } else {
-                                MaterialTheme.colorScheme.onSurface
+                        Icon(
+                            imageVector = alphaRootIcon(route),
+                            contentDescription = when (route) {
+                                AndroidAlphaRoute.Home -> "Today"
+                                AndroidAlphaRoute.CaseList -> "Matters"
+                                else -> "Settings"
                             },
+                            tint = if (selected) Color.White else chromeMuted,
                         )
                     }
                 }
@@ -661,72 +710,144 @@ private fun AlphaRootStrip(selectedRoute: AndroidAlphaRoute, onSelect: (AndroidA
 @Composable
 private fun AlphaRootAskDock(controller: AlphaRossController) {
     var showTools by remember { mutableStateOf(false) }
+    var dismissedInlineQuestion by rememberSaveable { mutableStateOf<String?>(null) }
     val activeScopeCaseId = controller.askSelectedScopeCaseId
-    val draftPreview = controller.askDraft(activeScopeCaseId).trim()
-    val prompt = when {
-        draftPreview.isNotEmpty() -> draftPreview
-        activeScopeCaseId != null -> "Ask about ${controller.scopeLabel(activeScopeCaseId)}"
-        else -> "Ask Ross across all matters"
+    val inlineResult = controller.latestAskResult?.takeUnless { dismissedInlineQuestion == it.question }
+    val chromeBackground = alphaChromeBackgroundColor()
+    val chromeForeground = alphaChromeForegroundColor()
+    val chromeMuted = alphaChromeMutedColor()
+
+    fun send() {
+        val question = controller.askDraft(activeScopeCaseId).trim()
+        if (question.isBlank()) return
+        dismissedInlineQuestion = null
+        controller.submitAsk(
+            question = question,
+            scopeCaseId = activeScopeCaseId,
+            webEnabled = controller.askWebEnabled,
+        )
     }
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
+        inlineResult?.let { result ->
+            AlphaInlineAskResponseCard(
+                result = result,
+                onOpenSource = { source ->
+                    controller.focusCase(source.caseId)
+                    controller.pendingRoute = AndroidAlphaRoute.DocumentViewer(source.caseId, source.documentId, source.pageNumber)
+                },
+                onOpenConversation = { controller.openAsk(activeScopeCaseId) },
+                onClose = { dismissedInlineQuestion = result.question },
+            )
+        }
+
         OutlinedCard(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(999.dp),
-            colors = CardDefaults.outlinedCardColors(containerColor = Color(0xFF171717)),
+            shape = RoundedCornerShape(22.dp),
+            colors = CardDefaults.outlinedCardColors(containerColor = chromeBackground),
+            border = androidx.compose.foundation.BorderStroke(1.dp, alphaChromeStrokeColor()),
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically,
+            Column(
+                modifier = Modifier.padding(horizontal = 11.dp, vertical = 9.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                OutlinedCard(
-                    shape = RoundedCornerShape(999.dp),
-                    colors = CardDefaults.outlinedCardColors(containerColor = Color.White.copy(alpha = 0.08f)),
-                    onClick = { showTools = true },
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        "+",
-                        modifier = Modifier.padding(horizontal = 15.dp, vertical = 9.dp),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = Color.White,
-                    )
+                    AlphaRootScopeButton(
+                        label = controller.scopeLabel(activeScopeCaseId),
+                        tint = chromeForeground,
+                    ) {
+                        showTools = true
+                    }
+
+                    if (controller.askWebEnabled) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Public,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.size(14.dp),
+                            )
+                            Text(
+                                "Web Search",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = chromeMuted,
+                            )
+                        }
+                    }
                 }
 
-                OutlinedCard(
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(999.dp),
-                    colors = CardDefaults.outlinedCardColors(containerColor = Color.Transparent),
-                    onClick = { controller.openAsk() },
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        prompt,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 11.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.78f),
-                        maxLines = 1,
+                    AlphaDockIconButton(
+                        icon = Icons.Outlined.Add,
+                        label = "Ask Ross tools",
+                        tint = chromeForeground,
+                    ) {
+                        showTools = true
+                    }
+
+                    BasicTextField(
+                        value = controller.askDraft(activeScopeCaseId),
+                        onValueChange = { controller.setAskDraft(activeScopeCaseId, it) },
+                        modifier = Modifier.weight(1f),
+                        textStyle = MaterialTheme.typography.bodySmall.copy(color = chromeForeground, lineHeight = 18.sp),
+                        keyboardOptions = KeyboardOptions(
+                            capitalization = KeyboardCapitalization.Sentences,
+                            imeAction = ImeAction.Send,
+                        ),
+                        maxLines = 2,
+                        decorationBox = { innerTextField ->
+                            Box(modifier = Modifier.padding(vertical = 8.dp)) {
+                                if (controller.askDraft(activeScopeCaseId).isBlank()) {
+                                    Text(
+                                        "Ask Ross about today",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = chromeMuted,
+                                    )
+                                }
+                                innerTextField()
+                            }
+                        },
                     )
+
+                    AlphaDockIconButton(
+                        icon = Icons.Outlined.ArrowUpward,
+                        label = "Send",
+                        tint = Color(0xFF111724),
+                        fill = Color.White,
+                    ) {
+                        send()
+                    }
+
+                    AlphaDockIconButton(
+                        icon = Icons.Outlined.ChatBubbleOutline,
+                        label = "Open Ask Ross conversation",
+                        tint = chromeForeground,
+                    ) {
+                        controller.openAsk(activeScopeCaseId)
+                    }
                 }
 
-                OutlinedCard(
-                    shape = RoundedCornerShape(999.dp),
-                    colors = CardDefaults.outlinedCardColors(containerColor = Color.White),
-                    onClick = { controller.openAsk() },
-                ) {
+                if (controller.askWebEnabled) {
                     Text(
-                        "Ask",
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF171717),
+                        "Web Search only sends a sanitized public-law query. Ross never sends your case files or document text.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = chromeMuted,
                     )
                 }
             }
@@ -765,6 +886,7 @@ private fun AlphaRootAskDock(controller: AlphaRossController) {
                     title = "Add file",
                     detail = "Import a PDF, image, or note into this device.",
                     accent = "Open",
+                    icon = Icons.Outlined.AttachFile,
                 ) {
                     controller.pendingRoute = AndroidAlphaRoute.Capture
                     showTools = false
@@ -778,6 +900,7 @@ private fun AlphaRootAskDock(controller: AlphaRossController) {
                         "Off. Ross stays fully local until you turn it on."
                     },
                     accent = if (controller.askWebEnabled) "On" else "Off",
+                    icon = if (controller.askWebEnabled) Icons.Outlined.Public else Icons.Outlined.Lock,
                 ) {
                     controller.askWebEnabled = !controller.askWebEnabled
                 }
@@ -795,10 +918,103 @@ private fun AlphaRootAskDock(controller: AlphaRossController) {
 }
 
 @Composable
+private fun AlphaRootScopeButton(label: String, tint: Color, onClick: () -> Unit) {
+    OutlinedCard(
+        shape = RoundedCornerShape(999.dp),
+        colors = CardDefaults.outlinedCardColors(containerColor = Color.White.copy(alpha = 0.08f)),
+        border = androidx.compose.foundation.BorderStroke(0.dp, Color.Transparent),
+        onClick = onClick,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = tint,
+                maxLines = 1,
+            )
+            Icon(
+                imageVector = Icons.Outlined.KeyboardArrowDown,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(14.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun AlphaDockIconButton(
+    icon: ImageVector,
+    label: String,
+    tint: Color,
+    fill: Color = Color.White.copy(alpha = 0.08f),
+    onClick: () -> Unit,
+) {
+    OutlinedCard(
+        shape = RoundedCornerShape(999.dp),
+        colors = CardDefaults.outlinedCardColors(containerColor = fill),
+        border = androidx.compose.foundation.BorderStroke(0.dp, Color.Transparent),
+        onClick = onClick,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
+            tint = tint,
+        )
+    }
+}
+
+@Composable
+private fun AlphaInlineAskResponseCard(
+    result: AlphaAskResult,
+    onOpenSource: (AlphaSourceRef) -> Unit,
+    onOpenConversation: () -> Unit,
+    onClose: () -> Unit,
+) {
+    AlphaCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(result.answerTitle, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Spacer(modifier = Modifier.weight(1f))
+            AlphaChromeIconButton(icon = Icons.Outlined.Close, label = "Dismiss latest answer", onClick = onClose)
+        }
+        result.answerSections.take(2).forEach { section ->
+            Text(section, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (result.caseFileSources.isNotEmpty()) {
+            Text(
+                result.caseFileSources.first().label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.clickable { onOpenSource(result.caseFileSources.first()) },
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            result.statusNote?.let { note ->
+                Text(note, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
+            } ?: Spacer(modifier = Modifier.width(1.dp))
+            TextButton(onClick = onOpenConversation) {
+                Text("Open thread")
+            }
+        }
+    }
+}
+
+@Composable
 private fun AlphaRootAskSheetAction(
     title: String,
     detail: String,
     accent: String,
+    icon: ImageVector,
     onClick: () -> Unit,
 ) {
     OutlinedCard(
@@ -810,13 +1026,25 @@ private fun AlphaRootAskSheetAction(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .background(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                        RoundedCornerShape(14.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            }
+
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
                 Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 Text(
@@ -825,12 +1053,22 @@ private fun AlphaRootAskSheetAction(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Text(
-                accent,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary,
-            )
+
+            Box(
+                modifier = Modifier
+                    .background(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                        RoundedCornerShape(999.dp)
+                    )
+                    .padding(horizontal = 10.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    accent,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
         }
     }
 }
@@ -865,18 +1103,48 @@ private fun AlphaOnboardingScreen(onContinue: () -> Unit) {
 private fun AlphaPackSetupScreen(controller: AlphaRossController, onContinue: () -> Unit, onSkip: () -> Unit) {
     var infoTier by rememberSaveable { mutableStateOf<AlphaCapabilityTier?>(null) }
 
-    AlphaShell(title = "Private AI Pack") {
+    AlphaShell(title = "Private AI Pack", showTopBar = false) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.56f),
+                            MaterialTheme.colorScheme.background,
+                        )
+                    )
+                )
+                .verticalScroll(rememberScrollState())
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(144.dp)
+                    .clip(RoundedCornerShape(26.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(Color(0xFF0F1320), Color(0xFF1A2031)),
+                        )
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.ross_logo),
+                    contentDescription = "Ross",
+                    modifier = Modifier.size(86.dp),
+                    contentScale = ContentScale.Fit,
+                )
+            }
+
             AlphaInlineHeader(
-                eyebrow = null,
+                eyebrow = "Assistant setup",
                 title = "Choose the private assistant for this device",
                 detail = "Setup runs in the background after you continue.",
             )
+
             AlphaCapabilityTier.values().forEach { tier ->
                 AlphaSelectableBar(
                     tier = tier,
@@ -885,16 +1153,17 @@ private fun AlphaPackSetupScreen(controller: AlphaRossController, onContinue: ()
                     onInfo = { infoTier = tier },
                 )
             }
+
             AlphaAssistantActivityStrip(
                 title = "${controller.selectedTier.title} keeps preparing in the background",
                 detail = "Settings shows a small amber light while Ross finishes setup.",
                 statusLabel = "In Settings",
                 tint = AlphaAmberStatus,
             )
-            Spacer(modifier = Modifier.weight(1f))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Button(onClick = onContinue, modifier = Modifier.weight(1f)) { Text("Start setup") }
-                Button(onClick = onSkip, modifier = Modifier.weight(1f)) { Text("Not now") }
+                TextButton(onClick = onSkip, modifier = Modifier.weight(1f)) { Text("Not now") }
             }
         }
     }
@@ -922,7 +1191,6 @@ private fun AlphaHomeScreen(
     selectedRoot: AndroidAlphaRoute,
     onRootSelected: (AndroidAlphaRoute) -> Unit,
     onOpenWorkspaceDrawer: () -> Unit,
-    onOpenCapture: () -> Unit,
     onCreateCase: () -> Unit,
     onOpenCase: (String) -> Unit,
 ) {
@@ -932,16 +1200,15 @@ private fun AlphaHomeScreen(
     val todayDateLines = alphaTodayDateLines(controller.persisted.cases)
     val upcomingDateLines = alphaUpcomingDateLines(controller.persisted.cases)
     val recentDocuments = alphaRecentDocumentItems(controller.persisted.cases)
-    val privateAssistantStatus = alphaPrivateAiStatus(controller)
     val attentionCount = todayDateLines.size + controller.todayTasks().size + controller.reviewQueue().size
 
     AlphaShell(
         title = "Today",
-        showMenu = true,
-        onMenu = onOpenWorkspaceDrawer,
+        showTopBar = false,
         topContent = {
-            AlphaRootStrip(
+            AlphaRootTopRail(
                 selectedRoute = selectedRoot,
+                onOpenWorkspaceDrawer = onOpenWorkspaceDrawer,
                 onSelect = onRootSelected,
             )
         },
@@ -965,15 +1232,13 @@ private fun AlphaHomeScreen(
                     "Ross grouped today, nearby dates, and matter activity below so the next action stays obvious."
                 }
             )
-            AlphaCard("Private AI", privateAssistantStatus.first) {
-                Text(privateAssistantStatus.second, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(modifier = Modifier.height(10.dp))
-                Button(
-                    onClick = { controller.pendingRoute = AndroidAlphaRoute.PrivateAiSettings },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text("Open device setup")
-                }
+            alphaActiveSetupJob(controller)?.let { activeJob ->
+                AlphaAssistantActivityStrip(
+                    title = "${activeJob.tier.title} is still preparing",
+                    detail = alphaAssistantActivityDetail(activeJob.state),
+                    statusLabel = alphaJobStatusLabel(activeJob.state),
+                    tint = AlphaAmberStatus,
+                )
             }
 
             if (controller.persisted.cases.isEmpty()) {
@@ -1016,7 +1281,14 @@ private fun AlphaHomeScreen(
                 }
             }
 
-            AlphaCard("Needs review") {
+            var needsReviewExpanded by rememberSaveable { mutableStateOf(true) }
+
+            AlphaExpandableCard(
+                title = "Needs review",
+                badge = "${controller.reviewQueue().size}",
+                expanded = needsReviewExpanded,
+                onToggle = { needsReviewExpanded = !needsReviewExpanded },
+            ) {
                 controller.reviewQueue().take(4).forEach { item ->
                     AlphaReviewRow(
                         item = item,
@@ -1034,17 +1306,6 @@ private fun AlphaHomeScreen(
                 expanded = matterActivityExpanded,
                 onToggle = { matterActivityExpanded = !matterActivityExpanded },
             ) {
-                if (controller.persisted.cases.isNotEmpty()) {
-                    Button(
-                        onClick = { onOpenCapture() },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text("Import a file")
-                    }
-                }
-                if (controller.persisted.cases.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(10.dp))
-                }
                 if (controller.persisted.cases.isEmpty() && recentDocuments.isEmpty()) {
                     Text("No matters yet. Save the first matter above and Ross will show it here with recent files.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -1092,24 +1353,11 @@ private fun AlphaCaseListScreen(
 
     AlphaShell(
         title = "Matters",
-        showMenu = true,
-        onMenu = onOpenWorkspaceDrawer,
-        actions = {
-            AlphaTopBarMenuAction(label = "Sort") { closeMenu ->
-                AlphaCaseSortMode.values().forEach { option ->
-                    DropdownMenuItem(
-                        text = { Text(option.label) },
-                        onClick = {
-                            sortMode = option
-                            closeMenu()
-                        },
-                    )
-                }
-            }
-        },
+        showTopBar = false,
         topContent = {
-            AlphaRootStrip(
+            AlphaRootTopRail(
                 selectedRoute = selectedRoot,
+                onOpenWorkspaceDrawer = onOpenWorkspaceDrawer,
                 onSelect = onRootSelected,
             )
         },
@@ -1124,19 +1372,29 @@ private fun AlphaCaseListScreen(
             verticalArrangement = Arrangement.spacedBy(alphaSectionSpacing)
         ) {
             item {
-                AlphaInlineHeader(
-                    eyebrow = null,
-                    title = "Keep each matter in one place",
-                    detail = "${controller.persisted.cases.size} matter(s) on this device",
-                )
-            }
-            item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    AlphaCaseListMenuButton(label = viewMode.label) { closeMenu ->
+                    Text(
+                        "${controller.persisted.cases.size} matter(s) on this device",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    AlphaIconMenuButton(icon = if (sortMode == AlphaCaseSortMode.RecentlyViewed) Icons.AutoMirrored.Outlined.Sort else Icons.Outlined.SwapVert, label = "Sort matters") { closeMenu ->
+                        AlphaCaseSortMode.values().forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option.label) },
+                                onClick = {
+                                    sortMode = option
+                                    closeMenu()
+                                },
+                            )
+                        }
+                    }
+                    AlphaIconMenuButton(icon = if (viewMode == AlphaMatterListViewMode.Expanded) Icons.Outlined.ViewAgenda else Icons.Outlined.ViewHeadline, label = "Change matter view") { closeMenu ->
                         AlphaMatterListViewMode.values().forEach { option ->
                             DropdownMenuItem(
                                 text = { Text(option.label) },
@@ -1147,8 +1405,7 @@ private fun AlphaCaseListScreen(
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.weight(1f))
-                    Button(onClick = onCreateCase) { Text("Create matter") }
+                    AlphaChromeIconButton(icon = Icons.Outlined.Add, label = "Create matter", onClick = onCreateCase)
                 }
             }
 
@@ -1321,7 +1578,7 @@ private fun AlphaCaseWorkspaceScreen(
     var selectedSection by rememberSaveable { mutableStateOf(AlphaWorkspaceSection.Overview) }
     val case = controller.persisted.cases.firstOrNull { it.id == caseId }
     AlphaShell(
-        title = "Matter",
+        title = "Case",
         showBack = true,
         onBack = onBack,
         actionLabel = "Ask",
@@ -1340,35 +1597,6 @@ private fun AlphaCaseWorkspaceScreen(
                     title = it.title,
                     detail = "${it.stage.name.lowercase().replaceFirstChar(Char::titlecase)} · ${it.documents.size} documents · ${controller.openTaskCount(caseId)} open tasks",
                 )
-                AlphaCard("What needs attention", "Auto-generated locally.") {
-                    it.nextHearing?.let { nextDate ->
-                        AlphaSummaryRow(title = "Next date", detail = alphaDateLabel(nextDate))
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-                    if (it.draftTasks.isEmpty()) {
-                        Text(
-                            "No next-step note is saved yet. Import another file or ask Ross to refresh this matter's next actions.",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    } else {
-                        Text(
-                            alphaCaseAttentionSummary(it),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        it.draftTasks.take(3).forEach { task ->
-                            AlphaBullet(task)
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Button(
-                        onClick = { controller.refreshCaseOverview(caseId) },
-                        enabled = !controller.isRefreshingCaseOverview(caseId),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(if (controller.isRefreshingCaseOverview(caseId)) "Refreshing with Ross..." else "Refresh with Ross")
-                    }
-                }
 
                 AlphaWorkspaceSectionBar(
                     selectedSection = selectedSection,
@@ -1378,12 +1606,58 @@ private fun AlphaCaseWorkspaceScreen(
                 when (selectedSection) {
                     AlphaWorkspaceSection.Overview -> {
                         AlphaCard {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .background(
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                            RoundedCornerShape(999.dp)
+                                        )
+                                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                                ) {
+                                    Text(
+                                        "Auto-generated locally",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+
+                                Button(
+                                    onClick = { controller.refreshCaseOverview(caseId) },
+                                    enabled = !controller.isRefreshingCaseOverview(caseId),
+                                ) {
+                                    Text(if (controller.isRefreshingCaseOverview(caseId)) "Refreshing..." else "Refresh")
+                                }
+                            }
+
                             it.nextHearing?.let { nextDate ->
                                 Text("Next date: ${alphaDateLabel(nextDate)}", fontWeight = FontWeight.SemiBold)
                             }
-                            Text("Open tasks: ${controller.openTaskCount(caseId)}")
-                            Text("Review items: ${controller.reviewQueue(caseId).size}")
-                            Text("Documents: ${it.documents.size}")
+
+                            Text(
+                                "${it.documents.size} documents • ${controller.reviewQueue(caseId).size} review items",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+
+                            if (it.draftTasks.isEmpty()) {
+                                Text(
+                                    "No next-step note is saved yet. Import another file or ask Ross to refresh this matter's next actions.",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            } else {
+                                Text(
+                                    alphaCaseAttentionSummary(it),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                it.draftTasks.take(3).forEach { task -> AlphaBullet(task) }
+                            }
+
+                            Spacer(modifier = Modifier.height(4.dp))
                             Text("Matter summary", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                             Text(
                                 "Built from the documents Ross has already read on this device.",
@@ -2024,11 +2298,11 @@ private fun AlphaSettingsScreen(
 ) {
     AlphaShell(
         title = "Settings",
-        showMenu = true,
-        onMenu = onOpenWorkspaceDrawer,
+        showTopBar = false,
         topContent = {
-            AlphaRootStrip(
+            AlphaRootTopRail(
                 selectedRoute = selectedRoot,
+                onOpenWorkspaceDrawer = onOpenWorkspaceDrawer,
                 onSelect = onRootSelected,
             )
         },
@@ -2043,43 +2317,124 @@ private fun AlphaSettingsScreen(
                 .padding(alphaScreenPadding),
             verticalArrangement = Arrangement.spacedBy(alphaSectionSpacing)
         ) {
-            val privateAiStatus = alphaPrivateAiStatus(controller)
             alphaActiveSetupJob(controller)?.let { activeJob ->
-                AlphaCard("Assistant activity") {
-                    AlphaAssistantActivityStrip(
-                        title = "${activeJob.tier.title} is still preparing",
-                        detail = alphaAssistantActivityDetail(activeJob.state),
-                        statusLabel = alphaJobStatusLabel(activeJob.state),
-                        tint = AlphaAmberStatus,
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(onClick = onOpenPrivateAi, modifier = Modifier.fillMaxWidth()) { Text("Open device setup") }
-                }
+                AlphaAssistantActivityStrip(
+                    title = "${activeJob.tier.title} is still preparing",
+                    detail = alphaAssistantActivityDetail(activeJob.state),
+                    statusLabel = alphaJobStatusLabel(activeJob.state),
+                    tint = AlphaAmberStatus,
+                )
             }
-            AlphaCard("Privacy and sharing", "Matter files stay on this device. Web search is always explicit and sanitized.") {
+
+            AlphaCard("Privacy") {
                 AlphaToggleRow("Ask before Web search", controller.persisted.settings.requirePublicLawApproval) {
                     controller.persisted = controller.persisted.copy(settings = controller.persisted.settings.copy(requirePublicLawApproval = it))
                     controller.save()
                 }
+                Spacer(modifier = Modifier.height(8.dp))
                 AlphaToggleRow("Keep Ross private by default", controller.persisted.settings.privateByDefault) {
                     controller.persisted = controller.persisted.copy(settings = controller.persisted.settings.copy(privateByDefault = it))
                     controller.save()
                 }
-            }
-            AlphaCard("Private AI on this device", privateAiStatus.first) {
-                Text(privateAiStatus.second, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = onOpenPrivateAi, modifier = Modifier.fillMaxWidth()) { Text("Open device setup") }
+                Text(
+                    "Matter files stay on this device. Web Search sends only a sanitized public-law query after you approve it.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
-            AlphaCard("Privacy ledger", "Review visible network and local actions.") {
-                Button(onClick = onOpenLedger, modifier = Modifier.fillMaxWidth()) { Text("Open Privacy Ledger") }
+
+            AlphaCard("On this device") {
+                AlphaSettingsValueRow(label = "Status", value = alphaPrivateAiStatus(controller).first)
+                Spacer(modifier = Modifier.height(8.dp))
+                AlphaSettingsValueRow(label = "Pack", value = controller.persisted.settings.activeTier?.title ?: "Not installed")
+                Spacer(modifier = Modifier.height(8.dp))
+                AlphaSettingsValueRow(label = "Saved reports", value = "${controller.persisted.exports.size}")
+                Spacer(modifier = Modifier.height(8.dp))
+                AlphaSettingsNavigationRow(
+                    title = "Open device setup",
+                    detail = "Review downloads, setup progress, and diagnostics.",
+                    icon = Icons.Outlined.Memory,
+                    onClick = onOpenPrivateAi,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                AlphaSettingsNavigationRow(
+                    title = "Open Privacy Ledger",
+                    detail = "See visible network and local actions.",
+                    icon = Icons.AutoMirrored.Outlined.FactCheck,
+                    onClick = onOpenLedger,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                AlphaSettingsNavigationRow(
+                    title = "Technical diagnostics",
+                    detail = "Use this only when setup or on-device review needs attention.",
+                    icon = Icons.Outlined.BuildCircle,
+                    onClick = onOpenPrivateAi,
+                )
             }
-            AlphaCard("Local reports", "${controller.persisted.exports.size} saved items") {
-                Text("Chronologies, case notes, order summaries, and Ross thread transcripts are saved locally.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun AlphaSettingsValueRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            value,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun AlphaSettingsNavigationRow(
+    title: String,
+    detail: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+) {
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.22f)),
+        onClick = onClick,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), RoundedCornerShape(10.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             }
-            AlphaCard("Advanced", "Use this only when device setup or on-device review needs attention.") {
-                Button(onClick = onOpenPrivateAi, modifier = Modifier.fillMaxWidth()) { Text("Technical diagnostics") }
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(title, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                Text(detail, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+
+            Icon(
+                imageVector = Icons.Outlined.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -2233,10 +2588,42 @@ private fun AlphaHero(eyebrow: String, title: String, body: String) {
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(eyebrow.uppercase(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
-            Text(title, style = MaterialTheme.typography.titleLarge)
-            Text(body, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(108.dp)
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(Color(0xFF0F1320), Color(0xFF1A2031))
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.ross_logo),
+                    contentDescription = "Ross",
+                    modifier = Modifier.size(66.dp),
+                    contentScale = ContentScale.Fit
+                )
+            }
+
+            Column(
+                modifier = Modifier.padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    eyebrow.uppercase(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+                Text(title, style = MaterialTheme.typography.headlineSmall)
+                Text(
+                    body,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -2263,7 +2650,7 @@ private fun AlphaCard(title: String? = null, subtitle: String? = null, content: 
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             title?.takeIf { it.isNotBlank() }?.let {
                 Text(it, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             }
@@ -2284,28 +2671,29 @@ private fun alphaTierTint(tier: AlphaCapabilityTier): Color =
         AlphaCapabilityTier.SeniorDraftingSupport -> Color(0xFF44795C)
     }
 
+private fun alphaTierIcon(tier: AlphaCapabilityTier): ImageVector =
+    when (tier) {
+        AlphaCapabilityTier.QuickStart -> Icons.Outlined.BarChart
+        AlphaCapabilityTier.CaseAssociate -> Icons.AutoMirrored.Outlined.MenuBook
+        AlphaCapabilityTier.SeniorDraftingSupport -> Icons.Outlined.Edit
+    }
+
 @Composable
 private fun AlphaTierGlyph(tier: AlphaCapabilityTier) {
     val tint = alphaTierTint(tier)
 
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(3.dp),
-        verticalAlignment = Alignment.Bottom,
+    Box(
         modifier = Modifier
             .background(tint.copy(alpha = 0.1f), shape = RoundedCornerShape(12.dp))
-            .padding(horizontal = 10.dp, vertical = 8.dp),
+            .padding(horizontal = 9.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        repeat(3) { index ->
-            Box(
-                modifier = Modifier
-                    .width(5.dp)
-                    .height((8 + ((index + 1) * 4)).dp)
-                    .background(
-                        if (index < tier.rank) tint else tint.copy(alpha = 0.18f),
-                        shape = RoundedCornerShape(2.dp),
-                    )
-            )
-        }
+        Icon(
+            imageVector = alphaTierIcon(tier),
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(18.dp),
+        )
     }
 }
 
@@ -2322,13 +2710,13 @@ private fun AlphaSelectableBar(
         modifier = Modifier
             .fillMaxWidth()
             .animateContentSize(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.outlinedCardColors(containerColor = if (selected) tint.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+                .padding(horizontal = 12.dp, vertical = 9.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -2349,6 +2737,8 @@ private fun AlphaSelectableBar(
                         "${tier.compactSetupSummary} • ${tier.downloadSizeLabel} • ${tier.setupTimeLabel}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
                 Box(
@@ -2368,12 +2758,11 @@ private fun AlphaSelectableBar(
                 colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.16f)),
                 onClick = onInfo,
             ) {
-                Text(
-                    "i",
-                    modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                Icon(
+                    imageVector = Icons.Outlined.Info,
+                    contentDescription = "About ${tier.title}",
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -2592,22 +2981,43 @@ private fun AlphaWorkspaceSectionBar(
     selectedSection: AlphaWorkspaceSection,
     onSelect: (AlphaWorkspaceSection) -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        AlphaWorkspaceSection.values().forEach { section ->
-            FilterChip(
-                selected = selectedSection == section,
-                onClick = { onSelect(section) },
-                label = { Text(section.label, style = MaterialTheme.typography.labelMedium) },
-            )
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            AlphaWorkspaceSection.values().forEach { section ->
+                FilterChip(
+                    selected = selectedSection == section,
+                    onClick = { onSelect(section) },
+                    label = { Text(section.label, style = MaterialTheme.typography.labelMedium) },
+                )
+            }
         }
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight()
+                .width(40.dp)
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(Color.Transparent, MaterialTheme.colorScheme.background)
+                    )
+                )
+        )
+        Icon(
+            imageVector = Icons.Outlined.ChevronRight,
+            contentDescription = "More sections",
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 4.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
+        )
     }
 }
-
 @Composable
 private fun AlphaBullet(text: String) {
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
@@ -2818,47 +3228,6 @@ private fun AlphaDocumentSummaryRow(caseTitle: String?, document: AlphaCaseDocum
 }
 
 @Composable
-private fun AlphaAskResultCard(result: AlphaAskResult, onOpenSource: (AlphaSourceRef) -> Unit) {
-    AlphaCard(result.answerTitle, result.scopeLabel) {
-        result.answerSections.forEach { section ->
-            AlphaBullet(section)
-        }
-        result.statusNote?.let { note ->
-            Text(note, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.secondary)
-        }
-        result.needsReviewWarning?.let { warning ->
-            Text(warning, color = MaterialTheme.colorScheme.tertiary, style = MaterialTheme.typography.bodySmall)
-        }
-        if (result.caseFileSources.isNotEmpty()) {
-            Text("Local matter sources", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            result.caseFileSources.forEach { source ->
-                Button(onClick = { onOpenSource(source) }, modifier = Modifier.fillMaxWidth()) { Text(source.label) }
-            }
-        }
-        result.publicLawPreview?.let { preview ->
-            Text("Web search preview", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(preview.query, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        if (result.publicLawResults.isNotEmpty()) {
-            Text("Public-law results", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            result.publicLawResults.forEach { publicResult ->
-                OutlinedCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.24f)),
-                ) {
-                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(publicResult.title, style = MaterialTheme.typography.titleMedium)
-                        Text(publicResult.citation, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
-                        Text(publicResult.snippet, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun AlphaAskConversationScreen(
     controller: AlphaRossController,
     fixedScopeCaseId: String?,
@@ -3028,52 +3397,66 @@ private fun AlphaAskTurnCard(result: AlphaAskResult, onOpenSource: (AlphaSourceR
 private fun AlphaAskComposerPanel(controller: AlphaRossController, fixedScopeCaseId: String?) {
     val activeScopeCaseId = fixedScopeCaseId ?: controller.askSelectedScopeCaseId
     var attachExpanded by remember { mutableStateOf(false) }
+    val chromeBackground = alphaChromeBackgroundColor()
+    val chromeForeground = alphaChromeForegroundColor()
+    val chromeMuted = alphaChromeMutedColor()
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
         OutlinedCard(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(26.dp),
-            colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)),
+            shape = RoundedCornerShape(22.dp),
+            colors = CardDefaults.outlinedCardColors(containerColor = chromeBackground),
+            border = androidx.compose.foundation.BorderStroke(1.dp, alphaChromeStrokeColor()),
         ) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 11.dp, vertical = 9.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (fixedScopeCaseId == null) {
-                    AlphaCaseScopeSelector(
-                        selectedCaseId = controller.askSelectedScopeCaseId,
-                        cases = controller.persisted.cases,
-                        allLabel = "All matters",
-                        includeAllCases = true,
-                    ) { selectedCaseId ->
-                        controller.setAskDocumentTitle(selectedCaseId, null)
-                        controller.askSelectedScopeCaseId = selectedCaseId
+                    AlphaRootScopeButton(label = controller.scopeLabel(activeScopeCaseId), tint = chromeForeground) {
+                        attachExpanded = true
                     }
                 } else {
                     Text(
                         controller.scopeLabel(fixedScopeCaseId),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.secondary,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = chromeMuted,
                     )
                 }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    OutlinedTextField(
+                    BasicTextField(
                         value = controller.askDraft(activeScopeCaseId),
                         onValueChange = { controller.setAskDraft(activeScopeCaseId, it) },
                         modifier = Modifier.weight(1f),
-                        label = { Text("Ask about dates, issues, files, or next steps") },
-                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                        minLines = 2,
-                        maxLines = 4,
+                        textStyle = MaterialTheme.typography.bodySmall.copy(color = chromeForeground, lineHeight = 18.sp),
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Send),
+                        maxLines = 3,
+                        decorationBox = { innerTextField ->
+                            Box(modifier = Modifier.padding(vertical = 8.dp)) {
+                                if (controller.askDraft(activeScopeCaseId).isBlank()) {
+                                    Text(
+                                        "Ask Ross about dates, files, or next steps",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = chromeMuted,
+                                    )
+                                }
+                                innerTextField()
+                            }
+                        },
                     )
-                    Spacer(modifier = Modifier.size(10.dp))
-                    AlphaAskMiniButton(label = "Go") {
+                    AlphaDockIconButton(
+                        icon = Icons.Outlined.ArrowUpward,
+                        label = "Send",
+                        tint = Color(0xFF111724),
+                        fill = Color.White,
+                    ) {
                         controller.submitAsk(
                             question = controller.askDraft(activeScopeCaseId),
                             scopeCaseId = activeScopeCaseId,
@@ -3081,12 +3464,37 @@ private fun AlphaAskComposerPanel(controller: AlphaRossController, fixedScopeCas
                         )
                     }
                 }
+
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box {
-                        AlphaAskMiniButton(label = "Add file") {
+                        AlphaDockIconButton(
+                            icon = Icons.Outlined.AttachFile,
+                            label = "Add file",
+                            tint = chromeForeground,
+                        ) {
                             attachExpanded = true
                         }
                         DropdownMenu(expanded = attachExpanded, onDismissRequest = { attachExpanded = false }) {
+                            if (fixedScopeCaseId == null) {
+                                DropdownMenuItem(
+                                    text = { Text("All matters") },
+                                    onClick = {
+                                        controller.setAskDocumentTitle(null, null)
+                                        controller.askSelectedScopeCaseId = null
+                                        attachExpanded = false
+                                    },
+                                )
+                                controller.persisted.cases.forEach { case ->
+                                    DropdownMenuItem(
+                                        text = { Text(case.title) },
+                                        onClick = {
+                                            controller.setAskDocumentTitle(case.id, null)
+                                            controller.askSelectedScopeCaseId = case.id
+                                            attachExpanded = false
+                                        },
+                                    )
+                                }
+                            }
                             DropdownMenuItem(
                                 text = { Text("Open import") },
                                 onClick = {
@@ -3109,15 +3517,19 @@ private fun AlphaAskComposerPanel(controller: AlphaRossController, fixedScopeCas
                             }
                         }
                     }
-                    AlphaAskMiniButton(label = "Web Search", selected = controller.askWebEnabled) {
+                    AlphaDockIconButton(
+                        icon = if (controller.askWebEnabled) Icons.Outlined.Public else Icons.Outlined.PublicOff,
+                        label = "Web Search",
+                        tint = if (controller.askWebEnabled) MaterialTheme.colorScheme.tertiary else chromeForeground,
+                    ) {
                         controller.askWebEnabled = !controller.askWebEnabled
                     }
                 }
                 if (controller.askWebEnabled) {
                     Text(
                         "Web Search only sends a generic public-law query. Ross does not send your case files or document text.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall,
+                        color = chromeMuted,
+                        style = MaterialTheme.typography.labelSmall,
                     )
                 }
             }
@@ -3146,25 +3558,6 @@ private fun AlphaAskComposerPanel(controller: AlphaRossController, fixedScopeCas
                     Text("Cancel")
                 }
             },
-        )
-    }
-}
-
-@Composable
-private fun AlphaAskMiniButton(label: String, selected: Boolean = false, onClick: () -> Unit) {
-    OutlinedCard(
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.outlinedCardColors(
-            containerColor = if (selected) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.86f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.34f),
-        ),
-        onClick = onClick,
-    ) {
-        Text(
-            label,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface,
         )
     }
 }
@@ -3242,7 +3635,8 @@ private fun AlphaCaseScopeSelector(
 }
 
 @Composable
-private fun AlphaCaseListMenuButton(
+private fun AlphaIconMenuButton(
+    icon: ImageVector,
     label: String,
     content: @Composable (closeMenu: () -> Unit) -> Unit,
 ) {
@@ -3259,8 +3653,18 @@ private fun AlphaCaseListMenuButton(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(label, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
-                Text("v", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(18.dp),
+                )
+                Icon(
+                    imageVector = Icons.Outlined.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(14.dp),
+                )
             }
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {

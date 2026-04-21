@@ -48,6 +48,11 @@ extension Color {
         dynamicColor(lightRed: 0.15, lightGreen: 0.35, lightBlue: 0.25,
                      darkRed: 0.35, darkGreen: 0.70, darkBlue: 0.55)
     }
+
+    static var rossChromeBackground: Color {
+        dynamicColor(lightRed: 0.06, lightGreen: 0.08, lightBlue: 0.12,
+                     darkRed: 0.09, darkGreen: 0.11, darkBlue: 0.16)
+    }
     
     // Backgrounds for Hero
     static var rossHeroTop: Color {

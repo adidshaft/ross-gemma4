@@ -104,6 +104,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.work:work-runtime-ktx:2.10.5")
     implementation("com.google.android.material:material:1.13.0")
     implementation("com.google.code.gson:gson:2.11.0")
