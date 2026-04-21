@@ -939,6 +939,31 @@ internal class AlphaRossController(
         save()
     }
 
+    fun moveDocument(caseId: String, documentId: String, offset: Int) {
+        val case = persisted.cases.firstOrNull { it.id == caseId } ?: return
+        val currentIndex = case.documents.indexOfFirst { it.id == documentId }
+        if (currentIndex == -1) return
+        val targetIndex = (currentIndex + offset).coerceIn(0, case.documents.lastIndex)
+        if (targetIndex == currentIndex) return
+
+        val reorderedDocuments = case.documents.toMutableList().apply {
+            val moved = removeAt(currentIndex)
+            add(targetIndex, moved)
+        }
+
+        persisted = persisted.copy(
+            cases = persisted.cases.map { entry ->
+                if (entry.id == caseId) {
+                    entry.copy(
+                        documents = reorderedDocuments,
+                        updatedAt = nowIso(),
+                    )
+                } else entry
+            },
+        )
+        save()
+    }
+
     fun askCase(caseId: String) {
         val question = askDrafts[caseId]?.takeIf { it.isNotBlank() }
             ?: "Ask Ross about this case..."

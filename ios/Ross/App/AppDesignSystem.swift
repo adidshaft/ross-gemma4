@@ -2,11 +2,15 @@ import SwiftUI
 
 public extension Font {
     static func rossSerifTitle() -> Font {
-        .custom("Baskerville", size: 26, relativeTo: .title)
+        .system(size: 22, weight: .semibold, design: .rounded)
     }
     
     static func rossSerifHeadline() -> Font {
-        .custom("Baskerville", size: 18, relativeTo: .title3)
+        .system(size: 17, weight: .semibold, design: .rounded)
+    }
+
+    static func rossInlineTitle() -> Font {
+        .system(size: 19, weight: .semibold, design: .rounded)
     }
 }
 

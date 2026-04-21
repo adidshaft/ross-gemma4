@@ -1228,6 +1228,7 @@ private fun AlphaRootAskDock(controller: AlphaRossController, fixedScopeCaseId: 
         ModalBottomSheet(
             onDismissRequest = { showTools = false },
             containerColor = MaterialTheme.colorScheme.surface,
+            dragHandle = null,
         ) {
             Column(
                 modifier = Modifier
@@ -1566,6 +1567,7 @@ private fun AlphaPackSetupScreen(controller: AlphaRossController, onContinue: ()
     infoTier?.let { tier ->
         ModalBottomSheet(
             onDismissRequest = { infoTier = null },
+            dragHandle = null,
         ) {
             AlphaPackTierSheetContent(
                 tier = tier,
@@ -1829,9 +1831,35 @@ private fun AlphaCaseListScreen(
                     }
                 }
             } else {
-                items(sortedCases, key = { it.id }) { case ->
-                    when (viewMode) {
-                        AlphaMatterListViewMode.Expanded -> {
+                when (viewMode) {
+                    AlphaMatterListViewMode.Folder -> {
+                        item {
+                            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                                sortedCases.chunked(3).forEach { rowCases ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    ) {
+                                        rowCases.forEach { case ->
+                                            AlphaCaseFolderRow(
+                                                case = case,
+                                                openTasks = controller.openTaskCount(case.id),
+                                                reviewCount = controller.reviewQueue(case.id).size,
+                                                onOpen = { onOpenCase(case.id) },
+                                                onLongPress = { actionTarget = case },
+                                                modifier = Modifier.weight(1f),
+                                            )
+                                        }
+                                        repeat(3 - rowCases.size) {
+                                            Spacer(modifier = Modifier.weight(1f))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    AlphaMatterListViewMode.Expanded -> {
+                        items(sortedCases, key = { it.id }) { case ->
                             AlphaCaseSummaryRow(
                                 case = case,
                                 openTasks = controller.openTaskCount(case.id),
@@ -1840,19 +1868,12 @@ private fun AlphaCaseListScreen(
                                 onLongPress = { actionTarget = case },
                             )
                         }
-                        AlphaMatterListViewMode.Summary -> {
+                    }
+                    AlphaMatterListViewMode.Summary -> {
+                        items(sortedCases, key = { it.id }) { case ->
                             AlphaCaseCompactRow(
                                 case = case,
                                 openTasks = controller.openTaskCount(case.id),
-                                onOpen = { onOpenCase(case.id) },
-                                onLongPress = { actionTarget = case },
-                            )
-                        }
-                        AlphaMatterListViewMode.Folder -> {
-                            AlphaCaseFolderRow(
-                                case = case,
-                                openTasks = controller.openTaskCount(case.id),
-                                reviewCount = controller.reviewQueue(case.id).size,
                                 onOpen = { onOpenCase(case.id) },
                                 onLongPress = { actionTarget = case },
                             )
@@ -1867,6 +1888,7 @@ private fun AlphaCaseListScreen(
         ModalBottomSheet(
             onDismissRequest = { actionTarget = null },
             containerColor = MaterialTheme.colorScheme.surface,
+            dragHandle = null,
         ) {
             AlphaMatterActionsSheet(
                 controller = controller,
@@ -2072,7 +2094,12 @@ private fun AlphaCaseWorkspaceScreen(
     onOpenSource: (AlphaSourceRef) -> Unit,
 ) {
     var selectedSection by rememberSaveable { mutableStateOf(AlphaWorkspaceSection.Overview) }
+    var documentLayoutMode by rememberSaveable { mutableStateOf(AlphaDocumentLayoutMode.Grid) }
+    var expandedDocumentIds by rememberSaveable { mutableStateOf(setOf<String>()) }
     val case = controller.persisted.cases.firstOrNull { it.id == caseId }
+    val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) controller.importDocument(caseId, uri)
+    }
     AlphaShell(
         title = "Case",
         showBack = true,
@@ -2124,11 +2151,11 @@ private fun AlphaCaseWorkspaceScreen(
                                     )
                                 }
 
-                                Button(
+                                TextButton(
                                     onClick = { controller.refreshCaseOverview(caseId) },
                                     enabled = !controller.isRefreshingCaseOverview(caseId),
                                 ) {
-                                    Text(if (controller.isRefreshingCaseOverview(caseId)) "Refreshing..." else "Refresh")
+                                    Text(if (controller.isRefreshingCaseOverview(caseId)) "Reloading..." else "Reload")
                                 }
                             }
 
@@ -2180,17 +2207,48 @@ private fun AlphaCaseWorkspaceScreen(
                     }
 
                     AlphaWorkspaceSection.Documents -> {
-                        AlphaCard {
-                            Button(onClick = onOpenDocuments, modifier = Modifier.fillMaxWidth()) { Text("Import or open documents") }
-                            Spacer(modifier = Modifier.height(12.dp))
-                            if (it.documents.isEmpty()) {
-                                Text("No documents yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    "${it.documents.size} file(s) on this matter",
+                                    modifier = Modifier.weight(1f),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                AlphaDocumentLayoutMenu(
+                                    layoutMode = documentLayoutMode,
+                                    onSelect = { documentLayoutMode = it },
+                                )
                             }
-                            it.documents.forEach { document ->
-                                AlphaDocumentSummaryRow(
+
+                            Button(
+                                onClick = { importer.launch(arrayOf("application/pdf", "image/*", "text/plain")) },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Import document")
+                            }
+
+                            if (it.documents.isEmpty()) {
+                                AlphaCard {
+                                    Text("No documents yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            } else {
+                                AlphaDocumentBrowser(
+                                    documents = it.documents,
                                     caseTitle = null,
-                                    document = document,
-                                    onOpen = { controller.pendingRoute = AndroidAlphaRoute.DocumentViewer(caseId, document.id, 1) },
+                                    layoutMode = documentLayoutMode,
+                                    expandedDocumentIds = expandedDocumentIds,
+                                    onExpandedDocumentIdsChange = { expandedDocumentIds = it },
+                                    onOpen = { documentId ->
+                                        controller.pendingRoute = AndroidAlphaRoute.DocumentViewer(caseId, documentId, 1)
+                                    },
+                                    onMoveDocument = { documentId, offset ->
+                                        controller.moveDocument(caseId, documentId, offset)
+                                    },
                                 )
                             }
                         }
@@ -2254,50 +2312,64 @@ private fun AlphaDocumentListScreen(
     onAskCase: () -> Unit,
 ) {
     val case = controller.persisted.cases.firstOrNull { it.id == caseId }
+    var documentLayoutMode by rememberSaveable { mutableStateOf(AlphaDocumentLayoutMode.Grid) }
+    var expandedDocumentIds by rememberSaveable { mutableStateOf(setOf<String>()) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) controller.importDocument(caseId, uri)
     }
     AlphaShell(title = "Documents", showBack = true, onBack = onBack, actionLabel = "Ask", onAction = onAskCase) {
-        Column(modifier = Modifier.fillMaxSize().padding(alphaScreenPadding), verticalArrangement = Arrangement.spacedBy(alphaSectionSpacing)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(alphaScreenPadding),
+            verticalArrangement = Arrangement.spacedBy(alphaSectionSpacing)
+        ) {
             AlphaInlineHeader(
                 eyebrow = case?.forum ?: "Documents",
                 title = case?.title ?: "Documents",
                 detail = "${case?.documents?.size ?: 0} file(s) in this case",
             )
             AlphaCard {
-                Text(
-                    "${case?.documents?.size ?: 0} files • ${controller.reviewQueue(caseId).size} need review • ${controller.openTaskCount(caseId)} open tasks",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "${case?.documents?.size ?: 0} file(s) stored for this matter",
+                        modifier = Modifier.weight(1f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    AlphaDocumentLayoutMenu(
+                        layoutMode = documentLayoutMode,
+                        onSelect = { documentLayoutMode = it },
+                    )
+                }
             }
-            AlphaCard("Next actions") {
-                AlphaAction(
-                    title = "Import another file",
-                    detail = "Add a PDF, image, or text file so Ross can read it locally and refresh the matter overview.",
-                    onClick = { launcher.launch(arrayOf("application/pdf", "image/*", "text/plain")) },
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                AlphaAction(
-                    title = "Ask about this matter",
-                    detail = "Continue the Ross thread with this matter's files, dates, tasks, and source notes as context.",
-                    onClick = onAskCase,
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                AlphaAction(
-                    title = "Generate case note",
-                    detail = "Create a local draft note from the current matter before the next hearing.",
-                    onClick = { controller.generateExport("case_note", caseId) },
-                )
+            Button(
+                onClick = { launcher.launch(arrayOf("application/pdf", "image/*", "text/plain")) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Import document")
             }
             if (case?.documents.isNullOrEmpty()) {
                 AlphaCard {
                     Text("Import the first order, pleading, notice, or note for this matter.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(case?.documents ?: emptyList()) { document ->
-                    AlphaDocumentSummaryRow(caseTitle = null, document = document, onOpen = { onOpenDocument(document.id) })
-                }
+            if (case != null && case.documents.isNotEmpty()) {
+                AlphaDocumentBrowser(
+                    documents = case.documents,
+                    caseTitle = null,
+                    layoutMode = documentLayoutMode,
+                    expandedDocumentIds = expandedDocumentIds,
+                    onExpandedDocumentIdsChange = { expandedDocumentIds = it },
+                    onOpen = { documentId -> onOpenDocument(documentId) },
+                    onMoveDocument = { documentId, offset ->
+                        controller.moveDocument(caseId, documentId, offset)
+                    },
+                )
             }
         }
     }
@@ -3354,6 +3426,11 @@ private enum class AlphaMatterListViewMode(val label: String) {
     Folder("Folder"),
 }
 
+private enum class AlphaDocumentLayoutMode(val label: String) {
+    Grid("Grid"),
+    List("List"),
+}
+
 private enum class AlphaWorkspaceSection(val label: String) {
     Overview("Overview"),
     Documents("Documents"),
@@ -3511,7 +3588,7 @@ private fun AlphaWorkspaceSectionBar(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
                 .fillMaxHeight()
-                .width(40.dp)
+                .width(44.dp)
                 .background(
                     Brush.horizontalGradient(
                         colors = listOf(Color.Transparent, MaterialTheme.colorScheme.background)
@@ -3522,8 +3599,7 @@ private fun AlphaWorkspaceSectionBar(
             imageVector = Icons.Outlined.ChevronRight,
             contentDescription = "More sections",
             modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(end = 4.dp),
+                .align(Alignment.CenterEnd),
             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
         )
     }
@@ -3738,56 +3814,306 @@ private fun AlphaCaseFolderRow(
     reviewCount: Int,
     onOpen: () -> Unit,
     onLongPress: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
 ) {
     val tint = alphaMatterTintColor(case.folderTint)
 
     OutlinedCard(
-        modifier = Modifier
-            .fillMaxWidth()
+        modifier = modifier
             .combinedClickable(onClick = onOpen, onLongClick = onLongPress),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.outlinedCardColors(containerColor = tint.copy(alpha = 0.06f)),
+        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = androidx.compose.foundation.BorderStroke(1.dp, tint.copy(alpha = 0.14f)),
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 15.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            verticalAlignment = Alignment.Top,
+                .padding(horizontal = 12.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            AlphaMatterFolderGlyph(tint = case.folderTint, size = 50)
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top,
-                ) {
-                    Text(
-                        case.title,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    case.nextHearing?.let { nextDate ->
-                        Text(alphaDateLabel(nextDate), style = MaterialTheme.typography.labelMedium, color = tint)
-                    }
-                }
+            AlphaFolderArtwork(
+                tint = tint,
+                icon = Icons.Outlined.Folder,
+                badge = if (case.documents.isEmpty()) "New" else "${case.documents.size}",
+            )
+
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    "$openTasks open tasks • $reviewCount review items • ${case.documents.size} documents",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    case.summary,
+                    case.title,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.SemiBold,
                     maxLines = 2,
                 )
+                Text(
+                    case.nextHearing?.let { alphaDateLabel(it) }
+                        ?: "$openTasks open task(s)",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = tint,
+                    maxLines = 1,
+                )
+                if (reviewCount > 0) {
+                    Text(
+                        "$reviewCount review item(s)",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AlphaFolderArtwork(
+    tint: Color,
+    icon: ImageVector,
+    badge: String?,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(110.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .padding(start = 14.dp, top = 8.dp)
+                .width(52.dp)
+                .height(18.dp)
+                .background(tint.copy(alpha = 0.22f), RoundedCornerShape(11.dp))
+        )
+
+        Box(
+            modifier = Modifier
+                .padding(top = 16.dp)
+                .fillMaxWidth()
+                .height(88.dp)
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(Color.White.copy(alpha = 0.96f), tint.copy(alpha = 0.16f))
+                    ),
+                    RoundedCornerShape(18.dp),
+                )
+                .border(1.dp, tint.copy(alpha = 0.16f), RoundedCornerShape(18.dp))
+        )
+
+        Row(
+            modifier = Modifier.padding(start = 18.dp, top = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            repeat(3) { index ->
+                Box(
+                    modifier = Modifier
+                        .width(24.dp)
+                        .height(34.dp)
+                        .padding(top = if (index % 2 == 0) 0.dp else 4.dp)
+                        .background(
+                            Color.White.copy(alpha = if (index == 2) 0.68f else 0.88f),
+                            RoundedCornerShape(8.dp),
+                        )
+                        .border(1.dp, tint.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 12.dp, bottom = 10.dp)
+                .size(34.dp)
+                .background(Color.White.copy(alpha = 0.84f), RoundedCornerShape(12.dp))
+                .border(1.dp, tint.copy(alpha = 0.12f), RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+
+        badge?.let {
+            Text(
+                it,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 12.dp, bottom = 12.dp)
+                    .background(Color.White.copy(alpha = 0.92f), RoundedCornerShape(999.dp))
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = tint,
+            )
+        }
+    }
+}
+
+@Composable
+private fun AlphaDocumentLayoutMenu(
+    layoutMode: AlphaDocumentLayoutMode,
+    onSelect: (AlphaDocumentLayoutMode) -> Unit,
+) {
+    AlphaIconMenuButton(
+        icon = if (layoutMode == AlphaDocumentLayoutMode.Grid) Icons.Outlined.GridView else Icons.AutoMirrored.Outlined.ViewList,
+        label = "Change document view"
+    ) { closeMenu ->
+        AlphaDocumentLayoutMode.values().forEach { option ->
+            DropdownMenuItem(
+                text = { Text(option.label) },
+                onClick = {
+                    onSelect(option)
+                    closeMenu()
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun AlphaDocumentFolderTile(
+    document: AlphaCaseDocument,
+    onOpen: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val tint = alphaDocumentTint(document.kind)
+
+    OutlinedCard(
+        modifier = modifier.clickable(onClick = onOpen),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, tint.copy(alpha = 0.14f)),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(9.dp),
+        ) {
+            AlphaFolderArtwork(
+                tint = tint,
+                icon = alphaDocumentIcon(document.kind),
+                badge = if (document.pageCount == 1) "1 page" else "${document.pageCount}",
+            )
+
+            Text(
+                document.title,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+            )
+
+            Text(
+                document.lawyerStatusTitle(),
+                style = MaterialTheme.typography.labelSmall,
+                color = tint,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+@Composable
+private fun AlphaExpandableDocumentRow(
+    caseTitle: String?,
+    document: AlphaCaseDocument,
+    expanded: Boolean,
+    canMoveEarlier: Boolean,
+    canMoveLater: Boolean,
+    onToggle: () -> Unit,
+    onOpen: () -> Unit,
+    onMoveEarlier: () -> Unit,
+    onMoveLater: () -> Unit,
+) {
+    val tint = alphaDocumentTint(document.kind)
+
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            TextButton(onClick = onToggle, modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .background(tint.copy(alpha = 0.12f), RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = alphaDocumentIcon(document.kind),
+                            contentDescription = null,
+                            tint = tint,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text(document.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                        caseTitle?.let {
+                            Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Text(
+                            "${document.kind.title} • ${document.pageCount} page(s) • ${document.lawyerStatusTitle()}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = tint,
+                        )
+                    }
+
+                    Icon(
+                        imageVector = if (expanded) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            if (expanded) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        "Imported ${alphaDateLabel(document.importedAt)}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+
+                    document.dominantSourceSnippet?.takeIf { it.isNotBlank() }?.let { snippet ->
+                        Text(
+                            snippet,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 3,
+                        )
+                    }
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = onOpen) {
+                            Text("Open")
+                        }
+                        if (canMoveEarlier) {
+                            TextButton(onClick = onMoveEarlier) {
+                                Text("Move up")
+                            }
+                        }
+                        if (canMoveLater) {
+                            TextButton(onClick = onMoveLater) {
+                                Text("Move down")
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -3798,6 +4124,64 @@ private fun AlphaSummaryRow(title: String, detail: String) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(title, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
         Text(detail, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun AlphaDocumentBrowser(
+    documents: List<AlphaCaseDocument>,
+    caseTitle: String?,
+    layoutMode: AlphaDocumentLayoutMode,
+    expandedDocumentIds: Set<String>,
+    onExpandedDocumentIdsChange: (Set<String>) -> Unit,
+    onOpen: (String) -> Unit,
+    onMoveDocument: (String, Int) -> Unit,
+) {
+    when (layoutMode) {
+        AlphaDocumentLayoutMode.Grid -> {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                documents.chunked(3).forEach { rowDocuments ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        rowDocuments.forEach { document ->
+                            AlphaDocumentFolderTile(
+                                document = document,
+                                onOpen = { onOpen(document.id) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        repeat(3 - rowDocuments.size) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+        }
+        AlphaDocumentLayoutMode.List -> {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                documents.forEachIndexed { index, document ->
+                    AlphaExpandableDocumentRow(
+                        caseTitle = caseTitle,
+                        document = document,
+                        expanded = expandedDocumentIds.contains(document.id),
+                        canMoveEarlier = index > 0,
+                        canMoveLater = index < documents.lastIndex,
+                        onToggle = {
+                            onExpandedDocumentIdsChange(
+                                expandedDocumentIds.toMutableSet().apply {
+                                    if (contains(document.id)) remove(document.id) else add(document.id)
+                                }
+                            )
+                        },
+                        onOpen = { onOpen(document.id) },
+                        onMoveEarlier = { onMoveDocument(document.id, -1) },
+                        onMoveLater = { onMoveDocument(document.id, 1) },
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -4192,6 +4576,23 @@ private fun alphaMatterTintLabel(tint: AlphaMatterTint): String =
         AlphaMatterTint.Emerald -> "Emerald"
         AlphaMatterTint.Rose -> "Rose"
         AlphaMatterTint.Slate -> "Slate"
+    }
+
+@Composable
+private fun alphaDocumentTint(kind: AlphaDocumentKind): Color =
+    when (kind) {
+        AlphaDocumentKind.Pdf -> MaterialTheme.colorScheme.primary
+        AlphaDocumentKind.Image -> AlphaAmberStatus
+        AlphaDocumentKind.Text -> Color(0xFF44795C)
+        AlphaDocumentKind.Unknown -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+private fun alphaDocumentIcon(kind: AlphaDocumentKind): ImageVector =
+    when (kind) {
+        AlphaDocumentKind.Pdf -> Icons.Outlined.Description
+        AlphaDocumentKind.Image -> Icons.Outlined.Image
+        AlphaDocumentKind.Text -> Icons.AutoMirrored.Outlined.Article
+        AlphaDocumentKind.Unknown -> Icons.AutoMirrored.Outlined.InsertDriveFile
     }
 
 @Composable

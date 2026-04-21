@@ -946,6 +946,21 @@ final class AlphaRossModel {
         persist()
     }
 
+    func moveDocument(caseId: UUID, documentId: UUID, by offset: Int) {
+        guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }) else { return }
+        guard let currentIndex = persisted.cases[caseIndex].documents.firstIndex(where: { $0.id == documentId }) else { return }
+        let targetIndex = min(
+            max(currentIndex + offset, 0),
+            persisted.cases[caseIndex].documents.count - 1
+        )
+        guard targetIndex != currentIndex else { return }
+
+        let movedDocument = persisted.cases[caseIndex].documents.remove(at: currentIndex)
+        persisted.cases[caseIndex].documents.insert(movedDocument, at: targetIndex)
+        persisted.cases[caseIndex].updatedAt = .now
+        persist()
+    }
+
     func askCase(caseId: UUID) {
         guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }) else { return }
         let question = askDrafts[caseId, default: "Ask Ross about this case..."]
@@ -2758,6 +2773,7 @@ private struct AlphaPackSetupScreen: View {
                 }
             )
             .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.hidden)
         }
     }
 
@@ -3111,6 +3127,7 @@ private struct AlphaRootAskDock: View {
         .sheet(isPresented: $showingTools) {
             AlphaRootAskToolsSheet(model: model, fixedScopeCaseID: fixedScopeCaseID)
                 .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.hidden)
         }
         .sheet(isPresented: Binding(
             get: { model.publicLawPreview != nil && model.pendingPublicLawQuestion != nil },
@@ -3144,6 +3161,7 @@ private struct AlphaRootAskDock: View {
                     .padding(alphaScreenPadding)
                 }
                 .presentationDetents([.medium])
+                .presentationDragIndicator(.hidden)
             }
         }
     }
@@ -4015,30 +4033,57 @@ private struct AlphaCaseListScreen: View {
                         }
                     }
                 } else {
-                    VStack(spacing: viewMode == .folder ? 14 : (viewMode == .expanded ? 12 : 8)) {
-                        ForEach(sortedCases) { caseMatter in
-                            Button {
-                                model.focusCase(caseMatter.id)
-                                model.path.append(.caseWorkspace(caseMatter.id))
-                            } label: {
-                                switch viewMode {
-                                case .expanded:
-                                    AlphaCaseSummaryCard(model: model, caseMatter: caseMatter)
-                                case .summary:
-                                    AlphaCaseSummaryLine(model: model, caseMatter: caseMatter)
-                                case .folder:
+                    if viewMode == .folder {
+                        LazyVGrid(
+                            columns: [GridItem(.adaptive(minimum: 106, maximum: 132), spacing: 14)],
+                            alignment: .leading,
+                            spacing: 16
+                        ) {
+                            ForEach(sortedCases) { caseMatter in
+                                Button {
+                                    model.focusCase(caseMatter.id)
+                                    model.path.append(.caseWorkspace(caseMatter.id))
+                                } label: {
                                     AlphaCaseFolderCard(model: model, caseMatter: caseMatter)
                                 }
+                                .buttonStyle(.plain)
+                                .contextMenu {
+                                    AlphaMatterContextMenu(
+                                        model: model,
+                                        caseMatter: caseMatter,
+                                        renameTarget: $renameTarget,
+                                        renameDraft: $renameDraft,
+                                        deleteTarget: $deleteTarget
+                                    )
+                                }
                             }
-                            .buttonStyle(.plain)
-                            .contextMenu {
-                                AlphaMatterContextMenu(
-                                    model: model,
-                                    caseMatter: caseMatter,
-                                    renameTarget: $renameTarget,
-                                    renameDraft: $renameDraft,
-                                    deleteTarget: $deleteTarget
-                                )
+                        }
+                    } else {
+                        VStack(spacing: viewMode == .expanded ? 12 : 8) {
+                            ForEach(sortedCases) { caseMatter in
+                                Button {
+                                    model.focusCase(caseMatter.id)
+                                    model.path.append(.caseWorkspace(caseMatter.id))
+                                } label: {
+                                    switch viewMode {
+                                    case .expanded:
+                                        AlphaCaseSummaryCard(model: model, caseMatter: caseMatter)
+                                    case .summary:
+                                        AlphaCaseSummaryLine(model: model, caseMatter: caseMatter)
+                                    case .folder:
+                                        AlphaCaseFolderCard(model: model, caseMatter: caseMatter)
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                                .contextMenu {
+                                    AlphaMatterContextMenu(
+                                        model: model,
+                                        caseMatter: caseMatter,
+                                        renameTarget: $renameTarget,
+                                        renameDraft: $renameDraft,
+                                        deleteTarget: $deleteTarget
+                                    )
+                                }
                             }
                         }
                     }
@@ -4130,6 +4175,31 @@ private enum AlphaMatterListViewMode: String, CaseIterable, Identifiable {
     }
 }
 
+private enum AlphaDocumentLayoutMode: String, CaseIterable, Identifiable {
+    case grid
+    case list
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .grid:
+            "Grid"
+        case .list:
+            "List"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .grid:
+            "square.grid.2x2"
+        case .list:
+            "list.bullet"
+        }
+    }
+}
+
 private func alphaMatterTintColor(_ tint: AlphaMatterTint) -> Color {
     switch tint {
     case .indigo:
@@ -4201,6 +4271,363 @@ private struct AlphaMatterFolderGlyph: View {
             RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
                 .stroke(color.opacity(0.16), lineWidth: 1)
         }
+    }
+}
+
+private func alphaDocumentTint(_ kind: AlphaDocumentKind) -> Color {
+    switch kind {
+    case .pdf:
+        return Color.rossAccent
+    case .image:
+        return Color.rossHighlight
+    case .text:
+        return Color.rossSuccess
+    case .unknown:
+        return Color.rossInk.opacity(0.56)
+    }
+}
+
+private func alphaDocumentSymbolName(_ kind: AlphaDocumentKind) -> String {
+    switch kind {
+    case .pdf:
+        return "doc.richtext.fill"
+    case .image:
+        return "photo.fill"
+    case .text:
+        return "doc.text.fill"
+    case .unknown:
+        return "doc.fill"
+    }
+}
+
+private func alphaDocumentImportedLabel(_ document: AlphaCaseDocument) -> String {
+    document.importedAt.formatted(date: .abbreviated, time: .omitted)
+}
+
+private struct AlphaFolderArtwork: View {
+    let tint: Color
+    let symbolName: String
+    let badgeText: String?
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 11, style: .continuous)
+                .fill(tint.opacity(0.22))
+                .frame(width: 52, height: 18)
+                .padding(.leading, 14)
+                .padding(.top, 8)
+
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.96),
+                            tint.opacity(0.16)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .frame(height: 88)
+                .padding(.top, 16)
+                .overlay(alignment: .topLeading) {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(tint.opacity(0.18))
+                        .frame(width: 58, height: 18)
+                        .padding(.leading, 14)
+                        .padding(.top, 6)
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(tint.opacity(0.18), lineWidth: 1)
+                        .padding(.top, 16)
+                }
+
+            HStack(spacing: 6) {
+                ForEach(0..<3, id: \.self) { index in
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.white.opacity(index == 2 ? 0.68 : 0.88))
+                        .frame(width: 24, height: 34)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .stroke(tint.opacity(0.08), lineWidth: 0.8)
+                        }
+                        .rotationEffect(.degrees(Double(index - 1) * 4))
+                        .offset(y: CGFloat(index.isMultiple(of: 2) ? 0 : 4))
+                }
+            }
+            .padding(.leading, 18)
+            .padding(.top, 2)
+
+            Image(systemName: symbolName)
+                .symbolRenderingMode(.hierarchical)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(tint.opacity(0.9))
+                .frame(width: 34, height: 34)
+                .background(Color.white.opacity(0.84), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(tint.opacity(0.12), lineWidth: 1)
+                }
+                .padding(.trailing, 12)
+                .padding(.bottom, 10)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+
+            if let badgeText {
+                Text(badgeText)
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(tint.opacity(0.92))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.white.opacity(0.92), in: Capsule())
+                    .padding(.leading, 12)
+                    .padding(.bottom, 12)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 108)
+    }
+}
+
+private struct AlphaDocumentLayoutMenu: View {
+    @Binding var layoutMode: AlphaDocumentLayoutMode
+
+    var body: some View {
+        Menu {
+            ForEach(AlphaDocumentLayoutMode.allCases) { option in
+                Button(option.title) {
+                    layoutMode = option
+                }
+            }
+        } label: {
+            Image(systemName: layoutMode.systemImage)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color.rossInk)
+                .frame(width: 34, height: 34)
+                .background(.ultraThinMaterial, in: Circle())
+                .overlay {
+                    Circle()
+                        .stroke(Color.rossBorder, lineWidth: 0.8)
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Choose document view")
+    }
+}
+
+private struct AlphaDocumentCollectionView: View {
+    let documents: [AlphaCaseDocument]
+    let caseTitle: String?
+    let layoutMode: AlphaDocumentLayoutMode
+    @Binding var expandedDocumentIDs: Set<UUID>
+    let onOpen: (UUID) -> Void
+    let onMoveDocument: (UUID, Int) -> Void
+
+    var body: some View {
+        switch layoutMode {
+        case .grid:
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 96, maximum: 126), spacing: 14)],
+                alignment: .leading,
+                spacing: 16
+            ) {
+                ForEach(Array(documents.enumerated()), id: \.element.id) { index, document in
+                    Button {
+                        onOpen(document.id)
+                    } label: {
+                        AlphaDocumentFolderTile(document: document)
+                    }
+                    .buttonStyle(.plain)
+                    .contextMenu {
+                        Button("Open document") {
+                            onOpen(document.id)
+                        }
+
+                        if index > 0 {
+                            Button("Move earlier") {
+                                onMoveDocument(document.id, -1)
+                            }
+                        }
+
+                        if index < documents.count - 1 {
+                            Button("Move later") {
+                                onMoveDocument(document.id, 1)
+                            }
+                        }
+                    }
+                }
+            }
+        case .list:
+            VStack(spacing: 10) {
+                ForEach(Array(documents.enumerated()), id: \.element.id) { index, document in
+                    AlphaExpandableDocumentRow(
+                        caseTitle: caseTitle,
+                        document: document,
+                        isExpanded: expandedDocumentIDs.contains(document.id),
+                        canMoveEarlier: index > 0,
+                        canMoveLater: index < documents.count - 1,
+                        onToggle: {
+                            withAnimation(.snappy(duration: 0.24)) {
+                                if expandedDocumentIDs.contains(document.id) {
+                                    expandedDocumentIDs.remove(document.id)
+                                } else {
+                                    expandedDocumentIDs.insert(document.id)
+                                }
+                            }
+                        },
+                        onOpen: { onOpen(document.id) },
+                        onMoveEarlier: { onMoveDocument(document.id, -1) },
+                        onMoveLater: { onMoveDocument(document.id, 1) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+private struct AlphaDocumentFolderTile: View {
+    let document: AlphaCaseDocument
+
+    var body: some View {
+        let tint = alphaDocumentTint(document.kind)
+
+        VStack(alignment: .leading, spacing: 9) {
+            AlphaFolderArtwork(
+                tint: tint,
+                symbolName: alphaDocumentSymbolName(document.kind),
+                badgeText: document.pageCount == 1 ? "1 page" : "\(document.pageCount)"
+            )
+
+            Text(document.title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.rossInk)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(document.lawyerStatusTitle)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(tint.opacity(0.92))
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, minHeight: 170, alignment: .topLeading)
+        .padding(10)
+        .background(Color.rossCardBackground)
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(tint.opacity(0.14), lineWidth: 0.9)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+}
+
+private struct AlphaExpandableDocumentRow: View {
+    let caseTitle: String?
+    let document: AlphaCaseDocument
+    let isExpanded: Bool
+    let canMoveEarlier: Bool
+    let canMoveLater: Bool
+    let onToggle: () -> Void
+    let onOpen: () -> Void
+    let onMoveEarlier: () -> Void
+    let onMoveLater: () -> Void
+
+    var body: some View {
+        let tint = alphaDocumentTint(document.kind)
+
+        VStack(alignment: .leading, spacing: 12) {
+            Button(action: onToggle) {
+                HStack(alignment: .top, spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(tint.opacity(0.12))
+
+                        Image(systemName: alphaDocumentSymbolName(document.kind))
+                            .symbolRenderingMode(.hierarchical)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(tint)
+                    }
+                    .frame(width: 42, height: 42)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(document.title)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.rossInk)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        if let caseTitle {
+                            Text(caseTitle)
+                                .font(.caption)
+                                .foregroundStyle(Color.rossInk.opacity(0.56))
+                                .lineLimit(1)
+                        }
+
+                        Text("\(document.kind.title) • \(document.pageCount) page(s) • \(document.lawyerStatusTitle)")
+                            .font(.caption)
+                            .foregroundStyle(tint.opacity(0.9))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer(minLength: 8)
+
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.rossInk.opacity(0.42))
+                        .padding(.top, 4)
+                }
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Imported \(alphaDocumentImportedLabel(document))")
+                        .font(.caption)
+                        .foregroundStyle(Color.rossInk.opacity(0.58))
+
+                    if let snippet = document.displaySourceSnippet, !snippet.isEmpty {
+                        Text(snippet)
+                            .font(.footnote)
+                            .foregroundStyle(Color.rossInk.opacity(0.72))
+                            .lineLimit(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    HStack(spacing: 8) {
+                        Button("Open", action: onOpen)
+                            .buttonStyle(.borderedProminent)
+
+                        if canMoveEarlier {
+                            Button {
+                                onMoveEarlier()
+                            } label: {
+                                Image(systemName: "arrow.up")
+                            }
+                            .buttonStyle(.bordered)
+                            .accessibilityLabel("Move document earlier")
+                        }
+
+                        if canMoveLater {
+                            Button {
+                                onMoveLater()
+                            } label: {
+                                Image(systemName: "arrow.down")
+                            }
+                            .buttonStyle(.bordered)
+                            .accessibilityLabel("Move document later")
+                        }
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(Color.rossCardBackground)
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.rossBorder, lineWidth: 0.8)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .animation(.snappy(duration: 0.24), value: isExpanded)
     }
 }
 
@@ -4833,54 +5260,54 @@ private struct AlphaCaseWorkspaceSectionBar: View {
     @Binding var selectedSection: AlphaCaseWorkspaceSection
 
     var body: some View {
-        ZStack(alignment: .trailing) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(AlphaCaseWorkspaceSection.allCases) { section in
-                        Button {
-                            withAnimation(.snappy(duration: 0.18)) {
-                                selectedSection = section
-                            }
-                        } label: {
-                            Label(section.title, systemImage: section.symbolName)
-                                .symbolRenderingMode(.hierarchical)
-                                .font(.footnote.weight(.semibold))
-                                .foregroundStyle(selectedSection == section ? Color.white : Color.rossInk)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 9)
-                                .background(
-                                    selectedSection == section
-                                        ? Color.rossAccent
-                                        : Color.rossSecondaryGroupedBackground
-                                )
-                                .clipShape(Capsule())
-                                .overlay {
-                                    Capsule()
-                                        .stroke(
-                                            selectedSection == section ? Color.rossAccent : Color.rossBorder,
-                                            lineWidth: 1
-                                        )
-                                }
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(AlphaCaseWorkspaceSection.allCases) { section in
+                    Button {
+                        withAnimation(.snappy(duration: 0.18)) {
+                            selectedSection = section
                         }
-                        .buttonStyle(.plain)
+                    } label: {
+                        Label(section.title, systemImage: section.symbolName)
+                            .symbolRenderingMode(.hierarchical)
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(selectedSection == section ? Color.white : Color.rossInk)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 9)
+                            .background(
+                                selectedSection == section
+                                    ? Color.rossAccent
+                                    : Color.rossSecondaryGroupedBackground
+                            )
+                            .clipShape(Capsule())
+                            .overlay {
+                                Capsule()
+                                    .stroke(
+                                        selectedSection == section ? Color.rossAccent : Color.rossBorder,
+                                        lineWidth: 1
+                                    )
+                            }
                     }
+                    .buttonStyle(.plain)
                 }
-                .padding(.vertical, 2)
             }
-
-            HStack(spacing: 0) {
+            .padding(.vertical, 2)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(alignment: .trailing) {
+            ZStack(alignment: .trailing) {
                 LinearGradient(
                     colors: [Color.clear, Color.rossGroupedBackground],
                     startPoint: .leading,
                     endPoint: .trailing
                 )
-                .frame(width: 28)
+                .frame(width: 42)
 
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.bold))
                     .foregroundStyle(Color.rossInk.opacity(0.35))
-                    .padding(.trailing, 2)
             }
+            .frame(maxHeight: .infinity)
             .allowsHitTesting(false)
         }
     }
@@ -5053,42 +5480,33 @@ private struct AlphaCaseFolderCard: View {
     var body: some View {
         let tint = alphaMatterTintColor(caseMatter.folderTint)
 
-        HStack(alignment: .top, spacing: 14) {
-            AlphaMatterFolderGlyph(tint: caseMatter.folderTint, size: 52)
+        VStack(alignment: .leading, spacing: 10) {
+            AlphaFolderArtwork(
+                tint: tint,
+                symbolName: "folder.fill",
+                badgeText: caseMatter.documents.isEmpty ? "New" : "\(caseMatter.documents.count)"
+            )
 
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(caseMatter.title)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.rossInk)
-                        .lineLimit(2)
+            Text(caseMatter.title)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color.rossInk)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
 
-                    Spacer(minLength: 8)
-
-                    if let nextHearing = caseMatter.nextHearing {
-                        Text(nextHearing.formatted(date: .abbreviated, time: .omitted))
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(tint)
-                    }
-                }
-
-                Text("\(model.openTaskCount(for: caseMatter.id)) open tasks • \(caseMatter.documents.count) documents")
-                    .font(.caption)
-                    .foregroundStyle(Color.rossInk.opacity(0.64))
-                    .lineLimit(1)
-
-                Text(caseMatter.summary)
-                    .font(.footnote)
-                    .foregroundStyle(Color.rossInk.opacity(0.72))
-                    .lineLimit(2)
-            }
+            Text(
+                caseMatter.nextHearing?.formatted(date: .abbreviated, time: .omitted)
+                    ?? "\(model.openTaskCount(for: caseMatter.id)) open task(s)"
+            )
+            .font(.caption)
+            .foregroundStyle(tint.opacity(0.9))
+            .lineLimit(1)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(tint.opacity(0.06))
+        .frame(maxWidth: .infinity, minHeight: 158, alignment: .topLeading)
+        .padding(12)
+        .background(Color.rossCardBackground)
         .overlay {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(tint.opacity(0.16), lineWidth: 1)
+                .stroke(tint.opacity(0.16), lineWidth: 0.9)
         }
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
@@ -5109,7 +5527,7 @@ private struct AlphaInlineHeader: View {
             }
 
             Text(title)
-                .font(.headline.weight(.semibold))
+                .font(.rossInlineTitle())
                 .foregroundStyle(Color.rossInk)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -5798,6 +6216,7 @@ private struct AlphaAskComposerPanel: View {
                     .padding(alphaScreenPadding)
                 }
                 .presentationDetents([.medium])
+                .presentationDragIndicator(.hidden)
             }
         }
     }
@@ -5880,6 +6299,9 @@ private struct AlphaCaseWorkspaceScreen: View {
     @Bindable var model: AlphaRossModel
     let caseId: UUID
     @State private var selectedSection: AlphaCaseWorkspaceSection = .overview
+    @State private var documentLayoutMode: AlphaDocumentLayoutMode = .grid
+    @State private var expandedDocumentIDs: Set<UUID> = []
+    @State private var showingImporter = false
 
     private var caseMatter: AlphaCaseMatter? {
         model.persisted.cases.first { $0.id == caseId }
@@ -5911,11 +6333,18 @@ private struct AlphaCaseWorkspaceScreen: View {
 
                                     Spacer(minLength: 8)
 
-                                    Button(model.refreshingCaseOverviewIDs.contains(caseId) ? "Refreshing..." : "Refresh with Ross") {
+                                    Button {
                                         Task { await model.refreshCaseOverview(caseId: caseId) }
+                                    } label: {
+                                        Image(systemName: model.refreshingCaseOverviewIDs.contains(caseId) ? "arrow.triangle.2.circlepath.circle.fill" : "arrow.clockwise")
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .foregroundStyle(Color.rossAccent)
+                                            .frame(width: 34, height: 34)
+                                            .background(Color.rossAccent.opacity(0.1), in: Circle())
                                     }
-                                    .buttonStyle(.bordered)
+                                    .buttonStyle(.plain)
                                     .disabled(model.refreshingCaseOverviewIDs.contains(caseId))
+                                    .accessibilityLabel("Reload overview with Ross")
                                 }
 
                                 if let nextHearing = caseMatter.nextHearing {
@@ -5981,8 +6410,18 @@ private struct AlphaCaseWorkspaceScreen: View {
                         }
                     case .documents:
                         VStack(alignment: .leading, spacing: 12) {
+                            HStack(spacing: 10) {
+                                Text("\(caseMatter.documents.count) file(s) on this matter")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(Color.rossInk.opacity(0.62))
+
+                                Spacer(minLength: 0)
+
+                                AlphaDocumentLayoutMenu(layoutMode: $documentLayoutMode)
+                            }
+
                             Button("Import document") {
-                                model.path.append(.documentList(caseId))
+                                showingImporter = true
                             }
                             .rossPrimaryButtonStyle()
 
@@ -5993,14 +6432,18 @@ private struct AlphaCaseWorkspaceScreen: View {
                                         .foregroundStyle(Color.rossInk.opacity(0.7))
                                 }
                             } else {
-                                ForEach(caseMatter.documents) { document in
-                                    Button {
-                                        model.path.append(.documentViewer(caseId, document.id, 1))
-                                    } label: {
-                                        AlphaDocumentRow(caseTitle: nil, document: document, showChevron: true)
+                                AlphaDocumentCollectionView(
+                                    documents: caseMatter.documents,
+                                    caseTitle: nil,
+                                    layoutMode: documentLayoutMode,
+                                    expandedDocumentIDs: $expandedDocumentIDs,
+                                    onOpen: { documentId in
+                                        model.path.append(.documentViewer(caseId, documentId, 1))
+                                    },
+                                    onMoveDocument: { documentId, offset in
+                                        model.moveDocument(caseId: caseId, documentId: documentId, by: offset)
                                     }
-                                    .buttonStyle(.plain)
-                                }
+                                )
                             }
                         }
                     case .tasks:
@@ -6058,6 +6501,15 @@ private struct AlphaCaseWorkspaceScreen: View {
                 .padding(.top, 6)
                 .padding(.bottom, 6)
         }
+        .fileImporter(
+            isPresented: $showingImporter,
+            allowedContentTypes: [.pdf, .image, .plainText],
+            allowsMultipleSelection: false
+        ) { result in
+            if case let .success(urls) = result, let url = urls.first {
+                Task { await model.importDocument(caseId: caseId, from: url) }
+            }
+        }
         .navigationTitle("Case")
         .rossInlineNavigationTitle()
     }
@@ -6067,14 +6519,14 @@ private struct AlphaDocumentListScreen: View {
     @Bindable var model: AlphaRossModel
     let caseId: UUID
     @State private var showingImporter = false
+    @State private var documentLayoutMode: AlphaDocumentLayoutMode = .grid
+    @State private var expandedDocumentIDs: Set<UUID> = []
 
     private var caseMatter: AlphaCaseMatter? {
         model.persisted.cases.first { $0.id == caseId }
     }
 
     var body: some View {
-        let reviewCount = model.reviewQueue(caseId: caseId).count
-
         ScrollView {
             VStack(alignment: .leading, spacing: alphaSectionSpacing) {
                 AlphaInlineHeader(
@@ -6084,43 +6536,21 @@ private struct AlphaDocumentListScreen: View {
                 )
 
                 RossSectionCard {
-                    HStack(spacing: 10) {
-                        RossInfoPill(title: "\(caseMatter?.documents.count ?? 0) files", systemImage: "doc.text")
-                        RossInfoPill(title: "\(reviewCount) need review", systemImage: "checkmark.seal")
-                        RossInfoPill(title: "\(model.openTaskCount(for: caseId)) open tasks", systemImage: "checklist")
+                    HStack {
+                        Text("\(caseMatter?.documents.count ?? 0) file(s) stored for this matter")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.rossInk.opacity(0.62))
+
+                        Spacer(minLength: 0)
+
+                        AlphaDocumentLayoutMenu(layoutMode: $documentLayoutMode)
                     }
                 }
 
-                RossSectionCard(title: "Next actions") {
-                    VStack(spacing: 12) {
-                        RossActionTile(
-                            title: "Import another file",
-                            detail: "Add a PDF, image, or text file so Ross can read it locally and refresh the matter overview.",
-                            systemImage: "square.and.arrow.down",
-                            tint: Color.rossHighlight
-                        ) {
-                            showingImporter = true
-                        }
-
-                        RossActionTile(
-                            title: "Ask about this matter",
-                            detail: "Continue the Ross thread with this matter's files, dates, tasks, and source notes as context.",
-                            systemImage: "bubble.left.and.text.bubble.right",
-                            tint: Color.rossAccent
-                        ) {
-                            model.openAsk(scopeCaseID: caseId)
-                        }
-
-                        RossActionTile(
-                            title: "Generate case note",
-                            detail: "Create a local draft note from the current matter before the next hearing.",
-                            systemImage: "text.append",
-                            tint: Color.rossSuccess
-                        ) {
-                            Task { await model.generateExport(kind: "case_note", caseId: caseId) }
-                        }
-                    }
+                Button("Import document") {
+                    showingImporter = true
                 }
+                .rossPrimaryButtonStyle()
 
                 if let caseMatter, caseMatter.documents.isEmpty {
                     RossSectionCard {
@@ -6130,13 +6560,19 @@ private struct AlphaDocumentListScreen: View {
                     }
                 }
 
-                ForEach(caseMatter?.documents ?? []) { document in
-                    Button {
-                        model.path.append(.documentViewer(caseId, document.id, 1))
-                    } label: {
-                        AlphaDocumentRow(caseTitle: nil, document: document, showChevron: true)
-                    }
-                    .buttonStyle(.plain)
+                if let documents = caseMatter?.documents, !documents.isEmpty {
+                    AlphaDocumentCollectionView(
+                        documents: documents,
+                        caseTitle: nil,
+                        layoutMode: documentLayoutMode,
+                        expandedDocumentIDs: $expandedDocumentIDs,
+                        onOpen: { documentId in
+                            model.path.append(.documentViewer(caseId, documentId, 1))
+                        },
+                        onMoveDocument: { documentId, offset in
+                            model.moveDocument(caseId: caseId, documentId: documentId, by: offset)
+                        }
+                    )
                 }
             }
             .padding(alphaScreenPadding)
