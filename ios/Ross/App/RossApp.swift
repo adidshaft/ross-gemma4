@@ -7,6 +7,20 @@ import SwiftUI
 import UIKit
 #endif
 
+// MARK: - Language Preference
+
+private let rossLanguageSelectedKey = "ross.language.selected"
+private let rossSelectedLanguageCodeKey = "ross.language.code"
+
+func rossHasSelectedLanguage() -> Bool {
+    UserDefaults.standard.bool(forKey: rossLanguageSelectedKey)
+}
+
+func rossSaveLanguageSelection(code: String) {
+    UserDefaults.standard.set(true, forKey: rossLanguageSelectedKey)
+    UserDefaults.standard.set(code, forKey: rossSelectedLanguageCodeKey)
+}
+
 func rossBackendBaseURL() -> URL {
     let environment = ProcessInfo.processInfo.environment
     let rawURL = environment["ROSS_BACKEND_BASE_URL"] ?? environment["ROSS_BACKEND_URL"] ?? "http://127.0.0.1:8080"
@@ -172,6 +186,12 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
     var phase: RossAuthPhase = .loading
     var isStartingSignIn = false
     var authErrorMessage: String?
+    var hasSelectedLanguage: Bool = rossHasSelectedLanguage()
+
+    func markLanguageSelected(code: String) {
+        rossSaveLanguageSelection(code: code)
+        hasSelectedLanguage = true
+    }
 
     var session: RossAuthSession? {
         switch phase {
@@ -496,21 +516,58 @@ private struct RossAuthRootView: View {
             case .loading:
                 RossLaunchSplashView()
             case .signedOut:
-                RossSignInScreen(authController: authController)
+                if authController.hasSelectedLanguage {
+                    RossSignInScreen(authController: authController)
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .trailing).combined(with: .opacity),
+                            removal: .opacity
+                        ))
+                } else {
+                    RossLanguageSelectionScreen(authController: authController)
+                        .transition(.asymmetric(
+                            insertion: .opacity,
+                            removal: .move(edge: .leading).combined(with: .opacity)
+                        ))
+                }
             case .unlockRequired(let session):
                 RossQuickUnlockScreen(authController: authController, session: session)
             case .signedIn:
                 AlphaRossRootView(authController: authController)
             }
         }
+        .animation(.easeInOut(duration: 0.38), value: authController.hasSelectedLanguage)
         .task {
             await authController.loadIfNeeded()
         }
     }
 }
 
-private struct RossSignInScreen: View {
+// MARK: - Language Selection Screen
+
+private struct RossLanguageOption: Identifiable {
+    let id: String  // language code
+    let nativeName: String
+    let englishName: String
+    let flag: String
+}
+
+private let rossLanguageOptions: [RossLanguageOption] = [
+    RossLanguageOption(id: "en", nativeName: "English", englishName: "English", flag: "🇬🇧"),
+    RossLanguageOption(id: "hi", nativeName: "हिन्दी", englishName: "Hindi", flag: "🇮🇳"),
+    RossLanguageOption(id: "ta", nativeName: "தமிழ்", englishName: "Tamil", flag: "🇮🇳"),
+    RossLanguageOption(id: "te", nativeName: "తెలుగు", englishName: "Telugu", flag: "🇮🇳"),
+    RossLanguageOption(id: "kn", nativeName: "ಕನ್ನಡ", englishName: "Kannada", flag: "🇮🇳"),
+    RossLanguageOption(id: "ml", nativeName: "മലയാളം", englishName: "Malayalam", flag: "🇮🇳"),
+    RossLanguageOption(id: "mr", nativeName: "मराठी", englishName: "Marathi", flag: "🇮🇳"),
+    RossLanguageOption(id: "bn", nativeName: "বাংলা", englishName: "Bengali", flag: "🇮🇳"),
+]
+
+private struct RossLanguageSelectionScreen: View {
     @Bindable var authController: RossAuthController
+    @State private var selectedCode: String? = nil
+    @State private var appeared = false
+
+    private let columns = [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
 
     var body: some View {
         GeometryReader { proxy in
@@ -518,46 +575,271 @@ private struct RossSignInScreen: View {
                 RossAuthBackdrop()
                     .frame(width: proxy.size.width, height: proxy.size.height)
 
-                VStack(spacing: 0) {
-                    Spacer(minLength: max(proxy.size.height * 0.08, 42))
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack(spacing: 14) {
+                            RossAuthHeroMark(size: 62)
 
-                    RossAuthHeroMark()
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("ROSS")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .tracking(3.4)
+                                    .foregroundStyle(Color.rossAccent)
 
-                    Spacer(minLength: 30)
+                                Text("Set your starting language")
+                                    .font(.system(size: 16, weight: .regular))
+                                    .foregroundStyle(Color.rossInk.opacity(0.78))
+                            }
 
-                    Text("Private legal work. On this phone.")
-                        .font(.system(size: 34, weight: .semibold, design: .rounded))
-                        .multilineTextAlignment(.center)
-                        .foregroundStyle(Color.rossInk)
-                        .frame(maxWidth: 320)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.horizontal, 24)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.top, max(proxy.safeAreaInsets.top + 12, 28))
+                        .opacity(appeared ? 1 : 0)
+                        .offset(y: appeared ? 0 : -10)
 
-                    Spacer(minLength: 0)
+                        RossAuthGlassPanel(cornerRadius: 34, padding: 20) {
+                            VStack(alignment: .leading, spacing: 18) {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Choose your language")
+                                        .font(.system(size: 38, weight: .light))
+                                        .tracking(-1.6)
+                                        .foregroundStyle(Color.rossInk)
+                                        .fixedSize(horizontal: false, vertical: true)
 
-                    VStack(spacing: 16) {
+                                    Text("Ross starts here. You can change it later in Settings.")
+                                        .font(.system(size: 16, weight: .regular))
+                                        .foregroundStyle(Color.rossInk.opacity(0.64))
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+
+                                LazyVGrid(columns: columns, spacing: 14) {
+                                    ForEach(Array(rossLanguageOptions.enumerated()), id: \.element.id) { index, option in
+                                        RossLanguageTile(
+                                            option: option,
+                                            isSelected: selectedCode == option.id
+                                        ) {
+                                            withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
+                                                selectedCode = option.id
+                                            }
+                                        }
+                                        .opacity(appeared ? 1 : 0)
+                                        .offset(y: appeared ? 0 : 12)
+                                        .animation(
+                                            .spring(response: 0.48, dampingFraction: 0.82).delay(Double(index) * 0.04 + 0.08),
+                                            value: appeared
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        .opacity(appeared ? 1 : 0)
+                        .offset(y: appeared ? 0 : 12)
+
+                        Button {
+                            guard let code = selectedCode else { return }
+                            authController.markLanguageSelected(code: code)
+                        } label: {
+                            Text("Continue")
+                        }
+                        .rossPrimaryButtonStyle()
+                        .disabled(selectedCode == nil)
+                        .opacity(selectedCode == nil ? 0.48 : 1)
+                        .animation(.easeOut(duration: 0.18), value: selectedCode == nil)
+                        .opacity(appeared ? 1 : 0)
+                        .offset(y: appeared ? 0 : 16)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, max(proxy.safeAreaInsets.bottom + 12, 24))
+                }
+            }
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.82)) {
+                appeared = true
+            }
+        }
+    }
+}
+
+private struct RossLanguageTile: View {
+    let option: RossLanguageOption
+    let isSelected: Bool
+    let action: () -> Void
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 24, style: .continuous)
+
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(option.nativeName)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(isSelected ? Color.white : Color.rossInk)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+
+                Text(option.englishName)
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundStyle(
+                        isSelected
+                            ? Color.white.opacity(0.78)
+                            : Color.rossInk.opacity(0.56)
+                    )
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+            }
+            .frame(maxWidth: .infinity, minHeight: 78, alignment: .leading)
+            .padding(.horizontal, 16)
+            .background {
+                if isSelected {
+                    shape
+                        .fill(Color.rossPillGradient.opacity(colorScheme == .dark ? 0.88 : 1))
+                        .background(.thinMaterial, in: shape)
+                        .shadow(color: Color.rossAccent.opacity(0.24), radius: 12, y: 8)
+                } else {
+                    shape
+                        .fill(Color.white.opacity(colorScheme == .dark ? 0.05 : 0.18))
+                        .background(.ultraThinMaterial, in: shape)
+                }
+            }
+            .overlay {
+                shape.strokeBorder(
+                    LinearGradient(
+                        colors: [
+                            isSelected
+                                ? Color.white.opacity(0.32)
+                                : Color.white.opacity(colorScheme == .dark ? 0.08 : 0.34),
+                            isSelected
+                                ? Color.white.opacity(0.12)
+                                : Color.rossGlassStroke.opacity(colorScheme == .dark ? 0.26 : 0.58)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+            }
+            .scaleEffect(isSelected ? 1.01 : 1)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct RossSignInScreen: View {
+    @Bindable var authController: RossAuthController
+    @State private var appeared = false
+
+    private var anyAuthInProgress: Bool {
+        authController.isStartingSignIn
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack {
+                RossAuthBackdrop()
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 18) {
+                        HStack(spacing: 14) {
+                            RossAuthHeroMark(size: 62)
+
+                            Text("ROSS")
+                                .font(.system(size: 15, weight: .semibold))
+                                .tracking(3.6)
+                                .foregroundStyle(Color.rossAccent)
+
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.top, max(proxy.safeAreaInsets.top + 12, 28))
+                        .opacity(appeared ? 1 : 0)
+                        .offset(y: appeared ? 0 : -10)
+
+                        RossAuthGlassPanel(cornerRadius: 36, padding: 24) {
+                            VStack(alignment: .leading, spacing: 18) {
+                                Text("Private legal work.\nOn this phone.")
+                                    .font(.system(size: 46, weight: .light))
+                                    .tracking(-1.8)
+                                    .foregroundStyle(Color.rossInk)
+                                    .fixedSize(horizontal: false, vertical: true)
+
+                                Text("Sign in once and keep every matter, file, and chat on this device.")
+                                    .font(.system(size: 16, weight: .regular))
+                                    .foregroundStyle(Color.rossInk.opacity(0.66))
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .opacity(appeared ? 1 : 0)
+                        .offset(y: appeared ? 0 : 10)
+
+                        HStack(spacing: 12) {
+                            RossAuthFeatureTile(
+                                icon: .lock,
+                                variant: .highlight,
+                                fallbackSystemImage: "lock.fill",
+                                title: "Files stay local",
+                                detail: "Matters, files, and chats stay on this device."
+                            )
+
+                            RossAuthFeatureTile(
+                                icon: .gearKeyhole,
+                                variant: .accent,
+                                fallbackSystemImage: "faceid",
+                                title: "Quick unlock",
+                                detail: "Use Face ID, Touch ID, or your passcode when you return."
+                            )
+                        }
+                        .opacity(appeared ? 1 : 0)
+                        .offset(y: appeared ? 0 : 12)
+
                         if let errorMessage = authController.authErrorMessage, !errorMessage.isEmpty {
-                            Text(errorMessage)
-                                .font(.footnote)
-                                .foregroundStyle(.red)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 12)
-                                .background(Color.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            RossAuthGlassPanel(cornerRadius: 24, padding: 14) {
+                                HStack(alignment: .top, spacing: 10) {
+                                    RossGlassIconView(
+                                        .triangleWarning,
+                                        variant: .highlight,
+                                        size: 16,
+                                        fallbackSystemImage: "exclamationmark.triangle.fill"
+                                    )
+
+                                    Text(errorMessage)
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundStyle(Color.red)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
                         }
 
                         Button {
                             authController.startGoogleSignIn()
                         } label: {
-                            Text(authController.isStartingSignIn ? "Opening sign-in…" : "Continue with Google")
+                            HStack(spacing: 12) {
+                                RossGlassIconView(.earth, variant: .highlight, size: 18, fallbackSystemImage: "globe")
+                                    .frame(width: 22, height: 22)
+
+                                Text(authController.isStartingSignIn ? "Opening secure sign-in..." : "Continue with Google")
+                                    .frame(maxWidth: .infinity, alignment: .center)
+
+                                Color.clear
+                                    .frame(width: 22, height: 22)
+                            }
                         }
-                        .buttonStyle(RossAuthPrimaryButtonStyle())
-                        .disabled(authController.isStartingSignIn)
+                        .rossPrimaryButtonStyle()
+                        .disabled(anyAuthInProgress)
+                        .opacity(anyAuthInProgress ? 0.82 : 1)
+                        .opacity(appeared ? 1 : 0)
+                        .offset(y: appeared ? 0 : 16)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, max(proxy.safeAreaInsets.bottom, 18))
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, max(proxy.safeAreaInsets.bottom + 20, 32))
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.68, dampingFraction: 0.84)) {
+                appeared = true
             }
         }
     }
@@ -573,140 +855,108 @@ private struct RossQuickUnlockScreen: View {
                 RossAuthBackdrop()
                     .frame(width: proxy.size.width, height: proxy.size.height)
 
-                VStack(spacing: 0) {
-                    Spacer(minLength: max(proxy.size.height * 0.08, 42))
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 18) {
+                        HStack(spacing: 14) {
+                            RossAuthHeroMark(size: 62)
 
-                    RossAuthHeroMark(size: 150, logoSize: 72)
+                            Text("ROSS")
+                                .font(.system(size: 15, weight: .semibold))
+                                .tracking(3.6)
+                                .foregroundStyle(Color.rossAccent)
 
-                    Spacer(minLength: 26)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.top, max(proxy.safeAreaInsets.top + 12, 28))
 
-                    VStack(alignment: .center, spacing: 10) {
-                        Text("Welcome back")
-                            .font(.system(size: 34, weight: .semibold, design: .rounded))
-                            .foregroundStyle(Color.rossInk)
+                        RossAuthGlassPanel(cornerRadius: 36, padding: 24) {
+                            VStack(alignment: .leading, spacing: 16) {
+                                Text("Welcome back")
+                                    .font(.system(size: 44, weight: .light))
+                                    .tracking(-1.4)
+                                    .foregroundStyle(Color.rossInk)
 
-                        Text(session.displayLabel)
-                            .font(.headline.weight(.medium))
-                            .foregroundStyle(Color.rossInk.opacity(0.72))
-                            .multilineTextAlignment(.center)
-                            .lineLimit(2)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .padding(.horizontal, 32)
+                                Text(session.displayLabel)
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundStyle(Color.rossInk.opacity(0.76))
+                                    .lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
 
-                    if let errorMessage = authController.authErrorMessage, !errorMessage.isEmpty {
-                        Text(errorMessage)
-                            .font(.footnote)
-                            .foregroundStyle(.red)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 12)
-                            .background(Color.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    }
+                                Text(authController.quickUnlockSummary)
+                                    .font(.system(size: 14, weight: .regular))
+                                    .foregroundStyle(Color.rossInk.opacity(0.6))
+                            }
+                        }
 
-                    Spacer(minLength: 0)
+                        if let errorMessage = authController.authErrorMessage, !errorMessage.isEmpty {
+                            RossAuthGlassPanel(cornerRadius: 24, padding: 14) {
+                                Text(errorMessage)
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(.red)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
 
-                    VStack(spacing: 14) {
                         Button {
                             authController.unlockSession()
                         } label: {
                             HStack(spacing: 12) {
-                                Image(systemName: authController.unlockSymbolName)
-                                    .font(.system(size: 17, weight: .semibold))
+                                RossGlassIconView(.gearKeyhole, variant: .accent, size: 18, fallbackSystemImage: authController.unlockSymbolName)
+                                    .frame(width: 22, height: 22)
 
                                 Text(authController.unlockButtonTitle)
                                     .frame(maxWidth: .infinity, alignment: .center)
+
+                                Color.clear
+                                    .frame(width: 22, height: 22)
                             }
                         }
-                        .buttonStyle(RossAuthPrimaryButtonStyle())
+                        .rossPrimaryButtonStyle()
 
                         Button("Remove local sign-in") {
                             authController.signOut()
                         }
                         .buttonStyle(RossAuthTextButtonStyle())
+                        .padding(.top, 2)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, max(proxy.safeAreaInsets.bottom, 18))
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, max(proxy.safeAreaInsets.bottom + 20, 32))
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
     }
 }
 
 private struct RossAuthHeroMark: View {
-    var size: CGFloat = 172
-    var logoSize: CGFloat = 82
+    var size: CGFloat = 132
 
     var body: some View {
-        ZStack {
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [
-                            Color.rossAccent.opacity(0.92),
-                            Color.rossAccent.opacity(0.42),
-                            Color.clear
-                        ],
-                        center: .center,
-                        startRadius: 12,
-                        endRadius: size * 0.64
-                    )
-                )
-                .frame(width: size * 1.08, height: size * 1.08)
-                .blur(radius: 4)
-
-            Circle()
-                .fill(Color.rossGlassFill.opacity(0.92))
-                .overlay {
-                    Circle()
-                        .stroke(
-                            LinearGradient(
-                                colors: [Color.white.opacity(0.52), Color.rossGlassStroke.opacity(0.38)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1.2
-                        )
-                }
-                .shadow(color: Color.rossShadow.opacity(0.28), radius: 30, y: 18)
-                .frame(width: size, height: size)
-
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [Color.white.opacity(0.18), Color.clear],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(width: size * 0.86, height: size * 0.86)
-                .offset(x: -14, y: -14)
-
-            Image("RossLogo")
-                .resizable()
-                .scaledToFit()
-                .frame(width: logoSize, height: logoSize)
-                .padding(size * 0.14)
-                .background(Color.rossGlassSubtleFill.opacity(0.94), in: RoundedRectangle(cornerRadius: size * 0.2, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: size * 0.2, style: .continuous)
-                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                }
-                .shadow(color: Color.rossShadow.opacity(0.22), radius: 18, y: 10)
-        }
+        Image("RossLogo")
+            .resizable()
+            .scaledToFit()
+            .frame(width: size, height: size)
+            .shadow(color: Color.white.opacity(0.12), radius: 12, y: -2)
+            .shadow(color: Color.rossShadow.opacity(0.2), radius: 24, y: 16)
     }
 }
 
-private struct RossAuthBackdrop: View {
+struct RossAuthBackdrop: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
         ZStack {
             LinearGradient(
-                colors: [
-                    Color.rossHeroTop,
-                    Color.rossGroupedBackground,
-                    Color.rossHeroBottom
-                ],
+                colors: colorScheme == .dark
+                    ? [
+                        Color(red: 0.04, green: 0.06, blue: 0.09),
+                        Color(red: 0.08, green: 0.09, blue: 0.14),
+                        Color(red: 0.07, green: 0.05, blue: 0.11)
+                    ]
+                    : [
+                        Color(red: 0.74, green: 0.88, blue: 0.92),
+                        Color(red: 0.93, green: 0.96, blue: 0.97),
+                        Color(red: 0.88, green: 0.88, blue: 0.84)
+                    ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -714,71 +964,148 @@ private struct RossAuthBackdrop: View {
             Ellipse()
                 .fill(
                     LinearGradient(
-                        colors: [Color.rossBackdropGlow.opacity(0.95), Color.clear],
+                        colors: colorScheme == .dark
+                            ? [
+                                Color(red: 0.22, green: 0.43, blue: 0.64).opacity(0.42),
+                                Color.clear
+                            ]
+                            : [
+                                Color.white.opacity(0.74),
+                                Color.clear
+                            ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
-                .frame(width: 540, height: 280)
+                .frame(width: 620, height: 320)
                 .rotationEffect(.degrees(-18))
-                .blur(radius: 28)
-                .offset(x: 60, y: -255)
+                .blur(radius: 34)
+                .offset(x: -40, y: -260)
+
+            Ellipse()
+                .fill(
+                    LinearGradient(
+                        colors: colorScheme == .dark
+                            ? [
+                                Color(red: 0.54, green: 0.42, blue: 0.82).opacity(0.22),
+                                Color.clear
+                            ]
+                            : [
+                                Color(red: 0.96, green: 0.82, blue: 0.65).opacity(0.34),
+                                Color.clear
+                            ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .frame(width: 420, height: 420)
+                .blur(radius: 48)
+                .offset(x: 170, y: 250)
 
             Circle()
-                .fill(Color.rossAccent.opacity(0.14))
+                .fill(colorScheme == .dark ? Color.white.opacity(0.08) : Color.white.opacity(0.26))
                 .frame(width: 320, height: 320)
-                .blur(radius: 52)
-                .offset(x: 146, y: -230)
-
-            Circle()
-                .fill(Color.white.opacity(0.12))
-                .frame(width: 240, height: 240)
-                .blur(radius: 72)
-                .offset(x: -118, y: -108)
+                .blur(radius: 76)
+                .offset(x: 148, y: -210)
         }
         .ignoresSafeArea()
     }
 }
 
-private struct RossAuthPrimaryButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.headline.weight(.semibold))
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .frame(height: 58)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.rossAccent.opacity(configuration.isPressed ? 0.78 : 0.96),
-                                Color.rossAccent.opacity(configuration.isPressed ? 0.68 : 0.84)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .overlay(alignment: .top) {
-                        Capsule(style: .continuous)
+private struct RossAuthGlassPanel<Content: View>: View {
+    let cornerRadius: CGFloat
+    let padding: CGFloat
+    let content: Content
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    init(
+        cornerRadius: CGFloat = 30,
+        padding: CGFloat = 24,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.cornerRadius = cornerRadius
+        self.padding = padding
+        self.content = content()
+    }
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+
+        content
+            .padding(padding)
+            .background {
+                shape
+                    .fill(Color.white.opacity(colorScheme == .dark ? 0.08 : 0.26))
+                    .background(.ultraThinMaterial, in: shape)
+                    .overlay {
+                        shape
                             .fill(
                                 LinearGradient(
-                                    colors: [Color.white.opacity(0.34), Color.white.opacity(0.02)],
-                                    startPoint: .top,
-                                    endPoint: .bottom
+                                    colors: [
+                                        Color.white.opacity(colorScheme == .dark ? 0.12 : 0.36),
+                                        Color.white.opacity(colorScheme == .dark ? 0.04 : 0.14),
+                                        Color.clear
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
                                 )
                             )
-                            .padding(1.4)
+                            .blendMode(.screen)
                     }
-            )
-            .overlay {
-                Capsule(style: .continuous)
-                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
             }
-            .shadow(color: Color.rossAccent.opacity(configuration.isPressed ? 0.18 : 0.24), radius: configuration.isPressed ? 10 : 18, y: configuration.isPressed ? 6 : 12)
-            .shadow(color: Color.rossShadow.opacity(configuration.isPressed ? 0.14 : 0.22), radius: configuration.isPressed ? 6 : 14, y: configuration.isPressed ? 3 : 8)
-            .scaleEffect(configuration.isPressed ? 0.99 : 1)
-            .animation(.easeOut(duration: 0.16), value: configuration.isPressed)
+            .overlay {
+                shape.strokeBorder(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(colorScheme == .dark ? 0.12 : 0.48),
+                            Color.rossGlassStroke.opacity(colorScheme == .dark ? 0.28 : 0.62)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+            }
+            .shadow(
+                color: Color.rossShadow.opacity(colorScheme == .dark ? 0.32 : 0.14),
+                radius: colorScheme == .dark ? 18 : 28,
+                y: colorScheme == .dark ? 10 : 18
+            )
+    }
+}
+
+private struct RossAuthFeatureTile: View {
+    let icon: RossGlassIconName
+    let variant: RossGlassIconVariant
+    let fallbackSystemImage: String
+    let title: String
+    let detail: String
+
+    var body: some View {
+        RossAuthGlassPanel(cornerRadius: 26, padding: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color.white.opacity(0.16))
+                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+                    RossGlassIconView(icon, variant: variant, size: 16, fallbackSystemImage: fallbackSystemImage)
+                }
+                .frame(width: 34, height: 34)
+
+                Text(title)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Color.rossInk)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(detail)
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundStyle(Color.rossInk.opacity(0.58))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 }
 

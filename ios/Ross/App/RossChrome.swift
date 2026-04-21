@@ -87,25 +87,32 @@ struct RossGlassIconView: View {
 }
 
 struct RossLaunchSplashView: View {
+    @State private var appeared = false
+
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [Color.rossGroupedBackground, Color.rossSecondaryGroupedBackground],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            RossAuthBackdrop()
 
-            VStack(spacing: 18) {
+            VStack(spacing: 14) {
                 Image("RossLogo")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 138, height: 138)
-                    .shadow(color: Color.rossShadow.opacity(0.9), radius: 16, y: 8)
+                    .frame(width: 96, height: 96)
+                    .shadow(color: Color.rossAccent.opacity(0.16), radius: 24, y: 12)
+                    .shadow(color: Color.rossShadow.opacity(0.18), radius: 12, y: 6)
+                    .scaleEffect(appeared ? 1 : 0.78)
+                    .opacity(appeared ? 1 : 0)
 
                 Text("Ross")
-                    .font(.system(size: 28, weight: .semibold, design: .rounded))
+                    .font(.system(size: 24, weight: .medium))
                     .foregroundStyle(Color.rossInk)
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 6)
+            }
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.78)) {
+                appeared = true
             }
         }
     }
