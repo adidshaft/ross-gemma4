@@ -9086,11 +9086,11 @@ private struct AlphaSettingsScreen: View {
                 }
 
                 if let authController, let session = authController.session {
-                    RossSectionCard(title: "Account") {
+                    RossSectionCard(title: "Sign-in") {
                         VStack(alignment: .leading, spacing: 12) {
-                            AlphaSettingsValueRow(label: "Google", value: session.email)
+                            AlphaSettingsValueRow(label: "Signed in as", value: session.email)
                             Divider()
-                            AlphaSettingsValueRow(label: "Quick unlock", value: authController.quickUnlockSummary)
+                            AlphaSettingsValueRow(label: "Unlock", value: authController.quickUnlockSummary)
                             Divider()
                             Button(role: .destructive, action: authController.signOut) {
                                 HStack(spacing: 12) {
@@ -9100,7 +9100,7 @@ private struct AlphaSettingsScreen: View {
                                         .frame(width: 30, height: 30)
                                         .background(Color.red.opacity(0.1), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
 
-                                    Text("Sign out")
+                                    Text("Remove local sign-in")
                                         .font(.footnote.weight(.semibold))
                                         .foregroundStyle(Color.rossInk)
 
@@ -9114,10 +9114,10 @@ private struct AlphaSettingsScreen: View {
 
                 RossSectionCard(title: "Privacy") {
                     VStack(alignment: .leading, spacing: 14) {
-                        Toggle("Ask before Web search", isOn: publicLawApprovalBinding)
+                        Toggle("Approve Web search", isOn: publicLawApprovalBinding)
                         Divider()
-                        Toggle("Keep Ross private by default", isOn: privateByDefaultBinding)
-                        Text("Matter files stay on this device. Web search only sends a sanitized public-law query after you approve it.")
+                        Toggle("Private by default", isOn: privateByDefaultBinding)
+                        Text("Work stays on this device. Web search sends only a sanitized public-law query after you approve it.")
                             .font(.footnote)
                             .foregroundStyle(Color.rossInk.opacity(0.64))
                     }
