@@ -1857,54 +1857,7 @@ final class AlphaRossModel {
     }
 
     func buildPublicLawPreview() {
-        let text = publicLawDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-        let suggestedQuery = suggestedPublicLawQuery() ?? "Find current public-law guidance relevant to delay condonation where diligence is documented."
-        let lower = text.lowercased()
-        let blockedPatterns = [
-            "raghav fakepriv",
-            "9876501234",
-            "fakepriv@example.com",
-            "fake/123/2026",
-            "blue suitcase near temple",
-            "@",
-            "case number",
-            "client",
-            "party",
-            "ocr"
-        ]
-
-        var removed: [String] = []
-        var sanitized = text
-            .replacingOccurrences(of: "\\b\\d{2,}\\b", with: "", options: .regularExpression)
-            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        if let selectedCase {
-            if lower.contains(selectedCase.title.lowercased()) || lower.contains(selectedCase.forum.lowercased()) {
-                removed.append("Case title and forum references")
-                sanitized = sanitized
-                    .replacingOccurrences(of: selectedCase.title, with: "", options: .caseInsensitive)
-                    .replacingOccurrences(of: selectedCase.forum, with: "", options: .caseInsensitive)
-                    .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-            }
-        }
-
-        if blockedPatterns.contains(where: { lower.contains($0) }) {
-            removed.append("Private details and obvious identifiers")
-            sanitized = suggestedQuery
-        }
-
-        if sanitized.count > 180 {
-            removed.append("Long factual narrative")
-            sanitized = String(sanitized.prefix(180)).trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-
-        publicLawPreview = AlphaPublicLawPreview(
-            query: sanitized.isEmpty ? suggestedQuery : sanitized,
-            removed: removed.isEmpty ? ["No private case data detected"] : removed,
-            confirmationNote: "Public-law search sends only a sanitized query after explicit confirmation."
-        )
+        publicLawPreview = sanitizePublicLawPreview(rawQuery: publicLawDraft, caseMatter: selectedCase)
         publicLawResults = []
         persisted.publicLawDraft = publicLawDraft
         persisted.publicLawPreview = publicLawPreview
@@ -3363,8 +3316,12 @@ final class AlphaRossModel {
 
     private func buildAskPublicLawPreview(question: String, scopeCaseID: UUID?) -> AlphaPublicLawPreview {
         let caseMatter = scopeCaseID.flatMap { id in persisted.cases.first { $0.id == id } }
+        return sanitizePublicLawPreview(rawQuery: question, caseMatter: caseMatter)
+    }
+
+    private func sanitizePublicLawPreview(rawQuery: String, caseMatter: AlphaCaseMatter?) -> AlphaPublicLawPreview {
         let suggested = suggestedPublicLawQuery() ?? "Find current public-law guidance relevant to delay condonation where diligence is documented."
-        var sanitized = question
+        var sanitized = rawQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         var removed: [String] = []
         let blockedTerms = [
             "case number",
@@ -3379,27 +3336,29 @@ final class AlphaRossModel {
             "ocr",
             "filename",
             "address",
-            "mobile"
+            "mobile",
+            "this matter",
+            "this case",
+            "my matter",
+            "my case",
+            "our matter",
+            "our case",
+            "my client",
+            "our client",
+            "private matter",
+            "confidential matter",
+            "what should i",
+            "do next",
+            "next step",
+            "next steps"
         ]
-
-        if let caseMatter {
-            let sensitiveTokens = [caseMatter.title, caseMatter.forum] + caseMatter.documents.map(\.title) + caseMatter.documents.map(\.fileName)
-            sensitiveTokens.filter { !$0.isEmpty }.forEach { token in
-                if sanitized.localizedCaseInsensitiveContains(token) {
-                    removed.append("Case titles, forum names, or document labels")
-                    sanitized = sanitized.replacingOccurrences(of: token, with: "", options: .caseInsensitive)
-                }
-            }
-        }
-
-        blockedTerms.forEach { token in
-            if sanitized.localizedCaseInsensitiveContains(token) {
-                removed.append("Case-detail phrasing and private drafting cues")
-                sanitized = sanitized.replacingOccurrences(of: token, with: "", options: .caseInsensitive)
-            }
-        }
-
         let patterns: [(String, String)] = [
+            (#"\b(my|our)\s+(client|case|matter)\b"#, "Matter-scoped wording"),
+            (#"\b(this|private|confidential)\s+(case|matter)\b"#, "Matter-scoped wording"),
+            (#"\bwhat\s+should\s+i\b"#, "Matter-scoped wording"),
+            (#"\bdo\s+next\b"#, "Matter-scoped wording"),
+            (#"\bnext\s+steps?\b"#, "Matter-scoped wording"),
+            (#"\bfor\s+(this|my|our)\s+(client|case|matter)\b"#, "Matter-scoped wording"),
             (#"\b\d{2,}\b"#, "Case numbers, phone numbers, or long numeric strings"),
             (#"\b[A-Za-z]{1,8}[(/\- ]*\d+[A-Za-z/()\- ]*\d{4}\b"#, "Case numbers or filing references"),
             (#"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+"#, "Email addresses"),
@@ -3411,6 +3370,23 @@ final class AlphaRossModel {
             (#"\b(?:near|behind|opposite|at)\s+[A-Za-z][A-Za-z\s]{3,40}\b"#, "Addresses or location details")
         ]
 
+        if let caseMatter {
+            let sensitiveTokens = [caseMatter.title, caseMatter.forum] + caseMatter.documents.map(\.title) + caseMatter.documents.map(\.fileName)
+            sensitiveTokens.filter { !$0.isEmpty }.forEach { token in
+                if sanitized.localizedCaseInsensitiveContains(token) {
+                    removed.append("Case titles, forum names, or document labels")
+                    sanitized = sanitized.replacingOccurrences(of: token, with: " ", options: .caseInsensitive)
+                }
+            }
+        }
+
+        blockedTerms.forEach { token in
+            if sanitized.localizedCaseInsensitiveContains(token) {
+                removed.append("Case-detail phrasing and private drafting cues")
+                sanitized = sanitized.replacingOccurrences(of: token, with: " ", options: .caseInsensitive)
+            }
+        }
+
         for (pattern, label) in patterns {
             if sanitized.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil {
                 removed.append(label)
@@ -3420,6 +3396,7 @@ final class AlphaRossModel {
 
         sanitized = sanitized
             .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+            .replacingOccurrences(of: #"\b(for|about|regarding|with|on)\s*$"#, with: "", options: [.regularExpression, .caseInsensitive])
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
         if sanitized.count > 180 {
@@ -3427,24 +3404,27 @@ final class AlphaRossModel {
             sanitized = String(sanitized.prefix(180)).trimmingCharacters(in: .whitespacesAndNewlines)
         }
 
-        if sanitized.isEmpty {
+        let legalCandidate = sanitized
+            .lowercased()
+            .replacingOccurrences(of: #"[^a-z0-9\s]"#, with: " ", options: .regularExpression)
+            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if legalCandidate.isEmpty {
             sanitized = suggested
             removed.append("Private case details")
-        } else {
-            let legalCandidate = sanitized
-                .lowercased()
-                .replacingOccurrences(of: #"[^a-z0-9\s]"#, with: " ", options: .regularExpression)
-                .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            if !legalCandidate.isEmpty && !looksLikeLegalConcept(legalCandidate) {
-                sanitized = suggested
-                removed.append("General drafting phrasing")
-            }
+        } else if legalCandidate.range(of: #"\b(my|our)\s+(client|case|matter)\b|\b(this|private|confidential)\s+(case|matter)\b"#, options: .regularExpression) != nil {
+            sanitized = suggested
+            removed.append("Matter-scoped wording")
+        } else if !looksLikeLegalConcept(legalCandidate) {
+            sanitized = suggested
+            removed.append("General drafting phrasing")
         }
 
+        let dedupedRemoved = Array(NSOrderedSet(array: removed)) as? [String] ?? removed
         return AlphaPublicLawPreview(
             query: sanitized,
-            removed: removed.isEmpty ? ["No private case data detected"] : Array(NSOrderedSet(array: removed)) as? [String] ?? removed,
+            removed: dedupedRemoved.isEmpty ? ["No private case data detected"] : dedupedRemoved,
             confirmationNote: "Public-law search sends only a sanitized query after explicit confirmation."
         )
     }

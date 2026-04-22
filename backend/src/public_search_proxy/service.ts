@@ -354,6 +354,9 @@ export class PublicSearchProxyService {
   ) {}
 
   async search(input: PublicSearchInput): Promise<PublicSearchResponse> {
+    const liveSearchFallbackNote =
+      "Live public-law results are temporarily unavailable, so Ross is using a privacy-safe fallback index.";
+
     if (!this.env.publicLawGeminiApiKey) {
       return buildFixtureResponse(
         input,
@@ -405,25 +408,23 @@ export class PublicSearchProxyService {
         })
       });
     } catch {
-      throw new AppError(502, "public_law_connector_unavailable", "Could not search public law right now.");
+      return buildFixtureResponse(input, liveSearchFallbackNote);
     }
 
     if (!response.ok) {
-      throw new AppError(502, "public_law_connector_unavailable", "Could not search public law right now.", {
-        providerStatus: response.status
-      });
+      return buildFixtureResponse(input, liveSearchFallbackNote);
     }
 
     let payload: GeminiGenerateContentResponse;
     try {
       payload = (await response.json()) as GeminiGenerateContentResponse;
     } catch {
-      throw new AppError(502, "public_law_connector_invalid_response", "Could not search public law right now.");
+      return buildFixtureResponse(input, liveSearchFallbackNote);
     }
 
     const results = buildGeminiResults(input, payload);
     if (results.length === 0) {
-      throw new AppError(502, "public_law_connector_invalid_response", "Could not search public law right now.");
+      return buildFixtureResponse(input, liveSearchFallbackNote);
     }
 
     return {

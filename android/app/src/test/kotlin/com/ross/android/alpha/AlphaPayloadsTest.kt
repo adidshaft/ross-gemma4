@@ -199,6 +199,19 @@ class AlphaPayloadsTest {
     }
 
     @Test
+    fun `public law preview removes matter-scoped wording before confirmation`() {
+        val preview = AlphaPayloadShaper.buildPublicLawPreview(
+            rawQuery = "What should I do next for this matter about delay condonation and sufficient cause?",
+            case = null,
+        )
+
+        assertFalse(preview.query.contains("what should i", ignoreCase = true))
+        assertFalse(preview.query.contains("this matter", ignoreCase = true))
+        assertTrue(preview.query.contains("delay condonation", ignoreCase = true))
+        assertFalse(preview.removed.contains("No private case data detected"))
+    }
+
+    @Test
     fun `public law backend request always marks explicit confirmation`() {
         val preview = AlphaPayloadShaper.buildPublicLawPreview(
             rawQuery = "Find Section 138 cheque dishonour limitation law",

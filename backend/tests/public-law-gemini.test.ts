@@ -196,7 +196,7 @@ test("unsafe public-law queries are rejected before any Gemini request is made",
   assert.doesNotMatch(response.body, /FAKE\/123\/2026/i);
 });
 
-test("Gemini connector failures stay plain-language and do not echo the query", async (t) => {
+test("Gemini connector failures fall back to the privacy-safe index without echoing the query", async (t) => {
   const originalFetch = globalThis.fetch;
 
   globalThis.fetch = (async () =>
@@ -234,7 +234,59 @@ test("Gemini connector failures stay plain-language and do not echo the query", 
     }
   });
 
-  assert.equal(response.statusCode, 502);
-  assert.match(response.body, /Could not search public law right now\./);
+  assert.equal(response.statusCode, 200);
+  assert.match(response.body, /backend_fixture_index/);
+  assert.match(response.body, /temporarily unavailable/i);
   assert.doesNotMatch(response.body, new RegExp(query, "i"));
+});
+
+test("Gemini responses without usable grounding fall back to the privacy-safe index", async (t) => {
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = (async () =>
+    jsonResponse({
+      candidates: [
+        {
+          content: {
+            parts: [
+              {
+                text: "General answer without grounding chunks."
+              }
+            ]
+          },
+          groundingMetadata: {
+            groundingChunks: [],
+            groundingSupports: []
+          }
+        }
+      ]
+    })) as typeof fetch;
+
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  const app = await buildApp({
+    env: buildTestEnv(),
+    emitLogsToConsole: false
+  });
+
+  t.after(async () => {
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "POST",
+    url: "/public-law/search",
+    payload: {
+      query: "Latest Indian public-law guidance on delay condonation and sufficient cause",
+      jurisdiction: "IN-ALL",
+      language: "en",
+      confirmedPublicPreview: true
+    }
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.match(response.body, /backend_fixture_index/);
+  assert.match(response.body, /temporarily unavailable/i);
 });

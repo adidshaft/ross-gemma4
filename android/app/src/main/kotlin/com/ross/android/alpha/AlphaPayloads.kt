@@ -38,6 +38,20 @@ object AlphaPayloadShaper {
         "filename",
         "address",
         "mobile",
+        "this matter",
+        "this case",
+        "my matter",
+        "my case",
+        "our matter",
+        "our case",
+        "my client",
+        "our client",
+        "private matter",
+        "confidential matter",
+        "what should i",
+        "do next",
+        "next step",
+        "next steps",
     )
     private val legalConceptSignals = listOf(
         "act",
@@ -88,14 +102,30 @@ object AlphaPayloadShaper {
         sensitiveTokens.forEach { token ->
             if (sanitized.contains(token, ignoreCase = true)) {
                 removed += "Case titles, forum names, or document labels"
-                sanitized = sanitized.replace(token, "", ignoreCase = true)
+                sanitized = sanitized.replace(token, " ", ignoreCase = true)
             }
         }
 
         blockedTerms.forEach { token ->
             if (sanitized.contains(token, ignoreCase = true)) {
                 removed += "Case-detail phrasing and private drafting cues"
-                sanitized = sanitized.replace(token, "", ignoreCase = true)
+                sanitized = sanitized.replace(token, " ", ignoreCase = true)
+            }
+        }
+
+        val matterScopedPatterns = listOf(
+            "\\b(my|our)\\s+(client|case|matter)\\b",
+            "\\b(this|private|confidential)\\s+(case|matter)\\b",
+            "\\bwhat\\s+should\\s+i\\b",
+            "\\bdo\\s+next\\b",
+            "\\bnext\\s+steps?\\b",
+            "\\bfor\\s+(this|my|our)\\s+(client|case|matter)\\b",
+        )
+        matterScopedPatterns.forEach { pattern ->
+            val regex = Regex(pattern, RegexOption.IGNORE_CASE)
+            if (regex.containsMatchIn(sanitized)) {
+                removed += "Matter-scoped wording"
+                sanitized = sanitized.replace(regex, " ")
             }
         }
 
@@ -145,6 +175,7 @@ object AlphaPayloadShaper {
 
         sanitized = sanitized
             .replace(Regex("\\s+"), " ")
+            .replace(Regex("\\b(for|about|regarding|with|on)\\s*$", RegexOption.IGNORE_CASE), "")
             .trim()
 
         if (sanitized.length > 180) {
@@ -162,7 +193,11 @@ object AlphaPayloadShaper {
                 .replace(Regex("[^a-z0-9\\s]"), " ")
                 .replace(Regex("\\s+"), " ")
                 .trim()
-            if (legalCandidate.isNotBlank() && !looksLikeLegalConcept(legalCandidate)) {
+            if (Regex("\\b(my|our)\\s+(client|case|matter)\\b|\\b(this|private|confidential)\\s+(case|matter)\\b", RegexOption.IGNORE_CASE).containsMatchIn(legalCandidate)) {
+                sanitized = suggestedPublicLawQuery(case)
+                    ?: "Find current public-law guidance relevant to delay condonation where diligence is documented."
+                removed += "Matter-scoped wording"
+            } else if (legalCandidate.isNotBlank() && !looksLikeLegalConcept(legalCandidate)) {
                 sanitized = suggestedPublicLawQuery(case)
                     ?: "Find current public-law guidance relevant to delay condonation where diligence is documented."
                 removed += "General drafting phrasing"

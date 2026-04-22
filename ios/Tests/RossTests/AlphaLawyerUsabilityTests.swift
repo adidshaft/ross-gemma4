@@ -157,6 +157,31 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    func testSanitizedPreviewRemovesMatterScopedWordingBeforeWebSearch() async throws {
+        try await withRestoredStore { store in
+            try await store.replace(with: AlphaPersistedState.seed())
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+            await MainActor.run {
+                model.submitAsk(
+                    question: "What should I do next for this matter about delay condonation and sufficient cause?",
+                    scopeCaseID: nil,
+                    webEnabled: true
+                )
+            }
+
+            let preview = await MainActor.run { model.publicLawPreview }
+            XCTAssertNotNil(preview)
+            XCTAssertNil(preview?.query.range(of: "what should i", options: .caseInsensitive))
+            XCTAssertNil(preview?.query.range(of: "this matter", options: .caseInsensitive))
+            XCTAssertTrue(preview?.query.range(of: "delay condonation", options: .caseInsensitive) != nil)
+            XCTAssertFalse(preview?.removed.contains("No private case data detected") == true)
+        }
+    }
+
     func testLocalAskReturnsSafeNotFoundAnswer() async throws {
         try await withRestoredStore { store in
             try await store.replace(with: AlphaPersistedState.seed())

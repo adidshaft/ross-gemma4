@@ -45,6 +45,10 @@ func rossSetBackendBaseURLOverride(_ rawValue: String?) {
     UserDefaults.standard.set(normalized, forKey: rossBackendBaseURLOverrideKey)
 }
 
+private func rossAuthTopHeaderPadding(_ safeAreaTop: CGFloat) -> CGFloat {
+    max(safeAreaTop - 14, 14)
+}
+
 private struct RossDemoProfile {
     let email: String
     let displayName: String
@@ -752,7 +756,7 @@ private struct RossLanguageSelectionScreen: View {
 
                             Spacer(minLength: 0)
                         }
-                        .padding(.top, max(proxy.safeAreaInsets.top + 12, 28))
+                        .padding(.top, rossAuthTopHeaderPadding(proxy.safeAreaInsets.top))
                         .opacity(appeared ? 1 : 0)
                         .offset(y: appeared ? 0 : -10)
 
@@ -917,7 +921,7 @@ private struct RossSignInScreen: View {
 
                         Spacer(minLength: 0)
                     }
-                    .padding(.top, max(proxy.safeAreaInsets.top + 6, 18))
+                    .padding(.top, rossAuthTopHeaderPadding(proxy.safeAreaInsets.top))
                     .opacity(appeared ? 1 : 0)
                     .offset(y: appeared ? 0 : -10)
 
@@ -1260,7 +1264,7 @@ private struct RossQuickUnlockScreen: View {
 
                             Spacer(minLength: 0)
                         }
-                        .padding(.top, max(proxy.safeAreaInsets.top + 12, 28))
+                        .padding(.top, rossAuthTopHeaderPadding(proxy.safeAreaInsets.top))
 
                         RossAuthGlassPanel(cornerRadius: 36, padding: 24) {
                             VStack(alignment: .leading, spacing: 16) {
