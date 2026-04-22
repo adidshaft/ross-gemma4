@@ -3941,7 +3941,7 @@ private struct AlphaSetupPrimaryButtonStyle: ButtonStyle {
             .font(.headline.weight(.semibold))
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
+            .frame(minHeight: 56)
             .background(
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
                     .fill(.ultraThinMaterial)
@@ -3975,7 +3975,7 @@ private struct AlphaSetupSecondaryButtonStyle: ButtonStyle {
             .font(.headline.weight(.medium))
             .foregroundStyle(Color.rossInk.opacity(configuration.isPressed ? 0.7 : 0.86))
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
+            .frame(minHeight: 56)
             .background(
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
                     .fill(.ultraThinMaterial)
@@ -4002,71 +4002,63 @@ private struct AlphaOnboardingScreen: View {
         ("Source-backed drafts", "paperclip"),
         ("Web search is opt-in", "shield")
     ]
-    private let featureColumns = [
-        GridItem(.flexible(minimum: 0, maximum: .infinity), spacing: 12),
-        GridItem(.flexible(minimum: 0, maximum: .infinity), spacing: 12)
-    ]
 
     var body: some View {
         GeometryReader { proxy in
             ZStack {
                 AlphaSetupBackdrop()
 
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 22) {
-                        AlphaSetupWordmarkRow(title: "Ross")
+                VStack(alignment: .leading, spacing: 22) {
+                    AlphaSetupWordmarkRow(title: "Ross")
 
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Private legal work, on this phone")
-                                .font(.system(size: 29, weight: .semibold, design: .rounded))
-                                .foregroundStyle(Color.rossInk)
-                                .fixedSize(horizontal: false, vertical: true)
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Private legal work, on this phone")
+                            .font(.system(size: 29, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color.rossInk)
+                            .fixedSize(horizontal: false, vertical: true)
 
-                            Text("Create matters, tag files, and ask Ross without moving case data off this device.")
-                                .font(.title3)
-                                .foregroundStyle(Color.rossInk.opacity(0.7))
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-
-                        LazyVGrid(
-                            columns: featureColumns,
-                            alignment: .leading,
-                            spacing: 12
-                        ) {
-                            ForEach(featurePills, id: \.0) { feature in
-                                RossInfoPill(title: feature.0, systemImage: feature.1)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                        }
-
-                        VStack(alignment: .leading, spacing: 14) {
-                            RossBulletRow(text: "Ross picks a sensible local setup for this phone.")
-                            RossBulletRow(text: "Setup can finish in the background.")
-                            RossBulletRow(text: "Each matter keeps its own files and chats.")
-                        }
-                        .padding(18)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                                .stroke(Color.rossGlassStroke.opacity(0.9), lineWidth: 1)
-                        }
-                        .shadow(color: Color.rossShadow.opacity(0.24), radius: 18, y: 10)
-
-                        Spacer(minLength: 10)
-
-                        Button("Continue") {
-                            model.advanceOnboarding()
-                        }
-                        .buttonStyle(AlphaSetupPrimaryButtonStyle())
+                        Text("Create matters, tag files, and ask Ross without moving case data off this device.")
+                            .font(.title3)
+                            .foregroundStyle(Color.rossInk.opacity(0.7))
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    .frame(
-                        minHeight: proxy.size.height - proxy.safeAreaInsets.top - proxy.safeAreaInsets.bottom,
-                        alignment: .top
-                    )
-                    .padding(.horizontal, 24)
-                    .padding(.top, 12)
-                    .padding(.bottom, max(proxy.safeAreaInsets.bottom, 18))
+
+                    Grid(horizontalSpacing: 12, verticalSpacing: 12) {
+                        GridRow {
+                            RossInfoPill(title: featurePills[0].0, systemImage: featurePills[0].1)
+                            RossInfoPill(title: featurePills[1].0, systemImage: featurePills[1].1)
+                        }
+
+                        GridRow {
+                            RossInfoPill(title: featurePills[2].0, systemImage: featurePills[2].1)
+                                .gridCellColumns(2)
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 14) {
+                        RossBulletRow(text: "Ross picks a sensible local setup for this phone.")
+                        RossBulletRow(text: "Setup can finish in the background.")
+                        RossBulletRow(text: "Each matter keeps its own files and chats.")
+                    }
+                    .padding(16)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            .stroke(Color.rossGlassStroke.opacity(0.9), lineWidth: 1)
+                    }
+                    .shadow(color: Color.rossShadow.opacity(0.24), radius: 18, y: 10)
+
+                    Spacer(minLength: 20)
+
+                    Button("Continue") {
+                        model.advanceOnboarding()
+                    }
+                    .buttonStyle(AlphaSetupPrimaryButtonStyle())
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .padding(.horizontal, 24)
+                .padding(.top, max(proxy.safeAreaInsets.top + 8, 18))
+                .padding(.bottom, max(proxy.safeAreaInsets.bottom, 12))
             }
         }
     }
@@ -4119,28 +4111,26 @@ private struct AlphaPackSetupScreen: View {
                             statusLabel: "Background",
                             tint: .orange
                         )
-
-                        Spacer(minLength: 8)
-
-                        HStack(spacing: 12) {
-                            Button("Start setup") {
-                                model.finishPackSetup()
-                            }
-                            .buttonStyle(AlphaSetupPrimaryButtonStyle())
-
-                            Button("Not now") {
-                                model.skipPackSetup()
-                            }
-                            .buttonStyle(AlphaSetupSecondaryButtonStyle())
-                        }
                     }
-                    .frame(
-                        minHeight: proxy.size.height - proxy.safeAreaInsets.top - proxy.safeAreaInsets.bottom,
-                        alignment: .top
-                    )
                     .padding(.horizontal, 24)
-                    .padding(.top, 12)
-                    .padding(.bottom, max(proxy.safeAreaInsets.bottom, 18))
+                    .padding(.top, max(proxy.safeAreaInsets.top + 8, 18))
+                    .padding(.bottom, 184)
+                }
+                .safeAreaInset(edge: .bottom) {
+                    HStack(spacing: 12) {
+                        Button("Start setup") {
+                            model.finishPackSetup()
+                        }
+                        .buttonStyle(AlphaSetupPrimaryButtonStyle())
+
+                        Button("Not now") {
+                            model.skipPackSetup()
+                        }
+                        .buttonStyle(AlphaSetupSecondaryButtonStyle())
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 10)
+                    .padding(.bottom, max(proxy.safeAreaInsets.bottom - 2, 12))
                 }
             }
         }
@@ -4456,29 +4446,29 @@ private struct AlphaRootAskDock: View {
     }
 
     private var dockBadgeFill: Color {
-        colorScheme == .dark ? Color.white.opacity(0.08) : Color.white.opacity(0.74)
+        colorScheme == .dark ? Color.white.opacity(0.11) : Color.white.opacity(0.94)
     }
 
     private var dockGradient: [Color] {
         if colorScheme == .dark {
             return [
-                Color.rossChromeBackground.opacity(0.78),
-                Color.rossChromeBackground.opacity(0.66)
+                Color.white.opacity(0.08),
+                Color(red: 0.14, green: 0.17, blue: 0.24).opacity(0.62)
             ]
         }
 
         return [
-            Color.white.opacity(0.92),
-            Color(red: 0.91, green: 0.94, blue: 0.99).opacity(0.88)
+            Color.white.opacity(0.98),
+            Color(red: 0.94, green: 0.96, blue: 1.0).opacity(0.94)
         ]
     }
 
     private var dockStroke: Color {
-        colorScheme == .dark ? Color.white.opacity(0.16) : Color.rossGlassStroke.opacity(0.92)
+        colorScheme == .dark ? Color.white.opacity(0.18) : Color.white.opacity(0.76)
     }
 
     private var dockShadow: Color {
-        colorScheme == .dark ? Color.black.opacity(0.16) : Color.rossShadow.opacity(0.12)
+        colorScheme == .dark ? Color.black.opacity(0.14) : Color.rossShadow.opacity(0.08)
     }
 
     private var mentionSuggestions: [AlphaAskDocumentOption] {
@@ -4717,10 +4707,11 @@ private struct AlphaRootAskDock: View {
         .padding(.horizontal, 11)
         .padding(.vertical, 9)
         .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(.ultraThinMaterial)
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(colorScheme == .dark ? Color.white.opacity(0.045) : Color.white.opacity(0.64))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: dockGradient,
@@ -4731,7 +4722,7 @@ private struct AlphaRootAskDock: View {
                 }
         )
         .overlay {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .stroke(dockStroke, lineWidth: 1)
         }
         .shadow(color: dockShadow, radius: 16, x: 0, y: 8)
@@ -5632,6 +5623,7 @@ private struct AlphaWorkspaceDrawerButton: View {
 }
 
 private struct AlphaWorkspaceDrawerPanel: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Bindable var model: AlphaRossModel
     @State private var expandedMatterIDs: Set<UUID> = []
     @State private var recentFilesExpanded = false
@@ -5806,8 +5798,36 @@ private struct AlphaWorkspaceDrawerPanel: View {
         }
         .padding(18)
         .frame(maxHeight: .infinity, alignment: .top)
-        .background(Color.rossGlassFill.opacity(0.96))
-        .background(.ultraThinMaterial)
+        .background {
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(colorScheme == .dark ? Color.white.opacity(0.06) : Color.white.opacity(0.2))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(colorScheme == .dark ? 0.08 : 0.26),
+                                    Color.rossAccent.opacity(colorScheme == .dark ? 0.08 : 0.06),
+                                    Color.clear
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                }
+                .overlay {
+                    RadialGradient(
+                        colors: [
+                            Color.rossBackdropGlow.opacity(colorScheme == .dark ? 0.14 : 0.1),
+                            Color.clear
+                        ],
+                        center: .topTrailing,
+                        startRadius: 16,
+                        endRadius: 220
+                    )
+                }
+        }
         .overlay {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .stroke(Color.rossGlassStroke.opacity(0.9), lineWidth: 1)
@@ -7082,6 +7102,7 @@ private struct AlphaTierGlyph: View {
 }
 
 private struct AlphaPackTierSelectionBar: View {
+    @Environment(\.colorScheme) private var colorScheme
     let tier: AlphaCapabilityTier
     let isSelected: Bool
     let badge: String?
@@ -7137,14 +7158,28 @@ private struct AlphaPackTierSelectionBar: View {
             .accessibilityLabel("About \(tier.title)")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(isSelected ? alphaTierTint(tier).opacity(0.08) : Color.rossCardBackground)
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(isSelected ? alphaTierTint(tier).opacity(0.28) : Color.rossBorder, lineWidth: 1)
-            }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(
+                    isSelected
+                        ? alphaTierTint(tier).opacity(colorScheme == .dark ? 0.12 : 0.08)
+                        : Color.white.opacity(colorScheme == .dark ? 0.05 : 0.18)
+                )
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(
+                    isSelected
+                        ? alphaTierTint(tier).opacity(colorScheme == .dark ? 0.34 : 0.28)
+                        : Color.rossGlassStroke.opacity(colorScheme == .dark ? 0.3 : 0.72),
+                    lineWidth: 1
+                )
+        }
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.18 : 0.08), radius: 12, y: 6)
     }
 }
 
@@ -7271,6 +7306,7 @@ private struct AlphaMatterStarterCard: View {
 }
 
 private struct AlphaAssistantActivityStrip: View {
+    @Environment(\.colorScheme) private var colorScheme
     let title: String
     let detail: String
     let statusLabel: String
@@ -7304,15 +7340,30 @@ private struct AlphaAssistantActivityStrip: View {
                 .clipShape(Capsule())
         }
         .padding(14)
-        .background(
-            tint.opacity(0.04)
-                .background(Color.rossSecondaryGroupedBackground)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(tint.opacity(0.12), lineWidth: 1)
+        .background {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(colorScheme == .dark ? Color.white.opacity(0.045) : Color.white.opacity(0.2))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    tint.opacity(colorScheme == .dark ? 0.1 : 0.08),
+                                    Color.clear
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                }
         }
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(tint.opacity(colorScheme == .dark ? 0.22 : 0.16), lineWidth: 1)
+        }
+        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.16 : 0.08), radius: 12, y: 6)
     }
 }
 
@@ -8417,22 +8468,7 @@ private struct AlphaAskConversationScreen: View {
             )
                 .padding(.horizontal, 12)
                 .padding(.top, 8)
-                .background(AlphaDockInsetBackdrop())
         }
-    }
-}
-
-private struct AlphaDockInsetBackdrop: View {
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        Rectangle()
-            .fill(
-                colorScheme == .dark
-                    ? Color.rossChromeBackground.opacity(0.74)
-                    : Color.white.opacity(0.9)
-            )
-            .background(.ultraThinMaterial)
     }
 }
 
@@ -9315,7 +9351,6 @@ private struct AlphaDocumentViewerScreen: View {
             .padding(.horizontal, 12)
             .padding(.top, 8)
             .padding(.bottom, 6)
-            .background(AlphaDockInsetBackdrop())
         }
     }
 }
@@ -10114,7 +10149,7 @@ private struct AlphaPrivateAISettingsScreen: View {
             .padding(alphaScreenPadding)
         }
         .navigationTitle("Private Assistant")
-        .rossHideNavigationBarIfSupported()
+        .rossInlineNavigationTitle()
     }
 }
 
@@ -10151,7 +10186,7 @@ private struct AlphaPrivacyLedgerScreen: View {
             .padding(alphaScreenPadding)
         }
         .navigationTitle("Privacy Ledger")
-        .rossHideNavigationBarIfSupported()
+        .rossInlineNavigationTitle()
     }
 }
 

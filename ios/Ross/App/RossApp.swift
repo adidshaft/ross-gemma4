@@ -757,22 +757,24 @@ private struct RossLanguageSelectionScreen: View {
                         }
                         .opacity(appeared ? 1 : 0)
                         .offset(y: appeared ? 0 : 12)
-
-                        Button {
-                            guard let code = selectedCode else { return }
-                            authController.markLanguageSelected(code: code)
-                        } label: {
-                            Text("Continue")
-                        }
-                        .rossPrimaryButtonStyle()
-                        .disabled(selectedCode == nil)
-                        .opacity(selectedCode == nil ? 0.48 : 1)
-                        .animation(.easeOut(duration: 0.18), value: selectedCode == nil)
-                        .opacity(appeared ? 1 : 0)
-                        .offset(y: appeared ? 0 : 16)
                     }
                     .padding(.horizontal, 20)
-                    .padding(.bottom, max(proxy.safeAreaInsets.bottom + 12, 24))
+                    .padding(.bottom, 144)
+                }
+                .safeAreaInset(edge: .bottom) {
+                    Button {
+                        guard let code = selectedCode else { return }
+                        authController.markLanguageSelected(code: code)
+                    } label: {
+                        Text("Continue")
+                    }
+                    .rossPrimaryButtonStyle()
+                    .disabled(selectedCode == nil)
+                    .opacity(selectedCode == nil ? 0.48 : 1)
+                    .animation(.easeOut(duration: 0.18), value: selectedCode == nil)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 10)
+                    .padding(.bottom, max(proxy.safeAreaInsets.bottom, 12))
                 }
             }
         }
@@ -856,9 +858,16 @@ private struct RossSignInScreen: View {
     @State private var signInCardExpanded = false
     @State private var emailOptionExpanded = false
 
+    private var reservedSheetHeight: CGFloat {
+        if emailOptionExpanded {
+            return 356
+        }
+        return signInCardExpanded ? 312 : 142
+    }
+
     var body: some View {
         GeometryReader { proxy in
-            ZStack {
+            ZStack(alignment: .bottom) {
                 RossAuthBackdrop()
                     .frame(width: proxy.size.width, height: proxy.size.height)
 
@@ -893,22 +902,23 @@ private struct RossSignInScreen: View {
                     }
                     .opacity(appeared ? 1 : 0)
                     .offset(y: appeared ? 0 : 10)
-
-                    Spacer(minLength: 0)
-
-                    RossAuthSignInSheet(
-                        authController: authController,
-                        demoEmail: $demoEmail,
-                        isExpanded: $signInCardExpanded,
-                        isEmailExpanded: $emailOptionExpanded
-                    )
-                    .opacity(appeared ? 1 : 0)
-                    .offset(y: appeared ? 0 : 80)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .padding(.horizontal, 20)
-                .padding(.bottom, max(proxy.safeAreaInsets.bottom + 8, 18))
+                .padding(.bottom, reservedSheetHeight)
+
+                RossAuthSignInSheet(
+                    authController: authController,
+                    demoEmail: $demoEmail,
+                    isExpanded: $signInCardExpanded,
+                    isEmailExpanded: $emailOptionExpanded,
+                    bottomInset: proxy.safeAreaInsets.bottom
+                )
+                .padding(.horizontal, 16)
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 42)
             }
+            .ignoresSafeArea(edges: .bottom)
         }
         .onAppear {
             withAnimation(.spring(response: 0.68, dampingFraction: 0.84)) {
@@ -929,6 +939,7 @@ private struct RossAuthSignInSheet: View {
     @Binding var demoEmail: String
     @Binding var isExpanded: Bool
     @Binding var isEmailExpanded: Bool
+    let bottomInset: CGFloat
 
     private var externalSignInDisabled: Bool {
         authController.isStartingSignIn
@@ -956,7 +967,7 @@ private struct RossAuthSignInSheet: View {
 
                                 Text(
                                     isExpanded
-                                        ? "Choose a sign-in method. Ross keeps your legal work on this phone."
+                                        ? "Choose a sign-in method."
                                         : "Tap to choose how you want to sign in."
                                 )
                                 .font(.system(size: isExpanded ? 13 : 14, weight: .regular))
@@ -1017,14 +1028,12 @@ private struct RossAuthSignInSheet: View {
                                 } label: {
                                     RossAuthActionLabel(
                                         title: "Continue with Email",
-                                        subtitle: "Use the local demo profile on this phone",
-                                        tone: .primary
+                                        tone: .secondary
                                     ) {
-                                        Image(systemName: "envelope.fill")
-                                            .font(.system(size: 15, weight: .semibold))
+                                        RossGlassIconView(.userMsg, variant: .neutral, size: 17, fallbackSystemImage: "envelope.fill")
                                     }
                                 }
-                                .rossPrimaryButtonStyle()
+                                .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 20)
                             }
                             .transition(.move(edge: .top).combined(with: .opacity))
                         } else {
@@ -1034,14 +1043,12 @@ private struct RossAuthSignInSheet: View {
                                 } label: {
                                     RossAuthActionLabel(
                                         title: authController.activeExternalProvider == .google ? "Connecting to Google" : "Continue with Google",
-                                        subtitle: "Start your local Ross session",
-                                        tone: .primary
+                                        tone: .secondary
                                     ) {
-                                        RossGlassIconView(.earth, variant: .highlight, size: 17, fallbackSystemImage: "globe")
-                                            .foregroundStyle(Color.white.opacity(0.94))
+                                        RossGoogleMark(size: 17)
                                     }
                                 }
-                                .rossPrimaryButtonStyle()
+                                .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 20)
                                 .disabled(externalSignInDisabled)
                                 .opacity(externalSignInDisabled && authController.activeExternalProvider != .google ? 0.78 : 1)
 
@@ -1050,7 +1057,6 @@ private struct RossAuthSignInSheet: View {
                                 } label: {
                                     RossAuthActionLabel(
                                         title: authController.activeExternalProvider == .apple ? "Connecting to Apple" : "Continue with Apple",
-                                        subtitle: "Use the account already on this phone",
                                         tone: .secondary
                                     ) {
                                         Image(systemName: "applelogo")
@@ -1068,7 +1074,6 @@ private struct RossAuthSignInSheet: View {
                                 } label: {
                                     RossAuthActionLabel(
                                         title: "Continue with Email",
-                                        subtitle: "Use the local demo profile",
                                         tone: .secondary
                                     ) {
                                         RossGlassIconView(.userMsg, variant: .neutral, size: 17, fallbackSystemImage: "envelope.fill")
@@ -1107,6 +1112,7 @@ private struct RossAuthSignInSheet: View {
                     }
                 }
             }
+            .padding(.bottom, max(bottomInset - 2, 12))
             .animation(.spring(response: 0.32, dampingFraction: 0.84), value: isExpanded)
             .animation(.spring(response: 0.32, dampingFraction: 0.84), value: isEmailExpanded)
         }
@@ -1164,6 +1170,33 @@ private struct RossAuthActionLabel<Icon: View>: View {
             Spacer(minLength: 10)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct RossGoogleMark: View {
+    let size: CGFloat
+
+    init(size: CGFloat = 18) {
+        self.size = size
+    }
+
+    var body: some View {
+        Text("G")
+            .font(.system(size: size * 1.02, weight: .bold, design: .rounded))
+            .foregroundStyle(
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.25, green: 0.48, blue: 0.96),
+                        Color(red: 0.17, green: 0.71, blue: 0.38),
+                        Color(red: 0.98, green: 0.73, blue: 0.10),
+                        Color(red: 0.91, green: 0.27, blue: 0.21)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .shadow(color: Color.white.opacity(0.18), radius: 1, y: 0.5)
+            .frame(width: size, height: size)
     }
 }
 

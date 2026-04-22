@@ -315,6 +315,7 @@ struct RossHeroCard<Content: View>: View {
 }
 
 struct RossInfoPill: View {
+    @Environment(\.colorScheme) private var colorScheme
     let title: String
     let systemImage: String
     private let cornerRadius: CGFloat = 18
@@ -337,20 +338,34 @@ struct RossInfoPill: View {
                 .layoutPriority(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(minHeight: 62, alignment: .topLeading)
+        .frame(minHeight: 70, alignment: .topLeading)
         .padding(.horizontal, 13)
         .padding(.vertical, 10)
-        .background(
+        .background {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .fill(Color.rossGlassSubtleFill)
-                .background(.ultraThinMaterial)
-        )
+                .fill(colorScheme == .dark ? Color.white.opacity(0.05) : Color.white.opacity(0.22))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(colorScheme == .dark ? 0.06 : 0.16),
+                                    Color.rossHighlight.opacity(colorScheme == .dark ? 0.05 : 0.03),
+                                    Color.clear
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                }
+        }
         .overlay {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .stroke(Color.rossGlassStroke.opacity(0.42), lineWidth: 1)
+                .stroke(Color.rossGlassStroke.opacity(colorScheme == .dark ? 0.3 : 0.42), lineWidth: 1)
         }
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-        .shadow(color: Color.rossShadow.opacity(0.24), radius: 10, y: 4)
+        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.14 : 0.18), radius: 10, y: 4)
     }
 }
 
