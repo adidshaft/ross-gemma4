@@ -2,7 +2,7 @@
 
 Ross is built around a hard local-first boundary for advocate case work.
 
-The product does not upload case files, OCR text, prompts, embeddings, filenames, party names, client facts, or extracted legal fields to cloud AI services.
+Ross does not upload case files, OCR text, prompts, embeddings, filenames, party names, client facts, or extracted legal fields to cloud AI services.
 
 ## Core privacy promises
 
@@ -58,10 +58,10 @@ This layer performs:
 Rules:
 
 - no cloud OCR
-- no remote model APIs
+- no remote private-matter model APIs
 - no analytics SDKs
 - no silent case-data upload
-- unsupported or uncertain details remain reviewable
+- uncertain details remain reviewable
 
 ## Public-law Search
 
@@ -69,17 +69,34 @@ This is the only normal user network boundary for legal research.
 
 Rules:
 
-- Web is off by default
-- Ross must build the query locally
-- Ross must show a preview before sending it
-- Ross must require explicit confirmation
-- Ross must send only a generic sanitized public-law query
-- Ross must reject private details such as party names, filing references, exact dates, filenames, and factual narratives
-- Ross must label public-law results separately from case-file sources
+- `Web search` is off by default
+- Ross builds the query locally
+- Ross shows a preview before anything is sent
+- explicit confirmation is required
+- only a generic sanitized public-law query may cross the boundary
+- case files, document text, filenames, party names, client names, exact private dates, filing references, and factual narratives must not cross the boundary
 
-The current development backend returns privacy-safe fixture results for QA. That is still subject to the same boundary.
+Current backend guardrails:
 
-When a live connector is enabled, it must remain server-side only. The current connector path is Gemini with Google Search grounding behind the same preview-confirmation boundary. Only the sanitized public-law query may cross that boundary.
+- rejects obvious private matter wording such as `my case` and `this matter`
+- rejects phone numbers and email addresses
+- rejects filing references and filenames
+- rejects exact private dates
+- rejects location-like factual phrases
+- rejects the fake-secret regression values
+- rejects queries that are not general public-law research
+- logs only hashed query metadata for the public-law route
+
+## Gemini boundary
+
+Gemini may only be used server-side for confirmed public-law search.
+
+Rules:
+
+- mobile apps never call Gemini directly
+- Gemini receives only the sanitized public-law query
+- Gemini must never receive case text, filenames, review fields, party names, client names, or factual matter narratives
+- if Gemini is unavailable, Ross falls back to a privacy-safe backend index without echoing the query
 
 ## Auth and Session
 
@@ -90,7 +107,7 @@ Rules:
 - auth routes must not receive case-file payloads
 - refresh and account tokens must not contain case text
 - audit logs must not contain raw prompts or raw source text
-- Google sign-in must remain plain-language in the app on failure
+- Google sign-in failures remain plain-language
 - Apple sign-in is currently local-session only on iOS
 
 ## Delivery and Entitlement
@@ -112,14 +129,16 @@ Rules:
 
 The Privacy Ledger should remain understandable to a lawyer.
 
-Examples of acceptable entries:
+Acceptable entries include:
 
 - `Checked Private AI availability`
 - `Downloaded Private AI Pack`
 - `Searched public law`
+- `Public-law search unavailable`
 - `Generated local export`
+- `Document reviewed locally`
 
-The ledger should not expose raw payloads, raw prompts, or raw private text.
+The ledger should not expose raw payloads, raw prompts, raw source text, or provider internals.
 
 ## Regression guardrail
 
@@ -127,6 +146,6 @@ Fake-secret regression values such as `Raghav Fakepriv`, `9876501234`, `fakepriv
 
 ## Real-runtime note
 
-This architecture document describes the privacy boundary Ross preserves in the current internal alpha.
+This document describes the privacy boundary Ross preserves in the current alpha.
 
 It is not a claim that a real local model has already been proven on hardware.

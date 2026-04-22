@@ -1,94 +1,117 @@
-# Ross Internal Alpha Stabilization Report
+# Ross Real-World Usage Alpha Report
 
-## Branch choice
+## Branch used
 
-The requested branch name for this phase was `alpha-internal-stabilization`.
+Work stayed on the existing active branch:
 
-This repo was already on active feature branch `alpha-lawyer-usable-app` with ongoing transitional work, so the work stayed on that branch instead of creating a new branch on top of active changes.
+- `alpha-lawyer-usable-app`
 
-## Repo-state treatment
+No new branch was created on top of active feature work.
 
-Inspected and intentionally handled in one of three ways:
+## Repo-state handling
 
-- included in this phase: Android auth and shell work, backend auth and runtime connectivity work, docs and QA runbooks, targeted iOS auth-shell fixes
-- left untouched as unrelated or not yet ready: `SCRIPT.md`, `artifacts/`, local Xcode workspace state, research notes, design folders, and other user-owned untracked files
-- documented rather than cleaned: screenshot artifacts and local QA byproducts
+Included in this phase:
 
-No large model files, secrets, provisioning profiles, or generated screenshot bundles were intentionally committed from this report alone.
+- iOS daily-usage workflow refinements
+- Android daily-usage workflow refinements
+- demo workspace seeding and reset behavior
+- task and matter dashboard logic
+- public-law preview hardening and backend smoke coverage
+- docs and runbooks
+- screenshot refresh
 
-## Phase outcome
+Left intentionally untouched:
 
-This phase is moving Ross from a transitional repo toward a manually testable internal alpha with:
+- `SCRIPT.md`
+- local Xcode workspace state
+- logo and design artifact folders
+- research notes
+- `shared/assets/`
+- `backend/.env.local`
 
-- stable auth-shell direction
-- demo sign-in support
-- Home-first workflow emphasis
-- app-to-backend public-law connectivity work
-- plain-language settings and privacy copy
-- stronger QA documentation
+No secrets, provisioning profiles, certificates, or local environment files were committed.
 
-## Verified in-session
+## What changed in product terms
 
-Verified during this phase:
+Ross now leans much harder into the real daily loop:
 
-- Rust tests passed
-- backend tests, typecheck, and build passed
-- privacy guard scripts passed
-- Android unit tests and debug assemble passed
-- iOS simulator build and Swift tests passed
-- backend smoke reached `GET /health`
-- backend smoke reached `POST /public-law/search`
-- iOS simulator demo sign-in was manually observed landing on Home
+- demo sign-in lands on a populated synthetic workspace instead of an abstract shell
+- Home answers `What needs my attention today?`
+- matters carry dates, tasks, documents, review work, notes, and exports in one place
+- public-law search remains preview-gated and sanitized
+- Privacy Ledger stays lawyer-readable
 
-## Explicitly not proven by this report
+## Fresh proof from this phase
 
-This report does not claim:
+Freshly observed in the iOS simulator on April 22, 2026:
 
-- real Google OAuth success with real credentials
+- demo sign-in lands on Home
+- Home shows live local dashboard sections
+- matter list opens
+- matter workspace opens
+- file room opens
+- document viewer opens
+- review actions are visible
+- Ask Ross works with Web off
+- public-law preview appears before search
+- Privacy Ledger opens
+- notes and exports surface opens
+- Settings remain plain-language with Advanced separated
+
+Freshly proven by code and tests in this phase:
+
+- demo workspace seeding is intentional and resettable
+- generic morning questions produce a research-safe public-law preview
+- marking matter dates done no longer silently inflates open tasks
+- Android and iOS both carry the same no-silent-task-inflation regression
+
+## Explicitly still unproven
+
+This phase does not prove:
+
+- real Google OAuth with real credentials
 - backend-backed Apple sign-in
-- physical iPhone installation completion
-- real local model proof
-- production public-law provider integration
+- physical iPhone install or provisioning completion
+- quick unlock on real hardware
+- Android emulator walkthrough in this session
+- real local model proof on device
 
-## Current backend truth
+## Public-law truth
 
-The current public-law path is live from the Ross backend for local QA. The backend can now call Gemini with Google Search grounding, but only after Ross sends a sanitized public-law query through the explicit preview-confirmation flow.
+The current public-law path is:
 
-This repo snapshot does not include a configured Gemini key, so live Gemini grounding is not proven in this report. Without that key, the backend falls back to privacy-safe fixture results for QA.
+1. local preview in the app
+2. explicit confirmation
+3. Ross backend call
+4. Gemini with Google Search grounding only if configured server-side
+5. privacy-safe fallback index if the live connector fails or is unavailable
 
-## Current UI truth
+The backend route rejects obvious private matter content, identifiers, filenames, exact dates, and the fake-secret regression values before any Gemini request is made.
 
-Normal UI should remain lawyer-facing:
+Backend logging records hashed metadata, not the raw public-law query in production-style paths.
 
-- Home
-- Cases
-- Ask Ross
-- Settings
+## Screenshot treatment
 
-Diagnostics stay behind `Settings > Advanced > Technical diagnostics`.
+Current screenshots are curated under:
 
-## Treatment of SCRIPT.md and artifacts
+- `artifacts/qa-screenshots-2026-04-22/`
 
-- `SCRIPT.md` remains intentionally untracked and untouched in this phase unless separately curated
-- `artifacts/` remains intentionally untouched except for manual QA outputs and screenshot storage
+Older tracked screenshot bundles under `artifacts/ios/light/` and `artifacts/ios/dark/` are now legacy and should not be treated as current product truth.
 
 ## Exact next recommended step
 
-Complete one clean manual app pass on a fresh build and record it in [`docs/INTERNAL_ALPHA_QA.md`](/Users/amanpandey/projects/ross/docs/INTERNAL_ALPHA_QA.md):
+Run one clean, fresh iOS simulator pass after relaunching the newly built app and record:
 
-1. demo sign-in
-2. create matter
-3. import document
-4. review one field
-5. Ask Ross with Web off
-6. public-law preview and confirmed search with Web on
-7. export
-8. Privacy Ledger
-9. Settings and Advanced
+1. create matter
+2. add task and date
+3. import a new file
+4. accept, edit, and ignore a review item
+5. generate and open one export draft
+6. confirm public-law search results end-to-end on the refreshed build
 
-After that, the next proof track should be a separate, explicit run for:
+After that, the next proof track should be a separate credential and hardware pass:
 
-- real Google OAuth with real credentials
+- real Google OAuth
 - physical-device quick unlock
 - physical iPhone install
 - real local model proof

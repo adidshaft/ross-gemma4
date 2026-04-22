@@ -1,24 +1,29 @@
 # Device Install QA
 
-This runbook covers local install and device-readiness notes for the Ross internal alpha.
+This runbook covers simulator, emulator, and physical-device readiness for Ross.
 
-## iOS
-
-### Simulator
+## iOS simulator
 
 Build:
 
 ```bash
 cd /Users/amanpandey/projects/ross/ios
 xcodebuild -project Ross.xcodeproj -scheme Ross -configuration Debug -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.4.1' -derivedDataPath tmp/DerivedData build
+swift test --scratch-path tmp/swiftpm
 ```
 
 Backend notes:
 
-- simulator can use `http://127.0.0.1:<port>`
-- if the backend is not on `8080`, save the override from `Settings > Advanced`
+- iOS Simulator can use `http://127.0.0.1:<port>`
+- if your backend is on `8787`, use `http://127.0.0.1:8787`
+- the app also supports `Settings > Advanced > Save test server`
 
-### Physical iPhone
+Current truth:
+
+- simulator build is proven
+- manual simulator QA is partially proven in this phase
+
+## Physical iPhone
 
 Expected signing path:
 
@@ -36,7 +41,7 @@ Backend notes:
 
 Known blocker:
 
-- physical-device install and provisioning are not yet completed in this phase
+- physical-device install and provisioning were not completed in this phase
 
 Do not commit:
 
@@ -44,48 +49,64 @@ Do not commit:
 - certificates
 - personal device identifiers
 
-## Android
-
-### Emulator
+## Android emulator
 
 Build:
 
 ```bash
 cd /Users/amanpandey/projects/ross/android
 ./gradlew :app:assembleDebug
+./gradlew :app:testDebugUnitTest
 ```
 
 Backend notes:
 
-- default emulator host mapping is `http://10.0.2.2:8080`
-- if the backend runs on `8787`, save `http://10.0.2.2:8787` from `Settings > Advanced`
+- default emulator mapping is `http://10.0.2.2:8080`
+- if your backend runs on `8787`, use `http://10.0.2.2:8787`
+- the app also supports `Settings > Advanced > Save test server`
 
-### Physical Android device
+Current blocker:
+
+- no Android emulator was attached during this session, so a fresh emulator walkthrough was not run
+
+## Physical Android device
 
 Install path:
 
-1. connect device with developer mode enabled
-2. use Android Studio run or install the debug APK
-3. point Ross to your host machine's LAN IP from `Settings > Advanced`
+1. connect the device with developer mode enabled
+2. use Android Studio Run or install the debug APK
+3. point Ross to your Mac's LAN IP from `Settings > Advanced`
 
 Backend notes:
 
 - use `http://<your-mac-lan-ip>:8787`
-- ensure phone and host are on the same network
+- keep the device and host on the same network
 
-Biometric notes:
+Biometric note:
 
-- quick unlock proof should be done on a real device
-- emulator biometric behavior is not enough for a final claim
+- quick unlock should be validated on a real device before making any hardware claim
+
+## Xcode test-action note
+
+`xcodebuild test` is still limited by the shared `Ross` scheme:
+
+- the scheme currently has no Xcode testables in `TestAction`
+- there is no dedicated Xcode test target in the project file
+
+For this phase, the safe validation path remains:
+
+- `xcodebuild ... build`
+- `swift test --scratch-path tmp/swiftpm`
 
 ## Current truth
 
 It is fair to say:
 
-- simulator and emulator install paths are available
+- simulator and emulator build paths are documented
 - local backend addressing is documented
 
 It is not yet fair to say:
 
 - physical iPhone install is completed
+- Android emulator QA was freshly run in this session
 - quick unlock is proven on hardware

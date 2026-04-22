@@ -2,33 +2,35 @@
 
 Ross is designed to remain useful when the network is unavailable.
 
-The current internal alpha keeps the core matter workflow usable on device.
+The current alpha keeps the core matter workflow local-first.
 
 ## Works offline
 
-These flows are designed to work without network access:
+These flows are designed to keep working without network access:
 
 - open the app after a local session already exists
 - use demo mode after it has been selected locally
-- open Home and Cases
-- create and update matters
+- open Home and Matters
+- create and edit matters
+- manage tasks and dates
 - import PDF, image, and text files into app-private storage
+- open the file room
 - open the document viewer
 - review extracted details
-- ask Ross from local case files with Web off
-- generate local exports
+- ask Ross from local case files with `Web search` off
+- generate local notes and exports
 - inspect the Privacy Ledger
 
-## Works offline with no Private AI Pack installed
+## Works offline in basic local mode
 
 Ross should still remain useful in `Using basic local mode`.
 
 That includes:
 
-- basic local document reading
+- basic document reading
 - plain-language review status
 - matter and task management
-- local Ask Ross responses where enough case data exists
+- local Ask Ross answers when enough case data exists
 - local export generation
 
 ## Requires network
@@ -38,25 +40,33 @@ These flows still depend on the network:
 - Google sign-in
 - session refresh for backend-backed sessions
 - model catalog checks
-- Private AI Pack download setup
-- public-law search after the user approves a sanitized preview
+- Private AI Pack downloads
+- public-law search after the user confirms the preview
+
+## Demo mode note
+
+Demo mode is still local-first:
+
+- it seeds a synthetic workspace locally
+- it does not create a cloud Ross account
+- it can be reset locally from Settings
 
 ## Public-law behavior
 
 Public-law search is never automatic.
 
-If Web is off:
+If `Web search` is off:
 
 - no public-law request is made
 - Ross answers from local case files only
 
-If Web is on:
+If `Web search` is on:
 
-- Ross builds the public-law query locally
+- Ross builds the query locally
 - Ross shows the sanitized preview
 - Ross requires explicit confirmation
 - no case text, filenames, or party details are sent
-- if the backend has no live connector configured, Ross may fall back to a privacy-safe QA index instead of live web results
+- if the live connector is unavailable, Ross may fall back to a privacy-safe backend index
 
 ## Degraded behavior
 
@@ -66,12 +76,12 @@ Expected plain-language degraded states include:
 - `Still reading`
 - `Needs review`
 - `Could not read this clearly`
-- `Could not search public law right now. Your files stayed on this device.`
+- `Public-law search is unavailable right now. Your case files were not sent.`
 
-Normal user screens should not expose backend or runtime jargon in these states.
+Normal screens should not expose backend or runtime jargon in these states.
 
 ## Real-runtime note
 
-This document describes product behavior that should remain true even without a network connection.
+This document describes the product behavior Ross is designed to preserve.
 
 It is not a claim that a real local model has already been proven on hardware.

@@ -1,31 +1,31 @@
 # Internal Alpha QA
 
-This checklist is for the Ross internal alpha on April 22, 2026.
+This checklist is the general manual QA script for Ross on April 22, 2026.
 
-For each step, record pass or fail, the platform used, and any screenshot or note path.
+Record pass or fail, platform, screenshot path, and any blocker at each step.
 
-## 1. Fresh install or clean state
+## 1. Fresh state
 
 Expected result:
 
 - app opens without crash
-- prior local demo data is cleared if you intentionally removed the app first
+- if you removed the app first, prior local demo data is gone
 
 Fail condition:
 
 - crash on launch
-- stuck loading screen
+- stuck loading state
 
 Privacy expectation:
 
-- no sign-in is forced through a cloud-only path
+- no case data leaves the device just to open the app
 
 ## 2. Choose language
 
 Expected result:
 
-- language screen is visible
-- one selection is required before continuing
+- language selection is visible when required
+- one choice lets the user continue
 
 Fail condition:
 
@@ -33,30 +33,31 @@ Fail condition:
 
 Privacy expectation:
 
-- no case data leaves the device
+- no private matter data is transmitted
 
 ## 3. Sign in with demo mode
 
 Expected result:
 
 - `Open demo mode` is visible
-- demo mode works without real credentials
+- sign-in works without real credentials
 - app lands on Home
+- demo workspace is clearly synthetic
 
 Fail condition:
 
-- demo sign-in loops or crashes
+- sign-in loops, crashes, or lands on an empty shell
 
 Privacy expectation:
 
 - demo mode creates a local session only
 
-## 4. Optional Google sign-in attempt
+## 4. Optional Google sign-in
 
 Expected result:
 
-- Google sign-in starts cleanly when credentials are configured
-- failure remains plain-language when credentials are missing or invalid
+- Google sign-in starts cleanly when backend credentials are configured
+- missing or invalid setup stays plain-language
 
 Fail condition:
 
@@ -71,321 +72,267 @@ Privacy expectation:
 Expected result:
 
 - Apple sign-in can be invoked on iOS
-- if it succeeds, it is clearly local-only for now
+- the current UI does not imply backend-backed cross-device sync
 
 Fail condition:
 
-- UI implies backend-backed sync that does not exist
+- UI implies server account sync that does not exist
 
 Privacy expectation:
 
-- no case data crosses the auth boundary
+- auth remains separate from matter content
 
-## 6. Enable quick unlock if available
+## 6. Optional quick unlock
 
 Expected result:
 
-- a supported device offers quick unlock
-- unsupported devices show plain-language fallback
+- supported hardware offers quick unlock
+- unsupported devices show a plain fallback
 
 Fail condition:
 
-- crash loop or broken auth state after enabling
+- crash loop or broken auth state
 
 Privacy expectation:
 
-- local lock or unlock only
+- unlock remains local only
 
 ## 7. Confirm Home
 
 Expected result:
 
-- Home shows today summary, active matter, open tasks, review items, recent files, and Ask Ross
+- Home shows Today, upcoming dates, open tasks, review items, active matters, recent activity, and Ask Ross
+- every section has a next action
 
 Fail condition:
 
-- Home feels empty without a next action
+- Home feels empty or technical
 
 Privacy expectation:
 
-- Home data stays on device
+- Home data stays local
 
-## 8. Create matter
+## 8. Confirm demo workspace
 
 Expected result:
 
-- matter can be created and reopened
+- `Demo Matter: Sharma v. Rana` appears
+- demo tasks, dates, and documents are visible
+- demo copy states that sample data is being used
 
 Fail condition:
 
-- matter is not saved or cannot be reopened
+- demo sign-in lands on a blank workspace
+
+Privacy expectation:
+
+- demo data is synthetic and local only
+
+## 9. Create a matter
+
+Expected result:
+
+- matter saves and reopens
+- matter name, court, case number, and next date persist
+
+Fail condition:
+
+- matter disappears or cannot be reopened
 
 Privacy expectation:
 
 - matter details remain local
 
-## 9. Add basic matter details
+## 10. Add a task
 
 Expected result:
 
-- title, forum, and related details save correctly
+- task is created and appears in Home and the matter workspace
 
 Fail condition:
 
-- edited values disappear or corrupt the matter
+- task is lost or duplicated unexpectedly
 
 Privacy expectation:
 
-- details remain local
+- task stays local
 
-## 10. Import PDF
+## 11. Add a date or reminder
 
 Expected result:
 
-- PDF appears in the matter file room
+- hearing, deadline, compliance, or follow-up date can be added
+- the date appears in Home and in the matter
 
 Fail condition:
 
-- import silently fails or imported file does not appear
+- date is not saved or creates broken counts
 
 Privacy expectation:
 
-- PDF remains on device
+- date metadata stays local
 
-## 11. Import image or text if supported
+## 12. Import a file
 
 Expected result:
 
-- non-PDF import is handled cleanly
+- PDF, image, or text import appears in the matter file room
+- import status stays plain-language
 
 Fail condition:
 
-- app crashes or mislabels the file
+- import silently fails or the file does not appear
 
 Privacy expectation:
 
-- imported file remains on device
+- file stays in app-private local storage
 
-## 12. Open file room
+## 13. Open the document viewer
 
 Expected result:
 
-- file room lists imported files and statuses plainly
+- selected file opens
+- review snapshot and source-backed details are visible
 
 Fail condition:
 
-- files are missing or unreadable
+- blank viewer, crash, or no review surface
 
 Privacy expectation:
 
-- no upload occurs
+- source stays local
 
-## 13. Open document viewer
-
-Expected result:
-
-- viewer opens and displays the selected file
-
-Fail condition:
-
-- blank viewer or crash
-
-Privacy expectation:
-
-- source remains local
-
-## 14. Review extracted details
-
-Expected result:
-
-- review items and source references are visible
-
-Fail condition:
-
-- no review path exists for uncertain details
-
-Privacy expectation:
-
-- extracted details remain local
-
-## 15. Accept, edit, or ignore one field
+## 14. Review one field
 
 Expected result:
 
 - one field can be accepted, edited, or ignored
+- review counts update
 
 Fail condition:
 
-- change is lost immediately
+- action is lost immediately
 
 Privacy expectation:
 
-- edited data stays local
+- edits remain local
 
-## 16. Create task or reminder from review if supported
+## 15. Create a task or date from review
 
 Expected result:
 
-- follow-up action can be created where supported
+- follow-up work can be created from review where supported
 
 Fail condition:
 
-- task creation path is broken
+- review action does nothing or creates broken counts
 
 Privacy expectation:
 
-- task data stays local
+- follow-up stays local
 
-## 17. Ask Ross locally with Web off
+## 16. Ask Ross with Web off
 
 Expected result:
 
 - Ross answers from local files only
+- no public-law call is made
 
 Fail condition:
 
-- any public-law request fires while Web is off
+- any web search starts while Web is off
 
 Privacy expectation:
 
-- no network search occurs
+- no search request leaves the device
 
-## 18. Toggle Web on
+## 17. Ask Ross with Web on
 
 Expected result:
 
-- Web state changes clearly
+- Web state is clearly visible
+- Ross explains the privacy boundary
+- a sanitized preview appears
+- confirmation is required before search
 
 Fail condition:
 
-- toggle state is confusing or ignored
+- search runs without preview or confirmation
 
 Privacy expectation:
 
-- enabling Web alone does not send anything
+- only the sanitized public-law query may be sent
 
-## 19. Preview sanitized public-law query
+## 18. View public-law results
 
 Expected result:
 
-- Ross shows the public-law query preview before search
+- public-law results are labeled separately from case-file sources
+- backend failures remain plain-language
 
 Fail condition:
 
-- no preview appears
+- private case content appears as if it was sent to web search
 
 Privacy expectation:
 
-- preview removes case-specific private details
+- no private matter data appears in public-law transport or result metadata
 
-## 20. Confirm search
+## 19. Open notes and exports
 
 Expected result:
 
-- confirmed search sends only the sanitized query
+- chronology, case note, order summary, and transcript surfaces are reachable where supported
+- exports are framed as `Draft for advocate review`
 
 Fail condition:
 
-- search sends private details or runs without confirmation
+- export surface is missing or misleading
 
 Privacy expectation:
 
-- no case text, prompt text, or filenames are sent
+- exports stay local
 
-## 21. View public-law results
+## 20. Open the Privacy Ledger
 
 Expected result:
 
-- public-law results appear separately from case-file sources
+- entries are plain-language
+- public-law entries explain that only a generic public-law query crossed the boundary
 
 Fail condition:
 
-- result surface mixes public-law results with local-source citations
+- raw payloads, routes, or technical metadata appear in normal ledger copy
 
 Privacy expectation:
 
-- results are labeled as public-law results
+- no raw prompts or raw case text are shown
 
-## 22. Generate chronology or case note
+## 21. Open Settings and Advanced
 
 Expected result:
 
-- export or note is created and framed as `Draft for advocate review`
+- top-level settings remain lawyer-facing
+- technical diagnostics remain inside Advanced only
 
 Fail condition:
 
-- export path is broken or wording implies legal advice
+- runtime or provider jargon appears on normal settings screens
 
 Privacy expectation:
 
-- export remains local
+- backend override and diagnostics remain deliberate, not automatic
 
-## 23. Open export area
+## 22. Reset demo data
 
 Expected result:
 
-- generated export is visible and reopenable
+- demo session can reset its synthetic workspace cleanly
 
 Fail condition:
 
-- export disappears or is mislabeled
+- reset is missing or leaves a broken state
 
 Privacy expectation:
 
-- no cloud sync
-
-## 24. Open Privacy Ledger
-
-Expected result:
-
-- ledger entries are understandable to a lawyer
-
-Fail condition:
-
-- raw payloads or raw text are shown
-
-Privacy expectation:
-
-- only boundary events are recorded
-
-## 25. Check Settings
-
-Expected result:
-
-- settings remain plain-language
-
-Fail condition:
-
-- normal settings read like a developer console
-
-Privacy expectation:
-
-- no secret or raw auth details shown
-
-## 26. Check Advanced diagnostics
-
-Expected result:
-
-- diagnostics are hidden behind Advanced
-
-Fail condition:
-
-- technical diagnostics appear in normal UI
-
-Privacy expectation:
-
-- diagnostics do not expose raw prompts or source text
-
-## 27. Delete local test data if supported
-
-Expected result:
-
-- local test data can be removed cleanly
-
-Fail condition:
-
-- stale test data remains stuck
-
-Privacy expectation:
-
-- deletion affects only local data
+- reset affects local demo data only

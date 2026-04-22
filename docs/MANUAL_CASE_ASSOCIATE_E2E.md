@@ -1,6 +1,6 @@
 # Manual Case Associate E2E
 
-This script validates the lawyer-facing `Case Associate` workflow in the current internal alpha.
+This script validates the lawyer-facing matter and document loop in Ross.
 
 Use it for manual product QA. Do not use it to claim a real local-model proof.
 
@@ -22,23 +22,34 @@ Expected:
 
 Expected:
 
-- Home feels like a private legal dashboard
-- it shows today summary, matters, tasks, review items, recent files, and Ask Ross
+- Home feels like a private daily dashboard
+- it shows today summary, dates, tasks, review items, active matters, and Ask Ross
 
-## 3. Create a matter
+## 3. Create or open a matter
 
 Steps:
 
-- tap `Create matter`
-- save a matter title and basic forum details
+- either use the seeded demo matter or tap `Create matter`
+- save title, court, case number, and next date
 
 Expected:
 
-- the matter appears on Home
-- the matter appears in Cases
+- the matter appears on Home and in the matter list
 - the matter opens as a private workspace
 
-## 4. Import a document
+## 4. Add tasks and dates
+
+Steps:
+
+- add one task
+- add one hearing or deadline date
+
+Expected:
+
+- both appear in the matter and Home
+- counts stay coherent
+
+## 5. Import a document
 
 Steps:
 
@@ -47,22 +58,22 @@ Steps:
 
 Expected:
 
-- the file appears in the matter file room
+- the file appears in the file room
 - the viewer opens
 - status stays plain-language
 
-Expected plain-language statuses:
+Expected statuses:
 
 - `Ready`
 - `Still reading`
 - `Needs review`
 - `Could not read this clearly`
 
-## 5. Review extracted details
+## 6. Review extracted details
 
 Steps:
 
-- open Review or the document viewer
+- open the document viewer
 - accept one field
 - edit one field
 - ignore one field if needed
@@ -73,11 +84,22 @@ Expected:
 - corrected values remain local
 - source references remain visible
 
-## 6. Ask Ross with Web off
+## 7. Create follow-up work from review
 
 Steps:
 
-- keep `Web` off
+- create a task or date from a review item where supported
+
+Expected:
+
+- the follow-up appears in the matter
+- Home reflects the change
+
+## 8. Ask Ross with Web off
+
+Steps:
+
+- keep `Web search` off
 - ask about the matter or document
 
 Expected:
@@ -86,11 +108,11 @@ Expected:
 - case-file sources are shown separately
 - if Ross cannot answer, it stays local and says so plainly
 
-## 7. Ask Ross with Web on
+## 9. Ask Ross with Web on
 
 Steps:
 
-- turn `Web` on
+- turn `Web search` on
 - ask a public-law question
 
 Expected:
@@ -103,20 +125,21 @@ Expected:
 Fail if:
 
 - the search runs without preview
-- case text or document text is sent
+- private case wording is sent
 
-## 8. Export
+## 10. Export
 
 Steps:
 
+- open `Notes / Exports`
 - generate a chronology, case note, or order summary
 
 Expected:
 
 - output is framed as `Draft for advocate review`
-- export stays local
+- export remains local
 
-## 9. Privacy Ledger
+## 11. Privacy Ledger
 
 Steps:
 
@@ -126,22 +149,21 @@ Expected:
 
 - entries are understandable to a lawyer
 - no raw payloads appear
-- a public-law search entry says only that a sanitized query crossed the boundary
+- a public-law entry says only that a generic public-law query crossed the boundary
 
-## 10. Advanced diagnostics
+## 12. Settings and Advanced
 
 Steps:
 
 - open Settings
-- open Advanced
-- open Technical diagnostics only if needed
+- open Advanced only if needed
 
 Expected:
 
 - diagnostics are hidden from normal screens
 - normal settings remain plain-language
 
-## 11. What not to claim from this pass
+## 13. What not to claim from this pass
 
 Do not claim from this manual pass alone:
 
@@ -150,3 +172,4 @@ Do not claim from this manual pass alone:
 - proven legal accuracy without advocate review
 - proven real Google OAuth unless you actually ran it
 - proven backend-backed Apple sign-in
+- proven quick unlock on real hardware

@@ -1,6 +1,6 @@
 # Auth QA
 
-This runbook covers demo mode, Google sign-in readiness, Apple sign-in status, session refresh, and quick unlock for the Ross internal alpha.
+This runbook covers demo mode, Google sign-in readiness, Apple sign-in status, session refresh, and quick unlock for Ross.
 
 ## Demo mode
 
@@ -15,12 +15,16 @@ Expected behavior:
 - works without backend credentials
 - creates a local session
 - lands on Home
+- seeds a synthetic workspace for local QA
 
-Known demo emails:
+Current local demo workspace:
 
-- `advocate@ross.ai`
-- `test@ross.ai`
-- `admin@ross.ai`
+- `Demo Matter: Sharma v. Rana`
+- seeded documents, tasks, dates, and review items
+
+Reset path:
+
+- `Settings > Account > Reset demo data`
 
 ## Google OAuth
 
@@ -35,7 +39,12 @@ Required backend environment values:
 - `ROSS_AUTH_ACCESS_SIGNING_SECRET`
 - `ROSS_AUTH_REFRESH_SIGNING_SECRET`
 
-Typical local start command:
+Recommended local storage:
+
+- keep these in `backend/.env.local`
+- do not commit that file
+
+Typical local start:
 
 ```bash
 cd /Users/amanpandey/projects/ross/backend
@@ -52,62 +61,57 @@ Current mobile flow:
 
 1. app opens `/auth/google/start`
 2. backend redirects to Google
-3. backend receives Google callback
+3. backend receives the callback
 4. backend redirects back to `ross://auth/callback`
-5. app reads access, refresh, account token, subject, and profile fields from the callback
+5. app reads the session tokens and profile fields from the callback
 
 ### iOS requirements
 
-- bundle URL scheme `ross` must remain registered
-- callback target is `ross://auth/callback`
-- backend base URL must be reachable from the simulator or device
+- URL scheme `ross` must remain registered
+- backend URL must be reachable from the simulator or device
 
 ### Android requirements
 
-- callback intent filter for `ross://auth/callback` must remain registered
-- backend base URL must be reachable from the emulator or device
-
-Note:
-
-The current mobile flow is backend-mediated OAuth. It does not depend on a native Google SDK setup or Android SHA registration in the same way a native SDK flow would.
+- deep link for `ross://auth/callback` must remain registered
+- backend URL must be reachable from the emulator or device
 
 ### Expected success
 
-- browser auth completes
-- app returns to Ross
-- app stores session
+- auth completes in the browser
+- Ross receives the callback
+- session is stored
 - app lands on Home
 
 ### Expected failure
 
 - app shows `Could not sign in. Please try again.`
-- app does not expose raw token or provider errors
+- raw token or provider errors do not appear in normal UI
 
 ### Current status
 
-- backend routes are present
-- app wiring is present on iOS and Android
-- session refresh path exists
-- real Google OAuth is not yet proven in this phase without real credentials
+- backend routes exist
+- iOS and Android wiring exist
+- session refresh route exists
+- real Google OAuth is still not manually proven in this phase
 
 ## Apple sign-in
 
 Current status:
 
 - iOS only
-- implemented as a local Ross session on device
-- no Ross backend Apple auth route exists yet
+- local Ross session only
+- not backed by a Ross backend Apple auth route
 
-Expected current behavior:
+Current user-facing truth:
 
-- Apple sign-in can create a local session
-- UI should not imply backend-backed sync
+- it is fair to present Apple sign-in as an on-device sign-in path
+- it is not fair to imply cross-device Ross account sync
 
-Future requirement for backend-backed Apple auth:
+Future work needed for backend-backed Apple auth:
 
 - dedicated backend Apple auth route
+- account-linking rules
 - entitlement and capability review
-- documented account-linking behavior
 
 ## Session refresh
 
@@ -134,17 +138,23 @@ Android:
 - uses `BiometricManager` with strong biometrics or device credential
 - emulator support is limited
 
-Expected plain-language fallback:
+Expected plain fallback:
 
 - `Quick unlock is not available on this device.`
 
 Current proof status:
 
 - implementation exists
-- physical-device validation is still pending
+- real hardware proof is still pending
 
-## Known blockers
+## Auth truth as of April 22, 2026
 
-- real Google OAuth proof still depends on real configured credentials
-- Apple sign-in is not yet backend-backed
-- physical-device quick unlock proof is still pending
+Proven:
+
+- demo sign-in works on iOS simulator
+
+Not yet proven:
+
+- real Google OAuth with real credentials
+- backend-backed Apple auth
+- physical-device quick unlock

@@ -2,29 +2,30 @@
 
 Ross is a privacy-first legal workbench for Indian advocates.
 
-The current goal is a clean internal alpha that can be installed, opened, signed into, used through the core legal workflow, and manually QA'd without guessing.
+The current phase is `Ross Real-World Usage Alpha`: make Ross feel like a real morning work app for a non-technical advocate, without weakening the local-first privacy boundary.
 
-## Internal alpha shape
+## Current daily loop
 
-The current lawyer-facing flow is:
+The target lawyer-facing flow is:
 
 1. Language selection
 2. Sign in
 3. Optional quick unlock
 4. Home
 
-The main daily workflow is:
+The current morning workflow is:
 
-1. Home
-2. Open or create a matter
-3. Import a document
-4. Review details
-5. Ask Ross from local files
-6. Optionally run a sanitized public-law search
-7. Export a draft
-8. Open the Privacy Ledger
+1. Open Ross
+2. See what needs attention today
+3. Open or create a matter
+4. Add or import a file
+5. Review extracted details locally
+6. Ask Ross from local files with `Web search off`
+7. Optionally turn `Web search` on and confirm a sanitized public-law query
+8. Generate a draft note or chronology
+9. Open the Privacy Ledger if needed
 
-Normal UI language stays lawyer-friendly:
+Normal UI stays lawyer-friendly:
 
 - `Draft for advocate review`
 - `Source-backed`
@@ -33,66 +34,93 @@ Normal UI language stays lawyer-friendly:
 - `Needs review`
 - `Verified from source`
 - `Private AI on this device`
+- `Web search is off`
+- `Review before searching public law`
 
-Technical diagnostics stay under `Settings > Advanced > Technical diagnostics`.
+Technical details stay under `Settings > Advanced > Technical diagnostics`.
 
-## What is verified in this phase
+## What is currently proven
 
-As of April 22, 2026, this repo has recent passing validation for:
+As of April 22, 2026, recent validation in this repo includes:
 
-- Rust tests
-- backend tests, typecheck, and build
-- privacy guard scripts
-- Android unit tests and debug assemble
-- iOS simulator build and Swift tests
+- Rust tests pass
+- backend tests, typecheck, and build pass
+- privacy guard scripts pass
+- Android unit tests pass
+- Android debug assemble passes
+- iOS simulator build passes
+- iOS Swift tests pass
 
-Demo sign-in is the supported local QA path.
+Recent manual iOS simulator proof includes:
 
-Google sign-in wiring is present, but real Google OAuth must not be treated as proven unless you run it with real credentials and record the result.
+- sign-in shell renders
+- demo sign-in lands on Home
+- Home shows real local dashboard state
+- matter list opens
+- matter workspace opens
+- file room opens
+- document viewer and review screen open
+- Ask Ross works with Web off
+- public-law preview appears before search
+- Privacy Ledger opens
+- notes and exports surface opens
+- Settings remain lawyer-facing and keep diagnostics under Advanced
 
-Apple sign-in is currently iOS-only and local-session only. It is not yet backed by a Ross backend Apple auth route.
+Fresh manual Android walkthrough is still pending because no emulator was available in this session.
 
-Real local model proof is still pending unless separately run and documented.
+## What is not proven yet
 
-## What Ross does not do
+Do not claim these unless separately run and recorded:
 
-Ross does not add:
+- real Google OAuth with real credentials
+- backend-backed Apple sign-in
+- physical iPhone install and provisioning completion
+- quick unlock on real hardware
+- real local model proof on device
+- production public-law provider readiness
 
-- remote model APIs
-- cloud OCR
-- analytics SDKs
-- remote case storage
-- automatic case-file upload
-- prompt upload
-- OCR text upload
-- filename upload
-- party or client data upload
+Apple sign-in is currently iOS-only and local-session only.
 
-Ross is not presented as an AI lawyer and does not present outputs as legal advice.
+## Demo mode
 
-## Repo layout
+`Open demo mode` is the supported local QA path.
 
-```text
-ross/
-  android/                  Android app shell and Compose workflow
-  ios/                      iOS app shell and SwiftUI workflow
-  backend/                  Auth, model catalog, download, and public-law routes
-  core/rust/                Privacy and local AI boundary logic
-  shared/                   Shared assets and schemas
-  docs/                     Product, privacy, QA, and runbook docs
-  scripts/                  Validation and development helpers
-```
+Demo mode now seeds a clearly synthetic workspace with:
 
-## Run the backend
+- `Demo Matter: Sharma v. Rana`
+- upcoming dates
+- open tasks
+- review items
+- demo documents
 
-Install dependencies once:
+This data is local only and resettable from `Settings > Account > Reset demo data`.
+
+## Public-law search boundary
+
+Public-law search is optional and separate from private matter work.
+
+- `Web search` is off by default
+- the app builds a generic public-law query locally
+- the user sees the preview before anything is sent
+- confirmation is required
+- only the sanitized public-law query crosses the network boundary
+
+The mobile apps never call Gemini directly.
+
+If the backend is configured with `ROSS_PUBLIC_LAW_GEMINI_API_KEY` or `GEMINI_API_KEY`, the Ross backend may use Gemini with Google Search grounding for confirmed public-law search. If that connector is unavailable, Ross falls back to a privacy-safe backend index for QA.
+
+Case files, document text, filenames, party names, client details, review fields, and private factual narratives stay local.
+
+## Backend setup
+
+Install once:
 
 ```bash
 cd /Users/amanpandey/projects/ross/backend
 npm install
 ```
 
-Start the local backend:
+Start the backend:
 
 ```bash
 cd /Users/amanpandey/projects/ross/backend
@@ -101,17 +129,12 @@ npm run dev
 
 Notes:
 
-- Port `8080` is the default if it is free.
-- The backend auto-loads `backend/.env` and `backend/.env.local` if present.
-- A gitignored `backend/.env.local` now exists for local development. Put your Gemini key there.
-- The app can point to a different local backend from `Settings > Advanced > Save test server`.
-- The backend exposes `GET /health` for a local smoke check.
-- Public-law search can use Gemini with Google Search grounding only from the backend, never from the app clients.
-- Set `ROSS_PUBLIC_LAW_GEMINI_API_KEY` or `GEMINI_API_KEY` on the backend to enable the live public-law connector.
-- If no Gemini key is configured, Ross falls back to a privacy-safe backend fixture index for QA.
-- Only the sanitized public-law query is sent to the live connector. Case files, document text, filenames, extracted fields, and matter details stay local.
+- the backend auto-loads `backend/.env` and `backend/.env.local`
+- `backend/.env.local` is gitignored and is the right place for your local Gemini key
+- `GET /health` is available for smoke checks
+- the default port is `8080` if free
 
-## Run iOS
+## iOS
 
 Open [`ios/Ross.xcodeproj`](/Users/amanpandey/projects/ross/ios/Ross.xcodeproj) in Xcode and run the shared `Ross` scheme.
 
@@ -123,17 +146,15 @@ xcodebuild -project Ross.xcodeproj -scheme Ross -configuration Debug -sdk iphone
 swift test --scratch-path tmp/swiftpm
 ```
 
-iOS local backend notes:
+iOS backend notes:
 
-- iOS Simulator can reach `http://127.0.0.1:<port>` on the host machine.
-- Physical iPhone testing should use your Mac's LAN IP, for example `http://192.168.x.x:8787`.
-- The app also supports an in-app backend override under `Settings > Advanced`.
+- iOS Simulator can use `http://127.0.0.1:<port>`
+- physical iPhone should use your Mac's LAN IP
+- an in-app backend override is available under `Settings > Advanced`
 
-See [`ios/README.md`](/Users/amanpandey/projects/ross/ios/README.md) and [`docs/DEVICE_INSTALL_QA.md`](/Users/amanpandey/projects/ross/docs/DEVICE_INSTALL_QA.md).
+## Android
 
-## Run Android
-
-Build from CLI:
+CLI build:
 
 ```bash
 cd /Users/amanpandey/projects/ross/android
@@ -141,15 +162,14 @@ cd /Users/amanpandey/projects/ross/android
 ./gradlew :app:testDebugUnitTest
 ```
 
-Android local backend notes:
+Android backend notes:
 
-- The default emulator backend address is `http://10.0.2.2:8080`.
-- If your backend runs elsewhere, use `Settings > Advanced > Save test server`.
-- Physical Android devices should use your host machine's LAN IP.
+- the default emulator mapping is `http://10.0.2.2:8080`
+- if your backend runs on `8787`, use `http://10.0.2.2:8787`
+- physical devices should use your Mac's LAN IP
+- the app also supports an in-app backend override under `Settings > Advanced`
 
-See [`android/README.md`](/Users/amanpandey/projects/ross/android/README.md) and [`docs/DEVICE_INSTALL_QA.md`](/Users/amanpandey/projects/ross/docs/DEVICE_INSTALL_QA.md).
-
-## Run privacy guards
+## Privacy guards
 
 ```bash
 cd /Users/amanpandey/projects/ross
@@ -162,28 +182,21 @@ cd /Users/amanpandey/projects/ross
 
 ## QA and runbooks
 
+- [`docs/REAL_WORLD_USAGE_QA.md`](/Users/amanpandey/projects/ross/docs/REAL_WORLD_USAGE_QA.md)
 - [`docs/INTERNAL_ALPHA_QA.md`](/Users/amanpandey/projects/ross/docs/INTERNAL_ALPHA_QA.md)
+- [`docs/PUBLIC_LAW_QA.md`](/Users/amanpandey/projects/ross/docs/PUBLIC_LAW_QA.md)
 - [`docs/AUTH_QA.md`](/Users/amanpandey/projects/ross/docs/AUTH_QA.md)
 - [`docs/DEVICE_INSTALL_QA.md`](/Users/amanpandey/projects/ross/docs/DEVICE_INSTALL_QA.md)
 - [`docs/MANUAL_CASE_ASSOCIATE_E2E.md`](/Users/amanpandey/projects/ross/docs/MANUAL_CASE_ASSOCIATE_E2E.md)
+- [`docs/INTERNAL_ALPHA_READINESS.md`](/Users/amanpandey/projects/ross/docs/INTERNAL_ALPHA_READINESS.md)
 - [`docs/PRIVACY_ARCHITECTURE.md`](/Users/amanpandey/projects/ross/docs/PRIVACY_ARCHITECTURE.md)
 - [`docs/OFFLINE_BEHAVIOR.md`](/Users/amanpandey/projects/ross/docs/OFFLINE_BEHAVIOR.md)
 - [`docs/NEXT_STEP_REPORT.md`](/Users/amanpandey/projects/ross/docs/NEXT_STEP_REPORT.md)
 
-## Truth-in-status note
+## Screenshot bundle
 
-This internal alpha is about product usability and privacy boundaries.
+The current curated simulator screenshots live in:
 
-It is honest to say:
+- `artifacts/qa-screenshots-2026-04-22/`
 
-- demo auth works for local QA
-- the core shell exists across iOS and Android
-- public-law preview is explicit and sanitized
-- privacy guards are enforced in code and scripts
-
-It is not honest to say, unless separately proven:
-
-- real Google OAuth is fully proven
-- Apple backend auth exists
-- physical iPhone install is complete
-- real local model proof is complete
+See [`docs/INTERNAL_ALPHA_READINESS.md`](/Users/amanpandey/projects/ross/docs/INTERNAL_ALPHA_READINESS.md) for which screens were freshly captured in this phase.
