@@ -1298,7 +1298,7 @@ private fun AlphaRootAskDock(
             }
         }
         dismissedInlineQuestion = null
-        controller.submitAsk(
+        controller.submitDockInput(
             question = question,
             scopeCaseId = activeScopeCaseId,
             webEnabled = controller.askWebEnabled,
@@ -1409,7 +1409,7 @@ private fun AlphaRootAskDock(
                             Box(modifier = Modifier.padding(vertical = 8.dp)) {
                                 if (controller.askDraft(activeScopeCaseId).isBlank()) {
                                     Text(
-                                        "Ask Ross about dates, files, or next steps",
+                                        "Ask Ross or type add task, save date, or draft note",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = chromeMuted,
                                     )
@@ -1446,9 +1446,16 @@ private fun AlphaRootAskDock(
                     }
                 }
 
-                controller.askSelectionSubtitle(activeScopeCaseId)?.takeIf { fixedDocumentIds.isEmpty() }?.let { subtitle ->
+                val selectionSubtitle = controller.askSelectionSubtitle(activeScopeCaseId)?.takeIf { fixedDocumentIds.isEmpty() }
+                if (selectionSubtitle != null) {
                     Text(
-                        subtitle,
+                        selectionSubtitle,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = chromeMuted,
+                    )
+                } else if (fixedDocumentIds.isEmpty()) {
+                    Text(
+                        "Type @ to add a file, or say add task / save date.",
                         style = MaterialTheme.typography.labelSmall,
                         color = chromeMuted,
                     )
@@ -2609,19 +2616,41 @@ private fun AlphaCaseWorkspaceScreen(
 
                     AlphaWorkspaceSection.Tasks -> {
                         AlphaCard {
-                            Button(
-                                onClick = { controller.refreshCaseOverview(caseId) },
-                                enabled = !controller.isRefreshingCaseOverview(caseId),
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Text(if (controller.isRefreshingCaseOverview(caseId)) "Refreshing task suggestions with Ross..." else "Refresh task suggestions with Ross")
-                            }
+                            AlphaSectionCommandHintCard(
+                                detail = "Use Ask Ross below to add tasks, save hearing dates, and draft notes.",
+                                actionLabel = "Refresh matter overview with Ross",
+                                actionIcon = Icons.Outlined.Refresh,
+                                actionDisabled = controller.isRefreshingCaseOverview(caseId),
+                                onAction = { controller.refreshCaseOverview(caseId) },
+                            )
                             Spacer(modifier = Modifier.height(10.dp))
-                            AlphaTaskQuickAdd(onAdd = { title, dueDate ->
-                                controller.addTask(title = title, caseId = caseId, dueDate = dueDate)
-                            })
+                            val scheduledDates = controller.scheduledMatterDates(caseId)
+                            if (scheduledDates.isEmpty()) {
+                                Text("No dates saved yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            } else {
+                                scheduledDates.forEach { matterDate ->
+                                    AlphaMatterDateRow(
+                                        matterDate = matterDate,
+                                        onMarkDone = { controller.setMatterDateStatus(caseId, matterDate.id, AlphaMatterDateStatus.Done) },
+                                        onCancel = { controller.setMatterDateStatus(caseId, matterDate.id, AlphaMatterDateStatus.Cancelled) },
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                }
+                            }
                             controller.tasks(caseId).forEach { task ->
-                                AlphaTaskRow(task = task, onToggle = { controller.toggleTaskDone(task.id) })
+                                AlphaTaskRow(
+                                    task = task,
+                                    onToggle = { controller.toggleTaskDone(task.id) },
+                                    onSnooze = if (task.status == AlphaTaskStatus.Open) {
+                                        { controller.snoozeTask(task.id, 1) }
+                                    } else {
+                                        null
+                                    },
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+                            if (controller.tasks(caseId).isEmpty()) {
+                                Text("No open tasks yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -2646,7 +2675,15 @@ private fun AlphaCaseWorkspaceScreen(
 
                     AlphaWorkspaceSection.NotesExports -> {
                         AlphaCard {
-                            Button(onClick = onOpenExports, modifier = Modifier.fillMaxWidth()) { Text("Open exports") }
+                            AlphaDraftActionStrip(
+                                onGenerateChronology = { controller.generateExport("chronology_report", caseId) },
+                                onGenerateCaseNote = { controller.generateExport("case_note", caseId) },
+                                onGenerateOrderSummary = { controller.generateExport("order_summary", caseId) },
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            TextButton(onClick = onOpenExports, modifier = Modifier.fillMaxWidth()) {
+                                Text("Open exports")
+                            }
                         }
                     }
                 }
@@ -3262,13 +3299,44 @@ private fun AlphaExportsScreen(controller: AlphaRossController, caseId: String?,
                 detail = "Generate local reports for advocate review.",
             )
             AlphaCard("Generate") {
-                Button(onClick = { controller.generateExport("chronology_report", caseId) }, modifier = Modifier.fillMaxWidth()) { Text("Generate Chronology Report") }
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = { controller.generateExport("case_note", caseId) }, modifier = Modifier.fillMaxWidth()) { Text("Generate Case Note") }
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = { controller.generateExport("order_summary", caseId) }, modifier = Modifier.fillMaxWidth()) { Text("Generate Order Summary") }
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = { controller.generateExport("chat_transcript", caseId) }, modifier = Modifier.fillMaxWidth()) { Text("Generate Ross Thread Transcript") }
+                Text(
+                    "Use the compact actions here, or type “draft case note” in Ask Ross below.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    AlphaCompactDraftActionButton(
+                        title = "Chronology",
+                        icon = Icons.Outlined.ViewTimeline,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        controller.generateExport("chronology_report", caseId)
+                    }
+                    AlphaCompactDraftActionButton(
+                        title = "Case note",
+                        icon = Icons.Outlined.EditNote,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        controller.generateExport("case_note", caseId)
+                    }
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    AlphaCompactDraftActionButton(
+                        title = "Order summary",
+                        icon = Icons.Outlined.Description,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        controller.generateExport("order_summary", caseId)
+                    }
+                    AlphaCompactDraftActionButton(
+                        title = "Transcript",
+                        icon = Icons.Outlined.ChatBubbleOutline,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        controller.generateExport("chat_transcript", caseId)
+                    }
+                }
             }
             controller.persisted.exports.forEach { report ->
                 AlphaCard(report.title, report.kind.replace('_', ' ')) {
@@ -4478,42 +4546,59 @@ private fun alphaCanUseDeviceUnlock(activity: FragmentActivity?): Boolean {
 }
 
 @Composable
-private fun AlphaTaskQuickAdd(onAdd: (String, String?) -> Unit) {
-    var title by remember { mutableStateOf("") }
-    var dueToday by remember { mutableStateOf(false) }
+private fun AlphaCompactRowActionButton(
+    icon: ImageVector,
+    label: String,
+    tint: Color = MaterialTheme.colorScheme.onSurface,
+    onClick: () -> Unit,
+) {
+    OutlinedCard(
+        shape = RoundedCornerShape(999.dp),
+        colors = CardDefaults.outlinedCardColors(containerColor = alphaChromeBackgroundColor().copy(alpha = 0.92f)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, alphaChromeStrokeColor()),
+        onClick = onClick,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
+            tint = tint,
+        )
+    }
+}
 
+@Composable
+private fun AlphaSectionCommandHintCard(
+    detail: String,
+    actionLabel: String? = null,
+    actionIcon: ImageVector? = null,
+    actionDisabled: Boolean = false,
+    onAction: (() -> Unit)? = null,
+) {
     OutlinedCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.22f)),
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedTextField(
-                value = title,
-                onValueChange = { title = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Add task") },
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                FilterChip(
-                    selected = dueToday,
-                    onClick = { dueToday = !dueToday },
-                    label = { Text("Due today") },
-                )
-                Button(
-                    onClick = {
-                        onAdd(title.trim(), if (dueToday) java.time.Instant.now().toString() else null)
-                        title = ""
-                        dueToday = false
-                    },
-                    enabled = title.isNotBlank(),
-                ) {
-                    Text("Add")
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Use Ask Ross below", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (actionLabel != null && actionIcon != null && onAction != null) {
+                Box(modifier = Modifier.defaultMinSize(minWidth = 40.dp)) {
+                    AlphaCompactRowActionButton(
+                        icon = actionIcon,
+                        label = actionLabel,
+                        tint = if (actionDisabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f) else MaterialTheme.colorScheme.onSurface,
+                        onClick = { if (!actionDisabled) onAction() },
+                    )
                 }
             }
         }
@@ -4521,36 +4606,162 @@ private fun AlphaTaskQuickAdd(onAdd: (String, String?) -> Unit) {
 }
 
 @Composable
-private fun AlphaTaskRow(task: AlphaTaskItem, onToggle: () -> Unit) {
+private fun AlphaCompactDraftActionButton(
+    title: String,
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    OutlinedCard(
+        modifier = modifier,
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)),
+        onClick = onClick,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
+            Text(title, style = MaterialTheme.typography.titleSmall, maxLines = 1)
+        }
+    }
+}
+
+@Composable
+private fun AlphaDraftActionStrip(
+    onGenerateChronology: () -> Unit,
+    onGenerateCaseNote: () -> Unit,
+    onGenerateOrderSummary: () -> Unit,
+) {
+    Text(
+        "Make a local draft without leaving this matter.",
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(modifier = Modifier.height(10.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        AlphaCompactDraftActionButton(
+            title = "Chronology",
+            icon = Icons.Outlined.EventNote,
+            modifier = Modifier.weight(1f),
+            onClick = onGenerateChronology,
+        )
+        AlphaCompactDraftActionButton(
+            title = "Case note",
+            icon = Icons.Outlined.EditNote,
+            modifier = Modifier.weight(1f),
+            onClick = onGenerateCaseNote,
+        )
+    }
+    Spacer(modifier = Modifier.height(10.dp))
+    AlphaCompactDraftActionButton(
+        title = "Order summary",
+        icon = Icons.Outlined.Description,
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onGenerateOrderSummary,
+    )
+}
+
+@Composable
+private fun AlphaTaskRow(task: AlphaTaskItem, onToggle: () -> Unit, onSnooze: (() -> Unit)? = null) {
     OutlinedCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.28f)),
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            AlphaCompactRowActionButton(
+                icon = if (task.status == AlphaTaskStatus.Done) Icons.Outlined.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
+                label = if (task.status == AlphaTaskStatus.Done) "Mark task open" else "Mark task done",
+                tint = if (task.status == AlphaTaskStatus.Done) Color(0xFF2F7B52) else MaterialTheme.colorScheme.primary,
+                onClick = onToggle,
+            )
+
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.weight(1f),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.Top,
             ) {
-                Text(task.title, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    if (task.status == AlphaTaskStatus.Done) "Done" else task.priority.name.lowercase().replaceFirstChar(Char::titlecase),
-                    color = MaterialTheme.colorScheme.secondary,
-                    style = MaterialTheme.typography.labelLarge,
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(task.title, style = MaterialTheme.typography.titleMedium)
+                    task.notes
+                        ?.takeIf { it.startsWith("review-sync::").not() }
+                        ?.takeIf { it.startsWith(ALPHA_ROSS_SUGGESTED_TASK_NOTE_PREFIX).not() }
+                        ?.let { note ->
+                            Text(note, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                        }
+                    task.dueDate?.let { dueDate ->
+                        Text("Due ${alphaDateLabel(dueDate)}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+
+                if (task.status == AlphaTaskStatus.Open && onSnooze != null) {
+                    AlphaCompactRowActionButton(
+                        icon = Icons.Outlined.Schedule,
+                        label = "Snooze task by one day",
+                        onClick = onSnooze,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AlphaMatterDateRow(
+    matterDate: AlphaMatterDate,
+    onMarkDone: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.28f)),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(matterDate.title, style = MaterialTheme.typography.titleMedium)
+                Text(alphaDateLabel(matterDate.date), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                matterDate.notes?.takeIf { it.isNotBlank() }?.let { note ->
+                    Text(note, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = false,
+                    onClick = {},
+                    enabled = false,
+                    label = { Text(matterDate.kind.title) },
                 )
-            }
-            task.notes
-                ?.takeIf { it.startsWith("review-sync::").not() }
-                ?.takeIf { it.startsWith(ALPHA_ROSS_SUGGESTED_TASK_NOTE_PREFIX).not() }
-                ?.let { note ->
-                Text(note, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-            }
-            task.dueDate?.let { dueDate ->
-                Text("Due ${alphaDateLabel(dueDate)}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-            }
-            Button(onClick = onToggle, modifier = Modifier.fillMaxWidth()) {
-                Text(if (task.status == AlphaTaskStatus.Done) "Mark open" else "Mark done")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AlphaCompactRowActionButton(
+                        icon = Icons.Outlined.Check,
+                        label = "Mark date done",
+                        tint = Color(0xFF2F7B52),
+                        onClick = onMarkDone,
+                    )
+                    AlphaCompactRowActionButton(
+                        icon = Icons.Outlined.Close,
+                        label = "Cancel date",
+                        tint = MaterialTheme.colorScheme.error,
+                        onClick = onCancel,
+                    )
+                }
             }
         }
     }

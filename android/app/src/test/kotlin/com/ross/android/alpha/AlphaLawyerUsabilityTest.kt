@@ -149,6 +149,76 @@ class AlphaLawyerUsabilityTest {
     }
 
     @Test
+    fun `dock command adds task without triggering web preview`() {
+        val controller = buildController(secretKeyProvider = InMemorySecretKeyProvider())
+        controller.signInDemoMode()
+        val caseId = controller.cases.first { it.title == "Demo Matter: Sharma v. Rana" }.id
+
+        controller.submitDockInput(
+            question = "add task prepare hearing note tomorrow",
+            scopeCaseId = caseId,
+            webEnabled = true,
+        )
+
+        assertTrue(controller.tasks(caseId).any { it.title == "prepare hearing note" })
+        assertEquals("Task saved locally", controller.latestAskResult?.answerTitle)
+        assertEquals("Saved locally", controller.latestAskResult?.statusNote)
+        assertNull(controller.publicLawPreview)
+    }
+
+    @Test
+    fun `dock command adds matter date to scoped matter`() {
+        val controller = buildController(secretKeyProvider = InMemorySecretKeyProvider())
+        controller.signInDemoMode()
+        val caseId = controller.cases.first { it.title == "Demo Matter: Sharma v. Rana" }.id
+
+        controller.submitDockInput(
+            question = "save next hearing on 1 May 2026",
+            scopeCaseId = caseId,
+            webEnabled = false,
+        )
+
+        assertTrue(
+            controller.scheduledMatterDates(caseId).any {
+                it.kind == AlphaMatterDateKind.Hearing && it.title == "Next hearing" && it.date.startsWith("2026-05-01")
+            }
+        )
+        assertTrue(controller.latestAskResult?.answerTitle?.contains("saved locally", ignoreCase = true) == true)
+    }
+
+    @Test
+    fun `dock command generates scoped export`() {
+        val controller = buildController(secretKeyProvider = InMemorySecretKeyProvider())
+        controller.signInDemoMode()
+        val caseId = controller.cases.first { it.title == "Demo Matter: Sharma v. Rana" }.id
+
+        controller.submitDockInput(
+            question = "prepare hearing note",
+            scopeCaseId = caseId,
+            webEnabled = false,
+        )
+
+        assertTrue(controller.persisted.exports.any { it.caseId == caseId })
+        assertEquals("Hearing note ready", controller.latestAskResult?.answerTitle)
+        assertEquals("Draft ready", controller.latestAskResult?.statusNote)
+    }
+
+    @Test
+    fun `dock question still falls back to standard ask flow`() {
+        val controller = buildController(secretKeyProvider = InMemorySecretKeyProvider())
+
+        controller.submitDockInput(
+            question = "What needs my attention today?",
+            scopeCaseId = null,
+            webEnabled = false,
+        )
+
+        assertNull(controller.publicLawPreview)
+        assertFalse(controller.latestAskResult?.answerTitle?.contains("saved locally", ignoreCase = true) == true)
+        assertFalse(controller.latestAskResult?.answerTitle?.contains("ready", ignoreCase = true) == true)
+    }
+
+    @Test
     fun `review count updates after field correction`() {
         val controller = buildController(secretKeyProvider = InMemorySecretKeyProvider())
         val caseId = "case-review"

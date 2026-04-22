@@ -144,6 +144,15 @@ val AlphaDocumentKind.title: String
         AlphaDocumentKind.Text -> "TEXT"
         AlphaDocumentKind.Unknown -> "FILE"
     }
+
+val AlphaMatterDateKind.title: String
+    get() = when (this) {
+        AlphaMatterDateKind.Hearing -> "Hearing"
+        AlphaMatterDateKind.FilingDeadline -> "Filing deadline"
+        AlphaMatterDateKind.ComplianceDate -> "Compliance date"
+        AlphaMatterDateKind.ClientFollowUp -> "Client follow-up"
+    }
+
 enum class AlphaPackRuntimeMode(val wireValue: String) {
     DeterministicDev("deterministic_dev"),
     MediapipeLlm("mediapipe_llm"),
@@ -506,6 +515,13 @@ internal class AlphaRossController(
         publicLawSearchOverride ?: { preview -> backend.searchPublicLaw(preview) }
     private val extractionOrchestrator = AlphaLocalExtractionOrchestrator(context)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    private sealed interface DockCommandAction {
+        data class AddTask(val title: String, val dueDate: String?) : DockCommandAction
+        data class AddMatterDate(val title: String, val kind: AlphaMatterDateKind, val date: String) : DockCommandAction
+        data class GenerateExport(val kind: String, val label: String) : DockCommandAction
+        data class Guidance(val title: String, val detail: String) : DockCommandAction
+    }
 
     var persisted by mutableStateOf(loadState())
     var pendingRoute by mutableStateOf<AndroidAlphaRoute?>(null)
@@ -1531,6 +1547,20 @@ internal class AlphaRossController(
         save()
     }
 
+    fun submitDockInput(question: String, scopeCaseId: String?, webEnabled: Boolean) {
+        val cleaned = question.trim()
+        if (cleaned.isEmpty()) return
+
+        val command = dockCommandAction(cleaned)
+        if (command == null) {
+            submitAsk(question = cleaned, scopeCaseId = scopeCaseId, webEnabled = webEnabled)
+            return
+        }
+
+        setAskDraft(scopeCaseId, "")
+        runDockCommand(command, rawInput = cleaned, scopeCaseId = scopeCaseId)
+    }
+
     fun submitAsk(question: String, scopeCaseId: String?, webEnabled: Boolean) {
         val cleaned = question.trim()
         if (cleaned.isEmpty()) return
@@ -1558,6 +1588,116 @@ internal class AlphaRossController(
                 result.copy(publicLawPreview = null, statusNote = "Web search off")
             }
         }
+    }
+
+    private fun runDockCommand(command: DockCommandAction, rawInput: String, scopeCaseId: String?) {
+        pendingPublicLawQuestion = null
+        pendingPublicLawScopeCaseId = null
+        publicLawPreview = null
+        askSelectedScopeCaseId = scopeCaseId
+
+        val selectedDocumentTitles = selectedAskDocuments(scopeCaseId).map { it.title }
+        val result = when (command) {
+            is DockCommandAction.AddTask -> {
+                addTask(title = command.title, caseId = scopeCaseId, dueDate = command.dueDate)
+                AlphaAskResult(
+                    question = rawInput,
+                    scopeCaseId = scopeCaseId,
+                    scopeLabel = scopeLabel(scopeCaseId),
+                    selectedDocumentTitles = selectedDocumentTitles,
+                    answerTitle = "Task saved locally",
+                    answerSections = listOf(
+                        "${command.title} was added on this device.",
+                        command.dueDate?.let { "Due ${dockCommandDateLabel(it)}." } ?: "Open the task list any time to mark it done or snooze it."
+                    ),
+                    caseFileSources = emptyList(),
+                    statusNote = "Saved locally",
+                )
+            }
+
+            is DockCommandAction.AddMatterDate -> {
+                if (scopeCaseId == null) {
+                    AlphaAskResult(
+                        question = rawInput,
+                        scopeCaseId = null,
+                        scopeLabel = scopeLabel(null),
+                        selectedDocumentTitles = selectedDocumentTitles,
+                        answerTitle = "Choose a matter first",
+                        answerSections = listOf(
+                            "Pick a matter in the bar above before saving a hearing date, deadline, or reminder.",
+                            "Ross did not change anything."
+                        ),
+                        caseFileSources = emptyList(),
+                        statusNote = "No change made",
+                    )
+                } else {
+                    addMatterDate(caseId = scopeCaseId, title = command.title, kind = command.kind, date = command.date)
+                    AlphaAskResult(
+                        question = rawInput,
+                        scopeCaseId = scopeCaseId,
+                        scopeLabel = scopeLabel(scopeCaseId),
+                        selectedDocumentTitles = selectedDocumentTitles,
+                        answerTitle = "${command.kind.title} saved locally",
+                        answerSections = listOf(
+                            "${command.title} is saved for ${dockCommandDateLabel(command.date)}.",
+                            "You can mark it done or cancel it from the matter timeline."
+                        ),
+                        caseFileSources = emptyList(),
+                        statusNote = "Saved locally",
+                    )
+                }
+            }
+
+            is DockCommandAction.GenerateExport -> {
+                if (scopeCaseId == null) {
+                    AlphaAskResult(
+                        question = rawInput,
+                        scopeCaseId = null,
+                        scopeLabel = scopeLabel(null),
+                        selectedDocumentTitles = selectedDocumentTitles,
+                        answerTitle = "Choose a matter first",
+                        answerSections = listOf(
+                            "Pick a matter in the bar above before generating a ${command.label.lowercase()} draft.",
+                            "Ross did not create an export yet."
+                        ),
+                        caseFileSources = emptyList(),
+                        statusNote = "No change made",
+                    )
+                } else {
+                    generateExport(command.kind, scopeCaseId)
+                    AlphaAskResult(
+                        question = rawInput,
+                        scopeCaseId = scopeCaseId,
+                        scopeLabel = scopeLabel(scopeCaseId),
+                        selectedDocumentTitles = selectedDocumentTitles,
+                        answerTitle = "${command.label} ready",
+                        answerSections = listOf(
+                            "Ross created a local ${command.label.lowercase()} draft for advocate review.",
+                            "Open Exports to review or share the PDF."
+                        ),
+                        caseFileSources = emptyList(),
+                        statusNote = "Draft ready",
+                    )
+                }
+            }
+
+            is DockCommandAction.Guidance -> AlphaAskResult(
+                question = rawInput,
+                scopeCaseId = scopeCaseId,
+                scopeLabel = scopeLabel(scopeCaseId),
+                selectedDocumentTitles = selectedDocumentTitles,
+                answerTitle = command.title,
+                answerSections = listOf(
+                    command.detail,
+                    "Ross did not change anything."
+                ),
+                caseFileSources = emptyList(),
+                statusNote = "No change made",
+            )
+        }
+
+        appendAskResult(result, scopeCaseId, includeLocalLedger = false)
+        latestAskResult = result
     }
 
     fun cancelPendingPublicLawSearch() {
@@ -1617,7 +1757,11 @@ internal class AlphaRossController(
         }
     }
 
-    private fun appendAskResult(result: AlphaAskResult, scopeCaseId: String?) {
+    private fun appendAskResult(
+        result: AlphaAskResult,
+        scopeCaseId: String?,
+        includeLocalLedger: Boolean = true,
+    ) {
         askHistory = askHistory + result
         val storageCaseId = scopeCaseId ?: ALPHA_SHARED_WORKSPACE_ID
         val updatedCases = persisted.cases.map { case ->
@@ -1631,15 +1775,19 @@ internal class AlphaRossController(
                 case.copy(chatTurns = listOf(turn) + case.chatTurns, updatedAt = nowIso())
             } else case
         }
-        persisted = persisted.copy(
-            cases = updatedCases,
-            ledgerEntries = listOf(
-                localLedger(
-                    if (scopeCaseId == null) "Local review run" else "Local case review run",
-                    "The question and source-backed draft stayed on-device.",
-                )
-            ) + persisted.ledgerEntries,
-        )
+        persisted = if (includeLocalLedger) {
+            persisted.copy(
+                cases = updatedCases,
+                ledgerEntries = listOf(
+                    localLedger(
+                        if (scopeCaseId == null) "Local review run" else "Local case review run",
+                        "The question and source-backed draft stayed on-device.",
+                    )
+                ) + persisted.ledgerEntries,
+            )
+        } else {
+            persisted.copy(cases = updatedCases)
+        }
         save()
     }
 
@@ -1818,6 +1966,91 @@ internal class AlphaRossController(
             ledgerEntries = listOf(localLedger("Task saved locally", "$cleaned was added on this device.")) + persisted.ledgerEntries,
         )
         caseId?.let(::rebuildCaseWorkspace)
+        save()
+    }
+
+    fun snoozeTask(taskId: String, days: Long) {
+        var affectedCaseId: String? = null
+        persisted = persisted.copy(
+            tasks = (persisted.tasks ?: emptyList()).map { task ->
+                if (task.id == taskId) {
+                    affectedCaseId = task.caseId
+                    val currentDue = task.dueDate?.let(::dockCommandParsedInstant) ?: java.time.Instant.now()
+                    task.copy(
+                        dueDate = currentDue.plus(java.time.Duration.ofDays(days)).toString(),
+                        updatedAt = nowIso(),
+                    )
+                } else task
+            }
+        )
+        affectedCaseId?.let(::rebuildCaseWorkspace)
+        save()
+    }
+
+    fun scheduledMatterDates(caseId: String): List<AlphaMatterDate> =
+        persisted.cases
+            .firstOrNull { it.id == caseId }
+            ?.dates
+            ?.filter { it.status == AlphaMatterDateStatus.Scheduled }
+            ?.sortedBy { it.date }
+            ?: emptyList()
+
+    fun addMatterDate(
+        caseId: String,
+        title: String,
+        kind: AlphaMatterDateKind,
+        date: String,
+        notes: String? = null,
+    ) {
+        val cleanedTitle = title.trim().ifBlank { kind.title }
+        persisted = persisted.copy(
+            cases = persisted.cases.map { matter ->
+                if (matter.id == caseId) {
+                    val updatedDates = (matter.dates + AlphaMatterDate(
+                        caseId = caseId,
+                        title = cleanedTitle,
+                        kind = kind,
+                        date = date,
+                        notes = notes?.trim()?.ifBlank { null },
+                    )).sortedBy { it.date }
+                    matter.copy(
+                        nextHearing = if (kind == AlphaMatterDateKind.Hearing) date else matter.nextHearing,
+                        dates = updatedDates,
+                        updatedAt = nowIso(),
+                    )
+                } else matter
+            },
+            ledgerEntries = listOf(localLedger("Matter date saved locally", "$cleanedTitle was added on this device.")) + persisted.ledgerEntries,
+        )
+        rebuildCaseWorkspace(caseId)
+        save()
+    }
+
+    fun setMatterDateStatus(caseId: String, dateId: String, status: AlphaMatterDateStatus) {
+        persisted = persisted.copy(
+            cases = persisted.cases.map { matter ->
+                if (matter.id == caseId) {
+                    val affectedDate = matter.dates.firstOrNull { it.id == dateId }
+                    val updatedDates = matter.dates.map { entry ->
+                        if (entry.id == dateId) entry.copy(status = status) else entry
+                    }
+                    val nextScheduledHearing = updatedDates
+                        .filter { it.kind == AlphaMatterDateKind.Hearing && it.status == AlphaMatterDateStatus.Scheduled }
+                        .minByOrNull { it.date }
+                        ?.date
+                    matter.copy(
+                        dates = updatedDates,
+                        nextHearing = when {
+                            affectedDate?.kind != AlphaMatterDateKind.Hearing -> matter.nextHearing
+                            nextScheduledHearing != null -> nextScheduledHearing
+                            else -> null
+                        },
+                        updatedAt = nowIso(),
+                    )
+                } else matter
+            },
+        )
+        rebuildCaseWorkspace(caseId)
         save()
     }
 
@@ -2684,6 +2917,160 @@ internal class AlphaRossController(
     private fun reviewTaskNote(documentId: String, title: String): String =
         "review-sync::$documentId::$title"
 
+    private fun dockCommandAction(rawInput: String): DockCommandAction? {
+        val normalized = rawInput
+            .replace(Regex("\\s+"), " ")
+            .trim()
+        if (normalized.isEmpty()) return null
+
+        val lowered = normalized.lowercase()
+        val exportCommands = listOf(
+            Triple(listOf("generate chronology", "prepare chronology", "draft chronology", "export chronology", "create chronology"), "chronology_report", "Chronology"),
+            Triple(listOf("generate case note", "prepare case note", "draft case note", "export case note"), "case_note", "Case note"),
+            Triple(listOf("generate hearing note", "prepare hearing note", "draft hearing note", "export hearing note"), "case_note", "Hearing note"),
+            Triple(listOf("generate order summary", "prepare order summary", "draft order summary", "export order summary"), "order_summary", "Order summary"),
+            Triple(listOf("generate transcript", "draft transcript", "export transcript", "generate chat transcript", "generate thread transcript"), "chat_transcript", "Ross thread transcript"),
+        )
+
+        exportCommands.firstOrNull { (prefixes, _, _) ->
+            prefixes.any { lowered.startsWith(it) }
+        }?.let { (_, kind, label) ->
+            return DockCommandAction.GenerateExport(kind = kind, label = label)
+        }
+
+        dockCommandBody(normalized, listOf("add task ", "create task ", "save task ", "add reminder ", "save reminder ", "remind me to "))?.let { body ->
+            val (title, dueDate) = dockCommandTitleAndDate(body)
+            return if (title.isBlank()) {
+                DockCommandAction.Guidance(
+                    title = "Add a task title",
+                    detail = "Try “add task prepare hearing note tomorrow.”",
+                )
+            } else {
+                DockCommandAction.AddTask(title = title, dueDate = dueDate)
+            }
+        }
+
+        val specificDateCommands = listOf(
+            Triple(listOf("set next hearing ", "save next hearing ", "add next hearing ", "save hearing ", "add hearing "), AlphaMatterDateKind.Hearing, "Next hearing"),
+            Triple(listOf("save filing deadline ", "add filing deadline ", "set filing deadline "), AlphaMatterDateKind.FilingDeadline, "Filing deadline"),
+            Triple(listOf("save compliance date ", "add compliance date ", "set compliance date "), AlphaMatterDateKind.ComplianceDate, "Compliance date"),
+            Triple(listOf("save client follow-up ", "add client follow-up ", "set client follow-up "), AlphaMatterDateKind.ClientFollowUp, "Client follow-up"),
+        )
+
+        specificDateCommands.forEach { (prefixes, kind, fallbackTitle) ->
+            dockCommandBody(normalized, prefixes)?.let { body ->
+                val (title, date) = dockCommandTitleAndDate(body)
+                return if (date == null) {
+                    DockCommandAction.Guidance(
+                        title = "Add the date",
+                        detail = "Try “${prefixes.first().trim()} on 1 May 2026.”",
+                    )
+                } else {
+                    DockCommandAction.AddMatterDate(
+                        title = title.ifBlank { fallbackTitle },
+                        kind = kind,
+                        date = date,
+                    )
+                }
+            }
+        }
+
+        dockCommandBody(normalized, listOf("save date ", "add date ", "set date "))?.let { body ->
+            val (title, date) = dockCommandTitleAndDate(body)
+            return if (date == null) {
+                DockCommandAction.Guidance(
+                    title = "Add the date",
+                    detail = "Try “save date filing reminder on 1 May 2026.”",
+                )
+            } else {
+                DockCommandAction.AddMatterDate(
+                    title = title.ifBlank { inferredMatterDateKind(title).title },
+                    kind = inferredMatterDateKind(title),
+                    date = date,
+                )
+            }
+        }
+
+        return null
+    }
+
+    private fun dockCommandBody(text: String, prefixes: List<String>): String? =
+        prefixes.firstNotNullOfOrNull { prefix ->
+            if (text.lowercase().startsWith(prefix)) {
+                text.drop(prefix.length).trim()
+            } else {
+                null
+            }
+        }
+
+    private fun dockCommandTitleAndDate(rawValue: String): Pair<String, String?> {
+        val normalized = rawValue
+            .replace(Regex("\\s+"), " ")
+            .trim()
+        if (normalized.isEmpty()) return "" to null
+
+        listOf("on ", "for ").forEach { prefix ->
+            if (normalized.lowercase().startsWith(prefix)) {
+                val candidateDate = normalized.drop(prefix.length).trim()
+                val parsedDate = alphaParsedDate(candidateDate)
+                if (parsedDate != null) {
+                    return "" to parsedDate
+                }
+            }
+        }
+
+        listOf(" on ", " for ").forEach { separator ->
+            val lowered = normalized.lowercase()
+            val index = lowered.lastIndexOf(separator)
+            if (index != -1) {
+                val candidateDate = normalized.substring(index + separator.length).trim()
+                val parsedDate = alphaParsedDate(candidateDate)
+                if (parsedDate != null) {
+                    return normalized.substring(0, index).trim() to parsedDate
+                }
+            }
+        }
+
+        listOf(" today", " tomorrow", " next week").forEach { suffix ->
+            val lowered = normalized.lowercase()
+            if (lowered.endsWith(suffix)) {
+                val candidateDate = normalized.takeLast(suffix.length).trim()
+                val parsedDate = alphaParsedDate(candidateDate)
+                if (parsedDate != null) {
+                    return normalized.dropLast(suffix.length).trim() to parsedDate
+                }
+            }
+        }
+
+        alphaParsedDate(normalized)?.let { parsedDate ->
+            return "" to parsedDate
+        }
+
+        return normalized to null
+    }
+
+    private fun inferredMatterDateKind(title: String): AlphaMatterDateKind {
+        val lowered = title.lowercase()
+        return when {
+            lowered.contains("hearing") || lowered.contains("next date") -> AlphaMatterDateKind.Hearing
+            lowered.contains("deadline") || lowered.contains("filing") -> AlphaMatterDateKind.FilingDeadline
+            lowered.contains("client") || lowered.contains("follow") -> AlphaMatterDateKind.ClientFollowUp
+            else -> AlphaMatterDateKind.ComplianceDate
+        }
+    }
+
+    private fun dockCommandDateLabel(rawDate: String): String {
+        val instant = dockCommandParsedInstant(rawDate) ?: return rawDate.take(10)
+        val formatter = java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy")
+        return instant.atZone(java.time.ZoneId.systemDefault()).format(formatter)
+    }
+
+    private fun dockCommandParsedInstant(rawDate: String?): java.time.Instant? {
+        val value = rawDate?.trim().orEmpty()
+        if (value.isEmpty()) return null
+        return runCatching { java.time.Instant.parse(value) }.getOrNull()
+    }
+
     private fun alphaParsedDate(rawValue: String?): String? {
         val raw = rawValue?.trim().orEmpty()
         if (raw.isEmpty()) return null
@@ -2694,6 +3081,13 @@ internal class AlphaRossController(
             .replace(",", "")
             .replace(Regex("\\s+"), " ")
             .trim()
+        val zoneId = java.time.ZoneId.systemDefault()
+        val today = java.time.LocalDate.now(zoneId)
+        when (normalized.lowercase()) {
+            "today" -> return today.atStartOfDay(zoneId).toInstant().toString()
+            "tomorrow" -> return today.plusDays(1).atStartOfDay(zoneId).toInstant().toString()
+            "next week" -> return today.plusWeeks(1).atStartOfDay(zoneId).toInstant().toString()
+        }
         val supportedPatterns = listOf(
             "yyyy-MM-dd",
             "d/M/yyyy",
@@ -2704,16 +3098,21 @@ internal class AlphaRossController(
             "dd MMM yyyy",
             "d MMMM yyyy",
             "dd MMMM yyyy",
+            "d MMM",
+            "dd MMM",
+            "d MMMM",
+            "dd MMMM",
         )
-        val zoneId = java.time.ZoneId.systemDefault()
 
         supportedPatterns.forEach { pattern ->
             val formatter = java.time.format.DateTimeFormatter.ofPattern(pattern, java.util.Locale.ENGLISH)
             runCatching {
-                return java.time.LocalDate.parse(normalized, formatter)
-                    .atStartOfDay(zoneId)
-                    .toInstant()
-                    .toString()
+                val parsed = java.time.LocalDate.parse(
+                    if (pattern.contains('y')) normalized else "$normalized ${today.year}",
+                    if (pattern.contains('y')) formatter else java.time.format.DateTimeFormatter.ofPattern("$pattern yyyy", java.util.Locale.ENGLISH),
+                )
+                val resolved = if (!pattern.contains('y') && parsed.isBefore(today)) parsed.plusYears(1) else parsed
+                return resolved.atStartOfDay(zoneId).toInstant().toString()
             }
         }
 

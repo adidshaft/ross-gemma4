@@ -159,6 +159,13 @@ private struct AlphaAssistantStatusSnapshot {
 @MainActor
 @Observable
 final class AlphaRossModel {
+    private enum DockCommandAction: Hashable {
+        case addTask(title: String, dueDate: Date?)
+        case addMatterDate(title: String, kind: AlphaMatterDateKind, date: Date)
+        case generateExport(kind: String, label: String)
+        case guidance(title: String, detail: String)
+    }
+
     private let store: AlphaRossStore
     @ObservationIgnored private let backend: AlphaBackendClient
     @ObservationIgnored private let publicLawSearchAction: AlphaPublicLawSearchAction
@@ -1170,6 +1177,23 @@ final class AlphaRossModel {
             .runtimeMode
     }
 
+    func submitDockInput(question: String, scopeCaseID: UUID?, webEnabled: Bool) async {
+        let cleaned = question.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleaned.isEmpty else { return }
+
+        if let command = dockCommandAction(for: cleaned) {
+            if let scopeCaseID {
+                askDrafts[scopeCaseID] = ""
+            } else {
+                globalAskDraft = ""
+            }
+            await runDockCommand(command, rawInput: cleaned, scopeCaseID: scopeCaseID)
+            return
+        }
+
+        submitAsk(question: cleaned, scopeCaseID: scopeCaseID, webEnabled: webEnabled)
+    }
+
     func submitAsk(question: String, scopeCaseID: UUID?, webEnabled: Bool) {
         let cleaned = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleaned.isEmpty else { return }
@@ -1225,6 +1249,151 @@ final class AlphaRossModel {
                 turn.statusNote = "Web search off"
             }
         }
+    }
+
+    private func runDockCommand(_ command: DockCommandAction, rawInput: String, scopeCaseID: UUID?) async {
+        pendingPublicLawQuestion = nil
+        pendingPublicLawScopeCaseID = nil
+        pendingPublicLawSessionID = nil
+        pendingPublicLawTurnID = nil
+        publicLawPreview = nil
+        askSelectedScopeCaseID = scopeCaseID
+
+        let selectedDocumentTitles = selectedAskDocuments(for: scopeCaseID).map(\.displayTitle)
+        let result: AlphaAskResult
+
+        switch command {
+        case let .addTask(title, dueDate):
+            addTask(title: title, caseId: scopeCaseID, dueDate: dueDate)
+            let dueSection = dueDate.map {
+                "Due \($0.formatted(date: .abbreviated, time: .omitted))."
+            } ?? "Open the task list any time to mark it done or snooze it."
+            result = AlphaAskResult(
+                kind: .matterUpdate,
+                question: rawInput,
+                scopeCaseID: scopeCaseID,
+                scopeLabel: scopeLabel(for: scopeCaseID),
+                selectedDocumentTitles: selectedDocumentTitles,
+                answerTitle: "Task saved locally",
+                answerSections: [
+                    "\(title) was added on this device.",
+                    dueSection
+                ],
+                caseFileSources: [],
+                publicLawPreview: nil,
+                publicLawResults: [],
+                statusNote: "Saved locally",
+                needsReviewWarning: nil
+            )
+
+        case let .addMatterDate(title, kind, date):
+            guard let scopeCaseID else {
+                result = AlphaAskResult(
+                    kind: .matterUpdate,
+                    question: rawInput,
+                    scopeCaseID: nil,
+                    scopeLabel: scopeLabel(for: nil),
+                    selectedDocumentTitles: selectedDocumentTitles,
+                    answerTitle: "Choose a matter first",
+                    answerSections: [
+                        "Pick a matter in the bar above before saving a hearing date, deadline, or reminder.",
+                        "Ross did not change anything."
+                    ],
+                    caseFileSources: [],
+                    publicLawPreview: nil,
+                    publicLawResults: [],
+                    statusNote: "No change made",
+                    needsReviewWarning: nil
+                )
+                break
+            }
+
+            addMatterDate(caseId: scopeCaseID, title: title, kind: kind, date: date)
+            result = AlphaAskResult(
+                kind: .matterUpdate,
+                question: rawInput,
+                scopeCaseID: scopeCaseID,
+                scopeLabel: scopeLabel(for: scopeCaseID),
+                selectedDocumentTitles: selectedDocumentTitles,
+                answerTitle: "\(kind.title) saved locally",
+                answerSections: [
+                    "\(title) is saved for \(date.formatted(date: .abbreviated, time: .omitted)).",
+                    "You can mark it done or cancel it from the matter timeline."
+                ],
+                caseFileSources: [],
+                publicLawPreview: nil,
+                publicLawResults: [],
+                statusNote: "Saved locally",
+                needsReviewWarning: nil
+            )
+
+        case let .generateExport(kind, label):
+            guard let scopeCaseID else {
+                result = AlphaAskResult(
+                    kind: .matterUpdate,
+                    question: rawInput,
+                    scopeCaseID: nil,
+                    scopeLabel: scopeLabel(for: nil),
+                    selectedDocumentTitles: selectedDocumentTitles,
+                    answerTitle: "Choose a matter first",
+                    answerSections: [
+                        "Pick a matter in the bar above before generating a \(label.lowercased()) draft.",
+                        "Ross did not create an export yet."
+                    ],
+                    caseFileSources: [],
+                    publicLawPreview: nil,
+                    publicLawResults: [],
+                    statusNote: "No change made",
+                    needsReviewWarning: nil
+                )
+                break
+            }
+
+            let exportCreated = await generateExport(kind: kind, caseId: scopeCaseID)
+            result = AlphaAskResult(
+                kind: .matterUpdate,
+                question: rawInput,
+                scopeCaseID: scopeCaseID,
+                scopeLabel: scopeLabel(for: scopeCaseID),
+                selectedDocumentTitles: selectedDocumentTitles,
+                answerTitle: exportCreated ? "\(label) ready" : "Could not create \(label.lowercased())",
+                answerSections: exportCreated
+                    ? [
+                        "Ross created a local \(label.lowercased()) draft for advocate review.",
+                        "Open Exports to review or share the PDF."
+                    ]
+                    : [
+                        "Ross could not create the local draft right now.",
+                        "Your matter files stayed safe on this device."
+                    ],
+                caseFileSources: [],
+                publicLawPreview: nil,
+                publicLawResults: [],
+                statusNote: exportCreated ? "Draft ready" : "Draft unavailable",
+                needsReviewWarning: nil
+            )
+
+        case let .guidance(title, detail):
+            result = AlphaAskResult(
+                kind: .matterUpdate,
+                question: rawInput,
+                scopeCaseID: scopeCaseID,
+                scopeLabel: scopeLabel(for: scopeCaseID),
+                selectedDocumentTitles: selectedDocumentTitles,
+                answerTitle: title,
+                answerSections: [
+                    detail,
+                    "Ross did not change anything."
+                ],
+                caseFileSources: [],
+                publicLawPreview: nil,
+                publicLawResults: [],
+                statusNote: "No change made",
+                needsReviewWarning: nil
+            )
+        }
+
+        latestAskResult = appendAskResult(result, persistToCase: scopeCaseID, includeReviewLedger: false)
     }
 
     func cancelPendingPublicLawSearch() {
@@ -1316,7 +1485,11 @@ final class AlphaRossModel {
     }
 
     @discardableResult
-    private func appendAskResult(_ result: AlphaAskResult, persistToCase caseID: UUID?) -> AlphaAskResult {
+    private func appendAskResult(
+        _ result: AlphaAskResult,
+        persistToCase caseID: UUID?,
+        includeReviewLedger: Bool = true
+    ) -> AlphaAskResult {
         let storageCaseID = caseID ?? alphaSharedWorkspaceID
         let contextDocumentIDs = selectedAskDocumentIDs(for: caseID)
         let turn = AlphaChatTurn(
@@ -1333,17 +1506,19 @@ final class AlphaRossModel {
         )
 
         if let storedResult = appendStoredTurn(turn, to: storageCaseID, contextDocumentIDs: contextDocumentIDs) {
-            persisted.ledgerEntries.insert(
-                AlphaPrivacyLedgerEntry(
-                    title: caseID == nil ? "Local review run" : "Local case review run",
-                    detail: "The question and source-backed draft stayed on this device.",
-                    purpose: .local_only,
-                    payloadClass: .local_only,
-                    endpointLabel: caseID == nil ? "device://ask" : "device://ask-case",
-                    success: true
-                ),
-                at: 0
-            )
+            if includeReviewLedger {
+                persisted.ledgerEntries.insert(
+                    AlphaPrivacyLedgerEntry(
+                        title: caseID == nil ? "Local review run" : "Local case review run",
+                        detail: "The question and source-backed draft stayed on this device.",
+                        purpose: .local_only,
+                        payloadClass: .local_only,
+                        endpointLabel: caseID == nil ? "device://ask" : "device://ask-case",
+                        success: true
+                    ),
+                    at: 0
+                )
+            }
             persist(workspaceChanged: true)
             return storedResult
         }
@@ -2196,7 +2371,8 @@ final class AlphaRossModel {
         persist()
     }
 
-    func generateExport(kind: String, caseId: UUID?) async {
+    @discardableResult
+    func generateExport(kind: String, caseId: UUID?) async -> Bool {
         let caseMatter = caseId.flatMap { id in persisted.cases.first { $0.id == id } }
         let titleBase = caseMatter?.title ?? "Ross Report"
         let bodyLines = exportBodyLines(kind: kind, caseMatter: caseMatter)
@@ -2221,6 +2397,7 @@ final class AlphaRossModel {
                 at: 0
             )
             persist()
+            return true
         } catch {
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
@@ -2234,6 +2411,7 @@ final class AlphaRossModel {
                 at: 0
             )
             persist()
+            return false
         }
     }
 
@@ -3105,14 +3283,180 @@ final class AlphaRossModel {
         }
     }
 
+    private func dockCommandAction(for rawInput: String) -> DockCommandAction? {
+        let normalized = rawInput
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty else { return nil }
+
+        let exportCommands: [([String], String, String)] = [
+            (["generate chronology", "prepare chronology", "draft chronology", "export chronology", "create chronology"], "chronology_report", "Chronology"),
+            (["generate case note", "prepare case note", "draft case note", "export case note"], "case_note", "Case note"),
+            (["generate hearing note", "prepare hearing note", "draft hearing note", "export hearing note"], "case_note", "Hearing note"),
+            (["generate order summary", "prepare order summary", "draft order summary", "export order summary"], "order_summary", "Order summary"),
+            (["generate transcript", "draft transcript", "export transcript", "generate chat transcript", "generate thread transcript"], "chat_transcript", "Ross thread transcript")
+        ]
+
+        let lowered = normalized.lowercased()
+        if let exportCommand = exportCommands.first(where: { prefixes, _, _ in
+            prefixes.contains(where: { lowered.hasPrefix($0) })
+        }) {
+            return .generateExport(kind: exportCommand.1, label: exportCommand.2)
+        }
+
+        if let body = dockCommandBody(in: normalized, prefixes: ["add task ", "create task ", "save task ", "add reminder ", "save reminder ", "remind me to "]) {
+            let (title, dueDate) = dockCommandTitleAndDate(from: body)
+            guard !title.isEmpty else {
+                return .guidance(title: "Add a task title", detail: "Try “add task prepare hearing note tomorrow.”")
+            }
+            return .addTask(title: title, dueDate: dueDate)
+        }
+
+        let specificDateCommands: [([String], AlphaMatterDateKind, String)] = [
+            (["set next hearing ", "save next hearing ", "add next hearing ", "save hearing ", "add hearing "], .hearing, "Next hearing"),
+            (["save filing deadline ", "add filing deadline ", "set filing deadline "], .filingDeadline, "Filing deadline"),
+            (["save compliance date ", "add compliance date ", "set compliance date "], .complianceDate, "Compliance date"),
+            (["save client follow-up ", "add client follow-up ", "set client follow-up "], .clientFollowUp, "Client follow-up")
+        ]
+
+        for (prefixes, kind, fallbackTitle) in specificDateCommands {
+            if let body = dockCommandBody(in: normalized, prefixes: prefixes) {
+                let (title, date) = dockCommandTitleAndDate(from: body)
+                guard let date else {
+                    return .guidance(
+                        title: "Add the date",
+                        detail: "Try “\(prefixes[0].trimmingCharacters(in: .whitespaces)) on 1 May 2026.”"
+                    )
+                }
+                return .addMatterDate(title: title.ifEmpty(fallbackTitle), kind: kind, date: date)
+            }
+        }
+
+        if let body = dockCommandBody(in: normalized, prefixes: ["save date ", "add date ", "set date "]) {
+            let (title, date) = dockCommandTitleAndDate(from: body)
+            guard let date else {
+                return .guidance(title: "Add the date", detail: "Try “save date filing reminder on 1 May 2026.”")
+            }
+            let inferredKind = inferredMatterDateKind(for: title)
+            return .addMatterDate(title: title.ifEmpty(inferredKind.title), kind: inferredKind, date: date)
+        }
+
+        return nil
+    }
+
+    private func dockCommandBody(in text: String, prefixes: [String]) -> String? {
+        let normalized = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        for prefix in prefixes where normalized.lowercased().hasPrefix(prefix) {
+            return String(normalized.dropFirst(prefix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return nil
+    }
+
+    private func dockCommandTitleAndDate(from rawValue: String) -> (String, Date?) {
+        let normalized = rawValue
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty else { return ("", nil) }
+
+        for prefix in ["on ", "for "] where normalized.lowercased().hasPrefix(prefix) {
+            let candidateDate = String(normalized.dropFirst(prefix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+            if let parsedDate = alphaParsedDate(from: candidateDate) {
+                return ("", parsedDate)
+            }
+        }
+
+        for separator in [" on ", " for "] {
+            if let range = normalized.range(of: separator, options: [.caseInsensitive, .backwards]) {
+                let candidateDate = String(normalized[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+                if let parsedDate = alphaParsedDate(from: candidateDate) {
+                    let title = String(normalized[..<range.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+                    return (title, parsedDate)
+                }
+            }
+        }
+
+        for suffix in [" today", " tomorrow", " next week"] {
+            if let range = normalized.range(of: suffix, options: [.caseInsensitive, .backwards]),
+               range.upperBound == normalized.endIndex {
+                let candidateDate = String(normalized[range.lowerBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+                if let parsedDate = alphaParsedDate(from: candidateDate) {
+                    let title = String(normalized[..<range.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+                    return (title, parsedDate)
+                }
+            }
+        }
+
+        if let parsedDate = alphaParsedDate(from: normalized) {
+            return ("", parsedDate)
+        }
+
+        return (normalized, nil)
+    }
+
+    private func inferredMatterDateKind(for title: String) -> AlphaMatterDateKind {
+        let lowered = title.lowercased()
+        if lowered.contains("hearing") || lowered.contains("next date") {
+            return .hearing
+        }
+        if lowered.contains("deadline") || lowered.contains("filing") {
+            return .filingDeadline
+        }
+        if lowered.contains("client") || lowered.contains("follow") {
+            return .clientFollowUp
+        }
+        return .complianceDate
+    }
+
     private func alphaParsedDate(from value: String) -> Date? {
-        let formatters = ["d/M/yyyy", "d/M/yy", "d-MM-yyyy", "d MMM yyyy", "dd MMM yyyy"]
+        let cleaned = value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: ",", with: "")
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        guard !cleaned.isEmpty else { return nil }
+
+        let calendar = Calendar.current
+        let startOfToday = calendar.startOfDay(for: .now)
+        switch cleaned.lowercased() {
+        case "today":
+            return startOfToday
+        case "tomorrow":
+            return calendar.date(byAdding: .day, value: 1, to: startOfToday)
+        case "next week":
+            return calendar.date(byAdding: .day, value: 7, to: startOfToday)
+        default:
+            break
+        }
+
+        let formatters = [
+            "yyyy-MM-dd",
+            "d/M/yyyy",
+            "dd/MM/yyyy",
+            "d/M/yy",
+            "d-MM-yyyy",
+            "dd-MM-yyyy",
+            "d MMM yyyy",
+            "dd MMM yyyy",
+            "d MMMM yyyy",
+            "dd MMMM yyyy",
+            "d MMM",
+            "dd MMM",
+            "d MMMM",
+            "dd MMMM"
+        ]
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_IN")
         formatter.timeZone = .current
+        formatter.isLenient = false
+        formatter.defaultDate = calendar.date(from: DateComponents(year: calendar.component(.year, from: .now), month: 1, day: 1))
         for format in formatters {
             formatter.dateFormat = format
-            if let date = formatter.date(from: value) {
+            if let date = formatter.date(from: cleaned) {
+                if format.contains("y") {
+                    return date
+                }
+                if date < startOfToday {
+                    return calendar.date(byAdding: .year, value: 1, to: date)
+                }
                 return date
             }
         }
@@ -4923,7 +5267,13 @@ private struct AlphaRootAskDock: View {
         if dismissingExpandedComposer {
             showingExpandedComposer = false
         }
-        model.submitAsk(question: question, scopeCaseID: activeScopeCaseID, webEnabled: model.askWebEnabled)
+        Task {
+            await model.submitDockInput(
+                question: question,
+                scopeCaseID: activeScopeCaseID,
+                webEnabled: model.askWebEnabled
+            )
+        }
     }
 
     private func removeDocumentSelection(_ documentID: UUID) {
@@ -5032,7 +5382,7 @@ private struct AlphaRootAskDock: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel("Ask Ross tools")
 
-                    TextField("Ask Ross about dates, files, or next steps", text: draftBinding, axis: .vertical)
+                    TextField("Ask Ross or type add task, save date, or draft note", text: draftBinding, axis: .vertical)
                         .lineLimit(1...2)
                         .textFieldStyle(.plain)
                         .font(.system(size: 13, weight: .medium))
@@ -5093,7 +5443,7 @@ private struct AlphaRootAskDock: View {
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(dockSecondaryText)
                 } else if fixedDocumentIDs.isEmpty {
-                    Text("Type @ to add a file.")
+                    Text("Type @ to add a file, or say add task / save date.")
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(dockMutedText)
                 }
@@ -8811,9 +9161,127 @@ private struct AlphaActiveMatterChatCard: View {
     }
 }
 
+private struct AlphaCompactRowActionButton: View {
+    let systemImage: String
+    let accessibilityLabel: String
+    var tint: Color = Color.rossInk
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 30, height: 30)
+                .background(Color.rossGlassFill, in: Circle())
+                .overlay {
+                    Circle()
+                        .stroke(Color.rossGlassStroke.opacity(0.65), lineWidth: 1)
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
+    }
+}
+
+private struct AlphaMatterCommandHintCard: View {
+    let detail: String
+    var actionSystemImage: String?
+    var actionLabel: String?
+    var actionDisabled = false
+    let action: (() -> Void)?
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Use Ask Ross below")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.rossAccent)
+                Text(detail)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.rossInk.opacity(0.72))
+            }
+
+            Spacer(minLength: 8)
+
+            if let actionSystemImage, let actionLabel, let action {
+                AlphaCompactRowActionButton(
+                    systemImage: actionSystemImage,
+                    accessibilityLabel: actionLabel,
+                    tint: actionDisabled ? Color.rossInk.opacity(0.35) : Color.rossInk,
+                    action: action
+                )
+                .disabled(actionDisabled)
+                .opacity(actionDisabled ? 0.45 : 1)
+            }
+        }
+        .padding(14)
+        .background(Color.rossCardBackground.opacity(0.94), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.rossBorder.opacity(0.9), lineWidth: 1)
+        }
+    }
+}
+
+private struct AlphaCompactDraftActionButton: View {
+    let title: String
+    let systemImage: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 14, weight: .semibold))
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, minHeight: 40)
+            .foregroundStyle(Color.rossInk)
+            .padding(.horizontal, 12)
+            .background(Color.rossGlassFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.rossGlassStroke.opacity(0.7), lineWidth: 1)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct AlphaMatterDraftActionStrip: View {
+    let onGenerateChronology: () -> Void
+    let onGenerateCaseNote: () -> Void
+    let onGenerateOrderSummary: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Make a local draft without leaving this matter.")
+                .font(.subheadline)
+                .foregroundStyle(Color.rossInk.opacity(0.72))
+
+            HStack(spacing: 10) {
+                AlphaCompactDraftActionButton(title: "Chronology", systemImage: "list.bullet.rectangle") {
+                    onGenerateChronology()
+                }
+                AlphaCompactDraftActionButton(title: "Case note", systemImage: "square.and.pencil") {
+                    onGenerateCaseNote()
+                }
+            }
+
+            AlphaCompactDraftActionButton(title: "Order summary", systemImage: "doc.plaintext") {
+                onGenerateOrderSummary()
+            }
+        }
+    }
+}
+
 private struct AlphaTaskRow: View {
     let task: AlphaTaskItem
     let onToggle: () -> Void
+    var onSnooze: (() -> Void)? = nil
 
     private var visibleNotes: String? {
         guard let notes = task.notes?.trimmingCharacters(in: .whitespacesAndNewlines), !notes.isEmpty else {
@@ -8829,6 +9297,7 @@ private struct AlphaTaskRow: View {
         HStack(alignment: .top, spacing: 12) {
             Button(action: onToggle) {
                 Image(systemName: task.status == .done ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 19, weight: .semibold))
                     .foregroundStyle(task.status == .done ? Color.rossSuccess : Color.rossAccent)
             }
             .buttonStyle(.plain)
@@ -8843,11 +9312,26 @@ private struct AlphaTaskRow: View {
                 }
                 if let dueDate = task.dueDate {
                     Text(alphaTaskDueLabel(dueDate))
-                        .font(.caption)
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(Color.rossInk.opacity(0.6))
                 }
             }
-            Spacer()
+
+            Spacer(minLength: 8)
+
+            if task.status == .open, let onSnooze {
+                AlphaCompactRowActionButton(
+                    systemImage: "clock.arrow.circlepath",
+                    accessibilityLabel: "Snooze task by one day",
+                    action: onSnooze
+                )
+            }
+        }
+        .padding(14)
+        .background(Color.rossCardBackground.opacity(0.92), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.rossBorder.opacity(0.9), lineWidth: 1)
         }
     }
 }
@@ -8890,98 +9374,29 @@ private struct AlphaReviewRow: View {
     }
 }
 
-private struct AlphaTaskQuickAddCard: View {
-    @State private var title = ""
-    @State private var dueOffset = 0
-    let onAdd: (String, Date?) -> Void
-
-    private var trimmedTitle: String {
-        title.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private func submitTask() {
-        guard trimmedTitle.isEmpty == false else { return }
-        let dueDate = dueOffset == 0 ? nil : Calendar.current.date(byAdding: .day, value: dueOffset - 1, to: .now)
-        onAdd(trimmedTitle, dueDate)
-        title = ""
-        dueOffset = 0
-    }
-
-    var body: some View {
-        VStack(spacing: 12) {
-            TextField("Add task", text: $title)
-                .textFieldStyle(.roundedBorder)
-                .submitLabel(.done)
-                .onSubmit(submitTask)
-            Picker("Due", selection: $dueOffset) {
-                Text("No date").tag(0)
-                Text("Today").tag(1)
-                Text("Tomorrow").tag(2)
-                Text("This week").tag(7)
-            }
-            .pickerStyle(.segmented)
-            Button("Add task", action: submitTask)
-            .buttonStyle(.borderedProminent)
-            .disabled(trimmedTitle.isEmpty)
-        }
-    }
-}
-
-private struct AlphaMatterDateQuickAddCard: View {
-    @State private var title = ""
-    @State private var selectedKind: AlphaMatterDateKind = .hearing
-    @State private var date = Calendar.current.date(byAdding: .day, value: 1, to: .now) ?? .now
-    let onAdd: (String, AlphaMatterDateKind, Date) -> Void
-
-    var body: some View {
-        VStack(spacing: 12) {
-            TextField("Add date or reminder", text: $title)
-                .textFieldStyle(.roundedBorder)
-
-            Picker("Type", selection: $selectedKind) {
-                ForEach(AlphaMatterDateKind.allCases, id: \.self) { kind in
-                    Text(kind.title).tag(kind)
-                }
-            }
-            .pickerStyle(.menu)
-
-            DatePicker("When", selection: $date, displayedComponents: .date)
-                .datePickerStyle(.compact)
-
-            Button("Save date") {
-                onAdd(title.trimmingCharacters(in: .whitespacesAndNewlines), selectedKind, date)
-                title = ""
-                selectedKind = .hearing
-                date = Calendar.current.date(byAdding: .day, value: 1, to: .now) ?? .now
-            }
-            .buttonStyle(.borderedProminent)
-        }
-    }
-}
-
 private struct AlphaMatterDateRow: View {
     let matterDate: AlphaMatterDate
     let onMarkDone: () -> Void
     let onCancel: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(matterDate.title)
-                        .font(.subheadline.weight(.semibold))
-                    Text(matterDate.date.formatted(date: .abbreviated, time: .omitted))
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(matterDate.title)
+                    .font(.subheadline.weight(.semibold))
+                Text(matterDate.date.formatted(date: .abbreviated, time: .omitted))
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color.rossInk.opacity(0.68))
+                if let notes = matterDate.notes, !notes.isEmpty {
+                    Text(notes)
                         .font(.footnote)
-                        .foregroundStyle(Color.rossInk.opacity(0.68))
-                    if let notes = matterDate.notes, !notes.isEmpty {
-                        Text(notes)
-                            .font(.footnote)
-                            .foregroundStyle(Color.rossInk.opacity(0.62))
-                    }
+                        .foregroundStyle(Color.rossInk.opacity(0.62))
                 }
+            }
 
-                Spacer()
+            Spacer(minLength: 8)
 
+            VStack(alignment: .trailing, spacing: 8) {
                 Text(matterDate.kind.title)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Color.rossAccent)
@@ -8989,20 +9404,28 @@ private struct AlphaMatterDateRow: View {
                     .padding(.vertical, 6)
                     .background(Color.rossAccent.opacity(0.12))
                     .clipShape(Capsule())
-            }
 
-            HStack(spacing: 10) {
-                Button("Mark done", action: onMarkDone)
-                    .buttonStyle(.borderedProminent)
-                Button("Cancel", role: .destructive, action: onCancel)
-                    .buttonStyle(.bordered)
+                HStack(spacing: 8) {
+                    AlphaCompactRowActionButton(
+                        systemImage: "checkmark",
+                        accessibilityLabel: "Mark date done",
+                        tint: Color.rossSuccess,
+                        action: onMarkDone
+                    )
+                    AlphaCompactRowActionButton(
+                        systemImage: "xmark",
+                        accessibilityLabel: "Cancel date",
+                        tint: Color.orange,
+                        action: onCancel
+                    )
+                }
             }
         }
-        .padding(16)
-        .background(Color.rossCardBackground)
+        .padding(14)
+        .background(Color.rossCardBackground.opacity(0.92), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.rossBorder, lineWidth: 1)
+                .stroke(Color.rossBorder.opacity(0.9), lineWidth: 1)
         }
     }
 }
@@ -9525,15 +9948,15 @@ private struct AlphaCaseWorkspaceScreen: View {
                     case .tasks:
                         RossSectionCard {
                             VStack(alignment: .leading, spacing: 12) {
-                                Button(model.refreshingCaseOverviewIDs.contains(caseId) ? "Refreshing task suggestions with Ross..." : "Refresh task suggestions with Ross") {
-                                    Task { await model.refreshCaseOverview(caseId: caseId) }
-                                }
-                                .buttonStyle(.bordered)
-                                .disabled(model.refreshingCaseOverviewIDs.contains(caseId))
-
-                                AlphaMatterDateQuickAddCard { title, kind, date in
-                                    model.addMatterDate(caseId: caseId, title: title, kind: kind, date: date)
-                                }
+                                AlphaMatterCommandHintCard(
+                                    detail: "Add tasks, save hearing dates, and generate notes from the Ask Ross bar.",
+                                    actionSystemImage: "arrow.clockwise",
+                                    actionLabel: "Refresh matter overview with Ross",
+                                    actionDisabled: model.refreshingCaseOverviewIDs.contains(caseId),
+                                    action: {
+                                        Task { await model.refreshCaseOverview(caseId: caseId) }
+                                    }
+                                )
 
                                 let matterDates = model.scheduledMatterDates(for: caseId)
                                 if matterDates.isEmpty {
@@ -9550,11 +9973,14 @@ private struct AlphaCaseWorkspaceScreen: View {
                                     }
                                 }
 
-                                AlphaTaskQuickAddCard(onAdd: { title, dueDate in
-                                    model.addTask(title: title, caseId: caseId, dueDate: dueDate)
-                                })
                                 ForEach(model.tasks(for: caseId)) { task in
-                                    AlphaTaskRow(task: task, onToggle: { model.toggleTaskDone(task.id) })
+                                    AlphaTaskRow(
+                                        task: task,
+                                        onToggle: { model.toggleTaskDone(task.id) },
+                                        onSnooze: task.status == .open ? {
+                                            model.snoozeTask(task.id, by: 1)
+                                        } : nil
+                                    )
                                         .contextMenu {
                                             if task.status == .open {
                                                 Button("Snooze by 1 day") {
@@ -9580,20 +10006,17 @@ private struct AlphaCaseWorkspaceScreen: View {
                         }
                     case .notesExports:
                         RossSectionCard {
-                            VStack(spacing: 12) {
-                                Button("Generate chronology") {
+                            AlphaMatterDraftActionStrip(
+                                onGenerateChronology: {
                                     Task { await model.generateExport(kind: "chronology_report", caseId: caseId) }
-                                }
-                                .rossPrimaryButtonStyle()
-                                Button("Generate case note") {
+                                },
+                                onGenerateCaseNote: {
                                     Task { await model.generateExport(kind: "case_note", caseId: caseId) }
-                                }
-                                .buttonStyle(.bordered)
-                                Button("Generate order summary") {
+                                },
+                                onGenerateOrderSummary: {
                                     Task { await model.generateExport(kind: "order_summary", caseId: caseId) }
                                 }
-                                .buttonStyle(.bordered)
-                            }
+                            )
                         }
                     }
                 }
@@ -10423,26 +10846,28 @@ private struct AlphaExportsScreen: View {
                 )
 
                 RossSectionCard(title: "Generate") {
-                    VStack(spacing: 12) {
-                        Button("Generate Chronology Report") {
-                            Task { await model.generateExport(kind: "chronology_report", caseId: caseId) }
-                        }
-                        .rossPrimaryButtonStyle()
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Use the compact actions here, or type “draft case note” in Ask Ross below.")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.rossInk.opacity(0.72))
 
-                        Button("Generate Case Note") {
-                            Task { await model.generateExport(kind: "case_note", caseId: caseId) }
+                        HStack(spacing: 10) {
+                            AlphaCompactDraftActionButton(title: "Chronology", systemImage: "list.bullet.rectangle") {
+                                Task { await model.generateExport(kind: "chronology_report", caseId: caseId) }
+                            }
+                            AlphaCompactDraftActionButton(title: "Case note", systemImage: "square.and.pencil") {
+                                Task { await model.generateExport(kind: "case_note", caseId: caseId) }
+                            }
                         }
-                        .buttonStyle(.bordered)
 
-                        Button("Generate Order Summary") {
-                            Task { await model.generateExport(kind: "order_summary", caseId: caseId) }
+                        HStack(spacing: 10) {
+                            AlphaCompactDraftActionButton(title: "Order summary", systemImage: "doc.plaintext") {
+                                Task { await model.generateExport(kind: "order_summary", caseId: caseId) }
+                            }
+                            AlphaCompactDraftActionButton(title: "Transcript", systemImage: "bubble.left.and.text.bubble.right") {
+                                Task { await model.generateExport(kind: "chat_transcript", caseId: caseId) }
+                            }
                         }
-                        .buttonStyle(.bordered)
-
-                        Button("Generate Ross Thread Transcript") {
-                            Task { await model.generateExport(kind: "chat_transcript", caseId: caseId) }
-                        }
-                        .buttonStyle(.bordered)
                     }
                 }
 

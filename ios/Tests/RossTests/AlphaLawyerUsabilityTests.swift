@@ -274,6 +274,120 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    func testDockCommandAddsTaskWithoutTriggeringWebPreview() async throws {
+        try await withRestoredStore { store in
+            let state = AlphaPersistedState.demoSeed()
+            try await store.replace(with: state)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+            let maybeCaseID = await MainActor.run {
+                model.persisted.cases.first(where: { $0.title == "Demo Matter: Sharma v. Rana" })?.id
+            }
+            let caseID = try XCTUnwrap(maybeCaseID)
+
+            await model.submitDockInput(
+                question: "add task prepare hearing note tomorrow",
+                scopeCaseID: caseID,
+                webEnabled: true
+            )
+
+            let latestResult = await MainActor.run { model.latestAskResult }
+            let tasks = await MainActor.run { model.tasks(for: caseID) }
+            let preview = await MainActor.run { model.publicLawPreview }
+
+            XCTAssertTrue(tasks.contains(where: { $0.title == "prepare hearing note" }))
+            XCTAssertEqual("Task saved locally", latestResult?.answerTitle)
+            XCTAssertEqual("Saved locally", latestResult?.statusNote)
+            XCTAssertNil(preview)
+        }
+    }
+
+    func testDockCommandAddsMatterDateToScopedMatter() async throws {
+        try await withRestoredStore { store in
+            let state = AlphaPersistedState.demoSeed()
+            try await store.replace(with: state)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+            let maybeCaseID = await MainActor.run {
+                model.persisted.cases.first(where: { $0.title == "Demo Matter: Sharma v. Rana" })?.id
+            }
+            let caseID = try XCTUnwrap(maybeCaseID)
+
+            await model.submitDockInput(
+                question: "save next hearing on 1 May 2026",
+                scopeCaseID: caseID,
+                webEnabled: false
+            )
+
+            let savedDates = await MainActor.run { model.scheduledMatterDates(for: caseID) }
+            let latestResult = await MainActor.run { model.latestAskResult }
+
+            XCTAssertTrue(savedDates.contains(where: {
+                $0.kind == .hearing &&
+                    $0.title == "Next hearing" &&
+                    Calendar.current.isDate($0.date, inSameDayAs: DateComponents(calendar: .current, year: 2026, month: 5, day: 1).date!)
+            }))
+            XCTAssertTrue(latestResult?.answerTitle.contains("saved locally") == true)
+        }
+    }
+
+    func testDockCommandGeneratesScopedExport() async throws {
+        try await withRestoredStore { store in
+            let state = AlphaPersistedState.demoSeed()
+            try await store.replace(with: state)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+            let maybeCaseID = await MainActor.run {
+                model.persisted.cases.first(where: { $0.title == "Demo Matter: Sharma v. Rana" })?.id
+            }
+            let caseID = try XCTUnwrap(maybeCaseID)
+
+            await model.submitDockInput(
+                question: "prepare hearing note",
+                scopeCaseID: caseID,
+                webEnabled: false
+            )
+
+            let exports = await MainActor.run { model.persisted.exports.filter { $0.caseId == caseID } }
+            let latestResult = await MainActor.run { model.latestAskResult }
+
+            XCTAssertFalse(exports.isEmpty)
+            XCTAssertEqual("Hearing note ready", latestResult?.answerTitle)
+            XCTAssertEqual("Draft ready", latestResult?.statusNote)
+        }
+    }
+
+    func testDockQuestionStillFallsBackToStandardAskFlow() async throws {
+        try await withRestoredStore { store in
+            try await store.replace(with: AlphaPersistedState.seed())
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+
+            await model.submitDockInput(
+                question: "What needs my attention today?",
+                scopeCaseID: nil,
+                webEnabled: false
+            )
+
+            let latestResult = await MainActor.run { model.latestAskResult }
+            XCTAssertEqual(.userAsk, latestResult?.kind)
+            XCTAssertFalse(latestResult?.answerTitle.contains("saved locally") == true)
+            XCTAssertFalse(latestResult?.answerTitle.contains("ready") == true)
+        }
+    }
+
     func testReviewCountUpdatesAfterFieldCorrection() async throws {
         try await withRestoredStore { store in
             let caseID = UUID()

@@ -59,8 +59,22 @@ class AlphaExportService(
         exportsDir.mkdirs()
         val titleBase = case?.title ?: "Ross Report"
         val draft = buildDraft(kind, case, titleBase)
-        val file = File(exportsDir, "${slug(titleBase)}-${kind}-${UUID.randomUUID().toString().take(8)}.pdf")
-        pdfWriter.write(file, draft)
+        val fileStem = "${slug(titleBase)}-${kind}-${UUID.randomUUID().toString().take(8)}"
+        val file = runCatching {
+            File(exportsDir, "$fileStem.pdf").also { pdfFile ->
+                pdfWriter.write(pdfFile, draft)
+            }
+        }.getOrElse {
+            File(exportsDir, "$fileStem.txt").also { textFile ->
+                textFile.writeText(
+                    buildString {
+                        appendLine(draft.title)
+                        appendLine()
+                        draft.bodyLines.forEach { line -> appendLine(line) }
+                    }
+                )
+            }
+        }
         return AlphaExportRecord(
             caseId = case?.id,
             title = "$titleBase ${kind.replace('_', ' ')}",
