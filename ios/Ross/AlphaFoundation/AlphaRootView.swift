@@ -5400,23 +5400,28 @@ private struct AlphaRootAskDock: View {
     let fixedDocumentIDs: Set<UUID>
     let showsInlineResponseCard: Bool
     let showsConversationShortcut: Bool
+    let collapsesWhenIdle: Bool
     @State private var showingTools = false
     @State private var dismissedInlineQuestion: String?
     @State private var pendingImportKind: AlphaDockImportKind?
     @State private var showingExpandedComposer = false
+    @State private var dockExpanded = false
+    @State private var pendingCollapseQuestion: String?
 
     init(
         model: AlphaRossModel,
         fixedScopeCaseID: UUID? = nil,
         fixedDocumentIDs: Set<UUID> = [],
         showsInlineResponseCard: Bool = true,
-        showsConversationShortcut: Bool = true
+        showsConversationShortcut: Bool = true,
+        collapsesWhenIdle: Bool = true
     ) {
         self.model = model
         self.fixedScopeCaseID = fixedScopeCaseID
         self.fixedDocumentIDs = fixedDocumentIDs
         self.showsInlineResponseCard = showsInlineResponseCard
         self.showsConversationShortcut = showsConversationShortcut
+        self.collapsesWhenIdle = collapsesWhenIdle
     }
 
     private var activeScopeCaseID: UUID? {
@@ -5516,6 +5521,52 @@ private struct AlphaRootAskDock: View {
         return "\(selected.count) files selected"
     }
 
+    private var composerPlaceholder: String {
+        if fixedDocumentIDs.count == 1 {
+            return "Ask Ross about this file…"
+        }
+        if activeScopeCaseID != nil {
+            return "Ask Ross about this matter…"
+        }
+        return "Ask Ross about today, a matter, or a file…"
+    }
+
+    private var collapsedDockTitle: String {
+        if fixedDocumentIDs.count == 1 {
+            return "Ask Ross about this file…"
+        }
+        if activeScopeCaseID != nil {
+            return "Ask Ross about this matter…"
+        }
+        return "Ask Ross…"
+    }
+
+    private var showsCollapsedDock: Bool {
+        collapsesWhenIdle &&
+            !dockExpanded &&
+            !showingTools &&
+            !showingExpandedComposer &&
+            draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func dockAnimation() -> Animation {
+        .spring(duration: 0.32, bounce: 0.12)
+    }
+
+    private func expandDock() {
+        guard collapsesWhenIdle else { return }
+        withAnimation(dockAnimation()) {
+            dockExpanded = true
+        }
+    }
+
+    private func collapseDock() {
+        guard collapsesWhenIdle else { return }
+        withAnimation(dockAnimation()) {
+            dockExpanded = false
+        }
+    }
+
     private func send(dismissingExpandedComposer: Bool = false) {
         let question = draftText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !question.isEmpty else { return }
@@ -5523,6 +5574,8 @@ private struct AlphaRootAskDock: View {
             model.setSelectedAskDocumentIDs(fixedDocumentIDs, for: activeScopeCaseID)
         }
         dismissedInlineQuestion = nil
+        pendingCollapseQuestion = question
+        model.setAskDraft("", for: activeScopeCaseID)
         if dismissingExpandedComposer {
             showingExpandedComposer = false
         }
@@ -5556,185 +5609,157 @@ private struct AlphaRootAskDock: View {
         Task { await model.importDocument(caseId: activeScopeCaseID, from: url) }
     }
 
-    private var composerPlaceholder: String {
-        if fixedDocumentIDs.count == 1 {
-            return "Ask Ross about this file…"
-        }
-        if activeScopeCaseID != nil {
-            return "Ask Ross about this matter…"
-        }
-        return "Ask Ross about today, a matter, or a file…"
-    }
+    private var expandedDock: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                if fixedScopeCaseID == nil {
+                    Menu {
+                        Button("All work") {
+                            model.askSelectedScopeCaseID = nil
+                        }
+                        ForEach(model.cases) { caseMatter in
+                            Button(caseMatter.title) {
+                                model.askSelectedScopeCaseID = caseMatter.id
+                            }
+                        }
+                    } label: {
+                        AlphaAskScopePill(
+                            title: "Asking about: \(model.scopeLabel(for: activeScopeCaseID))",
+                            foregroundStyle: dockPrimaryText,
+                            backgroundOpacity: colorScheme == .dark ? 0.1 : 0.16,
+                            showsChevron: true
+                        )
+                    }
+                } else {
+                    AlphaAskScopePill(
+                        title: "Asking about: \(model.scopeLabel(for: activeScopeCaseID))",
+                        foregroundStyle: dockPrimaryText,
+                        backgroundOpacity: colorScheme == .dark ? 0.08 : 0.16,
+                        statusSystemImage: "lock.fill",
+                        showsChevron: false
+                    )
+                    .accessibilityHint("Ask Ross is scoped to this matter.")
+                }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if let inlineResult {
-                AlphaInlineAskResponseCard(
-                    result: inlineResult,
-                    contextDocumentTitle: fixedDocumentIDs.count == 1 ? activeSelectedDocuments.first?.title : nil,
-                    onOpenSource: model.openSourceRef,
-                    onOpenConversation: {
+                if model.askWebEnabled {
+                    HStack(spacing: 4) {
+                        RossGlassIconView(.earth, variant: .highlight, size: 14, fallbackSystemImage: "globe")
+                        Text("Public law search: On")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(dockSecondaryText)
+                    }
+                }
+            }
+
+            if !activeSelectedDocuments.isEmpty, fixedDocumentIDs.count != 1 {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(activeSelectedDocuments) { document in
+                            AlphaAskSelectionChip(
+                                title: document.displayTitle,
+                                detail: activeScopeCaseID == nil ? (document.isShared ? "shared" : document.caseTitle) : (document.isShared ? "shared" : nil),
+                                isShared: document.isShared,
+                                tone: .dock,
+                                onRemove: fixedDocumentIDs.isEmpty ? {
+                                    removeDocumentSelection(document.id)
+                                } : nil
+                            )
+                        }
+                    }
+                }
+            }
+
+            HStack(spacing: 8) {
+                Button {
+                    showingTools = true
+                } label: {
+                    RossGlassIconView(.badgeSparkle, variant: .neutral, size: 18, fallbackSystemImage: "plus")
+                        .frame(width: 34, height: 34)
+                        .background(dockBadgeFill, in: Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Ask Ross tools")
+
+                ZStack(alignment: .leading) {
+                    if draftText.isEmpty {
+                        Text(composerPlaceholder)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(dockPrimaryText.opacity(0.38))
+                            .padding(.vertical, 2)
+                    }
+
+                    TextField("", text: draftBinding, axis: .vertical)
+                        .lineLimit(1...2)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(dockPrimaryText)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Button {
+                    showingExpandedComposer = true
+                } label: {
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(dockPrimaryText.opacity(0.92))
+                        .frame(width: 28, height: 28)
+                        .background(dockBadgeFill, in: Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Open full composer")
+
+                Button(action: { send() }) {
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(Color.black.opacity(0.88))
+                        .frame(width: 34, height: 34)
+                        .background(Color.white, in: Circle())
+                }
+                .buttonStyle(.plain)
+                .disabled(!canSend)
+                .opacity(canSend ? 1 : 0.42)
+
+                if showsConversationShortcut {
+                    Button {
                         if fixedDocumentIDs.count == 1, let documentID = fixedDocumentIDs.first {
                             model.openAsk(scopeCaseID: activeScopeCaseID, documentID: documentID)
                         } else {
                             model.openAsk(scopeCaseID: activeScopeCaseID)
                         }
-                    },
-                    onClose: { dismissedInlineQuestion = inlineResult.question }
+                    } label: {
+                        RossGlassIconView(.userMsg, variant: .accent, size: 20, fallbackSystemImage: "bubble.left.and.text.bubble.right.fill")
+                            .frame(width: 34, height: 34)
+                            .background(dockBadgeFill, in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Open Ask Ross conversation")
+                }
+            }
+
+            if !mentionSuggestions.isEmpty {
+                AlphaAskMentionSuggestionsCard(
+                    documents: mentionSuggestions,
+                    scopeCaseID: activeScopeCaseID,
+                    tone: .dock,
+                    onSelect: applyMention
                 )
             }
 
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 8) {
-                    if fixedScopeCaseID == nil {
-                        Menu {
-                            Button("All work") {
-                                model.askSelectedScopeCaseID = nil
-                            }
-                            ForEach(model.cases) { caseMatter in
-                                Button(caseMatter.title) {
-                                    model.askSelectedScopeCaseID = caseMatter.id
-                                }
-                            }
-                        } label: {
-                            AlphaAskScopePill(
-                                title: "Asking about: \(model.scopeLabel(for: activeScopeCaseID))",
-                                foregroundStyle: dockPrimaryText,
-                                backgroundOpacity: colorScheme == .dark ? 0.1 : 0.16,
-                                showsChevron: true
-                            )
-                        }
-                    } else {
-                        AlphaAskScopePill(
-                            title: "Asking about: \(model.scopeLabel(for: activeScopeCaseID))",
-                            foregroundStyle: dockPrimaryText,
-                            backgroundOpacity: colorScheme == .dark ? 0.08 : 0.16,
-                            statusSystemImage: "lock.fill",
-                            showsChevron: false
-                        )
-                        .accessibilityHint("Ask Ross is scoped to this matter.")
-                    }
+            if let selectionSubtitle, fixedDocumentIDs.isEmpty {
+                Text(selectionSubtitle)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(dockSecondaryText)
+            } else if fixedDocumentIDs.isEmpty {
+                Text("Type @ to add a file, or say add task / save date.")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(dockMutedText)
+            }
 
-                    if model.askWebEnabled {
-                        HStack(spacing: 4) {
-                            RossGlassIconView(.earth, variant: .highlight, size: 14, fallbackSystemImage: "globe")
-                            Text("Public law search: On")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(dockSecondaryText)
-                        }
-                    }
-                }
-
-                if !activeSelectedDocuments.isEmpty, fixedDocumentIDs.count != 1 {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(activeSelectedDocuments) { document in
-                                AlphaAskSelectionChip(
-                                    title: document.displayTitle,
-                                    detail: activeScopeCaseID == nil ? (document.isShared ? "shared" : document.caseTitle) : (document.isShared ? "shared" : nil),
-                                    isShared: document.isShared,
-                                    tone: .dock,
-                                    onRemove: fixedDocumentIDs.isEmpty ? {
-                                        removeDocumentSelection(document.id)
-                                    } : nil
-                                )
-                            }
-                        }
-                    }
-                }
-
-                HStack(spacing: 8) {
-                    Button {
-                        showingTools = true
-                    } label: {
-                        RossGlassIconView(.badgeSparkle, variant: .neutral, size: 18, fallbackSystemImage: "plus")
-                            .frame(width: 34, height: 34)
-                            .background(dockBadgeFill, in: Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Ask Ross tools")
-
-                    ZStack(alignment: .leading) {
-                        if draftText.isEmpty {
-                            Text(composerPlaceholder)
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(dockPrimaryText.opacity(0.38))
-                                .padding(.vertical, 2)
-                        }
-
-                        TextField("", text: draftBinding, axis: .vertical)
-                            .lineLimit(1...2)
-                            .textFieldStyle(.plain)
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(dockPrimaryText)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                    Button {
-                        showingExpandedComposer = true
-                    } label: {
-                        Image(systemName: "arrow.up.left.and.arrow.down.right")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(dockPrimaryText.opacity(0.92))
-                            .frame(width: 28, height: 28)
-                            .background(dockBadgeFill, in: Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Open full composer")
-
-                    Button(action: { send() }) {
-                        Image(systemName: "arrow.up")
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundStyle(Color.black.opacity(0.88))
-                            .frame(width: 34, height: 34)
-                            .background(Color.white, in: Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(!canSend)
-                    .opacity(canSend ? 1 : 0.42)
-
-                    if showsConversationShortcut {
-                        Button {
-                            if fixedDocumentIDs.count == 1, let documentID = fixedDocumentIDs.first {
-                                model.openAsk(scopeCaseID: activeScopeCaseID, documentID: documentID)
-                            } else {
-                                model.openAsk(scopeCaseID: activeScopeCaseID)
-                            }
-                        } label: {
-                            RossGlassIconView(.userMsg, variant: .accent, size: 20, fallbackSystemImage: "bubble.left.and.text.bubble.right.fill")
-                                .frame(width: 34, height: 34)
-                                .background(dockBadgeFill, in: Circle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Open Ask Ross conversation")
-                    }
-                }
-
-                if !mentionSuggestions.isEmpty {
-                    AlphaAskMentionSuggestionsCard(
-                        documents: mentionSuggestions,
-                        scopeCaseID: activeScopeCaseID,
-                        tone: .dock,
-                        onSelect: applyMention
-                    )
-                }
-
-                if let selectionSubtitle, fixedDocumentIDs.isEmpty {
-                    Text(selectionSubtitle)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(dockSecondaryText)
-                } else if fixedDocumentIDs.isEmpty {
-                    Text("Type @ to add a file, or say add task / save date.")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(dockMutedText)
-                }
-
-                if model.askWebEnabled {
-                    Text("Public-law search sends only a sanitized query. Case files stay on this device.")
-                        .font(.caption2)
-                        .foregroundStyle(dockSecondaryText)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+            if model.askWebEnabled {
+                Text("Public-law search sends only a sanitized query. Case files stay on this device.")
+                    .font(.caption2)
+                    .foregroundStyle(dockSecondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(.horizontal, 11)
@@ -5759,6 +5784,35 @@ private struct AlphaRootAskDock: View {
                 .stroke(dockStroke, lineWidth: 1)
         }
         .shadow(color: dockShadow, radius: 16, x: 0, y: 8)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let inlineResult {
+                AlphaInlineAskResponseCard(
+                    result: inlineResult,
+                    contextDocumentTitle: fixedDocumentIDs.count == 1 ? activeSelectedDocuments.first?.title : nil,
+                    onOpenSource: model.openSourceRef,
+                    onOpenConversation: {
+                        if fixedDocumentIDs.count == 1, let documentID = fixedDocumentIDs.first {
+                            model.openAsk(scopeCaseID: activeScopeCaseID, documentID: documentID)
+                        } else {
+                            model.openAsk(scopeCaseID: activeScopeCaseID)
+                        }
+                    },
+                    onClose: { dismissedInlineQuestion = inlineResult.question }
+                )
+            }
+
+            if showsCollapsedDock {
+                Button(action: expandDock) {
+                    AlphaCollapsedAskDockPill(title: collapsedDockTitle)
+                }
+                .buttonStyle(.plain)
+            } else {
+                expandedDock
+            }
+        }
         .sheet(isPresented: $showingExpandedComposer) {
             AlphaAskComposerSheet(
                 model: model,
@@ -5826,6 +5880,57 @@ private struct AlphaRootAskDock: View {
                 .presentationDragIndicator(.hidden)
             }
         }
+        .onChange(of: draftText) { _, newValue in
+            let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty, collapsesWhenIdle, !dockExpanded {
+                expandDock()
+            } else if trimmed.isEmpty,
+                      collapsesWhenIdle,
+                      pendingCollapseQuestion == nil,
+                      !showingTools,
+                      !showingExpandedComposer {
+                collapseDock()
+            }
+        }
+        .onChange(of: model.latestAskResult) { _, latestResult in
+            guard let latestResult else { return }
+            guard pendingCollapseQuestion == latestResult.question else { return }
+            guard latestResult.scopeCaseID == activeScopeCaseID else { return }
+            pendingCollapseQuestion = nil
+            collapseDock()
+        }
+    }
+}
+
+private struct AlphaCollapsedAskDockPill: View {
+    @Environment(\.colorScheme) private var colorScheme
+    let title: String
+
+    var body: some View {
+        HStack(spacing: 10) {
+            RossGlassIconView(.badgeSparkle, variant: .accent, size: 16, fallbackSystemImage: "sparkles")
+                .frame(width: 28, height: 28)
+                .background((colorScheme == .dark ? Color.white.opacity(0.08) : Color.white.opacity(0.9)), in: Circle())
+
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(colorScheme == .dark ? Color.white.opacity(0.9) : Color.rossInk.opacity(0.88))
+                .lineLimit(1)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 999, style: .continuous)
+                .fill(colorScheme == .dark ? Color.white.opacity(0.05) : Color.white.opacity(0.72))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 999, style: .continuous))
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 999, style: .continuous)
+                .stroke(colorScheme == .dark ? Color.white.opacity(0.16) : Color.white.opacity(0.78), lineWidth: 1)
+        }
+        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.18 : 0.08), radius: 14, y: 8)
     }
 }
 
@@ -7260,13 +7365,19 @@ private struct AlphaHomeScreen: View {
         let recentDocuments = model.recentDocumentItems()
         let assistantStatus = alphaAssistantStatusSnapshot(model)
         let attentionCount = todayDates.count + todayTasks.count + reviewItems.count
+        let hasDueTodayItems = !todayDates.isEmpty || !todayTasks.isEmpty
+        let hasUpcomingItems = !upcomingDates.isEmpty || !upcomingTasks.isEmpty
+        let hasReviewItems = !reviewItems.isEmpty
+        let hasMatters = !model.cases.isEmpty
 
         ScrollView {
             VStack(alignment: .leading, spacing: alphaSectionSpacing) {
                 RossHeroCard(
                     eyebrow: alphaGreeting(),
                     title: alphaAttentionHeadline(attentionCount),
-                    detail: attentionCount == 0
+                    detail: !hasMatters
+                        ? "Start by adding your first matter below."
+                        : attentionCount == 0
                         ? "No urgent work right now."
                         : nil,
                     showsMedia: false,
@@ -7291,21 +7402,17 @@ private struct AlphaHomeScreen: View {
                 }
                 .animation(.snappy(duration: 0.28, extraBounce: 0.04), value: model.persisted.modelJobs.count)
 
-                if model.cases.isEmpty {
+                if !hasMatters {
                     AlphaMatterStarterCard(model: model)
                 }
 
-                AlphaDisclosureCard(
-                    title: "Due today",
-                    badge: "\(todayDates.count + todayTasks.count)",
-                    isExpanded: $dueTodayExpanded
-                ) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        if todayDates.isEmpty && todayTasks.isEmpty {
-                            Text("Nothing urgent is due today.")
-                                .font(.subheadline)
-                                .foregroundStyle(Color.rossInk.opacity(0.7))
-                        } else {
+                if hasDueTodayItems {
+                    AlphaDisclosureCard(
+                        title: "Due today",
+                        badge: "\(todayDates.count + todayTasks.count)",
+                        isExpanded: $dueTodayExpanded
+                    ) {
+                        VStack(alignment: .leading, spacing: 12) {
                             ForEach(Array(todayDates.prefix(3)), id: \.title) { row in
                                 AlphaSummaryRow(title: row.title, detail: row.detail, tint: Color.rossAccent)
                             }
@@ -7316,17 +7423,13 @@ private struct AlphaHomeScreen: View {
                     }
                 }
 
-                AlphaDisclosureCard(
-                    title: "Upcoming dates",
-                    badge: "\(upcomingDates.count + upcomingTasks.count)",
-                    isExpanded: $upcomingExpanded
-                ) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        if upcomingDates.isEmpty && upcomingTasks.isEmpty {
-                            Text("No upcoming dates are saved yet.")
-                                .font(.subheadline)
-                                .foregroundStyle(Color.rossInk.opacity(0.7))
-                        } else {
+                if hasUpcomingItems {
+                    AlphaDisclosureCard(
+                        title: "Upcoming dates",
+                        badge: "\(upcomingDates.count + upcomingTasks.count)",
+                        isExpanded: $upcomingExpanded
+                    ) {
+                        VStack(alignment: .leading, spacing: 12) {
                             ForEach(Array(upcomingDates.prefix(4)), id: \.title) { row in
                                 AlphaSummaryRow(title: row.title, detail: row.detail)
                             }
@@ -7337,17 +7440,13 @@ private struct AlphaHomeScreen: View {
                     }
                 }
 
-                AlphaDisclosureCard(
-                    title: "Needs review",
-                    badge: "\(reviewItems.count)",
-                    isExpanded: $needsReviewExpanded
-                ) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        if reviewItems.isEmpty {
-                            Text("Nothing is waiting for manual review right now.")
-                                .font(.subheadline)
-                                .foregroundStyle(Color.rossInk.opacity(0.7))
-                        } else {
+                if hasReviewItems {
+                    AlphaDisclosureCard(
+                        title: "Needs review",
+                        badge: "\(reviewItems.count)",
+                        isExpanded: $needsReviewExpanded
+                    ) {
+                        VStack(alignment: .leading, spacing: 12) {
                             ForEach(Array(reviewItems.prefix(4))) { item in
                                 AlphaReviewRow(item: item) {
                                     model.path.append(.documentViewer(item.caseId, item.documentId, item.sourceRef?.pageNumber))
@@ -7357,13 +7456,9 @@ private struct AlphaHomeScreen: View {
                     }
                 }
 
-                RossSectionCard {
-                    VStack(alignment: .leading, spacing: 12) {
-                        if model.cases.isEmpty {
-                            Text("No matters yet. Create the first one above.")
-                                .font(.subheadline)
-                                .foregroundStyle(Color.rossInk.opacity(0.7))
-                        } else {
+                if hasMatters {
+                    RossSectionCard {
+                        VStack(alignment: .leading, spacing: 12) {
                             AlphaHomeMattersLinkCard(matterCount: model.cases.count) {
                                 model.persisted.selectedTab = .cases
                             }
@@ -9987,7 +10082,8 @@ private struct AlphaAskConversationScreen: View {
                 model: model,
                 fixedScopeCaseID: fixedScopeCaseID,
                 showsInlineResponseCard: false,
-                showsConversationShortcut: false
+                showsConversationShortcut: false,
+                collapsesWhenIdle: false
             )
                 .padding(.horizontal, 12)
                 .padding(.top, 8)
@@ -10671,6 +10767,7 @@ private struct AlphaDocumentViewerScreen: View {
     let caseId: UUID
     let documentId: UUID
     let initialPage: Int?
+    @State private var rawTextExpanded = false
 
     private var isSharedDocument: Bool {
         caseId == alphaSharedWorkspaceID
@@ -10735,32 +10832,19 @@ private struct AlphaDocumentViewerScreen: View {
                         detail: "Status: \(document.lawyerStatusTitle) · \(alphaPageCountLabel(document.pageCount)) · \(needsReviewCount == 1 ? "1 item needs review" : "\(needsReviewCount) items need review")"
                     )
 
-                    RossSectionCard(
-                        title: "Review snapshot",
-                        subtitle: reviewSummaryText ?? (needsReviewCount > 0 ? "Ross found details that still need advocate review." : "This document is ready for normal use in the matter.")
-                    ) {
-                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                            RossMetricTile(label: "Status", value: needsReviewCount > 0 ? "Needs review" : "Ready", tint: needsReviewCount > 0 ? .orange : Color.rossSuccess)
-                            RossMetricTile(label: "Fields", value: "\(reviewFields.count)", tint: Color.rossAccent)
-                            RossMetricTile(label: "Needs review", value: "\(needsReviewCount)", tint: needsReviewCount > 0 ? .orange : Color.rossSuccess)
-                            RossMetricTile(label: "Page", value: "\(resolvedPage)/\(document.pageCount)", tint: Color.rossHighlight)
-                        }
+                    AlphaDocumentReviewStatusBanner(
+                        needsReviewCount: needsReviewCount,
+                        detail: reviewSummaryText ?? (needsReviewCount > 0
+                            ? "Check the highlighted items below before relying on this document in a note or export."
+                            : "Verified details can be used in notes, tasks, and exports for this matter.")
+                    )
+
+                    if let preview = AlphaDocumentPreview(document: document, initialPage: resolvedPage) {
+                        preview
                     }
 
                     RossSectionCard(title: "Actions") {
                         VStack(spacing: 12) {
-                            AlphaActiveMatterChatCard(
-                                session: model.activeChatSession(for: caseId),
-                                sessionTitle: model.activeChatSession(for: caseId).map(model.chatSessionTitle),
-                                sessionSubtitle: model.activeChatSession(for: caseId).map(model.chatSessionSubtitle),
-                                onOpenChat: {
-                                    model.openDocumentInChat(caseId: caseId, documentId: document.id, startNewThread: false)
-                                },
-                                onStartNewChat: {
-                                    model.openDocumentInChat(caseId: caseId, documentId: document.id, startNewThread: true)
-                                }
-                            )
-
                             RossActionTile(
                                 title: "Continue in active matter chat",
                                 detail: "Use the current matter thread with this document already selected.",
@@ -10817,10 +10901,6 @@ private struct AlphaDocumentViewerScreen: View {
                             }
                             .buttonStyle(.bordered)
                         }
-                    }
-
-                    if let preview = AlphaDocumentPreview(document: document, initialPage: resolvedPage) {
-                        preview
                     }
 
                     if let reviewSummaryText {
@@ -10935,16 +11015,21 @@ private struct AlphaDocumentViewerScreen: View {
                         }
                     }
 
-                    RossSectionCard(title: "Text found") {
-                        Text(document.extractedText ?? "Ross will keep source references visible even when exact highlights are still pending.")
-                            .font(.body)
-                            .foregroundStyle(Color.rossInk.opacity(0.8))
+                    RossSectionCard(title: "Raw text") {
+                        DisclosureGroup(rawTextExpanded ? "Hide extracted text" : "Show extracted text", isExpanded: $rawTextExpanded) {
+                            Text(document.extractedText ?? "No extracted text is available for this page yet.")
+                                .font(.footnote)
+                                .foregroundStyle(Color.rossInk.opacity(0.76))
+                                .padding(.top, 10)
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        .tint(Color.rossInk)
                     }
 
                     RossSectionCard(title: "Sources") {
                         VStack(alignment: .leading, spacing: 10) {
                             if sourceRefs.isEmpty {
-                                Text("Source unavailable. Ross will keep the document context visible without pretending to anchor a missing excerpt.")
+                                Text("No source previews available for this page.")
                                     .font(.footnote)
                                     .foregroundStyle(Color.rossInk.opacity(0.65))
                             }
@@ -10971,7 +11056,7 @@ private struct AlphaDocumentViewerScreen: View {
                 .padding(alphaScreenPadding)
             }
         }
-        .navigationTitle("Document")
+        .navigationTitle(document?.title ?? "Document")
         .rossInlineNavigationTitle()
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 10) {
@@ -11037,6 +11122,56 @@ private struct AlphaDocumentQuickAskStrip: View {
         .overlay {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(Color.rossBorder, lineWidth: 1)
+        }
+    }
+}
+
+private struct AlphaDocumentReviewStatusBanner: View {
+    let needsReviewCount: Int
+    let detail: String
+
+    private var title: String {
+        needsReviewCount == 0
+            ? "Ready to use in this matter"
+            : needsReviewCount == 1
+            ? "1 item needs your review below"
+            : "\(needsReviewCount) items need your review below"
+    }
+
+    private var tint: Color {
+        needsReviewCount == 0 ? Color.rossSuccess : .orange
+    }
+
+    private var systemImage: String {
+        needsReviewCount == 0 ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(tint)
+                .frame(width: 34, height: 34)
+                .background(tint.opacity(0.12), in: Circle())
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(Color.rossInk)
+                Text(detail)
+                    .font(.footnote)
+                    .foregroundStyle(Color.rossInk.opacity(0.7))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(Color.rossCardBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(tint.opacity(0.32), lineWidth: 1)
         }
     }
 }
