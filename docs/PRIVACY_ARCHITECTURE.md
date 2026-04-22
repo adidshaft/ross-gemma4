@@ -73,25 +73,34 @@ Rules:
 - Ross builds the query locally
 - Ross shows a preview before anything is sent
 - explicit confirmation is required
-- only a generic sanitized public-law query may cross the boundary
+- only the approved sanitized public-law query may cross the boundary
 - case files, document text, filenames, party names, client names, exact private dates, filing references, and factual narratives must not cross the boundary
+
+Sanitizer preservation rules now enforced by tests:
+
+- preserve legal citation patterns such as `Order 39 Rules 1 and 2 CPC`
+- preserve statute references such as `Section 138 NI Act`, `Section 482 CrPC`, and `Article 226 Constitution of India`
+- do not strip numbers merely because they are numbers
+- do strip case-specific identifiers, filenames, contact details, private phrasing, and fake-secret regressions
 
 Current backend guardrails:
 
 - rejects obvious private matter wording such as `my case` and `this matter`
 - rejects phone numbers and email addresses
 - rejects filing references and filenames
-- rejects exact private dates
+- rejects exact private dates when they are case-specific
 - rejects location-like factual phrases
 - rejects the fake-secret regression values
 - rejects queries that are not general public-law research
-- logs only hashed query metadata for the public-law route
+- does not expose raw provider internals in normal UI
 
-Manual proof note for April 22, 2026:
+Manual proof note for April 23, 2026:
 
-- iOS simulator proof used `http://127.0.0.1:8787`
-- Android emulator defaults to `http://10.0.2.2:8080`
-- Android preview -> confirm -> results still needs a fresh manual pass
+- backend smoke used `http://127.0.0.1:8081`
+- the approved citation-preserving query returned a safe public-law response
+- fake-secret content was rejected at the public-law boundary
+- Android emulator boot/install succeeded, but Android app launch remained blocked
+- fresh iOS inline review proof remained blocked by simulator tap flakiness
 
 ## Gemini boundary
 

@@ -45,14 +45,6 @@ These flows still depend on the network:
 - Private AI Pack downloads
 - public-law search after the user confirms the preview
 
-## Demo mode note
-
-Demo mode is still local-first:
-
-- it seeds a synthetic workspace locally
-- it does not create a cloud Ross account
-- it can be reset locally from Settings
-
 ## Public-law behavior
 
 Public-law search is never automatic.
@@ -67,6 +59,8 @@ If `Web search` is on:
 - Ross builds the query locally
 - Ross shows the sanitized preview
 - Ross requires explicit confirmation
+- the approved preview query must match the query that is sent
+- legal citations stay intact when they are part of generic public-law research
 - no case text, filenames, or party details are sent
 - if the live connector is unavailable, Ross may fall back to a privacy-safe backend index
 

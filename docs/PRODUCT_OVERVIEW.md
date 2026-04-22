@@ -2,7 +2,7 @@
 
 Ross is a privacy-first legal workbench for Indian advocates.
 
-The current phase is `Ross Internal Dogfood Readiness`.
+The current phase is `Ross Dogfood Proof & Public-Law Polish`.
 
 The current alpha should feel like a calm daily matter desk, not a developer console.
 
@@ -56,16 +56,6 @@ It should answer:
 - what still needs review
 - which matter to open next
 
-Home sections:
-
-- Today
-- Upcoming dates
-- Open tasks
-- Needs review
-- Active matters
-- Recent files or activity
-- Ask Ross bar
-
 ## Matter workflow
 
 Each matter should make it easy to:
@@ -78,22 +68,7 @@ Each matter should make it easy to:
 - ask Ross in scope
 - generate a note or chronology
 
-## Demo workspace
-
-Demo mode now opens a realistic synthetic workspace instead of a blank app.
-
-Current seeded content includes:
-
-- `Demo Matter: Sharma v. Rana`
-- court and case number
-- hearing and deadline dates
-- open tasks
-- demo documents
-- review items
-
-This is sample data only and is resettable from Settings.
-
-## Ask Ross
+## Ask Ross and public-law
 
 Default behavior:
 
@@ -108,6 +83,13 @@ Optional public-law behavior:
 - Ross shows the preview
 - Ross requires confirmation before sending anything
 - public-law results are labeled separately from case-file sources
+
+Citation-preserving examples now covered in tests:
+
+- `Order 39 Rules 1 and 2 CPC`
+- `Section 138 NI Act`
+- `Section 482 CrPC`
+- `Article 226 Constitution of India`
 
 ## Exports
 
@@ -131,7 +113,7 @@ Ross keeps these user-facing promises:
 - `Needs review`
 - `Public-law search sends only a sanitized query`
 
-## What this alpha proves and does not prove
+## What this phase proves and does not prove
 
 This phase is meant to prove:
 
@@ -146,3 +128,4 @@ This phase does not by itself prove:
 - backend-backed Apple sign-in
 - physical-device install completion
 - real local model performance on hardware
+- live Gemini behavior in the app UI

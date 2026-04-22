@@ -1,12 +1,12 @@
 # Product Proof QA
 
-This document records the current dogfood-readiness proof for Ross on April 22, 2026.
+This document records the current dogfood-readiness proof for Ross on April 23, 2026.
 
-It is intentionally strict about what was actually run, what only passed in automated validation, and what still needs a fresh manual pass.
+It is intentionally strict about what was actually run, what only passed in automated validation, and what is still blocked.
 
 ## Goal
 
-The target dogfood loop is:
+The target dogfood loop for this phase is:
 
 1. launch Ross
 2. sign in with demo mode
@@ -24,86 +24,92 @@ The target dogfood loop is:
 14. open the Privacy Ledger
 15. confirm Settings keeps technical details under `Advanced`
 
-## Fresh manual proof
+## Fresh manual proof on April 23, 2026
 
 ### iOS simulator
 
-Freshly run in this session after commit `76c387e`:
+Freshly run in this session:
 
 - demo sign-in
-- Home load with live sections for attention, dates, tasks, review work, active matters, and Ask Ross
-- plain-language private assistant copy on the main flow
-- create matter for `Walkthrough Matter: Rao v. Singh`
-- Ask Ross local command to add a task
-- Ask Ross local command to save the next hearing
-- document import into the new matter
-- document viewer open
-- local Ask Ross answer with `Web Search` off
-- `Web Search` on showing a preview before the backend call
-- successful public-law result on a generic law question
-- visible separation between case-file content and public-law results
+- Home load with populated daily sections
+- create a new matter
+- Ask Ross dock command to add a task
+- Ask Ross dock command to save the next hearing
+- open the new matter workspace
+- reach the real iOS file picker for import
+- reopen the seeded `Demo order` document viewer
+- confirm the review surface is present with plain-language `Accept`, `Edit`, and `Ignore` controls
 
-Freshly observed issues on iOS:
+Freshly observed iOS blockers:
 
-- the public-law sanitizer is over-aggressive for legal citations and stripped `39` from `Order 39 Rules 1 and 2 CPC`
-- the public-law answer layout still feels mixed because local review content and public-law content appear too close together
-- the private assistant status still needs one clean confirmation pass from Home after the latest local UI changes
+- the system file picker was reached, but fresh document selection from the picker was not completed in this pass
+- inline review taps in the simulator are currently not trustworthy in this environment; repeated taps on visible review buttons misrouted Ross to SpringBoard instead of updating review state
+- because of that simulator interaction issue, fresh proof of review `Accept`, `Edit`, `Ignore`, review-to-task/date, export open, Privacy Ledger, and Settings -> Advanced was not completed in this pass
+- the current running build still showed a stale `Session expired` banner after simulator relaunches; code was patched to clear that launch-path banner on expired stored sessions, but that patch was not manually re-proven in-app without another restart
 
-Not freshly proven in this iOS pass:
+Freshly not proven on iOS in this pass:
 
+- review `Accept`
 - review `Edit`
 - review `Ignore`
 - create task/date directly from a review item
 - export generation and export opening
-- Privacy Ledger opening in the latest pass
+- Privacy Ledger opening
 - Settings -> Advanced -> Technical diagnostics in the latest pass
+- public-law preview -> confirm -> results after the latest citation/layout fixes
 
 ### Android emulator
 
 Freshly run in this session:
 
-- install debug APK
-- launch app
-- open demo mode
-- land on Home with populated synthetic data
-- open `Demo Matter: Sharma v. Rana`
-- open the Ask Ross tools sheet
-- toggle `Web Search` from off to on with the expected plain-language privacy copy
+- boot a local `Pixel_8` AVD
+- wait for emulator boot completion
+- install the debug APK with `./gradlew :app:installDebug`
 
 Freshly observed Android blocker:
 
-- matter-scoped Ask Ross free-text input did not prove the intended persisted-action path
-- entering `add task review latest order` produced a `Tasks from your files` answer with suggested tasks, but the `Tasks` tab did not clearly show a newly persisted task
-- because of that inconsistency, Android dock command persistence is not proven yet
+- the emulator boots and the APK installs, but the app does not launch through `adb`
+- `adb shell am start -W -n com.ross.android/com.ross.android.MainActivity` returns `Error type 3`
+- `adb shell dumpsys package com.ross.android` still shows `MainActivity` registered for `MAIN` and `LAUNCHER`
+- because launch is blocked at the emulator level, no fresh Android in-app walkthrough was completed in this pass
 
-Android flow still not proven in this session:
+Freshly not proven on Android in this pass:
 
-- create matter
-- saved next hearing/date from the dock
+- app launch into Home
+- demo sign-in
+- dock add-task persistence
+- dock save-date persistence
+- matter workspace
 - document import
 - document viewer
-- public-law preview -> confirm -> results end to end
+- public-law preview -> confirm -> results
 - export generation/opening
-- Privacy Ledger opening
-- Settings -> Advanced audit
+- Privacy Ledger
+- Settings -> Advanced
 
-## Backend URLs used
+## Public-law proof and backend smoke
 
-iOS simulator manual public-law proof used:
+Fresh backend smoke run in this session used:
 
-- `http://127.0.0.1:8787`
+- `http://127.0.0.1:8081`
 
-Android emulator default path currently documented in the app:
+Fresh backend smoke results:
 
-- `http://10.0.2.2:8080`
+- `GET /model-catalog?platform=ios`: passed
+- `POST /model-download/session` with a valid pack and device hash: passed
+- `POST /public-law/search` with `Order 39 Rules 1 and 2 CPC temporary injunction`: passed
+- `POST /public-law/search` with fake-secret content: rejected with a privacy-boundary response
 
-Physical device pattern:
+Current backend truth:
 
-- `http://<your-mac-lan-ip>:<port>`
+- the exact approved query is forwarded server-side for public-law search
+- legal citations are preserved in the sanitizer and test suite
+- fake/private matter data is still stripped or blocked
+- the observed backend source in this smoke run was the privacy-safe fixture/index path, not a live Gemini-grounded response
 
 ## Automated validation status
 
-Recently passing in this repo:
+Freshly passing in this repo after the current code changes:
 
 - Rust: `cargo test`
 - backend: `npm test`
@@ -118,27 +124,47 @@ Recently passing in this repo:
 - Android:
   - `./gradlew :app:testDebugUnitTest`
   - `./gradlew :app:assembleDebug`
+  - `./gradlew :app:installDebug`
 - iOS:
   - `xcodebuild ... build`
   - `swift test --scratch-path tmp/swiftpm`
-  - `swift run --scratch-path tmp/swiftpm Ross --generate-screenshots`
+
+Still deferred or limited:
+
+- `xcodebuild test`
+  - the shared `Ross` Xcode scheme already has a `TestAction`, but there is still no Xcode-native test target wired into `Testables`
+  - `swift test` remains the safe test path for the Swift package coverage in this repo
+
+## Screenshot truth
+
+Current tracked screenshot bundle:
+
+- `artifacts/qa-screenshots-2026-04-22/`
+
+April 23 captures were taken during the fresh iOS simulator pass, but the new bundle was not fully curated or completed in this session.
 
 ## Still unproven
 
 Do not claim:
 
-- real downloaded on-device model proof
+- a fully completed fresh iOS P0 walkthrough for April 23, 2026
+- a fresh Android in-app walkthrough for April 23, 2026
+- review `Accept`, `Edit`, and `Ignore` as manually proven in this pass
+- review-to-task/date as manually proven in this pass
+- export open or Privacy Ledger open as manually proven in this pass
+- Settings -> Advanced as manually proven in this pass
 - real Google OAuth with working credentials
 - backend-backed Apple sign-in
 - physical quick unlock proof
 - physical iPhone install/provisioning
-- `xcodebuild test`
+- real downloaded on-device model proof
+- live Gemini fallback observation in product UI
 
 ## Exact next recommended step
 
-Run one clean follow-up proof pass with the current build and focus only on the remaining blockers:
+Use the current branch and stay narrow:
 
-1. iOS export generation -> open export -> open Privacy Ledger -> open Settings -> Advanced
-2. Android dock command persistence for task/date actions
-3. Android public-law preview -> confirm -> results
-4. iOS public-law citation sanitization polish
+1. finish one clean iOS simulator pass on a fresh launch path that proves review `Accept`, `Edit`, `Ignore`, export open, Privacy Ledger, and Settings -> Advanced without the SpringBoard tap regression
+2. resolve the Android emulator launch blocker so the debug build can actually open from `adb`
+3. rerun the public-law preview -> confirm -> results flow on iOS after the citation/layout fixes
+4. curate the April 23 screenshot bundle only after those proofs are complete

@@ -1,6 +1,6 @@
 # Real-World Usage QA
 
-This is the primary manual script for `Ross Internal Dogfood Readiness`.
+This is the primary manual script for `Ross Dogfood Proof & Public-Law Polish`.
 
 The goal is not just feature coverage. The goal is to prove that a non-technical advocate can use Ross through a realistic morning loop.
 
@@ -84,6 +84,7 @@ Expected:
 - explicit privacy explanation
 - sanitized preview
 - confirm before search
+- citations like `Order 39 Rules 1 and 2 CPC` survive sanitization
 - results separated from case-file sources
 
 ### 10. Notes and exports
@@ -107,43 +108,29 @@ Expected:
 - top-level sections are lawyer-facing
 - Advanced and Technical diagnostics remain separate
 
-### 13. Demo reset
+## Current proof status on April 23, 2026
 
-Expected:
-
-- synthetic demo workspace can be reset cleanly
-
-## Current proof status on April 22, 2026
-
-Fresh iOS simulator proof:
+Fresh iOS simulator proof in this pass:
 
 - demo sign-in
 - live Home dashboard
 - create matter
 - Ask Ross add task
 - Ask Ross save next hearing
-- document import
-- matter workspace
-- file room
-- document viewer
-- Ask Ross with Web off
-- public-law preview before search
-- successful public-law result on a generic law question
+- new matter workspace
+- reach the import picker
+- seeded document viewer/review surface reopen
+- review controls are visibly present
 
-Still needing a fresh iOS follow-up:
+Current iOS blocker:
 
-- review `Edit`
-- review `Ignore`
-- export generation and opening
-- Privacy Ledger opening
-- Settings -> Advanced
+- inline review taps are flaky in this simulator environment and cannot yet be treated as reliable proof of review state changes
 
-Android status:
+Fresh Android proof in this pass:
 
-- fresh emulator walkthrough is partially complete
-- debug app installed
-- demo sign-in worked
-- populated Home was visible
-- demo matter opened
-- Web Search toggle copy was verified
-- dock command persistence is not proven yet
+- emulator boot
+- debug APK install
+
+Current Android blocker:
+
+- the installed app does not launch through `adb`, so the fresh Android in-app walkthrough did not start

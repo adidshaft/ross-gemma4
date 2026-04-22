@@ -1,113 +1,55 @@
-# Ross Internal Dogfood Readiness Report
+# Ross Dogfood Proof And Public-Law Polish
 
 ## Branch used
 
-Work stayed on the existing active branch:
+Work stayed on:
 
 - `alpha-lawyer-usable-app`
 
-No new branch was created on top of active feature work.
+## What changed in this pass
 
-## Repo-state handling
+- preserved legal citations in the public-law sanitizer across Rust, iOS, Android, and backend tests
+- tightened private-matter stripping for fake secrets and case-specific phrasing
+- made the public-law result layout more clearly separate case-file sources from public-law results
+- fixed iOS export drafting so ignored review fields do not leak into export content
+- added Android export open/share support through a `FileProvider`
+- aligned docs with the actual April 23 proof status
 
-Included in this phase:
+## Current proof truth
 
-- iOS daily-usage workflow refinements
-- Android daily-usage workflow refinements
-- demo workspace seeding and reset behavior
-- task and matter dashboard logic
-- public-law preview hardening and backend smoke coverage
-- docs and runbooks
-- screenshot refresh
+Freshly proven in this pass:
 
-Left intentionally untouched:
+- Rust, backend, privacy guards, Android build/tests, and iOS build/Swift tests pass
+- backend smoke on `http://127.0.0.1:8081` proves citation-preserving public-law search and fake-secret rejection
+- iOS demo sign-in, Home, matter creation, Ask Ross add-task, Ask Ross save-next-hearing, matter open, and review-surface reachability were manually re-run
+- Android emulator boot and debug APK install were manually re-run
 
-- `SCRIPT.md`
-- local Xcode workspace state
-- logo and design artifact folders
-- research notes
-- `shared/assets/`
-- `backend/.env.local`
+Freshly blocked in this pass:
 
-No secrets, provisioning profiles, certificates, or local environment files were committed.
+- iOS inline review actions remain blocked by flaky simulator tap behavior that throws Ross to SpringBoard instead of reliably pressing on-screen review buttons
+- Android app launch remains blocked even after successful emulator boot and APK install; `adb` launch returns `Error type 3` while `dumpsys package` still lists `MainActivity`
 
-## Current proof summary
+## Current public-law truth
 
-Freshly observed on iOS in this session:
+- legal citations such as `Order 39 Rules 1 and 2 CPC`, `Section 138 NI Act`, `Section 482 CrPC`, and `Article 226 Constitution of India` are preserved in tests
+- fake/private matter data such as `Raghav Fakepriv`, `9876501234`, `fakepriv@example.com`, `FAKE/123/2026`, and `blue suitcase near temple` is stripped or blocked
+- the exact approved preview query is what backend tests now verify is sent server-side
+- mobile apps still never call Gemini directly
+- this session observed the privacy-safe backend fixture/index path, not a live Gemini fallback event in product UI
 
-- demo sign-in
-- populated Home
-- create matter
-- Ask Ross add task
-- Ask Ross save next hearing
-- document import
-- document viewer open
-- local Ask Ross with `Web Search` off
-- preview before public-law search
-- successful public-law result for a generic law question
-- visible split between case-file context and public-law results
+## Screenshot truth
 
-Freshly observed on Android in this session:
-
-- debug install
-- app launch
-- demo sign-in
-- populated Home
-- demo matter open
-- `Web Search` can be toggled on with plain privacy copy
-
-Current Android blocker:
-
-- matter-scoped free-text dock input is not yet proven to persist task/date actions cleanly
-
-## Explicitly still unproven
-
-This phase still does not prove:
-
-- export generation and export opening in the latest iOS pass
-- Privacy Ledger opening in the latest iOS pass
-- Settings -> Advanced in the latest iOS pass
-- Android dock action persistence
-- Android document flow
-- Android public-law preview -> confirm -> results
-- real Google OAuth with real credentials
-- backend-backed Apple sign-in
-- physical iPhone install or provisioning completion
-- quick unlock on real hardware
-- real local model proof on device
-
-## Public-law truth
-
-The current public-law path remains:
-
-1. local handling first
-2. preview in the app
-3. explicit confirmation
-4. Ross backend call
-5. server-side Gemini only if configured there
-6. privacy-safe fallback if the live connector is unavailable
-
-Manual proof URL used on iOS in this session:
-
-- `http://127.0.0.1:8787`
-
-Android emulator default:
-
-- `http://10.0.2.2:8080`
-
-## Screenshot treatment
-
-Current screenshots are curated under:
+Current tracked bundle:
 
 - `artifacts/qa-screenshots-2026-04-22/`
 
-Older tracked screenshot bundles under `artifacts/ios/light/` and `artifacts/ios/dark/` are now legacy and should not be treated as current product truth.
+April 23 captures exist from the simulator pass, but the `artifacts/qa-screenshots-2026-04-23/` bundle was not completed or curated in this session.
 
 ## Exact next recommended step
 
-Run a short blocker-only pass:
+Do one blocker-only follow-up:
 
-1. iOS export generation -> open export -> open Privacy Ledger -> open Settings -> Advanced
-2. Android dock `add task` and `save next hearing` persistence
-3. Android public-law preview -> confirm -> results
-4. iOS sanitizer polish for legal citations such as `Order 39 Rules 1 and 2 CPC`
+1. finish a fresh iOS manual pass that proves review actions, export open, Privacy Ledger, and Settings -> Advanced without the simulator tap regression
+2. fix or document the Android emulator launch issue so the installed debug app can actually open
+3. rerun the iOS public-law preview -> confirm -> results flow after the citation/layout fixes
+4. only then refresh the April 23 screenshot bundle

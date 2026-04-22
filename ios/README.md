@@ -80,8 +80,8 @@ iOS resolves backend URLs in this order:
 
 Recommended local setup:
 
-- iOS Simulator: `http://127.0.0.1:8787`
-- physical iPhone: `http://<your-mac-lan-ip>:8787`
+- iOS Simulator: `http://127.0.0.1:8081` in this session
+- physical iPhone: `http://<your-mac-lan-ip>:8081`
 
 The app supports changing the server from `Settings > Advanced > Save test server`.
 
@@ -91,48 +91,55 @@ The app supports changing the server from `Settings > Advanced > Save test serve
 - Ross builds the public-law query locally
 - Ross shows a preview before anything is sent
 - explicit confirmation is required
-- only a sanitized public-law query crosses the boundary
+- only the approved sanitized public-law query crosses the boundary
+
+Legal citations now preserved by tests include:
+
+- `Order 39 Rules 1 and 2 CPC`
+- `Section 138 NI Act`
+- `Section 482 CrPC`
+- `Article 226 Constitution of India`
 
 If the backend is configured with `ROSS_PUBLIC_LAW_GEMINI_API_KEY` or `GEMINI_API_KEY`, the confirmed public-law request is resolved server-side through Gemini with Google Search grounding.
 
 If no live connector is available, Ross falls back to a privacy-safe backend index for QA.
 
-## Current iOS truth
+## Current iOS truth on April 23, 2026
 
-Freshly observed in this phase:
+Freshly observed in this pass:
 
 - demo sign-in lands on Home
-- Home shows real local dashboard state
+- Home shows a populated daily dashboard
 - create matter
 - Ask Ross add-task action
 - Ask Ross save-next-hearing action
-- document import into a matter
-- matter list opens
 - matter workspace opens
-- file room opens
-- document viewer opens
-- local Ask Ross with `Web Search` off
-- preview before public-law search
-- public-law results for a generic law question
+- the real import picker is reachable
+- seeded document viewer and review surface reopen
+- plain-language `Accept`, `Edit`, and `Ignore` review controls are visible
 
-Freshly observed issues:
+Freshly observed blocker:
 
-- citation sanitization is too aggressive for `Order 39 Rules 1 and 2 CPC`
-- export, ledger, and Settings -> Advanced still need a clean follow-up pass
+- inline review action taps in the simulator are currently unreliable in this environment and repeatedly throw Ross to SpringBoard instead of proving review state changes
 
-Still unproven on iOS:
+Still not freshly proven on iOS in this pass:
 
-- real Google OAuth with real credentials
-- backend-backed Apple sign-in
-- physical iPhone install and provisioning completion
-- quick unlock on physical hardware
-- real local model proof on device
+- review `Accept`
+- review `Edit`
+- review `Ignore`
+- review-to-task/date
+- export generation and export opening
+- Privacy Ledger opening
+- Settings -> Advanced
+- public-law preview -> confirm -> results after the latest citation/layout fixes
 
 ## Xcode test-action note
 
-`xcodebuild test` is still limited because the shared `Ross` scheme has no Xcode testables. The safe validation path for now remains:
+`xcodebuild test` is still limited because the shared `Ross` scheme has no Xcode-native test target in `Testables`.
+
+The safe validation path for now remains:
 
 - `xcodebuild ... build`
 - `swift test --scratch-path tmp/swiftpm`
 
-See [`docs/AUTH_QA.md`](/Users/amanpandey/projects/ross/docs/AUTH_QA.md), [`docs/DEVICE_INSTALL_QA.md`](/Users/amanpandey/projects/ross/docs/DEVICE_INSTALL_QA.md), and [`docs/REAL_WORLD_USAGE_QA.md`](/Users/amanpandey/projects/ross/docs/REAL_WORLD_USAGE_QA.md).
+See [`docs/PRODUCT_PROOF_QA.md`](/Users/amanpandey/projects/ross/docs/PRODUCT_PROOF_QA.md), [`docs/AUTH_QA.md`](/Users/amanpandey/projects/ross/docs/AUTH_QA.md), and [`docs/REAL_WORLD_USAGE_QA.md`](/Users/amanpandey/projects/ross/docs/REAL_WORLD_USAGE_QA.md).

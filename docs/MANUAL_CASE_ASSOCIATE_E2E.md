@@ -6,6 +6,11 @@ Use it for manual product QA. Do not use it to claim a real local-model proof.
 
 For the latest truth in status, pair this script with [`docs/PRODUCT_PROOF_QA.md`](/Users/amanpandey/projects/ross/docs/PRODUCT_PROOF_QA.md).
 
+Current known environment blockers on April 23, 2026:
+
+- iOS simulator inline review taps are flaky in this environment and can throw Ross to SpringBoard instead of reliably pressing visible review buttons
+- Android emulator boots and accepts the APK, but the app does not launch through `adb`
+
 ## 1. Launch and sign in
 
 Steps:
@@ -115,13 +120,15 @@ Expected:
 Steps:
 
 - turn `Web search` on
-- ask a public-law question
+- ask a public-law question such as `Order 39 Rules 1 and 2 CPC temporary injunction`
 
 Expected:
 
 - Ross explains that only a sanitized public-law query will be sent
 - Ross shows the query preview
 - Ross requires explicit confirmation before sending anything
+- the approved preview query matches the query that is sent
+- legal citations survive sanitization
 - public-law results are shown separately from case-file sources
 
 Fail if:

@@ -6,6 +6,7 @@
 cd /Users/amanpandey/projects/ross/android
 ./gradlew :app:assembleDebug
 ./gradlew :app:testDebugUnitTest
+./gradlew :app:installDebug
 ```
 
 Open the Android project in Android Studio if you want emulator or device debugging.
@@ -65,48 +66,42 @@ Default emulator address:
 
 Recommended overrides:
 
-- Android emulator with backend on `8787`: `http://10.0.2.2:8787`
-- physical Android device: `http://<your-mac-lan-ip>:8787`
+- Android emulator with backend on `8081`: `http://10.0.2.2:8081`
+- physical Android device: `http://<your-mac-lan-ip>:8081`
 
 ## Public-law search
 
 - `Web search` is off by default
 - enabling `Web search` still requires a local preview and explicit confirmation
+- only the approved sanitized public-law query is sent
 - backend-unavailable errors should remain plain-language
-- only a sanitized public-law query is sent
+
+Legal citations preserved by tests include:
+
+- `Order 39 Rules 1 and 2 CPC`
+- `Section 138 NI Act`
+- `Section 482 CrPC`
 
 If the backend is configured with `ROSS_PUBLIC_LAW_GEMINI_API_KEY` or `GEMINI_API_KEY`, the confirmed public-law request is resolved server-side through Gemini with Google Search grounding.
 
 If that connector is unavailable, Ross falls back to a privacy-safe backend index for QA.
 
-## Current Android truth
+## Current Android truth on April 23, 2026
 
-Fresh manual proof in this session:
+Fresh manual environment proof in this pass:
 
-- debug app install
-- app launch
-- demo sign-in
-- populated Home
-- demo matter open
-- Ask Ross tools sheet
-- `Web Search` on/off copy
+- local `Pixel_8` emulator booted successfully
+- debug APK installed successfully with `./gradlew :app:installDebug`
 
-Current blocker from manual QA:
+Fresh blocker in this pass:
 
-- matter-scoped free-text `add task ...` produced suggested tasks from files, but did not clearly prove a persisted task in the `Tasks` tab
+- the installed app does not launch through `adb`
+- `adb shell am start -W -n com.ross.android/com.ross.android.MainActivity` returns `Error type 3`
+- `adb shell dumpsys package com.ross.android` still lists `MainActivity` as the `MAIN` / `LAUNCHER` activity
 
-Still unproven in a fresh emulator or device pass:
+Current consequence:
 
-- create matter
-- dock add-task persistence
-- dock save-date persistence
-- document import and viewer
-- public-law preview -> confirm -> results
-- export open
-- Privacy Ledger
-- Settings -> Advanced
-- real Google OAuth with real credentials
-- physical-device quick unlock
-- real local model proof on device
+- no fresh Android in-app walkthrough was completed in this pass
+- dock persistence, document flow, public-law preview/results, exports, ledger, and Settings still need Android manual proof after the launch blocker is resolved
 
-See [`docs/AUTH_QA.md`](/Users/amanpandey/projects/ross/docs/AUTH_QA.md), [`docs/DEVICE_INSTALL_QA.md`](/Users/amanpandey/projects/ross/docs/DEVICE_INSTALL_QA.md), and [`docs/REAL_WORLD_USAGE_QA.md`](/Users/amanpandey/projects/ross/docs/REAL_WORLD_USAGE_QA.md).
+See [`docs/PRODUCT_PROOF_QA.md`](/Users/amanpandey/projects/ross/docs/PRODUCT_PROOF_QA.md), [`docs/AUTH_QA.md`](/Users/amanpandey/projects/ross/docs/AUTH_QA.md), and [`docs/REAL_WORLD_USAGE_QA.md`](/Users/amanpandey/projects/ross/docs/REAL_WORLD_USAGE_QA.md).
