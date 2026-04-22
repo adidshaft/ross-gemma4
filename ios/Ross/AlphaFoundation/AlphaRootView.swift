@@ -9361,8 +9361,14 @@ private struct AlphaCaseFolderCard: View {
 
 private struct AlphaInlineHeader: View {
     let eyebrow: String?
-    let title: String
+    let title: String?
     let detail: String?
+
+    init(eyebrow: String? = nil, title: String? = nil, detail: String? = nil) {
+        self.eyebrow = eyebrow
+        self.title = title
+        self.detail = detail
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -9373,10 +9379,12 @@ private struct AlphaInlineHeader: View {
                     .foregroundStyle(Color.rossAccent)
             }
 
-            Text(title)
-                .font(.rossInlineTitle())
-                .foregroundStyle(Color.rossInk)
-                .fixedSize(horizontal: false, vertical: true)
+            if let title, !title.isEmpty {
+                Text(title)
+                    .font(.rossInlineTitle())
+                    .foregroundStyle(Color.rossInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             if let detail, !detail.isEmpty {
                 Text(detail)
@@ -10828,7 +10836,6 @@ private struct AlphaDocumentViewerScreen: View {
                 VStack(alignment: .leading, spacing: alphaSectionSpacing) {
                     AlphaInlineHeader(
                         eyebrow: document.kind.title,
-                        title: document.title,
                         detail: "Status: \(document.lawyerStatusTitle) · \(alphaPageCountLabel(document.pageCount)) · \(needsReviewCount == 1 ? "1 item needs review" : "\(needsReviewCount) items need review")"
                     )
 

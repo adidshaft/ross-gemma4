@@ -115,6 +115,7 @@ import kotlinx.coroutines.launch
 private val alphaScreenPadding = 18.dp
 private val alphaSectionSpacing = 14.dp
 private val AlphaAmberStatus = Color(0xFFD18C00)
+private val AlphaSuccessStatus = Color(0xFF2F7B52)
 
 private enum class RossGlassAsset(@DrawableRes val resId: Int) {
     BadgeSparkleAccent(R.drawable.ng_accent_badge_sparkle),
@@ -1268,6 +1269,8 @@ private fun AlphaRootAskDock(
     var showTools by remember { mutableStateOf(false) }
     var dismissedInlineQuestion by rememberSaveable { mutableStateOf<String?>(null) }
     var expandedComposer by rememberSaveable { mutableStateOf(false) }
+    var dockExpanded by rememberSaveable { mutableStateOf(false) }
+    var pendingCollapseQuestion by rememberSaveable { mutableStateOf<String?>(null) }
     val activeScopeCaseId = fixedScopeCaseId ?: controller.askSelectedScopeCaseId
     val activeSelectedDocuments = if (fixedDocumentIds.isEmpty()) {
         controller.selectedAskDocuments(activeScopeCaseId)
@@ -1282,6 +1285,21 @@ private fun AlphaRootAskDock(
     val chromeBackground = alphaChromeBackgroundColor()
     val chromeForeground = alphaChromeForegroundColor()
     val chromeMuted = alphaChromeMutedColor()
+    val draftText = controller.askDraft(activeScopeCaseId)
+    val composerPlaceholder = when {
+        fixedDocumentIds.size == 1 -> "Ask Ross about this file..."
+        activeScopeCaseId != null -> "Ask Ross about this matter..."
+        else -> "Ask Ross about today, a matter, or a file..."
+    }
+    val collapsedDockTitle = when {
+        fixedDocumentIds.size == 1 -> "Ask Ross about this file..."
+        activeScopeCaseId != null -> "Ask Ross about this matter..."
+        else -> "Ask Ross..."
+    }
+    val showsCollapsedDock = !dockExpanded &&
+        !showTools &&
+        !expandedComposer &&
+        draftText.trim().isEmpty()
     val fileLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) controller.importDocument(activeScopeCaseId, uri)
     }
@@ -1289,8 +1307,16 @@ private fun AlphaRootAskDock(
         if (uri != null) controller.importDocument(activeScopeCaseId, uri)
     }
 
+    fun expandDock() {
+        dockExpanded = true
+    }
+
+    fun collapseDock() {
+        dockExpanded = false
+    }
+
     fun send() {
-        val question = controller.askDraft(activeScopeCaseId).trim()
+        val question = draftText.trim()
         if (question.isBlank()) return
         fixedDocumentIds.forEach { documentId ->
             if (documentId !in controller.selectedAskDocumentIds(activeScopeCaseId)) {
@@ -1298,6 +1324,7 @@ private fun AlphaRootAskDock(
             }
         }
         dismissedInlineQuestion = null
+        pendingCollapseQuestion = question
         controller.submitDockInput(
             question = question,
             scopeCaseId = activeScopeCaseId,
@@ -1324,152 +1351,179 @@ private fun AlphaRootAskDock(
             )
         }
 
-        OutlinedCard(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(22.dp),
-            colors = CardDefaults.outlinedCardColors(
-                containerColor = chromeBackground,
-            ),
-            border = androidx.compose.foundation.BorderStroke(1.dp, alphaChromeStrokeColor()),
-        ) {
-            Column(
-                modifier = Modifier.padding(horizontal = 11.dp, vertical = 9.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+        if (showsCollapsedDock) {
+            AlphaCollapsedAskDockPill(
+                title = collapsedDockTitle,
+                chromeBackground = chromeBackground,
+                chromeForeground = chromeForeground,
+            ) { expandDock() }
+        } else {
+            OutlinedCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .animateContentSize(),
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.outlinedCardColors(
+                    containerColor = chromeBackground,
+                ),
+                border = androidx.compose.foundation.BorderStroke(1.dp, alphaChromeStrokeColor()),
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                Column(
+                    modifier = Modifier.padding(horizontal = 11.dp, vertical = 9.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    if (fixedScopeCaseId == null) {
-                        AlphaRootScopeButton(
-                            label = controller.scopeLabel(activeScopeCaseId),
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (fixedScopeCaseId == null) {
+                            AlphaRootScopeButton(
+                                label = controller.scopeLabel(activeScopeCaseId),
+                                tint = chromeForeground,
+                            ) {
+                                showTools = true
+                            }
+                        } else {
+                            AlphaStaticScopePill(
+                                label = controller.scopeLabel(activeScopeCaseId),
+                                tint = chromeForeground,
+                            )
+                        }
+
+                        if (controller.askWebEnabled) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                RossGlassIcon(
+                                    asset = RossGlassAsset.EarthHighlight,
+                                    modifier = Modifier.size(14.dp),
+                                )
+                                Text(
+                                    "Web Search",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = chromeMuted,
+                                )
+                            }
+                        }
+                    }
+
+                    if (activeSelectedDocuments.isNotEmpty() && fixedDocumentIds.size != 1) {
+                        Row(
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            activeSelectedDocuments.forEach { document ->
+                                AlphaAskSelectionChip(title = document.title, isShared = document.isShared)
+                            }
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        AlphaDockIconButton(
+                            asset = RossGlassAsset.BadgeSparkleAccent,
+                            label = "Ask Ross tools",
                             tint = chromeForeground,
                         ) {
                             showTools = true
                         }
-                    } else {
-                        AlphaStaticScopePill(
-                            label = controller.scopeLabel(activeScopeCaseId),
+
+                        BasicTextField(
+                            value = draftText,
+                            onValueChange = { controller.setAskDraft(activeScopeCaseId, it) },
+                            modifier = Modifier.weight(1f),
+                            textStyle = MaterialTheme.typography.bodySmall.copy(color = chromeForeground, lineHeight = 18.sp),
+                            keyboardOptions = KeyboardOptions(
+                                capitalization = KeyboardCapitalization.Sentences,
+                                imeAction = ImeAction.Send,
+                            ),
+                            maxLines = if (expandedComposer) 8 else 2,
+                            decorationBox = { innerTextField ->
+                                Box(modifier = Modifier.padding(vertical = 8.dp)) {
+                                    if (draftText.isBlank()) {
+                                        Text(
+                                            composerPlaceholder,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = chromeMuted,
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            },
+                        )
+
+                        AlphaDockIconButton(
+                            icon = if (expandedComposer) Icons.Outlined.UnfoldLess else Icons.Outlined.UnfoldMore,
+                            label = if (expandedComposer) "Collapse composer" else "Expand composer",
                             tint = chromeForeground,
+                        ) {
+                            expandedComposer = !expandedComposer
+                        }
+
+                        AlphaDockIconButton(
+                            icon = Icons.Outlined.ArrowUpward,
+                            label = "Send",
+                            tint = Color(0xFF111724),
+                            fill = Color.White,
+                        ) {
+                            send()
+                        }
+
+                        AlphaDockIconButton(
+                            icon = Icons.Outlined.ChatBubbleOutline,
+                            asset = RossGlassAsset.UserMsgAccent,
+                            label = "Open Ask Ross conversation",
+                            tint = chromeForeground,
+                        ) {
+                            controller.openAsk(activeScopeCaseId, fixedDocumentIds.singleOrNull())
+                        }
+                    }
+
+                    val selectionSubtitle = controller.askSelectionSubtitle(activeScopeCaseId)?.takeIf { fixedDocumentIds.isEmpty() }
+                    if (selectionSubtitle != null) {
+                        Text(
+                            selectionSubtitle,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = chromeMuted,
+                        )
+                    } else if (fixedDocumentIds.isEmpty()) {
+                        Text(
+                            "Type @ to add a file, or say add task / save date.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = chromeMuted,
                         )
                     }
 
                     if (controller.askWebEnabled) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RossGlassIcon(
-                                asset = RossGlassAsset.EarthHighlight,
-                                modifier = Modifier.size(14.dp),
-                            )
-                            Text(
-                                "Web Search",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = chromeMuted,
-                            )
-                        }
+                        Text(
+                            "Web Search only sends a sanitized public-law query. Ross never sends your case files or document text.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = chromeMuted,
+                        )
                     }
-                }
-
-                if (activeSelectedDocuments.isNotEmpty() && fixedDocumentIds.size != 1) {
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        activeSelectedDocuments.forEach { document ->
-                            AlphaAskSelectionChip(title = document.title, isShared = document.isShared)
-                        }
-                    }
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    AlphaDockIconButton(
-                        asset = RossGlassAsset.BadgeSparkleAccent,
-                        label = "Ask Ross tools",
-                        tint = chromeForeground,
-                    ) {
-                        showTools = true
-                    }
-
-                    BasicTextField(
-                        value = controller.askDraft(activeScopeCaseId),
-                        onValueChange = { controller.setAskDraft(activeScopeCaseId, it) },
-                        modifier = Modifier.weight(1f),
-                        textStyle = MaterialTheme.typography.bodySmall.copy(color = chromeForeground, lineHeight = 18.sp),
-                        keyboardOptions = KeyboardOptions(
-                            capitalization = KeyboardCapitalization.Sentences,
-                            imeAction = ImeAction.Send,
-                        ),
-                        maxLines = if (expandedComposer) 8 else 2,
-                        decorationBox = { innerTextField ->
-                            Box(modifier = Modifier.padding(vertical = 8.dp)) {
-                                if (controller.askDraft(activeScopeCaseId).isBlank()) {
-                                    Text(
-                                        "Ask Ross or type add task, save date, or draft note",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = chromeMuted,
-                                    )
-                                }
-                                innerTextField()
-                            }
-                        },
-                    )
-
-                    AlphaDockIconButton(
-                        icon = if (expandedComposer) Icons.Outlined.UnfoldLess else Icons.Outlined.UnfoldMore,
-                        label = if (expandedComposer) "Collapse composer" else "Expand composer",
-                        tint = chromeForeground,
-                    ) {
-                        expandedComposer = !expandedComposer
-                    }
-
-                    AlphaDockIconButton(
-                        icon = Icons.Outlined.ArrowUpward,
-                        label = "Send",
-                        tint = Color(0xFF111724),
-                        fill = Color.White,
-                    ) {
-                        send()
-                    }
-
-                    AlphaDockIconButton(
-                        icon = Icons.Outlined.ChatBubbleOutline,
-                        asset = RossGlassAsset.UserMsgAccent,
-                        label = "Open Ask Ross conversation",
-                        tint = chromeForeground,
-                    ) {
-                        controller.openAsk(activeScopeCaseId, fixedDocumentIds.singleOrNull())
-                    }
-                }
-
-                val selectionSubtitle = controller.askSelectionSubtitle(activeScopeCaseId)?.takeIf { fixedDocumentIds.isEmpty() }
-                if (selectionSubtitle != null) {
-                    Text(
-                        selectionSubtitle,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = chromeMuted,
-                    )
-                } else if (fixedDocumentIds.isEmpty()) {
-                    Text(
-                        "Type @ to add a file, or say add task / save date.",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = chromeMuted,
-                    )
-                }
-
-                if (controller.askWebEnabled) {
-                    Text(
-                        "Web Search only sends a sanitized public-law query. Ross never sends your case files or document text.",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = chromeMuted,
-                    )
                 }
             }
+        }
+    }
+
+    LaunchedEffect(draftText, showTools, expandedComposer) {
+        val trimmed = draftText.trim()
+        when {
+            trimmed.isNotEmpty() && !dockExpanded -> expandDock()
+            trimmed.isEmpty() && pendingCollapseQuestion == null && !showTools && !expandedComposer -> collapseDock()
+        }
+    }
+
+    LaunchedEffect(controller.latestAskResult) {
+        val latestResult = controller.latestAskResult ?: return@LaunchedEffect
+        if (pendingCollapseQuestion == latestResult.question && latestResult.scopeCaseId == activeScopeCaseId) {
+            pendingCollapseQuestion = null
+            controller.setAskDraft(activeScopeCaseId, "")
+            collapseDock()
         }
     }
 
@@ -1589,6 +1643,49 @@ private fun AlphaRootAskDock(
 
                 Spacer(modifier = Modifier.height(6.dp))
             }
+        }
+    }
+}
+
+@Composable
+private fun AlphaCollapsedAskDockPill(
+    title: String,
+    chromeBackground: Color,
+    chromeForeground: Color,
+    onClick: () -> Unit,
+) {
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(999.dp),
+        colors = CardDefaults.outlinedCardColors(containerColor = chromeBackground),
+        border = androidx.compose.foundation.BorderStroke(1.dp, alphaChromeStrokeColor()),
+        onClick = onClick,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .background(Color.White.copy(alpha = 0.1f), shape = RoundedCornerShape(999.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                RossGlassIcon(
+                    asset = RossGlassAsset.BadgeSparkleAccent,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+
+            Text(
+                title,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = chromeForeground,
+                maxLines = 1,
+            )
         }
     }
 }
@@ -1960,6 +2057,10 @@ private fun AlphaHomeScreen(
     val upcomingDateLines = alphaUpcomingDateLines(controller.cases)
     val recentDocuments = alphaRecentDocumentItems(controller.cases)
     val attentionCount = todayDateLines.size + controller.todayTasks().size + controller.reviewQueue().size
+    val hasDueTodayItems = todayDateLines.isNotEmpty() || controller.todayTasks().isNotEmpty()
+    val hasUpcomingItems = upcomingDateLines.isNotEmpty() || controller.upcomingTasks().isNotEmpty()
+    val hasReviewItems = controller.reviewQueue().isNotEmpty()
+    val hasMatterActivity = controller.cases.isNotEmpty() || recentDocuments.isNotEmpty()
 
     AlphaShell(
         title = "Today",
@@ -1985,7 +2086,9 @@ private fun AlphaHomeScreen(
             AlphaHero(
                 eyebrow = alphaGreeting(),
                 title = alphaAttentionHeadline(attentionCount),
-                body = if (attentionCount == 0) {
+                body = if (controller.cases.isEmpty()) {
+                    "Start by adding your first matter below."
+                } else if (attentionCount == 0) {
                     "Nothing urgent is waiting. Ross grouped the day so the next action stays easy to spot."
                 } else {
                     "Ross grouped today, nearby dates, and matter activity below so the next action stays obvious."
@@ -2005,15 +2108,13 @@ private fun AlphaHomeScreen(
                 AlphaMatterStarterCard(controller = controller)
             }
 
-            AlphaExpandableCard(
-                title = "Due today",
-                badge = "${todayDateLines.size + controller.todayTasks().size}",
-                expanded = dueTodayExpanded,
-                onToggle = { dueTodayExpanded = !dueTodayExpanded },
-            ) {
-                if (todayDateLines.isEmpty() && controller.todayTasks().isEmpty()) {
-                    Text("Nothing urgent is due today.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                } else {
+            if (hasDueTodayItems) {
+                AlphaExpandableCard(
+                    title = "Due today",
+                    badge = "${todayDateLines.size + controller.todayTasks().size}",
+                    expanded = dueTodayExpanded,
+                    onToggle = { dueTodayExpanded = !dueTodayExpanded },
+                ) {
                     todayDateLines.take(3).forEach { line ->
                         AlphaSummaryRow(title = line, detail = "Needs attention today")
                     }
@@ -2023,15 +2124,13 @@ private fun AlphaHomeScreen(
                 }
             }
 
-            AlphaExpandableCard(
-                title = "Upcoming dates",
-                badge = "${upcomingDateLines.size + controller.upcomingTasks().size}",
-                expanded = upcomingExpanded,
-                onToggle = { upcomingExpanded = !upcomingExpanded },
-            ) {
-                if (upcomingDateLines.isEmpty() && controller.upcomingTasks().isEmpty()) {
-                    Text("No upcoming dates are saved yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                } else {
+            if (hasUpcomingItems) {
+                AlphaExpandableCard(
+                    title = "Upcoming dates",
+                    badge = "${upcomingDateLines.size + controller.upcomingTasks().size}",
+                    expanded = upcomingExpanded,
+                    onToggle = { upcomingExpanded = !upcomingExpanded },
+                ) {
                     upcomingDateLines.take(4).forEach { line ->
                         AlphaSummaryRow(title = line, detail = "Saved in your matter dates")
                     }
@@ -2043,56 +2142,54 @@ private fun AlphaHomeScreen(
 
             var needsReviewExpanded by rememberSaveable { mutableStateOf(false) }
 
-            AlphaExpandableCard(
-                title = "Needs review",
-                badge = "${controller.reviewQueue().size}",
-                expanded = needsReviewExpanded,
-                onToggle = { needsReviewExpanded = !needsReviewExpanded },
-            ) {
-                controller.reviewQueue().take(4).forEach { item ->
-                    AlphaReviewRow(
-                        item = item,
-                        onOpen = { controller.pendingRoute = AndroidAlphaRoute.DocumentViewer(item.caseId, item.documentId, item.sourceRef?.pageNumber) },
-                    )
-                }
-                if (controller.reviewQueue().isEmpty()) {
-                    Text("Nothing is waiting for manual review right now.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (hasReviewItems) {
+                AlphaExpandableCard(
+                    title = "Needs review",
+                    badge = "${controller.reviewQueue().size}",
+                    expanded = needsReviewExpanded,
+                    onToggle = { needsReviewExpanded = !needsReviewExpanded },
+                ) {
+                    controller.reviewQueue().take(4).forEach { item ->
+                        AlphaReviewRow(
+                            item = item,
+                            onOpen = { controller.pendingRoute = AndroidAlphaRoute.DocumentViewer(item.caseId, item.documentId, item.sourceRef?.pageNumber) },
+                        )
+                    }
                 }
             }
 
-            AlphaExpandableCard(
-                title = "Active matters and recent files",
-                badge = "${controller.cases.size}",
-                expanded = matterActivityExpanded,
-                onToggle = { matterActivityExpanded = !matterActivityExpanded },
-            ) {
-                if (controller.cases.isEmpty() && recentDocuments.isEmpty()) {
-                    Text("No matters yet. Save the first matter above and Ross will show it here with recent files.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                controller.cases
-                    .take(4)
-                    .forEach { case ->
-                        AlphaCaseSummaryRow(
-                            case = case,
-                            openTasks = controller.openTaskCount(case.id),
-                            reviewCount = controller.reviewQueue(case.id).size,
-                            onOpen = { onOpenCase(case.id) },
+            if (hasMatterActivity) {
+                AlphaExpandableCard(
+                    title = "Active matters and recent files",
+                    badge = "${controller.cases.size}",
+                    expanded = matterActivityExpanded,
+                    onToggle = { matterActivityExpanded = !matterActivityExpanded },
+                ) {
+                    controller.cases
+                        .take(4)
+                        .forEach { case ->
+                            AlphaCaseSummaryRow(
+                                case = case,
+                                openTasks = controller.openTaskCount(case.id),
+                                reviewCount = controller.reviewQueue(case.id).size,
+                                onOpen = { onOpenCase(case.id) },
+                            )
+                        }
+                    if (recentDocuments.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text("Recent files", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+                    recentDocuments.take(4).forEach { entry ->
+                        AlphaDocumentSummaryRow(
+                            caseTitle = entry.caseTitle,
+                            document = entry.document,
+                            onOpen = {
+                                controller.focusCase(entry.caseId)
+                                controller.pendingRoute = AndroidAlphaRoute.DocumentViewer(entry.caseId, entry.document.id, 1)
+                            },
                         )
                     }
-                if (recentDocuments.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text("Recent files", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(modifier = Modifier.height(4.dp))
-                }
-                recentDocuments.take(4).forEach { entry ->
-                    AlphaDocumentSummaryRow(
-                        caseTitle = entry.caseTitle,
-                        document = entry.document,
-                        onOpen = {
-                            controller.focusCase(entry.caseId)
-                            controller.pendingRoute = AndroidAlphaRoute.DocumentViewer(entry.caseId, entry.document.id, 1)
-                        },
-                    )
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
@@ -2145,7 +2242,7 @@ private fun AlphaCaseListScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        "${controller.cases.size} matter(s) on this device",
+                        if (controller.cases.size == 1) "1 matter on this device" else "${controller.cases.size} matters on this device",
                         modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -2783,8 +2880,9 @@ private fun AlphaDocumentViewerScreen(
     var editingFieldId by remember(documentId) { mutableStateOf<String?>(null) }
     var draftFieldValue by remember(documentId) { mutableStateOf("") }
     var editingClassification by remember(documentId) { mutableStateOf(false) }
+    var rawTextExpanded by rememberSaveable(documentId) { mutableStateOf(false) }
     AlphaShell(
-        title = "Document",
+        title = document?.title ?: "Document",
         showBack = true,
         onBack = onBack,
         actionLabel = "Ask",
@@ -2836,21 +2934,19 @@ private fun AlphaDocumentViewerScreen(
                 val detailReviewFields = reviewFields.filterNot { alphaIsImportantReviewField(it.fieldType) }
                 val reviewFindings = doc.extractionFindings.filterNot { it.resolved }.take(4)
                 val reviewCount = reviewFields.count { it.needsReview } + reviewFindings.size
-                AlphaInlineHeader(
-                    eyebrow = doc.kind.title,
-                    title = doc.title,
-                    detail = "Status: ${doc.lawyerStatusTitle()} · ${doc.pageCount} page(s) · $reviewCount need review",
+            AlphaInlineHeader(
+                eyebrow = doc.kind.title,
+                detail = "Status: ${doc.lawyerStatusTitle()} · ${alphaPageCountLabel(doc.pageCount)} · ${alphaReviewNeedLabel(reviewCount)}",
+            )
+                AlphaDocumentStatusCard(
+                    reviewCount = reviewCount,
+                    detail = controller.reviewSummary(caseId, documentId)
+                        ?: if (reviewCount > 0) {
+                            "Check the highlighted items below before relying on this document in a note or export."
+                        } else {
+                            "Verified details can be used in notes, tasks, and exports for this matter."
+                        },
                 )
-                AlphaCard(
-                    "Review snapshot",
-                    controller.reviewSummary(caseId, documentId)
-                        ?: if (reviewCount > 0) "Ross found details that still need advocate review." else "This document is ready for normal use in the matter.",
-                ) {
-                    Text(
-                        "${controller.visibleExtractedFields(caseId, documentId).size} fields found • $reviewCount need review • page ${sourcePanel.resolvedPage} of ${sourcePanel.pageCount}",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
                 val file = controller.absoluteFile(doc.storedRelativePath).takeIf { it.exists() }
                 when {
                     doc.kind == AlphaDocumentKind.Image && file != null -> {
@@ -2911,8 +3007,16 @@ private fun AlphaDocumentViewerScreen(
                         onBack()
                     }
                 }
-                AlphaCard("Text found") {
-                    Text(doc.extractedText ?: "No extracted text yet. Ross will keep source references visible even when exact highlights are still pending.")
+                AlphaExpandableCard(
+                    title = "Raw text",
+                    badge = if (rawTextExpanded) "Hide" else "Show",
+                    expanded = rawTextExpanded,
+                    onToggle = { rawTextExpanded = !rawTextExpanded },
+                ) {
+                    Text(
+                        doc.extractedText ?: "No extracted text is available for this page yet.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
                 AlphaCard(
                     "Review details",
@@ -3052,7 +3156,14 @@ private fun AlphaDocumentViewerScreen(
                         Button(onClick = onOpenPrivateAi, modifier = Modifier.fillMaxWidth()) { Text("Open Private AI") }
                     }
                 }
-                AlphaCard("Sources", sourcePanel.fallbackMessage ?: "Ross shows the best source metadata available for this page.") {
+                AlphaCard(
+                    "Sources",
+                    if (sourcePanel.currentPageRefs.isEmpty() && sourcePanel.otherRefs.isEmpty()) {
+                        "No source previews available for this page."
+                    } else {
+                        sourcePanel.fallbackMessage ?: "Ross shows the best source metadata available for this page."
+                    }
+                ) {
                     Text("Target page ${sourcePanel.resolvedPage} of ${sourcePanel.pageCount}", fontWeight = FontWeight.SemiBold)
                     Spacer(modifier = Modifier.height(8.dp))
                     val visibleRefs = if (sourcePanel.currentPageRefs.isEmpty()) sourcePanel.otherRefs.take(3) else sourcePanel.currentPageRefs
@@ -3104,6 +3215,45 @@ private fun AlphaDocumentQuickAskStrip(title: String?, detail: String, isShared:
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.secondary,
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AlphaDocumentStatusCard(reviewCount: Int, detail: String) {
+    val tint = if (reviewCount == 0) AlphaSuccessStatus else AlphaAmberStatus
+    val icon = if (reviewCount == 0) Icons.Outlined.CheckCircle else Icons.Outlined.WarningAmber
+    val title = if (reviewCount == 0) {
+        "Ready to use in this matter"
+    } else if (reviewCount == 1) {
+        "1 item needs your review below"
+    } else {
+        "$reviewCount items need your review below"
+    }
+
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .background(tint.copy(alpha = 0.14f), shape = RoundedCornerShape(999.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
+            }
+
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -3181,6 +3331,12 @@ private fun alphaAttentionHeadline(count: Int): String = when (count) {
     1 -> "1 item needs attention"
     else -> "$count items need attention"
 }
+
+private fun alphaPageCountLabel(count: Int): String =
+    if (count == 1) "1 page" else "$count pages"
+
+private fun alphaReviewNeedLabel(count: Int): String =
+    if (count == 1) "1 item needs review" else "$count items need review"
 
 private fun alphaIsImportantReviewField(type: AlphaExtractedLegalFieldType): Boolean =
     reviewPriority(type) <= 8
@@ -3994,12 +4150,14 @@ private fun AlphaHero(eyebrow: String, title: String, body: String, showLogo: Bo
 }
 
 @Composable
-private fun AlphaInlineHeader(eyebrow: String? = null, title: String, detail: String? = null) {
+private fun AlphaInlineHeader(eyebrow: String? = null, title: String? = null, detail: String? = null) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         eyebrow?.takeIf { it.isNotBlank() }?.let {
             Text(it.uppercase(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
         }
-        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        title?.takeIf { it.isNotBlank() }?.let {
+            Text(it, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        }
         detail?.takeIf { it.isNotBlank() }?.let {
             Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -5089,7 +5247,7 @@ private fun AlphaExpandableDocumentRow(
                             Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Text(
-                            "${document.kind.title} • ${document.pageCount} page(s) • ${document.lawyerStatusTitle()}",
+                            "${document.kind.title} • ${alphaPageCountLabel(document.pageCount)} • ${document.lawyerStatusTitle()}",
                             style = MaterialTheme.typography.labelMedium,
                             color = tint,
                         )
