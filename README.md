@@ -2,7 +2,7 @@
 
 Ross is a privacy-first legal workbench for Indian advocates.
 
-The current phase is `Ross Real-World Usage Alpha`: make Ross feel like a real morning work app for a non-technical advocate, without weakening the local-first privacy boundary.
+The current phase is `Ross Internal Dogfood Readiness`: prove and polish the existing app so a founder or a small set of trusted lawyers can use it without an engineer narrating the flow.
 
 ## Current daily loop
 
@@ -56,17 +56,32 @@ Recent manual iOS simulator proof includes:
 - sign-in shell renders
 - demo sign-in lands on Home
 - Home shows real local dashboard state
+- create matter
+- Ask Ross add-task action
+- Ask Ross save-next-hearing action
+- document import into a matter
 - matter list opens
 - matter workspace opens
 - file room opens
 - document viewer and review screen open
 - Ask Ross works with Web off
 - public-law preview appears before search
-- Privacy Ledger opens
-- notes and exports surface opens
-- Settings remain lawyer-facing and keep diagnostics under Advanced
+- public-law results render for a generic law question
 
-Fresh manual Android walkthrough is still pending because no emulator was available in this session.
+Recent manual Android emulator proof includes:
+
+- debug app install
+- app launch
+- demo sign-in
+- populated Home
+- demo matter opens
+- Web Search can be toggled on from the Ask Ross tools sheet
+
+Current Android blocker from live QA:
+
+- matter-scoped free-text `add task ...` produced `Tasks from your files` suggestions instead of a clearly persisted task in the `Tasks` tab
+
+Fresh Android proof of dock action persistence, document flow, exports, ledger, and Settings is still pending.
 
 ## What is not proven yet
 
@@ -182,6 +197,7 @@ cd /Users/amanpandey/projects/ross
 
 ## QA and runbooks
 
+- [`docs/PRODUCT_PROOF_QA.md`](/Users/amanpandey/projects/ross/docs/PRODUCT_PROOF_QA.md)
 - [`docs/REAL_WORLD_USAGE_QA.md`](/Users/amanpandey/projects/ross/docs/REAL_WORLD_USAGE_QA.md)
 - [`docs/INTERNAL_ALPHA_QA.md`](/Users/amanpandey/projects/ross/docs/INTERNAL_ALPHA_QA.md)
 - [`docs/PUBLIC_LAW_QA.md`](/Users/amanpandey/projects/ross/docs/PUBLIC_LAW_QA.md)
@@ -191,6 +207,8 @@ cd /Users/amanpandey/projects/ross
 - [`docs/INTERNAL_ALPHA_READINESS.md`](/Users/amanpandey/projects/ross/docs/INTERNAL_ALPHA_READINESS.md)
 - [`docs/PRIVACY_ARCHITECTURE.md`](/Users/amanpandey/projects/ross/docs/PRIVACY_ARCHITECTURE.md)
 - [`docs/OFFLINE_BEHAVIOR.md`](/Users/amanpandey/projects/ross/docs/OFFLINE_BEHAVIOR.md)
+- [`docs/PRIVATE_ASSISTANT_USAGE.md`](/Users/amanpandey/projects/ross/docs/PRIVATE_ASSISTANT_USAGE.md)
+- [`docs/PUBLIC_LAW_LOCAL_QUERY_FLOW.md`](/Users/amanpandey/projects/ross/docs/PUBLIC_LAW_LOCAL_QUERY_FLOW.md)
 - [`docs/NEXT_STEP_REPORT.md`](/Users/amanpandey/projects/ross/docs/NEXT_STEP_REPORT.md)
 
 ## Screenshot bundle

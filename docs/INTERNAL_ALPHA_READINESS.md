@@ -18,22 +18,25 @@ Fresh manual proof:
 - sign-in shell
 - demo sign-in to Home
 - Home dashboard
+- create matter
+- Ask Ross add-task command
+- Ask Ross save-next-hearing command
+- document import
 - matter list
 - matter workspace
 - file room
 - document viewer and review surface
 - Ask Ross with Web off
 - public-law preview
-- Privacy Ledger
-- notes and exports surface
-- Settings surface
+- successful public-law result on a generic question
 
 Still needing a fresh proof pass:
 
-- create matter on the refreshed build
-- task and date creation on the refreshed build
+- review `Edit`
+- review `Ignore`
 - export open after generation
-- final public-law results screen after the latest code changes
+- Privacy Ledger open after the latest pass
+- Settings -> Advanced after the latest pass
 
 ### Android
 
@@ -44,12 +47,19 @@ Build and tests:
 
 Fresh manual proof:
 
-- none in this session
+- install debug APK
+- launch app
+- demo sign-in
+- populated Home
+- demo matter open
+- Ask Ross tools sheet
+- Web Search on/off copy
 
 Current truth:
 
-- workflow is implemented and tested in code
-- no emulator was attached for a fresh walkthrough
+- workflow is implemented and partially manually checked
+- matter-level dock command persistence is not proven yet
+- document/review/export/ledger/settings still need Android manual proof
 
 ### Backend
 
@@ -127,7 +137,8 @@ Validated:
 
 - local Ask Ross with Web off: manually proven on iOS
 - sanitized preview before public-law search: manually proven on iOS
-- public-law results from the refreshed build after latest changes: not freshly re-proven
+- public-law results from the latest iOS pass: manually proven for a generic law question
+- Android dock persistence for task/date actions: not proven yet
 
 ### Notes and exports
 
@@ -137,14 +148,14 @@ Validated:
 
 ### Privacy Ledger
 
-- ledger opens: manually proven on iOS
-- plain-language entries: manually proven on iOS
+- ledger opens: not freshly proven in the latest pass
+- plain-language entries: previously designed that way, but not freshly reopened in the latest pass
 
 ### Settings
 
-- lawyer-facing settings: manually proven on iOS
-- Advanced separation: manually proven on iOS
-- Technical diagnostics inside Advanced only: present in product structure; expanded panel was not freshly captured in this final sweep
+- lawyer-facing settings: previously proven, not freshly reopened in the latest pass
+- Advanced separation: present in product structure
+- Technical diagnostics inside Advanced only: still needs a fresh manual reopen
 
 ## Screenshot bundle
 

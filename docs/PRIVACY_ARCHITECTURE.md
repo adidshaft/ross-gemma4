@@ -87,6 +87,12 @@ Current backend guardrails:
 - rejects queries that are not general public-law research
 - logs only hashed query metadata for the public-law route
 
+Manual proof note for April 22, 2026:
+
+- iOS simulator proof used `http://127.0.0.1:8787`
+- Android emulator defaults to `http://10.0.2.2:8080`
+- Android preview -> confirm -> results still needs a fresh manual pass
+
 ## Gemini boundary
 
 Gemini may only be used server-side for confirmed public-law search.

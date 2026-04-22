@@ -1,4 +1,4 @@
-# Ross Real-World Usage Alpha Report
+# Ross Internal Dogfood Readiness Report
 
 ## Branch used
 
@@ -31,64 +31,69 @@ Left intentionally untouched:
 
 No secrets, provisioning profiles, certificates, or local environment files were committed.
 
-## What changed in product terms
+## Current proof summary
 
-Ross now leans much harder into the real daily loop:
+Freshly observed on iOS in this session:
 
-- demo sign-in lands on a populated synthetic workspace instead of an abstract shell
-- Home answers `What needs my attention today?`
-- matters carry dates, tasks, documents, review work, notes, and exports in one place
-- public-law search remains preview-gated and sanitized
-- Privacy Ledger stays lawyer-readable
+- demo sign-in
+- populated Home
+- create matter
+- Ask Ross add task
+- Ask Ross save next hearing
+- document import
+- document viewer open
+- local Ask Ross with `Web Search` off
+- preview before public-law search
+- successful public-law result for a generic law question
+- visible split between case-file context and public-law results
 
-## Fresh proof from this phase
+Freshly observed on Android in this session:
 
-Freshly observed in the iOS simulator on April 22, 2026:
+- debug install
+- app launch
+- demo sign-in
+- populated Home
+- demo matter open
+- `Web Search` can be toggled on with plain privacy copy
 
-- demo sign-in lands on Home
-- Home shows live local dashboard sections
-- matter list opens
-- matter workspace opens
-- file room opens
-- document viewer opens
-- review actions are visible
-- Ask Ross works with Web off
-- public-law preview appears before search
-- Privacy Ledger opens
-- notes and exports surface opens
-- Settings remain plain-language with Advanced separated
+Current Android blocker:
 
-Freshly proven by code and tests in this phase:
-
-- demo workspace seeding is intentional and resettable
-- generic morning questions produce a research-safe public-law preview
-- marking matter dates done no longer silently inflates open tasks
-- Android and iOS both carry the same no-silent-task-inflation regression
+- matter-scoped free-text dock input is not yet proven to persist task/date actions cleanly
 
 ## Explicitly still unproven
 
-This phase does not prove:
+This phase still does not prove:
 
+- export generation and export opening in the latest iOS pass
+- Privacy Ledger opening in the latest iOS pass
+- Settings -> Advanced in the latest iOS pass
+- Android dock action persistence
+- Android document flow
+- Android public-law preview -> confirm -> results
 - real Google OAuth with real credentials
 - backend-backed Apple sign-in
 - physical iPhone install or provisioning completion
 - quick unlock on real hardware
-- Android emulator walkthrough in this session
 - real local model proof on device
 
 ## Public-law truth
 
-The current public-law path is:
+The current public-law path remains:
 
-1. local preview in the app
-2. explicit confirmation
-3. Ross backend call
-4. Gemini with Google Search grounding only if configured server-side
-5. privacy-safe fallback index if the live connector fails or is unavailable
+1. local handling first
+2. preview in the app
+3. explicit confirmation
+4. Ross backend call
+5. server-side Gemini only if configured there
+6. privacy-safe fallback if the live connector is unavailable
 
-The backend route rejects obvious private matter content, identifiers, filenames, exact dates, and the fake-secret regression values before any Gemini request is made.
+Manual proof URL used on iOS in this session:
 
-Backend logging records hashed metadata, not the raw public-law query in production-style paths.
+- `http://127.0.0.1:8787`
+
+Android emulator default:
+
+- `http://10.0.2.2:8080`
 
 ## Screenshot treatment
 
@@ -100,18 +105,9 @@ Older tracked screenshot bundles under `artifacts/ios/light/` and `artifacts/ios
 
 ## Exact next recommended step
 
-Run one clean, fresh iOS simulator pass after relaunching the newly built app and record:
+Run a short blocker-only pass:
 
-1. create matter
-2. add task and date
-3. import a new file
-4. accept, edit, and ignore a review item
-5. generate and open one export draft
-6. confirm public-law search results end-to-end on the refreshed build
-
-After that, the next proof track should be a separate credential and hardware pass:
-
-- real Google OAuth
-- physical-device quick unlock
-- physical iPhone install
-- real local model proof
+1. iOS export generation -> open export -> open Privacy Ledger -> open Settings -> Advanced
+2. Android dock `add task` and `save next hearing` persistence
+3. Android public-law preview -> confirm -> results
+4. iOS sanitizer polish for legal citations such as `Order 39 Rules 1 and 2 CPC`

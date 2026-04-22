@@ -2,6 +2,8 @@
 
 Ross is designed to remain useful when the network is unavailable.
 
+The current dogfood phase assumes the app should still feel usable even when the private assistant is unavailable or the backend cannot be reached.
+
 The current alpha keeps the core matter workflow local-first.
 
 ## Works offline
@@ -23,7 +25,7 @@ These flows are designed to keep working without network access:
 
 ## Works offline in basic local mode
 
-Ross should still remain useful in `Using basic local mode`.
+Ross should still remain useful in `Using basic local review`.
 
 That includes:
 
@@ -73,6 +75,7 @@ If `Web search` is on:
 Expected plain-language degraded states include:
 
 - `Using basic local mode`
+- `Using basic local review`
 - `Still reading`
 - `Needs review`
 - `Could not read this clearly`

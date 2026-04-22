@@ -1,6 +1,6 @@
 # Real-World Usage QA
 
-This is the primary manual script for `Ross Real-World Usage Alpha`.
+This is the primary manual script for `Ross Internal Dogfood Readiness`.
 
 The goal is not just feature coverage. The goal is to prove that a non-technical advocate can use Ross through a realistic morning loop.
 
@@ -119,22 +119,31 @@ Fresh iOS simulator proof:
 
 - demo sign-in
 - live Home dashboard
-- matter list and matter workspace
+- create matter
+- Ask Ross add task
+- Ask Ross save next hearing
+- document import
+- matter workspace
 - file room
-- document viewer and review surface
+- document viewer
 - Ask Ross with Web off
 - public-law preview before search
-- Privacy Ledger
-- notes and exports surface
-- Settings surface
+- successful public-law result on a generic law question
 
-Still needing a fresh clean pass after relaunch:
+Still needing a fresh iOS follow-up:
 
-- create matter on the freshly built app
-- add task and date on the freshly built app
-- generate and then open one export draft
-- final in-app public-law results confirmation on the refreshed build
+- review `Edit`
+- review `Ignore`
+- export generation and opening
+- Privacy Ledger opening
+- Settings -> Advanced
 
 Android status:
 
-- no fresh emulator walkthrough in this session because no emulator was attached
+- fresh emulator walkthrough is partially complete
+- debug app installed
+- demo sign-in worked
+- populated Home was visible
+- demo matter opened
+- Web Search toggle copy was verified
+- dock command persistence is not proven yet

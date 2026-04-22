@@ -81,16 +81,30 @@ If that connector is unavailable, Ross falls back to a privacy-safe backend inde
 
 ## Current Android truth
 
-Proven by code and tests in this phase:
+Fresh manual proof in this session:
 
-- demo workspace seeding and reset behavior
-- matter, task, date, and review data model updates
-- sanitized public-law query generation
-- no-silent-task-inflation regression coverage
+- debug app install
+- app launch
+- demo sign-in
+- populated Home
+- demo matter open
+- Ask Ross tools sheet
+- `Web Search` on/off copy
+
+Current blocker from manual QA:
+
+- matter-scoped free-text `add task ...` produced suggested tasks from files, but did not clearly prove a persisted task in the `Tasks` tab
 
 Still unproven in a fresh emulator or device pass:
 
-- Android emulator walkthrough in this session
+- create matter
+- dock add-task persistence
+- dock save-date persistence
+- document import and viewer
+- public-law preview -> confirm -> results
+- export open
+- Privacy Ledger
+- Settings -> Advanced
 - real Google OAuth with real credentials
 - physical-device quick unlock
 - real local model proof on device

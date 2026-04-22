@@ -4,6 +4,8 @@ This script validates the lawyer-facing matter and document loop in Ross.
 
 Use it for manual product QA. Do not use it to claim a real local-model proof.
 
+For the latest truth in status, pair this script with [`docs/PRODUCT_PROOF_QA.md`](/Users/amanpandey/projects/ross/docs/PRODUCT_PROOF_QA.md).
+
 ## 1. Launch and sign in
 
 Steps:

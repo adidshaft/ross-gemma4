@@ -103,12 +103,22 @@ Freshly observed in this phase:
 
 - demo sign-in lands on Home
 - Home shows real local dashboard state
+- create matter
+- Ask Ross add-task action
+- Ask Ross save-next-hearing action
+- document import into a matter
 - matter list opens
 - matter workspace opens
 - file room opens
 - document viewer opens
-- Privacy Ledger opens
-- notes and exports surface opens
+- local Ask Ross with `Web Search` off
+- preview before public-law search
+- public-law results for a generic law question
+
+Freshly observed issues:
+
+- citation sanitization is too aggressive for `Order 39 Rules 1 and 2 CPC`
+- export, ledger, and Settings -> Advanced still need a clean follow-up pass
 
 Still unproven on iOS:
 

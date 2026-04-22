@@ -2,6 +2,8 @@
 
 Ross is a privacy-first legal workbench for Indian advocates.
 
+The current phase is `Ross Internal Dogfood Readiness`.
+
 The current alpha should feel like a calm daily matter desk, not a developer console.
 
 ## Product shape
@@ -131,14 +133,14 @@ Ross keeps these user-facing promises:
 
 ## What this alpha proves and does not prove
 
-This alpha is meant to prove:
+This phase is meant to prove:
 
 - the app can launch and feel usable
 - the matter workflow is practical
 - public-law preview and confirmation are explicit
 - privacy boundaries are preserved
 
-This alpha does not by itself prove:
+This phase does not by itself prove:
 
 - real Google OAuth with production credentials
 - backend-backed Apple sign-in
