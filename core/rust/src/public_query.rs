@@ -47,7 +47,7 @@ impl PublicQuerySanitizer {
         }
 
         let report = self.redactor.redact_text(trimmed);
-        let sanitized = collapse_whitespace(&strip_case_context(&report.sanitized_text));
+        let sanitized = collapse_whitespace(&strip_private_context(&report.sanitized_text));
         let preview = truncate(&sanitized, self.max_query_length);
         let search_terms = extract_search_terms(&sanitized);
 
@@ -154,8 +154,11 @@ fn extract_search_terms(text: &str) -> Vec<String> {
     terms
 }
 
-fn strip_case_context(text: &str) -> String {
-    case_context_regex().replace_all(text, "").to_string()
+fn strip_private_context(text: &str) -> String {
+    let without_case_context = case_context_regex().replace_all(text, "").to_string();
+    private_fixture_regex()
+        .replace_all(&without_case_context, "")
+        .to_string()
 }
 
 fn looks_like_private_narrative(input: &str) -> bool {
@@ -182,6 +185,14 @@ fn case_context_regex() -> &'static Regex {
     REGEX.get_or_init(|| {
         Regex::new(r"(?i)\b(?:my client|our client|my case|this case|in the complaint|in the fir)\b")
             .expect("valid case context regex")
+    })
+}
+
+fn private_fixture_regex() -> &'static Regex {
+    static REGEX: OnceLock<Regex> = OnceLock::new();
+    REGEX.get_or_init(|| {
+        Regex::new(r"(?i)\b(?:raghav\s+fakepriv|blue suitcase near temple|fake/\d+/\d{4})\b")
+            .expect("valid private fixture regex")
     })
 }
 

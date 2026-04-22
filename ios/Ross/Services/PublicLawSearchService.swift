@@ -75,7 +75,7 @@ struct StubPublicLawSearchService: PublicLawSearchServicing {
         }
 
         sanitized = sanitized.replacingOccurrences(
-            of: "\\b\\d{2,}\\b",
+            of: "\\b\\d{8,}\\b",
             with: "",
             options: .regularExpression
         )

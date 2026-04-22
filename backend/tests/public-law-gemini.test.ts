@@ -153,6 +153,86 @@ test("public-law search uses Gemini grounding when configured and sends only the
   assert.doesNotMatch(requestBody, /caseId|caseText|filename|document text/i);
 });
 
+test("public-law search preserves legal citations in the approved query sent to Gemini", async (t) => {
+  const originalFetch = globalThis.fetch;
+  const fetchCalls: Array<{ url: string; init?: RequestInit | undefined }> = [];
+
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    fetchCalls.push({
+      url: typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url,
+      init
+    });
+
+    return jsonResponse({
+      candidates: [
+        {
+          content: {
+            parts: [
+              {
+                text: "Temporary injunction review commonly turns on prima facie case, balance of convenience, and irreparable injury."
+              }
+            ]
+          },
+          groundingMetadata: {
+            groundingChunks: [
+              {
+                web: {
+                  uri: "https://www.livelaw.in/top-stories/order-39-rules-1-2-cpc-overview",
+                  title: "Order 39 Rules 1 and 2 CPC overview"
+                }
+              }
+            ],
+            groundingSupports: [
+              {
+                segment: {
+                  startIndex: 0,
+                  endIndex: 112,
+                  text: "Temporary injunction review commonly turns on prima facie case, balance of convenience, and irreparable injury."
+                },
+                groundingChunkIndices: [0]
+              }
+            ]
+          }
+        }
+      ]
+    });
+  }) as typeof fetch;
+
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  const app = await buildApp({
+    env: buildTestEnv(),
+    emitLogsToConsole: false
+  });
+
+  t.after(async () => {
+    await app.close();
+  });
+
+  const query = "Order 39 Rules 1 and 2 CPC temporary injunction";
+  const response = await app.inject({
+    method: "POST",
+    url: "/public-law/search",
+    payload: {
+      query,
+      jurisdiction: "IN-ALL",
+      language: "en",
+      confirmedPublicPreview: true
+    }
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(fetchCalls.length, 1);
+
+  const parsedRequest = JSON.parse(fetchCalls[0]?.init?.body as string) as {
+    contents?: Array<{ parts?: Array<{ text?: string }> }>;
+  };
+
+  assert.equal(parsedRequest.contents?.[0]?.parts?.[0]?.text, query);
+});
+
 test("unsafe public-law queries are rejected before any Gemini request is made", async (t) => {
   const originalFetch = globalThis.fetch;
   const fetchCalls: Array<{ url: string; init?: RequestInit | undefined }> = [];

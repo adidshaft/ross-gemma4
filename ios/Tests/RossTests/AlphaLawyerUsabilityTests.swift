@@ -191,6 +191,69 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    func testSanitizedPreviewPreservesLegalCitationsAndTimeLimits() async throws {
+        try await withRestoredStore { store in
+            try await store.replace(with: AlphaPersistedState.seed())
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+            await MainActor.run {
+                model.submitAsk(
+                    question: "Order 39 Rules 1 and 2 CPC temporary injunction, Section 138 NI Act notice limitation, Section 482 CrPC quashing FIR, Article 226 Constitution of India writ mandamus",
+                    scopeCaseID: nil,
+                    webEnabled: true
+                )
+            }
+
+            let preview = await MainActor.run { model.publicLawPreview }
+            XCTAssertNotNil(preview)
+            XCTAssertTrue(preview?.query.contains("Order 39 Rules 1 and 2 CPC") == true)
+            XCTAssertTrue(preview?.query.contains("Section 138 NI Act") == true)
+            XCTAssertTrue(preview?.query.contains("Section 482 CrPC") == true)
+            XCTAssertTrue(preview?.query.contains("Article 226 Constitution of India") == true)
+
+            await MainActor.run {
+                model.submitAsk(
+                    question: "delay filing written statement 120 days Commercial Courts Act",
+                    scopeCaseID: nil,
+                    webEnabled: true
+                )
+            }
+
+            let deadlinePreview = await MainActor.run { model.publicLawPreview }
+            XCTAssertTrue(deadlinePreview?.query.contains("120 days Commercial Courts Act") == true)
+        }
+    }
+
+    func testConfirmedPublicLawSearchUsesApprovedPreviewQuery() async throws {
+        try await withRestoredStore { store in
+            try await store.replace(with: AlphaPersistedState.seed())
+            let sentQuery = SendableBox<String?>(nil)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { preview in
+                    sentQuery.value = preview.query
+                    return []
+                })
+            }
+            await model.loadIfNeeded()
+            await MainActor.run {
+                model.submitAsk(
+                    question: "Order 39 Rules 1 and 2 CPC temporary injunction",
+                    scopeCaseID: nil,
+                    webEnabled: true
+                )
+            }
+
+            let approvedQuery = await MainActor.run { model.publicLawPreview?.query }
+            await model.confirmPendingPublicLawSearch()
+
+            XCTAssertEqual(approvedQuery, sentQuery.value)
+        }
+    }
+
     func testMarkingMatterDateDoneDoesNotSilentlyInflateOpenTasks() async throws {
         try await withRestoredStore { store in
             let state = AlphaPersistedState.demoSeed()
@@ -363,6 +426,59 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertFalse(exports.isEmpty)
             XCTAssertEqual("Hearing note ready", latestResult?.answerTitle)
             XCTAssertEqual("Draft ready", latestResult?.statusNote)
+        }
+    }
+
+    func testIgnoredFieldDoesNotAppearInExportDraftBody() async throws {
+        try await withRestoredStore { store in
+            var state = AlphaPersistedState.demoSeed()
+            guard
+                let caseIndex = state.cases.firstIndex(where: { $0.title == "Demo Matter: Sharma v. Rana" }),
+                let documentIndex = state.cases[caseIndex].documents.indices.first
+            else {
+                XCTFail("Missing demo matter")
+                return
+            }
+
+            let caseID = state.cases[caseIndex].id
+            let documentID = state.cases[caseIndex].documents[documentIndex].id
+            let uniqueValue = "Ignored unique export field"
+            let sourceRef = AlphaSourceRef(
+                caseId: caseID,
+                documentId: documentID,
+                documentTitle: state.cases[caseIndex].documents[documentIndex].title,
+                pageNumber: 1,
+                textSnippet: "Ignored unique export field source"
+            )
+            let field = AlphaExtractedLegalField(
+                caseId: caseID,
+                documentId: documentID,
+                fieldType: .relief,
+                label: "Relief",
+                value: uniqueValue,
+                sourceRefs: [sourceRef],
+                confidence: 0.52,
+                extractionMode: .basic,
+                extractionPass: .regex,
+                needsReview: true
+            )
+            state.cases[caseIndex].documents[documentIndex].extractedFields.insert(field, at: 0)
+            try await store.replace(with: state)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+            await MainActor.run {
+                model.ignoreExtractedField(caseId: caseID, documentId: documentID, fieldId: field.id)
+            }
+
+            let exportLines = await MainActor.run {
+                let caseMatter = model.persisted.cases.first(where: { $0.id == caseID })
+                return model.exportBodyLines(kind: "case_note", caseMatter: caseMatter)
+            }
+
+            XCTAssertFalse(exportLines.joined(separator: "\n").contains(uniqueValue))
         }
     }
 

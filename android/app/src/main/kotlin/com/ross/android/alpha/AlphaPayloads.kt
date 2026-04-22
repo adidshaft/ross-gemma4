@@ -55,9 +55,12 @@ object AlphaPayloadShaper {
     )
     private val legalConceptSignals = listOf(
         "act",
+        "article",
         "section",
         "order",
         "rule",
+        "constitution",
+        "writ",
         "maintenance",
         "injunction",
         "dishonour",
@@ -129,14 +132,14 @@ object AlphaPayloadShaper {
             }
         }
 
-        if (Regex("\\b\\d{2,}\\b").containsMatchIn(sanitized)) {
-            removed += "Case numbers, phone numbers, or long numeric strings"
-            sanitized = sanitized.replace(Regex("\\b\\d{2,}\\b"), " ")
-        }
-
         if (Regex("\\b[A-Za-z]{1,8}[(/\\- ]*\\d+[A-Za-z/()\\- ]*\\d{4}\\b", RegexOption.IGNORE_CASE).containsMatchIn(sanitized)) {
             removed += "Case numbers or filing references"
             sanitized = sanitized.replace(Regex("\\b[A-Za-z]{1,8}[(/\\- ]*\\d+[A-Za-z/()\\- ]*\\d{4}\\b", RegexOption.IGNORE_CASE), " ")
+        }
+
+        if (Regex("\\b[A-Z]{2,}(?:\\([A-Z]+\\))?(?:[/ -]?\\d+/\\d{4})\\b", RegexOption.IGNORE_CASE).containsMatchIn(sanitized)) {
+            removed += "Case numbers or filing references"
+            sanitized = sanitized.replace(Regex("\\b[A-Z]{2,}(?:\\([A-Z]+\\))?(?:[/ -]?\\d+/\\d{4})\\b", RegexOption.IGNORE_CASE), " ")
         }
 
         if (Regex("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+").containsMatchIn(sanitized)) {
@@ -147,6 +150,11 @@ object AlphaPayloadShaper {
         if (Regex("\\b\\+?\\d[\\d\\s-]{7,}\\b").containsMatchIn(sanitized)) {
             removed += "Phone numbers"
             sanitized = sanitized.replace(Regex("\\b\\+?\\d[\\d\\s-]{7,}\\b"), " ")
+        }
+
+        if (Regex("\\b\\d{8,}\\b").containsMatchIn(sanitized)) {
+            removed += "Phone numbers or long numeric strings"
+            sanitized = sanitized.replace(Regex("\\b\\d{8,}\\b"), " ")
         }
 
         if (Regex("\\b[^\\s]+\\.(pdf|docx|doc|txt|png|jpg|jpeg)\\b", RegexOption.IGNORE_CASE).containsMatchIn(sanitized)) {
@@ -269,12 +277,14 @@ object AlphaPayloadShaper {
         val patterns = listOf(
             "commercial courts act",
             "negotiable instruments act",
+            "constitution of india",
             "written statement",
             "delay condonation",
             "interim maintenance",
             "injunction",
+            "article \\d+[a-z]*",
             "section \\d+[a-z]*",
-            "order [a-z0-9]+ rule \\d+",
+            "order [a-z0-9]+(?: rules? \\d+[a-z]*(?:\\s*(?:,|and|to|-)\\s*\\d+[a-z]*)*)?",
             "cheque dishonour",
         )
         val matched = patterns.mapNotNull { pattern ->
@@ -295,8 +305,9 @@ object AlphaPayloadShaper {
 
     private fun looksLikeLegalConcept(value: String): Boolean =
         legalConceptSignals.any { signal -> value.contains(signal) } ||
+            Regex("article\\s+\\d+[a-z]*", RegexOption.IGNORE_CASE).containsMatchIn(value) ||
             Regex("section\\s+\\d+[a-z]*", RegexOption.IGNORE_CASE).containsMatchIn(value) ||
-            Regex("order\\s+[a-z0-9]+\\s+rule\\s+\\d+", RegexOption.IGNORE_CASE).containsMatchIn(value)
+            Regex("order\\s+[a-z0-9]+(?:\\s+rules?\\s+\\d+[a-z]?(?:\\s*(?:,|and|to|-)\\s*\\d+[a-z]?)*)?", RegexOption.IGNORE_CASE).containsMatchIn(value)
 
     private fun isSafePublicLawToken(value: String): Boolean {
         val lowered = value.lowercase()

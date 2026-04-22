@@ -256,6 +256,26 @@ class AlphaPayloadsTest {
     }
 
     @Test
+    fun `public law preview preserves legal citations and statutory time limits`() {
+        val preview = AlphaPayloadShaper.buildPublicLawPreview(
+            rawQuery = "Order 39 Rules 1 and 2 CPC temporary injunction, Section 138 NI Act notice limitation, Section 482 CrPC quashing FIR, Article 226 Constitution of India writ mandamus",
+            case = null,
+        )
+
+        assertTrue(preview.query.contains("Order 39 Rules 1 and 2 CPC", ignoreCase = true))
+        assertTrue(preview.query.contains("Section 138 NI Act", ignoreCase = true))
+        assertTrue(preview.query.contains("Section 482 CrPC", ignoreCase = true))
+        assertTrue(preview.query.contains("Article 226 Constitution of India", ignoreCase = true))
+
+        val deadlinePreview = AlphaPayloadShaper.buildPublicLawPreview(
+            rawQuery = "delay filing written statement 120 days Commercial Courts Act",
+            case = null,
+        )
+
+        assertTrue(deadlinePreview.query.contains("120 days Commercial Courts Act", ignoreCase = true))
+    }
+
+    @Test
     fun `public law preview strips exact dates and address-like private details`() {
         val preview = AlphaPayloadShaper.buildPublicLawPreview(
             rawQuery = "Find law on delay condonation for hearing fixed on 14 March 2026 at blue suitcase near temple and contact 9876501234",

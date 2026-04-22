@@ -67,10 +67,12 @@ class AlphaLawyerUsabilityTest {
     @Test
     fun `web on requires preview before public law request`() {
         var publicLawCalls = 0
+        var approvedQuerySent: String? = null
         val controller = buildController(
             secretKeyProvider = InMemorySecretKeyProvider(),
-            publicLawSearchOverride = {
+            publicLawSearchOverride = { preview ->
                 publicLawCalls += 1
+                approvedQuerySent = preview.query
                 listOf(
                     AlphaPublicLawResult(
                         title = "Delay condonation and documented diligence",
@@ -98,6 +100,7 @@ class AlphaLawyerUsabilityTest {
         assertEquals(1, publicLawCalls)
         assertEquals("Public-law results", controller.latestAskResult?.statusNote)
         assertEquals(1, controller.publicLawResults.size)
+        assertEquals(controller.publicLawPreview?.query, approvedQuerySent)
     }
 
     @Test
@@ -117,6 +120,21 @@ class AlphaLawyerUsabilityTest {
         assertFalse(preview.query.contains("fakepriv@example.com", ignoreCase = true))
         assertFalse(preview.query.contains("private-bundle.pdf", ignoreCase = true))
         assertFalse(preview.query.contains("FAKE/123/2026", ignoreCase = true))
+    }
+
+    @Test
+    fun `sanitized preview keeps legal citation numbering intact`() {
+        val controller = buildController(secretKeyProvider = InMemorySecretKeyProvider())
+
+        controller.submitAsk(
+            question = "Order 39 Rules 1 and 2 CPC temporary injunction",
+            scopeCaseId = null,
+            webEnabled = true,
+        )
+
+        val preview = controller.publicLawPreview
+        assertNotNull(preview)
+        assertEquals("Order 39 Rules 1 and 2 CPC temporary injunction", preview?.query)
     }
 
     @Test

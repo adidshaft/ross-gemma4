@@ -2917,7 +2917,7 @@ final class AlphaRossModel {
         }
     }
 
-    private func exportBodyLines(kind: String, caseMatter: AlphaCaseMatter?) -> [String] {
+    func exportBodyLines(kind: String, caseMatter: AlphaCaseMatter?) -> [String] {
         let title = caseMatter?.title ?? "Ross"
         let generatedDate = Date().formatted(date: .abbreviated, time: .shortened)
         guard let caseMatter else {
@@ -2933,7 +2933,14 @@ final class AlphaRossModel {
         }
 
         let documents = caseMatter.documents
-        let allFields = documents.flatMap(\.extractedFields)
+        let ignoredFieldIDs = Set(
+            caseMatter.advocateCorrections
+                .filter { $0.correctionType == .ignoreField }
+                .compactMap(\.fieldId)
+        )
+        let allFields = documents
+            .flatMap(\.extractedFields)
+            .filter { !ignoredFieldIDs.contains($0.id) }
         let verifiedFields = allFields.filter { !$0.needsReview || $0.userCorrected }
         let pendingFields = allFields.filter(\.needsReview)
         let unresolvedFindings = documents.flatMap(\.extractionFindings).filter { !$0.resolved }
@@ -3712,6 +3719,7 @@ final class AlphaRossModel {
             "negotiable instruments act",
             "arbitration act",
             "limitation act",
+            "constitution of india",
             "written statement",
             "delay condonation",
             "interim maintenance",
@@ -3719,8 +3727,9 @@ final class AlphaRossModel {
             "injunction",
             "stay",
             "cheque dishonour",
+            "article \\d+[a-z]*",
             "section \\d+[a-z]*",
-            "order [a-z0-9]+ rule \\d+"
+            "order [a-z0-9]+(?: rules? \\d+[a-z]*(?:\\s*(?:,|and|to|-)\\s*\\d+[a-z]*)*)?"
         ]
         let matches: [String] = patterns.compactMap { pattern -> String? in
             guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else { return nil }
@@ -3744,9 +3753,12 @@ final class AlphaRossModel {
     private func looksLikeLegalConcept(_ value: String) -> Bool {
         let legalSignals = [
             "act",
+            "article",
             "section",
             "order",
             "rule",
+            "constitution",
+            "writ",
             "maintenance",
             "injunction",
             "dishonour",
@@ -3762,8 +3774,9 @@ final class AlphaRossModel {
         if legalSignals.contains(where: { value.contains($0) }) {
             return true
         }
-        return value.range(of: #"section\s+\d+[a-z]*"#, options: .regularExpression) != nil ||
-            value.range(of: #"order\s+[a-z0-9]+\s+rule\s+\d+"#, options: .regularExpression) != nil
+        return value.range(of: #"article\s+\d+[a-z]*"#, options: .regularExpression) != nil ||
+            value.range(of: #"section\s+\d+[a-z]*"#, options: .regularExpression) != nil ||
+            value.range(of: #"order\s+[a-z0-9]+(?:\s+rules?\s+\d+[a-z]?(?:\s*(?:,|and|to|-)\s*\d+[a-z]?)*)?"#, options: .regularExpression) != nil
     }
 
     private func isSafePublicLawTerm(_ value: String) -> Bool {
@@ -4324,10 +4337,11 @@ final class AlphaRossModel {
             (#"\bdo\s+next\b"#, "Matter-scoped wording"),
             (#"\bnext\s+steps?\b"#, "Matter-scoped wording"),
             (#"\bfor\s+(this|my|our)\s+(client|case|matter)\b"#, "Matter-scoped wording"),
-            (#"\b\d{2,}\b"#, "Case numbers, phone numbers, or long numeric strings"),
             (#"\b[A-Za-z]{1,8}[(/\- ]*\d+[A-Za-z/()\- ]*\d{4}\b"#, "Case numbers or filing references"),
+            (#"\b[A-Z]{2,}(?:\([A-Z]+\))?(?:[/ -]?\d+/\d{4})\b"#, "Case numbers or filing references"),
             (#"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+"#, "Email addresses"),
             (#"\b\+?\d[\d\s-]{7,}\b"#, "Phone numbers"),
+            (#"\b\d{8,}\b"#, "Phone numbers or long numeric strings"),
             (#"\b[^ ]+\.(pdf|docx|doc|txt|png|jpg|jpeg)\b"#, "File names"),
             (#"\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b"#, "Exact private dates"),
             (#"\b\d{1,2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+\d{4}\b"#, "Exact private dates"),
@@ -10291,56 +10305,46 @@ private struct AlphaAskTurnCard: View {
                         }
                     }
 
-                    if let warning = result.needsReviewWarning {
-                        Text(warning)
-                            .font(.footnote)
-                            .foregroundStyle(.orange)
-                    }
-
                     if !result.caseFileSources.isEmpty {
-                        Text("Local sources")
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(Color.rossInk.opacity(0.7))
-                        AlphaSourceRefChips(
-                            sourceRefs: result.caseFileSources,
-                            contextDocumentTitle: contextDocumentTitle,
-                            onOpenSourceRef: onOpenSource
-                        )
+                        VStack(alignment: .leading, spacing: 10) {
+                            AlphaSectionLabel(title: "Case-file sources", detail: "Only local matter context used in this draft.")
+                            AlphaSourceRefChips(
+                                sourceRefs: result.caseFileSources,
+                                contextDocumentTitle: contextDocumentTitle,
+                                onOpenSourceRef: onOpenSource
+                            )
+                        }
+                        .padding(12)
+                        .background(Color.rossSecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                     }
 
                     if let preview = result.publicLawPreview {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Web search preview")
-                                .font(.footnote.weight(.semibold))
-                                .foregroundStyle(Color.rossInk.opacity(0.7))
+                            AlphaSectionLabel(title: "Approved public-law query", detail: "Ross only sent this sanitized public-law query.")
                             Text(preview.query)
                                 .font(.footnote.weight(.medium))
                                 .foregroundStyle(Color.rossInk.opacity(0.82))
                         }
+                        .padding(12)
+                        .background(Color.rossSecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                     }
 
                     if !result.publicLawResults.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
-                            Text("Public-law results")
-                                .font(.footnote.weight(.semibold))
-                                .foregroundStyle(Color.rossInk.opacity(0.7))
+                            AlphaSectionLabel(title: "Public-law results", detail: "Separate from case-file facts and limited to approved public-law search.")
                             ForEach(result.publicLawResults) { publicResult in
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text(publicResult.title)
-                                        .font(.footnote.weight(.semibold))
-                                    Text(publicResult.citation)
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(Color.rossAccent)
-                                    Text(publicResult.snippet)
-                                        .font(.caption)
-                                        .foregroundStyle(Color.rossInk.opacity(0.74))
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(12)
-                                .background(Color.rossGlassSubtleFill)
-                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                AlphaPublicLawResultCard(result: publicResult)
                             }
                         }
+                        .padding(12)
+                        .background(Color.rossSecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    }
+
+                    if result.publicLawPreview != nil || !result.publicLawResults.isEmpty || result.needsReviewWarning != nil {
+                        AlphaPublicLawWarningsView(
+                            needsReviewWarning: result.needsReviewWarning,
+                            includePublicLawWarnings: result.publicLawPreview != nil || !result.publicLawResults.isEmpty
+                        )
                     }
 
                     Text("Ross can make mistakes. Always verify before filing.")
@@ -10387,6 +10391,106 @@ private struct AlphaAskToolbarButton: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityLabel)
+    }
+}
+
+private struct AlphaSectionLabel: View {
+    let title: String
+    let detail: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color.rossInk.opacity(0.74))
+            Text(detail)
+                .font(.caption2)
+                .foregroundStyle(Color.rossInk.opacity(0.62))
+        }
+    }
+}
+
+private struct AlphaTagChip: View {
+    let title: String
+    var tint: Color = Color.rossAccent
+
+    var body: some View {
+        Text(title)
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(tint)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(tint.opacity(0.12), in: Capsule())
+    }
+}
+
+private struct AlphaPublicLawResultCard: View {
+    let result: AlphaPublicLawResult
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 8) {
+                AlphaTagChip(title: "Public-law result")
+                Spacer(minLength: 8)
+                Text(result.sourceName)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.rossInk.opacity(0.62))
+                    .multilineTextAlignment(.trailing)
+            }
+
+            Text(result.title)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color.rossInk)
+
+            if !result.citation.isEmpty {
+                Text(result.citation)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.rossAccent)
+            }
+
+            Text(result.snippet)
+                .font(.caption)
+                .foregroundStyle(Color.rossInk.opacity(0.74))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color.rossGlassSubtleFill)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
+private struct AlphaPublicLawWarningsView: View {
+    let needsReviewWarning: String?
+    let includePublicLawWarnings: Bool
+
+    private var warnings: [String] {
+        var items: [String] = []
+        if includePublicLawWarnings {
+            items.append("Public-law search used a sanitized query.")
+            items.append("Verify all citations before use.")
+            items.append("Draft for advocate review.")
+        }
+        if let needsReviewWarning, !needsReviewWarning.isEmpty {
+            items.append(needsReviewWarning)
+        }
+        return items
+    }
+
+    var body: some View {
+        if !warnings.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                AlphaSectionLabel(title: "Warnings", detail: "Keep public-law references and matter facts separate while reviewing.")
+                ForEach(warnings, id: \.self) { warning in
+                    RossBulletRow(text: warning)
+                }
+            }
+            .padding(12)
+            .background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.orange.opacity(0.22), lineWidth: 1)
+            }
+        }
     }
 }
 
@@ -11597,18 +11701,14 @@ private struct AlphaPublicLawScreen: View {
                 if !model.publicLawResults.isEmpty {
                     RossSectionCard(title: "Preview results", subtitle: "Draft for advocate review") {
                         VStack(alignment: .leading, spacing: 12) {
+                            AlphaSectionLabel(title: "Public-law results", detail: "Separate from case-file context and limited to the approved public-law query.")
                             ForEach(model.publicLawResults) { result in
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(result.title)
-                                        .font(.headline)
-                                    Text(result.citation)
-                                        .font(.subheadline.weight(.medium))
-                                        .foregroundStyle(Color.rossAccent)
-                                    Text(result.snippet)
-                                        .font(.footnote)
-                                        .foregroundStyle(Color.rossInk.opacity(0.7))
-                                }
+                                AlphaPublicLawResultCard(result: result)
                             }
+                            AlphaPublicLawWarningsView(
+                                needsReviewWarning: nil,
+                                includePublicLawWarnings: true
+                            )
                         }
                     }
                 }

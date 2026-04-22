@@ -23,6 +23,31 @@ fn sanitizer_rejects_private_narrative_pastes() {
 }
 
 #[test]
+fn sanitizer_preserves_legal_citations_and_strips_known_fake_secrets() {
+    let raw = "Order 39 Rules 1 and 2 CPC temporary injunction for Raghav Fakepriv in FAKE/123/2026 using fakepriv@example.com and 9876501234 near blue suitcase near temple";
+    let sanitized = PublicQuerySanitizer::default().sanitize(raw).expect("query should sanitize");
+
+    assert!(sanitized.text.contains("Order 39 Rules 1 and 2 CPC"));
+    assert!(sanitized.text.contains("temporary injunction"));
+    assert!(!sanitized.text.contains("Raghav Fakepriv"));
+    assert!(!sanitized.text.contains("FAKE/123/2026"));
+    assert!(!sanitized.text.contains("fakepriv@example.com"));
+    assert!(!sanitized.text.contains("9876501234"));
+    assert!(!sanitized.text.contains("blue suitcase near temple"));
+}
+
+#[test]
+fn sanitizer_preserves_other_common_indian_legal_citations() {
+    let raw = "Section 138 NI Act notice limitation, Section 482 CrPC quashing FIR, Article 226 Constitution of India writ mandamus, and delay filing written statement 120 days Commercial Courts Act";
+    let sanitized = PublicQuerySanitizer::default().sanitize(raw).expect("query should sanitize");
+
+    assert!(sanitized.text.contains("Section 138 NI Act"));
+    assert!(sanitized.text.contains("Section 482 CrPC"));
+    assert!(sanitized.text.contains("Article 226 Constitution of India"));
+    assert!(sanitized.text.contains("120 days Commercial Courts Act"));
+}
+
+#[test]
 fn public_answer_is_source_backed() {
     let results = vec![PublicLawDocument {
         id: "src-1".into(),
