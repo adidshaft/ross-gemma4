@@ -78,6 +78,20 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     });
   });
 
+  app.get(
+    "/health",
+    {
+      config: {
+        auditClassification: "no_case_data"
+      }
+    },
+    async (_request, reply) =>
+      reply.send({
+        ok: true,
+        service: "ross-backend"
+      })
+  );
+
   await registerAuthRoutes(app, { env, auditLogger });
   await registerEntitlementRoutes(app, { env, auditLogger });
   await registerModelCatalogRoutes(app, { env, auditLogger });

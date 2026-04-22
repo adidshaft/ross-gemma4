@@ -217,7 +217,11 @@ test("public-law search rejects obvious private matter content and fake secrets 
     "Need guidance tied to 9876501234",
     "Can fakepriv@example.com be mentioned in a filing?",
     "Status of FAKE/123/2026",
-    "How should blue suitcase near temple be handled?"
+    "How should blue suitcase near temple be handled?",
+    "What should the respondent say in CS(COMM) 245/2026?",
+    "What matters on 14/03/2026 for this filing?",
+    "Can order-final.pdf be cited in public law research?",
+    "What should I mention near South Avenue market?"
   ];
 
   for (const query of disallowedQueries) {

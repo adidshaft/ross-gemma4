@@ -128,6 +128,29 @@ export function assertSafePublicLawQuery(query: string): void {
     reasons.add("sensitive_identifier");
   }
 
+  if (/\b[A-Za-z]{1,8}[(/\- ]*\d+[A-Za-z/()\- ]*\d{4}\b/i.test(query)) {
+    reasons.add("filing_reference");
+  }
+
+  if (/\b[^()\s]+\.(pdf|docx|doc|txt|png|jpg|jpeg)\b/i.test(query)) {
+    reasons.add("file_name");
+  }
+
+  if (
+    /\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b/.test(query) ||
+    /\b\d{1,2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+\d{4}\b/i.test(query)
+  ) {
+    reasons.add("exact_private_date");
+  }
+
+  if (/\b(?:client|party|petitioner|respondent|appellant|defendant|plaintiff|chat history|source chunk|ocr|filename|address|mobile)\b/i.test(query)) {
+    reasons.add("private_context_term");
+  }
+
+  if (/\b(?:near|behind|opposite|at)\s+[A-Za-z][A-Za-z\s]{3,40}\b/i.test(query)) {
+    reasons.add("location_detail");
+  }
+
   if (
     normalizedQuery.includes("raghav fakepriv") ||
     normalizedQuery.includes("9876501234") ||

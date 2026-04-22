@@ -23,7 +23,7 @@ const PUBLIC_LAW_FIXTURES: PublicLawFixture[] = [
   {
     id: "arb-1996-section-34",
     jurisdiction: "IN-ALL",
-    source: "Backend fixture index",
+    source: "Official or licensed source (preview)",
     title: "Arbitration and Conciliation Act, 1996: setting aside awards under Section 34",
     citation: "Arbitration and Conciliation Act, 1996, s. 34",
     snippet:
@@ -34,7 +34,7 @@ const PUBLIC_LAW_FIXTURES: PublicLawFixture[] = [
   {
     id: "limitation-1963-overview",
     jurisdiction: "IN-ALL",
-    source: "Backend fixture index",
+    source: "Official or licensed source (preview)",
     title: "Limitation Act, 1963: condensed limitation periods overview",
     citation: "Limitation Act, 1963",
     snippet:
@@ -45,7 +45,7 @@ const PUBLIC_LAW_FIXTURES: PublicLawFixture[] = [
   {
     id: "evidence-65b-overview",
     jurisdiction: "IN-ALL",
-    source: "Backend fixture index",
+    source: "Official or licensed source (preview)",
     title: "Indian Evidence Act: electronic records and Section 65B certificates",
     citation: "Indian Evidence Act, 1872, s. 65B",
     snippet:
@@ -56,7 +56,7 @@ const PUBLIC_LAW_FIXTURES: PublicLawFixture[] = [
   {
     id: "consumer-protection-2019-overview",
     jurisdiction: "IN-ALL",
-    source: "Backend fixture index",
+    source: "Official or licensed source (preview)",
     title: "Consumer Protection Act, 2019: complaint and appellate structure overview",
     citation: "Consumer Protection Act, 2019",
     snippet:
@@ -67,7 +67,7 @@ const PUBLIC_LAW_FIXTURES: PublicLawFixture[] = [
   {
     id: "cpc-temporary-injunctions",
     jurisdiction: "IN-ALL",
-    source: "Backend fixture index",
+    source: "Official or licensed source (preview)",
     title: "Code of Civil Procedure: temporary injunctions and interim relief",
     citation: "Code of Civil Procedure, 1908, O. XXXIX rr. 1-2",
     snippet:

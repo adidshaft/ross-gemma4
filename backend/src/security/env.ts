@@ -2,6 +2,12 @@ export interface RuntimeEnv {
   nodeEnv: string;
   isProduction: boolean;
   port: number;
+  publicBaseUrl: string;
+  authMobileRedirect: string;
+  googleOauthClientId?: string | undefined;
+  googleOauthClientSecret?: string | undefined;
+  authAccessSigningSecret: string;
+  authRefreshSigningSecret: string;
   otpStubCode: string;
   entitlementSigningSecret: string;
   entitlementKeyId: string;
@@ -59,6 +65,15 @@ export function readRuntimeEnv(
     nodeEnv,
     isProduction: nodeEnv === "production",
     port: parsePort(environment.PORT),
+    publicBaseUrl: trimmedValue(environment.ROSS_PUBLIC_BASE_URL) ?? "http://localhost:8080",
+    authMobileRedirect:
+      trimmedValue(environment.ROSS_AUTH_MOBILE_REDIRECT) ?? "ross://auth/callback",
+    googleOauthClientId: trimmedValue(environment.GOOGLE_OAUTH_CLIENT_ID),
+    googleOauthClientSecret: trimmedValue(environment.GOOGLE_OAUTH_CLIENT_SECRET),
+    authAccessSigningSecret:
+      environment.ROSS_AUTH_ACCESS_SIGNING_SECRET ?? "dev-ross-access-secret-change-me",
+    authRefreshSigningSecret:
+      environment.ROSS_AUTH_REFRESH_SIGNING_SECRET ?? "dev-ross-refresh-secret-change-me",
     otpStubCode: environment.OTP_STUB_CODE ?? "123456",
     entitlementSigningSecret:
       environment.ENTITLEMENT_SIGNING_SECRET ?? "dev-entitlement-secret-change-me",
