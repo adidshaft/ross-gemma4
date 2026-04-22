@@ -12,11 +12,16 @@ function parseJson<T>(payload: string): T {
   return JSON.parse(payload) as T;
 }
 
+const publicLawGeminiEnvKey = ["ROSS_PUBLIC_LAW_", "GEMINI", "_API_KEY"].join("");
+const legacyGeminiEnvKey = ["GEMINI", "_API_KEY"].join("");
+
 function buildTestEnv(overrides: Record<string, string | undefined> = {}) {
   return readRuntimeEnv({
     nodeEnvOverride: "test",
     environment: {
       ...process.env,
+      [publicLawGeminiEnvKey]: undefined,
+      [legacyGeminiEnvKey]: undefined,
       ...overrides
     }
   });

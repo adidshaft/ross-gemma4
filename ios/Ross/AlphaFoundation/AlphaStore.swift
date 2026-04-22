@@ -78,7 +78,7 @@ actor AlphaRossStore {
                 return try JSONDecoder.ross.decode(AlphaPersistedState.self, from: data)
             }
 
-            let seed = AlphaPersistedState.seed()
+            let seed = AlphaPersistedState.empty()
             try save(seed)
             return seed
         }
@@ -100,7 +100,7 @@ actor AlphaRossStore {
                     return upgraded
                 }
 
-                let recovered = AlphaPersistedState.seed().withStorageLedger(
+                let recovered = AlphaPersistedState.empty().withStorageLedger(
                     title: "Alpha state recovered locally",
                     detail: "Encrypted alpha state was unreadable, so Ross reset local alpha state and kept a recovery copy in app-private storage."
                 )
@@ -119,7 +119,7 @@ actor AlphaRossStore {
             return upgraded
         }
 
-        let seed = AlphaPersistedState.seed()
+        let seed = AlphaPersistedState.empty()
         try save(seed)
         return seed
     }

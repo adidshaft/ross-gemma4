@@ -163,7 +163,7 @@ final class AlphaRossModel {
     @ObservationIgnored private let backend: AlphaBackendClient
     @ObservationIgnored private let publicLawSearchAction: AlphaPublicLawSearchAction
 
-    var persisted = AlphaPersistedState.seed() {
+    var persisted = AlphaPersistedState.empty() {
         didSet {
             invalidateWorkspaceDerivedState()
         }
@@ -173,6 +173,11 @@ final class AlphaRossModel {
     var selectedTier: AlphaCapabilityTier = .caseAssociate
     var caseDraftTitle = ""
     var caseDraftForum = ""
+    var caseDraftCaseNumber = ""
+    var caseDraftParties = ""
+    var caseDraftNextDateText = ""
+    var caseDraftStage: AlphaCaseStage = .intake
+    var caseDraftNotes = ""
     var askDrafts: [UUID: String] = [:]
     var globalAskDraft = ""
     var askSelectedScopeCaseID: UUID?
@@ -232,6 +237,27 @@ final class AlphaRossModel {
         }
     }
 
+    func syncWorkspaceForSession(_ session: RossAuthSession?) {
+        guard loaded else { return }
+
+        if let session, session.subject.hasPrefix("local_demo_") {
+            if shouldSeedDemoWorkspace(for: session.subject) {
+                let preserved = preservedWorkspaceConfiguration()
+                persisted = AlphaPersistedState.demoSeed(profileSubject: session.subject)
+                applyPreservedWorkspaceConfiguration(preserved)
+                persist(workspaceChanged: true)
+            }
+            return
+        }
+
+        if persisted.demoProfileSubject != nil, isCurrentWorkspaceDemoOnly {
+            let preserved = preservedWorkspaceConfiguration()
+            persisted = AlphaPersistedState.empty()
+            applyPreservedWorkspaceConfiguration(preserved)
+            persist(workspaceChanged: true)
+        }
+    }
+
     private func syncDerivedStateFromPersisted() {
         selectedCaseID = cases.first?.id
         selectedTier = persisted.settings.activeTier ?? recommendedOnDeviceTier()
@@ -249,6 +275,71 @@ final class AlphaRossModel {
                 }
             }
         }
+    }
+
+    private struct AlphaPreservedWorkspaceConfiguration {
+        var settings: AlphaSettings
+        var modelJobs: [AlphaModelDownloadJob]
+        var installedPacks: [AlphaInstalledModelPack]
+        var lastModelCatalogRefresh: Date?
+    }
+
+    private func preservedWorkspaceConfiguration() -> AlphaPreservedWorkspaceConfiguration {
+        AlphaPreservedWorkspaceConfiguration(
+            settings: persisted.settings,
+            modelJobs: persisted.modelJobs,
+            installedPacks: persisted.installedPacks,
+            lastModelCatalogRefresh: persisted.lastModelCatalogRefresh
+        )
+    }
+
+    private func applyPreservedWorkspaceConfiguration(_ preserved: AlphaPreservedWorkspaceConfiguration) {
+        persisted.settings = preserved.settings
+        persisted.modelJobs = preserved.modelJobs
+        persisted.installedPacks = preserved.installedPacks
+        persisted.lastModelCatalogRefresh = preserved.lastModelCatalogRefresh
+        selectedTier = persisted.settings.activeTier ?? recommendedOnDeviceTier()
+        publicLawDraft = persisted.publicLawDraft ?? publicLawDraft
+        publicLawPreview = persisted.publicLawPreview
+        publicLawResults = persisted.publicLawResults ?? []
+        syncDerivedStateFromPersisted()
+    }
+
+    private var visibleCasesCount: Int {
+        persisted.cases.filter { $0.archivedAt == nil && $0.id != alphaSharedWorkspaceID }.count
+    }
+
+    private var isLegacySeedWorkspace: Bool {
+        let titles = Set(
+            persisted.cases
+                .filter { $0.id != alphaSharedWorkspaceID }
+                .map(\.title)
+        )
+        return titles == [
+            "Kaveri Developers v. South Ward Municipal Corporation",
+            "Arun Textiles v. State Tax Officer"
+        ]
+    }
+
+    private var isCurrentWorkspaceDemoOnly: Bool {
+        let visibleCases = persisted.cases.filter { $0.archivedAt == nil && $0.id != alphaSharedWorkspaceID }
+        guard visibleCases.count == 1 else { return false }
+        guard visibleCases.first?.title == "Demo Matter: Sharma v. Rana" else { return false }
+        let exportCount = persisted.exports.filter { $0.caseId == visibleCases.first?.id }.count
+        return exportCount <= 1
+    }
+
+    private func shouldSeedDemoWorkspace(for subject: String) -> Bool {
+        if persisted.demoProfileSubject == subject {
+            return false
+        }
+        if visibleCasesCount == 0 || isLegacySeedWorkspace {
+            return true
+        }
+        if persisted.demoProfileSubject != nil && isCurrentWorkspaceDemoOnly {
+            return true
+        }
+        return false
     }
 
     private func invalidateWorkspaceDerivedState() {
@@ -296,6 +387,7 @@ final class AlphaRossModel {
 
             let calendar = Calendar.current
             let startOfDay = calendar.startOfDay(for: .now)
+            let startOfTomorrow = calendar.date(byAdding: .day, value: 1, to: startOfDay) ?? .now
 
             var tasksByCase: [UUID: [AlphaTaskItem]] = [:]
             var openTaskCountByCase: [UUID: Int] = [:]
@@ -318,12 +410,12 @@ final class AlphaRossModel {
                 }
 
                 guard let dueDate = task.dueDate else { continue }
-                if calendar.isDateInToday(dueDate) {
+                if dueDate < startOfTomorrow {
                     todayTasks.append(task)
                     if let caseId = task.caseId, caseId != alphaSharedWorkspaceID {
                         todayTasksByCase[caseId, default: []].append(task)
                     }
-                } else if dueDate >= startOfDay {
+                } else if dueDate >= startOfTomorrow {
                     upcomingTasks.append(task)
                     if let caseId = task.caseId, caseId != alphaSharedWorkspaceID {
                         upcomingTasksByCase[caseId, default: []].append(task)
@@ -351,17 +443,44 @@ final class AlphaRossModel {
                 recentDocumentItemsByCase[caseMatter.id] = caseRecentItems
                 recentDocumentItems.append(contentsOf: caseRecentItems)
 
-                if let nextHearing = caseMatter.nextHearing {
-                    let row = AlphaUpcomingDateRow(
-                        title: caseMatter.title,
-                        detail: calendar.isDateInToday(nextHearing)
-                            ? "Hearing today"
-                            : "Next date: \(nextHearing.formatted(date: .abbreviated, time: .omitted))",
-                        date: nextHearing
-                    )
-                    if calendar.isDateInToday(nextHearing) {
+                let scheduledDates = caseMatter.dates
+                    .filter { $0.status == .scheduled }
+                    .sorted { $0.date < $1.date }
+
+                let dateRows: [AlphaUpcomingDateRow]
+                if scheduledDates.isEmpty, let nextHearing = caseMatter.nextHearing {
+                    dateRows = [
+                        AlphaUpcomingDateRow(
+                            title: caseMatter.title,
+                            detail: nextHearing < startOfDay
+                                ? "Overdue hearing from \(nextHearing.formatted(date: .abbreviated, time: .omitted))"
+                                : calendar.isDateInToday(nextHearing)
+                                    ? "Hearing today"
+                                    : "Next date: \(nextHearing.formatted(date: .abbreviated, time: .omitted))",
+                            date: nextHearing
+                        )
+                    ]
+                } else {
+                    dateRows = scheduledDates.map { matterDate in
+                        let prefix: String
+                        if matterDate.date < startOfDay {
+                            prefix = "Overdue"
+                        } else if calendar.isDateInToday(matterDate.date) {
+                            prefix = "Today"
+                        } else {
+                            prefix = matterDate.title
+                        }
+                        let detail = prefix == "Today"
+                            ? "\(matterDate.title) today"
+                            : "\(prefix): \(matterDate.date.formatted(date: .abbreviated, time: .omitted))"
+                        return AlphaUpcomingDateRow(title: caseMatter.title, detail: detail, date: matterDate.date)
+                    }
+                }
+
+                for row in dateRows {
+                    if row.date < startOfTomorrow {
                         todayDateRows.append(row)
-                    } else if nextHearing >= startOfDay {
+                    } else {
                         upcomingDateRows.append(row)
                     }
                 }
@@ -840,6 +959,14 @@ final class AlphaRossModel {
         return workspaceDerivedState.openTaskCountByCase[caseId] ?? 0
     }
 
+    func scheduledMatterDates(for caseId: UUID) -> [AlphaMatterDate] {
+        persisted.cases
+            .first(where: { $0.id == caseId })?
+            .dates
+            .filter { $0.status == .scheduled }
+            .sorted { $0.date < $1.date } ?? []
+    }
+
     func reviewQueueCount(for caseId: UUID? = nil) -> Int {
         ensureWorkspaceDerivedState()
         guard let caseId else { return workspaceDerivedState.reviewQueue.count }
@@ -897,6 +1024,79 @@ final class AlphaRossModel {
             ),
             at: 0
         )
+        persist(workspaceChanged: true)
+    }
+
+    func snoozeTask(_ taskID: UUID, by days: Int) {
+        guard var taskList = persisted.tasks, let index = taskList.firstIndex(where: { $0.id == taskID }) else { return }
+        let currentDueDate = taskList[index].dueDate ?? .now
+        taskList[index].dueDate = Calendar.current.date(byAdding: .day, value: days, to: currentDueDate)
+        taskList[index].updatedAt = .now
+        persisted.tasks = taskList
+        invalidateWorkspaceDerivedState()
+        persist(workspaceChanged: true)
+    }
+
+    func removeTask(_ taskID: UUID) {
+        guard let task = (persisted.tasks ?? []).first(where: { $0.id == taskID }) else { return }
+        persisted.tasks = (persisted.tasks ?? []).filter { $0.id != taskID }
+        invalidateWorkspaceDerivedState()
+        if let caseId = task.caseId, let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }) {
+            refreshCaseWorkspace(at: caseIndex)
+        }
+        persist(workspaceChanged: true)
+    }
+
+    func addMatterDate(
+        caseId: UUID,
+        title: String,
+        kind: AlphaMatterDateKind,
+        date: Date,
+        notes: String? = nil
+    ) {
+        guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }) else { return }
+        var caseMatter = persisted.cases[caseIndex]
+        let newDate = AlphaMatterDate(
+            caseId: caseId,
+            title: title.trimmingCharacters(in: .whitespacesAndNewlines).ifEmpty(kind.title),
+            kind: kind,
+            date: date,
+            notes: notes?.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+        caseMatter.dates.insert(newDate, at: 0)
+        if kind == .hearing {
+            caseMatter.nextHearing = date
+        }
+        refreshCaseWorkspace(caseMatter: &caseMatter)
+        persisted.cases[caseIndex] = caseMatter
+        persisted.ledgerEntries.insert(
+            AlphaPrivacyLedgerEntry(
+                title: "Matter date saved locally",
+                detail: "\(newDate.title) was added on this device.",
+                purpose: .local_only,
+                payloadClass: .local_only,
+                endpointLabel: "device://matter-date",
+                success: true
+            ),
+            at: 0
+        )
+        persist(workspaceChanged: true)
+    }
+
+    func setMatterDateStatus(caseId: UUID, dateId: UUID, status: AlphaMatterDateStatus) {
+        guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }) else { return }
+        guard let dateIndex = persisted.cases[caseIndex].dates.firstIndex(where: { $0.id == dateId }) else { return }
+        persisted.cases[caseIndex].dates[dateIndex].status = status
+        persisted.cases[caseIndex].dates[dateIndex].updatedAt = .now
+        if persisted.cases[caseIndex].dates[dateIndex].kind == .hearing, status != .scheduled {
+            let nextScheduledHearing = persisted.cases[caseIndex].dates
+                .filter { $0.kind == .hearing && $0.status == .scheduled }
+                .map(\.date)
+                .sorted()
+                .first
+            persisted.cases[caseIndex].nextHearing = nextScheduledHearing
+        }
+        refreshCaseWorkspace(at: caseIndex)
         persist(workspaceChanged: true)
     }
 
@@ -1386,29 +1586,103 @@ final class AlphaRossModel {
         Task { await startPackDownload(for: selectedTier, mobileAllowed: selectedTier == .quickStart) }
     }
 
+    func clearCaseDraft() {
+        caseDraftTitle = ""
+        caseDraftForum = ""
+        caseDraftCaseNumber = ""
+        caseDraftParties = ""
+        caseDraftNextDateText = ""
+        caseDraftStage = .intake
+        caseDraftNotes = ""
+    }
+
+    func resetDemoWorkspace(for subject: String = "local_demo_advocate") {
+        let preserved = preservedWorkspaceConfiguration()
+        persisted = AlphaPersistedState.demoSeed(profileSubject: subject)
+        applyPreservedWorkspaceConfiguration(preserved)
+        persisted.ledgerEntries.insert(
+            AlphaPrivacyLedgerEntry(
+                title: "Demo workspace reset locally",
+                detail: "Ross restored the synthetic sample matter on this device.",
+                purpose: .local_only,
+                payloadClass: .local_only,
+                endpointLabel: "device://demo-reset",
+                success: true
+            ),
+            at: 0
+        )
+        persist(workspaceChanged: true)
+    }
+
     func createCase(openWorkspace: Bool = true) {
         let title = caseDraftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         let forum = caseDraftForum.trimmingCharacters(in: .whitespacesAndNewlines)
+        let caseNumber = caseDraftCaseNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+        let parties = caseDraftParties.trimmingCharacters(in: .whitespacesAndNewlines)
+        let notes = caseDraftNotes.trimmingCharacters(in: .whitespacesAndNewlines)
+        let nextDate = alphaParsedDate(from: caseDraftNextDateText)
         guard !title.isEmpty else { return }
 
+        let matterDate = nextDate.map {
+            AlphaMatterDate(
+                caseId: UUID(),
+                title: "Next hearing",
+                kind: .hearing,
+                date: $0
+            )
+        }
         let matter = AlphaCaseMatter(
             title: title,
             forum: forum.isEmpty ? "Forum pending" : forum,
-            stage: .intake,
-            summary: "New matter created locally. Import pleadings, orders, or captures to build a source-backed workspace.",
-            issueHighlights: ["Import the first source document to begin chronology work."],
+            caseNumber: caseNumber.isEmpty ? nil : caseNumber,
+            partiesSummary: parties.isEmpty ? nil : parties,
+            stage: caseDraftStage,
+            nextHearing: nextDate,
+            dates: matterDate.map {
+                [AlphaMatterDate(
+                    id: $0.id,
+                    caseId: $0.caseId,
+                    title: $0.title,
+                    kind: $0.kind,
+                    date: $0.date
+                )]
+            } ?? [],
+            notes: notes.isEmpty ? nil : notes,
+            summary: nextDate == nil
+                ? "New matter created locally. Import pleadings, orders, or captures to build a source-backed workspace."
+                : "New matter created locally with the next date saved. Import pleadings, orders, or captures to build a source-backed workspace.",
+            issueHighlights: nextDate == nil
+                ? ["Import the first source document to begin chronology work."]
+                : [
+                    "Import the first source document to begin chronology work.",
+                    "Prepare this matter for \(nextDate!.formatted(date: .abbreviated, time: .omitted))."
+                ],
             evidenceNotes: ["No imported documents yet."],
-            draftTasks: ["Import the first case document.", "Pin the first source reference."],
+            draftTasks: nextDate == nil
+                ? ["Import the first case document.", "Pin the first source reference."]
+                : ["Import the first case document.", "Prepare for the saved next date."],
             documents: [],
             sourceRefs: [],
             updatedAt: .now
         )
 
-        persisted.cases.insert(matter, at: 0)
+        var normalizedMatter = matter
+        if let firstDate = nextDate {
+            normalizedMatter.dates = [
+                AlphaMatterDate(
+                    caseId: normalizedMatter.id,
+                    title: "Next hearing",
+                    kind: .hearing,
+                    date: firstDate
+                )
+            ]
+        }
+
+        persisted.cases.insert(normalizedMatter, at: 0)
         var taskList = persisted.tasks ?? []
         taskList.insert(
             AlphaTaskItem(
-                caseId: matter.id,
+                caseId: normalizedMatter.id,
                 title: "Import first document",
                 notes: "Add the first order, pleading, or note for this case.",
                 dueDate: Calendar.current.date(byAdding: .day, value: 1, to: .now),
@@ -1417,11 +1691,23 @@ final class AlphaRossModel {
             ),
             at: 0
         )
+        if let nextDate {
+            taskList.insert(
+                AlphaTaskItem(
+                    caseId: normalizedMatter.id,
+                    title: "Prepare for next date",
+                    notes: "Use the saved next date while the matter is still being set up.",
+                    dueDate: nextDate,
+                    priority: .normal,
+                    source: .manual
+                ),
+                at: 1
+            )
+        }
         persisted.tasks = taskList
-        selectedCaseID = matter.id
-        askSelectedScopeCaseID = matter.id
-        caseDraftTitle = ""
-        caseDraftForum = ""
+        selectedCaseID = normalizedMatter.id
+        askSelectedScopeCaseID = normalizedMatter.id
+        clearCaseDraft()
         persisted.ledgerEntries.insert(
             AlphaPrivacyLedgerEntry(
                 title: "Case created locally",
@@ -1436,7 +1722,7 @@ final class AlphaRossModel {
         persist(workspaceChanged: true)
         if openWorkspace {
             path.removeAll()
-            path.append(.caseWorkspace(matter.id))
+            path.append(.caseWorkspace(normalizedMatter.id))
         }
     }
 
@@ -1633,6 +1919,9 @@ final class AlphaRossModel {
     func deleteDocument(caseId: UUID, documentId: UUID) {
         guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }) else { return }
         let removedDocument = persisted.cases[caseIndex].documents.first(where: { $0.id == documentId })
+        if let relativePath = removedDocument?.storedRelativePath {
+            try? FileManager.default.removeItem(at: alphaAbsoluteURL(for: relativePath))
+        }
         persisted.cases[caseIndex].documents.removeAll { $0.id == documentId }
         persisted.cases[caseIndex].sourceRefs.removeAll { $0.documentId == documentId }
         persisted.tasks = (persisted.tasks ?? []).filter { $0.caseId != caseId || !($0.notes?.contains(removedDocument?.title ?? "") ?? false) }
@@ -2414,6 +2703,31 @@ final class AlphaRossModel {
                 "Generated locally for advocate review. Verify all citations."
             ]
 
+        case "chat_transcript":
+            let turns = caseMatter.chatSessions
+                .flatMap(\.turns)
+                .sorted { $0.askedAt < $1.askedAt }
+
+            let transcriptLines = turns.flatMap { turn -> [String] in
+                var lines = ["Q: \(turn.question)"]
+                lines.append(contentsOf: turn.answerSections.map { "A: \($0)" })
+                if !turn.sourceRefs.isEmpty {
+                    lines.append("Sources: \(turn.sourceRefs.map(\.label).joined(separator: " | "))")
+                }
+                lines.append("")
+                return lines
+            }
+
+            return [
+                title,
+                "Generated: \(generatedDate)",
+                "Draft for advocate review",
+                "",
+                "Ross thread transcript",
+            ] + (transcriptLines.isEmpty ? ["No chat turns are saved for this matter yet.", ""] : transcriptLines) + [
+                "Generated locally for advocate review. Verify all citations."
+            ]
+
         default:
             let notes = caseMatter.draftTasks.map { "- \($0)" }
             return [
@@ -2597,9 +2911,37 @@ final class AlphaRossModel {
             caseMatter.forum = forum
         }
 
+        if let caseNumber = verifiedFields.first(where: { $0.fieldType == .caseNumber })?.value,
+           (caseMatter.caseNumber?.isEmpty ?? true) {
+            caseMatter.caseNumber = caseNumber
+        }
+
+        let verifiedPartyNames = Array(
+            NSOrderedSet(
+                array: verifiedFields
+                    .filter { $0.fieldType == .partyName }
+                    .map(\.value)
+            )
+        ).compactMap { $0 as? String }
+        if caseMatter.partiesSummary == nil || caseMatter.partiesSummary?.isEmpty == true,
+           !verifiedPartyNames.isEmpty {
+            caseMatter.partiesSummary = verifiedPartyNames.joined(separator: " · ")
+        }
+
         if let nextDate = verifiedFields.first(where: { $0.fieldType == .nextDate })?.value {
             caseMatter.localNotice = "Case files stay on this device. Next date found: \(nextDate)"
-            caseMatter.nextHearing = alphaParsedDate(from: nextDate) ?? caseMatter.nextHearing
+            if let parsedDate = alphaParsedDate(from: nextDate) {
+                caseMatter.nextHearing = parsedDate
+                upsertMatterDate(
+                    in: &caseMatter,
+                    title: "Next hearing",
+                    kind: .hearing,
+                    date: parsedDate,
+                    sourceRef: verifiedFields.first(where: { $0.fieldType == .nextDate })?.sourceRefs.first
+                )
+            }
+        } else if let nextHearing = caseMatter.nextHearing {
+            upsertMatterDate(in: &caseMatter, title: "Next hearing", kind: .hearing, date: nextHearing)
         }
 
         let classifications = caseMatter.documents.compactMap { $0.classification?.type.rawValue.replacingOccurrences(of: "_", with: " ") }
@@ -2680,7 +3022,33 @@ final class AlphaRossModel {
         }
         caseMatter.draftTasks = Array(uniqueTasks.prefix(3))
         caseMatter.updatedAt = .now
-        syncRossSuggestedTasks(for: caseMatter)
+    }
+
+    private func upsertMatterDate(
+        in caseMatter: inout AlphaCaseMatter,
+        title: String,
+        kind: AlphaMatterDateKind,
+        date: Date,
+        sourceRef: AlphaSourceRef? = nil
+    ) {
+        if let existingIndex = caseMatter.dates.firstIndex(where: { $0.kind == kind && $0.status == .scheduled }) {
+            caseMatter.dates[existingIndex].title = title
+            caseMatter.dates[existingIndex].date = date
+            caseMatter.dates[existingIndex].sourceRef = sourceRef ?? caseMatter.dates[existingIndex].sourceRef
+            caseMatter.dates[existingIndex].updatedAt = .now
+        } else {
+            caseMatter.dates.insert(
+                AlphaMatterDate(
+                    caseId: caseMatter.id,
+                    title: title,
+                    kind: kind,
+                    date: date,
+                    sourceRef: sourceRef
+                ),
+                at: 0
+            )
+        }
+        caseMatter.dates.sort { $0.date < $1.date }
     }
 
     private func upsertReviewTasks(for caseMatter: AlphaCaseMatter, document: AlphaCaseDocument) {
@@ -2737,30 +3105,6 @@ final class AlphaRossModel {
         }
     }
 
-    private func syncRossSuggestedTasks(for caseMatter: AlphaCaseMatter) {
-        let existingTasks = persisted.tasks ?? []
-        let preservedTasks = existingTasks.filter {
-            !($0.caseId == caseMatter.id && $0.status == .open && isRossSuggestedTask($0))
-        }
-
-        let generatedTasks = caseMatter.draftTasks.enumerated().compactMap { offset, title -> AlphaTaskItem? in
-            guard !preservedTasks.contains(where: { $0.caseId == caseMatter.id && $0.title == title }) else {
-                return nil
-            }
-
-            return AlphaTaskItem(
-                caseId: caseMatter.id,
-                title: title,
-                notes: rossSuggestedTaskNote(caseId: caseMatter.id, slot: offset),
-                dueDate: offset == 0 ? caseMatter.nextHearing : nil,
-                priority: offset == 0 ? .high : .normal,
-                source: .system
-            )
-        }
-
-        persisted.tasks = generatedTasks + preservedTasks
-    }
-
     private func alphaParsedDate(from value: String) -> Date? {
         let formatters = ["d/M/yyyy", "d/M/yy", "d-MM-yyyy", "d MMM yyyy", "dd MMM yyyy"]
         let formatter = DateFormatter()
@@ -2784,23 +3128,54 @@ final class AlphaRossModel {
         )
     }
 
-    private func suggestedPublicLawQuery() -> String? {
-        guard let selectedCase else { return nil }
-        let verifiedFields = selectedCase.documents
+    private func suggestedPublicLawQuery(for caseMatter: AlphaCaseMatter?) -> String? {
+        guard let caseMatter else { return nil }
+        let verifiedFields = caseMatter.documents
             .flatMap(\.extractedFields)
             .filter { !$0.needsReview || $0.userCorrected }
-        let issues = verifiedFields
+        let legalConcepts = verifiedFields
             .filter { $0.fieldType == .issue || $0.fieldType == .orderDirection || $0.fieldType == .relief || $0.fieldType == .section }
             .flatMap { publicLawKeywords(from: $0.value) }
-        let classifications = selectedCase.documents.compactMap { document in
-            document.classification
-                .flatMap { $0.needsReview ? nil : $0.type.rawValue.replacingOccurrences(of: "_", with: " ") }
+        let documentFocusTerms: [String] = caseMatter.documents.compactMap { document -> String? in
+            guard let classification = document.classification, !classification.needsReview else { return nil }
+            return publicLawFocusTerm(for: classification.type)
         }
-        let terms = Array(NSOrderedSet(array: issues + classifications))
+        let calendarTerms: [String] = {
+            var terms: [String] = []
+            if caseMatter.nextHearing != nil || caseMatter.dates.contains(where: { $0.kind == .hearing && $0.status == .scheduled }) {
+                terms.append("court procedure and hearing dates")
+            }
+            if caseMatter.dates.contains(where: { $0.kind == .filingDeadline && $0.status == .scheduled }) {
+                terms.append("filing compliance and limitation")
+            }
+            return terms
+        }()
+        var terms = Array(NSOrderedSet(array: calendarTerms + legalConcepts + documentFocusTerms))
             .compactMap { $0 as? String }
             .filter(isSafePublicLawTerm)
-        guard !terms.isEmpty else { return nil }
-        return (terms + ["India"]).joined(separator: " ")
+        if terms.isEmpty {
+            terms = ["court procedure and filing compliance"]
+        }
+        return "Indian public law guidance on \(Array(terms.prefix(3)).joined(separator: ", "))"
+    }
+
+    private func publicLawFocusTerm(for type: AlphaLegalDocumentType) -> String? {
+        switch type {
+        case .pleading:
+            return "pleading requirements and court procedure"
+        case .order:
+            return "court orders and order directions"
+        case .judgment:
+            return "judgment review and relief"
+        case .affidavit:
+            return "affidavit practice and evidence procedure"
+        case .notice:
+            return "statutory notice requirements"
+        case .evidence:
+            return "evidence procedure"
+        case .correspondence, .misc:
+            return nil
+        }
     }
 
     private func publicLawKeywords(from value: String) -> [String] {
@@ -2909,10 +3284,6 @@ final class AlphaRossModel {
                 )
             }
         }
-    }
-
-    private func rossSuggestedTaskNote(caseId: UUID, slot: Int) -> String {
-        "\(alphaRossSuggestedTaskNotePrefix)\(caseId.uuidString)::\(slot)"
     }
 
     private func isRossSuggestedTask(_ task: AlphaTaskItem) -> Bool {
@@ -3320,7 +3691,7 @@ final class AlphaRossModel {
     }
 
     private func sanitizePublicLawPreview(rawQuery: String, caseMatter: AlphaCaseMatter?) -> AlphaPublicLawPreview {
-        let suggested = suggestedPublicLawQuery() ?? "Find current public-law guidance relevant to delay condonation where diligence is documented."
+        let suggested = suggestedPublicLawQuery(for: caseMatter ?? selectedCase) ?? "Find current public law guidance on court procedure and filing compliance."
         var sanitized = rawQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         var removed: [String] = []
         let blockedTerms = [
@@ -3519,7 +3890,6 @@ final class AlphaRossModel {
 }
 
 private actor AlphaBackendClient {
-    private let configuration = AlphaBackendConfiguration()
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
 
@@ -3529,6 +3899,7 @@ private actor AlphaBackendClient {
     }
 
     func fetchCatalog(for tier: AlphaCapabilityTier) async throws -> AlphaBackendCatalogManifest {
+        let configuration = AlphaBackendConfiguration()
         var components = URLComponents(url: configuration.baseURL.appendingPathComponent("model-catalog"), resolvingAgainstBaseURL: false)
         components?.queryItems = [
             URLQueryItem(name: "platform", value: "ios"),
@@ -3541,13 +3912,14 @@ private actor AlphaBackendClient {
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.timeoutInterval = configuration.requestTimeout
-        applySessionHeaders(to: &request)
+        applySessionHeaders(to: &request, configuration: configuration)
 
         let response: AlphaBackendCatalogResponse = try await send(request, expecting: AlphaBackendCatalogResponse.self)
         return response.manifest.payload
     }
 
     func createDownloadSession(for packId: String) async throws -> AlphaBackendDownloadSessionPayload {
+        let configuration = AlphaBackendConfiguration()
         let requestBody = AlphaBackendDownloadSessionRequest(
             accountToken: configuration.accountToken,
             packId: packId,
@@ -3561,13 +3933,14 @@ private actor AlphaBackendClient {
         request.timeoutInterval = configuration.requestTimeout
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try encoder.encode(requestBody)
-        applySessionHeaders(to: &request)
+        applySessionHeaders(to: &request, configuration: configuration)
 
         let response: AlphaBackendDownloadSessionResponse = try await send(request, expecting: AlphaBackendDownloadSessionResponse.self)
         return response.downloadSession.payload
     }
 
     func searchPublicLaw(preview: AlphaPublicLawPreview) async throws -> [AlphaPublicLawResult] {
+        let configuration = AlphaBackendConfiguration()
         let requestBody = AlphaBackendPublicLawSearchRequest(
             query: preview.query,
             jurisdiction: "IN-ALL",
@@ -3580,7 +3953,7 @@ private actor AlphaBackendClient {
         request.timeoutInterval = configuration.requestTimeout
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try encoder.encode(requestBody)
-        applySessionHeaders(to: &request)
+        applySessionHeaders(to: &request, configuration: configuration)
 
         let response: AlphaBackendPublicLawResponse = try await send(request, expecting: AlphaBackendPublicLawResponse.self)
         return response.results.map {
@@ -3597,7 +3970,8 @@ private actor AlphaBackendClient {
         session: AlphaBackendDownloadSessionPayload,
         onProgress: @escaping @Sendable (Int64) async -> Void
     ) async throws -> AlphaDownloadedArtifact {
-        let artifactURL = try resolveArtifactURL(for: session.artifact)
+        let configuration = AlphaBackendConfiguration()
+        let artifactURL = try resolveArtifactURL(for: session.artifact, configuration: configuration)
         var downloaded = Data()
         downloaded.reserveCapacity(Int(session.artifact.sizeBytes))
 
@@ -3629,7 +4003,10 @@ private actor AlphaBackendClient {
         return AlphaDownloadedArtifact(data: downloaded, bytes: Int64(downloaded.count))
     }
 
-    private func resolveArtifactURL(for artifact: AlphaBackendArtifact) throws -> URL {
+    private func resolveArtifactURL(
+        for artifact: AlphaBackendArtifact,
+        configuration: AlphaBackendConfiguration = AlphaBackendConfiguration()
+    ) throws -> URL {
         if let downloadPath = artifact.downloadPath {
             return configuration.baseURL.appendingPathComponent(downloadPath.trimmingCharacters(in: CharacterSet(charactersIn: "/")))
         }
@@ -3645,7 +4022,10 @@ private actor AlphaBackendClient {
         return url
     }
 
-    private func applySessionHeaders(to request: inout URLRequest) {
+    private func applySessionHeaders(
+        to request: inout URLRequest,
+        configuration: AlphaBackendConfiguration = AlphaBackendConfiguration()
+    ) {
         request.setValue(configuration.accountToken, forHTTPHeaderField: "X-Ross-Account-Token")
         if let accessToken = configuration.accessToken {
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
@@ -3869,6 +4249,12 @@ struct AlphaRossRootView: View {
         }
         .task {
             await model.loadIfNeeded()
+        }
+        .task(id: authController?.session?.subject) {
+            await model.loadIfNeeded()
+            await MainActor.run {
+                model.syncWorkspaceForSession(authController?.session)
+            }
         }
         .task {
             try? await Task.sleep(for: .seconds(1.15))
@@ -6261,6 +6647,14 @@ private struct AlphaHomeScreen: View {
                 }
                 .animation(.snappy(duration: 0.28, extraBounce: 0.04), value: model.persisted.modelJobs.count)
 
+                if model.persisted.demoProfileSubject != nil {
+                    RossSectionCard(title: "Demo mode") {
+                        Text("Demo matter uses sample data only.")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.rossInk.opacity(0.7))
+                    }
+                }
+
                 if model.cases.isEmpty {
                     AlphaMatterStarterCard(model: model)
                 }
@@ -6328,7 +6722,7 @@ private struct AlphaHomeScreen: View {
                 }
 
                 AlphaDisclosureCard(
-                    title: "Matters and files",
+                    title: "Active matters",
                     badge: "\(model.cases.count)",
                     isExpanded: $matterActivityExpanded
                 ) {
@@ -7305,11 +7699,15 @@ private struct AlphaMatterStarterCard: View {
     @Bindable var model: AlphaRossModel
 
     var body: some View {
-        RossSectionCard(title: "Start with one matter", subtitle: "You can add the court or forum now, or leave it for later.") {
+        RossSectionCard(title: "Start with your first matter", subtitle: "Add the basics now so Ross can show what matters today.") {
             VStack(spacing: 12) {
                 TextField("Matter name", text: $model.caseDraftTitle)
                     .textFieldStyle(.roundedBorder)
                 TextField("Court or forum", text: $model.caseDraftForum)
+                    .textFieldStyle(.roundedBorder)
+                TextField("Case number", text: $model.caseDraftCaseNumber)
+                    .textFieldStyle(.roundedBorder)
+                TextField("Next date (for example 28 Apr 2026)", text: $model.caseDraftNextDateText)
                     .textFieldStyle(.roundedBorder)
                 Button("Save matter and open") {
                     model.createCase()
@@ -7650,6 +8048,14 @@ private struct AlphaCreateCaseScreen: View {
         model.caseDraftForum.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private var trimmedCaseNumber: String {
+        model.caseDraftCaseNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var trimmedNextDate: String {
+        model.caseDraftNextDateText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     private var canCreate: Bool {
         !trimmedTitle.isEmpty
     }
@@ -7674,14 +8080,55 @@ private struct AlphaCreateCaseScreen: View {
                     VStack(alignment: .leading, spacing: 14) {
                         AlphaMatterEditorField(
                             title: "Matter name",
-                            placeholder: "Kaveri Developers v. South Ward Municipal Corporation",
+                            placeholder: "Enter matter name",
                             text: $model.caseDraftTitle
                         )
 
                         AlphaMatterEditorField(
                             title: "Court or forum",
-                            placeholder: "Delhi High Court",
+                            placeholder: "Enter court or forum",
                             text: $model.caseDraftForum
+                        )
+
+                        AlphaMatterEditorField(
+                            title: "Case number",
+                            placeholder: "Enter case number",
+                            text: $model.caseDraftCaseNumber
+                        )
+
+                        AlphaMatterEditorField(
+                            title: "Next date",
+                            placeholder: "DD MMM YYYY",
+                            text: $model.caseDraftNextDateText
+                        )
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Stage")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Color.rossInk.opacity(0.62))
+
+                            Picker("Stage", selection: $model.caseDraftStage) {
+                                ForEach(AlphaCaseStage.allCases) { stage in
+                                    Text(stage.title).tag(stage)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                        }
+                    }
+                }
+
+                RossSectionCard(title: "Optional details") {
+                    VStack(alignment: .leading, spacing: 14) {
+                        AlphaMatterEditorField(
+                            title: "Parties",
+                            placeholder: "Enter parties",
+                            text: $model.caseDraftParties
+                        )
+
+                        AlphaMatterEditorMultilineField(
+                            title: "Notes",
+                            placeholder: "What should Ross help you remember about this matter?",
+                            text: $model.caseDraftNotes
                         )
                     }
                 }
@@ -7696,6 +8143,12 @@ private struct AlphaCreateCaseScreen: View {
                                     ? "You can add the forum now or later."
                                     : "The forum will be saved as \(trimmedForum)."
                             )
+                            if !trimmedCaseNumber.isEmpty {
+                                RossBulletRow(text: "Ross will save case number \(trimmedCaseNumber).")
+                            }
+                            if !trimmedNextDate.isEmpty {
+                                RossBulletRow(text: "Ross will save \(trimmedNextDate) as the current next date.")
+                            }
                         }
                     }
                 }
@@ -7748,6 +8201,45 @@ private struct AlphaMatterEditorField: View {
                             lineWidth: 1
                         )
                 }
+        }
+    }
+}
+
+private struct AlphaMatterEditorMultilineField: View {
+    let title: String
+    let placeholder: String
+    @Binding var text: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.rossInk.opacity(0.62))
+
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color.rossGlassSubtleFill)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+
+                TextEditor(text: $text)
+                    .scrollContentBackground(.hidden)
+                    .frame(minHeight: 110)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+
+                if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text(placeholder)
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(Color.rossInk.opacity(0.35))
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 18)
+                        .allowsHitTesting(false)
+                }
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.rossGlassStroke.opacity(0.72), lineWidth: 1)
+            }
         }
     }
 }
@@ -8323,6 +8815,16 @@ private struct AlphaTaskRow: View {
     let task: AlphaTaskItem
     let onToggle: () -> Void
 
+    private var visibleNotes: String? {
+        guard let notes = task.notes?.trimmingCharacters(in: .whitespacesAndNewlines), !notes.isEmpty else {
+            return nil
+        }
+        guard notes.hasPrefix(alphaRossSuggestedTaskNotePrefix) == false else {
+            return nil
+        }
+        return notes
+    }
+
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Button(action: onToggle) {
@@ -8334,13 +8836,13 @@ private struct AlphaTaskRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(task.title)
                     .font(.subheadline.weight(.semibold))
-                if let notes = task.notes {
+                if let notes = visibleNotes {
                     Text(notes)
                         .font(.footnote)
                         .foregroundStyle(Color.rossInk.opacity(0.65))
                 }
                 if let dueDate = task.dueDate {
-                    Text("Due \(dueDate.formatted(date: .abbreviated, time: .omitted))")
+                    Text(alphaTaskDueLabel(dueDate))
                         .font(.caption)
                         .foregroundStyle(Color.rossInk.opacity(0.6))
                 }
@@ -8348,6 +8850,18 @@ private struct AlphaTaskRow: View {
             Spacer()
         }
     }
+}
+
+private func alphaTaskDueLabel(_ dueDate: Date) -> String {
+    let calendar = Calendar.current
+    let startOfDay = calendar.startOfDay(for: .now)
+    if dueDate < startOfDay {
+        return "Overdue since \(dueDate.formatted(date: .abbreviated, time: .omitted))"
+    }
+    if calendar.isDateInToday(dueDate) {
+        return "Due today"
+    }
+    return "Due \(dueDate.formatted(date: .abbreviated, time: .omitted))"
 }
 
 private struct AlphaReviewRow: View {
@@ -8381,10 +8895,24 @@ private struct AlphaTaskQuickAddCard: View {
     @State private var dueOffset = 0
     let onAdd: (String, Date?) -> Void
 
+    private var trimmedTitle: String {
+        title.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func submitTask() {
+        guard trimmedTitle.isEmpty == false else { return }
+        let dueDate = dueOffset == 0 ? nil : Calendar.current.date(byAdding: .day, value: dueOffset - 1, to: .now)
+        onAdd(trimmedTitle, dueDate)
+        title = ""
+        dueOffset = 0
+    }
+
     var body: some View {
         VStack(spacing: 12) {
             TextField("Add task", text: $title)
                 .textFieldStyle(.roundedBorder)
+                .submitLabel(.done)
+                .onSubmit(submitTask)
             Picker("Due", selection: $dueOffset) {
                 Text("No date").tag(0)
                 Text("Today").tag(1)
@@ -8392,14 +8920,89 @@ private struct AlphaTaskQuickAddCard: View {
                 Text("This week").tag(7)
             }
             .pickerStyle(.segmented)
-            Button("Add task") {
-                let dueDate = dueOffset == 0 ? nil : Calendar.current.date(byAdding: .day, value: dueOffset - 1, to: .now)
-                onAdd(title, dueDate)
+            Button("Add task", action: submitTask)
+            .buttonStyle(.borderedProminent)
+            .disabled(trimmedTitle.isEmpty)
+        }
+    }
+}
+
+private struct AlphaMatterDateQuickAddCard: View {
+    @State private var title = ""
+    @State private var selectedKind: AlphaMatterDateKind = .hearing
+    @State private var date = Calendar.current.date(byAdding: .day, value: 1, to: .now) ?? .now
+    let onAdd: (String, AlphaMatterDateKind, Date) -> Void
+
+    var body: some View {
+        VStack(spacing: 12) {
+            TextField("Add date or reminder", text: $title)
+                .textFieldStyle(.roundedBorder)
+
+            Picker("Type", selection: $selectedKind) {
+                ForEach(AlphaMatterDateKind.allCases, id: \.self) { kind in
+                    Text(kind.title).tag(kind)
+                }
+            }
+            .pickerStyle(.menu)
+
+            DatePicker("When", selection: $date, displayedComponents: .date)
+                .datePickerStyle(.compact)
+
+            Button("Save date") {
+                onAdd(title.trimmingCharacters(in: .whitespacesAndNewlines), selectedKind, date)
                 title = ""
-                dueOffset = 0
+                selectedKind = .hearing
+                date = Calendar.current.date(byAdding: .day, value: 1, to: .now) ?? .now
             }
             .buttonStyle(.borderedProminent)
-            .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
+    }
+}
+
+private struct AlphaMatterDateRow: View {
+    let matterDate: AlphaMatterDate
+    let onMarkDone: () -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(matterDate.title)
+                        .font(.subheadline.weight(.semibold))
+                    Text(matterDate.date.formatted(date: .abbreviated, time: .omitted))
+                        .font(.footnote)
+                        .foregroundStyle(Color.rossInk.opacity(0.68))
+                    if let notes = matterDate.notes, !notes.isEmpty {
+                        Text(notes)
+                            .font(.footnote)
+                            .foregroundStyle(Color.rossInk.opacity(0.62))
+                    }
+                }
+
+                Spacer()
+
+                Text(matterDate.kind.title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.rossAccent)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.rossAccent.opacity(0.12))
+                    .clipShape(Capsule())
+            }
+
+            HStack(spacing: 10) {
+                Button("Mark done", action: onMarkDone)
+                    .buttonStyle(.borderedProminent)
+                Button("Cancel", role: .destructive, action: onCancel)
+                    .buttonStyle(.bordered)
+            }
+        }
+        .padding(16)
+        .background(Color.rossCardBackground)
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.rossBorder, lineWidth: 1)
         }
     }
 }
@@ -8787,6 +9390,33 @@ private struct AlphaCaseWorkspaceScreen: View {
                                     .font(.subheadline)
                                     .foregroundStyle(Color.rossInk.opacity(0.7))
 
+                                if caseMatter.caseNumber != nil || caseMatter.partiesSummary != nil {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        if let caseNumber = caseMatter.caseNumber, !caseNumber.isEmpty {
+                                            AlphaSettingsValueRow(label: "Case number", value: caseNumber)
+                                        }
+                                        if let partiesSummary = caseMatter.partiesSummary, !partiesSummary.isEmpty {
+                                            AlphaSettingsValueRow(label: "Parties", value: partiesSummary)
+                                        }
+                                    }
+                                }
+
+                                let savedDates = model.scheduledMatterDates(for: caseId)
+                                if !savedDates.isEmpty {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Text("Saved dates")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(Color.rossInk.opacity(0.65))
+                                        ForEach(Array(savedDates.prefix(3))) { matterDate in
+                                            AlphaSummaryRow(
+                                                title: matterDate.title,
+                                                detail: matterDate.date.formatted(date: .abbreviated, time: .omitted),
+                                                tint: Color.rossHighlight
+                                            )
+                                        }
+                                    }
+                                }
+
                                 if caseMatter.draftTasks.isEmpty {
                                     Text("No next-step note is saved yet. Import another file or ask Ross to refresh this matter's next actions.")
                                         .font(.subheadline)
@@ -8901,11 +9531,40 @@ private struct AlphaCaseWorkspaceScreen: View {
                                 .buttonStyle(.bordered)
                                 .disabled(model.refreshingCaseOverviewIDs.contains(caseId))
 
+                                AlphaMatterDateQuickAddCard { title, kind, date in
+                                    model.addMatterDate(caseId: caseId, title: title, kind: kind, date: date)
+                                }
+
+                                let matterDates = model.scheduledMatterDates(for: caseId)
+                                if matterDates.isEmpty {
+                                    Text("No dates saved yet.")
+                                        .font(.subheadline)
+                                        .foregroundStyle(Color.rossInk.opacity(0.7))
+                                } else {
+                                    ForEach(matterDates) { matterDate in
+                                        AlphaMatterDateRow(
+                                            matterDate: matterDate,
+                                            onMarkDone: { model.setMatterDateStatus(caseId: caseId, dateId: matterDate.id, status: .done) },
+                                            onCancel: { model.setMatterDateStatus(caseId: caseId, dateId: matterDate.id, status: .cancelled) }
+                                        )
+                                    }
+                                }
+
                                 AlphaTaskQuickAddCard(onAdd: { title, dueDate in
                                     model.addTask(title: title, caseId: caseId, dueDate: dueDate)
                                 })
                                 ForEach(model.tasks(for: caseId)) { task in
                                     AlphaTaskRow(task: task, onToggle: { model.toggleTaskDone(task.id) })
+                                        .contextMenu {
+                                            if task.status == .open {
+                                                Button("Snooze by 1 day") {
+                                                    model.snoozeTask(task.id, by: 1)
+                                                }
+                                            }
+                                            Button("Delete task", role: .destructive) {
+                                                model.removeTask(task.id)
+                                            }
+                                        }
                                 }
                             }
                         }
@@ -9748,6 +10407,12 @@ private struct AlphaExportsScreen: View {
     @Bindable var model: AlphaRossModel
     let caseId: UUID?
 
+    private var visibleReports: [AlphaExportedReport] {
+        model.persisted.exports.filter { report in
+            caseId == nil || report.caseId == caseId
+        }
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: alphaSectionSpacing) {
@@ -9781,7 +10446,15 @@ private struct AlphaExportsScreen: View {
                     }
                 }
 
-                ForEach(model.persisted.exports) { report in
+                if visibleReports.isEmpty {
+                    RossSectionCard(title: "No drafts yet") {
+                        Text("Generate a case note, chronology, order summary, or transcript to keep a local draft ready for advocate review.")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.rossInk.opacity(0.7))
+                    }
+                }
+
+                ForEach(visibleReports) { report in
                     RossSectionCard(title: report.title, subtitle: report.kind.replacingOccurrences(of: "_", with: " ").capitalized) {
                         VStack(alignment: .leading, spacing: 10) {
                             Text(report.relativePath)
@@ -9818,6 +10491,7 @@ private struct AlphaSettingsScreen: View {
     @Bindable var model: AlphaRossModel
     let authController: RossAuthController?
     @State private var backendAddressDraft = rossBackendBaseURLOverride() ?? ""
+    @State private var selectedLanguageCode = rossSelectedLanguageCode()
 
     private var publicLawApprovalBinding: Binding<Bool> {
         Binding(
@@ -9857,9 +10531,25 @@ private struct AlphaSettingsScreen: View {
                 }
 
                 if let authController, let session = authController.session {
-                    RossSectionCard(title: "Sign-in") {
+                    RossSectionCard(title: "Account") {
                         VStack(alignment: .leading, spacing: 12) {
                             AlphaSettingsValueRow(label: "Signed in as", value: session.email)
+                            Divider()
+                            AlphaSettingsValueRow(label: "Language", value: rossLanguageDisplayName(code: selectedLanguageCode))
+                            Picker("Language", selection: $selectedLanguageCode) {
+                                Text("English").tag("en")
+                                Text("Hindi").tag("hi")
+                                Text("Tamil").tag("ta")
+                                Text("Telugu").tag("te")
+                                Text("Kannada").tag("kn")
+                                Text("Malayalam").tag("ml")
+                                Text("Marathi").tag("mr")
+                                Text("Bengali").tag("bn")
+                            }
+                            .pickerStyle(.menu)
+                            .onChange(of: selectedLanguageCode) { _, newValue in
+                                rossSaveLanguageSelection(code: newValue)
+                            }
                             Divider()
                             if authController.canUseQuickUnlock {
                                 Toggle(
@@ -9882,6 +10572,23 @@ private struct AlphaSettingsScreen: View {
                                 AlphaSettingsValueRow(label: "Unlock", value: "Quick unlock is not available on this device.")
                             }
                             Divider()
+                            if session.subject.hasPrefix("local_demo_") {
+                                Button {
+                                    model.resetDemoWorkspace(for: session.subject)
+                                } label: {
+                                    AlphaSettingsNavigationRow(
+                                        title: "Reset demo data",
+                                        detail: "Restore the sample matter, tasks, files, and review items for local testing.",
+                                        systemImage: "arrow.counterclockwise"
+                                    )
+                                }
+                                .buttonStyle(.plain)
+
+                                Text("Demo matter uses sample data only.")
+                                    .font(.footnote)
+                                    .foregroundStyle(Color.rossInk.opacity(0.64))
+                                Divider()
+                            }
                             Button(role: .destructive, action: authController.signOut) {
                                 HStack(spacing: 12) {
                                     Image(systemName: "rectangle.portrait.and.arrow.right")
@@ -9935,13 +10642,11 @@ private struct AlphaSettingsScreen: View {
                     }
                 }
 
-                RossSectionCard(title: "On this device") {
+                RossSectionCard(title: "Private assistant") {
                     VStack(alignment: .leading, spacing: 12) {
                         AlphaSettingsValueRow(label: "Status", value: alphaPrivateAIStatus(model))
                         Divider()
                         AlphaSettingsValueRow(label: "Pack", value: model.activePack?.tier.title ?? "Not installed")
-                        Divider()
-                        AlphaSettingsValueRow(label: "Saved reports", value: "\(model.persisted.exports.count)")
                         Divider()
                         NavigationLink(value: AlphaRoute.privateAISettings) {
                             AlphaSettingsNavigationRow(
@@ -9961,6 +10666,28 @@ private struct AlphaSettingsScreen: View {
                         }
                         .buttonStyle(.plain)
                     }
+                }
+
+                RossSectionCard(title: "Storage") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        AlphaSettingsValueRow(label: "Saved reports", value: "\(model.persisted.exports.count)")
+                        Divider()
+                        AlphaSettingsValueRow(label: "Matter count", value: "\(model.cases.count)")
+                        Divider()
+                        Text("Case files stay on this device.")
+                            .font(.footnote)
+                            .foregroundStyle(Color.rossInk.opacity(0.64))
+                    }
+                }
+
+                RossSectionCard(title: "Help") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Web search is off by default.")
+                        Text("Review before searching public law.")
+                        Text("Exports are drafts for advocate review.")
+                    }
+                    .font(.footnote)
+                    .foregroundStyle(Color.rossInk.opacity(0.7))
                 }
 
                 RossSectionCard(title: "Advanced") {

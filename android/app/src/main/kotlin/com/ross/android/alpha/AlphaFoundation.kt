@@ -22,7 +22,7 @@ import java.io.FileOutputStream
 import java.security.MessageDigest
 import java.util.UUID
 
-private const val ALPHA_ROSS_SUGGESTED_TASK_NOTE_PREFIX = "ross-overview::"
+internal const val ALPHA_ROSS_SUGGESTED_TASK_NOTE_PREFIX = "ross-overview::"
 const val ALPHA_SHARED_WORKSPACE_ID = "0d9e5220-4d3c-4b49-9a67-10b42b593b7d"
 private const val ALPHA_BACKEND_PREFS = "ross_alpha_backend"
 private const val ALPHA_BACKEND_BASE_URL_OVERRIDE_KEY = "backend_base_url_override"
@@ -129,6 +129,8 @@ enum class AlphaMatterTint { Indigo, Amber, Emerald, Rose, Slate }
 enum class AlphaTaskPriority { Low, Normal, High }
 enum class AlphaTaskStatus { Open, Done }
 enum class AlphaTaskSource { Manual, Extraction, System }
+enum class AlphaMatterDateKind { Hearing, FilingDeadline, ComplianceDate, ClientFollowUp }
+enum class AlphaMatterDateStatus { Scheduled, Done, Cancelled }
 enum class AlphaDocumentKind { Pdf, Image, Text, Unknown }
 enum class AlphaOcrStatus { NotStarted, Indexed, Placeholder, NativeText, OcrComplete, Partial, Failed }
 enum class AlphaIndexingStatus { NotStarted, Extracting, Indexed, Partial, Failed }
@@ -215,6 +217,17 @@ data class AlphaTaskItem(
     val updatedAt: String = nowIso(),
 )
 
+data class AlphaMatterDate(
+    val id: String = UUID.randomUUID().toString(),
+    val caseId: String,
+    val title: String,
+    val kind: AlphaMatterDateKind,
+    val date: String,
+    val status: AlphaMatterDateStatus = AlphaMatterDateStatus.Scheduled,
+    val notes: String? = null,
+    val sourceRef: AlphaSourceRef? = null,
+)
+
 data class AlphaReviewQueueItem(
     val id: String = UUID.randomUUID().toString(),
     val caseId: String,
@@ -260,6 +273,7 @@ data class AlphaCaseMatter(
     val issueHighlights: List<String>,
     val evidenceNotes: List<String>,
     val draftTasks: List<String>,
+    val dates: List<AlphaMatterDate> = emptyList(),
     val documents: List<AlphaCaseDocument>,
     val sourceRefs: List<AlphaSourceRef>,
     val chatTurns: List<AlphaChatTurn> = emptyList(),
@@ -422,8 +436,9 @@ data class AlphaPersistedState(
     val selectedTab: AlphaAppTab = AlphaAppTab.Home,
     val settings: AlphaSettings = AlphaSettings(),
     val accountSession: AlphaAccountSession = AlphaAccountSession(),
-    val cases: List<AlphaCaseMatter> = seedCases(),
-    val tasks: List<AlphaTaskItem>? = null,
+    val demoProfileSubject: String? = null,
+    val cases: List<AlphaCaseMatter> = listOf(sharedWorkspaceMatter()),
+    val tasks: List<AlphaTaskItem>? = emptyList(),
     val ledgerEntries: List<AlphaPrivacyLedgerEntry> = listOf(
         AlphaPrivacyLedgerEntry(
             title = "Model catalog checked",
@@ -495,7 +510,7 @@ internal class AlphaRossController(
     var persisted by mutableStateOf(loadState())
     var pendingRoute by mutableStateOf<AndroidAlphaRoute?>(null)
 
-    var selectedCaseId by mutableStateOf(persisted.cases.firstOrNull()?.id)
+    var selectedCaseId by mutableStateOf(persisted.cases.firstOrNull { it.id != ALPHA_SHARED_WORKSPACE_ID }?.id)
     var selectedTier by mutableStateOf(persisted.settings.activeTier ?: AlphaCapabilityTier.CaseAssociate)
     var caseDraftTitle by mutableStateOf("")
     var caseDraftForum by mutableStateOf("")
@@ -523,6 +538,54 @@ internal class AlphaRossController(
         scope.launch {
             refreshAccountSessionIfNeeded()
         }
+    }
+
+    private data class AlphaPreservedWorkspaceConfiguration(
+        val settings: AlphaSettings,
+        val modelJobs: List<AlphaModelDownloadJob>,
+        val installedPacks: List<AlphaInstalledPack>,
+        val localInferenceMetrics: List<AlphaLocalInferenceMetrics>,
+    )
+
+    private fun preservedWorkspaceConfiguration(): AlphaPreservedWorkspaceConfiguration =
+        AlphaPreservedWorkspaceConfiguration(
+            settings = persisted.settings,
+            modelJobs = persisted.modelJobs,
+            installedPacks = persisted.installedPacks,
+            localInferenceMetrics = persisted.localInferenceMetrics,
+        )
+
+    private fun applyPreservedWorkspaceConfiguration(
+        state: AlphaPersistedState,
+        preserved: AlphaPreservedWorkspaceConfiguration,
+    ): AlphaPersistedState = state.copy(
+        settings = preserved.settings,
+        modelJobs = preserved.modelJobs,
+        installedPacks = preserved.installedPacks,
+        localInferenceMetrics = preserved.localInferenceMetrics,
+    )
+
+    private fun shouldSeedDemoWorkspace(subject: String): Boolean {
+        if (persisted.demoProfileSubject == subject) {
+            return false
+        }
+        if (cases.isEmpty()) {
+            return true
+        }
+        return isLegacySeedWorkspace() || (persisted.demoProfileSubject != null && isCurrentWorkspaceDemoOnly())
+    }
+
+    private fun isLegacySeedWorkspace(): Boolean {
+        val titles = cases.map { it.title }.toSet()
+        return titles == setOf(
+            "Kaveri Developers v. South Ward Municipal Corporation",
+            "Arun Textiles v. State Tax Officer",
+        )
+    }
+
+    private fun isCurrentWorkspaceDemoOnly(): Boolean {
+        val activeCases = cases
+        return activeCases.size == 1 && activeCases.firstOrNull()?.title == "Demo Matter: Sharma v. Rana"
     }
 
     val cases: List<AlphaCaseMatter>
@@ -574,10 +637,24 @@ internal class AlphaRossController(
         tasks(caseId).filter { it.status == AlphaTaskStatus.Open }
 
     fun todayTasks(caseId: String? = null): List<AlphaTaskItem> =
-        openTasks(caseId).filter { it.dueDate?.startsWith(nowIso().substring(0, 10)) == true }
+        openTasks(caseId).filter { task ->
+            val dueDate = task.dueDate?.let { runCatching { java.time.Instant.parse(it) }.getOrNull() } ?: return@filter false
+            val startOfTomorrow = java.time.LocalDate.now()
+                .plusDays(1)
+                .atStartOfDay(java.time.ZoneId.systemDefault())
+                .toInstant()
+            dueDate.isBefore(startOfTomorrow)
+        }
 
     fun upcomingTasks(caseId: String? = null): List<AlphaTaskItem> =
-        openTasks(caseId).filter { it.dueDate != null && !it.dueDate.startsWith(nowIso().substring(0, 10)) }
+        openTasks(caseId).filter { task ->
+            val dueDate = task.dueDate?.let { runCatching { java.time.Instant.parse(it) }.getOrNull() } ?: return@filter false
+            val startOfTomorrow = java.time.LocalDate.now()
+                .plusDays(1)
+                .atStartOfDay(java.time.ZoneId.systemDefault())
+                .toInstant()
+            !dueDate.isBefore(startOfTomorrow)
+        }
 
     fun askDraft(scopeCaseId: String?): String =
         scopeCaseId?.let { askDrafts[it] ?: "Ask Ross about this matter..." } ?: globalAskDraft
@@ -1027,7 +1104,29 @@ internal class AlphaRossController(
                 lastUnlockedAt = nowIso(),
             )
         )
+        if (shouldSeedDemoWorkspace(demoSubject)) {
+            val preserved = preservedWorkspaceConfiguration()
+            persisted = demoSeedState(demoSubject).copy(accountSession = persisted.accountSession)
+            persisted = applyPreservedWorkspaceConfiguration(persisted, preserved)
+        }
+        selectedCaseId = cases.firstOrNull()?.id
         authStatusMessage = null
+        save()
+    }
+
+    fun resetDemoWorkspace(subject: String = "local_demo_advocate") {
+        val preserved = preservedWorkspaceConfiguration()
+        val session = persisted.accountSession
+        persisted = demoSeedState(subject).copy(accountSession = session)
+        persisted = applyPreservedWorkspaceConfiguration(persisted, preserved).copy(
+            ledgerEntries = listOf(
+                localLedger(
+                    "Demo workspace reset locally",
+                    "Ross restored the synthetic sample matter on this device."
+                )
+            ) + demoSeedState(subject).ledgerEntries
+        )
+        selectedCaseId = cases.firstOrNull()?.id
         save()
     }
 
@@ -1062,6 +1161,11 @@ internal class AlphaRossController(
     fun signOutAccountSession() {
         persisted = persisted.copy(accountSession = AlphaAccountSession())
         authStatusMessage = null
+        if (persisted.demoProfileSubject != null && isCurrentWorkspaceDemoOnly()) {
+            val preserved = preservedWorkspaceConfiguration()
+            persisted = applyPreservedWorkspaceConfiguration(AlphaPersistedState(), preserved)
+        }
+        selectedCaseId = cases.firstOrNull()?.id
         save()
     }
 
@@ -1894,29 +1998,6 @@ internal class AlphaRossController(
                 if (existing.id == caseId) refreshedCase else existing
             }
         )
-        syncRossSuggestedTasks(refreshedCase)
-    }
-
-    private fun syncRossSuggestedTasks(case: AlphaCaseMatter) {
-        val existingTasks = persisted.tasks ?: emptyList()
-        val preservedTasks = existingTasks.filterNot {
-            it.caseId == case.id && it.status == AlphaTaskStatus.Open && it.isRossSuggestedTask()
-        }
-        val generatedTasks = case.draftTasks.mapIndexedNotNull { index, title ->
-            if (preservedTasks.any { it.caseId == case.id && it.title == title }) {
-                null
-            } else {
-                AlphaTaskItem(
-                    caseId = case.id,
-                    title = title,
-                    notes = rossSuggestedTaskNote(case.id, index),
-                    dueDate = if (index == 0) case.nextHearing else null,
-                    priority = if (index == 0) AlphaTaskPriority.High else AlphaTaskPriority.Normal,
-                    source = AlphaTaskSource.System,
-                )
-            }
-        }
-        persisted = persisted.copy(tasks = generatedTasks + preservedTasks)
     }
 
     private fun buildLocalAskResult(question: String, scopeCaseId: String?): AlphaAskResult {
@@ -2441,9 +2522,6 @@ internal class AlphaRossController(
         success = true,
     )
 
-    private fun rossSuggestedTaskNote(caseId: String, slot: Int): String =
-        "$ALPHA_ROSS_SUGGESTED_TASK_NOTE_PREFIX$caseId::$slot"
-
     private fun AlphaTaskItem.isRossSuggestedTask(): Boolean =
         notes?.startsWith(ALPHA_ROSS_SUGGESTED_TASK_NOTE_PREFIX) == true
 
@@ -2589,7 +2667,17 @@ internal class AlphaRossController(
         }?.value
         val parsedDate = alphaParsedDate(nextDateValue) ?: return cases
         return cases.map { matter ->
-            if (matter.id == caseId) matter.copy(nextHearing = parsedDate, updatedAt = nowIso()) else matter
+            if (matter.id == caseId) {
+                val refreshedDates = matter.dates
+                    .filterNot { it.kind == AlphaMatterDateKind.Hearing && it.status == AlphaMatterDateStatus.Scheduled } +
+                    AlphaMatterDate(
+                        caseId = caseId,
+                        title = "Next hearing",
+                        kind = AlphaMatterDateKind.Hearing,
+                        date = parsedDate,
+                    )
+                matter.copy(nextHearing = parsedDate, dates = refreshedDates.sortedBy { it.date }, updatedAt = nowIso())
+            } else matter
         }
     }
 
@@ -2639,97 +2727,264 @@ internal class AlphaRossController(
 
 private fun seedCases(): List<AlphaCaseMatter> {
     val caseId = UUID.randomUUID().toString()
-    val draftId = UUID.randomUUID().toString()
-    val noticeId = UUID.randomUUID().toString()
-    val sources = listOf(
-        AlphaSourceRef(caseId = caseId, documentId = draftId, documentTitle = "Writ Petition Draft", pageNumber = 4, paragraphRange = "¶2-3", textSnippet = "Representation and reply timeline.", ocrConfidence = 0.96),
-        AlphaSourceRef(caseId = caseId, documentId = noticeId, documentTitle = "Impugned Notice", pageNumber = 2, paragraphRange = "¶1", textSnippet = "Inspection grounds and compliance window.", ocrConfidence = 0.91),
-    )
-    val petitionCase = AlphaCaseMatter(
-        id = caseId,
-        title = "Kaveri Developers v. South Ward Municipal Corporation",
-        forum = "Karnataka High Court",
-        stage = AlphaCaseStage.Pleadings,
-        nextHearing = nowIso(),
-        summary = "The file is ready for a chronology-focused hearing note. The strongest near-term task is tying the representation sequence to the municipal demand pages already in the bundle.",
-        issueHighlights = listOf(
-            "Whether the demand proceeds without addressing the representation already on record.",
-            "Whether the notice timing supports a procedural fairness argument.",
-        ),
-        evidenceNotes = listOf(
-            "Representation acknowledgment page should stay close to the hearing note.",
-            "Photo bundle still needs placeholder page records for quick navigation.",
-        ),
-        draftTasks = listOf(
-            "Prepare a short chronology for the next hearing.",
-            "Anchor the reply timeline to source chips.",
-            "Draft a focused procedural fairness note.",
-        ),
-        documents = listOf(
-            AlphaCaseDocument(
-                id = draftId,
-                title = "Writ Petition Draft",
-                fileName = "writ-petition-draft.pdf",
-                kind = AlphaDocumentKind.Pdf,
-                storedRelativePath = "seed/writ-petition-draft.pdf",
-                pageCount = 28,
-                ocrStatus = AlphaOcrStatus.Indexed,
-                extractedText = "Representation chronology, demand challenge, and hearing posture.",
-                pages = listOf(AlphaDocumentPage(pageNumber = 1, snippet = "Draft reference page 1.")),
-            ),
-            AlphaCaseDocument(
-                id = noticeId,
-                title = "Impugned Notice",
-                fileName = "impugned-notice.pdf",
-                kind = AlphaDocumentKind.Pdf,
-                storedRelativePath = "seed/impugned-notice.pdf",
-                pageCount = 6,
-                ocrStatus = AlphaOcrStatus.Indexed,
-                extractedText = "Inspection grounds and compliance window.",
-                pages = listOf(AlphaDocumentPage(pageNumber = 1, snippet = "Notice page 1.")),
-            )
-        ),
-        sourceRefs = sources,
-    )
-    val taxCaseId = UUID.randomUUID().toString()
     val orderId = UUID.randomUUID().toString()
-    val taxCase = AlphaCaseMatter(
-        id = taxCaseId,
-        title = "Arun Textiles v. State Tax Officer",
-        forum = "Madras High Court",
-        stage = AlphaCaseStage.Evidence,
-        nextHearing = nowIso(),
-        summary = "The file supports an evidence-focused review with the order and reconciliation pages ready for source-backed issue extraction.",
+    val affidavitId = UUID.randomUUID().toString()
+    val noticeId = UUID.randomUUID().toString()
+    val nextHearing = java.time.Instant.now().plusSeconds(9 * 86_400L).toString()
+    val filingDeadline = java.time.Instant.now().plusSeconds(4 * 86_400L).toString()
+    val clientFollowUp = java.time.Instant.now().plusSeconds(2 * 86_400L).toString()
+    val hearingSource = AlphaSourceRef(
+        caseId = caseId,
+        documentId = orderId,
+        documentTitle = "Demo order",
+        pageNumber = 2,
+        paragraphRange = "¶3",
+        textSnippet = "List the matter on ${alphaMatterDateLabel(nextHearing)} for arguments.",
+        ocrConfidence = 0.95,
+    )
+    val directionSource = AlphaSourceRef(
+        caseId = caseId,
+        documentId = orderId,
+        documentTitle = "Demo order",
+        pageNumber = 3,
+        paragraphRange = "¶5",
+        textSnippet = "Cure filing defects and prepare a short hearing note before the next date.",
+        ocrConfidence = 0.92,
+    )
+    val partySource = AlphaSourceRef(
+        caseId = caseId,
+        documentId = affidavitId,
+        documentTitle = "Demo affidavit",
+        pageNumber = 1,
+        paragraphRange = "Cause title",
+        textSnippet = "Sharma versus Rana",
+        ocrConfidence = 0.90,
+    )
+    val filingSource = AlphaSourceRef(
+        caseId = caseId,
+        documentId = noticeId,
+        documentTitle = "Demo notice",
+        pageNumber = 1,
+        paragraphRange = "¶2",
+        textSnippet = "Reply and filing compliance should be completed before ${alphaMatterDateLabel(filingDeadline)}.",
+        ocrConfidence = 0.88,
+    )
+
+    val demoMatter = AlphaCaseMatter(
+        id = caseId,
+        title = "Demo Matter: Sharma v. Rana",
+        forum = "District Court",
+        stage = AlphaCaseStage.Arguments,
+        nextHearing = nextHearing,
+        localNotice = "Demo matter uses sample data only. Case files stay on this device",
+        summary = "This synthetic matter is ready for a morning check-in. Review the latest order, confirm the next date, prepare a hearing note, and keep filing compliance on track.",
         issueHighlights = listOf(
-            "Mismatch between the assessment reasoning and the reconciliation schedule.",
-            "Need to isolate whether the clarification already supplied was engaged.",
+            "Confirm the next hearing date from the latest order.",
+            "Prepare a short hearing note before arguments.",
+            "Check the filing deadline before sharing the next update.",
         ),
         evidenceNotes = listOf(
-            "Order pages are ready for source-backed notes.",
-            "A short hearing-preparation export can be generated once discrepancy pages are pinned.",
+            "Demo order contains the next date and order direction.",
+            "Demo affidavit still needs a quick party-name confirmation.",
+            "Demo notice flags the filing deadline.",
         ),
         draftTasks = listOf(
-            "Map discrepancy pages against the order reasoning.",
-            "Prepare a short note for the next hearing.",
+            "Review latest order",
+            "Prepare hearing note",
+            "Confirm filing deadline",
+            "Call client with next date",
+        ),
+        dates = listOf(
+            AlphaMatterDate(
+                caseId = caseId,
+                title = "Next hearing",
+                kind = AlphaMatterDateKind.Hearing,
+                date = nextHearing,
+                sourceRef = hearingSource,
+            ),
+            AlphaMatterDate(
+                caseId = caseId,
+                title = "Filing deadline",
+                kind = AlphaMatterDateKind.FilingDeadline,
+                date = filingDeadline,
+                sourceRef = filingSource,
+            ),
+            AlphaMatterDate(
+                caseId = caseId,
+                title = "Client follow-up",
+                kind = AlphaMatterDateKind.ClientFollowUp,
+                date = clientFollowUp,
+            ),
         ),
         documents = listOf(
             AlphaCaseDocument(
                 id = orderId,
-                title = "Assessment Order",
-                fileName = "assessment-order.pdf",
+                title = "Demo order",
+                fileName = "demo-order.pdf",
                 kind = AlphaDocumentKind.Pdf,
-                storedRelativePath = "seed/assessment-order.pdf",
-                pageCount = 19,
-                ocrStatus = AlphaOcrStatus.Indexed,
-                extractedText = "Assessment reasoning and discrepancy notes.",
-                pages = listOf(AlphaDocumentPage(pageNumber = 1, snippet = "Assessment page 1.")),
+                storedRelativePath = "seed/demo-order.pdf",
+                importedAt = java.time.Instant.now().minusSeconds(2 * 86_400L).toString(),
+                pageCount = 4,
+                ocrStatus = AlphaOcrStatus.NativeText,
+                extractedText = "Interim order directing filing compliance and listing the matter for arguments.",
+                indexingStatus = AlphaIndexingStatus.Indexed,
+                dominantSourceSnippet = "List the matter for arguments and prepare a hearing note.",
+                lastIndexedAt = java.time.Instant.now().minusSeconds(2 * 86_400L).toString(),
+                pages = (1..4).map { AlphaDocumentPage(pageNumber = it, snippet = "Demo order page $it.") },
+                classification = AlphaLegalDocumentClassification(
+                    documentId = orderId,
+                    type = AlphaLegalDocumentType.Order,
+                    subtype = "interim order",
+                    confidence = 0.82,
+                    sourceRefs = listOf(hearingSource),
+                    needsReview = false,
+                ),
+                extractedFields = listOf(
+                    AlphaExtractedLegalField(
+                        caseId = caseId,
+                        documentId = orderId,
+                        fieldType = AlphaExtractedLegalFieldType.NextDate,
+                        label = "Next date",
+                        value = alphaMatterDateLabel(nextHearing),
+                        sourceRefs = listOf(hearingSource),
+                        confidence = 0.58,
+                        extractionMode = AlphaExtractionMode.CaseAssociate,
+                        extractionPass = AlphaExtractionPass.LlmExtract,
+                        needsReview = true,
+                    ),
+                    AlphaExtractedLegalField(
+                        caseId = caseId,
+                        documentId = orderId,
+                        fieldType = AlphaExtractedLegalFieldType.OrderDirection,
+                        label = "Order direction",
+                        value = "Cure filing defects and prepare a short hearing note before the next date.",
+                        sourceRefs = listOf(directionSource),
+                        confidence = 0.86,
+                        extractionMode = AlphaExtractionMode.CaseAssociate,
+                        extractionPass = AlphaExtractionPass.LlmVerify,
+                        needsReview = false,
+                    ),
+                ),
+                extractionRuns = listOf(
+                    AlphaExtractionRun(
+                        caseId = caseId,
+                        documentId = orderId,
+                        mode = AlphaExtractionMode.CaseAssociate,
+                        status = AlphaExtractionRunStatus.NeedsReview,
+                        progressState = AlphaExtractionProgressState.NeedsReview,
+                        pagesProcessed = 4,
+                        totalPages = 4,
+                        fieldsExtracted = 2,
+                        fieldsNeedingReview = 1,
+                        warnings = listOf("Next date still needs advocate confirmation."),
+                    )
+                ),
+                extractionFindings = listOf(
+                    AlphaExtractionFinding(
+                        caseId = caseId,
+                        documentId = orderId,
+                        kind = AlphaExtractionFindingKind.DateConflict,
+                        message = "Confirm the next date against the signed order before relying on it in a note or export.",
+                        sourceRefs = listOf(hearingSource),
+                        severity = AlphaExtractionFindingSeverity.Warning,
+                    )
+                ),
+            ),
+            AlphaCaseDocument(
+                id = affidavitId,
+                title = "Demo affidavit",
+                fileName = "demo-affidavit.pdf",
+                kind = AlphaDocumentKind.Pdf,
+                storedRelativePath = "seed/demo-affidavit.pdf",
+                importedAt = java.time.Instant.now().minusSeconds(5 * 86_400L).toString(),
+                pageCount = 3,
+                ocrStatus = AlphaOcrStatus.NativeText,
+                extractedText = "Affidavit describing chronology and supporting facts for arguments.",
+                indexingStatus = AlphaIndexingStatus.Indexed,
+                dominantSourceSnippet = "Cause title and supporting chronology for arguments.",
+                lastIndexedAt = java.time.Instant.now().minusSeconds(5 * 86_400L).toString(),
+                pages = (1..3).map { AlphaDocumentPage(pageNumber = it, snippet = "Demo affidavit page $it.") },
+                classification = AlphaLegalDocumentClassification(
+                    documentId = affidavitId,
+                    type = AlphaLegalDocumentType.Affidavit,
+                    confidence = 0.79,
+                    sourceRefs = listOf(partySource),
+                    needsReview = false,
+                ),
+                extractedFields = listOf(
+                    AlphaExtractedLegalField(
+                        caseId = caseId,
+                        documentId = affidavitId,
+                        fieldType = AlphaExtractedLegalFieldType.PartyName,
+                        label = "Party name",
+                        value = "Sharma v. Rana",
+                        sourceRefs = listOf(partySource),
+                        confidence = 0.63,
+                        extractionMode = AlphaExtractionMode.CaseAssociate,
+                        extractionPass = AlphaExtractionPass.LlmExtract,
+                        needsReview = true,
+                    )
+                ),
+            ),
+            AlphaCaseDocument(
+                id = noticeId,
+                title = "Demo notice",
+                fileName = "demo-notice.pdf",
+                kind = AlphaDocumentKind.Pdf,
+                storedRelativePath = "seed/demo-notice.pdf",
+                importedAt = java.time.Instant.now().minusSeconds(8 * 86_400L).toString(),
+                pageCount = 2,
+                ocrStatus = AlphaOcrStatus.NativeText,
+                extractedText = "Notice recording a filing deadline and response timeline.",
+                indexingStatus = AlphaIndexingStatus.Indexed,
+                dominantSourceSnippet = "Filing compliance should be completed before the listed date.",
+                lastIndexedAt = java.time.Instant.now().minusSeconds(8 * 86_400L).toString(),
+                pages = (1..2).map { AlphaDocumentPage(pageNumber = it, snippet = "Demo notice page $it.") },
+                classification = AlphaLegalDocumentClassification(
+                    documentId = noticeId,
+                    type = AlphaLegalDocumentType.Notice,
+                    confidence = 0.74,
+                    sourceRefs = listOf(filingSource),
+                    needsReview = false,
+                ),
+                extractedFields = listOf(
+                    AlphaExtractedLegalField(
+                        caseId = caseId,
+                        documentId = noticeId,
+                        fieldType = AlphaExtractedLegalFieldType.Date,
+                        label = "Filing deadline",
+                        value = alphaMatterDateLabel(filingDeadline),
+                        sourceRefs = listOf(filingSource),
+                        confidence = 0.77,
+                        extractionMode = AlphaExtractionMode.CaseAssociate,
+                        extractionPass = AlphaExtractionPass.LlmVerify,
+                        needsReview = true,
+                    )
+                ),
+            ),
+        ),
+        sourceRefs = listOf(hearingSource, directionSource, partySource, filingSource),
+        chatTurns = listOf(
+            AlphaChatTurn(
+                question = "Matter update",
+                answerTitle = "Good morning",
+                answerSections = listOf(
+                    "This demo matter has one next hearing, one filing deadline, and one order that still needs advocate review.",
+                    "Start with the latest order, confirm the next date, then generate a short hearing note.",
+                ),
+                sourceRefs = listOf(hearingSource, directionSource),
             )
         ),
-        sourceRefs = listOf(
-            AlphaSourceRef(caseId = taxCaseId, documentId = orderId, documentTitle = "Assessment Order", pageNumber = 11, paragraphRange = "¶4", textSnippet = "Reasoning on discrepancy.", ocrConfidence = 0.89)
+        caseMemoryUpdates = listOf(
+            AlphaCaseMemoryUpdate(
+                caseId = caseId,
+                source = AlphaCaseMemoryUpdateSource.ManualNote,
+                summary = "Demo workspace prepared for local morning-use QA.",
+                affectedDocuments = listOf(orderId, affidavitId, noticeId),
+            )
         ),
     )
-    return listOf(petitionCase, taxCase, sharedWorkspaceMatter())
+    return listOf(demoMatter, sharedWorkspaceMatter())
 }
 
 private fun sharedWorkspaceMatter(): AlphaCaseMatter =
@@ -2766,47 +3021,75 @@ private fun String.toRuntimeMode(): AlphaPackRuntimeMode = when (lowercase()) {
 }
 
 private fun seedTasks(cases: List<AlphaCaseMatter>): List<AlphaTaskItem> {
-    val petitionId = cases.firstOrNull()?.id
-    val taxCaseId = cases.drop(1).firstOrNull()?.id
+    val demoCaseId = cases.firstOrNull { it.id != ALPHA_SHARED_WORKSPACE_ID }?.id
     return listOfNotNull(
-        petitionId?.let {
+        demoCaseId?.let {
             AlphaTaskItem(
                 caseId = it,
-                title = "Prepare chronology",
-                notes = "Tie the representation timeline to the demand pages before the next hearing.",
+                title = "Review latest order",
+                notes = "Confirm the next date and order direction from the demo order.",
                 dueDate = java.time.Instant.now().plusSeconds(86_400).toString(),
                 priority = AlphaTaskPriority.High,
                 source = AlphaTaskSource.Manual,
             )
         },
-        petitionId?.let {
+        demoCaseId?.let {
             AlphaTaskItem(
                 caseId = it,
-                title = "Review order direction",
-                notes = "Confirm whether the notice timing supports the procedural fairness point.",
-                dueDate = java.time.Instant.now().plusSeconds(3 * 86_400L).toString(),
+                title = "Prepare hearing note",
+                notes = "Generate a short note after confirming the next date.",
+                dueDate = java.time.Instant.now().plusSeconds(2 * 86_400L).toString(),
                 priority = AlphaTaskPriority.Normal,
-                source = AlphaTaskSource.Extraction,
-            )
-        },
-        taxCaseId?.let {
-            AlphaTaskItem(
-                caseId = it,
-                title = "Confirm next date",
-                notes = "Check the latest order before sharing hearing notes.",
-                dueDate = java.time.Instant.now().plusSeconds(5 * 86_400L).toString(),
-                priority = AlphaTaskPriority.High,
                 source = AlphaTaskSource.System,
             )
         },
-        AlphaTaskItem(
-            caseId = null,
-            title = "Call client",
-            notes = "Share the review-ready hearing note after source checks.",
-            dueDate = java.time.Instant.now().plusSeconds(2 * 86_400L).toString(),
-            priority = AlphaTaskPriority.Normal,
-            source = AlphaTaskSource.Manual,
-        )
+        demoCaseId?.let {
+            AlphaTaskItem(
+                caseId = it,
+                title = "Confirm filing deadline",
+                notes = "Check the demo notice before closing the review loop.",
+                dueDate = java.time.Instant.now().plusSeconds(4 * 86_400L).toString(),
+                priority = AlphaTaskPriority.High,
+                source = AlphaTaskSource.Extraction,
+            )
+        },
+        demoCaseId?.let {
+            AlphaTaskItem(
+                caseId = it,
+                title = "Call client with next date",
+                notes = "Use the confirmed next date after advocate review.",
+                dueDate = java.time.Instant.now().plusSeconds(2 * 86_400L).toString(),
+                priority = AlphaTaskPriority.Normal,
+                source = AlphaTaskSource.Manual,
+            )
+        }
+    )
+}
+
+private fun demoSeedState(subject: String): AlphaPersistedState {
+    val cases = seedCases()
+    return AlphaPersistedState(
+        demoProfileSubject = subject,
+        cases = cases,
+        tasks = seedTasks(cases),
+        ledgerEntries = listOf(
+            AlphaPrivacyLedgerEntry(
+                title = "Demo workspace prepared locally",
+                detail = "Ross created synthetic sample work for local testing only.",
+                purpose = AlphaPrivacyPurpose.LocalOnly,
+                payloadClass = AlphaPayloadClass.LocalOnly,
+                endpointLabel = "device://demo-seed",
+                success = true,
+            ),
+            AlphaPrivacyLedgerEntry(
+                title = "Model catalog checked",
+                detail = "Catalog metadata was reviewed without case files attached.",
+                purpose = AlphaPrivacyPurpose.ModelCatalog,
+                payloadClass = AlphaPayloadClass.NoCaseData,
+                endpointLabel = "/model-catalog",
+                success = true,
+            ),
+        ),
     )
 }
 

@@ -231,18 +231,38 @@ object AlphaPayloadShaper {
                 document.classification
                     ?.takeIf { !it.needsReview }
                     ?.type
-                    ?.name
-                    ?.replace("_", " ")
+                    ?.let(::publicLawFocusTerm)
             }
+        val calendarTerms = buildList {
+            if (case?.nextHearing != null || case?.dates.orEmpty().any { it.kind == AlphaMatterDateKind.Hearing && it.status == AlphaMatterDateStatus.Scheduled }) {
+                add("court procedure and hearing dates")
+            }
+            if (case?.dates.orEmpty().any { it.kind == AlphaMatterDateKind.FilingDeadline && it.status == AlphaMatterDateStatus.Scheduled }) {
+                add("filing compliance and limitation")
+            }
+        }
         val tokens = linkedSetOf<String>()
-        (conceptTerms + documentTypes + listOf("India")).forEach { token ->
+        (calendarTerms + conceptTerms + documentTypes).forEach { token ->
             val trimmed = token.trim()
             if (trimmed.isNotBlank() && isSafePublicLawToken(trimmed)) {
                 tokens += trimmed
             }
         }
-        return tokens.joinToString(" ").takeIf { it.isNotBlank() }
+        val focusTerms = tokens.toList().ifEmpty { listOf("court procedure and filing compliance") }
+        return "Indian public law guidance on ${focusTerms.take(3).joinToString(", ")}"
     }
+
+    private fun publicLawFocusTerm(type: AlphaLegalDocumentType): String? =
+        when (type) {
+            AlphaLegalDocumentType.Pleading -> "pleading requirements and court procedure"
+            AlphaLegalDocumentType.Order -> "court orders and order directions"
+            AlphaLegalDocumentType.Judgment -> "judgment review and relief"
+            AlphaLegalDocumentType.Affidavit -> "affidavit practice and evidence procedure"
+            AlphaLegalDocumentType.Notice -> "statutory notice requirements"
+            AlphaLegalDocumentType.Evidence -> "evidence procedure"
+            AlphaLegalDocumentType.Correspondence,
+            AlphaLegalDocumentType.Misc -> null
+        }
 
     private fun publicLawKeywords(value: String): List<String> {
         val lowered = value.lowercase()

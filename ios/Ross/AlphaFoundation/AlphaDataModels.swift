@@ -249,6 +249,69 @@ enum AlphaTaskSource: String, Codable, Hashable, Sendable {
     case system
 }
 
+enum AlphaMatterDateKind: String, Codable, CaseIterable, Hashable, Sendable {
+    case hearing
+    case filingDeadline = "filing_deadline"
+    case complianceDate = "compliance_date"
+    case clientFollowUp = "client_follow_up"
+
+    var title: String {
+        switch self {
+        case .hearing:
+            "Next hearing"
+        case .filingDeadline:
+            "Filing deadline"
+        case .complianceDate:
+            "Compliance date"
+        case .clientFollowUp:
+            "Client follow-up"
+        }
+    }
+}
+
+enum AlphaMatterDateStatus: String, Codable, Hashable, Sendable {
+    case scheduled
+    case done
+    case cancelled
+}
+
+struct AlphaMatterDate: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID
+    var caseId: UUID
+    var title: String
+    var kind: AlphaMatterDateKind
+    var date: Date
+    var status: AlphaMatterDateStatus
+    var notes: String?
+    var sourceRef: AlphaSourceRef?
+    var createdAt: Date
+    var updatedAt: Date
+
+    init(
+        id: UUID = UUID(),
+        caseId: UUID,
+        title: String,
+        kind: AlphaMatterDateKind,
+        date: Date,
+        status: AlphaMatterDateStatus = .scheduled,
+        notes: String? = nil,
+        sourceRef: AlphaSourceRef? = nil,
+        createdAt: Date = .now,
+        updatedAt: Date = .now
+    ) {
+        self.id = id
+        self.caseId = caseId
+        self.title = title
+        self.kind = kind
+        self.date = date
+        self.status = status
+        self.notes = notes
+        self.sourceRef = sourceRef
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+}
+
 struct AlphaTaskItem: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     var caseId: UUID?
@@ -1057,10 +1120,16 @@ struct AlphaCaseMatter: Identifiable, Codable, Hashable, Sendable {
     let id: UUID
     var title: String
     var forum: String
+    var caseNumber: String?
+    var partiesSummary: String?
+    var judgeName: String?
+    var advocateName: String?
     var stage: AlphaCaseStage
     var folderTint: AlphaMatterTint
     var nextHearing: Date?
+    var dates: [AlphaMatterDate]
     var localNotice: String
+    var notes: String?
     var summary: String
     var issueHighlights: [String]
     var evidenceNotes: [String]
@@ -1078,10 +1147,16 @@ struct AlphaCaseMatter: Identifiable, Codable, Hashable, Sendable {
         id: UUID = UUID(),
         title: String,
         forum: String,
+        caseNumber: String? = nil,
+        partiesSummary: String? = nil,
+        judgeName: String? = nil,
+        advocateName: String? = nil,
         stage: AlphaCaseStage,
         folderTint: AlphaMatterTint = .indigo,
         nextHearing: Date? = nil,
+        dates: [AlphaMatterDate] = [],
         localNotice: String = "Case files stay on this device",
+        notes: String? = nil,
         summary: String,
         issueHighlights: [String],
         evidenceNotes: [String],
@@ -1098,10 +1173,16 @@ struct AlphaCaseMatter: Identifiable, Codable, Hashable, Sendable {
         self.id = id
         self.title = title
         self.forum = forum
+        self.caseNumber = caseNumber
+        self.partiesSummary = partiesSummary
+        self.judgeName = judgeName
+        self.advocateName = advocateName
         self.stage = stage
         self.folderTint = folderTint
         self.nextHearing = nextHearing
+        self.dates = dates.sorted { $0.date < $1.date }
         self.localNotice = localNotice
+        self.notes = notes
         self.summary = summary
         self.issueHighlights = issueHighlights
         self.evidenceNotes = evidenceNotes
@@ -1120,10 +1201,16 @@ struct AlphaCaseMatter: Identifiable, Codable, Hashable, Sendable {
         case id
         case title
         case forum
+        case caseNumber
+        case partiesSummary
+        case judgeName
+        case advocateName
         case stage
         case folderTint
         case nextHearing
+        case dates
         case localNotice
+        case notes
         case summary
         case issueHighlights
         case evidenceNotes
@@ -1144,10 +1231,16 @@ struct AlphaCaseMatter: Identifiable, Codable, Hashable, Sendable {
         id = try container.decode(UUID.self, forKey: .id)
         title = try container.decode(String.self, forKey: .title)
         forum = try container.decode(String.self, forKey: .forum)
+        caseNumber = try container.decodeIfPresent(String.self, forKey: .caseNumber)
+        partiesSummary = try container.decodeIfPresent(String.self, forKey: .partiesSummary)
+        judgeName = try container.decodeIfPresent(String.self, forKey: .judgeName)
+        advocateName = try container.decodeIfPresent(String.self, forKey: .advocateName)
         stage = try container.decode(AlphaCaseStage.self, forKey: .stage)
         folderTint = try container.decodeIfPresent(AlphaMatterTint.self, forKey: .folderTint) ?? .indigo
         nextHearing = try container.decodeIfPresent(Date.self, forKey: .nextHearing)
+        dates = (try container.decodeIfPresent([AlphaMatterDate].self, forKey: .dates) ?? []).sorted { $0.date < $1.date }
         localNotice = try container.decodeIfPresent(String.self, forKey: .localNotice) ?? "Case files stay on this device"
+        notes = try container.decodeIfPresent(String.self, forKey: .notes)
         summary = try container.decode(String.self, forKey: .summary)
         issueHighlights = try container.decodeIfPresent([String].self, forKey: .issueHighlights) ?? []
         evidenceNotes = try container.decodeIfPresent([String].self, forKey: .evidenceNotes) ?? []
@@ -1176,10 +1269,16 @@ struct AlphaCaseMatter: Identifiable, Codable, Hashable, Sendable {
         try container.encode(id, forKey: .id)
         try container.encode(title, forKey: .title)
         try container.encode(forum, forKey: .forum)
+        try container.encodeIfPresent(caseNumber, forKey: .caseNumber)
+        try container.encodeIfPresent(partiesSummary, forKey: .partiesSummary)
+        try container.encodeIfPresent(judgeName, forKey: .judgeName)
+        try container.encodeIfPresent(advocateName, forKey: .advocateName)
         try container.encode(stage, forKey: .stage)
         try container.encode(folderTint, forKey: .folderTint)
         try container.encodeIfPresent(nextHearing, forKey: .nextHearing)
+        try container.encode(dates.sorted { $0.date < $1.date }, forKey: .dates)
         try container.encode(localNotice, forKey: .localNotice)
+        try container.encodeIfPresent(notes, forKey: .notes)
         try container.encode(summary, forKey: .summary)
         try container.encode(issueHighlights, forKey: .issueHighlights)
         try container.encode(evidenceNotes, forKey: .evidenceNotes)
@@ -1549,6 +1648,7 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
     var onboardingStage: AlphaOnboardingStage
     var selectedTab: AlphaAppTab
     var settings: AlphaSettings
+    var demoProfileSubject: String?
     var cases: [AlphaCaseMatter]
     var tasks: [AlphaTaskItem]?
     var ledgerEntries: [AlphaPrivacyLedgerEntry]
@@ -1561,121 +1661,330 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
     var publicLawResults: [AlphaPublicLawResult]?
     var exports: [AlphaExportedReport]
 
+    static func empty() -> AlphaPersistedState {
+        AlphaPersistedState(
+            onboardingStage: .completed,
+            selectedTab: .home,
+            settings: .default,
+            demoProfileSubject: nil,
+            cases: [sharedWorkspaceMatter()],
+            tasks: [],
+            ledgerEntries: [
+                AlphaPrivacyLedgerEntry(
+                    title: "Model catalog checked",
+                    detail: "Catalog metadata was reviewed without case files attached.",
+                    purpose: .model_catalog,
+                    payloadClass: .no_case_data,
+                    endpointLabel: "/model-catalog",
+                    success: true
+                )
+            ],
+            modelJobs: [],
+            installedPacks: [],
+            lastModelCatalogRefresh: nil,
+            publicLawCache: [],
+            publicLawDraft: "Find Indian public-law guidance on delay condonation and filing compliance.",
+            publicLawPreview: nil,
+            publicLawResults: [],
+            exports: []
+        )
+    }
+
     static func seed() -> AlphaPersistedState {
+        demoSeed()
+    }
+
+    static func demoSeed(profileSubject: String = "local_demo_advocate") -> AlphaPersistedState {
         let sharedWorkspaceID = UUID(uuidString: "0D9E5220-4D3C-4B49-9A67-10B42B593B7D")!
-        let petitionId = UUID()
-        let noticeDocId = UUID()
-        let draftDocId = UUID()
-        let taxCaseId = UUID()
-        let taxOrderId = UUID()
+        let matterID = UUID()
+        let orderID = UUID()
+        let affidavitID = UUID()
+        let noticeID = UUID()
+        let nextHearing = Calendar.current.date(byAdding: .day, value: 9, to: .now) ?? .now
+        let filingDeadline = Calendar.current.date(byAdding: .day, value: 4, to: .now) ?? .now
+        let clientFollowUp = Calendar.current.date(byAdding: .day, value: 2, to: .now) ?? .now
+        let orderImportedAt = Calendar.current.date(byAdding: .day, value: -2, to: .now) ?? .now
+        let affidavitImportedAt = Calendar.current.date(byAdding: .day, value: -5, to: .now) ?? .now
+        let noticeImportedAt = Calendar.current.date(byAdding: .day, value: -8, to: .now) ?? .now
 
-        let petitionDocs = [
-            AlphaCaseDocument(
-                id: draftDocId,
-                title: "Writ Petition Draft",
-                fileName: "writ-petition-draft.pdf",
-                kind: .pdf,
-                storedRelativePath: "seed/writ-petition-draft.pdf",
-                importedAt: Calendar.current.date(byAdding: .day, value: -8, to: .now) ?? .now,
-                pageCount: 28,
-                ocrStatus: .nativeText,
-                indexingStatus: .indexed,
-                extractedText: "Representation chronology, demand challenge, and hearing posture.",
-                dominantSourceSnippet: "Representation chronology, demand challenge, and hearing posture.",
-                lastIndexedAt: Calendar.current.date(byAdding: .day, value: -8, to: .now) ?? .now,
-                pages: (1...3).map { AlphaDocumentPage(pageNumber: $0, snippet: "Draft reference page \($0).") }
-            ),
-            AlphaCaseDocument(
-                id: noticeDocId,
-                title: "Impugned Notice",
-                fileName: "impugned-notice.pdf",
-                kind: .pdf,
-                storedRelativePath: "seed/impugned-notice.pdf",
-                importedAt: Calendar.current.date(byAdding: .day, value: -12, to: .now) ?? .now,
-                pageCount: 6,
-                ocrStatus: .nativeText,
-                indexingStatus: .indexed,
-                extractedText: "Inspection grounds and compliance window.",
-                dominantSourceSnippet: "Inspection grounds and compliance window.",
-                lastIndexedAt: Calendar.current.date(byAdding: .day, value: -12, to: .now) ?? .now,
-                pages: (1...2).map { AlphaDocumentPage(pageNumber: $0, snippet: "Notice page \($0).") }
-            )
-        ]
-
-        let petitionSources = [
-            AlphaSourceRef(caseId: petitionId, documentId: draftDocId, documentTitle: "Writ Petition Draft", pageNumber: 4, paragraphRange: "¶2-3", textSnippet: "Representation and reply timeline.", ocrConfidence: 0.96),
-            AlphaSourceRef(caseId: petitionId, documentId: noticeDocId, documentTitle: "Impugned Notice", pageNumber: 2, paragraphRange: "¶1", textSnippet: "Inspection grounds and compliance window.", ocrConfidence: 0.91)
-        ]
-
-        let petitionCase = AlphaCaseMatter(
-            id: petitionId,
-            title: "Kaveri Developers v. South Ward Municipal Corporation",
-            forum: "Karnataka High Court",
-            stage: .pleadings,
-            nextHearing: Calendar.current.date(byAdding: .day, value: 6, to: .now),
-            summary: "The file is ready for a chronology-focused hearing note. The strongest near-term task is tying the representation sequence to the municipal demand pages already in the bundle.",
-            issueHighlights: [
-                "Whether the demand proceeds without addressing the representation already on record.",
-                "Whether the notice timing supports a procedural fairness argument."
-            ],
-            evidenceNotes: [
-                "Representation acknowledgment page should stay close to the hearing note.",
-                "Photo bundle still needs placeholder page records for quick navigation."
-            ],
-            draftTasks: [
-                "Prepare a short chronology for the next hearing.",
-                "Anchor the reply timeline to source chips.",
-                "Draft a focused procedural fairness note."
-            ],
-            documents: petitionDocs,
-            sourceRefs: petitionSources,
-            updatedAt: Calendar.current.date(byAdding: .hour, value: -5, to: .now) ?? .now
+        let hearingSource = AlphaSourceRef(
+            caseId: matterID,
+            documentId: orderID,
+            documentTitle: "Demo order",
+            pageNumber: 2,
+            paragraphRange: "¶3",
+            textSnippet: "List the matter on \(nextHearing.formatted(date: .abbreviated, time: .omitted)) for arguments.",
+            ocrConfidence: 0.95
+        )
+        let directionSource = AlphaSourceRef(
+            caseId: matterID,
+            documentId: orderID,
+            documentTitle: "Demo order",
+            pageNumber: 3,
+            paragraphRange: "¶5",
+            textSnippet: "Filing defects are to be cured before the next date and a short hearing note should be prepared.",
+            ocrConfidence: 0.93
+        )
+        let partySource = AlphaSourceRef(
+            caseId: matterID,
+            documentId: affidavitID,
+            documentTitle: "Demo affidavit",
+            pageNumber: 1,
+            paragraphRange: "Cause title",
+            textSnippet: "Sharma versus Rana",
+            ocrConfidence: 0.91
+        )
+        let filingSource = AlphaSourceRef(
+            caseId: matterID,
+            documentId: noticeID,
+            documentTitle: "Demo notice",
+            pageNumber: 1,
+            paragraphRange: "¶2",
+            textSnippet: "Reply and filing compliance should be completed before \(filingDeadline.formatted(date: .abbreviated, time: .omitted)).",
+            ocrConfidence: 0.88
         )
 
-        let taxDocs = [
-            AlphaCaseDocument(
-                id: taxOrderId,
-                title: "Assessment Order",
-                fileName: "assessment-order.pdf",
-                kind: .pdf,
-                storedRelativePath: "seed/assessment-order.pdf",
-                importedAt: Calendar.current.date(byAdding: .day, value: -15, to: .now) ?? .now,
-                pageCount: 19,
-                ocrStatus: .nativeText,
-                indexingStatus: .indexed,
-                extractedText: "Assessment reasoning and discrepancy notes.",
-                dominantSourceSnippet: "Assessment reasoning and discrepancy notes.",
-                lastIndexedAt: Calendar.current.date(byAdding: .day, value: -15, to: .now) ?? .now,
-                pages: (1...2).map { AlphaDocumentPage(pageNumber: $0, snippet: "Assessment page \($0).") }
+        let demoOrder = AlphaCaseDocument(
+            id: orderID,
+            title: "Demo order",
+            fileName: "demo-order.pdf",
+            kind: .pdf,
+            storedRelativePath: "seed/demo-order.pdf",
+            importedAt: orderImportedAt,
+            pageCount: 4,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: "Interim order directing filing compliance and listing the matter for arguments.",
+            dominantSourceSnippet: "List the matter for arguments and prepare a hearing note.",
+            lastIndexedAt: orderImportedAt,
+            pages: (1...4).map { AlphaDocumentPage(pageNumber: $0, snippet: "Demo order page \($0).") },
+            classification: AlphaLegalDocumentClassification(
+                documentId: orderID,
+                type: .order,
+                subtype: "interim order",
+                confidence: 0.82,
+                sourceRefs: [hearingSource],
+                needsReview: false
+            ),
+            extractedFields: [
+                AlphaExtractedLegalField(
+                    caseId: matterID,
+                    documentId: orderID,
+                    fieldType: .nextDate,
+                    label: "Next date",
+                    value: nextHearing.formatted(date: .abbreviated, time: .omitted),
+                    sourceRefs: [hearingSource],
+                    confidence: 0.58,
+                    extractionMode: .caseAssociate,
+                    extractionPass: .llmExtract,
+                    needsReview: true
+                ),
+                AlphaExtractedLegalField(
+                    caseId: matterID,
+                    documentId: orderID,
+                    fieldType: .orderDirection,
+                    label: "Order direction",
+                    value: "Cure filing defects and prepare a short hearing note before the next date.",
+                    sourceRefs: [directionSource],
+                    confidence: 0.86,
+                    extractionMode: .caseAssociate,
+                    extractionPass: .llmVerify,
+                    needsReview: false
+                )
+            ],
+            extractionRuns: [
+                AlphaExtractionRun(
+                    caseId: matterID,
+                    documentId: orderID,
+                    mode: .caseAssociate,
+                    status: .needsReview,
+                    progressState: .needsReview,
+                    startedAt: orderImportedAt.addingTimeInterval(90),
+                    completedAt: orderImportedAt.addingTimeInterval(180),
+                    pagesProcessed: 4,
+                    totalPages: 4,
+                    fieldsExtracted: 2,
+                    fieldsNeedingReview: 1,
+                    warnings: ["Next date still needs advocate confirmation."]
+                )
+            ],
+            extractionFindings: [
+                AlphaExtractionFinding(
+                    caseId: matterID,
+                    documentId: orderID,
+                    kind: .dateConflict,
+                    message: "Confirm the next date against the signed order before relying on it in a note or export.",
+                    sourceRefs: [hearingSource],
+                    severity: .warning
+                )
+            ]
+        )
+
+        let demoAffidavit = AlphaCaseDocument(
+            id: affidavitID,
+            title: "Demo affidavit",
+            fileName: "demo-affidavit.pdf",
+            kind: .pdf,
+            storedRelativePath: "seed/demo-affidavit.pdf",
+            importedAt: affidavitImportedAt,
+            pageCount: 3,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: "Affidavit describing chronology and supporting facts for arguments.",
+            dominantSourceSnippet: "Cause title and supporting chronology for arguments.",
+            lastIndexedAt: affidavitImportedAt,
+            pages: (1...3).map { AlphaDocumentPage(pageNumber: $0, snippet: "Demo affidavit page \($0).") },
+            classification: AlphaLegalDocumentClassification(
+                documentId: affidavitID,
+                type: .affidavit,
+                subtype: nil,
+                confidence: 0.79,
+                sourceRefs: [partySource],
+                needsReview: false
+            ),
+            extractedFields: [
+                AlphaExtractedLegalField(
+                    caseId: matterID,
+                    documentId: affidavitID,
+                    fieldType: .partyName,
+                    label: "Party name",
+                    value: "Sharma v. Rana",
+                    sourceRefs: [partySource],
+                    confidence: 0.63,
+                    extractionMode: .caseAssociate,
+                    extractionPass: .llmExtract,
+                    needsReview: true
+                )
+            ]
+        )
+
+        let demoNotice = AlphaCaseDocument(
+            id: noticeID,
+            title: "Demo notice",
+            fileName: "demo-notice.pdf",
+            kind: .pdf,
+            storedRelativePath: "seed/demo-notice.pdf",
+            importedAt: noticeImportedAt,
+            pageCount: 2,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: "Notice recording a filing deadline and response timeline.",
+            dominantSourceSnippet: "Filing compliance should be completed before the listed date.",
+            lastIndexedAt: noticeImportedAt,
+            pages: (1...2).map { AlphaDocumentPage(pageNumber: $0, snippet: "Demo notice page \($0).") },
+            classification: AlphaLegalDocumentClassification(
+                documentId: noticeID,
+                type: .notice,
+                subtype: nil,
+                confidence: 0.74,
+                sourceRefs: [filingSource],
+                needsReview: false
+            ),
+            extractedFields: [
+                AlphaExtractedLegalField(
+                    caseId: matterID,
+                    documentId: noticeID,
+                    fieldType: .date,
+                    label: "Filing deadline",
+                    value: filingDeadline.formatted(date: .abbreviated, time: .omitted),
+                    sourceRefs: [filingSource],
+                    confidence: 0.77,
+                    extractionMode: .caseAssociate,
+                    extractionPass: .llmVerify,
+                    needsReview: true
+                )
+            ]
+        )
+
+        let demoDates = [
+            AlphaMatterDate(
+                caseId: matterID,
+                title: "Next hearing",
+                kind: .hearing,
+                date: nextHearing,
+                sourceRef: hearingSource
+            ),
+            AlphaMatterDate(
+                caseId: matterID,
+                title: "Filing deadline",
+                kind: .filingDeadline,
+                date: filingDeadline,
+                sourceRef: filingSource
+            ),
+            AlphaMatterDate(
+                caseId: matterID,
+                title: "Client follow-up",
+                kind: .clientFollowUp,
+                date: clientFollowUp
             )
         ]
 
-        let taxSources = [
-            AlphaSourceRef(caseId: taxCaseId, documentId: taxOrderId, documentTitle: "Assessment Order", pageNumber: 11, paragraphRange: "¶4", textSnippet: "Reasoning on discrepancy.", ocrConfidence: 0.89)
-        ]
-
-        let taxCase = AlphaCaseMatter(
-            id: taxCaseId,
-            title: "Arun Textiles v. State Tax Officer",
-            forum: "Madras High Court",
-            stage: .evidence,
-            nextHearing: Calendar.current.date(byAdding: .day, value: 14, to: .now),
-            summary: "The file supports an evidence-focused review with the order and reconciliation pages ready for source-backed issue extraction.",
+        let demoMatter = AlphaCaseMatter(
+            id: matterID,
+            title: "Demo Matter: Sharma v. Rana",
+            forum: "District Court",
+            caseNumber: "Demo/123/2026",
+            partiesSummary: "Sharma v. Rana",
+            judgeName: "District Judge (Demo)",
+            advocateName: "Ross Demo Advocate",
+            stage: .arguments,
+            folderTint: .indigo,
+            nextHearing: nextHearing,
+            dates: demoDates,
+            localNotice: "Demo matter uses sample data only. Case files stay on this device.",
+            notes: "Demo matter uses sample data only.",
+            summary: "This synthetic matter is ready for a morning check-in. Review the latest order, confirm the next date, prepare a hearing note, and keep filing compliance on track.",
             issueHighlights: [
-                "Mismatch between the assessment reasoning and the reconciliation schedule.",
-                "Need to isolate whether the clarification already supplied was engaged."
+                "Confirm the next hearing date from the latest order.",
+                "Prepare a short hearing note before arguments.",
+                "Check the filing deadline before sharing the next update."
             ],
             evidenceNotes: [
-                "Order pages are ready for source-backed notes.",
-                "A short hearing-preparation export can be generated once discrepancy pages are pinned."
+                "Demo order contains the next date and order direction.",
+                "Demo affidavit still needs a quick party-name confirmation.",
+                "Demo notice flags the filing deadline."
             ],
             draftTasks: [
-                "Map discrepancy pages against the order reasoning.",
-                "Prepare a short note for the next hearing."
+                "Review latest order",
+                "Prepare hearing note",
+                "Confirm filing deadline",
+                "Call client with next date"
             ],
-            documents: taxDocs,
-            sourceRefs: taxSources,
-            updatedAt: Calendar.current.date(byAdding: .day, value: -1, to: .now) ?? .now
+            documents: [demoOrder, demoAffidavit, demoNotice],
+            sourceRefs: [hearingSource, directionSource, partySource, filingSource],
+            chatSessions: [
+                AlphaChatSession(
+                    createdAt: orderImportedAt,
+                    updatedAt: orderImportedAt,
+                    contextDocumentIDs: [orderID],
+                    turns: [
+                        AlphaChatTurn(
+                            kind: .matterUpdate,
+                            askedAt: orderImportedAt,
+                            question: "Matter update",
+                            answerTitle: "Good morning",
+                            answerSections: [
+                                "This demo matter has one next hearing, one filing deadline, and one order that still needs advocate review.",
+                                "Start with the latest order, confirm the next date, then generate a short hearing note."
+                            ],
+                            sourceRefs: [hearingSource, directionSource],
+                            selectedDocumentTitles: ["Demo order"],
+                            statusNote: "Demo matter ready",
+                            needsReviewWarning: "Review before relying on the next date."
+                        )
+                    ]
+                )
+            ],
+            caseMemoryUpdates: [
+                AlphaCaseMemoryUpdate(
+                    caseId: matterID,
+                    source: .manualNote,
+                    summary: "Demo workspace prepared for local morning-use QA.",
+                    affectedDocuments: [orderID, affidavitID, noticeID],
+                    createdAt: noticeImportedAt
+                )
+            ],
+            updatedAt: orderImportedAt
         )
 
         let sharedWorkspace = AlphaCaseMatter(
@@ -1684,6 +1993,7 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
             forum: "Available across matters",
             stage: .intake,
             nextHearing: nil,
+            dates: [],
             summary: "Files placed here stay available anywhere on this device.",
             issueHighlights: [
                 "Use shared files when a document should support more than one matter."
@@ -1699,34 +2009,34 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
 
         let seededTasks = [
             AlphaTaskItem(
-                caseId: petitionId,
-                title: "Prepare chronology",
-                notes: "Tie the representation timeline to the demand pages before the next hearing.",
+                caseId: matterID,
+                title: "Review latest order",
+                notes: "Confirm the next date and order direction from the demo order.",
                 dueDate: Calendar.current.date(byAdding: .day, value: 1, to: .now),
                 priority: .high,
                 source: .manual
             ),
             AlphaTaskItem(
-                caseId: petitionId,
-                title: "Review order direction",
-                notes: "Confirm whether the notice timing supports the procedural fairness point.",
-                dueDate: Calendar.current.date(byAdding: .day, value: 3, to: .now),
+                caseId: matterID,
+                title: "Prepare hearing note",
+                notes: "Generate a short note after confirming the next date.",
+                dueDate: Calendar.current.date(byAdding: .day, value: 2, to: .now),
                 priority: .normal,
-                source: .extraction
-            ),
-            AlphaTaskItem(
-                caseId: taxCaseId,
-                title: "Confirm next date",
-                notes: "Check the latest order before sharing hearing notes.",
-                dueDate: Calendar.current.date(byAdding: .day, value: 5, to: .now),
-                priority: .high,
                 source: .system
             ),
             AlphaTaskItem(
-                caseId: nil,
-                title: "Call client",
-                notes: "Share the review-ready hearing note after source checks.",
-                dueDate: Calendar.current.date(byAdding: .day, value: 2, to: .now),
+                caseId: matterID,
+                title: "Confirm filing deadline",
+                notes: "Check the demo notice before closing the review loop.",
+                dueDate: filingDeadline,
+                priority: .high,
+                source: .extraction
+            ),
+            AlphaTaskItem(
+                caseId: matterID,
+                title: "Call client with next date",
+                notes: "Use the confirmed next date after advocate review.",
+                dueDate: clientFollowUp,
                 priority: .normal,
                 source: .manual
             )
@@ -1736,9 +2046,18 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
             onboardingStage: .completed,
             selectedTab: .home,
             settings: .default,
-            cases: [petitionCase, taxCase, sharedWorkspace],
+            demoProfileSubject: profileSubject,
+            cases: [demoMatter, sharedWorkspace],
             tasks: seededTasks,
             ledgerEntries: [
+                AlphaPrivacyLedgerEntry(
+                    title: "Demo workspace prepared locally",
+                    detail: "Ross created synthetic sample work for local testing only.",
+                    purpose: .local_only,
+                    payloadClass: .local_only,
+                    endpointLabel: "device://demo-seed",
+                    success: true
+                ),
                 AlphaPrivacyLedgerEntry(
                     timestamp: Calendar.current.date(byAdding: .hour, value: -4, to: .now) ?? .now,
                     title: "Model catalog checked",
@@ -1753,10 +2072,34 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
             installedPacks: [],
             lastModelCatalogRefresh: nil,
             publicLawCache: [],
-            publicLawDraft: "Find Supreme Court guidance on delay condonation where diligence is documented but filing was disrupted.",
+            publicLawDraft: "Find Indian public-law guidance on delay condonation and filing compliance after an interim order.",
             publicLawPreview: nil,
             publicLawResults: [],
             exports: []
+        )
+    }
+}
+
+private extension AlphaPersistedState {
+    static func sharedWorkspaceMatter() -> AlphaCaseMatter {
+        AlphaCaseMatter(
+            id: UUID(uuidString: "0D9E5220-4D3C-4B49-9A67-10B42B593B7D")!,
+            title: "Shared files",
+            forum: "Available across matters",
+            stage: .intake,
+            nextHearing: nil,
+            dates: [],
+            summary: "Files placed here stay available anywhere on this device.",
+            issueHighlights: [
+                "Use shared files when a document should support more than one matter."
+            ],
+            evidenceNotes: [
+                "Ross keeps these files local and ready for device-wide questions."
+            ],
+            draftTasks: [],
+            documents: [],
+            sourceRefs: [],
+            updatedAt: .now
         )
     }
 }

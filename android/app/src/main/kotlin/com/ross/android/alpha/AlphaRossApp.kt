@@ -3383,6 +3383,21 @@ private fun AlphaSettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    if (session.isDemoMode) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(
+                            onClick = { controller.resetDemoWorkspace(session.subject ?: "local_demo_advocate") },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("Reset demo data")
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "Demo matter uses sample data only.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     Spacer(modifier = Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Button(
@@ -4525,7 +4540,10 @@ private fun AlphaTaskRow(task: AlphaTaskItem, onToggle: () -> Unit) {
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
-            task.notes?.takeIf { it.startsWith("review-sync::").not() }?.let { note ->
+            task.notes
+                ?.takeIf { it.startsWith("review-sync::").not() }
+                ?.takeIf { it.startsWith(ALPHA_ROSS_SUGGESTED_TASK_NOTE_PREFIX).not() }
+                ?.let { note ->
                 Text(note, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
             }
             task.dueDate?.let { dueDate ->
@@ -5338,19 +5356,23 @@ private fun alphaGreeting(): String {
 }
 
 private fun alphaTodayDateLines(cases: List<AlphaCaseMatter>): List<String> =
-    cases.mapNotNull { matter ->
-        matter.nextHearing?.takeIf { alphaIsToday(it) }?.let { "Hearing today: ${matter.title}" }
+    cases.flatMap { matter ->
+        alphaScheduledMatterDates(matter)
+            .filter { alphaIsToday(it.date) }
+            .map { date -> "${date.title}: ${matter.title}" }
     }
 
 private fun alphaUpcomingDateLines(cases: List<AlphaCaseMatter>): List<String> =
-    cases.mapNotNull { matter ->
-        val rawDate = matter.nextHearing ?: return@mapNotNull null
-        val instant = alphaParsedInstant(rawDate) ?: return@mapNotNull null
-        matter.title to instant
+    cases.flatMap { matter ->
+        alphaScheduledMatterDates(matter).mapNotNull { date ->
+            alphaParsedInstant(date.date)?.let { instant ->
+                Triple(matter.title, date.title, instant)
+            }
+        }
     }
-        .sortedBy { it.second }
-        .map { (title, instant) ->
-            "$title: ${alphaDateLabel(instant.toString())}"
+        .sortedBy { it.third }
+        .map { (title, label, instant) ->
+            "$label: $title on ${alphaDateLabel(instant.toString())}"
         }
 
 private fun alphaSortedCases(sortMode: AlphaCaseSortMode, controller: AlphaRossController): List<AlphaCaseMatter> =
@@ -5369,16 +5391,42 @@ private fun alphaNextActionInstant(case: AlphaCaseMatter, controller: AlphaRossC
         .firstOrNull { it.status == AlphaTaskStatus.Open && it.dueDate != null }
         ?.dueDate
         ?.let(::alphaParsedInstant)
+    val nextMatterDate = alphaScheduledMatterDates(case)
+        .mapNotNull { alphaParsedInstant(it.date) }
+        .minOrNull()
     val nextHearing = alphaParsedInstant(case.nextHearing)
-    return listOfNotNull(nextTask, nextHearing).minOrNull()
+    return listOfNotNull(nextTask, nextMatterDate, nextHearing).minOrNull()
 }
 
 private fun alphaCaseAttentionSummary(case: AlphaCaseMatter): String =
     when {
+        alphaScheduledMatterDates(case).isNotEmpty() -> {
+            val nextDate = alphaScheduledMatterDates(case)
+                .sortedBy { it.date }
+                .first()
+            "Ross sees the next focus as ${nextDate.title.lowercase()} on ${alphaDateLabel(nextDate.date)}."
+        }
         case.nextHearing != null -> "Ross sees the next focus as getting this file ready for ${alphaDateLabel(case.nextHearing)}."
         case.draftTasks.isNotEmpty() -> "Ross sees the next focus as ${case.draftTasks.first().lowercase()}."
         else -> "Ross is ready to refresh the next-step note after another document or instruction is added."
     }
+
+private fun alphaScheduledMatterDates(case: AlphaCaseMatter): List<AlphaMatterDate> {
+    val scheduledDates = case.dates.filter { it.status == AlphaMatterDateStatus.Scheduled }
+    if (scheduledDates.isNotEmpty()) {
+        return scheduledDates
+    }
+    return case.nextHearing?.let { nextHearing ->
+        listOf(
+            AlphaMatterDate(
+                caseId = case.id,
+                title = "Next hearing",
+                kind = AlphaMatterDateKind.Hearing,
+                date = nextHearing,
+            )
+        )
+    } ?: emptyList()
+}
 
 private fun alphaIsToday(rawDate: String?): Boolean {
     val instant = alphaParsedInstant(rawDate) ?: return false

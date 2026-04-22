@@ -157,6 +157,75 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    func testGenericMorningQuestionFallsBackToResearchAnchoredPublicLawPreview() async throws {
+        try await withRestoredStore { store in
+            let state = AlphaPersistedState.demoSeed()
+            try await store.replace(with: state)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+            let caseID = await MainActor.run {
+                model.persisted.cases.first(where: { $0.title == "Demo Matter: Sharma v. Rana" })?.id
+            }
+            XCTAssertNotNil(caseID)
+
+            await MainActor.run {
+                model.submitAsk(
+                    question: "What needs my attention today?",
+                    scopeCaseID: caseID,
+                    webEnabled: true
+                )
+            }
+
+            let preview = await MainActor.run { model.publicLawPreview }
+            XCTAssertNotNil(preview)
+            XCTAssertTrue(preview?.query.range(of: "public law", options: .caseInsensitive) != nil)
+            XCTAssertTrue(
+                preview?.query.range(of: "court procedure", options: .caseInsensitive) != nil ||
+                preview?.query.range(of: "filing compliance", options: .caseInsensitive) != nil ||
+                preview?.query.range(of: "hearing dates", options: .caseInsensitive) != nil
+            )
+            XCTAssertNotEqual("order affidavit notice India", preview?.query.lowercased())
+        }
+    }
+
+    func testMarkingMatterDateDoneDoesNotSilentlyInflateOpenTasks() async throws {
+        try await withRestoredStore { store in
+            let state = AlphaPersistedState.demoSeed()
+            try await store.replace(with: state)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+
+            let snapshot = await MainActor.run { model.persisted }
+            guard let caseID = snapshot.cases.first(where: { $0.title == "Demo Matter: Sharma v. Rana" })?.id else {
+                XCTFail("Missing demo matter")
+                return
+            }
+            guard let dateID = await MainActor.run(body: { model.scheduledMatterDates(for: caseID).first?.id }) else {
+                XCTFail("Missing scheduled matter date")
+                return
+            }
+
+            let initialOpenTaskCount = await MainActor.run { model.openTaskCount(for: caseID) }
+            let initialDateCount = await MainActor.run { model.scheduledMatterDates(for: caseID).count }
+
+            await MainActor.run {
+                model.setMatterDateStatus(caseId: caseID, dateId: dateID, status: .done)
+            }
+
+            let finalOpenTaskCount = await MainActor.run { model.openTaskCount(for: caseID) }
+            let finalDateCount = await MainActor.run { model.scheduledMatterDates(for: caseID).count }
+
+            XCTAssertEqual(initialOpenTaskCount, finalOpenTaskCount)
+            XCTAssertEqual(initialDateCount - 1, finalDateCount)
+        }
+    }
+
     func testSanitizedPreviewRemovesMatterScopedWordingBeforeWebSearch() async throws {
         try await withRestoredStore { store in
             try await store.replace(with: AlphaPersistedState.seed())
@@ -378,11 +447,12 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             }
 
             let sessions = await MainActor.run { model.chatSessions(for: caseID) }
-            XCTAssertEqual(sessions.count, 2)
-            XCTAssertEqual(sessions[0].turns.first?.question, "What is the next hearing date?")
-            XCTAssertEqual(sessions[1].turns.first?.question, "What should I do next for this matter?")
+            let userAskSessions = sessions.filter { $0.turns.first?.kind == .userAsk }
+            XCTAssertEqual(userAskSessions.count, 2)
+            XCTAssertEqual(userAskSessions[0].turns.first?.question, "What is the next hearing date?")
+            XCTAssertEqual(userAskSessions[1].turns.first?.question, "What should I do next for this matter?")
 
-            let firstSessionID = try XCTUnwrap(sessions.last?.id)
+            let firstSessionID = try XCTUnwrap(userAskSessions.last?.id)
             await MainActor.run {
                 model.setActiveChatSession(firstSessionID, for: caseID)
             }
@@ -506,7 +576,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             let document = try XCTUnwrap(caseMatter.documents.first)
 
             let initialSessionCount = await MainActor.run { model.chatSessions(for: caseMatter.id).count }
-            XCTAssertEqual(initialSessionCount, 0)
+            XCTAssertEqual(initialSessionCount, 1)
 
             await MainActor.run {
                 model.openDocumentInChat(caseId: caseMatter.id, documentId: document.id, startNewThread: false)
@@ -519,7 +589,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             let askDraft = await MainActor.run { model.askDraft(for: caseMatter.id) }
             let routeDescription = await MainActor.run { model.path.last }
 
-            XCTAssertEqual(sessionCount, 1)
+            XCTAssertEqual(sessionCount, initialSessionCount)
             XCTAssertEqual(Set(activeSession.contextDocumentIDs), Set([document.id]))
             XCTAssertEqual(selectedDocumentIDs, Set([document.id]))
             XCTAssertEqual(askDraft, "What should I note from \(document.title)?")

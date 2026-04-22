@@ -186,6 +186,76 @@ class AlphaPayloadsTest {
     }
 
     @Test
+    fun `generic morning question falls back to research anchored public law preview`() {
+        val case = AlphaCaseMatter(
+            title = "Demo Matter: Sharma v. Rana",
+            forum = "District Court",
+            stage = AlphaCaseStage.Arguments,
+            nextHearing = "2026-05-01T10:00:00Z",
+            summary = "summary",
+            issueHighlights = emptyList(),
+            evidenceNotes = emptyList(),
+            draftTasks = emptyList(),
+            documents = listOf(
+                AlphaCaseDocument(
+                    title = "Demo order",
+                    fileName = "demo-order.pdf",
+                    kind = AlphaDocumentKind.Pdf,
+                    storedRelativePath = "docs/demo-order.pdf",
+                    pageCount = 1,
+                    ocrStatus = AlphaOcrStatus.Indexed,
+                    classification = AlphaLegalDocumentClassification(
+                        documentId = "doc-order",
+                        type = AlphaLegalDocumentType.Order,
+                        confidence = 0.88,
+                        sourceRefs = emptyList(),
+                        needsReview = false,
+                    ),
+                    pages = listOf(AlphaDocumentPage(pageNumber = 1, snippet = "snippet")),
+                ),
+                AlphaCaseDocument(
+                    title = "Demo affidavit",
+                    fileName = "demo-affidavit.pdf",
+                    kind = AlphaDocumentKind.Pdf,
+                    storedRelativePath = "docs/demo-affidavit.pdf",
+                    pageCount = 1,
+                    ocrStatus = AlphaOcrStatus.Indexed,
+                    classification = AlphaLegalDocumentClassification(
+                        documentId = "doc-affidavit",
+                        type = AlphaLegalDocumentType.Affidavit,
+                        confidence = 0.84,
+                        sourceRefs = emptyList(),
+                        needsReview = false,
+                    ),
+                    pages = listOf(AlphaDocumentPage(pageNumber = 1, snippet = "snippet")),
+                ),
+            ),
+            sourceRefs = emptyList(),
+            dates = listOf(
+                AlphaMatterDate(
+                    caseId = "demo-case",
+                    title = "Filing deadline",
+                    kind = AlphaMatterDateKind.FilingDeadline,
+                    date = "2026-04-24T10:00:00Z",
+                ),
+            ),
+        )
+
+        val preview = AlphaPayloadShaper.buildPublicLawPreview(
+            rawQuery = "What needs my attention today?",
+            case = case,
+        )
+
+        assertTrue(preview.query.contains("public law", ignoreCase = true))
+        assertTrue(
+            preview.query.contains("court procedure", ignoreCase = true) ||
+                preview.query.contains("filing compliance", ignoreCase = true) ||
+                preview.query.contains("hearing dates", ignoreCase = true),
+        )
+        assertFalse(preview.query.equals("order affidavit notice India", ignoreCase = true))
+    }
+
+    @Test
     fun `public law preview strips exact dates and address-like private details`() {
         val preview = AlphaPayloadShaper.buildPublicLawPreview(
             rawQuery = "Find law on delay condonation for hearing fixed on 14 March 2026 at blue suitcase near temple and contact 9876501234",

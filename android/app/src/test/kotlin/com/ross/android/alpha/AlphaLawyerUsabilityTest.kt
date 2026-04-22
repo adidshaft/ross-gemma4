@@ -13,6 +13,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
+import java.time.Duration
 import java.util.UUID
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -116,6 +117,21 @@ class AlphaLawyerUsabilityTest {
         assertFalse(preview.query.contains("fakepriv@example.com", ignoreCase = true))
         assertFalse(preview.query.contains("private-bundle.pdf", ignoreCase = true))
         assertFalse(preview.query.contains("FAKE/123/2026", ignoreCase = true))
+    }
+
+    @Test
+    fun `refreshing case overview does not silently inflate open tasks`() {
+        val controller = buildController(secretKeyProvider = InMemorySecretKeyProvider())
+        controller.signInDemoMode()
+
+        val caseId = controller.cases.first { it.title == "Demo Matter: Sharma v. Rana" }.id
+        val initialOpenTaskCount = controller.openTaskCount(caseId)
+
+        controller.refreshCaseOverview(caseId)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(400))
+
+        val finalOpenTaskCount = controller.openTaskCount(caseId)
+        assertEquals(initialOpenTaskCount, finalOpenTaskCount)
     }
 
     @Test

@@ -23,6 +23,24 @@ func rossSaveLanguageSelection(code: String) {
     UserDefaults.standard.set(code, forKey: rossSelectedLanguageCodeKey)
 }
 
+func rossSelectedLanguageCode() -> String {
+    UserDefaults.standard.string(forKey: rossSelectedLanguageCodeKey) ?? "en"
+}
+
+func rossLanguageDisplayName(code: String) -> String {
+    switch code {
+    case "en": "English"
+    case "hi": "Hindi"
+    case "ta": "Tamil"
+    case "te": "Telugu"
+    case "kn": "Kannada"
+    case "ml": "Malayalam"
+    case "mr": "Marathi"
+    case "bn": "Bengali"
+    default: code.uppercased()
+    }
+}
+
 func rossQuickUnlockEnabled() -> Bool {
     UserDefaults.standard.bool(forKey: rossQuickUnlockEnabledKey)
 }
