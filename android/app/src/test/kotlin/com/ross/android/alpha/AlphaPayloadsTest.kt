@@ -215,11 +215,24 @@ class AlphaPayloadsTest {
     @Test
     fun `backend base url prefers canonical config name`() {
         val resolved = resolveRossBackendBaseUrl(
+            overrideValue = null,
             systemPropertyValue = null,
             canonicalSystemPropertyValue = "http://127.0.0.1:8080",
             buildConfigValue = "",
         )
 
         assertEquals("http://127.0.0.1:8080", resolved)
+    }
+
+    @Test
+    fun `backend base url override wins over other config`() {
+        val resolved = resolveRossBackendBaseUrl(
+            overrideValue = "http://10.0.2.2:8787",
+            systemPropertyValue = "http://127.0.0.1:8080",
+            canonicalSystemPropertyValue = "http://127.0.0.1:9090",
+            buildConfigValue = "http://localhost:3000",
+        )
+
+        assertEquals("http://10.0.2.2:8787", resolved)
     }
 }

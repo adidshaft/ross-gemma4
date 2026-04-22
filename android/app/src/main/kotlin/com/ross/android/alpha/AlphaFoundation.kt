@@ -8,6 +8,7 @@ import android.webkit.MimeTypeMap
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.ross.android.BuildConfig
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import kotlinx.coroutines.CoroutineScope
@@ -22,9 +23,60 @@ import java.security.MessageDigest
 import java.util.UUID
 
 private const val ALPHA_ROSS_SUGGESTED_TASK_NOTE_PREFIX = "ross-overview::"
+const val ALPHA_SHARED_WORKSPACE_ID = "0d9e5220-4d3c-4b49-9a67-10b42b593b7d"
+private const val ALPHA_BACKEND_PREFS = "ross_alpha_backend"
+private const val ALPHA_BACKEND_BASE_URL_OVERRIDE_KEY = "backend_base_url_override"
+
+private fun normalizedBackendBaseUrlOverride(rawValue: String?): String? =
+    rawValue?.trim()?.takeIf { it.isNotEmpty() }
+
+internal class AlphaBackendBaseUrlOverrideSnapshot private constructor() {
+    private val lock = Any()
+    private var baseUrlOverride: String? = null
+
+    fun update(rawValue: String?) {
+        synchronized(lock) {
+            baseUrlOverride = normalizedBackendBaseUrlOverride(rawValue)
+        }
+    }
+
+    fun value(): String? =
+        synchronized(lock) {
+            baseUrlOverride
+        }
+
+    companion object {
+        val shared = AlphaBackendBaseUrlOverrideSnapshot()
+    }
+}
+
+private fun Context.readRossBackendBaseUrlOverride(): String? =
+    normalizedBackendBaseUrlOverride(
+        getSharedPreferences(ALPHA_BACKEND_PREFS, Context.MODE_PRIVATE)
+            .getString(ALPHA_BACKEND_BASE_URL_OVERRIDE_KEY, null)
+    )
+
+private fun Context.writeRossBackendBaseUrlOverride(rawValue: String?) {
+    val normalized = normalizedBackendBaseUrlOverride(rawValue)
+    getSharedPreferences(ALPHA_BACKEND_PREFS, Context.MODE_PRIVATE)
+        .edit()
+        .apply {
+            if (normalized == null) {
+                remove(ALPHA_BACKEND_BASE_URL_OVERRIDE_KEY)
+            } else {
+                putString(ALPHA_BACKEND_BASE_URL_OVERRIDE_KEY, normalized)
+            }
+        }
+        .apply()
+}
 
 enum class AlphaOnboardingStage { Onboarding, PrivateAiPack, Completed }
 enum class AlphaAppTab { Home, Cases, Capture, Ask, Settings, PublicLaw, Exports }
+enum class AlphaAppearanceMode(val label: String) {
+    Auto("Auto (Default)"),
+    Dark("Dark"),
+    Light("Light"),
+}
 enum class AlphaCapabilityTier(val tierId: String, val title: String, val summary: String, val downloadSizeLabel: String, val installedSizeLabel: String) {
     QuickStart("quick_start", "Quick Start", "Basic extraction for short documents, simple summaries, and lighter storage use.", "1.2 GB", "2.1 GB"),
     CaseAssociate("case_associate", "Case Associate", "Better document understanding, stronger field extraction, mixed English/Hindi support, and source-backed chronology work.", "2.8 GB", "4.9 GB"),
@@ -177,6 +229,7 @@ data class AlphaAskResult(
     val question: String,
     val scopeCaseId: String?,
     val scopeLabel: String,
+    val selectedDocumentTitles: List<String> = emptyList(),
     val answerTitle: String,
     val answerSections: List<String>,
     val caseFileSources: List<AlphaSourceRef>,
@@ -312,12 +365,63 @@ data class AlphaSettings(
     val requirePublicLawApproval: Boolean = true,
     val instantModeEnabled: Boolean = true,
     val privateByDefault: Boolean = true,
+    val appearanceMode: AlphaAppearanceMode = AlphaAppearanceMode.Auto,
 )
 
+enum class AlphaAccountAuthMode { Demo, Google }
+
+data class AlphaAccountSession(
+    val email: String? = null,
+    val displayName: String? = null,
+    val providerLabel: String = "Demo mode",
+    val authMode: AlphaAccountAuthMode? = null,
+    val accessToken: String? = null,
+    val refreshToken: String? = null,
+    val accountToken: String? = null,
+    val subject: String? = null,
+    val expiresAt: String? = null,
+    val awaitingBrowserReturn: Boolean = false,
+    val quickUnlockEnabled: Boolean = false,
+    val locked: Boolean = false,
+    val lastUnlockedAt: String? = null,
+) {
+    val isSignedIn: Boolean
+        get() = !email.isNullOrBlank() && !accountToken.isNullOrBlank()
+
+    val isDemoMode: Boolean
+        get() = authMode == AlphaAccountAuthMode.Demo
+}
+
+internal class AlphaAccountSessionSnapshot private constructor() {
+    private val lock = Any()
+    private var cachedSession: AlphaAccountSession? = null
+
+    fun update(session: AlphaAccountSession?) {
+        synchronized(lock) {
+            cachedSession = session?.takeIf { it.isSignedIn }
+        }
+    }
+
+    fun accountToken(fallback: String): String =
+        synchronized(lock) {
+            cachedSession?.accountToken ?: fallback
+        }
+
+    fun accessToken(): String? =
+        synchronized(lock) {
+            cachedSession?.accessToken
+        }
+
+    companion object {
+        val shared = AlphaAccountSessionSnapshot()
+    }
+}
+
 data class AlphaPersistedState(
-    val onboardingStage: AlphaOnboardingStage = AlphaOnboardingStage.Onboarding,
+    val onboardingStage: AlphaOnboardingStage = AlphaOnboardingStage.Completed,
     val selectedTab: AlphaAppTab = AlphaAppTab.Home,
     val settings: AlphaSettings = AlphaSettings(),
+    val accountSession: AlphaAccountSession = AlphaAccountSession(),
     val cases: List<AlphaCaseMatter> = seedCases(),
     val tasks: List<AlphaTaskItem>? = null,
     val ledgerEntries: List<AlphaPrivacyLedgerEntry> = listOf(
@@ -335,6 +439,15 @@ data class AlphaPersistedState(
     val localInferenceMetrics: List<AlphaLocalInferenceMetrics> = emptyList(),
     val publicLawCache: List<AlphaPublicLawCacheItem> = emptyList(),
     val exports: List<AlphaExportRecord> = emptyList(),
+)
+
+data class AlphaAskDocumentOption(
+    val id: String,
+    val caseId: String,
+    val caseTitle: String,
+    val title: String,
+    val kind: AlphaDocumentKind,
+    val isShared: Boolean,
 )
 
 sealed interface AndroidAlphaRoute {
@@ -389,8 +502,8 @@ internal class AlphaRossController(
     var askDrafts by mutableStateOf<Map<String, String>>(emptyMap())
     var globalAskDraft by mutableStateOf("What needs my attention today?")
     var askSelectedScopeCaseId by mutableStateOf<String?>(null)
-    var askDocumentTitles by mutableStateOf<Map<String, String>>(emptyMap())
-    var globalAskDocumentTitle by mutableStateOf<String?>(null)
+    var askSelectedDocumentIds by mutableStateOf<Map<String, Set<String>>>(emptyMap())
+    var globalAskSelectedDocumentIds by mutableStateOf<Set<String>>(emptySet())
     var askWebEnabled by mutableStateOf(false)
     var pendingPublicLawQuestion by mutableStateOf<String?>(null)
     var pendingPublicLawScopeCaseId by mutableStateOf<String?>(null)
@@ -402,11 +515,23 @@ internal class AlphaRossController(
     var localInferenceSmokeReport by mutableStateOf<AlphaLocalInferenceSmokeReport?>(null)
     var localInferenceSmokeRunning by mutableStateOf(false)
     var refreshingCaseOverviewIds by mutableStateOf<Set<String>>(emptySet())
+    var authStatusMessage by mutableStateOf<String?>(null)
+
+    init {
+        AlphaAccountSessionSnapshot.shared.update(persisted.accountSession)
+        AlphaBackendBaseUrlOverrideSnapshot.shared.update(context.readRossBackendBaseUrlOverride())
+        scope.launch {
+            refreshAccountSessionIfNeeded()
+        }
+    }
 
     val cases: List<AlphaCaseMatter>
         get() = persisted.cases
-            .filter { it.archivedAt == null }
+            .filter { it.archivedAt == null && it.id != ALPHA_SHARED_WORKSPACE_ID }
             .sortedByDescending { it.updatedAt }
+
+    val sharedWorkspace: AlphaCaseMatter?
+        get() = persisted.cases.firstOrNull { it.id == ALPHA_SHARED_WORKSPACE_ID }
 
     private val activeCaseIds: Set<String>
         get() = cases.mapTo(linkedSetOf()) { it.id }
@@ -438,7 +563,7 @@ internal class AlphaRossController(
             .filter { task ->
                 task.caseId == null || task.caseId in activeCaseIds
             }
-            .filter { caseId == null || it.caseId == caseId }
+            .filter { caseId == null || (caseId != ALPHA_SHARED_WORKSPACE_ID && it.caseId == caseId) }
             .sortedWith(
                 compareBy<AlphaTaskItem> { it.status != AlphaTaskStatus.Open }
                     .thenBy { it.dueDate ?: "9999-12-31T00:00:00Z" }
@@ -455,7 +580,7 @@ internal class AlphaRossController(
         openTasks(caseId).filter { it.dueDate != null && !it.dueDate.startsWith(nowIso().substring(0, 10)) }
 
     fun askDraft(scopeCaseId: String?): String =
-        scopeCaseId?.let { askDrafts[it] ?: "Ask Ross about this case..." } ?: globalAskDraft
+        scopeCaseId?.let { askDrafts[it] ?: "Ask Ross about this matter..." } ?: globalAskDraft
 
     fun setAskDraft(scopeCaseId: String?, value: String) {
         if (scopeCaseId == null) {
@@ -465,28 +590,92 @@ internal class AlphaRossController(
         }
     }
 
-    fun askDocumentTitle(scopeCaseId: String?): String? =
-        scopeCaseId?.let { askDocumentTitles[it] } ?: globalAskDocumentTitle
+    fun selectedAskDocumentIds(scopeCaseId: String?): Set<String> =
+        scopeCaseId?.let { askSelectedDocumentIds[it] ?: emptySet() } ?: globalAskSelectedDocumentIds
 
-    fun setAskDocumentTitle(scopeCaseId: String?, value: String?) {
+    private fun setSelectedAskDocumentIds(scopeCaseId: String?, documentIds: Set<String>) {
         if (scopeCaseId == null) {
-            globalAskDocumentTitle = value
+            globalAskSelectedDocumentIds = documentIds
         } else {
-            askDocumentTitles = if (value.isNullOrBlank()) {
-                askDocumentTitles - scopeCaseId
+            askSelectedDocumentIds = if (documentIds.isEmpty()) {
+                askSelectedDocumentIds - scopeCaseId
             } else {
-                askDocumentTitles + (scopeCaseId to value)
+                askSelectedDocumentIds + (scopeCaseId to documentIds)
             }
         }
     }
 
-    fun openAsk(scopeCaseId: String? = null, documentTitle: String? = null) {
-        setAskDocumentTitle(scopeCaseId, documentTitle)
+    fun availableAskDocuments(scopeCaseId: String?): List<AlphaAskDocumentOption> {
+        val scopedCases = if (scopeCaseId == null) {
+            persisted.cases
+        } else {
+            persisted.cases.filter { it.id == scopeCaseId || it.id == ALPHA_SHARED_WORKSPACE_ID }
+        }
+        return scopedCases
+            .flatMap { case ->
+                case.documents.map { document ->
+                    AlphaAskDocumentOption(
+                        id = document.id,
+                        caseId = case.id,
+                        caseTitle = case.title,
+                        title = document.title,
+                        kind = document.kind,
+                        isShared = case.id == ALPHA_SHARED_WORKSPACE_ID,
+                    )
+                }
+            }
+            .sortedWith(
+                compareBy<AlphaAskDocumentOption> { !it.isShared }
+                    .thenBy { it.caseTitle.lowercase() }
+                    .thenBy { it.title.lowercase() }
+            )
+    }
+
+    fun selectedAskDocuments(scopeCaseId: String?): List<AlphaAskDocumentOption> {
+        val selectedIds = selectedAskDocumentIds(scopeCaseId)
+        if (selectedIds.isEmpty()) return emptyList()
+        return availableAskDocuments(scopeCaseId).filter { it.id in selectedIds }
+    }
+
+    fun askDocumentTitle(scopeCaseId: String?): String? =
+        selectedAskDocuments(scopeCaseId).singleOrNull()?.title
+
+    fun askSelectionSubtitle(scopeCaseId: String?): String? {
+        val selected = selectedAskDocuments(scopeCaseId)
+        if (selected.isEmpty()) return null
+        if (selected.size == 1) {
+            return selected.first().let {
+                when {
+                    it.isShared -> "${it.title} · shared file"
+                    scopeCaseId == null -> "${it.title} · ${it.caseTitle}"
+                    else -> it.title
+                }
+            }
+        }
+        val sharedCount = selected.count { it.isShared }
+        return if (sharedCount > 0) "${selected.size} files selected · $sharedCount shared" else "${selected.size} files selected"
+    }
+
+    fun toggleAskDocumentSelection(scopeCaseId: String?, documentId: String) {
+        val updated = selectedAskDocumentIds(scopeCaseId).toMutableSet().apply {
+            if (!add(documentId)) remove(documentId)
+        }
+        setSelectedAskDocumentIds(scopeCaseId, updated)
+    }
+
+    fun openAsk(scopeCaseId: String? = null, documentId: String? = null) {
+        if (documentId != null) {
+            setSelectedAskDocumentIds(scopeCaseId, setOf(documentId))
+        }
         pendingRoute = scopeCaseId?.let(AndroidAlphaRoute::AskCase) ?: AndroidAlphaRoute.AskRoss
     }
 
     fun scopeLabel(caseId: String?): String =
-        caseId?.let { id -> cases.firstOrNull { it.id == id }?.title } ?: "All matters"
+        when {
+            caseId == null -> "All work"
+            caseId == ALPHA_SHARED_WORKSPACE_ID -> "Shared files"
+            else -> cases.firstOrNull { it.id == caseId }?.title ?: "All work"
+        }
 
     fun askConversation(scopeCaseId: String?): List<AlphaAskResult> =
         askHistory.filter { it.scopeCaseId == scopeCaseId }
@@ -674,6 +863,249 @@ internal class AlphaRossController(
         startPackInstall(selectedTier, selectedTier == AlphaCapabilityTier.QuickStart)
     }
 
+    fun setAppearanceMode(mode: AlphaAppearanceMode) {
+        persisted = persisted.copy(settings = persisted.settings.copy(appearanceMode = mode))
+        save()
+    }
+
+    fun backendBaseUrlOverride(): String? = AlphaBackendBaseUrlOverrideSnapshot.shared.value()
+
+    fun effectiveBackendBaseUrl(): String = resolveRossBackendBaseUrl(
+        overrideValue = AlphaBackendBaseUrlOverrideSnapshot.shared.value(),
+        buildConfigValue = BuildConfig.ROSS_BACKEND_BASE_URL,
+    )
+
+    fun setBackendBaseUrlOverride(rawValue: String?) {
+        val normalized = normalizedBackendBaseUrlOverride(rawValue)
+        context.writeRossBackendBaseUrlOverride(normalized)
+        AlphaBackendBaseUrlOverrideSnapshot.shared.update(normalized)
+    }
+
+    fun prepareGoogleSignInUri(): Uri =
+        Uri.parse(
+            "${resolveRossBackendBaseUrl(
+                overrideValue = AlphaBackendBaseUrlOverrideSnapshot.shared.value(),
+                buildConfigValue = BuildConfig.ROSS_BACKEND_BASE_URL,
+            ).trimEnd('/')}/auth/google/start"
+        ).buildUpon()
+            .appendQueryParameter("redirectTarget", "ross://auth/callback")
+            .apply {
+                persisted.accountSession.email
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let { appendQueryParameter("loginHint", it) }
+            }
+            .build()
+
+    fun markGoogleSignInStarted() {
+        authStatusMessage = null
+        persisted = persisted.copy(
+            accountSession = persisted.accountSession.copy(
+                authMode = AlphaAccountAuthMode.Google,
+                providerLabel = "Google",
+                awaitingBrowserReturn = true,
+                locked = false,
+            )
+        )
+        save()
+    }
+
+    fun consumeGoogleSignInRedirect(uri: Uri?): Boolean {
+        if (uri == null || uri.scheme != "ross" || uri.host != "auth") {
+            return false
+        }
+
+        val status = uri.getQueryParameter("status")
+            ?: if (!uri.getQueryParameter("account_token").isNullOrBlank()) "success" else null
+        val backendError = uri.getQueryParameter("error")
+        when (status) {
+            "success" -> {
+                val email = uri.getQueryParameter("email")?.takeIf { it.isNotBlank() }
+                val displayName = uri.getQueryParameter("display_name")
+                    ?.takeIf { it.isNotBlank() }
+                    ?: uri.getQueryParameter("name")?.takeIf { it.isNotBlank() }
+                val accessToken = uri.getQueryParameter("access_token")?.takeIf { it.isNotBlank() }
+                val refreshToken = uri.getQueryParameter("refresh_token")?.takeIf { it.isNotBlank() }
+                val accountToken = uri.getQueryParameter("account_token")?.takeIf { it.isNotBlank() }
+                val subject = uri.getQueryParameter("subject")?.takeIf { it.isNotBlank() }
+                val expiresAt = uri.getQueryParameter("expires_at")?.takeIf { it.isNotBlank() }
+                if (
+                    email == null ||
+                    accessToken == null ||
+                    refreshToken == null ||
+                    accountToken == null ||
+                    subject == null ||
+                    expiresAt == null
+                ) {
+                    persisted = persisted.copy(
+                        accountSession = persisted.accountSession.copy(
+                            awaitingBrowserReturn = false,
+                            locked = false,
+                        )
+                    )
+                    authStatusMessage = "Could not sign in. Please try again."
+                    save()
+                    return true
+                }
+                persisted = persisted.copy(
+                    accountSession = persisted.accountSession.copy(
+                        email = email,
+                        displayName = displayName,
+                        providerLabel = "Google",
+                        authMode = AlphaAccountAuthMode.Google,
+                        accessToken = accessToken,
+                        refreshToken = refreshToken,
+                        accountToken = accountToken,
+                        subject = subject,
+                        expiresAt = expiresAt,
+                        awaitingBrowserReturn = false,
+                        locked = false,
+                        lastUnlockedAt = nowIso(),
+                    )
+                )
+                authStatusMessage = null
+                save()
+                return true
+            }
+
+            "cancelled", "error" -> {
+                persisted = persisted.copy(
+                    accountSession = persisted.accountSession.copy(
+                        awaitingBrowserReturn = false,
+                        locked = false,
+                    )
+                )
+                authStatusMessage = "Could not sign in. Please try again."
+                save()
+                return true
+            }
+        }
+
+        if (!backendError.isNullOrBlank()) {
+            persisted = persisted.copy(
+                accountSession = persisted.accountSession.copy(
+                    awaitingBrowserReturn = false,
+                    locked = false,
+                )
+            )
+            authStatusMessage = "Could not sign in. Please try again."
+            save()
+            return true
+        }
+
+        return false
+    }
+
+    fun clearPendingGoogleSignIn() {
+        if (!persisted.accountSession.awaitingBrowserReturn) return
+        persisted = persisted.copy(
+            accountSession = persisted.accountSession.copy(awaitingBrowserReturn = false)
+        )
+        authStatusMessage = "Could not sign in. Please try again."
+        save()
+    }
+
+    fun clearAuthStatusMessage() {
+        authStatusMessage = null
+    }
+
+    fun signInDemoMode() {
+        val demoSubject = "local_demo_advocate"
+        persisted = persisted.copy(
+            accountSession = AlphaAccountSession(
+                email = "advocate@ross.ai",
+                displayName = "Ross Demo",
+                providerLabel = "Demo mode",
+                authMode = AlphaAccountAuthMode.Demo,
+                accessToken = "demo_access_$demoSubject",
+                refreshToken = "demo_refresh_$demoSubject",
+                accountToken = "demo_account_$demoSubject",
+                subject = demoSubject,
+                expiresAt = java.time.Instant.now().plusSeconds(31_536_000).toString(),
+                awaitingBrowserReturn = false,
+                quickUnlockEnabled = persisted.accountSession.quickUnlockEnabled,
+                locked = false,
+                lastUnlockedAt = nowIso(),
+            )
+        )
+        authStatusMessage = null
+        save()
+    }
+
+    fun setQuickUnlockEnabled(enabled: Boolean) {
+        persisted = persisted.copy(
+            accountSession = persisted.accountSession.copy(
+                quickUnlockEnabled = enabled,
+                locked = if (enabled && persisted.accountSession.isSignedIn) persisted.accountSession.locked else false,
+            )
+        )
+        save()
+    }
+
+    fun lockSessionForQuickUnlock() {
+        if (!persisted.accountSession.quickUnlockEnabled || !persisted.accountSession.isSignedIn) return
+        if (persisted.accountSession.locked) return
+        persisted = persisted.copy(accountSession = persisted.accountSession.copy(locked = true))
+        save()
+    }
+
+    fun unlockSession() {
+        if (!persisted.accountSession.locked) return
+        persisted = persisted.copy(
+            accountSession = persisted.accountSession.copy(
+                locked = false,
+                lastUnlockedAt = nowIso(),
+            )
+        )
+        save()
+    }
+
+    fun signOutAccountSession() {
+        persisted = persisted.copy(accountSession = AlphaAccountSession())
+        authStatusMessage = null
+        save()
+    }
+
+    private suspend fun refreshAccountSessionIfNeeded() {
+        val session = persisted.accountSession
+        if (!session.isSignedIn || session.isDemoMode) {
+            return
+        }
+
+        val refreshToken = session.refreshToken?.takeIf { it.isNotBlank() } ?: return
+        val expiresAt = session.expiresAt?.let { raw ->
+            runCatching { java.time.Instant.parse(raw) }.getOrNull()
+        } ?: return
+
+        if (expiresAt.isAfter(java.time.Instant.now().plusSeconds(300))) {
+            return
+        }
+
+        val refreshed = runCatching { backend.refreshSession(refreshToken) }.getOrNull()
+        if (refreshed == null) {
+            persisted = persisted.copy(accountSession = AlphaAccountSession())
+            authStatusMessage = "Session expired. Please sign in again."
+            save()
+            return
+        }
+
+        persisted = persisted.copy(
+            accountSession = persisted.accountSession.copy(
+                accessToken = refreshed.accessToken,
+                refreshToken = refreshed.refreshToken,
+                accountToken = refreshed.accountToken,
+                subject = refreshed.subject,
+                expiresAt = refreshed.expiresAt,
+                email = refreshed.profile?.email ?: persisted.accountSession.email,
+                displayName = refreshed.profile?.displayName ?: persisted.accountSession.displayName,
+                awaitingBrowserReturn = false,
+                locked = false,
+                lastUnlockedAt = nowIso(),
+            )
+        )
+        authStatusMessage = null
+        save()
+    }
+
     fun createCase(openWorkspace: Boolean = true): String? {
         val title = caseDraftTitle.trim()
         if (title.isEmpty()) return null
@@ -712,6 +1144,7 @@ internal class AlphaRossController(
     }
 
     fun renameCase(caseId: String, title: String) {
+        if (caseId == ALPHA_SHARED_WORKSPACE_ID) return
         val cleaned = title.trim()
         if (cleaned.isEmpty()) return
         persisted = persisted.copy(
@@ -730,6 +1163,7 @@ internal class AlphaRossController(
     }
 
     fun archiveCase(caseId: String) {
+        if (caseId == ALPHA_SHARED_WORKSPACE_ID) return
         persisted = persisted.copy(
             cases = persisted.cases.map { matter ->
                 if (matter.id == caseId) matter.copy(archivedAt = nowIso(), updatedAt = nowIso()) else matter
@@ -741,6 +1175,7 @@ internal class AlphaRossController(
     }
 
     fun setCaseFolderTint(caseId: String, tint: AlphaMatterTint) {
+        if (caseId == ALPHA_SHARED_WORKSPACE_ID) return
         persisted = persisted.copy(
             cases = persisted.cases.map { matter ->
                 if (matter.id == caseId) matter.copy(folderTint = tint, updatedAt = nowIso()) else matter
@@ -750,6 +1185,7 @@ internal class AlphaRossController(
     }
 
     fun deleteCase(caseId: String) {
+        if (caseId == ALPHA_SHARED_WORKSPACE_ID) return
         val removedCase = persisted.cases.firstOrNull { it.id == caseId } ?: return
         removedCase.documents.forEach { document ->
             runCatching { absoluteFile(document.storedRelativePath).takeIf { it.exists() }?.delete() }
@@ -773,9 +1209,10 @@ internal class AlphaRossController(
         save()
     }
 
-    fun importDocument(caseId: String, uri: Uri): Boolean {
+    fun importDocument(caseId: String?, uri: Uri): Boolean {
         ensureFolders()
-        val caseFolder = File(documentsDir, caseId).apply { mkdirs() }
+        val targetCaseId = caseId ?: ALPHA_SHARED_WORKSPACE_ID
+        val caseFolder = File(documentsDir, targetCaseId).apply { mkdirs() }
         val extension = context.contentResolver.getType(uri)?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) }
             ?: uri.lastPathSegment?.substringAfterLast('.', "")
             ?: "bin"
@@ -825,7 +1262,7 @@ internal class AlphaRossController(
             dominantSourceSnippet = seedSnippet,
             lastIndexedAt = if (kind == AlphaDocumentKind.Text) nowIso() else null,
             pages = (1..pageCount).map { page ->
-                AlphaDocumentPage(
+                    AlphaDocumentPage(
                     pageNumber = page,
                     snippet = if (page == 1) seedSnippet else "Imported page $page.",
                     extractedText = if (page == 1 && kind == AlphaDocumentKind.Text) seedSnippet else null,
@@ -837,7 +1274,7 @@ internal class AlphaRossController(
             },
             extractionRuns = listOf(
                 AlphaExtractionRun(
-                    caseId = caseId,
+                    caseId = targetCaseId,
                     documentId = documentId,
                     mode = activeExtractionMode(),
                     status = AlphaExtractionRunStatus.Running,
@@ -852,7 +1289,7 @@ internal class AlphaRossController(
             ),
         )
         val sourceRef = AlphaSourceRef(
-            caseId = caseId,
+            caseId = targetCaseId,
             documentId = document.id,
             documentTitle = document.title,
             pageNumber = 1,
@@ -861,7 +1298,7 @@ internal class AlphaRossController(
         )
         persisted = persisted.copy(
             cases = persisted.cases.map { case ->
-                if (case.id == caseId) case.copy(
+                if (case.id == targetCaseId) case.copy(
                     documents = listOf(document) + case.documents,
                     sourceRefs = listOf(sourceRef) + case.sourceRefs,
                     updatedAt = nowIso(),
@@ -869,10 +1306,10 @@ internal class AlphaRossController(
             },
             ledgerEntries = listOf(localLedger("Document imported locally", "${document.title} was copied into app-private storage.")) + persisted.ledgerEntries,
         )
-        pendingRoute = AndroidAlphaRoute.DocumentViewer(caseId, document.id, 1)
+        pendingRoute = AndroidAlphaRoute.DocumentViewer(targetCaseId, document.id, 1)
         save()
         scope.launch {
-            runExtractionForDocument(caseId, document.id)
+            runExtractionForDocument(targetCaseId, document.id)
         }
         return true
     }
@@ -921,6 +1358,10 @@ internal class AlphaRossController(
         runCatching {
             absoluteFile(existingDocument.storedRelativePath).takeIf { it.exists() }?.delete()
         }
+        globalAskSelectedDocumentIds = globalAskSelectedDocumentIds - documentId
+        askSelectedDocumentIds = askSelectedDocumentIds
+            .mapValues { (_, ids) -> ids - documentId }
+            .filterValues { it.isNotEmpty() }
         persisted = persisted.copy(
             cases = persisted.cases.map { case ->
                 if (case.id == caseId) {
@@ -966,7 +1407,7 @@ internal class AlphaRossController(
 
     fun askCase(caseId: String) {
         val question = askDrafts[caseId]?.takeIf { it.isNotBlank() }
-            ?: "Ask Ross about this case..."
+            ?: "Ask Ross about this matter..."
         val localResult = buildLocalAskResult(question, caseId)
         persisted = persisted.copy(
             cases = persisted.cases.map { case ->
@@ -1008,6 +1449,10 @@ internal class AlphaRossController(
             pendingPublicLawQuestion = null
             pendingPublicLawScopeCaseId = null
             publicLawPreview = null
+            latestAskResult = latestAskResult?.copy(statusNote = "Web search off")
+            updateLatestAskHistory(scopeCaseId, cleaned) { result ->
+                result.copy(publicLawPreview = null, statusNote = "Web search off")
+            }
         }
     }
 
@@ -1051,7 +1496,7 @@ internal class AlphaRossController(
                     AlphaPrivacyLedgerEntry(
                         title = if (results.isEmpty()) "Public-law search unavailable" else "Public-law query sent",
                         detail = if (results.isEmpty()) {
-                            "Ross could not reach the sanitized public-law backend with the approved preview."
+                            "Could not search public law right now. Your files stayed on this device."
                         } else {
                             "Only a sanitized public query crossed the network boundary."
                         },
@@ -1070,20 +1515,17 @@ internal class AlphaRossController(
 
     private fun appendAskResult(result: AlphaAskResult, scopeCaseId: String?) {
         askHistory = askHistory + result
-        val updatedCases = if (scopeCaseId == null) {
-            persisted.cases
-        } else {
-            persisted.cases.map { case ->
-                if (case.id == scopeCaseId) {
-                    val turn = AlphaChatTurn(
-                        question = result.question,
-                        answerTitle = result.answerTitle,
-                        answerSections = result.answerSections,
-                        sourceRefs = result.caseFileSources,
-                    )
-                    case.copy(chatTurns = listOf(turn) + case.chatTurns, updatedAt = nowIso())
-                } else case
-            }
+        val storageCaseId = scopeCaseId ?: ALPHA_SHARED_WORKSPACE_ID
+        val updatedCases = persisted.cases.map { case ->
+            if (case.id == storageCaseId) {
+                val turn = AlphaChatTurn(
+                    question = result.question,
+                    answerTitle = result.answerTitle,
+                    answerSections = result.answerSections,
+                    sourceRefs = result.caseFileSources,
+                )
+                case.copy(chatTurns = listOf(turn) + case.chatTurns, updatedAt = nowIso())
+            } else case
         }
         persisted = persisted.copy(
             cases = updatedCases,
@@ -1114,32 +1556,22 @@ internal class AlphaRossController(
         val preview = publicLawPreview ?: return
         scope.launch {
             val backendResults = runCatching { backend.searchPublicLaw(preview) }
-            publicLawResults = backendResults.getOrElse {
-                    listOf(
-                        AlphaPublicLawResult(
-                            title = "Delay condonation and documented diligence",
-                            citation = "(2024) 7 SCC 112",
-                            snippet = "Diligence, chronology, and the absence of strategic delay remain central to condonation review.",
-                            sourceName = "Official or licensed source (preview)",
-                        ),
-                        AlphaPublicLawResult(
-                            title = "Administrative fairness in filing-delay matters",
-                            citation = "2023 SCC OnLine SC 881",
-                            snippet = "A brief disruption may be weighed differently where the record shows prompt corrective action and contemporaneous documentation.",
-                            sourceName = "Official or licensed source (preview)",
-                        ),
-                    )
-                }
+            val results = backendResults.getOrElse { emptyList() }
+            publicLawResults = results
             persisted = persisted.copy(
-                publicLawCache = listOf(AlphaPublicLawCacheItem(query = preview.query, resultTitles = publicLawResults.map { it.title })) + persisted.publicLawCache,
+                publicLawCache = listOf(AlphaPublicLawCacheItem(query = preview.query, resultTitles = results.map { it.title })) + persisted.publicLawCache,
                 ledgerEntries = listOf(
                     AlphaPrivacyLedgerEntry(
-                        title = "Public-law query sent",
-                        detail = "Only a sanitized public query crossed the network boundary.",
+                        title = if (results.isEmpty()) "Public-law search unavailable" else "Public-law query sent",
+                        detail = if (results.isEmpty()) {
+                            "Could not search public law right now. Your files stayed on this device."
+                        } else {
+                            "Only a sanitized public query crossed the network boundary."
+                        },
                         purpose = AlphaPrivacyPurpose.PublicLawSearch,
                         payloadClass = AlphaPayloadClass.SanitizedPublicQuery,
                         endpointLabel = "/public-law/search",
-                        success = backendResults.isSuccess,
+                        success = results.isNotEmpty(),
                     )
                 ) + persisted.ledgerEntries,
             )
@@ -1488,13 +1920,20 @@ internal class AlphaRossController(
     }
 
     private fun buildLocalAskResult(question: String, scopeCaseId: String?): AlphaAskResult {
-        val visibleCases = persisted.cases.filter { scopeCaseId == null || it.id == scopeCaseId }
+        val selectedDocuments = selectedAskDocuments(scopeCaseId)
+        val selectedDocumentIds = selectedDocuments.mapTo(linkedSetOf()) { it.id }
+        val visibleCases = if (scopeCaseId == null) {
+            persisted.cases
+        } else {
+            persisted.cases.filter { it.id == scopeCaseId || it.id == ALPHA_SHARED_WORKSPACE_ID }
+        }
         val lowered = question.lowercase()
         val asksAboutSchedule = lowered.contains("next date") || lowered.contains("hearing")
         val asksAboutTasks = lowered.contains("task") || lowered.contains("today") || lowered.contains("reminder") || lowered.contains("due")
         val asksAboutReview = lowered.contains("review") || lowered.contains("document") || lowered.contains("order") || lowered.contains("party")
         val matchedSources = visibleCases
             .flatMap { it.sourceRefs }
+            .filter { selectedDocumentIds.isEmpty() || it.documentId in selectedDocumentIds }
             .filter {
                 asksAboutSchedule ||
                     asksAboutTasks ||
@@ -1504,7 +1943,7 @@ internal class AlphaRossController(
             }
         val sections = mutableListOf<String>()
         if (asksAboutSchedule) {
-            visibleCases.mapNotNull { case ->
+            cases.filter { scopeCaseId == null || it.id == scopeCaseId }.mapNotNull { case ->
                 case.nextHearing?.let { nextDate -> "${case.title}: ${nextDate.take(10)}" }
             }.take(2).forEach(sections::add)
         }
@@ -1514,18 +1953,35 @@ internal class AlphaRossController(
             }
         }
         if (asksAboutReview) {
-            reviewQueue(scopeCaseId).take(3).forEach { sections += "${it.title}: ${it.detail}" }
+            reviewQueue(scopeCaseId)
+                .filter { selectedDocumentIds.isEmpty() || it.documentId in selectedDocumentIds }
+                .take(3)
+                .forEach { sections += "${it.title}: ${it.detail}" }
+        }
+        if (sections.isEmpty() && selectedDocuments.isNotEmpty()) {
+            selectedDocuments.take(3).forEach { document ->
+                sections += if (document.isShared) {
+                    "${document.title}: shared across matters."
+                } else {
+                    "${document.title}: included for this answer."
+                }
+            }
         }
         val notFound = sections.isEmpty() && matchedSources.isEmpty()
         return AlphaAskResult(
             question = question,
             scopeCaseId = scopeCaseId,
             scopeLabel = scopeLabel(scopeCaseId),
-            answerTitle = if (notFound) "Ross could not find this in local matter files yet." else "Ross draft for advocate review",
-            answerSections = if (notFound) listOf("Ross could not find this in local matter files yet.") else sections.take(3),
+            selectedDocumentTitles = selectedDocuments.map { it.title },
+            answerTitle = if (notFound) "Ross could not find this in your files yet." else "Ross drafted this from your files",
+            answerSections = if (notFound) listOf("Ross could not find this in your files yet.") else sections.take(3),
             caseFileSources = matchedSources.take(3),
-            statusNote = if (notFound) "Web search off" else "Ross thread · local matter sources",
-            needsReviewWarning = reviewQueue(scopeCaseId).takeIf { it.isNotEmpty() }?.size?.let { "$it item(s) still need review." },
+            statusNote = if (notFound) "Web Search is off" else if (selectedDocuments.isEmpty()) "Chat · local files" else "Chat · selected files only",
+            needsReviewWarning = reviewQueue(scopeCaseId)
+                .filter { selectedDocumentIds.isEmpty() || it.documentId in selectedDocumentIds }
+                .takeIf { it.isNotEmpty() }
+                ?.size
+                ?.let { "$it item(s) still need review." },
         )
     }
 
@@ -1939,6 +2395,7 @@ internal class AlphaRossController(
     }
 
     private fun saveState(state: AlphaPersistedState) {
+        AlphaAccountSessionSnapshot.shared.update(state.accountSession)
         encryptedStateStore.save(state)
     }
 
@@ -1950,7 +2407,7 @@ internal class AlphaRossController(
             askSelectedScopeCaseId = null
         }
         askDrafts = askDrafts - caseId
-        askDocumentTitles = askDocumentTitles - caseId
+        askSelectedDocumentIds = askSelectedDocumentIds - caseId
         if (pendingRoute is AndroidAlphaRoute.CaseWorkspace && (pendingRoute as AndroidAlphaRoute.CaseWorkspace).caseId == caseId) {
             pendingRoute = AndroidAlphaRoute.CaseList
         }
@@ -1998,8 +2455,24 @@ internal class AlphaRossController(
             AlphaAppTab.Exports -> AlphaAppTab.Home
             else -> state.selectedTab
         }
-        val normalizedTasks = state.tasks ?: seedTasks(state.cases)
-        return state.copy(selectedTab = normalizedTab, tasks = normalizedTasks)
+        val normalizedCases = if (state.cases.any { it.id == ALPHA_SHARED_WORKSPACE_ID }) {
+            state.cases
+        } else {
+            state.cases + sharedWorkspaceMatter()
+        }
+        val normalizedTasks = state.tasks ?: seedTasks(normalizedCases)
+        val normalizedSession = state.accountSession.copy(
+            providerLabel = state.accountSession.providerLabel.ifBlank {
+                if (state.accountSession.authMode == AlphaAccountAuthMode.Google) "Google" else "Demo mode"
+            }
+        )
+        return state.copy(
+            onboardingStage = AlphaOnboardingStage.Completed,
+            selectedTab = normalizedTab,
+            cases = normalizedCases,
+            tasks = normalizedTasks,
+            accountSession = normalizedSession,
+        )
     }
 
     private fun seedAskHistory(cases: List<AlphaCaseMatter>): List<AlphaAskResult> =
@@ -2007,8 +2480,8 @@ internal class AlphaRossController(
             case.chatTurns.asReversed().map { turn ->
                 AlphaAskResult(
                     question = turn.question,
-                    scopeCaseId = case.id,
-                    scopeLabel = case.title,
+                    scopeCaseId = if (case.id == ALPHA_SHARED_WORKSPACE_ID) null else case.id,
+                    scopeLabel = if (case.id == ALPHA_SHARED_WORKSPACE_ID) "All work" else case.title,
                     answerTitle = turn.answerTitle,
                     answerSections = turn.answerSections,
                     caseFileSources = turn.sourceRefs,
@@ -2256,8 +2729,23 @@ private fun seedCases(): List<AlphaCaseMatter> {
             AlphaSourceRef(caseId = taxCaseId, documentId = orderId, documentTitle = "Assessment Order", pageNumber = 11, paragraphRange = "¶4", textSnippet = "Reasoning on discrepancy.", ocrConfidence = 0.89)
         ),
     )
-    return listOf(petitionCase, taxCase)
+    return listOf(petitionCase, taxCase, sharedWorkspaceMatter())
 }
+
+private fun sharedWorkspaceMatter(): AlphaCaseMatter =
+    AlphaCaseMatter(
+        id = ALPHA_SHARED_WORKSPACE_ID,
+        title = "Shared files",
+        forum = "Available across matters",
+        stage = AlphaCaseStage.Intake,
+        nextHearing = null,
+        summary = "Files placed here stay available anywhere on this device.",
+        issueHighlights = listOf("Use shared files when a document should support more than one matter."),
+        evidenceNotes = listOf("Ross keeps these files local and ready for device-wide questions."),
+        draftTasks = emptyList(),
+        documents = emptyList(),
+        sourceRefs = emptyList(),
+    )
 
 fun nowIso(): String = java.time.Instant.now().toString()
 private fun alphaMatterDateLabel(rawDate: String): String {
@@ -2378,4 +2866,12 @@ fun AlphaPrivacyLedgerEntry.lawyerDetail(): String = when (title) {
     "Private AI Pack verified", "Private AI Pack fallback installed" ->
         "A Private AI Pack was prepared on this device."
     else -> detail
+}
+
+fun AlphaPrivacyLedgerEntry.lawyerPurposeLabel(): String = when (purpose) {
+    AlphaPrivacyPurpose.LocalOnly -> "Stayed on this device"
+    AlphaPrivacyPurpose.PublicLawSearch -> "Law search only"
+    AlphaPrivacyPurpose.ModelCatalog,
+    AlphaPrivacyPurpose.ModelDownload,
+    AlphaPrivacyPurpose.ModelVerification -> "Private assistant setup"
 }

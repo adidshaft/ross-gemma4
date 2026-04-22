@@ -128,8 +128,8 @@ class AlphaLawyerUsabilityTest {
             webEnabled = false,
         )
 
-        assertEquals("Ross could not find this in local matter files yet.", controller.latestAskResult?.answerTitle)
-        assertEquals(listOf("Ross could not find this in local matter files yet."), controller.latestAskResult?.answerSections)
+        assertEquals("Ross could not find this in your files yet.", controller.latestAskResult?.answerTitle)
+        assertEquals(listOf("Ross could not find this in your files yet."), controller.latestAskResult?.answerSections)
     }
 
     @Test

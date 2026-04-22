@@ -1733,7 +1733,7 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
         ]
 
         return AlphaPersistedState(
-            onboardingStage: .onboarding,
+            onboardingStage: .completed,
             selectedTab: .home,
             settings: .default,
             cases: [petitionCase, taxCase, sharedWorkspace],
@@ -1819,6 +1819,8 @@ extension AlphaPrivacyLedgerEntry {
             "Downloaded Private AI Pack"
         case "Public-law query sent":
             "Searched public law"
+        case "Public-law search unavailable":
+            "Public-law search needs attention"
         case "Local export generated":
             "Generated local export"
         case "Local case review run":
@@ -1836,10 +1838,23 @@ extension AlphaPrivacyLedgerEntry {
         switch title {
         case "Public-law query sent":
             "Ross sent only a generic public-law query. Your case files stayed on this device."
+        case "Public-law search unavailable":
+            "Ross could not complete the approved public-law search. Your case files stayed on this device."
         case "Private AI Pack verified", "Private AI Pack fallback installed":
             "A Private AI Pack was prepared on this device."
         default:
             detail
+        }
+    }
+
+    var lawyerPurposeLabel: String {
+        switch purpose {
+        case .local_only:
+            "Stayed on this device"
+        case .public_law_search:
+            "Law search only"
+        case .model_catalog, .model_download, .model_verification:
+            "Private assistant setup"
         }
     }
 }

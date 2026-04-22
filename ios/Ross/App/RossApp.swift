@@ -11,6 +11,8 @@ import UIKit
 
 private let rossLanguageSelectedKey = "ross.language.selected"
 private let rossSelectedLanguageCodeKey = "ross.language.code"
+private let rossQuickUnlockEnabledKey = "ross.quick_unlock.enabled"
+private let rossBackendBaseURLOverrideKey = "ross.backend.base_url.override"
 
 func rossHasSelectedLanguage() -> Bool {
     UserDefaults.standard.bool(forKey: rossLanguageSelectedKey)
@@ -19,6 +21,28 @@ func rossHasSelectedLanguage() -> Bool {
 func rossSaveLanguageSelection(code: String) {
     UserDefaults.standard.set(true, forKey: rossLanguageSelectedKey)
     UserDefaults.standard.set(code, forKey: rossSelectedLanguageCodeKey)
+}
+
+func rossQuickUnlockEnabled() -> Bool {
+    UserDefaults.standard.bool(forKey: rossQuickUnlockEnabledKey)
+}
+
+func rossSetQuickUnlockEnabled(_ enabled: Bool) {
+    UserDefaults.standard.set(enabled, forKey: rossQuickUnlockEnabledKey)
+}
+
+func rossBackendBaseURLOverride() -> String? {
+    let normalized = UserDefaults.standard.string(forKey: rossBackendBaseURLOverrideKey)?
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    return (normalized?.isEmpty == false) ? normalized : nil
+}
+
+func rossSetBackendBaseURLOverride(_ rawValue: String?) {
+    guard let normalized = rawValue?.trimmingCharacters(in: .whitespacesAndNewlines), !normalized.isEmpty else {
+        UserDefaults.standard.removeObject(forKey: rossBackendBaseURLOverrideKey)
+        return
+    }
+    UserDefaults.standard.set(normalized, forKey: rossBackendBaseURLOverrideKey)
 }
 
 private struct RossDemoProfile {
@@ -40,7 +64,10 @@ private func rossDemoProfile(for email: String) -> RossDemoProfile? {
 
 func rossBackendBaseURL() -> URL {
     let environment = ProcessInfo.processInfo.environment
-    let rawURL = environment["ROSS_BACKEND_BASE_URL"] ?? environment["ROSS_BACKEND_URL"] ?? "http://127.0.0.1:8080"
+    let rawURL = rossBackendBaseURLOverride()
+        ?? environment["ROSS_BACKEND_BASE_URL"]
+        ?? environment["ROSS_BACKEND_URL"]
+        ?? "http://127.0.0.1:8080"
     return URL(string: rawURL) ?? URL(string: "http://127.0.0.1:8080")!
 }
 
@@ -210,6 +237,7 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
     fileprivate var activeExternalProvider: RossExternalSignInProvider?
     var authErrorMessage: String?
     var hasSelectedLanguage: Bool = rossHasSelectedLanguage()
+    var quickUnlockEnabled: Bool = rossQuickUnlockEnabled()
 
     var isStartingSignIn: Bool {
         activeExternalProvider != nil
@@ -258,6 +286,10 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
         }
     }
 
+    var canUseQuickUnlock: Bool {
+        shouldRequireUnlock()
+    }
+
     func loadIfNeeded() async {
         guard !didLoad else { return }
         didLoad = true
@@ -271,12 +303,12 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
 
             let activeSession = try await refreshedSessionIfNeeded(from: storedSession)
             RossAuthSessionSnapshot.shared.update(activeSession)
-            phase = shouldRequireUnlock() ? .unlockRequired(activeSession) : .signedIn(activeSession)
+            phase = quickUnlockEnabled && shouldRequireUnlock() ? .unlockRequired(activeSession) : .signedIn(activeSession)
         } catch {
             store.clearSession()
             RossAuthSessionSnapshot.shared.update(nil)
             phase = .signedOut
-            authErrorMessage = nil
+            authErrorMessage = "Session expired. Please sign in again."
         }
     }
 
@@ -287,7 +319,7 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
 
         guard let callbackScheme = rossMobileAuthRedirectURL().scheme else {
             activeExternalProvider = nil
-            authErrorMessage = "Ross could not prepare the mobile sign-in callback."
+            authErrorMessage = "Could not sign in. Please try again."
             return
         }
 
@@ -303,7 +335,7 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
 
         guard let startURL = components?.url else {
             activeExternalProvider = nil
-            authErrorMessage = "Ross could not prepare sign-in."
+            authErrorMessage = "Could not sign in. Please try again."
             return
         }
 
@@ -322,7 +354,7 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
         if !authenticationSession.start() {
             webAuthenticationSession = nil
             activeExternalProvider = nil
-            authErrorMessage = "Ross could not open sign-in."
+            authErrorMessage = "Could not sign in. Please try again."
         }
     }
 
@@ -345,7 +377,7 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
         authErrorMessage = nil
 
         guard let profile = rossDemoProfile(for: email) else {
-            authErrorMessage = "Use `advocate@ross.ai`, `test@ross.ai`, or `admin@ross.ai` to open the local demo profile."
+            authErrorMessage = "Use `advocate@ross.ai` to open demo mode."
             return
         }
 
@@ -373,7 +405,7 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
 
         var error: NSError?
         guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) else {
-            phase = .signedIn(pendingSession)
+            authErrorMessage = "Quick unlock is not available on this device."
             return
         }
 
@@ -386,8 +418,8 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
                 if success {
                     self.authErrorMessage = nil
                     self.phase = .signedIn(pendingSession)
-                } else if let evaluationError {
-                    self.authErrorMessage = evaluationError.localizedDescription
+                } else if evaluationError != nil {
+                    self.authErrorMessage = "Could not unlock. Please try again."
                 }
             }
         }
@@ -407,6 +439,7 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
     func handleScenePhase(_ scenePhase: ScenePhase) {
         guard scenePhase == .background else { return }
         guard case .signedIn(let session) = phase else { return }
+        guard quickUnlockEnabled else { return }
         guard shouldRequireUnlock() else { return }
         phase = .unlockRequired(session)
     }
@@ -426,7 +459,7 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
         }
 
         guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
-            authErrorMessage = "Ross could not complete Apple sign-in."
+            authErrorMessage = "Could not sign in. Please try again."
             return
         }
 
@@ -450,7 +483,7 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
             authErrorMessage = nil
             phase = .signedIn(session)
         } catch {
-            authErrorMessage = "Ross could not save the Apple sign-in session on this device."
+            authErrorMessage = "Could not sign in. Please try again."
         }
     }
 
@@ -464,7 +497,7 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
             return
         }
 
-        authErrorMessage = error.localizedDescription
+        authErrorMessage = "Could not sign in. Please try again."
     }
 
     private func activePresentationAnchor() -> ASPresentationAnchor {
@@ -523,20 +556,19 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
             return
         }
 
-        if let error {
-            authErrorMessage = error.localizedDescription
+        if error != nil {
+            authErrorMessage = "Could not sign in. Please try again."
             return
         }
 
         guard let callbackURL else {
-            authErrorMessage = "Ross did not receive a sign-in callback."
+            authErrorMessage = "Could not sign in. Please try again."
             return
         }
 
         let callbackItems = parseCallbackItems(from: callbackURL)
-        if let errorTitle = callbackItems["error"] {
-            let detail = callbackItems["error_description"]?.removingPercentEncoding
-            authErrorMessage = [errorTitle, detail].compactMap { $0 }.joined(separator: ": ")
+        if callbackItems["error"] != nil {
+            authErrorMessage = "Could not sign in. Please try again."
             return
         }
 
@@ -548,7 +580,7 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
             let subject = callbackItems["subject"],
             let expiresAt = parseDate(from: callbackItems["expires_at"])
         else {
-            authErrorMessage = "Ross received an incomplete sign-in response."
+            authErrorMessage = "Could not sign in. Please try again."
             return
         }
 
@@ -567,7 +599,7 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
             RossAuthSessionSnapshot.shared.update(session)
             phase = .signedIn(session)
         } catch {
-            authErrorMessage = "Ross could not save the local sign-in session."
+            authErrorMessage = "Could not sign in. Please try again."
         }
     }
 
@@ -609,6 +641,11 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
         let context = LAContext()
         var error: NSError?
         return context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error)
+    }
+
+    func setQuickUnlockEnabled(_ enabled: Bool) {
+        quickUnlockEnabled = enabled
+        rossSetQuickUnlockEnabled(enabled)
     }
 
     private func currentBiometryType() -> LABiometryType {
@@ -696,7 +733,6 @@ private struct RossLanguageSelectionScreen: View {
         GeometryReader { proxy in
             ZStack {
                 RossAuthBackdrop()
-                    .frame(width: proxy.size.width, height: proxy.size.height)
 
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 16) {
@@ -869,7 +905,6 @@ private struct RossSignInScreen: View {
         GeometryReader { proxy in
             ZStack(alignment: .bottom) {
                 RossAuthBackdrop()
-                    .frame(width: proxy.size.width, height: proxy.size.height)
 
                 VStack(alignment: .leading, spacing: 18) {
                     HStack(spacing: 14) {
@@ -993,7 +1028,7 @@ private struct RossAuthSignInSheet: View {
                         if isEmailExpanded {
                             VStack(alignment: .leading, spacing: 10) {
                                 HStack {
-                                    Text("Email")
+                                    Text("Demo mode")
                                         .font(.system(size: 14, weight: .semibold))
                                         .foregroundStyle(Color.rossInk)
 
@@ -1010,7 +1045,7 @@ private struct RossAuthSignInSheet: View {
                                 }
 
                                 RossAuthInputField(
-                                    title: "Email",
+                                    title: "Demo email",
                                     text: $demoEmail,
                                     placeholder: "advocate@ross.ai",
                                     iconSystemName: "envelope.fill",
@@ -1019,7 +1054,7 @@ private struct RossAuthSignInSheet: View {
                                     }
                                 )
 
-                                Text("Use `advocate@ross.ai` for the local demo.")
+                                Text("Demo mode is for local testing only. Use `advocate@ross.ai`.")
                                     .font(.system(size: 11, weight: .medium))
                                     .foregroundStyle(Color.rossInk.opacity(0.5))
 
@@ -1027,7 +1062,7 @@ private struct RossAuthSignInSheet: View {
                                     authController.signInWithDemoEmail(demoEmail)
                                 } label: {
                                     RossAuthActionLabel(
-                                        title: "Continue with Email",
+                                        title: "Open demo mode",
                                         tone: .secondary
                                     ) {
                                         RossGlassIconView(.userMsg, variant: .neutral, size: 17, fallbackSystemImage: "envelope.fill")
@@ -1073,13 +1108,17 @@ private struct RossAuthSignInSheet: View {
                                     }
                                 } label: {
                                     RossAuthActionLabel(
-                                        title: "Continue with Email",
+                                        title: "Open demo mode",
                                         tone: .secondary
                                     ) {
                                         RossGlassIconView(.userMsg, variant: .neutral, size: 17, fallbackSystemImage: "envelope.fill")
                                     }
                                 }
                                 .rossGlassButtonStyle(cornerRadius: 20)
+
+                                Text("Apple sign-in stays on this iPhone for now.")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundStyle(Color.rossInk.opacity(0.5))
                             }
                         }
                     }
@@ -1208,7 +1247,6 @@ private struct RossQuickUnlockScreen: View {
         GeometryReader { proxy in
             ZStack {
                 RossAuthBackdrop()
-                    .frame(width: proxy.size.width, height: proxy.size.height)
 
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 18) {

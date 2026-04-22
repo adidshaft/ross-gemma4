@@ -25,6 +25,7 @@ internal class AlphaBackendClient(
             connectTimeout = configuration.timeoutMs
             readTimeout = configuration.timeoutMs
         }
+        configuration.applySessionHeaders(request)
 
         try {
             request.connect()
@@ -45,6 +46,7 @@ internal class AlphaBackendClient(
             doOutput = true
             setRequestProperty("Content-Type", "application/json")
         }
+        configuration.applySessionHeaders(request)
 
         try {
             request.outputStream.use { it.write(gson.toJson(payload).toByteArray()) }
@@ -65,6 +67,7 @@ internal class AlphaBackendClient(
             doOutput = true
             setRequestProperty("Content-Type", "application/json")
         }
+        configuration.applySessionHeaders(request)
 
         try {
             request.outputStream.use { it.write(gson.toJson(payload).toByteArray()) }
@@ -78,6 +81,27 @@ internal class AlphaBackendClient(
                     sourceName = it.source,
                 )
             }
+        } finally {
+            request.disconnect()
+        }
+    }
+
+    suspend fun refreshSession(refreshToken: String): AlphaBackendAuthSession = withContext(Dispatchers.IO) {
+        val request = (URL("${configuration.baseUrl.trimEnd('/')}/auth/session/refresh").openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            connectTimeout = configuration.timeoutMs
+            readTimeout = configuration.timeoutMs
+            doOutput = true
+            setRequestProperty("Content-Type", "application/json")
+        }
+        configuration.applySessionHeaders(request)
+
+        try {
+            val payload = gson.toJson(mapOf("refreshToken" to refreshToken))
+            request.outputStream.use { it.write(payload.toByteArray()) }
+            if (request.responseCode !in 200..299) throw AlphaBackendError.Unavailable(request.responseCode)
+            val body = request.inputStream.bufferedReader().use { it.readText() }
+            gson.fromJson(body, AlphaBackendAuthSession::class.java)
         } finally {
             request.disconnect()
         }
@@ -131,12 +155,30 @@ internal class AlphaBackendClient(
 }
 
 internal data class AlphaBackendConfiguration(
-    val baseUrl: String = resolveRossBackendBaseUrl(),
+    private val baseUrlOverrideProvider: () -> String? = { AlphaBackendBaseUrlOverrideSnapshot.shared.value() },
     val timeoutMs: Int = 10_000,
-    val accountToken: String = "acct_alpha_ross_local",
     val deviceIdHash: String = "a1b2c3d4e5f6a7b8",
     val appVersion: String = "0.1.0",
-)
+) {
+    val baseUrl: String
+        get() = resolveRossBackendBaseUrl(
+            overrideValue = baseUrlOverrideProvider(),
+            buildConfigValue = BuildConfig.ROSS_BACKEND_BASE_URL,
+        )
+
+    val accountToken: String
+        get() = AlphaAccountSessionSnapshot.shared.accountToken("acct_alpha_ross_local")
+
+    val accessToken: String?
+        get() = AlphaAccountSessionSnapshot.shared.accessToken()
+
+    fun applySessionHeaders(connection: HttpURLConnection) {
+        connection.setRequestProperty("X-Ross-Account-Token", accountToken)
+        accessToken?.let { token ->
+            connection.setRequestProperty("Authorization", "Bearer $token")
+        }
+    }
+}
 
 internal sealed class AlphaBackendError(message: String) : IOException(message) {
     data class Unavailable(val code: Int) : AlphaBackendError("Backend unavailable with status $code")
@@ -148,6 +190,18 @@ internal sealed class AlphaBackendError(message: String) : IOException(message) 
 internal data class AlphaBackendCatalogResponse(val manifest: AlphaSignedEnvelope<AlphaBackendCatalogManifest>)
 internal data class AlphaBackendDownloadSessionResponse(val downloadSession: AlphaSignedEnvelope<AlphaBackendDownloadSessionPayload>)
 internal data class AlphaBackendPublicLawResponse(val results: List<AlphaBackendPublicLawResult>)
+internal data class AlphaBackendAuthSession(
+    val accountToken: String,
+    val accessToken: String,
+    val refreshToken: String,
+    val subject: String,
+    val expiresAt: String,
+    val profile: AlphaBackendAuthProfile? = null,
+)
+internal data class AlphaBackendAuthProfile(
+    val email: String? = null,
+    val displayName: String? = null,
+)
 
 internal data class AlphaSignedEnvelope<T>(
     val signature: String,
@@ -267,11 +321,15 @@ private fun sha256(bytes: ByteArray): String =
     MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
 
 internal fun resolveRossBackendBaseUrl(
+    overrideValue: String? = AlphaBackendBaseUrlOverrideSnapshot.shared.value(),
     systemPropertyValue: String? = System.getProperty("ross.backend.baseUrl"),
     canonicalSystemPropertyValue: String? = System.getProperty("ROSS_BACKEND_BASE_URL"),
     buildConfigValue: String = BuildConfig.ROSS_BACKEND_BASE_URL,
 ): String =
-    systemPropertyValue
+    overrideValue
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
+        ?: systemPropertyValue
         ?.trim()
         ?.takeIf { it.isNotBlank() }
         ?: canonicalSystemPropertyValue

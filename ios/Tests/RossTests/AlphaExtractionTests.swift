@@ -2,6 +2,11 @@ import XCTest
 @testable import Ross
 
 final class AlphaExtractionTests: XCTestCase {
+    override func tearDown() {
+        rossSetBackendBaseURLOverride(nil)
+        super.tearDown()
+    }
+
     private func installedPack(_ tier: AlphaCapabilityTier, runtimeMode: AlphaPackRuntimeMode = .deterministicDev) -> AlphaInstalledModelPack {
         AlphaInstalledModelPack(
             packId: "\(tier.rawValue)-pack",
@@ -375,5 +380,11 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(model.publicLawPreview?.query.contains("delay in filing written statement") == true)
         XCTAssertFalse(model.publicLawPreview?.query.contains("Private Matter") == true)
         XCTAssertFalse(model.publicLawPreview?.query.contains("Raghav Fakepriv") == true)
+    }
+
+    func testRossBackendBaseURLUsesSavedOverride() {
+        rossSetBackendBaseURLOverride("http://127.0.0.1:8787")
+
+        XCTAssertEqual(rossBackendBaseURL().absoluteString, "http://127.0.0.1:8787")
     }
 }

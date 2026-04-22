@@ -156,6 +156,17 @@ object AlphaPayloadShaper {
             sanitized = suggestedPublicLawQuery(case)
                 ?: "Find current public-law guidance relevant to delay condonation where diligence is documented."
             removed += "Private case details"
+        } else {
+            val legalCandidate = sanitized
+                .lowercase()
+                .replace(Regex("[^a-z0-9\\s]"), " ")
+                .replace(Regex("\\s+"), " ")
+                .trim()
+            if (legalCandidate.isNotBlank() && !looksLikeLegalConcept(legalCandidate)) {
+                sanitized = suggestedPublicLawQuery(case)
+                    ?: "Find current public-law guidance relevant to delay condonation where diligence is documented."
+                removed += "General drafting phrasing"
+            }
         }
 
         return AlphaPublicLawPreview(

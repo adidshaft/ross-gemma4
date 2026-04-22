@@ -1098,7 +1098,7 @@ final class AlphaRossModel {
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
                     title: "Public-law search unavailable",
-                    detail: "Ross could not reach the sanitized public-law backend with the approved preview.",
+                    detail: "Could not search public law right now. Your files stayed on this device.",
                     purpose: .public_law_search,
                     payloadClass: .sanitized_public_query,
                     endpointLabel: "/public-law/search",
@@ -1921,7 +1921,7 @@ final class AlphaRossModel {
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
                     title: "Public-law search unavailable",
-                    detail: "Ross could not reach the sanitized public-law backend with the approved preview.",
+                    detail: "Could not search public law right now. Your files stayed on this device.",
                     purpose: .public_law_search,
                     payloadClass: .sanitized_public_query,
                     endpointLabel: "/public-law/search",
@@ -2933,6 +2933,7 @@ final class AlphaRossModel {
 
     private func normalizeLoadedState(_ state: AlphaPersistedState) -> AlphaPersistedState {
         var normalized = state
+        normalized.onboardingStage = .completed
         normalized.selectedTab = normalized.selectedTab.normalizedForLawyerShell
         if !normalized.cases.contains(where: { $0.id == alphaSharedWorkspaceID }) {
             normalized.cases.append(sharedWorkspaceMatter())
@@ -3365,6 +3366,21 @@ final class AlphaRossModel {
         let suggested = suggestedPublicLawQuery() ?? "Find current public-law guidance relevant to delay condonation where diligence is documented."
         var sanitized = question
         var removed: [String] = []
+        let blockedTerms = [
+            "case number",
+            "case no",
+            "case no.",
+            "client",
+            "party",
+            "petitioner",
+            "respondent",
+            "chat history",
+            "source chunk",
+            "ocr",
+            "filename",
+            "address",
+            "mobile"
+        ]
 
         if let caseMatter {
             let sensitiveTokens = [caseMatter.title, caseMatter.forum] + caseMatter.documents.map(\.title) + caseMatter.documents.map(\.fileName)
@@ -3376,13 +3392,23 @@ final class AlphaRossModel {
             }
         }
 
+        blockedTerms.forEach { token in
+            if sanitized.localizedCaseInsensitiveContains(token) {
+                removed.append("Case-detail phrasing and private drafting cues")
+                sanitized = sanitized.replacingOccurrences(of: token, with: "", options: .caseInsensitive)
+            }
+        }
+
         let patterns: [(String, String)] = [
             (#"\b\d{2,}\b"#, "Case numbers, phone numbers, or long numeric strings"),
+            (#"\b[A-Za-z]{1,8}[(/\- ]*\d+[A-Za-z/()\- ]*\d{4}\b"#, "Case numbers or filing references"),
             (#"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+"#, "Email addresses"),
             (#"\b\+?\d[\d\s-]{7,}\b"#, "Phone numbers"),
             (#"\b[^ ]+\.(pdf|docx|doc|txt|png|jpg|jpeg)\b"#, "File names"),
             (#"\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b"#, "Exact private dates"),
-            (#"raghav\s+fakepriv|blue suitcase near temple"#, "Fake secrets and private facts")
+            (#"\b\d{1,2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+\d{4}\b"#, "Exact private dates"),
+            (#"raghav\s+fakepriv|blue suitcase near temple"#, "Fake secrets and private facts"),
+            (#"\b(?:near|behind|opposite|at)\s+[A-Za-z][A-Za-z\s]{3,40}\b"#, "Addresses or location details")
         ]
 
         for (pattern, label) in patterns {
@@ -3404,6 +3430,16 @@ final class AlphaRossModel {
         if sanitized.isEmpty {
             sanitized = suggested
             removed.append("Private case details")
+        } else {
+            let legalCandidate = sanitized
+                .lowercased()
+                .replacingOccurrences(of: #"[^a-z0-9\s]"#, with: " ", options: .regularExpression)
+                .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if !legalCandidate.isEmpty && !looksLikeLegalConcept(legalCandidate) {
+                sanitized = suggested
+                removed.append("General drafting phrasing")
+            }
         }
 
         return AlphaPublicLawPreview(
@@ -3655,7 +3691,7 @@ private actor AlphaBackendClient {
 
 private struct AlphaBackendConfiguration {
     let baseURL: URL
-    let requestTimeout: TimeInterval = 2
+    let requestTimeout: TimeInterval = 10
     var accountToken: String {
         RossAuthSessionSnapshot.shared.accountToken(fallback: "acct_local_alpha_device")
     }
@@ -9801,6 +9837,7 @@ private struct AlphaExportsScreen: View {
 private struct AlphaSettingsScreen: View {
     @Bindable var model: AlphaRossModel
     let authController: RossAuthController?
+    @State private var backendAddressDraft = rossBackendBaseURLOverride() ?? ""
 
     private var publicLawApprovalBinding: Binding<Bool> {
         Binding(
@@ -9844,7 +9881,26 @@ private struct AlphaSettingsScreen: View {
                         VStack(alignment: .leading, spacing: 12) {
                             AlphaSettingsValueRow(label: "Signed in as", value: session.email)
                             Divider()
-                            AlphaSettingsValueRow(label: "Unlock", value: authController.quickUnlockSummary)
+                            if authController.canUseQuickUnlock {
+                                Toggle(
+                                    "Use device unlock",
+                                    isOn: Binding(
+                                        get: { authController.quickUnlockEnabled },
+                                        set: { authController.setQuickUnlockEnabled($0) }
+                                    )
+                                )
+                                .tint(Color.rossAccent)
+
+                                Text(
+                                    authController.quickUnlockEnabled
+                                        ? "Ross locks again when the app leaves the screen."
+                                        : "Turn this on to reopen Ross with Face ID, Touch ID, or device passcode.",
+                                    )
+                                    .font(.footnote)
+                                    .foregroundStyle(Color.rossInk.opacity(0.64))
+                            } else {
+                                AlphaSettingsValueRow(label: "Unlock", value: "Quick unlock is not available on this device.")
+                            }
                             Divider()
                             Button(role: .destructive, action: authController.signOut) {
                                 HStack(spacing: 12) {
@@ -9925,6 +9981,48 @@ private struct AlphaSettingsScreen: View {
                         }
                         .buttonStyle(.plain)
                     }
+                }
+
+                RossSectionCard(title: "Advanced") {
+                    DisclosureGroup("Technical diagnostics") {
+                        VStack(alignment: .leading, spacing: 12) {
+                            AlphaSettingsValueRow(label: "Current server", value: rossBackendBaseURL().absoluteString)
+
+                            TextField("http://127.0.0.1:8080", text: $backendAddressDraft)
+                                .autocorrectionDisabled(true)
+                                .font(.system(size: 13, weight: .regular, design: .monospaced))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 10)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .fill(Color.rossGroupedBackground)
+                                )
+
+                            Text("For internal testing only. iPhone Simulator usually uses 127.0.0.1, Android emulator uses 10.0.2.2, and a physical device needs your Mac's LAN IP.")
+                                .font(.caption2)
+                                .foregroundStyle(Color.rossInk.opacity(0.62))
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            HStack(spacing: 10) {
+                                Button("Save test server") {
+                                    let normalized = backendAddressDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                                    backendAddressDraft = normalized
+                                    rossSetBackendBaseURLOverride(normalized)
+                                }
+                                .rossGlassButtonStyle(tint: Color.rossAccent)
+
+                                Button("Use default address") {
+                                    backendAddressDraft = ""
+                                    rossSetBackendBaseURLOverride(nil)
+                                }
+                                .buttonStyle(.plain)
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(Color.rossInk.opacity(0.7))
+                            }
+                        }
+                        .padding(.top, 12)
+                    }
+                    .tint(Color.rossAccent)
                 }
             }
             .padding(alphaScreenPadding)
@@ -10115,8 +10213,8 @@ private struct AlphaPrivateAISettingsScreen: View {
                 }
 
                 if let runtimeHealth = model.activeRuntimeHealth {
-                    RossSectionCard(title: "Diagnostics") {
-                        DisclosureGroup("Diagnostics details") {
+                    RossSectionCard(title: "Advanced") {
+                        DisclosureGroup("Technical diagnostics") {
                             VStack(alignment: .leading, spacing: 10) {
                                 AlphaSettingsValueRow(label: "Runtime mode", value: runtimeHealth.runtimeMode.rawValue)
                                 AlphaSettingsValueRow(label: "Artifact kind", value: model.activePack?.artifactKind ?? "Missing")
@@ -10169,7 +10267,7 @@ private struct AlphaPrivacyLedgerScreen: View {
                     ForEach(model.persisted.ledgerEntries) { entry in
                         RossSectionCard(title: entry.lawyerTitle, subtitle: entry.lawyerDetail) {
                             HStack(alignment: .center, spacing: 12) {
-                                Text(entry.purpose.rawValue.replacingOccurrences(of: "_", with: " "))
+                                Text(entry.lawyerPurposeLabel)
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(Color.rossInk.opacity(0.68))
 
@@ -10354,14 +10452,14 @@ private struct AlphaPrivateAIInstalledPackCard: View {
                         .font(.headline)
                         .foregroundStyle(Color.rossInk)
 
-                    Text(pack.developmentOnly ? "Development artifact only" : "Ready on this device")
+                    Text(pack.developmentOnly ? "Needs attention" : "Ready on this device")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(pack.developmentOnly ? Color.orange : Color.rossSuccess)
                 }
 
                 Spacer(minLength: 8)
 
-                AlphaPrivateAIInlineBadge(title: pack.runtimeMode.rawValue, tint: Color.rossAccent)
+                AlphaPrivateAIInlineBadge(title: pack.developmentOnly ? "Needs attention" : "Ready", tint: Color.rossAccent)
             }
 
             HStack(spacing: 10) {
