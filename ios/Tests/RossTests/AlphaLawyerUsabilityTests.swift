@@ -299,7 +299,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             let preview = await MainActor.run { model.publicLawPreview }
 
             XCTAssertTrue(tasks.contains(where: { $0.title == "prepare hearing note" }))
-            XCTAssertEqual("Task saved locally", latestResult?.answerTitle)
+            XCTAssertEqual("Task added.", latestResult?.answerTitle)
             XCTAssertEqual("Saved locally", latestResult?.statusNote)
             XCTAssertNil(preview)
         }
@@ -333,7 +333,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                     $0.title == "Next hearing" &&
                     Calendar.current.isDate($0.date, inSameDayAs: DateComponents(calendar: .current, year: 2026, month: 5, day: 1).date!)
             }))
-            XCTAssertTrue(latestResult?.answerTitle.contains("saved locally") == true)
+            XCTAssertEqual("Date saved.", latestResult?.answerTitle)
         }
     }
 
@@ -363,6 +363,74 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertFalse(exports.isEmpty)
             XCTAssertEqual("Hearing note ready", latestResult?.answerTitle)
             XCTAssertEqual("Draft ready", latestResult?.statusNote)
+        }
+    }
+
+    func testDockCommandCreatesTasksFromSelectedDocument() async throws {
+        try await withRestoredStore { store in
+            let state = AlphaPersistedState.demoSeed()
+            try await store.replace(with: state)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+            let identifiers = await MainActor.run {
+                let caseMatter = model.persisted.cases.first(where: { $0.title == "Demo Matter: Sharma v. Rana" })
+                return (caseMatter?.id, caseMatter?.documents.first?.id)
+            }
+            let caseID = try XCTUnwrap(identifiers.0)
+            let documentID = try XCTUnwrap(identifiers.1)
+
+            await MainActor.run {
+                model.setSelectedAskDocumentIDs([documentID], for: caseID)
+            }
+
+            let initialTaskCount = await MainActor.run { model.tasks(for: caseID).count }
+            await model.submitDockInput(
+                question: "create tasks from this document",
+                scopeCaseID: caseID,
+                webEnabled: false
+            )
+
+            let finalTaskCount = await MainActor.run { model.tasks(for: caseID).count }
+            let latestResult = await MainActor.run { model.latestAskResult }
+
+            XCTAssertTrue(finalTaskCount >= initialTaskCount)
+            XCTAssertNotNil(latestResult)
+            XCTAssertTrue(["Tasks added.", "No new tasks needed."].contains(latestResult?.answerTitle ?? ""))
+        }
+    }
+
+    func testDockCommandCanRerunSelectedDocumentReview() async throws {
+        try await withRestoredStore { store in
+            let state = AlphaPersistedState.demoSeed()
+            try await store.replace(with: state)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+            let identifiers = await MainActor.run {
+                let caseMatter = model.persisted.cases.first(where: { $0.title == "Demo Matter: Sharma v. Rana" })
+                return (caseMatter?.id, caseMatter?.documents.first?.id)
+            }
+            let caseID = try XCTUnwrap(identifiers.0)
+            let documentID = try XCTUnwrap(identifiers.1)
+
+            await MainActor.run {
+                model.setSelectedAskDocumentIDs([documentID], for: caseID)
+            }
+
+            await model.submitDockInput(
+                question: "review this document",
+                scopeCaseID: caseID,
+                webEnabled: false
+            )
+
+            let latestResult = await MainActor.run { model.latestAskResult }
+            XCTAssertEqual("Review updated.", latestResult?.answerTitle)
+            XCTAssertEqual("Review updated", latestResult?.statusNote)
         }
     }
 

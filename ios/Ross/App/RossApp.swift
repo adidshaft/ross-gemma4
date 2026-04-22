@@ -1076,7 +1076,7 @@ private struct RossAuthSignInSheet: View {
                                     }
                                 )
 
-                                Text("Demo mode is for local testing only. Use `advocate@ross.ai`.")
+                                Text("Demo mode uses sample data only. Use `advocate@ross.ai`.")
                                     .font(.system(size: 11, weight: .medium))
                                     .foregroundStyle(Color.rossInk.opacity(0.5))
 

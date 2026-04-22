@@ -79,8 +79,8 @@ enum class AlphaAppearanceMode(val label: String) {
 }
 enum class AlphaCapabilityTier(val tierId: String, val title: String, val summary: String, val downloadSizeLabel: String, val installedSizeLabel: String) {
     QuickStart("quick_start", "Quick Start", "Basic extraction for short documents, simple summaries, and lighter storage use.", "1.2 GB", "2.1 GB"),
-    CaseAssociate("case_associate", "Case Associate", "Better document understanding, stronger field extraction, mixed English/Hindi support, and source-backed chronology work.", "2.8 GB", "4.9 GB"),
-    SeniorDraftingSupport("senior_drafting_support", "Senior Drafting Support", "Deeper review, verification pass, longer bilingual bundles, and evidence or issue analysis.", "4.6 GB", "7.4 GB");
+    CaseAssociate("case_associate", "Case Associate", "Better document understanding, stronger field extraction, mixed English/Hindi support, and stronger chronology work.", "2.8 GB", "4.9 GB"),
+    SeniorDraftingSupport("senior_drafting_support", "Senior Drafting Support", "Deeper review, longer bilingual bundles, and stronger evidence or issue analysis.", "4.6 GB", "7.4 GB");
 
     val compactSetupSummary: String
         get() = when (this) {
@@ -99,8 +99,8 @@ enum class AlphaCapabilityTier(val tierId: String, val title: String, val summar
     val bestFor: String
         get() = when (this) {
             QuickStart -> "Fast intake, smaller devices, and standard extraction for short documents."
-            CaseAssociate -> "Most advocates who need source-backed extraction, chronology work, and mixed-language review on-device."
-            SeniorDraftingSupport -> "Longer bundles, hearing prep, verification passes, and stronger bilingual workflows."
+            CaseAssociate -> "Most advocates who need stronger extraction, chronology work, and mixed-language review on-device."
+            SeniorDraftingSupport -> "Longer bundles, hearing prep, and stronger bilingual workflows."
         }
 
     val setupTimeLabel: String
@@ -520,6 +520,8 @@ internal class AlphaRossController(
         data class AddTask(val title: String, val dueDate: String?) : DockCommandAction
         data class AddMatterDate(val title: String, val kind: AlphaMatterDateKind, val date: String) : DockCommandAction
         data class GenerateExport(val kind: String, val label: String) : DockCommandAction
+        data object RerunDocumentReview : DockCommandAction
+        data object CreateTasksFromDocument : DockCommandAction
         data class Guidance(val title: String, val detail: String) : DockCommandAction
     }
 
@@ -1590,6 +1592,58 @@ internal class AlphaRossController(
         }
     }
 
+    private fun selectedOrLatestAskDocument(scopeCaseId: String?): Pair<AlphaCaseMatter, AlphaCaseDocument>? {
+        selectedAskDocuments(scopeCaseId).firstOrNull()?.let { selected ->
+            val case = persisted.cases.firstOrNull { it.id == selected.caseId } ?: return@let
+            val document = case.documents.firstOrNull { it.id == selected.id } ?: return@let
+            return case to document
+        }
+
+        val case = scopeCaseId?.let { id -> persisted.cases.firstOrNull { it.id == id } } ?: return null
+        val document = case.documents.maxByOrNull { it.importedAt } ?: return null
+        return case to document
+    }
+
+    private fun normalizedTaskTitle(value: String, fallback: String): String {
+        val trimmed = value.trim().replace(Regex("\\s+"), " ")
+        if (trimmed.isBlank()) return fallback
+        val candidate = trimmed.removeSuffix(".")
+        return candidate.take(90)
+    }
+
+    private fun suggestedTaskTitles(case: AlphaCaseMatter, document: AlphaCaseDocument): List<String> {
+        val visibleFields = visibleExtractedFields(case.id, document.id)
+        val directionFields = visibleFields.filter {
+            it.fieldType == AlphaExtractedLegalFieldType.OrderDirection ||
+                it.fieldType == AlphaExtractedLegalFieldType.Issue ||
+                it.fieldType == AlphaExtractedLegalFieldType.Relief ||
+                it.fieldType == AlphaExtractedLegalFieldType.Prayer
+        }
+        val nextDateValue = visibleFields.firstOrNull {
+            (it.fieldType == AlphaExtractedLegalFieldType.NextDate || it.fieldType == AlphaExtractedLegalFieldType.Date) &&
+                (!it.needsReview || it.userCorrected)
+        }?.value
+        val hasReviewWork = reviewQueue(case.id).any { it.documentId == document.id }
+
+        val suggestions = buildList {
+            directionFields.take(2).forEach { add(normalizedTaskTitle(it.value, "Review ${document.title}")) }
+            nextDateValue?.takeIf { it.isNotBlank() }?.let { add("Prepare for $it from ${document.title}") }
+            if (hasReviewWork) {
+                add("Resolve review points in ${document.title}")
+            }
+            add("Review ${document.title}")
+        }
+
+        return suggestions.distinctBy { it.lowercase() }.take(3)
+    }
+
+    private fun addSuggestedTasks(case: AlphaCaseMatter, document: AlphaCaseDocument): Int {
+        val existingTitles = tasks(case.id).map { it.title.lowercase() }.toSet()
+        val newTitles = suggestedTaskTitles(case, document).filterNot { it.lowercase() in existingTitles }
+        newTitles.forEach { addTask(title = it, caseId = case.id, dueDate = null) }
+        return newTitles.size
+    }
+
     private fun runDockCommand(command: DockCommandAction, rawInput: String, scopeCaseId: String?) {
         pendingPublicLawQuestion = null
         pendingPublicLawScopeCaseId = null
@@ -1605,7 +1659,7 @@ internal class AlphaRossController(
                     scopeCaseId = scopeCaseId,
                     scopeLabel = scopeLabel(scopeCaseId),
                     selectedDocumentTitles = selectedDocumentTitles,
-                    answerTitle = "Task saved locally",
+                    answerTitle = "Task added.",
                     answerSections = listOf(
                         "${command.title} was added on this device.",
                         command.dueDate?.let { "Due ${dockCommandDateLabel(it)}." } ?: "Open the task list any time to mark it done or snooze it."
@@ -1637,7 +1691,7 @@ internal class AlphaRossController(
                         scopeCaseId = scopeCaseId,
                         scopeLabel = scopeLabel(scopeCaseId),
                         selectedDocumentTitles = selectedDocumentTitles,
-                        answerTitle = "${command.kind.title} saved locally",
+                        answerTitle = "Date saved.",
                         answerSections = listOf(
                             "${command.title} is saved for ${dockCommandDateLabel(command.date)}.",
                             "You can mark it done or cancel it from the matter timeline."
@@ -1677,6 +1731,78 @@ internal class AlphaRossController(
                         ),
                         caseFileSources = emptyList(),
                         statusNote = "Draft ready",
+                    )
+                }
+            }
+
+            DockCommandAction.RerunDocumentReview -> {
+                val target = selectedOrLatestAskDocument(scopeCaseId)
+                if (target == null) {
+                    AlphaAskResult(
+                        question = rawInput,
+                        scopeCaseId = scopeCaseId,
+                        scopeLabel = scopeLabel(scopeCaseId),
+                        selectedDocumentTitles = selectedDocumentTitles,
+                        answerTitle = "Choose a document first",
+                        answerSections = listOf(
+                            "Tag a file in Ask Ross or open the document before asking Ross to review it again.",
+                            "Ross did not change anything."
+                        ),
+                        caseFileSources = emptyList(),
+                        statusNote = "No change made",
+                    )
+                } else {
+                    rerunReview(target.first.id, target.second.id)
+                    AlphaAskResult(
+                        question = rawInput,
+                        scopeCaseId = target.first.id,
+                        scopeLabel = scopeLabel(target.first.id),
+                        selectedDocumentTitles = listOf(target.second.title),
+                        answerTitle = "Review updated.",
+                        answerSections = listOf(
+                            "Ross reviewed ${target.second.title} again on this device.",
+                            "Open the review items to accept, edit, or ignore anything that still needs attention."
+                        ),
+                        caseFileSources = emptyList(),
+                        statusNote = "Review updated",
+                    )
+                }
+            }
+
+            DockCommandAction.CreateTasksFromDocument -> {
+                val target = selectedOrLatestAskDocument(scopeCaseId)
+                if (target == null) {
+                    AlphaAskResult(
+                        question = rawInput,
+                        scopeCaseId = scopeCaseId,
+                        scopeLabel = scopeLabel(scopeCaseId),
+                        selectedDocumentTitles = selectedDocumentTitles,
+                        answerTitle = "Choose a document first",
+                        answerSections = listOf(
+                            "Tag a file in Ask Ross or open the latest document before asking Ross to create tasks from it.",
+                            "Ross did not change anything."
+                        ),
+                        caseFileSources = emptyList(),
+                        statusNote = "No change made",
+                    )
+                } else {
+                    val addedCount = addSuggestedTasks(target.first, target.second)
+                    AlphaAskResult(
+                        question = rawInput,
+                        scopeCaseId = target.first.id,
+                        scopeLabel = scopeLabel(target.first.id),
+                        selectedDocumentTitles = listOf(target.second.title),
+                        answerTitle = if (addedCount == 0) "No new tasks needed." else "Tasks added.",
+                        answerSections = listOf(
+                            if (addedCount == 0) {
+                                "The likely follow-up tasks were already saved for this matter."
+                            } else {
+                                "$addedCount task(s) were added from ${target.second.title}."
+                            },
+                            "Open Tasks to adjust dates or mark anything done."
+                        ),
+                        caseFileSources = emptyList(),
+                        statusNote = if (addedCount == 0) "No change made" else "Saved locally",
                     )
                 }
             }
@@ -2245,6 +2371,12 @@ internal class AlphaRossController(
         val asksAboutSchedule = lowered.contains("next date") || lowered.contains("hearing")
         val asksAboutTasks = lowered.contains("task") || lowered.contains("today") || lowered.contains("reminder") || lowered.contains("due")
         val asksAboutReview = lowered.contains("review") || lowered.contains("document") || lowered.contains("order") || lowered.contains("party")
+        val asksForMatterSummary = lowered.contains("status of this matter") || lowered.contains("status of this case") || lowered.contains("summarize this matter") || lowered.contains("summarise this matter") || lowered.contains("matter summary")
+        val asksForDocumentSummary = lowered.contains("summarize this document") || lowered.contains("summarise this document") || lowered.contains("what did the latest order say") || lowered.contains("latest order") || lowered.contains("current document")
+        val asksForImportantDates = lowered.contains("important dates") || lowered.contains("list important dates") || lowered.contains("list dates")
+        val asksForNextActions = lowered.contains("what should i do next") || lowered.contains("next actions") || lowered.contains("suggest next action") || lowered.contains("what tasks should i create") || lowered.contains("needs my attention today")
+        val scopedPrimaryCase = scopeCaseId?.let { id -> persisted.cases.firstOrNull { it.id == id } }
+        val selectedDocumentTarget = selectedOrLatestAskDocument(scopeCaseId)
         val matchedSources = visibleCases
             .flatMap { it.sourceRefs }
             .filter { selectedDocumentIds.isEmpty() || it.documentId in selectedDocumentIds }
@@ -2252,10 +2384,56 @@ internal class AlphaRossController(
                 asksAboutSchedule ||
                     asksAboutTasks ||
                     asksAboutReview ||
+                    asksForDocumentSummary ||
                     lowered.contains(it.documentTitle.lowercase()) ||
                     lowered.contains((it.textSnippet ?: "").lowercase())
             }
         val sections = mutableListOf<String>()
+        if (asksForMatterSummary && scopedPrimaryCase != null) {
+            sections += scopedPrimaryCase.summary
+            scopedPrimaryCase.nextHearing?.let { sections += "Next hearing: ${alphaMatterDateLabel(it)}." }
+            if (scopedPrimaryCase.draftTasks.isNotEmpty()) {
+                sections += "Next actions: ${scopedPrimaryCase.draftTasks.take(2).joinToString("; ")}."
+            }
+        }
+        if (asksForDocumentSummary && selectedDocumentTarget != null) {
+            val (case, document) = selectedDocumentTarget
+            val visibleFields = visibleExtractedFields(case.id, document.id)
+            val direction = visibleFields.firstOrNull {
+                it.fieldType == AlphaExtractedLegalFieldType.OrderDirection ||
+                    it.fieldType == AlphaExtractedLegalFieldType.Issue ||
+                    it.fieldType == AlphaExtractedLegalFieldType.Relief
+            }?.value
+            sections += "${document.title} is available in this matter."
+            visibleFields.firstOrNull { it.fieldType == AlphaExtractedLegalFieldType.NextDate }?.value?.let {
+                sections += "Next date found: $it."
+            }
+            when {
+                !direction.isNullOrBlank() -> sections += direction!!
+                document.pages.firstOrNull()?.snippet?.isNotBlank() == true -> sections += document.pages.first().snippet.orEmpty()
+            }
+        }
+        if (asksForImportantDates) {
+            visibleCases
+                .filter { it.id != ALPHA_SHARED_WORKSPACE_ID }
+                .flatMap { case ->
+                    case.dates
+                        .filter { it.status == AlphaMatterDateStatus.Scheduled }
+                        .sortedBy { it.date }
+                        .take(2)
+                        .map { "${case.title}: ${it.title} on ${alphaMatterDateLabel(it.date)}" }
+                }
+                .take(3)
+                .forEach(sections::add)
+        }
+        if (asksForNextActions && scopedPrimaryCase != null) {
+            val nextActions = if (scopedPrimaryCase.draftTasks.isEmpty()) {
+                openTasks(scopeCaseId).take(3).map { it.title }
+            } else {
+                scopedPrimaryCase.draftTasks.take(3)
+            }
+            sections += nextActions
+        }
         if (asksAboutSchedule) {
             cases.filter { scopeCaseId == null || it.id == scopeCaseId }.mapNotNull { case ->
                 case.nextHearing?.let { nextDate -> "${case.title}: ${nextDate.take(10)}" }
@@ -2282,12 +2460,22 @@ internal class AlphaRossController(
             }
         }
         val notFound = sections.isEmpty() && matchedSources.isEmpty()
+        val answerTitle = when {
+            notFound -> "Ross could not find this in your files yet."
+            asksForMatterSummary -> "Matter summary"
+            asksForDocumentSummary -> "Document summary"
+            asksForImportantDates || asksAboutSchedule -> "Important dates"
+            asksForNextActions -> "Next actions"
+            asksAboutTasks -> "Tasks from your files"
+            asksAboutReview -> "Review items from your files"
+            else -> "Ross drafted this from your files"
+        }
         return AlphaAskResult(
             question = question,
             scopeCaseId = scopeCaseId,
             scopeLabel = scopeLabel(scopeCaseId),
             selectedDocumentTitles = selectedDocuments.map { it.title },
-            answerTitle = if (notFound) "Ross could not find this in your files yet." else "Ross drafted this from your files",
+            answerTitle = answerTitle,
             answerSections = if (notFound) listOf("Ross could not find this in your files yet.") else sections.take(3),
             caseFileSources = matchedSources.take(3),
             statusNote = if (notFound) "Web Search is off" else if (selectedDocuments.isEmpty()) "Chat · local files" else "Chat · selected files only",
@@ -2938,6 +3126,28 @@ internal class AlphaRossController(
             return DockCommandAction.GenerateExport(kind = kind, label = label)
         }
 
+        if (
+            lowered.startsWith("review this document") ||
+            lowered.startsWith("review this file") ||
+            lowered.startsWith("review this order") ||
+            lowered.startsWith("review latest document") ||
+            lowered.startsWith("review latest order") ||
+            lowered.startsWith("review this document again") ||
+            lowered.startsWith("review this file again")
+        ) {
+            return DockCommandAction.RerunDocumentReview
+        }
+
+        if (
+            lowered.startsWith("create tasks from this document") ||
+            lowered.startsWith("create tasks from this file") ||
+            lowered.startsWith("create tasks from this order") ||
+            lowered.startsWith("create tasks from latest order") ||
+            lowered.startsWith("create tasks from latest document")
+        ) {
+            return DockCommandAction.CreateTasksFromDocument
+        }
+
         dockCommandBody(normalized, listOf("add task ", "create task ", "save task ", "add reminder ", "save reminder ", "remind me to "))?.let { body ->
             val (title, dueDate) = dockCommandTitleAndDate(body)
             return if (title.isBlank()) {
@@ -3529,8 +3739,8 @@ fun AlphaCaseDocument.lawyerStatusTitle(): String {
 }
 
 fun AlphaPrivacyLedgerEntry.lawyerTitle(): String = when (title) {
-    "Model catalog checked" -> "Checked Private AI availability"
-    "Private AI Pack queued", "Private AI Pack verified", "Private AI Pack fallback installed" -> "Downloaded Private AI Pack"
+    "Model catalog checked" -> "Checked private assistant setup"
+    "Private AI Pack queued", "Private AI Pack verified", "Private AI Pack fallback installed" -> "Set up private assistant"
     "Public-law query sent" -> "Searched public law"
     "Public-law search unavailable" -> "Public-law search needs attention"
     "Local export generated" -> "Generated local export"
@@ -3546,7 +3756,7 @@ fun AlphaPrivacyLedgerEntry.lawyerDetail(): String = when (title) {
     "Public-law search unavailable" ->
         "Ross could not complete the approved public-law search. Your case files stayed on this device."
     "Private AI Pack verified", "Private AI Pack fallback installed" ->
-        "A Private AI Pack was prepared on this device."
+        "Private assistant was prepared on this device."
     else -> detail
 }
 

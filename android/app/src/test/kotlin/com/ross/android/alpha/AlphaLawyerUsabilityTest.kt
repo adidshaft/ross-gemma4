@@ -161,7 +161,7 @@ class AlphaLawyerUsabilityTest {
         )
 
         assertTrue(controller.tasks(caseId).any { it.title == "prepare hearing note" })
-        assertEquals("Task saved locally", controller.latestAskResult?.answerTitle)
+        assertEquals("Task added.", controller.latestAskResult?.answerTitle)
         assertEquals("Saved locally", controller.latestAskResult?.statusNote)
         assertNull(controller.publicLawPreview)
     }
@@ -183,7 +183,7 @@ class AlphaLawyerUsabilityTest {
                 it.kind == AlphaMatterDateKind.Hearing && it.title == "Next hearing" && it.date.startsWith("2026-05-01")
             }
         )
-        assertTrue(controller.latestAskResult?.answerTitle?.contains("saved locally", ignoreCase = true) == true)
+        assertEquals("Date saved.", controller.latestAskResult?.answerTitle)
     }
 
     @Test
@@ -201,6 +201,44 @@ class AlphaLawyerUsabilityTest {
         assertTrue(controller.persisted.exports.any { it.caseId == caseId })
         assertEquals("Hearing note ready", controller.latestAskResult?.answerTitle)
         assertEquals("Draft ready", controller.latestAskResult?.statusNote)
+    }
+
+    @Test
+    fun `dock command creates tasks from selected document`() {
+        val controller = buildController(secretKeyProvider = InMemorySecretKeyProvider())
+        controller.signInDemoMode()
+        val caseId = controller.cases.first { it.title == "Demo Matter: Sharma v. Rana" }.id
+        val documentId = controller.persisted.cases.first { it.id == caseId }.documents.first().id
+        controller.openAsk(caseId, documentId)
+        val initialTaskCount = controller.tasks(caseId).size
+
+        controller.submitDockInput(
+            question = "create tasks from this document",
+            scopeCaseId = caseId,
+            webEnabled = false,
+        )
+
+        assertTrue(controller.tasks(caseId).size >= initialTaskCount)
+        assertTrue(listOf("Tasks added.", "No new tasks needed.").contains(controller.latestAskResult?.answerTitle))
+    }
+
+    @Test
+    fun `dock command can rerun selected document review`() {
+        val controller = buildController(secretKeyProvider = InMemorySecretKeyProvider())
+        controller.signInDemoMode()
+        val caseId = controller.cases.first { it.title == "Demo Matter: Sharma v. Rana" }.id
+        val documentId = controller.persisted.cases.first { it.id == caseId }.documents.first().id
+        controller.openAsk(caseId, documentId)
+
+        controller.submitDockInput(
+            question = "review this document",
+            scopeCaseId = caseId,
+            webEnabled = false,
+        )
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals("Review updated.", controller.latestAskResult?.answerTitle)
+        assertEquals("Review updated", controller.latestAskResult?.statusNote)
     }
 
     @Test

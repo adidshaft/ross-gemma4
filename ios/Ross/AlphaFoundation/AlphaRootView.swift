@@ -163,6 +163,8 @@ final class AlphaRossModel {
         case addTask(title: String, dueDate: Date?)
         case addMatterDate(title: String, kind: AlphaMatterDateKind, date: Date)
         case generateExport(kind: String, label: String)
+        case rerunDocumentReview
+        case createTasksFromDocument
         case guidance(title: String, detail: String)
     }
 
@@ -1251,6 +1253,74 @@ final class AlphaRossModel {
         }
     }
 
+    private func selectedOrLatestAskDocument(for scopeCaseID: UUID?) -> (caseMatter: AlphaCaseMatter, document: AlphaCaseDocument)? {
+        if let selected = selectedAskDocuments(for: scopeCaseID).first,
+           let caseMatter = persisted.cases.first(where: { $0.id == selected.caseId }),
+           let document = caseMatter.documents.first(where: { $0.id == selected.id }) {
+            return (caseMatter, document)
+        }
+
+        guard let scopeCaseID,
+              let caseMatter = persisted.cases.first(where: { $0.id == scopeCaseID }),
+              let document = caseMatter.documents.max(by: { $0.importedAt < $1.importedAt }) else {
+            return nil
+        }
+
+        return (caseMatter, document)
+    }
+
+    private func normalizedTaskTitle(from value: String, fallback: String) -> String {
+        let trimmed = value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        guard !trimmed.isEmpty else { return fallback }
+        let candidate = trimmed.hasSuffix(".") ? String(trimmed.dropLast()) : trimmed
+        return String(candidate.prefix(90))
+    }
+
+    private func suggestedTaskTitles(from document: AlphaCaseDocument, in caseMatter: AlphaCaseMatter) -> [String] {
+        let visibleFields = visibleExtractedFields(caseId: caseMatter.id, documentId: document.id)
+        let directionFields = visibleFields.filter {
+            [.orderDirection, .issue, .relief, .prayer].contains($0.fieldType)
+        }
+        let nextDateField = visibleFields.first {
+            ($0.fieldType == .nextDate || $0.fieldType == .date) && (!$0.needsReview || $0.userCorrected)
+        }
+        let hasReviewWork = !reviewQueue(caseId: caseMatter.id)
+            .filter { $0.documentId == document.id }
+            .isEmpty
+
+        var suggestions: [String] = directionFields.prefix(2).map {
+            normalizedTaskTitle(from: $0.value, fallback: "Review \(document.title)")
+        }
+
+        if let nextDateValue = nextDateField?.value, !nextDateValue.isEmpty {
+            suggestions.append("Prepare for \(nextDateValue) from \(document.title)")
+        }
+        if hasReviewWork {
+            suggestions.append("Resolve review points in \(document.title)")
+        }
+        suggestions.append("Review \(document.title)")
+
+        var deduped: [String] = []
+        for suggestion in suggestions where !deduped.contains(where: { $0.caseInsensitiveCompare(suggestion) == .orderedSame }) {
+            deduped.append(suggestion)
+        }
+        return Array(deduped.prefix(3))
+    }
+
+    private func addSuggestedTasks(from document: AlphaCaseDocument, in caseMatter: AlphaCaseMatter) -> Int {
+        let existingTitles = Set(tasks(for: caseMatter.id).map { $0.title.lowercased() })
+        let newTitles = suggestedTaskTitles(from: document, in: caseMatter)
+            .filter { !existingTitles.contains($0.lowercased()) }
+
+        for title in newTitles {
+            addTask(title: title, caseId: caseMatter.id, dueDate: nil)
+        }
+
+        return newTitles.count
+    }
+
     private func runDockCommand(_ command: DockCommandAction, rawInput: String, scopeCaseID: UUID?) async {
         pendingPublicLawQuestion = nil
         pendingPublicLawScopeCaseID = nil
@@ -1274,7 +1344,7 @@ final class AlphaRossModel {
                 scopeCaseID: scopeCaseID,
                 scopeLabel: scopeLabel(for: scopeCaseID),
                 selectedDocumentTitles: selectedDocumentTitles,
-                answerTitle: "Task saved locally",
+                answerTitle: "Task added.",
                 answerSections: [
                     "\(title) was added on this device.",
                     dueSection
@@ -1315,7 +1385,7 @@ final class AlphaRossModel {
                 scopeCaseID: scopeCaseID,
                 scopeLabel: scopeLabel(for: scopeCaseID),
                 selectedDocumentTitles: selectedDocumentTitles,
-                answerTitle: "\(kind.title) saved locally",
+                answerTitle: "Date saved.",
                 answerSections: [
                     "\(title) is saved for \(date.formatted(date: .abbreviated, time: .omitted)).",
                     "You can mark it done or cancel it from the matter timeline."
@@ -1370,6 +1440,90 @@ final class AlphaRossModel {
                 publicLawPreview: nil,
                 publicLawResults: [],
                 statusNote: exportCreated ? "Draft ready" : "Draft unavailable",
+                needsReviewWarning: nil
+            )
+
+        case .rerunDocumentReview:
+            guard let target = selectedOrLatestAskDocument(for: scopeCaseID) else {
+                result = AlphaAskResult(
+                    kind: .matterUpdate,
+                    question: rawInput,
+                    scopeCaseID: scopeCaseID,
+                    scopeLabel: scopeLabel(for: scopeCaseID),
+                    selectedDocumentTitles: selectedDocumentTitles,
+                    answerTitle: "Choose a document first",
+                    answerSections: [
+                        "Tag a file in Ask Ross or open the document before asking Ross to review it again.",
+                        "Ross did not change anything."
+                    ],
+                    caseFileSources: [],
+                    publicLawPreview: nil,
+                    publicLawResults: [],
+                    statusNote: "No change made",
+                    needsReviewWarning: nil
+                )
+                break
+            }
+
+            await rerunReview(caseId: target.caseMatter.id, documentId: target.document.id)
+            result = AlphaAskResult(
+                kind: .matterUpdate,
+                question: rawInput,
+                scopeCaseID: target.caseMatter.id,
+                scopeLabel: scopeLabel(for: target.caseMatter.id),
+                selectedDocumentTitles: [target.document.title],
+                answerTitle: "Review updated.",
+                answerSections: [
+                    "Ross reviewed \(target.document.title) again on this device.",
+                    "Open the review items to accept, edit, or ignore anything that still needs attention."
+                ],
+                caseFileSources: [],
+                publicLawPreview: nil,
+                publicLawResults: [],
+                statusNote: "Review updated",
+                needsReviewWarning: nil
+            )
+
+        case .createTasksFromDocument:
+            guard let target = selectedOrLatestAskDocument(for: scopeCaseID) else {
+                result = AlphaAskResult(
+                    kind: .matterUpdate,
+                    question: rawInput,
+                    scopeCaseID: scopeCaseID,
+                    scopeLabel: scopeLabel(for: scopeCaseID),
+                    selectedDocumentTitles: selectedDocumentTitles,
+                    answerTitle: "Choose a document first",
+                    answerSections: [
+                        "Tag a file in Ask Ross or open the latest document before asking Ross to create tasks from it.",
+                        "Ross did not change anything."
+                    ],
+                    caseFileSources: [],
+                    publicLawPreview: nil,
+                    publicLawResults: [],
+                    statusNote: "No change made",
+                    needsReviewWarning: nil
+                )
+                break
+            }
+
+            let addedCount = addSuggestedTasks(from: target.document, in: target.caseMatter)
+            result = AlphaAskResult(
+                kind: .matterUpdate,
+                question: rawInput,
+                scopeCaseID: target.caseMatter.id,
+                scopeLabel: scopeLabel(for: target.caseMatter.id),
+                selectedDocumentTitles: [target.document.title],
+                answerTitle: addedCount == 0 ? "No new tasks needed." : "Tasks added.",
+                answerSections: [
+                    addedCount == 0
+                        ? "The likely follow-up tasks were already saved for this matter."
+                        : "\(addedCount) task(s) were added from \(target.document.title).",
+                    "Open Tasks to adjust dates or mark anything done."
+                ],
+                caseFileSources: [],
+                publicLawPreview: nil,
+                publicLawResults: [],
+                statusNote: addedCount == 0 ? "No change made" : "Saved locally",
                 needsReviewWarning: nil
             )
 
@@ -3304,6 +3458,28 @@ final class AlphaRossModel {
             return .generateExport(kind: exportCommand.1, label: exportCommand.2)
         }
 
+        if [
+            "review this document",
+            "review this file",
+            "review this order",
+            "review latest document",
+            "review latest order",
+            "review this document again",
+            "review this file again"
+        ].contains(where: { lowered.hasPrefix($0) }) {
+            return .rerunDocumentReview
+        }
+
+        if [
+            "create tasks from this document",
+            "create tasks from this file",
+            "create tasks from this order",
+            "create tasks from latest order",
+            "create tasks from latest document"
+        ].contains(where: { lowered.hasPrefix($0) }) {
+            return .createTasksFromDocument
+        }
+
         if let body = dockCommandBody(in: normalized, prefixes: ["add task ", "create task ", "save task ", "add reminder ", "save reminder ", "remind me to "]) {
             let (title, dueDate) = dockCommandTitleAndDate(from: body)
             guard !title.isEmpty else {
@@ -3747,6 +3923,12 @@ final class AlphaRossModel {
         let asksAboutSchedule = lowered.contains("next date") || lowered.contains("hearing")
         let asksAboutTasks = lowered.contains("task") || lowered.contains("today") || lowered.contains("reminder") || lowered.contains("due")
         let asksAboutReview = lowered.contains("review") || lowered.contains("document") || lowered.contains("order") || lowered.contains("party")
+        let asksForMatterSummary = lowered.contains("status of this matter") || lowered.contains("status of this case") || lowered.contains("summarize this matter") || lowered.contains("summarise this matter") || lowered.contains("matter summary")
+        let asksForDocumentSummary = lowered.contains("summarize this document") || lowered.contains("summarise this document") || lowered.contains("what did the latest order say") || lowered.contains("latest order") || lowered.contains("current document")
+        let asksForImportantDates = lowered.contains("important dates") || lowered.contains("list important dates") || lowered.contains("list dates")
+        let asksForNextActions = lowered.contains("what should i do next") || lowered.contains("next actions") || lowered.contains("suggest next action") || lowered.contains("what tasks should i create") || lowered.contains("needs my attention today")
+        let scopedPrimaryCase = scopeCaseID.flatMap { id in persisted.cases.first(where: { $0.id == id }) }
+        let selectedDocumentTarget = selectedOrLatestAskDocument(for: scopeCaseID)
         let matchedSources = scopedCases
             .flatMap(\.sourceRefs)
             .filter { selectedDocumentIDs.isEmpty || selectedDocumentIDs.contains($0.documentId) }
@@ -3754,6 +3936,7 @@ final class AlphaRossModel {
                 asksAboutSchedule ||
                     asksAboutTasks ||
                     asksAboutReview ||
+                    asksForDocumentSummary ||
                     lowered.contains($0.documentTitle.lowercased()) ||
                     lowered.contains(($0.textSnippet ?? "").lowercased())
             }
@@ -3762,6 +3945,48 @@ final class AlphaRossModel {
             .filter { selectedDocumentIDs.isEmpty || selectedDocumentIDs.contains($0.documentId) }
 
         var sections: [String] = []
+        if asksForMatterSummary, let scopedPrimaryCase {
+            sections.append(scopedPrimaryCase.summary)
+            if let nextHearing = scopedPrimaryCase.nextHearing {
+                sections.append("Next hearing: \(nextHearing.formatted(date: .abbreviated, time: .omitted)).")
+            }
+            if !scopedPrimaryCase.draftTasks.isEmpty {
+                sections.append("Next actions: \(scopedPrimaryCase.draftTasks.prefix(2).joined(separator: "; ")).")
+            }
+        }
+        if asksForDocumentSummary, let target = selectedDocumentTarget {
+            let visibleFields = visibleExtractedFields(caseId: target.caseMatter.id, documentId: target.document.id)
+            let directionValues = visibleFields
+                .filter { [.orderDirection, .issue, .relief].contains($0.fieldType) }
+                .map(\.value)
+            sections.append("\(target.document.title) is available in this matter.")
+            if let nextDate = visibleFields.first(where: { $0.fieldType == .nextDate })?.value {
+                sections.append("Next date found: \(nextDate).")
+            }
+            if let direction = directionValues.first {
+                sections.append(direction)
+            } else if let firstPage = target.document.pages.first?.snippet, !firstPage.isEmpty {
+                sections.append(firstPage)
+            }
+        }
+        if asksForImportantDates {
+            let dateLines = scopedCases
+                .filter { $0.id != alphaSharedWorkspaceID }
+                .flatMap { caseMatter in
+                    caseMatter.dates
+                        .filter { $0.status == .scheduled }
+                        .sorted { $0.date < $1.date }
+                        .prefix(2)
+                        .map { "\(caseMatter.title): \($0.title) on \($0.date.formatted(date: .abbreviated, time: .omitted))" }
+                }
+            sections.append(contentsOf: dateLines.prefix(3))
+        }
+        if asksForNextActions, let scopedPrimaryCase {
+            let nextActions = scopedPrimaryCase.draftTasks.isEmpty
+                ? openScopedTasks.prefix(3).map(\.title)
+                : Array(scopedPrimaryCase.draftTasks.prefix(3))
+            sections.append(contentsOf: nextActions)
+        }
         if asksAboutSchedule {
             let dateLines = cases
                 .filter { scopeCaseID == nil || $0.id == scopeCaseID }
@@ -3795,6 +4020,24 @@ final class AlphaRossModel {
 
         let warnings = scopedReviewItems
         let notFound = sections.isEmpty && matchedSources.isEmpty
+        let answerTitle: String
+        if notFound {
+            answerTitle = "I could not find this in your case files."
+        } else if asksForMatterSummary {
+            answerTitle = "Matter summary"
+        } else if asksForDocumentSummary {
+            answerTitle = "Document summary"
+        } else if asksForImportantDates || asksAboutSchedule {
+            answerTitle = "Important dates"
+        } else if asksForNextActions {
+            answerTitle = "Next actions"
+        } else if asksAboutTasks {
+            answerTitle = "Tasks from your files"
+        } else if asksAboutReview {
+            answerTitle = "Review items from your files"
+        } else {
+            answerTitle = "Ross drafted this from your files"
+        }
         return AlphaAskResult(
             chatSessionID: nil,
             chatTurnID: nil,
@@ -3803,7 +4046,7 @@ final class AlphaRossModel {
             scopeCaseID: scopeCaseID,
             scopeLabel: scopeLabel(for: scopeCaseID),
             selectedDocumentTitles: selectedDocuments.map(\.title),
-            answerTitle: notFound ? "I could not find this in your case files." : "Ross drafted this from your files",
+            answerTitle: answerTitle,
             answerSections: notFound ? ["I could not find this in your case files."] : Array(sections.prefix(3)),
             caseFileSources: Array(matchedSources.prefix(3)),
             publicLawPreview: nil,
@@ -4853,7 +5096,7 @@ private struct AlphaPackSetupScreen: View {
 
                         AlphaAssistantActivityStrip(
                             title: "Setup continues in the background",
-                            detail: "Ross only marks an assistant ready after the local download and verification pass finishes.",
+                            detail: "Ross only marks the private assistant ready after setup finishes on this device.",
                             statusLabel: "Background",
                             tint: .orange
                         )
@@ -5302,6 +5545,7 @@ private struct AlphaRootAskDock: View {
             if let inlineResult {
                 AlphaInlineAskResponseCard(
                     result: inlineResult,
+                    contextDocumentTitle: fixedDocumentIDs.count == 1 ? activeSelectedDocuments.first?.title : nil,
                     onOpenSource: model.openSourceRef,
                     onOpenConversation: {
                         if fixedDocumentIDs.count == 1, let documentID = fixedDocumentIDs.first {
@@ -5353,7 +5597,7 @@ private struct AlphaRootAskDock: View {
                     }
                 }
 
-                if !activeSelectedDocuments.isEmpty {
+                if !activeSelectedDocuments.isEmpty, fixedDocumentIDs.count != 1 {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             ForEach(activeSelectedDocuments) { document in
@@ -5449,7 +5693,7 @@ private struct AlphaRootAskDock: View {
                 }
 
                 if model.askWebEnabled {
-                    Text("Web Search only sends a generic public-law query, never your case files or document text.")
+                    Text("Public-law search sends only a sanitized query. Case files stay on this device.")
                         .font(.caption2)
                         .foregroundStyle(dockSecondaryText)
                         .fixedSize(horizontal: false, vertical: true)
@@ -5521,7 +5765,7 @@ private struct AlphaRootAskDock: View {
                             .font(.headline)
                         Text(preview.query)
                             .font(.body.weight(.semibold))
-                        Text("No case files or document text will be sent.")
+                        Text("Ross will only send this public-law query. Your case files stay on this device.")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                         VStack(alignment: .leading, spacing: 8) {
@@ -5550,6 +5794,7 @@ private struct AlphaRootAskDock: View {
 
 private struct AlphaInlineAskResponseCard: View {
     let result: AlphaAskResult
+    let contextDocumentTitle: String?
     let onOpenSource: (AlphaSourceRef) -> Void
     let onOpenConversation: () -> Void
     let onClose: () -> Void
@@ -5577,7 +5822,11 @@ private struct AlphaInlineAskResponseCard: View {
             }
 
             if !result.caseFileSources.isEmpty {
-                AlphaSourceRefChips(sourceRefs: Array(result.caseFileSources.prefix(2)), onOpenSourceRef: onOpenSource)
+                AlphaSourceRefChips(
+                    sourceRefs: Array(result.caseFileSources.prefix(2)),
+                    contextDocumentTitle: contextDocumentTitle,
+                    onOpenSourceRef: onOpenSource
+                )
             }
 
             HStack {
@@ -5959,7 +6208,7 @@ private struct AlphaAskComposerSheet: View {
                     .buttonStyle(.plain)
                 }
 
-                if !activeSelectedDocuments.isEmpty {
+                if !activeSelectedDocuments.isEmpty, fixedDocumentIDs.count != 1 {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             ForEach(activeSelectedDocuments) { document in
@@ -9003,26 +9252,38 @@ private func alphaAssistantStatusSnapshot(_ model: AlphaRossModel) -> AlphaAssis
             break
         case .downloading, .queued, .verifying:
             return AlphaAssistantStatusSnapshot(
-                title: "Setting up assistant",
-                detail: "Ross is preparing \(job.tier.title) on this device. You can keep working while it finishes.",
+                title: "Setting up private assistant",
+                detail: "Ross is setting up your private assistant on this device. You can keep working while setup finishes.",
                 tint: Color.rossAccent
             )
         case .pausedWaitingForWifi:
             return AlphaAssistantStatusSnapshot(
                 title: "Waiting for Wi-Fi",
-                detail: "\(job.tier.title) is ready to continue as soon as Wi-Fi is available.",
+                detail: "Ross will continue private assistant setup when Wi-Fi is available.",
                 tint: Color.rossHighlight
             )
-        case .failed:
+        case .pausedUser:
             return AlphaAssistantStatusSnapshot(
-                title: "Assistant needs attention",
-                detail: "Ross could not finish the assistant setup. Open the setup screen to resume or choose another tier.",
+                title: "Private assistant needs attention",
+                detail: "Setup is paused. You can continue working and resume whenever you are ready.",
+                tint: .orange
+            )
+        case .pausedNoStorage:
+            return AlphaAssistantStatusSnapshot(
+                title: "Private assistant needs attention",
+                detail: "Free up space and try again.",
+                tint: .orange
+            )
+        case .pausedError, .failed, .cancelled:
+            return AlphaAssistantStatusSnapshot(
+                title: "Private assistant needs attention",
+                detail: "Private assistant could not be set up. Open setup to retry.",
                 tint: .orange
             )
         default:
             return AlphaAssistantStatusSnapshot(
-                title: "Setting up assistant",
-                detail: "Ross is still preparing the assistant on this device.",
+                title: "Setting up private assistant",
+                detail: "Ross is still preparing the private assistant on this device.",
                 tint: Color.rossAccent
             )
         }
@@ -9031,22 +9292,22 @@ private func alphaAssistantStatusSnapshot(_ model: AlphaRossModel) -> AlphaAssis
     if let activePack = model.activePack {
         if model.activeRuntimeHealth?.fallbackActive == true {
             return AlphaAssistantStatusSnapshot(
-                title: "Basic local mode",
-                detail: "\(activePack.tier.title) is installed, but Ross is using the lighter local mode right now.",
+                title: "Using basic local review",
+                detail: "\(activePack.tier.title) is installed, but Ross is using basic local review right now.",
                 tint: Color.rossHighlight
             )
         }
 
         return AlphaAssistantStatusSnapshot(
-            title: "Assistant ready",
-            detail: "\(activePack.tier.title) is ready for private on-device review and drafting support.",
+            title: "Private assistant is ready",
+            detail: "\(activePack.tier.title) is ready for local review, drafting, and Ask Ross actions on this device.",
             tint: Color.rossSuccess
         )
     }
 
     return AlphaAssistantStatusSnapshot(
-        title: "Basic local mode",
-        detail: "Files are ready now. Install the assistant for deeper local review.",
+        title: "Private assistant is not set up.",
+        detail: "Ross can still organize matters, tasks, dates, and files on this device. Using basic local review.",
         tint: Color.rossAccent
     )
 }
@@ -9446,6 +9707,10 @@ private struct AlphaAskConversationScreen: View {
         model.scopeLabel(for: activeScopeCaseID)
     }
 
+    private var contextDocumentTitle: String? {
+        model.askDocumentTitle(for: activeScopeCaseID)
+    }
+
     private var introDetail: String {
         let selectedDocuments = model.selectedAskDocuments(for: activeScopeCaseID)
         if let documentTitle = model.askDocumentTitle(for: activeScopeCaseID) {
@@ -9478,7 +9743,11 @@ private struct AlphaAskConversationScreen: View {
                 } else {
                     VStack(alignment: .leading, spacing: 18) {
                         ForEach(conversation, id: \.stableIdentity) { result in
-                            AlphaAskTurnCard(result: result, onOpenSource: model.openSourceRef)
+                            AlphaAskTurnCard(
+                                result: result,
+                                contextDocumentTitle: contextDocumentTitle,
+                                onOpenSource: model.openSourceRef
+                            )
                         }
                     }
                 }
@@ -9561,6 +9830,7 @@ private struct AlphaAskEmptyState: View {
 
 private struct AlphaAskTurnCard: View {
     let result: AlphaAskResult
+    let contextDocumentTitle: String?
     let onOpenSource: (AlphaSourceRef) -> Void
 
     var body: some View {
@@ -9612,7 +9882,7 @@ private struct AlphaAskTurnCard: View {
                             .foregroundStyle(Color.rossAccent)
                     }
 
-                    if !result.selectedDocumentTitles.isEmpty {
+                    if !result.selectedDocumentTitles.isEmpty, contextDocumentTitle == nil {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
                                 ForEach(result.selectedDocumentTitles, id: \.self) { title in
@@ -9637,7 +9907,11 @@ private struct AlphaAskTurnCard: View {
                         Text("Local sources")
                             .font(.footnote.weight(.semibold))
                             .foregroundStyle(Color.rossInk.opacity(0.65))
-                        AlphaSourceRefChips(sourceRefs: result.caseFileSources, onOpenSourceRef: onOpenSource)
+                        AlphaSourceRefChips(
+                            sourceRefs: result.caseFileSources,
+                            contextDocumentTitle: contextDocumentTitle,
+                            onOpenSourceRef: onOpenSource
+                        )
                     }
 
                     if let preview = result.publicLawPreview {
@@ -9737,22 +10011,25 @@ private extension AlphaAskResult {
 private func alphaAskSuggestions(for scopeLabel: String?, documentTitle: String? = nil) -> [String] {
     if let documentTitle, !documentTitle.isEmpty {
         return [
-            "What should I note from \(documentTitle)?",
-            "What in \(documentTitle) still needs review?",
-            "What should I do next after this file?"
+            "Summarize this document",
+            "What directions did the court give?",
+            "Create tasks from this document",
+            "What needs review?"
         ]
     }
     if let scopeLabel, !scopeLabel.isEmpty {
         return [
-            "Summarise this matter in one note.",
-            "What is the next date and why does it matter?",
-            "What should I do next for this matter?"
+            "Summarize this matter",
+            "Prepare hearing note",
+            "List important dates",
+            "What tasks should I create?"
         ]
     }
     return [
         "What needs my attention today?",
-        "What should I prepare this week?",
-        "Which files still need review?"
+        "Add task",
+        "Save next hearing",
+        "Generate case note"
     ]
 }
 
@@ -10303,6 +10580,7 @@ private struct AlphaDocumentViewerScreen: View {
                                         if let classification = document.classification {
                                             AlphaClassificationReviewCard(
                                                 classification: classification,
+                                                contextDocumentTitle: document.title,
                                                 onAccept: {
                                                     model.updateDocumentClassification(
                                                         caseId: caseId,
@@ -10324,6 +10602,7 @@ private struct AlphaDocumentViewerScreen: View {
                                         ForEach(importantReviewFields) { field in
                                             AlphaExtractedFieldReviewCard(
                                                 field: field,
+                                                contextDocumentTitle: document.title,
                                                 onAccept: {
                                                     model.acceptExtractedField(caseId: caseId, documentId: documentId, fieldId: field.id)
                                                 },
@@ -10338,7 +10617,11 @@ private struct AlphaDocumentViewerScreen: View {
                                         }
 
                                         ForEach(reviewFindings) { finding in
-                                            AlphaFindingCard(finding: finding, onOpenSourceRef: model.openSourceRef)
+                                            AlphaFindingCard(
+                                                finding: finding,
+                                                contextDocumentTitle: document.title,
+                                                onOpenSourceRef: model.openSourceRef
+                                            )
                                         }
                                     }
                                 }
@@ -10363,6 +10646,7 @@ private struct AlphaDocumentViewerScreen: View {
                                         ForEach(detailReviewFields) { field in
                                             AlphaExtractedFieldReviewCard(
                                                 field: field,
+                                                contextDocumentTitle: document.title,
                                                 onAccept: {
                                                     model.acceptExtractedField(caseId: caseId, documentId: documentId, fieldId: field.id)
                                                 },
@@ -10410,7 +10694,7 @@ private struct AlphaDocumentViewerScreen: View {
 
                             ForEach(currentPageRefs.isEmpty ? sourceRefs : currentPageRefs) { source in
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(source.label)
+                                    Text(alphaSourceRefDisplayLabel(source, contextDocumentTitle: document.title))
                                         .font(.headline)
                                     Text(source.detail)
                                         .font(.footnote)
@@ -10436,7 +10720,7 @@ private struct AlphaDocumentViewerScreen: View {
             VStack(spacing: 10) {
                 if let document {
                     AlphaDocumentQuickAskStrip(
-                        title: document.title,
+                        title: nil,
                         detail: reviewSummaryText
                             ?? document.dominantSourceSnippet
                             ?? "Ross will answer from this file only while you stay here.",
@@ -10454,7 +10738,7 @@ private struct AlphaDocumentViewerScreen: View {
 }
 
 private struct AlphaDocumentQuickAskStrip: View {
-    let title: String
+    let title: String?
     let detail: String
     let isShared: Bool
 
@@ -10470,10 +10754,12 @@ private struct AlphaDocumentQuickAskStrip: View {
             .background(Color.rossCardBackground, in: Circle())
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.rossInk)
-                    .lineLimit(1)
+                if let title, !title.isEmpty {
+                    Text(title)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.rossInk)
+                        .lineLimit(1)
+                }
                 Text(detail)
                     .font(.caption2)
                     .foregroundStyle(Color.rossInk.opacity(0.66))
@@ -10482,7 +10768,7 @@ private struct AlphaDocumentQuickAskStrip: View {
 
             Spacer(minLength: 0)
 
-            Text(isShared ? "Shared file" : "This file")
+            Text(isShared ? "Shared file" : "Using this file")
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(Color.rossAccent)
                 .padding(.horizontal, 8)
@@ -10519,6 +10805,7 @@ private func AlphaDocumentPreview(document: AlphaCaseDocument, initialPage: Int)
 
 private struct AlphaClassificationReviewCard: View {
     let classification: AlphaLegalDocumentClassification
+    let contextDocumentTitle: String?
     let onAccept: () -> Void
     let onUpdateType: (AlphaLegalDocumentType) -> Void
     let onOpenSourceRef: (AlphaSourceRef) -> Void
@@ -10573,7 +10860,11 @@ private struct AlphaClassificationReviewCard: View {
                 }
             }
 
-            AlphaSourceRefChips(sourceRefs: classification.sourceRefs, onOpenSourceRef: onOpenSourceRef)
+            AlphaSourceRefChips(
+                sourceRefs: classification.sourceRefs,
+                contextDocumentTitle: contextDocumentTitle,
+                onOpenSourceRef: onOpenSourceRef
+            )
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
@@ -10587,6 +10878,7 @@ private struct AlphaClassificationReviewCard: View {
 
 private struct AlphaExtractedFieldReviewCard: View {
     let field: AlphaExtractedLegalField
+    let contextDocumentTitle: String?
     let onAccept: () -> Void
     let onSaveEdit: (String) -> Void
     let onIgnore: () -> Void
@@ -10622,7 +10914,11 @@ private struct AlphaExtractedFieldReviewCard: View {
                 )
             }
 
-            AlphaSourceRefChips(sourceRefs: field.sourceRefs, onOpenSourceRef: onOpenSourceRef)
+            AlphaSourceRefChips(
+                sourceRefs: field.sourceRefs,
+                contextDocumentTitle: contextDocumentTitle,
+                onOpenSourceRef: onOpenSourceRef
+            )
 
             HStack(spacing: 10) {
                 if isEditing {
@@ -10667,6 +10963,7 @@ private struct AlphaExtractedFieldReviewCard: View {
 
 private struct AlphaFindingCard: View {
     let finding: AlphaExtractionFinding
+    let contextDocumentTitle: String?
     let onOpenSourceRef: (AlphaSourceRef) -> Void
 
     var body: some View {
@@ -10681,7 +10978,11 @@ private struct AlphaFindingCard: View {
                 )
             }
 
-            AlphaSourceRefChips(sourceRefs: finding.sourceRefs, onOpenSourceRef: onOpenSourceRef)
+            AlphaSourceRefChips(
+                sourceRefs: finding.sourceRefs,
+                contextDocumentTitle: contextDocumentTitle,
+                onOpenSourceRef: onOpenSourceRef
+            )
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
@@ -10695,6 +10996,7 @@ private struct AlphaFindingCard: View {
 
 private struct AlphaSourceRefChips: View {
     let sourceRefs: [AlphaSourceRef]
+    let contextDocumentTitle: String?
     let onOpenSourceRef: (AlphaSourceRef) -> Void
 
     var body: some View {
@@ -10713,7 +11015,7 @@ private struct AlphaSourceRefChips: View {
                         onOpenSourceRef(sourceRef)
                     } label: {
                         HStack {
-                            Text(sourceRef.label)
+                            Text(alphaSourceRefDisplayLabel(sourceRef, contextDocumentTitle: contextDocumentTitle))
                                 .font(.footnote.weight(.semibold))
                             Spacer()
                             Text(sourceRef.detail)
@@ -10731,6 +11033,26 @@ private struct AlphaSourceRefChips: View {
             }
         }
     }
+}
+
+private func alphaSourceRefDisplayLabel(_ sourceRef: AlphaSourceRef, contextDocumentTitle: String?) -> String {
+    let label = sourceRef.label.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard let contextDocumentTitle else { return label }
+    let context = contextDocumentTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !context.isEmpty else { return label }
+
+    if label == context {
+        return "This file"
+    }
+
+    for prefix in ["\(context) ", "\(context): ", "\(context) · "] {
+        if label.hasPrefix(prefix) {
+            let shortened = String(label.dropFirst(prefix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+            return shortened.isEmpty ? "This file" : shortened
+        }
+    }
+
+    return label
 }
 
 private struct AlphaConfidenceBadge: View {
@@ -10765,8 +11087,8 @@ private struct AlphaPublicLawScreen: View {
             VStack(alignment: .leading, spacing: alphaSectionSpacing) {
                 AlphaInlineHeader(
                     eyebrow: nil,
-                    title: "Sanitized law search",
-                    detail: "Ross only sends a generic public-law query after you review it."
+                    title: "Review before searching public law",
+                    detail: "Ross will only send this public-law query. Your case files stay on this device."
                 )
 
                 RossSectionCard {
@@ -10776,7 +11098,7 @@ private struct AlphaPublicLawScreen: View {
                         .background(Color.rossSecondaryGroupedBackground)
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
 
-                    Text("Do not send case IDs, filenames, OCR text, chunk text, chat history, client names, party names, phone numbers, emails, or long factual narratives.")
+                    Text("Ross removes case IDs, file names, client names, party names, phone numbers, email addresses, and text copied from your files before search.")
                         .font(.footnote)
                         .foregroundStyle(Color.rossInk.opacity(0.65))
 
@@ -10787,7 +11109,7 @@ private struct AlphaPublicLawScreen: View {
                 }
 
                 if let preview = model.publicLawPreview {
-                    RossSectionCard(title: "Sanitized preview", subtitle: preview.confirmationNote) {
+                    RossSectionCard(title: "Public-law query to be sent", subtitle: "Ross will only send this public-law query. Your case files stay on this device.") {
                         Text(preview.query)
                             .font(.headline)
                         ForEach(preview.removed, id: \.self) { item in
@@ -11286,9 +11608,9 @@ private struct AlphaPrivateAISettingsScreen: View {
                     VStack(alignment: .leading, spacing: 12) {
                         AlphaSettingsValueRow(label: "Status", value: assistantStatus.title)
                         Divider()
-                        AlphaSettingsValueRow(label: "Pack", value: model.activePack?.tier.title ?? "Not installed")
+                        AlphaSettingsValueRow(label: "Pack level", value: model.activePack?.tier.title ?? "Not installed")
                         Divider()
-                        AlphaSettingsValueRow(label: "Review quality", value: model.activeExtractionMode.qualityLabel)
+                        AlphaSettingsValueRow(label: "Storage", value: model.activePack?.tier.installedSizeLabel ?? "Using basic local review")
 
                         Text(assistantStatus.detail)
                             .font(.footnote)
@@ -11314,8 +11636,8 @@ private struct AlphaPrivateAISettingsScreen: View {
                 }
 
                 RossSectionCard(
-                    title: "Choose a review level",
-                    subtitle: "Ross keeps the recommended level selected, but you can switch to another local level at any time."
+                    title: "Choose a private assistant level",
+                    subtitle: "Ross keeps the recommended level selected, but you can switch at any time."
                 ) {
                     VStack(alignment: .leading, spacing: 12) {
                         ForEach(AlphaPackOffer.catalog) { offer in
@@ -11551,6 +11873,12 @@ private struct AlphaPrivateAIJobCard: View {
                 .font(.caption)
                 .foregroundStyle(Color.rossInk.opacity(0.6))
 
+            if let progressLabel = alphaDownloadProgressLabel(job) {
+                Text(progressLabel)
+                    .font(.caption)
+                    .foregroundStyle(Color.rossInk.opacity(0.6))
+            }
+
             HStack(spacing: 10) {
                 Button("Pause") { model.pauseJob(job) }
                     .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 16)
@@ -11584,7 +11912,7 @@ private struct AlphaPrivateAIInstalledPackCard: View {
                         .font(.headline)
                         .foregroundStyle(Color.rossInk)
 
-                    Text(pack.developmentOnly ? "Needs attention" : "Ready on this device")
+                    Text(pack.developmentOnly ? "Private assistant needs attention" : "Private assistant is ready")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(pack.developmentOnly ? Color.orange : Color.rossSuccess)
                 }
@@ -11628,6 +11956,14 @@ private struct AlphaPrivateAIInlineBadge: View {
             .padding(.vertical, 5)
             .background(tint.opacity(0.1), in: Capsule())
     }
+}
+
+private func alphaDownloadProgressLabel(_ job: AlphaModelDownloadJob) -> String? {
+    guard job.totalBytes > 0 else { return nil }
+    let percent = Int((Double(job.bytesDownloaded) / Double(job.totalBytes)) * 100)
+    let downloaded = ByteCountFormatter.string(fromByteCount: job.bytesDownloaded, countStyle: .file)
+    let total = ByteCountFormatter.string(fromByteCount: job.totalBytes, countStyle: .file)
+    return "\(percent)% downloaded • \(downloaded) of \(total)"
 }
 
 private func alphaFieldSortRank(_ type: AlphaExtractedLegalFieldType) -> Int {

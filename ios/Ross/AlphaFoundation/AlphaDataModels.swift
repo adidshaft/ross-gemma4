@@ -80,9 +80,9 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
         case .quickStart:
             "Basic extraction for short documents, simple summaries, and lighter storage use."
         case .caseAssociate:
-            "Better document understanding, stronger field extraction, mixed English/Hindi support, and source-backed chronology work."
+            "Better document understanding, stronger field extraction, mixed English/Hindi support, and stronger chronology work."
         case .seniorDraftingSupport:
-            "Deeper review, verification pass, longer bilingual bundles, and evidence or issue analysis."
+            "Deeper review, longer bilingual bundles, and stronger evidence or issue analysis."
         }
     }
 
@@ -124,9 +124,9 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
         case .quickStart:
             "Fast intake, smaller devices, and standard extraction for short documents."
         case .caseAssociate:
-            "Most advocates who need source-backed extraction, chronology work, and mixed-language review on-device."
+            "Most advocates who need stronger extraction, chronology work, and mixed-language review on-device."
         case .seniorDraftingSupport:
-            "Longer bundles, hearing prep, verification passes, and stronger bilingual workflows."
+            "Longer bundles, hearing prep, and stronger bilingual workflows."
         }
     }
 
@@ -2157,9 +2157,9 @@ extension AlphaPrivacyLedgerEntry {
     var lawyerTitle: String {
         switch title {
         case "Model catalog checked":
-            "Checked Private AI availability"
+            "Checked private assistant setup"
         case "Private AI Pack queued", "Private AI Pack verified", "Private AI Pack fallback installed":
-            "Downloaded Private AI Pack"
+            "Set up private assistant"
         case "Public-law query sent":
             "Searched public law"
         case "Public-law search unavailable":
@@ -2184,7 +2184,7 @@ extension AlphaPrivacyLedgerEntry {
         case "Public-law search unavailable":
             "Ross could not complete the approved public-law search. Your case files stayed on this device."
         case "Private AI Pack verified", "Private AI Pack fallback installed":
-            "A Private AI Pack was prepared on this device."
+            "Private assistant was prepared on this device."
         default:
             detail
         }

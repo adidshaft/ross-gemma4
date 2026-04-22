@@ -8,7 +8,6 @@ import java.io.File
 import java.io.FileOutputStream
 import java.nio.charset.StandardCharsets.UTF_8
 import java.security.KeyStore
-import java.security.SecureRandom
 import java.util.Base64
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -59,7 +58,6 @@ internal class AlphaEncryptedStateStore(
     private val encryptedStateFile = File(rootDir, "state.enc")
     private val legacyPlaintextStateFile = File(rootDir, "state.json")
     private val recoveryDir = File(rootDir, "recovery")
-    private val random = SecureRandom()
 
     fun load(seedFactory: () -> AlphaPersistedState): AlphaPersistedState {
         ensureFolders()
@@ -131,9 +129,9 @@ internal class AlphaEncryptedStateStore(
     }
 
     private fun encrypt(json: String): String {
-        val iv = ByteArray(12).also(random::nextBytes)
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-        cipher.init(Cipher.ENCRYPT_MODE, secretKeyProvider.getOrCreate(), GCMParameterSpec(128, iv))
+        cipher.init(Cipher.ENCRYPT_MODE, secretKeyProvider.getOrCreate())
+        val iv = cipher.iv ?: error("Android keystore did not return an IV for alpha state encryption.")
         cipher.updateAAD(aad())
         val ciphertext = cipher.doFinal(json.toByteArray(UTF_8))
         return gson.toJson(
