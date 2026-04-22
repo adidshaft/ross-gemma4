@@ -221,7 +221,9 @@ test("public-law search rejects obvious private matter content and fake secrets 
     "What should the respondent say in CS(COMM) 245/2026?",
     "What matters on 14/03/2026 for this filing?",
     "Can order-final.pdf be cited in public law research?",
-    "What should I mention near South Avenue market?"
+    "What should I mention near South Avenue market?",
+    "Who won the IPL match yesterday?",
+    "Best restaurants in Delhi tonight?"
   ];
 
   for (const query of disallowedQueries) {

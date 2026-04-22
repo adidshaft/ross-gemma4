@@ -1,3 +1,6 @@
+import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
 export interface RuntimeEnv {
   nodeEnv: string;
   isProduction: boolean;
@@ -31,6 +34,8 @@ export interface RuntimeEnv {
   externalModelFilePath?: string | undefined;
 }
 
+const backendRootDirectory = fileURLToPath(new URL("../../", import.meta.url));
+
 function parsePort(value: string | undefined): number {
   const parsed = Number.parseInt(value ?? "", 10);
   return Number.isFinite(parsed) ? parsed : 8080;
@@ -55,13 +60,71 @@ function trimmedValue(value: string | undefined): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
+function parseEnvFileValue(rawValue: string): string {
+  const trimmed = rawValue.trim();
+
+  if (
+    (trimmed.startsWith("\"") && trimmed.endsWith("\"")) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+
+  return trimmed;
+}
+
+function readEnvFile(filePath: string): Record<string, string> {
+  if (!existsSync(filePath)) {
+    return {};
+  }
+
+  const parsed: Record<string, string> = {};
+  const contents = readFileSync(filePath, "utf8");
+
+  for (const line of contents.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) {
+      continue;
+    }
+
+    const match = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
+    if (!match) {
+      continue;
+    }
+
+    const key = match[1];
+    const rawValue = match[2] ?? "";
+    if (!key) {
+      continue;
+    }
+    parsed[key] = parseEnvFileValue(rawValue);
+  }
+
+  return parsed;
+}
+
+function readRuntimeEnvironmentFiles(filePaths?: string[]): Record<string, string> {
+  const defaultFiles = [`${backendRootDirectory}/.env`, `${backendRootDirectory}/.env.local`];
+  const merged: Record<string, string> = {};
+
+  for (const filePath of filePaths ?? defaultFiles) {
+    Object.assign(merged, readEnvFile(filePath));
+  }
+
+  return merged;
+}
+
 export function readRuntimeEnv(
   options: {
     nodeEnvOverride?: string;
     environment?: Record<string, string | undefined>;
+    envFiles?: string[];
   } = {}
 ): RuntimeEnv {
-  const environment = options.environment ?? process.env;
+  const environment = {
+    ...readRuntimeEnvironmentFiles(options.envFiles),
+    ...(options.environment ?? process.env)
+  } satisfies Record<string, string | undefined>;
   const nodeEnv = options.nodeEnvOverride ?? environment.NODE_ENV ?? "development";
 
   return {

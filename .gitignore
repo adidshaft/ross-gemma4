@@ -21,6 +21,8 @@ coverage/
 .env
 .env.*
 !.env.example
+!backend/.env.example
+backend/.env.local
 backend/.data/
 android/.cxx/
 android/local.properties

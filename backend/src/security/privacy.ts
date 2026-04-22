@@ -51,6 +51,78 @@ function normalizeText(value: string): string {
     .replace(/\s+/g, " ");
 }
 
+const publicLawResearchAnchors = [
+  "act",
+  "acts",
+  "appeal",
+  "appeals",
+  "arbitration",
+  "article",
+  "articles",
+  "bail",
+  "case law",
+  "circular",
+  "code",
+  "condonation",
+  "constitution",
+  "constitutional",
+  "consumer",
+  "contract",
+  "court",
+  "courts",
+  "cpc",
+  "crpc",
+  "evidence",
+  "filing",
+  "gst",
+  "hearing date",
+  "high court",
+  "injunction",
+  "ipc",
+  "judgment",
+  "judgments",
+  "jurisdiction",
+  "law",
+  "laws",
+  "legal",
+  "limitation",
+  "maintainability",
+  "notification",
+  "ordinance",
+  "petition",
+  "precedent",
+  "procedure",
+  "procedural",
+  "public law",
+  "regulation",
+  "regulations",
+  "relief",
+  "review petition",
+  "rule",
+  "rules",
+  "section",
+  "sections",
+  "service law",
+  "specific relief",
+  "statute",
+  "statutory",
+  "stay",
+  "supreme court",
+  "tax",
+  "taxation",
+  "tribunal",
+  "writ"
+];
+
+function escapeForRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const publicLawResearchPattern = new RegExp(
+  `\\b(?:${publicLawResearchAnchors.map(escapeForRegExp).join("|")})\\b`,
+  "i"
+);
+
 export class PrivacyViolationError extends AppError {
   constructor(fields: string[]) {
     super(400, "privacy_boundary_violation", "Case-data fields are not allowed on this endpoint.", {
@@ -159,6 +231,10 @@ export function assertSafePublicLawQuery(query: string): void {
     normalizedQuery.includes("blue suitcase near temple")
   ) {
     reasons.add("test_secret");
+  }
+
+  if (!publicLawResearchPattern.test(normalizedQuery)) {
+    reasons.add("not_public_law_research");
   }
 
   if (reasons.size > 0) {

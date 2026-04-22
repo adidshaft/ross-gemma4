@@ -96,12 +96,14 @@ Start the local backend:
 
 ```bash
 cd /Users/amanpandey/projects/ross/backend
-PORT=8787 ROSS_PUBLIC_BASE_URL=http://127.0.0.1:8787 npm run dev
+npm run dev
 ```
 
 Notes:
 
 - Port `8080` is the default if it is free.
+- The backend auto-loads `backend/.env` and `backend/.env.local` if present.
+- A gitignored `backend/.env.local` now exists for local development. Put your Gemini key there.
 - The app can point to a different local backend from `Settings > Advanced > Save test server`.
 - The backend exposes `GET /health` for a local smoke check.
 - Public-law search can use Gemini with Google Search grounding only from the backend, never from the app clients.

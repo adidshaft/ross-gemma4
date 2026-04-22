@@ -16,6 +16,8 @@ STRICT_GEMINI_EXCLUDES=(
   --glob '!backend/src/public_search_proxy/service.ts'
   --glob '!backend/src/security/env.ts'
   --glob '!backend/tests/public-law-gemini.test.ts'
+  --glob '!backend/tests/runtime-env.test.ts'
+  --glob '!backend/.env.example'
 )
 
 for pattern in "openai" "anthropic" "claude" "gemini.googleapis" "api.openai.com" "generativelanguage.googleapis.com" "x-goog-api-key" "GEMINI_API_KEY"; do
