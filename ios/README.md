@@ -1,71 +1,111 @@
-# Ross iOS Project
+# Ross iOS
 
-## Open and run in Xcode
+## Open and run
 
-1. Open `/Users/amanpandey/projects/ross/ios/Ross.xcodeproj` in Xcode.
+1. Open [`ios/Ross.xcodeproj`](/Users/amanpandey/projects/ross/ios/Ross.xcodeproj) in Xcode.
 2. Select the shared `Ross` scheme.
-3. Pick an iOS Simulator destination.
-4. Press Run.
+3. Pick an iPhone simulator or a provisioned device.
+4. Run.
 
-## Command-line build
+CLI build:
 
-```sh
+```bash
 cd /Users/amanpandey/projects/ross/ios
-swift build --scratch-path tmp/swiftpm
-xcodebuild -project Ross.xcodeproj -scheme Ross -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath tmp/DerivedData build
-```
-
-## Tests and screenshot export
-
-```sh
-cd /Users/amanpandey/projects/ross/ios
+xcodebuild -project Ross.xcodeproj -scheme Ross -configuration Debug -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.4.1' -derivedDataPath tmp/DerivedData build
 swift test --scratch-path tmp/swiftpm
-swift run --scratch-path tmp/swiftpm Ross --generate-screenshots
 ```
 
-## Current iOS usability alpha
+## Current iOS launch flow
 
-The active iOS shell is lawyer-facing and organized around:
+The target internal-alpha launch flow is:
 
-- Home
-- Cases
-- Capture / Import
-- Ask Ross
-- Settings
+1. Language selection
+2. Sign in
+3. Optional quick unlock
+4. Home
 
-Key iOS behaviors in this phase:
+The supported local QA path is `Open demo mode`.
 
-- Home dashboard with cases, tasks, dates, review items, and recent documents
-- local task model and case-scoped task views
-- case workspaces with overview, documents, tasks, review, and exports
-- plain-language document statuses
-- bottom Ask Ross composer
-- Web toggle with sanitized preview and confirmation
-- privacy ledger in plain language
-- technical diagnostics hidden under advanced Private AI settings
+## Sign-in modes
 
-## Privacy and Web search
+### Demo mode
 
-iOS keeps these rules:
+- works without backend credentials
+- creates a local session
+- is for local testing only
+- should not be described as a production account
 
-- case files stay on this device
+Use `advocate@ross.ai` on the demo path.
+
+### Google sign-in
+
+- backend-mediated OAuth flow is wired
+- custom callback scheme is `ross://auth/callback`
+- bundle URL scheme `ross` is registered in [`ios/Ross/Resources/Info.plist`](/Users/amanpandey/projects/ross/ios/Ross/Resources/Info.plist)
+- real credentials are required for a true proof run
+
+Until a real credential run is performed, treat Google OAuth as ready for manual QA, not proven.
+
+### Apple sign-in
+
+- available on iOS only
+- currently creates a local Ross session on device
+- does not yet use a Ross backend Apple auth route
+
+Normal UI should be read as local-only for now, not cross-device account sync.
+
+### Quick unlock
+
+- uses LocalAuthentication
+- simulator support is limited
+- physical-device proof is still required for a real manual claim
+
+## Backend connectivity
+
+iOS resolves backend URLs in this order:
+
+1. saved test-server override in Settings
+2. `ROSS_BACKEND_BASE_URL`
+3. `ROSS_BACKEND_URL`
+4. default `http://127.0.0.1:8080`
+
+Recommended local development setup:
+
+- iOS Simulator: `http://127.0.0.1:8787`
+- Physical iPhone: `http://<your-mac-lan-ip>:8787`
+
+The app also allows changing the server from `Settings > Advanced > Save test server`.
+
+`NSAllowsLocalNetworking` is enabled for local-network testing.
+
+## Public-law search
+
 - Web is off by default
-- no public-law request is made when Web is off
-- when Web is on, Ross shows a sanitized preview before search
-- public-law results stay separate from case-file sources
+- Ross builds the public-law query locally
+- Ross shows a preview before anything is sent
+- the user must confirm
+- only a sanitized public-law query crosses the boundary
+
+The current development backend returns privacy-safe fixture results. This is useful for QA, but it is not a claim of a production research connector.
 
 ## Private AI note
 
-Private AI Pack setup remains available with:
+Normal iOS screens should show plain-language status such as:
 
-- Quick Start
-- Case Associate
-- Senior Drafting Support
+- `Ready`
+- `Not installed`
+- `Downloading`
+- `Waiting for Wi-Fi`
+- `Needs attention`
+- `Using basic local mode`
 
-Normal iOS screens should avoid runtime jargon. Technical diagnostics remain in advanced settings for QA and proof work.
+Technical diagnostics stay under `Settings > Advanced > Technical diagnostics`.
 
-## Real local inference note
+## Still unproven on iOS
 
-Real local-model proof is still separate from this usability alpha.
+- real Google OAuth with real credentials
+- backend-backed Apple sign-in
+- physical iPhone install and provisioning completion
+- real local model proof on device
 
-This README describes the current iOS product shell and validation entry points, not a claim that a real iOS runtime has already been proven on hardware in this phase.
+See [`docs/AUTH_QA.md`](/Users/amanpandey/projects/ross/docs/AUTH_QA.md) and [`docs/DEVICE_INSTALL_QA.md`](/Users/amanpandey/projects/ross/docs/DEVICE_INSTALL_QA.md).

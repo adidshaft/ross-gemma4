@@ -2,7 +2,7 @@
 
 Ross is built around a hard local-first boundary for advocate case work.
 
-The current product does not upload case files, OCR text, prompts, embeddings, filenames, party names, client facts, or extracted legal fields to cloud AI services.
+The product does not upload case files, OCR text, prompts, embeddings, filenames, party names, client facts, or extracted legal fields to cloud AI services.
 
 ## Core privacy promises
 
@@ -17,24 +17,24 @@ Ross keeps these product promises:
 
 ## Privacy layers
 
-Ross separates work into four layers:
+Ross separates work into five layers:
 
 1. Case Vault
-2. Local Review and Private AI
+2. Local Review and Ask Ross
 3. Public-law Search
-4. Delivery and Entitlement
+4. Auth and Session
+5. Delivery and Entitlement
 
 ## Case Vault
 
 The Case Vault contains:
 
-- case metadata
-- tasks
-- reminders and dates
+- matter metadata
+- tasks and dates
 - imported documents
 - extracted details
 - review decisions
-- source refs
+- source references
 - local exports
 - privacy ledger entries
 
@@ -45,15 +45,14 @@ Rules:
 - is not shared with public-law search
 - is not stored in analytics or telemetry systems
 
-## Local Review and Private AI
+## Local Review and Ask Ross
 
 This layer performs:
 
 - local document reading
-- OCR where supported locally
 - source-backed extraction
 - review queues
-- case note and chronology generation
+- chronology and note drafting
 - local Ask Ross responses from case files
 
 Rules:
@@ -62,11 +61,11 @@ Rules:
 - no remote model APIs
 - no analytics SDKs
 - no silent case-data upload
-- unsupported or uncertain details must remain reviewable, not silently accepted
+- unsupported or uncertain details remain reviewable
 
 ## Public-law Search
 
-This is the only legal-research network boundary in the normal app.
+This is the only normal user network boundary for legal research.
 
 Rules:
 
@@ -75,8 +74,22 @@ Rules:
 - Ross must show a preview before sending it
 - Ross must require explicit confirmation
 - Ross must send only a generic sanitized public-law query
-- Ross must not send case text, filenames, party names, or factual narrative
+- Ross must reject private details such as party names, filing references, exact dates, filenames, and factual narratives
 - Ross must label public-law results separately from case-file sources
+
+The current development backend returns privacy-safe fixture results for QA. That is still subject to the same boundary.
+
+## Auth and Session
+
+Auth is separate from matter content.
+
+Rules:
+
+- auth routes must not receive case-file payloads
+- refresh and account tokens must not contain case text
+- audit logs must not contain raw prompts or raw source text
+- Google sign-in must remain plain-language in the app on failure
+- Apple sign-in is currently local-session only on iOS
 
 ## Delivery and Entitlement
 
@@ -84,7 +97,6 @@ This layer covers:
 
 - model catalog checks
 - Private AI Pack downloads
-- checksum verification
 - install metadata
 - entitlement checks
 
@@ -105,10 +117,14 @@ Examples of acceptable entries:
 - `Searched public law`
 - `Generated local export`
 
-The ledger should not expose raw payloads or raw private text.
+The ledger should not expose raw payloads, raw prompts, or raw private text.
+
+## Regression guardrail
+
+Fake-secret regression values such as `Raghav Fakepriv`, `9876501234`, `fakepriv@example.com`, `FAKE/123/2026`, and `blue suitcase near temple` may appear in local-only UI, but must not cross the public-law or auth boundary.
 
 ## Real-runtime note
 
-Real local model proof is separate from this usability alpha.
+This architecture document describes the privacy boundary Ross preserves in the current internal alpha.
 
-This architecture document describes the boundary Ross preserves now, regardless of whether a real on-device runtime has been separately proven in manual QA.
+It is not a claim that a real local model has already been proven on hardware.

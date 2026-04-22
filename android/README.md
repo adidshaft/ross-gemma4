@@ -1,62 +1,94 @@
-# Ross Android Project
+# Ross Android
 
-## Build from CLI
+## Build and run
 
-```sh
+```bash
 cd /Users/amanpandey/projects/ross/android
 ./gradlew :app:assembleDebug
-```
-
-## Run unit tests
-
-```sh
-cd /Users/amanpandey/projects/ross/android
 ./gradlew :app:testDebugUnitTest
 ```
 
-## Current Android usability alpha
+Open the Android project in Android Studio if you want emulator or device debugging.
 
-The active Android shell is lawyer-facing and organized around:
+## Current Android launch flow
 
-- Home
-- Cases
-- Capture / Import
-- Ask Ross
-- Settings
+The target internal-alpha flow is:
 
-Key Android behaviors in this phase:
+1. Language or welcome
+2. Sign in or demo mode
+3. Optional quick unlock where available
+4. Home
 
-- Home dashboard with cases, tasks, dates, review items, and recent documents
-- local task persistence
-- case workspaces with documents, tasks, review, and exports
-- plain-language document status copy
-- sticky Ask Ross bar
-- Web toggle with sanitized preview and confirmation
-- privacy ledger in plain language
-- technical diagnostics hidden under advanced Private AI settings
+The supported local QA path is `Open demo mode`.
 
-## Privacy and Web search
+## Sign-in modes
 
-Android keeps these rules:
+### Demo mode
 
-- case files stay on this device
+- works without backend credentials
+- creates a local session
+- is for local testing only
+
+### Google sign-in
+
+- backend-mediated OAuth start flow is wired from the app
+- custom callback route is `ross://auth/callback`
+- Android deep link is registered in [`android/app/src/main/AndroidManifest.xml`](/Users/amanpandey/projects/ross/android/app/src/main/AndroidManifest.xml)
+
+The current mobile flow uses backend-mediated OAuth rather than the native Google Android SDK, so Android SHA registration is not the main setup requirement in this phase. Real proof still depends on valid Google OAuth credentials on the backend side.
+
+### Quick unlock
+
+- Android checks `BiometricManager` with strong biometrics or device credential
+- emulator behavior is limited
+- physical-device proof is still required for a true manual claim
+
+## Backend connectivity
+
+Android resolves backend URLs in this order:
+
+1. saved test-server override in Settings
+2. `ROSS_BACKEND_BASE_URL`
+3. system property override
+4. build default from [`android/app/build.gradle.kts`](/Users/amanpandey/projects/ross/android/app/build.gradle.kts)
+
+Default emulator address:
+
+- `http://10.0.2.2:8080`
+
+Recommended overrides:
+
+- Android emulator with backend on `8787`: `http://10.0.2.2:8787`
+- Physical Android device: `http://<your-mac-lan-ip>:8787`
+
+You can save the address from `Settings > Advanced > Save test server`.
+
+## Public-law search
+
 - Web is off by default
-- no public-law request is made when Web is off
-- when Web is on, Ross shows a sanitized preview before search
-- public-law results stay labeled separately from case-file sources
+- Web on still requires a local preview and explicit confirmation
+- backend-unavailable errors should remain plain-language
+- only a sanitized public-law query is sent
+
+The current development backend returns privacy-safe fixture results and is suitable for QA only.
 
 ## Private AI note
 
-Private AI Pack setup remains available with:
+Normal Android screens should show plain-language status such as:
 
-- Quick Start
-- Case Associate
-- Senior Drafting Support
+- `Ready`
+- `Not installed`
+- `Downloading`
+- `Waiting for Wi-Fi`
+- `Needs attention`
+- `Using basic local mode`
 
-Normal Android screens should not expose runtime identifiers. Technical diagnostics remain under advanced settings.
+Technical diagnostics stay under `Settings > Advanced`.
 
-## Real local inference note
+## Still unproven on Android
 
-Real local-model proof is still separate from this usability alpha.
+- real Google OAuth with real credentials
+- physical-device quick unlock proof
+- real local model proof on device
 
-This README documents the Android product shell now in place, not a claim that a real Android runtime has already been proven on hardware in this phase.
+See [`docs/AUTH_QA.md`](/Users/amanpandey/projects/ross/docs/AUTH_QA.md) and [`docs/DEVICE_INSTALL_QA.md`](/Users/amanpandey/projects/ross/docs/DEVICE_INSTALL_QA.md).

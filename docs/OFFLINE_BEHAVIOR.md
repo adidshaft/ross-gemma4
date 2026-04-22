@@ -1,77 +1,76 @@
 # Offline Behavior
 
-Ross is useful even when the network is unavailable.
+Ross is designed to remain useful when the network is unavailable.
 
-The current usability alpha is built so the main case workflow still works locally.
+The current internal alpha keeps the core matter workflow usable on device.
 
 ## Works offline
 
-The following flows are designed to work without network access:
+These flows are designed to work without network access:
 
-- create a case
+- open the app after a local session already exists
+- use demo mode after it has been selected locally
 - open Home and Cases
-- add and complete tasks
-- import PDF, image, and text documents into app-private storage
-- run local document reading and review
-- open document viewer and source-backed review UI
-- accept, edit, or ignore extracted details
+- create and update matters
+- import PDF, image, and text files into app-private storage
+- open the document viewer
+- review extracted details
 - ask Ross from local case files with Web off
 - generate local exports
 - inspect the Privacy Ledger
 
 ## Works offline with no Private AI Pack installed
 
-Ross still supports:
+Ross should still remain useful in `Using basic local mode`.
+
+That includes:
 
 - basic local document reading
 - plain-language review status
-- local task management
-- local-only case answers where enough case data exists
-- local exports
-
-In that state, Ross should present itself as using `basic local mode`, not as a failed technical runtime.
+- matter and task management
+- local Ask Ross responses where enough case data exists
+- local export generation
 
 ## Requires network
 
-These flows remain network-dependent:
+These flows still depend on the network:
 
+- Google sign-in
+- session refresh for backend-backed sessions
 - model catalog checks
 - Private AI Pack download setup
-- development artifact delivery
-- entitlement refresh
 - public-law search after the user approves a sanitized preview
 
-## Public-law search behavior
+## Public-law behavior
 
-Public-law Web search is not automatic.
+Public-law search is never automatic.
 
 If Web is off:
 
-- no public-law network request is made
+- no public-law request is made
 - Ross answers from local case files only
 
 If Web is on:
 
 - Ross builds the public-law query locally
 - Ross shows the sanitized preview
-- Ross requires explicit user confirmation before sending it
-- no case files or document text are sent
+- Ross requires explicit confirmation
+- no case text, filenames, or party details are sent
 
 ## Degraded behavior
 
-If Ross cannot complete a richer private review path, the app should still remain useful and calm.
-
-Expected degraded states include:
+Expected plain-language degraded states include:
 
 - `Using basic local mode`
 - `Still reading`
 - `Needs review`
 - `Could not read this clearly`
+- `Could not search public law right now. Your files stayed on this device.`
 
-The app should avoid exposing runtime jargon in these normal user flows.
+Normal user screens should not expose backend or runtime jargon in these states.
 
 ## Real-runtime note
 
-Real local model proof remains separate from offline product usability.
+This document describes product behavior that should remain true even without a network connection.
 
-This document describes the offline product behavior the lawyer can rely on today, not a claim that a real runtime has been proven on hardware in this phase.
+It is not a claim that a real local model has already been proven on hardware.

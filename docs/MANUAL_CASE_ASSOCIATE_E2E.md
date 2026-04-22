@@ -1,81 +1,64 @@
 # Manual Case Associate E2E
 
-This script validates the lawyer-facing `Case Associate` workflow in the current usability alpha.
+This script validates the lawyer-facing `Case Associate` workflow in the current internal alpha.
 
-Use it for a manual app pass, not for claiming a real local-model proof.
+Use it for manual product QA. Do not use it to claim a real local-model proof.
 
-## 1. Launch the app
-
-Expected:
-
-- onboarding is short
-- Ross says `Case files stay on this device`
-- no technical model names appear in onboarding
-
-## 2. Complete or skip Private AI Pack setup
-
-Expected:
-
-- Quick Start, Case Associate, and Senior Drafting Support are shown with user-facing descriptions
-- the app can continue even if pack setup is skipped
-- technical diagnostics are not shown here
-
-## 3. Land on Home
-
-Expected:
-
-- Home feels like a clean private case dashboard
-- Home shows cases, tasks, dates, recent documents, and review-required items
-- the Ask Ross bar is visible at the bottom
-
-## 4. Create a case
+## 1. Launch and sign in
 
 Steps:
 
-- tap `Create Case`
-- save a case title and forum
+- open the app
+- choose a language if prompted
+- use `Open demo mode`
 
 Expected:
 
-- the case appears on Home
-- the case appears in Cases
-- the case opens as a private workspace
+- no technical model names appear in normal auth screens
+- demo mode clearly reads as local testing only
+- the app lands on Home after sign-in
 
-## 5. Add a task
-
-Steps:
-
-- add a task from Home or a case workspace
-- mark it done
+## 2. Confirm Home
 
 Expected:
 
-- the task appears under Today or Tasks
-- the task can be marked done and reopened
-- the task remains local
+- Home feels like a private legal dashboard
+- it shows today summary, matters, tasks, review items, recent files, and Ask Ross
 
-## 6. Import a document
+## 3. Create a matter
 
 Steps:
 
-- open a case
+- tap `Create matter`
+- save a matter title and basic forum details
+
+Expected:
+
+- the matter appears on Home
+- the matter appears in Cases
+- the matter opens as a private workspace
+
+## 4. Import a document
+
+Steps:
+
+- open the matter
 - import a PDF, image, or text file
 
 Expected:
 
-- the document appears in Documents
-- the status is shown in plain language
+- the file appears in the matter file room
 - the viewer opens
+- status stays plain-language
 
 Expected plain-language statuses:
 
 - `Ready`
 - `Still reading`
 - `Needs review`
-- `Low confidence scan`
 - `Could not read this clearly`
 
-## 7. Review extracted details
+## 5. Review extracted details
 
 Steps:
 
@@ -90,20 +73,20 @@ Expected:
 - corrected values remain local
 - source references remain visible
 
-## 8. Ask Ross with Web off
+## 6. Ask Ross with Web off
 
 Steps:
 
 - keep `Web` off
-- ask about a case or document
+- ask about the matter or document
 
 Expected:
 
 - Ross answers from local case files only
 - case-file sources are shown separately
-- if Ross does not find the answer, it says `I could not find this in your case files.`
+- if Ross cannot answer, it stays local and says so plainly
 
-## 9. Ask Ross with Web on
+## 7. Ask Ross with Web on
 
 Steps:
 
@@ -112,8 +95,8 @@ Steps:
 
 Expected:
 
-- Ross explains that only a generic public-law query will be sent
-- Ross shows `Public-law query to be sent`
+- Ross explains that only a sanitized public-law query will be sent
+- Ross shows the query preview
 - Ross requires explicit confirmation before sending anything
 - public-law results are shown separately from case-file sources
 
@@ -122,7 +105,7 @@ Fail if:
 - the search runs without preview
 - case text or document text is sent
 
-## 10. Export
+## 8. Export
 
 Steps:
 
@@ -133,7 +116,7 @@ Expected:
 - output is framed as `Draft for advocate review`
 - export stays local
 
-## 11. Privacy Ledger
+## 9. Privacy Ledger
 
 Steps:
 
@@ -145,12 +128,25 @@ Expected:
 - no raw payloads appear
 - a public-law search entry says only that a sanitized query crossed the boundary
 
-## 12. What not to claim from this pass
+## 10. Advanced diagnostics
+
+Steps:
+
+- open Settings
+- open Advanced
+- open Technical diagnostics only if needed
+
+Expected:
+
+- diagnostics are hidden from normal screens
+- normal settings remain plain-language
+
+## 11. What not to claim from this pass
 
 Do not claim from this manual pass alone:
 
 - a real local model proof
 - legal advice
 - proven legal accuracy without advocate review
-
-That proof work remains separate from this usability-alpha checklist.
+- proven real Google OAuth unless you actually ran it
+- proven backend-backed Apple sign-in

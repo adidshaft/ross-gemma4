@@ -2,7 +2,7 @@
 
 Ross is a privacy-first legal workbench for Indian advocates.
 
-The current alpha is designed to feel like a simple private mobile app for day-to-day legal work, not a technical AI runtime showcase.
+The current internal alpha is designed to feel like a calm private work app, not a developer console.
 
 ## Core product shape
 
@@ -10,48 +10,65 @@ The normal app experience is organized around:
 
 - Home
 - Cases
-- Capture / Import
 - Ask Ross
 - Settings
 
-The main product loop is:
+Document import, review, exports, and the Privacy Ledger live inside the Home and matter workflow rather than as separate technical surfaces.
 
-1. Create a case.
-2. Add or import documents.
-3. Review uncertain extracted details.
-4. Track tasks, dates, and reminders.
-5. Ask Ross from local case files.
-6. Optionally run a sanitized public-law search.
-7. Export a chronology, case note, or order summary.
+## Launch and auth
+
+The intended launch path is:
+
+1. Language selection
+2. Sign in
+3. Optional quick unlock
+4. Home
+
+Supported sign-in modes in this phase:
+
+- demo mode for local QA
+- Google sign-in wiring, ready for manual testing with configured credentials
+- Apple sign-in on iOS as a local-only session for now
 
 ## Home-first experience
 
-Home is the primary dashboard.
+Home is the main daily dashboard.
 
-It is expected to show:
+It should show:
 
-- greeting and day summary
-- items due today
-- upcoming dates
-- active cases
+- today summary
+- current or active matter
 - open tasks
-- review-required items
-- recent documents
-- a bottom Ask Ross bar
+- review items
+- next action
+- recent files or activity
+- Ask Ross bar
+
+## Matter workflow
+
+The core matter loop is:
+
+1. create or open a matter
+2. import documents
+3. review extracted details
+4. ask Ross from local files
+5. optionally run a public-law search
+6. export a draft
+7. inspect the Privacy Ledger
 
 ## Ask Ross
 
-Ask Ross is designed as a simple bottom input pattern, available globally and within a case.
+Ask Ross is available from Home and within matters.
 
 Default behavior:
 
 - Web is off
 - Ross answers from local case files only
-- if Ross cannot find the answer locally, it says `I could not find this in your case files.`
+- answers remain source-backed
 
 Optional Web behavior:
 
-- the user turns on `Web`
+- the user turns Web on
 - Ross builds a generic public-law query locally
 - Ross shows the query preview
 - Ross requires explicit confirmation before sending anything
@@ -70,35 +87,29 @@ Ross keeps these user-facing promises:
 
 ## Private AI positioning
 
-Private AI Pack options remain:
+Private AI remains part of the product narrative, but with plain-language status:
 
-- Quick Start
-- Case Associate
-- Senior Drafting Support
+- `Ready`
+- `Not installed`
+- `Downloading`
+- `Waiting for Wi-Fi`
+- `Needs attention`
+- `Using basic local mode`
 
-Normal users see:
+Technical details remain hidden under advanced settings.
 
-- what each pack helps with
-- how much space it needs
-- whether Wi-Fi is recommended
-- whether it is ready, downloading, waiting, or needs attention
+## What this alpha is and is not
 
-Normal users should not need to see runtime identifiers or artifact details.
+This internal alpha is meant to prove:
 
-## Technical diagnostics
+- the app can launch cleanly
+- the core legal workflow is usable
+- privacy boundaries are still enforced
+- public-law preview and confirmation are explicit
 
-Technical diagnostics still exist, but they are not part of the normal product narrative.
+This alpha does not by itself prove:
 
-They remain hidden under advanced settings and are used for QA, debugging, and real-runtime proof work.
-
-## What this alpha is not
-
-Ross is not:
-
-- a cloud AI case processor
-- an AI lawyer
-- a developer console
-- a remote case-sync product
-- a claim of proven real local model performance
-
-Real local model proof remains a separate effort from this usability alpha.
+- real Google OAuth with production credentials
+- backend-backed Apple sign-in
+- physical-device installation completion
+- real local model performance on device
