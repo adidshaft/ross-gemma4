@@ -6,6 +6,9 @@ export interface RuntimeEnv {
   authMobileRedirect: string;
   googleOauthClientId?: string | undefined;
   googleOauthClientSecret?: string | undefined;
+  publicLawGeminiApiKey?: string | undefined;
+  publicLawGeminiModel: string;
+  publicLawGeminiBaseUrl: string;
   authAccessSigningSecret: string;
   authRefreshSigningSecret: string;
   otpStubCode: string;
@@ -70,6 +73,12 @@ export function readRuntimeEnv(
       trimmedValue(environment.ROSS_AUTH_MOBILE_REDIRECT) ?? "ross://auth/callback",
     googleOauthClientId: trimmedValue(environment.GOOGLE_OAUTH_CLIENT_ID),
     googleOauthClientSecret: trimmedValue(environment.GOOGLE_OAUTH_CLIENT_SECRET),
+    publicLawGeminiApiKey:
+      trimmedValue(environment.ROSS_PUBLIC_LAW_GEMINI_API_KEY) ?? trimmedValue(environment.GEMINI_API_KEY),
+    publicLawGeminiModel: trimmedValue(environment.ROSS_PUBLIC_LAW_GEMINI_MODEL) ?? "gemini-2.5-flash",
+    publicLawGeminiBaseUrl:
+      trimmedValue(environment.ROSS_PUBLIC_LAW_GEMINI_BASE_URL) ??
+      "https://generativelanguage.googleapis.com",
     authAccessSigningSecret:
       environment.ROSS_AUTH_ACCESS_SIGNING_SECRET ?? "dev-ross-access-secret-change-me",
     authRefreshSigningSecret:

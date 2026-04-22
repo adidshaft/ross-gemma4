@@ -97,7 +97,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   await registerModelCatalogRoutes(app, { env, auditLogger });
   await registerModelDownloadRoutes(app, { env, auditLogger });
   await registerBillingRoutes(app, { env, auditLogger });
-  await registerPublicSearchProxyRoutes(app, { auditLogger });
+  await registerPublicSearchProxyRoutes(app, { auditLogger, env });
 
   return app;
 }

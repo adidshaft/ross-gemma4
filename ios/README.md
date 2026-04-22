@@ -86,7 +86,9 @@ The app also allows changing the server from `Settings > Advanced > Save test se
 - the user must confirm
 - only a sanitized public-law query crosses the boundary
 
-The current development backend returns privacy-safe fixture results. This is useful for QA, but it is not a claim of a production research connector.
+If the backend is configured with `ROSS_PUBLIC_LAW_GEMINI_API_KEY` or `GEMINI_API_KEY`, the confirmed public-law request is resolved server-side through Gemini with Google Search grounding.
+
+If that key is missing, Ross falls back to privacy-safe fixture results for QA. Either path keeps case files and document text on device.
 
 ## Private AI note
 

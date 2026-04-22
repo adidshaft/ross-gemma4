@@ -79,6 +79,8 @@ Rules:
 
 The current development backend returns privacy-safe fixture results for QA. That is still subject to the same boundary.
 
+When a live connector is enabled, it must remain server-side only. The current connector path is Gemini with Google Search grounding behind the same preview-confirmation boundary. Only the sanitized public-law query may cross that boundary.
+
 ## Auth and Session
 
 Auth is separate from matter content.

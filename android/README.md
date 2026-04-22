@@ -70,7 +70,9 @@ You can save the address from `Settings > Advanced > Save test server`.
 - backend-unavailable errors should remain plain-language
 - only a sanitized public-law query is sent
 
-The current development backend returns privacy-safe fixture results and is suitable for QA only.
+If the backend is configured with `ROSS_PUBLIC_LAW_GEMINI_API_KEY` or `GEMINI_API_KEY`, the confirmed public-law request is resolved server-side through Gemini with Google Search grounding.
+
+If that key is missing, Ross falls back to privacy-safe fixture results and remains suitable for QA only.
 
 ## Private AI note
 

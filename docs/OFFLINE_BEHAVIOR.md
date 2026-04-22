@@ -56,6 +56,7 @@ If Web is on:
 - Ross shows the sanitized preview
 - Ross requires explicit confirmation
 - no case text, filenames, or party details are sent
+- if the backend has no live connector configured, Ross may fall back to a privacy-safe QA index instead of live web results
 
 ## Degraded behavior
 

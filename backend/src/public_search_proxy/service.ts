@@ -1,4 +1,6 @@
+import type { RuntimeEnv } from "../security/env.js";
 import { createId } from "../utils/ids.js";
+import { AppError } from "../utils/http.js";
 import { hashForAudit } from "../utils/signing.js";
 
 export interface PublicSearchInput {
@@ -18,6 +20,72 @@ interface PublicLawFixture {
   link: string;
   tags: string[];
 }
+
+interface PublicSearchResult {
+  resultId: string;
+  source: string;
+  title: string;
+  citation: string;
+  snippet: string;
+  link: string;
+  jurisdiction: string;
+  score: number;
+  matchedTerms: string[];
+}
+
+interface PublicSearchResponse {
+  requestId: string;
+  approvalState: "confirmed_public_preview";
+  queryHash: string;
+  connector: {
+    mode: string;
+    liveSourceConnected: boolean;
+    cache: {
+      policy: "private, no-store";
+      ttlSeconds: 0;
+      cacheKey: string;
+      servedFromCache: false;
+    };
+  };
+  results: PublicSearchResult[];
+  resultCount: number;
+  disclaimers: string[];
+}
+
+interface GeminiGroundingChunk {
+  web?: {
+    uri?: string;
+    title?: string;
+  };
+}
+
+interface GeminiGroundingSupport {
+  segment?: {
+    startIndex?: number;
+    endIndex?: number;
+    text?: string;
+  };
+  groundingChunkIndices?: number[];
+}
+
+interface GeminiCandidate {
+  content?: {
+    parts?: Array<{
+      text?: string;
+    }>;
+  };
+  groundingMetadata?: {
+    webSearchQueries?: string[];
+    groundingChunks?: GeminiGroundingChunk[];
+    groundingSupports?: GeminiGroundingSupport[];
+  };
+}
+
+interface GeminiGenerateContentResponse {
+  candidates?: GeminiCandidate[];
+}
+
+type FetchLike = typeof fetch;
 
 const PUBLIC_LAW_FIXTURES: PublicLawFixture[] = [
   {
@@ -77,6 +145,14 @@ const PUBLIC_LAW_FIXTURES: PublicLawFixture[] = [
   }
 ];
 
+const PUBLIC_LAW_GEMINI_SYSTEM_INSTRUCTION = [
+  "You help Ross perform public-law research for Indian advocates.",
+  "Only the sanitized user query is user-provided context.",
+  "Do not assume access to any private matter details beyond the sanitized query.",
+  "Use Google Search grounding for fresh public sources and prefer official, court, statutory, or otherwise reliable public-law material.",
+  "Return grounded public-law research only."
+].join(" ");
+
 function normalizeText(value: string): string {
   return value
     .toLowerCase()
@@ -88,6 +164,42 @@ function tokenize(value: string): string[] {
   return normalizeText(value)
     .split(" ")
     .filter((token) => token.length >= 2);
+}
+
+function clipText(value: string, maxLength: number): string {
+  const trimmed = value.trim().replace(/\s+/g, " ");
+  if (trimmed.length <= maxLength) {
+    return trimmed;
+  }
+
+  return `${trimmed.slice(0, maxLength - 1).trimEnd()}…`;
+}
+
+function safeHostname(value: string | undefined): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  try {
+    return new URL(value).hostname.replace(/^www\./i, "");
+  } catch {
+    return undefined;
+  }
+}
+
+function uniqueNonEmpty(values: Array<string | undefined>): string[] {
+  const seen = new Set<string>();
+
+  for (const value of values) {
+    const normalized = value?.trim();
+    if (!normalized) {
+      continue;
+    }
+
+    seen.add(normalized);
+  }
+
+  return [...seen];
 }
 
 function buildFixtureScore(fixture: PublicLawFixture, queryTokens: string[], jurisdiction: string): number {
@@ -106,50 +218,229 @@ function buildFixtureScore(fixture: PublicLawFixture, queryTokens: string[], jur
   return score;
 }
 
-export class PublicSearchProxyService {
-  search(input: PublicSearchInput) {
-    const queryTokens = tokenize(input.query);
-    const scoredFixtures = PUBLIC_LAW_FIXTURES.map((fixture) => ({
-      fixture,
-      score: buildFixtureScore(fixture, queryTokens, input.jurisdiction)
-    }))
-      .filter(({ score, fixture }) => score > 0 || fixture.jurisdiction === "IN-ALL")
-      .sort((left, right) => right.score - left.score || left.fixture.title.localeCompare(right.fixture.title));
+function buildCacheMetadata(input: PublicSearchInput) {
+  return {
+    policy: "private, no-store" as const,
+    ttlSeconds: 0 as const,
+    cacheKey: hashForAudit(`${input.jurisdiction}:${input.language}:${input.query}`),
+    servedFromCache: false as const
+  };
+}
 
-    const topFixtures = scoredFixtures.slice(0, 4);
+function extractGeminiAnswerText(candidate: GeminiCandidate | undefined): string {
+  return (
+    candidate?.content?.parts
+      ?.map((part) => part.text?.trim())
+      .filter((part): part is string => Boolean(part))
+      .join(" ")
+      .trim() ?? ""
+  );
+}
+
+function buildFixtureResults(input: PublicSearchInput): PublicSearchResult[] {
+  const queryTokens = tokenize(input.query);
+  const scoredFixtures = PUBLIC_LAW_FIXTURES.map((fixture) => ({
+    fixture,
+    score: buildFixtureScore(fixture, queryTokens, input.jurisdiction)
+  }))
+    .filter(({ score, fixture }) => score > 0 || fixture.jurisdiction === "IN-ALL")
+    .sort((left, right) => right.score - left.score || left.fixture.title.localeCompare(right.fixture.title));
+
+  return scoredFixtures.slice(0, 4).map(({ fixture, score }) => ({
+    resultId: fixture.id,
+    source: fixture.source,
+    title: fixture.title,
+    citation: fixture.citation,
+    snippet: fixture.snippet,
+    link: fixture.link,
+    jurisdiction: fixture.jurisdiction,
+    score,
+    matchedTerms: queryTokens.filter((token) =>
+      normalizeText([fixture.title, fixture.citation, fixture.snippet, ...fixture.tags].join(" ")).includes(token)
+    )
+  }));
+}
+
+function buildFixtureResponse(input: PublicSearchInput, statusNote: string): PublicSearchResponse {
+  const results = buildFixtureResults(input);
+
+  return {
+    requestId: createId("pls"),
+    approvalState: "confirmed_public_preview",
+    queryHash: hashForAudit(input.query),
+    connector: {
+      mode: "backend_fixture_index",
+      liveSourceConnected: false,
+      cache: buildCacheMetadata(input)
+    },
+    results,
+    resultCount: results.length,
+    disclaimers: [
+      "Public-law results are drafts for advocate review.",
+      "Only a sanitized public-law query crossed the network boundary.",
+      statusNote
+    ]
+  };
+}
+
+function buildGeminiResults(input: PublicSearchInput, payload: GeminiGenerateContentResponse): PublicSearchResult[] {
+  const candidate = payload.candidates?.[0];
+  const answerText = extractGeminiAnswerText(candidate);
+  const groundingChunks = candidate?.groundingMetadata?.groundingChunks ?? [];
+  const groundingSupports = candidate?.groundingMetadata?.groundingSupports ?? [];
+  const queryTokens = tokenize(input.query);
+  const supportTextByChunk = new Map<number, string[]>();
+
+  for (const support of groundingSupports) {
+    const segmentText = support.segment?.text?.trim();
+    if (!segmentText) {
+      continue;
+    }
+
+    for (const chunkIndex of support.groundingChunkIndices ?? []) {
+      const existing = supportTextByChunk.get(chunkIndex) ?? [];
+      if (!existing.includes(segmentText)) {
+        existing.push(segmentText);
+      }
+      supportTextByChunk.set(chunkIndex, existing);
+    }
+  }
+
+  const results = groundingChunks
+    .map((chunk, index): PublicSearchResult | null => {
+      const link = chunk.web?.uri?.trim();
+      const host = safeHostname(link);
+      const supportSegments = supportTextByChunk.get(index) ?? [];
+      const title = chunk.web?.title?.trim() || host || "Public-law source";
+      const citation = host ? `Public web source • ${host}` : "Public web source";
+      const snippet = clipText(
+        uniqueNonEmpty([
+          ...supportSegments,
+          answerText ? `${answerText}` : undefined
+        ]).join(" "),
+        320
+      );
+
+      if (!link || !snippet) {
+        return null;
+      }
+
+      const haystack = normalizeText(`${title} ${citation} ${snippet}`);
+      const matchedTerms = queryTokens.filter((token) => haystack.includes(token));
+
+      return {
+        resultId: createId(`gem-${index + 1}`),
+        source: host ?? "Public web source",
+        title,
+        citation,
+        snippet,
+        link,
+        jurisdiction: input.jurisdiction,
+        score: supportSegments.length * 10 + matchedTerms.length * 4 + Math.max(0, 4 - index),
+        matchedTerms
+      };
+    })
+    .filter((result): result is PublicSearchResult => Boolean(result))
+    .sort((left, right) => right.score - left.score || left.title.localeCompare(right.title))
+    .slice(0, 4);
+
+  return results;
+}
+
+export class PublicSearchProxyService {
+  constructor(
+    private readonly env: RuntimeEnv,
+    private readonly fetchImpl: FetchLike = globalThis.fetch.bind(globalThis)
+  ) {}
+
+  async search(input: PublicSearchInput): Promise<PublicSearchResponse> {
+    if (!this.env.publicLawGeminiApiKey) {
+      return buildFixtureResponse(
+        input,
+        "Live public-law search is not configured on this backend, so Ross is using a privacy-safe fallback index."
+      );
+    }
+
+    const endpoint = new URL(
+      `/v1beta/models/${encodeURIComponent(this.env.publicLawGeminiModel)}:generateContent`,
+      this.env.publicLawGeminiBaseUrl
+    ).toString();
+
+    let response: Response;
+    try {
+      response = await this.fetchImpl(endpoint, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json",
+          "x-goog-api-key": this.env.publicLawGeminiApiKey
+        },
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [
+              {
+                text: PUBLIC_LAW_GEMINI_SYSTEM_INSTRUCTION
+              }
+            ]
+          },
+          contents: [
+            {
+              role: "user",
+              parts: [
+                {
+                  text: input.query
+                }
+              ]
+            }
+          ],
+          tools: [
+            {
+              google_search: {}
+            }
+          ],
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 768
+          }
+        })
+      });
+    } catch {
+      throw new AppError(502, "public_law_connector_unavailable", "Could not search public law right now.");
+    }
+
+    if (!response.ok) {
+      throw new AppError(502, "public_law_connector_unavailable", "Could not search public law right now.", {
+        providerStatus: response.status
+      });
+    }
+
+    let payload: GeminiGenerateContentResponse;
+    try {
+      payload = (await response.json()) as GeminiGenerateContentResponse;
+    } catch {
+      throw new AppError(502, "public_law_connector_invalid_response", "Could not search public law right now.");
+    }
+
+    const results = buildGeminiResults(input, payload);
+    if (results.length === 0) {
+      throw new AppError(502, "public_law_connector_invalid_response", "Could not search public law right now.");
+    }
 
     return {
       requestId: createId("pls"),
       approvalState: "confirmed_public_preview",
       queryHash: hashForAudit(input.query),
       connector: {
-        mode: "backend_fixture_index",
-        liveSourceConnected: false,
-        cache: {
-          policy: "private, no-store",
-          ttlSeconds: 0,
-          cacheKey: hashForAudit(`${input.jurisdiction}:${input.language}:${input.query}`),
-          servedFromCache: false
-        }
+        mode: "gemini_google_search",
+        liveSourceConnected: true,
+        cache: buildCacheMetadata(input)
       },
-      results: topFixtures.map(({ fixture, score }) => ({
-        resultId: fixture.id,
-        source: fixture.source,
-        title: fixture.title,
-        citation: fixture.citation,
-        snippet: fixture.snippet,
-        link: fixture.link,
-        jurisdiction: fixture.jurisdiction,
-        score,
-        matchedTerms: queryTokens.filter((token) =>
-          normalizeText([fixture.title, fixture.citation, fixture.snippet, ...fixture.tags].join(" ")).includes(token)
-        )
-      })),
-      resultCount: topFixtures.length,
+      results,
+      resultCount: results.length,
       disclaimers: [
         "Public-law results are drafts for advocate review.",
-        "No case files or private matter details are stored by this backend.",
-        "This backend currently serves a sanitized fixture index until an approved connector is integrated."
+        "Only a sanitized public-law query crossed the network boundary.",
+        "Live public-law results were grounded from public web sources."
       ]
     };
   }

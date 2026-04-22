@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
 import type { AuditLogger } from "../audit/logger.js";
+import type { RuntimeEnv } from "../security/env.js";
 import {
   assertNoCaseDataPayload,
   assertSafePublicLawQuery,
@@ -13,6 +14,7 @@ import { hashForAudit } from "../utils/signing.js";
 
 interface RouteDeps {
   auditLogger: AuditLogger;
+  env: RuntimeEnv;
 }
 
 const publicSearchSchema = z
@@ -33,7 +35,7 @@ export async function registerPublicSearchProxyRoutes(
   app: FastifyInstance,
   deps: RouteDeps
 ): Promise<void> {
-  const service = new PublicSearchProxyService();
+  const service = new PublicSearchProxyService(deps.env);
 
   app.post(
     "/public-law/search",
@@ -76,7 +78,7 @@ export async function registerPublicSearchProxyRoutes(
         throw error;
       }
 
-      const response = service.search(input);
+      const response = await service.search(input);
       reply.header("Cache-Control", "private, no-store");
 
       deps.auditLogger.info({

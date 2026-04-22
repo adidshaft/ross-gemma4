@@ -52,7 +52,9 @@ This report does not claim:
 
 ## Current backend truth
 
-The current public-law path is live from the Ross backend for local QA, but the returned results are still privacy-safe fixture results. That is suitable for internal alpha testing and copy validation, not a production research-provider claim.
+The current public-law path is live from the Ross backend for local QA. The backend can now call Gemini with Google Search grounding, but only after Ross sends a sanitized public-law query through the explicit preview-confirmation flow.
+
+This repo snapshot does not include a configured Gemini key, so live Gemini grounding is not proven in this report. Without that key, the backend falls back to privacy-safe fixture results for QA.
 
 ## Current UI truth
 

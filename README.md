@@ -104,7 +104,10 @@ Notes:
 - Port `8080` is the default if it is free.
 - The app can point to a different local backend from `Settings > Advanced > Save test server`.
 - The backend exposes `GET /health` for a local smoke check.
-- Current public-law search in dev is a privacy-safe backend fixture path, not a production research provider.
+- Public-law search can use Gemini with Google Search grounding only from the backend, never from the app clients.
+- Set `ROSS_PUBLIC_LAW_GEMINI_API_KEY` or `GEMINI_API_KEY` on the backend to enable the live public-law connector.
+- If no Gemini key is configured, Ross falls back to a privacy-safe backend fixture index for QA.
+- Only the sanitized public-law query is sent to the live connector. Case files, document text, filenames, extracted fields, and matter details stay local.
 
 ## Run iOS
 
