@@ -5217,7 +5217,7 @@ private extension AlphaAppTab {
         case .cases:
             "Matters"
         case .ask:
-            "Ask"
+            "Ross"
         case .settings:
             "Settings"
         case .capture, .publicLawLegacy, .exportsLegacy:
@@ -5267,6 +5267,10 @@ private extension AlphaAppTab {
 private struct AlphaRootTopRail: View {
     @Bindable var model: AlphaRossModel
 
+    private var showsWorkspaceStrip: Bool {
+        model.persisted.selectedTab.normalizedForLawyerShell != .settings
+    }
+
     var body: some View {
         HStack(spacing: 8) {
             AlphaWorkspaceDrawerButton {
@@ -5275,10 +5279,19 @@ private struct AlphaRootTopRail: View {
                 }
             }
 
-            AlphaRootWorkspaceStrip(selectedTab: model.persisted.selectedTab) { tab in
-                withAnimation(.snappy(duration: 0.22)) {
-                    model.persisted.selectedTab = tab.normalizedForLawyerShell
+            if showsWorkspaceStrip {
+                AlphaRootWorkspaceStrip(selectedTab: model.persisted.selectedTab) { tab in
+                    withAnimation(.snappy(duration: 0.22)) {
+                        model.persisted.selectedTab = tab.normalizedForLawyerShell
+                    }
                 }
+            } else {
+                Text("Settings")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color.rossInk.opacity(0.78))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.leading, 4)
+                    .padding(.vertical, 10)
             }
         }
     }
@@ -5288,7 +5301,7 @@ private struct AlphaRootWorkspaceStrip: View {
     let selectedTab: AlphaAppTab
     let onSelect: (AlphaAppTab) -> Void
 
-    private let tabs: [AlphaAppTab] = [.home, .cases, .ask, .settings]
+    private let tabs: [AlphaAppTab] = [.home, .cases, .ask]
 
     var body: some View {
         HStack(spacing: 6) {
@@ -5624,7 +5637,7 @@ private struct AlphaRootAskDock: View {
                         }
                     } label: {
                         AlphaAskScopePill(
-                            title: "Asking about: \(model.scopeLabel(for: activeScopeCaseID))",
+                            title: model.scopeLabel(for: activeScopeCaseID),
                             foregroundStyle: dockPrimaryText,
                             backgroundOpacity: colorScheme == .dark ? 0.1 : 0.16,
                             showsChevron: true
@@ -5632,7 +5645,7 @@ private struct AlphaRootAskDock: View {
                     }
                 } else {
                     AlphaAskScopePill(
-                        title: "Asking about: \(model.scopeLabel(for: activeScopeCaseID))",
+                        title: model.scopeLabel(for: activeScopeCaseID),
                         foregroundStyle: dockPrimaryText,
                         backgroundOpacity: colorScheme == .dark ? 0.08 : 0.16,
                         statusSystemImage: "lock.fill",
@@ -5641,14 +5654,18 @@ private struct AlphaRootAskDock: View {
                     .accessibilityHint("Ask Ross is scoped to this matter.")
                 }
 
-                if model.askWebEnabled {
-                    HStack(spacing: 4) {
-                        RossGlassIconView(.earth, variant: .highlight, size: 14, fallbackSystemImage: "globe")
-                        Text("Public law search: On")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(dockSecondaryText)
-                    }
+                Button {
+                    model.askWebEnabled.toggle()
+                } label: {
+                    AlphaAskScopePill(
+                        title: model.askWebEnabled ? "Web on" : "Web off",
+                        foregroundStyle: model.askWebEnabled ? dockPrimaryText : dockSecondaryText,
+                        backgroundOpacity: colorScheme == .dark ? 0.08 : 0.14,
+                        statusSystemImage: "globe",
+                        showsChevron: false
+                    )
                 }
+                .buttonStyle(.plain)
             }
 
             if !activeSelectedDocuments.isEmpty, fixedDocumentIDs.count != 1 {
@@ -5674,7 +5691,7 @@ private struct AlphaRootAskDock: View {
                     showingTools = true
                 } label: {
                     RossGlassIconView(.badgeSparkle, variant: .neutral, size: 18, fallbackSystemImage: "plus")
-                        .frame(width: 34, height: 34)
+                        .frame(width: 30, height: 30)
                         .background(dockBadgeFill, in: Circle())
                 }
                 .buttonStyle(.plain)
@@ -5683,7 +5700,7 @@ private struct AlphaRootAskDock: View {
                 ZStack(alignment: .leading) {
                     if draftText.isEmpty {
                         Text(composerPlaceholder)
-                            .font(.system(size: 14, weight: .medium))
+                            .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(dockPrimaryText.opacity(0.38))
                             .padding(.vertical, 2)
                     }
@@ -5691,7 +5708,7 @@ private struct AlphaRootAskDock: View {
                     TextField("", text: draftBinding, axis: .vertical)
                         .lineLimit(1...2)
                         .textFieldStyle(.plain)
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(dockPrimaryText)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -5702,7 +5719,7 @@ private struct AlphaRootAskDock: View {
                     Image(systemName: "arrow.up.left.and.arrow.down.right")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(dockPrimaryText.opacity(0.92))
-                        .frame(width: 28, height: 28)
+                        .frame(width: 24, height: 24)
                         .background(dockBadgeFill, in: Circle())
                 }
                 .buttonStyle(.plain)
@@ -5712,7 +5729,7 @@ private struct AlphaRootAskDock: View {
                     Image(systemName: "arrow.up")
                         .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(Color.black.opacity(0.88))
-                        .frame(width: 34, height: 34)
+                        .frame(width: 30, height: 30)
                         .background(Color.white, in: Circle())
                 }
                 .buttonStyle(.plain)
@@ -5728,7 +5745,7 @@ private struct AlphaRootAskDock: View {
                         }
                     } label: {
                         RossGlassIconView(.userMsg, variant: .accent, size: 20, fallbackSystemImage: "bubble.left.and.text.bubble.right.fill")
-                            .frame(width: 34, height: 34)
+                            .frame(width: 30, height: 30)
                             .background(dockBadgeFill, in: Circle())
                     }
                     .buttonStyle(.plain)
@@ -5747,29 +5764,29 @@ private struct AlphaRootAskDock: View {
 
             if let selectionSubtitle, fixedDocumentIDs.isEmpty {
                 Text(selectionSubtitle)
-                    .font(.caption2.weight(.semibold))
+                    .font(.caption2)
                     .foregroundStyle(dockSecondaryText)
             } else if fixedDocumentIDs.isEmpty {
                 Text("Type @ to add a file, or say add task / save date.")
-                    .font(.caption2.weight(.semibold))
+                    .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(dockMutedText)
             }
 
             if model.askWebEnabled {
                 Text("Public-law search sends only a sanitized query. Case files stay on this device.")
-                    .font(.caption2)
+                    .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(dockSecondaryText)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(.horizontal, 11)
-        .padding(.vertical, 9)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
         .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(colorScheme == .dark ? Color.white.opacity(0.045) : Color.white.opacity(0.64))
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: dockGradient,
@@ -5780,7 +5797,7 @@ private struct AlphaRootAskDock: View {
                 }
         )
         .overlay {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .stroke(dockStroke, lineWidth: 1)
         }
         .shadow(color: dockShadow, radius: 16, x: 0, y: 8)
@@ -5853,9 +5870,9 @@ private struct AlphaRootAskDock: View {
                 NavigationStack {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Public-law query to be sent")
-                            .font(.headline)
+                            .font(.subheadline.weight(.semibold))
                         Text(preview.query)
-                            .font(.body.weight(.semibold))
+                            .font(.callout.weight(.semibold))
                         Text("Ross will only send this public-law query. Your case files stay on this device.")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
@@ -5908,29 +5925,29 @@ private struct AlphaCollapsedAskDockPill: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            RossGlassIconView(.badgeSparkle, variant: .accent, size: 16, fallbackSystemImage: "sparkles")
+            RossGlassIconView(.badgeSparkle, variant: .neutral, size: 15, fallbackSystemImage: "sparkles")
                 .frame(width: 28, height: 28)
                 .background((colorScheme == .dark ? Color.white.opacity(0.08) : Color.white.opacity(0.9)), in: Circle())
 
             Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(colorScheme == .dark ? Color.white.opacity(0.9) : Color.rossInk.opacity(0.88))
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(colorScheme == .dark ? Color.white.opacity(0.86) : Color.rossInk.opacity(0.84))
                 .lineLimit(1)
 
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 13)
+        .padding(.vertical, 9)
         .background(
             RoundedRectangle(cornerRadius: 999, style: .continuous)
-                .fill(colorScheme == .dark ? Color.white.opacity(0.05) : Color.white.opacity(0.72))
+                .fill(colorScheme == .dark ? Color.white.opacity(0.045) : Color.white.opacity(0.68))
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 999, style: .continuous))
         )
         .overlay {
             RoundedRectangle(cornerRadius: 999, style: .continuous)
-                .stroke(colorScheme == .dark ? Color.white.opacity(0.16) : Color.white.opacity(0.78), lineWidth: 1)
+                .stroke(colorScheme == .dark ? Color.white.opacity(0.16) : Color.white.opacity(0.74), lineWidth: 1)
         }
-        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.18 : 0.08), radius: 14, y: 8)
+        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.16 : 0.08), radius: 12, y: 7)
     }
 }
 
@@ -5999,7 +6016,7 @@ private struct AlphaAskScopePill: View {
     let showsChevron: Bool
 
     var body: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: 4) {
             Text(title)
                 .lineLimit(1)
 
@@ -6013,11 +6030,11 @@ private struct AlphaAskScopePill: View {
                     .font(.caption2.weight(.bold))
             }
         }
-        .font(.footnote.weight(.semibold))
+        .font(.caption2.weight(.semibold))
         .foregroundStyle(foregroundStyle)
-        .frame(minHeight: 40)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .frame(minHeight: 30)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
         .background(Color.white.opacity(backgroundOpacity), in: Capsule())
     }
 }
@@ -6300,11 +6317,11 @@ private struct AlphaAskComposerSheet: View {
                 HStack(alignment: .top, spacing: 12) {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Ask Ross")
-                            .font(.title3.weight(.semibold))
+                            .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Color.rossInk)
 
                         Text("Type @ to add a file.")
-                            .font(.subheadline)
+                            .font(.caption)
                             .foregroundStyle(Color.rossInk.opacity(0.64))
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -6350,9 +6367,10 @@ private struct AlphaAskComposerSheet: View {
                         model.askWebEnabled.toggle()
                     } label: {
                         AlphaAskScopePill(
-                            title: model.askWebEnabled ? "Web Search On" : "Web Search Off",
+                            title: model.askWebEnabled ? "Web on" : "Web off",
                             foregroundStyle: model.askWebEnabled ? Color.rossHighlight : Color.rossInk.opacity(0.78),
                             backgroundOpacity: 0.08,
+                            statusSystemImage: "globe",
                             showsChevron: false
                         )
                     }
@@ -6387,7 +6405,7 @@ private struct AlphaAskComposerSheet: View {
 
                     if draftText.isEmpty {
                         Text("Ask Ross about this matter, a tagged file, or your next drafting step.")
-                            .font(.body)
+                            .font(.footnote)
                             .foregroundStyle(Color.rossInk.opacity(0.34))
                             .padding(.horizontal, 18)
                             .padding(.vertical, 18)
@@ -6395,7 +6413,7 @@ private struct AlphaAskComposerSheet: View {
 
                     TextEditor(text: draftBinding)
                         .scrollContentBackground(.hidden)
-                        .font(.body)
+                        .font(.footnote)
                         .foregroundStyle(Color.rossInk)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         .padding(.horizontal, 14)
@@ -6419,7 +6437,7 @@ private struct AlphaAskComposerSheet: View {
 
                 if model.askWebEnabled {
                     Text("Web Search only uses an approved public-law query. Case files and document text stay on-device.")
-                        .font(.caption)
+                        .font(.caption2)
                         .foregroundStyle(Color.rossInk.opacity(0.58))
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -6472,11 +6490,11 @@ private struct AlphaRootAskToolsSheet: View {
                         HStack(spacing: 10) {
                             RossGlassIconView(.userMsg, variant: .accent, size: 22, fallbackSystemImage: "bubble.left.and.text.bubble.right.fill")
                             Text("Ask Ross")
-                                .font(.title3.weight(.semibold))
+                                .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(Color.rossInk)
                         }
                         Text("Choose scope, add a file, or turn on Web search.")
-                            .font(.subheadline)
+                            .font(.caption)
                             .foregroundStyle(Color.rossInk.opacity(0.66))
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -7906,6 +7924,19 @@ private func alphaDocumentGlassIcon(_ kind: AlphaDocumentKind) -> (RossGlassIcon
     }
 }
 
+private func alphaDocumentKindBadgeTitle(_ kind: AlphaDocumentKind) -> String {
+    switch kind {
+    case .pdf:
+        return "PDF"
+    case .image:
+        return "PHOTO"
+    case .text:
+        return "TEXT"
+    case .unknown:
+        return "FILE"
+    }
+}
+
 private func alphaDocumentImportedLabel(_ document: AlphaCaseDocument) -> String {
     document.importedAt.formatted(date: .abbreviated, time: .omitted)
 }
@@ -7915,14 +7946,32 @@ private struct AlphaFolderArtwork: View {
     let icon: RossGlassIconName
     let variant: RossGlassIconVariant
     let fallbackSystemImage: String
+    let topTagText: String?
     let badgeText: String?
 
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
+        ZStack {
             RossGlassIconView(icon, variant: variant, size: 64, fallbackSystemImage: fallbackSystemImage)
                 .padding(.leading, 2)
                 .padding(.top, 2)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+
+            if let topTagText {
+                Text(topTagText)
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .tracking(0.4)
+                    .foregroundStyle(tint.opacity(0.94))
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 4)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .overlay {
+                        Capsule()
+                            .stroke(Color.white.opacity(0.3), lineWidth: 0.7)
+                    }
+                    .padding(.top, 2)
+                    .padding(.trailing, 2)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+            }
 
             if let badgeText {
                 Text(badgeText)
@@ -8070,6 +8119,7 @@ private struct AlphaDocumentFolderTile: View {
                 icon: glassIcon.0,
                 variant: glassIcon.1,
                 fallbackSystemImage: glassIcon.2,
+                topTagText: alphaDocumentKindBadgeTitle(document.kind),
                 badgeText: document.pageCount == 1 ? "1 page" : "\(document.pageCount)"
             )
 
@@ -9331,6 +9381,7 @@ private struct AlphaCaseFolderCard: View {
                 icon: .folder,
                 variant: .neutral,
                 fallbackSystemImage: "folder.fill",
+                topTagText: nil,
                 badgeText: caseMatter.documents.isEmpty ? "New" : "\(caseMatter.documents.count)"
             )
 
@@ -9606,15 +9657,15 @@ private struct AlphaActiveMatterChatCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text("Matter chat")
-                    .font(.headline)
+                    .font(.subheadline.weight(.semibold))
                 Text(
                     session == nil
                         ? "Keep questions, file follow-up, and next steps together for this matter."
                         : "Continue in the current matter thread to keep related work in one place."
                 )
-                .font(.footnote)
+                .font(.caption)
                 .foregroundStyle(Color.rossInk.opacity(0.7))
                 .fixedSize(horizontal: false, vertical: true)
             }
@@ -9622,40 +9673,49 @@ private struct AlphaActiveMatterChatCard: View {
             if let session, let sessionTitle {
                 HStack(alignment: .top, spacing: 12) {
                     RossGlassIconView(.userMsg, variant: .accent, size: 20, fallbackSystemImage: "bubble.left.and.text.bubble.right.fill")
-                        .frame(width: 32, height: 32)
+                        .frame(width: 28, height: 28)
                         .background(Color.rossAccent.opacity(0.1), in: Circle())
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(sessionTitle)
-                            .font(.subheadline.weight(.semibold))
+                            .font(.footnote.weight(.semibold))
                             .foregroundStyle(Color.rossInk)
 
                         Text("\(alphaUpdateCountLabel(session.turns.count)) · \(sessionSubtitle ?? "Recent activity")")
-                            .font(.caption)
+                            .font(.caption2)
                             .foregroundStyle(Color.rossInk.opacity(0.7))
                     }
                 }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(Color.rossGlassFill.opacity(0.84), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Color.rossGlassStroke.opacity(0.8), lineWidth: 1)
+                }
             } else {
                 Text("No matter chat yet. Ross will start one when you import a file, review a document, or ask the first question here.")
-                    .font(.subheadline)
+                    .font(.footnote)
                     .foregroundStyle(Color.rossInk.opacity(0.72))
                     .fixedSize(horizontal: false, vertical: true)
             }
 
             HStack(spacing: 10) {
-                Button(session == nil ? "Open matter chat" : "Continue in matter chat", action: onOpenChat)
-                    .rossPrimaryButtonStyle()
+                Button(session == nil ? "Open chat" : "Continue chat", action: onOpenChat)
+                    .font(.footnote.weight(.semibold))
+                    .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 14, expandsHorizontally: false)
 
-                Button("Start new chat", action: onStartNewChat)
-                    .buttonStyle(.bordered)
+                Button("New chat", action: onStartNewChat)
+                    .font(.footnote.weight(.semibold))
+                    .rossGlassButtonStyle(tint: Color.rossInk.opacity(0.7), cornerRadius: 14, expandsHorizontally: false)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(Color.rossCardBackground)
+        .padding(14)
+        .background(Color.rossGlassSubtleFill.opacity(0.94))
         .overlay {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.rossBorder, lineWidth: 1)
+                .stroke(Color.rossGlassStroke.opacity(0.82), lineWidth: 1)
         }
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
@@ -10110,10 +10170,10 @@ private struct AlphaAskEmptyState: View {
         VStack(spacing: 20) {
             VStack(spacing: 8) {
                 Text("Ask Ross what's next")
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
                     .multilineTextAlignment(.center)
                 Text(detail)
-                    .font(.subheadline)
+                    .font(.footnote)
                     .foregroundStyle(Color.rossInk.opacity(0.7))
                     .multilineTextAlignment(.center)
             }
@@ -10124,7 +10184,7 @@ private struct AlphaAskEmptyState: View {
                         onSelectSuggestion(suggestion)
                     } label: {
                         Text(suggestion)
-                            .font(.subheadline.weight(.medium))
+                            .font(.footnote.weight(.medium))
                             .foregroundStyle(Color.rossInk)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 14)
@@ -10160,7 +10220,7 @@ private struct AlphaAskTurnCard: View {
                 HStack {
                     Spacer(minLength: 48)
                     Text(result.question)
-                        .font(.body)
+                        .font(.callout)
                         .foregroundStyle(Color.rossInk)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
@@ -10184,12 +10244,12 @@ private struct AlphaAskTurnCard: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 14) {
                     Text(result.answerTitle)
-                        .font(.headline)
+                        .font(.subheadline.weight(.semibold))
 
                     ForEach(Array(result.answerSectionItems().enumerated()), id: \.element.id) { index, section in
                         VStack(alignment: .leading, spacing: 14) {
                             Text(section.text)
-                                .font(.body)
+                                .font(.callout)
                                 .foregroundStyle(Color.rossInk.opacity(0.92))
                             if index < result.answerSections.count - 1 {
                                 Divider().overlay(Color.rossBorder.opacity(0.4))
@@ -10241,7 +10301,7 @@ private struct AlphaAskTurnCard: View {
                                 .font(.footnote.weight(.semibold))
                                 .foregroundStyle(Color.rossInk.opacity(0.7))
                             Text(preview.query)
-                                .font(.subheadline.weight(.medium))
+                                .font(.footnote.weight(.medium))
                                 .foregroundStyle(Color.rossInk.opacity(0.82))
                         }
                     }
@@ -10254,12 +10314,12 @@ private struct AlphaAskTurnCard: View {
                             ForEach(result.publicLawResults) { publicResult in
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text(publicResult.title)
-                                        .font(.subheadline.weight(.semibold))
+                                        .font(.footnote.weight(.semibold))
                                     Text(publicResult.citation)
                                         .font(.caption.weight(.semibold))
                                         .foregroundStyle(Color.rossAccent)
                                     Text(publicResult.snippet)
-                                        .font(.footnote)
+                                        .font(.caption)
                                         .foregroundStyle(Color.rossInk.opacity(0.74))
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -10275,7 +10335,7 @@ private struct AlphaAskTurnCard: View {
                         .foregroundStyle(Color.rossInk.opacity(0.4))
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
-                .padding(18)
+                .padding(16)
                 .background {
                     RoundedRectangle(cornerRadius: 26, style: .continuous)
                         .fill(Color.rossGlassFill)
