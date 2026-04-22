@@ -2,11 +2,11 @@ import SwiftUI
 
 public extension Font {
     static func rossSerifTitle() -> Font {
-        .system(size: 22, weight: .semibold, design: .rounded)
+        .system(size: 22, weight: .semibold, design: .serif)
     }
     
     static func rossSerifHeadline() -> Font {
-        .system(size: 17, weight: .semibold, design: .rounded)
+        .system(size: 17, weight: .semibold, design: .serif)
     }
 
     static func rossInlineTitle() -> Font {
@@ -15,19 +15,52 @@ public extension Font {
 }
 
 public struct RossCardStyle: ViewModifier {
+    @Environment(\.colorScheme) private var colorScheme
+
     public func body(content: Content) -> some View {
         content
-            .padding(16)
-            .background(
-                Color.rossCardBackground.opacity(0.88)
-                    .background(.ultraThinMaterial)
-            )
+            .padding(18)
+            .background {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(
+                            colorScheme == .dark
+                                ? Color.rossGlassSubtleFill.opacity(0.78)
+                                : Color.rossCardBackground.opacity(0.88)
+                        )
+
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                }
+            }
             .overlay {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .stroke(Color.rossBorder.opacity(0.9), lineWidth: 0.75)
             }
+            .overlay(alignment: .top) {
+                if colorScheme == .dark {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.12),
+                                    Color.clear
+                                ],
+                                startPoint: .top,
+                                endPoint: .center
+                            ),
+                            lineWidth: 1
+                        )
+                        .padding(.horizontal, 0.5)
+                }
+            }
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .shadow(color: Color.rossShadow.opacity(0.45), radius: 14, x: 0, y: 8)
+            .shadow(
+                color: colorScheme == .dark ? Color.black.opacity(0.08) : Color.rossShadow.opacity(0.45),
+                radius: colorScheme == .dark ? 8 : 14,
+                x: 0,
+                y: colorScheme == .dark ? 4 : 8
+            )
     }
 }
 

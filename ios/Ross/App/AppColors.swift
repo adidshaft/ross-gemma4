@@ -38,7 +38,7 @@ extension Color {
 
     static var rossAccent: Color {
         dynamicColor(lightRed: 0.18, lightGreen: 0.22, lightBlue: 0.40,
-                     darkRed: 0.50, darkGreen: 0.55, darkBlue: 0.85)
+                     darkRed: 0.52, darkGreen: 0.56, darkBlue: 0.94)
     }
 
     static var rossHighlight: Color {
@@ -90,7 +90,7 @@ extension Color {
             lightRed: 1, lightGreen: 1, lightBlue: 1,
             darkRed: 0.84, darkGreen: 0.88, darkBlue: 0.96,
             lightAlpha: 0.64,
-            darkAlpha: 0.24
+            darkAlpha: 0.38
         )
     }
 
@@ -139,7 +139,14 @@ extension Color {
         )
     }
     
-    static let rossBorder = Color.primary.opacity(0.08)
+    static var rossBorder: Color {
+        dynamicColor(
+            lightRed: 0, lightGreen: 0, lightBlue: 0,
+            darkRed: 1, darkGreen: 1, darkBlue: 1,
+            lightAlpha: 0.07,
+            darkAlpha: 0.16
+        )
+    }
 
     static var rossCardBackground: Color {
         #if canImport(UIKit)
