@@ -42,8 +42,8 @@ extension Color {
     }
 
     static var rossHighlight: Color {
-        dynamicColor(lightRed: 0.85, lightGreen: 0.65, lightBlue: 0.25,
-                     darkRed: 0.95, darkGreen: 0.75, darkBlue: 0.35)
+        dynamicColor(lightRed: 0.60, lightGreen: 0.54, lightBlue: 0.46,
+                     darkRed: 0.86, darkGreen: 0.80, darkBlue: 0.70)
     }
 
     static var rossSuccess: Color {
@@ -58,12 +58,12 @@ extension Color {
     
     // Backgrounds for Hero
     static var rossHeroTop: Color {
-        dynamicColor(lightRed: 0.98, lightGreen: 0.98, lightBlue: 0.99,
+        dynamicColor(lightRed: 0.98, lightGreen: 0.97, lightBlue: 0.95,
                      darkRed: 0.14, darkGreen: 0.15, darkBlue: 0.18)
     }
 
     static var rossHeroBottom: Color {
-        dynamicColor(lightRed: 0.91, lightGreen: 0.92, lightBlue: 0.95,
+        dynamicColor(lightRed: 0.93, lightGreen: 0.92, lightBlue: 0.89,
                      darkRed: 0.08, darkGreen: 0.09, darkBlue: 0.12)
     }
 

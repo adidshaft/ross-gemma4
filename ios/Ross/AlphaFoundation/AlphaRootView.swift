@@ -4058,7 +4058,7 @@ final class AlphaRossModel {
             caseFileSources: Array(matchedSources.prefix(3)),
             publicLawPreview: nil,
             publicLawResults: [],
-            statusNote: notFound ? "Web Search is off" : selectedDocuments.isEmpty ? "Chat · local files" : "Chat · selected files only",
+            statusNote: notFound ? "Public law search is off" : selectedDocuments.isEmpty ? "Chat · local files" : "Chat · selected files only",
             needsReviewWarning: warnings.isEmpty ? nil : "\(alphaReviewItemCountLabel(warnings.count)) still need review."
         )
     }
@@ -4912,6 +4912,12 @@ private struct AlphaSetupBackdrop: View {
 
 private struct AlphaSetupWordmarkRow: View {
     let title: String
+    let stepLabel: String?
+
+    init(title: String, stepLabel: String? = nil) {
+        self.title = title
+        self.stepLabel = stepLabel
+    }
 
     var body: some View {
         HStack(spacing: 10) {
@@ -4927,6 +4933,21 @@ private struct AlphaSetupWordmarkRow: View {
                 .font(.caption.weight(.bold))
                 .tracking(2.4)
                 .foregroundStyle(Color.rossAccent)
+
+            Spacer(minLength: 0)
+
+            if let stepLabel, !stepLabel.isEmpty {
+                Text(stepLabel)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.rossInk.opacity(0.68))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.rossGlassFill, in: Capsule())
+                    .overlay {
+                        Capsule()
+                            .stroke(Color.rossGlassStroke.opacity(0.84), lineWidth: 1)
+                    }
+            }
         }
     }
 }
@@ -5005,7 +5026,7 @@ private struct AlphaOnboardingScreen: View {
                 AlphaSetupBackdrop()
 
                 VStack(alignment: .leading, spacing: 24) {
-                    AlphaSetupWordmarkRow(title: "Ross")
+                    AlphaSetupWordmarkRow(title: "Ross", stepLabel: "1 / 2")
 
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Let’s set up your assistant.")
@@ -5030,19 +5051,6 @@ private struct AlphaOnboardingScreen: View {
                                 .gridCellColumns(2)
                         }
                     }
-
-                    Text("Ross picks a sensible local setup for this phone, keeps each matter separate, and can finish the setup quietly in the background.")
-                        .font(.footnote)
-                        .foregroundStyle(Color.rossInk.opacity(0.72))
-                        .lineSpacing(3)
-                        .padding(20)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                                .stroke(Color.rossGlassStroke.opacity(0.9), lineWidth: 1)
-                        }
-                        .shadow(color: Color.rossShadow.opacity(0.24), radius: 18, y: 10)
 
                     Spacer(minLength: 24)
 
@@ -5075,10 +5083,10 @@ private struct AlphaPackSetupScreen: View {
 
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 18) {
-                        AlphaSetupWordmarkRow(title: "Assistant setup")
+                        AlphaSetupWordmarkRow(title: "Assistant setup", stepLabel: "2 / 2")
 
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Choose your on-device AI assistant.")
+                            Text("Choose your private reading assistant.")
                                 .font(.system(size: 28, weight: .semibold, design: .rounded))
                                 .foregroundStyle(Color.rossInk)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -6436,7 +6444,7 @@ private struct AlphaAskComposerSheet: View {
                 }
 
                 if model.askWebEnabled {
-                    Text("Web Search only uses an approved public-law query. Case files and document text stay on-device.")
+                    Text("Public law search only uses an approved public-law query. Case files and document text stay on-device.")
                         .font(.caption2)
                         .foregroundStyle(Color.rossInk.opacity(0.58))
                         .fixedSize(horizontal: false, vertical: true)
@@ -6493,7 +6501,7 @@ private struct AlphaRootAskToolsSheet: View {
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(Color.rossInk)
                         }
-                        Text("Choose scope, add a file, or turn on Web search.")
+                        Text("Choose scope, add a file, or turn on public law search.")
                             .font(.caption)
                             .foregroundStyle(Color.rossInk.opacity(0.66))
                             .fixedSize(horizontal: false, vertical: true)
@@ -6544,7 +6552,7 @@ private struct AlphaRootAskToolsSheet: View {
                     }
 
                     AlphaRootAskToolRow(
-                        title: "Web Search",
+                        title: "Public law search",
                         detail: model.askWebEnabled
                             ? "On. Ross only sends a sanitized public-law query."
                             : "Off. Ross stays fully local until you turn it on.",
@@ -7396,7 +7404,7 @@ private struct AlphaHomeScreen: View {
                     detail: !hasMatters
                         ? "Start by adding your first matter below."
                         : attentionCount == 0
-                        ? "No urgent work right now."
+                        ? "All caught up for now."
                         : nil,
                     showsMedia: false,
                     mediaHeight: 108,
@@ -7590,7 +7598,7 @@ private struct AlphaCaseListScreen: View {
                             } label: {
                                 Label("Create matter", systemImage: "plus")
                             }
-                            .buttonStyle(.borderedProminent)
+                            .rossPrimaryButtonStyle()
                         }
                     }
                 } else {
@@ -8518,8 +8526,13 @@ private struct AlphaMatterStarterCard: View {
                     .textFieldStyle(.roundedBorder)
                 TextField("Case number", text: $model.caseDraftCaseNumber)
                     .textFieldStyle(.roundedBorder)
-                TextField("Next date (for example 28 Apr 2026)", text: $model.caseDraftNextDateText)
-                    .textFieldStyle(.roundedBorder)
+                AlphaMatterEditorDateField(
+                    title: "Next hearing date",
+                    date: Binding(
+                        get: { model.caseDraftNextDate },
+                        set: { model.setCaseDraftNextDate($0) }
+                    )
+                )
                 Button("Save matter and open") {
                     model.createCase()
                 }
@@ -10686,7 +10699,7 @@ private struct AlphaCaseWorkspaceScreen: View {
                                 }
 
                                 VStack(alignment: .leading, spacing: 12) {
-                                    AlphaWorkspaceSectionLabel(title: "Needs review", detail: nil)
+                                    AlphaWorkspaceSectionLabel(title: "AI flags", detail: nil)
 
                                     if reviewItems.isEmpty {
                                         AlphaReviewEmptyState()

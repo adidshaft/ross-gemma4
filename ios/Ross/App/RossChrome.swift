@@ -87,27 +87,31 @@ struct RossGlassIconView: View {
 }
 
 struct RossLaunchSplashView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @State private var appeared = false
 
     var body: some View {
         ZStack {
             RossAuthBackdrop()
 
-            VStack(spacing: 14) {
+            VStack(spacing: 18) {
                 Image("RossLogo")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 96, height: 96)
+                    .frame(width: 146, height: 146)
+                    .shadow(color: colorScheme == .dark ? Color.clear : Color.white.opacity(0.52), radius: 16, y: -3)
                     .shadow(color: Color.rossAccent.opacity(0.16), radius: 24, y: 12)
                     .shadow(color: Color.rossShadow.opacity(0.18), radius: 12, y: 6)
                     .scaleEffect(appeared ? 1 : 0.78)
                     .opacity(appeared ? 1 : 0)
 
                 Text("Ross")
-                    .font(.system(size: 24, weight: .medium))
+                    .font(.system(size: 30, weight: .semibold))
+                    .tracking(0.8)
                     .foregroundStyle(Color.rossInk)
-                    .opacity(appeared ? 1 : 0)
-                    .offset(y: appeared ? 0 : 6)
+                    .offset(y: -2)
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 6)
             }
         }
         .onAppear {
@@ -136,7 +140,7 @@ struct RossSectionCard<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             if title != nil || subtitle != nil {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 10) {
                     if let title {
                         Text(title)
                             .font(.rossSerifHeadline())
@@ -147,12 +151,11 @@ struct RossSectionCard<Content: View>: View {
                     if let subtitle {
                         Text(subtitle)
                             .font(.footnote)
-                            .foregroundStyle(Color.rossInk.opacity(0.65))
+                            .foregroundStyle(Color.rossInk.opacity(0.7))
                             .lineSpacing(3)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
-                .padding(.bottom, 4)
             }
 
             content
@@ -274,10 +277,9 @@ struct RossHeroCard<Content: View>: View {
             }
 
             VStack(alignment: .leading, spacing: 10) {
-                Text(eyebrow.uppercased())
-                    .font(.caption.weight(.bold))
-                    .tracking(1.8)
-                    .foregroundStyle(Color.rossHighlight)
+                Text(eyebrow)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color.rossInk.opacity(0.58))
 
                 Text(title)
                     .font(.rossSerifTitle())
@@ -310,7 +312,7 @@ struct RossHeroCard<Content: View>: View {
                 .stroke(Color.rossGlassStroke.opacity(0.85), lineWidth: 1)
         }
         .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
-        .shadow(color: Color.rossAccent.opacity(0.08), radius: 18, y: 10)
+        .shadow(color: Color.rossShadow.opacity(0.14), radius: 24, y: 14)
     }
 }
 
@@ -338,7 +340,7 @@ struct RossInfoPill: View {
                 .layoutPriority(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(minHeight: 70, alignment: .topLeading)
+        .frame(minHeight: 58, alignment: .topLeading)
         .padding(.horizontal, 13)
         .padding(.vertical, 10)
         .background {
@@ -376,19 +378,18 @@ struct RossMetricTile: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text(label.uppercased())
-                .font(.caption2.weight(.bold))
-                .tracking(1.1)
-                .foregroundStyle(tint.opacity(0.8))
+            Text(label)
+                .font(.system(size: 12, weight: .regular))
+                .foregroundStyle(tint.opacity(0.76))
                 .lineLimit(1)
                 .minimumScaleFactor(0.55)
                 .allowsTightening(true)
 
             Text(value)
-                .font(.subheadline.weight(.semibold))
+                .font(.title3.weight(.semibold))
                 .foregroundStyle(Color.rossInk)
         }
-        .padding(12)
+        .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(tint.opacity(0.05))
         .overlay {
