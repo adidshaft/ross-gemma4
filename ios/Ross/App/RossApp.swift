@@ -330,7 +330,7 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
             store.clearSession()
             RossAuthSessionSnapshot.shared.update(nil)
             phase = .signedOut
-            authErrorMessage = "Session expired. Please sign in again."
+            authErrorMessage = nil
         }
     }
 
@@ -1064,7 +1064,7 @@ private struct RossAuthSignInSheet: View {
                             #if DEBUG
                             VStack(alignment: .leading, spacing: 10) {
                                 HStack {
-                                    Text("Internal testing mode")
+                                    Text("Demo mode")
                                         .font(.system(size: 14, weight: .semibold))
                                         .foregroundStyle(Color.rossInk)
 
@@ -1090,7 +1090,7 @@ private struct RossAuthSignInSheet: View {
                                     }
                                 )
 
-                                Text("Internal testing mode uses sample data only. Use `advocate@ross.ai`.")
+                                Text("Demo mode uses sample data only. Use `advocate@ross.ai`.")
                                     .font(.system(size: 11, weight: .medium))
                                     .foregroundStyle(Color.rossInk.opacity(0.7))
 
@@ -1098,7 +1098,7 @@ private struct RossAuthSignInSheet: View {
                                     authController.signInWithDemoEmail(demoEmail)
                                 } label: {
                                     RossAuthActionLabel(
-                                        title: "Use internal testing mode",
+                                        title: "Open demo mode",
                                         tone: .secondary
                                     ) {
                                         RossGlassIconView(.userMsg, variant: .neutral, size: 17, fallbackSystemImage: "envelope.fill")
@@ -1143,23 +1143,32 @@ private struct RossAuthSignInSheet: View {
 
                                 #if DEBUG
                                 Button {
+                                    authController.authErrorMessage = nil
                                     withAnimation(.spring(response: 0.3, dampingFraction: 0.84)) {
                                         isEmailExpanded = true
                                     }
                                 } label: {
-                                    HStack(spacing: 8) {
-                                        Text("Internal testing mode")
-                                            .font(.system(size: 12, weight: .semibold))
-                                            .foregroundStyle(Color.rossInk.opacity(0.76))
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        HStack(spacing: 8) {
+                                            Text("Open demo mode")
+                                                .font(.system(size: 12, weight: .semibold))
+                                                .foregroundStyle(Color.rossInk.opacity(0.76))
 
-                                        Spacer(minLength: 8)
+                                            Spacer(minLength: 8)
 
-                                        Image(systemName: "chevron.right")
-                                            .font(.system(size: 11, weight: .bold))
-                                            .foregroundStyle(Color.rossInk.opacity(0.34))
+                                            Image(systemName: "chevron.right")
+                                                .font(.system(size: 11, weight: .bold))
+                                                .foregroundStyle(Color.rossInk.opacity(0.34))
+                                        }
+
+                                        Text("Sample data only. Case files stay on this device.")
+                                            .font(.system(size: 10.5, weight: .medium))
+                                            .foregroundStyle(Color.rossInk.opacity(0.58))
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding(.horizontal, 4)
+                                    .padding(.vertical, 8)
+                                    .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
                                 #endif

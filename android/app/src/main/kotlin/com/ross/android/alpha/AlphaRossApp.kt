@@ -103,6 +103,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -2984,10 +2985,11 @@ private fun AlphaDocumentViewerScreen(
                         "Create review task",
                         "Save a follow-up task linked to this matter and its next date.",
                         onClick = {
+                            val dueDate = controller.persisted.cases.firstOrNull { it.id == caseId }?.nextHearing
                             controller.addTask(
                                 title = "Review ${doc.title}",
                                 caseId = caseId,
-                                dueDate = java.time.Instant.now().plusSeconds(86_400).toString(),
+                                dueDate = dueDate,
                                 priority = AlphaTaskPriority.Normal,
                                 notes = "Created from document viewer.",
                             )
@@ -3436,10 +3438,16 @@ private fun AlphaPublicLawScreen(controller: AlphaRossController, onBack: () -> 
                     Button(onClick = { controller.runPublicLawSearch() }, modifier = Modifier.fillMaxWidth()) { Text("Run Public-Law Search") }
                 }
             }
-            controller.publicLawResults.forEach { result ->
-                AlphaCard(result.title, result.citation) {
-                    Text(result.snippet, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(result.sourceName, style = MaterialTheme.typography.bodySmall)
+            if (controller.publicLawResults.isNotEmpty()) {
+                AlphaCard("Public-law results", "Separate from case-file context and limited to the approved public-law query.") {
+                    controller.publicLawResults.forEach { result ->
+                        AlphaPublicLawResultCard(result)
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                    AlphaPublicLawWarningsCard(
+                        needsReviewWarning = null,
+                        includePublicLawWarnings = true,
+                    )
                 }
             }
         }
@@ -3448,6 +3456,7 @@ private fun AlphaPublicLawScreen(controller: AlphaRossController, onBack: () -> 
 
 @Composable
 private fun AlphaExportsScreen(controller: AlphaRossController, caseId: String?, onBack: () -> Unit) {
+    val context = LocalContext.current
     AlphaShell(title = "Local Reports", showBack = true, onBack = onBack) {
         Column(
             modifier = Modifier
@@ -3504,10 +3513,61 @@ private fun AlphaExportsScreen(controller: AlphaRossController, caseId: String?,
             controller.persisted.exports.forEach { report ->
                 AlphaCard(report.title, report.kind.replace('_', ' ')) {
                     Text(report.relativePath, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    controller.absoluteFile(report.relativePath).takeIf { it.exists() }?.let { exportFile ->
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = { openLocalExport(context, exportFile) },
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Text(if (exportFile.extension.equals("pdf", ignoreCase = true)) "Open PDF" else "Open draft")
+                            }
+                            TextButton(
+                                onClick = { shareLocalExport(context, exportFile) },
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Text("Share")
+                            }
+                        }
+                    }
                 }
             }
         }
     }
+}
+
+private fun exportMimeType(file: File): String =
+    when (file.extension.lowercase()) {
+        "pdf" -> "application/pdf"
+        "txt" -> "text/plain"
+        else -> "*/*"
+    }
+
+private fun exportUri(context: android.content.Context, file: File) =
+    FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+
+private fun openLocalExport(context: android.content.Context, file: File) {
+    val uri = exportUri(context, file)
+    val openIntent = Intent(Intent.ACTION_VIEW).apply {
+        setDataAndType(uri, exportMimeType(file))
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+
+    runCatching {
+        context.startActivity(Intent.createChooser(openIntent, "Open local draft"))
+    }.getOrElse {
+        shareLocalExport(context, file)
+    }
+}
+
+private fun shareLocalExport(context: android.content.Context, file: File) {
+    val uri = exportUri(context, file)
+    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+        type = exportMimeType(file)
+        putExtra(Intent.EXTRA_STREAM, uri)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    context.startActivity(Intent.createChooser(shareIntent, "Share local draft"))
 }
 
 @Composable
@@ -5535,50 +5595,163 @@ private fun AlphaAskTurnCard(
                         }
                     }
                 }
-                result.needsReviewWarning?.let { warning ->
-                    Text(warning, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary)
-                }
                 if (result.caseFileSources.isNotEmpty()) {
-                    Text("Local sources", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    result.caseFileSources.forEach { source ->
-                        OutlinedCard(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
-                                onClick = { onOpenSource(source) },
+                    OutlinedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.22f)),
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
-                            Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(
-                                    alphaSourceLabel(source, contextDocumentTitle),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.SemiBold,
-                                )
-                                Text(source.detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            AlphaSectionLabel("Case-file sources", "Only local matter context used in this draft.")
+                            result.caseFileSources.forEach { source ->
+                                OutlinedCard(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)),
+                                    onClick = { onOpenSource(source) },
+                                ) {
+                                    Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text(
+                                            alphaSourceLabel(source, contextDocumentTitle),
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.SemiBold,
+                                        )
+                                        Text(source.detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
                             }
                         }
                     }
                 }
                 result.publicLawPreview?.let { preview ->
-                    Text("Web search preview", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(preview.query, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    OutlinedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.22f)),
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            AlphaSectionLabel("Approved public-law query", "Ross only sent this sanitized public-law query.")
+                            Text(preview.query, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                 }
                 if (result.publicLawResults.isNotEmpty()) {
-                    Text("Public-law results", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    result.publicLawResults.forEach { publicResult ->
-                        OutlinedCard(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.26f)),
+                    OutlinedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.22f)),
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
-                            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(publicResult.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                                Text(publicResult.citation, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
-                                Text(publicResult.snippet, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            AlphaSectionLabel("Public-law results", "Separate from case-file facts and limited to approved public-law search.")
+                            result.publicLawResults.forEach { publicResult ->
+                                AlphaPublicLawResultCard(publicResult)
                             }
                         }
                     }
                 }
+                if (result.publicLawPreview != null || result.publicLawResults.isNotEmpty() || result.needsReviewWarning != null) {
+                    AlphaPublicLawWarningsCard(
+                        needsReviewWarning = result.needsReviewWarning,
+                        includePublicLawWarnings = result.publicLawPreview != null || result.publicLawResults.isNotEmpty(),
+                    )
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun AlphaSectionLabel(title: String, detail: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(detail, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun AlphaTagChip(title: String) {
+    OutlinedCard(
+        shape = RoundedCornerShape(999.dp),
+        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
+        border = androidx.compose.foundation.BorderStroke(0.dp, Color.Transparent),
+    ) {
+        Text(
+            title,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
+}
+
+@Composable
+private fun AlphaPublicLawResultCard(result: AlphaPublicLawResult) {
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)),
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top,
+            ) {
+                AlphaTagChip("Public-law result")
+                Text(
+                    result.sourceName,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(result.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            if (result.citation.isNotBlank()) {
+                Text(result.citation, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+            }
+            Text(result.snippet, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun AlphaPublicLawWarningsCard(needsReviewWarning: String?, includePublicLawWarnings: Boolean) {
+    val warnings = buildList {
+        if (includePublicLawWarnings) {
+            add("Public-law search used a sanitized query.")
+            add("Verify all citations before use.")
+            add("Draft for advocate review.")
+        }
+        if (!needsReviewWarning.isNullOrBlank()) {
+            add(needsReviewWarning)
+        }
+    }
+    if (warnings.isEmpty()) return
+
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.outlinedCardColors(containerColor = AlphaAmberStatus.copy(alpha = 0.08f)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, AlphaAmberStatus.copy(alpha = 0.25f)),
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            AlphaSectionLabel("Warnings", "Keep public-law references and matter facts separate while reviewing.")
+            warnings.forEach { AlphaBullet(it) }
         }
     }
 }
