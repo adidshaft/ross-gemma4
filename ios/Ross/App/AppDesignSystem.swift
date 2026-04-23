@@ -21,17 +21,12 @@ public struct RossCardStyle: ViewModifier {
         content
             .padding(18)
             .background {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(
-                            colorScheme == .dark
-                                ? Color.rossGlassSubtleFill.opacity(0.78)
-                                : Color.rossCardBackground.opacity(0.88)
-                        )
-
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                }
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(
+                        colorScheme == .dark
+                            ? Color.rossGlassFill.opacity(0.74)
+                            : Color.rossCardBackground
+                    )
             }
             .overlay {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -56,10 +51,10 @@ public struct RossCardStyle: ViewModifier {
             }
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
             .shadow(
-                color: colorScheme == .dark ? Color.black.opacity(0.08) : Color.rossShadow.opacity(0.45),
-                radius: colorScheme == .dark ? 8 : 14,
+                color: colorScheme == .dark ? Color.black.opacity(0.08) : Color.rossShadow.opacity(0.14),
+                radius: colorScheme == .dark ? 8 : 10,
                 x: 0,
-                y: colorScheme == .dark ? 4 : 8
+                y: colorScheme == .dark ? 4 : 5
             )
     }
 }

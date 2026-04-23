@@ -94,14 +94,21 @@ struct RossLaunchSplashView: View {
         ZStack {
             RossAuthBackdrop()
 
+            if colorScheme == .light {
+                Circle()
+                    .fill(Color.rossAccent.opacity(0.05))
+                    .frame(width: 360, height: 360)
+                    .blur(radius: 54)
+            }
+
             VStack(spacing: 18) {
                 Image("RossLogo")
                     .resizable()
                     .scaledToFit()
                     .frame(width: 146, height: 146)
-                    .shadow(color: colorScheme == .dark ? Color.clear : Color.white.opacity(0.52), radius: 16, y: -3)
-                    .shadow(color: Color.rossAccent.opacity(0.16), radius: 24, y: 12)
-                    .shadow(color: Color.rossShadow.opacity(0.18), radius: 12, y: 6)
+                    .shadow(color: colorScheme == .dark ? Color.clear : Color.white.opacity(0.42), radius: 12, y: -2)
+                    .shadow(color: Color.rossAccent.opacity(0.1), radius: 12, y: 7)
+                    .shadow(color: Color.rossShadow.opacity(0.12), radius: 8, y: 4)
                     .scaleEffect(appeared ? 1 : 0.78)
                     .opacity(appeared ? 1 : 0)
 
@@ -165,6 +172,7 @@ struct RossSectionCard<Content: View>: View {
 }
 
 struct RossHeroCard<Content: View>: View {
+    @Environment(\.colorScheme) private var colorScheme
     let eyebrow: String
     let title: String
     let detail: String?
@@ -278,8 +286,8 @@ struct RossHeroCard<Content: View>: View {
 
             VStack(alignment: .leading, spacing: 10) {
                 Text(eyebrow)
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Color.rossInk.opacity(0.58))
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundStyle(Color.rossInk.opacity(0.6))
 
                 Text(title)
                     .font(.rossSerifTitle())
@@ -289,8 +297,8 @@ struct RossHeroCard<Content: View>: View {
 
                 if let detail {
                     Text(detail)
-                        .font(.subheadline)
-                        .foregroundStyle(Color.rossInk.opacity(0.8))
+                        .font(.system(size: 15, weight: .regular))
+                        .foregroundStyle(Color.rossInk.opacity(0.72))
                         .lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -300,13 +308,19 @@ struct RossHeroCard<Content: View>: View {
             }
             .padding(16)
         }
-        .background(
-            LinearGradient(
-                colors: [Color.rossHeroTop, Color.rossHeroBottom],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
+        .background {
+            ZStack {
+                LinearGradient(
+                    colors: [Color.rossHeroTop, Color.rossHeroBottom],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+
+                if colorScheme == .light {
+                    Color.rossAccent.opacity(0.06)
+                }
+            }
+        }
         .overlay {
             RoundedRectangle(cornerRadius: 32, style: .continuous)
                 .stroke(Color.rossGlassStroke.opacity(0.85), lineWidth: 1)

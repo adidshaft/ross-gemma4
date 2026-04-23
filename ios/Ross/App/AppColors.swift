@@ -42,8 +42,8 @@ extension Color {
     }
 
     static var rossHighlight: Color {
-        dynamicColor(lightRed: 0.60, lightGreen: 0.54, lightBlue: 0.46,
-                     darkRed: 0.86, darkGreen: 0.80, darkBlue: 0.70)
+        dynamicColor(lightRed: 0.78, lightGreen: 0.68, lightBlue: 0.48,
+                     darkRed: 0.86, darkGreen: 0.78, darkBlue: 0.62)
     }
 
     static var rossSuccess: Color {
