@@ -1,187 +1,96 @@
 # Local Model Runtime
 
-Ross uses a local model runtime contract so extraction quality can improve without weakening the privacy boundary.
+Ross uses a local runtime contract so private matter work can improve without weakening the privacy boundary.
 
-OCR is only acquisition. The runtime sits between source-packed local text and advocate review.
+## Current Direction
 
-## Alpha proof update
+- Gemma 4 E2B Q4 Gemma 4 Q4 is the production-intended generative model stack for Private AI Pack tiers.
+- `gemma_local_runtime` is the preferred local generative runtime mode.
+- Matter/document retrieval uses a separate embedding model. The preferred path is EmbeddingGemma 300M with `litert`; the single-runtime fallback is Gemma 4 Embedding.
+- `deterministic_dev` remains the default fallback for CI, tests, and local development.
+- No model files are committed or bundled.
 
-- `deterministic_dev` remains the default fallback and is not a real model.
-- iPhone setup now first checks for the iOS on-device private assistant and installs a `system_model` pack when available.
-- Android model download now preserves backend artifact filenames, including `.task`, so downloaded MediaPipe artifacts can be loaded by the runtime.
-- Android Ask Ross now attempts `matter_question_answer` with the installed local runtime when available, then safely falls back to deterministic local review.
-- Android real inference proof is expected to come from a physical device plus a compatible `.task` artifact.
-- iOS real inference proof requires Aman's device to support the on-device private assistant.
-- Model files are not committed and are not bundled.
-- No cloud inference is used.
-- Raw prompts and raw source text are not persisted in invocation metadata.
-- Accepted output remains schema-validated, source-validated, and verifier-gated.
-- Unsupported fields are not silently accepted.
-- Local-only runtime metrics now record counts and timings without storing content.
+## Runtime Modes
 
-Latest observed proof state on 2026-04-23:
-
-- iOS `system_model` pack creation is covered by Swift tests; physical iPhone setup availability still needs a manual tap on Aman's device.
-- Android `.task` artifact installation is covered by unit tests; real `mediapipe_llm` execution still needs a compatible physical Android device and artifact.
-- Android Ask Ross model-backed answer routing is implemented behind installed-pack provider selection, with local fallback preserved.
-
-## Design goals
-
-- keep case files on-device
-- keep deterministic development behavior for CI
-- allow a real local inference adapter when a compatible runtime and developer artifact are available
-- keep prompt packing and output validation strict
-- require source refs for accepted fields
-- avoid storing raw prompts or raw source text in invocation metadata
-- keep the runtime network-free
-
-## Runtime modes
-
-Ross runtime metadata distinguishes between:
+Ross runtime metadata supports:
 
 - `deterministic_dev`
 - `mediapipe_llm`
 - `gemma_local_runtime`
 - `apple_foundation_models`
+- `litert`
 - `unavailable`
 
-Artifact metadata distinguishes between:
+Artifact metadata supports:
 
 - `tiny_dev_artifact`
 - `local_model_artifact`
+- `local_embedding_model`
 - `system_model`
 - `external_debug_model`
 
-The backend still serves only checksum-verified tiny development artifacts for normal CI and development installs. No large model file is committed to the repo.
+## Provider Behavior
 
-## Canonical debug configuration
+Deterministic development provider:
 
-Use these names in docs and manual QA:
+- default for CI and tests
+- network-free
+- schema-shaped
+- not a real model proof
 
-- `ROSS_BACKEND_BASE_URL`
-- `ROSS_ENABLE_REAL_LOCAL_INFERENCE`
-- `ROSS_LOCAL_RUNTIME`
-- `ROSS_LOCAL_MODEL_PATH`
-- `ROSS_LOCAL_MODEL_CHECKSUM`
-- `ROSS_LOCAL_MODEL_KIND`
+Gemma 4 Q4 provider direction:
 
-If these values are absent, Ross keeps deterministic fallback behavior.
+- primary target for Gemma 4 E2B Q4 generative tiers
+- selected through `gemma_local_runtime`
+- must load files only from app-private storage or explicit external/dev paths
+- must not bundle Gemma 4 Q4 files into the app
 
-## Providers
+Retrieval provider direction:
 
-### Deterministic development provider
+- separate from the generative Gemma 4 E2B Q4 model
+- powers Matter Search, local semantic search, source retrieval, matter/document RAG, and source-backed answers
+- preferred runtime is `litert`
+- fallback runtime is `gemma_local_runtime`
 
-This provider remains real and remains the default for CI, tests, and safe fallback behavior.
+Existing compatibility:
 
-It:
+- Android still has a MediaPipe adapter path for explicitly supplied developer artifacts.
+- iOS still has an on-device system assistant path where available.
+- Both remain compatibility paths, not the default Gemma 4 E2B Q4-first strategy.
 
-- never uses the network
-- does not pretend to be a real LLM
-- returns schema-shaped outputs for deterministic validation
-- keeps the end-to-end extraction pipeline testable
+## Backend Catalog Modes
 
-### Android MediaPipe path
+`ROSS_MODEL_CATALOG_MODE=dev` serves tiny deterministic artifacts and remains the default.
 
-Android now has a concrete `mediapipe_llm` adapter path behind the installed-pack provider contract.
+`ROSS_MODEL_CATALOG_MODE=production_metadata` advertises Gemma 4 E2B Q4 metadata only. It does not serve real large files, does not return real download segments, and does not make model download sessions succeed.
 
-Current behavior:
+## Prompt And Output Handling
 
-- compiles against `com.google.mediapipe:tasks-genai:0.10.27`
-- loads only developer-provided `.task` artifacts from debug or app-private storage
-- never loads models from bundled app assets
-- never imports network clients into the local runtime provider
-- reports runtime availability, model-path presence, checksum status, fallback state, and last error category in technical details
-- falls back safely to `deterministic_dev` when runtime availability is false
+Ross treats all model output as untrusted until validated:
 
-Real Android inference still requires:
-
-- a physical device
-- a developer-provided compatible model artifact
-- a manual QA run that proves `Last invocation runtime` was `mediapipe_llm`
-
-### iOS on-device assistant path
-
-iOS uses the on-device private assistant supplied by iOS when available.
-
-Current behavior:
-
-- setup creates a `system_model` installed pack with `apple_foundation_models` runtime when the device reports availability
-- no Gemma 4 local runtime or Hugging Face model is downloaded inside the iPhone app
-- case files remain on device
-- if the runtime is unavailable, setup records a plain-language failure and Ross keeps using basic local review
-- technical runtime details remain under Advanced diagnostics
-
-## Prompt packing
-
-`PromptPackBuilder`:
-
-- selects page-aware source blocks
-- enforces an input character budget
-- keeps source refs attached to every included block
-- includes document language profile
-- includes document classification
-- includes the expected JSON schema
-- includes refusal rules
-- treats uploaded documents as quoted data rather than instructions
-
-For large documents, Ross chunks real extraction and verification passes by page budget and falls back safely when the runtime cannot process a safe prompt pack.
-
-## Output handling
-
-Ross treats model output as untrusted until it passes several gates:
-
-1. raw model output capture
+1. prompt packing with local source refs
 2. JSON candidate extraction
 3. schema validation
-4. safe repair attempt for small malformed JSON
-5. source-ref validation
-6. verifier categorization into `verified`, `needs_review`, or `rejected`
+4. source-ref validation
+5. verifier categorization into `verified`, `needs_review`, or `rejected`
 
-Free-form model text is not accepted as extracted legal fields.
+Raw prompts and raw source text are not persisted in invocation metadata by default.
 
-Unsupported values must never be accepted silently.
+## Current Status
 
-## Invocation metadata
-
-Invocation metadata includes:
-
-- task
-- case/document/run ids
-- capability tier
-- runtime mode
-- timestamps
-- status
-- prompt/input/output hashes
-- redacted source refs
-- local-only status
-
-Ross does not persist raw prompts by default.
-
-Ross does not persist raw source text in invocation metadata by default.
-
-## Current alpha status
-
-What is real now:
+Implemented:
 
 - shared runtime contracts
 - deterministic development provider
-- Android MediaPipe adapter path
-- iOS on-device assistant pack path
-- Ask Ross matter-answer routing through the installed local runtime on iOS and Android when available
-- prompt packing
-- schema-specific output validation
-- runtime health and resource estimates
-- pack-aware provider selection on Android and iOS
+- Gemma 4 E2B Q4-first registry metadata
+- production metadata catalog mode
+- Android/iOS tier mapping to Gemma 4 E2B Q4 sizes and plain-language labels
+- runtime health and fallback reporting
 
-What still requires manual proof:
+Not yet proven:
 
-- Android real device execution with a developer model artifact
-- iOS real device setup on Aman's specific iPhone
-
-What remains stubbed:
-
-- Android Gemma 4 Q4 runtime
-- iOS MediaPipe and Gemma 4 Q4 runtimes
-- shipping production local model artifacts through normal pack delivery
-
-Ross should be described precisely: this alpha contains a real Android adapter path and a real iOS opt-in path, but deterministic fallback remains the default unless a compatible real runtime actually runs.
+- Android native Gemma 4 Q4 inference
+- iOS Gemma 4 Q4 inference with a linked runtime bridge
+- separate embedding model install and lifecycle
+- hardware proof of Gemma 4 E2B Q4 tiers
+- production model delivery for large artifacts

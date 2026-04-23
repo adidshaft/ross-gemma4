@@ -86,6 +86,20 @@ If the backend is configured with `ROSS_PUBLIC_LAW_GEMINI_API_KEY` or `GEMINI_AP
 
 If that connector is unavailable, Ross falls back to a privacy-safe backend index for QA.
 
+## Private AI Pack model mapping
+
+Normal Android UI shows assistant levels only:
+
+- `Quick Start` - about 430 MB
+- `Case Associate` - recommended, about 1.1-1.3 GB
+- `Senior Drafting Support` - about 2.5 GB
+
+Technical diagnostics may show the underlying Gemma 4 E2B Q4 Gemma 4 Q4 metadata under `Settings > Advanced > Technical diagnostics`. Normal screens should not show model names, quantization, runtime names, repository names, checksums, or artifact names.
+
+Matter Search is a separate embedding model requirement for local semantic search and source-backed answers. Its install lifecycle is still TODO; do not claim it is ready until it is downloaded, verified, and used by retrieval.
+
+The backend default model catalog still serves tiny deterministic artifacts for tests. `ROSS_MODEL_CATALOG_MODE=production_metadata` advertises Gemma 4 E2B Q4 metadata without serving large files.
+
 ## Current Android truth on April 23, 2026
 
 Fresh manual environment proof in this pass:

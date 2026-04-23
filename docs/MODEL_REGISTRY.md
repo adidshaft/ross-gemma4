@@ -1,16 +1,31 @@
 # Model Registry
 
-Ross shows advocate-friendly capability packs in product UI. Technical model names stay out of onboarding because the user-facing promise is extraction quality, not model branding.
+Ross shows advocate-friendly assistant levels in normal UI. Technical model names stay under `Settings -> Advanced -> Technical diagnostics`.
 
-## Alpha proof update
+## Canonical Files
 
-- `Case Associate` is the primary alpha tier for real local inference proof.
-- Backend can now optionally advertise an `external_debug_model` entry for developer QA.
-- The default registry remains the tiny deterministic development artifacts used by CI.
-- Model files are not committed and are not bundled.
-- Real local inference still requires compatible runtime availability and explicit QA.
+- `shared/constants/privateAssistantModelRegistry.json`
+- `shared/constants/modelCapabilityTiers.json`
+- `shared/constants/technicalModelRegistry.json`
+- `backend/src/model_catalog/service.ts`
+- `core/rust/src/ai_capability.rs`
 
-## User-facing packs
+## Recommended Stack
+
+Generative assistant tiers are Gemma 4 E2B Q4-first:
+
+- Quick Start -> Gemma 4 E2B Q4, `google/gemma-4-E2B-it`
+- Case Associate -> Gemma 4 E4B Q4, `google/gemma-4-E4B-it`
+- Senior Drafting Support -> Gemma 4 26B-A4B Q4, `google/gemma-4-26B-A4B-it`
+
+Retrieval is separate:
+
+- preferred: EmbeddingGemma 300M, `litert-community/embeddinggemma-300m`, `litert`
+- fallback: Gemma 4 Embedding, `Gemma 4 E2B Q4/Gemma-4-Embedding`, `gemma_local_runtime`
+
+Gemma/Gemma 3n generative paths are optional future or experimental paths, not Ross's default Private AI Pack strategy.
+
+## User-Facing Packs
 
 ### Basic
 
@@ -19,22 +34,21 @@ Ross shows advocate-friendly capability packs in product UI. Technical model nam
 
 ### Quick Start
 
-- extraction quality: `Standard`
-- best for short documents and lighter cleanup
+- download: about 430 MB
+- role: command routing, simple Ask Ross actions, short summaries, basic local matter Q&A
 
 ### Case Associate
 
-- extraction quality: `Advanced`
-- best for stronger field extraction, mixed-language handling, chronology support, and review queues
+- recommended
+- download: about 1.1-1.3 GB
+- role: document review, next-date extraction, order directions, matter summaries, hearing notes, chronology, source-backed Ask Ross answers
 
 ### Senior Drafting Support
 
-- extraction quality: `Advanced`
-- best for deeper synthesis and longer bundle workflows
+- download: about 2.5 GB
+- role: advanced drafting, deeper review, longer matter reasoning, chronology refinement, issue extraction, hearing preparation
 
-## Runtime registry notes
-
-Ross now tracks runtime metadata separately from user-facing pack labels.
+## Runtime And Artifact Values
 
 Supported runtime-mode values:
 
@@ -42,31 +56,38 @@ Supported runtime-mode values:
 - `mediapipe_llm`
 - `gemma_local_runtime`
 - `apple_foundation_models`
+- `litert`
 - `unavailable`
 
 Supported artifact-kind values:
 
 - `tiny_dev_artifact`
 - `local_model_artifact`
+- `local_embedding_model`
 - `system_model`
 - `external_debug_model`
 
-The current alpha catalog still serves only `tiny_dev_artifact` packs with `deterministic_dev` runtime metadata for normal development installs.
+## Backend Catalog Modes
 
-## Registry principles
+`ROSS_MODEL_CATALOG_MODE=dev`:
 
-- do not show technical model names in onboarding
-- present packs as advocate workflows
-- keep installation separate from the base app
-- keep the app usable without a pack
-- prefer real local inference when a compatible local runtime is available
-- fall back deterministically when it is not
-- never imply that every pack already includes a running local model
+- default for CI and local development
+- serves only tiny deterministic artifacts
+- keeps `deterministic_dev` stable
 
-## Alpha delivery status
+`ROSS_MODEL_CATALOG_MODE=production_metadata`:
 
-- backend `/model-catalog` returns signed dev-artifact metadata
-- backend `/model-download/session` returns signed segmented dev-artifact metadata
-- Android and iOS both use this delivery path without sending case data
-- real local model artifacts remain developer-provided and outside the repo in this alpha
-- the Android app can now load a developer-provided MediaPipe `.task` artifact from debug or app-private storage without bundling the model into the app
+- advertises Gemma 4 E2B Q4 tier metadata
+- uses `local_model_artifact`
+- uses `gemma_local_runtime`
+- does not provide real download URLs or segments
+- rejects model download sessions until a real delivery path is configured
+
+## Registry Principles
+
+- no model files are committed
+- no large model files are bundled into app assets
+- normal UI uses assistant levels, not model names
+- private matter data never goes to cloud AI
+- deterministic dev remains available for tests and fallback
+- source-backed answers require the separate retrieval model path

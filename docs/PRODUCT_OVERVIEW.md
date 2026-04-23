@@ -75,6 +75,7 @@ Default behavior:
 - `Web search` is off
 - Ross answers from local case files only
 - case-file sources stay separate and source-backed
+- source-backed private answers use local retrieval, not a cloud model
 
 Optional public-law behavior:
 
@@ -112,6 +113,21 @@ Ross keeps these user-facing promises:
 - `Verified from source`
 - `Needs review`
 - `Public-law search sends only a sanitized query`
+- `Private assistant is ready`
+- `Using basic local review`
+
+Normal UI should use assistant levels such as `Quick Start`, `Case Associate`, and `Senior Drafting Support`. It should not show Gemma 4 E2B Q4, Gemma 4 Q4, quantization, runtime, repository, checksum, or artifact names outside `Settings -> Advanced -> Technical diagnostics`.
+
+## Private AI Pack Strategy
+
+Ross's production-intended local assistant strategy is:
+
+- Gemma 4 E2B Q4 Gemma 4 Q4 for the generative assistant tiers
+- a dedicated embedding model for Matter Search and RAG
+- deterministic development artifacts for CI and local tests
+- no model files committed or bundled in the app
+
+The default user recommendation is `Case Associate`.
 
 ## What this phase proves and does not prove
 
@@ -129,3 +145,4 @@ This phase does not by itself prove:
 - physical-device install completion
 - real local model performance on hardware
 - live Gemini behavior in the app UI
+- separate Matter Search embedding-model install

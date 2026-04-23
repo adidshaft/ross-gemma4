@@ -1,55 +1,43 @@
-# Ross Dogfood Proof And Public-Law Polish
+# Ross Gemma 4 E2B Q4 Model Strategy Update
 
-## Branch used
+## Branch Used
 
-Work stayed on:
+- `codex/qwen-gguf-model-strategy`
 
-- `alpha-lawyer-usable-app`
+## What Changed
 
-## What changed in this pass
+- added canonical Gemma 4 E2B Q4-first model registry metadata
+- mapped Quick Start, Case Associate, and Senior Drafting Support to Gemma 4 E2B Q4 Gemma 4 Q4 tiers
+- added separate Matter Search retrieval model metadata
+- added backend `ROSS_MODEL_CATALOG_MODE=dev | production_metadata`
+- kept deterministic tiny artifacts as the default backend catalog mode
+- updated Android and iOS user-facing tier sizes and copy
+- moved technical model details out of normal Private Assistant UI
+- documented the Gemma 4 E2B Q4 strategy and hardware estimates
 
-- preserved legal citations in the public-law sanitizer across Rust, iOS, Android, and backend tests
-- tightened private-matter stripping for fake secrets and case-specific phrasing
-- made the public-law result layout more clearly separate case-file sources from public-law results
-- fixed iOS export drafting so ignored review fields do not leak into export content
-- added Android export open/share support through a `FileProvider`
-- aligned docs with the actual April 23 proof status
+## Model Mapping
 
-## Current proof truth
+- Quick Start -> Gemma 4 E2B Q4, about 430 MB
+- Case Associate -> Gemma 4 E4B Q4, about 1.1-1.3 GB
+- Senior Drafting Support -> Gemma 4 26B-A4B Q4, about 2.5 GB
+- Matter Search -> EmbeddingGemma 300M preferred, Gemma 4 Embedding fallback
 
-Freshly proven in this pass:
+## Current Truth
 
-- Rust, backend, privacy guards, Android build/tests, and iOS build/Swift tests pass
-- backend smoke on `http://127.0.0.1:8081` proves citation-preserving public-law search and fake-secret rejection
-- iOS demo sign-in, Home, matter creation, Ask Ross add-task, Ask Ross save-next-hearing, matter open, and review-surface reachability were manually re-run
-- Android emulator boot and debug APK install were manually re-run
+- The registry and catalog metadata are updated.
+- The backend still serves tiny deterministic artifacts by default.
+- Production metadata mode does not serve real model files.
+- No model files are committed or bundled.
+- Normal UI should hide model names and runtime details.
 
-Freshly blocked in this pass:
+## Still Unimplemented
 
-- iOS inline review actions remain blocked by flaky simulator tap behavior that throws Ross to SpringBoard instead of reliably pressing on-screen review buttons
-- Android app launch remains blocked even after successful emulator boot and APK install; `adb` launch returns `Error type 3` while `dumpsys package` still lists `MainActivity`
+- production serving for real Gemma 4 Q4 files
+- Android native Gemma 4 Q4 inference
+- iOS Gemma 4 Q4 inference proof with a linked runtime bridge
+- separate embedding model download/install lifecycle
+- hardware proof for each tier
 
-## Current public-law truth
+## Exact Next Recommended Step
 
-- legal citations such as `Order 39 Rules 1 and 2 CPC`, `Section 138 NI Act`, `Section 482 CrPC`, and `Article 226 Constitution of India` are preserved in tests
-- fake/private matter data such as `Raghav Fakepriv`, `9876501234`, `fakepriv@example.com`, `FAKE/123/2026`, and `blue suitcase near temple` is stripped or blocked
-- the exact approved preview query is what backend tests now verify is sent server-side
-- mobile apps still never call Gemini directly
-- this session observed the privacy-safe backend fixture/index path, not a live Gemini fallback event in product UI
-
-## Screenshot truth
-
-Current tracked bundle:
-
-- `artifacts/qa-screenshots-2026-04-22/`
-
-April 23 captures exist from the simulator pass, but the `artifacts/qa-screenshots-2026-04-23/` bundle was not completed or curated in this session.
-
-## Exact next recommended step
-
-Do one blocker-only follow-up:
-
-1. finish a fresh iOS manual pass that proves review actions, export open, Privacy Ledger, and Settings -> Advanced without the simulator tap regression
-2. fix or document the Android emulator launch issue so the installed debug app can actually open
-3. rerun the iOS public-law preview -> confirm -> results flow after the citation/layout fixes
-4. only then refresh the April 23 screenshot bundle
+Implement the Matter Search embedding model lifecycle first: catalog entry, download state, install state, retrieval-provider health, and a small local RAG smoke test that proves source retrieval remains on-device.

@@ -4,12 +4,13 @@ Ross needs a model artifact strategy that proves real local inference without we
 
 ## Current proof status
 
-Latest observed state on 2026-04-23:
+Latest observed state on 2026-04-24:
 
-- iPhone setup uses the iOS on-device private assistant when available; it does not download a model from Gemma 4 local runtime or Hugging Face inside the app.
-- Android real model downloads are wired through the existing Ross backend model session flow.
-- Android now preserves the backend artifact filename, so a served `.task` file remains `.task` in app-private storage for MediaPipe loading.
-- Android real local inference still needs one compatible `.task` artifact outside the repo and a physical Android proof run.
+- Ross's production-intended assistant metadata is Gemma 4 E2B Q4 Gemma 4 Q4 through `gemma_local_runtime`.
+- Backend default mode still serves tiny deterministic artifacts for CI and local tests.
+- Backend `production_metadata` mode advertises Gemma 4 E2B Q4 tier metadata without serving large model files.
+- Matter Search is a separate embedding model requirement, not part of the generative model file.
+- Real Gemma 4 Q4 inference still needs a linked mobile runtime and physical-device proof.
 
 ## Non-negotiable rules
 
@@ -82,6 +83,7 @@ Future work only.
 - checksums
 - app-private storage after download
 - explicit artifact lifecycle management
+- separate embedding model lifecycle for Matter Search
 
 Not for this alpha:
 
@@ -91,8 +93,8 @@ Not for this alpha:
 
 ## Alpha recommendation
 
-1. On iPhone, use the system on-device assistant path first and record whether Aman's device reports it available.
-2. On Android, use backend dev serving with one compatible `.task` file outside the repo to prove download plus MediaPipe loading.
-3. Keep backend external serving disabled by default.
-4. Do not add broader delivery architecture until a real physical-device proof run exists.
-5. Record `Not run` immediately if either the physical Android device or the external `.task` artifact is missing.
+1. Keep `ROSS_MODEL_CATALOG_MODE=dev` for CI and normal local tests.
+2. Use `ROSS_MODEL_CATALOG_MODE=production_metadata` only to verify Gemma 4 E2B Q4 metadata and UI mapping.
+3. Implement the separate Matter Search embedding lifecycle before claiming source-backed RAG is production-ready.
+4. Prove Android and iOS Gemma 4 Q4 inference on hardware before claiming real Gemma 4 E2B Q4 execution.
+5. Use backend dev serving with one compatible external file outside the repo only for manual runtime bring-up.
