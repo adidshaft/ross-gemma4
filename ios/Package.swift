@@ -19,7 +19,8 @@ let package = Package(
             name: "Ross",
             path: "Ross",
             exclude: [
-                "Resources/Info.plist"
+                "Resources/Info.plist",
+                "Ross.entitlements"
             ],
             resources: [
                 .process("Resources/Assets.xcassets")
