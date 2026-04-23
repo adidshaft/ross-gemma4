@@ -5205,19 +5205,15 @@ struct AlphaRossRootView: View {
                     .zIndex(1)
             }
         }
-        .task {
-            await model.loadIfNeeded()
-        }
         .task(id: authController?.session?.subject) {
             await model.loadIfNeeded()
             await MainActor.run {
                 model.syncWorkspaceForSession(authController?.session)
-            }
-        }
-        .task {
-            try? await Task.sleep(for: .seconds(1.5))
-            withAnimation(.easeOut(duration: 0.18)) {
-                showingLaunchSplash = false
+                if showingLaunchSplash {
+                    withAnimation(.easeOut(duration: 0.12)) {
+                        showingLaunchSplash = false
+                    }
+                }
             }
         }
         .preferredColorScheme(model.persisted.settings.appearanceMode.preferredColorScheme)
