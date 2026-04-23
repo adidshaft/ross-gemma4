@@ -5201,7 +5201,7 @@ struct AlphaRossRootView: View {
 
             if showingLaunchSplash {
                 RossLaunchSplashView()
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .transition(.opacity)
                     .zIndex(1)
             }
         }
@@ -5216,7 +5216,7 @@ struct AlphaRossRootView: View {
         }
         .task {
             try? await Task.sleep(for: .seconds(1.5))
-            withAnimation(.spring(response: 0.75, dampingFraction: 0.92)) {
+            withAnimation(.easeOut(duration: 0.18)) {
                 showingLaunchSplash = false
             }
         }
@@ -9660,7 +9660,7 @@ private struct AlphaCaptureScreen: View {
                                         .font(.system(size: 13, weight: .semibold))
                                         .foregroundStyle(Color.rossInk.opacity(0.72))
                                 }
-                                .transition(.opacity.combined(with: .move(edge: .top)))
+                                .transition(.opacity)
                             }
 
                             Button("Import file or image") {

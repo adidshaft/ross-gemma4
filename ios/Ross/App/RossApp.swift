@@ -722,22 +722,16 @@ private struct RossAuthRootView: View {
             case .signedOut:
                 if authController.hasSelectedLanguage {
                     RossSignInScreen(authController: authController)
-                        .transition(.asymmetric(
-                            insertion: .move(edge: .trailing).combined(with: .opacity),
-                            removal: .opacity
-                        ))
+                        .transition(.opacity)
                 } else {
                     RossLanguageSelectionScreen(authController: authController)
-                        .transition(.asymmetric(
-                            insertion: .opacity,
-                            removal: .move(edge: .leading).combined(with: .opacity)
-                        ))
+                        .transition(.opacity)
                 }
             case .unlockRequired, .signedIn:
                 RossAuthenticatedShell(authController: authController)
             }
         }
-        .animation(.easeInOut(duration: 0.38), value: authController.hasSelectedLanguage)
+        .animation(.easeOut(duration: 0.18), value: authController.hasSelectedLanguage)
         .task {
             await authController.loadIfNeeded()
         }
@@ -759,7 +753,6 @@ private struct RossAuthenticatedShell: View {
             AlphaRossRootView(authController: authController)
                 .allowsHitTesting(lockedSession == nil)
                 .blur(radius: lockedSession == nil ? 0 : 10)
-                .scaleEffect(lockedSession == nil ? 1 : 0.985)
                 .overlay {
                     if lockedSession != nil {
                         Color.black.opacity(0.28)
@@ -773,10 +766,10 @@ private struct RossAuthenticatedShell: View {
                     session: lockedSession,
                     showsBackdrop: false
                 )
-                .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                .transition(.opacity)
             }
         }
-        .animation(.easeInOut(duration: 0.22), value: lockedSession != nil)
+        .animation(.easeOut(duration: 0.16), value: lockedSession != nil)
     }
 }
 
@@ -823,7 +816,6 @@ private struct RossLanguageSelectionScreen: View {
                         }
                         .padding(.top, rossAuthTopHeaderPadding(proxy.safeAreaInsets.top))
                         .opacity(appeared ? 1 : 0)
-                        .offset(y: appeared ? 0 : -10)
 
                         RossAuthGlassPanel(cornerRadius: 34, padding: 24) {
                             VStack(alignment: .leading, spacing: 20) {
@@ -834,27 +826,21 @@ private struct RossLanguageSelectionScreen: View {
                                     .fixedSize(horizontal: false, vertical: true)
 
                                 LazyVGrid(columns: columns, spacing: 18) {
-                                    ForEach(Array(rossLanguageOptions.enumerated()), id: \.element.id) { index, option in
+                                    ForEach(rossLanguageOptions) { option in
                                         RossLanguageTile(
                                             option: option,
                                             isSelected: selectedCode == option.id
                                         ) {
-                                            withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
+                                            withAnimation(.easeOut(duration: 0.14)) {
                                                 selectedCode = option.id
                                             }
                                         }
                                         .opacity(appeared ? 1 : 0)
-                                        .offset(y: appeared ? 0 : 12)
-                                        .animation(
-                                            .spring(response: 0.48, dampingFraction: 0.82).delay(Double(index) * 0.04 + 0.08),
-                                            value: appeared
-                                        )
                                     }
                                 }
                             }
                         }
                         .opacity(appeared ? 1 : 0)
-                        .offset(y: appeared ? 0 : 12)
                     }
                     .padding(.horizontal, 20)
                     .padding(.bottom, 144)
@@ -882,7 +868,7 @@ private struct RossLanguageSelectionScreen: View {
             }
         }
         .onAppear {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.82)) {
+            withAnimation(.easeOut(duration: 0.18)) {
                 appeared = true
             }
         }
@@ -987,7 +973,6 @@ private struct RossSignInScreen: View {
                     }
                     .padding(.top, rossAuthTopHeaderPadding(proxy.safeAreaInsets.top))
                     .opacity(appeared ? 1 : 0)
-                    .offset(y: appeared ? 0 : -10)
 
                     RossAuthGlassPanel(cornerRadius: 34, padding: 24, forcedWidth: heroPanelWidth) {
                         VStack(alignment: .leading, spacing: 14) {
@@ -1004,7 +989,6 @@ private struct RossSignInScreen: View {
                         }
                     }
                     .opacity(appeared ? 1 : 0)
-                    .offset(y: appeared ? 0 : 10)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .padding(.horizontal, 20)
@@ -1029,7 +1013,6 @@ private struct RossSignInScreen: View {
                     }
                     .padding(.horizontal, 16)
                     .opacity(appeared ? 1 : 0)
-                    .offset(y: appeared ? 0 : 42)
                 }
             }
             .ignoresSafeArea(edges: .bottom)
@@ -1038,13 +1021,13 @@ private struct RossSignInScreen: View {
             }
         }
         .onAppear {
-            withAnimation(.spring(response: 0.68, dampingFraction: 0.84)) {
+            withAnimation(.easeOut(duration: 0.18)) {
                 appeared = true
             }
         }
         .onChange(of: authController.authErrorMessage) { _, newValue in
             guard let newValue, !newValue.isEmpty else { return }
-            withAnimation(.spring(response: 0.34, dampingFraction: 0.84)) {
+            withAnimation(.easeOut(duration: 0.16)) {
                 signInCardExpanded = true
             }
         }
@@ -1071,7 +1054,7 @@ private struct RossAuthSignInSheet: View {
         RossAuthGlassPanel(cornerRadius: 32, padding: 20, forcedWidth: panelWidth) {
             VStack(alignment: .leading, spacing: isExpanded ? 14 : 10) {
                 Button {
-                    withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) {
+                    withAnimation(.easeOut(duration: 0.16)) {
                         isExpanded.toggle()
                     }
                 } label: {
@@ -1122,7 +1105,7 @@ private struct RossAuthSignInSheet: View {
                                     Spacer(minLength: 10)
 
                                     Button("Back") {
-                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.84)) {
+                                        withAnimation(.easeOut(duration: 0.16)) {
                                             isEmailExpanded = false
                                         }
                                     }
@@ -1169,7 +1152,7 @@ private struct RossAuthSignInSheet: View {
                                 }
                                 .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 20)
                             }
-                            .transition(.move(edge: .top).combined(with: .opacity))
+                            .transition(.opacity)
                         } else {
                             VStack(alignment: .leading, spacing: 10) {
                                 Button {
@@ -1203,7 +1186,7 @@ private struct RossAuthSignInSheet: View {
 
                                 Button {
                                     authController.authErrorMessage = nil
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.84)) {
+                                    withAnimation(.easeOut(duration: 0.16)) {
                                         isEmailExpanded = true
                                     }
                                 } label: {
@@ -1255,8 +1238,8 @@ private struct RossAuthSignInSheet: View {
                 }
             }
             .padding(.bottom, max(bottomInset - 2, 12))
-            .animation(.spring(response: 0.32, dampingFraction: 0.84), value: isExpanded)
-            .animation(.spring(response: 0.32, dampingFraction: 0.84), value: isEmailExpanded)
+            .animation(.easeOut(duration: 0.16), value: isExpanded)
+            .animation(.easeOut(duration: 0.16), value: isEmailExpanded)
         }
     }
 }
@@ -1772,7 +1755,11 @@ struct RossApp: App {
             case .interactive:
                 RossAuthRootView(authController: authController)
                     .onChange(of: scenePhase) { _, newPhase in
-                        authController.handleScenePhase(newPhase)
+                        var transaction = Transaction(animation: nil)
+                        transaction.disablesAnimations = true
+                        withTransaction(transaction) {
+                            authController.handleScenePhase(newPhase)
+                        }
                     }
             case .screenshotExport:
                 ScreenshotExportView()
