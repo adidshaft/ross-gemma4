@@ -10347,12 +10347,17 @@ private struct AlphaAskConversationScreen: View {
     }
 
     private var showsBackButton: Bool {
-        model.path.last?.isAskRoute == true
+        model.path.last?.isAskRoute == true ||
+            model.persisted.selectedTab.normalizedForLawyerShell == .ask
     }
 
     private func goBack() {
-        guard showsBackButton, !model.path.isEmpty else { return }
-        model.path.removeLast()
+        if model.path.last?.isAskRoute == true, !model.path.isEmpty {
+            model.path.removeLast()
+            return
+        }
+
+        model.persisted.selectedTab = .home
     }
 
     var body: some View {
