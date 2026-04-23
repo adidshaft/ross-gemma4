@@ -5464,7 +5464,6 @@ private struct AlphaRootAskDock: View {
     let fixedScopeCaseID: UUID?
     let fixedDocumentIDs: Set<UUID>
     let showsInlineResponseCard: Bool
-    let showsConversationShortcut: Bool
     let collapsesWhenIdle: Bool
     @State private var showingTools = false
     @State private var dismissedInlineQuestion: String?
@@ -5479,14 +5478,12 @@ private struct AlphaRootAskDock: View {
         fixedScopeCaseID: UUID? = nil,
         fixedDocumentIDs: Set<UUID> = [],
         showsInlineResponseCard: Bool = true,
-        showsConversationShortcut: Bool = true,
         collapsesWhenIdle: Bool = true
     ) {
         self.model = model
         self.fixedScopeCaseID = fixedScopeCaseID
         self.fixedDocumentIDs = fixedDocumentIDs
         self.showsInlineResponseCard = showsInlineResponseCard
-        self.showsConversationShortcut = showsConversationShortcut
         self.collapsesWhenIdle = collapsesWhenIdle
     }
 
@@ -5742,6 +5739,7 @@ private struct AlphaRootAskDock: View {
 
             HStack(spacing: 8) {
                 Button {
+                    dockComposerFocused = false
                     showingTools = true
                 } label: {
                     RossGlassIconView(.badgeSparkle, variant: .neutral, size: 18, fallbackSystemImage: "plus")
@@ -5771,34 +5769,11 @@ private struct AlphaRootAskDock: View {
                                 send()
                             }
                         }
-                        .toolbar {
-                            #if os(iOS)
-                            ToolbarItemGroup(placement: .keyboard) {
-                                Spacer()
-                                Button("Hide keyboard") {
-                                    dockComposerFocused = false
-                                }
-                            }
-                            #endif
-                        }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                if dockComposerFocused {
-                    Button {
-                        dockComposerFocused = false
-                    } label: {
-                        Image(systemName: "keyboard.chevron.compact.down")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(dockPrimaryText.opacity(0.84))
-                            .frame(width: 24, height: 24)
-                            .background(dockBadgeFill, in: Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Hide keyboard")
-                }
-
                 Button {
+                    dockComposerFocused = false
                     showingExpandedComposer = true
                 } label: {
                     Image(systemName: "arrow.up.left.and.arrow.down.right")
@@ -5820,22 +5795,6 @@ private struct AlphaRootAskDock: View {
                 .buttonStyle(.plain)
                 .disabled(!canSend)
                 .opacity(canSend ? 1 : 0.42)
-
-                if showsConversationShortcut {
-                    Button {
-                        if fixedDocumentIDs.count == 1, let documentID = fixedDocumentIDs.first {
-                            model.openAsk(scopeCaseID: activeScopeCaseID, documentID: documentID)
-                        } else {
-                            model.openAsk(scopeCaseID: activeScopeCaseID)
-                        }
-                    } label: {
-                        RossGlassIconView(.userMsg, variant: .accent, size: 20, fallbackSystemImage: "bubble.left.and.text.bubble.right.fill")
-                            .frame(width: 30, height: 30)
-                            .background(dockBadgeFill, in: Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Open Ask Ross conversation")
-                }
             }
 
             if !mentionSuggestions.isEmpty {
@@ -6518,16 +6477,6 @@ private struct AlphaAskComposerSheet: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 12)
-                        .toolbar {
-                            #if os(iOS)
-                            ToolbarItemGroup(placement: .keyboard) {
-                                Spacer()
-                                Button("Hide keyboard") {
-                                    hideKeyboard()
-                                }
-                            }
-                            #endif
-                        }
                 }
                 .frame(
                     maxWidth: .infinity,
@@ -10422,7 +10371,6 @@ private struct AlphaAskConversationScreen: View {
                 model: model,
                 fixedScopeCaseID: fixedScopeCaseID,
                 showsInlineResponseCard: false,
-                showsConversationShortcut: false,
                 collapsesWhenIdle: false
             )
                 .padding(.horizontal, 12)
