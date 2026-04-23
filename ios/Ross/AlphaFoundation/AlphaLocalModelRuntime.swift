@@ -381,7 +381,7 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
         return AlphaLocalRuntimeHealth(
             runtimeMode: runtimeMode,
             available: status.available,
-            modelPathPresent: modelPath != nil,
+            modelPathPresent: modelPath != nil || modelPathLabel == "system-model",
             modelPathLabel: modelPathLabel,
             checksumVerified: checksumVerified,
             supportedTasks: Array(plannedTasks),
@@ -441,7 +441,7 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
                 rawText: "",
                 parsedJson: nil,
                 schemaValid: false,
-                warnings: ["The Apple Foundation Models runtime could not finish this request and Ross kept the request local."],
+                warnings: ["The on-device private assistant could not finish this request and Ross kept the request local."],
                 sourceRefs: promptPack.includedSourceRefs,
                 errorCategory: "unknown_runtime_error"
             )
@@ -486,18 +486,18 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
         do {
             let model = try resolvedModel()
             if model.isAvailable {
-                return (true, modelPath == nil ? "Apple Foundation Models local runtime is available." : "Developer-provided local Foundation Models adapter is available.", nil)
+                return (true, modelPath == nil ? "Private assistant on this device is available." : "Developer-provided local assistant adapter is available.", nil)
             }
             switch model.availability {
             case .available:
-                return (true, "Apple Foundation Models local runtime is available.", nil)
+                return (true, "Private assistant on this device is available.", nil)
             case .unavailable(let reason):
-                return (false, "Foundation Models runtime unavailable: \(String(describing: reason)).", "unsupported_runtime")
+                return (false, "The on-device private assistant is not available on this iPhone yet. \(String(describing: reason))", "unsupported_runtime")
             @unknown default:
-                return (false, "Foundation Models runtime availability is unknown.", "unsupported_runtime")
+                return (false, "The on-device private assistant availability is unknown.", "unsupported_runtime")
             }
         } catch {
-            return (false, "Foundation Models adapter could not be loaded from the configured local path.", "runtime_dependency_unavailable")
+            return (false, "The configured local assistant adapter could not be loaded.", "runtime_dependency_unavailable")
         }
     }
 

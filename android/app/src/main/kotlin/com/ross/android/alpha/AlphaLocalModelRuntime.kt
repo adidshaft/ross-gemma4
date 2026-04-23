@@ -25,6 +25,7 @@ enum class AlphaLocalModelTask(val wireValue: String) {
     ChronologyGeneration("chronology_generation"),
     OrderSummary("order_summary"),
     IssueExtraction("issue_extraction"),
+    MatterQuestionAnswer("matter_question_answer"),
 }
 
 enum class AlphaLocalModelInvocationStatus { Queued, Running, Complete, Failed, Cancelled }
@@ -391,6 +392,7 @@ internal class AlphaMediaPipeLocalModelProvider(
         AlphaLocalModelTask.ChronologyGeneration,
         AlphaLocalModelTask.OrderSummary,
         AlphaLocalModelTask.IssueExtraction,
+        AlphaLocalModelTask.MatterQuestionAnswer,
     )
     private val availability by lazy(LazyThreadSafetyMode.SYNCHRONIZED) { probeAvailability() }
 
@@ -809,6 +811,7 @@ internal object AlphaLocalModelRuntime {
             AlphaLocalModelTask.ChronologyGeneration,
             AlphaLocalModelTask.OrderSummary,
             AlphaLocalModelTask.IssueExtraction,
+            AlphaLocalModelTask.MatterQuestionAnswer,
         )
         val (message, errorCategory) = when {
             debug.enableRealInference && explicitFile == null ->

@@ -304,6 +304,37 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.lastErrorCategory, "runtime_dependency_unavailable")
     }
 
+    func testSystemPrivateAssistantPackUsesDeviceModelWithoutDownloadedPath() {
+        let pack = AlphaInstalledModelPack(
+            packId: "apple-foundation-models-case_associate",
+            tier: .caseAssociate,
+            installPath: "system://apple-foundation-models",
+            checksumSha256: String(repeating: "b", count: 64),
+            artifactKind: "system_model",
+            runtimeMode: .appleFoundationModels,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: false,
+                runtimeModeOverride: nil,
+                modelPath: nil,
+                modelChecksum: nil,
+                modelKind: nil
+            )
+        )
+
+        XCTAssertEqual(health?.runtimeMode, .appleFoundationModels)
+        XCTAssertEqual(health?.modelPathLabel, "system-model")
+        XCTAssertEqual(health?.modelPathPresent, true)
+        XCTAssertEqual(health?.explicitOptInEnabled, true)
+    }
+
     @MainActor
     func testPublicLawPreviewUsesVerifiedFieldsOnly() {
         let model = AlphaRossModel()

@@ -214,10 +214,12 @@ final class AlphaRossModel {
     var publicLawDraft = "Find Supreme Court guidance on delay condonation where diligence is documented but filing was disrupted."
     var publicLawPreview: AlphaPublicLawPreview?
     var publicLawResults: [AlphaPublicLawResult] = []
+    var publicLawSearchInFlight = false
     var localInferenceSmokeReport: AlphaLocalInferenceSmokeReport?
     var localInferenceSmokeRunning = false
     var refreshingCaseOverviewIDs: Set<UUID> = []
     var workspaceDrawerPresented = false
+    var settingsReturnTab: AlphaAppTab = .home
     var loaded = false
     @ObservationIgnored private var workspaceRevision: UInt64 = 0
     @ObservationIgnored private var cachedWorkspaceRevision: UInt64 = .max
@@ -833,6 +835,19 @@ final class AlphaRossModel {
         } else {
             path.append(.askRoss)
         }
+    }
+
+    func openSettings() {
+        let currentTab = persisted.selectedTab.normalizedForLawyerShell
+        if currentTab != .settings, currentTab != .ask {
+            settingsReturnTab = currentTab
+        }
+        persisted.selectedTab = .settings
+    }
+
+    func closeSettings() {
+        let returnTab = settingsReturnTab.normalizedForLawyerShell
+        persisted.selectedTab = returnTab == .settings ? .home : returnTab
     }
 
     func scopeLabel(for caseId: UUID?) -> String {
@@ -1593,6 +1608,10 @@ final class AlphaRossModel {
 
     func confirmPendingPublicLawSearch() async {
         guard let preview = publicLawPreview else { return }
+        guard !publicLawSearchInFlight else { return }
+        publicLawSearchInFlight = true
+        defer { publicLawSearchInFlight = false }
+
         do {
             let results = try await publicLawSearchAction(preview)
             latestAskResult?.publicLawPreview = preview
@@ -2513,6 +2532,10 @@ final class AlphaRossModel {
 
     func runPublicLawSearch() async {
         guard let preview = publicLawPreview else { return }
+        guard !publicLawSearchInFlight else { return }
+        publicLawSearchInFlight = true
+        defer { publicLawSearchInFlight = false }
+
         do {
             publicLawResults = try await backend.searchPublicLaw(preview: preview)
         } catch {
@@ -2645,6 +2668,80 @@ final class AlphaRossModel {
         persist()
     }
 
+    private func prepareSystemAssistantPack(for tier: AlphaCapabilityTier, jobID: UUID) -> Bool {
+        let installed = alphaSystemAssistantPack(for: tier)
+        guard let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: installed,
+            requestedTier: tier
+        ), health.runtimeMode == .appleFoundationModels else {
+            return false
+        }
+
+        updateJob(jobID) {
+            $0.state = .verifying
+            $0.packId = installed.packId
+            $0.totalBytes = 0
+            $0.bytesDownloaded = 0
+            $0.checksumSha256 = installed.checksumSha256
+            $0.artifactKind = installed.artifactKind
+            $0.runtimeMode = installed.runtimeMode
+            $0.developmentOnly = installed.developmentOnly
+            $0.failureReason = nil
+            $0.updatedAt = .now
+        }
+        persist()
+
+        guard health.available else {
+            updateJob(jobID) {
+                $0.state = .failed
+                $0.failureReason = "The on-device private assistant is not available on this iPhone yet. Ross will keep using basic local review."
+                $0.updatedAt = .now
+            }
+            persisted.ledgerEntries.insert(
+                AlphaPrivacyLedgerEntry(
+                    title: "Private assistant setup unavailable",
+                    detail: "Ross checked this iPhone's on-device assistant and did not send case files.",
+                    purpose: .model_verification,
+                    payloadClass: .no_case_data,
+                    endpointLabel: "device://private-assistant",
+                    success: false
+                ),
+                at: 0
+            )
+            persist()
+            return true
+        }
+
+        persisted.installedPacks = persisted.installedPacks.map {
+            var copy = $0
+            copy.isActive = false
+            return copy
+        }
+        persisted.installedPacks.removeAll { $0.tier == tier }
+        persisted.installedPacks.insert(installed, at: 0)
+        persisted.settings.activeTier = tier
+        updateJob(jobID) {
+            $0.state = .installed
+            $0.bytesDownloaded = 0
+            $0.totalBytes = 0
+            $0.completedAt = .now
+            $0.updatedAt = .now
+        }
+        persisted.ledgerEntries.insert(
+            AlphaPrivacyLedgerEntry(
+                title: "Private assistant enabled",
+                detail: "Ross turned on the on-device assistant supplied by this iPhone. Case files stayed on this device.",
+                purpose: .model_verification,
+                payloadClass: .no_case_data,
+                endpointLabel: "device://private-assistant",
+                success: true
+            ),
+            at: 0
+        )
+        persist()
+        return true
+    }
+
     func startPackDownload(for tier: AlphaCapabilityTier, mobileAllowed: Bool) async {
         let policy: AlphaDownloadPolicy = mobileAllowed ? .mobileAllowed : .wifiOnly
         let waitingForWifi = !mobileAllowed && tier != .quickStart
@@ -2663,6 +2760,10 @@ final class AlphaRossModel {
 
         upsertJob(job)
         persist()
+
+        if prepareSystemAssistantPack(for: tier, jobID: job.id) {
+            return
+        }
 
         do {
             let catalog = try await backend.fetchCatalog(for: tier)
@@ -4797,6 +4898,23 @@ private func alphaAllowsDevelopmentModelArtifacts() -> Bool {
     return environment["ROSS_ALLOW_DEVELOPMENT_MODEL_ARTIFACTS"] == "1"
 }
 
+private func alphaSystemAssistantPack(for tier: AlphaCapabilityTier) -> AlphaInstalledModelPack {
+    let packId = "apple-foundation-models-\(tier.rawValue)"
+    let checksum = sha256Hex(Data("ross-system-private-assistant:\(tier.rawValue)".utf8))
+    return AlphaInstalledModelPack(
+        packId: packId,
+        tier: tier,
+        installPath: "system://apple-foundation-models",
+        checksumSha256: checksum,
+        artifactKind: "system_model",
+        runtimeMode: .appleFoundationModels,
+        developmentOnly: false,
+        checksumVerified: true,
+        minimumAppVersion: "0.1.0-alpha",
+        isActive: true
+    )
+}
+
 private func alphaUnsupportedPackReason(
     for tier: AlphaCapabilityTier,
     runtimeMode: AlphaPackRuntimeMode,
@@ -5145,9 +5263,9 @@ private struct AlphaPackSetupScreen: View {
                         }
 
                         AlphaAssistantActivityStrip(
-                            title: "Setup continues in the background",
-                            detail: "Your assistant downloads quietly in the background. Ross will let you know when it is ready.",
-                            statusLabel: "Background",
+                            title: "Uses this iPhone's private assistant",
+                            detail: "Ross checks the on-device assistant built into this iPhone. Case files stay on this device. If this iPhone cannot run it yet, Ross will say so and keep using basic local review.",
+                            statusLabel: "On device",
                             tint: Color.rossAccent
                         )
                     }
@@ -5325,38 +5443,74 @@ private struct AlphaRootTopRail: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            AlphaWorkspaceDrawerButton {
-                withAnimation(.snappy(duration: 0.24)) {
-                    model.workspaceDrawerPresented = true
-                }
-            }
-
             if showsWorkspaceStrip {
+                AlphaWorkspaceDrawerButton {
+                    withAnimation(.snappy(duration: 0.24)) {
+                        model.workspaceDrawerPresented = true
+                    }
+                }
+
                 AlphaRootWorkspaceStrip(selectedTab: model.persisted.selectedTab) { tab in
                     withAnimation(.snappy(duration: 0.22)) {
                         model.persisted.selectedTab = tab.normalizedForLawyerShell
                     }
                 }
             } else {
+                AlphaSettingsBackButton {
+                    withAnimation(.snappy(duration: 0.22)) {
+                        model.closeSettings()
+                    }
+                }
+
                 Text("Settings")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Color.rossInk.opacity(0.78))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.leading, 4)
                     .padding(.vertical, 10)
+
+                AlphaWorkspaceDrawerButton {
+                    withAnimation(.snappy(duration: 0.24)) {
+                        model.workspaceDrawerPresented = true
+                    }
+                }
             }
         }
     }
 }
 
+private struct AlphaSettingsBackButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label("Back", systemImage: "chevron.left")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color.rossInk)
+                .padding(.horizontal, 12)
+                .frame(height: 34)
+                .background(.ultraThinMaterial, in: Capsule())
+                .overlay {
+                    Capsule()
+                        .stroke(Color.rossBorder.opacity(0.9), lineWidth: 1)
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Back")
+    }
+}
+
 private struct AlphaRootWorkspaceStrip: View {
+    @Environment(\.colorScheme) private var colorScheme
     let selectedTab: AlphaAppTab
     let onSelect: (AlphaAppTab) -> Void
 
     private let tabs: [AlphaAppTab] = [.home, .cases, .ask]
 
     var body: some View {
-        HStack(spacing: 6) {
+        let shape = Capsule(style: .continuous)
+
+        HStack(spacing: 4) {
             ForEach(tabs, id: \.self) { tab in
                 AlphaRootWorkspaceTabButton(
                     tab: tab,
@@ -5366,18 +5520,49 @@ private struct AlphaRootWorkspaceStrip: View {
                 }
             }
         }
-        .padding(4)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(5)
+        .background {
+            if colorScheme == .dark {
+                ZStack {
+                    shape.fill(.ultraThinMaterial)
+                    shape.fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.12),
+                                Color.black.opacity(0.42),
+                                Color.white.opacity(0.04)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                }
+            } else {
+                shape
+                    .fill(.ultraThinMaterial)
+                    .overlay(Color.white.opacity(0.76).clipShape(shape))
+            }
+        }
         .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.rossBorder.opacity(0.9), lineWidth: 1)
+            shape.strokeBorder(
+                LinearGradient(
+                    colors: [
+                        Color.white.opacity(colorScheme == .dark ? 0.24 : 0.82),
+                        Color.rossBorder.opacity(colorScheme == .dark ? 0.32 : 0.8)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                lineWidth: 1
+            )
         }
         .frame(maxWidth: .infinity)
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 3)
+        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.34 : 0.08), radius: colorScheme == .dark ? 18 : 10, x: 0, y: colorScheme == .dark ? 10 : 4)
     }
 }
 
 private struct AlphaRootWorkspaceTabButton: View {
+    @Environment(\.colorScheme) private var colorScheme
     let tab: AlphaAppTab
     let isSelected: Bool
     let action: () -> Void
@@ -5387,28 +5572,47 @@ private struct AlphaRootWorkspaceTabButton: View {
             VStack(spacing: 3) {
                 Image(systemName: isSelected ? tab.workspaceStripSelectedSymbol : tab.workspaceStripSymbol)
                     .symbolRenderingMode(.hierarchical)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
 
                 Text(tab.workspaceStripTitle)
                     .font(.system(size: 11, weight: .semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
-            .foregroundStyle(isSelected ? Color.white : Color.rossInk.opacity(0.78))
+            .foregroundStyle(selectedForeground)
             .frame(maxWidth: .infinity)
-            .frame(height: 44)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(isSelected ? Color.rossAccent : Color.clear)
-            )
+            .frame(height: 48)
+            .background(selectedBackground)
             .overlay {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(isSelected ? Color.rossAccent : Color.clear, lineWidth: 1)
+                    .stroke(selectedStroke, lineWidth: isSelected ? 1 : 0)
             }
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
         .accessibilityLabel(tab.workspaceStripTitle)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private var selectedForeground: Color {
+        guard isSelected else { return Color.rossInk.opacity(0.78) }
+        return colorScheme == .dark ? Color.black.opacity(0.9) : Color.white
+    }
+
+    @ViewBuilder
+    private var selectedBackground: some View {
+        if isSelected {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(colorScheme == .dark ? Color.white.opacity(0.92) : Color.rossAccent)
+                .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.28 : 0.12), radius: 10, x: 0, y: 5)
+        } else {
+            Color.clear
+        }
+    }
+
+    private var selectedStroke: Color {
+        guard isSelected else { return Color.clear }
+        return colorScheme == .dark ? Color.white.opacity(0.42) : Color.rossAccent
     }
 }
 
@@ -5630,6 +5834,18 @@ private struct AlphaRootAskDock: View {
         }
     }
 
+    private func clearDraft() {
+        pendingCollapseQuestion = nil
+        model.setAskDraft("", for: activeScopeCaseID)
+    }
+
+    private func cancelDockEditing() {
+        dockComposerFocused = false
+        if !canSend {
+            collapseDock()
+        }
+    }
+
     private func send(dismissingExpandedComposer: Bool = false) {
         let question = draftText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !question.isEmpty else { return }
@@ -5738,63 +5954,100 @@ private struct AlphaRootAskDock: View {
             }
 
             HStack(spacing: 8) {
-                Button {
-                    dockComposerFocused = false
-                    showingTools = true
-                } label: {
-                    RossGlassIconView(.badgeSparkle, variant: .neutral, size: 18, fallbackSystemImage: "plus")
-                        .frame(width: 30, height: 30)
-                        .background(dockBadgeFill, in: Circle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Ask Ross tools")
+                HStack(spacing: 9) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.body.weight(.semibold))
+                        .imageScale(.small)
+                        .foregroundStyle(dockMutedText)
+                        .frame(width: 18)
 
-                ZStack(alignment: .leading) {
-                    if draftText.isEmpty {
-                        Text(composerPlaceholder)
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(dockPrimaryText.opacity(0.38))
-                            .padding(.vertical, 2)
-                    }
+                    ZStack(alignment: .leading) {
+                        if draftText.isEmpty {
+                            Text(composerPlaceholder)
+                                .font(.body)
+                                .foregroundStyle(dockPrimaryText.opacity(0.42))
+                                .lineLimit(1)
+                        }
 
-                    TextField("", text: draftBinding, axis: .vertical)
-                        .lineLimit(1...2)
-                        .textFieldStyle(.plain)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(dockPrimaryText)
-                        .focused($dockComposerFocused)
-                        .submitLabel(.send)
-                        .onSubmit {
-                            if canSend {
-                                send()
+                        TextField("", text: draftBinding, axis: .vertical)
+                            .lineLimit(1...2)
+                            .textFieldStyle(.plain)
+                            .font(.body)
+                            .foregroundStyle(dockPrimaryText)
+                            .focused($dockComposerFocused)
+                            .submitLabel(.send)
+                            .onSubmit {
+                                if canSend {
+                                    send()
+                                }
                             }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    if !draftText.isEmpty {
+                        Button(action: clearDraft) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.body.weight(.semibold))
+                                .imageScale(.medium)
+                                .foregroundStyle(dockMutedText)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Clear Ask Ross text")
+                    } else {
+                        Button {
+                            dockComposerFocused = false
+                            showingTools = true
+                        } label: {
+                            Image(systemName: "paperclip")
+                                .font(.body.weight(.semibold))
+                                .imageScale(.small)
+                                .foregroundStyle(dockSecondaryText)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Attach to Ask Ross")
+                    }
+                }
+                .padding(.horizontal, 13)
+                .padding(.vertical, 10)
+                .background {
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .fill(colorScheme == .dark ? Color.black.opacity(0.34) : Color.white.opacity(0.82))
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(colorScheme == .dark ? Color.white.opacity(0.18) : Color.rossBorder.opacity(0.68), lineWidth: 1)
+                }
+
+                Button {
+                    if canSend {
+                        send()
+                    } else {
+                        cancelDockEditing()
+                    }
+                } label: {
+                    Image(systemName: canSend ? "arrow.up" : "xmark")
+                        .font((canSend ? Font.body : Font.callout).weight(.bold))
+                        .imageScale(.small)
+                        .foregroundStyle(canSend ? Color.black.opacity(0.88) : dockPrimaryText.opacity(0.82))
+                        .frame(width: 36, height: 36)
+                        .background(
+                            canSend
+                                ? Color.white
+                                : (colorScheme == .dark ? Color.black.opacity(0.32) : Color.white.opacity(0.78)),
+                            in: Circle()
+                        )
+                        .overlay {
+                            Circle()
+                                .stroke(colorScheme == .dark ? Color.white.opacity(0.18) : Color.rossBorder.opacity(0.58), lineWidth: canSend ? 0 : 1)
                         }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                Button {
-                    dockComposerFocused = false
-                    showingExpandedComposer = true
-                } label: {
-                    Image(systemName: "arrow.up.left.and.arrow.down.right")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(dockPrimaryText.opacity(0.92))
-                        .frame(width: 24, height: 24)
-                        .background(dockBadgeFill, in: Circle())
-                }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Open full composer")
-
-                Button(action: { send() }) {
-                    Image(systemName: "arrow.up")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(Color.black.opacity(0.88))
-                        .frame(width: 30, height: 30)
-                        .background(Color.white, in: Circle())
-                }
-                .buttonStyle(.plain)
-                .disabled(!canSend)
-                .opacity(canSend ? 1 : 0.42)
+                .accessibilityLabel(canSend ? "Send Ask Ross question" : "Close Ask Ross")
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                dockComposerFocused = true
             }
 
             if !mentionSuggestions.isEmpty {
@@ -5812,13 +6065,13 @@ private struct AlphaRootAskDock: View {
                     .foregroundStyle(dockSecondaryText)
             } else if fixedDocumentIDs.isEmpty {
                 Text("Use tools to attach a file, or say add task / save date.")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.caption.weight(.medium))
                     .foregroundStyle(dockMutedText)
             }
 
             if model.askWebEnabled {
                 Text("Public-law search sends only a sanitized query. Case files stay on this device.")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.caption.weight(.medium))
                     .foregroundStyle(dockSecondaryText)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -5926,11 +6179,18 @@ private struct AlphaRootAskDock: View {
                                 RossBulletRow(text: item)
                             }
                         }
+                        if model.publicLawSearchInFlight {
+                            ProgressView("Searching public law…")
+                                .progressViewStyle(.circular)
+                                .tint(Color.rossAccent)
+                                .font(.footnote.weight(.medium))
+                        }
                         Spacer()
                         Button("Search public law") {
                             Task { await model.confirmPendingPublicLawSearch() }
                         }
                         .rossPrimaryButtonStyle()
+                        .disabled(model.publicLawSearchInFlight)
                         Button("Cancel") {
                             model.cancelPendingPublicLawSearch()
                         }
@@ -5969,30 +6229,36 @@ private struct AlphaCollapsedAskDockPill: View {
     let title: String
 
     var body: some View {
-        HStack(spacing: 10) {
-            RossGlassIconView(.badgeSparkle, variant: .neutral, size: 15, fallbackSystemImage: "sparkles")
-                .frame(width: 28, height: 28)
-                .background((colorScheme == .dark ? Color.white.opacity(0.08) : Color.white.opacity(0.9)), in: Circle())
+        HStack(spacing: 9) {
+            Image(systemName: "magnifyingglass")
+                .font(.body.weight(.semibold))
+                .imageScale(.small)
+                .foregroundStyle(colorScheme == .dark ? Color.white.opacity(0.54) : Color.rossInk.opacity(0.5))
 
             Text(title)
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(colorScheme == .dark ? Color.white.opacity(0.86) : Color.rossInk.opacity(0.84))
+                .font(.body)
+                .foregroundStyle(colorScheme == .dark ? Color.white.opacity(0.78) : Color.rossInk.opacity(0.72))
                 .lineLimit(1)
 
             Spacer(minLength: 0)
+
+            Image(systemName: "paperclip")
+                .font(.body.weight(.semibold))
+                .imageScale(.small)
+                .foregroundStyle(colorScheme == .dark ? Color.white.opacity(0.48) : Color.rossInk.opacity(0.42))
         }
-        .padding(.horizontal, 13)
-        .padding(.vertical, 9)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
         .background(
             RoundedRectangle(cornerRadius: 999, style: .continuous)
-                .fill(colorScheme == .dark ? Color.white.opacity(0.045) : Color.white.opacity(0.68))
+                .fill(colorScheme == .dark ? Color.black.opacity(0.38) : Color.white.opacity(0.78))
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 999, style: .continuous))
         )
         .overlay {
             RoundedRectangle(cornerRadius: 999, style: .continuous)
-                .stroke(colorScheme == .dark ? Color.white.opacity(0.16) : Color.white.opacity(0.74), lineWidth: 1)
+                .stroke(colorScheme == .dark ? Color.white.opacity(0.18) : Color.white.opacity(0.78), lineWidth: 1)
         }
-        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.16 : 0.08), radius: 12, y: 7)
+        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.22 : 0.08), radius: 14, y: 8)
     }
 }
 
@@ -6922,7 +7188,7 @@ private struct AlphaWorkspaceDrawerPanel: View {
 
     private func openSettings() {
         closeDrawer()
-        model.persisted.selectedTab = .settings
+        model.openSettings()
     }
 
     var body: some View {
@@ -8482,7 +8748,7 @@ private struct AlphaPackTierSelectionBar: View {
                                 .background(alphaTierTint(tier).opacity(0.12), in: Capsule())
                         }
 
-                        Text("\(tier.compactSetupSummary) • \(tier.downloadSizeLabel) • \(tier.setupTimeLabel)")
+                        Text("\(tier.compactSetupSummary) • Uses this iPhone • No separate download")
                             .font(.caption)
                             .foregroundStyle(Color.rossInk.opacity(0.68))
                             .lineLimit(2)
@@ -8575,13 +8841,13 @@ private struct AlphaPackTierInfoSheet: View {
 
                     VStack(alignment: .leading, spacing: 12) {
                         HStack(spacing: 10) {
-                            RossInfoPill(title: "\(tier.downloadSizeLabel) download", systemImage: "arrow.down.circle")
-                            RossInfoPill(title: tier.setupTimeLabel, systemImage: "clock")
+                            RossInfoPill(title: "Uses this iPhone", systemImage: "iphone")
+                            RossInfoPill(title: "No cloud upload", systemImage: "lock")
                         }
 
                         HStack(spacing: 10) {
-                            RossInfoPill(title: "\(tier.installedSizeLabel) on device", systemImage: "internaldrive")
-                            RossInfoPill(title: tier.storageNote, systemImage: "shippingbox")
+                            RossInfoPill(title: "No separate model download", systemImage: "arrow.down.circle")
+                            RossInfoPill(title: "Change later", systemImage: "slider.horizontal.3")
                         }
                     }
 
@@ -8602,7 +8868,7 @@ private struct AlphaPackTierInfoSheet: View {
                             .foregroundStyle(Color.rossAccent)
                             .padding(.top, 2)
 
-                        Text("Setup continues after you leave this screen.")
+                        Text("On iPhone, Ross uses the private assistant provided by iOS when it is available. Ross does not use any outside model app or website for iPhone setup.")
                             .font(.footnote)
                             .foregroundStyle(Color.rossInk.opacity(0.72))
                             .fixedSize(horizontal: false, vertical: true)
@@ -8671,33 +8937,59 @@ private struct AlphaAssistantActivityStrip: View {
     let detail: String
     let statusLabel: String
     let tint: Color
+    var progressValue: Double?
+    var showsIndeterminateProgress: Bool = false
+
+    private var clampedProgress: Double? {
+        progressValue.map { min(max($0, 0), 1) }
+    }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 14) {
-            RossGlassIconView(.sparkle3, variant: .accent, size: 30, fallbackSystemImage: "brain.head.profile")
-                .frame(width: 40, height: 40)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center, spacing: 14) {
+                RossGlassIconView(.sparkle3, variant: .accent, size: 30, fallbackSystemImage: "brain.head.profile")
+                    .frame(width: 40, height: 40)
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.rossInk)
-                    .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.rossInk)
+                        .fixedSize(horizontal: false, vertical: true)
 
-                Text(detail)
-                    .font(.footnote)
-                    .foregroundStyle(Color.rossInk.opacity(0.68))
-                    .fixedSize(horizontal: false, vertical: true)
+                    Text(detail)
+                        .font(.footnote)
+                        .foregroundStyle(Color.rossInk.opacity(0.68))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 12)
+
+                Text(statusLabel)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(tint)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(tint.opacity(0.12))
+                    .clipShape(Capsule())
             }
 
-            Spacer(minLength: 12)
+            if let clampedProgress {
+                ProgressView(value: clampedProgress, total: 1)
+                    .progressViewStyle(.linear)
+                    .tint(tint)
+                    .accessibilityLabel(statusLabel)
+            } else if showsIndeterminateProgress {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(tint)
 
-            Text(statusLabel)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(tint)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(tint.opacity(0.12))
-                .clipShape(Capsule())
+                    Text(statusLabel)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Color.rossInk.opacity(0.72))
+                }
+                .accessibilityElement(children: .combine)
+            }
         }
         .padding(14)
         .background {
@@ -8853,9 +9145,9 @@ private func alphaActiveSetupJob(_ model: AlphaRossModel) -> AlphaModelDownloadJ
 private func alphaAssistantActivityDetail(for state: AlphaDownloadState) -> String {
     switch state {
     case .queued, .downloading:
-        "Ross is downloading the assistant in the background. You can keep using the app."
+        "Ross is preparing the private assistant. You can keep using the app."
     case .verifying:
-        "Ross finished the download and is checking the files before turning it on."
+        "Ross is checking that the on-device assistant is ready before turning it on."
     case .pausedWaitingForWifi:
         "Ross is waiting for Wi-Fi before continuing the assistant setup."
     case .pausedUser:
@@ -8863,7 +9155,7 @@ private func alphaAssistantActivityDetail(for state: AlphaDownloadState) -> Stri
     case .pausedNoStorage:
         "Ross needs more free space before the assistant can finish setting up."
     case .pausedError, .failed:
-        "This build could not turn on the private assistant. You can keep using basic local review and retry setup later."
+        "Ross could not turn on the private assistant. You can keep using basic local review and retry setup later."
     case .notStarted, .installed, .cancelled:
         "No setup is running right now."
     }
@@ -8900,6 +9192,27 @@ private func alphaAssistantActivityTitle(for job: AlphaModelDownloadJob) -> Stri
         "\(job.tier.title) setup is paused"
     default:
         "\(job.tier.title) is preparing"
+    }
+}
+
+private func alphaDownloadProgressValue(_ job: AlphaModelDownloadJob) -> Double? {
+    guard job.totalBytes > 0 else { return nil }
+    switch job.state {
+    case .downloading, .verifying, .installed:
+        return job.progress
+    case .queued, .notStarted, .pausedWaitingForWifi, .pausedUser, .pausedNoStorage, .pausedError, .failed, .cancelled:
+        return nil
+    }
+}
+
+private func alphaDownloadShowsIndeterminateProgress(_ job: AlphaModelDownloadJob) -> Bool {
+    switch job.state {
+    case .queued, .verifying:
+        return job.totalBytes == 0
+    case .downloading:
+        return job.totalBytes == 0
+    case .notStarted, .pausedWaitingForWifi, .pausedUser, .pausedNoStorage, .pausedError, .installed, .failed, .cancelled:
+        return false
     }
 }
 
@@ -11919,6 +12232,14 @@ private struct AlphaPublicLawScreen: View {
                             Task { await model.runPublicLawSearch() }
                         }
                         .buttonStyle(.borderedProminent)
+                        .disabled(model.publicLawSearchInFlight)
+
+                        if model.publicLawSearchInFlight {
+                            ProgressView("Searching public law…")
+                                .progressViewStyle(.circular)
+                                .tint(Color.rossAccent)
+                                .font(.footnote.weight(.medium))
+                        }
                     }
                 }
 
@@ -12086,7 +12407,9 @@ private struct AlphaSettingsScreen: View {
                             title: alphaAssistantActivityTitle(for: activeJob),
                             detail: alphaAssistantActivityDetail(for: activeJob.state),
                             statusLabel: alphaAssistantStateLabel(activeJob.state),
-                            tint: .orange
+                            tint: Color.rossAccent,
+                            progressValue: alphaDownloadProgressValue(activeJob),
+                            showsIndeterminateProgress: alphaDownloadShowsIndeterminateProgress(activeJob)
                         )
                     }
                     .buttonStyle(.plain)
@@ -12298,6 +12621,16 @@ private struct AlphaSettingsScreen: View {
             .padding(alphaScreenPadding)
         }
         .rossHideNavigationBarIfSupported()
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 28, coordinateSpace: .local)
+                .onEnded { value in
+                    guard value.translation.width > 90,
+                          abs(value.translation.width) > abs(value.translation.height) * 1.35 else { return }
+                    withAnimation(.snappy(duration: 0.22)) {
+                        model.closeSettings()
+                    }
+                }
+        )
     }
 }
 
@@ -12456,7 +12789,9 @@ private struct AlphaPrivateAISettingsScreen: View {
                         title: alphaAssistantActivityTitle(for: activeJob),
                         detail: alphaAssistantActivityDetail(for: activeJob.state),
                         statusLabel: alphaAssistantStateLabel(activeJob.state),
-                        tint: .orange
+                        tint: Color.rossAccent,
+                        progressValue: alphaDownloadProgressValue(activeJob),
+                        showsIndeterminateProgress: alphaDownloadShowsIndeterminateProgress(activeJob)
                     )
                 }
 
@@ -12471,7 +12806,7 @@ private struct AlphaPrivateAISettingsScreen: View {
                             .foregroundStyle(Color.rossInk.opacity(0.7))
                             .fixedSize(horizontal: false, vertical: true)
 
-                        Text("Private assistant setup is still in preview on this build. If setup does not finish, Ross continues with basic local review: matters, tasks, dates, document review, and source-backed notes still stay on this device.")
+                        Text("On this iPhone, Ross uses the private assistant supplied by the device when it is available. If it is not available yet, Ross continues with basic local review: matters, tasks, dates, document review, and source-backed notes still stay on this device.")
                             .font(.footnote)
                             .foregroundStyle(Color.rossInk.opacity(0.7))
                             .fixedSize(horizontal: false, vertical: true)
@@ -12739,10 +13074,30 @@ private struct AlphaPrivateAIJobCard: View {
                 .font(.caption)
                 .foregroundStyle(Color.rossInk.opacity(0.6))
 
-            if let progressLabel = alphaDownloadProgressLabel(job) {
-                Text(progressLabel)
-                    .font(.caption)
-                    .foregroundStyle(Color.rossInk.opacity(0.6))
+            if let progressValue = alphaDownloadProgressValue(job) {
+                VStack(alignment: .leading, spacing: 6) {
+                    ProgressView(value: progressValue, total: 1)
+                        .progressViewStyle(.linear)
+                        .tint(Color.rossAccent)
+
+                    if let progressLabel = alphaDownloadProgressLabel(job) {
+                        Text(progressLabel)
+                            .font(.caption)
+                            .foregroundStyle(Color.rossInk.opacity(0.6))
+                    }
+                }
+                .accessibilityElement(children: .combine)
+            } else if alphaDownloadShowsIndeterminateProgress(job) {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(Color.rossAccent)
+
+                    Text(alphaAssistantStateLabel(job.state))
+                        .font(.caption)
+                        .foregroundStyle(Color.rossInk.opacity(0.68))
+                }
+                .accessibilityElement(children: .combine)
             }
 
             HStack(spacing: 10) {

@@ -2,7 +2,7 @@
 
 Ross treats the Private AI Pack as the private assistant on this device.
 
-This phase is about product usability, not a claim of real local-model proof on hardware.
+This phase now separates the iPhone system assistant path from Android model-artifact downloads.
 
 ## User-facing status copy
 
@@ -31,6 +31,12 @@ When the private assistant is ready:
 - Ross can interpret everyday requests more naturally
 - Ross can shape public-law queries locally before preview
 - private matter work remains on-device
+
+## Model source in this alpha
+
+On iPhone, Ross uses the private assistant supplied by iOS when the device supports it. The app does not download a model from Gemma 4 local runtime or Hugging Face inside the iPhone app.
+
+On Android, Ross can install a compatible MediaPipe `.task` artifact from the Ross backend when the backend is explicitly configured with an external model file outside the repo. The app stores the downloaded artifact in app-private storage and loads it locally; case files are not sent with model catalog or download requests.
 
 ## Privacy boundary
 
@@ -62,16 +68,16 @@ These belong only under `Settings -> Advanced -> Technical diagnostics`:
 
 ## Current proof status
 
-Freshly observed in the latest iOS manual pass:
+Validated by automated tests on 2026-04-23:
 
-- plain-language private assistant copy exists
-- the app remains usable in local mode
+- iOS setup can create a `system_model` private assistant pack without a downloaded file when the on-device assistant is available.
+- iOS Ask Ross still supports local file answers, task/date commands, exports, and public-law preview flow.
+- Android downloaded real-model artifacts keep their `.task` filename so MediaPipe can load them from app-private storage.
+- Android Ask Ross now attempts a model-backed matter answer when an installed real local pack is available, and keeps deterministic local fallback when not.
+- Android task/date/export dock commands still pass automated tests.
 
-Freshly observed in the latest Android manual pass:
+Still not proven in this run:
 
-- the Ask Ross tools sheet uses plain-language `Web Search` privacy copy
-
-Still not proven in this phase:
-
-- a real downloaded local model running on-device
-- full manual walkthrough of every private assistant state on both platforms
+- a live iPhone manual setup tap proving Apple on-device assistant availability on Aman's specific device
+- a real Android `.task` model executing on a physical Android device
+- a production model-delivery source

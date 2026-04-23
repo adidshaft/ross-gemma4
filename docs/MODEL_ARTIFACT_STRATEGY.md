@@ -4,12 +4,12 @@ Ross needs a model artifact strategy that proves real local inference without we
 
 ## Current proof status
 
-Latest observed state on 2026-04-19:
+Latest observed state on 2026-04-23:
 
-- Android real local inference was not run.
-- No physical Android device was connected.
-- No developer-provided compatible `.task` model artifact was supplied in this session.
-- The next proof attempt still needs one artifact outside the repo and outside Android app assets.
+- iPhone setup uses the iOS on-device private assistant when available; it does not download a model from Gemma 4 local runtime or Hugging Face inside the app.
+- Android real model downloads are wired through the existing Ross backend model session flow.
+- Android now preserves the backend artifact filename, so a served `.task` file remains `.task` in app-private storage for MediaPipe loading.
+- Android real local inference still needs one compatible `.task` artifact outside the repo and a physical Android proof run.
 
 ## Non-negotiable rules
 
@@ -41,7 +41,7 @@ When to use:
 ## B. Backend-advertised external debug model
 
 - backend can optionally advertise `external_debug_model` metadata in `/model-catalog`
-- mobile still uses a developer-provided local model path
+- mobile can install the artifact through `/model-download/session` when backend serving is explicitly enabled
 - no download URL is exposed from the catalog
 - useful for testing metadata selection and runtime labeling without serving a binary
 
@@ -91,8 +91,8 @@ Not for this alpha:
 
 ## Alpha recommendation
 
-1. Prefer the debug-path model first.
-2. Use backend external metadata only when you need to validate metadata plumbing.
-3. Use backend dev serving only as a clearly disabled-by-default developer feature.
+1. On iPhone, use the system on-device assistant path first and record whether Aman's device reports it available.
+2. On Android, use backend dev serving with one compatible `.task` file outside the repo to prove download plus MediaPipe loading.
+3. Keep backend external serving disabled by default.
 4. Do not add broader delivery architecture until a real physical-device proof run exists.
-5. Record `Not run` immediately if either the physical device or the external `.task` artifact is missing.
+5. Record `Not run` immediately if either the physical Android device or the external `.task` artifact is missing.

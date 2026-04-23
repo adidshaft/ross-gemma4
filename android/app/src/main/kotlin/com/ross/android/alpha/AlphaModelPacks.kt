@@ -52,6 +52,7 @@ object AlphaModelPackManager {
         rootDir: File,
         job: AlphaModelDownloadJob,
         artifactBytes: ByteArray = devArtifactBytes(job.tier),
+        fileName: String? = null,
         now: String,
     ): AlphaModelPackProgress {
         val actualChecksum = sha256Bytes(artifactBytes)
@@ -78,7 +79,7 @@ object AlphaModelPackManager {
         }
 
         val folder = File(File(rootDir, "model-packs"), job.tier.tierId).apply { mkdirs() }
-        val artifact = File(folder, "pack.dev").apply { writeBytes(artifactBytes) }
+        val artifact = File(folder, safeArtifactFileName(fileName, job)).apply { writeBytes(artifactBytes) }
         val installedPack = AlphaInstalledPack(
             packId = job.packId,
             tier = job.tier,
@@ -126,6 +127,20 @@ object AlphaModelPackManager {
             append('\n')
             append("privacy=no-case-data\n")
         }.toByteArray()
+
+    private fun safeArtifactFileName(fileName: String?, job: AlphaModelDownloadJob): String {
+        val candidate = fileName
+            ?.substringAfterLast('/')
+            ?.substringAfterLast('\\')
+            ?.replace(Regex("""[^A-Za-z0-9._-]"""), "_")
+            ?.takeIf { it.isNotBlank() }
+        if (candidate != null) return candidate
+        return if (job.runtimeMode == AlphaPackRuntimeMode.MediapipeLlm || job.artifactKind == "external_debug_model") {
+            "model.task"
+        } else {
+            "pack.dev"
+        }
+    }
 }
 
 private fun sha256Bytes(value: ByteArray): String =

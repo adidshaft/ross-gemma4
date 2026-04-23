@@ -1426,6 +1426,24 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
                     sourceRefs = fields.flatMap { it.sourceRefs },
                 )
             }
+
+            AlphaLocalModelTask.MatterQuestionAnswer -> {
+                val snippets = pages
+                    .mapNotNull { it.snippet?.takeIf { snippet -> snippet.isNotBlank() } }
+                    .take(3)
+                val payload = mapOf(
+                    "answer" to snippets.joinToString(" "),
+                    "sourceCount" to snippets.size,
+                )
+                val json = gson.toJson(payload)
+                AlphaLocalModelOutput(
+                    rawText = json,
+                    parsedJson = json,
+                    schemaValid = true,
+                    warnings = listOf("Deterministic matter answer synthesis only."),
+                    sourceRefs = taskInput.sourcePack.map { it.sourceRef },
+                )
+            }
         }
     }
 

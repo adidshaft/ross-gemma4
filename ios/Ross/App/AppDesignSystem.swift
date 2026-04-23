@@ -18,27 +18,74 @@ public struct RossCardStyle: ViewModifier {
     @Environment(\.colorScheme) private var colorScheme
 
     public func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
+
         content
             .padding(18)
             .background {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(
-                        colorScheme == .dark
-                            ? Color.rossGlassFill.opacity(0.74)
-                            : Color.rossCardBackground
-                    )
+                if colorScheme == .dark {
+                    ZStack {
+                        shape
+                            .fill(.ultraThinMaterial)
+
+                        shape
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color.white.opacity(0.10),
+                                        Color(red: 0.13, green: 0.14, blue: 0.16).opacity(0.82),
+                                        Color.black.opacity(0.34)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+
+                        shape
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color.white.opacity(0.10),
+                                        Color.clear,
+                                        Color.white.opacity(0.035)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .blendMode(.screen)
+                    }
+                } else {
+                    shape.fill(Color.rossCardBackground)
+                }
             }
             .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(Color.rossBorder.opacity(0.9), lineWidth: 0.75)
+                shape.strokeBorder(
+                    colorScheme == .dark
+                        ? LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.20),
+                                Color.white.opacity(0.055),
+                                Color.black.opacity(0.24)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                        : LinearGradient(
+                            colors: [Color.rossBorder.opacity(0.9), Color.rossBorder.opacity(0.9)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                    lineWidth: colorScheme == .dark ? 1 : 0.75
+                )
             }
             .overlay(alignment: .top) {
                 if colorScheme == .dark {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    shape
                         .stroke(
                             LinearGradient(
                                 colors: [
-                                    Color.white.opacity(0.12),
+                                    Color.white.opacity(0.16),
                                     Color.clear
                                 ],
                                 startPoint: .top,
@@ -49,12 +96,12 @@ public struct RossCardStyle: ViewModifier {
                         .padding(.horizontal, 0.5)
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .clipShape(shape)
             .shadow(
-                color: colorScheme == .dark ? Color.black.opacity(0.08) : Color.rossShadow.opacity(0.14),
-                radius: colorScheme == .dark ? 8 : 10,
+                color: colorScheme == .dark ? Color.black.opacity(0.28) : Color.rossShadow.opacity(0.14),
+                radius: colorScheme == .dark ? 18 : 10,
                 x: 0,
-                y: colorScheme == .dark ? 4 : 5
+                y: colorScheme == .dark ? 10 : 5
             )
     }
 }

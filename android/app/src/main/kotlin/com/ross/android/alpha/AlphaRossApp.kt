@@ -222,6 +222,24 @@ fun AlphaRossApp() {
         backStack += route
     }
 
+    fun openRootRoute(route: AndroidAlphaRoute) {
+        if (route == AndroidAlphaRoute.Settings) {
+            if (currentRoute != AndroidAlphaRoute.Settings) {
+                backStack += AndroidAlphaRoute.Settings
+            }
+        } else {
+            replaceWith(route)
+        }
+    }
+
+    fun goBackOrHome() {
+        if (backStack.size > 1) {
+            backStack.removeLast()
+        } else {
+            replaceWith(AndroidAlphaRoute.Home)
+        }
+    }
+
     fun openRootDrawer() {
         rootDrawerScope.launch {
             rootDrawerState.open()
@@ -266,8 +284,8 @@ fun AlphaRossApp() {
         }
     }
 
-    BackHandler(enabled = backStack.size > 1) {
-        backStack.removeLast()
+    BackHandler(enabled = backStack.size > 1 || currentRoute == AndroidAlphaRoute.Settings) {
+        goBackOrHome()
     }
 
     RossTheme(darkTheme = darkTheme) {
@@ -294,7 +312,7 @@ fun AlphaRossApp() {
                 drawerState = rootDrawerState,
                 controller = controller,
                 selectedRoot = rootRoute,
-                onSelectRoot = { route -> closeRootDrawerThen { replaceWith(route) } },
+                onSelectRoot = { route -> closeRootDrawerThen { openRootRoute(route) } },
                 onCreateCase = { closeRootDrawerThen { push(AndroidAlphaRoute.CreateCase) } },
                 onOpenCase = { caseId ->
                     closeRootDrawerThen {
@@ -312,7 +330,7 @@ fun AlphaRossApp() {
                 AlphaHomeScreen(
                     controller = controller,
                     selectedRoot = rootRoute,
-                    onRootSelected = { replaceWith(it) },
+                    onRootSelected = { openRootRoute(it) },
                     onOpenWorkspaceDrawer = { openRootDrawer() },
                     onCreateCase = { push(AndroidAlphaRoute.CreateCase) },
                     onOpenCase = { caseId ->
@@ -326,7 +344,7 @@ fun AlphaRossApp() {
                 drawerState = rootDrawerState,
                 controller = controller,
                 selectedRoot = rootRoute,
-                onSelectRoot = { route -> closeRootDrawerThen { replaceWith(route) } },
+                onSelectRoot = { route -> closeRootDrawerThen { openRootRoute(route) } },
                 onCreateCase = { closeRootDrawerThen { push(AndroidAlphaRoute.CreateCase) } },
                 onOpenCase = { caseId ->
                     closeRootDrawerThen {
@@ -344,7 +362,7 @@ fun AlphaRossApp() {
                 AlphaCaseListScreen(
                     controller = controller,
                     selectedRoot = rootRoute,
-                    onRootSelected = { replaceWith(it) },
+                    onRootSelected = { openRootRoute(it) },
                     onOpenWorkspaceDrawer = { openRootDrawer() },
                     onCreateCase = { push(AndroidAlphaRoute.CreateCase) },
                     onOpenCase = { caseId ->
@@ -411,7 +429,7 @@ fun AlphaRossApp() {
                 drawerState = rootDrawerState,
                 controller = controller,
                 selectedRoot = rootRoute,
-                onSelectRoot = { route -> closeRootDrawerThen { replaceWith(route) } },
+                onSelectRoot = { route -> closeRootDrawerThen { openRootRoute(route) } },
                 onCreateCase = { closeRootDrawerThen { push(AndroidAlphaRoute.CreateCase) } },
                 onOpenCase = { caseId ->
                     closeRootDrawerThen {
@@ -457,7 +475,7 @@ fun AlphaRossApp() {
                 drawerState = rootDrawerState,
                 controller = controller,
                 selectedRoot = rootRoute,
-                onSelectRoot = { route -> closeRootDrawerThen { replaceWith(route) } },
+                onSelectRoot = { route -> closeRootDrawerThen { openRootRoute(route) } },
                 onCreateCase = { closeRootDrawerThen { push(AndroidAlphaRoute.CreateCase) } },
                 onOpenCase = { caseId ->
                     closeRootDrawerThen {
@@ -475,8 +493,9 @@ fun AlphaRossApp() {
                 AlphaSettingsScreen(
                     controller = controller,
                     selectedRoot = rootRoute,
-                    onRootSelected = { replaceWith(it) },
+                    onRootSelected = { openRootRoute(it) },
                     onOpenWorkspaceDrawer = { openRootDrawer() },
+                    onBack = { goBackOrHome() },
                     onOpenLedger = { push(AndroidAlphaRoute.PrivacyLedger) },
                     onOpenPrivateAi = { push(AndroidAlphaRoute.PrivateAiSettings) },
                 )
@@ -1181,6 +1200,8 @@ private fun AlphaRootTopRail(
     selectedRoute: AndroidAlphaRoute,
     onOpenWorkspaceDrawer: () -> Unit,
     onSelect: (AndroidAlphaRoute) -> Unit,
+    showBack: Boolean = false,
+    onBack: (() -> Unit)? = null,
 ) {
     Row(
         modifier = Modifier
@@ -1190,16 +1211,58 @@ private fun AlphaRootTopRail(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        AlphaChromeIconButton(
-            icon = Icons.AutoMirrored.Outlined.MenuOpen,
-            label = "Open workspace drawer",
-            onClick = onOpenWorkspaceDrawer,
-        )
-        AlphaRootStrip(
-            modifier = Modifier.weight(1f),
-            selectedRoute = selectedRoute,
-            onSelect = onSelect,
-        )
+        if (showBack && onBack != null) {
+            AlphaChromeIconButton(
+                icon = Icons.AutoMirrored.Outlined.ArrowBack,
+                label = "Back",
+                onClick = onBack,
+            )
+            AlphaRootTitlePill(
+                title = "Settings",
+                modifier = Modifier.weight(1f),
+            )
+            AlphaChromeIconButton(
+                icon = Icons.AutoMirrored.Outlined.MenuOpen,
+                label = "Open workspace drawer",
+                onClick = onOpenWorkspaceDrawer,
+            )
+        } else {
+            AlphaChromeIconButton(
+                icon = Icons.AutoMirrored.Outlined.MenuOpen,
+                label = "Open workspace drawer",
+                onClick = onOpenWorkspaceDrawer,
+            )
+            AlphaRootStrip(
+                modifier = Modifier.weight(1f),
+                selectedRoute = selectedRoute,
+                onSelect = onSelect,
+            )
+        }
+    }
+}
+
+@Composable
+private fun AlphaRootTitlePill(title: String, modifier: Modifier = Modifier) {
+    OutlinedCard(
+        modifier = modifier,
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.outlinedCardColors(containerColor = alphaChromeBackgroundColor()),
+        border = androidx.compose.foundation.BorderStroke(1.dp, alphaChromeStrokeColor()),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp)
+                .padding(horizontal = 14.dp),
+            contentAlignment = Alignment.CenterStart,
+        ) {
+            Text(
+                title,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = alphaChromeForegroundColor(),
+            )
+        }
     }
 }
 
@@ -3576,6 +3639,7 @@ private fun AlphaSettingsScreen(
     selectedRoot: AndroidAlphaRoute,
     onRootSelected: (AndroidAlphaRoute) -> Unit,
     onOpenWorkspaceDrawer: () -> Unit,
+    onBack: () -> Unit,
     onOpenLedger: () -> Unit,
     onOpenPrivateAi: () -> Unit,
 ) {
@@ -3591,6 +3655,8 @@ private fun AlphaSettingsScreen(
                 selectedRoute = selectedRoot,
                 onOpenWorkspaceDrawer = onOpenWorkspaceDrawer,
                 onSelect = onRootSelected,
+                showBack = true,
+                onBack = onBack,
             )
         },
     ) {

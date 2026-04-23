@@ -1,5 +1,25 @@
 # Real Model QA Results
 
+## 2026-04-23 iPhone and Android model-path update
+
+- Branch: `alpha-lawyer-usable-app`
+- iPhone model source: iOS on-device private assistant when available
+- iPhone model download: No separate Gemma 4 local runtime or Hugging Face model is downloaded inside the app
+- Android model source: backend-served compatible MediaPipe `.task` artifact when explicitly configured outside the repo
+- Whether model files were committed: No
+- Whether iPhone setup was manually tapped on Aman's device in this update: Not yet
+- Whether Android real `mediapipe_llm` inference ran on a physical Android device: Not yet
+- What was validated instead:
+  - iOS Swift tests passed for `system_model` runtime health without a downloaded path
+  - Android unit tests passed for preserving `.task` filenames during backend artifact install
+  - Android Ask Ross now routes matter Q&A through the installed local runtime when available, with deterministic local fallback
+  - Android dock command tests still pass for task creation, date saving, and export generation
+- Remaining blocker:
+  - a real Android `.task` artifact and physical Android device are still required before claiming Android real-model execution
+  - Aman's iPhone still needs a manual setup check before claiming the iOS on-device assistant is available on that exact phone
+
+## 2026-04-19 Android physical-device proof attempt
+
 - Date: 2026-04-19
 - Branch: `alpha-android-real-proof`
 - Commit observed during validation: `e10c7f4`
