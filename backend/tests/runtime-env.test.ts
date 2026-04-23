@@ -75,3 +75,15 @@ test("readRuntimeEnv can load env values from local files when no explicit envir
     rmSync(tempDirectory, { recursive: true, force: true });
   }
 });
+
+test("readRuntimeEnv defaults model catalog to dev and accepts production metadata mode", () => {
+  assert.equal(readRuntimeEnv({ environment: {} }).modelCatalogMode, "dev");
+  assert.equal(
+    readRuntimeEnv({ environment: { ROSS_MODEL_CATALOG_MODE: "production_metadata" } }).modelCatalogMode,
+    "production_metadata"
+  );
+  assert.equal(
+    readRuntimeEnv({ environment: { ROSS_MODEL_CATALOG_MODE: "unexpected" } }).modelCatalogMode,
+    "dev"
+  );
+});

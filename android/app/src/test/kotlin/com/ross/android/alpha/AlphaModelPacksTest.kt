@@ -10,6 +10,34 @@ import java.security.MessageDigest
 
 class AlphaModelPacksTest {
     @Test
+    fun `private assistant tiers use qwen strategy download sizes without exposing model names`() {
+        assertEquals(429_000_000L, AlphaModelPackManager.totalBytesFor(AlphaCapabilityTier.QuickStart))
+        assertEquals(1_280_000_000L, AlphaModelPackManager.totalBytesFor(AlphaCapabilityTier.CaseAssociate))
+        assertEquals(2_500_000_000L, AlphaModelPackManager.totalBytesFor(AlphaCapabilityTier.SeniorDraftingSupport))
+
+        assertEquals("about 430 MB", AlphaCapabilityTier.QuickStart.downloadSizeLabel)
+        assertEquals("about 1.1-1.3 GB", AlphaCapabilityTier.CaseAssociate.downloadSizeLabel)
+        assertEquals("about 2.5 GB", AlphaCapabilityTier.SeniorDraftingSupport.downloadSizeLabel)
+
+        val forbidden = Regex("Gemma 4 E2B Q4|Gemma 4 Q4|Q4|Q4|gemma_local_runtime|EmbeddingGemma|LiteRT|checksum|artifact|deterministic_dev|mediapipe_llm", RegexOption.IGNORE_CASE)
+        AlphaCapabilityTier.values().forEach { tier ->
+            val userFacingCopy = listOf(
+                tier.title,
+                tier.summary,
+                tier.downloadSizeLabel,
+                tier.installedSizeLabel,
+                tier.compactSetupSummary,
+                tier.storageNote,
+                tier.bestFor,
+                tier.setupTimeLabel,
+                tier.extractionQuality,
+            ).joinToString("\n")
+
+            assertTrue("Technical model term leaked for ${tier.title}", !forbidden.containsMatchIn(userFacingCopy))
+        }
+    }
+
+    @Test
     fun `large packs pause for wifi when mobile data is not allowed`() {
         val job = AlphaModelPackManager.stageJob(
             tier = AlphaCapabilityTier.CaseAssociate,

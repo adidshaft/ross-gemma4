@@ -20,6 +20,46 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testPrivateAssistantTierCopyHidesTechnicalModelNames() {
+        XCTAssertEqual(AlphaCapabilityTier.quickStart.downloadSizeLabel, "about 430 MB")
+        XCTAssertEqual(AlphaCapabilityTier.caseAssociate.downloadSizeLabel, "about 1.1-1.3 GB")
+        XCTAssertEqual(AlphaCapabilityTier.seniorDraftingSupport.downloadSizeLabel, "about 2.5 GB")
+
+        let forbidden = [
+            "Gemma 4 E2B Q4",
+            "Gemma 4 Q4",
+            "Q4",
+            "Q4",
+            "gemma_local_runtime",
+            "EmbeddingGemma",
+            "LiteRT",
+            "checksum",
+            "artifact",
+            "deterministic_dev",
+            "mediapipe_llm"
+        ]
+
+        for tier in AlphaCapabilityTier.allCases {
+            let userFacingCopy = [
+                tier.title,
+                tier.summary,
+                tier.storageNote,
+                tier.downloadSizeLabel,
+                tier.installedSizeLabel,
+                tier.bestFor,
+                tier.compactSetupSummary,
+                tier.setupTimeLabel
+            ].joined(separator: "\n")
+
+            for term in forbidden {
+                XCTAssertNil(
+                    userFacingCopy.range(of: term, options: [.caseInsensitive]),
+                    "\(term) leaked into user-facing copy for \(tier.title)"
+                )
+            }
+        }
+    }
+
     func testLocalExtractionDetectsMixedLanguageProfile() async {
         let store = AlphaRossStore()
         let caseId = UUID()

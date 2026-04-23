@@ -1,0 +1,168 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import test from "node:test";
+
+import { buildApp } from "../src/main.js";
+import { readRuntimeEnv } from "../src/security/env.js";
+
+const registryPath = path.resolve(process.cwd(), "../shared/constants/privateAssistantModelRegistry.json");
+const publicLawGeminiEnvKey = ["ROSS_PUBLIC_LAW_", "GEMINI", "_API_KEY"].join("");
+const legacyGeminiEnvKey = ["GEMINI", "_API_KEY"].join("");
+
+function readRegistry() {
+  return JSON.parse(readFileSync(registryPath, "utf8")) as {
+    assistantTiers: Record<
+      string,
+      {
+        displayName: string;
+        technicalModelName: string;
+        repo: string;
+        alternateRepo?: string;
+        quantization: string;
+        runtimeMode: string;
+        artifactKind: string;
+        approxDownloadSizeMb: number;
+      }
+    >;
+    retrievalModels: Record<
+      string,
+      {
+        displayName: string;
+        technicalModelName: string;
+        repo: string;
+        runtimeMode: string;
+        artifactKind: string;
+      }
+    >;
+  };
+}
+
+function buildTestEnv(overrides: Record<string, string | undefined> = {}) {
+  return readRuntimeEnv({
+    nodeEnvOverride: "test",
+    environment: {
+      ...process.env,
+      [publicLawGeminiEnvKey]: undefined,
+      [legacyGeminiEnvKey]: undefined,
+      ...overrides
+    }
+  });
+}
+
+test("canonical private assistant registry maps tiers to qwen gguf models and separate retrieval", () => {
+  const registry = readRegistry();
+  const quickStart = registry.assistantTiers.quick_start;
+  const caseAssociate = registry.assistantTiers.case_associate;
+  const seniorDrafting = registry.assistantTiers.senior_drafting_support;
+  const preferredRetrieval = registry.retrievalModels.preferred;
+  const fallbackRetrieval = registry.retrievalModels.singleRuntimeFallback;
+
+  assert.ok(quickStart);
+  assert.ok(caseAssociate);
+  assert.ok(seniorDrafting);
+  assert.ok(preferredRetrieval);
+  assert.ok(fallbackRetrieval);
+
+  assert.equal(quickStart.displayName, "Quick Start");
+  assert.equal(quickStart.technicalModelName, "Gemma 4 E2B Q4");
+  assert.equal(quickStart.repo, "google/gemma-4-E2B-it");
+  assert.equal(quickStart.quantization, "Q4");
+  assert.equal(quickStart.runtimeMode, "gemma_local_runtime");
+  assert.equal(quickStart.approxDownloadSizeMb, 429);
+
+  assert.equal(caseAssociate.displayName, "Case Associate");
+  assert.equal(caseAssociate.technicalModelName, "Gemma 4 E4B Q4");
+  assert.equal(caseAssociate.repo, "google/gemma-4-E4B-it");
+  assert.equal(caseAssociate.alternateRepo, "google/gemma-4-E4B-it");
+  assert.equal(caseAssociate.quantization, "Q4");
+
+  assert.equal(seniorDrafting.displayName, "Senior Drafting Support");
+  assert.equal(seniorDrafting.technicalModelName, "Gemma 4 26B-A4B Q4");
+  assert.equal(seniorDrafting.repo, "google/gemma-4-26B-A4B-it");
+  assert.equal(seniorDrafting.alternateRepo, "google/gemma-4-26B-A4B-it");
+  assert.equal(seniorDrafting.quantization, "Q4");
+
+  assert.equal(preferredRetrieval.displayName, "Matter Search");
+  assert.equal(preferredRetrieval.technicalModelName, "EmbeddingGemma 300M");
+  assert.equal(preferredRetrieval.repo, "litert-community/embeddinggemma-300m");
+  assert.equal(preferredRetrieval.runtimeMode, "litert");
+  assert.equal(preferredRetrieval.artifactKind, "local_embedding_model");
+
+  assert.equal(fallbackRetrieval.technicalModelName, "Gemma 4 Embedding");
+  assert.equal(fallbackRetrieval.runtimeMode, "gemma_local_runtime");
+});
+
+test("production model catalog advertises qwen metadata without enabling large downloads", async (t) => {
+  const app = await buildApp({
+    env: buildTestEnv({ ROSS_MODEL_CATALOG_MODE: "production_metadata" }),
+    emitLogsToConsole: false
+  });
+
+  t.after(async () => {
+    await app.close();
+  });
+
+  const catalog = await app.inject({
+    method: "GET",
+    url: "/model-catalog?platform=android"
+  });
+
+  assert.equal(catalog.statusCode, 200);
+  const body = JSON.parse(catalog.body) as {
+    manifest: {
+      payload: {
+        packs: Array<{
+          packId: string;
+          displayName: string;
+          tier: string;
+          technicalModelName: string;
+          repo: string;
+          artifactKind: string;
+          runtimeMode: string;
+          developmentOnly: boolean;
+          checksumSha256: string;
+          segmentCount: number;
+          downloadConfigured: boolean;
+        }>;
+      };
+    };
+  };
+
+  assert.deepEqual(
+    body.manifest.payload.packs.map((pack) => pack.displayName),
+    ["Quick Start", "Case Associate", "Senior Drafting Support"]
+  );
+
+  const quickStart = body.manifest.payload.packs.find((pack) => pack.tier === "quick_start");
+  const caseAssociate = body.manifest.payload.packs.find((pack) => pack.tier === "case_associate");
+  const senior = body.manifest.payload.packs.find((pack) => pack.tier === "senior_drafting_support");
+
+  assert.equal(quickStart?.technicalModelName, "Gemma 4 E2B Q4");
+  assert.equal(caseAssociate?.technicalModelName, "Gemma 4 E4B Q4");
+  assert.equal(senior?.technicalModelName, "Gemma 4 26B-A4B Q4");
+
+  for (const pack of body.manifest.payload.packs) {
+    assert.equal(pack.artifactKind, "local_model_artifact");
+    assert.equal(pack.runtimeMode, "gemma_local_runtime");
+    assert.equal(pack.developmentOnly, false);
+    assert.equal(pack.checksumSha256, "");
+    assert.equal(pack.segmentCount, 0);
+    assert.equal(pack.downloadConfigured, false);
+  }
+
+  const download = await app.inject({
+    method: "POST",
+    url: "/model-download/session",
+    payload: {
+      accountToken: "acct_test_token_1234567890",
+      packId: quickStart?.packId ?? "gemma-4-e2b-q4",
+      platform: "android",
+      appVersion: "1.0.0",
+      deviceIdHash: "a1b2c3d4e5f6a7b8"
+    }
+  });
+
+  assert.equal(download.statusCode, 409);
+  assert.match(download.body, /model_download_unconfigured/);
+});
