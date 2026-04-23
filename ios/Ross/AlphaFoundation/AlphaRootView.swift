@@ -5176,6 +5176,13 @@ private struct AlphaTabShell: View {
         return true
     }
 
+    private var shouldShowTopRail: Bool {
+        let selectedTab = model.persisted.selectedTab.normalizedForLawyerShell
+        guard selectedTab != .ask else { return false }
+        guard model.path.last?.isAskRoute != true else { return false }
+        return true
+    }
+
     var body: some View {
         GeometryReader { proxy in
             ZStack(alignment: .leading) {
@@ -5194,10 +5201,12 @@ private struct AlphaTabShell: View {
                     }
                 }
                 .safeAreaInset(edge: .top, spacing: 0) {
-                    AlphaRootTopRail(model: model)
-                        .padding(.horizontal, 12)
-                        .padding(.top, 2)
-                        .padding(.bottom, 6)
+                    if shouldShowTopRail {
+                        AlphaRootTopRail(model: model)
+                            .padding(.horizontal, 12)
+                            .padding(.top, 2)
+                            .padding(.bottom, 6)
+                    }
                 }
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     if shouldShowGlobalAskDock {
@@ -7402,7 +7411,6 @@ private struct AlphaHomeScreen: View {
         let todayTasks = model.todayTasks()
         let todayDates = model.todayDateRows()
         let upcomingDates = model.upcomingDateRows()
-        let recentDocuments = model.recentDocumentItems()
         let assistantStatus = alphaAssistantStatusSnapshot(model)
         let attentionCount = todayDates.count + todayTasks.count + reviewItems.count
         let hasDueTodayItems = !todayDates.isEmpty || !todayTasks.isEmpty
@@ -7506,25 +7514,6 @@ private struct AlphaHomeScreen: View {
                     }
                 }
 
-                if !recentDocuments.isEmpty {
-                    RossSectionCard(title: "Recent files") {
-                        VStack(alignment: .leading, spacing: 12) {
-                            ForEach(Array(recentDocuments.prefix(4))) { entry in
-                                Button {
-                                    model.focusCase(entry.caseId)
-                                    model.path.append(.documentViewer(entry.caseId, entry.document.id, 1))
-                                } label: {
-                                    AlphaDocumentRow(
-                                        caseTitle: entry.caseTitle,
-                                        document: entry.document,
-                                        showChevron: true
-                                    )
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                    }
-                }
             }
             .padding(alphaScreenPadding)
         }
@@ -8755,9 +8744,43 @@ private func alphaAssistantActivityDetail(for state: AlphaDownloadState) -> Stri
     case .pausedNoStorage:
         "Ross needs more free space before the assistant can finish setting up."
     case .pausedError, .failed:
-        "Ross hit a setup problem. Open device setup to resume or choose another model."
+        "This build could not turn on the private assistant. You can keep using basic local review and retry setup later."
     case .notStarted, .installed, .cancelled:
         "No setup is running right now."
+    }
+}
+
+private func alphaAssistantStateLabel(_ state: AlphaDownloadState) -> String {
+    switch state {
+    case .queued, .downloading:
+        "Preparing"
+    case .verifying:
+        "Checking"
+    case .pausedWaitingForWifi:
+        "Waiting for Wi-Fi"
+    case .pausedUser:
+        "Paused"
+    case .pausedNoStorage:
+        "Needs space"
+    case .pausedError, .failed:
+        "Needs retry"
+    case .installed:
+        "Ready"
+    case .cancelled:
+        "Cancelled"
+    case .notStarted:
+        "Not started"
+    }
+}
+
+private func alphaAssistantActivityTitle(for job: AlphaModelDownloadJob) -> String {
+    switch job.state {
+    case .pausedError, .failed:
+        "Private assistant needs a retry"
+    case .pausedWaitingForWifi, .pausedUser, .pausedNoStorage:
+        "\(job.tier.title) setup is paused"
+    default:
+        "\(job.tier.title) is preparing"
     }
 }
 
@@ -9640,7 +9663,7 @@ private struct AlphaCompactAssistantStatusRow: View {
                 .frame(width: 9, height: 9)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Private AI")
+                Text("Private assistant")
                     .font(.caption.weight(.bold))
                     .tracking(1.1)
                     .foregroundStyle(snapshot.tint.opacity(0.9))
@@ -10156,21 +10179,6 @@ private struct AlphaAskConversationScreen: View {
             }
             .padding(alphaScreenPadding)
             .padding(.bottom, 112)
-        }
-        .navigationTitle("Ask Ross")
-        .rossInlineNavigationTitle()
-        .toolbar {
-            if fixedScopeCaseID == nil {
-                #if os(iOS)
-                ToolbarItem(placement: .topBarLeading) {
-                    AlphaWorkspaceDrawerButton {
-                        withAnimation(.snappy(duration: 0.24)) {
-                            model.workspaceDrawerPresented = true
-                        }
-                    }
-                }
-                #endif
-            }
         }
         .safeAreaInset(edge: .bottom) {
             AlphaRootAskDock(
@@ -10953,6 +10961,7 @@ private struct AlphaDocumentViewerScreen: View {
     let documentId: UUID
     let initialPage: Int?
     @State private var rawTextExpanded = false
+    @State private var otherDetailsExpanded = false
 
     private var isSharedDocument: Bool {
         caseId == alphaSharedWorkspaceID
@@ -11027,63 +11036,51 @@ private struct AlphaDocumentViewerScreen: View {
                         preview
                     }
 
-                    RossSectionCard(title: "Actions") {
-                        VStack(spacing: 12) {
-                            RossActionTile(
-                                title: "Continue in active matter chat",
-                                detail: "Use the current matter thread with this document already selected.",
-                                systemImage: "bubble.left.and.text.bubble.right",
-                                tint: Color.rossAccent
-                            ) {
-                                model.openDocumentInChat(caseId: caseId, documentId: document.id, startNewThread: false)
+                    RossSectionCard(title: "Quick actions") {
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack(spacing: 10) {
+                                AlphaCompactDraftActionButton(title: "Ask", systemImage: "bubble.left.and.text.bubble.right") {
+                                    model.openDocumentInChat(caseId: caseId, documentId: document.id, startNewThread: false)
+                                }
+
+                                AlphaCompactDraftActionButton(title: "Task", systemImage: "checklist") {
+                                    model.addTask(
+                                        title: "Review \(document.title)",
+                                        caseId: caseId,
+                                        dueDate: caseMatter?.nextHearing,
+                                        priority: .normal,
+                                        notes: "Created from the document viewer."
+                                    )
+                                }
                             }
 
-                            RossActionTile(
-                                title: "Start review chat for this document",
-                                detail: "Open a fresh matter thread dedicated to this file and its review.",
-                                systemImage: "square.and.pencil",
-                                tint: Color.rossHighlight
-                            ) {
-                                model.openDocumentInChat(caseId: caseId, documentId: document.id, startNewThread: true)
-                            }
+                            HStack(spacing: 10) {
+                                AlphaCompactDraftActionButton(title: "Case note", systemImage: "text.append") {
+                                    Task { await model.generateExport(kind: "case_note", caseId: caseId) }
+                                }
 
-                            RossActionTile(
-                                title: "Create review task",
-                                detail: "Save a follow-up task linked to this matter and its next date.",
-                                systemImage: "checklist",
-                                tint: Color.rossHighlight
-                            ) {
-                                model.addTask(
-                                    title: "Review \(document.title)",
-                                    caseId: caseId,
-                                    dueDate: caseMatter?.nextHearing,
-                                    priority: .normal,
-                                    notes: "Created from the document viewer."
-                                )
+                                Menu {
+                                    Button("Start new review chat") {
+                                        model.openDocumentInChat(caseId: caseId, documentId: document.id, startNewThread: true)
+                                    }
+                                    Button("Review again") {
+                                        Task { await model.rerunReview(caseId: caseId, documentId: documentId) }
+                                    }
+                                    Button("Delete document", role: .destructive) {
+                                        model.deleteDocument(caseId: caseId, documentId: documentId)
+                                    }
+                                } label: {
+                                    Label("More", systemImage: "ellipsis.circle")
+                                }
+                                .frame(maxWidth: .infinity, minHeight: 40)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Color.rossInk)
+                                .background(Color.rossGlassFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .stroke(Color.rossGlassStroke.opacity(0.7), lineWidth: 1)
+                                }
                             }
-
-                            RossActionTile(
-                                title: "Generate case note",
-                                detail: "Create a local note you can refine before sharing or filing.",
-                                systemImage: "text.append",
-                                tint: Color.rossSuccess
-                            ) {
-                                Task { await model.generateExport(kind: "case_note", caseId: caseId) }
-                            }
-
-                            RossActionTile(
-                                title: "Re-run review",
-                                detail: "Ask Ross to review this file again using the current assistant and source rules.",
-                                systemImage: "arrow.clockwise",
-                                tint: Color.rossAccent
-                            ) {
-                                Task { await model.rerunReview(caseId: caseId, documentId: documentId) }
-                            }
-
-                            Button("Delete document", role: .destructive) {
-                                model.deleteDocument(caseId: caseId, documentId: documentId)
-                            }
-                            .buttonStyle(.bordered)
                         }
                     }
 
@@ -11148,39 +11145,51 @@ private struct AlphaDocumentViewerScreen: View {
                                 }
 
                                 if document.languageProfile != nil || !detailReviewFields.isEmpty {
-                                    VStack(alignment: .leading, spacing: 12) {
-                                        Text("Other details")
-                                            .font(.headline)
-                                        Text("Helpful details you can accept, edit, or ignore after the essentials are clear.")
-                                            .font(.footnote)
-                                            .foregroundStyle(Color.rossInk.opacity(0.65))
+                                    DisclosureGroup(isExpanded: $otherDetailsExpanded) {
+                                        VStack(alignment: .leading, spacing: 12) {
+                                            Text("Helpful details you can accept, edit, or ignore after the essentials are clear.")
+                                                .font(.footnote)
+                                                .foregroundStyle(Color.rossInk.opacity(0.65))
 
-                                        if let languageProfile = document.languageProfile {
-                                            RossSectionCard(title: "Language profile", subtitle: "Scripts seen in this file.") {
+                                            if let languageProfile = document.languageProfile {
                                                 HStack(spacing: 12) {
-                                                    RossInfoPill(title: "Primary: \(languageProfile.primaryLanguage.rawValue.capitalized)", systemImage: "character.book.closed")
-                                                    RossInfoPill(title: "Scripts: \(languageProfile.scriptsDetected.joined(separator: ", "))", systemImage: "textformat.abc.dottedunderline")
+                                                    RossInfoPill(title: "\(languageProfile.primaryLanguage.rawValue.capitalized)", systemImage: "character.book.closed")
+                                                    RossInfoPill(title: languageProfile.scriptsDetected.joined(separator: ", "), systemImage: "textformat.abc.dottedunderline")
                                                 }
                                             }
-                                        }
 
-                                        ForEach(detailReviewFields) { field in
-                                            AlphaExtractedFieldReviewCard(
-                                                field: field,
-                                                contextDocumentTitle: document.title,
-                                                onAccept: {
-                                                    model.acceptExtractedField(caseId: caseId, documentId: documentId, fieldId: field.id)
-                                                },
-                                                onSaveEdit: { newValue in
-                                                    model.applyFieldCorrection(caseId: caseId, documentId: documentId, fieldId: field.id, newValue: newValue)
-                                                },
-                                                onIgnore: {
-                                                    model.ignoreExtractedField(caseId: caseId, documentId: documentId, fieldId: field.id)
-                                                },
-                                                onOpenSourceRef: model.openSourceRef
-                                            )
+                                            ForEach(detailReviewFields) { field in
+                                                AlphaExtractedFieldReviewCard(
+                                                    field: field,
+                                                    contextDocumentTitle: document.title,
+                                                    onAccept: {
+                                                        model.acceptExtractedField(caseId: caseId, documentId: documentId, fieldId: field.id)
+                                                    },
+                                                    onSaveEdit: { newValue in
+                                                        model.applyFieldCorrection(caseId: caseId, documentId: documentId, fieldId: field.id, newValue: newValue)
+                                                    },
+                                                    onIgnore: {
+                                                        model.ignoreExtractedField(caseId: caseId, documentId: documentId, fieldId: field.id)
+                                                    },
+                                                    onOpenSourceRef: model.openSourceRef
+                                                )
+                                            }
+                                        }
+                                        .padding(.top, 10)
+                                    } label: {
+                                        HStack {
+                                            Text("Other details")
+                                                .font(.headline)
+                                                .foregroundStyle(Color.rossInk)
+                                            Spacer()
+                                            Text("\(detailReviewFields.count)")
+                                                .font(.caption.weight(.bold))
+                                                .foregroundStyle(Color.rossAccent)
                                         }
                                     }
+                                    .tint(Color.rossAccent)
+                                    .padding(12)
+                                    .background(Color.rossGlassSubtleFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                                 }
 
                                 if let upgrade = model.extractionUpgradeMessage(for: document) {
@@ -11390,18 +11399,23 @@ private struct AlphaClassificationReviewCard: View {
         let confidenceLabel = alphaConfidenceLabel(confidence: classification.confidence, needsReview: classification.needsReview)
         let confidenceSupport = alphaConfidenceSupportText(confidence: classification.confidence, needsReview: classification.needsReview)
 
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Document type")
-                        .font(.headline)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Type")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Color.rossInk.opacity(0.58))
                     Text(classification.type.rawValue.replacingOccurrences(of: "_", with: " ").capitalized)
-                        .font(.title3.weight(.semibold))
+                        .font(.headline)
+                        .foregroundStyle(Color.rossInk)
+                        .lineLimit(2)
                     Text(confidenceSupport)
-                        .font(.footnote.weight(.semibold))
+                        .font(.caption)
                         .foregroundStyle(alphaConfidenceTint(confidenceLabel))
                 }
-                Spacer()
+
+                Spacer(minLength: 8)
+
                 AlphaConfidenceBadge(
                     label: confidenceLabel,
                     tint: alphaConfidenceTint(confidenceLabel)
@@ -11410,13 +11424,13 @@ private struct AlphaClassificationReviewCard: View {
 
             if let subtype = classification.subtype, !subtype.isEmpty {
                 Text(subtype.replacingOccurrences(of: "_", with: " ").capitalized)
-                    .font(.footnote)
+                    .font(.caption)
                     .foregroundStyle(Color.rossInk.opacity(0.65))
             }
 
             HStack(spacing: 10) {
                 Button("Accept", action: onAccept)
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.bordered)
 
                 Menu("Edit") {
                     ForEach([
@@ -11435,6 +11449,7 @@ private struct AlphaClassificationReviewCard: View {
                     }
                 }
             }
+            .font(.footnote.weight(.semibold))
 
             AlphaSourceRefChips(
                 sourceRefs: classification.sourceRefs,
@@ -11443,11 +11458,11 @@ private struct AlphaClassificationReviewCard: View {
             )
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(Color.rossCardBackground)
+        .padding(14)
+        .background(Color.rossGlassSubtleFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.rossBorder, lineWidth: 1)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.rossBorder.opacity(0.85), lineWidth: 1)
         }
     }
 }
@@ -11466,21 +11481,23 @@ private struct AlphaExtractedFieldReviewCard: View {
     var body: some View {
         let confidenceSupport = alphaConfidenceSupportText(confidence: field.confidence, needsReview: field.needsReview)
 
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(field.label)
-                        .font(.headline)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Color.rossInk.opacity(0.58))
                     if isEditing {
                         TextField("Edit \(field.label.lowercased())", text: $draftValue)
                             .textFieldStyle(.roundedBorder)
                     } else {
                         Text(field.value)
-                            .font(.body)
+                            .font(.headline)
                             .foregroundStyle(Color.rossInk)
+                            .lineLimit(3)
                     }
                     Text(confidenceSupport)
-                        .font(.footnote.weight(.semibold))
+                        .font(.caption)
                         .foregroundStyle(alphaConfidenceTint(field.confidenceLabel))
                 }
                 Spacer()
@@ -11511,7 +11528,7 @@ private struct AlphaExtractedFieldReviewCard: View {
                     .buttonStyle(.bordered)
                 } else {
                     Button("Accept", action: onAccept)
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.bordered)
 
                     Button("Edit") {
                         draftValue = field.value
@@ -11523,13 +11540,14 @@ private struct AlphaExtractedFieldReviewCard: View {
                         .buttonStyle(.bordered)
                 }
             }
+            .font(.footnote.weight(.semibold))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(Color.rossCardBackground)
+        .padding(14)
+        .background(Color.rossGlassSubtleFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.rossBorder, lineWidth: 1)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.rossBorder.opacity(0.85), lineWidth: 1)
         }
         .onAppear {
             draftValue = field.value
@@ -11576,14 +11594,14 @@ private struct AlphaSourceRefChips: View {
     let onOpenSourceRef: (AlphaSourceRef) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             if sourceRefs.isEmpty {
                 Text("Source pending")
-                    .font(.footnote)
+                    .font(.caption)
                     .foregroundStyle(Color.rossInk.opacity(0.65))
             } else {
                 Text("Source")
-                    .font(.footnote.weight(.semibold))
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(Color.rossInk.opacity(0.65))
 
                 ForEach(sourceRefs.prefix(3)) { sourceRef in
@@ -11592,15 +11610,15 @@ private struct AlphaSourceRefChips: View {
                     } label: {
                         HStack {
                             Text(alphaSourceRefDisplayLabel(sourceRef, contextDocumentTitle: contextDocumentTitle))
-                                .font(.footnote.weight(.semibold))
+                                .font(.caption.weight(.semibold))
                             Spacer()
                             Text(sourceRef.detail)
-                                .font(.caption)
+                                .font(.caption2)
                                 .foregroundStyle(Color.rossInk.opacity(0.65))
                                 .lineLimit(1)
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
                         .background(Color.rossSecondaryGroupedBackground)
                         .clipShape(Capsule())
                     }
@@ -11818,6 +11836,8 @@ private struct AlphaSettingsScreen: View {
     let authController: RossAuthController?
     @State private var backendAddressDraft = rossBackendBaseURLOverride() ?? ""
     @State private var selectedLanguageCode = rossSelectedLanguageCode()
+    @State private var languageExpanded = false
+    @State private var appearanceExpanded = false
     private let languageOptions: [(String, String)] = [
         ("en", "English"),
         ("hi", "Hindi"),
@@ -11857,9 +11877,9 @@ private struct AlphaSettingsScreen: View {
                 if let activeJob = alphaActiveSetupJob(model) {
                     NavigationLink(value: AlphaRoute.privateAISettings) {
                         AlphaAssistantActivityStrip(
-                            title: "\(activeJob.tier.title) is still preparing",
+                            title: alphaAssistantActivityTitle(for: activeJob),
                             detail: alphaAssistantActivityDetail(for: activeJob.state),
-                            statusLabel: activeJob.state.title,
+                            statusLabel: alphaAssistantStateLabel(activeJob.state),
                             tint: .orange
                         )
                     }
@@ -11871,14 +11891,19 @@ private struct AlphaSettingsScreen: View {
                         VStack(alignment: .leading, spacing: 12) {
                             AlphaSettingsValueRow(label: "Signed in as", value: session.displayLabel)
                             Divider()
-                            AlphaSettingsValueRow(label: "Language", value: rossLanguageDisplayName(code: selectedLanguageCode))
-                            AlphaSettingsLanguageGrid(
-                                options: languageOptions,
-                                selectedCode: $selectedLanguageCode
-                            )
-                            .onChange(of: selectedLanguageCode) { _, newValue in
-                                rossSaveLanguageSelection(code: newValue)
+                            DisclosureGroup(isExpanded: $languageExpanded) {
+                                AlphaSettingsLanguageGrid(
+                                    options: languageOptions,
+                                    selectedCode: $selectedLanguageCode
+                                )
+                                .padding(.top, 10)
+                                .onChange(of: selectedLanguageCode) { _, newValue in
+                                    rossSaveLanguageSelection(code: newValue)
+                                }
+                            } label: {
+                                AlphaSettingsValueRow(label: "Language", value: rossLanguageDisplayName(code: selectedLanguageCode))
                             }
+                            .tint(Color.rossAccent)
                             Divider()
                             if authController.canUseQuickUnlock {
                                 Toggle(
@@ -11949,38 +11974,49 @@ private struct AlphaSettingsScreen: View {
                     }
                 }
 
-                RossSectionCard(title: "Appearance") {
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(AlphaAppearanceMode.allCases.enumerated()), id: \.element) { index, mode in
-                            Button {
-                                model.updateSettings { settings in
-                                    settings.appearanceMode = mode
+                RossSectionCard(title: "Display") {
+                    DisclosureGroup(isExpanded: $appearanceExpanded) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            ForEach(Array(AlphaAppearanceMode.allCases.enumerated()), id: \.element) { index, mode in
+                                Button {
+                                    model.updateSettings { settings in
+                                        settings.appearanceMode = mode
+                                    }
+                                } label: {
+                                    AlphaAppearanceOptionRow(
+                                        mode: mode,
+                                        isSelected: model.persisted.settings.appearanceMode == mode
+                                    )
                                 }
-                            } label: {
-                                AlphaAppearanceOptionRow(
-                                    mode: mode,
-                                    isSelected: model.persisted.settings.appearanceMode == mode
-                                )
-                            }
-                            .buttonStyle(.plain)
+                                .buttonStyle(.plain)
 
-                            if index < AlphaAppearanceMode.allCases.count - 1 {
-                                Divider()
+                                if index < AlphaAppearanceMode.allCases.count - 1 {
+                                    Divider()
+                                }
                             }
                         }
+                        .padding(.top, 10)
+                    } label: {
+                        AlphaSettingsValueRow(label: "Theme", value: model.persisted.settings.appearanceMode.title)
                     }
+                    .tint(Color.rossAccent)
                 }
 
                 RossSectionCard(title: "Private assistant") {
                     VStack(alignment: .leading, spacing: 12) {
-                        AlphaSettingsValueRow(label: "Status", value: alphaPrivateAIStatus(model))
-                        Divider()
-                        AlphaSettingsValueRow(label: "Assistant level", value: model.activePack?.tier.title ?? "Not installed")
+                        Text(alphaPrivateAIStatus(model))
+                            .font(.headline)
+                            .foregroundStyle(Color.rossInk)
+
+                        Text(alphaAssistantStatusSnapshot(model).detail)
+                            .font(.footnote)
+                            .foregroundStyle(Color.rossInk.opacity(0.7))
+                            .fixedSize(horizontal: false, vertical: true)
                         Divider()
                         NavigationLink(value: AlphaRoute.privateAISettings) {
                             AlphaSettingsNavigationRow(
-                                title: "Assistant setup",
-                                detail: "Downloads, setup progress, and local assistant status.",
+                                title: "Open assistant setup",
+                                detail: "Retry setup, choose a lighter level, or read what is available in this build.",
                                 systemImage: "gearshape.2"
                             )
                         }
@@ -12145,39 +12181,42 @@ private struct AlphaSettingsLanguageGrid: View {
     let options: [(String, String)]
     @Binding var selectedCode: String
 
-    private let columns = [GridItem(.flexible()), GridItem(.flexible())]
-
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 10) {
-            ForEach(options, id: \.0) { code, label in
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(options.enumerated()), id: \.element.0) { index, option in
+                let code = option.0
+                let label = option.1
                 Button {
                     selectedCode = code
                 } label: {
-                    Text(label)
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(selectedCode == code ? Color.white : Color.rossInk)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .fill(selectedCode == code ? Color.rossAccent : Color.rossGlassSubtleFill)
-                        )
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(
-                                    selectedCode == code ? Color.rossAccent : Color.rossGlassStroke.opacity(0.72),
-                                    lineWidth: 1
-                                )
-                        }
+                    HStack(spacing: 12) {
+                        Text(label)
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(Color.rossInk)
+
+                        Spacer(minLength: 8)
+
+                        Image(systemName: selectedCode == code ? "checkmark.circle.fill" : "circle")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(selectedCode == code ? Color.rossAccent : Color.rossInk.opacity(0.18))
+                    }
+                    .padding(.vertical, 10)
                 }
                 .buttonStyle(.plain)
+
+                if index < options.count - 1 {
+                    Divider()
+                }
             }
         }
+        .padding(.horizontal, 12)
+        .background(Color.rossGlassSubtleFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
 private struct AlphaPrivateAISettingsScreen: View {
     @Bindable var model: AlphaRossModel
+    @State private var downloadPreferencesExpanded = false
 
     private var wifiOnlyDownloadsBinding: Binding<Bool> {
         Binding(
@@ -12208,47 +12247,56 @@ private struct AlphaPrivateAISettingsScreen: View {
             VStack(alignment: .leading, spacing: alphaSectionSpacing) {
                 if let activeJob = alphaActiveSetupJob(model) {
                     AlphaAssistantActivityStrip(
-                        title: "\(activeJob.tier.title) is still preparing",
+                        title: alphaAssistantActivityTitle(for: activeJob),
                         detail: alphaAssistantActivityDetail(for: activeJob.state),
-                        statusLabel: activeJob.state.title,
+                        statusLabel: alphaAssistantStateLabel(activeJob.state),
                         tint: .orange
                     )
                 }
 
                 RossSectionCard(title: "Current status") {
                     VStack(alignment: .leading, spacing: 12) {
-                        AlphaSettingsValueRow(label: "Status", value: assistantStatus.title)
-                        Divider()
-                        AlphaSettingsValueRow(label: "Assistant level", value: model.activePack?.tier.title ?? "Not installed")
-                        Divider()
-                        AlphaSettingsValueRow(label: "Storage", value: model.activePack?.tier.installedSizeLabel ?? "Using basic local review")
+                        Text(assistantStatus.title)
+                            .font(.headline)
+                            .foregroundStyle(Color.rossInk)
 
                         Text(assistantStatus.detail)
+                            .font(.footnote)
+                            .foregroundStyle(Color.rossInk.opacity(0.7))
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text("Private assistant setup is still in preview on this build. If setup does not finish, Ross continues with basic local review: matters, tasks, dates, document review, and source-backed notes still stay on this device.")
                             .font(.footnote)
                             .foregroundStyle(Color.rossInk.opacity(0.7))
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
 
-                RossSectionCard(title: "Download settings") {
-                    VStack(alignment: .leading, spacing: 0) {
-                        AlphaSettingsToggleRow(
-                            title: "Wi-Fi only downloads",
-                            detail: "Hold larger assistant downloads until Wi-Fi is available.",
-                            isOn: wifiOnlyDownloadsBinding
-                        )
-                        Divider()
-                        AlphaSettingsToggleRow(
-                            title: "Allow mobile data for large packs",
-                            detail: "Use cellular for bigger on-device models when you choose to.",
-                            isOn: allowMobileDataBinding
-                        )
+                RossSectionCard(title: "Download preferences") {
+                    DisclosureGroup(isExpanded: $downloadPreferencesExpanded) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            AlphaSettingsToggleRow(
+                                title: "Use Wi-Fi for larger downloads",
+                                detail: "Ross waits for Wi-Fi before downloading larger private assistant files.",
+                                isOn: wifiOnlyDownloadsBinding
+                            )
+                            Divider()
+                            AlphaSettingsToggleRow(
+                                title: "Allow mobile data",
+                                detail: "Only use cellular data for assistant setup when you choose to.",
+                                isOn: allowMobileDataBinding
+                            )
+                        }
+                        .padding(.top, 10)
+                    } label: {
+                        AlphaSettingsValueRow(label: "Network", value: model.persisted.settings.allowMobileDataForLargePacks ? "Wi-Fi or mobile data" : "Wi-Fi preferred")
                     }
+                    .tint(Color.rossAccent)
                 }
 
                 RossSectionCard(
-                    title: "Choose a private assistant level",
-                    subtitle: "Ross keeps the recommended level selected, but you can switch at any time."
+                    title: "Choose level",
+                    subtitle: "Pick the lightest option that fits the kind of files you usually handle."
                 ) {
                     VStack(alignment: .leading, spacing: 12) {
                         ForEach(AlphaPackOffer.catalog) { offer in
@@ -12392,12 +12440,12 @@ private struct AlphaPrivateAIOfferCard: View {
 
     private var actionTitle: String {
         if isActive {
-            return "Installed on this phone"
+            return "Using this level"
         }
         if isPreparing {
-            return "Resume setup"
+            return "Retry setup"
         }
-        return "Download or resume"
+        return "Set up this level"
     }
 
     var body: some View {
@@ -12425,16 +12473,15 @@ private struct AlphaPrivateAIOfferCard: View {
                 Spacer(minLength: 8)
             }
 
-            HStack(spacing: 8) {
-                AlphaPrivateAIInlineBadge(title: offer.tier.downloadSizeLabel, tint: Color.rossHighlight)
-                AlphaPrivateAIInlineBadge(title: offer.tier.extractionQuality, tint: Color.rossAccent)
-                AlphaPrivateAIInlineBadge(title: offer.tier.storageNote, tint: Color.rossSuccess)
-            }
-
             Text(offer.tier.bestFor)
                 .font(.caption)
                 .foregroundStyle(Color.rossInk.opacity(0.58))
                 .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 8) {
+                AlphaPrivateAIInlineBadge(title: offer.tier.compactSetupSummary, tint: Color.rossAccent)
+                AlphaPrivateAIInlineBadge(title: offer.tier.storageNote, tint: Color.rossSuccess)
+            }
 
             Button(actionTitle) {
                 Task {
@@ -12472,17 +12519,17 @@ private struct AlphaPrivateAIJobCard: View {
                         .font(.headline)
                         .foregroundStyle(Color.rossInk)
 
-                    Text(job.state.title)
+                    Text(alphaAssistantStateLabel(job.state))
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.rossAccent)
                 }
 
                 Spacer(minLength: 8)
 
-                AlphaPrivateAIInlineBadge(title: job.state.title, tint: .orange)
+                AlphaPrivateAIInlineBadge(title: alphaAssistantStateLabel(job.state), tint: .orange)
             }
 
-            Text("Ross is downloading and checking this assistant on this device.")
+            Text(alphaAssistantActivityDetail(for: job.state))
                 .font(.caption)
                 .foregroundStyle(Color.rossInk.opacity(0.6))
 

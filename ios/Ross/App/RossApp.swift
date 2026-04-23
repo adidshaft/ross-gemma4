@@ -711,16 +711,50 @@ private struct RossAuthRootView: View {
                             removal: .move(edge: .leading).combined(with: .opacity)
                         ))
                 }
-            case .unlockRequired(let session):
-                RossQuickUnlockScreen(authController: authController, session: session)
-            case .signedIn:
-                AlphaRossRootView(authController: authController)
+            case .unlockRequired, .signedIn:
+                RossAuthenticatedShell(authController: authController)
             }
         }
         .animation(.easeInOut(duration: 0.38), value: authController.hasSelectedLanguage)
         .task {
             await authController.loadIfNeeded()
         }
+    }
+}
+
+private struct RossAuthenticatedShell: View {
+    @Bindable var authController: RossAuthController
+
+    private var lockedSession: RossAuthSession? {
+        if case .unlockRequired(let session) = authController.phase {
+            return session
+        }
+        return nil
+    }
+
+    var body: some View {
+        ZStack {
+            AlphaRossRootView(authController: authController)
+                .allowsHitTesting(lockedSession == nil)
+                .blur(radius: lockedSession == nil ? 0 : 10)
+                .scaleEffect(lockedSession == nil ? 1 : 0.985)
+                .overlay {
+                    if lockedSession != nil {
+                        Color.black.opacity(0.28)
+                            .ignoresSafeArea()
+                    }
+                }
+
+            if let lockedSession {
+                RossQuickUnlockScreen(
+                    authController: authController,
+                    session: lockedSession,
+                    showsBackdrop: false
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.98)))
+            }
+        }
+        .animation(.easeInOut(duration: 0.22), value: lockedSession != nil)
     }
 }
 
@@ -1293,15 +1327,29 @@ private struct RossGoogleMark: View {
 private struct RossQuickUnlockScreen: View {
     @Bindable var authController: RossAuthController
     let session: RossAuthSession
+    var showsBackdrop = true
     @State private var showingSignOutConfirmation = false
 
     var body: some View {
         GeometryReader { proxy in
             ZStack {
-                ScrollView(showsIndicators: false) {
+                if showsBackdrop {
+                    RossAuthBackdrop()
+                } else {
+                    LinearGradient(
+                        colors: [Color.black.opacity(0.18), Color.black.opacity(0.08)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .ignoresSafeArea()
+                }
+
+                VStack(alignment: .leading, spacing: 18) {
+                    Spacer(minLength: max(proxy.safeAreaInsets.top + 20, 48))
+
                     VStack(alignment: .leading, spacing: 18) {
                         HStack(spacing: 14) {
-                            RossAuthHeroMark(size: 62)
+                            RossAuthHeroMark(size: 48)
 
                             Text("ROSS")
                                 .font(.system(size: 15, weight: .bold))
@@ -1310,22 +1358,22 @@ private struct RossQuickUnlockScreen: View {
 
                             Spacer(minLength: 0)
                         }
-                        .padding(.top, rossAuthTopHeaderPadding(proxy.safeAreaInsets.top))
 
-                        RossAuthGlassPanel(cornerRadius: 36, padding: 24) {
+                        RossAuthGlassPanel(cornerRadius: 32, padding: 22) {
                             VStack(alignment: .leading, spacing: 16) {
-                                Text("Welcome back")
-                                    .font(.system(size: 44, weight: .light))
-                                    .tracking(-1.4)
+                                Text("Unlock Ross")
+                                    .font(.system(size: 36, weight: .light))
+                                    .tracking(-1.0)
                                     .foregroundStyle(Color.rossInk)
 
-                                Text(Date.now.formatted(.dateTime.weekday(.wide).day().month(.wide)))
-                                    .font(.subheadline.weight(.medium))
-                                    .foregroundStyle(Color.rossInk.opacity(0.58))
+                                Text("Continue where you left off.")
+                                    .font(.headline.weight(.medium))
+                                    .foregroundStyle(Color.rossInk.opacity(0.72))
+                                    .fixedSize(horizontal: false, vertical: true)
 
                                 Text(session.displayLabel)
-                                    .font(.system(size: 18, weight: .medium))
-                                    .foregroundStyle(Color.rossInk.opacity(0.76))
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(Color.rossInk.opacity(0.62))
                                     .lineLimit(2)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
@@ -1382,12 +1430,24 @@ private struct RossQuickUnlockScreen: View {
                         .foregroundStyle(Color.rossInk.opacity(0.7))
                         .padding(.top, 2)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, max(proxy.safeAreaInsets.bottom + 20, 32))
+                    .padding(20)
+                    .background(
+                        RoundedRectangle(cornerRadius: 38, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 38, style: .continuous)
+                                    .fill(Color.rossGlassFill.opacity(0.72))
+                            }
+                    )
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 38, style: .continuous)
+                            .stroke(Color.rossGlassStroke.opacity(0.74), lineWidth: 1)
+                    }
+                    .shadow(color: Color.rossShadow.opacity(0.34), radius: 28, y: 18)
+
+                    Spacer(minLength: max(proxy.safeAreaInsets.bottom + 20, 40))
                 }
-            }
-            .background {
-                RossAuthBackdrop()
+                .padding(.horizontal, 20)
             }
         }
         .alert("Sign out of Ross?", isPresented: $showingSignOutConfirmation) {
