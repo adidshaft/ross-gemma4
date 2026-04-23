@@ -260,6 +260,78 @@ class AlphaLawyerUsabilityTest {
     }
 
     @Test
+    fun `installed assistant upgrades matter ask and preserves public law preview`() {
+        var runtimeWasCalled = false
+        val controller = buildController(
+            secretKeyProvider = InMemorySecretKeyProvider(),
+            askRuntimeProviderOverride = {
+                FakeMatterAnswerProvider { input ->
+                    runtimeWasCalled = true
+                    assertEquals(AlphaLocalModelTask.MatterQuestionAnswer, input.task)
+                    assertTrue(input.sourcePack.isNotEmpty())
+                    assertTrue(input.instruction.contains("Order 39", ignoreCase = true))
+                    AlphaLocalModelOutput(
+                        rawText = """
+                            {
+                              "headline": "Assistant answer from files",
+                              "sections": ["The installed assistant read the selected matter files and kept the answer local."],
+                              "statusNote": null
+                            }
+                        """.trimIndent(),
+                        parsedJson = """
+                            {
+                              "headline": "Assistant answer from files",
+                              "sections": ["The installed assistant read the selected matter files and kept the answer local."],
+                              "statusNote": null
+                            }
+                        """.trimIndent(),
+                        schemaValid = true,
+                        warnings = emptyList(),
+                        sourceRefs = input.sourcePack.map { it.sourceRef },
+                    )
+                }
+            },
+        )
+        controller.signInDemoMode()
+        val caseId = controller.cases.first { it.title == "Demo Matter: Sharma v. Rana" }.id
+        controller.persisted = controller.persisted.copy(
+            settings = controller.persisted.settings.copy(activeTier = AlphaCapabilityTier.CaseAssociate),
+            installedPacks = listOf(
+                AlphaInstalledPack(
+                    packId = "case-associate-local-debug-pack",
+                    tier = AlphaCapabilityTier.CaseAssociate,
+                    installRelativePath = "model-packs/case_associate/case-associate-local-debug.task",
+                    checksumSha256 = "a".repeat(64),
+                    artifactKind = "external_debug_model",
+                    runtimeMode = AlphaPackRuntimeMode.MediapipeLlm,
+                    developmentOnly = true,
+                    checksumVerified = true,
+                    isActive = true,
+                )
+            ),
+        )
+
+        controller.submitAsk(
+            question = "Order 39 Rules 1 and 2 CPC temporary injunction",
+            scopeCaseId = caseId,
+            webEnabled = true,
+        )
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertTrue(runtimeWasCalled)
+        assertEquals("Assistant answer from files", controller.latestAskResult?.answerTitle)
+        assertTrue(controller.latestAskResult?.answerSections?.single()?.contains("kept the answer local") == true)
+        assertNotNull(controller.latestAskResult?.publicLawPreview)
+        assertEquals("Web search preview ready", controller.latestAskResult?.statusNote)
+        assertTrue(
+            controller.persisted.cases
+                .first { it.id == caseId }
+                .chatTurns
+                .any { it.answerTitle == "Assistant answer from files" && it.sourceRefs.isNotEmpty() }
+        )
+    }
+
+    @Test
     fun `dock question still falls back to standard ask flow`() {
         val controller = buildController(secretKeyProvider = InMemorySecretKeyProvider())
 
@@ -371,10 +443,12 @@ class AlphaLawyerUsabilityTest {
     private fun buildController(
         secretKeyProvider: AlphaSecretKeyProvider,
         publicLawSearchOverride: (suspend (AlphaPublicLawPreview) -> List<AlphaPublicLawResult>)? = null,
+        askRuntimeProviderOverride: ((AlphaInstalledPack) -> AlphaLocalModelProvider?)? = null,
     ): AlphaRossController = AlphaRossController(
         context = context,
         publicLawSearchOverride = publicLawSearchOverride,
         secretKeyProvider = secretKeyProvider,
+        askRuntimeProviderOverride = askRuntimeProviderOverride,
     )
 }
 
@@ -384,4 +458,50 @@ private class InMemorySecretKeyProvider : AlphaSecretKeyProvider {
     }
 
     override fun getOrCreate(): SecretKey = secretKey
+}
+
+private class FakeMatterAnswerProvider(
+    private val runBlock: suspend (AlphaLocalModelInput) -> AlphaLocalModelOutput,
+) : AlphaLocalModelProvider {
+    override val capabilityTier: AlphaCapabilityTier = AlphaCapabilityTier.CaseAssociate
+    override val runtimeMode: AlphaPackRuntimeMode = AlphaPackRuntimeMode.MediapipeLlm
+
+    override fun isAvailable(): Boolean = true
+
+    override fun supportedTasks(): Set<AlphaLocalModelTask> = setOf(AlphaLocalModelTask.MatterQuestionAnswer)
+
+    override fun runtimeHealth(): AlphaLocalRuntimeHealth =
+        AlphaLocalRuntimeHealth(
+            runtimeMode = runtimeMode,
+            available = true,
+            modelPathPresent = true,
+            modelPathLabel = "case-associate-local-debug.task",
+            checksumVerified = true,
+            supportedTasks = supportedTasks().toList(),
+            maxInputChars = maxInputChars(),
+            estimatedContextTokens = contextWindowEstimate(),
+            userFacingStatus = "Private assistant is available for test.",
+            fallbackActive = false,
+            explicitOptInEnabled = true,
+        )
+
+    override fun contextWindowEstimate(): Int = 4_096
+
+    override fun maxInputChars(): Int = 14_000
+
+    override suspend fun run(taskInput: AlphaLocalModelInput): AlphaLocalModelOutput = runBlock(taskInput)
+
+    override fun estimateCostOrResourceUse(input: AlphaLocalModelInput): AlphaLocalModelResourceEstimate =
+        AlphaLocalModelResourceEstimate(
+            inputChars = input.instruction.length + input.sourcePack.sumOf { it.text.length },
+            estimatedTokens = null,
+            estimatedRuntimeMs = 0,
+            estimatedMemoryMb = 0,
+            estimatedDurationSeconds = 0,
+            shouldRunNow = true,
+            reason = null,
+            notes = emptyList(),
+        )
+
+    override fun cancel(invocationId: String): Boolean = false
 }

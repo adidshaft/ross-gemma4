@@ -503,6 +503,7 @@ internal class AlphaRossController(
     private val context: Context,
     private val publicLawSearchOverride: (suspend (AlphaPublicLawPreview) -> List<AlphaPublicLawResult>)? = null,
     private val secretKeyProvider: AlphaSecretKeyProvider = AndroidKeystoreAlphaSecretKeyProvider(),
+    private val askRuntimeProviderOverride: ((AlphaInstalledPack) -> AlphaLocalModelProvider?)? = null,
 ) {
     private val gson: Gson = GsonBuilder().setPrettyPrinting().create()
     private val rootDir = File(context.filesDir, "ross-alpha")
@@ -1951,13 +1952,15 @@ internal class AlphaRossController(
             selectedDocuments = selectedDocuments,
             sourceRefs = sourcePack.map { it.sourceRef },
         )
-        val provider = AlphaLocalModelRuntime.resolveProvider(
-            activePack = pack,
-            requestedTier = pack.tier,
-            executor = { deterministicOutput },
-            context = context,
-            appPrivateRoot = rootDir,
-        ) ?: return
+        val provider = askRuntimeProviderOverride?.invoke(pack)
+            ?: AlphaLocalModelRuntime.resolveProvider(
+                activePack = pack,
+                requestedTier = pack.tier,
+                executor = { deterministicOutput },
+                context = context,
+                appPrivateRoot = rootDir,
+            )
+            ?: return
         if (AlphaLocalModelTask.MatterQuestionAnswer !in provider.supportedTasks()) return
 
         val input = AlphaLocalModelInput(
