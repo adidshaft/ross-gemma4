@@ -1219,13 +1219,9 @@ final class AlphaRossModel {
     func submitDockInput(question: String, scopeCaseID: UUID?, webEnabled: Bool) async {
         let cleaned = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleaned.isEmpty else { return }
+        setAskDraft("", for: scopeCaseID)
 
         if let command = dockCommandAction(for: cleaned) {
-            if let scopeCaseID {
-                askDrafts[scopeCaseID] = ""
-            } else {
-                globalAskDraft = ""
-            }
             await runDockCommand(command, rawInput: cleaned, scopeCaseID: scopeCaseID)
             return
         }
@@ -2641,13 +2637,20 @@ final class AlphaRossModel {
     }
 
     func pauseJob(_ job: AlphaModelDownloadJob) {
+        guard job.state == .queued || job.state == .downloading else { return }
         updateJob(job.id) {
             $0.state = .pausedUser
             $0.updatedAt = .now
         }
+        persist()
     }
 
     func resumeJob(_ job: AlphaModelDownloadJob) {
+        guard job.state == .pausedUser ||
+            job.state == .pausedWaitingForWifi ||
+            job.state == .pausedError ||
+            job.state == .pausedNoStorage ||
+            job.state == .failed else { return }
         Task { await startPackDownload(for: job.tier, mobileAllowed: job.networkPolicy == .mobileAllowed) }
     }
 
@@ -2782,175 +2785,18 @@ final class AlphaRossModel {
         return true
     }
 
-    func startPackDownload(for tier: AlphaCapabilityTier, mobileAllowed: Bool) async {
-        let policy: AlphaDownloadPolicy = mobileAllowed ? .mobileAllowed : .wifiOnly
-        let sessionId = "mdl-\(UUID().uuidString.prefix(8))"
-
-        let job = AlphaModelDownloadJob(
-            sessionId: sessionId,
-            packId: "\(tier.rawValue)-pack",
-            tier: tier,
-            state: .queued,
-            networkPolicy: policy,
-            bytesDownloaded: 0,
-            totalBytes: 0,
-            checksumSha256: ""
-        )
-
-        upsertJob(job)
-        persist()
-
-        if prepareSystemAssistantPack(for: tier, jobID: job.id) {
-            return
-        }
-
+    private func installDevelopmentPackForTestRun(tier: AlphaCapabilityTier, jobID: UUID) async -> Bool {
+        guard alphaAllowsDevelopmentModelArtifacts() else { return false }
         do {
-            let catalog = try await backend.fetchCatalog(for: tier)
-            guard let pack = catalog.packs.first(where: { $0.tier == tier }) else {
-                throw AlphaBackendError.missingPack
-            }
-            if let unsupportedReason = alphaUnsupportedPackReason(
-                for: tier,
-                runtimeMode: pack.runtimeMode,
-                developmentOnly: pack.developmentOnly
-            ) {
-                updateJob(job.id) {
-                    $0.state = .failed
-                    $0.packId = pack.packId
-                    $0.totalBytes = pack.sizeBytes
-                    $0.checksumSha256 = pack.checksumSha256
-                    $0.artifactKind = pack.artifactKind
-                    $0.runtimeMode = pack.runtimeMode
-                    $0.developmentOnly = pack.developmentOnly
-                    $0.failureReason = unsupportedReason
-                    $0.updatedAt = .now
-                }
-                persisted.ledgerEntries.insert(
-                    AlphaPrivacyLedgerEntry(
-                        title: "Private AI Pack blocked",
-                        detail: unsupportedReason,
-                        purpose: .model_catalog,
-                        payloadClass: .no_case_data,
-                        endpointLabel: "/model-catalog",
-                        success: false
-                    ),
-                    at: 0
-                )
-                persist()
-                return
-            }
-
-            persisted.lastModelCatalogRefresh = .now
-            updateJob(job.id) {
-                $0.packId = pack.packId
-                $0.totalBytes = pack.sizeBytes
-                $0.checksumSha256 = pack.checksumSha256
-                $0.artifactKind = pack.artifactKind
-                $0.runtimeMode = pack.runtimeMode
-                $0.developmentOnly = pack.developmentOnly
-                $0.updatedAt = .now
-            }
-            persisted.ledgerEntries.insert(
-                AlphaPrivacyLedgerEntry(
-                    title: "Model catalog checked",
-                    detail: "Private AI Pack metadata was reviewed without case data.",
-                    purpose: .model_catalog,
-                    payloadClass: .no_case_data,
-                    endpointLabel: "/model-catalog",
-                    success: true
-                ),
-                at: 0
-            )
-            persist()
-
-            let session = try await backend.createDownloadSession(for: pack.packId)
-            if let unsupportedReason = alphaUnsupportedPackReason(
-                for: tier,
-                runtimeMode: session.artifact.runtimeMode,
-                developmentOnly: session.artifact.developmentOnly
-            ) {
-                updateJob(job.id) {
-                    $0.state = .failed
-                    $0.sessionId = session.sessionId
-                    $0.packId = session.packId
-                    $0.totalBytes = session.artifact.sizeBytes
-                    $0.checksumSha256 = session.artifact.finalSha256
-                    $0.artifactKind = session.artifact.artifactKind
-                    $0.runtimeMode = session.artifact.runtimeMode
-                    $0.developmentOnly = session.artifact.developmentOnly
-                    $0.failureReason = unsupportedReason
-                    $0.updatedAt = .now
-                }
-                persisted.ledgerEntries.insert(
-                    AlphaPrivacyLedgerEntry(
-                        title: "Private AI Pack blocked",
-                        detail: unsupportedReason,
-                        purpose: .model_download,
-                        payloadClass: .no_case_data,
-                        endpointLabel: "/model-download/session",
-                        success: false
-                    ),
-                    at: 0
-                )
-                persist()
-                return
-            }
-            updateJob(job.id) {
-                $0.sessionId = session.sessionId
-                $0.packId = session.packId
-                $0.totalBytes = session.artifact.sizeBytes
-                $0.checksumSha256 = session.artifact.finalSha256
-                $0.artifactKind = session.artifact.artifactKind
-                $0.runtimeMode = session.artifact.runtimeMode
-                $0.developmentOnly = session.artifact.developmentOnly
-                $0.state = .downloading
-                $0.updatedAt = .now
-            }
-            persisted.ledgerEntries.insert(
-                AlphaPrivacyLedgerEntry(
-                    title: "Private AI Pack queued",
-                    detail: "Model delivery started without reading case files.",
-                    purpose: .model_download,
-                    payloadClass: .no_case_data,
-                    endpointLabel: "/model-download/session",
-                    success: true
-                ),
-                at: 0
-            )
-            persist()
-
-            let downloaded = try await backend.downloadArtifact(session: session) { bytesDownloaded in
-                await MainActor.run {
-                    self.updateJob(job.id) {
-                        $0.state = .downloading
-                        $0.bytesDownloaded = bytesDownloaded
-                        $0.updatedAt = .now
-                    }
-                    self.persist()
-                }
-            }
-
-            updateJob(job.id) {
-                $0.state = .verifying
-                $0.bytesDownloaded = downloaded.bytes
-                $0.updatedAt = .now
-            }
-            persist()
-
-            let artifact = try await store.installDownloadedPackArtifact(
-                for: tier,
-                fileName: session.artifact.fileName,
-                data: downloaded.data,
-                expectedChecksum: session.artifact.finalSha256
-            )
+            let fallback = try await store.writeDevPackArtifact(for: tier)
             let installed = AlphaInstalledModelPack(
-                packId: pack.packId,
+                packId: "\(tier.rawValue)-test-pack",
                 tier: tier,
-                installPath: artifact.relativePath,
-                checksumSha256: artifact.checksum,
-                artifactKind: session.artifact.artifactKind,
-                runtimeMode: session.artifact.runtimeMode,
-                developmentOnly: session.artifact.developmentOnly,
+                installPath: fallback.relativePath,
+                checksumSha256: fallback.checksum,
+                artifactKind: "test_only_tiny_artifact",
+                runtimeMode: .deterministicDev,
+                developmentOnly: true,
                 isActive: true
             )
             persisted.installedPacks = persisted.installedPacks.map {
@@ -2961,11 +2807,12 @@ final class AlphaRossModel {
             persisted.installedPacks.removeAll { $0.tier == tier }
             persisted.installedPacks.insert(installed, at: 0)
             persisted.settings.activeTier = tier
-            updateJob(job.id) {
+            updateJob(jobID) {
                 $0.state = .installed
-                $0.bytesDownloaded = artifact.bytes
-                $0.totalBytes = artifact.bytes
-                $0.checksumSha256 = artifact.checksum
+                $0.packId = installed.packId
+                $0.bytesDownloaded = fallback.bytes
+                $0.totalBytes = fallback.bytes
+                $0.checksumSha256 = fallback.checksum
                 $0.artifactKind = installed.artifactKind
                 $0.runtimeMode = installed.runtimeMode
                 $0.developmentOnly = installed.developmentOnly
@@ -2974,8 +2821,255 @@ final class AlphaRossModel {
             }
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
-                    title: "Private AI Pack verified",
-                    detail: "Checksum and install metadata were verified locally.",
+                    title: "Test assistant artifact installed",
+                    detail: "A tiny test-only artifact was installed for automated tests. Device setup uses real Hugging Face model files.",
+                    purpose: .model_verification,
+                    payloadClass: .no_case_data,
+                    endpointLabel: "device://model-test-artifact",
+                    success: true
+                ),
+                at: 0
+            )
+            persist()
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    private func downloadAssistantModelArtifact(_ artifact: AlphaAssistantModelArtifact, jobID: UUID) async throws -> URL {
+        guard let url = artifact.downloadURL else {
+            throw AlphaAssistantDownloadError.invalidURL
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 10_800
+        request.setValue("Ross-iOS/0.1 model-downloader", forHTTPHeaderField: "User-Agent")
+
+        let taskBox = AlphaAssistantDownloadTaskBox()
+        let destinationURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-\(artifact.packId)-\(UUID().uuidString)")
+            .appendingPathExtension((artifact.fileName as NSString).pathExtension.isEmpty ? "gguf" : (artifact.fileName as NSString).pathExtension)
+
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                let task = URLSession.shared.downloadTask(with: request) { temporaryURL, response, error in
+                    taskBox.progressTask?.cancel()
+
+                    if let error {
+                        let nsError = error as NSError
+                        if nsError.domain == NSURLErrorDomain,
+                           nsError.code == NSURLErrorCancelled,
+                           taskBox.pausedByUser {
+                            continuation.resume(throwing: AlphaAssistantDownloadError.pausedByUser)
+                            return
+                        }
+
+                        continuation.resume(throwing: error)
+                        return
+                    }
+
+                    if let httpResponse = response as? HTTPURLResponse, !(200..<300).contains(httpResponse.statusCode) {
+                        continuation.resume(throwing: AlphaAssistantDownloadError.httpStatus(httpResponse.statusCode))
+                        return
+                    }
+
+                    guard let temporaryURL else {
+                        continuation.resume(throwing: AlphaAssistantDownloadError.missingDownloadedFile)
+                        return
+                    }
+
+                    do {
+                        try? FileManager.default.removeItem(at: destinationURL)
+                        try FileManager.default.moveItem(at: temporaryURL, to: destinationURL)
+                        continuation.resume(returning: destinationURL)
+                    } catch {
+                        continuation.resume(throwing: error)
+                    }
+                }
+
+                taskBox.task = task
+                taskBox.progressTask = Task { @MainActor in
+                    var lastReceived: Int64 = -1
+                    var lastExpected: Int64 = -1
+                    while !Task.isCancelled {
+                        try? await Task.sleep(nanoseconds: 500_000_000)
+                        guard !Task.isCancelled else { break }
+
+                        if persisted.modelJobs.first(where: { $0.id == jobID })?.state == .pausedUser {
+                            taskBox.pausedByUser = true
+                            task.cancel()
+                            break
+                        }
+
+                        let received = max(0, task.countOfBytesReceived)
+                        let expected = task.countOfBytesExpectedToReceive
+                        guard received != lastReceived || expected != lastExpected else { continue }
+                        lastReceived = received
+                        lastExpected = expected
+
+                        updateJob(jobID) {
+                            $0.bytesDownloaded = received
+                            if expected > 0 {
+                                $0.totalBytes = expected
+                            }
+                            $0.updatedAt = .now
+                        }
+                        persist()
+
+                        if task.state == .completed {
+                            break
+                        }
+                    }
+                }
+                task.resume()
+            }
+        } onCancel: {
+            taskBox.progressTask?.cancel()
+            taskBox.task?.cancel()
+        }
+    }
+
+    private func downloadedFileSize(at url: URL) -> Int64 {
+        let values = try? url.resourceValues(forKeys: [.fileSizeKey])
+        return Int64(values?.fileSize ?? 0)
+    }
+
+    private func assistantDownloadFailureMessage(_ error: any Error) -> String {
+        if let localized = error as? LocalizedError, let description = localized.errorDescription {
+            return description
+        }
+        let message = error.localizedDescription
+        return message.isEmpty ? "Ross could not download and verify the selected private assistant." : message
+    }
+
+    func startPackDownload(for tier: AlphaCapabilityTier, mobileAllowed: Bool) async {
+        let artifact = alphaAssistantModelArtifact(for: tier)
+        let policy: AlphaDownloadPolicy = mobileAllowed ? .mobileAllowed : .wifiOnly
+        let sessionId = "hf-\(UUID().uuidString.prefix(8))"
+
+        let job = AlphaModelDownloadJob(
+            sessionId: sessionId,
+            packId: artifact.packId,
+            tier: tier,
+            state: .queued,
+            networkPolicy: policy,
+            bytesDownloaded: 0,
+            totalBytes: artifact.sizeBytes,
+            checksumSha256: artifact.sha256,
+            artifactKind: "huggingface_gguf",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false
+        )
+
+        upsertJob(job)
+        persisted.lastModelCatalogRefresh = .now
+        persisted.ledgerEntries.insert(
+            AlphaPrivacyLedgerEntry(
+                title: "Assistant model selected",
+                detail: "\(artifact.displayName) from \(artifact.repository) was selected for \(tier.title). Ross has not read any case files.",
+                purpose: .model_catalog,
+                payloadClass: .no_case_data,
+                endpointLabel: artifact.sourcePageURLString,
+                success: true
+            ),
+            at: 0
+        )
+        persist()
+
+        if alphaAllowsDevelopmentModelArtifacts() {
+            _ = await installDevelopmentPackForTestRun(tier: tier, jobID: job.id)
+            return
+        }
+
+        let availableStorageGB = alphaAvailableStorageInGigabytes()
+        guard availableStorageGB >= artifact.requiredFreeSpaceGB else {
+            updateJob(job.id) {
+                $0.state = .pausedNoStorage
+                $0.failureReason = AlphaAssistantDownloadError.insufficientStorage(
+                    requiredGB: artifact.requiredFreeSpaceGB,
+                    availableGB: availableStorageGB
+                ).errorDescription
+                $0.updatedAt = .now
+            }
+            persist()
+            return
+        }
+
+        do {
+            updateJob(job.id) {
+                $0.state = .downloading
+                $0.failureReason = nil
+                $0.updatedAt = .now
+            }
+            persisted.ledgerEntries.insert(
+                AlphaPrivacyLedgerEntry(
+                    title: "Assistant model download started",
+                    detail: "Ross started downloading the selected private assistant. Case files stayed on this device.",
+                    purpose: .model_download,
+                    payloadClass: .no_case_data,
+                    endpointLabel: artifact.downloadURLString,
+                    success: true
+                ),
+                at: 0
+            )
+            persist()
+
+            let downloadedFileURL = try await downloadAssistantModelArtifact(artifact, jobID: job.id)
+            let downloadedBytes = downloadedFileSize(at: downloadedFileURL)
+
+            guard persisted.modelJobs.first(where: { $0.id == job.id })?.state != .pausedUser else {
+                return
+            }
+
+            updateJob(job.id) {
+                $0.state = .verifying
+                $0.bytesDownloaded = downloadedBytes > 0 ? downloadedBytes : artifact.sizeBytes
+                $0.updatedAt = .now
+            }
+            persist()
+
+            let installedArtifact = try await store.installDownloadedPackArtifact(
+                for: tier,
+                fileName: artifact.fileName,
+                downloadedFileURL: downloadedFileURL,
+                expectedChecksum: artifact.sha256
+            )
+            let installed = AlphaInstalledModelPack(
+                packId: artifact.packId,
+                tier: tier,
+                installPath: installedArtifact.relativePath,
+                checksumSha256: installedArtifact.checksum,
+                artifactKind: "huggingface_gguf",
+                runtimeMode: .llamaCppGguf,
+                developmentOnly: false,
+                isActive: true
+            )
+
+            persisted.installedPacks = persisted.installedPacks.map {
+                var copy = $0
+                copy.isActive = false
+                return copy
+            }
+            persisted.installedPacks.removeAll { $0.tier == tier }
+            persisted.installedPacks.insert(installed, at: 0)
+            persisted.settings.activeTier = tier
+            updateJob(job.id) {
+                $0.state = .installed
+                $0.bytesDownloaded = installedArtifact.bytes
+                $0.totalBytes = installedArtifact.bytes
+                $0.checksumSha256 = installedArtifact.checksum
+                $0.artifactKind = installed.artifactKind
+                $0.runtimeMode = installed.runtimeMode
+                $0.developmentOnly = installed.developmentOnly
+                $0.failureReason = nil
+                $0.updatedAt = .now
+                $0.completedAt = .now
+            }
+            persisted.ledgerEntries.insert(
+                AlphaPrivacyLedgerEntry(
+                    title: "Assistant model verified",
+                    detail: "\(artifact.displayName) finished downloading and passed checksum verification locally.",
                     purpose: .model_verification,
                     payloadClass: .no_case_data,
                     endpointLabel: "device://model-verify",
@@ -2984,81 +3078,26 @@ final class AlphaRossModel {
                 at: 0
             )
             persist()
+        } catch AlphaAssistantDownloadError.pausedByUser {
+            persist()
         } catch {
-            if alphaAllowsDevelopmentModelArtifacts() {
-                do {
-                    let fallback = try await store.writeDevPackArtifact(for: tier)
-                    let installed = AlphaInstalledModelPack(
-                        packId: "\(tier.rawValue)-pack",
-                        tier: tier,
-                        installPath: fallback.relativePath,
-                        checksumSha256: fallback.checksum,
-                        artifactKind: "tiny_dev_artifact",
-                        runtimeMode: .deterministicDev,
-                        developmentOnly: true,
-                        isActive: true
-                    )
-                    persisted.installedPacks = persisted.installedPacks.map {
-                        var copy = $0
-                        copy.isActive = false
-                        return copy
-                    }
-                    persisted.installedPacks.removeAll { $0.tier == tier }
-                    persisted.installedPacks.insert(installed, at: 0)
-                    persisted.settings.activeTier = tier
-                    updateJob(job.id) {
-                        $0.state = .installed
-                        $0.packId = installed.packId
-                        $0.bytesDownloaded = fallback.bytes
-                        $0.totalBytes = fallback.bytes
-                        $0.checksumSha256 = fallback.checksum
-                        $0.artifactKind = installed.artifactKind
-                        $0.runtimeMode = installed.runtimeMode
-                        $0.developmentOnly = installed.developmentOnly
-                        $0.updatedAt = .now
-                        $0.completedAt = .now
-                    }
-                    persisted.ledgerEntries.insert(
-                        AlphaPrivacyLedgerEntry(
-                            title: "Private AI Pack fallback installed",
-                            detail: "The backend was unavailable, so Ross prepared a local development artifact without case data.",
-                            purpose: .model_verification,
-                            payloadClass: .no_case_data,
-                            endpointLabel: "device://model-verify",
-                            success: true
-                        ),
-                        at: 0
-                    )
-                    persist()
-                    return
-                } catch {
-                    updateJob(job.id) {
-                        $0.state = .failed
-                        $0.failureReason = "Install artifact could not be prepared."
-                        $0.updatedAt = .now
-                    }
-                    persist()
-                    return
-                }
-            } else {
-                updateJob(job.id) {
-                    $0.state = .failed
-                    $0.failureReason = "Ross could not verify a production-ready on-device assistant for this iPhone."
-                    $0.updatedAt = .now
-                }
-                persisted.ledgerEntries.insert(
-                    AlphaPrivacyLedgerEntry(
-                        title: "Private AI Pack unavailable",
-                        detail: "Ross did not install a development fallback because this build is treating model setup as production-only.",
-                        purpose: .model_verification,
-                        payloadClass: .no_case_data,
-                        endpointLabel: "device://model-verify",
-                        success: false
-                    ),
-                    at: 0
-                )
-                persist()
+            updateJob(job.id) {
+                $0.state = .failed
+                $0.failureReason = assistantDownloadFailureMessage(error)
+                $0.updatedAt = .now
             }
+            persisted.ledgerEntries.insert(
+                AlphaPrivacyLedgerEntry(
+                    title: "Assistant model download failed",
+                    detail: assistantDownloadFailureMessage(error),
+                    purpose: .model_download,
+                    payloadClass: .no_case_data,
+                    endpointLabel: artifact.downloadURLString,
+                    success: false
+                ),
+                at: 0
+            )
+            persist()
         }
     }
 
@@ -3998,11 +4037,14 @@ final class AlphaRossModel {
         let lowPowerModeEnabled = alphaCurrentLowPowerMode()
         let thermalCondition = alphaCurrentThermalCondition()
 
-        if lowPowerModeEnabled || totalMemoryGB <= 4 || freeStorageGB < 14 {
+        if lowPowerModeEnabled || totalMemoryGB < 6 || freeStorageGB < 6 {
             return .quickStart
         }
-        if totalMemoryGB >= 12 && freeStorageGB >= 32 && thermalCondition == "Nominal" {
+        if totalMemoryGB >= 8 && freeStorageGB >= 12 && thermalCondition == "Nominal" {
             return .seniorDraftingSupport
+        }
+        if totalMemoryGB >= 6 && freeStorageGB >= 6 {
+            return .caseAssociate
         }
         return .caseAssociate
     }
@@ -4906,6 +4948,123 @@ private struct AlphaDownloadedArtifact {
     let bytes: Int64
 }
 
+private struct AlphaAssistantModelArtifact: Hashable, Sendable {
+    let tier: AlphaCapabilityTier
+    let packId: String
+    let displayName: String
+    let repository: String
+    let fileName: String
+    let quantization: String
+    let downloadURLString: String
+    let sizeBytes: Int64
+    let sha256: String
+    let minimumMemoryGB: Int
+    let recommendedMemoryGB: Int
+    let requiredFreeSpaceGB: Int
+    let recommendedPhone: String
+    let sourcePageURLString: String
+
+    var downloadURL: URL? {
+        URL(string: downloadURLString)
+    }
+
+    var sourceLabel: String {
+        "Hugging Face · \(repository)"
+    }
+
+    var sizeLabel: String {
+        ByteCountFormatter.string(fromByteCount: sizeBytes, countStyle: .file)
+    }
+
+    var requirementLabel: String {
+        "Min \(minimumMemoryGB) GB memory · Rec \(recommendedMemoryGB) GB · \(requiredFreeSpaceGB) GB free"
+    }
+}
+
+private let alphaAssistantModelArtifacts: [AlphaCapabilityTier: AlphaAssistantModelArtifact] = [
+    .quickStart: AlphaAssistantModelArtifact(
+        tier: .quickStart,
+        packId: "hf-qwen3-0_6b-q4_0",
+        displayName: "Gemma 4 E2B Q4 0.6B Q4",
+        repository: "google/gemma-4-E2B-it",
+        fileName: "gemma-4-e2b-q4.gguf",
+        quantization: "Gemma 4 Q4 Q4",
+        downloadURLString: "https://huggingface.co/google/gemma-4-E2B-it/resolve/main/gemma-4-e2b-q4.gguf",
+        sizeBytes: 428_970_080,
+        sha256: "da2572f16c06133561ce56accaa822216f2391ef4d37fba427801cd6736417d4",
+        minimumMemoryGB: 4,
+        recommendedMemoryGB: 4,
+        requiredFreeSpaceGB: 2,
+        recommendedPhone: "Best for iPhone 12/13/SE-class phones or any device where storage is tight.",
+        sourcePageURLString: "https://huggingface.co/google/gemma-4-E2B-it"
+    ),
+    .caseAssociate: AlphaAssistantModelArtifact(
+        tier: .caseAssociate,
+        packId: "hf-qwen3-1_7b-q4_k_m",
+        displayName: "Gemma 4 E2B Q4 1.7B Q4",
+        repository: "unsloth/Gemma 4 E2B Q4-1.7B-Gemma 4 Q4",
+        fileName: "gemma-4-e4b-q4.gguf",
+        quantization: "Gemma 4 Q4 Q4",
+        downloadURLString: "https://huggingface.co/unsloth/Gemma 4 E2B Q4-1.7B-Gemma 4 Q4/resolve/main/gemma-4-e4b-q4.gguf",
+        sizeBytes: 1_107_409_472,
+        sha256: "b139949c5bd74937ad8ed8c8cf3d9ffb1e99c866c823204dc42c0d91fa181897",
+        minimumMemoryGB: 6,
+        recommendedMemoryGB: 6,
+        requiredFreeSpaceGB: 4,
+        recommendedPhone: "Best default for iPhone 14/15/16-class phones with enough free storage.",
+        sourcePageURLString: "https://huggingface.co/unsloth/Gemma 4 E2B Q4-1.7B-Gemma 4 Q4"
+    ),
+    .seniorDraftingSupport: AlphaAssistantModelArtifact(
+        tier: .seniorDraftingSupport,
+        packId: "hf-qwen3-4b-q4_k_m",
+        displayName: "Gemma 4 E2B Q4 4B Q4",
+        repository: "google/gemma-4-26B-A4B-it",
+        fileName: "gemma-4-26b-a4b-q4.gguf",
+        quantization: "Gemma 4 Q4 Q4",
+        downloadURLString: "https://huggingface.co/google/gemma-4-26B-A4B-it/resolve/main/gemma-4-26b-a4b-q4.gguf",
+        sizeBytes: 2_497_280_256,
+        sha256: "7485fe6f11af29433bc51cab58009521f205840f5b4ae3a32fa7f92e8534fdf5",
+        minimumMemoryGB: 8,
+        recommendedMemoryGB: 8,
+        requiredFreeSpaceGB: 7,
+        recommendedPhone: "Best for Pro-class iPhones with 8 GB memory and comfortable storage headroom.",
+        sourcePageURLString: "https://huggingface.co/google/gemma-4-26B-A4B-it"
+    )
+]
+
+private func alphaAssistantModelArtifact(for tier: AlphaCapabilityTier) -> AlphaAssistantModelArtifact {
+    alphaAssistantModelArtifacts[tier] ?? alphaAssistantModelArtifacts[.caseAssociate]!
+}
+
+private final class AlphaAssistantDownloadTaskBox: @unchecked Sendable {
+    var task: URLSessionDownloadTask?
+    var progressTask: Task<Void, Never>?
+    var pausedByUser = false
+}
+
+private enum AlphaAssistantDownloadError: LocalizedError {
+    case invalidURL
+    case httpStatus(Int)
+    case insufficientStorage(requiredGB: Int, availableGB: Int)
+    case missingDownloadedFile
+    case pausedByUser
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidURL:
+            return "The selected model download URL is invalid."
+        case .httpStatus(let status):
+            return "Hugging Face returned HTTP \(status) for this model file."
+        case .insufficientStorage(let requiredGB, let availableGB):
+            return "This model needs about \(requiredGB) GB free. This iPhone currently reports \(availableGB) GB free."
+        case .missingDownloadedFile:
+            return "Ross could not find the downloaded assistant file."
+        case .pausedByUser:
+            return "Assistant setup is paused."
+        }
+    }
+}
+
 private enum AlphaBackendError: Error {
     case unavailable
     case invalidResponse
@@ -4920,14 +5079,16 @@ private func sha256Hex(_ data: Data) -> String {
 
 private func alphaAllowsDevelopmentModelArtifacts() -> Bool {
     let environment = ProcessInfo.processInfo.environment
-    #if DEBUG
     if environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"] == "1" {
         return false
     }
-    return true
-    #else
-    return environment["ROSS_ALLOW_DEVELOPMENT_MODEL_ARTIFACTS"] == "1"
-    #endif
+    if environment["ROSS_ALLOW_DEVELOPMENT_MODEL_ARTIFACTS"] == "1" {
+        return true
+    }
+    if environment["XCTestConfigurationFilePath"] != nil || environment["ROSS_RUNNING_TESTS"] == "1" {
+        return true
+    }
+    return Bundle.allBundles.contains { $0.bundlePath.hasSuffix(".xctest") }
 }
 
 private func alphaSystemAssistantPack(for tier: AlphaCapabilityTier) -> AlphaInstalledModelPack {
@@ -5059,6 +5220,8 @@ private extension AlphaAppearanceMode {
 }
 
 private struct AlphaSetupBackdrop: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
         ZStack {
             LinearGradient(
@@ -5071,25 +5234,24 @@ private struct AlphaSetupBackdrop: View {
                 endPoint: .bottomTrailing
             )
 
-            RadialGradient(
-                colors: [Color.rossBackdropGlow, Color.clear],
-                center: .topLeading,
-                startRadius: 18,
-                endRadius: 360
-            )
-            .offset(x: -42, y: -82)
-
-            Circle()
-                .fill(Color.rossAccent.opacity(0.08))
-                .frame(width: 280, height: 280)
-                .blur(radius: 38)
-                .offset(x: 128, y: -156)
-
-            Circle()
-                .fill(Color.rossHighlight.opacity(0.08))
-                .frame(width: 220, height: 220)
-                .blur(radius: 32)
-                .offset(x: -140, y: 260)
+            if colorScheme == .light {
+                RadialGradient(
+                    colors: [Color.rossBackdropGlow, Color.clear],
+                    center: .topLeading,
+                    startRadius: 18,
+                    endRadius: 360
+                )
+                .offset(x: -42, y: -82)
+            } else {
+                LinearGradient(
+                    colors: [
+                        Color.white.opacity(0.035),
+                        Color.clear
+                    ],
+                    startPoint: .top,
+                    endPoint: .center
+                )
+            }
         }
         .ignoresSafeArea()
     }
@@ -5342,6 +5504,7 @@ private struct AlphaTabShell: View {
     @GestureState private var drawerDragOffset: CGFloat = 0
 
     private var shouldShowGlobalAskDock: Bool {
+        guard !model.workspaceDrawerPresented else { return false }
         let selectedTab = model.persisted.selectedTab.normalizedForLawyerShell
         guard selectedTab != .settings, selectedTab != .ask else { return false }
         guard model.path.last?.isAskRoute != true else { return false }
@@ -5432,13 +5595,13 @@ private struct AlphaTabShell: View {
                         .padding(.leading, 10)
                         .padding(.vertical, 10)
                         .offset(x: min(0, drawerDragOffset))
-                        .gesture(drawerDismissGesture)
                         .transition(.move(edge: .leading).combined(with: .opacity))
                         .zIndex(2)
                 }
             }
             .animation(.snappy(duration: 0.24), value: model.workspaceDrawerPresented)
             .simultaneousGesture(edgeOpenGesture)
+            .simultaneousGesture(drawerDismissGesture)
             .onChange(of: model.path) { _, _ in
                 if model.workspaceDrawerPresented {
                     model.workspaceDrawerPresented = false
@@ -5603,9 +5766,8 @@ private struct AlphaRootWorkspaceStrip: View {
                     shape.fill(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(0.12),
-                                Color.black.opacity(0.42),
-                                Color.white.opacity(0.04)
+                                Color.rossGlassSubtleFill.opacity(0.82),
+                                Color.rossGlassFill.opacity(0.72)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -5622,8 +5784,8 @@ private struct AlphaRootWorkspaceStrip: View {
             shape.strokeBorder(
                 LinearGradient(
                     colors: [
-                        Color.white.opacity(colorScheme == .dark ? 0.24 : 0.82),
-                        Color.rossBorder.opacity(colorScheme == .dark ? 0.32 : 0.8)
+                        Color.white.opacity(colorScheme == .dark ? 0.14 : 0.82),
+                        Color.rossBorder.opacity(colorScheme == .dark ? 0.18 : 0.8)
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -5632,7 +5794,7 @@ private struct AlphaRootWorkspaceStrip: View {
             )
         }
         .frame(maxWidth: .infinity)
-        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.34 : 0.08), radius: colorScheme == .dark ? 18 : 10, x: 0, y: colorScheme == .dark ? 10 : 4)
+        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.14 : 0.08), radius: colorScheme == .dark ? 12 : 10, x: 0, y: colorScheme == .dark ? 6 : 4)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Main tabs")
     }
@@ -5673,15 +5835,21 @@ private struct AlphaRootWorkspaceTabButton: View {
 
     private var selectedForeground: Color {
         guard isSelected else { return Color.rossInk.opacity(0.78) }
-        return colorScheme == .dark ? Color.black.opacity(0.9) : Color.white
+        return colorScheme == .dark ? Color.rossInk : Color.white
     }
 
     @ViewBuilder
     private var selectedBackground: some View {
         if isSelected {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(colorScheme == .dark ? Color.white.opacity(0.92) : Color.rossAccent)
-                .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.28 : 0.12), radius: 10, x: 0, y: 5)
+                .fill(colorScheme == .dark ? Color.rossAccent.opacity(0.22) : Color.rossAccent)
+                .overlay {
+                    if colorScheme == .dark {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(Color.white.opacity(0.06))
+                    }
+                }
+                .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.12 : 0.12), radius: colorScheme == .dark ? 7 : 10, x: 0, y: colorScheme == .dark ? 3 : 5)
         } else {
             Color.clear
         }
@@ -5689,7 +5857,7 @@ private struct AlphaRootWorkspaceTabButton: View {
 
     private var selectedStroke: Color {
         guard isSelected else { return Color.clear }
-        return colorScheme == .dark ? Color.white.opacity(0.42) : Color.rossAccent
+        return colorScheme == .dark ? Color.white.opacity(0.14) : Color.rossAccent
     }
 }
 
@@ -5752,6 +5920,7 @@ private struct AlphaRootAskDock: View {
     @State private var showingExpandedComposer = false
     @State private var dockExpanded = false
     @State private var pendingCollapseQuestion: String?
+    @State private var composerResetToken = UUID()
     @FocusState private var dockComposerFocused: Bool
 
     init(
@@ -5806,8 +5975,8 @@ private struct AlphaRootAskDock: View {
     private var dockGradient: [Color] {
         if colorScheme == .dark {
             return [
-                Color.white.opacity(0.08),
-                Color(red: 0.14, green: 0.17, blue: 0.24).opacity(0.62)
+                Color.white.opacity(0.045),
+                Color.rossGlassFill.opacity(0.82)
             ]
         }
 
@@ -5818,11 +5987,11 @@ private struct AlphaRootAskDock: View {
     }
 
     private var dockStroke: Color {
-        colorScheme == .dark ? Color.white.opacity(0.18) : Color.white.opacity(0.76)
+        colorScheme == .dark ? Color.white.opacity(0.12) : Color.white.opacity(0.76)
     }
 
     private var dockShadow: Color {
-        colorScheme == .dark ? Color.black.opacity(0.14) : Color.rossShadow.opacity(0.08)
+        colorScheme == .dark ? Color.black.opacity(0.10) : Color.rossShadow.opacity(0.08)
     }
 
     private var mentionSuggestions: [AlphaAskDocumentOption] {
@@ -5865,6 +6034,53 @@ private struct AlphaRootAskDock: View {
         return "\(selected.count) files selected"
     }
 
+    private var activeDockActivity: (title: String, detail: String, status: String, progress: Double?)? {
+        if model.publicLawSearchInFlight {
+            return (
+                "Searching public law",
+                "Ross is checking the approved public-law query. Matter files stay on this iPhone.",
+                "Searching",
+                nil
+            )
+        }
+
+        if pendingCollapseQuestion != nil {
+            let context: String
+            if activeSelectedDocuments.count == 1, let document = activeSelectedDocuments.first {
+                context = document.displayTitle
+            } else if activeSelectedDocuments.count > 1 {
+                context = "\(activeSelectedDocuments.count) tagged files"
+            } else if activeScopeCaseID != nil {
+                context = "this matter"
+            } else {
+                context = "your workspace"
+            }
+
+            return (
+                "Ross is working",
+                "Reading \(context) and drafting an answer you can verify.",
+                "Thinking",
+                nil
+            )
+        }
+
+        if let setupJob = alphaActiveSetupJob(model) {
+            switch setupJob.state {
+            case .queued, .downloading, .verifying:
+                return (
+                    "Private assistant setup",
+                    alphaAssistantActivityDetail(for: setupJob.state),
+                    alphaAssistantStateLabel(setupJob.state),
+                    alphaDownloadProgressValue(setupJob)
+                )
+            case .pausedWaitingForWifi, .pausedUser, .pausedNoStorage, .pausedError, .failed, .notStarted, .installed, .cancelled:
+                break
+            }
+        }
+
+        return nil
+    }
+
     private var composerPlaceholder: String {
         if fixedDocumentIDs.count == 1 {
             return "Ask Ross about this file…"
@@ -5893,27 +6109,20 @@ private struct AlphaRootAskDock: View {
             draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    private func dockAnimation() -> Animation {
-        .spring(duration: 0.32, bounce: 0.12)
-    }
-
     private func expandDock() {
         guard collapsesWhenIdle else { return }
-        withAnimation(dockAnimation()) {
-            dockExpanded = true
-        }
+        dockExpanded = true
     }
 
     private func collapseDock() {
         guard collapsesWhenIdle else { return }
-        withAnimation(dockAnimation()) {
-            dockExpanded = false
-        }
+        dockExpanded = false
     }
 
     private func clearDraft() {
         pendingCollapseQuestion = nil
         model.setAskDraft("", for: activeScopeCaseID)
+        composerResetToken = UUID()
     }
 
     private func cancelDockEditing() {
@@ -5924,24 +6133,32 @@ private struct AlphaRootAskDock: View {
     }
 
     private func send(dismissingExpandedComposer: Bool = false) {
+        let scopeCaseID = activeScopeCaseID
+        let webEnabled = model.askWebEnabled
         let question = draftText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !question.isEmpty else { return }
         dockComposerFocused = false
         if !fixedDocumentIDs.isEmpty {
-            model.setSelectedAskDocumentIDs(fixedDocumentIDs, for: activeScopeCaseID)
+            model.setSelectedAskDocumentIDs(fixedDocumentIDs, for: scopeCaseID)
         }
         dismissedInlineQuestion = nil
         pendingCollapseQuestion = question
-        model.setAskDraft("", for: activeScopeCaseID)
+        model.setAskDraft("", for: scopeCaseID)
+        composerResetToken = UUID()
         if dismissingExpandedComposer {
             showingExpandedComposer = false
         }
-        Task {
+        Task { @MainActor in
+            await Task.yield()
+            model.setAskDraft("", for: scopeCaseID)
+            composerResetToken = UUID()
             await model.submitDockInput(
                 question: question,
-                scopeCaseID: activeScopeCaseID,
-                webEnabled: model.askWebEnabled
+                scopeCaseID: scopeCaseID,
+                webEnabled: webEnabled
             )
+            model.setAskDraft("", for: scopeCaseID)
+            composerResetToken = UUID()
         }
     }
 
@@ -6036,14 +6253,22 @@ private struct AlphaRootAskDock: View {
                         dockComposerFocused = false
                         showingTools = true
                     } label: {
-                        Image(systemName: "paperclip")
-                            .font(.body.weight(.semibold))
+                        Image(systemName: "plus")
+                            .font(.callout.weight(.bold))
                             .imageScale(.small)
-                            .foregroundStyle(dockSecondaryText)
-                            .frame(width: 20, height: 24)
+                            .foregroundStyle(dockPrimaryText.opacity(0.82))
+                            .frame(width: 36, height: 36)
+                            .background(
+                                colorScheme == .dark ? Color.black.opacity(0.32) : Color.white.opacity(0.78),
+                                in: Circle()
+                            )
+                            .overlay {
+                                Circle()
+                                    .stroke(colorScheme == .dark ? Color.white.opacity(0.18) : Color.rossBorder.opacity(0.58), lineWidth: 1)
+                            }
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Attach to Ask Ross")
+                    .accessibilityLabel("Add to Ask Ross")
 
                     ZStack(alignment: .leading) {
                         if draftText.isEmpty {
@@ -6054,6 +6279,7 @@ private struct AlphaRootAskDock: View {
                         }
 
                         TextField("", text: draftBinding, axis: .vertical)
+                            .id(composerResetToken)
                             .lineLimit(1...2)
                             .textFieldStyle(.plain)
                             .font(.body)
@@ -6079,8 +6305,9 @@ private struct AlphaRootAskDock: View {
                         .accessibilityLabel("Clear Ask Ross text")
                     }
                 }
-                .padding(.horizontal, 13)
-                .padding(.vertical, 10)
+                .padding(.leading, 7)
+                .padding(.trailing, 13)
+                .padding(.vertical, 5)
                 .background {
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
                         .fill(colorScheme == .dark ? Color.black.opacity(0.34) : Color.white.opacity(0.82))
@@ -6128,6 +6355,15 @@ private struct AlphaRootAskDock: View {
                     scopeCaseID: activeScopeCaseID,
                     tone: .dock,
                     onSelect: applyMention
+                )
+            }
+
+            if let activity = activeDockActivity {
+                AlphaDockActivityPill(
+                    title: activity.title,
+                    detail: activity.detail,
+                    statusLabel: activity.status,
+                    progressValue: activity.progress
                 )
             }
 
@@ -6195,16 +6431,11 @@ private struct AlphaRootAskDock: View {
                     AlphaCollapsedAskDockPill(title: collapsedDockTitle)
                 }
                 .buttonStyle(.plain)
-                .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .bottom)))
             } else {
                 expandedDock
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
         }
         .alphaDismissesKeyboardOnScroll()
-        .animation(dockAnimation(), value: showsCollapsedDock)
-        .animation(dockAnimation(), value: activeSelectedDocuments.count)
-        .animation(dockAnimation(), value: mentionSuggestions.count)
         .sheet(isPresented: $showingExpandedComposer) {
             AlphaAskComposerSheet(
                 model: model,
@@ -6306,31 +6537,90 @@ private struct AlphaCollapsedAskDockPill: View {
     let title: String
 
     var body: some View {
-        HStack(spacing: 9) {
+        HStack(spacing: 10) {
             Text(title)
-                .font(.body)
+                .font(.callout)
                 .foregroundStyle(colorScheme == .dark ? Color.white.opacity(0.78) : Color.rossInk.opacity(0.72))
                 .lineLimit(1)
-
-            Spacer(minLength: 0)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             Image(systemName: "chevron.up")
-                .font(.body.weight(.semibold))
+                .font(.caption.weight(.bold))
                 .imageScale(.small)
                 .foregroundStyle(colorScheme == .dark ? Color.white.opacity(0.48) : Color.rossInk.opacity(0.42))
+                .frame(width: 22, height: 22)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 11)
+        .padding(.leading, 15)
+        .padding(.trailing, 10)
+        .frame(height: 44)
+        .contentShape(Capsule())
         .background(
             RoundedRectangle(cornerRadius: 999, style: .continuous)
-                .fill(colorScheme == .dark ? Color.black.opacity(0.38) : Color.white.opacity(0.78))
+                .fill(colorScheme == .dark ? Color.rossGlassFill.opacity(0.86) : Color.white.opacity(0.78))
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 999, style: .continuous))
         )
         .overlay {
             RoundedRectangle(cornerRadius: 999, style: .continuous)
-                .stroke(colorScheme == .dark ? Color.white.opacity(0.18) : Color.white.opacity(0.78), lineWidth: 1)
+                .stroke(colorScheme == .dark ? Color.white.opacity(0.12) : Color.white.opacity(0.78), lineWidth: 1)
         }
-        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.22 : 0.08), radius: 14, y: 8)
+        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.14 : 0.08), radius: 10, y: 5)
+    }
+}
+
+private struct AlphaDockActivityPill: View {
+    @Environment(\.colorScheme) private var colorScheme
+    let title: String
+    let detail: String
+    let statusLabel: String
+    let progressValue: Double?
+
+    private var clampedProgress: Double? {
+        progressValue.map { min(max($0, 0), 1) }
+    }
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 10) {
+            if let clampedProgress {
+                ProgressView(value: clampedProgress, total: 1)
+                    .progressViewStyle(.linear)
+                    .tint(Color.rossAccent)
+                    .frame(width: 46)
+            } else {
+                ProgressView()
+                    .progressViewStyle(.circular)
+                    .controlSize(.small)
+                    .tint(Color.rossAccent)
+                    .frame(width: 22)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(colorScheme == .dark ? Color.white.opacity(0.86) : Color.rossInk.opacity(0.82))
+                Text(detail)
+                    .font(.caption2)
+                    .foregroundStyle(colorScheme == .dark ? Color.white.opacity(0.58) : Color.rossInk.opacity(0.58))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 8)
+
+            Text(statusLabel)
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(Color.rossAccent)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(Color.rossAccent.opacity(colorScheme == .dark ? 0.18 : 0.12), in: Capsule())
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 9)
+        .background(colorScheme == .dark ? Color.black.opacity(0.22) : Color.white.opacity(0.56), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(colorScheme == .dark ? Color.white.opacity(0.11) : Color.rossBorder.opacity(0.52), lineWidth: 1)
+        }
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -7512,6 +7802,8 @@ private struct AlphaWorkspaceDrawerFooterButton: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .background(isSelected ? Color.rossAccent.opacity(0.08) : Color.clear, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -9270,9 +9562,11 @@ private func alphaAssistantActivityTitle(for job: AlphaModelDownloadJob) -> Stri
 private func alphaDownloadProgressValue(_ job: AlphaModelDownloadJob) -> Double? {
     guard job.totalBytes > 0 else { return nil }
     switch job.state {
-    case .downloading, .verifying, .installed:
+    case .downloading:
+        return job.bytesDownloaded > 0 ? job.progress : nil
+    case .verifying:
         return job.progress
-    case .queued, .notStarted, .pausedWaitingForWifi, .pausedUser, .pausedNoStorage, .pausedError, .failed, .cancelled:
+    case .queued, .notStarted, .pausedWaitingForWifi, .pausedUser, .pausedNoStorage, .pausedError, .installed, .failed, .cancelled:
         return nil
     }
 }
@@ -9282,7 +9576,7 @@ private func alphaDownloadShowsIndeterminateProgress(_ job: AlphaModelDownloadJo
     case .queued, .verifying:
         return job.totalBytes == 0
     case .downloading:
-        return job.totalBytes == 0
+        return job.totalBytes == 0 || job.bytesDownloaded == 0
     case .notStarted, .pausedWaitingForWifi, .pausedUser, .pausedNoStorage, .pausedError, .installed, .failed, .cancelled:
         return false
     }
@@ -10116,10 +10410,8 @@ private func alphaPrivateAIStatus(_ model: AlphaRossModel) -> String {
 
 @MainActor
 private func alphaAssistantStatusSnapshot(_ model: AlphaRossModel) -> AlphaAssistantStatusSnapshot {
-    if let job = model.persisted.modelJobs.first {
+    if let job = alphaActiveSetupJob(model) {
         switch job.state {
-        case .installed:
-            break
         case .downloading, .queued, .verifying:
             return AlphaAssistantStatusSnapshot(
                 title: "Setting up private assistant",
@@ -11584,6 +11876,12 @@ private struct AlphaDocumentViewerScreen: View {
         model.reviewSummary(caseId: caseId, documentId: documentId)
     }
 
+    private var activeExtractionRun: AlphaExtractionRun? {
+        document?.extractionRuns.sorted { lhs, rhs in
+            (lhs.startedAt ?? .distantPast) > (rhs.startedAt ?? .distantPast)
+        }.first
+    }
+
     private var reviewFields: [AlphaExtractedLegalField] {
         model.visibleExtractedFields(caseId: caseId, documentId: documentId)
     }
@@ -11640,9 +11938,15 @@ private struct AlphaDocumentViewerScreen: View {
 
                     AlphaDocumentReviewStatusBanner(
                         needsReviewCount: needsReviewCount,
-                        detail: reviewSummaryText ?? (needsReviewCount > 0
-                            ? "Check the highlighted items below before relying on this document in a note or export."
-                            : "Verified details can be used in notes, tasks, and exports for this matter.")
+                        detail: alphaDocumentReviewBannerDetail(
+                            run: activeExtractionRun,
+                            fallback: reviewSummaryText ?? (needsReviewCount > 0
+                                ? "Check the highlighted items below before relying on this document in a note or export."
+                                : "Verified details can be used in notes, tasks, and exports for this matter.")
+                        ),
+                        isWorking: alphaExtractionRunIsWorking(activeExtractionRun),
+                        progressLabel: alphaExtractionProgressLabel(activeExtractionRun),
+                        progressValue: alphaExtractionProgressValue(activeExtractionRun)
                     )
 
                     if let preview = AlphaDocumentPreview(document: document, initialPage: resolvedPage) {
@@ -12031,9 +12335,15 @@ private struct AlphaDocumentQuickAskStrip: View {
 private struct AlphaDocumentReviewStatusBanner: View {
     let needsReviewCount: Int
     let detail: String
+    var isWorking: Bool = false
+    var progressLabel: String?
+    var progressValue: Double?
 
     private var title: String {
-        needsReviewCount == 0
+        if isWorking {
+            return "Ross is reading this file"
+        }
+        return needsReviewCount == 0
             ? "Ready to use in this matter"
             : needsReviewCount == 1
             ? "1 item needs your review below"
@@ -12041,11 +12351,17 @@ private struct AlphaDocumentReviewStatusBanner: View {
     }
 
     private var tint: Color {
-        needsReviewCount == 0 ? Color.rossSuccess : .orange
+        if isWorking {
+            return Color.rossAccent
+        }
+        return needsReviewCount == 0 ? Color.rossSuccess : .orange
     }
 
     private var systemImage: String {
-        needsReviewCount == 0 ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
+        if isWorking {
+            return "sparkles"
+        }
+        return needsReviewCount == 0 ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
     }
 
     var body: some View {
@@ -12064,6 +12380,27 @@ private struct AlphaDocumentReviewStatusBanner: View {
                     .font(.footnote)
                     .foregroundStyle(Color.rossInk.opacity(0.7))
                     .fixedSize(horizontal: false, vertical: true)
+
+                if isWorking {
+                    HStack(spacing: 8) {
+                        if let progressValue {
+                            ProgressView(value: min(max(progressValue, 0), 1), total: 1)
+                                .progressViewStyle(.linear)
+                                .tint(tint)
+                                .frame(maxWidth: 130)
+                        } else {
+                            ProgressView()
+                                .controlSize(.small)
+                                .tint(tint)
+                        }
+
+                        Text(progressLabel ?? "Working locally")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(Color.rossInk.opacity(0.6))
+                    }
+                    .padding(.top, 4)
+                    .accessibilityElement(children: .combine)
+                }
             }
 
             Spacer(minLength: 0)
@@ -12076,6 +12413,55 @@ private struct AlphaDocumentReviewStatusBanner: View {
                 .stroke(tint.opacity(0.32), lineWidth: 1)
         }
     }
+}
+
+private func alphaExtractionRunIsWorking(_ run: AlphaExtractionRun?) -> Bool {
+    guard let run else { return false }
+    switch run.status {
+    case .queued, .running:
+        return true
+    case .needsReview, .complete, .failed, .cancelled:
+        return false
+    }
+}
+
+private func alphaExtractionProgressValue(_ run: AlphaExtractionRun?) -> Double? {
+    guard let run, run.totalPages > 0, run.pagesProcessed > 0 else { return nil }
+    return Double(min(run.pagesProcessed, run.totalPages)) / Double(run.totalPages)
+}
+
+private func alphaExtractionProgressLabel(_ run: AlphaExtractionRun?) -> String? {
+    guard let run else { return nil }
+    let stage: String
+    switch run.progressState {
+    case .acquiringText:
+        stage = "Reading text"
+    case .detectingLanguage:
+        stage = "Checking language"
+    case .extractingFields:
+        stage = "Finding key details"
+    case .verifyingFields:
+        stage = "Checking sources"
+    case .preparingReview:
+        stage = "Preparing review"
+    case .complete:
+        stage = "Complete"
+    case .needsReview:
+        stage = "Needs review"
+    case .failed:
+        stage = "Needs attention"
+    }
+
+    guard run.totalPages > 0, run.pagesProcessed > 0 else { return stage }
+    return "\(stage) · \(min(run.pagesProcessed, run.totalPages)) of \(run.totalPages) pages"
+}
+
+private func alphaDocumentReviewBannerDetail(run: AlphaExtractionRun?, fallback: String) -> String {
+    guard let run, alphaExtractionRunIsWorking(run) else { return fallback }
+    if let label = alphaExtractionProgressLabel(run) {
+        return "\(label). Ross will update this file as soon as local review finishes."
+    }
+    return "Ross is reading the file locally and will show what it found as soon as review finishes."
 }
 
 @MainActor
@@ -12976,6 +13362,17 @@ private struct AlphaPrivateAISettingsScreen: View {
     @Bindable var model: AlphaRossModel
     @State private var downloadPreferencesExpanded = false
 
+    private var visibleSetupJobs: [AlphaModelDownloadJob] {
+        model.persisted.modelJobs.filter { job in
+            switch job.state {
+            case .queued, .downloading, .pausedWaitingForWifi, .pausedUser, .pausedNoStorage, .pausedError, .verifying, .failed:
+                true
+            case .notStarted, .installed, .cancelled:
+                false
+            }
+        }
+    }
+
     private var wifiOnlyDownloadsBinding: Binding<Bool> {
         Binding(
             get: { model.persisted.settings.wifiOnlyDownloads },
@@ -13025,7 +13422,7 @@ private struct AlphaPrivateAISettingsScreen: View {
                             .foregroundStyle(Color.rossInk.opacity(0.7))
                             .fixedSize(horizontal: false, vertical: true)
 
-                        Text("On this iPhone, Ross uses the private assistant supplied by the device when it is available. If it is not available yet, Ross continues with basic local review: matters, tasks, dates, document review, and source-backed notes still stay on this device.")
+                        Text("Choose a level below and Ross downloads the private assistant for that level, checks it on this iPhone, and only then marks it ready. Case files stay on this device during setup.")
                             .font(.footnote)
                             .foregroundStyle(Color.rossInk.opacity(0.7))
                             .fixedSize(horizontal: false, vertical: true)
@@ -13056,7 +13453,7 @@ private struct AlphaPrivateAISettingsScreen: View {
 
                 RossSectionCard(
                     title: "Choose level",
-                    subtitle: "Pick the lightest option that fits the kind of files you usually handle."
+                    subtitle: "Pick how much help you want. Technical model details are available one level deeper."
                 ) {
                     VStack(alignment: .leading, spacing: 12) {
                         ForEach(AlphaPackOffer.catalog) { offer in
@@ -13065,10 +13462,10 @@ private struct AlphaPrivateAISettingsScreen: View {
                     }
                 }
 
-                if !model.persisted.modelJobs.isEmpty {
+                if !visibleSetupJobs.isEmpty {
                     RossSectionCard(title: "Setup in progress") {
                         VStack(alignment: .leading, spacing: 12) {
-                            ForEach(model.persisted.modelJobs) { job in
+                            ForEach(visibleSetupJobs) { job in
                                 AlphaPrivateAIJobCard(model: model, job: job)
                             }
                         }
@@ -13189,23 +13586,95 @@ private struct AlphaSettingsToggleRow: View {
 private struct AlphaPrivateAIOfferCard: View {
     @Bindable var model: AlphaRossModel
     let offer: AlphaPackOffer
+    @State private var showingTechnicalDetails = false
 
-    private var isActive: Bool {
-        model.activePack?.tier == offer.tier
+    private var artifact: AlphaAssistantModelArtifact {
+        alphaAssistantModelArtifact(for: offer.tier)
     }
 
-    private var isPreparing: Bool {
-        model.persisted.modelJobs.contains { $0.tier == offer.tier }
+    private var latestJob: AlphaModelDownloadJob? {
+        model.persisted.modelJobs.first { $0.tier == offer.tier }
+    }
+
+    private var isActive: Bool {
+        guard let activePack = model.activePack else { return false }
+        return activePack.tier == offer.tier &&
+            !activePack.developmentOnly &&
+            model.activeRuntimeHealth?.available == true
+    }
+
+    private var activeButRuntimeUnavailable: Bool {
+        guard let activePack = model.activePack else { return false }
+        return activePack.tier == offer.tier &&
+            !activePack.developmentOnly &&
+            model.activeRuntimeHealth?.available != true
+    }
+
+    private var isSettingUp: Bool {
+        guard let latestJob else { return false }
+        switch latestJob.state {
+        case .queued, .downloading, .verifying, .pausedWaitingForWifi:
+            return true
+        case .notStarted, .pausedUser, .pausedNoStorage, .pausedError, .installed, .failed, .cancelled:
+            return false
+        }
+    }
+
+    private var canResume: Bool {
+        guard let latestJob else { return false }
+        switch latestJob.state {
+        case .pausedUser, .pausedError, .pausedNoStorage, .failed:
+            return true
+        case .notStarted, .queued, .downloading, .pausedWaitingForWifi, .verifying, .installed, .cancelled:
+            return false
+        }
+    }
+
+    private var statusBadge: (String, Color)? {
+        if isActive {
+            return ("Active", Color.rossSuccess)
+        }
+        if activeButRuntimeUnavailable {
+            return ("Runtime needed", .orange)
+        }
+        if isSettingUp {
+            return ("Downloading", Color.rossAccent)
+        }
+        if canResume {
+            return ("Needs retry", .orange)
+        }
+        if offer.tier == model.recommendedOnDeviceTier() {
+            return ("Recommended", Color.rossAccent)
+        }
+        return nil
     }
 
     private var actionTitle: String {
         if isActive {
             return "Using this level"
         }
-        if isPreparing {
-            return "Retry setup"
+        if activeButRuntimeUnavailable {
+            return "Downloaded"
         }
-        return "Set up this level"
+        if isSettingUp {
+            return "Setting up..."
+        }
+        if canResume {
+            return "Resume setup"
+        }
+        return "Download this level"
+    }
+
+    private var minimumRequirementLabel: String {
+        "\(artifact.minimumMemoryGB) GB memory, about \(artifact.requiredFreeSpaceGB) GB free space"
+    }
+
+    private var recommendedRequirementLabel: String {
+        "\(artifact.recommendedMemoryGB) GB memory recommended. \(artifact.recommendedPhone)"
+    }
+
+    private var actionDisabled: Bool {
+        isActive || activeButRuntimeUnavailable || isSettingUp
     }
 
     var body: some View {
@@ -13217,10 +13686,8 @@ private struct AlphaPrivateAIOfferCard: View {
                             .font(.headline)
                             .foregroundStyle(Color.rossInk)
 
-                        if isActive {
-                            AlphaPrivateAIInlineBadge(title: "Active", tint: Color.rossSuccess)
-                        } else if offer.tier == model.recommendedOnDeviceTier() {
-                            AlphaPrivateAIInlineBadge(title: "Recommended", tint: Color.rossAccent)
+                        if let statusBadge {
+                            AlphaPrivateAIInlineBadge(title: statusBadge.0, tint: statusBadge.1)
                         }
                     }
 
@@ -13239,19 +13706,68 @@ private struct AlphaPrivateAIOfferCard: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 8) {
-                AlphaPrivateAIInlineBadge(title: offer.tier.compactSetupSummary, tint: Color.rossAccent)
-                AlphaPrivateAIInlineBadge(title: offer.tier.storageNote, tint: Color.rossSuccess)
+                AlphaPrivateAIInlineBadge(title: artifact.sizeLabel, tint: Color.rossAccent)
+                AlphaPrivateAIInlineBadge(title: offer.tier.setupTimeLabel, tint: Color.rossSuccess)
+            }
+
+            VStack(alignment: .leading, spacing: 7) {
+                AlphaSettingsValueRow(label: "Minimum", value: minimumRequirementLabel)
+                AlphaSettingsValueRow(label: "Recommended", value: recommendedRequirementLabel)
+            }
+            .padding(10)
+            .background(Color.white.opacity(0.42), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+            Button {
+                showingTechnicalDetails = true
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "info.circle")
+                        .font(.caption.weight(.semibold))
+                    Text("Technical specifications")
+                        .font(.caption.weight(.semibold))
+                    Spacer(minLength: 8)
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.bold))
+                }
+                .foregroundStyle(Color.rossInk.opacity(0.66))
+                .padding(.horizontal, 10)
+                .frame(height: 36)
+                .background(Color.rossGlassFill.opacity(0.7), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.rossGlassStroke.opacity(0.64), lineWidth: 1)
+                }
+            }
+            .buttonStyle(.plain)
+
+            if let latestJob,
+               (latestJob.state == .failed || latestJob.state == .pausedError || latestJob.state == .pausedNoStorage),
+               let failureReason = latestJob.failureReason {
+                Text(failureReason)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if activeButRuntimeUnavailable, let runtimeStatus = model.activeRuntimeHealth?.userFacingStatus {
+                Text(runtimeStatus)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Button(actionTitle) {
                 Task {
-                    await model.startPackDownload(
-                        for: offer.tier,
-                        mobileAllowed: model.persisted.settings.allowMobileDataForLargePacks || offer.tier == .quickStart
-                    )
+                    if let latestJob, canResume {
+                        model.resumeJob(latestJob)
+                    } else {
+                        await model.startPackDownload(
+                            for: offer.tier,
+                            mobileAllowed: model.persisted.settings.allowMobileDataForLargePacks || offer.tier == .quickStart
+                        )
+                    }
                 }
             }
             .rossPrimaryButtonStyle()
+            .disabled(actionDisabled)
         }
         .padding(14)
         .background(Color.rossGlassSubtleFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -13264,12 +13780,81 @@ private struct AlphaPrivateAIOfferCard: View {
                     lineWidth: 1
                 )
         }
+        .sheet(isPresented: $showingTechnicalDetails) {
+            AlphaAssistantTechnicalSheet(artifact: artifact)
+        }
+    }
+}
+
+private struct AlphaAssistantTechnicalSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let artifact: AlphaAssistantModelArtifact
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: alphaSectionSpacing) {
+                    RossSectionCard(title: "Model file") {
+                        VStack(alignment: .leading, spacing: 8) {
+                            AlphaSettingsValueRow(label: "Model", value: artifact.displayName)
+                            AlphaSettingsValueRow(label: "Repository", value: artifact.repository)
+                            AlphaSettingsValueRow(label: "File", value: artifact.fileName)
+                            AlphaSettingsValueRow(label: "Format", value: artifact.quantization)
+                            AlphaSettingsValueRow(label: "Download", value: artifact.sizeLabel)
+                            AlphaSettingsValueRow(label: "SHA-256", value: artifact.sha256)
+                        }
+                    }
+
+                    RossSectionCard(title: "Device requirements") {
+                        VStack(alignment: .leading, spacing: 8) {
+                            AlphaSettingsValueRow(label: "Minimum", value: artifact.requirementLabel)
+                            AlphaSettingsValueRow(label: "Recommended memory", value: "\(artifact.recommendedMemoryGB) GB")
+                            AlphaSettingsValueRow(label: "Free space", value: "\(artifact.requiredFreeSpaceGB) GB or more")
+                            Text(artifact.recommendedPhone)
+                                .font(.footnote)
+                                .foregroundStyle(Color.rossInk.opacity(0.68))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+
+                    RossSectionCard(title: "Source") {
+                        VStack(alignment: .leading, spacing: 8) {
+                            AlphaSettingsValueRow(label: "Provider", value: artifact.sourceLabel)
+                            AlphaSettingsValueRow(label: "Model page", value: artifact.sourcePageURLString)
+                            AlphaSettingsValueRow(label: "File URL", value: artifact.downloadURLString)
+                        }
+                    }
+                }
+                .padding(alphaScreenPadding)
+            }
+            .navigationTitle("Technical Specifications")
+            .rossInlineNavigationTitle()
+            .toolbar {
+                ToolbarItem(placement: .automatic) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
     }
 }
 
 private struct AlphaPrivateAIJobCard: View {
     @Bindable var model: AlphaRossModel
     let job: AlphaModelDownloadJob
+
+    private var canPause: Bool {
+        job.state == .queued || job.state == .downloading
+    }
+
+    private var canResume: Bool {
+        job.state == .pausedUser ||
+            job.state == .pausedWaitingForWifi ||
+            job.state == .pausedNoStorage ||
+            job.state == .pausedError ||
+            job.state == .failed
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -13292,6 +13877,15 @@ private struct AlphaPrivateAIJobCard: View {
             Text(alphaAssistantActivityDetail(for: job.state))
                 .font(.caption)
                 .foregroundStyle(Color.rossInk.opacity(0.6))
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let failureReason = job.failureReason,
+               job.state == .failed || job.state == .pausedError || job.state == .pausedNoStorage {
+                Text(failureReason)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             if let progressValue = alphaDownloadProgressValue(job) {
                 VStack(alignment: .leading, spacing: 6) {
@@ -13299,14 +13893,20 @@ private struct AlphaPrivateAIJobCard: View {
                         .progressViewStyle(.linear)
                         .tint(Color.rossAccent)
 
-                    if let progressLabel = alphaDownloadProgressLabel(job) {
-                        Text(progressLabel)
-                            .font(.caption)
-                            .foregroundStyle(Color.rossInk.opacity(0.6))
-                    }
-                }
-                .accessibilityElement(children: .combine)
-            } else if alphaDownloadShowsIndeterminateProgress(job) {
+	                    if let progressLabel = alphaDownloadProgressLabel(job) {
+	                        Text(progressLabel)
+	                            .font(.caption)
+	                            .foregroundStyle(Color.rossInk.opacity(0.6))
+	                    }
+
+	                    if let estimateLabel = alphaDownloadEstimateLabel(job) {
+	                        Text(estimateLabel)
+	                            .font(.caption2)
+	                            .foregroundStyle(Color.rossInk.opacity(0.52))
+	                    }
+	                }
+	                .accessibilityElement(children: .combine)
+	            } else if alphaDownloadShowsIndeterminateProgress(job) {
                 HStack(spacing: 8) {
                     ProgressView()
                         .controlSize(.small)
@@ -13319,12 +13919,18 @@ private struct AlphaPrivateAIJobCard: View {
                 .accessibilityElement(children: .combine)
             }
 
-            HStack(spacing: 10) {
-                Button("Pause") { model.pauseJob(job) }
-                    .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 16)
+            if canPause || canResume {
+                HStack(spacing: 10) {
+                    if canPause {
+                        Button("Pause") { model.pauseJob(job) }
+                            .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 16)
+                    }
 
-                Button("Resume") { model.resumeJob(job) }
-                    .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
+                    if canResume {
+                        Button(job.state == .failed ? "Retry" : "Resume") { model.resumeJob(job) }
+                            .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
+                    }
+                }
             }
         }
         .padding(14)
@@ -13344,6 +13950,12 @@ private struct AlphaPrivateAIInstalledPackCard: View {
         !pack.developmentOnly || alphaAllowsDevelopmentModelArtifacts()
     }
 
+    private var runtimeUnavailable: Bool {
+        pack.isActive &&
+            !pack.developmentOnly &&
+            model.activeRuntimeHealth?.available != true
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 12) {
@@ -13352,14 +13964,21 @@ private struct AlphaPrivateAIInstalledPackCard: View {
                         .font(.headline)
                         .foregroundStyle(Color.rossInk)
 
-                    Text(pack.developmentOnly ? "Private assistant needs attention" : "Private assistant is ready")
+                    Text(pack.developmentOnly ? "Private assistant needs attention" : (runtimeUnavailable ? "Model downloaded, runtime needs attention" : "Private assistant is ready"))
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(pack.developmentOnly ? Color.orange : Color.rossSuccess)
+                        .foregroundStyle(pack.developmentOnly || runtimeUnavailable ? Color.orange : Color.rossSuccess)
                 }
 
                 Spacer(minLength: 8)
 
-                AlphaPrivateAIInlineBadge(title: pack.developmentOnly ? "Needs attention" : "Ready", tint: Color.rossAccent)
+                AlphaPrivateAIInlineBadge(title: pack.developmentOnly || runtimeUnavailable ? "Needs attention" : "Ready", tint: Color.rossAccent)
+            }
+
+            if runtimeUnavailable, let runtimeStatus = model.activeRuntimeHealth?.userFacingStatus {
+                Text(runtimeStatus)
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             HStack(spacing: 10) {
@@ -13400,10 +14019,35 @@ private struct AlphaPrivateAIInlineBadge: View {
 
 private func alphaDownloadProgressLabel(_ job: AlphaModelDownloadJob) -> String? {
     guard job.totalBytes > 0 else { return nil }
-    let percent = Int((Double(job.bytesDownloaded) / Double(job.totalBytes)) * 100)
+    guard job.state == .downloading || job.state == .verifying else { return nil }
+    let rawPercent = Int((Double(job.bytesDownloaded) / Double(job.totalBytes)) * 100)
+    let percent = job.state == .verifying ? min(100, rawPercent) : min(99, rawPercent)
     let downloaded = ByteCountFormatter.string(fromByteCount: job.bytesDownloaded, countStyle: .file)
     let total = ByteCountFormatter.string(fromByteCount: job.totalBytes, countStyle: .file)
     return "\(percent)% downloaded • \(downloaded) of \(total)"
+}
+
+private func alphaDownloadEstimateLabel(_ job: AlphaModelDownloadJob) -> String? {
+    switch job.state {
+    case .downloading:
+        guard job.totalBytes > 0 else { return "Ross will update the estimate once the download starts moving." }
+        let remainingFraction = max(0, min(1, 1 - job.progress))
+        let baselineMinutes: Double
+        switch job.tier {
+        case .quickStart:
+            baselineMinutes = 2
+        case .caseAssociate:
+            baselineMinutes = 4
+        case .seniorDraftingSupport:
+            baselineMinutes = 7
+        }
+        let remainingMinutes = max(1, Int(ceil(baselineMinutes * remainingFraction)))
+        return "Estimate: about \(remainingMinutes) min left on good Wi-Fi."
+    case .verifying:
+        return "Final check usually takes less than a minute."
+    default:
+        return nil
+    }
 }
 
 private func alphaFieldSortRank(_ type: AlphaExtractedLegalFieldType) -> Int {

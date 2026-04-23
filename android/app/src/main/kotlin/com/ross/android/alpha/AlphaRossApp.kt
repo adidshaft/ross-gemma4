@@ -61,6 +61,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalDrawerSheet
@@ -1370,6 +1371,9 @@ private fun AlphaRootAskDock(
     val imageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) controller.importDocument(activeScopeCaseId, uri)
     }
+    val activeAskStatus = controller.askWorkStatus?.takeIf { status ->
+        status.scopeCaseId == activeScopeCaseId
+    }
 
     fun expandDock() {
         dockExpanded = true
@@ -1412,6 +1416,16 @@ private fun AlphaRootAskDock(
                 },
                 onOpenConversation = { controller.openAsk(activeScopeCaseId, fixedDocumentIds.singleOrNull()) },
                 onClose = { dismissedInlineQuestion = result.question },
+            )
+        }
+
+        activeAskStatus?.let { status ->
+            AlphaAssistantActivityStrip(
+                title = status.message,
+                detail = status.detail,
+                statusLabel = "Working",
+                tint = MaterialTheme.colorScheme.primary,
+                showProgress = true,
             )
         }
 
@@ -1489,8 +1503,8 @@ private fun AlphaRootAskDock(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         AlphaDockIconButton(
-                            asset = RossGlassAsset.BadgeSparkleAccent,
-                            label = "Ask Ross tools",
+                            icon = Icons.Outlined.Add,
+                            label = "Add files or tools",
                             tint = chromeForeground,
                         ) {
                             showTools = true
@@ -1884,24 +1898,27 @@ private fun AlphaDockIconButton(
     onClick: () -> Unit,
 ) {
     OutlinedCard(
+        modifier = Modifier.size(40.dp),
         shape = RoundedCornerShape(999.dp),
         colors = CardDefaults.outlinedCardColors(containerColor = fill),
         border = androidx.compose.foundation.BorderStroke(0.dp, Color.Transparent),
         onClick = onClick,
     ) {
-        if (asset != null) {
-            RossGlassIcon(
-                asset = asset,
-                label = label,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp).size(20.dp),
-            )
-        } else if (icon != null) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
-                tint = tint,
-            )
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            if (asset != null) {
+                RossGlassIcon(
+                    asset = asset,
+                    label = label,
+                    modifier = Modifier.size(20.dp),
+                )
+            } else if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    modifier = Modifier.size(20.dp),
+                    tint = tint,
+                )
+            }
         }
     }
 }
@@ -2078,6 +2095,7 @@ private fun AlphaPackSetupScreen(controller: AlphaRossController, onContinue: ()
                 detail = "You can start matters while Ross finishes the download.",
                 statusLabel = "Background",
                 tint = AlphaAmberStatus,
+                showProgress = true,
             )
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -2165,6 +2183,8 @@ private fun AlphaHomeScreen(
                     detail = alphaAssistantActivityDetail(activeJob.state),
                     statusLabel = alphaJobStatusLabel(activeJob.state),
                     tint = AlphaAmberStatus,
+                    progress = alphaJobProgressFraction(activeJob),
+                    showProgress = true,
                 )
             }
 
@@ -2512,6 +2532,12 @@ private fun AlphaCaptureScreen(
                 },
             )
             if (activeCase != null) {
+                val activeImports = activeCase.documents.filter { document ->
+                    document.extractionRuns.firstOrNull()?.status in setOf(
+                        AlphaExtractionRunStatus.Queued,
+                        AlphaExtractionRunStatus.Running,
+                    )
+                }
                 AlphaCard("Import into", activeCase.title) {
                     AlphaCaseScopeSelector(
                         selectedCaseId = controller.selectedCaseId ?: controller.cases.firstOrNull()?.id,
@@ -2526,6 +2552,18 @@ private fun AlphaCaptureScreen(
                 }
                 Button(onClick = { launcher.launch(arrayOf("application/pdf", "image/*", "text/plain")) }, modifier = Modifier.fillMaxWidth()) {
                     Text("Import file or image")
+                }
+                activeImports.take(2).forEach { document ->
+                    val run = document.extractionRuns.firstOrNull()
+                    AlphaAssistantActivityStrip(
+                        title = "Reviewing ${document.title}",
+                        detail = run?.let(::alphaExtractionProgressDetail)
+                            ?: "Ross is preparing source-backed review notes for this file.",
+                        statusLabel = run?.let(::alphaExtractionProgressLabel) ?: "Reviewing",
+                        tint = MaterialTheme.colorScheme.primary,
+                        progress = run?.let(::alphaExtractionProgressFraction),
+                        showProgress = true,
+                    )
                 }
             } else {
                 AlphaCard("Start with a matter first", "This keeps imported files, dates, and review notes together in the right place.") {
@@ -2998,10 +3036,13 @@ private fun AlphaDocumentViewerScreen(
                 val detailReviewFields = reviewFields.filterNot { alphaIsImportantReviewField(it.fieldType) }
                 val reviewFindings = doc.extractionFindings.filterNot { it.resolved }.take(4)
                 val reviewCount = reviewFields.count { it.needsReview } + reviewFindings.size
-            AlphaInlineHeader(
-                eyebrow = doc.kind.title,
-                detail = "Status: ${doc.lawyerStatusTitle()} · ${alphaPageCountLabel(doc.pageCount)} · ${alphaReviewNeedLabel(reviewCount)}",
-            )
+                val activeExtractionRun = doc.extractionRuns.firstOrNull {
+                    it.status == AlphaExtractionRunStatus.Queued || it.status == AlphaExtractionRunStatus.Running
+                }
+                AlphaInlineHeader(
+                    eyebrow = doc.kind.title,
+                    detail = "Status: ${doc.lawyerStatusTitle()} · ${alphaPageCountLabel(doc.pageCount)} · ${alphaReviewNeedLabel(reviewCount)}",
+                )
                 AlphaDocumentStatusCard(
                     reviewCount = reviewCount,
                     detail = controller.reviewSummary(caseId, documentId)
@@ -3010,6 +3051,7 @@ private fun AlphaDocumentViewerScreen(
                         } else {
                             "Verified details can be used in notes, tasks, and exports for this matter."
                         },
+                    activeRun = activeExtractionRun,
                 )
                 val file = controller.absoluteFile(doc.storedRelativePath).takeIf { it.exists() }
                 when {
@@ -3286,10 +3328,21 @@ private fun AlphaDocumentQuickAskStrip(title: String?, detail: String, isShared:
 }
 
 @Composable
-private fun AlphaDocumentStatusCard(reviewCount: Int, detail: String) {
-    val tint = if (reviewCount == 0) AlphaSuccessStatus else AlphaAmberStatus
-    val icon = if (reviewCount == 0) Icons.Outlined.CheckCircle else Icons.Outlined.WarningAmber
-    val title = if (reviewCount == 0) {
+private fun AlphaDocumentStatusCard(reviewCount: Int, detail: String, activeRun: AlphaExtractionRun? = null) {
+    val isActive = activeRun?.status == AlphaExtractionRunStatus.Queued || activeRun?.status == AlphaExtractionRunStatus.Running
+    val tint = when {
+        isActive -> MaterialTheme.colorScheme.primary
+        reviewCount == 0 -> AlphaSuccessStatus
+        else -> AlphaAmberStatus
+    }
+    val icon = when {
+        isActive -> Icons.Outlined.AutoAwesome
+        reviewCount == 0 -> Icons.Outlined.CheckCircle
+        else -> Icons.Outlined.WarningAmber
+    }
+    val title = if (isActive) {
+        "Ross is reviewing this document"
+    } else if (reviewCount == 0) {
         "Ready to use in this matter"
     } else if (reviewCount == 1) {
         "1 item needs your review below"
@@ -3318,7 +3371,26 @@ private fun AlphaDocumentStatusCard(reviewCount: Int, detail: String) {
 
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    activeRun?.let(::alphaExtractionProgressDetail) ?: detail,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (isActive) {
+                    LinearProgressIndicator(
+                        progress = { alphaExtractionProgressFraction(activeRun).coerceIn(0f, 1f) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 6.dp),
+                        color = tint,
+                        trackColor = tint.copy(alpha = 0.14f),
+                    )
+                    Text(
+                        alphaExtractionProgressLabel(activeRun),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = tint,
+                    )
+                }
             }
         }
     }
@@ -3673,6 +3745,8 @@ private fun AlphaSettingsScreen(
                     detail = alphaAssistantActivityDetail(activeJob.state),
                     statusLabel = alphaJobStatusLabel(activeJob.state),
                     tint = AlphaAmberStatus,
+                    progress = alphaJobProgressFraction(activeJob),
+                    showProgress = true,
                 )
             }
 
@@ -4082,6 +4156,7 @@ private fun AlphaSettingsSelectionRow(
 @Composable
 private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack: () -> Unit) {
     var showTechnicalDiagnostics by remember { mutableStateOf(false) }
+    var technicalTierId by rememberSaveable { mutableStateOf<String?>(null) }
     val privateAiStatus = alphaPrivateAiStatus(controller)
     AlphaShell(title = "Private assistant", showBack = true, onBack = onBack) {
         Column(
@@ -4098,6 +4173,8 @@ private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack
                         detail = alphaAssistantActivityDetail(activeJob.state),
                         statusLabel = alphaJobStatusLabel(activeJob.state),
                         tint = AlphaAmberStatus,
+                        progress = alphaJobProgressFraction(activeJob),
+                        showProgress = true,
                     )
                 }
             }
@@ -4119,7 +4196,18 @@ private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack
             }
             AlphaCapabilityTier.values().forEach { tier ->
                 AlphaCard(tier.title, tier.summary) {
-                    Text("${tier.downloadSizeLabel} download • ${tier.installedSizeLabel} installed • Wi-Fi preferred")
+                    Text(
+                        "${tier.bestFor} Wi-Fi is preferred for setup.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    TextButton(onClick = { technicalTierId = if (technicalTierId == tier.tierId) null else tier.tierId }) {
+                        Text(if (technicalTierId == tier.tierId) "Hide technical specifications" else "Technical specifications")
+                    }
+                    if (technicalTierId == tier.tierId) {
+                        AlphaSettingsValueRow(label = "Download", value = tier.downloadSizeLabel)
+                        AlphaSettingsValueRow(label = "On-device storage", value = tier.installedSizeLabel)
+                        AlphaSettingsValueRow(label = "Setup estimate", value = tier.setupTimeLabel)
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(
                         onClick = { controller.startPackInstall(tier, controller.persisted.settings.allowMobileDataForLargePacks || tier == AlphaCapabilityTier.QuickStart) },
@@ -4129,11 +4217,14 @@ private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack
             }
             controller.persisted.modelJobs.forEach { job ->
                 AlphaCard(job.tier.title, "Setup in progress") {
-                    Text(alphaJobStatusLabel(job.state), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    alphaJobProgressLabel(job)?.let {
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                    AlphaAssistantActivityStrip(
+                        title = "${job.tier.title} setup",
+                        detail = alphaAssistantActivityDetail(job.state),
+                        statusLabel = alphaJobProgressLabel(job) ?: alphaJobStatusLabel(job.state),
+                        tint = AlphaAmberStatus,
+                        progress = alphaJobProgressFraction(job),
+                        showProgress = true,
+                    )
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = { controller.pauseJob(job.id) }) { Text("Pause") }
@@ -4143,8 +4234,6 @@ private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack
             }
             controller.persisted.installedPacks.forEach { pack ->
                 AlphaCard(pack.tier.title, "Private assistant is ready") {
-                    Text("Storage: ${pack.tier.installedSizeLabel}")
-                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         when (pack.tier) {
                             AlphaCapabilityTier.QuickStart -> "Best for shorter documents. Longer files may use basic local review."
@@ -4153,6 +4242,14 @@ private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack
                         },
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    TextButton(onClick = { technicalTierId = if (technicalTierId == pack.tier.tierId) null else pack.tier.tierId }) {
+                        Text(if (technicalTierId == pack.tier.tierId) "Hide technical specifications" else "Technical specifications")
+                    }
+                    if (technicalTierId == pack.tier.tierId) {
+                        AlphaSettingsValueRow(label = "Storage", value = pack.tier.installedSizeLabel)
+                        AlphaSettingsValueRow(label = "Runtime", value = pack.runtimeMode.wireValue)
+                        AlphaSettingsValueRow(label = "Artifact", value = pack.artifactKind)
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = { controller.activatePack(pack.id) }) { Text("Use this level") }
@@ -4427,7 +4524,7 @@ private fun AlphaSelectableBar(
                         }
                     }
                     Text(
-                        "${tier.compactSetupSummary} • ${tier.downloadSizeLabel} • ${tier.setupTimeLabel}",
+                        "${tier.compactSetupSummary} • ${tier.setupTimeLabel} setup • ${tier.storageNote}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 3,
@@ -4461,6 +4558,7 @@ private fun AlphaPackTierSheetContent(
     onDismiss: () -> Unit,
 ) {
     val tint = alphaTierTint(tier)
+    var showTechnicalSpecifications by rememberSaveable(tier.tierId) { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -4501,22 +4599,21 @@ private fun AlphaPackTierSheetContent(
             )
         }
 
-        Text(
-            "${tier.downloadSizeLabel} download • ${tier.setupTimeLabel}",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Text(
-            "${tier.installedSizeLabel} on device • ${tier.storageNote}",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
         Text(tier.bestFor, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(
             "Setup keeps running after you continue. Ross keeps progress visible in Settings.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        TextButton(onClick = { showTechnicalSpecifications = !showTechnicalSpecifications }) {
+            Text(if (showTechnicalSpecifications) "Hide technical specifications" else "Technical specifications")
+        }
+        if (showTechnicalSpecifications) {
+            AlphaSettingsValueRow(label = "Download", value = tier.downloadSizeLabel)
+            AlphaSettingsValueRow(label = "On-device storage", value = tier.installedSizeLabel)
+            AlphaSettingsValueRow(label = "Setup estimate", value = tier.setupTimeLabel)
+            AlphaSettingsValueRow(label = "Review depth", value = tier.extractionQuality)
+        }
 
         Button(
             onClick = if (selected) onDismiss else onUseTier,
@@ -4646,32 +4743,51 @@ private fun AlphaAssistantActivityStrip(
     detail: String,
     statusLabel: String,
     tint: Color,
+    progress: Float? = null,
+    showProgress: Boolean = false,
 ) {
     OutlinedCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.18f)),
     ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.Top,
-        ) {
-            Box(
-                modifier = Modifier
-                    .padding(top = 4.dp)
-                    .size(10.dp)
-                    .background(tint, shape = RoundedCornerShape(999.dp))
-            )
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.Top,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .padding(top = 4.dp)
+                        .size(10.dp)
+                        .background(tint, shape = RoundedCornerShape(999.dp))
+                )
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                    Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Text(
+                    statusLabel,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = tint,
+                )
             }
-            Text(
-                statusLabel,
-                style = MaterialTheme.typography.labelMedium,
-                color = tint,
-            )
+            if (showProgress) {
+                if (progress == null) {
+                    LinearProgressIndicator(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = tint,
+                        trackColor = tint.copy(alpha = 0.14f),
+                    )
+                } else {
+                    LinearProgressIndicator(
+                        progress = { progress.coerceIn(0f, 1f) },
+                        modifier = Modifier.fillMaxWidth(),
+                        color = tint,
+                        trackColor = tint.copy(alpha = 0.14f),
+                    )
+                }
+            }
         }
     }
 }
@@ -6181,7 +6297,7 @@ private fun alphaAssistantActivityDetail(state: AlphaDownloadState): String = wh
     AlphaDownloadState.PausedUser -> "Setup is paused. You can continue working and resume whenever you are ready."
     AlphaDownloadState.PausedNoStorage -> "Ross needs more free space before the assistant can finish setting up."
     AlphaDownloadState.PausedError,
-    AlphaDownloadState.Failed -> "Ross hit a setup problem. Open device setup to resume or choose another model."
+    AlphaDownloadState.Failed -> "Ross hit a setup problem. Open device setup to resume or choose another assistant level."
     AlphaDownloadState.NotStarted,
     AlphaDownloadState.Installed,
     AlphaDownloadState.Cancelled -> "No setup is running right now."
@@ -6204,6 +6320,57 @@ private fun alphaJobProgressLabel(job: AlphaModelDownloadJob): String? {
     if (job.totalBytes <= 0) return null
     val percent = ((job.bytesDownloaded.toDouble() / job.totalBytes.toDouble()) * 100).toInt()
     return "$percent% downloaded"
+}
+
+private fun alphaJobProgressFraction(job: AlphaModelDownloadJob): Float? {
+    if (job.totalBytes <= 0) return null
+    return (job.bytesDownloaded.toDouble() / job.totalBytes.toDouble()).toFloat()
+}
+
+private fun alphaExtractionProgressLabel(run: AlphaExtractionRun): String = when (run.progressState) {
+    AlphaExtractionProgressState.AcquiringText -> "Reading file"
+    AlphaExtractionProgressState.DetectingLanguage -> "Checking language"
+    AlphaExtractionProgressState.ExtractingFields -> "Finding details"
+    AlphaExtractionProgressState.VerifyingFields -> "Checking sources"
+    AlphaExtractionProgressState.PreparingReview -> "Preparing review"
+    AlphaExtractionProgressState.Complete -> "Complete"
+    AlphaExtractionProgressState.NeedsReview -> "Needs review"
+    AlphaExtractionProgressState.Failed -> "Needs attention"
+}
+
+private fun alphaExtractionProgressDetail(run: AlphaExtractionRun): String {
+    val pages = if (run.totalPages > 0) {
+        " Page ${run.pagesProcessed.coerceAtMost(run.totalPages)} of ${run.totalPages}."
+    } else {
+        ""
+    }
+    return when (run.progressState) {
+        AlphaExtractionProgressState.AcquiringText -> "Ross is reading the file on this device.$pages"
+        AlphaExtractionProgressState.DetectingLanguage -> "Ross is checking language and script before extraction.$pages"
+        AlphaExtractionProgressState.ExtractingFields -> "Ross is finding parties, dates, directions, and other source-backed details.$pages"
+        AlphaExtractionProgressState.VerifyingFields -> "Ross is checking each detail against the source text.$pages"
+        AlphaExtractionProgressState.PreparingReview -> "Ross is preparing the review queue and source anchors.$pages"
+        AlphaExtractionProgressState.Complete -> "Ross finished local review."
+        AlphaExtractionProgressState.NeedsReview -> "Ross found items that need advocate review."
+        AlphaExtractionProgressState.Failed -> run.errorMessage ?: "Ross could not finish review for this file."
+    }
+}
+
+private fun alphaExtractionProgressFraction(run: AlphaExtractionRun): Float {
+    if (run.totalPages > 0 && run.pagesProcessed > 0) {
+        val pageProgress = run.pagesProcessed.toFloat() / run.totalPages.toFloat()
+        return pageProgress.coerceIn(0.12f, 0.92f)
+    }
+    return when (run.progressState) {
+        AlphaExtractionProgressState.AcquiringText -> 0.14f
+        AlphaExtractionProgressState.DetectingLanguage -> 0.32f
+        AlphaExtractionProgressState.ExtractingFields -> 0.52f
+        AlphaExtractionProgressState.VerifyingFields -> 0.72f
+        AlphaExtractionProgressState.PreparingReview -> 0.88f
+        AlphaExtractionProgressState.Complete -> 1f
+        AlphaExtractionProgressState.NeedsReview -> 1f
+        AlphaExtractionProgressState.Failed -> 1f
+    }
 }
 
 private fun Boolean.thenCompleted(): String = if (this) "Completed" else "Needs attention"

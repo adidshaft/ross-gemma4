@@ -329,6 +329,14 @@ data class AlphaModelDownloadJob(
     val completedAt: String? = null,
 )
 
+data class AlphaAskWorkStatus(
+    val question: String,
+    val scopeCaseId: String?,
+    val message: String,
+    val detail: String,
+    val startedAt: String = nowIso(),
+)
+
 data class AlphaInstalledPack(
     val id: String = UUID.randomUUID().toString(),
     val packId: String,
@@ -548,6 +556,7 @@ internal class AlphaRossController(
     var pendingPublicLawQuestion by mutableStateOf<String?>(null)
     var pendingPublicLawScopeCaseId by mutableStateOf<String?>(null)
     var latestAskResult by mutableStateOf<AlphaAskResult?>(null)
+    var askWorkStatus by mutableStateOf<AlphaAskWorkStatus?>(null)
     var askHistory by mutableStateOf(seedAskHistory(persisted.cases))
     var publicLawDraft by mutableStateOf("Find Supreme Court guidance on delay condonation where diligence is documented but filing was disrupted.")
     var publicLawPreview by mutableStateOf<AlphaPublicLawPreview?>(null)
@@ -1573,6 +1582,13 @@ internal class AlphaRossController(
     fun submitAsk(question: String, scopeCaseId: String?, webEnabled: Boolean) {
         val cleaned = question.trim()
         if (cleaned.isEmpty()) return
+        askWorkStatus = AlphaAskWorkStatus(
+            question = cleaned,
+            scopeCaseId = scopeCaseId,
+            message = "Ross is reviewing your question",
+            detail = "Checking the selected matter, files, tasks, and review notes on this device.",
+        )
+        val localStatusStartedAt = askWorkStatus?.startedAt
         val localResult = buildLocalAskResult(cleaned, scopeCaseId)
         appendAskResult(localResult, scopeCaseId)
         latestAskResult = localResult
@@ -1600,6 +1616,16 @@ internal class AlphaRossController(
             latestAskResult = latestAskResult?.copy(statusNote = "Web search off")
             updateLatestAskHistory(scopeCaseId, cleaned) { result ->
                 result.copy(publicLawPreview = null, statusNote = "Web search off")
+            }
+        }
+        scope.launch {
+            delay(900)
+            if (
+                askWorkStatus?.question == cleaned &&
+                askWorkStatus?.scopeCaseId == scopeCaseId &&
+                askWorkStatus?.startedAt == localStatusStartedAt
+            ) {
+                askWorkStatus = null
             }
         }
     }
@@ -1975,22 +2001,34 @@ internal class AlphaRossController(
         )
 
         scope.launch {
-            val output = provider.run(input)
-            val payload = matterAskPayload(output, fallbackResult) ?: return@launch
-            val sourceRefs = output.sourceRefs.ifEmpty { fallbackResult.caseFileSources }.take(3)
-            val update: (AlphaAskResult) -> AlphaAskResult = { result ->
-                result.copy(
-                    answerTitle = payload.headline,
-                    answerSections = payload.sections,
-                    caseFileSources = sourceRefs,
-                    statusNote = payload.statusNote ?: result.statusNote,
-                )
+            askWorkStatus = AlphaAskWorkStatus(
+                question = question,
+                scopeCaseId = scopeCaseId,
+                message = "Private assistant is refining the answer",
+                detail = "Ross is checking local source text again before updating the response.",
+            )
+            try {
+                val output = provider.run(input)
+                val payload = matterAskPayload(output, fallbackResult) ?: return@launch
+                val sourceRefs = output.sourceRefs.ifEmpty { fallbackResult.caseFileSources }.take(3)
+                val update: (AlphaAskResult) -> AlphaAskResult = { result ->
+                    result.copy(
+                        answerTitle = payload.headline,
+                        answerSections = payload.sections,
+                        caseFileSources = sourceRefs,
+                        statusNote = payload.statusNote ?: result.statusNote,
+                    )
+                }
+                latestAskResult = latestAskResult?.let { current ->
+                    if (current.scopeCaseId == scopeCaseId && current.question == question) update(current) else current
+                }
+                updateLatestAskHistory(scopeCaseId, question, update)
+                updateLatestStoredChatTurn(scopeCaseId, question, payload, sourceRefs)
+            } finally {
+                if (askWorkStatus?.question == question && askWorkStatus?.scopeCaseId == scopeCaseId) {
+                    askWorkStatus = null
+                }
             }
-            latestAskResult = latestAskResult?.let { current ->
-                if (current.scopeCaseId == scopeCaseId && current.question == question) update(current) else current
-            }
-            updateLatestAskHistory(scopeCaseId, question, update)
-            updateLatestStoredChatTurn(scopeCaseId, question, payload, sourceRefs)
         }
     }
 

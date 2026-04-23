@@ -2,6 +2,9 @@ import Foundation
 #if canImport(FoundationModels)
 import FoundationModels
 #endif
+#if canImport(SwiftGemmaRuntime)
+import SwiftGemmaRuntime
+#endif
 
 enum AlphaLocalModelTask: String, Codable, Hashable, Sendable {
     case ocrCleanup = "ocr_cleanup"
@@ -348,6 +351,194 @@ struct AlphaUnavailableRealLocalModelProvider: AlphaRealLocalModelProvider {
     func cancel(invocationID: UUID) -> Bool { false }
 }
 
+#if canImport(SwiftGemmaRuntime)
+struct AlphaGemmaLocalModelProvider: AlphaRealLocalModelProvider {
+    let capabilityTier: AlphaCapabilityTier
+    let modelPath: String
+    let modelPathLabel: String?
+    let checksumVerified: Bool
+    let service: GemmaService
+    let runtimeMode: AlphaPackRuntimeMode = .llamaCppGguf
+
+    init(
+        capabilityTier: AlphaCapabilityTier,
+        modelPath: String,
+        modelPathLabel: String?,
+        checksumVerified: Bool
+    ) {
+        self.capabilityTier = capabilityTier
+        self.modelPath = modelPath
+        self.modelPathLabel = modelPathLabel
+        self.checksumVerified = checksumVerified
+        self.service = GemmaService(
+            modelUrl: URL(fileURLWithPath: modelPath),
+            config: GemmaConfig(batchSize: 256, maxTokenCount: UInt32(Self.contextTokens(for: capabilityTier)), useGPU: true)
+        )
+    }
+
+    func isAvailable() -> Bool {
+        FileManager.default.fileExists(atPath: modelPath)
+    }
+
+    func supportedTasks() -> Set<AlphaLocalModelTask> {
+        Set(AlphaLocalModelTask.allCases)
+    }
+
+    func runtimeHealth() -> AlphaLocalRuntimeHealth {
+        AlphaLocalRuntimeHealth(
+            runtimeMode: runtimeMode,
+            available: isAvailable(),
+            modelPathPresent: isAvailable(),
+            modelPathLabel: modelPathLabel,
+            checksumVerified: checksumVerified,
+            supportedTasks: Array(supportedTasks()),
+            maxInputChars: maxInputChars(),
+            estimatedContextTokens: contextWindowEstimate(),
+            lastErrorCategory: isAvailable() ? nil : "missing_model_file",
+            userFacingStatus: isAvailable()
+                ? "Gemma 4 Q4 local runtime is ready with llama.cpp."
+                : "The downloaded Gemma 4 Q4 model file is missing from app-private storage.",
+            fallbackActive: !isAvailable(),
+            explicitOptInEnabled: true
+        )
+    }
+
+    func contextWindowEstimate() -> Int? {
+        Self.contextTokens(for: capabilityTier)
+    }
+
+    func maxInputChars() -> Int? {
+        switch capabilityTier {
+        case .quickStart:
+            return 6_000
+        case .caseAssociate:
+            return 10_000
+        case .seniorDraftingSupport:
+            return 14_000
+        }
+    }
+
+    func run(_ taskInput: AlphaLocalModelInput) async -> AlphaLocalModelOutput {
+        let pack = AlphaPromptPackBuilder(maxInputChars: maxInputChars() ?? 10_000).build(input: taskInput)
+        let messages = [
+            GemmaChatMessage(
+                role: .system,
+                content: """
+                You are Ross, a private legal assistant running fully on this iPhone.
+                Use only the provided source blocks. Do not invent facts.
+                Return only JSON that matches the expected schema when a schema is provided.
+                Every accepted legal field must cite source refs from the prompt.
+                If evidence is weak, use needs_review or not_found instead of guessing.
+                """
+            ),
+            GemmaChatMessage(
+                role: .user,
+                content: pack.promptText + "\n\nReturn JSON only. /no_think"
+            )
+        ]
+
+        do {
+            let response = try await service.respond(
+                to: messages,
+                samplingConfig: GemmaSamplingConfig(
+                    temperature: 0.7,
+                    seed: UInt32(truncatingIfNeeded: taskInput.instruction.hashValue),
+                    topP: 0.8,
+                    topK: 20,
+                    minKeep: 1
+                )
+            )
+            let parsedJson = Self.extractLikelyJSON(from: response)
+            return AlphaLocalModelOutput(
+                rawText: response,
+                parsedJson: parsedJson,
+                schemaValid: parsedJson != nil,
+                warnings: pack.truncated ? ["Prompt pack was truncated to stay inside the local Gemma 4 Q4 runtime budget."] : [],
+                sourceRefs: pack.includedSourceRefs.isEmpty ? taskInput.sourcePack.map(\.sourceRef) : pack.includedSourceRefs
+            )
+        } catch {
+            return AlphaLocalModelOutput(
+                rawText: "",
+                parsedJson: nil,
+                schemaValid: false,
+                warnings: ["Local Gemma 4 Q4 inference failed: \(error.localizedDescription)"],
+                sourceRefs: pack.includedSourceRefs.isEmpty ? taskInput.sourcePack.map(\.sourceRef) : pack.includedSourceRefs,
+                errorCategory: "local_gguf_inference_failed"
+            )
+        }
+    }
+
+    func estimateCostOrResourceUse(_ input: AlphaLocalModelInput) -> AlphaLocalModelResourceEstimate {
+        let pack = AlphaPromptPackBuilder(maxInputChars: maxInputChars() ?? 10_000).build(input: input)
+        return AlphaLocalModelResourceEstimate(
+            inputChars: pack.inputChars,
+            estimatedTokens: pack.estimatedTokens,
+            estimatedRuntimeMs: max(pack.estimatedTokens ?? 1, 1) * 8,
+            estimatedMemoryMb: Self.estimatedMemoryMB(for: capabilityTier),
+            estimatedDurationSeconds: max((pack.estimatedTokens ?? 1) / 12, 1),
+            shouldRunNow: !pack.truncated && isAvailable(),
+            reason: pack.truncated ? "Prompt pack exceeded the local Gemma 4 Q4 runtime budget." : nil,
+            notes: ["llama.cpp Gemma 4 Q4 runtime estimate."]
+        )
+    }
+
+    func cancel(invocationID: UUID) -> Bool { false }
+
+    private static func contextTokens(for tier: AlphaCapabilityTier) -> Int {
+        switch tier {
+        case .quickStart:
+            return 4_096
+        case .caseAssociate, .seniorDraftingSupport:
+            return 8_192
+        }
+    }
+
+    private static func estimatedMemoryMB(for tier: AlphaCapabilityTier) -> Int {
+        switch tier {
+        case .quickStart:
+            return 1_200
+        case .caseAssociate:
+            return 2_400
+        case .seniorDraftingSupport:
+            return 4_800
+        }
+    }
+
+    private static func extractLikelyJSON(from text: String) -> String? {
+        guard let startIndex = text.firstIndex(where: { $0 == "{" || $0 == "[" }) else { return nil }
+        let candidate = text[startIndex...]
+        var depth = 0
+        var inString = false
+        var escaped = false
+        for index in candidate.indices {
+            let character = candidate[index]
+            if escaped {
+                escaped = false
+                continue
+            }
+            if character == "\\" {
+                escaped = true
+                continue
+            }
+            if character == "\"" {
+                inString.toggle()
+                continue
+            }
+            guard !inString else { continue }
+            if character == "{" || character == "[" {
+                depth += 1
+            } else if character == "}" || character == "]" {
+                depth -= 1
+                if depth == 0 {
+                    return String(candidate[...index])
+                }
+            }
+        }
+        return nil
+    }
+}
+#endif
+
 #if canImport(FoundationModels)
 @available(iOS 26.0, macOS 26.0, *)
 struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
@@ -650,14 +841,29 @@ enum AlphaLocalModelRuntime {
                 explicitOptInEnabled: debug.enableRealInference
             )
         case .llamaCppGguf:
-                return AlphaUnavailableRealLocalModelProvider(
+            #if canImport(SwiftGemmaRuntime)
+            if let modelPath {
+                return AlphaGemmaLocalModelProvider(
+                    capabilityTier: tier,
+                    modelPath: modelPath,
+                    modelPathLabel: modelPathLabel,
+                    checksumVerified: checksumVerified
+                )
+            }
+            let statusMessage = "The Gemma 4 Q4 runtime is linked, but this pack does not have a model file path."
+            let errorCategory = "missing_model_file"
+            #else
+            let statusMessage = "The Gemma 4 Q4 runtime bridge is not linked in this iOS build."
+            let errorCategory = "runtime_dependency_unavailable"
+            #endif
+            return AlphaUnavailableRealLocalModelProvider(
                     capabilityTier: tier,
                     runtimeMode: .llamaCppGguf,
                     modelPathLabel: modelPathLabel,
                     checksumVerified: checksumVerified,
-                statusMessage: "Gemma 4 Q4 local runtime remains unavailable on iOS in this alpha. Ross will keep deterministic fallback active.",
+                statusMessage: statusMessage,
                 plannedTasks: [.documentClassification, .legalFieldExtraction, .legalFieldVerification, .caseMemorySynthesis, .chronologyGeneration, .orderSummary],
-                errorCategory: "unsupported_runtime",
+                errorCategory: errorCategory,
                 fallbackActive: true,
                 explicitOptInEnabled: debug.enableRealInference
             )

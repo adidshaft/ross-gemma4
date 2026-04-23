@@ -238,6 +238,35 @@ actor AlphaRossStore {
         return (relativePath(for: artifactURL), checksum, Int64(data.count))
     }
 
+    func installDownloadedPackArtifact(
+        for tier: AlphaCapabilityTier,
+        fileName: String,
+        downloadedFileURL: URL,
+        expectedChecksum: String
+    ) throws -> (relativePath: String, checksum: String, bytes: Int64) {
+        try ensureFolders()
+        let verified = try sha256Hex(forFileAt: downloadedFileURL)
+        guard expectedChecksum.isEmpty || verified.checksum.caseInsensitiveCompare(expectedChecksum) == .orderedSame else {
+            throw NSError(domain: "RossAlphaPack", code: 2, userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."])
+        }
+
+        let folder = modelPacksURL.appendingPathComponent(tier.rawValue, isDirectory: true)
+        try fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
+        let artifactURL = folder.appendingPathComponent(fileName)
+        if fileManager.fileExists(atPath: artifactURL.path()) {
+            try fileManager.removeItem(at: artifactURL)
+        }
+
+        do {
+            try fileManager.moveItem(at: downloadedFileURL, to: artifactURL)
+        } catch {
+            try fileManager.copyItem(at: downloadedFileURL, to: artifactURL)
+            try? fileManager.removeItem(at: downloadedFileURL)
+        }
+
+        return (relativePath(for: artifactURL), verified.checksum, verified.bytes)
+    }
+
     func createPDFExport(title: String, kind: String, caseId: UUID?, bodyLines: [String]) throws -> AlphaExportedReport {
         try ensureFolders()
         let fileName = "\(safeFileName(title))-\(UUID().uuidString.prefix(8)).pdf"
@@ -263,6 +292,23 @@ actor AlphaRossStore {
         if fileManager.fileExists(atPath: legacyStateURL.path()) {
             try? fileManager.removeItem(at: legacyStateURL)
         }
+    }
+
+    private func sha256Hex(forFileAt url: URL) throws -> (checksum: String, bytes: Int64) {
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { try? handle.close() }
+
+        var hasher = SHA256()
+        var bytes: Int64 = 0
+        while true {
+            let chunk = try handle.read(upToCount: 1_048_576) ?? Data()
+            guard !chunk.isEmpty else { break }
+            bytes += Int64(chunk.count)
+            hasher.update(data: chunk)
+        }
+
+        let checksum = hasher.finalize().map { String(format: "%02x", $0) }.joined()
+        return (checksum, bytes)
     }
 
     private func ensureFolders() throws {

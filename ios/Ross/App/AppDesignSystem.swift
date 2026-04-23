@@ -32,9 +32,9 @@ public struct RossCardStyle: ViewModifier {
                             .fill(
                                 LinearGradient(
                                     colors: [
-                                        Color.white.opacity(0.10),
-                                        Color(red: 0.13, green: 0.14, blue: 0.16).opacity(0.82),
-                                        Color.black.opacity(0.34)
+                                        Color.white.opacity(0.045),
+                                        Color.rossGlassSubtleFill.opacity(0.94),
+                                        Color.rossGlassFill.opacity(0.82)
                                     ],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
@@ -45,9 +45,9 @@ public struct RossCardStyle: ViewModifier {
                             .fill(
                                 LinearGradient(
                                     colors: [
-                                        Color.white.opacity(0.10),
+                                        Color.white.opacity(0.045),
                                         Color.clear,
-                                        Color.white.opacity(0.035)
+                                        Color.white.opacity(0.02)
                                     ],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
@@ -64,9 +64,9 @@ public struct RossCardStyle: ViewModifier {
                     colorScheme == .dark
                         ? LinearGradient(
                             colors: [
-                                Color.white.opacity(0.20),
-                                Color.white.opacity(0.055),
-                                Color.black.opacity(0.24)
+                                Color.white.opacity(0.13),
+                                Color.white.opacity(0.045),
+                                Color.black.opacity(0.10)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -85,7 +85,7 @@ public struct RossCardStyle: ViewModifier {
                         .stroke(
                             LinearGradient(
                                 colors: [
-                                    Color.white.opacity(0.16),
+                                    Color.white.opacity(0.08),
                                     Color.clear
                                 ],
                                 startPoint: .top,
@@ -98,10 +98,10 @@ public struct RossCardStyle: ViewModifier {
             }
             .clipShape(shape)
             .shadow(
-                color: colorScheme == .dark ? Color.black.opacity(0.28) : Color.rossShadow.opacity(0.14),
-                radius: colorScheme == .dark ? 18 : 10,
+                color: colorScheme == .dark ? Color.black.opacity(0.18) : Color.rossShadow.opacity(0.14),
+                radius: colorScheme == .dark ? 12 : 10,
                 x: 0,
-                y: colorScheme == .dark ? 10 : 5
+                y: colorScheme == .dark ? 6 : 5
             )
     }
 }
@@ -160,9 +160,9 @@ public struct RossGlassButtonStyle: ButtonStyle {
                         .fill(
                             LinearGradient(
                                 colors: [
-                                    Color.rossGlassFill.opacity(isPressed ? 0.72 : 0.94),
-                                    tint.opacity(isPressed ? 0.05 : 0.1),
-                                    Color.rossGlassSubtleFill.opacity(isPressed ? 0.7 : 0.88)
+                                    Color.rossGlassFill.opacity(isPressed ? 0.70 : 0.90),
+                                    tint.opacity(isPressed ? 0.035 : 0.075),
+                                    Color.rossGlassSubtleFill.opacity(isPressed ? 0.66 : 0.82)
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
@@ -175,8 +175,8 @@ public struct RossGlassButtonStyle: ButtonStyle {
                     .strokeBorder(
                         LinearGradient(
                             colors: [
-                                Color.rossGlassStroke.opacity(isPressed ? 0.42 : 0.72),
-                                tint.opacity(isPressed ? 0.14 : 0.24)
+                                Color.rossGlassStroke.opacity(isPressed ? 0.32 : 0.54),
+                                tint.opacity(isPressed ? 0.10 : 0.18)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -185,9 +185,9 @@ public struct RossGlassButtonStyle: ButtonStyle {
                     )
             }
             .shadow(
-                color: Color.rossShadow.opacity(isPressed ? 0.12 : 0.22),
-                radius: isPressed ? 8 : 18,
-                y: isPressed ? 4 : 10
+                color: Color.rossShadow.opacity(isPressed ? 0.10 : 0.16),
+                radius: isPressed ? 6 : 12,
+                y: isPressed ? 3 : 6
             )
             .scaleEffect(isPressed ? 0.985 : 1)
             .animation(.easeOut(duration: 0.18), value: isPressed)
