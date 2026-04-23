@@ -36,6 +36,17 @@ private extension AlphaRoute {
     }
 }
 
+private extension View {
+    @ViewBuilder
+    func alphaDismissesKeyboardOnScroll() -> some View {
+        #if os(iOS)
+        self.scrollDismissesKeyboard(.interactively)
+        #else
+        self
+        #endif
+    }
+}
+
 struct AlphaLocalInferenceSmokeReport: Hashable {
     var ran: Bool
     var runtimeUsed: String
@@ -5451,6 +5462,7 @@ private struct AlphaRootAskDock: View {
     @State private var showingExpandedComposer = false
     @State private var dockExpanded = false
     @State private var pendingCollapseQuestion: String?
+    @FocusState private var dockComposerFocused: Bool
 
     init(
         model: AlphaRossModel,
@@ -5614,6 +5626,7 @@ private struct AlphaRootAskDock: View {
     private func send(dismissingExpandedComposer: Bool = false) {
         let question = draftText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !question.isEmpty else { return }
+        dockComposerFocused = false
         if !fixedDocumentIDs.isEmpty {
             model.setSelectedAskDocumentIDs(fixedDocumentIDs, for: activeScopeCaseID)
         }
@@ -5741,8 +5754,39 @@ private struct AlphaRootAskDock: View {
                         .textFieldStyle(.plain)
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(dockPrimaryText)
+                        .focused($dockComposerFocused)
+                        .submitLabel(.send)
+                        .onSubmit {
+                            if canSend {
+                                send()
+                            }
+                        }
+                        .toolbar {
+                            #if os(iOS)
+                            ToolbarItemGroup(placement: .keyboard) {
+                                Spacer()
+                                Button("Hide keyboard") {
+                                    dockComposerFocused = false
+                                }
+                            }
+                            #endif
+                        }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+
+                if dockComposerFocused {
+                    Button {
+                        dockComposerFocused = false
+                    } label: {
+                        Image(systemName: "keyboard.chevron.compact.down")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(dockPrimaryText.opacity(0.84))
+                            .frame(width: 24, height: 24)
+                            .background(dockBadgeFill, in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Hide keyboard")
+                }
 
                 Button {
                     showingExpandedComposer = true
@@ -5861,6 +5905,7 @@ private struct AlphaRootAskDock: View {
                 expandedDock
             }
         }
+        .alphaDismissesKeyboardOnScroll()
         .sheet(isPresented: $showingExpandedComposer) {
             AlphaAskComposerSheet(
                 model: model,
@@ -6063,9 +6108,8 @@ private struct AlphaAskScopePill: View {
         }
         .font(.caption2.weight(.semibold))
         .foregroundStyle(foregroundStyle)
-        .frame(minHeight: 30)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
+        .padding(.horizontal, AlphaAskPillMetrics.horizontalPadding)
+        .frame(height: AlphaAskPillMetrics.height)
         .background(Color.white.opacity(backgroundOpacity), in: Capsule())
     }
 }
@@ -6073,6 +6117,12 @@ private struct AlphaAskScopePill: View {
 private enum AlphaAskSurfaceTone {
     case dock
     case sheet
+}
+
+private enum AlphaAskPillMetrics {
+    static let height: CGFloat = 36
+    static let horizontalPadding: CGFloat = 11
+    static let cornerRadius: CGFloat = 18
 }
 
 private struct AlphaAskSelectionChip: View {
@@ -6141,15 +6191,14 @@ private struct AlphaAskSelectionChip: View {
         }
         .font(.caption.weight(.semibold))
         .foregroundStyle(tone == .dock ? dockForeground : Color.rossInk.opacity(0.82))
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .frame(minHeight: 36)
+        .padding(.horizontal, AlphaAskPillMetrics.horizontalPadding)
+        .frame(height: AlphaAskPillMetrics.height)
         .background(
             tone == .dock ? dockBackground : Color.rossGlassSubtleFill,
-            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+            in: RoundedRectangle(cornerRadius: AlphaAskPillMetrics.cornerRadius, style: .continuous)
         )
         .overlay {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: AlphaAskPillMetrics.cornerRadius, style: .continuous)
                 .stroke(
                     tone == .dock ? dockStroke : Color.rossGlassStroke.opacity(0.82),
                     lineWidth: 1
@@ -6306,6 +6355,7 @@ private struct AlphaAskComposerSheet: View {
     let onSelectMention: (AlphaAskDocumentOption) -> Void
     let onRemoveDocumentSelection: (UUID) -> Void
     let onSend: () -> Void
+    @FocusState private var composerFocused: Bool
 
     private var activeScopeCaseID: UUID? {
         fixedScopeCaseID ?? model.askSelectedScopeCaseID
@@ -6342,6 +6392,10 @@ private struct AlphaAskComposerSheet: View {
         !draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    private func hideKeyboard() {
+        composerFocused = false
+    }
+
     var body: some View {
         GeometryReader { proxy in
             VStack(alignment: .leading, spacing: 18) {
@@ -6360,7 +6414,11 @@ private struct AlphaAskComposerSheet: View {
                     Spacer(minLength: 8)
 
                     Button("Done") {
-                        dismiss()
+                        if composerFocused {
+                            hideKeyboard()
+                        } else {
+                            dismiss()
+                        }
                     }
                     .rossGlassButtonStyle(tint: Color.rossAccent, expandsHorizontally: false)
                 }
@@ -6446,9 +6504,20 @@ private struct AlphaAskComposerSheet: View {
                         .scrollContentBackground(.hidden)
                         .font(.footnote)
                         .foregroundStyle(Color.rossInk)
+                        .focused($composerFocused)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 12)
+                        .toolbar {
+                            #if os(iOS)
+                            ToolbarItemGroup(placement: .keyboard) {
+                                Spacer()
+                                Button("Hide keyboard") {
+                                    hideKeyboard()
+                                }
+                            }
+                            #endif
+                        }
                 }
                 .frame(
                     maxWidth: .infinity,
@@ -6474,6 +6543,7 @@ private struct AlphaAskComposerSheet: View {
                 }
 
                 Button {
+                    hideKeyboard()
                     onSend()
                 } label: {
                     Text("Send")
@@ -6488,6 +6558,7 @@ private struct AlphaAskComposerSheet: View {
             .padding(.bottom, max(proxy.safeAreaInsets.bottom, 24))
         }
         .background(Color.rossGroupedBackground.ignoresSafeArea())
+        .alphaDismissesKeyboardOnScroll()
     }
 }
 
@@ -10150,6 +10221,15 @@ private struct AlphaAskConversationScreen: View {
         return "Ask about today, shared files, or any matter on this device."
     }
 
+    private var showsBackButton: Bool {
+        model.path.last?.isAskRoute == true
+    }
+
+    private func goBack() {
+        guard showsBackButton, !model.path.isEmpty else { return }
+        model.path.removeLast()
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
@@ -10179,6 +10259,33 @@ private struct AlphaAskConversationScreen: View {
             }
             .padding(alphaScreenPadding)
             .padding(.bottom, 112)
+        }
+        .alphaDismissesKeyboardOnScroll()
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if showsBackButton {
+                HStack {
+                    Button(action: goBack) {
+                        Label("Back", systemImage: "chevron.left")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(Color.rossInk)
+                            .padding(.horizontal, 12)
+                            .frame(height: 38)
+                            .background(Color.rossGlassFill, in: Capsule())
+                            .overlay {
+                                Capsule()
+                                    .stroke(Color.rossGlassStroke.opacity(0.78), lineWidth: 1)
+                            }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Back")
+
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 4)
+                .padding(.bottom, 6)
+                .background(Color.rossGroupedBackground.opacity(0.96))
+            }
         }
         .safeAreaInset(edge: .bottom) {
             AlphaRootAskDock(
