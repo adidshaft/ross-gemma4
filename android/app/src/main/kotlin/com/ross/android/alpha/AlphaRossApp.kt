@@ -4190,22 +4190,21 @@ private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack
                     controller.save()
                 }
             }
-            AlphaCard("Choose a private assistant level", "Pick the amount of on-device help Ross should keep ready.") {
-                Text("You can switch later. Ross will keep the download and setup progress visible on this device.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            AlphaCard("Choose level", "Pick how much help Ross keeps ready on this device.") {
+                Text("You can switch later. Setup progress stays visible here and in Settings.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             AlphaCapabilityTier.values().forEach { tier ->
                 AlphaCard(tier.title, tier.summary) {
-                    Text(
-                        "${tier.bestFor} Wi-Fi is preferred for setup.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    AlphaSettingsValueRow(label = "Download", value = tier.downloadSizeLabel)
-                    AlphaSettingsValueRow(label = "Setup estimate", value = tier.setupTimeLabel)
+                    Text(tier.bestFor, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        AlphaTagChip(tier.downloadSizeLabel)
+                        AlphaTagChip(tier.setupTimeLabel)
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(
                         onClick = { controller.startPackInstall(tier, controller.persisted.settings.allowMobileDataForLargePacks || tier == AlphaCapabilityTier.QuickStart) },
                         modifier = Modifier.fillMaxWidth()
-                    ) { Text("Download or resume") }
+                    ) { Text("Download this level") }
                 }
             }
             controller.persisted.modelJobs.forEach { job ->
@@ -4226,7 +4225,14 @@ private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack
                 }
             }
             controller.persisted.installedPacks.forEach { pack ->
-                AlphaCard(pack.tier.title, "Private assistant is ready") {
+                val runtimeHealth = controller.activeRuntimeHealth()
+                val isActivePack = controller.activePack()?.id == pack.id
+                val status = when {
+                    isActivePack && runtimeHealth?.fallbackActive == true -> "Using basic local review"
+                    isActivePack && runtimeHealth?.available == false -> "Needs attention"
+                    else -> "Private assistant is ready"
+                }
+                AlphaCard(pack.tier.title, status) {
                     Text(
                         when (pack.tier) {
                             AlphaCapabilityTier.QuickStart -> "Best for shorter documents. Longer files may use basic local review."
@@ -6251,8 +6257,10 @@ private fun alphaPrivateAiStatus(controller: AlphaRossController): Pair<String, 
             "Private assistant needs attention" to "Private assistant could not be set up. Open setup to retry."
         activePack != null && runtimeHealth?.fallbackActive == true ->
             "Using basic local review" to "${activePack.tier.title} is installed, but Ross is using basic local review right now."
-        activePack != null ->
+        activePack != null && runtimeHealth?.available == true ->
             "Private assistant is ready" to "${activePack.tier.title} is ready for local review, drafting, and Ask Ross actions on this device."
+        activePack != null ->
+            "Private assistant needs attention" to "${activePack.tier.title} is installed, but Ross needs to check it before turning it on."
         else ->
             "Private assistant is not set up." to "Ross can still organize matters, tasks, dates, and files on this device. Using basic local review."
     }

@@ -1273,7 +1273,8 @@ final class AlphaRossModel {
             pendingPublicLawSessionID = nil
             pendingPublicLawTurnID = nil
             publicLawPreview = nil
-            latestAskResult?.statusNote = "Web search off"
+            let offlineStatusNote = storedResult.statusNote == "Private assistant" ? storedResult.statusNote : "Web search off"
+            latestAskResult?.statusNote = offlineStatusNote
             updateStoredAskTurn(
                 scopeCaseID: scopeCaseID,
                 sessionID: storedResult.chatSessionID,
@@ -1281,7 +1282,7 @@ final class AlphaRossModel {
             ) { turn in
                 turn.publicLawPreview = nil
                 turn.publicLawResults = []
-                turn.statusNote = "Web search off"
+                turn.statusNote = offlineStatusNote
             }
         }
     }
@@ -4035,13 +4036,9 @@ final class AlphaRossModel {
         let totalMemoryGB = max(2, Int(ProcessInfo.processInfo.physicalMemory / 1_073_741_824))
         let freeStorageGB = max(4, alphaAvailableStorageInGigabytes())
         let lowPowerModeEnabled = alphaCurrentLowPowerMode()
-        let thermalCondition = alphaCurrentThermalCondition()
 
         if lowPowerModeEnabled || totalMemoryGB < 6 || freeStorageGB < 6 {
             return .quickStart
-        }
-        if totalMemoryGB >= 8 && freeStorageGB >= 12 && thermalCondition == "Nominal" {
-            return .seniorDraftingSupport
         }
         if totalMemoryGB >= 6 && freeStorageGB >= 6 {
             return .caseAssociate
@@ -4102,21 +4099,6 @@ final class AlphaRossModel {
         #endif
     }
 
-    private func alphaCurrentThermalCondition() -> String {
-        switch ProcessInfo.processInfo.thermalState {
-        case .nominal:
-            "Nominal"
-        case .fair:
-            "Fair"
-        case .serious:
-            "Serious"
-        case .critical:
-            "Critical"
-        @unknown default:
-            "Unknown"
-        }
-    }
-
     private func buildLocalAskResult(question: String, scopeCaseID: UUID?) -> AlphaAskResult {
         let selectedDocuments = selectedAskDocuments(for: scopeCaseID)
         let selectedDocumentIDs = Set(selectedDocuments.map(\.id))
@@ -4134,6 +4116,34 @@ final class AlphaRossModel {
         let asksForDocumentSummary = lowered.contains("summarize this document") || lowered.contains("summarise this document") || lowered.contains("what did the latest order say") || lowered.contains("latest order") || lowered.contains("current document")
         let asksForImportantDates = lowered.contains("important dates") || lowered.contains("list important dates") || lowered.contains("list dates")
         let asksForNextActions = lowered.contains("what should i do next") || lowered.contains("next actions") || lowered.contains("suggest next action") || lowered.contains("what tasks should i create") || lowered.contains("needs my attention today")
+        let asksAboutAssistantSetup = lowered.contains("private assistant") ||
+            lowered.contains("assistant setup") ||
+            lowered.contains("setting up") ||
+            lowered.contains("setup assistant") ||
+            lowered.contains("before setup") ||
+            lowered.contains("without setup")
+        if asksAboutAssistantSetup {
+            return AlphaAskResult(
+                chatSessionID: nil,
+                chatTurnID: nil,
+                kind: .userAsk,
+                question: question,
+                scopeCaseID: scopeCaseID,
+                scopeLabel: scopeLabel(for: scopeCaseID),
+                selectedDocumentTitles: [],
+                answerTitle: "Private assistant setup",
+                answerSections: [
+                    "Before setup, Ross can still organize matters, tasks, dates, files, and basic local review on this device.",
+                    "After setup, the private assistant adds stronger document review, summaries, chronologies, and source-backed answers.",
+                    "Open Settings, then Private Assistant, to choose Quick Start, Case Associate, or Senior Drafting Support."
+                ],
+                caseFileSources: [],
+                publicLawPreview: nil,
+                publicLawResults: [],
+                statusNote: "Private assistant",
+                needsReviewWarning: nil
+            )
+        }
         let scopedPrimaryCase = scopeCaseID.flatMap { id in persisted.cases.first(where: { $0.id == id }) }
         let selectedDocumentTarget = selectedOrLatestAskDocument(for: scopeCaseID)
         let matchedSources = scopedCases
@@ -4269,6 +4279,7 @@ final class AlphaRossModel {
         storedResult: AlphaAskResult,
         fallbackResult: AlphaAskResult
     ) {
+        guard fallbackResult.statusNote != "Private assistant" else { return }
         guard activePack != nil else { return }
         let selectedDocuments = selectedAskDocuments(for: scopeCaseID)
         let sourcePack = askRuntimeSourcePack(scopeCaseID: scopeCaseID, selectedDocuments: selectedDocuments)
@@ -4973,7 +4984,14 @@ private struct AlphaAssistantModelArtifact: Hashable, Sendable {
     }
 
     var sizeLabel: String {
-        ByteCountFormatter.string(fromByteCount: sizeBytes, countStyle: .file)
+        switch tier {
+        case .quickStart:
+            "about 430 MB"
+        case .caseAssociate:
+            "about 1.1-1.3 GB"
+        case .seniorDraftingSupport:
+            "about 2.5 GB"
+        }
     }
 
     var requirementLabel: String {
@@ -10452,7 +10470,8 @@ private func alphaAssistantStatusSnapshot(_ model: AlphaRossModel) -> AlphaAssis
     }
 
     if let activePack = model.activePack {
-        if model.activeRuntimeHealth?.fallbackActive == true {
+        let runtimeHealth = model.activeRuntimeHealth
+        if runtimeHealth?.fallbackActive == true {
             return AlphaAssistantStatusSnapshot(
                 title: "Using basic local review",
                 detail: "\(activePack.tier.title) is installed, but Ross is using basic local review right now.",
@@ -10460,10 +10479,18 @@ private func alphaAssistantStatusSnapshot(_ model: AlphaRossModel) -> AlphaAssis
             )
         }
 
+        if runtimeHealth?.available == true {
+            return AlphaAssistantStatusSnapshot(
+                title: "Private assistant is ready",
+                detail: "\(activePack.tier.title) is ready for local review, drafting, and Ask Ross actions on this device.",
+                tint: Color.rossSuccess
+            )
+        }
+
         return AlphaAssistantStatusSnapshot(
-            title: "Private assistant is ready",
-            detail: "\(activePack.tier.title) is ready for local review, drafting, and Ask Ross actions on this device.",
-            tint: Color.rossSuccess
+            title: "Private assistant needs attention",
+            detail: "\(activePack.tier.title) is installed, but Ross needs to check it before turning it on.",
+            tint: .orange
         )
     }
 
@@ -13453,7 +13480,7 @@ private struct AlphaPrivateAISettingsScreen: View {
 
                 RossSectionCard(
                     title: "Choose level",
-                    subtitle: "Pick how much help you want. Technical model details are available one level deeper."
+                    subtitle: "Pick how much help Ross keeps ready on this device."
                 ) {
                     VStack(alignment: .leading, spacing: 12) {
                         ForEach(AlphaPackOffer.catalog) { offer in
@@ -13607,14 +13634,14 @@ private struct AlphaPrivateAIOfferCard: View {
     private var isActive: Bool {
         guard let activePack = model.activePack else { return false }
         return activePack.tier == offer.tier &&
-            !activePack.developmentOnly &&
+            (!activePack.developmentOnly || alphaAllowsDevelopmentModelArtifacts()) &&
             model.activeRuntimeHealth?.available == true
     }
 
     private var activeButRuntimeUnavailable: Bool {
         guard let activePack = model.activePack else { return false }
         return activePack.tier == offer.tier &&
-            !activePack.developmentOnly &&
+            (!activePack.developmentOnly || !alphaAllowsDevelopmentModelArtifacts()) &&
             model.activeRuntimeHealth?.available != true
     }
 
@@ -13643,10 +13670,10 @@ private struct AlphaPrivateAIOfferCard: View {
             return ("Active", Color.rossSuccess)
         }
         if activeButRuntimeUnavailable {
-            return ("Runtime needed", .orange)
+            return ("Needs attention", .orange)
         }
         if isSettingUp {
-            return ("Downloading", Color.rossAccent)
+            return ("Setting up", Color.rossAccent)
         }
         if canResume {
             return ("Needs retry", .orange)
@@ -13662,7 +13689,7 @@ private struct AlphaPrivateAIOfferCard: View {
             return "Using this level"
         }
         if activeButRuntimeUnavailable {
-            return "Downloaded"
+            return "Needs attention"
         }
         if isSettingUp {
             return "Setting up..."
@@ -13673,20 +13700,12 @@ private struct AlphaPrivateAIOfferCard: View {
         return "Download this level"
     }
 
-    private var minimumRequirementLabel: String {
-        "\(artifact.minimumMemoryGB) GB memory, about \(artifact.requiredFreeSpaceGB) GB free space"
-    }
-
-    private var recommendedRequirementLabel: String {
-        "\(artifact.recommendedMemoryGB) GB memory recommended. \(artifact.recommendedPhone)"
-    }
-
     private var actionDisabled: Bool {
         isActive || activeButRuntimeUnavailable || isSettingUp
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 5) {
                     HStack(spacing: 8) {
@@ -13708,22 +13727,20 @@ private struct AlphaPrivateAIOfferCard: View {
                 Spacer(minLength: 8)
             }
 
-            Text(offer.tier.bestFor)
-                .font(.caption)
-                .foregroundStyle(Color.rossInk.opacity(0.58))
-                .fixedSize(horizontal: false, vertical: true)
-
-            HStack(spacing: 8) {
-                AlphaPrivateAIInlineBadge(title: artifact.sizeLabel, tint: Color.rossAccent)
-                AlphaPrivateAIInlineBadge(title: offer.tier.setupTimeLabel, tint: Color.rossSuccess)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) {
+                    AlphaPrivateAIInlineBadge(title: artifact.sizeLabel, tint: Color.rossAccent)
+                    AlphaPrivateAIInlineBadge(title: "\(artifact.minimumMemoryGB) GB min", tint: Color.rossHighlight)
+                    AlphaPrivateAIInlineBadge(title: "\(artifact.recommendedMemoryGB) GB rec.", tint: Color.rossSuccess)
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    AlphaPrivateAIInlineBadge(title: artifact.sizeLabel, tint: Color.rossAccent)
+                    HStack(spacing: 8) {
+                        AlphaPrivateAIInlineBadge(title: "\(artifact.minimumMemoryGB) GB min", tint: Color.rossHighlight)
+                        AlphaPrivateAIInlineBadge(title: "\(artifact.recommendedMemoryGB) GB rec.", tint: Color.rossSuccess)
+                    }
+                }
             }
-
-            VStack(alignment: .leading, spacing: 7) {
-                AlphaSettingsValueRow(label: "Minimum", value: minimumRequirementLabel)
-                AlphaSettingsValueRow(label: "Recommended", value: recommendedRequirementLabel)
-            }
-            .padding(10)
-            .background(Color.white.opacity(0.42), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             if let latestJob,
                (latestJob.state == .failed || latestJob.state == .pausedError || latestJob.state == .pausedNoStorage),
@@ -13754,7 +13771,7 @@ private struct AlphaPrivateAIOfferCard: View {
             .rossPrimaryButtonStyle()
             .disabled(actionDisabled)
         }
-        .padding(14)
+        .padding(12)
         .background(Color.rossGlassSubtleFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -13878,10 +13895,18 @@ private struct AlphaPrivateAIInstalledPackCard: View {
         !pack.developmentOnly || alphaAllowsDevelopmentModelArtifacts()
     }
 
+    private var developmentPackIsUsable: Bool {
+        pack.developmentOnly && alphaAllowsDevelopmentModelArtifacts()
+    }
+
     private var runtimeUnavailable: Bool {
         pack.isActive &&
             !pack.developmentOnly &&
             model.activeRuntimeHealth?.available != true
+    }
+
+    private var isReady: Bool {
+        !runtimeUnavailable && (!pack.developmentOnly || developmentPackIsUsable)
     }
 
     var body: some View {
@@ -13892,14 +13917,14 @@ private struct AlphaPrivateAIInstalledPackCard: View {
                         .font(.headline)
                         .foregroundStyle(Color.rossInk)
 
-                    Text(pack.developmentOnly ? "Private assistant needs attention" : (runtimeUnavailable ? "Model downloaded, runtime needs attention" : "Private assistant is ready"))
+                    Text(isReady ? "Private assistant is ready" : "Private assistant needs attention")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(pack.developmentOnly || runtimeUnavailable ? Color.orange : Color.rossSuccess)
+                        .foregroundStyle(isReady ? Color.rossSuccess : Color.orange)
                 }
 
                 Spacer(minLength: 8)
 
-                AlphaPrivateAIInlineBadge(title: pack.developmentOnly || runtimeUnavailable ? "Needs attention" : "Ready", tint: Color.rossAccent)
+                AlphaPrivateAIInlineBadge(title: isReady ? "Ready" : "Needs attention", tint: isReady ? Color.rossSuccess : Color.orange)
             }
 
             if runtimeUnavailable, let runtimeStatus = model.activeRuntimeHealth?.userFacingStatus {

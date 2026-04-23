@@ -92,6 +92,31 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    func testAskRossExplainsPrivateAssistantSetupBeforeDownload() async throws {
+        try await withRestoredStore { store in
+            try await store.replace(with: AlphaPersistedState.empty())
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+            await MainActor.run {
+                model.submitAsk(
+                    question: "What can I do before setting up the private assistant?",
+                    scopeCaseID: nil,
+                    webEnabled: false
+                )
+            }
+
+            let result = await MainActor.run { model.latestAskResult }
+            XCTAssertEqual("Private assistant setup", result?.answerTitle)
+            XCTAssertEqual("Private assistant", result?.statusNote)
+            XCTAssertTrue(result?.answerSections.joined(separator: " ").contains("basic local review") == true)
+            XCTAssertEqual([], result?.selectedDocumentTitles)
+            XCTAssertEqual([], result?.caseFileSources)
+        }
+    }
+
     func testWebOnRequiresPreviewBeforeSearch() async throws {
         try await withRestoredStore { store in
             try await store.replace(with: AlphaPersistedState.seed())

@@ -1613,9 +1613,10 @@ internal class AlphaRossController(
             pendingPublicLawQuestion = null
             pendingPublicLawScopeCaseId = null
             publicLawPreview = null
-            latestAskResult = latestAskResult?.copy(statusNote = "Web search off")
+            val offlineStatusNote = if (localResult.statusNote == "Private assistant") localResult.statusNote else "Web search off"
+            latestAskResult = latestAskResult?.copy(statusNote = offlineStatusNote)
             updateLatestAskHistory(scopeCaseId, cleaned) { result ->
-                result.copy(publicLawPreview = null, statusNote = "Web search off")
+                result.copy(publicLawPreview = null, statusNote = offlineStatusNote)
             }
         }
         scope.launch {
@@ -1968,6 +1969,7 @@ internal class AlphaRossController(
         scopeCaseId: String?,
         fallbackResult: AlphaAskResult,
     ) {
+        if (fallbackResult.statusNote == "Private assistant") return
         val pack = activePack() ?: return
         val selectedDocuments = selectedAskDocuments(scopeCaseId)
         val sourcePack = askRuntimeSourcePack(scopeCaseId, selectedDocuments)
@@ -2664,6 +2666,29 @@ internal class AlphaRossController(
         val asksForDocumentSummary = lowered.contains("summarize this document") || lowered.contains("summarise this document") || lowered.contains("what did the latest order say") || lowered.contains("latest order") || lowered.contains("current document")
         val asksForImportantDates = lowered.contains("important dates") || lowered.contains("list important dates") || lowered.contains("list dates")
         val asksForNextActions = lowered.contains("what should i do next") || lowered.contains("next actions") || lowered.contains("suggest next action") || lowered.contains("what tasks should i create") || lowered.contains("needs my attention today")
+        val asksAboutAssistantSetup = lowered.contains("private assistant") ||
+            lowered.contains("assistant setup") ||
+            lowered.contains("setting up") ||
+            lowered.contains("setup assistant") ||
+            lowered.contains("before setup") ||
+            lowered.contains("without setup")
+        if (asksAboutAssistantSetup) {
+            return AlphaAskResult(
+                question = question,
+                scopeCaseId = scopeCaseId,
+                scopeLabel = scopeLabel(scopeCaseId),
+                selectedDocumentTitles = emptyList(),
+                answerTitle = "Private assistant setup",
+                answerSections = listOf(
+                    "Before setup, Ross can still organize matters, tasks, dates, files, and basic local review on this device.",
+                    "After setup, the private assistant adds stronger document review, summaries, chronologies, and source-backed answers.",
+                    "Open Settings, then Private Assistant, to choose Quick Start, Case Associate, or Senior Drafting Support.",
+                ),
+                caseFileSources = emptyList(),
+                statusNote = "Private assistant",
+                needsReviewWarning = null,
+            )
+        }
         val scopedPrimaryCase = scopeCaseId?.let { id -> persisted.cases.firstOrNull { it.id == id } }
         val selectedDocumentTarget = selectedOrLatestAskDocument(scopeCaseId)
         val matchedSources = visibleCases

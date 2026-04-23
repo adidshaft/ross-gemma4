@@ -65,6 +65,25 @@ class AlphaLawyerUsabilityTest {
     }
 
     @Test
+    fun `ask ross explains private assistant setup before download`() {
+        val controller = buildController(secretKeyProvider = InMemorySecretKeyProvider())
+
+        controller.submitAsk(
+            question = "What can I do before setting up the private assistant?",
+            scopeCaseId = null,
+            webEnabled = false,
+        )
+        shadowOf(Looper.getMainLooper()).idle()
+
+        val result = controller.latestAskResult
+        assertEquals("Private assistant setup", result?.answerTitle)
+        assertEquals("Private assistant", result?.statusNote)
+        assertTrue(result?.answerSections?.joinToString(" ")?.contains("basic local review") == true)
+        assertTrue(result?.selectedDocumentTitles?.isEmpty() == true)
+        assertTrue(result?.caseFileSources?.isEmpty() == true)
+    }
+
+    @Test
     fun `web on requires preview before public law request`() {
         var publicLawCalls = 0
         var approvedQuerySent: String? = null
