@@ -78,11 +78,11 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
     var summary: String {
         switch self {
         case .quickStart:
-            "Basic extraction for short documents, simple summaries, and lighter storage use."
+            "Basic local review, short summaries, simple Ask Ross actions, and lighter storage use."
         case .caseAssociate:
-            "Better document understanding, stronger field extraction, mixed English/Hindi support, and stronger chronology work."
+            "Recommended private assistant for document review, chronologies, hearing notes, and source-backed Ask Ross answers."
         case .seniorDraftingSupport:
-            "Deeper review, longer bilingual bundles, and stronger evidence or issue analysis."
+            "Advanced private assistant for deeper review, longer matter reasoning, and drafting support."
         }
     }
 
@@ -100,33 +100,33 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
     var downloadSizeLabel: String {
         switch self {
         case .quickStart:
-            "429 MB"
+            "about 430 MB"
         case .caseAssociate:
-            "1.1 GB"
+            "about 1.1-1.3 GB"
         case .seniorDraftingSupport:
-            "2.5 GB"
+            "about 2.5 GB"
         }
     }
 
     var installedSizeLabel: String {
         switch self {
         case .quickStart:
-            "429 MB"
+            "about 430 MB"
         case .caseAssociate:
-            "1.1 GB"
+            "about 1.1-1.3 GB"
         case .seniorDraftingSupport:
-            "2.5 GB"
+            "about 2.5 GB"
         }
     }
 
     var bestFor: String {
         switch self {
         case .quickStart:
-            "Fast intake, smaller devices, and standard extraction for short documents."
+            "Fast intake, smaller devices, and basic local review for short documents."
         case .caseAssociate:
-            "Most advocates who need stronger extraction, chronology work, and mixed-language review on-device."
+            "Most advocates who need document review, next dates, chronologies, notes, and source-backed answers on-device."
         case .seniorDraftingSupport:
-            "Longer bundles, hearing prep, and stronger bilingual workflows."
+            "Longer bundles, deeper review, hearing preparation, and more detailed drafting support."
         }
     }
 

@@ -18,12 +18,67 @@ export interface ModelCapabilityTier {
   requiredFreeSpaceMb: number;
   recommendedOnWifi: boolean;
   minRamGb?: number;
+  recommendedRamGb?: number;
   minOsVersion?: string;
   supportsLongDocuments: boolean;
   supportsAdvancedDrafting: boolean;
   supportsBilingualMode: boolean;
   hiddenTechnicalModelId: string;
+  technicalModelName?: string;
+  repo?: string;
+  alternateRepo?: string;
+  quantization?: "Q4" | "Q4";
+  runtimeMode?: LocalRuntimeMode;
+  artifactKind?: ModelArtifactKind;
+  userFacingRole?: string;
+  technicalRole?: string;
+  retrievalModelIds?: string[];
   sortOrder: number;
+}
+
+export type ModelArtifactKind =
+  | "tiny_dev_artifact"
+  | "local_model_artifact"
+  | "local_embedding_model"
+  | "system_model"
+  | "external_debug_model";
+
+export type LocalRuntimeMode =
+  | "deterministic_dev"
+  | "mediapipe_llm"
+  | "gemma_local_runtime"
+  | "apple_foundation_models"
+  | "litert"
+  | "unavailable";
+
+export interface PrivateAssistantTierRegistryEntry {
+  displayName: string;
+  technicalModelName: string;
+  repo: string;
+  alternateRepo?: string;
+  quantization: "Q4" | "Q4";
+  runtimeMode: "gemma_local_runtime";
+  artifactKind: "local_model_artifact";
+  approxDownloadSizeMb: number;
+  userFacingRole: string;
+  technicalRole: string;
+}
+
+export interface RetrievalModelRegistryEntry {
+  displayName: "Matter Search";
+  technicalModelName: string;
+  repo: string;
+  runtimeMode: "litert" | "gemma_local_runtime";
+  artifactKind: "local_embedding_model";
+  technicalRole: string;
+}
+
+export interface PrivateAssistantModelRegistry {
+  assistantTiers: Record<ModelCapabilityTierId, PrivateAssistantTierRegistryEntry>;
+  retrievalModels: {
+    preferred: RetrievalModelRegistryEntry;
+    singleRuntimeFallback: RetrievalModelRegistryEntry;
+  };
 }
 
 export interface ModelPackManifestSegment {
@@ -42,8 +97,10 @@ export interface ModelPackManifest {
     | "aicore"
     | "apple_foundation_models"
     | "gemma_local_runtime"
+    | "gemma_local_runtime"
     | "mediapipe"
     | "coreml"
+    | "litert"
     | "custom";
   technicalModelName: string;
   licenseName: string;
@@ -52,8 +109,8 @@ export interface ModelPackManifest {
   requiredFreeSpaceBytes: number;
   sha256: string;
   segments: ModelPackManifestSegment[];
-  artifactKind?: "tiny_dev_artifact";
-  runtimeMode?: "deterministic_dev" | "platform_stub";
+  artifactKind?: ModelArtifactKind;
+  runtimeMode?: LocalRuntimeMode | "platform_stub";
   developmentOnly?: boolean;
   version: string;
   releaseDate: string;
@@ -97,8 +154,8 @@ export interface InstalledModelPack {
   installedAt: string;
   installPath: string;
   checksumSha256: string;
-  artifactKind?: "tiny_dev_artifact";
-  runtimeMode?: "deterministic_dev" | "platform_stub";
+  artifactKind?: ModelArtifactKind;
+  runtimeMode?: LocalRuntimeMode | "platform_stub";
   developmentOnly?: boolean;
   isActive: boolean;
 }

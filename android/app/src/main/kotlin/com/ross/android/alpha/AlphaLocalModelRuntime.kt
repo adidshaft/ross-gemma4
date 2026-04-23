@@ -512,8 +512,8 @@ internal class AlphaMediaPipeLocalModelProvider(
             estimatedMemoryMb = 768,
             estimatedDurationSeconds = ((pack.inputChars / 1_200).coerceAtLeast(1)),
             shouldRunNow = !overBudget,
-            reason = if (overBudget) "Prompt pack exceeded the MediaPipe local runtime budget." else null,
-            notes = listOf("MediaPipe local runtime estimate."),
+            reason = if (overBudget) "Prompt pack exceeded the private assistant budget." else null,
+            notes = listOf("Private assistant runtime estimate."),
         )
     }
 
@@ -548,7 +548,7 @@ internal class AlphaMediaPipeLocalModelProvider(
                     modelPathPresent = modelPathPresent,
                     checksumVerified = checksumVerified,
                     lastErrorCategory = "unsupported_device",
-                    userFacingStatus = "MediaPipe local runtime needs a compatible physical Android device and does not reliably support emulators.",
+                    userFacingStatus = "Private assistant needs a compatible physical Android device and does not reliably support emulators.",
                 )
 
             !modelPathPresent ->
@@ -557,7 +557,7 @@ internal class AlphaMediaPipeLocalModelProvider(
                     modelPathPresent = false,
                     checksumVerified = checksumVerified,
                     lastErrorCategory = "model_file_not_found",
-                    userFacingStatus = "The configured local model file is not present on this device.",
+                    userFacingStatus = "The configured private assistant file is not present on this device.",
                 )
 
             !modelFile.canRead() ->
@@ -566,7 +566,7 @@ internal class AlphaMediaPipeLocalModelProvider(
                     modelPathPresent = true,
                     checksumVerified = checksumVerified,
                     lastErrorCategory = "unsupported_runtime",
-                    userFacingStatus = "The configured local model file is not readable by Ross on this device.",
+                    userFacingStatus = "The configured private assistant file is not readable by Ross on this device.",
                 )
 
             isBundledAssetPath(modelFile) ->
@@ -575,7 +575,7 @@ internal class AlphaMediaPipeLocalModelProvider(
                     modelPathPresent = true,
                     checksumVerified = checksumVerified,
                     lastErrorCategory = "unsupported_runtime",
-                    userFacingStatus = "Ross blocks bundled app assets for alpha local model QA. Use a developer-provided local model file instead.",
+                    userFacingStatus = "Ross blocks bundled assistant files for this setup. Use a developer-provided private assistant file instead.",
                 )
 
             !modelFile.name.lowercase(Locale.ROOT).endsWith(".task") ->
@@ -584,7 +584,7 @@ internal class AlphaMediaPipeLocalModelProvider(
                     modelPathPresent = true,
                     checksumVerified = checksumVerified,
                     lastErrorCategory = "unsupported_runtime",
-                    userFacingStatus = "MediaPipe local runtime expects a developer-provided .task model artifact.",
+                    userFacingStatus = "Private assistant file is not configured on this device.",
                 )
 
             !isSupportedModelKind(modelKind) ->
@@ -593,7 +593,7 @@ internal class AlphaMediaPipeLocalModelProvider(
                     modelPathPresent = true,
                     checksumVerified = checksumVerified,
                     lastErrorCategory = "unsupported_runtime",
-                    userFacingStatus = "The configured local model kind is not supported by the Android MediaPipe adapter.",
+                    userFacingStatus = "The configured private assistant file is not supported on this device.",
                 )
 
             expectedChecksum != null && !checksumVerified ->
@@ -611,14 +611,14 @@ internal class AlphaMediaPipeLocalModelProvider(
                     modelPathPresent = true,
                     checksumVerified = checksumVerified,
                     lastErrorCategory = null,
-                    userFacingStatus = "MediaPipe local runtime is available for manual QA on this device.",
+                    userFacingStatus = "Private assistant runtime is available for manual QA on this device.",
                 )
         }
     }
 
     private fun sanitizedRuntimeFailureMessage(error: Throwable): String = when (classifyRuntimeFailure(error)) {
-        "runtime_dependency_unavailable" -> "The MediaPipe local runtime dependency could not be initialized on this device."
-        "unsupported_runtime" -> "The configured local model artifact could not be used by the MediaPipe adapter on this device."
+        "runtime_dependency_unavailable" -> "The private assistant runtime could not be initialized on this device."
+        "unsupported_runtime" -> "The configured private assistant file could not be used on this device."
         "unknown_runtime_error" -> "The local runtime could not finish this request and Ross kept the request local."
         else -> "The local runtime could not finish this request and Ross kept the request local."
     }
@@ -815,25 +815,25 @@ internal object AlphaLocalModelRuntime {
         )
         val (message, errorCategory) = when {
             debug.enableRealInference && explicitFile == null ->
-                "Real local inference is enabled, but ROSS_LOCAL_MODEL_PATH is missing or blank." to "missing_model_path"
+                "Private assistant setup needs attention before this device can use it." to "missing_model_path"
 
             debug.enableRealInference && explicitFile?.exists() == false ->
-                "Ross could not find the developer-provided local model file at the configured path." to "model_file_not_found"
+                "Ross could not find the private assistant file on this device." to "model_file_not_found"
 
             activePack?.runtimeMode?.isRealLocal() == true && packFile == null ->
-                "This pack is marked for real local inference, but no installed local model artifact is present." to "missing_model_path"
+                "Private assistant setup did not finish on this device." to "missing_model_path"
 
             activePack?.runtimeMode?.isRealLocal() == true && packFile?.exists() == false ->
-                "This pack is marked for real local inference, but the installed local model artifact is missing on disk." to "model_file_not_found"
+                "Ross could not find the private assistant file on this device." to "model_file_not_found"
 
             requestedRuntimeMode == AlphaPackRuntimeMode.Gemma 4 E4B Q4CppGguf ->
-                "Gemma 4 Q4 local runtime remains blocked in this alpha because the Android native runtime is not wired yet." to "unsupported_runtime"
+                "Private assistant support is not ready on this Android build yet." to "unsupported_runtime"
 
             requestedRuntimeMode == AlphaPackRuntimeMode.AppleFoundationModels ->
-                "Apple Foundation Models remain unavailable on Android. Ross kept the request local and will fall back safely." to "unsupported_runtime"
+                "This private assistant option is not available on Android. Ross will keep basic local review active." to "unsupported_runtime"
 
             else ->
-                "The requested local runtime is unavailable on this device, so Ross will keep deterministic fallback active." to "unsupported_runtime"
+                "Private assistant is unavailable on this device, so Ross will keep basic local review active." to "unsupported_runtime"
         }
 
         return AlphaUnavailableRealLocalModelProvider(

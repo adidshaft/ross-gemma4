@@ -1,0 +1,57 @@
+{
+  "assistantTiers": {
+    "quick_start": {
+      "displayName": "Quick Start",
+      "technicalModelName": "Gemma 4 E2B Q4",
+      "repo": "google/gemma-4-E2B-it",
+      "quantization": "Q4",
+      "runtimeMode": "gemma_local_runtime",
+      "artifactKind": "local_model_artifact",
+      "approxDownloadSizeMb": 429,
+      "userFacingRole": "Start quickly with basic local review and simple Ask Ross actions",
+      "technicalRole": "command routing, short summaries, basic local Q&A, local public-law query shaping"
+    },
+    "case_associate": {
+      "displayName": "Case Associate",
+      "technicalModelName": "Gemma 4 E4B Q4",
+      "repo": "google/gemma-4-E4B-it",
+      "alternateRepo": "google/gemma-4-E4B-it",
+      "quantization": "Q4",
+      "runtimeMode": "gemma_local_runtime",
+      "artifactKind": "local_model_artifact",
+      "approxDownloadSizeMb": 1280,
+      "userFacingRole": "Recommended private assistant for most matters",
+      "technicalRole": "default legal document assistant, document review, drafting, source-backed Ask Ross"
+    },
+    "senior_drafting_support": {
+      "displayName": "Senior Drafting Support",
+      "technicalModelName": "Gemma 4 26B-A4B Q4",
+      "repo": "google/gemma-4-26B-A4B-it",
+      "alternateRepo": "google/gemma-4-26B-A4B-it",
+      "quantization": "Q4",
+      "runtimeMode": "gemma_local_runtime",
+      "artifactKind": "local_model_artifact",
+      "approxDownloadSizeMb": 2500,
+      "userFacingRole": "Advanced private assistant for deeper review and drafting",
+      "technicalRole": "advanced drafting, chronology refinement, issue extraction, deeper matter reasoning"
+    }
+  },
+  "retrievalModels": {
+    "preferred": {
+      "displayName": "Matter Search",
+      "technicalModelName": "EmbeddingGemma 300M",
+      "repo": "litert-community/embeddinggemma-300m",
+      "runtimeMode": "litert",
+      "artifactKind": "local_embedding_model",
+      "technicalRole": "local embeddings and RAG retrieval"
+    },
+    "singleRuntimeFallback": {
+      "displayName": "Matter Search",
+      "technicalModelName": "Gemma 4 Embedding",
+      "repo": "Gemma 4 E2B Q4/Gemma-4-Embedding",
+      "runtimeMode": "gemma_local_runtime",
+      "artifactKind": "local_embedding_model",
+      "technicalRole": "local embeddings and RAG retrieval through Gemma 4 Q4 runtime"
+    }
+  }
+}

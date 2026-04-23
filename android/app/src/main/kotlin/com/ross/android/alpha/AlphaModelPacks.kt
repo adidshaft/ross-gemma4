@@ -11,9 +11,9 @@ data class AlphaModelPackProgress(
 
 object AlphaModelPackManager {
     fun totalBytesFor(tier: AlphaCapabilityTier): Long = when (tier) {
-        AlphaCapabilityTier.QuickStart -> 1_200_000_000L
-        AlphaCapabilityTier.CaseAssociate -> 2_800_000_000L
-        AlphaCapabilityTier.SeniorDraftingSupport -> 4_600_000_000L
+        AlphaCapabilityTier.QuickStart -> 429_000_000L
+        AlphaCapabilityTier.CaseAssociate -> 1_280_000_000L
+        AlphaCapabilityTier.SeniorDraftingSupport -> 2_500_000_000L
     }
 
     fun stageJob(

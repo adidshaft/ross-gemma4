@@ -153,7 +153,9 @@ impl SourceBackedAnswer {
             answer: answer.into(),
             citations,
             confidence: AnswerConfidence::Medium,
-            limitations: vec!["Local scaffold uses extractive synthesis from retrieved sources.".into()],
+            limitations: vec![
+                "Local scaffold uses extractive synthesis from retrieved sources.".into(),
+            ],
         }
     }
 }
@@ -272,9 +274,11 @@ pub struct ModelCapabilityTier {
 pub enum RuntimeTarget {
     AiCore,
     AppleFoundationModels,
+    Gemma 4 E4B Q4CppGguf,
     Gemma 4 E4B Q4Cpp,
     Mediapipe,
     CoreMl,
+    LiteRt,
     Custom,
 }
 

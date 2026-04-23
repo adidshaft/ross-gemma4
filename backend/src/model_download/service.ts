@@ -23,6 +23,14 @@ export class ModelDownloadService {
       throw new AppError(404, "unknown_model_pack", "Requested model pack does not exist.");
     }
 
+    if (pack.artifactKind === "local_model_artifact") {
+      throw new AppError(
+        409,
+        "model_download_unconfigured",
+        "Production model metadata is available, but Ross is not configured to serve this large local model artifact."
+      );
+    }
+
     const artifact =
       pack.artifactKind === "external_debug_model"
         ? (await getExternalArtifactRecord(this.env, pack)).descriptor

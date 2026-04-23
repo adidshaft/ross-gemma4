@@ -78,9 +78,9 @@ enum class AlphaAppearanceMode(val label: String) {
     Light("Light"),
 }
 enum class AlphaCapabilityTier(val tierId: String, val title: String, val summary: String, val downloadSizeLabel: String, val installedSizeLabel: String) {
-    QuickStart("quick_start", "Quick Start", "Basic extraction for short documents, simple summaries, and lighter storage use.", "1.2 GB", "2.1 GB"),
-    CaseAssociate("case_associate", "Case Associate", "Better document understanding, stronger field extraction, mixed English/Hindi support, and stronger chronology work.", "2.8 GB", "4.9 GB"),
-    SeniorDraftingSupport("senior_drafting_support", "Senior Drafting Support", "Deeper review, longer bilingual bundles, and stronger evidence or issue analysis.", "4.6 GB", "7.4 GB");
+    QuickStart("quick_start", "Quick Start", "Basic local review, short summaries, simple Ask Ross actions, and lighter storage use.", "about 430 MB", "about 430 MB"),
+    CaseAssociate("case_associate", "Case Associate", "Recommended private assistant for document review, chronologies, hearing notes, and source-backed Ask Ross answers.", "about 1.1-1.3 GB", "about 1.1-1.3 GB"),
+    SeniorDraftingSupport("senior_drafting_support", "Senior Drafting Support", "Advanced private assistant for deeper review, longer matter reasoning, and drafting support.", "about 2.5 GB", "about 2.5 GB");
 
     val compactSetupSummary: String
         get() = when (this) {
@@ -98,9 +98,9 @@ enum class AlphaCapabilityTier(val tierId: String, val title: String, val summar
 
     val bestFor: String
         get() = when (this) {
-            QuickStart -> "Fast intake, smaller devices, and standard extraction for short documents."
-            CaseAssociate -> "Most advocates who need stronger extraction, chronology work, and mixed-language review on-device."
-            SeniorDraftingSupport -> "Longer bundles, hearing prep, and stronger bilingual workflows."
+            QuickStart -> "Fast intake, smaller devices, and basic local review for short documents."
+            CaseAssociate -> "Most advocates who need document review, next dates, chronologies, notes, and source-backed answers on-device."
+            SeniorDraftingSupport -> "Longer bundles, deeper review, hearing preparation, and more detailed drafting support."
         }
 
     val setupTimeLabel: String
@@ -3160,7 +3160,7 @@ internal class AlphaRossController(
             ledgerEntries = listOf(
                 AlphaPrivacyLedgerEntry(
                     title = if (backendWorked) "Private AI Pack verified" else "Private AI Pack fallback installed",
-                    detail = if (backendWorked) "Checksum and install metadata were verified locally after backend delivery." else "The backend was unavailable, so Ross prepared a local development artifact without case data.",
+                    detail = if (backendWorked) "Install metadata was verified locally after backend delivery." else "The backend was unavailable, so Ross prepared a local development assistant file without case data.",
                     purpose = AlphaPrivacyPurpose.ModelVerification,
                     payloadClass = AlphaPayloadClass.NoCaseData,
                     endpointLabel = if (backendWorked) "device://model-verify" else "device://model-verify",

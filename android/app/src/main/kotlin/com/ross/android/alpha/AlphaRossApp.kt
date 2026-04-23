@@ -4156,7 +4156,6 @@ private fun AlphaSettingsSelectionRow(
 @Composable
 private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack: () -> Unit) {
     var showTechnicalDiagnostics by remember { mutableStateOf(false) }
-    var technicalTierId by rememberSaveable { mutableStateOf<String?>(null) }
     val privateAiStatus = alphaPrivateAiStatus(controller)
     AlphaShell(title = "Private assistant", showBack = true, onBack = onBack) {
         Column(
@@ -4200,14 +4199,8 @@ private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack
                         "${tier.bestFor} Wi-Fi is preferred for setup.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    TextButton(onClick = { technicalTierId = if (technicalTierId == tier.tierId) null else tier.tierId }) {
-                        Text(if (technicalTierId == tier.tierId) "Hide technical specifications" else "Technical specifications")
-                    }
-                    if (technicalTierId == tier.tierId) {
-                        AlphaSettingsValueRow(label = "Download", value = tier.downloadSizeLabel)
-                        AlphaSettingsValueRow(label = "On-device storage", value = tier.installedSizeLabel)
-                        AlphaSettingsValueRow(label = "Setup estimate", value = tier.setupTimeLabel)
-                    }
+                    AlphaSettingsValueRow(label = "Download", value = tier.downloadSizeLabel)
+                    AlphaSettingsValueRow(label = "Setup estimate", value = tier.setupTimeLabel)
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(
                         onClick = { controller.startPackInstall(tier, controller.persisted.settings.allowMobileDataForLargePacks || tier == AlphaCapabilityTier.QuickStart) },
@@ -4242,14 +4235,7 @@ private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack
                         },
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    TextButton(onClick = { technicalTierId = if (technicalTierId == pack.tier.tierId) null else pack.tier.tierId }) {
-                        Text(if (technicalTierId == pack.tier.tierId) "Hide technical specifications" else "Technical specifications")
-                    }
-                    if (technicalTierId == pack.tier.tierId) {
-                        AlphaSettingsValueRow(label = "Storage", value = pack.tier.installedSizeLabel)
-                        AlphaSettingsValueRow(label = "Runtime", value = pack.runtimeMode.wireValue)
-                        AlphaSettingsValueRow(label = "Artifact", value = pack.artifactKind)
-                    }
+                    AlphaSettingsValueRow(label = "Storage", value = pack.tier.installedSizeLabel)
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = { controller.activatePack(pack.id) }) { Text("Use this level") }
@@ -4558,7 +4544,7 @@ private fun AlphaPackTierSheetContent(
     onDismiss: () -> Unit,
 ) {
     val tint = alphaTierTint(tier)
-    var showTechnicalSpecifications by rememberSaveable(tier.tierId) { mutableStateOf(false) }
+    var showDownloadDetails by rememberSaveable(tier.tierId) { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -4605,10 +4591,10 @@ private fun AlphaPackTierSheetContent(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        TextButton(onClick = { showTechnicalSpecifications = !showTechnicalSpecifications }) {
-            Text(if (showTechnicalSpecifications) "Hide technical specifications" else "Technical specifications")
+        TextButton(onClick = { showDownloadDetails = !showDownloadDetails }) {
+            Text(if (showDownloadDetails) "Hide download details" else "Download details")
         }
-        if (showTechnicalSpecifications) {
+        if (showDownloadDetails) {
             AlphaSettingsValueRow(label = "Download", value = tier.downloadSizeLabel)
             AlphaSettingsValueRow(label = "On-device storage", value = tier.installedSizeLabel)
             AlphaSettingsValueRow(label = "Setup estimate", value = tier.setupTimeLabel)

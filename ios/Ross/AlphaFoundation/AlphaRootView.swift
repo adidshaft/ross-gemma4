@@ -2819,13 +2819,13 @@ final class AlphaRossModel {
                 $0.updatedAt = .now
                 $0.completedAt = .now
             }
-            persisted.ledgerEntries.insert(
-                AlphaPrivacyLedgerEntry(
-                    title: "Test assistant artifact installed",
-                    detail: "A tiny test-only artifact was installed for automated tests. Device setup uses real Hugging Face model files.",
+                persisted.ledgerEntries.insert(
+                    AlphaPrivacyLedgerEntry(
+                    title: "Test assistant installed",
+                    detail: "A tiny test-only assistant file was installed for automated tests. Device setup uses private assistant files.",
                     purpose: .model_verification,
                     payloadClass: .no_case_data,
-                    endpointLabel: "device://model-test-artifact",
+                    endpointLabel: "device://private-assistant-test",
                     success: true
                 ),
                 at: 0
@@ -2957,7 +2957,7 @@ final class AlphaRossModel {
             bytesDownloaded: 0,
             totalBytes: artifact.sizeBytes,
             checksumSha256: artifact.sha256,
-            artifactKind: "huggingface_gguf",
+            artifactKind: "local_model_artifact",
             runtimeMode: .llamaCppGguf,
             developmentOnly: false
         )
@@ -2967,10 +2967,10 @@ final class AlphaRossModel {
         persisted.ledgerEntries.insert(
             AlphaPrivacyLedgerEntry(
                 title: "Assistant model selected",
-                detail: "\(artifact.displayName) from \(artifact.repository) was selected for \(tier.title). Ross has not read any case files.",
+                detail: "\(tier.title) was selected. Ross has not read any case files.",
                 purpose: .model_catalog,
                 payloadClass: .no_case_data,
-                endpointLabel: artifact.sourcePageURLString,
+                endpointLabel: "model-provider://private-assistant",
                 success: true
             ),
             at: 0
@@ -3008,7 +3008,7 @@ final class AlphaRossModel {
                     detail: "Ross started downloading the selected private assistant. Case files stayed on this device.",
                     purpose: .model_download,
                     payloadClass: .no_case_data,
-                    endpointLabel: artifact.downloadURLString,
+                    endpointLabel: "model-provider://private-assistant-download",
                     success: true
                 ),
                 at: 0
@@ -3040,7 +3040,7 @@ final class AlphaRossModel {
                 tier: tier,
                 installPath: installedArtifact.relativePath,
                 checksumSha256: installedArtifact.checksum,
-                artifactKind: "huggingface_gguf",
+                artifactKind: "local_model_artifact",
                 runtimeMode: .llamaCppGguf,
                 developmentOnly: false,
                 isActive: true
@@ -3069,7 +3069,7 @@ final class AlphaRossModel {
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
                     title: "Assistant model verified",
-                    detail: "\(artifact.displayName) finished downloading and passed checksum verification locally.",
+                    detail: "\(tier.title) finished downloading and passed checksum verification locally.",
                     purpose: .model_verification,
                     payloadClass: .no_case_data,
                     endpointLabel: "device://model-verify",
@@ -3092,7 +3092,7 @@ final class AlphaRossModel {
                     detail: assistantDownloadFailureMessage(error),
                     purpose: .model_download,
                     payloadClass: .no_case_data,
-                    endpointLabel: artifact.downloadURLString,
+                    endpointLabel: "model-provider://private-assistant-download",
                     success: false
                 ),
                 at: 0
@@ -4984,50 +4984,50 @@ private struct AlphaAssistantModelArtifact: Hashable, Sendable {
 private let alphaAssistantModelArtifacts: [AlphaCapabilityTier: AlphaAssistantModelArtifact] = [
     .quickStart: AlphaAssistantModelArtifact(
         tier: .quickStart,
-        packId: "hf-qwen3-0_6b-q4_0",
-        displayName: "Gemma 4 E2B Q4 0.6B Q4",
+        packId: "gemma-4-e2b-q4",
+        displayName: "Gemma 4 E2B Q4",
         repository: "google/gemma-4-E2B-it",
         fileName: "gemma-4-e2b-q4.gguf",
-        quantization: "Gemma 4 Q4 Q4",
+        quantization: "Q4",
         downloadURLString: "https://huggingface.co/google/gemma-4-E2B-it/resolve/main/gemma-4-e2b-q4.gguf",
         sizeBytes: 428_970_080,
         sha256: "da2572f16c06133561ce56accaa822216f2391ef4d37fba427801cd6736417d4",
         minimumMemoryGB: 4,
-        recommendedMemoryGB: 4,
-        requiredFreeSpaceGB: 2,
-        recommendedPhone: "Best for iPhone 12/13/SE-class phones or any device where storage is tight.",
+        recommendedMemoryGB: 6,
+        requiredFreeSpaceGB: 1,
+        recommendedPhone: "Best for smaller devices or any device where storage is tight.",
         sourcePageURLString: "https://huggingface.co/google/gemma-4-E2B-it"
     ),
     .caseAssociate: AlphaAssistantModelArtifact(
         tier: .caseAssociate,
-        packId: "hf-qwen3-1_7b-q4_k_m",
-        displayName: "Gemma 4 E2B Q4 1.7B Q4",
-        repository: "unsloth/Gemma 4 E2B Q4-1.7B-Gemma 4 Q4",
+        packId: "gemma-4-e4b-q4",
+        displayName: "Gemma 4 E4B Q4",
+        repository: "google/gemma-4-E4B-it",
         fileName: "gemma-4-e4b-q4.gguf",
-        quantization: "Gemma 4 Q4 Q4",
-        downloadURLString: "https://huggingface.co/unsloth/Gemma 4 E2B Q4-1.7B-Gemma 4 Q4/resolve/main/gemma-4-e4b-q4.gguf",
-        sizeBytes: 1_107_409_472,
-        sha256: "b139949c5bd74937ad8ed8c8cf3d9ffb1e99c866c823204dc42c0d91fa181897",
+        quantization: "Q4",
+        downloadURLString: "https://huggingface.co/google/gemma-4-E4B-it/resolve/main/gemma-4-e4b-q4.gguf",
+        sizeBytes: 1_282_439_264,
+        sha256: "d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5",
         minimumMemoryGB: 6,
-        recommendedMemoryGB: 6,
-        requiredFreeSpaceGB: 4,
-        recommendedPhone: "Best default for iPhone 14/15/16-class phones with enough free storage.",
-        sourcePageURLString: "https://huggingface.co/unsloth/Gemma 4 E2B Q4-1.7B-Gemma 4 Q4"
+        recommendedMemoryGB: 8,
+        requiredFreeSpaceGB: 3,
+        recommendedPhone: "Best default for current phones with enough free storage.",
+        sourcePageURLString: "https://huggingface.co/google/gemma-4-E4B-it"
     ),
     .seniorDraftingSupport: AlphaAssistantModelArtifact(
         tier: .seniorDraftingSupport,
-        packId: "hf-qwen3-4b-q4_k_m",
-        displayName: "Gemma 4 E2B Q4 4B Q4",
+        packId: "gemma-4-26b-a4b-q4",
+        displayName: "Gemma 4 26B-A4B Q4",
         repository: "google/gemma-4-26B-A4B-it",
         fileName: "gemma-4-26b-a4b-q4.gguf",
-        quantization: "Gemma 4 Q4 Q4",
+        quantization: "Q4",
         downloadURLString: "https://huggingface.co/google/gemma-4-26B-A4B-it/resolve/main/gemma-4-26b-a4b-q4.gguf",
-        sizeBytes: 2_497_280_256,
-        sha256: "7485fe6f11af29433bc51cab58009521f205840f5b4ae3a32fa7f92e8534fdf5",
+        sizeBytes: 2_497_280_640,
+        sha256: "ab27b9bfa375a178d6cba48f3ad892b94b7739659dcc7aae8058ce0ffed6b328",
         minimumMemoryGB: 8,
-        recommendedMemoryGB: 8,
-        requiredFreeSpaceGB: 7,
-        recommendedPhone: "Best for Pro-class iPhones with 8 GB memory and comfortable storage headroom.",
+        recommendedMemoryGB: 12,
+        requiredFreeSpaceGB: 5,
+        recommendedPhone: "Best for higher-memory phones with comfortable storage headroom.",
         sourcePageURLString: "https://huggingface.co/google/gemma-4-26B-A4B-it"
     )
 ]
@@ -5052,11 +5052,11 @@ private enum AlphaAssistantDownloadError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidURL:
-            return "The selected model download URL is invalid."
+            return "The selected private assistant download link is invalid."
         case .httpStatus(let status):
-            return "Hugging Face returned HTTP \(status) for this model file."
+            return "The private assistant download returned HTTP \(status)."
         case .insufficientStorage(let requiredGB, let availableGB):
-            return "This model needs about \(requiredGB) GB free. This iPhone currently reports \(availableGB) GB free."
+            return "This private assistant needs about \(requiredGB) GB free. This iPhone currently reports \(availableGB) GB free."
         case .missingDownloadedFile:
             return "Ross could not find the downloaded assistant file."
         case .pausedByUser:
@@ -5121,11 +5121,11 @@ private func alphaUnsupportedPackReason(
     case .appleFoundationModels:
         return nil
     case .deterministicDev:
-        return "\(tier.title) is still pointing at a deterministic development fallback."
+        return "\(tier.title) is still using a development-only assistant in this build."
     case .mediapipeLlm:
-        return "\(tier.title) is packaged for MediaPipe, which is not active in the iOS build."
+        return "\(tier.title) is not active in this iOS build."
     case .llamaCppGguf:
-        return "\(tier.title) is packaged for llama.cpp, which is not active in the iOS build."
+        return "\(tier.title) is not active in this iOS build."
     case .unavailable:
         return "\(tier.title) does not have an available on-device runtime in this build."
     }
@@ -13493,6 +13493,15 @@ private struct AlphaPrivateAISettingsScreen: View {
                                 AlphaSettingsValueRow(label: "Fallback active", value: runtimeHealth.fallbackActive ? "Yes" : "No")
                                 AlphaSettingsValueRow(label: "Model path", value: runtimeHealth.modelPathPresent ? "Configured" : "Missing")
 
+                                if let activePack = model.activePack {
+                                    let artifact = alphaAssistantModelArtifact(for: activePack.tier)
+                                    AlphaSettingsValueRow(label: "Technical model", value: artifact.displayName)
+                                    AlphaSettingsValueRow(label: "Repository", value: artifact.repository)
+                                    AlphaSettingsValueRow(label: "File", value: artifact.fileName)
+                                    AlphaSettingsValueRow(label: "Quantization", value: artifact.quantization)
+                                    AlphaSettingsValueRow(label: "Checksum", value: artifact.sha256)
+                                }
+
                                 if let modelPathLabel = runtimeHealth.modelPathLabel {
                                     AlphaSettingsValueRow(label: "Model file", value: modelPathLabel)
                                 }
@@ -13586,7 +13595,6 @@ private struct AlphaSettingsToggleRow: View {
 private struct AlphaPrivateAIOfferCard: View {
     @Bindable var model: AlphaRossModel
     let offer: AlphaPackOffer
-    @State private var showingTechnicalDetails = false
 
     private var artifact: AlphaAssistantModelArtifact {
         alphaAssistantModelArtifact(for: offer.tier)
@@ -13717,29 +13725,6 @@ private struct AlphaPrivateAIOfferCard: View {
             .padding(10)
             .background(Color.white.opacity(0.42), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-            Button {
-                showingTechnicalDetails = true
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "info.circle")
-                        .font(.caption.weight(.semibold))
-                    Text("Technical specifications")
-                        .font(.caption.weight(.semibold))
-                    Spacer(minLength: 8)
-                    Image(systemName: "chevron.right")
-                        .font(.caption2.weight(.bold))
-                }
-                .foregroundStyle(Color.rossInk.opacity(0.66))
-                .padding(.horizontal, 10)
-                .frame(height: 36)
-                .background(Color.rossGlassFill.opacity(0.7), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color.rossGlassStroke.opacity(0.64), lineWidth: 1)
-                }
-            }
-            .buttonStyle(.plain)
-
             if let latestJob,
                (latestJob.state == .failed || latestJob.state == .pausedError || latestJob.state == .pausedNoStorage),
                let failureReason = latestJob.failureReason {
@@ -13780,63 +13765,6 @@ private struct AlphaPrivateAIOfferCard: View {
                     lineWidth: 1
                 )
         }
-        .sheet(isPresented: $showingTechnicalDetails) {
-            AlphaAssistantTechnicalSheet(artifact: artifact)
-        }
-    }
-}
-
-private struct AlphaAssistantTechnicalSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    let artifact: AlphaAssistantModelArtifact
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: alphaSectionSpacing) {
-                    RossSectionCard(title: "Model file") {
-                        VStack(alignment: .leading, spacing: 8) {
-                            AlphaSettingsValueRow(label: "Model", value: artifact.displayName)
-                            AlphaSettingsValueRow(label: "Repository", value: artifact.repository)
-                            AlphaSettingsValueRow(label: "File", value: artifact.fileName)
-                            AlphaSettingsValueRow(label: "Format", value: artifact.quantization)
-                            AlphaSettingsValueRow(label: "Download", value: artifact.sizeLabel)
-                            AlphaSettingsValueRow(label: "SHA-256", value: artifact.sha256)
-                        }
-                    }
-
-                    RossSectionCard(title: "Device requirements") {
-                        VStack(alignment: .leading, spacing: 8) {
-                            AlphaSettingsValueRow(label: "Minimum", value: artifact.requirementLabel)
-                            AlphaSettingsValueRow(label: "Recommended memory", value: "\(artifact.recommendedMemoryGB) GB")
-                            AlphaSettingsValueRow(label: "Free space", value: "\(artifact.requiredFreeSpaceGB) GB or more")
-                            Text(artifact.recommendedPhone)
-                                .font(.footnote)
-                                .foregroundStyle(Color.rossInk.opacity(0.68))
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-
-                    RossSectionCard(title: "Source") {
-                        VStack(alignment: .leading, spacing: 8) {
-                            AlphaSettingsValueRow(label: "Provider", value: artifact.sourceLabel)
-                            AlphaSettingsValueRow(label: "Model page", value: artifact.sourcePageURLString)
-                            AlphaSettingsValueRow(label: "File URL", value: artifact.downloadURLString)
-                        }
-                    }
-                }
-                .padding(alphaScreenPadding)
-            }
-            .navigationTitle("Technical Specifications")
-            .rossInlineNavigationTitle()
-            .toolbar {
-                ToolbarItem(placement: .automatic) {
-                    Button("Done") { dismiss() }
-                }
-            }
-        }
-        .presentationDetents([.large])
-        .presentationDragIndicator(.visible)
     }
 }
 

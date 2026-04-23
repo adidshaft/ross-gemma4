@@ -19,6 +19,7 @@ pub struct TechnicalModelDescriptor {
 pub struct LocalModelCatalog {
     pub capability_tiers: Vec<ModelCapabilityTier>,
     pub technical_models: Vec<TechnicalModelDescriptor>,
+    pub retrieval_models: Vec<TechnicalModelDescriptor>,
     pub manifests: Vec<ModelPackManifest>,
 }
 
@@ -27,6 +28,7 @@ impl Default for LocalModelCatalog {
         Self {
             capability_tiers: default_capability_tiers(),
             technical_models: technical_model_registry(),
+            retrieval_models: retrieval_model_registry(),
             manifests: default_manifests(),
         }
     }
@@ -44,7 +46,9 @@ impl LocalModelCatalog {
     ) -> Vec<ModelPackManifest> {
         self.manifests
             .iter()
-            .filter(|manifest| manifest.capability_tier_id == tier_id && manifest.platform == platform)
+            .filter(|manifest| {
+                manifest.capability_tier_id == tier_id && manifest.platform == platform
+            })
             .cloned()
             .collect()
     }
@@ -94,7 +98,9 @@ impl LocalModelCatalog {
                 reasons.push("Large pack downloads are gated to Wi-Fi unless the user explicitly allows mobile data.".into());
             }
         } else {
-            reasons.push("No local manifest matched the requested tier, platform, and runtime.".into());
+            reasons.push(
+                "No local manifest matched the requested tier, platform, and runtime.".into(),
+            );
         }
 
         PackInstallPlan {
@@ -114,49 +120,49 @@ pub fn default_capability_tiers() -> Vec<ModelCapabilityTier> {
         ModelCapabilityTier {
             id: CapabilityTierId::QuickStart,
             display_name: "Quick Start".into(),
-            subtitle: "Start using private AI sooner".into(),
-            user_facing_description: "Basic document cleanup, short summaries, simple case questions over small files, and basic chronology extraction.".into(),
-            approx_download_size_mb: 850,
-            required_free_space_mb: 1600,
+            subtitle: "Start quickly with basic local review".into(),
+            user_facing_description: "Basic document cleanup, short summaries, simple Ask Ross actions, and basic local matter Q&A.".into(),
+            approx_download_size_mb: 429,
+            required_free_space_mb: 900,
             recommended_on_wifi: true,
             min_ram_gb: Some(4),
             min_os_version: Some("Android 12 / iOS 17".into()),
             supports_long_documents: false,
             supports_advanced_drafting: false,
             supports_bilingual_mode: false,
-            hidden_technical_model_id: "llama-3.2-3b-q4".into(),
+            hidden_technical_model_id: "qwen3-0_6b-q4_0-gguf".into(),
             sort_order: 1,
         },
         ModelCapabilityTier {
             id: CapabilityTierId::CaseAssociate,
             display_name: "Case Associate".into(),
-            subtitle: "Recommended for most advocates".into(),
-            user_facing_description: "Source-backed case Q&A, 50+ page PDF summarization, chronologies, issue extraction, order summaries, and evidence review.".into(),
-            approx_download_size_mb: 3800,
-            required_free_space_mb: 6200,
+            subtitle: "Recommended private assistant for most matters".into(),
+            user_facing_description: "Source-backed case Q&A, document review, next-date extraction, chronologies, order summaries, and hearing notes.".into(),
+            approx_download_size_mb: 1280,
+            required_free_space_mb: 2600,
             recommended_on_wifi: true,
             min_ram_gb: Some(6),
             min_os_version: Some("Android 13 / iOS 18".into()),
             supports_long_documents: true,
             supports_advanced_drafting: false,
             supports_bilingual_mode: true,
-            hidden_technical_model_id: "gemma-4-e2b-q4".into(),
+            hidden_technical_model_id: "qwen3-1_7b-q4_k_m-gguf".into(),
             sort_order: 2,
         },
         ModelCapabilityTier {
             id: CapabilityTierId::SeniorDrafting,
             display_name: "Senior Drafting Support".into(),
-            subtitle: "Best for longer files and detailed drafts".into(),
-            user_facing_description: "Longer-document workflows, more detailed drafting, stronger bilingual handling, senior counsel briefs, and deeper issue analysis.".into(),
-            approx_download_size_mb: 6400,
-            required_free_space_mb: 9800,
+            subtitle: "Advanced private assistant for deeper review and drafting".into(),
+            user_facing_description: "Advanced drafting, deeper review, longer matter reasoning, chronology refinement, issue extraction, and hearing preparation.".into(),
+            approx_download_size_mb: 2500,
+            required_free_space_mb: 5000,
             recommended_on_wifi: true,
             min_ram_gb: Some(8),
             min_os_version: Some("Android 14 / iOS 18".into()),
             supports_long_documents: true,
             supports_advanced_drafting: true,
             supports_bilingual_mode: true,
-            hidden_technical_model_id: "gemma-4-e4b-q4".into(),
+            hidden_technical_model_id: "qwen3-4b-q4_k_m-gguf".into(),
             sort_order: 3,
         },
     ]
@@ -165,49 +171,87 @@ pub fn default_capability_tiers() -> Vec<ModelCapabilityTier> {
 pub fn technical_model_registry() -> Vec<TechnicalModelDescriptor> {
     vec![
         TechnicalModelDescriptor {
-            id: "gemma-4-e2b-q4".into(),
+            id: "qwen3-0_6b-q4_0-gguf".into(),
             display_name: "Gemma 4 E2B Q4".into(),
-            family: "gemma".into(),
-            runtime_candidates: vec![RuntimeTarget::Gemma 4 E4B Q4Cpp, RuntimeTarget::Mediapipe, RuntimeTarget::Custom],
+            family: "qwen".into(),
+            runtime_candidates: vec![RuntimeTarget::Gemma 4 E4B Q4CppGguf, RuntimeTarget::Custom],
             use_cases: vec![
-                "summaries".into(),
-                "case_qa".into(),
-                "chronology".into(),
-                "issue_extraction".into(),
+                "command_routing".into(),
+                "short_summaries".into(),
+                "basic_local_qa".into(),
+                "public_law_query_shaping".into(),
             ],
-            license_name: "Placeholder evaluation license".into(),
-            onboarding_visible: true,
-        },
-        TechnicalModelDescriptor {
-            id: "gemma-4-e4b-q4".into(),
-            display_name: "Gemma 4 E4B Q4".into(),
-            family: "gemma".into(),
-            runtime_candidates: vec![RuntimeTarget::Gemma 4 E4B Q4Cpp, RuntimeTarget::CoreMl, RuntimeTarget::Custom],
-            use_cases: vec![
-                "advanced_drafting".into(),
-                "long_document_analysis".into(),
-                "bilingual_outputs".into(),
-            ],
-            license_name: "Placeholder evaluation license".into(),
-            onboarding_visible: true,
-        },
-        TechnicalModelDescriptor {
-            id: "embeddinggemma-300m-int8".into(),
-            display_name: "EmbeddingGemma 300M INT8".into(),
-            family: "gemma".into(),
-            runtime_candidates: vec![RuntimeTarget::Mediapipe, RuntimeTarget::Custom],
-            use_cases: vec!["local_rag".into(), "semantic_search".into()],
-            license_name: "Placeholder evaluation license".into(),
+            license_name: "Gemma 4 E2B Q4 license".into(),
             onboarding_visible: false,
         },
         TechnicalModelDescriptor {
-            id: "llama-3.2-3b-q4".into(),
-            display_name: "Gemma 4 E4B Q4 3.2 3B Q4".into(),
-            family: "llama".into(),
-            runtime_candidates: vec![RuntimeTarget::Gemma 4 E4B Q4Cpp, RuntimeTarget::Custom],
-            use_cases: vec!["compact_summaries".into(), "basic_classification".into()],
-            license_name: "Placeholder evaluation license".into(),
-            onboarding_visible: true,
+            id: "qwen3-1_7b-q4_k_m-gguf".into(),
+            display_name: "Gemma 4 E4B Q4".into(),
+            family: "qwen".into(),
+            runtime_candidates: vec![RuntimeTarget::Gemma 4 E4B Q4CppGguf, RuntimeTarget::Custom],
+            use_cases: vec![
+                "document_review".into(),
+                "next_date_extraction".into(),
+                "order_direction_extraction".into(),
+                "matter_summaries".into(),
+                "hearing_notes".into(),
+                "case_notes".into(),
+                "chronology".into(),
+                "source_backed_answers".into(),
+                "public_law_query_shaping".into(),
+            ],
+            license_name: "Gemma 4 E2B Q4 license".into(),
+            onboarding_visible: false,
+        },
+        TechnicalModelDescriptor {
+            id: "qwen3-4b-q4_k_m-gguf".into(),
+            display_name: "Gemma 4 26B-A4B Q4".into(),
+            family: "qwen".into(),
+            runtime_candidates: vec![RuntimeTarget::Gemma 4 E4B Q4CppGguf, RuntimeTarget::Custom],
+            use_cases: vec![
+                "advanced_drafting".into(),
+                "deeper_review".into(),
+                "longer_matter_reasoning".into(),
+                "chronology_refinement".into(),
+                "issue_extraction".into(),
+                "order_summary_refinement".into(),
+                "hearing_preparation".into(),
+            ],
+            license_name: "Gemma 4 E2B Q4 license".into(),
+            onboarding_visible: false,
+        },
+    ]
+}
+
+pub fn retrieval_model_registry() -> Vec<TechnicalModelDescriptor> {
+    vec![
+        TechnicalModelDescriptor {
+            id: "embeddinggemma-300m-litert".into(),
+            display_name: "EmbeddingGemma 300M".into(),
+            family: "gemma".into(),
+            runtime_candidates: vec![RuntimeTarget::LiteRt, RuntimeTarget::Custom],
+            use_cases: vec![
+                "local_rag".into(),
+                "semantic_search".into(),
+                "source_retrieval".into(),
+                "source_backed_answers".into(),
+            ],
+            license_name: "Gemma terms".into(),
+            onboarding_visible: false,
+        },
+        TechnicalModelDescriptor {
+            id: "qwen3-embedding-0_6b-gguf".into(),
+            display_name: "Gemma 4 Embedding".into(),
+            family: "qwen".into(),
+            runtime_candidates: vec![RuntimeTarget::Gemma 4 E4B Q4CppGguf, RuntimeTarget::Custom],
+            use_cases: vec![
+                "local_rag".into(),
+                "semantic_search".into(),
+                "source_retrieval".into(),
+                "source_backed_answers".into(),
+            ],
+            license_name: "Gemma 4 E2B Q4 license".into(),
+            onboarding_visible: false,
         },
     ]
 }
@@ -217,9 +261,9 @@ pub fn default_manifests() -> Vec<ModelPackManifest> {
         manifest_for_tier(
             CapabilityTierId::QuickStart,
             "quick-start-desktop",
-            "llama-3.2-3b-q4",
-            850,
-            1_600,
+            "qwen3-0_6b-q4_0-gguf",
+            429,
+            900,
             vec![
                 PackCapability::Generation,
                 PackCapability::Summarization,
@@ -229,9 +273,9 @@ pub fn default_manifests() -> Vec<ModelPackManifest> {
         manifest_for_tier(
             CapabilityTierId::CaseAssociate,
             "case-associate-desktop",
-            "gemma-4-e2b-q4",
-            3_800,
-            6_200,
+            "qwen3-1_7b-q4_k_m-gguf",
+            1_280,
+            2_600,
             vec![
                 PackCapability::Generation,
                 PackCapability::Embeddings,
@@ -243,9 +287,9 @@ pub fn default_manifests() -> Vec<ModelPackManifest> {
         manifest_for_tier(
             CapabilityTierId::SeniorDrafting,
             "senior-drafting-desktop",
-            "gemma-4-e4b-q4",
-            6_400,
-            9_800,
+            "qwen3-4b-q4_k_m-gguf",
+            2_500,
+            5_000,
             vec![
                 PackCapability::Generation,
                 PackCapability::Embeddings,

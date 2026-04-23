@@ -277,7 +277,9 @@ export async function findArtifactRecord(
     const record =
       pack.artifactKind === "external_debug_model"
         ? await getExternalArtifactRecord(env, pack).catch(() => undefined)
-        : getDevArtifactRecord(pack);
+        : pack.artifactKind === "tiny_dev_artifact"
+          ? getDevArtifactRecord(pack)
+          : undefined;
 
     if (record?.descriptor.artifactId === artifactId) {
       return record;

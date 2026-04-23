@@ -23,6 +23,7 @@ export interface RuntimeEnv {
   downloadKeyId: string;
   stripeWebhookSecret?: string | undefined;
   razorpayWebhookSecret?: string | undefined;
+  modelCatalogMode: "dev" | "production_metadata";
   enableExternalModelMetadata: boolean;
   externalModelRuntime?: string | undefined;
   externalModelKind?: string | undefined;
@@ -53,6 +54,11 @@ function parseOptionalPositiveInteger(value: string | undefined): number | undef
 
   const parsed = Number.parseInt(trimmed, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function parseModelCatalogMode(value: string | undefined): "dev" | "production_metadata" {
+  const normalized = (value ?? "").trim().toLowerCase();
+  return normalized === "production_metadata" ? "production_metadata" : "dev";
 }
 
 function trimmedValue(value: string | undefined): string | undefined {
@@ -156,6 +162,7 @@ export function readRuntimeEnv(
     downloadKeyId: environment.DOWNLOAD_KEY_ID ?? "download-dev-v1",
     stripeWebhookSecret: environment.STRIPE_WEBHOOK_SECRET,
     razorpayWebhookSecret: environment.RAZORPAY_WEBHOOK_SECRET,
+    modelCatalogMode: parseModelCatalogMode(environment.ROSS_MODEL_CATALOG_MODE),
     enableExternalModelMetadata: parseBoolean(environment.ROSS_ENABLE_EXTERNAL_MODEL_METADATA),
     externalModelRuntime: trimmedValue(environment.ROSS_EXTERNAL_MODEL_RUNTIME),
     externalModelKind: trimmedValue(environment.ROSS_EXTERNAL_MODEL_KIND),

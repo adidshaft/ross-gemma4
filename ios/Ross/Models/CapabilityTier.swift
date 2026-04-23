@@ -21,11 +21,11 @@ enum CapabilityTier: String, CaseIterable, Codable, Hashable, Identifiable, Send
     var summary: String {
         switch self {
         case .quickStart:
-            "Best for quick capture, short summaries, and small-file review while keeping the install light."
+            "Best for basic local review, short summaries, and simple Ask Ross actions while keeping the install light."
         case .caseAssociate:
-            "Balanced local support for source-backed case questions, chronologies, and issue extraction."
+            "Recommended private assistant for document review, chronologies, hearing notes, and source-backed Ask Ross answers."
         case .seniorDraftingSupport:
-            "Designed for longer files, deeper drafting support, and hearing-preparation workflows."
+            "Advanced private assistant for deeper review, longer matter reasoning, and drafting support."
         }
     }
 
@@ -142,32 +142,32 @@ extension Array where Element == ModelPack {
     static let fixtureCatalog: [ModelPack] = [
         ModelPack(
             tier: .quickStart,
-            downloadSize: "1.2 GB",
-            installedFootprint: "2.1 GB",
+            downloadSize: "about 430 MB",
+            installedFootprint: "about 430 MB",
             recommendedFor: "Lighter phones and rapid capture-first workflows.",
             technicalDetails: [
-                TechnicalModelComponent(name: "llama-3.2-3b-q4", purpose: "Compact local summarization and classification"),
-                TechnicalModelComponent(name: "embeddinggemma-300m-int8", purpose: "Local semantic search and retrieval")
+                TechnicalModelComponent(name: "Gemma 4 E2B Q4", purpose: "Command routing, short summaries, and basic local Q&A"),
+                TechnicalModelComponent(name: "EmbeddingGemma 300M", purpose: "Local semantic search and retrieval")
             ]
         ),
         ModelPack(
             tier: .caseAssociate,
-            downloadSize: "2.8 GB",
-            installedFootprint: "4.9 GB",
+            downloadSize: "about 1.1-1.3 GB",
+            installedFootprint: "about 1.1-1.3 GB",
             recommendedFor: "Balanced day-to-day case review and source-backed drafting support.",
             technicalDetails: [
-                TechnicalModelComponent(name: "gemma-4-e2b-q4", purpose: "Primary local case review and drafting"),
-                TechnicalModelComponent(name: "embeddinggemma-300m-int8", purpose: "Local semantic search and retrieval")
+                TechnicalModelComponent(name: "Gemma 4 E4B Q4", purpose: "Primary local case review and drafting"),
+                TechnicalModelComponent(name: "EmbeddingGemma 300M", purpose: "Local semantic search and retrieval")
             ]
         ),
         ModelPack(
             tier: .seniorDraftingSupport,
-            downloadSize: "4.6 GB",
-            installedFootprint: "7.4 GB",
+            downloadSize: "about 2.5 GB",
+            installedFootprint: "about 2.5 GB",
             recommendedFor: "Longer files, richer drafting sessions, and hearing preparation.",
             technicalDetails: [
-                TechnicalModelComponent(name: "gemma-4-e4b-q4", purpose: "Higher-capacity local drafting"),
-                TechnicalModelComponent(name: "embeddinggemma-300m-int8", purpose: "Local semantic search and retrieval")
+                TechnicalModelComponent(name: "Gemma 4 26B-A4B Q4", purpose: "Higher-capacity local drafting"),
+                TechnicalModelComponent(name: "EmbeddingGemma 300M", purpose: "Local semantic search and retrieval")
             ]
         )
     ]

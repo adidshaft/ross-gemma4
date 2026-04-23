@@ -396,8 +396,8 @@ struct AlphaGemmaLocalModelProvider: AlphaRealLocalModelProvider {
             estimatedContextTokens: contextWindowEstimate(),
             lastErrorCategory: isAvailable() ? nil : "missing_model_file",
             userFacingStatus: isAvailable()
-                ? "Gemma 4 Q4 local runtime is ready with llama.cpp."
-                : "The downloaded Gemma 4 Q4 model file is missing from app-private storage.",
+                ? "Private assistant is ready on this device."
+                : "The private assistant file is missing from app-private storage.",
             fallbackActive: !isAvailable(),
             explicitOptInEnabled: true
         )
@@ -453,7 +453,7 @@ struct AlphaGemmaLocalModelProvider: AlphaRealLocalModelProvider {
                 rawText: response,
                 parsedJson: parsedJson,
                 schemaValid: parsedJson != nil,
-                warnings: pack.truncated ? ["Prompt pack was truncated to stay inside the local Gemma 4 Q4 runtime budget."] : [],
+                warnings: pack.truncated ? ["Prompt pack was shortened to stay inside the private assistant budget."] : [],
                 sourceRefs: pack.includedSourceRefs.isEmpty ? taskInput.sourcePack.map(\.sourceRef) : pack.includedSourceRefs
             )
         } catch {
@@ -461,7 +461,7 @@ struct AlphaGemmaLocalModelProvider: AlphaRealLocalModelProvider {
                 rawText: "",
                 parsedJson: nil,
                 schemaValid: false,
-                warnings: ["Local Gemma 4 Q4 inference failed: \(error.localizedDescription)"],
+                warnings: ["Private assistant review failed: \(error.localizedDescription)"],
                 sourceRefs: pack.includedSourceRefs.isEmpty ? taskInput.sourcePack.map(\.sourceRef) : pack.includedSourceRefs,
                 errorCategory: "local_gguf_inference_failed"
             )
@@ -477,8 +477,8 @@ struct AlphaGemmaLocalModelProvider: AlphaRealLocalModelProvider {
             estimatedMemoryMb: Self.estimatedMemoryMB(for: capabilityTier),
             estimatedDurationSeconds: max((pack.estimatedTokens ?? 1) / 12, 1),
             shouldRunNow: !pack.truncated && isAvailable(),
-            reason: pack.truncated ? "Prompt pack exceeded the local Gemma 4 Q4 runtime budget." : nil,
-            notes: ["llama.cpp Gemma 4 Q4 runtime estimate."]
+            reason: pack.truncated ? "Prompt pack exceeded the private assistant budget." : nil,
+            notes: ["Private assistant runtime estimate."]
         )
     }
 
@@ -787,7 +787,7 @@ enum AlphaLocalModelRuntime {
             runtimeMode: runtimeMode,
             modelPathLabel: modelPathLabel,
             checksumVerified: checksumVerified,
-            statusMessage: "Real local inference is configured for this pack, but remains disabled until a developer explicitly sets ROSS_ENABLE_REAL_LOCAL_INFERENCE=1 for manual QA.",
+            statusMessage: "Private assistant support is not ready on this build, so Ross will keep basic local review active.",
             plannedTasks: plannedTasks,
             errorCategory: "unsupported_runtime",
             fallbackActive: true,
@@ -834,7 +834,7 @@ enum AlphaLocalModelRuntime {
                     runtimeMode: .mediapipeLlm,
                     modelPathLabel: modelPathLabel,
                     checksumVerified: checksumVerified,
-                statusMessage: "MediaPipe local runtime remains unavailable on iOS in this alpha. Ross will keep deterministic fallback active.",
+                statusMessage: "Private assistant support is not available on this iOS build. Ross will keep basic local review active.",
                 plannedTasks: [.documentClassification, .legalFieldExtraction, .legalFieldVerification, .caseMemorySynthesis, .chronologyGeneration, .orderSummary],
                 errorCategory: "unsupported_runtime",
                 fallbackActive: true,
@@ -850,10 +850,10 @@ enum AlphaLocalModelRuntime {
                     checksumVerified: checksumVerified
                 )
             }
-            let statusMessage = "The Gemma 4 Q4 runtime is linked, but this pack does not have a model file path."
+            let statusMessage = "Private assistant setup is missing the local file path."
             let errorCategory = "missing_model_file"
             #else
-            let statusMessage = "The Gemma 4 Q4 runtime bridge is not linked in this iOS build."
+            let statusMessage = "Private assistant support is not ready on this iOS build."
             let errorCategory = "runtime_dependency_unavailable"
             #endif
             return AlphaUnavailableRealLocalModelProvider(
@@ -883,7 +883,7 @@ enum AlphaLocalModelRuntime {
                 runtimeMode: .appleFoundationModels,
                 modelPathLabel: modelPathLabel,
                 checksumVerified: checksumVerified,
-                statusMessage: "Apple Foundation Models require iOS 26 or macOS 26 with a compatible local runtime.",
+                statusMessage: "This private assistant option is not available on this device yet.",
                 plannedTasks: [.documentClassification, .legalFieldExtraction, .legalFieldVerification, .caseMemorySynthesis, .chronologyGeneration, .orderSummary],
                 errorCategory: "unsupported_runtime",
                 fallbackActive: true,
@@ -944,7 +944,7 @@ enum AlphaLocalModelRuntime {
                 maxInputChars: nil,
                 estimatedContextTokens: nil,
                 lastErrorCategory: "unsupported_runtime",
-                userFacingStatus: "Local model runtime unavailable.",
+                userFacingStatus: "Private assistant runtime unavailable.",
                 fallbackActive: true,
                 explicitOptInEnabled: runtimeEnvironment.enableRealInference
             )
