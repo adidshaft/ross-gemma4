@@ -1441,8 +1441,9 @@ private struct RossQuickUnlockScreen: View {
                         RossAuthGlassPanel(cornerRadius: 32, padding: 22) {
                             VStack(alignment: .leading, spacing: 16) {
                                 Text("Welcome back")
-                                    .font(.system(size: 40, weight: .light))
-                                    .tracking(-1.0)
+                                    .font(.system(size: 38, weight: .light))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.82)
                                     .foregroundStyle(Color.rossInk)
 
                                 Text(Date.now.formatted(.dateTime.weekday(.wide).hour().minute()))
@@ -1513,10 +1514,12 @@ private struct RossQuickUnlockScreen: View {
                             .stroke(Color.rossGlassStroke.opacity(0.74), lineWidth: 1)
                     }
                     .shadow(color: Color.rossShadow.opacity(0.34), radius: 28, y: 18)
+                    .frame(maxWidth: min(proxy.size.width - 40, 420), alignment: .leading)
 
                     Spacer(minLength: max(proxy.safeAreaInsets.bottom + 20, 40))
                 }
                 .padding(.horizontal, 20)
+                .frame(maxWidth: .infinity, alignment: .center)
             }
         }
         .alert("Sign out of Ross?", isPresented: $showingSignOutConfirmation) {

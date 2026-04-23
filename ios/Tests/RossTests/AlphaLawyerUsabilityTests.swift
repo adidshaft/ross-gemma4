@@ -698,6 +698,73 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    func testAssistantSetupCompletesToInstalledPackWhenBackendIsUnavailable() async throws {
+        rossSetBackendBaseURLOverride("http://127.0.0.1:9")
+        defer { rossSetBackendBaseURLOverride(nil) }
+
+        try await withRestoredStore { store in
+            var state = AlphaPersistedState.seed()
+            state.installedPacks = []
+            state.modelJobs = []
+            state.settings.activeTier = nil
+            try await store.replace(with: state)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+            await model.startPackDownload(for: .caseAssociate, mobileAllowed: true)
+
+            let snapshot = await MainActor.run { model.persisted }
+            let installedPack = snapshot.installedPacks.first { $0.tier == .caseAssociate }
+            let installedJob = snapshot.modelJobs.first { $0.tier == .caseAssociate }
+
+            XCTAssertNotNil(installedPack)
+            if let runtimeMode = installedPack?.runtimeMode {
+                XCTAssertTrue([.appleFoundationModels, .deterministicDev].contains(runtimeMode))
+            }
+            XCTAssertEqual(installedJob?.state, .installed)
+            XCTAssertEqual(snapshot.settings.activeTier, .caseAssociate)
+        }
+    }
+
+    func testDocumentAdvocateNotePersistsOnDocument() async throws {
+        try await withRestoredStore { store in
+            let state = AlphaPersistedState.demoSeed()
+            try await store.replace(with: state)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+
+            let ids = await MainActor.run { () -> (UUID, UUID)? in
+                guard let caseMatter = model.cases.first,
+                      let document = caseMatter.documents.first else { return nil }
+                return (caseMatter.id, document.id)
+            }
+            XCTAssertNotNil(ids)
+            let note = "Manual advocate note: confirm next date from signed order."
+
+            await MainActor.run {
+                if let ids {
+                    model.updateDocumentAdvocateNote(caseId: ids.0, documentId: ids.1, note: note)
+                }
+            }
+
+            let savedNote = await MainActor.run { () -> String? in
+                guard let ids else { return nil }
+                return model.persisted.cases
+                    .first(where: { $0.id == ids.0 })?
+                    .documents
+                    .first(where: { $0.id == ids.1 })?
+                    .advocateNote
+            }
+
+            XCTAssertEqual(savedNote, note)
+        }
+    }
+
     func testLoadIfNeededKeepsPersistedAssistantTierSelection() async throws {
         try await withRestoredStore { store in
             var state = AlphaPersistedState.seed()

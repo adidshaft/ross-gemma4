@@ -926,6 +926,7 @@ struct AlphaCaseDocument: Identifiable, Codable, Hashable, Sendable {
     var dominantSourceSnippet: String?
     var lastIndexedAt: Date?
     var pages: [AlphaDocumentPage]
+    var advocateNote: String?
     var languageProfile: AlphaDocumentLanguageProfile?
     var classification: AlphaLegalDocumentClassification?
     var extractedFields: [AlphaExtractedLegalField]
@@ -947,6 +948,7 @@ struct AlphaCaseDocument: Identifiable, Codable, Hashable, Sendable {
         dominantSourceSnippet: String? = nil,
         lastIndexedAt: Date? = nil,
         pages: [AlphaDocumentPage],
+        advocateNote: String? = nil,
         languageProfile: AlphaDocumentLanguageProfile? = nil,
         classification: AlphaLegalDocumentClassification? = nil,
         extractedFields: [AlphaExtractedLegalField] = [],
@@ -967,6 +969,7 @@ struct AlphaCaseDocument: Identifiable, Codable, Hashable, Sendable {
         self.dominantSourceSnippet = dominantSourceSnippet
         self.lastIndexedAt = lastIndexedAt
         self.pages = pages
+        self.advocateNote = advocateNote
         self.languageProfile = languageProfile
         self.classification = classification
         self.extractedFields = extractedFields
