@@ -3986,7 +3986,9 @@ final class AlphaRossModel {
 
     private func normalizeLoadedState(_ state: AlphaPersistedState) -> AlphaPersistedState {
         var normalized = state
-        normalized.onboardingStage = .completed
+        if shouldRestoreAssistantSetupFlow(for: normalized) {
+            normalized.onboardingStage = looksLikePristineWorkspace(normalized) ? .onboarding : .privateAIPack
+        }
         normalized.selectedTab = normalized.selectedTab.normalizedForLawyerShell
         if !normalized.cases.contains(where: { $0.id == alphaSharedWorkspaceID }) {
             normalized.cases.append(sharedWorkspaceMatter())
@@ -3995,6 +3997,33 @@ final class AlphaRossModel {
             normalized.tasks = initialTasks(from: normalized.cases)
         }
         return normalized
+    }
+
+    private func shouldRestoreAssistantSetupFlow(for state: AlphaPersistedState) -> Bool {
+        state.onboardingStage == .completed
+            && state.demoProfileSubject == nil
+            && state.settings.activeTier == nil
+            && state.installedPacks.isEmpty
+    }
+
+    private func looksLikePristineWorkspace(_ state: AlphaPersistedState) -> Bool {
+        let nonSharedCases = state.cases.filter { $0.id != alphaSharedWorkspaceID }
+        let hasCaseDocuments = nonSharedCases.contains { !$0.documents.isEmpty }
+        let hasChatHistory = nonSharedCases.contains { !$0.chatSessions.isEmpty }
+        let hasSourceRefs = nonSharedCases.contains { !$0.sourceRefs.isEmpty }
+        let hasTasks = !(state.tasks ?? []).isEmpty
+        let hasExports = !state.exports.isEmpty
+        let hasPublicLawHistory = !state.publicLawCache.isEmpty || !((state.publicLawResults ?? []).isEmpty)
+        let hasDownloadState = !state.modelJobs.isEmpty
+
+        return nonSharedCases.isEmpty
+            && !hasCaseDocuments
+            && !hasChatHistory
+            && !hasSourceRefs
+            && !hasTasks
+            && !hasExports
+            && !hasPublicLawHistory
+            && !hasDownloadState
     }
 
     private func initialTasks(from cases: [AlphaCaseMatter]) -> [AlphaTaskItem] {

@@ -117,6 +117,44 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    func testEmptyStateStartsAtOnboarding() async throws {
+        try await withRestoredStore { store in
+            try await store.replace(with: AlphaPersistedState.empty())
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+
+            let snapshot = await MainActor.run { model.persisted }
+            XCTAssertEqual(.onboarding, snapshot.onboardingStage)
+            XCTAssertNil(snapshot.settings.activeTier)
+            XCTAssertTrue(snapshot.installedPacks.isEmpty)
+        }
+    }
+
+    func testCompletedStateWithoutAssistantRestoresSetupFlow() async throws {
+        try await withRestoredStore { store in
+            var state = AlphaPersistedState.seed()
+            state.demoProfileSubject = nil
+            state.onboardingStage = .completed
+            state.settings.activeTier = nil
+            state.installedPacks = []
+            state.modelJobs = []
+            try await store.replace(with: state)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+
+            let snapshot = await MainActor.run { model.persisted }
+            XCTAssertEqual(.privateAIPack, snapshot.onboardingStage)
+            XCTAssertNil(snapshot.settings.activeTier)
+            XCTAssertTrue(snapshot.installedPacks.isEmpty)
+        }
+    }
+
     func testWebOnRequiresPreviewBeforeSearch() async throws {
         try await withRestoredStore { store in
             try await store.replace(with: AlphaPersistedState.seed())

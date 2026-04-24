@@ -1666,7 +1666,7 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
 
     static func empty() -> AlphaPersistedState {
         AlphaPersistedState(
-            onboardingStage: .completed,
+            onboardingStage: .onboarding,
             selectedTab: .home,
             settings: .default,
             demoProfileSubject: nil,
