@@ -1,3 +1,5 @@
+import LocalAuthentication
+import SwiftUI
 import XCTest
 @testable import Ross
 
@@ -153,6 +155,85 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertNil(snapshot.settings.activeTier)
             XCTAssertTrue(snapshot.installedPacks.isEmpty)
         }
+    }
+
+    @MainActor
+    func testQuickUnlockKeepsWorkspaceCoveredUntilReturn() {
+        let localAuth = RossLocalAuthStub()
+        let controller = RossAuthController(
+            canEvaluateDeviceUnlock: { localAuth.canEvaluate },
+            biometryTypeProvider: { localAuth.biometryType },
+            evaluateDeviceUnlock: localAuth.evaluate
+        )
+        let session = makeAuthSession()
+
+        controller.phase = .signedIn(session)
+        controller.quickUnlockEnabled = true
+
+        controller.handleScenePhase(.inactive)
+        XCTAssertTrue(controller.privacyShieldVisible)
+        XCTAssertEqual(.signedIn(session), controller.phase)
+        XCTAssertEqual(0, localAuth.evaluateCallCount)
+
+        controller.handleScenePhase(.background)
+        XCTAssertEqual(.signedIn(session), controller.phase)
+        XCTAssertTrue(controller.privacyShieldVisible)
+        XCTAssertEqual(0, localAuth.evaluateCallCount)
+
+        controller.handleScenePhase(.active)
+        XCTAssertEqual(.unlockRequired(session), controller.phase)
+        XCTAssertTrue(controller.isUnlocking)
+        XCTAssertTrue(controller.privacyShieldVisible)
+        XCTAssertEqual(1, localAuth.evaluateCallCount)
+    }
+
+    @MainActor
+    func testAutomaticQuickUnlockSuccessRestoresSignedInState() async {
+        let localAuth = RossLocalAuthStub()
+        let controller = RossAuthController(
+            canEvaluateDeviceUnlock: { localAuth.canEvaluate },
+            biometryTypeProvider: { localAuth.biometryType },
+            evaluateDeviceUnlock: localAuth.evaluate
+        )
+        let session = makeAuthSession()
+
+        controller.phase = .signedIn(session)
+        controller.quickUnlockEnabled = true
+        controller.handleScenePhase(.background)
+        controller.handleScenePhase(.active)
+        localAuth.finishNext(success: true)
+        await Task.yield()
+
+        XCTAssertEqual(.signedIn(session), controller.phase)
+        XCTAssertFalse(controller.isUnlocking)
+        XCTAssertFalse(controller.privacyShieldVisible)
+        XCTAssertNil(controller.authErrorMessage)
+    }
+
+    @MainActor
+    func testCancelledAutomaticQuickUnlockFallsBackToManualScreen() async {
+        let localAuth = RossLocalAuthStub()
+        let controller = RossAuthController(
+            canEvaluateDeviceUnlock: { localAuth.canEvaluate },
+            biometryTypeProvider: { localAuth.biometryType },
+            evaluateDeviceUnlock: localAuth.evaluate
+        )
+        let session = makeAuthSession()
+
+        controller.phase = .signedIn(session)
+        controller.quickUnlockEnabled = true
+        controller.handleScenePhase(.background)
+        controller.handleScenePhase(.active)
+        localAuth.finishNext(
+            success: false,
+            error: NSError(domain: LAError.errorDomain, code: LAError.Code.userCancel.rawValue)
+        )
+        await Task.yield()
+
+        XCTAssertEqual(.unlockRequired(session), controller.phase)
+        XCTAssertFalse(controller.isUnlocking)
+        XCTAssertFalse(controller.privacyShieldVisible)
+        XCTAssertNil(controller.authErrorMessage)
     }
 
     func testWebOnRequiresPreviewBeforeSearch() async throws {
@@ -1078,6 +1159,40 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
 
         return await MainActor.run { model.persisted }
     }
+}
+
+private final class RossLocalAuthStub {
+    var canEvaluate = true
+    var biometryType: LABiometryType = .faceID
+    private(set) var evaluateCallCount = 0
+    private var completions: [@Sendable (Bool, Error?) -> Void] = []
+
+    func evaluate(
+        _ localizedReason: String,
+        _ completion: @escaping @Sendable (Bool, Error?) -> Void
+    ) {
+        _ = localizedReason
+        evaluateCallCount += 1
+        completions.append(completion)
+    }
+
+    func finishNext(success: Bool, error: Error? = nil) {
+        guard !completions.isEmpty else { return }
+        let completion = completions.removeFirst()
+        completion(success, error)
+    }
+}
+
+private func makeAuthSession() -> RossAuthSession {
+    RossAuthSession(
+        accessToken: "access",
+        refreshToken: "refresh",
+        accountToken: "account",
+        email: "fresh@ross.ai",
+        displayName: "Fresh Ross Account",
+        subject: "fresh_user",
+        expiresAt: Date(timeIntervalSince1970: 1_800_000_000)
+    )
 }
 
 private final class SendableBox<Value>: @unchecked Sendable {

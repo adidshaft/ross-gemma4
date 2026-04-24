@@ -5501,14 +5501,14 @@ private struct AlphaPackSetupScreen: View {
 
                         AlphaAssistantActivityStrip(
                             title: "Uses this iPhone's private assistant",
-                            detail: "Ross checks the on-device assistant built into this iPhone. Case files stay on this device. If this iPhone cannot run it yet, Ross will say so and keep using basic local review.",
+                            detail: "Ross keeps case files on this iPhone. If this build cannot run the private assistant yet, Ross falls back to basic local review.",
                             statusLabel: "On device",
                             tint: Color.rossAccent
                         )
                     }
                     .padding(.horizontal, 24)
                     .padding(.top, max(proxy.safeAreaInsets.top + 8, 18))
-                    .padding(.bottom, 184)
+                    .padding(.bottom, max(proxy.safeAreaInsets.bottom + 248, 248))
                 }
                 .safeAreaInset(edge: .bottom) {
                     VStack(spacing: 12) {
@@ -5527,6 +5527,11 @@ private struct AlphaPackSetupScreen: View {
                     .padding(.horizontal, 24)
                     .padding(.top, 10)
                     .padding(.bottom, max(proxy.safeAreaInsets.bottom - 2, 12))
+                    .background(
+                        Color.rossGroupedBackground
+                            .opacity(0.96)
+                            .ignoresSafeArea()
+                    )
                 }
             }
         }
@@ -13103,7 +13108,7 @@ private struct AlphaSettingsScreen: View {
 
                                 Text(
                                     authController.quickUnlockEnabled
-                                        ? "Ross locks again when the app leaves the screen."
+                                        ? "Ross covers the workspace as soon as it leaves the screen and asks for device unlock when you come back."
                                         : "Turn this on to reopen Ross with Face ID, Touch ID, or device passcode.",
                                     )
                                     .font(.system(size: 13, weight: .regular))

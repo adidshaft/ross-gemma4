@@ -88,7 +88,6 @@ struct RossGlassIconView: View {
 
 struct RossLaunchSplashView: View {
     @Environment(\.colorScheme) private var colorScheme
-    @State private var appeared = false
 
     var body: some View {
         ZStack {
@@ -109,21 +108,12 @@ struct RossLaunchSplashView: View {
                     .shadow(color: colorScheme == .dark ? Color.clear : Color.white.opacity(0.42), radius: 12, y: -2)
                     .shadow(color: Color.rossAccent.opacity(0.1), radius: 12, y: 7)
                     .shadow(color: Color.rossShadow.opacity(0.12), radius: 8, y: 4)
-                    .scaleEffect(appeared ? 1 : 0.78)
-                    .opacity(appeared ? 1 : 0)
 
                 Text("Ross")
                     .font(.system(size: 30, weight: .semibold))
                     .tracking(0.8)
                     .foregroundStyle(Color.rossInk)
                     .offset(y: -2)
-                .opacity(appeared ? 1 : 0)
-                .offset(y: appeared ? 0 : 6)
-            }
-        }
-        .onAppear {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.78)) {
-                appeared = true
             }
         }
     }

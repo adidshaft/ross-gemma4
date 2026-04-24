@@ -148,6 +148,11 @@ fileprivate enum RossExternalSignInProvider: Equatable {
     case apple
 }
 
+private enum RossUnlockTrigger {
+    case automatic
+    case manual
+}
+
 final class RossAuthSessionSnapshot: @unchecked Sendable {
     static let shared = RossAuthSessionSnapshot()
 
@@ -275,6 +280,11 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
     @ObservationIgnored private var webAuthenticationSession: ASWebAuthenticationSession?
     @ObservationIgnored private var appleAuthorizationController: ASAuthorizationController?
     @ObservationIgnored private let isoFormatter = ISO8601DateFormatter()
+    @ObservationIgnored private let canEvaluateDeviceUnlock: () -> Bool
+    @ObservationIgnored private let biometryTypeProvider: () -> LABiometryType
+    @ObservationIgnored private let evaluateDeviceUnlock: (_ localizedReason: String, _ completion: @escaping @Sendable (Bool, Error?) -> Void) -> Void
+    @ObservationIgnored private var pendingQuickRelockSession: RossAuthSession?
+    @ObservationIgnored private var pendingAutomaticUnlock = false
     @ObservationIgnored private var didLoad = false
 
     var phase: RossAuthPhase = .loading
@@ -282,6 +292,26 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
     var authErrorMessage: String?
     var hasSelectedLanguage: Bool = rossHasSelectedLanguage()
     var quickUnlockEnabled: Bool = rossQuickUnlockEnabled()
+    var privacyShieldVisible = false
+    var isUnlocking = false
+
+    override init() {
+        self.canEvaluateDeviceUnlock = RossAuthController.defaultCanEvaluateDeviceUnlock
+        self.biometryTypeProvider = RossAuthController.defaultBiometryType
+        self.evaluateDeviceUnlock = RossAuthController.defaultEvaluateDeviceUnlock
+        super.init()
+    }
+
+    init(
+        canEvaluateDeviceUnlock: @escaping () -> Bool,
+        biometryTypeProvider: @escaping () -> LABiometryType,
+        evaluateDeviceUnlock: @escaping (_ localizedReason: String, _ completion: @escaping @Sendable (Bool, Error?) -> Void) -> Void
+    ) {
+        self.canEvaluateDeviceUnlock = canEvaluateDeviceUnlock
+        self.biometryTypeProvider = biometryTypeProvider
+        self.evaluateDeviceUnlock = evaluateDeviceUnlock
+        super.init()
+    }
 
     var isStartingSignIn: Bool {
         activeExternalProvider != nil
@@ -348,9 +378,17 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
             let activeSession = try await refreshedSessionIfNeeded(from: storedSession)
             RossAuthSessionSnapshot.shared.update(activeSession)
             phase = quickUnlockEnabled && shouldRequireUnlock() ? .unlockRequired(activeSession) : .signedIn(activeSession)
+            if case .unlockRequired = phase {
+                privacyShieldVisible = true
+                pendingAutomaticUnlock = true
+                attemptAutomaticUnlockIfNeeded()
+            } else {
+                clearUnlockPresentationState()
+            }
         } catch {
             store.clearSession()
             RossAuthSessionSnapshot.shared.update(nil)
+            clearUnlockPresentationState()
             phase = .signedOut
             authErrorMessage = nil
         }
@@ -437,36 +475,12 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
 
         try? store.saveSession(session)
         RossAuthSessionSnapshot.shared.update(session)
+        clearUnlockPresentationState()
         phase = .signedIn(session)
     }
 
     func unlockSession() {
-        guard case .unlockRequired(let pendingSession) = phase else { return }
-        authErrorMessage = nil
-
-        let context = LAContext()
-        context.localizedFallbackTitle = "Use device passcode"
-
-        var error: NSError?
-        guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) else {
-            authErrorMessage = "Quick unlock is not available on this device."
-            return
-        }
-
-        context.evaluatePolicy(
-            .deviceOwnerAuthentication,
-            localizedReason: "Unlock Ross to access your local matters, files, and chats."
-        ) { [weak self] success, evaluationError in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                if success {
-                    self.authErrorMessage = nil
-                    self.phase = .signedIn(pendingSession)
-                } else if evaluationError != nil {
-                    self.authErrorMessage = "Could not unlock. Please try again."
-                }
-            }
-        }
+        startUnlock(trigger: .manual)
     }
 
     func signOut() {
@@ -476,16 +490,38 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
         activeExternalProvider = nil
         store.clearSession()
         RossAuthSessionSnapshot.shared.update(nil)
+        clearUnlockPresentationState()
         authErrorMessage = nil
         phase = .signedOut
     }
 
     func handleScenePhase(_ scenePhase: ScenePhase) {
-        guard scenePhase == .background else { return }
-        guard case .signedIn(let session) = phase else { return }
-        guard quickUnlockEnabled else { return }
-        guard shouldRequireUnlock() else { return }
-        phase = .unlockRequired(session)
+        switch scenePhase {
+        case .active:
+            if let pendingQuickRelockSession {
+                phase = .unlockRequired(pendingQuickRelockSession)
+                self.pendingQuickRelockSession = nil
+            }
+
+            if case .unlockRequired = phase {
+                privacyShieldVisible = true
+                attemptAutomaticUnlockIfNeeded()
+            } else {
+                privacyShieldVisible = false
+            }
+        case .inactive:
+            guard quickUnlockEnabled, shouldRequireUnlock(), session != nil else { return }
+            privacyShieldVisible = true
+            authErrorMessage = nil
+        case .background:
+            guard quickUnlockEnabled, shouldRequireUnlock(), case .signedIn(let session) = phase else { return }
+            pendingQuickRelockSession = session
+            pendingAutomaticUnlock = true
+            privacyShieldVisible = true
+            authErrorMessage = nil
+        @unknown default:
+            break
+        }
     }
 
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
@@ -524,6 +560,7 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
         do {
             try store.saveSession(session)
             RossAuthSessionSnapshot.shared.update(session)
+            clearUnlockPresentationState()
             authErrorMessage = nil
             phase = .signedIn(session)
         } catch {
@@ -682,21 +719,25 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
     }
 
     private func shouldRequireUnlock() -> Bool {
-        let context = LAContext()
-        var error: NSError?
-        return context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error)
+        canEvaluateDeviceUnlock()
     }
 
     func setQuickUnlockEnabled(_ enabled: Bool) {
         quickUnlockEnabled = enabled
         rossSetQuickUnlockEnabled(enabled)
+        guard !enabled else { return }
+        pendingQuickRelockSession = nil
+        pendingAutomaticUnlock = false
+        privacyShieldVisible = false
+        isUnlocking = false
+        authErrorMessage = nil
+        if case .unlockRequired(let session) = phase {
+            phase = .signedIn(session)
+        }
     }
 
     private func currentBiometryType() -> LABiometryType {
-        let context = LAContext()
-        var error: NSError?
-        _ = context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error)
-        return context.biometryType
+        biometryTypeProvider()
     }
 
     private func availableBiometryLabel() -> String? {
@@ -708,6 +749,138 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
         default:
             nil
         }
+    }
+
+    private func attemptAutomaticUnlockIfNeeded() {
+        guard pendingAutomaticUnlock else { return }
+        guard case .unlockRequired = phase else { return }
+        guard !isUnlocking else { return }
+        pendingAutomaticUnlock = false
+        startUnlock(trigger: .automatic)
+    }
+
+    private func startUnlock(trigger: RossUnlockTrigger) {
+        guard case .unlockRequired(let pendingSession) = phase else { return }
+        guard !isUnlocking else { return }
+
+        authErrorMessage = nil
+        privacyShieldVisible = true
+        isUnlocking = true
+
+        guard shouldRequireUnlock() else {
+            isUnlocking = false
+            privacyShieldVisible = false
+            authErrorMessage = "Quick unlock is not available on this device."
+            return
+        }
+
+        evaluateDeviceUnlock(
+            "Unlock Ross to access your local matters, files, and chats."
+        ) { [weak self] success, evaluationError in
+            Task { @MainActor [weak self] in
+                self?.finishUnlockAttempt(
+                    success: success,
+                    evaluationError: evaluationError,
+                    session: pendingSession,
+                    trigger: trigger
+                )
+            }
+        }
+    }
+
+    private func finishUnlockAttempt(
+        success: Bool,
+        evaluationError: Error?,
+        session: RossAuthSession,
+        trigger: RossUnlockTrigger
+    ) {
+        isUnlocking = false
+
+        guard case .unlockRequired = phase else {
+            privacyShieldVisible = false
+            return
+        }
+
+        if success {
+            authErrorMessage = nil
+            pendingQuickRelockSession = nil
+            pendingAutomaticUnlock = false
+            privacyShieldVisible = false
+            phase = .signedIn(session)
+            return
+        }
+
+        let errorCode = localAuthenticationErrorCode(from: evaluationError)
+        switch errorCode {
+        case .appCancel, .systemCancel, .notInteractive:
+            pendingAutomaticUnlock = true
+            privacyShieldVisible = true
+            authErrorMessage = nil
+        case .userCancel, .userFallback:
+            privacyShieldVisible = false
+            authErrorMessage = nil
+        case .authenticationFailed:
+            privacyShieldVisible = false
+            authErrorMessage = "Could not confirm your identity. Try again."
+        case .biometryLockout:
+            privacyShieldVisible = false
+            authErrorMessage = "Use your device passcode to continue."
+        case .biometryNotAvailable, .biometryNotEnrolled, .passcodeNotSet:
+            privacyShieldVisible = false
+            authErrorMessage = "Quick unlock is not available on this device."
+        default:
+            privacyShieldVisible = false
+            authErrorMessage = trigger == .manual ? "Could not unlock. Please try again." : nil
+        }
+
+        phase = .unlockRequired(session)
+    }
+
+    private func clearUnlockPresentationState() {
+        pendingQuickRelockSession = nil
+        pendingAutomaticUnlock = false
+        privacyShieldVisible = false
+        isUnlocking = false
+    }
+
+    private func localAuthenticationErrorCode(from error: Error?) -> LAError.Code? {
+        if let localAuthenticationError = error as? LAError {
+            return localAuthenticationError.code
+        }
+
+        let nsError = error as NSError?
+        guard nsError?.domain == LAError.errorDomain,
+              let rawCode = nsError?.code,
+              let code = LAError.Code(rawValue: rawCode) else {
+            return nil
+        }
+        return code
+    }
+
+    private static func defaultCanEvaluateDeviceUnlock() -> Bool {
+        let context = LAContext()
+        var error: NSError?
+        return context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error)
+    }
+
+    private static func defaultBiometryType() -> LABiometryType {
+        let context = LAContext()
+        var error: NSError?
+        _ = context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error)
+        return context.biometryType
+    }
+
+    private static func defaultEvaluateDeviceUnlock(
+        localizedReason: String,
+        completion: @escaping @Sendable (Bool, Error?) -> Void
+    ) {
+        let context = LAContext()
+        context.localizedFallbackTitle = "Use device passcode"
+        context.evaluatePolicy(
+            .deviceOwnerAuthentication,
+            localizedReason: localizedReason,
+            reply: completion
+        )
     }
 }
 
@@ -748,26 +921,56 @@ private struct RossAuthenticatedShell: View {
         return nil
     }
 
+    private var requiresWorkspaceShield: Bool {
+        authController.privacyShieldVisible || authController.isUnlocking || lockedSession != nil
+    }
+
     var body: some View {
         ZStack {
             AlphaRossRootView(authController: authController)
-                .allowsHitTesting(lockedSession == nil)
-                .overlay {
-                    if lockedSession != nil {
-                        Color.black.opacity(0.34)
-                            .ignoresSafeArea()
-                    }
-                }
+                .allowsHitTesting(!requiresWorkspaceShield)
 
-            if let lockedSession {
+            if requiresWorkspaceShield {
+                RossWorkspacePrivacyShield(isUnlocking: authController.isUnlocking)
+            }
+
+            if let lockedSession, !authController.isUnlocking {
                 RossQuickUnlockScreen(
                     authController: authController,
                     session: lockedSession
                 )
-                .transition(.opacity)
             }
         }
-        .animation(.easeOut(duration: 0.14), value: lockedSession != nil)
+    }
+}
+
+private struct RossWorkspacePrivacyShield: View {
+    let isUnlocking: Bool
+
+    var body: some View {
+        ZStack {
+            RossAuthBackdrop()
+
+            VStack(spacing: 14) {
+                RossAuthHeroMark(size: 66)
+
+                if isUnlocking {
+                    ProgressView()
+                        .tint(Color.rossAccent)
+                        .scaleEffect(1.08)
+
+                    Text("Unlocking Ross")
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(Color.rossInk)
+                } else {
+                    Text("Ross is private on this iPhone")
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(Color.rossInk)
+                }
+            }
+            .padding(.horizontal, 24)
+        }
+        .ignoresSafeArea()
     }
 }
 
@@ -1374,40 +1577,23 @@ private struct RossQuickUnlockScreen: View {
     var body: some View {
         GeometryReader { proxy in
             VStack {
-                Spacer(minLength: max(proxy.safeAreaInsets.top + 24, 72))
+                Spacer(minLength: max(proxy.safeAreaInsets.top + 20, 56))
 
-                VStack(alignment: .leading, spacing: 20) {
-                    HStack(alignment: .center, spacing: 14) {
-                        RossAuthHeroMark(size: 42)
+                VStack(alignment: .center, spacing: 20) {
+                    RossAuthHeroMark(size: 54)
 
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("ROSS")
-                                .font(.system(size: 14, weight: .bold))
-                                .tracking(3.6)
-                                .foregroundStyle(Color.rossAccent)
-
-                            Text("Private on this iPhone")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(Color.rossInk.opacity(0.58))
-                        }
-
-                        Spacer(minLength: 12)
-
-                        Text(Date.now.formatted(.dateTime.hour().minute()))
-                            .font(.caption.monospacedDigit().weight(.semibold))
-                            .foregroundStyle(Color.rossInk.opacity(0.56))
-                    }
-
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .center, spacing: 10) {
                         Text("Unlock Ross")
                             .font(.system(size: 32, weight: .semibold))
                             .foregroundStyle(Color.rossInk)
                             .lineLimit(1)
                             .minimumScaleFactor(0.84)
+                            .multilineTextAlignment(.center)
 
                         Text("Use \(authController.quickUnlockSummary) to reopen your private workspace.")
                             .font(.system(size: 14, weight: .regular))
                             .foregroundStyle(Color.rossInk.opacity(0.7))
+                            .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
                     }
 
@@ -1446,33 +1632,34 @@ private struct RossQuickUnlockScreen: View {
                         }
                     }
 
-                    Button {
-                        authController.unlockSession()
-                    } label: {
-                        HStack(spacing: 12) {
-                            RossGlassIconView(
-                                .gearKeyhole,
-                                variant: .accent,
-                                size: 18,
-                                fallbackSystemImage: authController.unlockSymbolName
-                            )
-                            .frame(width: 20, height: 20)
+                    VStack(spacing: 12) {
+                        Button {
+                            authController.unlockSession()
+                        } label: {
+                            HStack(spacing: 12) {
+                                RossGlassIconView(
+                                    .gearKeyhole,
+                                    variant: .accent,
+                                    size: 18,
+                                    fallbackSystemImage: authController.unlockSymbolName
+                                )
+                                .frame(width: 20, height: 20)
 
-                            Text(authController.unlockButtonTitle)
+                                Text(authController.unlockButtonTitle)
+                            }
                         }
-                    }
-                    .rossPrimaryButtonStyle()
+                        .rossPrimaryButtonStyle()
 
-                    Button("Sign out") {
-                        showingSignOutConfirmation = true
+                        Button("Sign out") {
+                            showingSignOutConfirmation = true
+                        }
+                        .buttonStyle(.plain)
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Color.rossInk.opacity(0.58))
                     }
-                    .buttonStyle(.plain)
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Color.rossInk.opacity(0.58))
-                    .frame(maxWidth: .infinity, alignment: .center)
                 }
                 .padding(24)
-                .frame(maxWidth: min(proxy.size.width - 32, 392), alignment: .leading)
+                .frame(maxWidth: min(proxy.size.width - 32, 360), alignment: .center)
                 .background(
                     RoundedRectangle(cornerRadius: 30, style: .continuous)
                         .fill(Color.rossCardBackground.opacity(0.96))
@@ -1483,7 +1670,7 @@ private struct RossQuickUnlockScreen: View {
                 }
                 .shadow(color: Color.rossShadow.opacity(0.24), radius: 18, y: 12)
 
-                Spacer(minLength: max(proxy.safeAreaInsets.bottom + 24, 72))
+                Spacer(minLength: max(proxy.safeAreaInsets.bottom + 20, 56))
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.horizontal, 16)
