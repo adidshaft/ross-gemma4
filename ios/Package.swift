@@ -14,9 +14,15 @@ let package = Package(
             targets: ["Ross"]
         )
     ],
+    dependencies: [
+        .package(url: "https://github.com/pgorzelany/swift-gemma-runtime", exact: "1.2.0")
+    ],
     targets: [
         .executableTarget(
             name: "Ross",
+            dependencies: [
+                .product(name: "SwiftGemmaRuntime", package: "swift-gemma-runtime")
+            ],
             path: "Ross",
             exclude: [
                 "Resources/Info.plist",

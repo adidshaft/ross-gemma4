@@ -1,7 +1,7 @@
 {
   "assistantTiers": {
     "quick_start": {
-      "displayName": "Quick Start",
+      "displayName": "Basic",
       "technicalModelName": "Gemma 4 E2B Q4",
       "repo": "google/gemma-4-E2B-it",
       "quantization": "Q4",
@@ -12,7 +12,7 @@
       "technicalRole": "command routing, short summaries, basic local Q&A, local public-law query shaping"
     },
     "case_associate": {
-      "displayName": "Case Associate",
+      "displayName": "Standard",
       "technicalModelName": "Gemma 4 E4B Q4",
       "repo": "google/gemma-4-E4B-it",
       "alternateRepo": "google/gemma-4-E4B-it",
@@ -24,7 +24,7 @@
       "technicalRole": "default legal document assistant, document review, drafting, source-backed Ask Ross"
     },
     "senior_drafting_support": {
-      "displayName": "Senior Drafting Support",
+      "displayName": "Advanced",
       "technicalModelName": "Gemma 4 26B-A4B Q4",
       "repo": "google/gemma-4-26B-A4B-it",
       "alternateRepo": "google/gemma-4-26B-A4B-it",

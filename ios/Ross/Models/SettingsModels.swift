@@ -14,7 +14,7 @@ struct AppSettings: Hashable, Sendable {
         instantModeEnabled: true,
         backgroundModelDownloadsEnabled: true,
         wifiOnlyDownloads: true,
-        requirePublicLawApproval: true,
+        requirePublicLawApproval: false,
         privateByDefault: true,
         showTechnicalDetails: false
     )

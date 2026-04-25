@@ -61,12 +61,15 @@ class AlphaLawyerUsabilityTest {
 
         assertEquals(0, publicLawCalls)
         assertNull(controller.publicLawPreview)
-        assertEquals("Web search off", controller.latestAskResult?.statusNote)
+        assertEquals("Answered from your files", controller.latestAskResult?.statusNote)
     }
 
     @Test
     fun `ask ross explains private assistant setup before download`() {
         val controller = buildController(secretKeyProvider = InMemorySecretKeyProvider())
+        controller.persisted = controller.persisted.copy(
+            settings = controller.persisted.settings.copy(requirePublicLawApproval = true),
+        )
 
         controller.submitAsk(
             question = "What can I do before setting up the private assistant?",
@@ -84,7 +87,7 @@ class AlphaLawyerUsabilityTest {
     }
 
     @Test
-    fun `web on requires preview before public law request`() {
+    fun `web on uses settings consent before public law request`() {
         var publicLawCalls = 0
         var approvedQuerySent: String? = null
         val controller = buildController(
@@ -103,19 +106,17 @@ class AlphaLawyerUsabilityTest {
             },
         )
 
+        controller.persisted = controller.persisted.copy(
+            settings = controller.persisted.settings.copy(requirePublicLawApproval = true),
+        )
         controller.submitAsk(
             question = "Find law on delay condonation",
             scopeCaseId = null,
             webEnabled = true,
         )
-
-        assertEquals(0, publicLawCalls)
-        assertNotNull(controller.publicLawPreview)
-        assertEquals("Web search preview ready", controller.latestAskResult?.statusNote)
-
-        controller.confirmPendingPublicLawSearch()
         shadowOf(Looper.getMainLooper()).idle()
 
+        assertNotNull(controller.publicLawPreview)
         assertEquals(1, publicLawCalls)
         assertEquals("Public-law results", controller.latestAskResult?.statusNote)
         assertEquals(1, controller.publicLawResults.size)
@@ -125,6 +126,9 @@ class AlphaLawyerUsabilityTest {
     @Test
     fun `sanitized preview strips fake secrets`() {
         val controller = buildController(secretKeyProvider = InMemorySecretKeyProvider())
+        controller.persisted = controller.persisted.copy(
+            settings = controller.persisted.settings.copy(requirePublicLawApproval = true),
+        )
 
         controller.submitAsk(
             question = "Find guidance for Raghav Fakepriv on 9876501234 using fakepriv@example.com and private-bundle.pdf in FAKE/123/2026",
@@ -144,6 +148,9 @@ class AlphaLawyerUsabilityTest {
     @Test
     fun `sanitized preview keeps legal citation numbering intact`() {
         val controller = buildController(secretKeyProvider = InMemorySecretKeyProvider())
+        controller.persisted = controller.persisted.copy(
+            settings = controller.persisted.settings.copy(requirePublicLawApproval = true),
+        )
 
         controller.submitAsk(
             question = "Order 39 Rules 1 and 2 CPC temporary injunction",
@@ -330,6 +337,9 @@ class AlphaLawyerUsabilityTest {
             ),
         )
 
+        controller.persisted = controller.persisted.copy(
+            settings = controller.persisted.settings.copy(requirePublicLawApproval = true),
+        )
         controller.submitAsk(
             question = "Order 39 Rules 1 and 2 CPC temporary injunction",
             scopeCaseId = caseId,
@@ -341,7 +351,6 @@ class AlphaLawyerUsabilityTest {
         assertEquals("Assistant answer from files", controller.latestAskResult?.answerTitle)
         assertTrue(controller.latestAskResult?.answerSections?.single()?.contains("kept the answer local") == true)
         assertNotNull(controller.latestAskResult?.publicLawPreview)
-        assertEquals("Web search preview ready", controller.latestAskResult?.statusNote)
         assertTrue(
             controller.persisted.cases
                 .first { it.id == caseId }

@@ -296,6 +296,53 @@ test("production public search logs only hashed query metadata and never the ful
   assert.doesNotMatch(serializedLogs, new RegExp(fakeSecret));
 });
 
+test("public-law search accepts settings consent metadata without broadening payload", async (t) => {
+  const app = await buildApp({
+    env: buildTestEnv(),
+    emitLogsToConsole: false
+  });
+
+  t.after(async () => {
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "POST",
+    url: "/public-law/search",
+    payload: {
+      query: "Order 39 Rules 1 and 2 CPC temporary injunction",
+      jurisdiction: "IN-ALL",
+      language: "en",
+      confirmedPublicPreview: true,
+      consent: {
+        mode: "settings_web_search_enabled",
+        version: "2026-04-store-v1"
+      }
+    }
+  });
+
+  assert.equal(response.statusCode, 200);
+
+  const rejected = await app.inject({
+    method: "POST",
+    url: "/public-law/search",
+    payload: {
+      query: "Order 39 Rules 1 and 2 CPC temporary injunction",
+      jurisdiction: "IN-ALL",
+      language: "en",
+      confirmedPublicPreview: true,
+      consent: {
+        mode: "settings_web_search_enabled",
+        version: "2026-04-store-v1",
+        fileName: "private-brief.pdf"
+      }
+    }
+  });
+
+  assert.equal(rejected.statusCode, 400);
+  assert.match(rejected.body, /privacy_boundary_violation|request_validation_error/);
+});
+
 test("external model serving never logs the configured local file path or fake-secret filename", async (t) => {
   const externalDir = mkdtempSync(path.join(tmpdir(), "ross-external-secret-"));
   const fakeSecretName = "Raghav Fakepriv-9876501234-fakepriv@example.com.task";

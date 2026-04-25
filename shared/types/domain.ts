@@ -3,6 +3,33 @@ export type ModelCapabilityTierId =
   | "case_associate"
   | "senior_drafting_support";
 
+export type AssistantLevelDisplayName = "Basic" | "Standard" | "Advanced";
+
+export type AssistantDeviceSupportState =
+  | "supported"
+  | "auto_downgraded"
+  | "needs_storage"
+  | "needs_newer_os"
+  | "unavailable";
+
+export type AssistantInstallState =
+  | "not_started"
+  | "queued"
+  | "downloading"
+  | "installed"
+  | "failed";
+
+export interface AssistantRuntimeDecision {
+  selectedTierId: ModelCapabilityTierId;
+  recommendedTierId: ModelCapabilityTierId;
+  effectiveTierId: ModelCapabilityTierId;
+  displayName: AssistantLevelDisplayName;
+  deviceSupportState: AssistantDeviceSupportState;
+  modelPackId: string;
+  installState: AssistantInstallState;
+  reason: string;
+}
+
 export type ExtractionMode =
   | "basic"
   | "quick_start"
@@ -11,7 +38,7 @@ export type ExtractionMode =
 
 export interface ModelCapabilityTier {
   id: ModelCapabilityTierId;
-  displayName: string;
+  displayName: AssistantLevelDisplayName;
   subtitle: string;
   userFacingDescription: string;
   approxDownloadSizeMb: number;
@@ -52,7 +79,7 @@ export type LocalRuntimeMode =
   | "unavailable";
 
 export interface PrivateAssistantTierRegistryEntry {
-  displayName: string;
+  displayName: AssistantLevelDisplayName;
   technicalModelName: string;
   repo: string;
   alternateRepo?: string;
@@ -278,6 +305,10 @@ export interface SanitizedPublicQuery {
   jurisdiction: string;
   language: "en" | "hi";
   confirmedPublicPreview: true;
+  consent: {
+    mode: "settings_web_search_enabled";
+    version: string;
+  };
 }
 
 export interface SourceRef {

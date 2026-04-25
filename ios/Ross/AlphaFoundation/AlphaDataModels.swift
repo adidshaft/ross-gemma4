@@ -67,22 +67,33 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
     var title: String {
         switch self {
         case .quickStart:
-            "Quick Start"
+            "Basic"
         case .caseAssociate:
-            "Case Associate"
+            "Standard"
         case .seniorDraftingSupport:
-            "Senior Drafting Support"
+            "Advanced"
+        }
+    }
+
+    var setupTitle: String {
+        switch self {
+        case .quickStart:
+            "Basic - short orders only"
+        case .caseAssociate:
+            "Standard - most matters"
+        case .seniorDraftingSupport:
+            "Advanced - long bundles and drafting"
         }
     }
 
     var summary: String {
         switch self {
         case .quickStart:
-            "Basic local review, short summaries, simple Ask Ross actions, and lighter storage use."
+            "Lighter setup for short orders, quick summaries, and basic local review."
         case .caseAssociate:
-            "Recommended private assistant for document review, chronologies, hearing notes, and source-backed Ask Ross answers."
+            "Recommended for everyday matters, document review, chronology work, and source-backed answers."
         case .seniorDraftingSupport:
-            "Advanced private assistant for deeper review, longer matter reasoning, and drafting support."
+            "Best for longer bundles, deeper review, and heavier drafting on this phone."
         }
     }
 
@@ -133,11 +144,22 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
     var compactSetupSummary: String {
         switch self {
         case .quickStart:
-            "Short files"
+            "Short orders"
         case .caseAssociate:
             "Most matters"
         case .seniorDraftingSupport:
-            "Longer bundles"
+            "Long bundles"
+        }
+    }
+
+    var setupWarning: String {
+        switch self {
+        case .quickStart:
+            "Download about 430 MB before you begin. Wi-Fi is still the safest option."
+        case .caseAssociate:
+            "Download about 1.3 GB before you begin. Keep this phone on Wi-Fi and make sure there is enough free space."
+        case .seniorDraftingSupport:
+            "Download about 2.5 GB before you begin. Use strong Wi-Fi and check that this phone has plenty of free space."
         }
     }
 
@@ -187,9 +209,9 @@ struct AlphaPackOffer: Identifiable, Codable, Hashable, Sendable {
     var id: AlphaCapabilityTier { tier }
 
     static let catalog: [AlphaPackOffer] = [
-        AlphaPackOffer(tier: .quickStart, runtimeLabel: "Quick local review", supportsBilingualDrafting: false),
-        AlphaPackOffer(tier: .caseAssociate, runtimeLabel: "Balanced local case work", supportsBilingualDrafting: true),
-        AlphaPackOffer(tier: .seniorDraftingSupport, runtimeLabel: "Deeper local drafting", supportsBilingualDrafting: true)
+        AlphaPackOffer(tier: .quickStart, runtimeLabel: "Basic", supportsBilingualDrafting: false),
+        AlphaPackOffer(tier: .caseAssociate, runtimeLabel: "Standard", supportsBilingualDrafting: true),
+        AlphaPackOffer(tier: .seniorDraftingSupport, runtimeLabel: "Advanced", supportsBilingualDrafting: true)
     ]
 }
 
@@ -199,11 +221,25 @@ enum AlphaCaseStage: String, Codable, CaseIterable, Identifiable, Hashable, Send
     case evidence
     case arguments
     case reserved
+    case disposed
 
     var id: String { rawValue }
 
     var title: String {
-        rawValue.capitalized
+        switch self {
+        case .intake:
+            "Filing"
+        case .pleadings:
+            "Pleadings"
+        case .evidence:
+            "Evidence"
+        case .arguments:
+            "Arguments"
+        case .reserved:
+            "Judgment Reserved"
+        case .disposed:
+            "Disposed"
+        }
     }
 }
 
@@ -372,19 +408,19 @@ enum AlphaOcrStatus: String, Codable, Hashable, Sendable {
     var title: String {
         switch self {
         case .notStarted:
-            "Not indexed"
+            "Not ready"
         case .indexed:
-            "Indexed locally"
+            "Ready"
         case .placeholder:
-            "Placeholder indexing"
+            "Reading your file..."
         case .nativeText:
-            "Native text indexed"
+            "Ready"
         case .ocrComplete:
-            "OCR complete"
+            "Ready"
         case .partial:
-            "Partial OCR"
+            "Partially read (some pages unclear)"
         case .failed:
-            "OCR unavailable"
+            "Could not read this file"
         }
     }
 }
@@ -399,15 +435,15 @@ enum AlphaIndexingStatus: String, Codable, Hashable, Sendable {
     var title: String {
         switch self {
         case .notStarted:
-            "Not started"
+            "Not ready"
         case .extracting:
-            "Extracting locally"
+            "Reading your file..."
         case .indexed:
-            "Indexed locally"
+            "Ready"
         case .partial:
-            "Partially indexed"
+            "Partially read (some pages unclear)"
         case .failed:
-            "Indexing failed"
+            "Could not read this file"
         }
     }
 }
@@ -712,7 +748,7 @@ struct AlphaExtractedLegalField: Identifiable, Codable, Hashable, Sendable {
 
     var confidenceLabel: String {
         if needsReview {
-            return "Needs review"
+            return "Please confirm"
         }
         if confidence < 0.84 {
             return "Low confidence"
@@ -1635,7 +1671,7 @@ struct AlphaSettings: Codable, Hashable, Sendable {
         appearanceMode: .auto,
         wifiOnlyDownloads: true,
         allowMobileDataForLargePacks: false,
-        requirePublicLawApproval: true,
+        requirePublicLawApproval: false,
         instantModeEnabled: true,
         privateByDefault: true
     )
@@ -1645,6 +1681,33 @@ struct AlphaPublicLawPreview: Codable, Hashable, Sendable {
     var query: String
     var removed: [String]
     var confirmationNote: String
+}
+
+enum AlphaAssistantDeviceSupportState: String, Codable, Hashable, Sendable {
+    case supported
+    case autoDowngraded = "auto_downgraded"
+    case needsStorage = "needs_storage"
+    case needsNewerOS = "needs_newer_os"
+    case unavailable
+}
+
+enum AlphaAssistantInstallState: String, Codable, Hashable, Sendable {
+    case notStarted = "not_started"
+    case queued
+    case downloading
+    case installed
+    case failed
+}
+
+struct AlphaAssistantRuntimeDecision: Codable, Hashable, Sendable {
+    var selectedTier: AlphaCapabilityTier
+    var recommendedTier: AlphaCapabilityTier
+    var effectiveTier: AlphaCapabilityTier
+    var displayName: String
+    var deviceSupportState: AlphaAssistantDeviceSupportState
+    var modelPackId: String
+    var installState: AlphaAssistantInstallState
+    var reason: String
 }
 
 struct AlphaPersistedState: Codable, Hashable, Sendable {
@@ -2138,21 +2201,21 @@ extension AlphaCaseDocument {
         }
 
         if extractionRuns.first?.status == .running || effectiveIndexingStatus == .extracting {
-            return "Still reading"
+            return "Reading your file..."
         }
         if effectiveIndexingStatus == .failed || ocrStatus == .failed {
-            return "Could not read this clearly"
+            return "Could not read this file"
         }
         if hasLowConfidenceScan {
             return "Low confidence scan"
         }
         if hasReviewWork {
-            return "Needs review"
+            return "Please confirm"
         }
         if effectiveIndexingStatus == .indexed || ocrStatus == .nativeText || ocrStatus == .ocrComplete {
             return "Ready"
         }
-        return "Still reading"
+        return "Reading your file..."
     }
 }
 
@@ -2168,7 +2231,7 @@ extension AlphaPrivacyLedgerEntry {
         case "Public-law search unavailable":
             "Public-law search needs attention"
         case "Local export generated":
-            "Generated local export"
+            "Generated Notes & Drafts"
         case "Local case review run":
             "Reviewed case locally"
         case "Document imported locally":
@@ -2185,7 +2248,7 @@ extension AlphaPrivacyLedgerEntry {
         case "Public-law query sent":
             "Ross sent only a generic public-law query. Your case files stayed on this device."
         case "Public-law search unavailable":
-            "Ross could not complete the approved public-law search. Your case files stayed on this device."
+            "Ross could not complete the sanitized public-law search. Your case files stayed on this device."
         case "Private AI Pack verified", "Private AI Pack fallback installed":
             "Private assistant was prepared on this device."
         default:

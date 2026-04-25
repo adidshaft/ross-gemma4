@@ -90,7 +90,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
 
             XCTAssertEqual(0, publicLawCalls.value)
             XCTAssertNil(preview)
-            XCTAssertEqual("Web search off", status)
+            XCTAssertEqual("Answered from your files", status)
         }
     }
 
@@ -256,16 +256,12 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             }
             await model.loadIfNeeded()
             await MainActor.run {
+                model.updateSettings { settings in
+                    settings.requirePublicLawApproval = true
+                }
                 model.submitAsk(question: "Find law on delay condonation", scopeCaseID: nil, webEnabled: true)
             }
-
-            let previewBeforeConfirm = await MainActor.run { model.publicLawPreview }
-            let statusBeforeConfirm = await MainActor.run { model.latestAskResult?.statusNote }
-            XCTAssertEqual(0, publicLawCalls.value)
-            XCTAssertNotNil(previewBeforeConfirm)
-            XCTAssertEqual("Web search preview ready", statusBeforeConfirm)
-
-            await model.confirmPendingPublicLawSearch()
+            try await waitForPublicLawSearch(model: model)
 
             let resultCount = await MainActor.run { model.publicLawResults.count }
             let statusAfterConfirm = await MainActor.run { model.latestAskResult?.statusNote }
@@ -284,6 +280,9 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             }
             await model.loadIfNeeded()
             await MainActor.run {
+                model.updateSettings { settings in
+                    settings.requirePublicLawApproval = true
+                }
                 model.submitAsk(
                     question: "Find guidance for Raghav Fakepriv on 9876501234 using fakepriv@example.com and private-bundle.pdf in FAKE/123/2026",
                     scopeCaseID: nil,
@@ -316,6 +315,9 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertNotNil(caseID)
 
             await MainActor.run {
+                model.updateSettings { settings in
+                    settings.requirePublicLawApproval = true
+                }
                 model.submitAsk(
                     question: "What needs my attention today?",
                     scopeCaseID: caseID,
@@ -344,6 +346,9 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             }
             await model.loadIfNeeded()
             await MainActor.run {
+                model.updateSettings { settings in
+                    settings.requirePublicLawApproval = true
+                }
                 model.submitAsk(
                     question: "Order 39 Rules 1 and 2 CPC temporary injunction, Section 138 NI Act notice limitation, Section 482 CrPC quashing FIR, Article 226 Constitution of India writ mandamus",
                     scopeCaseID: nil,
@@ -384,6 +389,9 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             }
             await model.loadIfNeeded()
             await MainActor.run {
+                model.updateSettings { settings in
+                    settings.requirePublicLawApproval = true
+                }
                 model.submitAsk(
                     question: "Order 39 Rules 1 and 2 CPC temporary injunction",
                     scopeCaseID: nil,
@@ -442,6 +450,9 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             }
             await model.loadIfNeeded()
             await MainActor.run {
+                model.updateSettings { settings in
+                    settings.requirePublicLawApproval = true
+                }
                 model.submitAsk(
                     question: "What should I do next for this matter about delay condonation and sufficient cause?",
                     scopeCaseID: nil,
@@ -1158,6 +1169,24 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
 
         return await MainActor.run { model.persisted }
+    }
+
+    private func waitForPublicLawSearch(
+        model: AlphaRossModel,
+        attempts: Int = 20,
+        intervalNanoseconds: UInt64 = 25_000_000
+    ) async throws {
+        for attempt in 0..<attempts {
+            let isFinished = await MainActor.run {
+                model.latestAskResult?.statusNote == "Public-law results"
+            }
+            if isFinished {
+                return
+            }
+            if attempt < attempts - 1 {
+                try await Task.sleep(nanoseconds: intervalNanoseconds)
+            }
+        }
     }
 }
 

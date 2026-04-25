@@ -10,11 +10,11 @@ enum CapabilityTier: String, CaseIterable, Codable, Hashable, Identifiable, Send
     var title: String {
         switch self {
         case .quickStart:
-            "Quick Start"
+            "Basic"
         case .caseAssociate:
-            "Case Associate"
+            "Standard"
         case .seniorDraftingSupport:
-            "Senior Drafting Support"
+            "Advanced"
         }
     }
 

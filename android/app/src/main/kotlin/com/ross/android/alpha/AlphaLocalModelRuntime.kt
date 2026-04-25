@@ -642,6 +642,7 @@ internal class AlphaMediaPipeLocalModelProvider(
             "mediapipe_llm",
             "mediapipe_task",
             "local_model_artifact",
+            "huggingface_gated_model_artifact",
             "external_debug_model",
         )
     }
@@ -774,7 +775,7 @@ internal object AlphaLocalModelRuntime {
 
     private fun resolvePackModelFile(activePack: AlphaInstalledPack?, appPrivateRoot: File?): File? {
         val pack = activePack ?: return null
-        if (pack.artifactKind !in setOf("local_model_artifact", "external_debug_model")) {
+        if (pack.artifactKind !in setOf("local_model_artifact", "huggingface_gated_model_artifact", "external_debug_model")) {
             return null
         }
         val root = appPrivateRoot ?: return null

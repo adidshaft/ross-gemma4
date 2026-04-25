@@ -12,6 +12,38 @@
         "senior_drafting_support"
       ]
     },
+    "assistantRuntimeDecision": {
+      "type": "object",
+      "required": [
+        "selectedTierId",
+        "recommendedTierId",
+        "effectiveTierId",
+        "displayName",
+        "deviceSupportState",
+        "modelPackId",
+        "installState",
+        "reason"
+      ],
+      "properties": {
+        "selectedTierId": { "$ref": "#/definitions/modelCapabilityTierId" },
+        "recommendedTierId": { "$ref": "#/definitions/modelCapabilityTierId" },
+        "effectiveTierId": { "$ref": "#/definitions/modelCapabilityTierId" },
+        "displayName": {
+          "type": "string",
+          "enum": ["Basic", "Standard", "Advanced"]
+        },
+        "deviceSupportState": {
+          "type": "string",
+          "enum": ["supported", "auto_downgraded", "needs_storage", "needs_newer_os", "unavailable"]
+        },
+        "modelPackId": { "type": "string" },
+        "installState": {
+          "type": "string",
+          "enum": ["not_started", "queued", "downloading", "installed", "failed"]
+        },
+        "reason": { "type": "string" }
+      }
+    },
     "extractionMode": {
       "type": "string",
       "enum": [

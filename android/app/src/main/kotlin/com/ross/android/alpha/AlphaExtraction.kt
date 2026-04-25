@@ -7,7 +7,7 @@ import android.os.ParcelFileDescriptor
 import com.google.gson.Gson
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
-import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import com.google.mlkit.vision.text.devanagari.DevanagariTextRecognizerOptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -124,7 +124,7 @@ data class AlphaExtractedLegalField(
 ) {
     val confidenceLabel: String
         get() = when {
-            needsReview -> "Needs review"
+            needsReview -> "Please confirm"
             confidence < 0.84 -> "Low confidence"
             else -> "Verified"
         }
@@ -400,7 +400,7 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
                         caseId = caseId,
                         documentId = document.id,
                         kind = AlphaExtractionFindingKind.UnsupportedLayout,
-                        message = "Quick Start is best for shorter files. Ross used deterministic fallback review for this longer document.",
+                        message = "Basic is best for shorter files. Ross used local fallback review for this longer document.",
                         sourceRefs = cleanedPages.take(2).map { page ->
                             AlphaSourceRef(
                                 caseId = caseId,
@@ -1078,7 +1078,7 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
     }
 
     private suspend fun recognizeBitmap(bitmap: Bitmap): String {
-        val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+        val recognizer = TextRecognition.getClient(DevanagariTextRecognizerOptions.Builder().build())
         val image = InputImage.fromBitmap(bitmap, 0)
         return runCatching {
             recognizer.process(image).await().text.orEmpty().trim()

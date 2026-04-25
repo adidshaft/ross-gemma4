@@ -606,25 +606,45 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: ["refreshToken": session.refreshToken])
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse, 200..<300 ~= httpResponse.statusCode else {
-            throw NSError(domain: "RossAuthController", code: 401, userInfo: nil)
-        }
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse else {
+                return session
+            }
+            guard 200..<300 ~= httpResponse.statusCode else {
+                if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
+                    throw NSError(domain: "RossAuthController", code: httpResponse.statusCode, userInfo: nil)
+                }
+                return session
+            }
 
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        let payload = try decoder.decode(RossRefreshSessionPayload.self, from: data)
-        let refreshedSession = RossAuthSession(
-            accessToken: payload.accessToken,
-            refreshToken: payload.refreshToken,
-            accountToken: payload.accountToken,
-            email: payload.profile?.email ?? session.email,
-            displayName: payload.profile?.displayName ?? session.displayName,
-            subject: payload.subject,
-            expiresAt: payload.expiresAt
-        )
-        try store.saveSession(refreshedSession)
-        return refreshedSession
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            let payload = try decoder.decode(RossRefreshSessionPayload.self, from: data)
+            let refreshedSession = RossAuthSession(
+                accessToken: payload.accessToken,
+                refreshToken: payload.refreshToken,
+                accountToken: payload.accountToken,
+                email: payload.profile?.email ?? session.email,
+                displayName: payload.profile?.displayName ?? session.displayName,
+                subject: payload.subject,
+                expiresAt: payload.expiresAt
+            )
+            try store.saveSession(refreshedSession)
+            return refreshedSession
+        } catch let error as URLError {
+            switch error.code {
+            case .notConnectedToInternet,
+                 .cannotFindHost,
+                 .cannotConnectToHost,
+                 .networkConnectionLost,
+                 .timedOut,
+                 .dnsLookupFailed:
+                return session
+            default:
+                throw error
+            }
+        }
     }
 
     private func finishGoogleSignIn(callbackURL: URL?, error: Error?) {

@@ -2,7 +2,7 @@ import type { RuntimeEnv } from "../security/env.js";
 import { AppError } from "../utils/http.js";
 import { createId } from "../utils/ids.js";
 import { signPayload } from "../utils/signing.js";
-import { listModelPacks } from "../model_catalog/service.js";
+import { buildDownloadArtifact, listModelPacks } from "../model_catalog/service.js";
 import { getDevArtifactDescriptor, getExternalArtifactRecord } from "./dev_artifacts.js";
 
 export interface ModelDownloadSessionInput {
@@ -17,24 +17,28 @@ export class ModelDownloadService {
   constructor(private readonly env: RuntimeEnv) {}
 
   async createSession(input: ModelDownloadSessionInput) {
-    const pack = listModelPacks(this.env).find((candidate) => candidate.packId === input.packId);
+    const pack = listModelPacks(this.env, input.platform).find((candidate) => candidate.packId === input.packId);
 
     if (!pack) {
       throw new AppError(404, "unknown_model_pack", "Requested model pack does not exist.");
     }
 
-    if (pack.artifactKind === "local_model_artifact") {
+    const artifact =
+      pack.artifactKind === "local_model_artifact" ||
+      pack.artifactKind === "huggingface_gated_model_artifact"
+        ? buildDownloadArtifact(pack)
+        : pack.artifactKind === "external_debug_model"
+          ? (await getExternalArtifactRecord(this.env, pack)).descriptor
+          : getDevArtifactDescriptor(pack);
+
+    if (!artifact) {
       throw new AppError(
         409,
         "model_download_unconfigured",
-        "Production model metadata is available, but Ross is not configured to serve this large local model artifact."
+        "Ross does not have a verified download path for this assistant yet."
       );
     }
 
-    const artifact =
-      pack.artifactKind === "external_debug_model"
-        ? (await getExternalArtifactRecord(this.env, pack)).descriptor
-        : getDevArtifactDescriptor(pack);
     const payload = {
       sessionId: createId("mdl"),
       packId: pack.packId,
@@ -42,6 +46,10 @@ export class ModelDownloadService {
       tier: pack.tier,
       deliveryBoundary: "no_case_data",
       deliveryMode:
+        pack.artifactKind === "local_model_artifact" ||
+        pack.artifactKind === "huggingface_gated_model_artifact"
+          ? "signed_segmented_local_model_artifact"
+          :
         pack.artifactKind === "external_debug_model"
           ? "signed_segmented_external_debug_artifact"
           : "signed_segmented_dev_artifact",
@@ -61,8 +69,11 @@ export class ModelDownloadService {
         minimumAppVersion: pack.minimumAppVersion,
         segmentSizeBytes: artifact.segmentSizeBytes,
         segmentCount: artifact.segmentCount,
-        downloadPath: artifact.path,
-        downloadUrl: `https://downloads.example.invalid${artifact.path}`,
+        downloadPath: "path" in artifact ? artifact.path : artifact.downloadPath,
+        downloadUrl:
+          "path" in artifact
+            ? `https://downloads.example.invalid${artifact.path}`
+            : artifact.downloadUrl,
         rangeUnit: "bytes",
         resumeStrategy: "range_request_segments",
         segments: artifact.segments

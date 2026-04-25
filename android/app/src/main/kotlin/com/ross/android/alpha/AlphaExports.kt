@@ -1,6 +1,7 @@
 package com.ross.android.alpha
 
 import android.graphics.Paint
+import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import java.io.File
 import java.util.UUID
@@ -18,17 +19,21 @@ class AndroidAlphaPdfWriter : AlphaPdfWriter {
     override fun write(file: File, draft: AlphaExportDraft) {
         val document = PdfDocument()
         try {
-            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 12f }
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                textSize = 12f
+                typeface = Typeface.create("sans-serif", Typeface.NORMAL)
+            }
             val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 textSize = 18f
                 isFakeBoldText = true
+                typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
             }
             val wrappedBody = wrapLines(draft.bodyLines, 86)
             val linesPerPage = 42
             val pages = wrappedBody.chunked(linesPerPage).ifEmpty { listOf(emptyList()) }
 
             pages.forEachIndexed { index, pageLines ->
-                val pageInfo = PdfDocument.PageInfo.Builder(612, 792, index + 1).create()
+                val pageInfo = PdfDocument.PageInfo.Builder(595, 842, index + 1).create()
                 val page = document.startPage(pageInfo)
                 var y = 56f
                 if (index == 0) {
@@ -192,7 +197,7 @@ class AlphaExportService(
                         }
                     }
                     add("")
-                    add("Needs review")
+                    add("Please confirm")
                     if (pendingFields.isEmpty()) {
                         add("- No pending review flags.")
                     } else {

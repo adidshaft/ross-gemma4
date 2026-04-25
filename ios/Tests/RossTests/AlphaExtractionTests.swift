@@ -344,6 +344,32 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.lastErrorCategory, "runtime_dependency_unavailable")
     }
 
+    func testDownloadedGemma 4 Q4RuntimeIsLinkedWhenModelPathExists() throws {
+        let temporaryURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-runtime-smoke-\(UUID().uuidString)")
+            .appendingPathExtension("gguf")
+        try Data("runtime-link-smoke".utf8).write(to: temporaryURL)
+        defer { try? FileManager.default.removeItem(at: temporaryURL) }
+
+        let pack = installedPack(.quickStart, runtimeMode: .llamaCppGguf)
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .llamaCppGguf,
+                modelPath: temporaryURL.path,
+                modelChecksum: String(repeating: "a", count: 64),
+                modelKind: "gguf"
+            )
+        )
+
+        XCTAssertEqual(health?.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(health?.available, true)
+        XCTAssertEqual(health?.modelPathPresent, true)
+        XCTAssertNotEqual(health?.lastErrorCategory, "runtime_dependency_unavailable")
+    }
+
     func testSystemPrivateAssistantPackUsesDeviceModelWithoutDownloadedPath() {
         let pack = AlphaInstalledModelPack(
             packId: "apple-foundation-models-case_associate",

@@ -1,6 +1,7 @@
 package com.ross.android.alpha
 
 import java.io.File
+import java.io.FileInputStream
 import java.util.UUID
 
 data class AlphaModelPackProgress(
@@ -11,9 +12,9 @@ data class AlphaModelPackProgress(
 
 object AlphaModelPackManager {
     fun totalBytesFor(tier: AlphaCapabilityTier): Long = when (tier) {
-        AlphaCapabilityTier.QuickStart -> 429_000_000L
-        AlphaCapabilityTier.CaseAssociate -> 1_280_000_000L
-        AlphaCapabilityTier.SeniorDraftingSupport -> 2_500_000_000L
+        AlphaCapabilityTier.QuickStart -> 303_950_933L
+        AlphaCapabilityTier.CaseAssociate -> 554_661_246L
+        AlphaCapabilityTier.SeniorDraftingSupport -> 689_308_662L
     }
 
     fun stageJob(
@@ -116,6 +117,79 @@ object AlphaModelPackManager {
         )
     }
 
+    fun finalizeInstallFromFile(
+        rootDir: File,
+        job: AlphaModelDownloadJob,
+        downloadedFile: File,
+        fileName: String? = null,
+        now: String,
+    ): AlphaModelPackProgress {
+        val actualChecksum = sha256File(downloadedFile)
+        if (!job.checksumSha256.equals(actualChecksum, ignoreCase = true)) {
+            val failed = job.copy(
+                state = AlphaDownloadState.Failed,
+                bytesDownloaded = minOf(job.bytesDownloaded, job.totalBytes),
+                failureReason = "Checksum verification failed",
+                updatedAt = now,
+            )
+            return AlphaModelPackProgress(
+                job = failed,
+                ledgerEntries = listOf(
+                    AlphaPrivacyLedgerEntry(
+                        title = "Private AI Pack verification failed",
+                        detail = "Checksum verification failed locally, so Ross blocked installation.",
+                        purpose = AlphaPrivacyPurpose.ModelVerification,
+                        payloadClass = AlphaPayloadClass.NoCaseData,
+                        endpointLabel = "device://model-verify",
+                        success = false,
+                    )
+                ),
+            )
+        }
+
+        val folder = File(File(rootDir, "model-packs"), job.tier.tierId).apply { mkdirs() }
+        val artifact = File(folder, safeArtifactFileName(fileName, job))
+        if (artifact.exists()) artifact.delete()
+        if (!downloadedFile.renameTo(artifact)) {
+            downloadedFile.copyTo(artifact, overwrite = true)
+            downloadedFile.delete()
+        }
+        val installedPack = AlphaInstalledPack(
+            packId = job.packId,
+            tier = job.tier,
+            installRelativePath = artifact.relativeTo(rootDir).path,
+            checksumSha256 = actualChecksum,
+            artifactKind = job.artifactKind,
+            runtimeMode = job.runtimeMode,
+            developmentOnly = job.developmentOnly,
+            checksumVerified = true,
+            minimumAppVersion = job.minimumAppVersion,
+            installedAt = now,
+            isActive = true,
+        )
+        val completedJob = job.copy(
+            state = AlphaDownloadState.Installed,
+            bytesDownloaded = job.totalBytes,
+            updatedAt = now,
+            completedAt = now,
+            failureReason = null,
+        )
+        return AlphaModelPackProgress(
+            job = completedJob,
+            installedPack = installedPack,
+            ledgerEntries = listOf(
+                AlphaPrivacyLedgerEntry(
+                    title = "Private AI Pack installed",
+                    detail = "Checksum and install metadata were prepared locally.",
+                    purpose = AlphaPrivacyPurpose.ModelVerification,
+                    payloadClass = AlphaPayloadClass.NoCaseData,
+                    endpointLabel = "device://model-verify",
+                    success = true,
+                )
+            ),
+        )
+    }
+
     fun matchesExpectedChecksum(expectedSha256: String, artifactBytes: ByteArray): Boolean =
         expectedSha256.equals(sha256Bytes(artifactBytes), ignoreCase = true)
 
@@ -147,3 +221,16 @@ private fun sha256Bytes(value: ByteArray): String =
     java.security.MessageDigest.getInstance("SHA-256")
         .digest(value)
         .joinToString("") { "%02x".format(it) }
+
+private fun sha256File(file: File): String {
+    val digest = java.security.MessageDigest.getInstance("SHA-256")
+    FileInputStream(file).use { input ->
+        val buffer = ByteArray(1024 * 1024)
+        while (true) {
+            val read = input.read(buffer)
+            if (read <= 0) break
+            digest.update(buffer, 0, read)
+        }
+    }
+    return digest.digest().joinToString("") { "%02x".format(it) }
+}

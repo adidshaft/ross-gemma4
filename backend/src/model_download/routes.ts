@@ -1,10 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
+import { Readable } from "node:stream";
+import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 
 import type { AuditLogger } from "../audit/logger.js";
 import type { RuntimeEnv } from "../security/env.js";
 import { assertNoCaseDataPayload, hashValueSchema, parseStrict, platformSchema } from "../security/privacy.js";
-import { listModelPacks } from "../model_catalog/service.js";
+import { buildDownloadArtifact, findDownloadPackByArtifactId, listModelPacks } from "../model_catalog/service.js";
 import { findArtifactRecord } from "./dev_artifacts.js";
 import { hashForAudit } from "../utils/signing.js";
 import { AppError } from "../utils/http.js";
@@ -14,6 +16,15 @@ import { createReadStream } from "node:fs";
 interface RouteDeps {
   env: RuntimeEnv;
   auditLogger: AuditLogger;
+}
+
+function modelArtifactMirrorUrl(env: RuntimeEnv, fileName: string): string | null {
+  const baseUrl = env.modelArtifactBaseUrl?.trim().replace(/\/+$/, "");
+  if (!baseUrl) {
+    return null;
+  }
+
+  return `${baseUrl}/${encodeURIComponent(fileName)}`;
 }
 
 const modelDownloadSessionSchema = z
@@ -58,6 +69,111 @@ export async function registerModelDownloadRoutes(
       });
 
       return reply.send(response);
+    }
+  );
+
+  app.get(
+    "/model-download/artifacts/:artifactId",
+    {
+      config: {
+        auditClassification: "account_token"
+      }
+    },
+    async (request, reply) => {
+      const params = parseStrict(
+        z
+          .object({
+            artifactId: z.string().trim().min(8).max(160)
+          })
+          .strict(),
+        request.params
+      );
+
+      const pack = findDownloadPackByArtifactId(deps.env, undefined, params.artifactId);
+      const artifact = pack ? buildDownloadArtifact(pack) : null;
+      const accountTokenHeader = request.headers["x-ross-account-token"];
+      const accountToken = Array.isArray(accountTokenHeader)
+        ? accountTokenHeader[0]
+        : accountTokenHeader;
+
+      if (!pack || !artifact || pack.artifactKind !== "huggingface_gated_model_artifact") {
+        throw new AppError(404, "unknown_model_artifact", "Requested model artifact does not exist.");
+      }
+
+      if (!accountToken || accountToken.trim().length < 12) {
+        throw new AppError(401, "account_token_required", "A Ross account session is required to download model artifacts.");
+      }
+
+      const mirrorUrl = modelArtifactMirrorUrl(deps.env, artifact.fileName);
+      const sourceUrl = mirrorUrl ?? pack.downloadUrl ?? artifact.downloadUrl;
+      const sourceKind = mirrorUrl ? "ross_artifact_mirror" : "huggingface";
+
+      if (!mirrorUrl && !deps.env.huggingFaceAccessToken) {
+        throw new AppError(
+          409,
+          "huggingface_token_required",
+          "Ross backend needs either ROSS_MODEL_ARTIFACT_BASE_URL or a Hugging Face access token to serve this Android model artifact."
+        );
+      }
+
+      const headers: Record<string, string> = {
+        Accept: "application/octet-stream"
+      };
+      const bearerToken = mirrorUrl ? deps.env.modelArtifactBearerToken : deps.env.huggingFaceAccessToken;
+      if (bearerToken) {
+        headers.Authorization = `Bearer ${bearerToken}`;
+      }
+      const rangeHeader = request.headers.range;
+      if (typeof rangeHeader === "string" && rangeHeader.trim().length > 0) {
+        headers.Range = rangeHeader.trim();
+      }
+
+      const upstream = await fetch(sourceUrl, {
+        method: "GET",
+        headers,
+        redirect: "follow"
+      });
+
+      if (!upstream.ok || !upstream.body) {
+        throw new AppError(
+          upstream.status === 401 || upstream.status === 403 ? 502 : upstream.status,
+          "model_artifact_upstream_unavailable",
+          "Ross could not fetch the verified model artifact from the upstream model host."
+        );
+      }
+
+      reply
+        .code(upstream.status)
+        .header("Accept-Ranges", upstream.headers.get("accept-ranges") ?? "bytes")
+        .header("Cache-Control", "private, no-store")
+        .header("Content-Type", upstream.headers.get("content-type") ?? artifact.contentType)
+        .header("Content-Disposition", `attachment; filename="${artifact.fileName}"`);
+
+      const contentLength = upstream.headers.get("content-length");
+      const contentRange = upstream.headers.get("content-range");
+      if (contentLength) {
+        reply.header("Content-Length", contentLength);
+      }
+      if (contentRange) {
+        reply.header("Content-Range", contentRange);
+      }
+
+      deps.auditLogger.info({
+        event: "model_artifact_proxy_served",
+        route: "/model-download/artifacts/:artifactId",
+        requestId: request.id,
+        classification: "account_token",
+        metadata: {
+          artifactId: params.artifactId,
+          packId: pack.packId,
+          sourceKind,
+          accountHash: hashForAudit(accountToken),
+          statusCode: upstream.status,
+          rangeRequested: typeof rangeHeader === "string" && rangeHeader.trim().length > 0
+        }
+      });
+
+      return reply.send(Readable.fromWeb(upstream.body as unknown as NodeReadableStream));
     }
   );
 

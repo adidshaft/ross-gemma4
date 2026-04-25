@@ -2,15 +2,15 @@ import SwiftUI
 
 public extension Font {
     static func rossSerifTitle() -> Font {
-        .system(size: 22, weight: .semibold, design: .serif)
+        .system(size: 28, weight: .bold, design: .serif)
     }
     
     static func rossSerifHeadline() -> Font {
-        .system(size: 17, weight: .semibold, design: .serif)
+        .system(size: 18, weight: .bold, design: .serif)
     }
 
     static func rossInlineTitle() -> Font {
-        .system(size: 19, weight: .semibold, design: .rounded)
+        .system(size: 20, weight: .semibold, design: .default)
     }
 }
 
@@ -111,6 +111,7 @@ public struct RossPrimaryButtonStyle: ButtonStyle {
         configuration.label
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(.white)
+            .shadow(color: .black.opacity(0.1), radius: 1, y: 1)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 13)
             .background(
@@ -124,6 +125,7 @@ public struct RossPrimaryButtonStyle: ButtonStyle {
             )
             .scaleEffect(configuration.isPressed ? 0.99 : 1)
             .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+            .sensoryFeedback(.impact(weight: .medium), trigger: configuration.isPressed)
     }
 }
 
@@ -191,6 +193,7 @@ public struct RossGlassButtonStyle: ButtonStyle {
             )
             .scaleEffect(isPressed ? 0.985 : 1)
             .animation(.easeOut(duration: 0.18), value: isPressed)
+            .sensoryFeedback(.impact(weight: .medium), trigger: isPressed)
     }
 }
 

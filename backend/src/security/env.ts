@@ -33,6 +33,9 @@ export interface RuntimeEnv {
   externalModelMinAppVersion?: string | undefined;
   enableExternalModelServing: boolean;
   externalModelFilePath?: string | undefined;
+  huggingFaceAccessToken?: string | undefined;
+  modelArtifactBaseUrl?: string | undefined;
+  modelArtifactBearerToken?: string | undefined;
 }
 
 const backendRootDirectory = fileURLToPath(new URL("../../", import.meta.url));
@@ -56,9 +59,18 @@ function parseOptionalPositiveInteger(value: string | undefined): number | undef
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
-function parseModelCatalogMode(value: string | undefined): "dev" | "production_metadata" {
+function parseModelCatalogMode(
+  value: string | undefined,
+  nodeEnv: string
+): "dev" | "production_metadata" {
   const normalized = (value ?? "").trim().toLowerCase();
-  return normalized === "production_metadata" ? "production_metadata" : "dev";
+  if (normalized === "production_metadata") {
+    return "production_metadata";
+  }
+  if (normalized === "dev") {
+    return "dev";
+  }
+  return nodeEnv === "test" ? "dev" : "production_metadata";
 }
 
 function trimmedValue(value: string | undefined): string | undefined {
@@ -162,7 +174,7 @@ export function readRuntimeEnv(
     downloadKeyId: environment.DOWNLOAD_KEY_ID ?? "download-dev-v1",
     stripeWebhookSecret: environment.STRIPE_WEBHOOK_SECRET,
     razorpayWebhookSecret: environment.RAZORPAY_WEBHOOK_SECRET,
-    modelCatalogMode: parseModelCatalogMode(environment.ROSS_MODEL_CATALOG_MODE),
+    modelCatalogMode: parseModelCatalogMode(environment.ROSS_MODEL_CATALOG_MODE, nodeEnv),
     enableExternalModelMetadata: parseBoolean(environment.ROSS_ENABLE_EXTERNAL_MODEL_METADATA),
     externalModelRuntime: trimmedValue(environment.ROSS_EXTERNAL_MODEL_RUNTIME),
     externalModelKind: trimmedValue(environment.ROSS_EXTERNAL_MODEL_KIND),
@@ -173,6 +185,12 @@ export function readRuntimeEnv(
       "Case Associate Local Debug Model",
     externalModelMinAppVersion: trimmedValue(environment.ROSS_EXTERNAL_MODEL_MIN_APP_VERSION),
     enableExternalModelServing: parseBoolean(environment.ROSS_ENABLE_EXTERNAL_MODEL_SERVING),
-    externalModelFilePath: trimmedValue(environment.ROSS_EXTERNAL_MODEL_FILE_PATH)
+    externalModelFilePath: trimmedValue(environment.ROSS_EXTERNAL_MODEL_FILE_PATH),
+    huggingFaceAccessToken:
+      trimmedValue(environment.ROSS_HUGGING_FACE_ACCESS_TOKEN) ??
+      trimmedValue(environment.HUGGING_FACE_HUB_TOKEN) ??
+      trimmedValue(environment.HF_TOKEN),
+    modelArtifactBaseUrl: trimmedValue(environment.ROSS_MODEL_ARTIFACT_BASE_URL),
+    modelArtifactBearerToken: trimmedValue(environment.ROSS_MODEL_ARTIFACT_BEARER_TOKEN)
   };
 }

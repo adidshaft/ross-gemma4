@@ -13,6 +13,11 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
     var promptHash: String
     var inputHash: String
     var outputHash: String?
+    var inputChars: Int?
+    var estimatedInputTokens: Int?
+    var outputChars: Int?
+    var estimatedOutputTokens: Int?
+    var durationMs: Int?
     var startedAt: Date
     var completedAt: Date?
     var status: AlphaLocalModelInvocationStatus
@@ -31,6 +36,11 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
         promptHash: String,
         inputHash: String,
         outputHash: String? = nil,
+        inputChars: Int? = nil,
+        estimatedInputTokens: Int? = nil,
+        outputChars: Int? = nil,
+        estimatedOutputTokens: Int? = nil,
+        durationMs: Int? = nil,
         startedAt: Date = .now,
         completedAt: Date? = nil,
         status: AlphaLocalModelInvocationStatus,
@@ -48,6 +58,11 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
         self.promptHash = promptHash
         self.inputHash = inputHash
         self.outputHash = outputHash
+        self.inputChars = inputChars
+        self.estimatedInputTokens = estimatedInputTokens
+        self.outputChars = outputChars
+        self.estimatedOutputTokens = estimatedOutputTokens
+        self.durationMs = durationMs
         self.startedAt = startedAt
         self.completedAt = completedAt
         self.status = status
@@ -86,6 +101,8 @@ enum AlphaModelInvocationStore {
             },
             promptHash: sha256Hex("\(input.instruction)\n\(input.expectedSchema)"),
             inputHash: sha256Hex(input.sourcePack.map { "\($0.sourceRef.documentId.uuidString):\($0.pageNumber):\($0.text)" }.joined(separator: "|")),
+            inputChars: input.instruction.count + input.expectedSchema.count + input.sourcePack.reduce(0) { $0 + $1.text.count },
+            estimatedInputTokens: max((input.instruction.count + input.expectedSchema.count + input.sourcePack.reduce(0) { $0 + $1.text.count }) / 4, 1),
             status: .running
         )
     }
@@ -95,8 +112,13 @@ enum AlphaModelInvocationStore {
         output: AlphaLocalModelOutput
     ) -> AlphaLocalModelInvocation {
         var copy = invocation
-        copy.outputHash = sha256Hex(output.parsedJson ?? output.rawText)
-        copy.completedAt = .now
+        let outputText = output.parsedJson ?? output.rawText
+        let completedAt = Date.now
+        copy.outputHash = sha256Hex(outputText)
+        copy.outputChars = outputText.isEmpty ? 0 : outputText.count
+        copy.estimatedOutputTokens = outputText.isEmpty ? 0 : max(outputText.count / 4, 1)
+        copy.completedAt = completedAt
+        copy.durationMs = max(Int(completedAt.timeIntervalSince(invocation.startedAt) * 1_000), 0)
         copy.status = switch output.errorCategory {
         case "cancelled":
             .cancelled
@@ -114,7 +136,9 @@ enum AlphaModelInvocationStore {
         errorCategory: String
     ) -> AlphaLocalModelInvocation {
         var copy = invocation
-        copy.completedAt = .now
+        let completedAt = Date.now
+        copy.completedAt = completedAt
+        copy.durationMs = max(Int(completedAt.timeIntervalSince(invocation.startedAt) * 1_000), 0)
         copy.status = .failed
         copy.errorCategory = errorCategory
         return copy

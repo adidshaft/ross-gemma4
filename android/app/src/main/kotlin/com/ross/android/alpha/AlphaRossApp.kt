@@ -1,10 +1,12 @@
 package com.ross.android.alpha
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
+import android.text.format.Formatter
 import com.ross.android.R
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
@@ -111,13 +113,34 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.ross.android.theme.RossTheme
 import java.io.File
+import java.util.Locale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private val alphaScreenPadding = 18.dp
 private val alphaSectionSpacing = 14.dp
 private val AlphaAmberStatus = Color(0xFFD18C00)
+
+private data class AlphaStorageSnapshot(
+    val documentCount: Int,
+    val exportCount: Int,
+    val documentBytes: Long,
+    val exportBytes: Long,
+    val assistantBytes: Long,
+) {
+    val totalBytes: Long
+        get() = documentBytes + exportBytes + assistantBytes
+}
 private val AlphaSuccessStatus = Color(0xFF2F7B52)
+private const val alphaUiPrefsName = "ross_alpha_ui_prefs"
+private const val alphaMatterListSortModePrefKey = "matter_list_sort_mode"
+private const val alphaMatterListViewModePrefKey = "matter_list_view_mode"
+
+private fun alphaStoredMatterListSortMode(rawValue: String?): AlphaCaseSortMode =
+    AlphaCaseSortMode.values().firstOrNull { it.storageValue == rawValue } ?: AlphaCaseSortMode.RecentlyViewed
+
+private fun alphaStoredMatterListViewMode(rawValue: String?): AlphaMatterListViewMode =
+    AlphaMatterListViewMode.values().firstOrNull { it.storageValue == rawValue } ?: AlphaMatterListViewMode.Expanded
 
 private enum class RossGlassAsset(@DrawableRes val resId: Int) {
     BadgeSparkleAccent(R.drawable.ng_accent_badge_sparkle),
@@ -938,8 +961,10 @@ private fun AlphaMatterFolderGlyph(tint: AlphaMatterTint, modifier: Modifier = M
         modifier = modifier
             .size(size.dp),
     ) {
-        RossGlassIcon(
-            asset = RossGlassAsset.FolderNeutral,
+        Icon(
+            imageVector = Icons.Outlined.Folder,
+            contentDescription = null,
+            tint = tintColor,
             modifier = Modifier
                 .size((size * 0.8f).dp)
                 .align(Alignment.Center),
@@ -1192,6 +1217,7 @@ private fun alphaRootIcon(route: AndroidAlphaRoute, selected: Boolean): ImageVec
     when (route) {
         AndroidAlphaRoute.Home -> if (selected) Icons.Filled.Home else Icons.Outlined.Home
         AndroidAlphaRoute.CaseList -> if (selected) Icons.Filled.Folder else Icons.Outlined.Folder
+        AndroidAlphaRoute.AskRoss -> if (selected) Icons.Filled.ChatBubble else Icons.Outlined.ChatBubbleOutline
         AndroidAlphaRoute.Settings, AndroidAlphaRoute.PrivateAiSettings -> if (selected) Icons.Filled.Settings else Icons.Outlined.Settings
         else -> if (selected) Icons.Filled.Home else Icons.Outlined.Home
     }
@@ -1273,7 +1299,7 @@ private fun AlphaRootStrip(
     onSelect: (AndroidAlphaRoute) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val tabs = listOf(AndroidAlphaRoute.Home, AndroidAlphaRoute.CaseList)
+    val tabs = listOf(AndroidAlphaRoute.Home, AndroidAlphaRoute.CaseList, AndroidAlphaRoute.AskRoss)
     val chromeBackground = alphaChromeBackgroundColor()
     val chromeForeground = alphaChromeForegroundColor()
     val chromeMuted = alphaChromeMutedColor()
@@ -1313,6 +1339,7 @@ private fun AlphaRootStrip(
                             contentDescription = when (route) {
                                 AndroidAlphaRoute.Home -> "Today"
                                 AndroidAlphaRoute.CaseList -> "Matters"
+                                AndroidAlphaRoute.AskRoss -> "Ross"
                                 else -> "Settings"
                             },
                             tint = if (selected) MaterialTheme.colorScheme.onPrimary else chromeMuted,
@@ -1352,11 +1379,17 @@ private fun AlphaRootAskDock(
     val chromeMuted = alphaChromeMutedColor()
     val draftText = controller.askDraft(activeScopeCaseId)
     val composerPlaceholder = when {
+        alphaUsesHindiUi() && fixedDocumentIds.size == 1 -> "Ross से इस फ़ाइल के बारे में पूछें..."
+        alphaUsesHindiUi() && activeScopeCaseId != null -> "Ross से इस मामले के बारे में पूछें..."
+        alphaUsesHindiUi() -> "Ross से आज, किसी मामले, या किसी फ़ाइल के बारे में पूछें..."
         fixedDocumentIds.size == 1 -> "Ask Ross about this file..."
         activeScopeCaseId != null -> "Ask Ross about this matter..."
         else -> "Ask Ross about today, a matter, or a file..."
     }
     val collapsedDockTitle = when {
+        alphaUsesHindiUi() && fixedDocumentIds.size == 1 -> "Ross से इस फ़ाइल के बारे में पूछें..."
+        alphaUsesHindiUi() && activeScopeCaseId != null -> "Ross से इस मामले के बारे में पूछें..."
+        alphaUsesHindiUi() -> "Ross से पूछें..."
         fixedDocumentIds.size == 1 -> "Ask Ross about this file..."
         activeScopeCaseId != null -> "Ask Ross about this matter..."
         else -> "Ask Ross..."
@@ -1415,6 +1448,7 @@ private fun AlphaRootAskDock(
                     controller.pendingRoute = AndroidAlphaRoute.DocumentViewer(source.caseId, source.documentId, source.pageNumber)
                 },
                 onOpenConversation = { controller.openAsk(activeScopeCaseId, fixedDocumentIds.singleOrNull()) },
+                onReport = { controller.reportAiOutput(result.question, result.scopeCaseId) },
                 onClose = { dismissedInlineQuestion = result.question },
             )
         }
@@ -1929,6 +1963,7 @@ private fun AlphaInlineAskResponseCard(
     contextDocumentTitle: String?,
     onOpenSource: (AlphaSourceRef) -> Unit,
     onOpenConversation: () -> Unit,
+    onReport: () -> Unit,
     onClose: () -> Unit,
 ) {
     AlphaCard {
@@ -1958,6 +1993,9 @@ private fun AlphaInlineAskResponseCard(
             } ?: Spacer(modifier = Modifier.width(1.dp))
             TextButton(onClick = onOpenConversation) {
                 Text("Open chat")
+            }
+            TextButton(onClick = onReport) {
+                Text("Report AI output")
             }
         }
     }
@@ -2032,14 +2070,14 @@ private fun AlphaOnboardingScreen(onContinue: () -> Unit) {
         ) {
             AlphaInlineHeader(
                 eyebrow = "Ross",
-                title = "A private case workbench for daily legal work",
-                detail = "Pick the setup for this phone and start the first matter when you are ready.",
+                title = "Your private legal assistant.",
+                detail = "Ross organizes your files, drafts notes, and answers questions, all securely on this phone.",
             )
             AlphaCard {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    AlphaBullet("Everything stays local to this device.")
+                    AlphaBullet("Matter files stay on this device.")
                     AlphaBullet("Today surfaces dates, tasks, and next actions.")
-                    AlphaBullet("You can change the assistant level later.")
+                    AlphaBullet("You stay in control of Web Search and assistant setup.")
                 }
             }
             Row(
@@ -2049,7 +2087,7 @@ private fun AlphaOnboardingScreen(onContinue: () -> Unit) {
                 AlphaInfoChip(label = "On-device files", modifier = Modifier.weight(1f))
                 AlphaInfoChip(label = "Approved web search", modifier = Modifier.weight(1f))
             }
-            Button(onClick = onContinue, modifier = Modifier.fillMaxWidth()) { Text("Continue") }
+            Button(onClick = onContinue, modifier = Modifier.fillMaxWidth()) { Text("Set up my assistant") }
         }
     }
 }
@@ -2059,7 +2097,7 @@ private fun AlphaOnboardingScreen(onContinue: () -> Unit) {
 private fun AlphaPackSetupScreen(controller: AlphaRossController, onContinue: () -> Unit, onSkip: () -> Unit) {
     var infoTier by rememberSaveable { mutableStateOf<AlphaCapabilityTier?>(null) }
 
-    AlphaShell(title = "Private assistant", showTopBar = false) {
+    AlphaShell(title = "My assistant", showTopBar = false) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -2077,8 +2115,8 @@ private fun AlphaPackSetupScreen(controller: AlphaRossController, onContinue: ()
         ) {
             AlphaInlineHeader(
                 eyebrow = "Assistant setup",
-                title = "Choose setup for this phone",
-                detail = "Ross picked a balanced default. You can change it later.",
+                title = "Choose the assistant for this phone.",
+                detail = "Start with the recommended level. You can change it later in Settings.",
             )
 
             AlphaCapabilityTier.values().forEach { tier ->
@@ -2091,16 +2129,31 @@ private fun AlphaPackSetupScreen(controller: AlphaRossController, onContinue: ()
             }
 
             AlphaAssistantActivityStrip(
-                title = "Setup keeps running in the background",
-                detail = "You can start matters while Ross finishes the download.",
-                statusLabel = "Background",
+                title = "Uses this phone's private assistant",
+                detail = "Ross keeps matter files on this phone. If setup needs more time, you can continue while the assistant finishes preparing.",
+                statusLabel = "On device",
                 tint = AlphaAmberStatus,
-                showProgress = true,
             )
 
+            AlphaCard {
+                val decision = controller.assistantRuntimeDecision()
+                Text(
+                    decision.reason,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    decision.effectiveTier.setupWarning,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Button(onClick = onContinue, modifier = Modifier.weight(1f)) { Text("Continue") }
-                TextButton(onClick = onSkip, modifier = Modifier.weight(1f)) { Text("Not now") }
+                Button(onClick = onContinue, modifier = Modifier.weight(1f)) { Text("Set up my assistant") }
+                TextButton(onClick = onSkip, modifier = Modifier.weight(1f)) { Text("Skip for now - later in Settings") }
             }
         }
     }
@@ -2155,7 +2208,10 @@ private fun AlphaHomeScreen(
             )
         },
         bottomBar = {
-            AlphaRootAskDock(controller = controller)
+            AlphaRootAskDock(
+                controller = controller,
+                fixedScopeCaseId = null,
+            )
         },
     ) {
         Column(
@@ -2228,7 +2284,7 @@ private fun AlphaHomeScreen(
 
             if (hasReviewItems) {
                 AlphaExpandableCard(
-                    title = "Needs review",
+                    title = "Please confirm",
                     badge = "${controller.reviewQueue().size}",
                     expanded = needsReviewExpanded,
                     onToggle = { needsReviewExpanded = !needsReviewExpanded },
@@ -2291,8 +2347,16 @@ private fun AlphaCaseListScreen(
     onCreateCase: () -> Unit,
     onOpenCase: (String) -> Unit,
 ) {
-    var sortMode by rememberSaveable { mutableStateOf(AlphaCaseSortMode.RecentlyViewed) }
-    var viewMode by rememberSaveable { mutableStateOf(AlphaMatterListViewMode.Expanded) }
+    val context = LocalContext.current
+    val uiPrefs = remember(context) {
+        context.applicationContext.getSharedPreferences(alphaUiPrefsName, Context.MODE_PRIVATE)
+    }
+    var sortMode by rememberSaveable {
+        mutableStateOf(alphaStoredMatterListSortMode(uiPrefs.getString(alphaMatterListSortModePrefKey, null)))
+    }
+    var viewMode by rememberSaveable {
+        mutableStateOf(alphaStoredMatterListViewMode(uiPrefs.getString(alphaMatterListViewModePrefKey, null)))
+    }
     var actionTarget by remember { mutableStateOf<AlphaCaseMatter?>(null) }
     var renameTarget by remember { mutableStateOf<AlphaCaseMatter?>(null) }
     var renameDraft by rememberSaveable { mutableStateOf("") }
@@ -2310,7 +2374,10 @@ private fun AlphaCaseListScreen(
             )
         },
         bottomBar = {
-            AlphaRootAskDock(controller = controller)
+            AlphaRootAskDock(
+                controller = controller,
+                fixedScopeCaseId = null,
+            )
         },
     ) {
         LazyColumn(
@@ -2331,12 +2398,13 @@ private fun AlphaCaseListScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    AlphaIconMenuButton(icon = if (sortMode == AlphaCaseSortMode.RecentlyViewed) Icons.AutoMirrored.Outlined.Sort else Icons.Outlined.SwapVert, label = "Sort matters") { closeMenu ->
+                    AlphaIconMenuButton(icon = if (sortMode == AlphaCaseSortMode.RecentlyViewed) Icons.AutoMirrored.Outlined.Sort else Icons.Outlined.SwapVert, label = "Sort list") { closeMenu ->
                         AlphaCaseSortMode.values().forEach { option ->
                             DropdownMenuItem(
                                 text = { Text(option.label) },
                                 onClick = {
                                     sortMode = option
+                                    uiPrefs.edit().putString(alphaMatterListSortModePrefKey, option.storageValue).apply()
                                     closeMenu()
                                 },
                             )
@@ -2355,6 +2423,7 @@ private fun AlphaCaseListScreen(
                                 text = { Text(option.label) },
                                 onClick = {
                                     viewMode = option
+                                    uiPrefs.edit().putString(alphaMatterListViewModePrefKey, option.storageValue).apply()
                                     closeMenu()
                                 },
                             )
@@ -2367,10 +2436,20 @@ private fun AlphaCaseListScreen(
             if (controller.cases.isEmpty()) {
                 item {
                     AlphaCard {
-                        Text(
-                            "Create a matter to start adding documents, dates, and tasks.",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text(
+                                "Your private workspace is empty.",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Text(
+                                "Add a matter to start organizing your files, notes, and tasks.",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Button(onClick = onCreateCase, modifier = Modifier.fillMaxWidth()) {
+                                Text("Add matter")
+                            }
+                        }
                     }
                 }
             } else {
@@ -2634,7 +2713,7 @@ private fun AlphaCreateCaseScreen(controller: AlphaRossController, onCreated: (S
                 value = controller.caseDraftForum,
                 onValueChange = { controller.caseDraftForum = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Court or forum") },
+                label = { Text("Court") },
             )
             Button(
                 onClick = { controller.createCase(openWorkspace = false)?.let(onCreated) },
@@ -2680,7 +2759,7 @@ private fun AlphaCaseWorkspaceScreen(
                 AlphaInlineHeader(
                     eyebrow = it.forum,
                     title = it.title,
-                    detail = "${it.stage.name.lowercase().replaceFirstChar(Char::titlecase)} · ${it.documents.size} documents · ${controller.openTaskCount(caseId)} open tasks",
+                    detail = "${it.stage.displayTitle} · ${it.documents.size} documents · ${controller.openTaskCount(caseId)} open tasks",
                 )
 
                 AlphaWorkspaceSectionBar(
@@ -3215,7 +3294,7 @@ private fun AlphaDocumentViewerScreen(
                             }
                             reviewFindings.forEach { finding ->
                                 Spacer(modifier = Modifier.height(8.dp))
-                                AlphaCard("Needs review", finding.kind.name) {
+                                AlphaCard("Please confirm", finding.kind.name) {
                                     Text(finding.message, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
@@ -3473,13 +3552,13 @@ private fun alphaPageCountLabel(count: Int): String =
     if (count == 1) "1 page" else "$count pages"
 
 private fun alphaReviewNeedLabel(count: Int): String =
-    if (count == 1) "1 item needs review" else "$count items need review"
+    if (count == 1) "1 item needs your check" else "$count items need your check"
 
 private fun alphaIsImportantReviewField(type: AlphaExtractedLegalFieldType): Boolean =
     reviewPriority(type) <= 8
 
 private fun alphaConfidenceLabel(confidence: Double, needsReview: Boolean): String = when {
-    needsReview -> "Needs review"
+    needsReview -> "Please confirm"
     confidence < 0.84 -> "Low confidence"
     else -> "Verified"
 }
@@ -3557,10 +3636,13 @@ private fun AlphaPublicLawScreen(controller: AlphaRossController, onBack: () -> 
                     onValueChange = { controller.publicLawDraft = it },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 6,
-                    label = { Text("Query") }
+                    label = { Text("Query") },
+                    placeholder = { Text("Example: Supreme Court guidance on delay condonation after a filing disruption") }
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text("Ross removes case IDs, file names, client names, party names, phone numbers, email addresses, and text copied from your files before search.")
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Why this is safe: Ross only sends the sanitized public-law query allowed in Settings. Your matter files stay on this device.")
                 Spacer(modifier = Modifier.height(12.dp))
                 Button(onClick = { controller.buildPublicLawPreview() }, modifier = Modifier.fillMaxWidth()) { Text("Review sanitized query") }
             }
@@ -3574,7 +3656,7 @@ private fun AlphaPublicLawScreen(controller: AlphaRossController, onBack: () -> 
                 }
             }
             if (controller.publicLawResults.isNotEmpty()) {
-                AlphaCard("Public-law results", "Separate from case-file context and limited to the approved public-law query.") {
+                AlphaCard("Public-law results", "Separate from case-file context and limited to the sanitized public-law query.") {
                     controller.publicLawResults.forEach { result ->
                         AlphaPublicLawResultCard(result)
                         Spacer(modifier = Modifier.height(8.dp))
@@ -3592,7 +3674,7 @@ private fun AlphaPublicLawScreen(controller: AlphaRossController, onBack: () -> 
 @Composable
 private fun AlphaExportsScreen(controller: AlphaRossController, caseId: String?, onBack: () -> Unit) {
     val context = LocalContext.current
-    AlphaShell(title = "Local Reports", showBack = true, onBack = onBack) {
+    AlphaShell(title = "Notes & Drafts", showBack = true, onBack = onBack) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -3602,8 +3684,8 @@ private fun AlphaExportsScreen(controller: AlphaRossController, caseId: String?,
         ) {
             AlphaInlineHeader(
                 eyebrow = null,
-                title = "Drafts and reports",
-                detail = "Generate local reports for advocate review.",
+                title = "Notes & Drafts",
+                detail = "Generate local notes and drafts for advocate review.",
             )
             AlphaCard("Generate") {
                 Text(
@@ -3657,8 +3739,16 @@ private fun AlphaExportsScreen(controller: AlphaRossController, caseId: String?,
                             ) {
                                 Text(if (exportFile.extension.equals("pdf", ignoreCase = true)) "Open PDF" else "Open draft")
                             }
+                            Button(
+                                onClick = { shareLocalExport(context, exportFile, preferWhatsApp = true) },
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Text("Send in WhatsApp")
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             TextButton(
-                                onClick = { shareLocalExport(context, exportFile) },
+                                onClick = { shareLocalExport(context, exportFile, preferWhatsApp = false) },
                                 modifier = Modifier.weight(1f),
                             ) {
                                 Text("Share")
@@ -3691,16 +3781,27 @@ private fun openLocalExport(context: android.content.Context, file: File) {
     runCatching {
         context.startActivity(Intent.createChooser(openIntent, "Open local draft"))
     }.getOrElse {
-        shareLocalExport(context, file)
+        shareLocalExport(context, file, preferWhatsApp = false)
     }
 }
 
-private fun shareLocalExport(context: android.content.Context, file: File) {
+private fun shareLocalExport(context: android.content.Context, file: File, preferWhatsApp: Boolean) {
     val uri = exportUri(context, file)
     val shareIntent = Intent(Intent.ACTION_SEND).apply {
         type = exportMimeType(file)
         putExtra(Intent.EXTRA_STREAM, uri)
+        putExtra(Intent.EXTRA_TEXT, "Sharing ${file.nameWithoutExtension} from Ross.")
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    if (preferWhatsApp) {
+        val whatsAppIntent = Intent(shareIntent).apply {
+            `package` = "com.whatsapp"
+        }
+        runCatching {
+            context.startActivity(whatsAppIntent)
+        }.onSuccess {
+            return
+        }
     }
     context.startActivity(Intent.createChooser(shareIntent, "Share local draft"))
 }
@@ -3717,6 +3818,7 @@ private fun AlphaSettingsScreen(
 ) {
     val context = LocalContext.current
     val biometricSupported = alphaCanUseDeviceUnlock(context as? FragmentActivity)
+    val storageSnapshot = alphaStorageSnapshot(controller)
     var showTechnicalDiagnostics by rememberSaveable { mutableStateOf(false) }
     var backendAddressDraft by rememberSaveable { mutableStateOf(controller.backendBaseUrlOverride().orEmpty()) }
     AlphaShell(
@@ -3769,7 +3871,7 @@ private fun AlphaSettingsScreen(
             }
 
             AlphaCard("Privacy") {
-                AlphaToggleRow("Ask before Web search", controller.persisted.settings.requirePublicLawApproval) {
+                AlphaToggleRow("Allow Web search", controller.persisted.settings.requirePublicLawApproval) {
                     controller.persisted = controller.persisted.copy(settings = controller.persisted.settings.copy(requirePublicLawApproval = it))
                     controller.save()
                 }
@@ -3780,7 +3882,7 @@ private fun AlphaSettingsScreen(
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "Matter files stay on this device. Web Search sends only a sanitized public-law query after you approve it.",
+                    "When this is on, Ross may look up public law through Ross's search service from a sanitized query only. Case files and matter work stay on this device.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -3894,20 +3996,62 @@ private fun AlphaSettingsScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 AlphaSettingsValueRow(label = "Pack", value = controller.persisted.settings.activeTier?.title ?: "Not installed")
                 Spacer(modifier = Modifier.height(8.dp))
-                AlphaSettingsValueRow(label = "Saved reports", value = "${controller.persisted.exports.size}")
+                AlphaSettingsValueRow(label = "Notes & Drafts", value = "${controller.persisted.exports.size}")
                 Spacer(modifier = Modifier.height(8.dp))
                 AlphaSettingsNavigationRow(
-                    title = "Private assistant",
+                    title = "My assistant",
                     detail = "Review downloads, pack level, and advanced settings.",
                     icon = Icons.Outlined.Memory,
                     onClick = onOpenPrivateAi,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 AlphaSettingsNavigationRow(
-                    title = "Open Privacy Ledger",
-                    detail = "See visible network and local actions.",
+                    title = "Open Privacy log",
+                    detail = "See what stayed on this phone and what Ross searched publicly.",
                     icon = Icons.AutoMirrored.Outlined.FactCheck,
                     onClick = onOpenLedger,
+                )
+            }
+
+            AlphaCard("Storage") {
+                AlphaSettingsValueRow(
+                    label = "Matter files",
+                    value = "${storageSnapshot.documentCount} • ${alphaFileSizeLabel(context, storageSnapshot.documentBytes)}",
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                AlphaSettingsValueRow(
+                    label = "Notes & Drafts",
+                    value = "${storageSnapshot.exportCount} • ${alphaFileSizeLabel(context, storageSnapshot.exportBytes)}",
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                AlphaSettingsValueRow(
+                    label = "Assistant files",
+                    value = alphaFileSizeLabel(context, storageSnapshot.assistantBytes),
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                AlphaSettingsValueRow(
+                    label = "Total on this device",
+                    value = alphaFileSizeLabel(context, storageSnapshot.totalBytes),
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "Matter files, exports, and assistant files stay on this phone unless you explicitly share them.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            AlphaCard("Help") {
+                AlphaSettingsValueRow(label = "Quick start", value = "Add a matter, import a file, then ask Ross.")
+                Spacer(modifier = Modifier.height(8.dp))
+                AlphaSettingsValueRow(label = "Assistant setup", value = "If setup pauses, reopen My assistant and retry on Wi-Fi.")
+                Spacer(modifier = Modifier.height(8.dp))
+                AlphaSettingsValueRow(label = "Client sharing", value = "Open Notes & Drafts to send a PDF by WhatsApp or Share.")
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "This test build keeps help inside the app. If something still looks off, open Privacy log and share the latest status with the Ross test team.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
@@ -3993,7 +4137,7 @@ private fun AlphaLaunchAuthGate(controller: AlphaRossController) {
                     detail = "Use demo mode with sample data, or sign in with Google to continue.",
                 )
                 Text(
-                    "Case files stay on this device. Public-law search sends only a sanitized query after you approve it.",
+                    "Case files stay on this device. Public-law search sends only a sanitized query while Web search is allowed in Settings.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -4157,7 +4301,7 @@ private fun AlphaSettingsSelectionRow(
 private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack: () -> Unit) {
     var showTechnicalDiagnostics by remember { mutableStateOf(false) }
     val privateAiStatus = alphaPrivateAiStatus(controller)
-    AlphaShell(title = "Private assistant", showBack = true, onBack = onBack) {
+    AlphaShell(title = "My assistant", showBack = true, onBack = onBack) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -4194,7 +4338,7 @@ private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack
                 Text("You can switch later. Setup progress stays visible here and in Settings.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             AlphaCapabilityTier.values().forEach { tier ->
-                AlphaCard(tier.title, tier.summary) {
+                AlphaCard(tier.setupTitle, tier.summary) {
                     Text(tier.bestFor, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         AlphaTagChip(tier.downloadSizeLabel)
@@ -4258,15 +4402,50 @@ private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack
                 }
                 if (showTechnicalDiagnostics) {
                     controller.activeRuntimeHealth()?.let { health ->
+                        val activePack = controller.activePack()
+                        val artifact = activePack?.tier?.let(::alphaTechnicalModelArtifact)
+                        val lastInvocation = controller.lastModelInvocation()
+                        val lastMetric = controller.lastLocalInferenceMetrics()
+                        val lastPreview = controller.publicLawPreview
+                        val resetCount = controller.persisted.ledgerEntries.count { it.title.contains("reset", ignoreCase = true) }
                         Spacer(modifier = Modifier.height(12.dp))
                         Text("Runtime mode: ${health.runtimeMode.wireValue}")
-                        Text("Artifact kind: ${controller.activePack()?.artifactKind ?: "Missing"}")
+                        Text("Artifact kind: ${activePack?.artifactKind ?: "Missing"}")
                         Text("Checksum verified: ${if (health.checksumVerified) "yes" else "no"}")
                         Text("Fallback active: ${if (health.fallbackActive) "yes" else "no"}")
                         Text("Model path: ${if (health.modelPathPresent) "Configured" else "Missing"}")
+                        artifact?.let {
+                            Text("Technical model: ${it.displayName}")
+                            Text("Repository: ${it.repository}")
+                            Text("File: ${it.fileName}")
+                            Text("Quantization: ${it.quantization}")
+                            Text("Checksum: ${it.sha256}")
+                        }
                         health.modelPathLabel?.let { Text("Model file: $it") }
                         health.lastErrorCategory?.let { Text("Last error category: $it") }
                         controller.lastModelInvocationRuntimeMode()?.let { Text("Last invocation runtime: $it") }
+                        lastInvocation?.let {
+                            Text("Last task: ${it.task.wireValue}")
+                            Text("Last status: ${it.status}")
+                            Text("Prompt hash: ${it.promptHash}")
+                            Text("Input hash: ${it.inputHash}")
+                            it.outputHash?.let { outputHash -> Text("Output hash: $outputHash") }
+                        } ?: Text("Last local inference: No model invocation recorded yet")
+                        lastMetric?.let {
+                            val tokenTotal = (it.estimatedTokens ?: 0) + ((it.outputChars ?: 0) / 4)
+                            val speed = if (it.durationMs > 0) tokenTotal.toDouble() / (it.durationMs.toDouble() / 1_000.0) else 0.0
+                            Text("Estimated input tokens: ${it.estimatedTokens ?: 0}")
+                            Text("Output chars: ${it.outputChars ?: 0}")
+                            Text("Last duration: ${it.durationMs} ms")
+                            Text("Approx speed: ${"%.1f".format(speed)} tok/s")
+                        }
+                        if (lastPreview != null) {
+                            Text("Last public-law query: ${lastPreview.query}")
+                            Text("Sanitizer removals: ${lastPreview.removed.size}")
+                        } else {
+                            Text("Last public-law query: None")
+                        }
+                        Text("Workspace resets: $resetCount")
                         Spacer(modifier = Modifier.height(8.dp))
                         Button(
                             onClick = { controller.runLocalInferenceSmoke() },
@@ -4295,13 +4474,21 @@ private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack
 
 @Composable
 private fun AlphaPrivacyLedgerScreen(controller: AlphaRossController, onBack: () -> Unit) {
-    AlphaShell(title = "Privacy Ledger", showBack = true, onBack = onBack) {
+    AlphaShell(title = "Privacy log", showBack = true, onBack = onBack) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(alphaScreenPadding),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            item {
+                AlphaCard("Privacy summary") {
+                    Text(
+                        "In the last 30 days, 0 case details left this phone. Public-law searches only used sanitized public-law queries.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             items(controller.persisted.ledgerEntries) { entry ->
                 AlphaCard(entry.lawyerTitle(), entry.success.thenCompleted()) {
                     Text(entry.lawyerDetail(), color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -4493,7 +4680,7 @@ private fun AlphaSelectableBar(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            tier.title,
+                            tier.setupTitle,
                             modifier = Modifier.weight(1f),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
@@ -4516,7 +4703,7 @@ private fun AlphaSelectableBar(
                         }
                     }
                     Text(
-                        "${tier.compactSetupSummary} • ${tier.setupTimeLabel} setup • ${tier.storageNote}",
+                        "${tier.compactSetupSummary} • On device • Change later",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 3,
@@ -4532,7 +4719,7 @@ private fun AlphaSelectableBar(
             ) {
                 RossGlassIcon(
                     asset = RossGlassAsset.CircleInfoHighlight,
-                    label = "About ${tier.title}",
+                    label = "About ${tier.setupTitle}",
                     modifier = Modifier
                         .padding(horizontal = 10.dp, vertical = 8.dp)
                         .size(20.dp),
@@ -4570,7 +4757,7 @@ private fun AlphaPackTierSheetContent(
             ) {
                 AlphaTierGlyph(tier = tier)
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(tier.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(tier.setupTitle, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     Text(tier.summary, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -4616,16 +4803,16 @@ private fun AlphaPackTierSheetContent(
     }
 }
 
-private enum class AlphaCaseSortMode(val label: String) {
-    RecentlyViewed("Recently Viewed"),
-    LastAdded("Last Added"),
-    EarliestActionNeeded("Earliest Action Needed"),
+private enum class AlphaCaseSortMode(val label: String, val storageValue: String) {
+    RecentlyViewed("Recently Viewed", "recently_viewed"),
+    LastAdded("Last Added", "last_added"),
+    EarliestActionNeeded("Earliest Action Needed", "earliest_action_needed"),
 }
 
-private enum class AlphaMatterListViewMode(val label: String) {
-    Expanded("Expanded"),
-    Summary("Summary"),
-    Folder("Folder"),
+private enum class AlphaMatterListViewMode(val label: String, val storageValue: String) {
+    Expanded("Expanded", "expanded"),
+    Summary("Summary", "summary"),
+    Folder("Folder", "folder"),
 }
 
 private enum class AlphaDocumentLayoutMode(val label: String) {
@@ -4704,7 +4891,7 @@ private fun AlphaAction(title: String, detail: String, onClick: () -> Unit) {
 
 @Composable
 private fun AlphaMatterStarterCard(controller: AlphaRossController) {
-    AlphaCard("Start with one matter", "You can add the court or forum now, or leave it for later.") {
+    AlphaCard("Start with one matter", "You can add the court now, or leave it for later.") {
         OutlinedTextField(
             value = controller.caseDraftTitle,
             onValueChange = { controller.caseDraftTitle = it },
@@ -4716,7 +4903,7 @@ private fun AlphaMatterStarterCard(controller: AlphaRossController) {
             value = controller.caseDraftForum,
             onValueChange = { controller.caseDraftForum = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Court or forum") },
+            label = { Text("Court") },
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
         )
         Button(
@@ -5210,7 +5397,7 @@ private fun AlphaCaseSummaryRow(
                 AlphaMatterFolderGlyph(tint = case.folderTint)
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(case.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                    Text("${case.forum} • ${case.stage.name.lowercase().replaceFirstChar(Char::titlecase)}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("${case.forum} • ${case.stage.displayTitle}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 case.nextHearing?.let { nextDate ->
                     Text(alphaDateLabel(nextDate), style = MaterialTheme.typography.labelMedium, color = alphaMatterTintColor(case.folderTint))
@@ -5345,13 +5532,25 @@ private fun AlphaFolderArtwork(
             .fillMaxWidth()
             .height(76.dp)
     ) {
-        RossGlassIcon(
-            asset = asset,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(start = 2.dp, top = 2.dp)
-                .size(64.dp),
-        )
+        if (asset == RossGlassAsset.FolderNeutral) {
+            Icon(
+                imageVector = Icons.Outlined.Folder,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 2.dp, top = 2.dp)
+                    .size(64.dp),
+            )
+        } else {
+            RossGlassIcon(
+                asset = asset,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 2.dp, top = 2.dp)
+                    .size(64.dp),
+            )
+        }
 
         badge?.let {
             Text(
@@ -5671,6 +5870,7 @@ private fun AlphaAskConversationScreen(
                         result = result,
                         contextDocumentTitle = documentTitle,
                         onOpenSource = onOpenSource,
+                        onReport = { controller.reportAiOutput(result.question, result.scopeCaseId) },
                     )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
@@ -5688,7 +5888,7 @@ private fun AlphaAskEmptyState(detail: String, suggestions: List<String>, onSele
         verticalArrangement = Arrangement.spacedBy(18.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("Ask Ross what's next", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Text(alphaAskEmptyTitle(), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Text(
             detail,
             style = MaterialTheme.typography.bodyMedium,
@@ -5718,6 +5918,7 @@ private fun AlphaAskTurnCard(
     result: AlphaAskResult,
     contextDocumentTitle: String?,
     onOpenSource: (AlphaSourceRef) -> Unit,
+    onReport: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
@@ -5810,7 +6011,7 @@ private fun AlphaAskTurnCard(
                             modifier = Modifier.padding(12.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            AlphaSectionLabel("Approved public-law query", "Ross only sent this sanitized public-law query.")
+                            AlphaSectionLabel("Sanitized public-law query", "Ross only sent this public-law query.")
                             Text(preview.query, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
@@ -5825,7 +6026,7 @@ private fun AlphaAskTurnCard(
                             modifier = Modifier.padding(12.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
-                            AlphaSectionLabel("Public-law results", "Separate from case-file facts and limited to approved public-law search.")
+                            AlphaSectionLabel("Public-law results", "Separate from case-file facts and limited to sanitized public-law search.")
                             result.publicLawResults.forEach { publicResult ->
                                 AlphaPublicLawResultCard(publicResult)
                             }
@@ -5837,6 +6038,9 @@ private fun AlphaAskTurnCard(
                         needsReviewWarning = result.needsReviewWarning,
                         includePublicLawWarnings = result.publicLawPreview != null || result.publicLawResults.isNotEmpty(),
                     )
+                }
+                TextButton(onClick = onReport) {
+                    Text("Report AI output")
                 }
             }
         }
@@ -5931,12 +6135,35 @@ private fun AlphaPublicLawWarningsCard(needsReviewWarning: String?, includePubli
 }
 
 private fun alphaAskSuggestions(scopeLabel: String?, documentTitle: String? = null): List<String> =
-    if (!documentTitle.isNullOrBlank()) {
+    if (alphaUsesHindiUi()) {
+        if (!documentTitle.isNullOrBlank()) {
+            listOf(
+                "इस दस्तावेज़ का सार बताओ",
+                "अदालत ने क्या निर्देश दिए?",
+                "इस दस्तावेज़ से कार्य बनाओ",
+                "क्या पुष्टि करनी है?",
+            )
+        } else if (scopeLabel.isNullOrBlank()) {
+            listOf(
+                "आज मुझे किस पर ध्यान देना है?",
+                "कार्य जोड़ो",
+                "अगली तारीख सहेजो",
+                "केस नोट बनाओ",
+            )
+        } else {
+            listOf(
+                "इस मामले का सार बताओ",
+                "हियरिंग नोट तैयार करो",
+                "महत्वपूर्ण तारीखें बताओ",
+                "कौन से कार्य बनाने चाहिए?",
+            )
+        }
+    } else if (!documentTitle.isNullOrBlank()) {
         listOf(
             "Summarize this document",
             "What directions did the court give?",
             "Create tasks from this document",
-            "What needs review?",
+            "What should I confirm?",
         )
     } else if (scopeLabel.isNullOrBlank()) {
         listOf(
@@ -5953,6 +6180,35 @@ private fun alphaAskSuggestions(scopeLabel: String?, documentTitle: String? = nu
             "What tasks should I create?",
         )
     }
+
+private fun alphaUsesHindiUi(): Boolean =
+    Locale.getDefault().language.equals("hi", ignoreCase = true)
+
+private fun alphaAskEmptyTitle(): String =
+    if (alphaUsesHindiUi()) "Ross से आगे का काम पूछें" else "Ask Ross what's next"
+
+private fun alphaFileSizeLabel(context: Context, bytes: Long): String =
+    Formatter.formatShortFileSize(context, bytes.coerceAtLeast(0))
+
+private fun alphaStorageSnapshot(controller: AlphaRossController): AlphaStorageSnapshot {
+    val documents = controller.cases.flatMap { it.documents }
+    val documentBytes = documents.fold(0L) { total, document ->
+        total + (controller.absoluteFile(document.storedRelativePath).takeIf(File::exists)?.length() ?: 0L)
+    }
+    val exportBytes = controller.persisted.exports.fold(0L) { total, report ->
+        total + (controller.absoluteFile(report.relativePath).takeIf(File::exists)?.length() ?: 0L)
+    }
+    val assistantBytes = controller.persisted.installedPacks.fold(0L) { total, pack ->
+        total + (controller.absoluteFile(pack.installRelativePath).takeIf(File::exists)?.length() ?: 0L)
+    }
+    return AlphaStorageSnapshot(
+        documentCount = documents.size,
+        exportCount = controller.persisted.exports.size,
+        documentBytes = documentBytes,
+        exportBytes = exportBytes,
+        assistantBytes = assistantBytes,
+    )
+}
 
 @Composable
 private fun alphaMatterTintColor(tint: AlphaMatterTint): Color =
@@ -6321,6 +6577,38 @@ private fun alphaJobProgressFraction(job: AlphaModelDownloadJob): Float? {
     return (job.bytesDownloaded.toDouble() / job.totalBytes.toDouble()).toFloat()
 }
 
+private data class AlphaTechnicalModelArtifact(
+    val displayName: String,
+    val repository: String,
+    val fileName: String,
+    val quantization: String,
+    val sha256: String,
+)
+
+private fun alphaTechnicalModelArtifact(tier: AlphaCapabilityTier): AlphaTechnicalModelArtifact = when (tier) {
+    AlphaCapabilityTier.QuickStart -> AlphaTechnicalModelArtifact(
+        displayName = "Gemma 3 270M IT Q8 MediaPipe Task",
+        repository = "litert-community/gemma-3-270m-it",
+        fileName = "gemma3-270m-it-q8.task",
+        quantization = "Q8",
+        sha256 = "0f7147f1c22eaf758b819bbf7841793e4c90096c9352cde7fbe5c631f2265ef5",
+    )
+    AlphaCapabilityTier.CaseAssociate -> AlphaTechnicalModelArtifact(
+        displayName = "Gemma 3 1B IT Q4 MediaPipe Task",
+        repository = "litert-community/Gemma3-1B-IT",
+        fileName = "Gemma3-1B-IT_multi-prefill-seq_q4_ekv2048.task",
+        quantization = "Q4",
+        sha256 = "ddfaf1210d8b4d1b812b5fadb6652999e852c8be6dd9abe353b9213a25262c10",
+    )
+    AlphaCapabilityTier.SeniorDraftingSupport -> AlphaTechnicalModelArtifact(
+        displayName = "Gemma 3 1B IT Q4 Block128 MediaPipe Task",
+        repository = "litert-community/Gemma3-1B-IT",
+        fileName = "Gemma3-1B-IT_multi-prefill-seq_q4_block128_ekv4096.task",
+        quantization = "Q4_BLOCK128",
+        sha256 = "036e15114d1868fc7be7ccc552fc8da2fe31d64af02b48847ff99f0185d37891",
+    )
+}
+
 private fun alphaExtractionProgressLabel(run: AlphaExtractionRun): String = when (run.progressState) {
     AlphaExtractionProgressState.AcquiringText -> "Reading file"
     AlphaExtractionProgressState.DetectingLanguage -> "Checking language"
@@ -6328,7 +6616,7 @@ private fun alphaExtractionProgressLabel(run: AlphaExtractionRun): String = when
     AlphaExtractionProgressState.VerifyingFields -> "Checking sources"
     AlphaExtractionProgressState.PreparingReview -> "Preparing review"
     AlphaExtractionProgressState.Complete -> "Complete"
-    AlphaExtractionProgressState.NeedsReview -> "Needs review"
+    AlphaExtractionProgressState.NeedsReview -> "Please confirm"
     AlphaExtractionProgressState.Failed -> "Needs attention"
 }
 

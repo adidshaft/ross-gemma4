@@ -10,14 +10,14 @@ import java.security.MessageDigest
 
 class AlphaModelPacksTest {
     @Test
-    fun `private assistant tiers use qwen strategy download sizes without exposing model names`() {
-        assertEquals(429_000_000L, AlphaModelPackManager.totalBytesFor(AlphaCapabilityTier.QuickStart))
-        assertEquals(1_280_000_000L, AlphaModelPackManager.totalBytesFor(AlphaCapabilityTier.CaseAssociate))
-        assertEquals(2_500_000_000L, AlphaModelPackManager.totalBytesFor(AlphaCapabilityTier.SeniorDraftingSupport))
+    fun `private assistant tiers use android local runtime download sizes without exposing model names`() {
+        assertEquals(303_950_933L, AlphaModelPackManager.totalBytesFor(AlphaCapabilityTier.QuickStart))
+        assertEquals(554_661_246L, AlphaModelPackManager.totalBytesFor(AlphaCapabilityTier.CaseAssociate))
+        assertEquals(689_308_662L, AlphaModelPackManager.totalBytesFor(AlphaCapabilityTier.SeniorDraftingSupport))
 
-        assertEquals("about 430 MB", AlphaCapabilityTier.QuickStart.downloadSizeLabel)
-        assertEquals("about 1.1-1.3 GB", AlphaCapabilityTier.CaseAssociate.downloadSizeLabel)
-        assertEquals("about 2.5 GB", AlphaCapabilityTier.SeniorDraftingSupport.downloadSizeLabel)
+        assertEquals("about 304 MB", AlphaCapabilityTier.QuickStart.downloadSizeLabel)
+        assertEquals("about 555 MB", AlphaCapabilityTier.CaseAssociate.downloadSizeLabel)
+        assertEquals("about 690 MB", AlphaCapabilityTier.SeniorDraftingSupport.downloadSizeLabel)
 
         val forbidden = Regex("Gemma 4 E2B Q4|Gemma 4 Q4|Q4|Q4|gemma_local_runtime|EmbeddingGemma|LiteRT|checksum|artifact|deterministic_dev|mediapipe_llm", RegexOption.IGNORE_CASE)
         AlphaCapabilityTier.values().forEach { tier ->

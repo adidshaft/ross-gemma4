@@ -153,11 +153,17 @@ struct RossSectionCard<Content: View>: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
+                .padding(.horizontal, 20)
             }
 
             content
+                .padding(.horizontal, 20)
         }
-        .rossCardStyle()
+        .padding(.vertical, 16)
+        .background(Color.rossCardBackground)
+        .overlay(alignment: .bottom) {
+            Divider().padding(.leading, 20)
+        }
     }
 }
 
@@ -349,7 +355,7 @@ struct RossInfoPill: View {
         .padding(.vertical, 10)
         .background {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .fill(colorScheme == .dark ? Color.white.opacity(0.05) : Color.white.opacity(0.22))
+                .fill(colorScheme == .dark ? Color.white.opacity(0.09) : Color.white.opacity(0.22))
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)

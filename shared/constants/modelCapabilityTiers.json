@@ -1,7 +1,7 @@
 [
   {
     "id": "quick_start",
-    "displayName": "Quick Start",
+    "displayName": "Basic",
     "subtitle": "Start quickly with basic local review",
     "userFacingDescription": "Basic document cleanup, short summaries, simple Ask Ross actions, and basic local matter Q&A.",
     "approxDownloadSizeMb": 429,
@@ -29,7 +29,7 @@
   },
   {
     "id": "case_associate",
-    "displayName": "Case Associate",
+    "displayName": "Standard",
     "subtitle": "Recommended private assistant for most matters",
     "userFacingDescription": "Source-backed case Q&A, document review, next-date extraction, chronologies, order summaries, and hearing notes.",
     "approxDownloadSizeMb": 1280,
@@ -58,7 +58,7 @@
   },
   {
     "id": "senior_drafting_support",
-    "displayName": "Senior Drafting Support",
+    "displayName": "Advanced",
     "subtitle": "Advanced private assistant for deeper review and drafting",
     "userFacingDescription": "Advanced drafting, deeper review, longer matter reasoning, chronology refinement, issue extraction, and hearing preparation.",
     "approxDownloadSizeMb": 2500,

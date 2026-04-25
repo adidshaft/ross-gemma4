@@ -76,14 +76,39 @@ test("readRuntimeEnv can load env values from local files when no explicit envir
   }
 });
 
-test("readRuntimeEnv defaults model catalog to dev and accepts production metadata mode", () => {
-  assert.equal(readRuntimeEnv({ environment: {} }).modelCatalogMode, "dev");
+test("readRuntimeEnv defaults model catalog by environment and accepts production metadata mode", () => {
+  assert.equal(readRuntimeEnv({ environment: {} }).modelCatalogMode, "production_metadata");
+  assert.equal(
+    readRuntimeEnv({ nodeEnvOverride: "test", environment: {} }).modelCatalogMode,
+    "dev"
+  );
   assert.equal(
     readRuntimeEnv({ environment: { ROSS_MODEL_CATALOG_MODE: "production_metadata" } }).modelCatalogMode,
     "production_metadata"
   );
   assert.equal(
     readRuntimeEnv({ environment: { ROSS_MODEL_CATALOG_MODE: "unexpected" } }).modelCatalogMode,
+    "production_metadata"
+  );
+  assert.equal(
+    readRuntimeEnv({
+      nodeEnvOverride: "test",
+      environment: { ROSS_MODEL_CATALOG_MODE: "unexpected" }
+    }).modelCatalogMode,
     "dev"
   );
+});
+
+test("readRuntimeEnv accepts model artifact mirror settings", () => {
+  const env = readRuntimeEnv({
+    environment: {
+      ROSS_MODEL_ARTIFACT_BASE_URL: "https://models.ross.example/private-assistant",
+      ROSS_MODEL_ARTIFACT_BEARER_TOKEN: "mirror-token",
+      ROSS_HUGGING_FACE_ACCESS_TOKEN: "hf-token"
+    }
+  });
+
+  assert.equal(env.modelArtifactBaseUrl, "https://models.ross.example/private-assistant");
+  assert.equal(env.modelArtifactBearerToken, "mirror-token");
+  assert.equal(env.huggingFaceAccessToken, "hf-token");
 });

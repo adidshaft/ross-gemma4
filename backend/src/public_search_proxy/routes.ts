@@ -27,7 +27,14 @@ const publicSearchSchema = z
       .regex(/^[^\r\n]+$/, "Query must be a single-line public query preview."),
     jurisdiction: z.string().trim().min(2).max(20).default("IN-ALL"),
     language: z.enum(["en", "hi"]).default("en"),
-    confirmedPublicPreview: z.literal(true)
+    confirmedPublicPreview: z.literal(true),
+    consent: z
+      .object({
+        mode: z.literal("settings_web_search_enabled"),
+        version: z.string().trim().min(1).max(40)
+      })
+      .strict()
+      .optional()
   })
   .strict();
 

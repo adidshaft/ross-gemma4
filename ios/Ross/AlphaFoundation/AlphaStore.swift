@@ -3,6 +3,9 @@ import CoreGraphics
 import CoreText
 import Foundation
 import Security
+#if canImport(UIKit)
+import UIKit
+#endif
 #if canImport(PDFKit)
 import PDFKit
 #endif
@@ -400,26 +403,38 @@ actor AlphaRossStore {
         let pageCount = max(pdf.pageCount, 1)
         var pages: [AlphaDocumentPage] = []
         var extractedChunks: [String] = []
-        var pagesWithText = 0
+        var readablePages = 0
+        var pagesUsingOCR = 0
 
         for pageIndex in 0..<pageCount {
             let pageNumber = pageIndex + 1
-            let nativeText = compactExtractedText(pdf.page(at: pageIndex)?.string)
-            let snippet = compactSnippet(from: nativeText)
-            if let nativeText, !nativeText.isEmpty {
-                extractedChunks.append(nativeText)
-                pagesWithText += 1
+            let pdfPage = pdf.page(at: pageIndex)
+            let nativeText = compactExtractedText(pdfPage?.string)
+            let recognizedText = nativeText?.isEmpty == false ? nil : recognizeText(in: pdfPage)
+            let pageText = compactExtractedText(nativeText ?? recognizedText?.text)
+            let snippet = compactSnippet(from: pageText)
+            let usedOCR = nativeText?.isEmpty != false && pageText?.isEmpty == false
+            if let pageText, !pageText.isEmpty {
+                extractedChunks.append(pageText)
+                readablePages += 1
+                if usedOCR {
+                    pagesUsingOCR += 1
+                }
             }
 
             pages.append(
                 AlphaDocumentPage(
                     pageNumber: pageNumber,
                     snippet: snippet ?? "Imported page \(pageNumber).",
-                    extractedText: nativeText,
+                    extractedText: pageText,
                     anchorText: snippet,
-                    ocrConfidence: nativeText == nil ? nil : 0.99,
-                    ocrStatus: nativeText == nil ? .placeholder : .nativeText,
-                    indexingStatus: nativeText == nil ? .notStarted : .indexed
+                    ocrConfidence: nativeText?.isEmpty == false ? 0.99 : recognizedText?.confidence,
+                    ocrStatus: {
+                        if nativeText?.isEmpty == false { return .nativeText }
+                        if pageText?.isEmpty == false { return .ocrComplete }
+                        return .failed
+                    }(),
+                    indexingStatus: pageText?.isEmpty == false ? .indexed : .failed
                 )
             )
         }
@@ -427,12 +442,12 @@ actor AlphaRossStore {
         let extractedText = extractedChunks.joined(separator: "\n\n").trimmingCharacters(in: .whitespacesAndNewlines)
         let overallStatus: AlphaOcrStatus
         let indexingStatus: AlphaIndexingStatus
-        switch pagesWithText {
+        switch readablePages {
         case 0:
-            overallStatus = .placeholder
-            indexingStatus = .notStarted
+            overallStatus = .failed
+            indexingStatus = .failed
         case pageCount:
-            overallStatus = .nativeText
+            overallStatus = pagesUsingOCR > 0 ? .ocrComplete : .nativeText
             indexingStatus = .indexed
         default:
             overallStatus = .partial
@@ -451,15 +466,10 @@ actor AlphaRossStore {
 
     private func extractImageContent(from url: URL) -> AlphaDocumentExtraction {
         #if canImport(Vision)
-        let request = VNRecognizeTextRequest()
-        request.recognitionLevel = .accurate
-        request.usesLanguageCorrection = true
-
         do {
-            try VNImageRequestHandler(url: url).perform([request])
-            let candidates = (request.results ?? []).compactMap { $0.topCandidates(1).first }
-            let text = candidates.map(\.string).joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
-            let confidence = candidates.isEmpty ? nil : Double(candidates.map(\.confidence).reduce(0, +) / Float(candidates.count))
+            let recognized = try recognizeText(using: VNImageRequestHandler(url: url))
+            let text = recognized.text
+            let confidence = recognized.confidence
             let snippet = compactSnippet(from: text)
 
             return AlphaDocumentExtraction(
@@ -500,13 +510,21 @@ actor AlphaRossStore {
     }
 
     private func writePDF(to url: URL, title: String, bodyLines: [String]) throws {
-        var mediaBox = CGRect(x: 0, y: 0, width: 612, height: 792)
+        var mediaBox = CGRect(x: 0, y: 0, width: 595, height: 842)
         guard let context = CGContext(url as CFURL, mediaBox: &mediaBox, nil) else {
             throw NSError(domain: "RossAlphaPDF", code: 1, userInfo: [NSLocalizedDescriptionKey: "Unable to create PDF context."])
         }
 
-        let titleFont = CTFontCreateWithName("Helvetica-Bold" as CFString, 18, nil)
-        let bodyFont = CTFontCreateWithName("Helvetica" as CFString, 12, nil)
+        let bodyBaseFont =
+            CTFontCreateUIFontForLanguage(.system, 12, "hi" as CFString)
+            ?? CTFontCreateWithName("Helvetica" as CFString, 12, nil)
+        let titleBaseFont =
+            CTFontCreateUIFontForLanguage(.system, 18, "hi" as CFString)
+            ?? CTFontCreateWithName("Helvetica-Bold" as CFString, 18, nil)
+        let titleFont =
+            CTFontCreateCopyWithSymbolicTraits(titleBaseFont, 18, nil, .traitBold, .traitBold)
+            ?? titleBaseFont
+        let bodyFont = bodyBaseFont
         let titleParagraph = NSMutableParagraphStyle()
         titleParagraph.alignment = .left
         let bodyParagraph = NSMutableParagraphStyle()
@@ -551,6 +569,53 @@ actor AlphaRossStore {
 
         context.closePDF()
     }
+
+    #if canImport(Vision)
+    private func recognizeText(using handler: VNImageRequestHandler) throws -> (text: String, confidence: Double?) {
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = .accurate
+        request.usesLanguageCorrection = true
+        request.recognitionLanguages = ["hi-IN", "en-IN"]
+        try handler.perform([request])
+        let candidates = (request.results ?? []).compactMap { $0.topCandidates(1).first }
+        let text = candidates
+            .map(\.string)
+            .joined(separator: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let confidence = candidates.isEmpty ? nil : Double(candidates.map(\.confidence).reduce(0, +) / Float(candidates.count))
+        return (text, confidence)
+    }
+    #endif
+
+    private func recognizeText(in page: PDFPage?) -> (text: String, confidence: Double?)? {
+        #if canImport(PDFKit) && canImport(Vision) && canImport(UIKit)
+        guard let page, let cgImage = renderImage(for: page) else { return nil }
+        return try? recognizeText(using: VNImageRequestHandler(cgImage: cgImage))
+        #else
+        return nil
+        #endif
+    }
+
+    #if canImport(PDFKit) && canImport(UIKit)
+    private func renderImage(for page: PDFPage, scale: CGFloat = 2) -> CGImage? {
+        let bounds = page.bounds(for: .mediaBox)
+        let targetSize = CGSize(
+            width: max(bounds.width * scale, 1),
+            height: max(bounds.height * scale, 1)
+        )
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
+        let image = UIGraphicsImageRenderer(size: targetSize, format: format).image { renderer in
+            UIColor.white.setFill()
+            renderer.fill(CGRect(origin: .zero, size: targetSize))
+            renderer.cgContext.translateBy(x: 0, y: targetSize.height)
+            renderer.cgContext.scaleBy(x: scale, y: -scale)
+            page.draw(with: .mediaBox, to: renderer.cgContext)
+        }
+        return image.cgImage
+    }
+    #endif
 
     private func encryptState(_ data: Data) throws -> Data {
         let key = try fetchOrCreateStateKey()
@@ -789,7 +854,7 @@ private struct AlphaLocalExtractionOrchestrator {
                     caseId: caseId,
                     documentId: document.id,
                     kind: .unsupportedLayout,
-                    message: "Quick Start is best for shorter files. Ross used deterministic fallback review for this longer document.",
+                    message: "Basic is best for shorter files. Ross used local fallback review for this longer document.",
                     sourceRefs: cleanedPages.prefix(2).map { page in
                         AlphaSourceRef(
                             caseId: caseId,

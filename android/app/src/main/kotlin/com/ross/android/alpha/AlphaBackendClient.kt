@@ -7,6 +7,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
@@ -118,9 +119,10 @@ internal class AlphaBackendClient(
             val request = (artifactUrl.openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
                 connectTimeout = configuration.timeoutMs
-                readTimeout = configuration.timeoutMs
+                readTimeout = maxOf(configuration.timeoutMs, ARTIFACT_DOWNLOAD_READ_TIMEOUT_MS)
                 setRequestProperty("Range", segment.rangeHeader)
             }
+            configuration.applySessionHeaders(request)
 
             try {
                 if (request.responseCode !in 200..299) throw AlphaBackendError.Unavailable(request.responseCode)
@@ -140,6 +142,70 @@ internal class AlphaBackendClient(
         if (sha256(allBytes) != session.artifact.finalSha256.lowercase()) throw AlphaBackendError.FinalIntegrity
 
         AlphaDownloadedArtifact(allBytes, allBytes.size.toLong())
+    }
+
+    suspend fun downloadArtifactToFile(
+        session: AlphaBackendDownloadSessionPayload,
+        destinationFile: File,
+        onProgress: suspend (Long) -> Unit,
+    ): AlphaDownloadedFileArtifact = withContext(Dispatchers.IO) {
+        val artifactUrl = resolveArtifactUrl(session.artifact)
+        destinationFile.parentFile?.mkdirs()
+        val temporaryFile = File(destinationFile.parentFile, "${destinationFile.name}.download")
+        if (temporaryFile.exists()) temporaryFile.delete()
+        if (destinationFile.exists()) destinationFile.delete()
+
+        var downloadedBytes = 0L
+        val finalDigest = MessageDigest.getInstance("SHA-256")
+        temporaryFile.outputStream().buffered().use { output ->
+            for (segment in session.artifact.segments) {
+                val request = (artifactUrl.openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = configuration.timeoutMs
+                    readTimeout = maxOf(configuration.timeoutMs, ARTIFACT_DOWNLOAD_READ_TIMEOUT_MS)
+                    setRequestProperty("Range", segment.rangeHeader)
+                }
+                configuration.applySessionHeaders(request)
+
+                try {
+                    if (request.responseCode !in 200..299) throw AlphaBackendError.Unavailable(request.responseCode)
+                    val segmentDigest = MessageDigest.getInstance("SHA-256")
+                    var segmentBytes = 0L
+                    BufferedInputStream(request.inputStream).use { input ->
+                        val buffer = ByteArray(DEFAULT_DOWNLOAD_BUFFER_BYTES)
+                        while (true) {
+                            val read = input.read(buffer)
+                            if (read <= 0) break
+                            output.write(buffer, 0, read)
+                            finalDigest.update(buffer, 0, read)
+                            segmentDigest.update(buffer, 0, read)
+                            segmentBytes += read
+                            downloadedBytes += read
+                            onProgress(downloadedBytes)
+                        }
+                    }
+                    if (segmentBytes != segment.sizeBytes) throw AlphaBackendError.InvalidResponse
+                    if (segmentDigest.hexDigest() != segment.sha256.lowercase()) throw AlphaBackendError.SegmentIntegrity
+                } finally {
+                    request.disconnect()
+                }
+            }
+        }
+
+        if (downloadedBytes != session.artifact.sizeBytes) {
+            temporaryFile.delete()
+            throw AlphaBackendError.InvalidResponse
+        }
+        if (finalDigest.hexDigest() != session.artifact.finalSha256.lowercase()) {
+            temporaryFile.delete()
+            throw AlphaBackendError.FinalIntegrity
+        }
+        if (!temporaryFile.renameTo(destinationFile)) {
+            temporaryFile.copyTo(destinationFile, overwrite = true)
+            temporaryFile.delete()
+        }
+
+        AlphaDownloadedFileArtifact(destinationFile, downloadedBytes)
     }
 
     private fun resolveArtifactUrl(artifact: AlphaBackendArtifact): URL {
@@ -280,6 +346,11 @@ internal data class AlphaDownloadedArtifact(
     val bytes: Long,
 )
 
+internal data class AlphaDownloadedFileArtifact(
+    val file: File,
+    val bytes: Long,
+)
+
 internal data class AlphaBackendPublicLawResult(
     val title: String,
     val citation: String,
@@ -300,6 +371,12 @@ internal data class AlphaBackendPublicLawRequest(
     val jurisdiction: String,
     val language: String,
     @SerializedName("confirmedPublicPreview") val confirmedPublicPreview: Boolean,
+    val consent: AlphaBackendPublicLawConsent,
+)
+
+internal data class AlphaBackendPublicLawConsent(
+    val mode: String,
+    val version: String,
 )
 
 private fun AlphaModelDownloadPayload.toRequest(configuration: AlphaBackendConfiguration) = AlphaBackendModelDownloadRequest(
@@ -315,10 +392,20 @@ internal fun AlphaPublicLawSearchPayload.toRequest() = AlphaBackendPublicLawRequ
     jurisdiction = "IN-ALL",
     language = "en",
     confirmedPublicPreview = true,
+    consent = AlphaBackendPublicLawConsent(
+        mode = "settings_web_search_enabled",
+        version = "2026-04-store-v1",
+    ),
 )
 
 private fun sha256(bytes: ByteArray): String =
     MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+
+private const val DEFAULT_DOWNLOAD_BUFFER_BYTES = 256 * 1024
+private const val ARTIFACT_DOWNLOAD_READ_TIMEOUT_MS = 120_000
+
+private fun MessageDigest.hexDigest(): String =
+    digest().joinToString("") { "%02x".format(it) }
 
 internal fun resolveRossBackendBaseUrl(
     overrideValue: String? = AlphaBackendBaseUrlOverrideSnapshot.shared.value(),

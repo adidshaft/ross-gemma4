@@ -326,8 +326,8 @@ struct AlphaUnavailableRealLocalModelProvider: AlphaRealLocalModelProvider {
             schemaValid: false,
             warnings: [
                 statusMessage,
-                "Ross kept the request local and did not send any network model call.",
-                pack.truncated ? "Prompt pack was truncated to stay inside the local runtime budget." : "Prompt pack stayed inside the local runtime budget."
+                "Ross reviewed this locally on your device.",
+                pack.truncated ? "The document was long, so Ross focused on the most relevant parts." : "Ross reviewed the entire document locally."
             ],
             sourceRefs: pack.includedSourceRefs.isEmpty ? taskInput.sourcePack.map(\.sourceRef) : pack.includedSourceRefs,
             errorCategory: errorCategory
@@ -453,7 +453,7 @@ struct AlphaGemmaLocalModelProvider: AlphaRealLocalModelProvider {
                 rawText: response,
                 parsedJson: parsedJson,
                 schemaValid: parsedJson != nil,
-                warnings: pack.truncated ? ["Prompt pack was shortened to stay inside the private assistant budget."] : [],
+                warnings: pack.truncated ? ["The document was long, so Ross focused on the most relevant parts."] : [],
                 sourceRefs: pack.includedSourceRefs.isEmpty ? taskInput.sourcePack.map(\.sourceRef) : pack.includedSourceRefs
             )
         } catch {
@@ -623,7 +623,7 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
                 rawText: raw,
                 parsedJson: extractJSONCandidate(from: raw),
                 schemaValid: extractJSONCandidate(from: raw) != nil,
-                warnings: promptPack.truncated ? ["Prompt pack was truncated to stay inside the local runtime budget."] : [],
+                warnings: promptPack.truncated ? ["The document was long, so Ross focused on the most relevant parts."] : [],
                 sourceRefs: promptPack.includedSourceRefs,
                 errorCategory: extractJSONCandidate(from: raw) == nil ? "invalid_model_output" : nil
             )

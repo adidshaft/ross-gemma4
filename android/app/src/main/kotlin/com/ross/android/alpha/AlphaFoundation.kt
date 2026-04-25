@@ -8,6 +8,9 @@ import android.webkit.MimeTypeMap
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.work.Data
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.ross.android.BuildConfig
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
@@ -20,6 +23,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.security.MessageDigest
+import java.util.concurrent.TimeUnit
 import java.util.UUID
 
 internal const val ALPHA_ROSS_SUGGESTED_TASK_NOTE_PREFIX = "ross-overview::"
@@ -78,15 +82,22 @@ enum class AlphaAppearanceMode(val label: String) {
     Light("Light"),
 }
 enum class AlphaCapabilityTier(val tierId: String, val title: String, val summary: String, val downloadSizeLabel: String, val installedSizeLabel: String) {
-    QuickStart("quick_start", "Quick Start", "Basic local review, short summaries, simple Ask Ross actions, and lighter storage use.", "about 430 MB", "about 430 MB"),
-    CaseAssociate("case_associate", "Case Associate", "Recommended private assistant for document review, chronologies, hearing notes, and source-backed Ask Ross answers.", "about 1.1-1.3 GB", "about 1.1-1.3 GB"),
-    SeniorDraftingSupport("senior_drafting_support", "Senior Drafting Support", "Advanced private assistant for deeper review, longer matter reasoning, and drafting support.", "about 2.5 GB", "about 2.5 GB");
+    QuickStart("quick_start", "Basic", "Lighter setup for short orders, quick summaries, and basic local review.", "about 304 MB", "about 304 MB"),
+    CaseAssociate("case_associate", "Standard", "Recommended for everyday matters, document review, chronology work, and source-backed answers.", "about 555 MB", "about 555 MB"),
+    SeniorDraftingSupport("senior_drafting_support", "Advanced", "Best for longer bundles, deeper review, and heavier drafting on this phone.", "about 690 MB", "about 690 MB");
+
+    val setupTitle: String
+        get() = when (this) {
+            QuickStart -> "Basic - short orders only"
+            CaseAssociate -> "Standard - most matters"
+            SeniorDraftingSupport -> "Advanced - long bundles and drafting"
+        }
 
     val compactSetupSummary: String
         get() = when (this) {
-            QuickStart -> "Short files"
+            QuickStart -> "Short orders"
             CaseAssociate -> "Most matters"
-            SeniorDraftingSupport -> "Longer bundles"
+            SeniorDraftingSupport -> "Long bundles"
         }
 
     val storageNote: String
@@ -101,6 +112,13 @@ enum class AlphaCapabilityTier(val tierId: String, val title: String, val summar
             QuickStart -> "Fast intake, smaller devices, and basic local review for short documents."
             CaseAssociate -> "Most advocates who need document review, next dates, chronologies, notes, and source-backed answers on-device."
             SeniorDraftingSupport -> "Longer bundles, deeper review, hearing preparation, and more detailed drafting support."
+        }
+
+    val setupWarning: String
+        get() = when (this) {
+            QuickStart -> "Download about 304 MB before you begin. Wi-Fi is still the safest option."
+            CaseAssociate -> "Download about 555 MB before you begin. Keep this phone on Wi-Fi and make sure there is enough free space."
+            SeniorDraftingSupport -> "Download about 690 MB before you begin. Use strong Wi-Fi and check that this phone has plenty of free space."
         }
 
     val setupTimeLabel: String
@@ -124,7 +142,19 @@ enum class AlphaCapabilityTier(val tierId: String, val title: String, val summar
             SeniorDraftingSupport -> 3
         }
 }
-enum class AlphaCaseStage { Intake, Pleadings, Evidence, Arguments, Reserved }
+enum class AlphaAssistantDeviceSupportState { Supported, AutoDowngraded, NeedsStorage, NeedsNewerOs, Unavailable }
+enum class AlphaAssistantInstallState { NotStarted, Queued, Downloading, Installed, Failed }
+data class AlphaAssistantRuntimeDecision(
+    val selectedTier: AlphaCapabilityTier,
+    val recommendedTier: AlphaCapabilityTier,
+    val effectiveTier: AlphaCapabilityTier,
+    val displayName: String,
+    val deviceSupportState: AlphaAssistantDeviceSupportState,
+    val modelPackId: String,
+    val installState: AlphaAssistantInstallState,
+    val reason: String,
+)
+enum class AlphaCaseStage { Intake, Pleadings, Evidence, Arguments, Reserved, Disposed }
 enum class AlphaMatterTint { Indigo, Amber, Emerald, Rose, Slate }
 enum class AlphaTaskPriority { Low, Normal, High }
 enum class AlphaTaskStatus { Open, Done }
@@ -151,6 +181,16 @@ val AlphaMatterDateKind.title: String
         AlphaMatterDateKind.FilingDeadline -> "Filing deadline"
         AlphaMatterDateKind.ComplianceDate -> "Compliance date"
         AlphaMatterDateKind.ClientFollowUp -> "Client follow-up"
+    }
+
+val AlphaCaseStage.displayTitle: String
+    get() = when (this) {
+        AlphaCaseStage.Intake -> "Filing"
+        AlphaCaseStage.Pleadings -> "Pleadings"
+        AlphaCaseStage.Evidence -> "Evidence"
+        AlphaCaseStage.Arguments -> "Arguments"
+        AlphaCaseStage.Reserved -> "Judgment Reserved"
+        AlphaCaseStage.Disposed -> "Disposed"
     }
 
 enum class AlphaPackRuntimeMode(val wireValue: String) {
@@ -399,7 +439,7 @@ data class AlphaSettings(
     val activeTier: AlphaCapabilityTier? = null,
     val wifiOnlyDownloads: Boolean = true,
     val allowMobileDataForLargePacks: Boolean = false,
-    val requirePublicLawApproval: Boolean = true,
+    val requirePublicLawApproval: Boolean = false,
     val instantModeEnabled: Boolean = true,
     val privateByDefault: Boolean = true,
     val appearanceMode: AlphaAppearanceMode = AlphaAppearanceMode.Auto,
@@ -533,6 +573,7 @@ internal class AlphaRossController(
 
     private sealed interface DockCommandAction {
         data class AddTask(val title: String, val dueDate: String?) : DockCommandAction
+        data class CompleteTask(val title: String) : DockCommandAction
         data class AddMatterDate(val title: String, val kind: AlphaMatterDateKind, val date: String) : DockCommandAction
         data class GenerateExport(val kind: String, val label: String) : DockCommandAction
         data object RerunDocumentReview : DockCommandAction
@@ -548,7 +589,7 @@ internal class AlphaRossController(
     var caseDraftTitle by mutableStateOf("")
     var caseDraftForum by mutableStateOf("")
     var askDrafts by mutableStateOf<Map<String, String>>(emptyMap())
-    var globalAskDraft by mutableStateOf("What needs my attention today?")
+    var globalAskDraft by mutableStateOf("")
     var askSelectedScopeCaseId by mutableStateOf<String?>(null)
     var askSelectedDocumentIds by mutableStateOf<Map<String, Set<String>>>(emptyMap())
     var globalAskSelectedDocumentIds by mutableStateOf<Set<String>>(emptySet())
@@ -558,7 +599,7 @@ internal class AlphaRossController(
     var latestAskResult by mutableStateOf<AlphaAskResult?>(null)
     var askWorkStatus by mutableStateOf<AlphaAskWorkStatus?>(null)
     var askHistory by mutableStateOf(seedAskHistory(persisted.cases))
-    var publicLawDraft by mutableStateOf("Find Supreme Court guidance on delay condonation where diligence is documented but filing was disrupted.")
+    var publicLawDraft by mutableStateOf("")
     var publicLawPreview by mutableStateOf<AlphaPublicLawPreview?>(null)
     var publicLawResults by mutableStateOf<List<AlphaPublicLawResult>>(emptyList())
     var localInferenceSmokeReport by mutableStateOf<AlphaLocalInferenceSmokeReport?>(null)
@@ -646,11 +687,13 @@ internal class AlphaRossController(
         )
 
     fun lastModelInvocationRuntimeMode(): String? =
+        lastModelInvocation()?.runtimeMode
+
+    fun lastModelInvocation(): AlphaLocalModelInvocation? =
         persisted.cases
             .flatMap { it.documents }
             .flatMap { it.modelInvocations }
-            .lastOrNull()
-            ?.runtimeMode
+            .maxByOrNull { it.completedAt ?: it.startedAt }
 
     fun lastLocalInferenceMetrics(): AlphaLocalInferenceMetrics? =
         persisted.localInferenceMetrics.maxByOrNull { it.createdAt }
@@ -691,7 +734,7 @@ internal class AlphaRossController(
         }
 
     fun askDraft(scopeCaseId: String?): String =
-        scopeCaseId?.let { askDrafts[it] ?: "Ask Ross about this matter..." } ?: globalAskDraft
+        scopeCaseId?.let { askDrafts[it] ?: "" } ?: globalAskDraft
 
     fun setAskDraft(scopeCaseId: String?, value: String) {
         if (scopeCaseId == null) {
@@ -965,13 +1008,76 @@ internal class AlphaRossController(
     }
 
     fun finishPackSetup() {
+        val decision = assistantRuntimeDecision(selectedTier)
+        selectedTier = decision.effectiveTier
         persisted = persisted.copy(
             onboardingStage = AlphaOnboardingStage.Completed,
             selectedTab = AlphaAppTab.Home,
-            settings = persisted.settings.copy(activeTier = selectedTier),
+            settings = persisted.settings.copy(activeTier = decision.effectiveTier),
+            ledgerEntries = if (decision.deviceSupportState == AlphaAssistantDeviceSupportState.AutoDowngraded) {
+                listOf(
+                    AlphaPrivacyLedgerEntry(
+                        title = "Assistant level adjusted",
+                        detail = decision.reason,
+                        purpose = AlphaPrivacyPurpose.ModelCatalog,
+                        payloadClass = AlphaPayloadClass.NoCaseData,
+                        endpointLabel = "device://assistant-routing",
+                        success = true,
+                    )
+                ) + persisted.ledgerEntries
+            } else {
+                persisted.ledgerEntries
+            },
         )
         save()
-        startPackInstall(selectedTier, selectedTier == AlphaCapabilityTier.QuickStart)
+        startPackInstall(decision.effectiveTier, decision.effectiveTier == AlphaCapabilityTier.QuickStart)
+    }
+
+    fun recommendedOnDeviceTier(): AlphaCapabilityTier {
+        val runtime = Runtime.getRuntime()
+        val maxMemoryMb = (runtime.maxMemory() / (1024 * 1024)).toInt()
+        val freeStorageGb = (rootDir.usableSpace / 1_073_741_824L).toInt().coerceAtLeast(1)
+        return when {
+            maxMemoryMb < 384 || freeStorageGb < 6 -> AlphaCapabilityTier.QuickStart
+            maxMemoryMb >= 1_024 && freeStorageGb >= 8 -> AlphaCapabilityTier.SeniorDraftingSupport
+            maxMemoryMb >= 512 && freeStorageGb >= 12 -> AlphaCapabilityTier.CaseAssociate
+            else -> AlphaCapabilityTier.CaseAssociate
+        }
+    }
+
+    fun assistantRuntimeDecision(selected: AlphaCapabilityTier = selectedTier): AlphaAssistantRuntimeDecision {
+        val recommended = recommendedOnDeviceTier()
+        val effective = if (selected.rank > recommended.rank) recommended else selected
+        val installed = persisted.installedPacks.any { it.tier == effective && it.isActive }
+        val job = persisted.modelJobs.firstOrNull { it.tier == effective }
+        val installState = when {
+            installed -> AlphaAssistantInstallState.Installed
+            job == null -> AlphaAssistantInstallState.NotStarted
+            job.state == AlphaDownloadState.Downloading || job.state == AlphaDownloadState.Verifying -> AlphaAssistantInstallState.Downloading
+            job.state == AlphaDownloadState.Installed -> AlphaAssistantInstallState.Installed
+            job.state == AlphaDownloadState.Failed -> AlphaAssistantInstallState.Failed
+            else -> AlphaAssistantInstallState.Queued
+        }
+        val supportState = if (effective == selected) {
+            AlphaAssistantDeviceSupportState.Supported
+        } else {
+            AlphaAssistantDeviceSupportState.AutoDowngraded
+        }
+        val reason = if (effective == selected) {
+            "${selected.title} is suitable for this phone."
+        } else {
+            "${selected.title} is heavier than this phone should run comfortably, so Ross will use ${effective.title} unless storage and memory improve."
+        }
+        return AlphaAssistantRuntimeDecision(
+            selectedTier = selected,
+            recommendedTier = recommended,
+            effectiveTier = effective,
+            displayName = effective.title,
+            deviceSupportState = supportState,
+            modelPackId = "${effective.tierId}-pack",
+            installState = installState,
+            reason = reason,
+        )
     }
 
     fun setAppearanceMode(mode: AlphaAppearanceMode) {
@@ -1218,10 +1324,18 @@ internal class AlphaRossController(
             return
         }
 
-        val refreshed = runCatching { backend.refreshSession(refreshToken) }.getOrNull()
+        val refreshAttempt = runCatching { backend.refreshSession(refreshToken) }
+        val refreshed = refreshAttempt.getOrNull()
         if (refreshed == null) {
-            persisted = persisted.copy(accountSession = AlphaAccountSession())
-            authStatusMessage = "Session expired. Please sign in again."
+            val error = refreshAttempt.exceptionOrNull()
+            if (error is AlphaBackendError.Unavailable && error.code in setOf(401, 403)) {
+                persisted = persisted.copy(accountSession = AlphaAccountSession())
+                authStatusMessage = "Session expired. Please sign in again."
+                save()
+                return
+            }
+
+            authStatusMessage = "Ross could not reach the server, so this phone is still using your saved sign-in."
             save()
             return
         }
@@ -1249,7 +1363,7 @@ internal class AlphaRossController(
         if (title.isEmpty()) return null
         val case = AlphaCaseMatter(
             title = title,
-            forum = caseDraftForum.trim().ifBlank { "Forum pending" },
+            forum = caseDraftForum.trim().ifBlank { "Court not yet specified" },
             stage = AlphaCaseStage.Intake,
             summary = "New matter created locally. Import the first source document to begin chronology work.",
             issueHighlights = listOf("Import the first source document to begin chronology work."),
@@ -1600,20 +1714,28 @@ internal class AlphaRossController(
             fallbackResult = localResult,
         )
 
-        if (webEnabled) {
+        val settingsAllowsWebSearch = persisted.settings.requirePublicLawApproval
+        if (webEnabled && settingsAllowsWebSearch) {
             val preview = buildAskPublicLawPreview(cleaned, scopeCaseId)
             pendingPublicLawQuestion = cleaned
             pendingPublicLawScopeCaseId = scopeCaseId
             publicLawPreview = preview
-            latestAskResult = latestAskResult?.copy(publicLawPreview = preview, statusNote = "Web search preview ready")
+            latestAskResult = latestAskResult?.copy(publicLawPreview = preview, statusNote = "Public-law search running")
             updateLatestAskHistory(scopeCaseId, cleaned) { result ->
-                result.copy(publicLawPreview = preview, statusNote = "Web search preview ready")
+                result.copy(publicLawPreview = preview, statusNote = "Public-law search running")
             }
+            confirmPendingPublicLawSearch()
         } else {
             pendingPublicLawQuestion = null
             pendingPublicLawScopeCaseId = null
             publicLawPreview = null
-            val offlineStatusNote = if (localResult.statusNote == "Private assistant") localResult.statusNote else "Web search off"
+            val offlineStatusNote = if (webEnabled && !settingsAllowsWebSearch) {
+                "Web search is off in Settings"
+            } else if (localResult.statusNote == "Private assistant") {
+                localResult.statusNote
+            } else {
+                "Answered from your files"
+            }
             latestAskResult = latestAskResult?.copy(statusNote = offlineStatusNote)
             updateLatestAskHistory(scopeCaseId, cleaned) { result ->
                 result.copy(publicLawPreview = null, statusNote = offlineStatusNote)
@@ -1708,6 +1830,23 @@ internal class AlphaRossController(
                 )
             }
 
+            is DockCommandAction.CompleteTask -> {
+                val changed = completeTaskMatching(command.title, scopeCaseId)
+                AlphaAskResult(
+                    question = rawInput,
+                    scopeCaseId = scopeCaseId,
+                    scopeLabel = scopeLabel(scopeCaseId),
+                    selectedDocumentTitles = selectedDocumentTitles,
+                    answerTitle = if (changed) "Task marked done." else "Task not found.",
+                    answerSections = listOf(
+                        if (changed) "Ross updated the matching task on this device." else "Ross could not find an open matching task in this scope.",
+                        "No case files or task text left this device.",
+                    ),
+                    caseFileSources = emptyList(),
+                    statusNote = if (changed) "Saved locally" else "No change made",
+                )
+            }
+
             is DockCommandAction.AddMatterDate -> {
                 if (scopeCaseId == null) {
                     AlphaAskResult(
@@ -1766,7 +1905,7 @@ internal class AlphaRossController(
                         answerTitle = "${command.label} ready",
                         answerSections = listOf(
                             "Ross created a local ${command.label.lowercase()} draft for advocate review.",
-                            "Open Exports to review or share the PDF."
+                            "Open Notes & Drafts to review or share the PDF."
                         ),
                         caseFileSources = emptyList(),
                         statusNote = "Draft ready",
@@ -1871,10 +2010,10 @@ internal class AlphaRossController(
         pendingPublicLawQuestion = null
         pendingPublicLawScopeCaseId = null
         publicLawPreview = null
-        latestAskResult = latestAskResult?.copy(statusNote = "Web search off")
+        latestAskResult = latestAskResult?.copy(statusNote = "Answered from your files")
         if (pendingQuestion != null) {
             updateLatestAskHistory(pendingScope, pendingQuestion) { result ->
-                result.copy(publicLawPreview = null, statusNote = "Web search off")
+                result.copy(publicLawPreview = null, statusNote = "Answered from your files")
             }
         }
     }
@@ -2006,7 +2145,7 @@ internal class AlphaRossController(
             askWorkStatus = AlphaAskWorkStatus(
                 question = question,
                 scopeCaseId = scopeCaseId,
-                message = "Private assistant is refining the answer",
+                message = "Ross is refining the answer",
                 detail = "Ross is checking local source text again before updating the response.",
             )
             try {
@@ -2384,6 +2523,80 @@ internal class AlphaRossController(
         )
         caseId?.let(::rebuildCaseWorkspace)
         save()
+        scheduleReminderNotification(dueDate)
+    }
+
+    private fun scheduleReminderNotification(dueDate: String?) {
+        val instant = dockCommandParsedInstant(dueDate) ?: return
+        val delayMillis = instant.toEpochMilli() - System.currentTimeMillis()
+        if (delayMillis <= 0) return
+        val request = OneTimeWorkRequestBuilder<AlphaReminderNotificationWorker>()
+            .setInitialDelay(delayMillis, TimeUnit.MILLISECONDS)
+            .setInputData(
+                Data.Builder()
+                    .putInt(AlphaReminderNotificationWorker.KEY_NOTIFICATION_ID, UUID.randomUUID().hashCode())
+                    .build()
+            )
+            .build()
+        runCatching {
+            WorkManager.getInstance(context.applicationContext).enqueue(request)
+        }
+    }
+
+    private fun completeTaskMatching(title: String, caseId: String?): Boolean {
+        val normalizedTitle = title.trim().lowercase()
+        if (normalizedTitle.isBlank()) return false
+        var changed = false
+        var affectedCaseId: String? = null
+        persisted = persisted.copy(
+            tasks = (persisted.tasks ?: emptyList()).map { task ->
+                if (
+                    !changed &&
+                    task.status == AlphaTaskStatus.Open &&
+                    (caseId == null || task.caseId == caseId) &&
+                    task.title.lowercase().contains(normalizedTitle)
+                ) {
+                    changed = true
+                    affectedCaseId = task.caseId
+                    task.copy(status = AlphaTaskStatus.Done, updatedAt = nowIso())
+                } else {
+                    task
+                }
+            },
+            ledgerEntries = if (changed) {
+                listOf(
+                    AlphaPrivacyLedgerEntry(
+                        title = "Task status changed locally",
+                        detail = "A task was marked done on this device.",
+                        purpose = AlphaPrivacyPurpose.LocalOnly,
+                        payloadClass = AlphaPayloadClass.LocalOnly,
+                        endpointLabel = "device://task-status",
+                        success = true,
+                    )
+                ) + persisted.ledgerEntries
+            } else {
+                persisted.ledgerEntries
+            },
+        )
+        affectedCaseId?.let(::rebuildCaseWorkspace)
+        if (changed) save()
+        return changed
+    }
+
+    fun reportAiOutput(question: String, scopeCaseId: String?) {
+        persisted = persisted.copy(
+            ledgerEntries = listOf(
+                AlphaPrivacyLedgerEntry(
+                    title = "AI output reported",
+                    detail = "Feedback was saved for ${scopeLabel(scopeCaseId)} without sending answer text or case files.",
+                    purpose = AlphaPrivacyPurpose.LocalOnly,
+                    payloadClass = AlphaPayloadClass.LocalOnly,
+                    endpointLabel = "device://ai-output-report",
+                    success = true,
+                )
+            ) + persisted.ledgerEntries,
+        )
+        save()
     }
 
     fun snoozeTask(taskId: String, days: Long) {
@@ -2552,7 +2765,7 @@ internal class AlphaRossController(
         }
 
         var refreshedForum = case.forum
-        if ((refreshedForum == "Forum pending" || refreshedForum.isBlank())) {
+        if ((refreshedForum == "Court not yet specified" || refreshedForum.isBlank())) {
             verifiedFields.firstOrNull { it.fieldType == AlphaExtractedLegalFieldType.Court }?.value?.let {
                 refreshedForum = it
             }
@@ -2682,7 +2895,7 @@ internal class AlphaRossController(
                 answerSections = listOf(
                     "Before setup, Ross can still organize matters, tasks, dates, files, and basic local review on this device.",
                     "After setup, the private assistant adds stronger document review, summaries, chronologies, and source-backed answers.",
-                    "Open Settings, then Private Assistant, to choose Quick Start, Case Associate, or Senior Drafting Support.",
+                    "Open Settings, then My assistant, to choose Basic, Standard, or Advanced.",
                 ),
                 caseFileSources = emptyList(),
                 statusNote = "Private assistant",
@@ -2792,7 +3005,7 @@ internal class AlphaRossController(
             answerTitle = answerTitle,
             answerSections = if (notFound) listOf("Ross could not find this in your files yet.") else sections.take(3),
             caseFileSources = matchedSources.take(3),
-            statusNote = if (notFound) "Web Search is off" else if (selectedDocuments.isEmpty()) "Chat · local files" else "Chat · selected files only",
+            statusNote = if (notFound) "Web Search is off" else if (selectedDocuments.isEmpty()) "Answered from your files" else "Answered from selected files",
             needsReviewWarning = reviewQueue(scopeCaseId)
                 .filter { selectedDocumentIds.isEmpty() || it.documentId in selectedDocumentIds }
                 .takeIf { it.isNotEmpty() }
@@ -2814,13 +3027,13 @@ internal class AlphaRossController(
     fun strongerPackMessageFor(document: AlphaCaseDocument): String? {
         val mode = activeExtractionMode()
         return when {
-            mode == AlphaExtractionMode.Basic -> "Better extraction is available with Case Associate."
+            mode == AlphaExtractionMode.Basic -> "Better extraction is available with Standard."
             mode == AlphaExtractionMode.QuickStart && (document.languageProfile?.primaryLanguage == AlphaDocumentLanguage.Mixed ||
                 document.extractionFindings.any { it.kind == AlphaExtractionFindingKind.LowConfidenceOcr || it.kind == AlphaExtractionFindingKind.LanguageUncertain }) ->
-                "This scan has mixed language or low OCR confidence. Senior Drafting Support may improve review."
-            mode == AlphaExtractionMode.QuickStart -> "Better extraction is available with Case Associate."
+                "This scan has mixed language or low OCR confidence. Advanced may improve review."
+            mode == AlphaExtractionMode.QuickStart -> "Better extraction is available with Standard."
             mode == AlphaExtractionMode.CaseAssociate && document.extractionFindings.any { it.kind == AlphaExtractionFindingKind.LowConfidenceOcr || it.kind == AlphaExtractionFindingKind.LanguageUncertain } ->
-                "This scan has mixed language or low OCR confidence. Senior Drafting Support may improve review."
+                "This scan has mixed language or low OCR confidence. Advanced may improve review."
             else -> null
         }
     }
@@ -2833,8 +3046,8 @@ internal class AlphaRossController(
         return when {
             visibleFields.isEmpty() && document.classification == null -> null
             pendingCount > 0 || document.extractionFindings.any { !it.resolved } ->
-                "Fields found: ${visibleFields.size} • Verified: $verifiedCount • Needs review: $pendingCount"
-            else -> "Fields found: ${visibleFields.size} • Verified: $verifiedCount • Needs review: 0"
+                "Fields found: ${visibleFields.size} • Verified: $verifiedCount • Please confirm: $pendingCount"
+            else -> "Fields found: ${visibleFields.size} • Verified: $verifiedCount • Please confirm: 0"
         }
     }
 
@@ -3125,7 +3338,16 @@ internal class AlphaRossController(
 
         val installation = runCatching {
             val session = backend.createDownloadSession(jobAfterCatalog)
-            val downloaded = backend.downloadArtifact(session) { downloadedBytes ->
+            val downloadFolder = File(rootDir, "model-downloads").apply { mkdirs() }
+            val safeFileName = session.artifact.fileName
+                .substringAfterLast('/')
+                .substringAfterLast('\\')
+                .replace(Regex("""[^A-Za-z0-9._-]"""), "_")
+                .ifBlank { "model.pack" }
+            val downloaded = backend.downloadArtifactToFile(
+                session = session,
+                destinationFile = File(downloadFolder, "${session.artifact.artifactId}-$safeFileName"),
+            ) { downloadedBytes ->
                 persisted = persisted.copy(
                     modelJobs = persisted.modelJobs.map { job ->
                         if (job.id == initialJob.id) job.copy(
@@ -3144,7 +3366,7 @@ internal class AlphaRossController(
                 )
                 save()
             }
-            val verified = AlphaModelPackManager.finalizeInstall(
+            val verified = AlphaModelPackManager.finalizeInstallFromFile(
                 rootDir = rootDir,
                 job = jobAfterCatalog.copy(
                     sessionId = session.sessionId,
@@ -3158,22 +3380,42 @@ internal class AlphaRossController(
                     developmentOnly = session.artifact.developmentOnly,
                     updatedAt = nowIso(),
                 ),
-                artifactBytes = downloaded.data,
+                downloadedFile = downloaded.file,
                 fileName = session.artifact.fileName,
                 now = nowIso(),
             )
-            Pair(true, verified)
-        }.getOrElse {
-            val fallback = AlphaModelPackManager.finalizeInstall(
-                rootDir = rootDir,
-                job = jobAfterCatalog.copy(state = AlphaDownloadState.Verifying, updatedAt = nowIso()),
-                now = nowIso(),
-            )
-            Pair(false, fallback)
+            Triple(true, verified, null as Throwable?)
+        }.getOrElse { error ->
+            Triple(false, null, error)
         }
 
         val backendWorked = installation.first
         val progress = installation.second
+        val installError = installation.third
+
+        if (!backendWorked || progress == null) {
+            val failedJob = jobAfterCatalog.copy(
+                state = AlphaDownloadState.Failed,
+                failureReason = assistantSetupFailureReason(installError),
+                updatedAt = nowIso(),
+            )
+            persisted = persisted.copy(
+                modelJobs = listOf(failedJob) + persisted.modelJobs.filterNot { it.id == initialJob.id },
+                ledgerEntries = listOf(
+                    AlphaPrivacyLedgerEntry(
+                        title = "Private AI Pack setup failed",
+                        detail = "Ross did not install a placeholder assistant. Fix the connection or free space, then try setup again.",
+                        purpose = AlphaPrivacyPurpose.ModelVerification,
+                        payloadClass = AlphaPayloadClass.NoCaseData,
+                        endpointLabel = "/model-download/session",
+                        success = false,
+                    )
+                ) + persisted.ledgerEntries,
+            )
+            save()
+            return
+        }
+
         persisted = persisted.copy(
             settings = persisted.settings.copy(activeTier = progress.installedPack?.tier ?: persisted.settings.activeTier),
             modelJobs = listOf(progress.job) + persisted.modelJobs.filterNot { it.id == initialJob.id },
@@ -3184,16 +3426,29 @@ internal class AlphaRossController(
             },
             ledgerEntries = listOf(
                 AlphaPrivacyLedgerEntry(
-                    title = if (backendWorked) "Private AI Pack verified" else "Private AI Pack fallback installed",
-                    detail = if (backendWorked) "Install metadata was verified locally after backend delivery." else "The backend was unavailable, so Ross prepared a local development assistant file without case data.",
+                    title = "Private AI Pack verified",
+                    detail = "Install metadata was verified locally after backend delivery.",
                     purpose = AlphaPrivacyPurpose.ModelVerification,
                     payloadClass = AlphaPayloadClass.NoCaseData,
-                    endpointLabel = if (backendWorked) "device://model-verify" else "device://model-verify",
+                    endpointLabel = "device://model-verify",
                     success = progress.job.state != AlphaDownloadState.Failed,
                 )
             ) + progress.ledgerEntries + persisted.ledgerEntries,
         )
         save()
+    }
+
+    private fun assistantSetupFailureReason(error: Throwable?): String = when (error) {
+        is AlphaBackendError.Unavailable -> when (error.code) {
+            401, 403 -> "Setup needs you to sign in again before downloading the assistant."
+            404 -> "Ross could not find this assistant file right now. Try again in a moment."
+            409 -> "This assistant is not ready to download from the current server yet."
+            else -> "Setup paused. Check your Wi-Fi or mobile data and try again."
+        }
+        is AlphaBackendError.SegmentIntegrity,
+        is AlphaBackendError.FinalIntegrity ->
+            "Setup paused because Ross could not verify the downloaded file. Try again on a stable connection."
+        else -> "Setup paused. Check your Wi-Fi or mobile data and try again."
     }
 
     private fun mergeHighlights(existing: List<String>, additions: List<String>): List<String> =
@@ -3472,6 +3727,20 @@ internal class AlphaRossController(
                 )
             } else {
                 DockCommandAction.AddTask(title = title, dueDate = dueDate)
+            }
+        }
+
+        dockCommandBody(normalized, listOf("mark task ", "complete task ", "finish task "))?.let { body ->
+            val cleaned = body
+                .replace(Regex("\\b(done|complete|completed|finished)\\b", RegexOption.IGNORE_CASE), "")
+                .trim()
+            return if (cleaned.isBlank()) {
+                DockCommandAction.Guidance(
+                    title = "Name the task",
+                    detail = "Try “mark task prepare hearing note done.”",
+                )
+            } else {
+                DockCommandAction.CompleteTask(cleaned)
             }
         }
 
@@ -4024,7 +4293,7 @@ private fun alphaReviewTitle(type: AlphaExtractedLegalFieldType): String = when 
     AlphaExtractedLegalFieldType.NextDate -> "Confirm next date"
     AlphaExtractedLegalFieldType.PartyName -> "Review party name"
     AlphaExtractedLegalFieldType.OrderDirection -> "Check order direction"
-    else -> "Needs review"
+    else -> "Please confirm"
 }
 
 private fun alphaReviewTitle(kind: AlphaExtractionFindingKind): String = when (kind) {
@@ -4034,7 +4303,7 @@ private fun alphaReviewTitle(kind: AlphaExtractionFindingKind): String = when (k
     AlphaExtractionFindingKind.AmbiguousOrderDirection -> "Check order direction"
     AlphaExtractionFindingKind.DateConflict -> "Confirm next date"
     AlphaExtractionFindingKind.PartyConflict -> "Review party name"
-    else -> "Needs review"
+    else -> "Please confirm"
 }
 
 fun AlphaCaseDocument.lawyerStatusTitle(): String {
@@ -4047,12 +4316,12 @@ fun AlphaCaseDocument.lawyerStatusTitle(): String {
 
     return when {
         extractionRuns.firstOrNull()?.status == AlphaExtractionRunStatus.Running ||
-            indexingStatus == AlphaIndexingStatus.Extracting -> "Still reading"
-        indexingStatus == AlphaIndexingStatus.Failed || ocrStatus == AlphaOcrStatus.Failed -> "Could not read this clearly"
+            indexingStatus == AlphaIndexingStatus.Extracting -> "Reading your file..."
+        indexingStatus == AlphaIndexingStatus.Failed || ocrStatus == AlphaOcrStatus.Failed -> "Could not read this file"
         hasLowConfidenceScan -> "Low confidence scan"
-        hasReviewWork -> "Needs review"
+        hasReviewWork -> "Please confirm"
         indexingStatus == AlphaIndexingStatus.Indexed || ocrStatus == AlphaOcrStatus.NativeText || ocrStatus == AlphaOcrStatus.OcrComplete -> "Ready"
-        else -> "Still reading"
+        else -> "Reading your file..."
     }
 }
 
@@ -4061,7 +4330,7 @@ fun AlphaPrivacyLedgerEntry.lawyerTitle(): String = when (title) {
     "Private AI Pack queued", "Private AI Pack verified", "Private AI Pack fallback installed" -> "Set up private assistant"
     "Public-law query sent" -> "Searched public law"
     "Public-law search unavailable" -> "Public-law search needs attention"
-    "Local export generated" -> "Generated local export"
+    "Local export generated" -> "Generated Notes & Drafts"
     "Local case review run" -> "Reviewed case locally"
     "Document imported locally" -> "Imported document"
     "Case created locally" -> "Created case"
@@ -4072,7 +4341,7 @@ fun AlphaPrivacyLedgerEntry.lawyerDetail(): String = when (title) {
     "Public-law query sent" ->
         "Ross sent only a generic public-law query. Your case files stayed on this device."
     "Public-law search unavailable" ->
-        "Ross could not complete the approved public-law search. Your case files stayed on this device."
+        "Ross could not complete the sanitized public-law search. Your case files stayed on this device."
     "Private AI Pack verified", "Private AI Pack fallback installed" ->
         "Private assistant was prepared on this device."
     else -> detail
