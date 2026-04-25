@@ -96,7 +96,10 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -1363,6 +1366,9 @@ private fun AlphaRootAskDock(
     var expandedComposer by rememberSaveable { mutableStateOf(false) }
     var dockExpanded by rememberSaveable { mutableStateOf(false) }
     var pendingCollapseQuestion by rememberSaveable { mutableStateOf<String?>(null) }
+    var focusComposerAfterExpand by rememberSaveable { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
     val activeScopeCaseId = fixedScopeCaseId ?: controller.askSelectedScopeCaseId
     val activeSelectedDocuments = if (fixedDocumentIds.isEmpty()) {
         controller.selectedAskDocuments(activeScopeCaseId)
@@ -1377,7 +1383,14 @@ private fun AlphaRootAskDock(
     val chromeBackground = alphaChromeBackgroundColor()
     val chromeForeground = alphaChromeForegroundColor()
     val chromeMuted = alphaChromeMutedColor()
-    val draftText = controller.askDraft(activeScopeCaseId)
+    val storedDraftText = controller.askDraft(activeScopeCaseId)
+    var localDraftText by rememberSaveable(
+        activeScopeCaseId ?: "all_work",
+        fixedDocumentIds.sorted().joinToString(","),
+    ) {
+        mutableStateOf(storedDraftText)
+    }
+    val draftText = localDraftText
     val composerPlaceholder = when {
         alphaUsesHindiUi() && fixedDocumentIds.size == 1 -> "Ross से इस फ़ाइल के बारे में पूछें..."
         alphaUsesHindiUi() && activeScopeCaseId != null -> "Ross से इस मामले के बारे में पूछें..."
@@ -1408,8 +1421,11 @@ private fun AlphaRootAskDock(
         status.scopeCaseId == activeScopeCaseId
     }
 
-    fun expandDock() {
+    fun expandDock(focusComposer: Boolean = false) {
         dockExpanded = true
+        if (focusComposer) {
+            focusComposerAfterExpand = true
+        }
     }
 
     fun collapseDock() {
@@ -1419,6 +1435,7 @@ private fun AlphaRootAskDock(
     fun send() {
         val question = draftText.trim()
         if (question.isBlank()) return
+        controller.setAskDraft(activeScopeCaseId, question)
         fixedDocumentIds.forEach { documentId ->
             if (documentId !in controller.selectedAskDocumentIds(activeScopeCaseId)) {
                 controller.toggleAskDocumentSelection(activeScopeCaseId, documentId)
@@ -1468,7 +1485,7 @@ private fun AlphaRootAskDock(
                 title = collapsedDockTitle,
                 chromeBackground = chromeBackground,
                 chromeForeground = chromeForeground,
-            ) { expandDock() }
+            ) { expandDock(focusComposer = true) }
         } else {
             OutlinedCard(
                 modifier = Modifier
@@ -1546,8 +1563,10 @@ private fun AlphaRootAskDock(
 
                         BasicTextField(
                             value = draftText,
-                            onValueChange = { controller.setAskDraft(activeScopeCaseId, it) },
-                            modifier = Modifier.weight(1f),
+                            onValueChange = { localDraftText = it },
+                            modifier = Modifier
+                                .weight(1f)
+                                .focusRequester(focusRequester),
                             textStyle = MaterialTheme.typography.bodySmall.copy(color = chromeForeground, lineHeight = 18.sp),
                             keyboardOptions = KeyboardOptions(
                                 capitalization = KeyboardCapitalization.Sentences,
@@ -1630,12 +1649,28 @@ private fun AlphaRootAskDock(
         }
     }
 
+    LaunchedEffect(focusComposerAfterExpand, showsCollapsedDock) {
+        if (focusComposerAfterExpand && !showsCollapsedDock) {
+            delay(120)
+            focusRequester.requestFocus()
+            keyboardController?.show()
+            focusComposerAfterExpand = false
+        }
+    }
+
     LaunchedEffect(controller.latestAskResult) {
         val latestResult = controller.latestAskResult ?: return@LaunchedEffect
         if (pendingCollapseQuestion == latestResult.question && latestResult.scopeCaseId == activeScopeCaseId) {
             pendingCollapseQuestion = null
             controller.setAskDraft(activeScopeCaseId, "")
+            localDraftText = ""
             collapseDock()
+        }
+    }
+
+    LaunchedEffect(storedDraftText, activeScopeCaseId) {
+        if (storedDraftText.isNotBlank() && localDraftText.isBlank()) {
+            localDraftText = storedDraftText
         }
     }
 
