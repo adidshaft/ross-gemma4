@@ -1311,6 +1311,12 @@ final class AlphaRossModel {
         return recoveredInstalledPackFromDisk(preferredTier: persisted.settings.activeTier ?? selectedTier)
     }
 
+    func installedPack(for tier: AlphaCapabilityTier) -> AlphaInstalledModelPack? {
+        persisted.installedPacks.first { pack in
+            pack.tier == tier && installedModelPackFileIsUsable(pack)
+        }
+    }
+
     var activeRuntimeHealth: AlphaLocalRuntimeHealth? {
         AlphaLocalModelRuntime.runtimeHealth(
             activePack: activePack,
@@ -2956,7 +2962,15 @@ final class AlphaRossModel {
         persisted.installedPacks = persisted.installedPacks.map {
             var copy = $0
             copy.isActive = copy.id == pack.id
+            if copy.id == pack.id,
+               !copy.developmentOnly,
+               copy.checksumSha256.caseInsensitiveCompare(alphaAssistantModelArtifact(for: copy.tier).sha256) == .orderedSame {
+                copy.checksumVerified = true
+            }
             return copy
+        }
+        persisted.modelJobs.removeAll { job in
+            job.tier == pack.tier && job.state != .installed
         }
         persisted.settings.activeTier = pack.tier
         persist()
@@ -3217,16 +3231,39 @@ final class AlphaRossModel {
     private func verifiedExistingAssistantArtifact(
         for tier: AlphaCapabilityTier,
         artifact: AlphaAssistantModelArtifact
-    ) -> (relativePath: String, checksum: String, bytes: Int64)? {
+    ) async -> (relativePath: String, checksum: String, bytes: Int64)? {
         let relativePath = "model-packs/\(tier.rawValue)/\(artifact.fileName)"
         let fileURL = alphaAbsoluteURL(for: relativePath)
-        let bytes = alphaFileByteCount(at: fileURL)
-        guard bytes == artifact.sizeBytes else { return nil }
-        guard let checksum = alphaSHA256Hex(forFileAt: fileURL),
-              checksum.caseInsensitiveCompare(artifact.sha256) == .orderedSame else {
-            return nil
-        }
-        return (relativePath, checksum, bytes)
+        let expectedBytes = artifact.sizeBytes
+        let expectedChecksum = artifact.sha256
+
+        return await Task.detached(priority: .utility) {
+            let path = fileURL.path()
+            let attributes = try? FileManager.default.attributesOfItem(atPath: path)
+            guard let bytes = (attributes?[.size] as? NSNumber)?.int64Value,
+                  bytes == expectedBytes,
+                  let handle = try? FileHandle(forReadingFrom: fileURL) else {
+                return nil
+            }
+            defer { try? handle.close() }
+
+            var hasher = SHA256()
+            do {
+                while true {
+                    let data = try handle.read(upToCount: 1024 * 1024)
+                    guard let data, !data.isEmpty else { break }
+                    hasher.update(data: data)
+                }
+            } catch {
+                return nil
+            }
+
+            let checksum = hasher.finalize().map { String(format: "%02x", $0) }.joined()
+            guard checksum.caseInsensitiveCompare(expectedChecksum) == .orderedSame else {
+                return nil
+            }
+            return (relativePath, checksum, bytes)
+        }.value
     }
 
     private func assistantDownloadFailureMessage(_ error: any Error) -> String {
@@ -3289,7 +3326,14 @@ final class AlphaRossModel {
             return
         }
 
-        if let existingArtifact = verifiedExistingAssistantArtifact(for: tier, artifact: artifact) {
+        updateJob(job.id) {
+            $0.state = .verifying
+            $0.failureReason = nil
+            $0.updatedAt = .now
+        }
+        persist()
+
+        if let existingArtifact = await verifiedExistingAssistantArtifact(for: tier, artifact: artifact) {
             let installed = AlphaInstalledModelPack(
                 packId: artifact.packId,
                 tier: tier,
@@ -3298,6 +3342,7 @@ final class AlphaRossModel {
                 artifactKind: "local_model_artifact",
                 runtimeMode: .llamaCppGguf,
                 developmentOnly: false,
+                checksumVerified: true,
                 isActive: true
             )
             persisted.installedPacks = persisted.installedPacks.map {
@@ -3396,6 +3441,7 @@ final class AlphaRossModel {
                 artifactKind: "local_model_artifact",
                 runtimeMode: .llamaCppGguf,
                 developmentOnly: false,
+                checksumVerified: true,
                 isActive: true
             )
 
@@ -4458,9 +4504,6 @@ final class AlphaRossModel {
         guard !pack.developmentOnly else { return alphaFileByteCount(at: fileURL) > 0 }
         let artifact = alphaAssistantModelArtifact(for: pack.tier)
         guard alphaFileByteCount(at: fileURL) == artifact.sizeBytes else { return false }
-        guard pack.checksumVerified else {
-            return alphaSHA256Hex(forFileAt: fileURL)?.caseInsensitiveCompare(artifact.sha256) == .orderedSame
-        }
         return pack.checksumSha256.caseInsensitiveCompare(artifact.sha256) == .orderedSame
     }
 
@@ -4508,16 +4551,19 @@ final class AlphaRossModel {
         let relativePath = "model-packs/\(tier.rawValue)/\(artifact.fileName)"
         let fileURL = alphaAbsoluteURL(for: relativePath)
         guard alphaFileByteCount(at: fileURL) == artifact.sizeBytes else { return nil }
-        let checksumMatches = alphaSHA256Hex(forFileAt: fileURL)?.caseInsensitiveCompare(artifact.sha256) == .orderedSame
+        guard let checksum = alphaSHA256Hex(forFileAt: fileURL),
+              checksum.caseInsensitiveCompare(artifact.sha256) == .orderedSame else {
+            return nil
+        }
         return AlphaInstalledModelPack(
             packId: artifact.packId,
             tier: tier,
             installPath: relativePath,
-            checksumSha256: artifact.sha256,
+            checksumSha256: checksum,
             artifactKind: "local_model_artifact",
             runtimeMode: .llamaCppGguf,
             developmentOnly: false,
-            checksumVerified: checksumMatches,
+            checksumVerified: true,
             isActive: true
         )
     }
@@ -6378,7 +6424,7 @@ private struct AlphaTabShell: View {
                         AlphaRootAskDock(
                             model: model,
                             fixedScopeCaseID: nil,
-                            showsInlineResponseCard: false,
+                            showsInlineResponseCard: true,
                             collapsesWhenIdle: true
                         )
                         .padding(.horizontal, 12)
@@ -14574,6 +14620,10 @@ private struct AlphaPrivateAIOfferCard: View {
         model.persisted.modelJobs.first { $0.tier == offer.tier }
     }
 
+    private var installedPack: AlphaInstalledModelPack? {
+        model.installedPack(for: offer.tier)
+    }
+
     private var isActive: Bool {
         guard let activePack = model.activePack else { return false }
         return activePack.tier == offer.tier &&
@@ -14588,7 +14638,14 @@ private struct AlphaPrivateAIOfferCard: View {
             model.activeRuntimeHealth?.available != true
     }
 
+    private var isInstalledButInactive: Bool {
+        installedPack != nil && !isActive && !activeButRuntimeUnavailable
+    }
+
     private var isSettingUp: Bool {
+        if installedPack != nil {
+            return false
+        }
         guard let latestJob else { return false }
         switch latestJob.state {
         case .queued, .downloading, .verifying, .pausedWaitingForWifi:
@@ -14599,6 +14656,9 @@ private struct AlphaPrivateAIOfferCard: View {
     }
 
     private var canResume: Bool {
+        if installedPack != nil {
+            return false
+        }
         guard let latestJob else { return false }
         switch latestJob.state {
         case .pausedUser, .pausedError, .pausedNoStorage, .failed:
@@ -14614,6 +14674,9 @@ private struct AlphaPrivateAIOfferCard: View {
         }
         if activeButRuntimeUnavailable {
             return ("Needs attention", .orange)
+        }
+        if isInstalledButInactive {
+            return ("Ready", Color.rossSuccess)
         }
         if isSettingUp {
             return ("Setting up", Color.rossAccent)
@@ -14633,6 +14696,9 @@ private struct AlphaPrivateAIOfferCard: View {
         }
         if activeButRuntimeUnavailable {
             return "Needs attention"
+        }
+        if isInstalledButInactive {
+            return "Use this level"
         }
         if isSettingUp {
             return "Setting up..."
@@ -14703,7 +14769,9 @@ private struct AlphaPrivateAIOfferCard: View {
 
             Button(actionTitle) {
                 Task {
-                    if let latestJob, canResume {
+                    if let installedPack {
+                        model.activateInstalledPack(installedPack)
+                    } else if let latestJob, canResume {
                         model.resumeJob(latestJob)
                     } else {
                         await model.startPackDownload(
