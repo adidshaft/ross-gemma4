@@ -1942,6 +1942,8 @@ struct RossApp: App {
                     }
             case .screenshotExport:
                 ScreenshotExportView()
+            case .localModelSmoke:
+                RossLocalModelSmokeView()
             }
         }
     }

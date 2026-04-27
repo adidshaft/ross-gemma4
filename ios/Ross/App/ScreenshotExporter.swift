@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 #if canImport(AppKit)
@@ -7,9 +8,127 @@ import AppKit
 enum RossLaunchMode {
     case interactive
     case screenshotExport
+    case localModelSmoke
 
     static var current: RossLaunchMode {
-        ProcessInfo.processInfo.arguments.contains("--generate-screenshots") ? .screenshotExport : .interactive
+        let arguments = ProcessInfo.processInfo.arguments
+        if arguments.contains("--generate-screenshots") {
+            return .screenshotExport
+        }
+        if arguments.contains("--local-model-smoke") {
+            return .localModelSmoke
+        }
+        return .interactive
+    }
+}
+
+struct RossLocalModelSmokeView: View {
+    @State private var status = "Running local model smoke..."
+
+    var body: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+            Text(status)
+                .font(.headline)
+                .multilineTextAlignment(.center)
+        }
+        .padding(32)
+        .task {
+            await runSmoke()
+        }
+    }
+
+    @MainActor
+    private func runSmoke() async {
+        let model = AlphaRossModel()
+        await model.loadIfNeeded()
+
+        guard let activePack = model.activePack else {
+            status = "No active local model pack."
+            print("ROSS_LOCAL_MODEL_SMOKE_FAIL no_active_pack")
+            return
+        }
+
+        let health = model.activeRuntimeHealth
+        print(
+            "ROSS_LOCAL_MODEL_SMOKE_HEALTH runtime=\(health?.runtimeMode.rawValue ?? "nil") available=\(health?.available == true) model=\(health?.modelPathLabel ?? "nil") checksum=\(health?.checksumVerified == true)"
+        )
+
+        guard let provider = AlphaLocalModelRuntime.resolveProvider(
+            activePack: activePack,
+            requestedTier: activePack.tier,
+            executor: { _ in
+                AlphaLocalModelOutput(
+                    rawText: "",
+                    parsedJson: nil,
+                    schemaValid: false,
+                    warnings: ["Smoke fallback should not run."],
+                    sourceRefs: [],
+                    errorCategory: "smoke_fallback_used"
+                )
+            }
+        ), provider.runtimeMode != .deterministicDev else {
+            status = "Real local provider unavailable."
+            print("ROSS_LOCAL_MODEL_SMOKE_FAIL provider_unavailable runtime=\(model.activeRuntimeHealth?.runtimeMode.rawValue ?? "nil")")
+            return
+        }
+
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "Local Smoke Source",
+            pageNumber: 1,
+            textSnippet: "Article 417 requires the advocate to verify citations before filing."
+        )
+        let sourceBoundInput = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "Answer from the supplied source. What does Article 417 require? Return JSON with headline, sections, and statusNote.",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: sourceRef,
+                    text: "Local smoke source: Article 417 requires the advocate to verify citations before filing. It does not authorize automatic legal advice.",
+                    pageNumber: 1,
+                    languageHint: "en",
+                    ocrConfidence: 1
+                )
+            ],
+            expectedSchema: #"{"headline":"short string","sections":["one concise string"],"statusNote":"short string"}"#,
+            maxOutputTokens: 192,
+            languageProfile: nil,
+            documentClassification: nil,
+            extractionMode: .fromInstalledPack(activePack),
+            requireSourceRefs: true
+        )
+        let generalInput = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "No matter document is supplied. Answer cautiously: what should an advocate know when someone asks 'What is Article 417?' Return JSON with headline, sections, and statusNote.",
+            sourcePack: [],
+            expectedSchema: #"{"headline":"short string","sections":["one concise string"],"statusNote":"short string"}"#,
+            maxOutputTokens: 192,
+            languageProfile: nil,
+            documentClassification: nil,
+            extractionMode: .fromInstalledPack(activePack),
+            requireSourceRefs: false
+        )
+
+        let started = Date()
+        let sourceBoundOutput = await provider.run(sourceBoundInput)
+        let generalOutput = await provider.run(generalInput)
+        let elapsed = Date().timeIntervalSince(started)
+        let rawPreview = String(sourceBoundOutput.rawText.replacingOccurrences(of: "\n", with: " ").prefix(500))
+        let parsedPreview = String((sourceBoundOutput.parsedJson ?? "").prefix(500))
+        let generalParsedPreview = String((generalOutput.parsedJson ?? generalOutput.rawText).replacingOccurrences(of: "\n", with: " ").prefix(500))
+
+        if sourceBoundOutput.schemaValid,
+           sourceBoundOutput.errorCategory == nil,
+           generalOutput.schemaValid,
+           generalOutput.errorCategory == nil {
+            status = "Local model smoke passed."
+            print("ROSS_LOCAL_MODEL_SMOKE_PASS runtime=\(provider.runtimeMode.rawValue) tier=\(activePack.tier.rawValue) elapsed=\(String(format: "%.2f", elapsed))s source_raw=\(rawPreview) source_parsed=\(parsedPreview) general_parsed=\(generalParsedPreview)")
+        } else {
+            status = "Local model smoke failed."
+            print("ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(provider.runtimeMode.rawValue) tier=\(activePack.tier.rawValue) elapsed=\(String(format: "%.2f", elapsed))s source_error=\(sourceBoundOutput.errorCategory ?? "nil") general_error=\(generalOutput.errorCategory ?? "nil") source_warnings=\(sourceBoundOutput.warnings.joined(separator: " | ")) general_warnings=\(generalOutput.warnings.joined(separator: " | ")) source_raw=\(rawPreview) general_raw=\(generalParsedPreview)")
+        }
     }
 }
 

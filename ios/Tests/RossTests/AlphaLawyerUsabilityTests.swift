@@ -90,7 +90,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
 
             XCTAssertEqual(0, publicLawCalls.value)
             XCTAssertNil(preview)
-            XCTAssertEqual("Public law search is off", status)
+            XCTAssertEqual("Private assistant setup required", status)
         }
     }
 
@@ -487,8 +487,11 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
 
             let answerTitle = await MainActor.run { model.latestAskResult?.answerTitle }
             let answerSections = await MainActor.run { model.latestAskResult?.answerSections }
-            XCTAssertEqual("I could not find this in your case files.", answerTitle)
-            XCTAssertEqual(["I could not find this in your case files."], answerSections)
+            XCTAssertEqual("Private assistant not ready", answerTitle)
+            XCTAssertEqual([
+                "Choose and download a private assistant before asking legal questions.",
+                "Ross did not generate a legal answer because a real local model is required."
+            ], answerSections)
         }
     }
 
@@ -722,8 +725,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
 
             let latestResult = await MainActor.run { model.latestAskResult }
             XCTAssertEqual(.userAsk, latestResult?.kind)
-            XCTAssertFalse(latestResult?.answerTitle.contains("saved locally") == true)
-            XCTAssertFalse(latestResult?.answerTitle.contains("ready") == true)
+            XCTAssertEqual("Private assistant not ready", latestResult?.answerTitle)
+            XCTAssertEqual("Private assistant setup required", latestResult?.statusNote)
         }
     }
 
