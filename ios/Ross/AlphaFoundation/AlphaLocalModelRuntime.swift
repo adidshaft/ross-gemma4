@@ -97,7 +97,6 @@ struct AlphaLocalRuntimeHealth: Codable, Hashable, Sendable {
     var estimatedContextTokens: Int?
     var lastErrorCategory: String?
     var userFacingStatus: String
-    var fallbackActive: Bool = false
     var explicitOptInEnabled: Bool = false
 }
 
@@ -304,7 +303,6 @@ struct AlphaUnavailableRealLocalModelProvider: AlphaRealLocalModelProvider {
     let statusMessage: String
     let plannedTasks: Set<AlphaLocalModelTask>
     let errorCategory: String
-    let fallbackActive: Bool
     let explicitOptInEnabled: Bool
 
     func isAvailable() -> Bool { false }
@@ -323,7 +321,6 @@ struct AlphaUnavailableRealLocalModelProvider: AlphaRealLocalModelProvider {
             estimatedContextTokens: contextWindowEstimate(),
             lastErrorCategory: errorCategory,
             userFacingStatus: statusMessage,
-            fallbackActive: fallbackActive,
             explicitOptInEnabled: explicitOptInEnabled
         )
     }
@@ -450,7 +447,6 @@ struct AlphaGemmaLocalModelProvider: AlphaRealLocalModelProvider {
             userFacingStatus: isAvailable()
                 ? "Private assistant is ready on this device."
                 : "The private assistant file is missing from app-private storage.",
-            fallbackActive: false,
             explicitOptInEnabled: true
         )
     }
@@ -711,7 +707,6 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
             estimatedContextTokens: contextWindowEstimate(),
             lastErrorCategory: status.lastErrorCategory,
             userFacingStatus: status.userFacingStatus,
-            fallbackActive: false,
             explicitOptInEnabled: true
         )
     }
@@ -921,7 +916,6 @@ enum AlphaLocalModelRuntime {
             statusMessage: "Private assistant support is not ready on this build. A real local runtime is required for legal answers.",
             plannedTasks: plannedTasks,
             errorCategory: "unsupported_runtime",
-            fallbackActive: false,
             explicitOptInEnabled: explicitOptInEnabled
         )
     }
@@ -968,7 +962,6 @@ enum AlphaLocalModelRuntime {
                 statusMessage: "Private assistant support is not available on this iOS build. A real local runtime is required for legal answers.",
                 plannedTasks: [.documentClassification, .legalFieldExtraction, .legalFieldVerification, .caseMemorySynthesis, .chronologyGeneration, .orderSummary],
                 errorCategory: "unsupported_runtime",
-                fallbackActive: false,
                 explicitOptInEnabled: debug.enableRealInference
             )
         case .llamaCppGguf:
@@ -995,7 +988,6 @@ enum AlphaLocalModelRuntime {
                 statusMessage: statusMessage,
                 plannedTasks: [.documentClassification, .legalFieldExtraction, .legalFieldVerification, .caseMemorySynthesis, .chronologyGeneration, .orderSummary],
                 errorCategory: errorCategory,
-                fallbackActive: false,
                 explicitOptInEnabled: debug.enableRealInference
             )
         case .appleFoundationModels:
@@ -1017,7 +1009,6 @@ enum AlphaLocalModelRuntime {
                 statusMessage: "This private assistant option is not available on this device yet.",
                 plannedTasks: [.documentClassification, .legalFieldExtraction, .legalFieldVerification, .caseMemorySynthesis, .chronologyGeneration, .orderSummary],
                 errorCategory: "unsupported_runtime",
-                fallbackActive: false,
                 explicitOptInEnabled: debug.enableRealInference
             )
         default:
@@ -1073,7 +1064,6 @@ enum AlphaLocalModelRuntime {
                     estimatedContextTokens: nil,
                     lastErrorCategory: "development_artifact_blocked",
                     userFacingStatus: "Development-only assistant artifacts are disabled for this build.",
-                    fallbackActive: false,
                     explicitOptInEnabled: runtimeEnvironment.enableRealInference
                 )
             }
@@ -1092,7 +1082,6 @@ enum AlphaLocalModelRuntime {
                 estimatedContextTokens: nil,
                 lastErrorCategory: "unsupported_runtime",
                 userFacingStatus: "Private assistant runtime unavailable.",
-                fallbackActive: false,
                 explicitOptInEnabled: runtimeEnvironment.enableRealInference
             )
         default:

@@ -236,8 +236,8 @@ final class AlphaRossModel {
     var publicLawDraft = ""
     var publicLawPreview: AlphaPublicLawPreview?
     var publicLawResults: [AlphaPublicLawResult] = []
-    var publicLawSearchInFlight = false
     var publicLawSearchStatus: AlphaPublicLawSearchStatus = .idle
+    var publicLawSearchInFlight: Bool { publicLawSearchStatus == .running }
     var localInferenceSmokeReport: AlphaLocalInferenceSmokeReport?
     var localInferenceSmokeRunning = false
     var refreshingCaseOverviewIDs: Set<UUID> = []
@@ -1393,8 +1393,7 @@ final class AlphaRossModel {
                 settings.requirePublicLawApproval = true
             }
         }
-        let settingsAllowsWebSearch = persisted.settings.requirePublicLawApproval
-        if webEnabled && settingsAllowsWebSearch {
+        if webEnabled {
             let preview = buildAskPublicLawPreview(question: cleaned, scopeCaseID: scopeCaseID)
             pendingPublicLawQuestion = cleaned
             pendingPublicLawScopeCaseID = scopeCaseID
@@ -1421,9 +1420,9 @@ final class AlphaRossModel {
             pendingPublicLawTurnID = nil
             publicLawPreview = nil
             publicLawSearchStatus = .idle
-            let offlineStatusNote = webEnabled && !settingsAllowsWebSearch
-                ? "Public-law search is off in Settings"
-                : (hasRealLocalAsk ? "Private assistant running locally" : (initialResult.statusNote ?? localResult.statusNote ?? "Answered from your files"))
+            let offlineStatusNote = hasRealLocalAsk
+                ? "Private assistant running locally"
+                : (initialResult.statusNote ?? localResult.statusNote ?? "Answered from your files")
             latestAskResult?.statusNote = offlineStatusNote
             updateStoredAskTurn(
                 scopeCaseID: scopeCaseID,
@@ -1876,8 +1875,7 @@ final class AlphaRossModel {
 
     func confirmPendingPublicLawSearch() async {
         guard let preview = publicLawPreview else { return }
-        guard !publicLawSearchInFlight else { return }
-        publicLawSearchInFlight = true
+        guard publicLawSearchStatus != .running else { return }
         publicLawSearchStatus = .running
         persisted.ledgerEntries.insert(
             AlphaPrivacyLedgerEntry(
@@ -1891,7 +1889,6 @@ final class AlphaRossModel {
             at: 0
         )
         persist()
-        defer { publicLawSearchInFlight = false }
 
         do {
             let results = try await publicLawSearchAction(preview)
@@ -2986,8 +2983,7 @@ final class AlphaRossModel {
 
     func runPublicLawSearch() async {
         guard let preview = publicLawPreview else { return }
-        guard !publicLawSearchInFlight else { return }
-        publicLawSearchInFlight = true
+        guard publicLawSearchStatus != .running else { return }
         publicLawSearchStatus = .running
         persisted.ledgerEntries.insert(
             AlphaPrivacyLedgerEntry(
@@ -3001,7 +2997,6 @@ final class AlphaRossModel {
             at: 0
         )
         persist()
-        defer { publicLawSearchInFlight = false }
 
         do {
             publicLawResults = try await backend.searchPublicLaw(preview: preview)
@@ -9371,8 +9366,7 @@ private struct AlphaHomeScreen: View {
                                 showsIndeterminateProgress: alphaDownloadShowsIndeterminateProgress(activeJob)
                             )
                         } else if model.activePack != nil,
-                           model.activeRuntimeHealth?.fallbackActive != true,
-                           model.persisted.modelJobs.isEmpty {
+                                  model.persisted.modelJobs.isEmpty {
                             AlphaCompactAssistantStatusRow(snapshot: assistantStatus) {
                                 model.path.append(.privateAISettings)
                             }
@@ -11764,14 +11758,6 @@ private func alphaAssistantStatusSnapshot(_ model: AlphaRossModel) -> AlphaAssis
 
     if let activePack = model.activePack {
         let runtimeHealth = model.activeRuntimeHealth
-        if runtimeHealth?.fallbackActive == true {
-            return AlphaAssistantStatusSnapshot(
-                title: "Private assistant unavailable",
-                detail: "\(activePack.tier.title) is installed, but the real local runtime is not available right now.",
-                tint: Color.rossHighlight
-            )
-        }
-
         if runtimeHealth?.available == true {
             return AlphaAssistantStatusSnapshot(
                 title: "Private assistant is ready",
@@ -14249,10 +14235,7 @@ private struct AlphaSourceRefChips: View {
 }
 
 private func alphaSourceRefDisplayLabel(_ sourceRef: AlphaSourceRef, contextDocumentTitle: String?) -> String {
-    var label = sourceRef.label.trimmingCharacters(in: .whitespacesAndNewlines)
-    if label.localizedCaseInsensitiveContains("Matter memory") {
-        label = "Matter details · source not available"
-    }
+    let label = sourceRef.label.trimmingCharacters(in: .whitespacesAndNewlines)
     guard let contextDocumentTitle else { return label }
     let context = contextDocumentTitle.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !context.isEmpty else { return label }
@@ -14515,17 +14498,6 @@ private struct AlphaSettingsScreen: View {
         )
     }
 
-    private var privateByDefaultBinding: Binding<Bool> {
-        Binding(
-            get: { model.persisted.settings.privateByDefault },
-            set: { newValue in
-                model.updateSettings { settings in
-                    settings.privateByDefault = newValue
-                }
-            }
-        )
-    }
-
     var body: some View {
         let storageSnapshot = alphaStorageSnapshot(model)
         ScrollView {
@@ -14624,8 +14596,6 @@ private struct AlphaSettingsScreen: View {
                 RossSectionCard(title: "Privacy") {
                     VStack(alignment: .leading, spacing: 14) {
                         Toggle("Allow public-law search", isOn: publicLawApprovalBinding)
-                        Divider()
-                        Toggle("Keep all work offline by default", isOn: privateByDefaultBinding)
                         Text("When this is on, Ross can prepare a sanitized public-law query. A search runs only after you review and approve it. Case files and matter work stay on this device.")
                             .font(.footnote)
                             .foregroundStyle(Color.rossInk.opacity(0.7))
@@ -15031,7 +15001,7 @@ private struct AlphaPrivateAISettingsScreen: View {
                                 AlphaSettingsValueRow(label: "Runtime mode", value: runtimeHealth.runtimeMode.rawValue)
                                 AlphaSettingsValueRow(label: "Artifact kind", value: model.activePack?.artifactKind ?? "Missing")
                                 AlphaSettingsValueRow(label: "Checksum verified", value: runtimeHealth.checksumVerified ? "Yes" : "No")
-                                AlphaSettingsValueRow(label: "Runtime available", value: runtimeHealth.available && !runtimeHealth.fallbackActive ? "Yes" : "No")
+                                AlphaSettingsValueRow(label: "Runtime available", value: runtimeHealth.available ? "Yes" : "No")
                                 AlphaSettingsValueRow(label: "Model path", value: runtimeHealth.modelPathPresent ? "Configured" : "Missing")
 
                                 if let activePack = model.activePack {

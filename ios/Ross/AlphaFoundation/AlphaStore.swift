@@ -69,7 +69,7 @@ actor AlphaRossStore {
         modelPacksURL = rootURL.appendingPathComponent("model-packs", isDirectory: true)
         exportsURL = rootURL.appendingPathComponent("exports", isDirectory: true)
         keychainAccount = isRunningTests ? "ross.ios.alpha.state.tests" : "ross.ios.alpha.state"
-        usePlaintextStateStorage = isRunningTests || ProcessInfo.processInfo.environment["ROSS_USE_PLAINTEXT_STATE"] == "1"
+        usePlaintextStateStorage = isRunningTests
     }
 
     func load() throws -> AlphaPersistedState {

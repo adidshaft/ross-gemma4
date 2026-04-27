@@ -1284,23 +1284,6 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         return await MainActor.run { model.persisted }
     }
 
-    private func waitForPublicLawSearch(
-        model: AlphaRossModel,
-        attempts: Int = 20,
-        intervalNanoseconds: UInt64 = 25_000_000
-    ) async throws {
-        for attempt in 0..<attempts {
-            let isFinished = await MainActor.run {
-                model.latestAskResult?.statusNote == "Public-law results"
-            }
-            if isFinished {
-                return
-            }
-            if attempt < attempts - 1 {
-                try await Task.sleep(nanoseconds: intervalNanoseconds)
-            }
-        }
-    }
 }
 
 private final class RossLocalAuthStub {

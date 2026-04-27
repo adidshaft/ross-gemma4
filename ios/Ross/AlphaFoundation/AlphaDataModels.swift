@@ -1483,7 +1483,6 @@ enum AlphaPrivacyPayloadClass: String, Codable, Hashable, Sendable {
     case local_only
     case no_case_data
     case sanitized_public_query
-    case account_token
 }
 
 struct AlphaPrivacyLedgerEntry: Identifiable, Codable, Hashable, Sendable {

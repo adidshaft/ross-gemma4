@@ -300,7 +300,6 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertNotNil(provider)
         XCTAssertEqual(health?.runtimeMode, .appleFoundationModels)
-        XCTAssertEqual(health?.fallbackActive, false)
         if health?.available == true {
             XCTAssertEqual(provider?.runtimeMode, .appleFoundationModels)
             XCTAssertEqual(health?.explicitOptInEnabled, true)
@@ -374,7 +373,6 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(health?.available, false)
-        XCTAssertEqual(health?.fallbackActive, false)
         XCTAssertEqual(health?.lastErrorCategory, "runtime_dependency_unavailable")
     }
 
