@@ -513,6 +513,79 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertFalse(model.publicLawPreview?.query.contains("Raghav Fakepriv") == true)
     }
 
+    func testSourceRefLabelsAvoidMatterMemoryAsLegalCitation() {
+        let caseID = UUID()
+        let documentID = UUID()
+        let matterMemory = AlphaSourceRef(
+            caseId: caseID,
+            documentId: documentID,
+            documentTitle: "Matter memory",
+            pageNumber: 1
+        )
+        let documentSource = AlphaSourceRef(
+            caseId: caseID,
+            documentId: documentID,
+            documentTitle: "Latest order",
+            pageNumber: 2
+        )
+        let missingDocumentTitle = AlphaSourceRef(
+            caseId: caseID,
+            documentId: documentID,
+            documentTitle: "",
+            pageNumber: 0
+        )
+
+        XCTAssertEqual(matterMemory.label, "Matter details · source not available")
+        XCTAssertEqual(documentSource.label, "Latest order · p. 2")
+        XCTAssertEqual(missingDocumentTitle.label, "Document source · source not available")
+    }
+
+    func testDocumentProcessingStateBlocksReadingAsReady() {
+        let document = AlphaCaseDocument(
+            title: "Reading file",
+            fileName: "reading.pdf",
+            kind: .pdf,
+            storedRelativePath: "reading.pdf",
+            importedAt: .now,
+            pageCount: 2,
+            ocrStatus: .placeholder,
+            indexingStatus: .extracting,
+            pages: [AlphaDocumentPage(pageNumber: 1, snippet: "Imported source reference.")],
+            extractionRuns: [
+                AlphaExtractionRun(
+                    caseId: UUID(),
+                    documentId: UUID(),
+                    mode: .caseAssociate,
+                    status: .running,
+                    progressState: .acquiringText,
+                    startedAt: .now,
+                    pagesProcessed: 0,
+                    totalPages: 2,
+                    fieldsExtracted: 0,
+                    fieldsNeedingReview: 0,
+                    warnings: []
+                )
+            ]
+        )
+
+        XCTAssertEqual(document.processingState, .readingText)
+        XCTAssertEqual(document.lawyerStatusTitle, "Reading")
+    }
+
+    func testFictionalClassificationBlocksAutomaticLegalFactSaving() {
+        let classification = AlphaLegalDocumentClassification(
+            documentId: UUID(),
+            type: .fictionalGameMaterial,
+            subtype: nil,
+            confidence: 0.7,
+            sourceRefs: [],
+            needsReview: true
+        )
+
+        XCTAssertTrue(classification.type.blocksAutomaticLegalFactSaving)
+        XCTAssertEqual(classification.type.title, "Fictional/game material")
+    }
+
     func testRossBackendBaseURLUsesSavedOverride() {
         rossSetBackendBaseURLOverride("http://127.0.0.1:8787")
 

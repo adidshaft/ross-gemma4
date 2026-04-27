@@ -261,13 +261,53 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 }
                 model.submitAsk(question: "Find law on delay condonation", scopeCaseID: nil, webEnabled: true)
             }
-            try await waitForPublicLawSearch(model: model)
+
+            let preview = await MainActor.run { model.publicLawPreview }
+            let statusBeforeConfirm = await MainActor.run { model.latestAskResult?.statusNote }
+            XCTAssertNotNil(preview)
+            XCTAssertEqual("Review required", statusBeforeConfirm)
+            XCTAssertEqual(0, publicLawCalls.value)
+
+            await model.confirmPendingPublicLawSearch()
 
             let resultCount = await MainActor.run { model.publicLawResults.count }
             let statusAfterConfirm = await MainActor.run { model.latestAskResult?.statusNote }
+            let ledgerTitles = await MainActor.run { model.persisted.ledgerEntries.map(\.title) }
             XCTAssertEqual(1, publicLawCalls.value)
             XCTAssertEqual(1, resultCount)
             XCTAssertEqual("Public-law results", statusAfterConfirm)
+            XCTAssertTrue(ledgerTitles.contains("Public-law search reviewed by user"))
+            XCTAssertTrue(ledgerTitles.contains("Public-law query sent"))
+        }
+    }
+
+    func testCancelPublicLawReviewPreventsNetworkCall() async throws {
+        try await withRestoredStore { store in
+            try await store.replace(with: AlphaPersistedState.seed())
+            let publicLawCalls = SendableBox(0)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in
+                    publicLawCalls.value += 1
+                    return []
+                })
+            }
+            await model.loadIfNeeded()
+            await MainActor.run {
+                model.updateSettings { settings in
+                    settings.requirePublicLawApproval = true
+                }
+                model.submitAsk(question: "Find cases on interim injunction", scopeCaseID: nil, webEnabled: true)
+                model.cancelPendingPublicLawSearch()
+            }
+
+            let preview = await MainActor.run { model.publicLawPreview }
+            let results = await MainActor.run { model.publicLawResults }
+            let latestPreview = await MainActor.run { model.latestAskResult?.publicLawPreview }
+            XCTAssertNil(preview)
+            XCTAssertNil(latestPreview)
+            XCTAssertTrue(results.isEmpty)
+            XCTAssertEqual(0, publicLawCalls.value)
         }
     }
 

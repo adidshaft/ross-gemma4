@@ -448,6 +448,32 @@ enum AlphaIndexingStatus: String, Codable, Hashable, Sendable {
     }
 }
 
+enum AlphaDocumentProcessingState: String, Codable, Hashable, Sendable {
+    case imported
+    case readingText
+    case reviewingFindings
+    case ready
+    case needsConfirmation
+    case failed
+
+    var title: String {
+        switch self {
+        case .imported:
+            "Imported"
+        case .readingText:
+            "Reading"
+        case .reviewingFindings:
+            "Review"
+        case .ready:
+            "Ready"
+        case .needsConfirmation:
+            "Needs review"
+        case .failed:
+            "Failed"
+        }
+    }
+}
+
 struct AlphaNormalizedRect: Codable, Hashable, Sendable {
     var x: Double
     var y: Double
@@ -496,6 +522,14 @@ struct AlphaDocumentPage: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
+enum AlphaSourceCategory: String, Codable, Hashable, Sendable {
+    case documentSource = "document_source"
+    case matterDetail = "matter_detail"
+    case rossSuggestion = "ross_suggestion"
+    case userConfirmedFact = "user_confirmed_fact"
+    case publicLawSource = "public_law_source"
+}
+
 struct AlphaSourceRef: Identifiable, Codable, Hashable, Sendable {
     let id: UUID
     let caseId: UUID
@@ -507,6 +541,7 @@ struct AlphaSourceRef: Identifiable, Codable, Hashable, Sendable {
     let ocrConfidence: Double?
     var highlightText: String?
     var highlightRects: [AlphaNormalizedRect]?
+    var sourceCategory: AlphaSourceCategory?
 
     init(
         id: UUID = UUID(),
@@ -518,7 +553,8 @@ struct AlphaSourceRef: Identifiable, Codable, Hashable, Sendable {
         textSnippet: String? = nil,
         ocrConfidence: Double? = nil,
         highlightText: String? = nil,
-        highlightRects: [AlphaNormalizedRect]? = nil
+        highlightRects: [AlphaNormalizedRect]? = nil,
+        sourceCategory: AlphaSourceCategory = .documentSource
     ) {
         self.id = id
         self.caseId = caseId
@@ -530,14 +566,38 @@ struct AlphaSourceRef: Identifiable, Codable, Hashable, Sendable {
         self.ocrConfidence = ocrConfidence
         self.highlightText = highlightText
         self.highlightRects = highlightRects
+        self.sourceCategory = sourceCategory
+    }
+
+    var effectiveSourceCategory: AlphaSourceCategory {
+        sourceCategory ?? .documentSource
     }
 
     var label: String {
-        "\(documentTitle) p. \(pageNumber)"
+        let title = documentTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        if title.localizedCaseInsensitiveContains("Matter memory") {
+            return "Matter details · source not available"
+        }
+        switch effectiveSourceCategory {
+        case .documentSource:
+            guard !title.isEmpty else { return "Document source · source not available" }
+            return pageNumber > 0 ? "\(title) · p. \(pageNumber)" : "\(title) · source not available"
+        case .matterDetail:
+            let field = paragraphRange?.trimmingCharacters(in: .whitespacesAndNewlines)
+            return "Matter details · \((field?.isEmpty == false ? field : "source not available") ?? "source not available")"
+        case .rossSuggestion:
+            return "Suggested by Ross · not confirmed"
+        case .userConfirmedFact:
+            let confirmedAt = paragraphRange?.trimmingCharacters(in: .whitespacesAndNewlines)
+            return "Confirmed by advocate · \((confirmedAt?.isEmpty == false ? confirmedAt : "source not available") ?? "source not available")"
+        case .publicLawSource:
+            return "Public law · \(!title.isEmpty ? title : "source not available")"
+        }
     }
 
     var detail: String {
-        textSnippet ?? "Source reference"
+        let snippet = textSnippet?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return snippet?.isEmpty == false ? snippet! : "source not available"
     }
 }
 
@@ -615,8 +675,70 @@ enum AlphaLegalDocumentType: String, Codable, Hashable, Sendable {
     case affidavit
     case notice
     case evidence
+    case clientNote = "client_note"
+    case courtFiling = "court_filing"
+    case legalResearch = "legal_research"
+    case nonLegalDocument = "non_legal_document"
+    case fictionalGameMaterial = "fictional_game_material"
+    case unknown
     case correspondence
     case misc
+
+    var title: String {
+        switch self {
+        case .pleading:
+            "Pleading"
+        case .order:
+            "Order"
+        case .judgment:
+            "Judgment"
+        case .affidavit:
+            "Affidavit"
+        case .notice:
+            "Notice"
+        case .evidence:
+            "Evidence"
+        case .clientNote:
+            "Client note"
+        case .courtFiling:
+            "Court filing"
+        case .legalResearch:
+            "Legal research"
+        case .nonLegalDocument:
+            "Non-legal document"
+        case .fictionalGameMaterial:
+            "Fictional/game material"
+        case .unknown, .misc:
+            "Unknown"
+        case .correspondence:
+            "Client note"
+        }
+    }
+
+    var blocksAutomaticLegalFactSaving: Bool {
+        switch self {
+        case .nonLegalDocument, .fictionalGameMaterial, .unknown, .misc:
+            true
+        default:
+            false
+        }
+    }
+
+    static var reviewMenuTypes: [AlphaLegalDocumentType] {
+        [
+            .order,
+            .pleading,
+            .notice,
+            .affidavit,
+            .evidence,
+            .clientNote,
+            .courtFiling,
+            .legalResearch,
+            .nonLegalDocument,
+            .fictionalGameMaterial,
+            .unknown
+        ]
+    }
 }
 
 struct AlphaLegalDocumentClassification: Codable, Hashable, Sendable {
@@ -830,9 +952,11 @@ enum AlphaExtractionFindingKind: String, Codable, Hashable, Sendable {
     case lowConfidenceOcr = "low_confidence_ocr"
     case languageUncertain = "language_uncertain"
     case possibleMissingPage = "possible_missing_page"
+    case documentClassificationNeedsReview = "document_classification_needs_review"
     case dateConflict = "date_conflict"
     case partyConflict = "party_conflict"
     case caseNumberConflict = "case_number_conflict"
+    case courtConflict = "court_conflict"
     case ambiguousOrderDirection = "ambiguous_order_direction"
     case possibleHandwriting = "possible_handwriting"
     case unsupportedLayout = "unsupported_layout"
@@ -853,6 +977,9 @@ struct AlphaExtractionFinding: Identifiable, Codable, Hashable, Sendable {
     var sourceRefs: [AlphaSourceRef]
     var severity: AlphaExtractionFindingSeverity
     var resolved: Bool
+    var fieldType: AlphaExtractedLegalFieldType?
+    var matterValue: String?
+    var fileValue: String?
 
     init(
         id: UUID = UUID(),
@@ -862,7 +989,10 @@ struct AlphaExtractionFinding: Identifiable, Codable, Hashable, Sendable {
         message: String,
         sourceRefs: [AlphaSourceRef],
         severity: AlphaExtractionFindingSeverity,
-        resolved: Bool = false
+        resolved: Bool = false,
+        fieldType: AlphaExtractedLegalFieldType? = nil,
+        matterValue: String? = nil,
+        fileValue: String? = nil
     ) {
         self.id = id
         self.caseId = caseId
@@ -872,6 +1002,9 @@ struct AlphaExtractionFinding: Identifiable, Codable, Hashable, Sendable {
         self.sourceRefs = sourceRefs
         self.severity = severity
         self.resolved = resolved
+        self.fieldType = fieldType
+        self.matterValue = matterValue
+        self.fileValue = fileValue
     }
 }
 
@@ -2199,28 +2332,56 @@ extension AlphaCaseDocument {
             ?? extractedText
     }
 
-    var lawyerStatusTitle: String {
+    var processingState: AlphaDocumentProcessingState {
+        let latestRun = extractionRuns.sorted { lhs, rhs in
+            (lhs.startedAt ?? .distantPast) > (rhs.startedAt ?? .distantPast)
+        }.first
+
+        if effectiveIndexingStatus == .failed || ocrStatus == .failed || latestRun?.status == .failed {
+            return .failed
+        }
+
+        if latestRun?.status == .queued || latestRun?.status == .running || effectiveIndexingStatus == .extracting {
+            return .readingText
+        }
+
+        let hasExtractedContent = extractedText?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ||
+            pages.contains { ($0.extractedText ?? $0.snippet ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false }
+        if !hasExtractedContent && effectiveIndexingStatus == .notStarted {
+            return .imported
+        }
+
+        if classification?.type.blocksAutomaticLegalFactSaving == true || classification?.needsReview == true {
+            return .needsConfirmation
+        }
+
         let hasReviewWork = extractedFields.contains(where: \.needsReview) || extractionFindings.contains(where: { !$0.resolved })
+        if hasReviewWork || latestRun?.status == .needsReview {
+            return .reviewingFindings
+        }
+
+        if effectiveIndexingStatus == .indexed || ocrStatus == .nativeText || ocrStatus == .ocrComplete || latestRun?.status == .complete {
+            return .ready
+        }
+
+        return .imported
+    }
+
+    var lawyerStatusTitle: String {
+        if classification?.type == .fictionalGameMaterial {
+            return "Fictional"
+        }
+        if classification?.type == .nonLegalDocument {
+            return "Non-legal?"
+        }
         let hasLowConfidenceScan = extractionFindings.contains {
             $0.kind == .lowConfidenceOcr || $0.kind == .languageUncertain || $0.kind == .possibleHandwriting
         }
 
-        if extractionRuns.first?.status == .running || effectiveIndexingStatus == .extracting {
-            return "Reading your file..."
-        }
-        if effectiveIndexingStatus == .failed || ocrStatus == .failed {
-            return "Could not read this file"
-        }
         if hasLowConfidenceScan {
             return "Low confidence scan"
         }
-        if hasReviewWork {
-            return "Please confirm"
-        }
-        if effectiveIndexingStatus == .indexed || ocrStatus == .nativeText || ocrStatus == .ocrComplete {
-            return "Ready"
-        }
-        return "Reading your file..."
+        return processingState.title
     }
 }
 
@@ -2231,8 +2392,12 @@ extension AlphaPrivacyLedgerEntry {
             "Checked private assistant setup"
         case "Private AI Pack queued", "Private AI Pack verified":
             "Set up private assistant"
+        case "Public-law search reviewed by user":
+            "Reviewed public-law search"
         case "Public-law query sent":
             "Searched public law"
+        case "Public-law search cancelled":
+            "Cancelled public-law search"
         case "Public-law search unavailable":
             "Public-law search needs attention"
         case "Local export generated":
@@ -2250,8 +2415,12 @@ extension AlphaPrivacyLedgerEntry {
 
     var lawyerDetail: String {
         switch title {
+        case "Public-law search reviewed by user":
+            "Ross prepared the sanitized query locally. 0 private case details left the device."
         case "Public-law query sent":
-            "Ross sent only a generic public-law query. Your case files stayed on this device."
+            "Sanitized query sent. 0 private case details sent; case files stayed on this device."
+        case "Public-law search cancelled":
+            "No public-law network request was made."
         case "Public-law search unavailable":
             "Ross could not complete the sanitized public-law search. Your case files stayed on this device."
         case "Private AI Pack verified":

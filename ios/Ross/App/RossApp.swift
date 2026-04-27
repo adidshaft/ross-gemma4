@@ -1038,10 +1038,14 @@ private struct RossLanguageSelectionScreen: View {
 
                         RossAuthGlassPanel(cornerRadius: 34, padding: 24) {
                             VStack(alignment: .leading, spacing: 20) {
-                                Text("Choose a language")
+                                Text("Choose your preferred language")
                                     .font(.system(size: 28, weight: .semibold))
-                                    .tracking(-0.7)
                                     .foregroundStyle(Color.rossInk)
+                                    .fixedSize(horizontal: false, vertical: true)
+
+                                Text("Ross will use this for assistant responses where supported. The app interface is currently English in this test build.")
+                                    .font(.footnote)
+                                    .foregroundStyle(Color.rossInk.opacity(0.7))
                                     .fixedSize(horizontal: false, vertical: true)
 
                                 LazyVGrid(columns: columns, spacing: 18) {
