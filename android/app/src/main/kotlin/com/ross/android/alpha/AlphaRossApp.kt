@@ -4373,34 +4373,57 @@ private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack
                 Text("You can switch later. Setup progress stays visible here and in Settings.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             AlphaCapabilityTier.values().forEach { tier ->
+                val installedPack = controller.installedPackFor(tier)
+                val setupJob = controller.setupJobFor(tier)
+                val isActivePack = installedPack != null && installedPack.id == controller.activePack()?.id
+                val actionLabel = when {
+                    isActivePack -> "Active"
+                    installedPack != null -> "Use this level"
+                    setupJob != null -> alphaJobStatusLabel(setupJob.state)
+                    else -> "Download this level"
+                }
+                val actionEnabled = !isActivePack && setupJob == null
                 AlphaCard(tier.setupTitle, tier.summary) {
                     Text(tier.bestFor, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         AlphaTagChip(tier.downloadSizeLabel)
                         AlphaTagChip(tier.setupTimeLabel)
                     }
+                    if (installedPack != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            if (isActivePack) "Ready on this device and currently active." else "Ready on this device.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                    if (setupJob != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        AlphaAssistantActivityStrip(
+                            title = "${tier.title} setup",
+                            detail = alphaAssistantActivityDetail(setupJob.state),
+                            statusLabel = alphaJobProgressLabel(setupJob) ?: alphaJobStatusLabel(setupJob.state),
+                            tint = AlphaAmberStatus,
+                            progress = alphaJobProgressFraction(setupJob),
+                            showProgress = true,
+                        )
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(
-                        onClick = { controller.startPackInstall(tier, controller.persisted.settings.allowMobileDataForLargePacks || tier == AlphaCapabilityTier.QuickStart) },
+                        onClick = {
+                            if (installedPack != null) {
+                                controller.activatePack(installedPack.id)
+                            } else {
+                                controller.startPackInstall(
+                                    tier,
+                                    controller.persisted.settings.allowMobileDataForLargePacks || tier == AlphaCapabilityTier.QuickStart
+                                )
+                            }
+                        },
+                        enabled = actionEnabled,
                         modifier = Modifier.fillMaxWidth()
-                    ) { Text("Download this level") }
-                }
-            }
-            controller.persisted.modelJobs.forEach { job ->
-                AlphaCard(job.tier.title, "Setup in progress") {
-                    AlphaAssistantActivityStrip(
-                        title = "${job.tier.title} setup",
-                        detail = alphaAssistantActivityDetail(job.state),
-                        statusLabel = alphaJobProgressLabel(job) ?: alphaJobStatusLabel(job.state),
-                        tint = AlphaAmberStatus,
-                        progress = alphaJobProgressFraction(job),
-                        showProgress = true,
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { controller.pauseJob(job.id) }) { Text("Pause") }
-                        Button(onClick = { controller.resumeJob(job) }) { Text("Resume") }
-                    }
+                    ) { Text(actionLabel) }
                 }
             }
             controller.persisted.installedPacks.forEach { pack ->
@@ -4423,7 +4446,10 @@ private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack
                     AlphaSettingsValueRow(label = "Storage", value = pack.tier.installedSizeLabel)
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { controller.activatePack(pack.id) }) { Text("Use this level") }
+                        Button(
+                            onClick = { controller.activatePack(pack.id) },
+                            enabled = !isActivePack,
+                        ) { Text(if (isActivePack) "Active" else "Use this level") }
                         Button(onClick = { controller.removeInstalledPack(pack.id) }) { Text("Remove") }
                     }
                 }
@@ -6562,15 +6588,15 @@ private fun alphaActiveSetupJob(controller: AlphaRossController): AlphaModelDown
         when (job.state) {
             AlphaDownloadState.NotStarted,
             AlphaDownloadState.Installed,
-            AlphaDownloadState.Cancelled -> false
+            AlphaDownloadState.Cancelled,
+            AlphaDownloadState.Failed -> false
             AlphaDownloadState.Queued,
             AlphaDownloadState.Downloading,
             AlphaDownloadState.PausedWaitingForWifi,
             AlphaDownloadState.PausedUser,
             AlphaDownloadState.PausedNoStorage,
             AlphaDownloadState.PausedError,
-            AlphaDownloadState.Verifying,
-            AlphaDownloadState.Failed -> true
+            AlphaDownloadState.Verifying -> true
         }
     }
 
