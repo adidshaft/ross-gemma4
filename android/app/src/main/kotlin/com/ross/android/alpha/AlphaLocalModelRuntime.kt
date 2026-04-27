@@ -667,6 +667,9 @@ internal object AlphaMediaPipeDeviceSupport {
         hardware: String = Build.HARDWARE.orEmpty(),
         model: String = Build.MODEL.orEmpty(),
     ): Boolean {
+        if (BuildConfig.DEBUG) {
+            return true
+        }
         val combined = listOf(fingerprint, hardware, model).joinToString(" ").lowercase(Locale.ROOT)
         val emulatorMarkers = listOf("generic", "emulator", "goldfish", "ranchu", "sdk_gphone")
         return emulatorMarkers.none { it in combined }
