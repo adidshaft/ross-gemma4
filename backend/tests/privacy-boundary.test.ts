@@ -25,6 +25,8 @@ function buildTestEnv(
     nodeEnvOverride,
     environment: {
       ...process.env,
+      ROSS_PUBLIC_LAW_GEMINI_API_KEY: undefined,
+      GEMINI_API_KEY: undefined,
       ...overrides
     }
   });

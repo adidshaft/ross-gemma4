@@ -1033,6 +1033,7 @@ struct AlphaChatTurn: Identifiable, Codable, Hashable, Sendable {
     var publicLawResults: [AlphaPublicLawResult]
     var statusNote: String?
     var needsReviewWarning: String?
+    var modelInvocation: AlphaLocalModelInvocation?
 
     init(
         id: UUID = UUID(),
@@ -1046,7 +1047,8 @@ struct AlphaChatTurn: Identifiable, Codable, Hashable, Sendable {
         publicLawPreview: AlphaPublicLawPreview? = nil,
         publicLawResults: [AlphaPublicLawResult] = [],
         statusNote: String? = nil,
-        needsReviewWarning: String? = nil
+        needsReviewWarning: String? = nil,
+        modelInvocation: AlphaLocalModelInvocation? = nil
     ) {
         self.id = id
         self.kind = kind
@@ -1060,6 +1062,7 @@ struct AlphaChatTurn: Identifiable, Codable, Hashable, Sendable {
         self.publicLawResults = publicLawResults
         self.statusNote = statusNote
         self.needsReviewWarning = needsReviewWarning
+        self.modelInvocation = modelInvocation
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -1075,6 +1078,7 @@ struct AlphaChatTurn: Identifiable, Codable, Hashable, Sendable {
         case publicLawResults
         case statusNote
         case needsReviewWarning
+        case modelInvocation
     }
 
     init(from decoder: any Decoder) throws {
@@ -1091,6 +1095,7 @@ struct AlphaChatTurn: Identifiable, Codable, Hashable, Sendable {
         publicLawResults = try container.decodeIfPresent([AlphaPublicLawResult].self, forKey: .publicLawResults) ?? []
         statusNote = try container.decodeIfPresent(String.self, forKey: .statusNote)
         needsReviewWarning = try container.decodeIfPresent(String.self, forKey: .needsReviewWarning)
+        modelInvocation = try container.decodeIfPresent(AlphaLocalModelInvocation.self, forKey: .modelInvocation)
     }
 }
 

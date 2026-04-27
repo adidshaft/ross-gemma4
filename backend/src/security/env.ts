@@ -156,7 +156,7 @@ export function readRuntimeEnv(
     googleOauthClientSecret: trimmedValue(environment.GOOGLE_OAUTH_CLIENT_SECRET),
     publicLawGeminiApiKey:
       trimmedValue(environment.ROSS_PUBLIC_LAW_GEMINI_API_KEY) ?? trimmedValue(environment.GEMINI_API_KEY),
-    publicLawGeminiModel: trimmedValue(environment.ROSS_PUBLIC_LAW_GEMINI_MODEL) ?? "gemini-2.5-flash",
+    publicLawGeminiModel: trimmedValue(environment.ROSS_PUBLIC_LAW_GEMINI_MODEL) ?? "gemini-2.5-flash-lite",
     publicLawGeminiBaseUrl:
       trimmedValue(environment.ROSS_PUBLIC_LAW_GEMINI_BASE_URL) ??
       "https://generativelanguage.googleapis.com",

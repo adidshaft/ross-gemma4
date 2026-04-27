@@ -90,7 +90,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
 
             XCTAssertEqual(0, publicLawCalls.value)
             XCTAssertNil(preview)
-            XCTAssertEqual("Answered from your files", status)
+            XCTAssertEqual("Public law search is off", status)
         }
     }
 

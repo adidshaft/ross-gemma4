@@ -352,6 +352,39 @@ struct AlphaUnavailableRealLocalModelProvider: AlphaRealLocalModelProvider {
 }
 
 #if canImport(SwiftGemmaRuntime)
+private struct AlphaGemma 4 E4B Q4MatterAskPayload: Codable, Sendable {
+    var headline: String
+    var sections: [String]
+    var statusNote: String?
+}
+
+private struct AlphaGemma 4 E4B Q4ClassificationPayload: Codable, Sendable {
+    var type: String
+    var subtype: String?
+    var confidence: Double
+    var needsReview: Bool
+}
+
+private struct AlphaGemma 4 E4B Q4FieldPayload: Codable, Sendable {
+    var fieldType: String
+    var label: String
+    var value: String
+    var normalizedValue: String?
+    var pageNumber: Int?
+    var confidence: Double
+    var needsReview: Bool
+}
+
+private struct AlphaGemma 4 E4B Q4VerificationPayload: Codable, Sendable {
+    var fields: [AlphaGemma 4 E4B Q4FieldPayload]
+    var findings: [String]
+}
+
+private struct AlphaGemma 4 E4B Q4MemoryPayload: Codable, Sendable {
+    var summary: String
+    var affectedPageNumbers: [Int]?
+}
+
 struct AlphaGemmaLocalModelProvider: AlphaRealLocalModelProvider {
     let capabilityTier: AlphaCapabilityTier
     let modelPath: String
@@ -370,9 +403,14 @@ struct AlphaGemmaLocalModelProvider: AlphaRealLocalModelProvider {
         self.modelPath = modelPath
         self.modelPathLabel = modelPathLabel
         self.checksumVerified = checksumVerified
+        #if targetEnvironment(simulator)
+        let useGPU = false
+        #else
+        let useGPU = true
+        #endif
         self.service = GemmaService(
             modelUrl: URL(fileURLWithPath: modelPath),
-            config: GemmaConfig(batchSize: 256, maxTokenCount: UInt32(Self.contextTokens(for: capabilityTier)), useGPU: true)
+            config: GemmaConfig(batchSize: 256, maxTokenCount: UInt32(Self.contextTokens(for: capabilityTier)), useGPU: useGPU)
         )
     }
 
@@ -410,11 +448,11 @@ struct AlphaGemmaLocalModelProvider: AlphaRealLocalModelProvider {
     func maxInputChars() -> Int? {
         switch capabilityTier {
         case .quickStart:
-            return 6_000
+            return 2_200
         case .caseAssociate:
-            return 10_000
+            return 5_000
         case .seniorDraftingSupport:
-            return 14_000
+            return 8_000
         }
     }
 
@@ -427,34 +465,39 @@ struct AlphaGemmaLocalModelProvider: AlphaRealLocalModelProvider {
                 You are Ross, a private legal assistant running fully on this iPhone.
                 Use only the provided source blocks. Do not invent facts.
                 Return only JSON that matches the expected schema when a schema is provided.
+                Do not include <think>, analysis, markdown, or prose before the JSON.
                 Every accepted legal field must cite source refs from the prompt.
                 If evidence is weak, use needs_review or not_found instead of guessing.
                 """
             ),
             GemmaChatMessage(
                 role: .user,
-                content: pack.promptText + "\n\nReturn JSON only. /no_think"
+                content: pack.promptText + "\n\n/no_think\nReturn one minified JSON object or array only. Start with { or [. Do not include <think>."
             )
         ]
 
         do {
-            let response = try await service.respond(
+            let generation = try await Self.generateLimitedResponse(
+                service: service,
                 to: messages,
                 samplingConfig: GemmaSamplingConfig(
-                    temperature: 0.7,
+                    temperature: 0.2,
                     seed: UInt32(truncatingIfNeeded: taskInput.instruction.hashValue),
                     topP: 0.8,
                     topK: 20,
                     minKeep: 1
-                )
+                ),
+                maxTokens: Self.maxResponseTokens(for: taskInput)
             )
+            let response = generation.text
             let parsedJson = Self.extractLikelyJSON(from: response)
             return AlphaLocalModelOutput(
                 rawText: response,
                 parsedJson: parsedJson,
                 schemaValid: parsedJson != nil,
-                warnings: pack.truncated ? ["The document was long, so Ross focused on the most relevant parts."] : [],
-                sourceRefs: pack.includedSourceRefs.isEmpty ? taskInput.sourcePack.map(\.sourceRef) : pack.includedSourceRefs
+                warnings: Self.warnings(pack: pack, generation: generation, parsedJson: parsedJson),
+                sourceRefs: pack.includedSourceRefs.isEmpty ? taskInput.sourcePack.map(\.sourceRef) : pack.includedSourceRefs,
+                errorCategory: parsedJson == nil ? "invalid_model_output" : nil
             )
         } catch {
             return AlphaLocalModelOutput(
@@ -487,9 +530,11 @@ struct AlphaGemmaLocalModelProvider: AlphaRealLocalModelProvider {
     private static func contextTokens(for tier: AlphaCapabilityTier) -> Int {
         switch tier {
         case .quickStart:
-            return 4_096
-        case .caseAssociate, .seniorDraftingSupport:
-            return 8_192
+            return 1_024
+        case .caseAssociate:
+            return 2_048
+        case .seniorDraftingSupport:
+            return 3_072
         }
     }
 
@@ -502,6 +547,69 @@ struct AlphaGemmaLocalModelProvider: AlphaRealLocalModelProvider {
         case .seniorDraftingSupport:
             return 4_800
         }
+    }
+
+    private static func maxResponseTokens(for input: AlphaLocalModelInput) -> Int {
+        let taskCap: Int
+        switch input.task {
+        case .matterQuestionAnswer:
+            taskCap = 320
+        case .documentClassification:
+            taskCap = 160
+        case .legalFieldExtraction, .legalFieldVerification, .caseMemorySynthesis:
+            taskCap = 320
+        case .issueExtraction, .chronologyGeneration, .orderSummary:
+            taskCap = 384
+        case .ocrCleanup, .languageCorrection:
+            taskCap = 256
+        }
+        return min(max(input.maxOutputTokens, 64), taskCap)
+    }
+
+    private static func generateLimitedResponse(
+        service: GemmaService,
+        to messages: [GemmaChatMessage],
+        samplingConfig: GemmaSamplingConfig,
+        maxTokens: Int
+    ) async throws -> (text: String, tokenCount: Int, stoppedAtJSON: Bool, hitTokenCap: Bool) {
+        let stream = try await service.streamCompletion(of: messages, samplingConfig: samplingConfig)
+        var output = ""
+        var tokenCount = 0
+        var stoppedAtJSON = false
+        do {
+            for try await token in stream {
+                output += token
+                tokenCount += 1
+                if extractLikelyJSON(from: output) != nil {
+                    stoppedAtJSON = true
+                    await service.stopCompletion()
+                    break
+                }
+                if tokenCount >= maxTokens {
+                    await service.stopCompletion()
+                    break
+                }
+            }
+        } catch {
+            await service.stopCompletion()
+            throw error
+        }
+        return (output, tokenCount, stoppedAtJSON, tokenCount >= maxTokens && !stoppedAtJSON)
+    }
+
+    private static func warnings(
+        pack: AlphaLocalPromptPack,
+        generation: (text: String, tokenCount: Int, stoppedAtJSON: Bool, hitTokenCap: Bool),
+        parsedJson: String?
+    ) -> [String] {
+        var warnings: [String] = []
+        if pack.truncated {
+            warnings.append("The document was long, so Ross focused on the most relevant parts.")
+        }
+        if generation.hitTokenCap, parsedJson == nil {
+            warnings.append("Private assistant stopped at the local response limit before valid JSON was complete.")
+        }
+        return warnings
     }
 
     private static func extractLikelyJSON(from text: String) -> String? {

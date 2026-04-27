@@ -106,6 +106,14 @@ export async function startServer(): Promise<FastifyInstance> {
   const env = readRuntimeEnv();
   const app = await buildApp({ env });
   await app.listen({ host: "0.0.0.0", port: env.port });
+  console.log(
+    JSON.stringify({
+      level: "info",
+      event: "server_started",
+      service: "ross-backend",
+      url: `http://127.0.0.1:${env.port}`
+    })
+  );
   return app;
 }
 

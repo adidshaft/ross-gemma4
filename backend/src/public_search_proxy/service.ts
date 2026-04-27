@@ -87,6 +87,8 @@ interface GeminiGenerateContentResponse {
 
 type FetchLike = typeof fetch;
 
+const GEMINI_SEARCH_TIMEOUT_MS = 15_000;
+
 const PUBLIC_LAW_FIXTURES: PublicLawFixture[] = [
   {
     id: "arb-1996-section-34",
@@ -370,9 +372,15 @@ export class PublicSearchProxyService {
     ).toString();
 
     let response: Response;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => {
+      controller.abort();
+    }, GEMINI_SEARCH_TIMEOUT_MS);
+
     try {
       response = await this.fetchImpl(endpoint, {
         method: "POST",
+        signal: controller.signal,
         headers: {
           "content-type": "application/json",
           accept: "application/json",
@@ -409,6 +417,8 @@ export class PublicSearchProxyService {
       });
     } catch {
       return buildFixtureResponse(input, liveSearchFallbackNote);
+    } finally {
+      clearTimeout(timeout);
     }
 
     if (!response.ok) {

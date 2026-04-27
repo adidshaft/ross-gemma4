@@ -265,7 +265,13 @@ final class AlphaRossModel {
     func loadIfNeeded() async {
         guard !loaded else { return }
         do {
-            persisted = normalizeLoadedState(try await store.load())
+            let loadedState = try await store.load()
+            persisted = normalizeLoadedState(loadedState)
+            if persisted.installedPacks != loadedState.installedPacks ||
+                persisted.modelJobs != loadedState.modelJobs ||
+                persisted.settings.activeTier != loadedState.settings.activeTier {
+                persist()
+            }
             invalidateWorkspaceDerivedState()
             syncDerivedStateFromPersisted()
             loaded = true
@@ -277,11 +283,16 @@ final class AlphaRossModel {
     func syncWorkspaceForSession(_ session: RossAuthSession?) {
         guard loaded else { return }
 
+        if recoverDownloadedAssistantArtifacts(from: &persisted) {
+            persist()
+        }
+
         if let session, session.subject.hasPrefix("local_demo_") {
             if shouldSeedDemoWorkspace(for: session.subject) {
                 let preserved = preservedWorkspaceConfiguration()
                 persisted = AlphaPersistedState.demoSeed(profileSubject: session.subject)
                 applyPreservedWorkspaceConfiguration(preserved)
+                _ = recoverDownloadedAssistantArtifacts(from: &persisted)
                 persist(workspaceChanged: true)
             }
             return
@@ -292,6 +303,7 @@ final class AlphaRossModel {
                 let preserved = preservedWorkspaceConfiguration()
                 persisted = AlphaPersistedState.empty()
                 applyPreservedWorkspaceConfiguration(preserved)
+                _ = recoverDownloadedAssistantArtifacts(from: &persisted)
                 persist(workspaceChanged: true)
             }
             return
@@ -301,6 +313,7 @@ final class AlphaRossModel {
             let preserved = preservedWorkspaceConfiguration()
             persisted = AlphaPersistedState.empty()
             applyPreservedWorkspaceConfiguration(preserved)
+            _ = recoverDownloadedAssistantArtifacts(from: &persisted)
             persist(workspaceChanged: true)
         }
     }
@@ -1291,7 +1304,11 @@ final class AlphaRossModel {
     }
 
     var activePack: AlphaInstalledModelPack? {
-        persisted.installedPacks.first(where: \.isActive)
+        if let active = persisted.installedPacks.first(where: \.isActive),
+           installedModelPackFileIsUsable(active) {
+            return active
+        }
+        return recoveredInstalledPackFromDisk(preferredTier: persisted.settings.activeTier ?? selectedTier)
     }
 
     var activeRuntimeHealth: AlphaLocalRuntimeHealth? {
@@ -1306,9 +1323,14 @@ final class AlphaRossModel {
     }
 
     var lastModelInvocation: AlphaLocalModelInvocation? {
-        persisted.cases
+        let documentInvocations = persisted.cases
             .flatMap(\.documents)
             .flatMap(\.modelInvocations)
+        let chatInvocations = persisted.cases
+            .flatMap(\.chatSessions)
+            .flatMap(\.turns)
+            .compactMap(\.modelInvocation)
+        return (documentInvocations + chatInvocations)
             .max { lhs, rhs in
                 (lhs.completedAt ?? lhs.startedAt) < (rhs.completedAt ?? rhs.startedAt)
             }
@@ -1332,15 +1354,13 @@ final class AlphaRossModel {
         guard !cleaned.isEmpty else { return }
 
         let localResult = buildLocalAskResult(question: cleaned, scopeCaseID: scopeCaseID)
-        let storedResult = appendAskResult(localResult, persistToCase: scopeCaseID)
+        let hasRealLocalAsk = canRunRealLocalAsk(question: cleaned, scopeCaseID: scopeCaseID)
+        let initialResult = hasRealLocalAsk
+            ? buildPendingLocalModelAskResult(question: cleaned, scopeCaseID: scopeCaseID, fallbackResult: localResult)
+            : localResult
+        let storedResult = appendAskResult(initialResult, persistToCase: scopeCaseID)
         latestAskResult = storedResult
         askSelectedScopeCaseID = scopeCaseID
-        scheduleAskRuntimeUpgrade(
-            question: cleaned,
-            scopeCaseID: scopeCaseID,
-            storedResult: storedResult,
-            fallbackResult: localResult
-        )
 
         if let scopeCaseID {
             askDrafts[scopeCaseID] = cleaned
@@ -1348,6 +1368,11 @@ final class AlphaRossModel {
             globalAskDraft = cleaned
         }
 
+        if webEnabled && !persisted.settings.requirePublicLawApproval {
+            updateSettings { settings in
+                settings.requirePublicLawApproval = true
+            }
+        }
         let settingsAllowsWebSearch = persisted.settings.requirePublicLawApproval
         if webEnabled && settingsAllowsWebSearch {
             let preview = buildAskPublicLawPreview(question: cleaned, scopeCaseID: scopeCaseID)
@@ -1357,14 +1382,14 @@ final class AlphaRossModel {
             pendingPublicLawTurnID = storedResult.chatTurnID
             publicLawPreview = preview
             latestAskResult?.publicLawPreview = preview
-            latestAskResult?.statusNote = "Public-law search running"
+            latestAskResult?.statusNote = hasRealLocalAsk ? "Private assistant and public-law search running" : "Public-law search running"
             updateStoredAskTurn(
                 scopeCaseID: scopeCaseID,
                 sessionID: storedResult.chatSessionID,
                 turnID: storedResult.chatTurnID
             ) { turn in
                 turn.publicLawPreview = preview
-                turn.statusNote = "Public-law search running"
+                turn.statusNote = hasRealLocalAsk ? "Private assistant and public-law search running" : "Public-law search running"
             }
             Task { await confirmPendingPublicLawSearch() }
         } else {
@@ -1375,7 +1400,7 @@ final class AlphaRossModel {
             publicLawPreview = nil
             let offlineStatusNote = webEnabled && !settingsAllowsWebSearch
                 ? "Web search is off in Settings"
-                : (storedResult.statusNote == "Private assistant" ? storedResult.statusNote : "Answered from your files")
+                : (hasRealLocalAsk ? "Private assistant running locally" : (localResult.statusNote ?? "Answered from your files"))
             latestAskResult?.statusNote = offlineStatusNote
             updateStoredAskTurn(
                 scopeCaseID: scopeCaseID,
@@ -1387,6 +1412,48 @@ final class AlphaRossModel {
                 turn.statusNote = offlineStatusNote
             }
         }
+
+        scheduleAskRuntimeUpgrade(
+            question: cleaned,
+            scopeCaseID: scopeCaseID,
+            storedResult: storedResult,
+            fallbackResult: localResult
+        )
+    }
+
+    private func canRunRealLocalAsk(question: String, scopeCaseID: UUID?) -> Bool {
+        guard let provider = AlphaLocalModelRuntime.resolveProvider(
+            activePack: activePack,
+            requestedTier: activePack?.tier ?? persisted.settings.activeTier ?? selectedTier,
+            executor: { _ in AlphaLocalModelOutput(rawText: "", parsedJson: nil, schemaValid: false, warnings: [], sourceRefs: []) }
+        ), provider.runtimeMode != .deterministicDev, provider.supportedTasks().contains(.matterQuestionAnswer) else {
+            return false
+        }
+        let selectedDocuments = selectedAskDocuments(for: scopeCaseID)
+        return !askRuntimeSourcePack(scopeCaseID: scopeCaseID, selectedDocuments: selectedDocuments).isEmpty
+    }
+
+    private func buildPendingLocalModelAskResult(
+        question: String,
+        scopeCaseID: UUID?,
+        fallbackResult: AlphaAskResult
+    ) -> AlphaAskResult {
+        AlphaAskResult(
+            chatSessionID: nil,
+            chatTurnID: nil,
+            kind: .userAsk,
+            question: question,
+            scopeCaseID: scopeCaseID,
+            scopeLabel: scopeLabel(for: scopeCaseID),
+            selectedDocumentTitles: fallbackResult.selectedDocumentTitles,
+            answerTitle: "Private assistant running locally",
+            answerSections: ["Ross is reading the selected local context with the on-device model."],
+            caseFileSources: fallbackResult.caseFileSources,
+            publicLawPreview: nil,
+            publicLawResults: [],
+            statusNote: "Private assistant running locally",
+            needsReviewWarning: fallbackResult.needsReviewWarning
+        )
     }
 
     private func selectedOrLatestAskDocument(for scopeCaseID: UUID?) -> (caseMatter: AlphaCaseMatter, document: AlphaCaseDocument)? {
@@ -1735,7 +1802,26 @@ final class AlphaRossModel {
             let results = try await publicLawSearchAction(preview)
             latestAskResult?.publicLawPreview = preview
             latestAskResult?.publicLawResults = results
-            latestAskResult?.statusNote = "Public-law results"
+            let latestInvocationStatus: AlphaLocalModelInvocationStatus? = {
+                guard
+                    let sessionID = pendingPublicLawSessionID,
+                    let turnID = pendingPublicLawTurnID
+                else { return nil }
+                let storageCaseID = pendingPublicLawScopeCaseID ?? alphaSharedWorkspaceID
+                return persisted.cases
+                    .first(where: { $0.id == storageCaseID })?
+                    .chatSessions
+                    .first(where: { $0.id == sessionID })?
+                    .turns
+                    .first(where: { $0.id == turnID })?
+                    .modelInvocation?
+                    .status
+            }()
+            latestAskResult?.statusNote = latestInvocationStatus == nil
+                ? "Public-law results"
+                : (latestInvocationStatus == .running
+                    ? "Private assistant running locally · public-law results ready"
+                    : "Private assistant + public-law results")
             updateStoredAskTurn(
                 scopeCaseID: pendingPublicLawScopeCaseID,
                 sessionID: pendingPublicLawSessionID,
@@ -1743,7 +1829,11 @@ final class AlphaRossModel {
             ) { turn in
                 turn.publicLawPreview = preview
                 turn.publicLawResults = results
-                turn.statusNote = "Public-law results"
+                turn.statusNote = turn.modelInvocation == nil
+                    ? "Public-law results"
+                    : (turn.modelInvocation?.status == .running
+                        ? "Private assistant running locally · public-law results ready"
+                        : "Private assistant + public-law results")
             }
             publicLawResults = results
             persisted.publicLawCache.insert(
@@ -3073,6 +3163,21 @@ final class AlphaRossModel {
         return Int64(values?.fileSize ?? 0)
     }
 
+    private func verifiedExistingAssistantArtifact(
+        for tier: AlphaCapabilityTier,
+        artifact: AlphaAssistantModelArtifact
+    ) -> (relativePath: String, checksum: String, bytes: Int64)? {
+        let relativePath = "model-packs/\(tier.rawValue)/\(artifact.fileName)"
+        let fileURL = alphaAbsoluteURL(for: relativePath)
+        let bytes = alphaFileByteCount(at: fileURL)
+        guard bytes == artifact.sizeBytes else { return nil }
+        guard let checksum = alphaSHA256Hex(forFileAt: fileURL),
+              checksum.caseInsensitiveCompare(artifact.sha256) == .orderedSame else {
+            return nil
+        }
+        return (relativePath, checksum, bytes)
+    }
+
     private func assistantDownloadFailureMessage(_ error: any Error) -> String {
         if let localized = error as? LocalizedError, let description = localized.errorDescription {
             return description
@@ -3115,9 +3220,6 @@ final class AlphaRossModel {
         )
         persist()
 
-        if prepareSystemAssistantPack(for: tier, jobID: job.id) {
-            return
-        }
         updateJob(job.id) {
             $0.packId = artifact.packId
             $0.totalBytes = artifact.sizeBytes
@@ -3133,6 +3235,52 @@ final class AlphaRossModel {
 
         if alphaAllowsDevelopmentModelArtifacts() {
             _ = await installDevelopmentPackForTestRun(tier: tier, jobID: job.id)
+            return
+        }
+
+        if let existingArtifact = verifiedExistingAssistantArtifact(for: tier, artifact: artifact) {
+            let installed = AlphaInstalledModelPack(
+                packId: artifact.packId,
+                tier: tier,
+                installPath: existingArtifact.relativePath,
+                checksumSha256: existingArtifact.checksum,
+                artifactKind: "local_model_artifact",
+                runtimeMode: .llamaCppGguf,
+                developmentOnly: false,
+                isActive: true
+            )
+            persisted.installedPacks = persisted.installedPacks.map {
+                var copy = $0
+                copy.isActive = false
+                return copy
+            }
+            persisted.installedPacks.removeAll { $0.tier == tier }
+            persisted.installedPacks.insert(installed, at: 0)
+            persisted.settings.activeTier = tier
+            updateJob(job.id) {
+                $0.state = .installed
+                $0.bytesDownloaded = existingArtifact.bytes
+                $0.totalBytes = existingArtifact.bytes
+                $0.checksumSha256 = existingArtifact.checksum
+                $0.artifactKind = installed.artifactKind
+                $0.runtimeMode = installed.runtimeMode
+                $0.developmentOnly = installed.developmentOnly
+                $0.failureReason = nil
+                $0.updatedAt = .now
+                $0.completedAt = .now
+            }
+            persisted.ledgerEntries.insert(
+                AlphaPrivacyLedgerEntry(
+                    title: "Assistant model verified",
+                    detail: "\(tier.title) was already downloaded and passed checksum verification locally.",
+                    purpose: .model_verification,
+                    payloadClass: .no_case_data,
+                    endpointLabel: "device://model-verify",
+                    success: true
+                ),
+                at: 0
+            )
+            persist()
             return
         }
 
@@ -4149,6 +4297,8 @@ final class AlphaRossModel {
 
     private func normalizeLoadedState(_ state: AlphaPersistedState) -> AlphaPersistedState {
         var normalized = state
+        removeSystemAssistantShortcutState(from: &normalized)
+        _ = recoverDownloadedAssistantArtifacts(from: &normalized)
         if shouldRestoreAssistantSetupFlow(for: normalized) {
             normalized.onboardingStage = looksLikePristineWorkspace(normalized) ? .onboarding : .privateAIPack
         }
@@ -4160,6 +4310,136 @@ final class AlphaRossModel {
             normalized.tasks = initialTasks(from: normalized.cases)
         }
         return normalized
+    }
+
+    private func removeSystemAssistantShortcutState(from state: inout AlphaPersistedState) {
+        state.installedPacks.removeAll { pack in
+            pack.artifactKind == "system_model" || pack.runtimeMode == .appleFoundationModels
+        }
+        state.modelJobs.removeAll { job in
+            job.artifactKind == "system_model" ||
+                (job.runtimeMode == .appleFoundationModels && (job.state == .installed || job.totalBytes == 0))
+        }
+    }
+
+    @discardableResult
+    private func recoverDownloadedAssistantArtifacts(from state: inout AlphaPersistedState) -> Bool {
+        let invalidPackIDs = Set(state.installedPacks.filter { !installedModelPackFileIsUsable($0) }.map(\.id))
+        if !invalidPackIDs.isEmpty {
+            state.installedPacks.removeAll { invalidPackIDs.contains($0.id) }
+        }
+
+        var recoveredPacks: [AlphaInstalledModelPack] = []
+        let existingPackPaths = Set(state.installedPacks.map(\.installPath))
+
+        for tier in AlphaCapabilityTier.allCases {
+            guard let recovered = recoveredInstalledPackFromDisk(tier: tier),
+                  !existingPackPaths.contains(recovered.installPath) else { continue }
+            recoveredPacks.append(recovered)
+        }
+
+        guard !recoveredPacks.isEmpty else { return !invalidPackIDs.isEmpty }
+
+        let hadActivePack = state.installedPacks.contains(where: \.isActive)
+        state.installedPacks.append(contentsOf: recoveredPacks)
+
+        if !hadActivePack {
+            let preferredTier = state.settings.activeTier ?? recoveredPacks.first?.tier
+            state.installedPacks = state.installedPacks.map { pack in
+                var copy = pack
+                copy.isActive = pack.tier == preferredTier
+                return copy
+            }
+            state.settings.activeTier = preferredTier
+        }
+
+        let recoveredTitles = recoveredPacks.map(\.tier.title).joined(separator: ", ")
+        state.ledgerEntries.insert(
+            AlphaPrivacyLedgerEntry(
+                title: "Assistant model restored",
+                detail: "Ross found and verified an existing private assistant file on this device: \(recoveredTitles).",
+                purpose: .model_verification,
+                payloadClass: .no_case_data,
+                endpointLabel: "device://model-verify",
+                success: true
+            ),
+            at: 0
+        )
+        return true
+    }
+
+    private func installedModelPackFileIsUsable(_ pack: AlphaInstalledModelPack) -> Bool {
+        guard pack.runtimeMode != .appleFoundationModels,
+              pack.artifactKind != "system_model" else {
+            return false
+        }
+
+        let fileURL = alphaAbsoluteURL(for: pack.installPath)
+        guard !pack.developmentOnly else { return alphaFileByteCount(at: fileURL) > 0 }
+        let artifact = alphaAssistantModelArtifact(for: pack.tier)
+        guard alphaFileByteCount(at: fileURL) == artifact.sizeBytes else { return false }
+        guard pack.checksumVerified else {
+            return alphaSHA256Hex(forFileAt: fileURL)?.caseInsensitiveCompare(artifact.sha256) == .orderedSame
+        }
+        return pack.checksumSha256.caseInsensitiveCompare(artifact.sha256) == .orderedSame
+    }
+
+    private func alphaFileByteCount(at url: URL) -> Int64 {
+        let attributes = try? FileManager.default.attributesOfItem(atPath: url.path())
+        if let size = attributes?[.size] as? NSNumber {
+            return size.int64Value
+        }
+        let values = try? url.resourceValues(forKeys: [.fileSizeKey])
+        return Int64(values?.fileSize ?? 0)
+    }
+
+    private func alphaSHA256Hex(forFileAt url: URL) -> String? {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? handle.close() }
+
+        var hasher = SHA256()
+        do {
+            while true {
+                let data = try handle.read(upToCount: 1024 * 1024)
+                guard let data, !data.isEmpty else { break }
+                hasher.update(data: data)
+            }
+        } catch {
+            return nil
+        }
+        return hasher.finalize().map { String(format: "%02x", $0) }.joined()
+    }
+
+    private func recoveredInstalledPackFromDisk(preferredTier: AlphaCapabilityTier?) -> AlphaInstalledModelPack? {
+        var seenTiers = Set<AlphaCapabilityTier>()
+        let tiers = ([preferredTier].compactMap { $0 } + AlphaCapabilityTier.allCases).filter { tier in
+            seenTiers.insert(tier).inserted
+        }
+        for tier in tiers {
+            if let pack = recoveredInstalledPackFromDisk(tier: tier) {
+                return pack
+            }
+        }
+        return nil
+    }
+
+    private func recoveredInstalledPackFromDisk(tier: AlphaCapabilityTier) -> AlphaInstalledModelPack? {
+        let artifact = alphaAssistantModelArtifact(for: tier)
+        let relativePath = "model-packs/\(tier.rawValue)/\(artifact.fileName)"
+        let fileURL = alphaAbsoluteURL(for: relativePath)
+        guard alphaFileByteCount(at: fileURL) == artifact.sizeBytes else { return nil }
+        let checksumMatches = alphaSHA256Hex(forFileAt: fileURL)?.caseInsensitiveCompare(artifact.sha256) == .orderedSame
+        return AlphaInstalledModelPack(
+            packId: artifact.packId,
+            tier: tier,
+            installPath: relativePath,
+            checksumSha256: artifact.sha256,
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            checksumVerified: checksumMatches,
+            isActive: true
+        )
     }
 
     private func shouldRestoreAssistantSetupFlow(for state: AlphaPersistedState) -> Bool {
@@ -4518,7 +4798,6 @@ final class AlphaRossModel {
         storedResult: AlphaAskResult,
         fallbackResult: AlphaAskResult
     ) {
-        guard fallbackResult.statusNote != "Private assistant" else { return }
         guard activePack != nil else { return }
         let selectedDocuments = selectedAskDocuments(for: scopeCaseID)
         let sourcePack = askRuntimeSourcePack(scopeCaseID: scopeCaseID, selectedDocuments: selectedDocuments)
@@ -4537,8 +4816,8 @@ final class AlphaRossModel {
                 selectedDocuments: selectedDocuments
             ),
             sourcePack: sourcePack,
-            expectedSchema: "AlphaMatterAskRuntimePayload",
-            maxOutputTokens: 1_024,
+            expectedSchema: #"{"headline":"short string","sections":["one to three concise strings"],"statusNote":"optional short string"}"#,
+            maxOutputTokens: 384,
             languageProfile: nil,
             documentClassification: nil,
             extractionMode: activeExtractionMode
@@ -4549,19 +4828,50 @@ final class AlphaRossModel {
             executor: { _ in
                 deterministicOutput
             }
-        ), provider.supportedTasks().contains(.matterQuestionAnswer) else {
+        ), provider.runtimeMode != .deterministicDev, provider.supportedTasks().contains(.matterQuestionAnswer) else {
             return
         }
 
         let chatSessionID = storedResult.chatSessionID
         let chatTurnID = storedResult.chatTurnID
+        let invocation = AlphaModelInvocationStore.begin(
+            task: .matterQuestionAnswer,
+            runtimeMode: provider.runtimeMode,
+            capabilityTier: provider.capabilityTier,
+            caseId: scopeCaseID,
+            documentId: selectedDocuments.first?.id,
+            extractionRunId: nil,
+            input: input
+        )
+        updateStoredAskTurn(
+            scopeCaseID: scopeCaseID,
+            sessionID: chatSessionID,
+            turnID: chatTurnID
+        ) { turn in
+            turn.statusNote = "Private assistant running locally"
+            turn.modelInvocation = invocation
+        }
         Task {
             let output = await provider.run(input)
+            let completedInvocation = AlphaModelInvocationStore.complete(invocation, output: output)
             await MainActor.run {
                 guard let payload = self.matterAskPayload(from: output, fallbackResult: fallbackResult) else {
+                    self.updateStoredAskTurn(
+                        scopeCaseID: scopeCaseID,
+                        sessionID: chatSessionID,
+                        turnID: chatTurnID
+                    ) { turn in
+                        turn.statusNote = "Private assistant could not produce a usable answer. Showing basic local review."
+                        turn.modelInvocation = completedInvocation
+                    }
+                    if var latest = self.latestAskResult, latest.chatTurnID == chatTurnID {
+                        latest.statusNote = "Private assistant could not produce a usable answer. Showing basic local review."
+                        self.latestAskResult = latest
+                    }
                     return
                 }
-                let sourceRefs = output.sourceRefs.isEmpty ? fallbackResult.caseFileSources : Array(output.sourceRefs.prefix(3))
+                let displayableOutputSources = output.sourceRefs.filter { self.sourceRefPointsToDocument($0) }
+                let sourceRefs = displayableOutputSources.isEmpty ? fallbackResult.caseFileSources : Array(displayableOutputSources.prefix(3))
                 self.updateStoredAskTurn(
                     scopeCaseID: scopeCaseID,
                     sessionID: chatSessionID,
@@ -4570,11 +4880,19 @@ final class AlphaRossModel {
                     turn.answerTitle = payload.headline
                     turn.answerSections = payload.sections
                     turn.sourceRefs = sourceRefs
+                    turn.statusNote = turn.publicLawResults.isEmpty
+                        ? (payload.statusNote ?? "Private assistant")
+                        : "Private assistant + public-law results"
+                    turn.modelInvocation = completedInvocation
                 }
-                if self.latestAskResult?.chatTurnID == chatTurnID {
-                    self.latestAskResult?.answerTitle = payload.headline
-                    self.latestAskResult?.answerSections = payload.sections
-                    self.latestAskResult?.caseFileSources = sourceRefs
+                if var latest = self.latestAskResult, latest.chatTurnID == chatTurnID {
+                    latest.answerTitle = payload.headline
+                    latest.answerSections = payload.sections
+                    latest.caseFileSources = sourceRefs
+                    latest.statusNote = latest.publicLawResults.isEmpty == false
+                        ? "Private assistant + public-law results"
+                        : (payload.statusNote ?? "Private assistant")
+                    self.latestAskResult = latest
                 }
             }
         }
@@ -4601,6 +4919,7 @@ final class AlphaRossModel {
         }
 
         instruction += "\nIf support is weak, say the answer needs advocate review instead of inventing facts."
+        instruction += "\nIf a supplied source says next hearing, listed on, or deadline with a date, answer with that date and cite the local source."
         return instruction
     }
 
@@ -4636,7 +4955,7 @@ final class AlphaRossModel {
             candidateDocuments = Array(candidateDocuments.prefix(4))
         }
 
-        var sourceBlocks: [AlphaSourceTextBlock] = []
+        var sourceBlocks = askRuntimeMatterMemorySourcePack(scopeCaseID: scopeCaseID)
         for (caseMatter, document) in candidateDocuments {
             let pages = document.pages.isEmpty
                 ? [AlphaDocumentPage(pageNumber: 1, snippet: document.dominantSourceSnippet ?? alphaAskCompactSnippet(from: document.extractedText))]
@@ -4669,7 +4988,93 @@ final class AlphaRossModel {
             }
         }
 
-        return sourceBlocks
+        if !sourceBlocks.isEmpty {
+            return Array(sourceBlocks.prefix(8))
+        }
+        return askRuntimeMatterMemorySourcePack(scopeCaseID: scopeCaseID)
+    }
+
+    private func askRuntimeMatterMemorySourcePack(scopeCaseID: UUID?) -> [AlphaSourceTextBlock] {
+        let scopedCases: [AlphaCaseMatter]
+        if let scopeCaseID {
+            scopedCases = persisted.cases.filter { $0.id == scopeCaseID }
+        } else {
+            scopedCases = Array(cases.prefix(4))
+        }
+
+        let matterBlocks = scopedCases.prefix(4).compactMap { caseMatter -> AlphaSourceTextBlock? in
+            var lines: [String] = [
+                "Matter: \(caseMatter.title)",
+                "Forum: \(caseMatter.forum)",
+                "Stage: \(caseMatter.stage.title)",
+                "Summary: \(caseMatter.summary)"
+            ]
+            if let nextHearing = caseMatter.nextHearing {
+                lines.append("Next hearing: \(nextHearing.formatted(date: .abbreviated, time: .omitted))")
+            }
+            if !caseMatter.issueHighlights.isEmpty {
+                lines.append("Issues: \(caseMatter.issueHighlights.prefix(3).joined(separator: "; "))")
+            }
+            let openTasks = tasks(for: caseMatter.id).filter { $0.status == .open }.prefix(4).map(\.title)
+            if !openTasks.isEmpty {
+                lines.append("Open tasks: \(openTasks.joined(separator: "; "))")
+            }
+            let scheduledDates = caseMatter.dates
+                .filter { $0.status == .scheduled }
+                .sorted { $0.date < $1.date }
+                .prefix(3)
+                .map { "\($0.title) on \($0.date.formatted(date: .abbreviated, time: .omitted))" }
+            if !scheduledDates.isEmpty {
+                lines.append("Dates: \(scheduledDates.joined(separator: "; "))")
+            }
+
+            let text = lines.joined(separator: "\n")
+            guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+            let documentID = caseMatter.documents.first?.id ?? caseMatter.id
+            let sourceRef = AlphaSourceRef(
+                caseId: caseMatter.id,
+                documentId: documentID,
+                documentTitle: "Matter memory",
+                pageNumber: 1,
+                textSnippet: alphaAskCompactSnippet(from: text),
+                ocrConfidence: nil
+            )
+            return AlphaSourceTextBlock(
+                sourceRef: sourceRef,
+                text: text,
+                pageNumber: 1,
+                languageHint: nil,
+                ocrConfidence: nil
+            )
+        }
+
+        if !matterBlocks.isEmpty {
+            return Array(matterBlocks)
+        }
+
+        let workspaceText = "No matter files have been added yet. Ross can still help create tasks, reminders, and organize a new matter locally."
+        return [
+            AlphaSourceTextBlock(
+                sourceRef: AlphaSourceRef(
+                    caseId: alphaSharedWorkspaceID,
+                    documentId: alphaSharedWorkspaceID,
+                    documentTitle: "Workspace memory",
+                    pageNumber: 1,
+                    textSnippet: workspaceText,
+                    ocrConfidence: nil
+                ),
+                text: workspaceText,
+                pageNumber: 1,
+                languageHint: nil,
+                ocrConfidence: nil
+            )
+        ]
+    }
+
+    private func sourceRefPointsToDocument(_ ref: AlphaSourceRef) -> Bool {
+        persisted.cases.contains { caseMatter in
+            caseMatter.id == ref.caseId && caseMatter.documents.contains { $0.id == ref.documentId }
+        }
     }
 
     private func deterministicAskRuntimeOutput(
@@ -4710,10 +5115,16 @@ final class AlphaRossModel {
         if let data = candidate.data(using: .utf8),
            let payload = try? decoder.decode(AlphaMatterAskRuntimePayload.self, from: data),
            !payload.sections.isEmpty {
-            return AlphaMatterAskRuntimePayload(
+            let cleanedPayload = AlphaMatterAskRuntimePayload(
                 headline: payload.headline.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).ifEmpty(fallbackResult.answerTitle),
                 sections: payload.sections.map { $0.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines) }.filter { !$0.isEmpty },
-                statusNote: payload.statusNote
+                statusNote: payload.statusNote?.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).ifEmpty(fallbackResult.statusNote ?? "Private assistant")
+            )
+            guard !cleanedPayload.sections.isEmpty else { return nil }
+            return AlphaMatterAskRuntimePayload(
+                headline: cleanedPayload.headline,
+                sections: Array(cleanedPayload.sections.prefix(3)),
+                statusNote: cleanedPayload.statusNote
             )
         }
 
@@ -4722,10 +5133,15 @@ final class AlphaRossModel {
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
         guard !paragraphs.isEmpty else { return nil }
-        return AlphaMatterAskRuntimePayload(
+        let cleanedPayload = AlphaMatterAskRuntimePayload(
             headline: fallbackResult.answerTitle,
             sections: Array(paragraphs.prefix(3)),
-            statusNote: fallbackResult.statusNote
+            statusNote: "Private assistant"
+        )
+        return AlphaMatterAskRuntimePayload(
+            headline: cleanedPayload.headline,
+            sections: Array(cleanedPayload.sections.prefix(3)),
+            statusNote: cleanedPayload.statusNote
         )
     }
 
@@ -5102,7 +5518,7 @@ private actor AlphaBackendClient {
 
 private struct AlphaBackendConfiguration {
     let baseURL: URL
-    let requestTimeout: TimeInterval = 10
+    let requestTimeout: TimeInterval = 25
     var accountToken: String {
         RossAuthSessionSnapshot.shared.accountToken(fallback: "acct_local_alpha_device")
     }
@@ -5400,7 +5816,11 @@ private func alphaUnsupportedPackReason(
     case .mediapipeLlm:
         return "\(tier.title) is not active in this iOS build."
     case .llamaCppGguf:
+        #if canImport(SwiftGemmaRuntime)
+        return nil
+        #else
         return "\(tier.title) is not active in this iOS build."
+        #endif
     case .unavailable:
         return "\(tier.title) does not have an available on-device runtime in this build."
     }
@@ -5739,7 +6159,7 @@ private struct AlphaPackSetupScreen: View {
                                 Text("On-device setup")
                                     .font(.caption.weight(.bold))
                                     .foregroundStyle(Color.rossInk)
-                                Text("Ross uses this iPhone first, then downloads a private assistant only if needed.")
+                                Text("Ross downloads a private assistant file and keeps matter work on this iPhone.")
                                     .font(.caption2)
                                     .foregroundStyle(Color.rossInk.opacity(0.68))
                                     .lineLimit(2)
@@ -5749,8 +6169,8 @@ private struct AlphaPackSetupScreen: View {
                         .background(Color.rossGlassSubtleFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     } else {
                         AlphaAssistantActivityStrip(
-                            title: "Uses this iPhone's private assistant",
-                            detail: "Ross uses this iPhone first, then downloads a private assistant only if needed. Matter files stay here.",
+                            title: "Downloads a local private assistant",
+                            detail: "Ross downloads the selected model file, verifies it, and runs Ask Ross on this iPhone.",
                             statusLabel: "On device",
                             tint: Color.rossAccent
                         )
@@ -9556,7 +9976,7 @@ private struct AlphaPackTierInfoSheet: View {
                         }
 
                         HStack(spacing: 10) {
-                            RossInfoPill(title: "No separate model download", systemImage: "arrow.down.circle")
+                            RossInfoPill(title: tier.downloadSizeLabel, systemImage: "arrow.down.circle")
                             RossInfoPill(title: "Change later", systemImage: "slider.horizontal.3")
                         }
                     }
@@ -9578,7 +9998,7 @@ private struct AlphaPackTierInfoSheet: View {
                             .foregroundStyle(Color.rossAccent)
                             .padding(.top, 2)
 
-                        Text("On iPhone, Ross uses the private assistant provided by iOS when it is available. Ross does not use any outside model app or website for iPhone setup.")
+                        Text("Ross downloads this assistant model into app-private storage, verifies the checksum, and uses the local runtime for Ask Ross. Matter files are not uploaded for setup.")
                             .font(.footnote)
                             .foregroundStyle(Color.rossInk.opacity(0.72))
                             .fixedSize(horizontal: false, vertical: true)
@@ -11469,19 +11889,19 @@ private struct AlphaAskTurnCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             if result.kind == .userAsk {
-                HStack {
-                    Spacer(minLength: 48)
-                    Text(result.question)
-                        .font(.callout)
-                        .foregroundStyle(Color.rossInk)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .background(Color.rossCardBackground.opacity(0.92))
-                        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                                .stroke(Color.rossBorder.opacity(0.6), lineWidth: 1)
-                        }
+                    HStack {
+                        Spacer(minLength: 48)
+                        Text(result.question)
+                            .font(.footnote)
+                            .foregroundStyle(Color.rossInk)
+                            .padding(.horizontal, 13)
+                            .padding(.vertical, 9)
+                            .background(Color.rossCardBackground.opacity(0.92))
+                            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    .stroke(Color.rossBorder.opacity(0.6), lineWidth: 1)
+                            }
                 }
             } else {
                 HStack(spacing: 8) {
@@ -11497,7 +11917,7 @@ private struct AlphaAskTurnCard: View {
                 VStack(alignment: .leading, spacing: 14) {
                     HStack(alignment: .center, spacing: 10) {
                         Text(result.answerTitle)
-                            .font(.subheadline.weight(.semibold))
+                            .font(.footnote.weight(.semibold))
 
                         Spacer(minLength: 8)
 
@@ -11515,7 +11935,7 @@ private struct AlphaAskTurnCard: View {
                     ForEach(Array(result.answerSectionItems().enumerated()), id: \.element.id) { index, section in
                         VStack(alignment: .leading, spacing: 14) {
                             Text(section.text)
-                                .font(.callout)
+                                .font(.footnote)
                                 .foregroundStyle(Color.rossInk.opacity(0.92))
                             if index < result.answerSections.count - 1 {
                                 Divider().overlay(Color.rossBorder.opacity(0.4))
@@ -11598,14 +12018,14 @@ private struct AlphaAskTurnCard: View {
                     .foregroundStyle(Color.rossAccent)
                     .accessibilityLabel("Report AI output")
                 }
-                .padding(16)
+                .padding(14)
                 .background {
-                    RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
                         .fill(Color.rossGlassFill)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 }
                 .overlay {
-                    RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
                         .stroke(Color.rossGlassStroke, lineWidth: 1)
                 }
 
