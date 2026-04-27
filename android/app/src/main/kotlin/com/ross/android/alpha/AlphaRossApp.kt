@@ -4407,14 +4407,14 @@ private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack
                 val runtimeHealth = controller.activeRuntimeHealth()
                 val isActivePack = controller.activePack()?.id == pack.id
                 val status = when {
-                    isActivePack && runtimeHealth?.fallbackActive == true -> "Using basic local review"
+                    isActivePack && runtimeHealth?.fallbackActive == true -> "Private assistant unavailable"
                     isActivePack && runtimeHealth?.available == false -> "Needs attention"
                     else -> "Private assistant is ready"
                 }
                 AlphaCard(pack.tier.title, status) {
                     Text(
                         when (pack.tier) {
-                            AlphaCapabilityTier.QuickStart -> "Best for shorter documents. Longer files may use basic local review."
+                            AlphaCapabilityTier.QuickStart -> "Best for shorter documents after setup finishes."
                             AlphaCapabilityTier.CaseAssociate -> "Better extraction for mixed-language or poor scans."
                             AlphaCapabilityTier.SeniorDraftingSupport -> "Better extraction for mixed-language or poor scans, with deeper review passes."
                         },
@@ -4447,7 +4447,7 @@ private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack
                         Text("Runtime mode: ${health.runtimeMode.wireValue}")
                         Text("Artifact kind: ${activePack?.artifactKind ?: "Missing"}")
                         Text("Checksum verified: ${if (health.checksumVerified) "yes" else "no"}")
-                        Text("Fallback active: ${if (health.fallbackActive) "yes" else "no"}")
+                        Text("Runtime available: ${if (health.available && !health.fallbackActive) "yes" else "no"}")
                         Text("Model path: ${if (health.modelPathPresent) "Configured" else "Missing"}")
                         artifact?.let {
                             Text("Technical model: ${it.displayName}")
@@ -6547,13 +6547,13 @@ private fun alphaPrivateAiStatus(controller: AlphaRossController): Pair<String, 
         activeJob?.state == AlphaDownloadState.Failed || activeJob?.state == AlphaDownloadState.PausedError || activeJob?.state == AlphaDownloadState.Cancelled ->
             "Private assistant needs attention" to "Private assistant could not be set up. Open setup to retry."
         activePack != null && runtimeHealth?.fallbackActive == true ->
-            "Using basic local review" to "${activePack.tier.title} is installed, but Ross is using basic local review right now."
+            "Private assistant unavailable" to "${activePack.tier.title} is installed, but the real local runtime is not available right now."
         activePack != null && runtimeHealth?.available == true ->
             "Private assistant is ready" to "${activePack.tier.title} is ready for local review, drafting, and Ask Ross actions on this device."
         activePack != null ->
             "Private assistant needs attention" to "${activePack.tier.title} is installed, but Ross needs to check it before turning it on."
         else ->
-            "Private assistant is not set up." to "Ross can still organize matters, tasks, dates, and files on this device. Using basic local review."
+            "Private assistant is not set up." to "Ross can still organize matters, tasks, dates, and files on this device. Legal answers require model setup."
     }
 }
 

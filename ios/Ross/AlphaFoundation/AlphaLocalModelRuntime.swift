@@ -340,8 +340,8 @@ struct AlphaUnavailableRealLocalModelProvider: AlphaRealLocalModelProvider {
             schemaValid: false,
             warnings: [
                 statusMessage,
-                "Ross reviewed this locally on your device.",
-                pack.truncated ? "The document was long, so Ross focused on the most relevant parts." : "Ross reviewed the entire document locally."
+                "No legal answer was generated because a real local runtime is required.",
+                pack.truncated ? "The prompt pack was truncated before the runtime failed." : "The prompt pack stayed local and was not sent to a cloud model."
             ],
             sourceRefs: pack.includedSourceRefs.isEmpty ? taskInput.sourcePack.map(\.sourceRef) : pack.includedSourceRefs,
             errorCategory: errorCategory
@@ -450,7 +450,7 @@ struct AlphaGemmaLocalModelProvider: AlphaRealLocalModelProvider {
             userFacingStatus: isAvailable()
                 ? "Private assistant is ready on this device."
                 : "The private assistant file is missing from app-private storage.",
-            fallbackActive: !isAvailable(),
+            fallbackActive: false,
             explicitOptInEnabled: true
         )
     }
@@ -711,7 +711,7 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
             estimatedContextTokens: contextWindowEstimate(),
             lastErrorCategory: status.lastErrorCategory,
             userFacingStatus: status.userFacingStatus,
-            fallbackActive: !status.available,
+            fallbackActive: false,
             explicitOptInEnabled: true
         )
     }
@@ -918,10 +918,10 @@ enum AlphaLocalModelRuntime {
             runtimeMode: runtimeMode,
             modelPathLabel: modelPathLabel,
             checksumVerified: checksumVerified,
-            statusMessage: "Private assistant support is not ready on this build, so Ross will keep basic local review active.",
+            statusMessage: "Private assistant support is not ready on this build. A real local runtime is required for legal answers.",
             plannedTasks: plannedTasks,
             errorCategory: "unsupported_runtime",
-            fallbackActive: true,
+            fallbackActive: false,
             explicitOptInEnabled: explicitOptInEnabled
         )
     }
@@ -965,10 +965,10 @@ enum AlphaLocalModelRuntime {
                     runtimeMode: .mediapipeLlm,
                     modelPathLabel: modelPathLabel,
                     checksumVerified: checksumVerified,
-                statusMessage: "Private assistant support is not available on this iOS build. Ross will keep basic local review active.",
+                statusMessage: "Private assistant support is not available on this iOS build. A real local runtime is required for legal answers.",
                 plannedTasks: [.documentClassification, .legalFieldExtraction, .legalFieldVerification, .caseMemorySynthesis, .chronologyGeneration, .orderSummary],
                 errorCategory: "unsupported_runtime",
-                fallbackActive: true,
+                fallbackActive: false,
                 explicitOptInEnabled: debug.enableRealInference
             )
         case .llamaCppGguf:
@@ -995,7 +995,7 @@ enum AlphaLocalModelRuntime {
                 statusMessage: statusMessage,
                 plannedTasks: [.documentClassification, .legalFieldExtraction, .legalFieldVerification, .caseMemorySynthesis, .chronologyGeneration, .orderSummary],
                 errorCategory: errorCategory,
-                fallbackActive: true,
+                fallbackActive: false,
                 explicitOptInEnabled: debug.enableRealInference
             )
         case .appleFoundationModels:
@@ -1017,7 +1017,7 @@ enum AlphaLocalModelRuntime {
                 statusMessage: "This private assistant option is not available on this device yet.",
                 plannedTasks: [.documentClassification, .legalFieldExtraction, .legalFieldVerification, .caseMemorySynthesis, .chronologyGeneration, .orderSummary],
                 errorCategory: "unsupported_runtime",
-                fallbackActive: true,
+                fallbackActive: false,
                 explicitOptInEnabled: debug.enableRealInference
             )
         default:
@@ -1061,6 +1061,22 @@ enum AlphaLocalModelRuntime {
         case nil:
             return nil
         case .deterministicDev:
+            guard alphaAllowsDevelopmentModelArtifacts() else {
+                return AlphaLocalRuntimeHealth(
+                    runtimeMode: .deterministicDev,
+                    available: false,
+                    modelPathPresent: false,
+                    modelPathLabel: nil,
+                    checksumVerified: false,
+                    supportedTasks: [],
+                    maxInputChars: nil,
+                    estimatedContextTokens: nil,
+                    lastErrorCategory: "development_artifact_blocked",
+                    userFacingStatus: "Development-only assistant artifacts are disabled for this build.",
+                    fallbackActive: false,
+                    explicitOptInEnabled: runtimeEnvironment.enableRealInference
+                )
+            }
             return DeterministicDevLocalModelProvider(capabilityTier: tier) { _ in
                 AlphaLocalModelOutput(rawText: "", parsedJson: nil, schemaValid: false, warnings: [], sourceRefs: [])
             }.runtimeHealth()
@@ -1076,7 +1092,7 @@ enum AlphaLocalModelRuntime {
                 estimatedContextTokens: nil,
                 lastErrorCategory: "unsupported_runtime",
                 userFacingStatus: "Private assistant runtime unavailable.",
-                fallbackActive: true,
+                fallbackActive: false,
                 explicitOptInEnabled: runtimeEnvironment.enableRealInference
             )
         default:
@@ -1100,16 +1116,12 @@ enum AlphaLocalModelRuntime {
         case nil:
             return nil
         case .deterministicDev:
+            guard alphaAllowsDevelopmentModelArtifacts() else {
+                return nil
+            }
             return DeterministicDevLocalModelProvider(capabilityTier: tier, executor: executor)
         case .mediapipeLlm, .llamaCppGguf, .appleFoundationModels, .unavailable:
-            let real = realProvider(activePack: activePack, tier: tier, runtimeEnvironment: runtimeEnvironment)
-            if let real, real.isAvailable() {
-                return real
-            }
-            guard alphaAllowsDevelopmentModelArtifacts() else {
-                return real
-            }
-            return DeterministicDevLocalModelProvider(capabilityTier: tier, executor: executor)
+            return realProvider(activePack: activePack, tier: tier, runtimeEnvironment: runtimeEnvironment)
         }
     }
 }

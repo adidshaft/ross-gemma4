@@ -10,17 +10,6 @@ export interface PublicSearchInput {
   confirmedPublicPreview: true;
 }
 
-interface PublicLawFixture {
-  id: string;
-  jurisdiction: string;
-  source: string;
-  title: string;
-  citation: string;
-  snippet: string;
-  link: string;
-  tags: string[];
-}
-
 interface PublicSearchResult {
   resultId: string;
   source: string;
@@ -89,64 +78,6 @@ type FetchLike = typeof fetch;
 
 const GEMINI_SEARCH_TIMEOUT_MS = 15_000;
 
-const PUBLIC_LAW_FIXTURES: PublicLawFixture[] = [
-  {
-    id: "arb-1996-section-34",
-    jurisdiction: "IN-ALL",
-    source: "Official or licensed source (preview)",
-    title: "Arbitration and Conciliation Act, 1996: setting aside awards under Section 34",
-    citation: "Arbitration and Conciliation Act, 1996, s. 34",
-    snippet:
-      "Sanitized fixture summary covering limited judicial review of arbitral awards and common public-law grounds raised in challenge petitions.",
-    link: "https://example.invalid/public-law/fixtures/arb-1996-section-34",
-    tags: ["arbitration", "award", "section 34", "judicial review", "challenge"]
-  },
-  {
-    id: "limitation-1963-overview",
-    jurisdiction: "IN-ALL",
-    source: "Official or licensed source (preview)",
-    title: "Limitation Act, 1963: condensed limitation periods overview",
-    citation: "Limitation Act, 1963",
-    snippet:
-      "Sanitized fixture summary of commonly referenced limitation principles for civil filings, delay, and condonation issues.",
-    link: "https://example.invalid/public-law/fixtures/limitation-1963-overview",
-    tags: ["limitation", "delay", "condonation", "civil procedure", "filing period"]
-  },
-  {
-    id: "evidence-65b-overview",
-    jurisdiction: "IN-ALL",
-    source: "Official or licensed source (preview)",
-    title: "Indian Evidence Act: electronic records and Section 65B certificates",
-    citation: "Indian Evidence Act, 1872, s. 65B",
-    snippet:
-      "Sanitized fixture summary for foundational requirements around admissibility of electronic evidence and certificate practice.",
-    link: "https://example.invalid/public-law/fixtures/evidence-65b-overview",
-    tags: ["electronic evidence", "65b", "certificate", "digital records", "admissibility"]
-  },
-  {
-    id: "consumer-protection-2019-overview",
-    jurisdiction: "IN-ALL",
-    source: "Official or licensed source (preview)",
-    title: "Consumer Protection Act, 2019: complaint and appellate structure overview",
-    citation: "Consumer Protection Act, 2019",
-    snippet:
-      "Sanitized fixture summary of forum structure, limitation touchpoints, and typical statutory remedies in consumer matters.",
-    link: "https://example.invalid/public-law/fixtures/consumer-protection-2019-overview",
-    tags: ["consumer", "complaint", "appeal", "forum", "remedy"]
-  },
-  {
-    id: "cpc-temporary-injunctions",
-    jurisdiction: "IN-ALL",
-    source: "Official or licensed source (preview)",
-    title: "Code of Civil Procedure: temporary injunctions and interim relief",
-    citation: "Code of Civil Procedure, 1908, O. XXXIX rr. 1-2",
-    snippet:
-      "Sanitized fixture summary of prima facie case, balance of convenience, and irreparable injury factors for interim relief.",
-    link: "https://example.invalid/public-law/fixtures/cpc-temporary-injunctions",
-    tags: ["injunction", "interim relief", "order 39", "civil procedure", "balance of convenience"]
-  }
-];
-
 const PUBLIC_LAW_GEMINI_SYSTEM_INSTRUCTION = [
   "You help Ross perform public-law research for Indian advocates.",
   "Only the sanitized user query is user-provided context.",
@@ -204,20 +135,41 @@ function uniqueNonEmpty(values: Array<string | undefined>): string[] {
   return [...seen];
 }
 
-function buildFixtureScore(fixture: PublicLawFixture, queryTokens: string[], jurisdiction: string): number {
-  const haystack = normalizeText(
-    [fixture.title, fixture.citation, fixture.snippet, ...fixture.tags].join(" ")
-  );
-
-  let score = fixture.jurisdiction === jurisdiction ? 8 : fixture.jurisdiction === "IN-ALL" ? 4 : 0;
-
-  for (const token of queryTokens) {
-    if (haystack.includes(token)) {
-      score += fixture.title.toLowerCase().includes(token) ? 6 : 3;
-    }
+function sourceQualityScore(host: string | undefined, title: string | undefined, link: string | undefined): number {
+  const normalized = [host, title, link]
+    .filter((value): value is string => Boolean(value))
+    .join(" ")
+    .toLowerCase();
+  if (!normalized) {
+    return 0;
+  }
+  if (
+    normalized.endsWith(".gov.in") ||
+    normalized.endsWith(".nic.in") ||
+    normalized.includes("sci.gov.in") ||
+    normalized.includes("indiacode.nic.in") ||
+    normalized.includes("judgments.ecourts.gov.in")
+  ) {
+    return 30;
+  }
+  if (
+    normalized.includes("indiankanoon.org") ||
+    normalized.includes("livelaw.in") ||
+    normalized.includes("scobserver.in") ||
+    normalized.includes("barandbench.com")
+  ) {
+    return 14;
+  }
+  if (
+    normalized.includes("scribd.com") ||
+    normalized.includes("studocu.com") ||
+    normalized.includes("coursehero.com") ||
+    normalized.includes("slideshare.net")
+  ) {
+    return -100;
   }
 
-  return score;
+  return 0;
 }
 
 function buildCacheMetadata(input: PublicSearchInput) {
@@ -237,52 +189,6 @@ function extractGeminiAnswerText(candidate: GeminiCandidate | undefined): string
       .join(" ")
       .trim() ?? ""
   );
-}
-
-function buildFixtureResults(input: PublicSearchInput): PublicSearchResult[] {
-  const queryTokens = tokenize(input.query);
-  const scoredFixtures = PUBLIC_LAW_FIXTURES.map((fixture) => ({
-    fixture,
-    score: buildFixtureScore(fixture, queryTokens, input.jurisdiction)
-  }))
-    .filter(({ score, fixture }) => score > 0 || fixture.jurisdiction === "IN-ALL")
-    .sort((left, right) => right.score - left.score || left.fixture.title.localeCompare(right.fixture.title));
-
-  return scoredFixtures.slice(0, 4).map(({ fixture, score }) => ({
-    resultId: fixture.id,
-    source: fixture.source,
-    title: fixture.title,
-    citation: fixture.citation,
-    snippet: fixture.snippet,
-    link: fixture.link,
-    jurisdiction: fixture.jurisdiction,
-    score,
-    matchedTerms: queryTokens.filter((token) =>
-      normalizeText([fixture.title, fixture.citation, fixture.snippet, ...fixture.tags].join(" ")).includes(token)
-    )
-  }));
-}
-
-function buildFixtureResponse(input: PublicSearchInput, statusNote: string): PublicSearchResponse {
-  const results = buildFixtureResults(input);
-
-  return {
-    requestId: createId("pls"),
-    approvalState: "confirmed_public_preview",
-    queryHash: hashForAudit(input.query),
-    connector: {
-      mode: "backend_fixture_index",
-      liveSourceConnected: false,
-      cache: buildCacheMetadata(input)
-    },
-    results,
-    resultCount: results.length,
-    disclaimers: [
-      "Public-law results are drafts for advocate review.",
-      "Only a sanitized public-law query crossed the network boundary.",
-      statusNote
-    ]
-  };
 }
 
 function buildGeminiResults(input: PublicSearchInput, payload: GeminiGenerateContentResponse): PublicSearchResult[] {
@@ -314,6 +220,10 @@ function buildGeminiResults(input: PublicSearchInput, payload: GeminiGenerateCon
       const host = safeHostname(link);
       const supportSegments = supportTextByChunk.get(index) ?? [];
       const title = chunk.web?.title?.trim() || host || "Public-law source";
+      const qualityScore = sourceQualityScore(host, title, link);
+      if (qualityScore <= -100) {
+        return null;
+      }
       const citation = host ? `Public web source • ${host}` : "Public web source";
       const snippet = clipText(
         uniqueNonEmpty([
@@ -338,7 +248,7 @@ function buildGeminiResults(input: PublicSearchInput, payload: GeminiGenerateCon
         snippet,
         link,
         jurisdiction: input.jurisdiction,
-        score: supportSegments.length * 10 + matchedTerms.length * 4 + Math.max(0, 4 - index),
+        score: qualityScore + supportSegments.length * 10 + matchedTerms.length * 4 + Math.max(0, 4 - index),
         matchedTerms
       };
     })
@@ -356,13 +266,11 @@ export class PublicSearchProxyService {
   ) {}
 
   async search(input: PublicSearchInput): Promise<PublicSearchResponse> {
-    const liveSearchFallbackNote =
-      "Live public-law results are temporarily unavailable, so Ross is using a privacy-safe fallback index.";
-
     if (!this.env.publicLawGeminiApiKey) {
-      return buildFixtureResponse(
-        input,
-        "Live public-law search is not configured on this backend, so Ross is using a privacy-safe fallback index."
+      throw new AppError(
+        503,
+        "public_law_gemini_unavailable",
+        "Live Gemini public-law search is required for this backend and is not configured."
       );
     }
 
@@ -416,25 +324,41 @@ export class PublicSearchProxyService {
         })
       });
     } catch {
-      return buildFixtureResponse(input, liveSearchFallbackNote);
+      throw new AppError(
+        503,
+        "public_law_gemini_unavailable",
+        "Live Gemini public-law search is required for this backend and is not available right now."
+      );
     } finally {
       clearTimeout(timeout);
     }
 
     if (!response.ok) {
-      return buildFixtureResponse(input, liveSearchFallbackNote);
+      throw new AppError(
+        503,
+        "public_law_gemini_unavailable",
+        "Live Gemini public-law search returned an unavailable response."
+      );
     }
 
     let payload: GeminiGenerateContentResponse;
     try {
       payload = (await response.json()) as GeminiGenerateContentResponse;
     } catch {
-      return buildFixtureResponse(input, liveSearchFallbackNote);
+      throw new AppError(
+        503,
+        "public_law_gemini_unavailable",
+        "Live Gemini public-law search returned an unreadable response."
+      );
     }
 
     const results = buildGeminiResults(input, payload);
     if (results.length === 0) {
-      return buildFixtureResponse(input, liveSearchFallbackNote);
+      throw new AppError(
+        503,
+        "public_law_gemini_unavailable",
+        "Live Gemini public-law search returned no grounded sources."
+      );
     }
 
     return {

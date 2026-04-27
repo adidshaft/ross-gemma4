@@ -8,9 +8,12 @@ function parseJson<T>(payload: string): T {
   return JSON.parse(payload) as T;
 }
 
-function buildTestEnv(overrides: Record<string, string | undefined> = {}) {
+function buildTestEnv(
+  overrides: Record<string, string | undefined> = {},
+  nodeEnvOverride = "test"
+) {
   return readRuntimeEnv({
-    nodeEnvOverride: "test",
+    nodeEnvOverride,
     environment: {
       ...process.env,
       ROSS_PUBLIC_LAW_GEMINI_API_KEY: "test-gemini-key",
@@ -64,6 +67,12 @@ test("public-law search uses Gemini grounding when configured and sends only the
                   uri: "https://www.scobserver.in/journal/limitation-act-delay-condonation-overview",
                   title: "Limitation and delay condonation overview"
                 }
+              },
+              {
+                web: {
+                  uri: "https://www.scribd.com/document/12345/random-delay-condonation-notes",
+                  title: "Uploaded notes on delay condonation"
+                }
               }
             ],
             groundingSupports: [
@@ -73,7 +82,7 @@ test("public-law search uses Gemini grounding when configured and sends only the
                   endIndex: 72,
                   text: "Delay condonation depends on sufficient cause and documented diligence."
                 },
-                groundingChunkIndices: [0, 1]
+                groundingChunkIndices: [0, 1, 2]
               }
             ]
           }
@@ -128,6 +137,7 @@ test("public-law search uses Gemini grounding when configured and sends only the
   assert.ok(body.resultCount >= 1);
   assert.match(body.results[0]?.title ?? "", /delay|condonation|overview/i);
   assert.match(body.results[0]?.source ?? "", /livelaw\.in|scobserver\.in/i);
+  assert.equal(body.results.some((result) => result.link.includes("scribd.com")), false);
 
   assert.equal(fetchCalls.length, 1);
   assert.equal(
@@ -276,7 +286,7 @@ test("unsafe public-law queries are rejected before any Gemini request is made",
   assert.doesNotMatch(response.body, /FAKE\/123\/2026/i);
 });
 
-test("Gemini connector failures fall back to the privacy-safe index without echoing the query", async (t) => {
+test("Gemini connector failures fail loudly without echoing the query", async (t) => {
   const originalFetch = globalThis.fetch;
 
   globalThis.fetch = (async () =>
@@ -314,13 +324,45 @@ test("Gemini connector failures fall back to the privacy-safe index without echo
     }
   });
 
-  assert.equal(response.statusCode, 200);
-  assert.match(response.body, /backend_fixture_index/);
-  assert.match(response.body, /temporarily unavailable/i);
+  assert.equal(response.statusCode, 503);
+  assert.match(response.body, /public_law_gemini_unavailable/);
+  assert.doesNotMatch(response.body, /backend_fixture_index/);
   assert.doesNotMatch(response.body, new RegExp(query, "i"));
 });
 
-test("Gemini responses without usable grounding fall back to the privacy-safe index", async (t) => {
+test("production public-law search fails loudly when Gemini is not configured", async (t) => {
+  const app = await buildApp({
+    env: buildTestEnv(
+      {
+        ROSS_PUBLIC_LAW_GEMINI_API_KEY: undefined,
+        GEMINI_API_KEY: undefined
+      },
+      "production"
+    ),
+    emitLogsToConsole: false
+  });
+
+  t.after(async () => {
+    await app.close();
+  });
+
+  const response = await app.inject({
+    method: "POST",
+    url: "/public-law/search",
+    payload: {
+      query: "Latest Indian public-law guidance on delay condonation",
+      jurisdiction: "IN-ALL",
+      language: "en",
+      confirmedPublicPreview: true
+    }
+  });
+
+  assert.equal(response.statusCode, 503);
+  assert.match(response.body, /public_law_gemini_unavailable/);
+  assert.doesNotMatch(response.body, /backend_fixture_index/);
+});
+
+test("Gemini responses without usable grounding fail loudly", async (t) => {
   const originalFetch = globalThis.fetch;
 
   globalThis.fetch = (async () =>
@@ -366,7 +408,7 @@ test("Gemini responses without usable grounding fall back to the privacy-safe in
     }
   });
 
-  assert.equal(response.statusCode, 200);
-  assert.match(response.body, /backend_fixture_index/);
-  assert.match(response.body, /temporarily unavailable/i);
+  assert.equal(response.statusCode, 503);
+  assert.match(response.body, /public_law_gemini_unavailable/);
+  assert.doesNotMatch(response.body, /backend_fixture_index/);
 });

@@ -89,7 +89,7 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
     var summary: String {
         switch self {
         case .quickStart:
-            "Lighter setup for short orders, quick summaries, and basic local review."
+            "Lighter setup for short orders, quick summaries, and simple private Ask Ross actions."
         case .caseAssociate:
             "Recommended for everyday matters, document review, chronology work, and source-backed answers."
         case .seniorDraftingSupport:
@@ -133,7 +133,7 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
     var bestFor: String {
         switch self {
         case .quickStart:
-            "Fast intake, smaller devices, and basic local review for short documents."
+            "Fast intake, smaller devices, and short document Q&A after the model is installed."
         case .caseAssociate:
             "Most advocates who need document review, next dates, chronologies, notes, and source-backed answers on-device."
         case .seniorDraftingSupport:
@@ -1465,9 +1465,9 @@ struct AlphaModelDownloadJob: Identifiable, Codable, Hashable, Sendable {
         bytesDownloaded: Int64,
         totalBytes: Int64,
         checksumSha256: String,
-        artifactKind: String = "tiny_dev_artifact",
-        runtimeMode: AlphaPackRuntimeMode = .deterministicDev,
-        developmentOnly: Bool = true,
+        artifactKind: String = "local_model_artifact",
+        runtimeMode: AlphaPackRuntimeMode = .unavailable,
+        developmentOnly: Bool = false,
         minimumAppVersion: String = "0.1.0",
         failureReason: String? = nil,
         createdAt: Date = .now,
@@ -1529,9 +1529,9 @@ struct AlphaModelDownloadJob: Identifiable, Codable, Hashable, Sendable {
         bytesDownloaded = try container.decode(Int64.self, forKey: .bytesDownloaded)
         totalBytes = try container.decode(Int64.self, forKey: .totalBytes)
         checksumSha256 = try container.decode(String.self, forKey: .checksumSha256)
-        artifactKind = try container.decodeIfPresent(String.self, forKey: .artifactKind) ?? "tiny_dev_artifact"
-        runtimeMode = try container.decodeIfPresent(AlphaPackRuntimeMode.self, forKey: .runtimeMode) ?? .deterministicDev
-        developmentOnly = try container.decodeIfPresent(Bool.self, forKey: .developmentOnly) ?? true
+        artifactKind = try container.decodeIfPresent(String.self, forKey: .artifactKind) ?? "local_model_artifact"
+        runtimeMode = try container.decodeIfPresent(AlphaPackRuntimeMode.self, forKey: .runtimeMode) ?? .unavailable
+        developmentOnly = try container.decodeIfPresent(Bool.self, forKey: .developmentOnly) ?? false
         minimumAppVersion = try container.decodeIfPresent(String.self, forKey: .minimumAppVersion) ?? "0.1.0"
         failureReason = try container.decodeIfPresent(String.self, forKey: .failureReason)
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? .now
@@ -1560,10 +1560,10 @@ struct AlphaInstalledModelPack: Identifiable, Codable, Hashable, Sendable {
         tier: AlphaCapabilityTier,
         installPath: String,
         checksumSha256: String,
-        artifactKind: String = "tiny_dev_artifact",
-        runtimeMode: AlphaPackRuntimeMode = .deterministicDev,
-        developmentOnly: Bool = true,
-        checksumVerified: Bool = true,
+        artifactKind: String = "local_model_artifact",
+        runtimeMode: AlphaPackRuntimeMode = .unavailable,
+        developmentOnly: Bool = false,
+        checksumVerified: Bool = false,
         minimumAppVersion: String = "0.1.0",
         installedAt: Date = .now,
         isActive: Bool
@@ -1604,10 +1604,10 @@ struct AlphaInstalledModelPack: Identifiable, Codable, Hashable, Sendable {
         tier = try container.decode(AlphaCapabilityTier.self, forKey: .tier)
         installPath = try container.decode(String.self, forKey: .installPath)
         checksumSha256 = try container.decode(String.self, forKey: .checksumSha256)
-        artifactKind = try container.decodeIfPresent(String.self, forKey: .artifactKind) ?? "tiny_dev_artifact"
-        runtimeMode = try container.decodeIfPresent(AlphaPackRuntimeMode.self, forKey: .runtimeMode) ?? .deterministicDev
-        developmentOnly = try container.decodeIfPresent(Bool.self, forKey: .developmentOnly) ?? true
-        checksumVerified = try container.decodeIfPresent(Bool.self, forKey: .checksumVerified) ?? true
+        artifactKind = try container.decodeIfPresent(String.self, forKey: .artifactKind) ?? "local_model_artifact"
+        runtimeMode = try container.decodeIfPresent(AlphaPackRuntimeMode.self, forKey: .runtimeMode) ?? .unavailable
+        developmentOnly = try container.decodeIfPresent(Bool.self, forKey: .developmentOnly) ?? false
+        checksumVerified = try container.decodeIfPresent(Bool.self, forKey: .checksumVerified) ?? false
         minimumAppVersion = try container.decodeIfPresent(String.self, forKey: .minimumAppVersion) ?? "0.1.0"
         installedAt = try container.decodeIfPresent(Date.self, forKey: .installedAt) ?? .now
         isActive = try container.decodeIfPresent(Bool.self, forKey: .isActive) ?? false
@@ -2229,7 +2229,7 @@ extension AlphaPrivacyLedgerEntry {
         switch title {
         case "Model catalog checked":
             "Checked private assistant setup"
-        case "Private AI Pack queued", "Private AI Pack verified", "Private AI Pack fallback installed":
+        case "Private AI Pack queued", "Private AI Pack verified":
             "Set up private assistant"
         case "Public-law query sent":
             "Searched public law"
@@ -2254,7 +2254,7 @@ extension AlphaPrivacyLedgerEntry {
             "Ross sent only a generic public-law query. Your case files stayed on this device."
         case "Public-law search unavailable":
             "Ross could not complete the sanitized public-law search. Your case files stayed on this device."
-        case "Private AI Pack verified", "Private AI Pack fallback installed":
+        case "Private AI Pack verified":
             "Private assistant was prepared on this device."
         default:
             detail

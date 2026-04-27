@@ -324,7 +324,7 @@ class AlphaLocalModelRuntimeTest {
     }
 
     @Test
-    fun `real runtime selection falls back safely when android adapter is unavailable`() = runBlocking {
+    fun `real runtime selection does not fall back when android adapter is unavailable`() = runBlocking {
         val pack = installedPack(
             tier = AlphaCapabilityTier.CaseAssociate,
             runtimeMode = AlphaPackRuntimeMode.MediapipeLlm,
@@ -352,11 +352,12 @@ class AlphaLocalModelRuntimeTest {
             appPrivateRoot = Files.createTempDirectory("ross-missing-runtime-health").toFile(),
         )
 
-        assertTrue(provider is DeterministicDevLocalModelProvider)
-        assertEquals(AlphaPackRuntimeMode.DeterministicDev, provider?.runtimeMode)
+        assertTrue(provider is AlphaRealLocalModelProvider)
+        assertFalse(provider is DeterministicDevLocalModelProvider)
+        assertEquals(AlphaPackRuntimeMode.MediapipeLlm, provider?.runtimeMode)
         assertEquals(AlphaPackRuntimeMode.MediapipeLlm, health?.runtimeMode)
         assertFalse(health?.available ?: true)
-        assertTrue(health?.fallbackActive == true)
+        assertFalse(health?.fallbackActive ?: true)
         assertEquals("model_file_not_found", health?.lastErrorCategory)
     }
 
@@ -380,7 +381,7 @@ class AlphaLocalModelRuntimeTest {
 
         assertEquals(AlphaPackRuntimeMode.MediapipeLlm, health?.runtimeMode)
         assertFalse(health?.available ?: true)
-        assertTrue(health?.fallbackActive ?: false)
+        assertFalse(health?.fallbackActive ?: true)
         assertEquals("model_file_not_found", health?.lastErrorCategory)
     }
 

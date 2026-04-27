@@ -264,16 +264,41 @@ test("public-law search rejects obvious private matter content and fake secrets 
   assert.doesNotMatch(serializedLogs, /blue suitcase near temple/i);
 });
 
-test("production public search logs only hashed query metadata and never the full query", async (t) => {
+test("Gemini public search logs only hashed query metadata and never the full query", async (t) => {
   const fakeSecret = "FAKE_SECRET_MUST_NOT_APPEAR";
   const auditSink: AuditEvent[] = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () =>
+    new Response(
+      JSON.stringify({
+        candidates: [
+          {
+            content: { parts: [{ text: "Grounded arbitration source." }] },
+            groundingMetadata: {
+              groundingChunks: [
+                { web: { uri: "https://example.com/arbitration", title: "Arbitration source" } }
+              ],
+              groundingSupports: [
+                {
+                  segment: { text: "Grounded arbitration source." },
+                  groundingChunkIndices: [0]
+                }
+              ]
+            }
+          }
+        ]
+      }),
+      { status: 200, headers: { "content-type": "application/json" } }
+    )) as typeof fetch;
+
   const app = await buildApp({
-    env: buildTestEnv({}, "production"),
+    env: buildTestEnv({ ROSS_PUBLIC_LAW_GEMINI_API_KEY: "test-gemini-key" }, "production"),
     auditSink,
     emitLogsToConsole: false
   });
 
   t.after(async () => {
+    globalThis.fetch = originalFetch;
     await app.close();
   });
 
@@ -292,19 +317,44 @@ test("production public search logs only hashed query metadata and never the ful
   assert.doesNotMatch(response.body, new RegExp(fakeSecret));
 
   const serializedLogs = JSON.stringify(auditSink);
-  assert.match(response.body, /backend_fixture_index/);
+  assert.match(response.body, /gemini_google_search/);
   assert.match(serializedLogs, /queryHash/);
   assert.match(serializedLogs, /queryLength/);
   assert.doesNotMatch(serializedLogs, new RegExp(fakeSecret));
 });
 
 test("public-law search accepts settings consent metadata without broadening payload", async (t) => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () =>
+    new Response(
+      JSON.stringify({
+        candidates: [
+          {
+            content: { parts: [{ text: "Temporary injunction source." }] },
+            groundingMetadata: {
+              groundingChunks: [
+                { web: { uri: "https://example.com/order-39", title: "Order 39 source" } }
+              ],
+              groundingSupports: [
+                {
+                  segment: { text: "Temporary injunction source." },
+                  groundingChunkIndices: [0]
+                }
+              ]
+            }
+          }
+        ]
+      }),
+      { status: 200, headers: { "content-type": "application/json" } }
+    )) as typeof fetch;
+
   const app = await buildApp({
-    env: buildTestEnv(),
+    env: buildTestEnv({ ROSS_PUBLIC_LAW_GEMINI_API_KEY: "test-gemini-key" }),
     emitLogsToConsole: false
   });
 
   t.after(async () => {
+    globalThis.fetch = originalFetch;
     await app.close();
   });
 

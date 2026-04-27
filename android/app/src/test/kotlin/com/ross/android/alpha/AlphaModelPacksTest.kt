@@ -38,7 +38,7 @@ class AlphaModelPacksTest {
     }
 
     @Test
-    fun `large packs pause for wifi when mobile data is not allowed`() {
+    fun `large packs start real download at zero bytes when mobile data is not allowed`() {
         val job = AlphaModelPackManager.stageJob(
             tier = AlphaCapabilityTier.CaseAssociate,
             mobileAllowed = false,
@@ -46,8 +46,9 @@ class AlphaModelPacksTest {
             now = nowIso(),
         )
 
-        assertEquals(AlphaDownloadState.PausedWaitingForWifi, job.state)
+        assertEquals(AlphaDownloadState.Downloading, job.state)
         assertEquals(AlphaDownloadPolicy.WifiOnly, job.networkPolicy)
+        assertEquals(0L, job.bytesDownloaded)
     }
 
     @Test

@@ -892,7 +892,7 @@ final class AlphaRossModel {
         guard let caseMatter = persisted.cases.first(where: { $0.id == storageCaseID }) else { return [] }
         guard let sessionID = caseMatter.activeChatSessionID ?? caseMatter.chatSessions.first?.id else { return [] }
         guard let session = caseMatter.chatSessions.first(where: { $0.id == sessionID }) else { return [] }
-        return session.turns.map { askResult(from: $0, in: caseMatter, chatSessionID: session.id) }
+        return session.turns.reversed().map { askResult(from: $0, in: caseMatter, chatSessionID: session.id) }
     }
 
     func chatSessions(for caseId: UUID) -> [AlphaChatSession] {
@@ -1357,7 +1357,7 @@ final class AlphaRossModel {
         let localResult = buildLocalAskResult(question: cleaned, scopeCaseID: scopeCaseID)
         let initialResult: AlphaAskResult
         if hasRealLocalAsk {
-            initialResult = buildPendingLocalModelAskResult(question: cleaned, scopeCaseID: scopeCaseID, fallbackResult: localResult)
+            initialResult = buildPendingLocalModelAskResult(question: cleaned, scopeCaseID: scopeCaseID, baseResult: localResult)
         } else if localResult.answerTitle == "Private assistant setup" {
             initialResult = localResult
         } else {
@@ -1422,7 +1422,7 @@ final class AlphaRossModel {
             question: cleaned,
             scopeCaseID: scopeCaseID,
             storedResult: storedResult,
-            fallbackResult: localResult
+            baseResult: localResult
         )
     }
 
@@ -1440,7 +1440,7 @@ final class AlphaRossModel {
     private func buildPendingLocalModelAskResult(
         question: String,
         scopeCaseID: UUID?,
-        fallbackResult: AlphaAskResult
+        baseResult: AlphaAskResult
     ) -> AlphaAskResult {
         AlphaAskResult(
             chatSessionID: nil,
@@ -1449,14 +1449,14 @@ final class AlphaRossModel {
             question: question,
             scopeCaseID: scopeCaseID,
             scopeLabel: scopeLabel(for: scopeCaseID),
-            selectedDocumentTitles: fallbackResult.selectedDocumentTitles,
+            selectedDocumentTitles: baseResult.selectedDocumentTitles,
             answerTitle: "Private assistant running locally",
             answerSections: ["Ross is reading the selected local context with the on-device model."],
-            caseFileSources: fallbackResult.caseFileSources,
+            caseFileSources: baseResult.caseFileSources,
             publicLawPreview: nil,
             publicLawResults: [],
             statusNote: "Private assistant running locally",
-            needsReviewWarning: fallbackResult.needsReviewWarning
+            needsReviewWarning: baseResult.needsReviewWarning
         )
     }
 
@@ -1496,7 +1496,7 @@ final class AlphaRossModel {
             publicLawPreview: nil,
             publicLawResults: [],
             statusNote: "Private assistant setup required",
-            needsReviewWarning: "No mock LLM answer was used."
+            needsReviewWarning: "Real local model required."
         )
     }
 
@@ -2927,9 +2927,16 @@ final class AlphaRossModel {
     }
 
     func removeInstalledPack(_ pack: AlphaInstalledModelPack) {
+        if !pack.installPath.hasPrefix("system://") {
+            let fileURL = alphaAbsoluteURL(for: pack.installPath)
+            try? FileManager.default.removeItem(at: fileURL)
+        }
         persisted.installedPacks.removeAll { $0.id == pack.id }
         if persisted.settings.activeTier == pack.tier {
-            persisted.settings.activeTier = persisted.installedPacks.first(where: \.isActive)?.tier
+            persisted.settings.activeTier = persisted.installedPacks.first?.tier
+        }
+        if !persisted.installedPacks.contains(where: \.isActive), !persisted.installedPacks.isEmpty {
+            persisted.installedPacks[0].isActive = true
         }
         persisted.ledgerEntries.insert(
             AlphaPrivacyLedgerEntry(
@@ -3009,7 +3016,7 @@ final class AlphaRossModel {
 
             updateJob(jobID) {
                 $0.state = .failed
-                $0.failureReason = "The on-device private assistant is not available on this iPhone yet. Ross will keep using basic local review."
+                $0.failureReason = "The on-device private assistant is not available on this iPhone yet. A real local model is required for legal answers."
                 $0.updatedAt = .now
             }
             persisted.ledgerEntries.insert(
@@ -4725,7 +4732,7 @@ final class AlphaRossModel {
                 selectedDocumentTitles: [],
                 answerTitle: "Private assistant setup",
                 answerSections: [
-                    "Before setup, Ross can still organize matters, tasks, dates, files, and basic local review on this device.",
+                    "Before setup, Ross can still organize matters, tasks, dates, and files on this device.",
                     "After setup, the private assistant adds stronger document review, summaries, chronologies, and source-backed answers.",
                     "Open Settings, then My assistant, to choose Basic, Standard, or Advanced."
                 ],
@@ -4869,16 +4876,11 @@ final class AlphaRossModel {
         question: String,
         scopeCaseID: UUID?,
         storedResult: AlphaAskResult,
-        fallbackResult: AlphaAskResult
+        baseResult: AlphaAskResult
     ) {
         guard activePack != nil else { return }
         let selectedDocuments = selectedAskDocuments(for: scopeCaseID)
         let sourcePack = askRuntimeSourcePack(scopeCaseID: scopeCaseID, selectedDocuments: selectedDocuments)
-        let deterministicOutput = deterministicAskRuntimeOutput(
-            fallbackResult: fallbackResult,
-            selectedDocuments: selectedDocuments,
-            sourceRefs: sourcePack.map(\.sourceRef)
-        )
 
         let input = AlphaLocalModelInput(
             task: .matterQuestionAnswer,
@@ -4900,7 +4902,14 @@ final class AlphaRossModel {
             activePack: activePack,
             requestedTier: activePack?.tier ?? persisted.settings.activeTier ?? selectedTier,
             executor: { _ in
-                deterministicOutput
+                AlphaLocalModelOutput(
+                    rawText: "",
+                    parsedJson: nil,
+                    schemaValid: false,
+                    warnings: ["Development local ask output is disabled."],
+                    sourceRefs: [],
+                    errorCategory: "development_artifact_blocked"
+                )
             }
         ), provider.runtimeMode != .deterministicDev, provider.supportedTasks().contains(.matterQuestionAnswer) else {
             return
@@ -4929,7 +4938,7 @@ final class AlphaRossModel {
             let output = await provider.run(input)
             let completedInvocation = AlphaModelInvocationStore.complete(invocation, output: output)
             await MainActor.run {
-                guard let payload = self.matterAskPayload(from: output, fallbackResult: fallbackResult) else {
+                guard let payload = self.matterAskPayload(from: output, baseResult: baseResult) else {
                     self.updateStoredAskTurn(
                         scopeCaseID: scopeCaseID,
                         sessionID: chatSessionID,
@@ -4938,7 +4947,7 @@ final class AlphaRossModel {
                         turn.answerTitle = "Private assistant could not answer"
                         turn.answerSections = [
                             "The local model ran, but did not return a usable response for this question.",
-                            "Ross did not replace it with a mock or template legal answer."
+                            "Ross did not generate a substitute answer because a real local model result is required."
                         ]
                         turn.statusNote = "Private assistant output invalid"
                         turn.modelInvocation = completedInvocation
@@ -4947,7 +4956,7 @@ final class AlphaRossModel {
                         latest.answerTitle = "Private assistant could not answer"
                         latest.answerSections = [
                             "The local model ran, but did not return a usable response for this question.",
-                            "Ross did not replace it with a mock or template legal answer."
+                            "Ross did not generate a substitute answer because a real local model result is required."
                         ]
                         latest.statusNote = "Private assistant output invalid"
                         self.latestAskResult = latest
@@ -4955,7 +4964,7 @@ final class AlphaRossModel {
                     return
                 }
                 let displayableOutputSources = output.sourceRefs.filter { self.sourceRefPointsToDocument($0) }
-                let sourceRefs = displayableOutputSources.isEmpty ? fallbackResult.caseFileSources : Array(displayableOutputSources.prefix(3))
+                let sourceRefs = displayableOutputSources.isEmpty ? baseResult.caseFileSources : Array(displayableOutputSources.prefix(3))
                 self.updateStoredAskTurn(
                     scopeCaseID: scopeCaseID,
                     sessionID: chatSessionID,
@@ -5181,38 +5190,9 @@ final class AlphaRossModel {
         }
     }
 
-    private func deterministicAskRuntimeOutput(
-        fallbackResult: AlphaAskResult,
-        selectedDocuments: [AlphaAskDocumentOption],
-        sourceRefs: [AlphaSourceRef]
-    ) -> AlphaLocalModelOutput {
-        var sections = fallbackResult.answerSections
-        if sections.isEmpty {
-            sections = ["I could not find this in your case files."]
-        }
-        if !selectedDocuments.isEmpty, sections.count < 3 {
-            sections.append("Tagged files in scope: \(selectedDocuments.prefix(2).map(\.title).joined(separator: ", ")).")
-        }
-        let payload = AlphaMatterAskRuntimePayload(
-            headline: fallbackResult.answerTitle,
-            sections: Array(sections.prefix(3)),
-            statusNote: fallbackResult.statusNote
-        )
-        let encoder = JSONEncoder()
-        let encodedPayload = (try? encoder.encode(payload)).flatMap { String(data: $0, encoding: .utf8) }
-
-        return AlphaLocalModelOutput(
-            rawText: encodedPayload ?? "",
-            parsedJson: encodedPayload,
-            schemaValid: encodedPayload != nil,
-            warnings: [],
-            sourceRefs: sourceRefs
-        )
-    }
-
     private func matterAskPayload(
         from output: AlphaLocalModelOutput,
-        fallbackResult: AlphaAskResult
+        baseResult: AlphaAskResult
     ) -> AlphaMatterAskRuntimePayload? {
         let candidate = output.parsedJson ?? output.rawText
         let decoder = JSONDecoder()
@@ -5220,9 +5200,9 @@ final class AlphaRossModel {
            let payload = try? decoder.decode(AlphaMatterAskRuntimePayload.self, from: data),
            !payload.sections.isEmpty {
             let cleanedPayload = AlphaMatterAskRuntimePayload(
-                headline: payload.headline.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).ifEmpty(fallbackResult.answerTitle),
+                headline: payload.headline.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).ifEmpty(baseResult.answerTitle),
                 sections: payload.sections.map { $0.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines) }.filter { !$0.isEmpty },
-                statusNote: payload.statusNote?.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).ifEmpty(fallbackResult.statusNote ?? "Private assistant")
+                statusNote: payload.statusNote?.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).ifEmpty(baseResult.statusNote ?? "Private assistant")
             )
             guard !cleanedPayload.sections.isEmpty else { return nil }
             return AlphaMatterAskRuntimePayload(
@@ -5238,7 +5218,7 @@ final class AlphaRossModel {
             .filter { !$0.isEmpty }
         guard !paragraphs.isEmpty else { return nil }
         let cleanedPayload = AlphaMatterAskRuntimePayload(
-            headline: fallbackResult.answerTitle,
+            headline: baseResult.answerTitle,
             sections: Array(paragraphs.prefix(3)),
             statusNote: "Private assistant"
         )
@@ -10393,7 +10373,7 @@ private func alphaAssistantActivityDetail(for state: AlphaDownloadState) -> Stri
     case .pausedNoStorage:
         "Ross needs more free space before the assistant can finish setting up."
     case .pausedError, .failed:
-        "Ross could not turn on the private assistant. You can keep using basic local review and retry setup later."
+        "Ross could not turn on the private assistant. Legal answers require model setup; retry when the issue is fixed."
     case .notStarted, .installed, .cancelled:
         "No setup is running right now."
     }
@@ -11329,8 +11309,8 @@ private func alphaAssistantStatusSnapshot(_ model: AlphaRossModel) -> AlphaAssis
         let runtimeHealth = model.activeRuntimeHealth
         if runtimeHealth?.fallbackActive == true {
             return AlphaAssistantStatusSnapshot(
-                title: "Using basic local review",
-                detail: "\(activePack.tier.title) is installed, but Ross is using basic local review right now.",
+                title: "Private assistant unavailable",
+                detail: "\(activePack.tier.title) is installed, but the real local runtime is not available right now.",
                 tint: Color.rossHighlight
             )
         }
@@ -11352,7 +11332,7 @@ private func alphaAssistantStatusSnapshot(_ model: AlphaRossModel) -> AlphaAssis
 
     return AlphaAssistantStatusSnapshot(
         title: "Private assistant is not set up.",
-        detail: "Ross can still organize matters, tasks, dates, and files on this device. Using basic local review.",
+        detail: "Ross can still organize matters, tasks, dates, and files on this device. Legal answers require model setup.",
         tint: Color.rossAccent
     )
 }
@@ -14444,7 +14424,7 @@ private struct AlphaPrivateAISettingsScreen: View {
                                 AlphaSettingsValueRow(label: "Runtime mode", value: runtimeHealth.runtimeMode.rawValue)
                                 AlphaSettingsValueRow(label: "Artifact kind", value: model.activePack?.artifactKind ?? "Missing")
                                 AlphaSettingsValueRow(label: "Checksum verified", value: runtimeHealth.checksumVerified ? "Yes" : "No")
-                                AlphaSettingsValueRow(label: "Fallback active", value: runtimeHealth.fallbackActive ? "Yes" : "No")
+                                AlphaSettingsValueRow(label: "Runtime available", value: runtimeHealth.available && !runtimeHealth.fallbackActive ? "Yes" : "No")
                                 AlphaSettingsValueRow(label: "Model path", value: runtimeHealth.modelPathPresent ? "Configured" : "Missing")
 
                                 if let activePack = model.activePack {

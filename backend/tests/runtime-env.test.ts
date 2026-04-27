@@ -80,7 +80,7 @@ test("readRuntimeEnv defaults model catalog by environment and accepts productio
   assert.equal(readRuntimeEnv({ environment: {} }).modelCatalogMode, "production_metadata");
   assert.equal(
     readRuntimeEnv({ nodeEnvOverride: "test", environment: {} }).modelCatalogMode,
-    "dev"
+    "production_metadata"
   );
   assert.equal(
     readRuntimeEnv({ environment: { ROSS_MODEL_CATALOG_MODE: "production_metadata" } }).modelCatalogMode,
@@ -95,7 +95,7 @@ test("readRuntimeEnv defaults model catalog by environment and accepts productio
       nodeEnvOverride: "test",
       environment: { ROSS_MODEL_CATALOG_MODE: "unexpected" }
     }).modelCatalogMode,
-    "dev"
+    "production_metadata"
   );
 });
 

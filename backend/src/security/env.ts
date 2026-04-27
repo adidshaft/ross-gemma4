@@ -61,7 +61,7 @@ function parseOptionalPositiveInteger(value: string | undefined): number | undef
 
 function parseModelCatalogMode(
   value: string | undefined,
-  nodeEnv: string
+  _nodeEnv: string
 ): "dev" | "production_metadata" {
   const normalized = (value ?? "").trim().toLowerCase();
   if (normalized === "production_metadata") {
@@ -70,7 +70,7 @@ function parseModelCatalogMode(
   if (normalized === "dev") {
     return "dev";
   }
-  return nodeEnv === "test" ? "dev" : "production_metadata";
+  return "production_metadata";
 }
 
 function trimmedValue(value: string | undefined): string | undefined {

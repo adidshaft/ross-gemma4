@@ -811,6 +811,17 @@ private struct AlphaLocalExtractionOrchestrator {
         ) { taskInput in
             await deterministicRuntimeOutput(caseId: caseId, document: document, pages: pages, input: taskInput)
         }
+        let realProviderReady = provider.map { $0.runtimeMode != .deterministicDev && $0.isAvailable() } ?? false
+        if pipelinePlan.requiresInstalledPack, !alphaAllowsDevelopmentModelArtifacts(), !realProviderReady {
+            return failedExtractionResult(
+                caseId: caseId,
+                document: document,
+                pages: pages,
+                pipelinePlan: pipelinePlan,
+                extractionRunID: extractionRunID,
+                warning: "Private assistant setup is required before Ross can review this document with a local LLM."
+            )
+        }
         var modelInvocations: [AlphaLocalModelInvocation] = []
 
         let cleanedPages = await runCleanupPass(
@@ -898,7 +909,7 @@ private struct AlphaLocalExtractionOrchestrator {
                     caseId: caseId,
                     documentId: document.id,
                     kind: .unsupportedLayout,
-                    message: "Basic is best for shorter files. Ross used local fallback review for this longer document.",
+                    message: "Basic is best for shorter files. Choose Standard or Advanced before Ross reviews this longer document with a local LLM.",
                     sourceRefs: cleanedPages.prefix(2).map { page in
                         AlphaSourceRef(
                             caseId: caseId,
@@ -975,6 +986,60 @@ private struct AlphaLocalExtractionOrchestrator {
             caseMemoryUpdates: caseMemory,
             reviewQueue: reviewQueue,
             modelInvocations: modelInvocations,
+            pipelinePlan: pipelinePlan
+        )
+    }
+
+    private func failedExtractionResult(
+        caseId: UUID,
+        document: AlphaCaseDocument,
+        pages: [AlphaDocumentPage],
+        pipelinePlan: AlphaExtractionPipelinePlan,
+        extractionRunID: UUID,
+        warning: String
+    ) -> AlphaLocalExtractionResult {
+        let finding = AlphaExtractionFinding(
+            caseId: caseId,
+            documentId: document.id,
+            kind: .unsupportedLayout,
+            message: warning,
+            sourceRefs: pages.prefix(1).map { page in
+                AlphaSourceRef(
+                    caseId: caseId,
+                    documentId: document.id,
+                    documentTitle: document.title,
+                    pageNumber: page.pageNumber,
+                    textSnippet: page.snippet,
+                    ocrConfidence: page.ocrConfidence
+                )
+            },
+            severity: .warning
+        )
+        return AlphaLocalExtractionResult(
+            pages: pages,
+            languageProfile: detectLanguageProfile(documentID: document.id, pages: pages),
+            classification: nil,
+            extractedFields: [],
+            extractionRun: AlphaExtractionRun(
+                id: extractionRunID,
+                caseId: caseId,
+                documentId: document.id,
+                mode: pipelinePlan.mode,
+                status: .failed,
+                progressState: .failed,
+                startedAt: .now,
+                completedAt: .now,
+                pagesProcessed: pages.count,
+                totalPages: document.pageCount,
+                fieldsExtracted: 0,
+                fieldsNeedingReview: 0,
+                warnings: [warning],
+                errorMessage: "Private assistant setup required."
+            ),
+            findings: [finding],
+            caseMemoryUpdates: [],
+            reviewQueue: AlphaReviewQueue(fieldIDs: [], findingIDs: [finding.id], summary: warning),
+            modelInvocations: [],
             pipelinePlan: pipelinePlan
         )
     }
@@ -1090,6 +1155,39 @@ private struct AlphaLocalExtractionOrchestrator {
         modelInvocations.append(AlphaModelInvocationStore.complete(invocation, output: output))
     }
 
+    private func needsReviewClassification(
+        caseId: UUID,
+        document: AlphaCaseDocument,
+        pages: [AlphaDocumentPage]
+    ) -> AlphaLegalDocumentClassification {
+        AlphaLegalDocumentClassification(
+            documentId: document.id,
+            type: .misc,
+            subtype: "Private assistant review required",
+            confidence: 0,
+            sourceRefs: pages.prefix(1).map { page in
+                AlphaSourceRef(
+                    caseId: caseId,
+                    documentId: document.id,
+                    documentTitle: document.title,
+                    pageNumber: page.pageNumber,
+                    textSnippet: page.snippet,
+                    ocrConfidence: page.ocrConfidence
+                )
+            },
+            needsReview: true
+        )
+    }
+
+    private func markFieldsNeedsReview(_ fields: [AlphaExtractedLegalField]) -> [AlphaExtractedLegalField] {
+        fields.map { field in
+            var copy = field
+            copy.confidence = min(copy.confidence, 0.2)
+            copy.needsReview = true
+            return copy
+        }
+    }
+
     private func runClassificationPass(
         provider: (any AlphaLocalModelProvider)?,
         activePack: AlphaInstalledModelPack?,
@@ -1103,7 +1201,7 @@ private struct AlphaLocalExtractionOrchestrator {
     ) async -> AlphaLegalDocumentClassification {
         let deterministic = classify(caseId: caseId, document: document, pages: pages, languageProfile: languageProfile)
         guard let provider, provider.supportedTasks().contains(.documentClassification) else {
-            return deterministic
+            return alphaAllowsDevelopmentModelArtifacts() ? deterministic : needsReviewClassification(caseId: caseId, document: document, pages: pages)
         }
 
         let input = AlphaLocalModelInput(
@@ -1136,7 +1234,7 @@ private struct AlphaLocalExtractionOrchestrator {
             return llmClassification
         }
         return AlphaModelOutputValidator.parseClassification(from: output, using: decoder)
-            .flatMap { $0.sourceRefs.isEmpty ? nil : $0 } ?? deterministic
+            .flatMap { $0.sourceRefs.isEmpty ? nil : $0 } ?? (alphaAllowsDevelopmentModelArtifacts() ? deterministic : needsReviewClassification(caseId: caseId, document: document, pages: pages))
     }
 
     private func runExtractionPass(
@@ -1160,7 +1258,7 @@ private struct AlphaLocalExtractionOrchestrator {
             languageProfile: languageProfile
         )
         guard let provider, provider.supportedTasks().contains(.legalFieldExtraction) else {
-            return deterministic
+            return alphaAllowsDevelopmentModelArtifacts() ? deterministic : []
         }
 
         let input = AlphaLocalModelInput(
@@ -1197,7 +1295,7 @@ private struct AlphaLocalExtractionOrchestrator {
         }
         let fields = AlphaModelOutputValidator.parseFields(from: output, using: decoder)
         return if fields.isEmpty || !AlphaModelOutputValidator.fieldsHaveSourceRefs(fields) {
-            deterministic
+            alphaAllowsDevelopmentModelArtifacts() ? deterministic : []
         } else {
             fields
         }
@@ -1264,7 +1362,7 @@ private struct AlphaLocalExtractionOrchestrator {
     ) async -> (fields: [AlphaExtractedLegalField], findings: [AlphaExtractionFinding]) {
         let deterministic = verifyFields(caseId: caseId, document: document, pages: pages, fields: fields)
         guard let provider, provider.supportedTasks().contains(.legalFieldVerification) else {
-            return deterministic
+            return alphaAllowsDevelopmentModelArtifacts() ? deterministic : (markFieldsNeedsReview(fields), [])
         }
 
         let input = AlphaLocalModelInput(
@@ -1302,7 +1400,7 @@ private struct AlphaLocalExtractionOrchestrator {
             !payload.fields.isEmpty,
             AlphaModelOutputValidator.fieldsHaveSourceRefs(payload.fields)
         else {
-            return deterministic
+            return alphaAllowsDevelopmentModelArtifacts() ? deterministic : (markFieldsNeedsReview(fields), [])
         }
         return (payload.fields, payload.findings)
     }
@@ -1321,7 +1419,7 @@ private struct AlphaLocalExtractionOrchestrator {
     ) async -> [AlphaCaseMemoryUpdate] {
         let deterministic = buildCaseMemory(caseId: caseId, documentID: document.id, classification: classification, fields: fields)
         guard let provider, provider.supportedTasks().contains(.caseMemorySynthesis) else {
-            return deterministic
+            return alphaAllowsDevelopmentModelArtifacts() ? deterministic : []
         }
 
         let input = AlphaLocalModelInput(
@@ -1352,7 +1450,7 @@ private struct AlphaLocalExtractionOrchestrator {
             return llmMemory
         }
         let parsed = AlphaModelOutputValidator.parseCaseMemory(from: output, using: decoder)
-        return parsed.isEmpty ? deterministic : parsed
+        return parsed.isEmpty ? (alphaAllowsDevelopmentModelArtifacts() ? deterministic : []) : parsed
     }
 
     private func parseLLMClassification(

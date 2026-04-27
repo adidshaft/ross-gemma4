@@ -113,7 +113,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             let result = await MainActor.run { model.latestAskResult }
             XCTAssertEqual("Private assistant setup", result?.answerTitle)
             XCTAssertEqual("Private assistant", result?.statusNote)
-            XCTAssertTrue(result?.answerSections.joined(separator: " ").contains("basic local review") == true)
+            XCTAssertTrue(result?.answerSections.joined(separator: " ").contains("organize matters") == true)
             XCTAssertEqual([], result?.selectedDocumentTitles)
             XCTAssertEqual([], result?.caseFileSources)
         }
@@ -856,7 +856,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
-    func testAssistantSetupCompletesToInstalledPackWhenBackendIsUnavailable() async throws {
+    func testAssistantSetupCanUseExplicitDevelopmentArtifactInTestHarness() async throws {
         rossSetBackendBaseURLOverride("http://127.0.0.1:9")
         defer { rossSetBackendBaseURLOverride(nil) }
 
@@ -883,6 +883,76 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             }
             XCTAssertEqual(installedJob?.state, .installed)
             XCTAssertEqual(snapshot.settings.activeTier, .caseAssociate)
+        }
+    }
+
+    func testInstalledPackActivationAndRemovalDeleteLocalArtifact() async throws {
+        try await withRestoredStore { store in
+            let basicPath = "model-packs/quick_start/lifecycle-basic.gguf"
+            let standardPath = "model-packs/case_associate/lifecycle-standard.gguf"
+            let basicURL = alphaAbsoluteURL(for: basicPath)
+            let standardURL = alphaAbsoluteURL(for: standardPath)
+            try FileManager.default.createDirectory(
+                at: basicURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try FileManager.default.createDirectory(
+                at: standardURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try Data("basic-real-artifact".utf8).write(to: basicURL)
+            try Data("standard-real-artifact".utf8).write(to: standardURL)
+
+            let basicPack = AlphaInstalledModelPack(
+                packId: "gemma-4-e2b-q4",
+                tier: .quickStart,
+                installPath: basicPath,
+                checksumSha256: String(repeating: "a", count: 64),
+                artifactKind: "local_model_artifact",
+                runtimeMode: .llamaCppGguf,
+                developmentOnly: false,
+                checksumVerified: true,
+                isActive: true
+            )
+            let standardPack = AlphaInstalledModelPack(
+                packId: "gemma-4-e4b-q4",
+                tier: .caseAssociate,
+                installPath: standardPath,
+                checksumSha256: String(repeating: "b", count: 64),
+                artifactKind: "local_model_artifact",
+                runtimeMode: .llamaCppGguf,
+                developmentOnly: false,
+                checksumVerified: true,
+                isActive: false
+            )
+
+            var state = AlphaPersistedState.seed()
+            state.installedPacks = [basicPack, standardPack]
+            state.settings.activeTier = .quickStart
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+            await MainActor.run {
+                model.persisted = state
+            }
+
+            await MainActor.run {
+                model.activateInstalledPack(standardPack)
+            }
+            var snapshot = await MainActor.run { model.persisted }
+            XCTAssertEqual(.caseAssociate, snapshot.settings.activeTier)
+            XCTAssertTrue(snapshot.installedPacks.first { $0.id == standardPack.id }?.isActive == true)
+
+            await MainActor.run {
+                model.removeInstalledPack(standardPack)
+            }
+            snapshot = await MainActor.run { model.persisted }
+            XCTAssertFalse(FileManager.default.fileExists(atPath: standardURL.path()))
+            XCTAssertFalse(snapshot.installedPacks.contains { $0.id == standardPack.id })
+            XCTAssertEqual(.quickStart, snapshot.settings.activeTier)
+            XCTAssertTrue(snapshot.installedPacks.first { $0.id == basicPack.id }?.isActive == true)
         }
     }
 

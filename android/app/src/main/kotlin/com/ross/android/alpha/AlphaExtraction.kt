@@ -302,9 +302,23 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
                 appPrivateRoot = appPrivateRoot,
             )
         }
+        val realProviderReady = provider != null &&
+            provider.runtimeMode != AlphaPackRuntimeMode.DeterministicDev &&
+            provider.isAvailable()
+        if (pipelinePlan.requiresInstalledPack && !alphaAllowsDevelopmentModelArtifacts() && !realProviderReady) {
+            return@withContext failedExtractionResult(
+                caseId = caseId,
+                document = document,
+                pages = acquiredPages,
+                pipelinePlan = pipelinePlan,
+                extractionRunId = extractionRunId,
+                warning = runtimeHealth?.userFacingStatus
+                    ?: "Private assistant setup is required before Ross can review this document with a local LLM.",
+            )
+        }
         val modelInvocations = mutableListOf<AlphaLocalModelInvocation>()
         val localInferenceMetrics = mutableListOf<AlphaLocalInferenceMetrics>()
-        val fallbackActive = runtimeHealth?.fallbackActive == true && runtimeHealth.runtimeMode != AlphaPackRuntimeMode.DeterministicDev
+        val fallbackActive = false
 
         val cleanedPages = runCleanupPass(
             provider = provider,
@@ -400,7 +414,7 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
                         caseId = caseId,
                         documentId = document.id,
                         kind = AlphaExtractionFindingKind.UnsupportedLayout,
-                        message = "Basic is best for shorter files. Ross used local fallback review for this longer document.",
+                        message = "Basic is best for shorter files. Choose Standard or Advanced before Ross reviews this longer document with a local LLM.",
                         sourceRefs = cleanedPages.take(2).map { page ->
                             AlphaSourceRef(
                                 caseId = caseId,
@@ -421,7 +435,7 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
                         caseId = caseId,
                         documentId = document.id,
                         kind = AlphaExtractionFindingKind.UnsupportedLayout,
-                        message = "Ross used the available local extraction mode. Better extraction requires a compatible Private AI Pack.",
+                        message = "Private assistant setup needs attention before Ross can review this document with a local LLM.",
                         sourceRefs = cleanedPages.take(1).map { page ->
                             AlphaSourceRef(
                                 caseId = caseId,
@@ -503,6 +517,72 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
             reviewQueue = reviewQueue,
             modelInvocations = modelInvocations.toList(),
             localInferenceMetrics = localInferenceMetrics.toList(),
+            pipelinePlan = pipelinePlan,
+        )
+    }
+
+    private fun failedExtractionResult(
+        caseId: String,
+        document: AlphaCaseDocument,
+        pages: List<AlphaPageAcquisition>,
+        pipelinePlan: AlphaExtractionPipelinePlan,
+        extractionRunId: String,
+        warning: String,
+    ): AlphaLocalExtractionResult {
+        val updatedPages = pages.map { page ->
+            AlphaDocumentPage(
+                pageNumber = page.pageNumber,
+                snippet = page.snippet,
+                extractedText = page.text,
+                anchorText = page.anchorText,
+                ocrConfidence = page.ocrConfidence,
+                ocrStatus = page.ocrStatus,
+                indexingStatus = page.indexingStatus,
+            )
+        }
+        val finding = AlphaExtractionFinding(
+            caseId = caseId,
+            documentId = document.id,
+            kind = AlphaExtractionFindingKind.UnsupportedLayout,
+            message = warning,
+            sourceRefs = updatedPages.take(1).map { page ->
+                AlphaSourceRef(
+                    caseId = caseId,
+                    documentId = document.id,
+                    documentTitle = document.title,
+                    pageNumber = page.pageNumber,
+                    textSnippet = page.snippet,
+                    ocrConfidence = page.ocrConfidence,
+                )
+            },
+            severity = AlphaExtractionFindingSeverity.Warning,
+        )
+        return AlphaLocalExtractionResult(
+            pages = updatedPages,
+            languageProfile = detectLanguageProfile(document.id, pages),
+            classification = null,
+            extractedFields = emptyList(),
+            extractionRun = AlphaExtractionRun(
+                id = extractionRunId,
+                caseId = caseId,
+                documentId = document.id,
+                mode = pipelinePlan.mode,
+                status = AlphaExtractionRunStatus.Failed,
+                progressState = AlphaExtractionProgressState.Failed,
+                startedAt = nowIso(),
+                completedAt = nowIso(),
+                pagesProcessed = updatedPages.size,
+                totalPages = document.pageCount,
+                fieldsExtracted = 0,
+                fieldsNeedingReview = 0,
+                warnings = listOf(warning),
+                errorMessage = "Private assistant setup required.",
+            ),
+            findings = listOf(finding),
+            caseMemoryUpdates = emptyList(),
+            reviewQueue = AlphaReviewQueue(fieldIds = emptyList(), findingIds = listOf(finding.id), summary = warning),
+            modelInvocations = emptyList(),
+            localInferenceMetrics = emptyList(),
             pipelinePlan = pipelinePlan,
         )
     }
@@ -677,6 +757,37 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
         )
     }
 
+    private fun needsReviewClassification(
+        caseId: String,
+        document: AlphaCaseDocument,
+        pages: List<AlphaPageAcquisition>,
+    ): AlphaLegalDocumentClassification =
+        AlphaLegalDocumentClassification(
+            documentId = document.id,
+            type = AlphaLegalDocumentType.Misc,
+            subtype = "Private assistant review required",
+            confidence = 0.0,
+            sourceRefs = pages.take(1).map { page ->
+                AlphaSourceRef(
+                    caseId = caseId,
+                    documentId = document.id,
+                    documentTitle = document.title,
+                    pageNumber = page.pageNumber,
+                    textSnippet = page.snippet,
+                    ocrConfidence = page.ocrConfidence,
+                )
+            },
+            needsReview = true,
+        )
+
+    private fun markFieldsNeedsReview(fields: List<AlphaExtractedLegalField>): List<AlphaExtractedLegalField> =
+        fields.map { field ->
+            field.copy(
+                confidence = minOf(field.confidence, 0.2),
+                needsReview = true,
+            )
+        }
+
     private suspend fun runClassificationPass(
         provider: AlphaLocalModelProvider?,
         activePack: AlphaInstalledPack?,
@@ -692,7 +803,7 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
     ): AlphaLegalDocumentClassification {
         val deterministic = classifyDocument(document, pages, languageProfile)
         if (provider == null || !provider.supportedTasks().contains(AlphaLocalModelTask.DocumentClassification)) {
-            return deterministic
+            return if (alphaAllowsDevelopmentModelArtifacts()) deterministic else needsReviewClassification(caseId, document, pages)
         }
         val batchedPages = pages.take(pageBatchLimit(activePack, AlphaLocalModelTask.DocumentClassification))
         val input = AlphaLocalModelInput(
@@ -725,7 +836,7 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
             fieldsVerified = if (parsed != null && !parsed.needsReview) 1 else 0,
             fieldsNeedingReview = if (parsed?.needsReview == true) 1 else 0,
         )
-        return parsed ?: deterministic
+        return parsed ?: if (alphaAllowsDevelopmentModelArtifacts()) deterministic else needsReviewClassification(caseId, document, pages)
     }
 
     private suspend fun runExtractionPass(
@@ -744,7 +855,7 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
     ): List<AlphaExtractedLegalField> {
         val deterministic = extractFields(caseId, document, pages, languageProfile, classification, mode)
         if (provider == null || !provider.supportedTasks().contains(AlphaLocalModelTask.LegalFieldExtraction)) {
-            return deterministic
+            return if (alphaAllowsDevelopmentModelArtifacts()) deterministic else emptyList()
         }
         val pageBatches = pages.chunked(pageBatchLimit(activePack, AlphaLocalModelTask.LegalFieldExtraction))
         val batchedFields = mutableListOf<AlphaExtractedLegalField>()
@@ -782,7 +893,7 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
                 fieldsNeedingReview = fields.size,
             )
             if (fields.isEmpty() || !AlphaModelOutputValidator.fieldsHaveSourceRefs(fields)) {
-                return deterministic
+                return if (alphaAllowsDevelopmentModelArtifacts()) deterministic else emptyList()
             }
             batchedFields += fields
         }
@@ -863,7 +974,7 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
     ): VerificationBundle {
         val deterministic = verifyFields(caseId, document, pages, fields)
         if (provider == null || !provider.supportedTasks().contains(AlphaLocalModelTask.LegalFieldVerification)) {
-            return deterministic
+            return if (alphaAllowsDevelopmentModelArtifacts()) deterministic else VerificationBundle(markFieldsNeedsReview(fields), emptyList())
         }
         val verifiedFields = mutableListOf<AlphaExtractedLegalField>()
         val findings = mutableListOf<AlphaExtractionFinding>()
@@ -906,14 +1017,14 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
                 unsupportedAccepted = 0,
             )
             if (payload == null || payload.fields.isEmpty()) {
-                return deterministic
+                return if (alphaAllowsDevelopmentModelArtifacts()) deterministic else VerificationBundle(markFieldsNeedsReview(fields), emptyList())
             }
             verifiedFields += payload.fields
             findings += payload.findings
         }
 
         return if (verifiedFields.isEmpty()) {
-            deterministic
+            if (alphaAllowsDevelopmentModelArtifacts()) deterministic else VerificationBundle(markFieldsNeedsReview(fields), emptyList())
         } else {
             VerificationBundle(mergeFields(verifiedFields, emptyList()), findings)
         }
@@ -935,7 +1046,7 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
     ): List<AlphaCaseMemoryUpdate> {
         val deterministic = buildCaseMemory(caseId, document.id, classification, fields)
         if (provider == null || !provider.supportedTasks().contains(AlphaLocalModelTask.CaseMemorySynthesis)) {
-            return deterministic
+            return if (alphaAllowsDevelopmentModelArtifacts()) deterministic else emptyList()
         }
         val input = AlphaLocalModelInput(
             task = AlphaLocalModelTask.CaseMemorySynthesis,
@@ -964,7 +1075,7 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
             localInferenceMetrics = localInferenceMetrics,
             fallbackActive = fallbackActive,
         )
-        return updates.ifEmpty { deterministic }
+        return updates.ifEmpty { if (alphaAllowsDevelopmentModelArtifacts()) deterministic else emptyList() }
     }
 
     private suspend fun acquirePages(document: AlphaCaseDocument, file: File): List<AlphaPageAcquisition> = when (document.kind) {

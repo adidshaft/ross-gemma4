@@ -102,7 +102,7 @@ Legal citations now preserved by tests include:
 
 If the backend is configured with `ROSS_PUBLIC_LAW_GEMINI_API_KEY` or `GEMINI_API_KEY`, the confirmed public-law request is resolved server-side through Gemini with Google Search grounding.
 
-If no live connector is available, Ross falls back to a privacy-safe backend index for QA.
+If no live connector is available, Ross fails the public-law request instead of returning fixture results.
 
 ## Private AI Pack model mapping
 
@@ -116,7 +116,7 @@ Technical diagnostics may show the underlying Gemma 4 E2B Q4 Gemma 4 Q4 metadata
 
 Matter Search is a separate embedding model requirement for local semantic search and source-backed answers. Its install lifecycle is still TODO; do not claim it is ready until it is downloaded, verified, and used by retrieval.
 
-The backend default model catalog still serves tiny deterministic artifacts for tests. `ROSS_MODEL_CATALOG_MODE=production_metadata` advertises Gemma 4 E2B Q4 metadata without serving large files.
+The backend defaults to production metadata outside tests. Test-only deterministic artifacts are limited to `NODE_ENV=test` or explicit `ROSS_MODEL_CATALOG_MODE=dev`.
 
 ## Current iOS truth on April 23, 2026
 

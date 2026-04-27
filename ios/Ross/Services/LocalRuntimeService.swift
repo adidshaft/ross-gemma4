@@ -36,7 +36,7 @@ struct StubLocalRuntimeService: LocalRuntimeServicing {
             )
         }
 
-        let packSummary = activePack?.title ?? "basic local review"
+        let packSummary = activePack?.title ?? "private assistant setup required"
         let firstIssue = caseFile.workspace.issueHighlights.first ?? "Reconfirm the strongest issue from the case file."
         let firstTask = caseFile.workspace.draftTasks.first ?? "Prepare a short source-backed note."
         let instantModeLine = instantModeAssessment(

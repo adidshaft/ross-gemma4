@@ -61,7 +61,7 @@ class AlphaLawyerUsabilityTest {
 
         assertEquals(0, publicLawCalls)
         assertNull(controller.publicLawPreview)
-        assertEquals("Answered from your files", controller.latestAskResult?.statusNote)
+        assertEquals("Setup required", controller.latestAskResult?.statusNote)
     }
 
     @Test
@@ -79,9 +79,9 @@ class AlphaLawyerUsabilityTest {
         shadowOf(Looper.getMainLooper()).idle()
 
         val result = controller.latestAskResult
-        assertEquals("Private assistant setup", result?.answerTitle)
-        assertEquals("Private assistant", result?.statusNote)
-        assertTrue(result?.answerSections?.joinToString(" ")?.contains("basic local review") == true)
+        assertEquals("Private assistant setup required", result?.answerTitle)
+        assertEquals("Setup required", result?.statusNote)
+        assertTrue(result?.answerSections?.joinToString(" ")?.contains("real local model is required", ignoreCase = true) == true)
         assertTrue(result?.selectedDocumentTitles?.isEmpty() == true)
         assertTrue(result?.caseFileSources?.isEmpty() == true)
     }
@@ -188,8 +188,8 @@ class AlphaLawyerUsabilityTest {
             webEnabled = false,
         )
 
-        assertEquals("Ross could not find this in your files yet.", controller.latestAskResult?.answerTitle)
-        assertEquals(listOf("Ross could not find this in your files yet."), controller.latestAskResult?.answerSections)
+        assertEquals("Private assistant setup required", controller.latestAskResult?.answerTitle)
+        assertTrue(controller.latestAskResult?.answerSections?.joinToString(" ")?.contains("real local model is required", ignoreCase = true) == true)
     }
 
     @Test
@@ -291,7 +291,7 @@ class AlphaLawyerUsabilityTest {
         val controller = buildController(
             secretKeyProvider = InMemorySecretKeyProvider(),
             askRuntimeProviderOverride = {
-                FakeMatterAnswerProvider { input ->
+                TestMatterAnswerProvider { input ->
                     runtimeWasCalled = true
                     assertEquals(AlphaLocalModelTask.MatterQuestionAnswer, input.task)
                     assertTrue(input.sourcePack.isNotEmpty())
@@ -328,9 +328,9 @@ class AlphaLawyerUsabilityTest {
                     tier = AlphaCapabilityTier.CaseAssociate,
                     installRelativePath = "model-packs/case_associate/case-associate-local-debug.task",
                     checksumSha256 = "a".repeat(64),
-                    artifactKind = "external_debug_model",
+                    artifactKind = "local_model_artifact",
                     runtimeMode = AlphaPackRuntimeMode.MediapipeLlm,
-                    developmentOnly = true,
+                    developmentOnly = false,
                     checksumVerified = true,
                     isActive = true,
                 )
@@ -468,6 +468,58 @@ class AlphaLawyerUsabilityTest {
         assertTrue(hasAssistantSetupState)
     }
 
+    @Test
+    fun `installed pack activation and removal delete local artifact`() {
+        val controller = buildController(secretKeyProvider = InMemorySecretKeyProvider())
+        val basicFile = context.filesDir
+            .resolve("ross-alpha")
+            .resolve("model-packs/quick_start/lifecycle-basic.task")
+        val standardFile = context.filesDir
+            .resolve("ross-alpha")
+            .resolve("model-packs/case_associate/lifecycle-standard.task")
+        basicFile.parentFile?.mkdirs()
+        standardFile.parentFile?.mkdirs()
+        basicFile.writeText("basic-real-artifact")
+        standardFile.writeText("standard-real-artifact")
+
+        val basicPack = AlphaInstalledPack(
+            packId = "gemma3-quick-start-mediapipe-task",
+            tier = AlphaCapabilityTier.QuickStart,
+            installRelativePath = "model-packs/quick_start/lifecycle-basic.task",
+            checksumSha256 = "a".repeat(64),
+            artifactKind = "local_model_artifact",
+            runtimeMode = AlphaPackRuntimeMode.MediapipeLlm,
+            developmentOnly = false,
+            checksumVerified = true,
+            isActive = true,
+        )
+        val standardPack = AlphaInstalledPack(
+            packId = "gemma3-case-associate-mediapipe-task",
+            tier = AlphaCapabilityTier.CaseAssociate,
+            installRelativePath = "model-packs/case_associate/lifecycle-standard.task",
+            checksumSha256 = "b".repeat(64),
+            artifactKind = "local_model_artifact",
+            runtimeMode = AlphaPackRuntimeMode.MediapipeLlm,
+            developmentOnly = false,
+            checksumVerified = true,
+            isActive = false,
+        )
+        controller.persisted = controller.persisted.copy(
+            settings = controller.persisted.settings.copy(activeTier = AlphaCapabilityTier.QuickStart),
+            installedPacks = listOf(basicPack, standardPack),
+        )
+
+        controller.activatePack(standardPack.id)
+        assertEquals(AlphaCapabilityTier.CaseAssociate, controller.persisted.settings.activeTier)
+        assertTrue(controller.persisted.installedPacks.first { it.id == standardPack.id }.isActive)
+
+        controller.removeInstalledPack(standardPack.id)
+        assertFalse(standardFile.exists())
+        assertFalse(controller.persisted.installedPacks.any { it.id == standardPack.id })
+        assertEquals(AlphaCapabilityTier.QuickStart, controller.persisted.settings.activeTier)
+        assertTrue(controller.persisted.installedPacks.first { it.id == basicPack.id }.isActive)
+    }
+
     private fun buildController(
         secretKeyProvider: AlphaSecretKeyProvider,
         publicLawSearchOverride: (suspend (AlphaPublicLawPreview) -> List<AlphaPublicLawResult>)? = null,
@@ -488,7 +540,7 @@ private class InMemorySecretKeyProvider : AlphaSecretKeyProvider {
     override fun getOrCreate(): SecretKey = secretKey
 }
 
-private class FakeMatterAnswerProvider(
+private class TestMatterAnswerProvider(
     private val runBlock: suspend (AlphaLocalModelInput) -> AlphaLocalModelOutput,
 ) : AlphaLocalModelProvider {
     override val capabilityTier: AlphaCapabilityTier = AlphaCapabilityTier.CaseAssociate

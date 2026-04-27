@@ -11,11 +11,32 @@ data class AlphaModelPackProgress(
 )
 
 object AlphaModelPackManager {
-    fun totalBytesFor(tier: AlphaCapabilityTier): Long = when (tier) {
-        AlphaCapabilityTier.QuickStart -> 303_950_933L
-        AlphaCapabilityTier.CaseAssociate -> 554_661_246L
-        AlphaCapabilityTier.SeniorDraftingSupport -> 689_308_662L
-    }
+    private data class AndroidPackDescriptor(
+        val packId: String,
+        val sizeBytes: Long,
+        val checksumSha256: String,
+    )
+
+    private val androidProductionPacks = mapOf(
+        AlphaCapabilityTier.QuickStart to AndroidPackDescriptor(
+            packId = "gemma3-quick-start-mediapipe-task",
+            sizeBytes = 303_950_933L,
+            checksumSha256 = "0f7147f1c22eaf758b819bbf7841793e4c90096c9352cde7fbe5c631f2265ef5",
+        ),
+        AlphaCapabilityTier.CaseAssociate to AndroidPackDescriptor(
+            packId = "gemma3-case-associate-mediapipe-task",
+            sizeBytes = 554_661_246L,
+            checksumSha256 = "ddfaf1210d8b4d1b812b5fadb6652999e852c8be6dd9abe353b9213a25262c10",
+        ),
+        AlphaCapabilityTier.SeniorDraftingSupport to AndroidPackDescriptor(
+            packId = "gemma3-senior-drafting-support-mediapipe-task",
+            sizeBytes = 689_308_662L,
+            checksumSha256 = "036e15114d1868fc7be7ccc552fc8da2fe31d64af02b48847ff99f0185d37891",
+        ),
+    )
+
+    fun totalBytesFor(tier: AlphaCapabilityTier): Long =
+        androidProductionPacks.getValue(tier).sizeBytes
 
     fun stageJob(
         tier: AlphaCapabilityTier,
@@ -23,24 +44,24 @@ object AlphaModelPackManager {
         existingJob: AlphaModelDownloadJob?,
         now: String,
     ): AlphaModelDownloadJob {
-        val totalBytes = totalBytesFor(tier)
+        val descriptor = androidProductionPacks.getValue(tier)
+        val totalBytes = descriptor.sizeBytes
         val resumeBytes = existingJob?.bytesDownloaded?.coerceAtMost(totalBytes) ?: 0L
-        val waitingForWifi = !mobileAllowed && tier != AlphaCapabilityTier.QuickStart
-        val expectedChecksum = sha256Bytes(devArtifactBytes(tier))
+        val waitingForWifi = false
 
         return AlphaModelDownloadJob(
             id = existingJob?.id ?: UUID.randomUUID().toString(),
             sessionId = existingJob?.sessionId ?: "mdl-${UUID.randomUUID().toString().take(8)}",
-            packId = existingJob?.packId ?: "${tier.tierId}-pack",
+            packId = existingJob?.packId ?: descriptor.packId,
             tier = tier,
             state = if (waitingForWifi) AlphaDownloadState.PausedWaitingForWifi else AlphaDownloadState.Downloading,
             networkPolicy = if (mobileAllowed) AlphaDownloadPolicy.MobileAllowed else AlphaDownloadPolicy.WifiOnly,
-            bytesDownloaded = if (waitingForWifi) resumeBytes else maxOf(resumeBytes, totalBytes / 3),
+            bytesDownloaded = resumeBytes,
             totalBytes = totalBytes,
-            checksumSha256 = expectedChecksum,
-            artifactKind = existingJob?.artifactKind ?: "tiny_dev_artifact",
-            runtimeMode = existingJob?.runtimeMode ?: AlphaPackRuntimeMode.DeterministicDev,
-            developmentOnly = existingJob?.developmentOnly ?: true,
+            checksumSha256 = descriptor.checksumSha256,
+            artifactKind = existingJob?.artifactKind ?: "huggingface_gated_model_artifact",
+            runtimeMode = existingJob?.runtimeMode ?: AlphaPackRuntimeMode.MediapipeLlm,
+            developmentOnly = existingJob?.developmentOnly ?: false,
             minimumAppVersion = existingJob?.minimumAppVersion ?: "0.1.0",
             failureReason = null,
             createdAt = existingJob?.createdAt ?: now,
@@ -52,7 +73,7 @@ object AlphaModelPackManager {
     fun finalizeInstall(
         rootDir: File,
         job: AlphaModelDownloadJob,
-        artifactBytes: ByteArray = devArtifactBytes(job.tier),
+        artifactBytes: ByteArray,
         fileName: String? = null,
         now: String,
     ): AlphaModelPackProgress {
@@ -192,15 +213,6 @@ object AlphaModelPackManager {
 
     fun matchesExpectedChecksum(expectedSha256: String, artifactBytes: ByteArray): Boolean =
         expectedSha256.equals(sha256Bytes(artifactBytes), ignoreCase = true)
-
-    internal fun devArtifactBytes(tier: AlphaCapabilityTier): ByteArray =
-        buildString {
-            append("Ross private alpha artifact\n")
-            append("tier=")
-            append(tier.tierId)
-            append('\n')
-            append("privacy=no-case-data\n")
-        }.toByteArray()
 
     private fun safeArtifactFileName(fileName: String?, job: AlphaModelDownloadJob): String {
         val candidate = fileName

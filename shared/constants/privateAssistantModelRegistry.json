@@ -8,7 +8,7 @@
       "runtimeMode": "gemma_local_runtime",
       "artifactKind": "local_model_artifact",
       "approxDownloadSizeMb": 429,
-      "userFacingRole": "Start quickly with basic local review and simple Ask Ross actions",
+      "userFacingRole": "Start quickly with short local Q&A and simple Ask Ross actions after setup",
       "technicalRole": "command routing, short summaries, basic local Q&A, local public-law query shaping"
     },
     "case_associate": {

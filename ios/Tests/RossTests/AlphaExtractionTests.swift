@@ -165,6 +165,40 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertFalse(sourcedPageTwoFields.isEmpty)
     }
 
+    func testImportingGeneratedPDFExtractsTextForLocalReview() async throws {
+        let store = AlphaRossStore()
+        let caseId = UUID()
+        let report = try await store.createPDFExport(
+            title: "Real PDF Import Smoke",
+            kind: "Local Review",
+            caseId: caseId,
+            bodyLines: [
+                "IN THE HIGH COURT OF DELHI",
+                "CS No. 45/2026",
+                "Article 417 requires the advocate to verify citations before filing.",
+                "Next date: 12/05/2026"
+            ]
+        )
+        let imported = try await store.importDocument(
+            from: alphaAbsoluteURL(for: report.relativePath),
+            into: caseId
+        )
+
+        XCTAssertEqual(imported.document.kind, .pdf)
+        XCTAssertEqual(imported.document.ocrStatus, .nativeText)
+        XCTAssertTrue(imported.document.extractedText?.contains("Article 417") == true)
+        XCTAssertTrue(imported.document.pages.contains { $0.snippet?.contains("CS No. 45/2026") == true })
+
+        let result = await store.runLocalExtraction(
+            caseId: caseId,
+            document: imported.document,
+            activePack: installedPack(.caseAssociate)
+        )
+
+        XCTAssertFalse(result.extractedFields.isEmpty)
+        XCTAssertTrue(result.extractedFields.contains { $0.value.contains("45/2026") })
+    }
+
     func testPipelinePlanChangesWithInstalledPack() {
         XCTAssertEqual(AlphaExtractionPipelinePlanner.plan(for: nil).mode, .basic)
         XCTAssertEqual(AlphaExtractionPipelinePlanner.plan(for: installedPack(.quickStart)).mode, .quickStart)
@@ -236,7 +270,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(environment.modelKind, "foundation_adapter")
     }
 
-    func testRealRuntimeSelectionFallsBackSafelyWhenUnavailable() async {
+    func testRealRuntimeSelectionFailsClosedWhenUnavailable() async {
         let pack = installedPack(.caseAssociate, runtimeMode: .appleFoundationModels)
         let runtimeEnvironment = AlphaLocalRuntimeEnvironment(
             enableRealInference: false,
@@ -266,13 +300,13 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertNotNil(provider)
         XCTAssertEqual(health?.runtimeMode, .appleFoundationModels)
+        XCTAssertEqual(health?.fallbackActive, false)
         if health?.available == true {
             XCTAssertEqual(provider?.runtimeMode, .appleFoundationModels)
-            XCTAssertEqual(health?.fallbackActive, false)
             XCTAssertEqual(health?.explicitOptInEnabled, true)
         } else {
-            XCTAssertEqual(provider?.runtimeMode, .deterministicDev)
-            XCTAssertEqual(health?.fallbackActive, true)
+            XCTAssertEqual(provider?.runtimeMode, .appleFoundationModels)
+            XCTAssertEqual(provider?.isAvailable(), false)
         }
         XCTAssertNotNil(health?.userFacingStatus)
     }
@@ -340,7 +374,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(health?.available, false)
-        XCTAssertEqual(health?.fallbackActive, true)
+        XCTAssertEqual(health?.fallbackActive, false)
         XCTAssertEqual(health?.lastErrorCategory, "runtime_dependency_unavailable")
     }
 

@@ -137,38 +137,3 @@ struct ModelDownloadJob: Identifiable, Hashable, Sendable {
         self.isBackgroundEligible = isBackgroundEligible
     }
 }
-
-extension Array where Element == ModelPack {
-    static let fixtureCatalog: [ModelPack] = [
-        ModelPack(
-            tier: .quickStart,
-            downloadSize: "about 430 MB",
-            installedFootprint: "about 430 MB",
-            recommendedFor: "Lighter phones and rapid capture-first workflows.",
-            technicalDetails: [
-                TechnicalModelComponent(name: "Gemma 4 E2B Q4", purpose: "Command routing, short summaries, and basic local Q&A"),
-                TechnicalModelComponent(name: "EmbeddingGemma 300M", purpose: "Local semantic search and retrieval")
-            ]
-        ),
-        ModelPack(
-            tier: .caseAssociate,
-            downloadSize: "about 1.1-1.3 GB",
-            installedFootprint: "about 1.1-1.3 GB",
-            recommendedFor: "Balanced day-to-day case review and source-backed drafting support.",
-            technicalDetails: [
-                TechnicalModelComponent(name: "Gemma 4 E4B Q4", purpose: "Primary local case review and drafting"),
-                TechnicalModelComponent(name: "EmbeddingGemma 300M", purpose: "Local semantic search and retrieval")
-            ]
-        ),
-        ModelPack(
-            tier: .seniorDraftingSupport,
-            downloadSize: "about 2.5 GB",
-            installedFootprint: "about 2.5 GB",
-            recommendedFor: "Longer files, richer drafting sessions, and hearing preparation.",
-            technicalDetails: [
-                TechnicalModelComponent(name: "Gemma 4 26B-A4B Q4", purpose: "Higher-capacity local drafting"),
-                TechnicalModelComponent(name: "EmbeddingGemma 300M", purpose: "Local semantic search and retrieval")
-            ]
-        )
-    ]
-}

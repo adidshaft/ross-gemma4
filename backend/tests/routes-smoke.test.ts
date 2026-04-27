@@ -14,6 +14,9 @@ function parseJson<T>(payload: string): T {
 
 const publicLawGeminiEnvKey = ["ROSS_PUBLIC_LAW_", "GEMINI", "_API_KEY"].join("");
 const legacyGeminiEnvKey = ["GEMINI", "_API_KEY"].join("");
+const rossHuggingFaceTokenEnvKey = "ROSS_HUGGING_FACE_ACCESS_TOKEN";
+const huggingFaceHubTokenEnvKey = "HUGGING_FACE_HUB_TOKEN";
+const hfTokenEnvKey = "HF_TOKEN";
 
 function buildTestEnv(overrides: Record<string, string | undefined> = {}) {
   return readRuntimeEnv({
@@ -22,6 +25,9 @@ function buildTestEnv(overrides: Record<string, string | undefined> = {}) {
       ...process.env,
       [publicLawGeminiEnvKey]: undefined,
       [legacyGeminiEnvKey]: undefined,
+      [rossHuggingFaceTokenEnvKey]: undefined,
+      [huggingFaceHubTokenEnvKey]: undefined,
+      [hfTokenEnvKey]: undefined,
       ...overrides
     }
   });
@@ -118,14 +124,18 @@ test("backend scaffold endpoints return coherent stub responses", async (t) => {
   assert.match(catalogBody.manifest.signature, /^[a-f0-9]{64}$/);
   assert.deepEqual(
     catalogBody.manifest.payload.packs.map((pack) => pack.packId).sort(),
-    ["case-associate-pack", "quick-start-pack", "senior-drafting-support-pack"]
+    [
+      "gemma3-case-associate-mediapipe-task",
+      "gemma3-quick-start-mediapipe-task",
+      "gemma3-senior-drafting-support-mediapipe-task"
+    ]
   );
   for (const pack of catalogBody.manifest.payload.packs) {
-    assert.equal(pack.artifactKind, "tiny_dev_artifact");
-    assert.equal(pack.runtimeMode, "deterministic_dev");
-    assert.equal(pack.developmentOnly, true);
+    assert.equal(pack.artifactKind, "huggingface_gated_model_artifact");
+    assert.equal(pack.runtimeMode, "mediapipe_llm");
+    assert.equal(pack.developmentOnly, false);
     assert.match(pack.checksumSha256, /^[a-f0-9]{64}$/);
-    assert.ok(pack.segmentCount >= 1);
+    assert.equal(pack.segmentCount, 1);
     assert.ok(pack.segmentSizeBytes >= 1);
   }
 
@@ -134,7 +144,7 @@ test("backend scaffold endpoints return coherent stub responses", async (t) => {
     url: "/model-download/session",
     payload: {
       accountToken: authBody.accountToken,
-      packId: catalogBody.manifest.payload.packs[0]?.packId ?? "quick-start-pack",
+      packId: catalogBody.manifest.payload.packs[0]?.packId ?? "gemma3-quick-start-mediapipe-task",
       platform: "android",
       appVersion: "1.0.0",
       deviceIdHash: "a1b2c3d4e5f6a7b8"
@@ -173,22 +183,22 @@ test("backend scaffold endpoints return coherent stub responses", async (t) => {
     };
   }>(modelDownload.body);
   assert.match(modelDownloadBody.downloadSession.signature, /^[a-f0-9]{64}$/);
-  assert.equal(modelDownloadBody.downloadSession.payload.deliveryMode, "signed_segmented_dev_artifact");
-  assert.equal(modelDownloadBody.downloadSession.payload.artifactKind, "tiny_dev_artifact");
-  assert.equal(modelDownloadBody.downloadSession.payload.runtimeMode, "deterministic_dev");
-  assert.equal(modelDownloadBody.downloadSession.payload.developmentOnly, true);
+  assert.equal(modelDownloadBody.downloadSession.payload.deliveryMode, "signed_segmented_local_model_artifact");
+  assert.equal(modelDownloadBody.downloadSession.payload.artifactKind, "huggingface_gated_model_artifact");
+  assert.equal(modelDownloadBody.downloadSession.payload.runtimeMode, "mediapipe_llm");
+  assert.equal(modelDownloadBody.downloadSession.payload.developmentOnly, false);
   assert.match(
     modelDownloadBody.downloadSession.payload.artifact.downloadPath,
-    /^\/dev-artifacts\//
+    /^\/model-download\/artifacts\//
   );
   assert.match(
     modelDownloadBody.downloadSession.payload.artifact.downloadUrl,
-    /^https:\/\/downloads\.example\.invalid\/dev-artifacts\//
+    /^https:\/\/huggingface\.co\//
   );
   assert.match(modelDownloadBody.downloadSession.payload.artifact.finalSha256, /^[a-f0-9]{64}$/);
-  assert.equal(modelDownloadBody.downloadSession.payload.artifact.artifactKind, "tiny_dev_artifact");
-  assert.equal(modelDownloadBody.downloadSession.payload.artifact.runtimeMode, "deterministic_dev");
-  assert.equal(modelDownloadBody.downloadSession.payload.artifact.developmentOnly, true);
+  assert.equal(modelDownloadBody.downloadSession.payload.artifact.artifactKind, "huggingface_gated_model_artifact");
+  assert.equal(modelDownloadBody.downloadSession.payload.artifact.runtimeMode, "mediapipe_llm");
+  assert.equal(modelDownloadBody.downloadSession.payload.artifact.developmentOnly, false);
   assert.ok(modelDownloadBody.downloadSession.payload.artifact.segmentSizeBytes >= 1);
   assert.equal(
     modelDownloadBody.downloadSession.payload.artifact.segments.length,
@@ -216,19 +226,13 @@ test("backend scaffold endpoints return coherent stub responses", async (t) => {
     method: "GET",
     url: modelDownloadBody.downloadSession.payload.artifact.downloadPath,
     headers: {
-      range: firstSegment.rangeHeader
+      range: firstSegment.rangeHeader,
+      "x-ross-account-token": authBody.accountToken
     }
   });
 
-  assert.equal(artifactRange.statusCode, 206);
-  assert.equal(
-    artifactRange.headers["content-range"],
-    `bytes ${firstSegment.startByte}-${firstSegment.endByteInclusive}/${modelDownloadBody.downloadSession.payload.artifact.sizeBytes}`
-  );
-  assert.equal(
-    createHash("sha256").update(Buffer.from(artifactRange.rawPayload)).digest("hex"),
-    firstSegment.sha256
-  );
+  assert.equal(artifactRange.statusCode, 409);
+  assert.match(artifactRange.body, /huggingface_token_required/);
 
   const stripeWebhook = await app.inject({
     method: "POST",
@@ -265,15 +269,9 @@ test("backend scaffold endpoints return coherent stub responses", async (t) => {
     }
   });
 
-  assert.equal(publicSearch.statusCode, 200);
-  const publicSearchBody = parseJson<{
-    connector: { mode: string };
-    resultCount: number;
-    results: Array<{ title: string }>;
-  }>(publicSearch.body);
-  assert.equal(publicSearchBody.connector.mode, "backend_fixture_index");
-  assert.equal(publicSearchBody.resultCount, publicSearchBody.results.length);
-  assert.match(publicSearchBody.results[0]?.title ?? "", /Act|Procedure|Evidence|injunction/i);
+  assert.equal(publicSearch.statusCode, 503);
+  assert.match(publicSearch.body, /public_law_gemini_unavailable/);
+  assert.doesNotMatch(publicSearch.body, /backend_fixture_index/);
 });
 
 test("external debug model metadata appears only when explicitly enabled", async (t) => {

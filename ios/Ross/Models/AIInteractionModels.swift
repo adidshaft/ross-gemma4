@@ -26,25 +26,6 @@ struct QuickCaptureDraft: Identifiable, Hashable, Sendable {
     let redactionChecklist: [String]
     let filingRecommendation: String
     let destinationCaseTitle: String?
-
-    static let fixture = QuickCaptureDraft(
-        id: UUID(),
-        captureTitle: "Handwritten hearing note and annexure photo set",
-        source: .camera,
-        receivedAt: Calendar.current.date(byAdding: .hour, value: -2, to: .now) ?? .now,
-        extractedHighlights: [
-            "Detected a short hearing note with two date references.",
-            "Captured an annexure label and one visible signature block.",
-            "Suggested a case link based on the selected workspace."
-        ],
-        redactionChecklist: [
-            "Confirm whether the visible signature block should be blurred before export.",
-            "Check if any phone number appears on the annexure edge.",
-            "Verify that the case title stays local and is not reused in public-law search."
-        ],
-        filingRecommendation: "File into the selected case after confirming the visible identifiers.",
-        destinationCaseTitle: CaseFile.fixtureCases.first?.title
-    )
 }
 
 struct AskCaseSection: Identifiable, Hashable, Sendable {
