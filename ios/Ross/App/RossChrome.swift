@@ -93,27 +93,21 @@ struct RossLaunchSplashView: View {
         ZStack {
             RossAuthBackdrop()
 
-            if colorScheme == .light {
-                Circle()
-                    .fill(Color.rossAccent.opacity(0.05))
-                    .frame(width: 360, height: 360)
-                    .blur(radius: 54)
-            }
-
-            VStack(spacing: 18) {
+            VStack(spacing: 12) {
                 Image("RossLogo")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 146, height: 146)
+                    .frame(width: 112, height: 112)
                     .shadow(color: colorScheme == .dark ? Color.clear : Color.white.opacity(0.42), radius: 12, y: -2)
-                    .shadow(color: Color.rossAccent.opacity(0.1), radius: 12, y: 7)
-                    .shadow(color: Color.rossShadow.opacity(0.12), radius: 8, y: 4)
+                    .shadow(color: Color.rossShadow.opacity(0.14), radius: 12, y: 8)
 
                 Text("Ross")
-                    .font(.system(size: 30, weight: .semibold))
-                    .tracking(0.8)
+                    .font(.system(size: 28, weight: .semibold))
                     .foregroundStyle(Color.rossInk)
-                    .offset(y: -2)
+
+                Text("Private legal work, on this phone.")
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(Color.rossInk.opacity(0.62))
             }
         }
     }

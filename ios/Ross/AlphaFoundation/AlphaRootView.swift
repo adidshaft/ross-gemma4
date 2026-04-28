@@ -6336,40 +6336,8 @@ private extension AlphaAppearanceMode {
 }
 
 private struct AlphaSetupBackdrop: View {
-    @Environment(\.colorScheme) private var colorScheme
-
     var body: some View {
-        ZStack {
-            LinearGradient(
-                colors: [
-                    Color.rossGroupedBackground,
-                    Color.rossSecondaryGroupedBackground,
-                    Color.rossGroupedBackground
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-
-            if colorScheme == .light {
-                RadialGradient(
-                    colors: [Color.rossBackdropGlow, Color.clear],
-                    center: .topLeading,
-                    startRadius: 18,
-                    endRadius: 360
-                )
-                .offset(x: -42, y: -82)
-            } else {
-                LinearGradient(
-                    colors: [
-                        Color.white.opacity(0.035),
-                        Color.clear
-                    ],
-                    startPoint: .top,
-                    endPoint: .center
-                )
-            }
-        }
-        .ignoresSafeArea()
+        RossAuthBackdrop()
     }
 }
 
@@ -6421,12 +6389,12 @@ private struct AlphaSetupPrimaryButtonStyle: ButtonStyle {
             .font(.headline.weight(.semibold))
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
-            .frame(minHeight: 56)
+            .frame(minHeight: 52)
             .background(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(.ultraThinMaterial)
                     .overlay {
-                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .fill(
                                 LinearGradient(
                                     colors: [
@@ -6439,7 +6407,7 @@ private struct AlphaSetupPrimaryButtonStyle: ButtonStyle {
                             )
                     }
                     .overlay {
-                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .stroke(Color.rossGlassStroke.opacity(0.45), lineWidth: 1)
                     }
             )
@@ -6460,47 +6428,53 @@ private struct AlphaOnboardingScreen: View {
 
     var body: some View {
         GeometryReader { proxy in
+            let contentWidth = min(proxy.size.width - 32, 430)
             ZStack {
                 AlphaSetupBackdrop()
 
-                VStack(alignment: .leading, spacing: 24) {
-                    AlphaSetupWordmarkRow(title: "Ross", stepLabel: "1 of 2")
+                VStack(spacing: 20) {
+                    Spacer(minLength: max(proxy.safeAreaInsets.top + 18, 44))
 
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Your private legal assistant.")
-                            .font(.system(size: 29, weight: .semibold, design: .rounded))
+                    VStack(spacing: 12) {
+                        RossAuthHeroMark(size: 78)
+
+                        Text("Set up Ross")
+                            .font(.system(size: 34, weight: .semibold))
                             .foregroundStyle(Color.rossInk)
-                            .fixedSize(horizontal: false, vertical: true)
+                            .multilineTextAlignment(.center)
 
-                        Text("Ross organizes your files, drafts notes, and answers questions, all securely on this iPhone.")
-                            .font(.title3)
+                        Text("A private legal workbench for your matters.")
+                            .font(.subheadline.weight(.medium))
                             .foregroundStyle(Color.rossInk.opacity(0.72))
-                            .fixedSize(horizontal: false, vertical: true)
+                            .multilineTextAlignment(.center)
                     }
+                    .frame(maxWidth: contentWidth)
 
-                    Grid(horizontalSpacing: 12, verticalSpacing: 12) {
-                        GridRow {
-                            RossInfoPill(title: featurePills[0].0, systemImage: featurePills[0].1)
-                            RossInfoPill(title: featurePills[1].0, systemImage: featurePills[1].1)
-                        }
-
-                        GridRow {
-                            RossInfoPill(title: featurePills[2].0, systemImage: featurePills[2].1)
-                                .gridCellColumns(2)
+                    VStack(spacing: 10) {
+                        ForEach(Array(featurePills.enumerated()), id: \.offset) { _, pill in
+                            RossInfoPill(title: pill.0, systemImage: pill.1)
                         }
                     }
+                    .frame(maxWidth: contentWidth)
 
-                    Spacer(minLength: 24)
+                    Spacer(minLength: 16)
 
-                    Button("Set up my assistant") {
+                    Button("Continue") {
                         model.advanceOnboarding()
                     }
                     .buttonStyle(AlphaSetupPrimaryButtonStyle())
+                    .frame(maxWidth: contentWidth)
+
+                    Text("No matter files leave this phone during setup.")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Color.rossInk.opacity(0.58))
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: contentWidth)
+
+                    Spacer(minLength: max(proxy.safeAreaInsets.bottom + 18, 36))
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .padding(.horizontal, 24)
-                .padding(.top, max(proxy.safeAreaInsets.top + 8, 18))
-                .padding(.bottom, max(proxy.safeAreaInsets.bottom, 12))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.horizontal, 16)
             }
         }
     }
@@ -6517,66 +6491,68 @@ private struct AlphaPackSetupScreen: View {
     var body: some View {
         GeometryReader { proxy in
             let compact = proxy.size.height < 760
+            let contentWidth = min(proxy.size.width - 32, 460)
 
             ZStack {
                 AlphaSetupBackdrop()
 
-                VStack(alignment: .leading, spacing: compact ? 12 : 16) {
-                    AlphaSetupWordmarkRow(title: "Assistant setup", stepLabel: "2 of 2")
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: compact ? 12 : 16) {
+                        AlphaSetupWordmarkRow(title: "Assistant", stepLabel: "2 of 2")
 
-                    VStack(alignment: .leading, spacing: compact ? 6 : 8) {
-                        Text("Set up Ross on this iPhone.")
-                            .font(.system(size: compact ? 24 : 27, weight: .semibold, design: .rounded))
-                            .foregroundStyle(Color.rossInk)
-                            .lineLimit(2)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Choose local assistant")
+                                .font(.system(size: compact ? 27 : 30, weight: .semibold))
+                                .foregroundStyle(Color.rossInk)
+                                .lineLimit(2)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            Text("Ross drafts and answers from files on this iPhone.")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(Color.rossInk.opacity(0.68))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        VStack(spacing: compact ? 7 : 9) {
+                            ForEach(AlphaPackOffer.catalog) { offer in
+                                AlphaPackTierSelectionBar(
+                                    offer: offer,
+                                    isSelected: model.selectedTier == offer.tier,
+                                    isDownloaded: model.installedPack(for: offer.tier) != nil,
+                                    isActive: model.activePack?.tier == offer.tier,
+                                    badge: offer.tier == recommendedTier ? "Recommended" : nil,
+                                    onSelect: { model.selectedTier = offer.tier },
+                                    onInfo: { infoTier = offer.tier }
+                                )
+                            }
+                        }
+
+                        Text("Matter files are not uploaded for assistant setup.")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(Color.rossInk.opacity(0.62))
                             .fixedSize(horizontal: false, vertical: true)
 
-                        Text("Ross can read your matter files and help draft notes. You can change this later.")
-                            .font(compact ? .subheadline : .callout)
-                            .foregroundStyle(Color.rossInk.opacity(0.72))
-                            .lineLimit(3)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                        VStack(spacing: 10) {
+                            Button("Set up assistant") {
+                                model.finishPackSetup()
+                            }
+                            .buttonStyle(AlphaSetupPrimaryButtonStyle())
 
-                    VStack(spacing: compact ? 7 : 9) {
-                        ForEach(AlphaPackOffer.catalog) { offer in
-                            AlphaPackTierSelectionBar(
-                                offer: offer,
-                                isSelected: model.selectedTier == offer.tier,
-                                isDownloaded: model.installedPack(for: offer.tier) != nil,
-                                isActive: model.activePack?.tier == offer.tier,
-                                badge: offer.tier == recommendedTier ? "Recommended" : nil,
-                                onSelect: { model.selectedTier = offer.tier },
-                                onInfo: { infoTier = offer.tier }
-                            )
+                            Button("Skip for now") {
+                                model.skipPackSetup()
+                            }
+                            .buttonStyle(.plain)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color.rossInk.opacity(0.62))
                         }
                     }
-
-                    Text("Matter files are not uploaded for setup.")
-                        .font(.footnote.weight(.medium))
-                        .foregroundStyle(Color.rossInk.opacity(0.68))
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    Spacer(minLength: compact ? 4 : 10)
-
-                    VStack(spacing: 12) {
-                        Button("Set up Ross assistant") {
-                            model.finishPackSetup()
-                        }
-                        .buttonStyle(AlphaSetupPrimaryButtonStyle())
-
-                        Button("Skip for now") {
-                            model.skipPackSetup()
-                        }
-                        .buttonStyle(.plain)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Color.rossInk.opacity(0.65))
-                    }
+                    .frame(maxWidth: contentWidth, alignment: .leading)
+                    .frame(minHeight: proxy.size.height - proxy.safeAreaInsets.top - proxy.safeAreaInsets.bottom)
+                    .padding(.horizontal, 16)
+                    .padding(.top, max(proxy.safeAreaInsets.top + 14, 28))
+                    .padding(.bottom, max(proxy.safeAreaInsets.bottom + 16, 28))
+                    .frame(maxWidth: .infinity)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .padding(.horizontal, 24)
-                .padding(.top, max(proxy.safeAreaInsets.top + 8, 18))
-                .padding(.bottom, max(proxy.safeAreaInsets.bottom, 12))
             }
         }
         .sheet(item: $infoTier) { tier in

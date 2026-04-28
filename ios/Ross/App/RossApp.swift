@@ -971,20 +971,20 @@ private struct RossWorkspacePrivacyShield: View {
         ZStack {
             RossAuthBackdrop()
 
-            VStack(spacing: 14) {
-                RossAuthHeroMark(size: 66)
+            VStack(spacing: 12) {
+                RossAuthHeroMark(size: 54)
 
                 if isUnlocking {
                     ProgressView()
                         .tint(Color.rossAccent)
-                        .scaleEffect(1.08)
+                        .scaleEffect(1.02)
 
                     Text("Unlocking Ross")
-                        .font(.headline.weight(.semibold))
+                        .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.rossInk)
                 } else {
-                    Text("Your workspace is locked")
-                        .font(.headline.weight(.semibold))
+                    Text("Workspace locked")
+                        .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.rossInk)
                 }
             }
@@ -1036,7 +1036,7 @@ private struct RossLanguageSelectionScreen: View {
                         }
                         .padding(.top, rossAuthTopHeaderPadding(proxy.safeAreaInsets.top))
 
-                        RossAuthGlassPanel(cornerRadius: 24, padding: 20) {
+                        RossAuthGlassPanel(cornerRadius: 20, padding: 18) {
                             VStack(alignment: .leading, spacing: 20) {
                                 Text("Choose your preferred language")
                                     .font(.system(size: 28, weight: .semibold))
@@ -1099,7 +1099,7 @@ private struct RossLanguageTile: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 24, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
 
         Button(action: action) {
             VStack(alignment: .leading, spacing: 6) {
@@ -1551,6 +1551,35 @@ private struct RossAuthActionLabel<Icon: View>: View {
     }
 }
 
+private struct RossAuthNotice: View {
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Color.rossInk.opacity(0.62))
+                .frame(width: 18, height: 18)
+
+            Text(text)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Color.rossInk.opacity(0.72))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.rossSecondaryGroupedBackground.opacity(0.68))
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.rossBorder.opacity(0.72), lineWidth: 1)
+        }
+    }
+}
+
 private struct RossGoogleMark: View {
     let size: CGFloat
 
@@ -1589,75 +1618,48 @@ private struct RossQuickUnlockScreen: View {
 
     var body: some View {
         GeometryReader { proxy in
-            VStack {
-                Spacer(minLength: max(proxy.safeAreaInsets.top + 20, 56))
+            let panelWidth = min(proxy.size.width - 32, 390)
 
-                VStack(alignment: .center, spacing: 20) {
-                    RossAuthHeroMark(size: 54)
+            VStack(spacing: 22) {
+                Spacer(minLength: max(proxy.safeAreaInsets.top + 18, 48))
 
-                    VStack(alignment: .center, spacing: 10) {
-                        Text("Unlock Ross")
-                            .font(.system(size: 32, weight: .semibold))
-                            .foregroundStyle(Color.rossInk)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.84)
-                            .multilineTextAlignment(.center)
+                RossAuthHeroMark(size: 72)
 
-                        Text("Use \(authController.quickUnlockSummary) to reopen Ross.")
-                            .font(.system(size: 14, weight: .regular))
-                            .foregroundStyle(Color.rossInk.opacity(0.7))
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                RossAuthGlassPanel(cornerRadius: 20, padding: 18, forcedWidth: panelWidth) {
+                    VStack(alignment: .center, spacing: 16) {
+                        VStack(spacing: 6) {
+                            Text("Ross is locked")
+                                .font(.system(size: 30, weight: .semibold))
+                                .foregroundStyle(Color.rossInk)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.82)
 
-                    Text(session.displayLabel)
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(Color.rossInk.opacity(0.74))
-                        .lineLimit(2)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 9)
-                        .background(Color.rossSecondaryGroupedBackground.opacity(0.94), in: Capsule())
-
-                    if let errorMessage = authController.authErrorMessage, !errorMessage.isEmpty {
-                        HStack(alignment: .top, spacing: 10) {
-                            RossGlassIconView(
-                                .triangleWarning,
-                                variant: .highlight,
-                                size: 16,
-                                fallbackSystemImage: "exclamationmark.triangle.fill"
-                            )
-
-                            Text(errorMessage)
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(Color(red: 0.63, green: 0.37, blue: 0.17))
+                            Text("Use \(authController.quickUnlockSummary) to continue.")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(Color.rossInk.opacity(0.68))
+                                .multilineTextAlignment(.center)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(Color(red: 0.96, green: 0.67, blue: 0.38).opacity(0.14))
-                        )
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(Color(red: 0.84, green: 0.55, blue: 0.28).opacity(0.34), lineWidth: 1)
-                        }
-                    }
 
-                    VStack(spacing: 12) {
+                        Text(session.displayLabel)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.rossInk.opacity(0.68))
+                            .lineLimit(2)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Color.rossSecondaryGroupedBackground.opacity(0.82), in: Capsule())
+
+                        if let errorMessage = authController.authErrorMessage, !errorMessage.isEmpty {
+                            RossAuthNotice(text: errorMessage)
+                        }
+
                         Button {
                             authController.unlockSession()
                         } label: {
-                            HStack(spacing: 12) {
-                                RossGlassIconView(
-                                    .gearKeyhole,
-                                    variant: .accent,
-                                    size: 18,
-                                    fallbackSystemImage: authController.unlockSymbolName
-                                )
-                                .frame(width: 20, height: 20)
-
+                            HStack(spacing: 10) {
+                                Image(systemName: authController.unlockSymbolName)
+                                    .font(.system(size: 16, weight: .semibold))
                                 Text(authController.unlockButtonTitle)
                             }
                         }
@@ -1667,23 +1669,12 @@ private struct RossQuickUnlockScreen: View {
                             showingSignOutConfirmation = true
                         }
                         .buttonStyle(.plain)
-                        .font(.footnote.weight(.semibold))
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(Color.rossInk.opacity(0.58))
                     }
                 }
-                .padding(24)
-                .frame(maxWidth: min(proxy.size.width - 32, 360), alignment: .center)
-                .background(
-                    RoundedRectangle(cornerRadius: 30, style: .continuous)
-                        .fill(Color.rossCardBackground.opacity(0.96))
-                )
-                .overlay {
-                    RoundedRectangle(cornerRadius: 30, style: .continuous)
-                        .stroke(Color.rossBorder.opacity(0.95), lineWidth: 1)
-                }
-                .shadow(color: Color.rossShadow.opacity(0.24), radius: 18, y: 12)
 
-                Spacer(minLength: max(proxy.safeAreaInsets.bottom + 20, 56))
+                Spacer(minLength: max(proxy.safeAreaInsets.bottom + 18, 48))
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.horizontal, 16)
@@ -1699,7 +1690,7 @@ private struct RossQuickUnlockScreen: View {
     }
 }
 
-private struct RossAuthHeroMark: View {
+struct RossAuthHeroMark: View {
     var size: CGFloat = 132
 
     var body: some View {
@@ -1866,12 +1857,12 @@ private struct RossAuthInputField: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 14)
             .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(Color.white.opacity(0.12))
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             )
             .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .stroke(
                         isFocused
                             ? Color.white.opacity(0.42)

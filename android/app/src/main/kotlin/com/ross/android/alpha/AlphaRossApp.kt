@@ -188,28 +188,83 @@ private fun AlphaLaunchSplash() {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.background,
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
-                    )
-                )
-            ),
+            .alphaAuthBackdrop(),
         contentAlignment = Alignment.Center,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Image(
                 painter = painterResource(id = R.drawable.ross_logo),
                 contentDescription = "Ross",
-                modifier = Modifier.size(138.dp),
+                modifier = Modifier.size(112.dp),
                 contentScale = ContentScale.Fit,
             )
             Text("Ross", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                "Private legal work, on this phone.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
+    }
+}
+
+@Composable
+private fun Modifier.alphaAuthBackdrop(): Modifier =
+    background(
+        Brush.linearGradient(
+            colors = listOf(
+                MaterialTheme.colorScheme.background,
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
+                MaterialTheme.colorScheme.background,
+            )
+        )
+    )
+
+@Composable
+private fun AlphaAuthPanel(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    OutlinedCard(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.outlinedCardColors(containerColor = alphaChromeBackgroundColor()),
+        border = androidx.compose.foundation.BorderStroke(1.dp, alphaChromeStrokeColor()),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            content = content,
+        )
+    }
+}
+
+@Composable
+private fun AlphaAuthNotice(text: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.48f), RoundedCornerShape(14.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.WarningAmber,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 
@@ -2121,34 +2176,47 @@ private fun AlphaRootAskSheetAction(
 
 @Composable
 private fun AlphaOnboardingScreen(onContinue: () -> Unit) {
-    AlphaShell(title = "Ross") {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .alphaAuthBackdrop()
+            .padding(horizontal = 18.dp),
+        contentAlignment = Alignment.Center,
+    ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+                .widthIn(max = 430.dp)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
-            AlphaInlineHeader(
-                eyebrow = "Ross",
-                title = "Your private legal assistant.",
-                detail = "Ross organizes your files, drafts notes, and answers questions, all securely on this phone.",
+            Image(
+                painter = painterResource(id = R.drawable.ross_logo),
+                contentDescription = "Ross",
+                modifier = Modifier.size(78.dp),
+                contentScale = ContentScale.Fit,
             )
-            AlphaCard {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    AlphaBullet("Matter files stay on this device.")
-                    AlphaBullet("Today surfaces dates, tasks, and next actions.")
-                    AlphaBullet("You stay in control of Web Search and assistant setup.")
-                }
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Set up Ross", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "A private legal workbench for your matters.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
             }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                AlphaInfoChip(label = "On-device files", modifier = Modifier.weight(1f))
-                AlphaInfoChip(label = "Approved web search", modifier = Modifier.weight(1f))
+            AlphaAuthPanel {
+                AlphaBullet("Matter files stay on this device.")
+                AlphaBullet("Answers stay source-backed.")
+                AlphaBullet("Web search asks before leaving Ross.")
             }
-            Button(onClick = onContinue, modifier = Modifier.fillMaxWidth()) { Text("Set up my assistant") }
+            Button(onClick = onContinue, modifier = Modifier.fillMaxWidth()) { Text("Continue") }
+            Text(
+                "No matter files leave this phone during setup.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }
@@ -2158,30 +2226,34 @@ private fun AlphaOnboardingScreen(onContinue: () -> Unit) {
 private fun AlphaPackSetupScreen(controller: AlphaRossController, onContinue: () -> Unit, onSkip: () -> Unit) {
     var infoTier by rememberSaveable { mutableStateOf<AlphaCapabilityTier?>(null) }
 
-    AlphaShell(title = "My assistant", showTopBar = false) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .alphaAuthBackdrop(),
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.56f),
-                            MaterialTheme.colorScheme.background,
-                        )
-                    )
-                )
                 .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp)
+                .padding(horizontal = 18.dp, vertical = 22.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            AlphaInlineHeader(
-                eyebrow = "Assistant setup",
-                title = "Choose the assistant for this phone.",
-                detail = "Start with the recommended level. You can change it later in Settings.",
-            )
+            Column(
+                modifier = Modifier.widthIn(max = 460.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text("Choose local assistant", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Ross drafts and answers from files on this phone.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
             AlphaCapabilityTier.values().forEach { tier ->
                 AlphaSelectableBar(
+                    modifier = Modifier.widthIn(max = 460.dp),
                     tier = tier,
                     selected = controller.selectedTier == tier,
                     isDownloaded = controller.persisted.installedPacks.any { it.tier == tier },
@@ -2191,32 +2263,19 @@ private fun AlphaPackSetupScreen(controller: AlphaRossController, onContinue: ()
                 )
             }
 
-            AlphaAssistantActivityStrip(
-                title = "Uses this phone's private assistant",
-                detail = "Ross keeps matter files on this phone. If setup needs more time, you can continue while the assistant finishes preparing.",
-                statusLabel = "On device",
-                tint = AlphaAmberStatus,
+            Text(
+                "Matter files are not uploaded for assistant setup.",
+                modifier = Modifier.widthIn(max = 460.dp).fillMaxWidth(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            AlphaCard {
-                val decision = controller.assistantRuntimeDecision()
-                Text(
-                    decision.reason,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    decision.effectiveTier.setupWarning,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Button(onClick = onContinue, modifier = Modifier.weight(1f)) { Text("Set up my assistant") }
-                TextButton(onClick = onSkip, modifier = Modifier.weight(1f)) { Text("Skip for now - later in Settings") }
+            Column(
+                modifier = Modifier.widthIn(max = 460.dp).fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(onClick = onContinue, modifier = Modifier.fillMaxWidth()) { Text("Set up assistant") }
+                TextButton(onClick = onSkip, modifier = Modifier.fillMaxWidth()) { Text("Skip for now") }
             }
         }
     }
@@ -4237,29 +4296,34 @@ private fun AlphaLaunchAuthGate(controller: AlphaRossController) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.98f))
-            .padding(24.dp),
+            .alphaAuthBackdrop()
+            .padding(horizontal = 18.dp),
         contentAlignment = Alignment.Center,
     ) {
-        OutlinedCard(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+        Column(
+            modifier = Modifier
+                .widthIn(max = 430.dp)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                AlphaInlineHeader(
-                    eyebrow = "Sign in",
-                    title = "Open Ross",
-                    detail = "Use demo mode with sample data, or sign in with Google to continue.",
-                )
+            Image(
+                painter = painterResource(id = R.drawable.ross_logo),
+                contentDescription = "Ross",
+                modifier = Modifier.size(78.dp),
+                contentScale = ContentScale.Fit,
+            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Open Ross", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
                 Text(
-                    "Case files stay on this device. Public-law search sends only a sanitized query while Web search is allowed in Settings.",
-                    style = MaterialTheme.typography.bodySmall,
+                    "Private legal work, on this phone.",
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
                 )
+            }
+
+            AlphaAuthPanel {
                 if (session.awaitingBrowserReturn) {
                     AlphaAssistantActivityStrip(
                         title = "Waiting for Google",
@@ -4269,11 +4333,7 @@ private fun AlphaLaunchAuthGate(controller: AlphaRossController) {
                     )
                 }
                 controller.authStatusMessage?.let { message ->
-                    Text(
-                        message,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
+                    AlphaAuthNotice(message)
                 }
                 Button(
                     onClick = {
@@ -4284,11 +4344,6 @@ private fun AlphaLaunchAuthGate(controller: AlphaRossController) {
                 ) {
                     Text("Open demo mode")
                 }
-                Text(
-                    "Demo mode uses sample data only.",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
                 Button(
                     onClick = {
                         controller.clearAuthStatusMessage()
@@ -4303,12 +4358,13 @@ private fun AlphaLaunchAuthGate(controller: AlphaRossController) {
                 ) {
                     Text("Sign in with Google")
                 }
-                Text(
-                    "Google sign-in uses the Ross sign-in flow when it is set up for this device.",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
+            Text(
+                "Case files stay local. Public-law search asks before it leaves Ross.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }
@@ -4789,6 +4845,7 @@ private fun AlphaTierGlyph(tier: AlphaCapabilityTier) {
 
 @Composable
 private fun AlphaSelectableBar(
+    modifier: Modifier = Modifier,
     tier: AlphaCapabilityTier,
     selected: Boolean,
     isDownloaded: Boolean = false,
@@ -4799,7 +4856,7 @@ private fun AlphaSelectableBar(
     val tint = alphaTierTint(tier)
 
     OutlinedCard(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .animateContentSize(),
         shape = RoundedCornerShape(18.dp),
@@ -5341,30 +5398,39 @@ private fun AlphaQuickUnlockGate(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.98f))
-            .padding(24.dp),
+            .alphaAuthBackdrop()
+            .padding(horizontal = 18.dp),
         contentAlignment = Alignment.Center,
     ) {
-        OutlinedCard(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+        Column(
+            modifier = Modifier
+                .widthIn(max = 390.dp)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                AlphaInlineHeader(
-                    eyebrow = "Unlock",
-                    title = "Ross is protected on this phone",
-                    detail = session.email ?: "Use device unlock to continue.",
-                )
-                promptMessage?.let {
+            Image(
+                painter = painterResource(id = R.drawable.ross_logo),
+                contentDescription = "Ross",
+                modifier = Modifier.size(72.dp),
+                contentScale = ContentScale.Fit,
+            )
+            AlphaAuthPanel {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text("Ross is locked", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
                     Text(
-                        it,
+                        session.email ?: "Use device unlock to continue.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
                     )
+                }
+                promptMessage?.let {
+                    AlphaAuthNotice(it)
                 }
                 Button(onClick = { requestUnlock() }, modifier = Modifier.fillMaxWidth()) {
                     Text("Unlock with device")
