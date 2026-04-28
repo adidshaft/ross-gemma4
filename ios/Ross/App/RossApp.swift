@@ -1186,10 +1186,10 @@ private struct RossSignInScreen: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let heroPanelWidth = min(proxy.size.width - 24, 430)
-            let signInPanelWidth = min(proxy.size.width - 24, 440)
+            let heroPanelWidth = min(proxy.size.width - 32, 430)
+            let signInPanelWidth = min(proxy.size.width - 32, 440)
             ZStack(alignment: .bottom) {
-                VStack(alignment: .leading, spacing: 28) {
+                VStack(alignment: .center, spacing: 28) {
                     HStack(spacing: 14) {
                         RossAuthHeroMark(size: 58)
 
@@ -1200,7 +1200,8 @@ private struct RossSignInScreen: View {
 
                         Spacer(minLength: 0)
                     }
-                        .padding(.top, rossAuthTopHeaderPadding(proxy.safeAreaInsets.top))
+                    .frame(width: heroPanelWidth, alignment: .leading)
+                    .padding(.top, rossAuthTopHeaderPadding(proxy.safeAreaInsets.top))
 
                     RossAuthGlassPanel(cornerRadius: 24, padding: 22, forcedWidth: heroPanelWidth) {
                         VStack(alignment: .leading, spacing: 14) {
