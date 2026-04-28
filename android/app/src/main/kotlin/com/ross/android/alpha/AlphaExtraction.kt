@@ -1555,6 +1555,22 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
                     sourceRefs = taskInput.sourcePack.map { it.sourceRef },
                 )
             }
+
+            AlphaLocalModelTask.PublicLawQueryShaping -> {
+                val payload = mapOf(
+                    "status" to "needs_review",
+                    "network" to "not_run",
+                    "message" to "Prepared only for sanitized public-law query review.",
+                )
+                val json = gson.toJson(payload)
+                AlphaLocalModelOutput(
+                    rawText = json,
+                    parsedJson = json,
+                    schemaValid = true,
+                    warnings = listOf("Deterministic public-law query shaping only. No network request was made."),
+                    sourceRefs = emptyList(),
+                )
+            }
         }
     }
 

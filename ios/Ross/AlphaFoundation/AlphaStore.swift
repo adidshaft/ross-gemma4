@@ -819,7 +819,7 @@ private struct AlphaLocalExtractionOrchestrator {
                 pages: pages,
                 pipelinePlan: pipelinePlan,
                 extractionRunID: extractionRunID,
-                warning: "Private assistant setup is required before Ross can review this document with a local LLM."
+                warning: "Private assistant setup is required before Ross can review this document with your private assistant."
             )
         }
         var modelInvocations: [AlphaLocalModelInvocation] = []
@@ -953,7 +953,7 @@ private struct AlphaLocalExtractionOrchestrator {
                     caseId: caseId,
                     documentId: document.id,
                     kind: .unsupportedLayout,
-                    message: "Basic is best for shorter files. Choose Standard or Advanced before Ross reviews this longer document with a local LLM.",
+                    message: "Basic is best for shorter files. Choose Standard or Advanced before Ross reviews this longer document with your private assistant.",
                     sourceRefs: cleanedPages.prefix(2).map { page in
                         AlphaSourceRef(
                             caseId: caseId,
@@ -1779,6 +1779,15 @@ private struct AlphaLocalExtractionOrchestrator {
         case .chronologyGeneration, .orderSummary, .matterQuestionAnswer:
             warnings = ["Deterministic development runtime does not synthesize standalone chronology or order summary outputs in this alpha build."]
             encodedPayload = nil
+
+        case .publicLawQueryShaping:
+            let payload = [
+                "status": "needs_review",
+                "network": "not_run",
+                "message": "Prepared only for sanitized public-law query review."
+            ]
+            warnings = ["Deterministic public-law query shaping only. No network request was made."]
+            encodedPayload = encodeJSON(payload)
         }
 
         return AlphaLocalModelOutput(

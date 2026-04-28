@@ -1511,8 +1511,8 @@ internal class AlphaRossController(
         }
         val seedSnippet = when (kind) {
             AlphaDocumentKind.Text -> runCatching { target.readText().replace(Regex("\\s+"), " ").take(180) }.getOrNull()
-            AlphaDocumentKind.Image -> "Imported image page. Ross is extracting text locally."
-            AlphaDocumentKind.Pdf -> "Imported PDF. Ross is reviewing pages locally."
+            AlphaDocumentKind.Image -> "Imported image page. Ross is reading the text on this page."
+            AlphaDocumentKind.Pdf -> "Imported PDF. Ross is reading the pages now."
             AlphaDocumentKind.Unknown -> "Imported source reference."
         }
         val documentId = UUID.randomUUID().toString()
@@ -1728,24 +1728,26 @@ internal class AlphaRossController(
             )
         }
 
-        val settingsAllowsWebSearch = persisted.settings.requirePublicLawApproval
-        if (webEnabled && settingsAllowsWebSearch) {
+        if (webEnabled) {
+            if (!persisted.settings.requirePublicLawApproval) {
+                persisted = persisted.copy(settings = persisted.settings.copy(requirePublicLawApproval = true))
+            }
             val preview = buildAskPublicLawPreview(cleaned, scopeCaseId)
             pendingPublicLawQuestion = cleaned
             pendingPublicLawScopeCaseId = scopeCaseId
             publicLawPreview = preview
-            latestAskResult = latestAskResult?.copy(publicLawPreview = preview, statusNote = "Public-law search running")
+            publicLawResults = emptyList()
+            latestAskResult = latestAskResult?.copy(publicLawPreview = preview, publicLawResults = emptyList(), statusNote = "Review required")
             updateLatestAskHistory(scopeCaseId, cleaned) { result ->
-                result.copy(publicLawPreview = preview, statusNote = "Public-law search running")
+                result.copy(publicLawPreview = preview, publicLawResults = emptyList(), statusNote = "Review required")
             }
-            confirmPendingPublicLawSearch()
+            pendingRoute = AndroidAlphaRoute.PublicLawPreview
+            save()
         } else {
             pendingPublicLawQuestion = null
             pendingPublicLawScopeCaseId = null
             publicLawPreview = null
-            val offlineStatusNote = if (webEnabled && !settingsAllowsWebSearch) {
-                "Web search is off in Settings"
-            } else if (localResult.statusNote == "Private assistant" || localResult.statusNote == "Setup required") {
+            val offlineStatusNote = if (localResult.statusNote == "Private assistant" || localResult.statusNote == "Setup required") {
                 localResult.statusNote
             } else {
                 "Answered from your files"
@@ -2021,19 +2023,49 @@ internal class AlphaRossController(
     fun cancelPendingPublicLawSearch() {
         val pendingQuestion = pendingPublicLawQuestion
         val pendingScope = pendingPublicLawScopeCaseId
+        val hadPreview = publicLawPreview != null && pendingQuestion != null
         pendingPublicLawQuestion = null
         pendingPublicLawScopeCaseId = null
         publicLawPreview = null
+        publicLawResults = emptyList()
         latestAskResult = latestAskResult?.copy(statusNote = "Answered from your files")
         if (pendingQuestion != null) {
             updateLatestAskHistory(pendingScope, pendingQuestion) { result ->
-                result.copy(publicLawPreview = null, statusNote = "Answered from your files")
+                result.copy(publicLawPreview = null, publicLawResults = emptyList(), statusNote = "Answered from your files")
             }
+        }
+        if (hadPreview) {
+            persisted = persisted.copy(
+                ledgerEntries = listOf(
+                    AlphaPrivacyLedgerEntry(
+                        title = "Public-law search cancelled",
+                        detail = "The sanitized query was reviewed, then cancelled. No public-law network request was made.",
+                        purpose = AlphaPrivacyPurpose.PublicLawSearch,
+                        payloadClass = AlphaPayloadClass.NoCaseData,
+                        endpointLabel = "device://public-law-review",
+                        success = true,
+                    )
+                ) + persisted.ledgerEntries,
+            )
+            save()
         }
     }
 
     fun confirmPendingPublicLawSearch() {
         val preview = publicLawPreview ?: return
+        persisted = persisted.copy(
+            ledgerEntries = listOf(
+                AlphaPrivacyLedgerEntry(
+                    title = "Public-law search reviewed by user",
+                    detail = "Sanitized query reviewed: ${preview.query}. Removed private details: ${preview.removed.joinToString(", ")}. 0 private case details sent.",
+                    purpose = AlphaPrivacyPurpose.PublicLawSearch,
+                    payloadClass = AlphaPayloadClass.NoCaseData,
+                    endpointLabel = "device://public-law-review",
+                    success = true,
+                )
+            ) + persisted.ledgerEntries,
+        )
+        save()
         scope.launch {
             val backendResults = runCatching { publicLawSearchAction(preview) }
             val results = backendResults.getOrElse { emptyList() }
@@ -2098,7 +2130,7 @@ internal class AlphaRossController(
                 cases = updatedCases,
                 ledgerEntries = listOf(
                     localLedger(
-                        if (scopeCaseId == null) "Local review run" else "Local case review run",
+                        if (scopeCaseId == null) "Review run" else "Case review run",
                         "The question and source-backed draft stayed on-device.",
                     )
                 ) + persisted.ledgerEntries,
@@ -3332,7 +3364,7 @@ internal class AlphaRossController(
                             AlphaCaseMemoryUpdate(
                                 caseId = caseId,
                                 source = AlphaCaseMemoryUpdateSource.UserCorrection,
-                                summary = "Advocate ignored ${field.label.lowercase()} for local review.",
+                                summary = "Advocate ignored ${field.label.lowercase()} for review.",
                                 affectedDocuments = listOf(documentId),
                             )
                         ) + case.caseMemoryUpdates,
@@ -4545,7 +4577,7 @@ fun AlphaPrivacyLedgerEntry.lawyerTitle(): String = when (title) {
     "Public-law query sent" -> "Searched public law"
     "Public-law search unavailable" -> "Public-law search needs attention"
     "Local export generated" -> "Generated Notes & Drafts"
-    "Local case review run" -> "Reviewed case locally"
+    "Case review run" -> "Reviewed case"
     "Document imported locally" -> "Imported document"
     "Case created locally" -> "Created case"
     else -> title

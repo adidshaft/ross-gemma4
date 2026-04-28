@@ -1,6 +1,6 @@
 # Internal Alpha QA
 
-This checklist is the general manual QA script for Ross on April 22, 2026.
+This checklist is the general manual QA script for Ross on April 28, 2026.
 
 Record pass or fail, platform, screenshot path, and any blocker at each step.
 
@@ -101,16 +101,32 @@ Privacy expectation:
 
 Expected result:
 
-- Home shows Today, upcoming dates, open tasks, review items, active matters, recent activity, and Ask Ross
+- Home shows Today, Needs review, Upcoming dates, Recent files, and one Ask Ross entrypoint
 - every section has a next action
+- setup or runtime copy appears only when attention is required
 
 Fail condition:
 
-- Home feels empty or technical
+- Home feels empty, noisy, or technical
 
 Privacy expectation:
 
 - Home data stays local
+
+## 7A. Workbench IA cleanup pass
+
+Run this pass on iOS and Android after the main smoke path:
+
+- Fresh matter: verify setup state is simple, import first document, and overview becomes live status.
+- Reading document: verify no confident facts appear before reading completes.
+- Fictional or sample file: verify warning gate appears and no silent matter updates happen.
+- Matter workspace: verify first viewport shows next date, review, tasks, and docs, not noisy setup text.
+- Document viewer: verify review actions are primary, with raw text and sources inspectable but not dominant.
+- Ask local-only: verify scope, selected files, answer, sources, and privacy receipt.
+- Public law: verify sanitized query review appears and no request is made before confirmation.
+- Commands: verify add task, save date, create tasks from document, and unsupported command behavior.
+- Android parity: verify public-law Ask does not auto-run network just because Public Law is on.
+- Settings: verify normal screens hide runtime internals and advanced diagnostics keep technical details.
 
 ## 8. Confirm demo workspace
 

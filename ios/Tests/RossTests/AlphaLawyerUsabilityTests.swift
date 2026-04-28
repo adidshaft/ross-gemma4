@@ -598,6 +598,68 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    func testDockCommandSaveHearingRequiresMatterScope() async throws {
+        try await withRestoredStore { store in
+            let state = AlphaPersistedState.demoSeed()
+            try await store.replace(with: state)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+            let initialDateCount = await MainActor.run {
+                model.persisted.cases.flatMap(\.dates).count
+            }
+
+            await model.submitDockInput(
+                question: "save next hearing on 1 May 2026",
+                scopeCaseID: nil,
+                webEnabled: true
+            )
+
+            let latestResult = await MainActor.run { model.latestAskResult }
+            let finalDateCount = await MainActor.run {
+                model.persisted.cases.flatMap(\.dates).count
+            }
+            let preview = await MainActor.run { model.publicLawPreview }
+
+            XCTAssertEqual(initialDateCount, finalDateCount)
+            XCTAssertEqual("Choose a matter first", latestResult?.answerTitle)
+            XCTAssertEqual("No change made", latestResult?.statusNote)
+            XCTAssertNil(preview)
+        }
+    }
+
+    func testUnsupportedDockCommandMakesNoMatterMutation() async throws {
+        try await withRestoredStore { store in
+            let state = AlphaPersistedState.demoSeed()
+            try await store.replace(with: state)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+            let maybeCaseID = await MainActor.run {
+                model.persisted.cases.first(where: { $0.title == "Demo Matter: Sharma v. Rana" })?.id
+            }
+            let caseID = try XCTUnwrap(maybeCaseID)
+            let initialOpenTaskCount = await MainActor.run { model.openTaskCount(for: caseID) }
+
+            await model.submitDockInput(
+                question: "complete task \(UUID().uuidString)",
+                scopeCaseID: caseID,
+                webEnabled: false
+            )
+
+            let finalOpenTaskCount = await MainActor.run { model.openTaskCount(for: caseID) }
+            let latestResult = await MainActor.run { model.latestAskResult }
+
+            XCTAssertEqual(initialOpenTaskCount, finalOpenTaskCount)
+            XCTAssertEqual("Task not found.", latestResult?.answerTitle)
+            XCTAssertEqual("No change made", latestResult?.statusNote)
+        }
+    }
+
     func testDockCommandGeneratesScopedExport() async throws {
         try await withRestoredStore { store in
             let state = AlphaPersistedState.demoSeed()

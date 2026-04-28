@@ -117,10 +117,48 @@ class AlphaLawyerUsabilityTest {
         shadowOf(Looper.getMainLooper()).idle()
 
         assertNotNull(controller.publicLawPreview)
+        assertEquals(0, publicLawCalls)
+        assertEquals(AndroidAlphaRoute.PublicLawPreview, controller.pendingRoute)
+        assertEquals("Review required", controller.latestAskResult?.statusNote)
+        assertEquals(0, controller.publicLawResults.size)
+
+        controller.confirmPendingPublicLawSearch()
+        shadowOf(Looper.getMainLooper()).idle()
+
         assertEquals(1, publicLawCalls)
         assertEquals("Public-law results", controller.latestAskResult?.statusNote)
         assertEquals(1, controller.publicLawResults.size)
         assertEquals(controller.publicLawPreview?.query, approvedQuerySent)
+        assertTrue(controller.persisted.ledgerEntries.any { it.title == "Public-law search reviewed by user" })
+        assertTrue(controller.persisted.ledgerEntries.any { it.title == "Public-law query sent" })
+    }
+
+    @Test
+    fun `cancel public law review prevents network call`() {
+        var publicLawCalls = 0
+        val controller = buildController(
+            secretKeyProvider = InMemorySecretKeyProvider(),
+            publicLawSearchOverride = {
+                publicLawCalls += 1
+                emptyList()
+            },
+        )
+
+        controller.submitAsk(
+            question = "Find law on delay condonation",
+            scopeCaseId = null,
+            webEnabled = true,
+        )
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertNotNull(controller.publicLawPreview)
+        controller.cancelPendingPublicLawSearch()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(0, publicLawCalls)
+        assertNull(controller.publicLawPreview)
+        assertEquals("Answered from your files", controller.latestAskResult?.statusNote)
+        assertTrue(controller.persisted.ledgerEntries.any { it.title == "Public-law search cancelled" })
     }
 
     @Test
@@ -228,6 +266,43 @@ class AlphaLawyerUsabilityTest {
             }
         )
         assertEquals("Date saved.", controller.latestAskResult?.answerTitle)
+    }
+
+    @Test
+    fun `dock command save hearing requires matter scope`() {
+        val controller = buildController(secretKeyProvider = InMemorySecretKeyProvider())
+        controller.signInDemoMode()
+        val initialDateCount = controller.persisted.cases.sumOf { it.dates.size }
+
+        controller.submitDockInput(
+            question = "save next hearing on 1 May 2026",
+            scopeCaseId = null,
+            webEnabled = true,
+        )
+
+        val finalDateCount = controller.persisted.cases.sumOf { it.dates.size }
+        assertEquals(initialDateCount, finalDateCount)
+        assertEquals("Choose a matter first", controller.latestAskResult?.answerTitle)
+        assertEquals("No change made", controller.latestAskResult?.statusNote)
+        assertNull(controller.publicLawPreview)
+    }
+
+    @Test
+    fun `unsupported dock command makes no matter mutation`() {
+        val controller = buildController(secretKeyProvider = InMemorySecretKeyProvider())
+        controller.signInDemoMode()
+        val caseId = controller.cases.first { it.title == "Demo Matter: Sharma v. Rana" }.id
+        val initialOpenTaskCount = controller.openTaskCount(caseId)
+
+        controller.submitDockInput(
+            question = "complete task ${UUID.randomUUID()}",
+            scopeCaseId = caseId,
+            webEnabled = false,
+        )
+
+        assertEquals(initialOpenTaskCount, controller.openTaskCount(caseId))
+        assertEquals("Task not found.", controller.latestAskResult?.answerTitle)
+        assertEquals("No change made", controller.latestAskResult?.statusNote)
     }
 
     @Test
