@@ -202,7 +202,7 @@ struct RossHeroCard<Content: View>: View {
                     Rectangle()
                         .fill(
                             LinearGradient(
-                                colors: [Color(white: 0.08), Color(white: 0.13)],
+                                colors: [Color.rossChromeBackground, Color.rossAccent],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -221,14 +221,14 @@ struct RossHeroCard<Content: View>: View {
                         } else {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 28, style: .continuous)
-                                    .fill(Color(white: 0.16))
+                                    .fill(Color.rossSecondaryGroupedBackground)
                                     .frame(width: logoSize, height: logoSize)
                                     .shadow(color: Color.black.opacity(0.5), radius: 20, y: 8)
                                 Text("R")
                                     .font(.system(size: logoSize * 0.54, weight: .black, design: .rounded))
                                     .foregroundStyle(
                                         LinearGradient(
-                                            colors: [Color(white: 0.42), Color(white: 0.26)],
+                                            colors: [Color.rossHighlight, Color.rossInk.opacity(0.72)],
                                             startPoint: .topLeading,
                                             endPoint: .bottomTrailing
                                         )
@@ -245,14 +245,14 @@ struct RossHeroCard<Content: View>: View {
                         } else {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 28, style: .continuous)
-                                    .fill(Color(white: 0.16))
+                                    .fill(Color.rossSecondaryGroupedBackground)
                                     .frame(width: logoSize, height: logoSize)
                                     .shadow(color: Color.black.opacity(0.5), radius: 20, y: 8)
                                 Text("R")
                                     .font(.system(size: logoSize * 0.54, weight: .black, design: .rounded))
                                     .foregroundStyle(
                                         LinearGradient(
-                                            colors: [Color(white: 0.42), Color(white: 0.26)],
+                                            colors: [Color.rossHighlight, Color.rossInk.opacity(0.72)],
                                             startPoint: .topLeading,
                                             endPoint: .bottomTrailing
                                         )
@@ -262,14 +262,14 @@ struct RossHeroCard<Content: View>: View {
                         #else
                         ZStack {
                             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                                .fill(Color(white: 0.16))
+                                .fill(Color.rossSecondaryGroupedBackground)
                                 .frame(width: logoSize, height: logoSize)
                                 .shadow(color: Color.black.opacity(0.5), radius: 20, y: 8)
                             Text("R")
                                 .font(.system(size: logoSize * 0.54, weight: .black, design: .rounded))
                                 .foregroundStyle(
                                     LinearGradient(
-                                        colors: [Color(white: 0.42), Color(white: 0.26)],
+                                        colors: [Color.rossHighlight, Color.rossInk.opacity(0.72)],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     )

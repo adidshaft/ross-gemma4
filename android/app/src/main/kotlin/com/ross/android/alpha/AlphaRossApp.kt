@@ -126,7 +126,7 @@ import kotlinx.coroutines.launch
 
 private val alphaScreenPadding = 18.dp
 private val alphaSectionSpacing = 14.dp
-private val AlphaAmberStatus = Color(0xFFD18C00)
+private val AlphaAmberStatus = Color(0xFFC7A766)
 
 private data class AlphaStorageSnapshot(
     val documentCount: Int,
@@ -138,7 +138,7 @@ private data class AlphaStorageSnapshot(
     val totalBytes: Long
         get() = documentBytes + exportBytes + assistantBytes
 }
-private val AlphaSuccessStatus = Color(0xFF2F7B52)
+private val AlphaSuccessStatus = Color(0xFFA1BAAE)
 private const val alphaUiPrefsName = "ross_alpha_ui_prefs"
 private const val alphaMatterListSortModePrefKey = "matter_list_sort_mode"
 private const val alphaMatterListViewModePrefKey = "matter_list_view_mode"
@@ -1615,8 +1615,8 @@ private fun AlphaRootAskDock(
                         AlphaDockIconButton(
                             icon = Icons.Outlined.ArrowUpward,
                             label = "Send",
-                            tint = Color(0xFF111724),
-                            fill = Color.White,
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            fill = MaterialTheme.colorScheme.primary,
                         ) {
                             send()
                         }
@@ -4632,7 +4632,10 @@ private fun AlphaHero(eyebrow: String, title: String, body: String, showLogo: Bo
                         .height(108.dp)
                         .background(
                             Brush.linearGradient(
-                                colors = listOf(Color(0xFF0F1320), Color(0xFF1A2031))
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primaryContainer,
+                                    MaterialTheme.colorScheme.surfaceVariant,
+                                )
                             )
                         ),
                     contentAlignment = Alignment.Center
@@ -4729,7 +4732,7 @@ private fun alphaTierTint(tier: AlphaCapabilityTier): Color =
     when (tier) {
         AlphaCapabilityTier.QuickStart -> MaterialTheme.colorScheme.tertiary
         AlphaCapabilityTier.CaseAssociate -> MaterialTheme.colorScheme.secondary
-        AlphaCapabilityTier.SeniorDraftingSupport -> Color(0xFF44795C)
+        AlphaCapabilityTier.SeniorDraftingSupport -> MaterialTheme.colorScheme.primary
     }
 
 @Composable
@@ -4967,10 +4970,10 @@ private enum class AlphaDocumentLayoutMode(val label: String) {
 
 private enum class AlphaWorkspaceSection(val label: String) {
     Overview("Overview"),
-    Documents("Documents"),
+    Documents("Files"),
     Tasks("Tasks"),
     Review("Review"),
-    NotesExports("Notes / Exports"),
+    NotesExports("Notes"),
 }
 
 @Composable
@@ -5121,40 +5124,19 @@ private fun AlphaWorkspaceSectionBar(
     selectedSection: AlphaWorkspaceSection,
     onSelect: (AlphaWorkspaceSection) -> Unit,
 ) {
-    Box(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            AlphaWorkspaceSection.values().forEach { section ->
-                FilterChip(
-                    selected = selectedSection == section,
-                    onClick = { onSelect(section) },
-                    label = { Text(section.label, style = MaterialTheme.typography.labelMedium) },
-                )
-            }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        AlphaWorkspaceSection.values().forEach { section ->
+            FilterChip(
+                selected = selectedSection == section,
+                onClick = { onSelect(section) },
+                label = { Text(section.label, style = MaterialTheme.typography.labelMedium) },
+            )
         }
-
-        Box(
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .fillMaxHeight()
-                .width(44.dp)
-                .background(
-                    Brush.horizontalGradient(
-                        colors = listOf(Color.Transparent, MaterialTheme.colorScheme.background)
-                    )
-                )
-        )
-        Icon(
-            imageVector = Icons.Outlined.ChevronRight,
-            contentDescription = "More sections",
-            modifier = Modifier
-                .align(Alignment.CenterEnd),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
-        )
     }
 }
 @Composable
@@ -5417,7 +5399,7 @@ private fun AlphaTaskRow(task: AlphaTaskItem, onToggle: () -> Unit, onSnooze: ((
             AlphaCompactRowActionButton(
                 icon = if (task.status == AlphaTaskStatus.Done) Icons.Outlined.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
                 label = if (task.status == AlphaTaskStatus.Done) "Mark task open" else "Mark task done",
-                tint = if (task.status == AlphaTaskStatus.Done) Color(0xFF2F7B52) else MaterialTheme.colorScheme.primary,
+                tint = if (task.status == AlphaTaskStatus.Done) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
                 onClick = onToggle,
             )
 
@@ -5487,7 +5469,7 @@ private fun AlphaMatterDateRow(
                     AlphaCompactRowActionButton(
                         icon = Icons.Outlined.Check,
                         label = "Mark date done",
-                        tint = Color(0xFF2F7B52),
+                        tint = MaterialTheme.colorScheme.tertiary,
                         onClick = onMarkDone,
                     )
                     AlphaCompactRowActionButton(
@@ -6059,13 +6041,18 @@ private fun AlphaAskEmptyState(detail: String, suggestions: List<String>, onSele
                 OutlinedCard(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f)),
+                    colors = CardDefaults.outlinedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.86f),
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, alphaChromeStrokeColor()),
                     onClick = { onSelectSuggestion(suggestion) },
                 ) {
                     Text(
                         suggestion,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
                         style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
             }
@@ -6554,7 +6541,7 @@ private fun alphaMatterTintColor(tint: AlphaMatterTint): Color =
     when (tint) {
         AlphaMatterTint.Indigo -> MaterialTheme.colorScheme.primary
         AlphaMatterTint.Amber -> AlphaAmberStatus
-        AlphaMatterTint.Emerald -> Color(0xFF44795C)
+        AlphaMatterTint.Emerald -> MaterialTheme.colorScheme.tertiary
         AlphaMatterTint.Rose -> Color(0xFFC65C78)
         AlphaMatterTint.Slate -> MaterialTheme.colorScheme.onSurfaceVariant
     }
@@ -6573,7 +6560,7 @@ private fun alphaDocumentTint(kind: AlphaDocumentKind): Color =
     when (kind) {
         AlphaDocumentKind.Pdf -> MaterialTheme.colorScheme.primary
         AlphaDocumentKind.Image -> AlphaAmberStatus
-        AlphaDocumentKind.Text -> Color(0xFF44795C)
+        AlphaDocumentKind.Text -> MaterialTheme.colorScheme.tertiary
         AlphaDocumentKind.Unknown -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 

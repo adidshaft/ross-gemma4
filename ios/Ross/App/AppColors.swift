@@ -30,85 +30,85 @@ extension Color {
         #endif
     }
 
-    // Modern Legal Premiere Palette
+    // Ross muted green-black palette
     static var rossInk: Color {
-        dynamicColor(lightRed: 0.05, lightGreen: 0.07, lightBlue: 0.10,
-                     darkRed: 0.90, darkGreen: 0.91, darkBlue: 0.93)
+        dynamicColor(lightRed: 0.043, lightGreen: 0.071, lightBlue: 0.071,
+                     darkRed: 0.93, darkGreen: 0.92, darkBlue: 0.95)
     }
 
     static var rossAccent: Color {
-        dynamicColor(lightRed: 0.18, lightGreen: 0.22, lightBlue: 0.40,
-                     darkRed: 0.58, darkGreen: 0.64, darkBlue: 0.78)
+        dynamicColor(lightRed: 0.165, lightGreen: 0.188, lightBlue: 0.180,
+                     darkRed: 0.800, darkGreen: 0.792, darkBlue: 0.820)
     }
 
     static var rossHighlight: Color {
-        dynamicColor(lightRed: 0.78, lightGreen: 0.68, lightBlue: 0.48,
-                     darkRed: 0.74, darkGreen: 0.68, darkBlue: 0.56)
+        dynamicColor(lightRed: 0.376, lightGreen: 0.396, lightBlue: 0.396,
+                     darkRed: 0.800, darkGreen: 0.792, darkBlue: 0.820)
     }
 
     static var rossSuccess: Color {
-        dynamicColor(lightRed: 0.15, lightGreen: 0.35, lightBlue: 0.25,
-                     darkRed: 0.46, darkGreen: 0.72, darkBlue: 0.58)
+        dynamicColor(lightRed: 0.227, lightGreen: 0.251, lightBlue: 0.243,
+                     darkRed: 0.63, darkGreen: 0.73, darkBlue: 0.68)
     }
 
     static var rossChromeBackground: Color {
-        dynamicColor(lightRed: 0.06, lightGreen: 0.08, lightBlue: 0.12,
-                     darkRed: 0.08, darkGreen: 0.09, darkBlue: 0.11)
+        dynamicColor(lightRed: 0.227, lightGreen: 0.251, lightBlue: 0.243,
+                     darkRed: 0.043, darkGreen: 0.071, darkBlue: 0.071)
     }
     
     // Backgrounds for Hero
     static var rossHeroTop: Color {
-        dynamicColor(lightRed: 0.98, lightGreen: 0.97, lightBlue: 0.95,
-                     darkRed: 0.12, darkGreen: 0.13, darkBlue: 0.15)
+        dynamicColor(lightRed: 0.965, lightGreen: 0.961, lightBlue: 0.973,
+                     darkRed: 0.106, darkGreen: 0.133, darkBlue: 0.125)
     }
 
     static var rossHeroBottom: Color {
-        dynamicColor(lightRed: 0.93, lightGreen: 0.92, lightBlue: 0.89,
-                     darkRed: 0.08, darkGreen: 0.09, darkBlue: 0.10)
+        dynamicColor(lightRed: 0.906, lightGreen: 0.902, lightBlue: 0.918,
+                     darkRed: 0.043, darkGreen: 0.071, darkBlue: 0.071)
     }
 
     static var rossGlassFill: Color {
         dynamicColor(
             lightRed: 1, lightGreen: 1, lightBlue: 1,
-            darkRed: 0.16, darkGreen: 0.17, darkBlue: 0.19,
+            darkRed: 0.106, darkGreen: 0.133, darkBlue: 0.125,
             lightAlpha: 0.74,
-            darkAlpha: 0.80
+            darkAlpha: 0.84
         )
     }
 
     static var rossGlassSubtleFill: Color {
         dynamicColor(
             lightRed: 1, lightGreen: 1, lightBlue: 1,
-            darkRed: 0.19, darkGreen: 0.20, darkBlue: 0.22,
+            darkRed: 0.165, darkGreen: 0.188, darkBlue: 0.180,
             lightAlpha: 0.56,
-            darkAlpha: 0.70
+            darkAlpha: 0.72
         )
     }
 
     static var rossGlassStroke: Color {
         dynamicColor(
-            lightRed: 1, lightGreen: 1, lightBlue: 1,
-            darkRed: 0.86, darkGreen: 0.88, darkBlue: 0.92,
-            lightAlpha: 0.64,
+            lightRed: 0.376, lightGreen: 0.396, lightBlue: 0.396,
+            darkRed: 0.800, darkGreen: 0.792, darkBlue: 0.820,
+            lightAlpha: 0.20,
             darkAlpha: 0.18
         )
     }
 
     static var rossBackdropGlow: Color {
         dynamicColor(
-            lightRed: 1, lightGreen: 1, lightBlue: 1,
-            darkRed: 0.50, darkGreen: 0.54, darkBlue: 0.62,
-            lightAlpha: 0.62,
-            darkAlpha: 0.08
+            lightRed: 0.800, lightGreen: 0.792, lightBlue: 0.820,
+            darkRed: 0.376, darkGreen: 0.396, darkBlue: 0.396,
+            lightAlpha: 0.52,
+            darkAlpha: 0.16
         )
     }
 
     static var rossShadow: Color {
         dynamicColor(
-            lightRed: 0.04, lightGreen: 0.06, lightBlue: 0.1,
+            lightRed: 0.043, lightGreen: 0.071, lightBlue: 0.071,
             darkRed: 0, darkGreen: 0, darkBlue: 0,
-            lightAlpha: 0.16,
-            darkAlpha: 0.18
+            lightAlpha: 0.18,
+            darkAlpha: 0.28
         )
     }
 
@@ -126,12 +126,12 @@ extension Color {
         LinearGradient(
             colors: [
                 dynamicColor(
-                    lightRed: 0.20, lightGreen: 0.25, lightBlue: 0.45,
-                    darkRed: 0.34, darkGreen: 0.40, darkBlue: 0.56
+                    lightRed: 0.227, lightGreen: 0.251, lightBlue: 0.243,
+                    darkRed: 0.376, darkGreen: 0.396, darkBlue: 0.396
                 ),
                 dynamicColor(
-                    lightRed: 0.15, lightGreen: 0.18, lightBlue: 0.35,
-                    darkRed: 0.23, darkGreen: 0.27, darkBlue: 0.39
+                    lightRed: 0.043, lightGreen: 0.071, lightBlue: 0.071,
+                    darkRed: 0.227, darkGreen: 0.251, darkBlue: 0.243
                 )
             ],
             startPoint: .topLeading,
@@ -141,26 +141,26 @@ extension Color {
     
     static var rossBorder: Color {
         dynamicColor(
-            lightRed: 0, lightGreen: 0, lightBlue: 0,
-            darkRed: 1, darkGreen: 1, darkBlue: 1,
-            lightAlpha: 0.07,
-            darkAlpha: 0.12
+            lightRed: 0.376, lightGreen: 0.396, lightBlue: 0.396,
+            darkRed: 0.800, darkGreen: 0.792, darkBlue: 0.820,
+            lightAlpha: 0.18,
+            darkAlpha: 0.14
         )
     }
 
     static var rossCardBackground: Color {
-        dynamicColor(lightRed: 1, lightGreen: 1, lightBlue: 1,
-                     darkRed: 0.14, darkGreen: 0.15, darkBlue: 0.17)
+        dynamicColor(lightRed: 0.984, lightGreen: 0.980, lightBlue: 0.992,
+                     darkRed: 0.106, darkGreen: 0.133, darkBlue: 0.125)
     }
 
     static var rossGroupedBackground: Color {
-        dynamicColor(lightRed: 0.97, lightGreen: 0.97, lightBlue: 0.98,
-                     darkRed: 0.08, darkGreen: 0.085, darkBlue: 0.10)
+        dynamicColor(lightRed: 0.965, lightGreen: 0.961, lightBlue: 0.973,
+                     darkRed: 0.043, darkGreen: 0.071, darkBlue: 0.071)
     }
 
     static var rossSecondaryGroupedBackground: Color {
-        dynamicColor(lightRed: 0.95, lightGreen: 0.95, lightBlue: 0.97,
-                     darkRed: 0.12, darkGreen: 0.125, darkBlue: 0.145)
+        dynamicColor(lightRed: 0.925, lightGreen: 0.922, lightBlue: 0.941,
+                     darkRed: 0.165, darkGreen: 0.188, darkBlue: 0.180)
     }
 }
 

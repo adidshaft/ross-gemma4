@@ -2,20 +2,30 @@ package com.ross.android.theme
 
 import androidx.compose.ui.graphics.Color
 
-val RossInk = Color(0xFF111111) // Deep Onyx, very stark
-val RossInkDark = Color(0xFFF2F2F2)
-val RossAccent = Color(0xFF2A3C5A) // Deep Indigo
-val RossAccentDark = Color(0xFF808CD9) // Lighter indigo for dark mode
-val RossHighlight = Color(0xFFB18F56) // Refined Gold
-val RossHighlightDark = Color(0xFFF2BF59)
-val RossSuccess = Color(0xFF2E6A4F) // Ledger Green
-val RossSuccessDark = Color(0xFF59B38C)
+val RossChromeChalice = Color(0xFFCCCAD1)
+val RossCordite = Color(0xFF606565)
+val RossTamahagane = Color(0xFF3A403E)
+val RossBerylBlackGreen = Color(0xFF2A302E)
+val RossShadowWarrior = Color(0xFF1B2220)
+val RossRuinedSmores = Color(0xFF0B1212)
+
+val RossInk = RossRuinedSmores
+val RossInkDark = Color(0xFFEDEBF0)
+val RossAccent = RossBerylBlackGreen
+val RossAccentDark = RossChromeChalice
+val RossHighlight = RossCordite
+val RossHighlightDark = RossChromeChalice
+val RossSuccess = RossTamahagane
+val RossSuccessDark = Color(0xFFA1BAAE)
 
 val RossWhite = Color(0xFFFFFFFF)
-val RossOffWhite = Color(0xFFF9F9FB)
-val RossBorderLight = Color(0xFFE5E7EB)
+val RossOffWhite = Color(0xFFF6F5F8)
+val RossLightSurface = Color(0xFFFBFAFC)
+val RossLightSurfaceVariant = Color(0xFFECEBF0)
+val RossBorderLight = Color(0xFFD8D6DD)
 
-val RossDarkBg = Color(0xFF141414)
-val RossDarkSurface = Color(0xFF1E1E1E)
-val RossBorderDark = Color(0xFF2D2D2D)
-val RossTextMuted = Color(0xFF6B7280)
+val RossDarkBg = RossRuinedSmores
+val RossDarkSurface = RossShadowWarrior
+val RossDarkSurfaceVariant = RossBerylBlackGreen
+val RossBorderDark = RossTamahagane
+val RossTextMuted = RossCordite

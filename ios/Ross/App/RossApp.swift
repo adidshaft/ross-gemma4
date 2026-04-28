@@ -1718,7 +1718,7 @@ private struct RossAuthHeroMark: View {
             .resizable()
             .scaledToFit()
             .frame(width: size, height: size)
-            .shadow(color: Color.white.opacity(0.12), radius: 12, y: -2)
+            .shadow(color: Color.rossBackdropGlow.opacity(0.18), radius: 12, y: -2)
             .shadow(color: Color.rossShadow.opacity(0.2), radius: 24, y: 16)
     }
 }
@@ -1729,17 +1729,11 @@ struct RossAuthBackdrop: View {
     var body: some View {
         ZStack {
             LinearGradient(
-                colors: colorScheme == .dark
-                    ? [
-                        Color(red: 0.04, green: 0.06, blue: 0.09),
-                        Color(red: 0.08, green: 0.09, blue: 0.14),
-                        Color(red: 0.07, green: 0.05, blue: 0.11)
-                    ]
-                    : [
-                        Color(red: 0.74, green: 0.88, blue: 0.92),
-                        Color(red: 0.93, green: 0.96, blue: 0.97),
-                        Color(red: 0.88, green: 0.88, blue: 0.84)
-                    ],
+                colors: [
+                    Color.rossGroupedBackground,
+                    Color.rossSecondaryGroupedBackground,
+                    Color.rossGroupedBackground
+                ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -1747,15 +1741,10 @@ struct RossAuthBackdrop: View {
             Ellipse()
                 .fill(
                     LinearGradient(
-                        colors: colorScheme == .dark
-                            ? [
-                                Color(red: 0.22, green: 0.43, blue: 0.64).opacity(0.42),
-                                Color.clear
-                            ]
-                            : [
-                                Color.white.opacity(0.74),
-                                Color.clear
-                            ],
+                        colors: [
+                            Color.rossBackdropGlow.opacity(colorScheme == .dark ? 0.36 : 0.48),
+                            Color.clear
+                        ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -1768,15 +1757,10 @@ struct RossAuthBackdrop: View {
             Ellipse()
                 .fill(
                     LinearGradient(
-                        colors: colorScheme == .dark
-                            ? [
-                                Color(red: 0.54, green: 0.42, blue: 0.82).opacity(0.22),
-                                Color.clear
-                            ]
-                            : [
-                                Color(red: 0.96, green: 0.82, blue: 0.65).opacity(0.34),
-                                Color.clear
-                            ],
+                        colors: [
+                            Color.rossHighlight.opacity(colorScheme == .dark ? 0.16 : 0.14),
+                            Color.clear
+                        ],
                         startPoint: .top,
                         endPoint: .bottom
                     )
@@ -1786,7 +1770,7 @@ struct RossAuthBackdrop: View {
                 .offset(x: 170, y: 250)
 
             Circle()
-                .fill(colorScheme == .dark ? Color.white.opacity(0.08) : Color.white.opacity(0.26))
+                .fill(Color.rossGlassStroke.opacity(colorScheme == .dark ? 0.12 : 0.28))
                 .frame(width: 320, height: 320)
                 .blur(radius: 76)
                 .offset(x: 148, y: -210)
@@ -1823,15 +1807,15 @@ private struct RossAuthGlassPanel<Content: View>: View {
             .frame(width: forcedWidth, alignment: .leading)
             .background {
                 shape
-                    .fill(Color.white.opacity(colorScheme == .dark ? 0.08 : 0.26))
+                    .fill(Color.rossGlassFill.opacity(colorScheme == .dark ? 0.9 : 0.78))
                     .background(.ultraThinMaterial, in: shape)
                     .overlay {
                         shape
                             .fill(
                                 LinearGradient(
                                     colors: [
-                                        Color.white.opacity(colorScheme == .dark ? 0.12 : 0.36),
-                                        Color.white.opacity(colorScheme == .dark ? 0.04 : 0.14),
+                                        Color.rossBackdropGlow.opacity(colorScheme == .dark ? 0.12 : 0.22),
+                                        Color.rossGlassSubtleFill.opacity(colorScheme == .dark ? 0.12 : 0.18),
                                         Color.clear
                                     ],
                                     startPoint: .topLeading,
