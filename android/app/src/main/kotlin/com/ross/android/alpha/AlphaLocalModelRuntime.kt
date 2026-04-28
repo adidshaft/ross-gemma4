@@ -29,6 +29,18 @@ enum class AlphaLocalModelTask(val wireValue: String) {
     PublicLawQueryShaping("public_law_query_shaping"),
 }
 
+private val alphaRealLocalSupportedTasks = setOf(
+    AlphaLocalModelTask.DocumentClassification,
+    AlphaLocalModelTask.LegalFieldExtraction,
+    AlphaLocalModelTask.LegalFieldVerification,
+    AlphaLocalModelTask.CaseMemorySynthesis,
+    AlphaLocalModelTask.ChronologyGeneration,
+    AlphaLocalModelTask.OrderSummary,
+    AlphaLocalModelTask.IssueExtraction,
+    AlphaLocalModelTask.MatterQuestionAnswer,
+    AlphaLocalModelTask.PublicLawQueryShaping,
+)
+
 enum class AlphaLocalModelInvocationStatus { Queued, Running, Complete, Failed, Cancelled }
 
 data class AlphaSourceTextBlock(
@@ -472,17 +484,7 @@ internal class AlphaMediaPipeLocalModelProvider(
     override val runtimeMode: AlphaPackRuntimeMode = AlphaPackRuntimeMode.MediapipeLlm
 
     private val promptBuilder = AlphaPromptPackBuilder(maxInputChars = maxInputChars() ?: 14_000)
-    private val plannedTasks = setOf(
-        AlphaLocalModelTask.DocumentClassification,
-        AlphaLocalModelTask.LegalFieldExtraction,
-        AlphaLocalModelTask.LegalFieldVerification,
-        AlphaLocalModelTask.CaseMemorySynthesis,
-        AlphaLocalModelTask.ChronologyGeneration,
-        AlphaLocalModelTask.OrderSummary,
-        AlphaLocalModelTask.IssueExtraction,
-        AlphaLocalModelTask.MatterQuestionAnswer,
-        AlphaLocalModelTask.PublicLawQueryShaping,
-    )
+    private val plannedTasks = alphaRealLocalSupportedTasks
     private val availability by lazy(LazyThreadSafetyMode.SYNCHRONIZED) { probeAvailability() }
 
     override fun isAvailable(): Boolean = availability.available
@@ -904,17 +906,7 @@ internal object AlphaLocalModelRuntime {
             else -> activePack?.checksumVerified ?: false
         }
         val label = modelPathLabel(debug.modelPath, selectedFile, activePack)
-        val supportedTasks = setOf(
-            AlphaLocalModelTask.DocumentClassification,
-            AlphaLocalModelTask.LegalFieldExtraction,
-            AlphaLocalModelTask.LegalFieldVerification,
-            AlphaLocalModelTask.CaseMemorySynthesis,
-            AlphaLocalModelTask.ChronologyGeneration,
-            AlphaLocalModelTask.OrderSummary,
-            AlphaLocalModelTask.IssueExtraction,
-            AlphaLocalModelTask.MatterQuestionAnswer,
-            AlphaLocalModelTask.PublicLawQueryShaping,
-        )
+        val supportedTasks = alphaRealLocalSupportedTasks
         val (message, errorCategory) = when {
             debug.enableRealInference && explicitFile == null ->
                 "Private assistant setup needs attention before this device can use it." to "missing_model_path"

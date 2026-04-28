@@ -372,39 +372,6 @@ struct AlphaUnavailableRealLocalModelProvider: AlphaRealLocalModelProvider {
 }
 
 #if canImport(SwiftGemmaRuntime)
-private struct AlphaGemma 4 E4B Q4MatterAskPayload: Codable, Sendable {
-    var headline: String
-    var sections: [String]
-    var statusNote: String?
-}
-
-private struct AlphaGemma 4 E4B Q4ClassificationPayload: Codable, Sendable {
-    var type: String
-    var subtype: String?
-    var confidence: Double
-    var needsReview: Bool
-}
-
-private struct AlphaGemma 4 E4B Q4FieldPayload: Codable, Sendable {
-    var fieldType: String
-    var label: String
-    var value: String
-    var normalizedValue: String?
-    var pageNumber: Int?
-    var confidence: Double
-    var needsReview: Bool
-}
-
-private struct AlphaGemma 4 E4B Q4VerificationPayload: Codable, Sendable {
-    var fields: [AlphaGemma 4 E4B Q4FieldPayload]
-    var findings: [String]
-}
-
-private struct AlphaGemma 4 E4B Q4MemoryPayload: Codable, Sendable {
-    var summary: String
-    var affectedPageNumbers: [Int]?
-}
-
 struct AlphaGemmaLocalModelProvider: AlphaRealLocalModelProvider {
     let capabilityTier: AlphaCapabilityTier
     let modelPath: String

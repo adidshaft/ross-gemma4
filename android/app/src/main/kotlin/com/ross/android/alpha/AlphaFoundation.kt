@@ -1711,7 +1711,8 @@ internal class AlphaRossController(
         )
         val localStatusStartedAt = askWorkStatus?.startedAt
         val selectedDocuments = selectedAskDocuments(scopeCaseId)
-        val localResult = if (canRunRealLocalAsk()) {
+        val canUseRealLocalAsk = canRunRealLocalAsk()
+        val localResult = if (canUseRealLocalAsk) {
             buildPendingLocalModelAskResult(cleaned, scopeCaseId, selectedDocuments)
         } else {
             buildLocalModelRequiredAskResult(cleaned, scopeCaseId, selectedDocuments)
@@ -1720,7 +1721,7 @@ internal class AlphaRossController(
         latestAskResult = localResult
         askSelectedScopeCaseId = scopeCaseId
         setAskDraft(scopeCaseId, cleaned)
-        if (canRunRealLocalAsk()) {
+        if (canUseRealLocalAsk) {
             scheduleAskRuntimeUpgrade(
                 question = cleaned,
                 scopeCaseId = scopeCaseId,

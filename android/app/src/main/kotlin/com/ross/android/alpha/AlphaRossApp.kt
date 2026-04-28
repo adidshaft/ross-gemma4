@@ -1389,6 +1389,7 @@ private fun AlphaRootAskDock(
     val chromeForeground = alphaChromeForegroundColor()
     val chromeMuted = alphaChromeMutedColor()
     val storedDraftText = controller.askDraft(activeScopeCaseId)
+    val usesHindiUi = alphaUsesHindiUi()
     var localDraftText by rememberSaveable(
         activeScopeCaseId ?: "all_work",
         fixedDocumentIds.sorted().joinToString(","),
@@ -1397,17 +1398,17 @@ private fun AlphaRootAskDock(
     }
     val draftText = localDraftText
     val composerPlaceholder = when {
-        alphaUsesHindiUi() && fixedDocumentIds.size == 1 -> "Ross से इस फ़ाइल के बारे में पूछें..."
-        alphaUsesHindiUi() && activeScopeCaseId != null -> "Ross से इस मामले के बारे में पूछें..."
-        alphaUsesHindiUi() -> "Ross से आज, किसी मामले, या किसी फ़ाइल के बारे में पूछें..."
+        usesHindiUi && fixedDocumentIds.size == 1 -> "Ross से इस फ़ाइल के बारे में पूछें..."
+        usesHindiUi && activeScopeCaseId != null -> "Ross से इस मामले के बारे में पूछें..."
+        usesHindiUi -> "Ross से आज, किसी मामले, या किसी फ़ाइल के बारे में पूछें..."
         fixedDocumentIds.size == 1 -> "Ask Ross about this file..."
         activeScopeCaseId != null -> "Ask Ross about this matter..."
         else -> "Ask Ross about today, a matter, or a file..."
     }
     val collapsedDockTitle = when {
-        alphaUsesHindiUi() && fixedDocumentIds.size == 1 -> "Ross से इस फ़ाइल के बारे में पूछें..."
-        alphaUsesHindiUi() && activeScopeCaseId != null -> "Ross से इस मामले के बारे में पूछें..."
-        alphaUsesHindiUi() -> "Ross से पूछें..."
+        usesHindiUi && fixedDocumentIds.size == 1 -> "Ross से इस फ़ाइल के बारे में पूछें..."
+        usesHindiUi && activeScopeCaseId != null -> "Ross से इस मामले के बारे में पूछें..."
+        usesHindiUi -> "Ross से पूछें..."
         fixedDocumentIds.size == 1 -> "Ask Ross about this file..."
         activeScopeCaseId != null -> "Ask Ross about this matter..."
         else -> "Ask Ross..."
@@ -2249,14 +2250,18 @@ private fun AlphaHomeScreen(
 ) {
     var dueTodayExpanded by rememberSaveable { mutableStateOf(false) }
     var upcomingExpanded by rememberSaveable { mutableStateOf(false) }
+    var needsReviewExpanded by rememberSaveable { mutableStateOf(false) }
     var recentFilesExpanded by rememberSaveable { mutableStateOf(false) }
     val todayDateLines = alphaTodayDateLines(controller.cases)
     val upcomingDateLines = alphaUpcomingDateLines(controller.cases)
     val recentDocuments = alphaRecentDocumentItems(controller.cases)
-    val attentionCount = todayDateLines.size + controller.todayTasks().size + controller.reviewQueue().size
-    val hasDueTodayItems = todayDateLines.isNotEmpty() || controller.todayTasks().isNotEmpty()
-    val hasUpcomingItems = upcomingDateLines.isNotEmpty() || controller.upcomingTasks().isNotEmpty()
-    val hasReviewItems = controller.reviewQueue().isNotEmpty()
+    val todayTasks = controller.todayTasks()
+    val upcomingTasks = controller.upcomingTasks()
+    val reviewItems = controller.reviewQueue()
+    val attentionCount = todayDateLines.size + todayTasks.size + reviewItems.size
+    val hasDueTodayItems = todayDateLines.isNotEmpty() || todayTasks.isNotEmpty()
+    val hasUpcomingItems = upcomingDateLines.isNotEmpty() || upcomingTasks.isNotEmpty()
+    val hasReviewItems = reviewItems.isNotEmpty()
     val hasRecentFiles = recentDocuments.isNotEmpty()
 
     AlphaShell(
@@ -2313,14 +2318,14 @@ private fun AlphaHomeScreen(
             if (hasDueTodayItems) {
                 AlphaExpandableCard(
                     title = "Today",
-                    badge = "${todayDateLines.size + controller.todayTasks().size}",
+                    badge = "${todayDateLines.size + todayTasks.size}",
                     expanded = dueTodayExpanded,
                     onToggle = { dueTodayExpanded = !dueTodayExpanded },
                 ) {
                     todayDateLines.take(3).forEach { line ->
                         AlphaSummaryRow(title = line, detail = "Needs attention today")
                     }
-                    controller.todayTasks().take(4 - todayDateLines.size.coerceAtMost(4)).forEach { task ->
+                    todayTasks.take(4 - todayDateLines.size.coerceAtMost(4)).forEach { task ->
                         AlphaTaskRow(task = task, onToggle = { controller.toggleTaskDone(task.id) })
                     }
                 }
@@ -2329,29 +2334,27 @@ private fun AlphaHomeScreen(
             if (hasUpcomingItems) {
                 AlphaExpandableCard(
                     title = "Upcoming dates",
-                    badge = "${upcomingDateLines.size + controller.upcomingTasks().size}",
+                    badge = "${upcomingDateLines.size + upcomingTasks.size}",
                     expanded = upcomingExpanded,
                     onToggle = { upcomingExpanded = !upcomingExpanded },
                 ) {
                     upcomingDateLines.take(4).forEach { line ->
                         AlphaSummaryRow(title = line, detail = "Saved in your matter dates")
                     }
-                    controller.upcomingTasks().take(2).forEach { task ->
+                    upcomingTasks.take(2).forEach { task ->
                         AlphaTaskRow(task = task, onToggle = { controller.toggleTaskDone(task.id) })
                     }
                 }
             }
 
-            var needsReviewExpanded by rememberSaveable { mutableStateOf(false) }
-
             if (hasReviewItems) {
                 AlphaExpandableCard(
                     title = "Needs review",
-                    badge = "${controller.reviewQueue().size}",
+                    badge = "${reviewItems.size}",
                     expanded = needsReviewExpanded,
                     onToggle = { needsReviewExpanded = !needsReviewExpanded },
                 ) {
-                    controller.reviewQueue().take(4).forEach { item ->
+                    reviewItems.take(4).forEach { item ->
                         AlphaReviewRow(
                             item = item,
                             onOpen = { controller.pendingRoute = AndroidAlphaRoute.DocumentViewer(item.caseId, item.documentId, item.sourceRef?.pageNumber) },
@@ -6436,14 +6439,17 @@ private fun alphaPrivacyReceipt(result: AlphaAskResult): String {
     return "Answered using only your files on this device. Nothing was sent online."
 }
 
+private val alphaAnswerBulletRegex = Regex("^[-•*]\\s+(.*)")
+private val alphaAnswerNumberedRegex = Regex("^(\\d+\\.)\\s+(.*)")
+
 @Composable
 private fun AlphaFormattedAnswerText(text: String) {
     val lines = text.split("\n").filter { it.isNotBlank() }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         lines.forEach { line ->
             val trimmed = line.trim()
-            val bulletMatch = Regex("^[-•*]\\s+(.*)").matchEntire(trimmed)
-            val numberedMatch = Regex("^(\\d+\\.)\\s+(.*)").matchEntire(trimmed)
+            val bulletMatch = alphaAnswerBulletRegex.matchEntire(trimmed)
+            val numberedMatch = alphaAnswerNumberedRegex.matchEntire(trimmed)
             when {
                 bulletMatch != null -> {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -6680,14 +6686,6 @@ private fun alphaDocumentTint(kind: AlphaDocumentKind): Color =
         AlphaDocumentKind.Image -> AlphaAmberStatus
         AlphaDocumentKind.Text -> MaterialTheme.colorScheme.tertiary
         AlphaDocumentKind.Unknown -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
-
-private fun alphaDocumentFallbackIcon(kind: AlphaDocumentKind): ImageVector =
-    when (kind) {
-        AlphaDocumentKind.Pdf -> Icons.Outlined.Description
-        AlphaDocumentKind.Image -> Icons.Outlined.Image
-        AlphaDocumentKind.Text -> Icons.AutoMirrored.Outlined.Article
-        AlphaDocumentKind.Unknown -> Icons.AutoMirrored.Outlined.InsertDriveFile
     }
 
 private fun alphaDocumentAsset(kind: AlphaDocumentKind): RossGlassAsset =
