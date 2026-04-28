@@ -87,16 +87,16 @@ private let rossEmailAccessProfiles: [RossEmailAccessProfile] = [
         email: "advocate@ross.ai",
         displayName: "Advocate Ross",
         subject: "local_demo_advocate",
-        title: "Demo account",
-        detail: "Prefilled sample matter and tasks.",
+        title: "Try sample matter",
+        detail: "Opens one sample case.",
         workspace: .demo
     ),
     RossEmailAccessProfile(
         email: "fresh@ross.ai",
         displayName: "Fresh Ross Account",
         subject: "local_fresh_default",
-        title: "Fresh account",
-        detail: "Starts with a clean private workspace on this device.",
+        title: "Start empty",
+        detail: "Creates a clean workspace.",
         workspace: .fresh
     )
 ]
@@ -983,7 +983,7 @@ private struct RossWorkspacePrivacyShield: View {
                         .font(.headline.weight(.semibold))
                         .foregroundStyle(Color.rossInk)
                 } else {
-                    Text("Ross is private on this iPhone")
+                    Text("Your workspace is locked")
                         .font(.headline.weight(.semibold))
                         .foregroundStyle(Color.rossInk)
                 }
@@ -1036,14 +1036,14 @@ private struct RossLanguageSelectionScreen: View {
                         }
                         .padding(.top, rossAuthTopHeaderPadding(proxy.safeAreaInsets.top))
 
-                        RossAuthGlassPanel(cornerRadius: 34, padding: 24) {
+                        RossAuthGlassPanel(cornerRadius: 24, padding: 20) {
                             VStack(alignment: .leading, spacing: 20) {
                                 Text("Choose your preferred language")
                                     .font(.system(size: 28, weight: .semibold))
                                     .foregroundStyle(Color.rossInk)
                                     .fixedSize(horizontal: false, vertical: true)
 
-                                Text("Ross will use this for assistant responses where supported. The app interface is currently English in this test build.")
+                                Text("Ross can answer in this language where supported.")
                                     .font(.footnote)
                                     .foregroundStyle(Color.rossInk.opacity(0.7))
                                     .fixedSize(horizontal: false, vertical: true)
@@ -1063,7 +1063,7 @@ private struct RossLanguageSelectionScreen: View {
                             }
                         }
                     }
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, 16)
                     .padding(.bottom, 144)
                 }
                 .safeAreaInset(edge: .bottom) {
@@ -1079,7 +1079,7 @@ private struct RossLanguageSelectionScreen: View {
                         .opacity(selectedCode == nil ? 0.48 : 1)
                         .animation(.easeOut(duration: 0.18), value: selectedCode == nil)
                     }
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, 16)
                     .padding(.top, 10)
                     .padding(.bottom, max(proxy.safeAreaInsets.bottom, 12))
                 }
@@ -1172,8 +1172,8 @@ private struct RossSignInScreen: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let heroPanelWidth = min(proxy.size.width - 40, 420)
-            let signInPanelWidth = min(proxy.size.width - 32, 430)
+            let heroPanelWidth = min(proxy.size.width - 24, 430)
+            let signInPanelWidth = min(proxy.size.width - 24, 440)
             ZStack(alignment: .bottom) {
                 VStack(alignment: .leading, spacing: 18) {
                     HStack(spacing: 14) {
@@ -1188,7 +1188,7 @@ private struct RossSignInScreen: View {
                     }
                     .padding(.top, rossAuthTopHeaderPadding(proxy.safeAreaInsets.top))
 
-                    RossAuthGlassPanel(cornerRadius: 34, padding: 24, forcedWidth: heroPanelWidth) {
+                    RossAuthGlassPanel(cornerRadius: 24, padding: 22, forcedWidth: heroPanelWidth) {
                         VStack(alignment: .leading, spacing: 14) {
                             Text("Private legal work.\nOn this phone.")
                                 .font(.system(size: 36, weight: .light))
@@ -1204,7 +1204,7 @@ private struct RossSignInScreen: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .padding(.horizontal, 20)
+                .padding(.horizontal, 16)
                 .padding(.bottom, reservedSheetHeight)
 
                 VStack {
@@ -1258,7 +1258,7 @@ private struct RossAuthSignInSheet: View {
     }
 
     var body: some View {
-        RossAuthGlassPanel(cornerRadius: 32, padding: 20, forcedWidth: panelWidth) {
+        RossAuthGlassPanel(cornerRadius: 24, padding: 18, forcedWidth: panelWidth) {
             VStack(alignment: .leading, spacing: isExpanded ? 14 : 10) {
                 Button {
                     withAnimation(.easeOut(duration: 0.16)) {
@@ -1277,11 +1277,7 @@ private struct RossAuthSignInSheet: View {
                                     .font(.system(size: isExpanded ? 18 : 24, weight: isExpanded ? .medium : .semibold))
                                     .foregroundStyle(Color.rossInk)
 
-                                Text(
-                                    isExpanded
-                                        ? "Choose a sign-in method."
-                                        : "Tap to choose how you want to sign in."
-                                )
+                                Text(isExpanded ? "Start with a demo or your account." : "Tap to sign in.")
                                 .font(.system(size: isExpanded ? 13 : 14, weight: .regular))
                                 .foregroundStyle(Color.rossInk.opacity(0.62))
                                 .fixedSize(horizontal: false, vertical: true)
@@ -1342,7 +1338,7 @@ private struct RossAuthSignInSheet: View {
                                     }
                                 )
 
-                                Text("Pick an account above, or type its email.")
+                                Text("Use the sample matter or enter your email.")
                                     .font(.system(size: 11.5, weight: .medium))
                                     .foregroundStyle(Color.rossInk.opacity(0.7))
                                     .fixedSize(horizontal: false, vertical: true)
@@ -1351,7 +1347,7 @@ private struct RossAuthSignInSheet: View {
                                     authController.signInWithEmailAccess(emailAddress)
                                 } label: {
                                     RossAuthActionLabel(
-                                        title: selectedEmailProfile?.workspace == .fresh ? "Continue fresh" : "Continue with demo",
+                                        title: "Continue",
                                         tone: .secondary
                                     ) {
                                         RossGlassIconView(.userMsg, variant: .neutral, size: 17, fallbackSystemImage: "envelope.fill")
@@ -1399,7 +1395,7 @@ private struct RossAuthSignInSheet: View {
                                 } label: {
                                     RossAuthActionLabel(
                                         title: "Continue with email",
-                                        subtitle: "Demo or fresh local account",
+                                        subtitle: "Sample matter or empty workspace",
                                         tone: .secondary
                                     ) {
                                         Image(systemName: "envelope.fill")
@@ -1408,7 +1404,7 @@ private struct RossAuthSignInSheet: View {
                                 }
                                 .rossGlassButtonStyle(cornerRadius: 20)
 
-                                Text("Apple sign-in stays on this iPhone for now.")
+                                Text("Demo data is sample only.")
                                     .font(.system(size: 11, weight: .medium))
                                     .foregroundStyle(Color.rossInk.opacity(0.7))
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -1474,16 +1470,9 @@ private struct RossEmailAccessPresetRow: View {
                     )
 
                 VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 8) {
-                        Text(profile.title)
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(Color.rossInk)
-
-                        Text(profile.email)
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(Color.rossInk.opacity(0.58))
-                            .lineLimit(1)
-                    }
+                    Text(profile.title)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.rossInk)
 
                     Text(profile.detail)
                         .font(.system(size: 11, weight: .regular))
@@ -1614,7 +1603,7 @@ private struct RossQuickUnlockScreen: View {
                             .minimumScaleFactor(0.84)
                             .multilineTextAlignment(.center)
 
-                        Text("Use \(authController.quickUnlockSummary) to reopen your private workspace.")
+                        Text("Use \(authController.quickUnlockSummary) to reopen Ross.")
                             .font(.system(size: 14, weight: .regular))
                             .foregroundStyle(Color.rossInk.opacity(0.7))
                             .multilineTextAlignment(.center)

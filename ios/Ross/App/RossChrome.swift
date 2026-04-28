@@ -135,9 +135,9 @@ struct RossSectionCard<Content: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             if title != nil || subtitle != nil {
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 8) {
                     if let title {
                         Text(title)
                             .font(.rossSerifHeadline())
@@ -153,16 +153,17 @@ struct RossSectionCard<Content: View>: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, 16)
             }
 
             content
-                .padding(.horizontal, 20)
+                .padding(.horizontal, 16)
         }
-        .padding(.vertical, 16)
-        .background(Color.rossCardBackground)
-        .overlay(alignment: .bottom) {
-            Divider().padding(.leading, 20)
+        .padding(.vertical, 14)
+        .background(Color.rossCardBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.rossBorder.opacity(0.82), lineWidth: 1)
         }
     }
 }
