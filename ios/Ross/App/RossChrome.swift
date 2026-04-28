@@ -129,6 +129,8 @@ struct RossSectionCard<Content: View>: View {
     }
 
     var body: some View {
+        let shape = RoundedRectangle(cornerRadius: RossSurface.cornerRadius, style: .continuous)
+
         VStack(alignment: .leading, spacing: 12) {
             if title != nil || subtitle != nil {
                 VStack(alignment: .leading, spacing: 8) {
@@ -154,10 +156,10 @@ struct RossSectionCard<Content: View>: View {
                 .padding(.horizontal, 16)
         }
         .padding(.vertical, 14)
-        .background(Color.rossCardBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.rossCardBackground, in: shape)
         .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.rossBorder.opacity(0.82), lineWidth: 1)
+            shape.stroke(Color.rossBorder.opacity(0.82), lineWidth: 1)
         }
     }
 }
@@ -191,6 +193,8 @@ struct RossHeroCard<Content: View>: View {
     }
 
     var body: some View {
+        let shape = RoundedRectangle(cornerRadius: RossSurface.cornerRadius, style: .continuous)
+
         VStack(alignment: .leading, spacing: 0) {
             if showsMedia {
                 ZStack(alignment: .center) {
@@ -299,6 +303,7 @@ struct RossHeroCard<Content: View>: View {
             }
             .padding(16)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             ZStack {
                 LinearGradient(
@@ -313,10 +318,9 @@ struct RossHeroCard<Content: View>: View {
             }
         }
         .overlay {
-            RoundedRectangle(cornerRadius: 32, style: .continuous)
-                .stroke(Color.rossGlassStroke.opacity(0.85), lineWidth: 1)
+            shape.stroke(Color.rossGlassStroke.opacity(0.85), lineWidth: 1)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+        .clipShape(shape)
         .shadow(color: Color.rossShadow.opacity(0.14), radius: 24, y: 14)
     }
 }
@@ -325,7 +329,7 @@ struct RossInfoPill: View {
     @Environment(\.colorScheme) private var colorScheme
     let title: String
     let systemImage: String
-    private let cornerRadius: CGFloat = 18
+    private let cornerRadius: CGFloat = RossSurface.cornerRadius
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {

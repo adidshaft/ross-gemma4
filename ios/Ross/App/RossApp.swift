@@ -364,6 +364,14 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
         shouldRequireUnlock()
     }
 
+    private func setSignedIn(_ session: RossAuthSession) {
+        var transaction = Transaction(animation: nil)
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            phase = .signedIn(session)
+        }
+    }
+
     func loadIfNeeded() async {
         guard !didLoad else { return }
         didLoad = true
@@ -476,7 +484,7 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
         try? store.saveSession(session)
         RossAuthSessionSnapshot.shared.update(session)
         clearUnlockPresentationState()
-        phase = .signedIn(session)
+        setSignedIn(session)
     }
 
     func unlockSession() {
@@ -562,7 +570,7 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
             RossAuthSessionSnapshot.shared.update(session)
             clearUnlockPresentationState()
             authErrorMessage = nil
-            phase = .signedIn(session)
+            setSignedIn(session)
         } catch {
             authErrorMessage = "Could not sign in. Please try again."
         }
@@ -698,7 +706,7 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
         do {
             try store.saveSession(session)
             RossAuthSessionSnapshot.shared.update(session)
-            phase = .signedIn(session)
+            setSignedIn(session)
         } catch {
             authErrorMessage = "Could not sign in. Please try again."
         }
@@ -752,7 +760,7 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
         isUnlocking = false
         authErrorMessage = nil
         if case .unlockRequired(let session) = phase {
-            phase = .signedIn(session)
+            setSignedIn(session)
         }
     }
 
@@ -826,7 +834,7 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
             pendingQuickRelockSession = nil
             pendingAutomaticUnlock = false
             privacyShieldVisible = false
-            phase = .signedIn(session)
+            setSignedIn(session)
             return
         }
 
@@ -922,6 +930,12 @@ private struct RossAuthRootView: View {
                 }
             case .unlockRequired, .signedIn:
                 RossAuthenticatedShell(authController: authController)
+            }
+        }
+        .transaction { transaction in
+            if case .signedIn = authController.phase {
+                transaction.animation = nil
+                transaction.disablesAnimations = true
             }
         }
         .animation(.easeOut(duration: 0.18), value: authController.hasSelectedLanguage)
@@ -1160,7 +1174,7 @@ private struct RossLanguageTile: View {
 private struct RossSignInScreen: View {
     @Bindable var authController: RossAuthController
     @State private var emailAccessAddress = "advocate@ross.ai"
-    @State private var signInCardExpanded = true
+    @State private var signInCardExpanded = false
     @State private var emailOptionExpanded = false
 
     private var reservedSheetHeight: CGFloat {
@@ -1175,7 +1189,7 @@ private struct RossSignInScreen: View {
             let heroPanelWidth = min(proxy.size.width - 24, 430)
             let signInPanelWidth = min(proxy.size.width - 24, 440)
             ZStack(alignment: .bottom) {
-                VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 28) {
                     HStack(spacing: 14) {
                         RossAuthHeroMark(size: 58)
 
@@ -1186,22 +1200,22 @@ private struct RossSignInScreen: View {
 
                         Spacer(minLength: 0)
                     }
-                    .padding(.top, rossAuthTopHeaderPadding(proxy.safeAreaInsets.top))
+                        .padding(.top, rossAuthTopHeaderPadding(proxy.safeAreaInsets.top))
 
                     RossAuthGlassPanel(cornerRadius: 24, padding: 22, forcedWidth: heroPanelWidth) {
                         VStack(alignment: .leading, spacing: 14) {
                             Text("Private legal work.\nOn this phone.")
-                                .font(.system(size: 36, weight: .light))
-                                .tracking(-1.3)
-                                .foregroundStyle(Color.rossInk)
+                                .font(.system(size: 34, weight: .regular))
+                                .foregroundStyle(Color.rossInk.opacity(0.96))
                                 .fixedSize(horizontal: false, vertical: true)
 
                             Text("Your matters stay private on this device.")
-                                .font(.system(size: 14, weight: .regular))
-                                .foregroundStyle(Color.rossInk.opacity(0.72))
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(Color.rossInk.opacity(0.78))
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }
+                    .padding(.top, 8)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .padding(.horizontal, 16)
@@ -1265,33 +1279,23 @@ private struct RossAuthSignInSheet: View {
                         isExpanded.toggle()
                     }
                 } label: {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Capsule()
-                            .fill(Color(white: 0.70))
-                            .frame(width: 46, height: 5)
-                            .frame(maxWidth: .infinity)
+                    VStack(alignment: .center, spacing: 8) {
+                        RossAuthSheetCue(isExpanded: isExpanded)
 
-                        HStack(alignment: .top, spacing: 12) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(isExpanded ? "Sign in" : "Get Started")
-                                    .font(.system(size: isExpanded ? 18 : 24, weight: isExpanded ? .medium : .semibold))
-                                    .foregroundStyle(Color.rossInk)
+                        VStack(spacing: 4) {
+                            Text(isExpanded ? "Sign in" : "Get Started")
+                                .font(.system(size: isExpanded ? 19 : 24, weight: isExpanded ? .semibold : .semibold))
+                                .foregroundStyle(Color.rossInk)
+                                .multilineTextAlignment(.center)
 
-                                Text(isExpanded ? "Start with a demo or your account." : "Tap to sign in.")
+                            Text(isExpanded ? "Start with a demo or your account." : "Tap to sign in.")
                                 .font(.system(size: isExpanded ? 13 : 14, weight: .regular))
                                 .foregroundStyle(Color.rossInk.opacity(0.62))
+                                .multilineTextAlignment(.center)
                                 .fixedSize(horizontal: false, vertical: true)
-                            }
-
-                            Spacer(minLength: 10)
-
-                            Image(systemName: isExpanded ? "chevron.down" : "chevron.up")
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundStyle(Color.rossInk.opacity(0.4))
-                                .padding(.top, 2)
                         }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .center)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -1307,14 +1311,23 @@ private struct RossAuthSignInSheet: View {
 
                                     Spacer(minLength: 10)
 
-                                    Button("Back") {
+                                    Button {
                                         withAnimation(.easeOut(duration: 0.16)) {
                                             isEmailExpanded = false
                                         }
+                                    } label: {
+                                        Image(systemName: "chevron.left")
+                                            .font(.system(size: 13, weight: .bold))
+                                            .foregroundStyle(Color.rossInk.opacity(0.72))
+                                            .frame(width: 30, height: 30)
+                                            .background(Color.white.opacity(0.1), in: Circle())
+                                            .overlay {
+                                                Circle()
+                                                    .stroke(Color.white.opacity(0.16), lineWidth: 1)
+                                            }
                                     }
                                     .buttonStyle(.plain)
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundStyle(Color.rossAccent)
+                                    .accessibilityLabel("Back")
                                 }
 
                                 VStack(spacing: 8) {
@@ -1444,6 +1457,32 @@ private struct RossAuthSignInSheet: View {
             .animation(.easeOut(duration: 0.16), value: isExpanded)
             .animation(.easeOut(duration: 0.16), value: isEmailExpanded)
         }
+    }
+}
+
+private struct RossAuthSheetCue: View {
+    let isExpanded: Bool
+    @State private var pulse = false
+
+    var body: some View {
+        Image(systemName: isExpanded ? "chevron.down" : "arrow.up")
+            .font(.system(size: 13, weight: .bold))
+            .foregroundStyle(Color.rossInk.opacity(isExpanded ? 0.46 : (pulse ? 0.76 : 0.32)))
+            .frame(width: 28, height: 18)
+            .onAppear {
+                guard !isExpanded else { return }
+                withAnimation(.easeInOut(duration: 0.74).repeatForever(autoreverses: true)) {
+                    pulse = true
+                }
+            }
+            .onChange(of: isExpanded) { _, expanded in
+                pulse = false
+                guard !expanded else { return }
+                withAnimation(.easeInOut(duration: 0.74).repeatForever(autoreverses: true)) {
+                    pulse = true
+                }
+            }
+            .accessibilityHidden(true)
     }
 }
 

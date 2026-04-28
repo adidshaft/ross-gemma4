@@ -14,6 +14,12 @@ public extension Font {
     }
 }
 
+public enum RossSurface {
+    public static let cornerRadius: CGFloat = 16
+    public static let compactCornerRadius: CGFloat = 12
+    public static let largeCornerRadius: CGFloat = 20
+}
+
 public struct RossCardStyle: ViewModifier {
     @Environment(\.colorScheme) private var colorScheme
 
