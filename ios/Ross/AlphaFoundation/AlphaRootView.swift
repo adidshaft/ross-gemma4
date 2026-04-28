@@ -105,6 +105,7 @@ struct AlphaReviewQueueItem: Identifiable, Hashable {
 typealias AlphaPublicLawSearchAction = @Sendable (AlphaPublicLawPreview) async throws -> [AlphaPublicLawResult]
 
 private let alphaScreenPadding: CGFloat = 20
+private let alphaDocumentScreenHorizontalPadding: CGFloat = 12
 private let alphaSectionSpacing: CGFloat = 20
 private let alphaRossSuggestedTaskNotePrefix = "ross-overview::"
 private let alphaSharedWorkspaceID = UUID(uuidString: "0D9E5220-4D3C-4B49-9A67-10B42B593B7D")!
@@ -13062,7 +13063,7 @@ private struct AlphaCaseWorkspaceScreen: View {
                 let matterTasks = model.tasks(for: caseId)
                 let openTaskCount = model.openTaskCount(for: caseId)
 
-                VStack(alignment: .leading, spacing: alphaSectionSpacing) {
+                VStack(alignment: .leading, spacing: 16) {
                     AlphaInlineHeader(
                         eyebrow: caseMatter.forum,
                         title: caseMatter.title,
@@ -13326,10 +13327,6 @@ private struct AlphaMatterAttentionCard: View {
         hasReview ? .orange : Color.rossAccent
     }
 
-    private var iconName: String {
-        hasReview ? "exclamationmark.triangle.fill" : "arrow.forward.circle.fill"
-    }
-
     private var eyebrow: String {
         hasReview ? "Needs review" : "Next action"
     }
@@ -13370,16 +13367,9 @@ private struct AlphaMatterAttentionCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
-                Image(systemName: iconName)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(tint)
-                    .frame(width: 32, height: 32)
-                    .background(tint.opacity(0.14), in: Circle())
-
                 VStack(alignment: .leading, spacing: 5) {
                     Text(eyebrow)
-                        .font(.caption.weight(.bold))
-                        .textCase(.uppercase)
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(tint)
                     Text(title)
                         .font(.headline.weight(.semibold))
@@ -13405,20 +13395,36 @@ private struct AlphaMatterAttentionCard: View {
                         Text(hasReview ? "Open Review" : "Refresh")
                     }
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(buttonForeground)
+                    .foregroundStyle(hasReview ? Color.rossInk : buttonForeground)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
-                    .background(tint, in: Capsule())
+                    .background(
+                        hasReview
+                            ? Color.rossSecondaryGroupedBackground
+                            : tint,
+                        in: Capsule()
+                    )
+                    .overlay {
+                        Capsule()
+                            .stroke(hasReview ? Color.rossBorder.opacity(0.85) : Color.clear, lineWidth: 1)
+                    }
                 }
                 .buttonStyle(.plain)
                 .disabled(!hasReview && isRefreshing)
             }
         }
         .padding(16)
-        .background(tint.opacity(0.11), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .padding(.leading, 4)
+        .background(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 999, style: .continuous)
+                .fill(tint.opacity(hasReview ? 0.75 : 0.45))
+                .frame(width: 3)
+                .padding(.vertical, 14)
+        }
+        .background(Color.rossCardBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(tint.opacity(0.42), lineWidth: 1)
+                .stroke(Color.rossBorder.opacity(0.86), lineWidth: 1)
         }
     }
 }
@@ -13829,7 +13835,7 @@ private struct AlphaDocumentViewerScreen: View {
     var body: some View {
         ScrollView {
             if let document {
-                VStack(alignment: .leading, spacing: alphaSectionSpacing) {
+                VStack(alignment: .leading, spacing: 16) {
                     AlphaInlineHeader(
                         eyebrow: document.kind.title,
                         title: document.title,
@@ -13849,7 +13855,7 @@ private struct AlphaDocumentViewerScreen: View {
                     )
 
                     if let reviewSummaryText {
-                        RossSectionCard(title: "What Ross found", subtitle: reviewSummaryText) {
+                        AlphaDocumentReviewWorkbenchCard(title: "What Ross found", subtitle: reviewSummaryText) {
                             VStack(alignment: .leading, spacing: 14) {
                                 if document.classification != nil || !importantReviewFields.isEmpty || !reviewFindings.isEmpty {
                                     VStack(alignment: .leading, spacing: 12) {
@@ -13981,60 +13987,14 @@ private struct AlphaDocumentViewerScreen: View {
                         preview
                     }
 
-                    RossSectionCard(
-                        title: "Sources",
-                        subtitle: displayedSourceRefs.isEmpty ? "Source not available for this page." : "\(displayedSourceRefs.count) source reference\(displayedSourceRefs.count == 1 ? "" : "s")"
-                    ) {
-                        DisclosureGroup(isExpanded: $sourceDetailsExpanded) {
-                            VStack(alignment: .leading, spacing: 10) {
-                                if displayedSourceRefs.isEmpty {
-                                    Text("No source previews available for this page.")
-                                        .font(.footnote)
-                                        .foregroundStyle(Color.rossInk.opacity(0.65))
-                                }
-
-                                ForEach(displayedSourceRefs) { source in
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(alphaSourceRefDisplayLabel(source, contextDocumentTitle: document.title))
-                                            .font(.headline)
-                                        Text(source.detail)
-                                            .font(.footnote)
-                                            .foregroundStyle(Color.rossInk.opacity(0.65))
-                                    }
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(14)
-                                    .background(Color.rossCardBackground)
-                                    .overlay {
-                                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                            .stroke(Color.rossBorder, lineWidth: 1)
-                                    }
-                                }
-                            }
-                            .padding(.top, 10)
-                        } label: {
-                            HStack {
-                                Text(sourceDetailsExpanded ? "Hide source detail" : "Show source detail")
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(Color.rossInk)
-                                Spacer(minLength: 8)
-                                Text("\(displayedSourceRefs.count)")
-                                    .font(.caption.weight(.bold))
-                                    .foregroundStyle(Color.rossAccent)
-                            }
-                        }
-                        .tint(Color.rossAccent)
-                    }
-
-                    RossSectionCard(title: "Raw text") {
-                        DisclosureGroup(rawTextExpanded ? "Hide extracted text" : "Show extracted text", isExpanded: $rawTextExpanded) {
-                            Text(document.extractedText ?? "No extracted text is available for this page yet.")
-                                .font(.footnote)
-                                .foregroundStyle(Color.rossInk.opacity(0.76))
-                                .padding(.top, 10)
-                        }
-                        .font(.subheadline.weight(.semibold))
-                        .tint(Color.rossInk)
-                    }
+                    AlphaDocumentInspectCard(
+                        documentTitle: document.title,
+                        extractedText: document.extractedText,
+                        sourceRefs: displayedSourceRefs,
+                        sourceDetailsExpanded: $sourceDetailsExpanded,
+                        rawTextExpanded: $rawTextExpanded,
+                        onOpenSourceRef: model.openSourceRef
+                    )
 
                     AlphaDocumentAdvocateNoteCard(
                         note: $advocateNoteDraft,
@@ -14047,7 +14007,8 @@ private struct AlphaDocumentViewerScreen: View {
                         }
                     )
                 }
-                .padding(alphaScreenPadding)
+                .padding(.horizontal, alphaDocumentScreenHorizontalPadding)
+                .padding(.vertical, alphaScreenPadding)
             }
         }
         .onAppear {
@@ -14074,16 +14035,6 @@ private struct AlphaDocumentViewerScreen: View {
         .rossInlineNavigationTitle()
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 10) {
-                if let document {
-                    AlphaDocumentQuickAskStrip(
-                        title: nil,
-                        detail: reviewSummaryText
-                            ?? document.dominantSourceSnippet
-                            ?? "Ross will answer from this file only while you stay here.",
-                        isShared: isSharedDocument
-                    )
-                }
-
                 if let document, document.processingState == .readingText || document.processingState == .imported {
                     Text("Ross is still reading this file. Full-document Ask will be available after it finishes reading.")
                         .font(.caption.weight(.medium))
@@ -14098,6 +14049,44 @@ private struct AlphaDocumentViewerScreen: View {
             .padding(.horizontal, 12)
             .padding(.top, 8)
             .padding(.bottom, 6)
+        }
+    }
+}
+
+private struct AlphaDocumentReviewWorkbenchCard<Content: View>: View {
+    let title: String
+    let subtitle: String
+    let content: Content
+
+    init(title: String, subtitle: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.subtitle = subtitle
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(title)
+                    .font(.rossSerifHeadline())
+                    .foregroundStyle(Color.rossInk)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(subtitle)
+                    .font(.footnote)
+                    .foregroundStyle(Color.rossInk.opacity(0.7))
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.horizontal, 14)
+
+            content
+                .padding(.horizontal, 14)
+        }
+        .padding(.vertical, 14)
+        .background(Color.rossCardBackground)
+        .overlay(alignment: .bottom) {
+            Divider().padding(.leading, 14)
         }
     }
 }
@@ -14262,6 +14251,75 @@ private struct AlphaDocumentQuickAskStrip: View {
     }
 }
 
+private struct AlphaDocumentInspectCard: View {
+    let documentTitle: String
+    let extractedText: String?
+    let sourceRefs: [AlphaSourceRef]
+    @Binding var sourceDetailsExpanded: Bool
+    @Binding var rawTextExpanded: Bool
+    let onOpenSourceRef: (AlphaSourceRef) -> Void
+
+    var body: some View {
+        RossSectionCard(title: "Inspect", subtitle: "Sources and extracted text.") {
+            VStack(alignment: .leading, spacing: 12) {
+                DisclosureGroup(isExpanded: $sourceDetailsExpanded) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        if sourceRefs.isEmpty {
+                            Text("No source previews available for this page.")
+                                .font(.footnote)
+                                .foregroundStyle(Color.rossInk.opacity(0.65))
+                        }
+
+                        ForEach(sourceRefs) { source in
+                            Button {
+                                onOpenSourceRef(source)
+                            } label: {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(alphaSourceRefDisplayLabel(source, contextDocumentTitle: documentTitle))
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(Color.rossInk)
+                                    Text(source.detail)
+                                        .font(.footnote)
+                                        .foregroundStyle(Color.rossInk.opacity(0.65))
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(12)
+                                .background(Color.rossSecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.top, 8)
+                } label: {
+                    HStack {
+                        Text(sourceDetailsExpanded ? "Hide sources" : "Sources")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.rossInk)
+                        Spacer(minLength: 8)
+                        Text(sourceRefs.isEmpty ? "0" : "\(sourceRefs.count)")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(Color.rossAccent)
+                    }
+                }
+                .tint(Color.rossAccent)
+
+                Divider()
+
+                DisclosureGroup(rawTextExpanded ? "Hide raw text" : "Raw text", isExpanded: $rawTextExpanded) {
+                    Text(extractedText ?? "No extracted text is available for this page yet.")
+                        .font(.footnote)
+                        .foregroundStyle(Color.rossInk.opacity(0.76))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 8)
+                }
+                .font(.subheadline.weight(.semibold))
+                .tint(Color.rossAccent)
+            }
+        }
+    }
+}
+
 private struct AlphaDocumentReviewStatusBanner: View {
     let state: AlphaDocumentProcessingState
     let needsReviewCount: Int
@@ -14302,63 +14360,50 @@ private struct AlphaDocumentReviewStatusBanner: View {
         return state == .ready || needsReviewCount == 0 ? Color.rossSuccess : .orange
     }
 
-    private var systemImage: String {
-        if state == .failed {
-            return "xmark.octagon.fill"
-        }
-        if isWorking || state == .imported {
-            return "sparkles"
-        }
-        return state == .ready || needsReviewCount == 0 ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
-    }
-
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: systemImage)
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(tint)
-                .frame(width: 34, height: 34)
-                .background(tint.opacity(0.12), in: Circle())
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.headline)
+                .foregroundStyle(Color.rossInk)
+            Text(detail)
+                .font(.footnote)
+                .foregroundStyle(Color.rossInk.opacity(0.7))
+                .fixedSize(horizontal: false, vertical: true)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.headline)
-                    .foregroundStyle(Color.rossInk)
-                Text(detail)
-                    .font(.footnote)
-                    .foregroundStyle(Color.rossInk.opacity(0.7))
-                    .fixedSize(horizontal: false, vertical: true)
-
-                if isWorking {
-                    HStack(spacing: 8) {
-                        if let progressValue {
-                            ProgressView(value: min(max(progressValue, 0), 1), total: 1)
-                                .progressViewStyle(.linear)
-                                .tint(tint)
-                                .frame(maxWidth: 130)
-                        } else {
-                            ProgressView()
-                                .controlSize(.small)
-                                .tint(tint)
-                        }
-
-                        Text(progressLabel ?? "Working locally")
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(Color.rossInk.opacity(0.6))
+            if isWorking {
+                HStack(spacing: 8) {
+                    if let progressValue {
+                        ProgressView(value: min(max(progressValue, 0), 1), total: 1)
+                            .progressViewStyle(.linear)
+                            .tint(tint)
+                            .frame(maxWidth: 130)
+                    } else {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(tint)
                     }
-                    .padding(.top, 4)
-                    .accessibilityElement(children: .combine)
-                }
-            }
 
-            Spacer(minLength: 0)
+                    Text(progressLabel ?? "Working locally")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Color.rossInk.opacity(0.6))
+                }
+                .padding(.top, 4)
+                .accessibilityElement(children: .combine)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
+        .padding(14)
+        .padding(.leading, 4)
+        .background(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 999, style: .continuous)
+                .fill(tint.opacity(0.7))
+                .frame(width: 3)
+                .padding(.vertical, 12)
+        }
         .background(Color.rossCardBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(tint.opacity(0.32), lineWidth: 1)
+                .stroke(tint.opacity(0.26), lineWidth: 1)
         }
     }
 }
@@ -14446,6 +14491,44 @@ private func AlphaDocumentPreview(document: AlphaCaseDocument, initialPage: Int)
     )
 }
 
+private struct AlphaReviewActionButtonStyle: ButtonStyle {
+    var tint: Color = Color.rossInk
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(tint)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                Color.rossSecondaryGroupedBackground.opacity(configuration.isPressed ? 0.72 : 1),
+                in: Capsule()
+            )
+            .overlay {
+                Capsule()
+                    .stroke(Color.rossBorder.opacity(0.84), lineWidth: 1)
+            }
+    }
+}
+
+private struct AlphaReviewActionLabel: View {
+    let title: String
+    var tint: Color = Color.rossInk
+
+    var body: some View {
+        Text(title)
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(tint)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color.rossSecondaryGroupedBackground, in: Capsule())
+            .overlay {
+                Capsule()
+                    .stroke(Color.rossBorder.opacity(0.84), lineWidth: 1)
+            }
+    }
+}
+
 private struct AlphaClassificationReviewCard: View {
     let classification: AlphaLegalDocumentClassification
     let contextDocumentTitle: String?
@@ -14458,27 +14541,26 @@ private struct AlphaClassificationReviewCard: View {
         let confidenceSupport = alphaConfidenceSupportText(confidence: classification.confidence, needsReview: classification.needsReview)
 
         VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Type")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(Color.rossInk.opacity(0.58))
-                    Text(classification.type.title)
-                        .font(.headline)
-                        .foregroundStyle(Color.rossInk)
-                        .lineLimit(2)
-                    Text(confidenceSupport)
-                        .font(.caption)
-                        .foregroundStyle(alphaConfidenceTint(confidenceLabel))
-                }
-
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("Type")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Color.rossInk.opacity(0.58))
                 Spacer(minLength: 8)
-
                 AlphaConfidenceBadge(
                     label: confidenceLabel,
                     tint: alphaConfidenceTint(confidenceLabel)
                 )
             }
+
+            Text(classification.type.title)
+                .font(.headline)
+                .foregroundStyle(Color.rossInk)
+                .lineLimit(2)
+
+            Text(confidenceSupport)
+                .font(.caption)
+                .foregroundStyle(alphaConfidenceTint(confidenceLabel))
+                .fixedSize(horizontal: false, vertical: true)
 
             if let subtype = classification.subtype, !subtype.isEmpty {
                 Text(subtype.replacingOccurrences(of: "_", with: " ").capitalized)
@@ -14499,21 +14581,23 @@ private struct AlphaClassificationReviewCard: View {
 
             HStack(spacing: 10) {
                 Button(classification.type.blocksAutomaticLegalFactSaving ? "Use as reference only" : "Accept", action: onAccept)
-                    .buttonStyle(.bordered)
+                    .buttonStyle(AlphaReviewActionButtonStyle())
 
-                Menu("Edit") {
+                Menu {
                     ForEach(AlphaLegalDocumentType.reviewMenuTypes, id: \.self) { type in
                         Button(type.title) {
                             onUpdateType(type)
                         }
                     }
+                } label: {
+                    AlphaReviewActionLabel(title: "Edit")
                 }
 
                 if classification.type.blocksAutomaticLegalFactSaving {
                     Button("Mark as legal document") {
                         onUpdateType(.courtFiling)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(AlphaReviewActionButtonStyle(tint: Color.rossAccent))
                 }
             }
             .font(.footnote.weight(.semibold))
@@ -14525,10 +14609,10 @@ private struct AlphaClassificationReviewCard: View {
             )
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(Color.rossGlassSubtleFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(12)
+        .background(Color.rossGlassSubtleFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(Color.rossBorder.opacity(0.85), lineWidth: 1)
         }
     }
@@ -14549,32 +14633,34 @@ private struct AlphaExtractedFieldReviewCard: View {
         let confidenceSupport = alphaConfidenceSupportText(confidence: field.confidence, needsReview: field.needsReview)
 
         VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(field.label)
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(Color.rossInk.opacity(0.58))
-                    if isEditing {
-                        TextField("Edit \(field.label.lowercased())", text: $draftValue)
-                            .textFieldStyle(.plain)
-                            .padding(8)
-                            .background(Color.rossGlassSubtleFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    } else {
-                        Text(field.value)
-                            .font(.headline)
-                            .foregroundStyle(Color.rossInk)
-                            .lineLimit(3)
-                    }
-                    Text(confidenceSupport)
-                        .font(.caption)
-                        .foregroundStyle(alphaConfidenceTint(field.confidenceLabel))
-                }
-                Spacer()
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(field.label)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Color.rossInk.opacity(0.58))
+                Spacer(minLength: 8)
                 AlphaConfidenceBadge(
                     label: field.confidenceLabel,
                     tint: alphaConfidenceTint(field.confidenceLabel)
                 )
             }
+
+            if isEditing {
+                TextField("Edit \(field.label.lowercased())", text: $draftValue)
+                    .textFieldStyle(.plain)
+                    .padding(10)
+                    .background(Color.rossSecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            } else {
+                Text(field.value)
+                    .font(.headline)
+                    .foregroundStyle(Color.rossInk)
+                    .lineLimit(4)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Text(confidenceSupport)
+                .font(.caption)
+                .foregroundStyle(alphaConfidenceTint(field.confidenceLabel))
+                .fixedSize(horizontal: false, vertical: true)
 
             AlphaSourceRefChips(
                 sourceRefs: field.sourceRefs,
@@ -14588,34 +14674,34 @@ private struct AlphaExtractedFieldReviewCard: View {
                         onSaveEdit(draftValue)
                         isEditing = false
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(AlphaReviewActionButtonStyle(tint: Color.rossAccent))
 
                     Button("Cancel") {
                         draftValue = field.value
                         isEditing = false
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(AlphaReviewActionButtonStyle())
                 } else {
                     Button("Accept", action: onAccept)
-                        .buttonStyle(.bordered)
+                        .buttonStyle(AlphaReviewActionButtonStyle())
 
                     Button("Edit") {
                         draftValue = field.value
                         isEditing = true
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(AlphaReviewActionButtonStyle())
 
                     Button("Ignore", role: .destructive, action: onIgnore)
-                        .buttonStyle(.bordered)
+                        .buttonStyle(AlphaReviewActionButtonStyle(tint: .red))
                 }
             }
             .font(.footnote.weight(.semibold))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(Color.rossGlassSubtleFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(12)
+        .background(Color.rossGlassSubtleFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(Color.rossBorder.opacity(0.85), lineWidth: 1)
         }
         .onAppear {
@@ -14670,25 +14756,25 @@ private struct AlphaFindingCard: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 8) {
                         Button("Keep matter value", action: onKeepMatterValue)
-                            .buttonStyle(.bordered)
+                            .buttonStyle(AlphaReviewActionButtonStyle())
                         Button("Use file value", action: onUseFileValue)
-                            .buttonStyle(.borderedProminent)
+                            .buttonStyle(AlphaReviewActionButtonStyle(tint: Color.rossAccent))
                     }
                     HStack(spacing: 8) {
                         Button("Save as alternate reference", action: onSaveAlternate)
-                            .buttonStyle(.bordered)
+                            .buttonStyle(AlphaReviewActionButtonStyle())
                         Button("Ignore", role: .destructive, action: onIgnore)
-                            .buttonStyle(.bordered)
+                            .buttonStyle(AlphaReviewActionButtonStyle(tint: .red))
                     }
                 }
                 .font(.footnote.weight(.semibold))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
+        .padding(12)
         .background(Color.rossCardBackground)
         .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(Color.rossBorder, lineWidth: 1)
         }
     }
