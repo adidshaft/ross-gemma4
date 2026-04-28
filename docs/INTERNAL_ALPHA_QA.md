@@ -247,7 +247,7 @@ Privacy expectation:
 
 - follow-up stays local
 
-## 16. Ask Ross with Web off
+## 16. Ask Ross with public law off
 
 Expected result:
 
@@ -256,17 +256,17 @@ Expected result:
 
 Fail condition:
 
-- any web search starts while Web is off
+- any public-law search starts while Public law is off
 
 Privacy expectation:
 
 - no search request leaves the device
 
-## 17. Ask Ross with Web on
+## 17. Ask Ross with public law on
 
 Expected result:
 
-- Web state is clearly visible
+- public-law state is clearly visible
 - Ross explains the privacy boundary
 - a sanitized preview appears
 - confirmation is required before search
@@ -288,7 +288,7 @@ Expected result:
 
 Fail condition:
 
-- private case content appears as if it was sent to web search
+- private case content appears as if it was sent to public-law search
 
 Privacy expectation:
 

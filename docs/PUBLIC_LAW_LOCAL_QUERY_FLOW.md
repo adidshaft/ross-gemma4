@@ -4,7 +4,7 @@ This document records the current public-law flow Ross is expected to preserve.
 
 ## Rules
 
-- `Web Search` is off by default
+- Public law is off by default
 - the mobile app must shape the query locally first
 - the user must see a preview before search
 - only the approved sanitized query may be sent
@@ -15,8 +15,8 @@ This document records the current public-law flow Ross is expected to preserve.
 
 1. user asks a question
 2. Ross first handles it locally
-3. if `Web Search` is off, Ross stays local-only
-4. if `Web Search` is on, Ross prepares a generic public-law query locally
+3. if Public law is off, Ross stays local-only
+4. if Public law is on, Ross prepares a generic public-law query locally
 5. Ross shows the preview
 6. the user confirms search
 7. the app sends only the sanitized query to the Ross backend
@@ -44,8 +44,8 @@ Physical device:
 
 Freshly proven in this session:
 
-- `Web Search` off stayed local for a matter-specific question
-- turning `Web Search` on produced a preview before the backend request
+- Public law off stayed local for a matter-specific question
+- turning Public law on produced a preview before the backend request
 - confirming a generic public-law question returned results
 - the result view separated case-file material from public-law results
 
@@ -57,7 +57,7 @@ Freshly observed issue:
 
 Freshly proven in this session:
 
-- the tools sheet can toggle `Web Search` on
+- the tools sheet can toggle Public law on
 - the privacy copy says Ross only sends a sanitized public-law query
 
 Not yet proven in this Android pass:

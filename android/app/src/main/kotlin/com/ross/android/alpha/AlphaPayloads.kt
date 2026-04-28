@@ -215,7 +215,7 @@ object AlphaPayloadShaper {
         return AlphaPublicLawPreview(
             query = sanitized,
             removed = removed.ifEmpty { linkedSetOf("No private case data detected") }.toList(),
-            confirmationNote = "Public-law search sends only a sanitized query while Web search is allowed in Settings.",
+            confirmationNote = "Public-law search sends only a sanitized query after advocate review.",
         )
     }
 

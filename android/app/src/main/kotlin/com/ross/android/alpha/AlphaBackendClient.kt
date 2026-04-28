@@ -393,7 +393,7 @@ internal fun AlphaPublicLawSearchPayload.toRequest() = AlphaBackendPublicLawRequ
     language = "en",
     confirmedPublicPreview = true,
     consent = AlphaBackendPublicLawConsent(
-        mode = "settings_web_search_enabled",
+        mode = "public_law_query_reviewed",
         version = "2026-04-store-v1",
     ),
 )

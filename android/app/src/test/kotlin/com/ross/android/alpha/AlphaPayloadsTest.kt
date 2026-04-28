@@ -180,7 +180,7 @@ class AlphaPayloadsTest {
         assertFalse(preview.query.contains("Raghav Fakepriv", ignoreCase = true))
         assertFalse(preview.query.contains("blue suitcase near temple", ignoreCase = true))
         assertEquals(
-            "Public-law search sends only a sanitized query while Web search is allowed in Settings.",
+            "Public-law search sends only a sanitized query after advocate review.",
             preview.confirmationNote,
         )
     }
@@ -313,7 +313,7 @@ class AlphaPayloadsTest {
         assertEquals(true, request.confirmedPublicPreview)
         assertEquals("IN-ALL", request.jurisdiction)
         assertEquals("en", request.language)
-        assertEquals("settings_web_search_enabled", request.consent.mode)
+        assertEquals("public_law_query_reviewed", request.consent.mode)
         assertEquals("2026-04-store-v1", request.consent.version)
     }
 

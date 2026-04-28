@@ -42,7 +42,16 @@ class AlphaLawyerUsabilityTest {
     }
 
     @Test
-    fun `web off keeps public law backend idle`() {
+    fun `fresh android state starts onboarding with public law review required`() {
+        val controller = buildController(secretKeyProvider = InMemorySecretKeyProvider())
+
+        assertEquals(AlphaOnboardingStage.Onboarding, controller.persisted.onboardingStage)
+        assertEquals(AndroidAlphaRoute.Onboarding, controller.startRoute())
+        assertTrue(controller.persisted.settings.requirePublicLawApproval)
+    }
+
+    @Test
+    fun `public law off keeps public law backend idle`() {
         var publicLawCalls = 0
         val controller = buildController(
             secretKeyProvider = InMemorySecretKeyProvider(),
@@ -81,13 +90,13 @@ class AlphaLawyerUsabilityTest {
         val result = controller.latestAskResult
         assertEquals("Private assistant setup required", result?.answerTitle)
         assertEquals("Setup required", result?.statusNote)
-        assertTrue(result?.answerSections?.joinToString(" ")?.contains("real local model is required", ignoreCase = true) == true)
+        assertTrue(result?.answerSections?.joinToString(" ")?.contains("private assistant is ready", ignoreCase = true) == true)
         assertTrue(result?.selectedDocumentTitles?.isEmpty() == true)
         assertTrue(result?.caseFileSources?.isEmpty() == true)
     }
 
     @Test
-    fun `web on uses settings consent before public law request`() {
+    fun `public law on uses settings consent before public law request`() {
         var publicLawCalls = 0
         var approvedQuerySent: String? = null
         val controller = buildController(
@@ -157,6 +166,8 @@ class AlphaLawyerUsabilityTest {
 
         assertEquals(0, publicLawCalls)
         assertNull(controller.publicLawPreview)
+        assertNull(controller.latestAskResult?.publicLawPreview)
+        assertTrue(controller.latestAskResult?.publicLawResults?.isEmpty() == true)
         assertEquals("Answered from your files", controller.latestAskResult?.statusNote)
         assertTrue(controller.persisted.ledgerEntries.any { it.title == "Public-law search cancelled" })
     }
@@ -227,7 +238,7 @@ class AlphaLawyerUsabilityTest {
         )
 
         assertEquals("Private assistant setup required", controller.latestAskResult?.answerTitle)
-        assertTrue(controller.latestAskResult?.answerSections?.joinToString(" ")?.contains("real local model is required", ignoreCase = true) == true)
+        assertTrue(controller.latestAskResult?.answerSections?.joinToString(" ")?.contains("private assistant is ready", ignoreCase = true) == true)
     }
 
     @Test

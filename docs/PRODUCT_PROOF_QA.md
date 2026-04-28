@@ -16,8 +16,8 @@ The target dogfood loop for this phase is:
 6. save a next hearing/date from the Ask Ross dock
 7. import a document
 8. review extracted details
-9. ask Ross with `Web Search` off
-10. turn `Web Search` on and review the sanitized preview
+9. ask Ross with Public law off
+10. turn Public law on and review the sanitized preview
 11. confirm search
 12. view public-law results separately from case-file sources
 13. generate and open a draft export

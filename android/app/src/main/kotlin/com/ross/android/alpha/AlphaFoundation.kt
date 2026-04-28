@@ -439,7 +439,7 @@ data class AlphaSettings(
     val activeTier: AlphaCapabilityTier? = null,
     val wifiOnlyDownloads: Boolean = true,
     val allowMobileDataForLargePacks: Boolean = false,
-    val requirePublicLawApproval: Boolean = false,
+    val requirePublicLawApproval: Boolean = true,
     val instantModeEnabled: Boolean = true,
     val privateByDefault: Boolean = true,
     val appearanceMode: AlphaAppearanceMode = AlphaAppearanceMode.Auto,
@@ -495,7 +495,7 @@ internal class AlphaAccountSessionSnapshot private constructor() {
 }
 
 data class AlphaPersistedState(
-    val onboardingStage: AlphaOnboardingStage = AlphaOnboardingStage.Completed,
+    val onboardingStage: AlphaOnboardingStage = AlphaOnboardingStage.Onboarding,
     val selectedTab: AlphaAppTab = AlphaAppTab.Home,
     val settings: AlphaSettings = AlphaSettings(),
     val accountSession: AlphaAccountSession = AlphaAccountSession(),
@@ -2029,7 +2029,11 @@ internal class AlphaRossController(
         pendingPublicLawScopeCaseId = null
         publicLawPreview = null
         publicLawResults = emptyList()
-        latestAskResult = latestAskResult?.copy(statusNote = "Answered from your files")
+        latestAskResult = latestAskResult?.copy(
+            publicLawPreview = null,
+            publicLawResults = emptyList(),
+            statusNote = "Answered from your files",
+        )
         if (pendingQuestion != null) {
             updateLatestAskHistory(pendingScope, pendingQuestion) { result ->
                 result.copy(publicLawPreview = null, publicLawResults = emptyList(), statusNote = "Answered from your files")
@@ -2231,8 +2235,8 @@ internal class AlphaRossController(
                     ?: AlphaMatterAskRuntimePayload(
                         headline = "Private assistant could not answer",
                         sections = listOf(
-                            "The local model returned output Ross could not safely display.",
-                            "Ross did not generate a substitute answer because a real local model result is required.",
+                            "Ross could not safely display the private assistant output.",
+                            "Ross did not generate a substitute legal answer. Please retry after checking the source files.",
                         ),
                         statusNote = "Needs retry",
                     )
@@ -2431,8 +2435,8 @@ internal class AlphaRossController(
             return AlphaMatterAskRuntimePayload(
                 headline = parsed.headline.trim().ifBlank { "Private assistant needs retry" },
                 sections = listOf(
-                    "The local model returned an incomplete answer body.",
-                    "Ross did not generate a substitute legal answer because a real local model result is required.",
+                    "Ross could not safely display the private assistant output.",
+                    "Ross did not generate a substitute legal answer. Please retry after checking the source files.",
                 ),
                 statusNote = "Needs retry",
             )
@@ -3195,7 +3199,7 @@ internal class AlphaRossController(
             answerTitle = answerTitle,
             answerSections = if (notFound) listOf("Ross could not find this in your files yet.") else sections.take(3),
             caseFileSources = matchedSources.take(3),
-            statusNote = if (notFound) "Web Search is off" else if (selectedDocuments.isEmpty()) "Answered from your files" else "Answered from selected files",
+            statusNote = if (notFound) "Public law is off" else if (selectedDocuments.isEmpty()) "Answered from your files" else "Answered from selected files",
             needsReviewWarning = reviewQueue(scopeCaseId)
                 .filter { selectedDocumentIds.isEmpty() || it.documentId in selectedDocumentIds }
                 .takeIf { it.isNotEmpty() }
@@ -3229,8 +3233,8 @@ internal class AlphaRossController(
             selectedDocumentTitles = selectedDocuments.map { it.title },
             answerTitle = "Ross is using the private assistant",
             answerSections = listOf(
-                "The local model is preparing a private answer on this device.",
-                "Ross will update this card when the model returns.",
+                "Ross is preparing a private answer on this device.",
+                "Ross will update this card when the answer is ready.",
             ),
             caseFileSources = emptyList(),
             statusNote = "Private assistant",
@@ -3253,11 +3257,11 @@ internal class AlphaRossController(
             answerTitle = "Private assistant setup required",
             answerSections = listOf(
                 detail,
-                "Ross did not generate a legal answer because a real local model is required.",
+                "Ross did not generate a legal answer until the private assistant is ready.",
             ),
             caseFileSources = emptyList(),
             statusNote = "Setup required",
-            needsReviewWarning = "Real local model required.",
+            needsReviewWarning = "Private assistant setup required.",
         )
     }
 
@@ -3783,7 +3787,7 @@ internal class AlphaRossController(
             }
         )
         return state.copy(
-            onboardingStage = AlphaOnboardingStage.Completed,
+            onboardingStage = state.onboardingStage,
             selectedTab = normalizedTab,
             cases = normalizedCases,
             tasks = normalizedTasks,
