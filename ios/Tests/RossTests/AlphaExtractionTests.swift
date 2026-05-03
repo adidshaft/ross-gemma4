@@ -92,6 +92,27 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNil(payload)
     }
 
+    func testAnswerDisplaySectionsHideRuntimeArtifacts() {
+        let sections = AlphaMatterAskPayloadParser.displaySections(from: [
+            """
+            <think>Internal chain of thought</think>
+            {"headline":"Next hearing found","sections":["The next hearing date is 7 May 2026.","Check the signed order before relying on it."],"statusNote":"Private assistant"}
+            """,
+            #"{"headline":"Only JSON","sections":["Second answer from structured payload."]}"#
+        ])
+
+        XCTAssertEqual(
+            [
+                "The next hearing date is 7 May 2026.",
+                "Check the signed order before relying on it.",
+                "Second answer from structured payload."
+            ],
+            sections
+        )
+        XCTAssertFalse(sections.joined(separator: "\n").contains("<think>"))
+        XCTAssertFalse(sections.joined(separator: "\n").contains(#""headline""#))
+    }
+
     func testPrivateAssistantTierCopyHidesTechnicalModelNames() {
         XCTAssertEqual(AlphaCapabilityTier.quickStart.downloadSizeLabel, "about 430 MB")
         XCTAssertEqual(AlphaCapabilityTier.caseAssociate.downloadSizeLabel, "about 1.1-1.3 GB")

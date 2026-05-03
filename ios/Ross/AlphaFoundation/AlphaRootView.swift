@@ -130,6 +130,10 @@ enum AlphaMatterAskPayloadParser {
         )
     }
 
+    static func displaySections(from sections: [String]) -> [String] {
+        sections.flatMap { displaySections(from: $0) }
+    }
+
     private static func decodedPayload(
         from candidate: String,
         baseResult: AlphaAskResult
@@ -239,7 +243,7 @@ enum AlphaMatterAskPayloadParser {
             return nil
         }
         let nsRange = NSRange(text.startIndex..., in: text)
-        guard let match = regex.firstMatch(in: text, range: nsRange),
+        guard let match = regex.matches(in: text, range: nsRange).last,
               let range = Range(match.range(at: 1), in: text) else {
             return nil
         }
@@ -263,7 +267,9 @@ enum AlphaMatterAskPayloadParser {
         let literalRange = NSRange(arrayBody.startIndex..., in: arrayBody)
         return literalRegex.matches(in: arrayBody, range: literalRange).compactMap { match in
             guard let range = Range(match.range, in: arrayBody) else { return nil }
+            let prefix = arrayBody[..<range.lowerBound].trimmingCharacters(in: .whitespacesAndNewlines)
             let suffix = arrayBody[range.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines)
+            guard prefix.last != ":" else { return nil }
             guard suffix.first != ":" else { return nil }
             return decodeJSONStringLiteral(String(arrayBody[range]))?
                 .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -308,6 +314,44 @@ enum AlphaMatterAskPayloadParser {
             return true
         }
         return false
+    }
+
+    private static func displaySections(from rawSection: String) -> [String] {
+        let sanitized = sanitizedResponseText(rawSection)
+        guard !sanitized.isEmpty else { return [] }
+
+        let candidates = [
+            extractLikelyJSON(from: sanitized),
+            sanitized
+        ]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty }
+
+        for candidate in candidates {
+            if let data = candidate.data(using: .utf8),
+               let payload = try? JSONDecoder().decode(AlphaMatterAskRuntimePayload.self, from: data) {
+                return normalizedDisplaySections(payload.sections)
+            }
+
+            let salvaged = extractJSONStringArray(for: "sections", in: candidate)
+            if !salvaged.isEmpty {
+                return normalizedDisplaySections(salvaged)
+            }
+        }
+
+        guard !looksLikeStructuredOutput(sanitized) else { return [] }
+        return humanReadableParagraphs(from: sanitized)
+    }
+
+    private static func normalizedDisplaySections(_ sections: [String]) -> [String] {
+        sections
+            .map(sanitizedResponseText)
+            .map { $0.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression) }
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter {
+                !$0.isEmpty &&
+                !$0.caseInsensitiveContains("<think") &&
+                !looksLikeStructuredOutput($0)
+            }
     }
 }
 
@@ -1467,18 +1511,20 @@ final class AlphaRossModel {
 
     func setMatterDateStatus(caseId: UUID, dateId: UUID, status: AlphaMatterDateStatus) {
         guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }) else { return }
-        guard let dateIndex = persisted.cases[caseIndex].dates.firstIndex(where: { $0.id == dateId }) else { return }
-        persisted.cases[caseIndex].dates[dateIndex].status = status
-        persisted.cases[caseIndex].dates[dateIndex].updatedAt = .now
-        if persisted.cases[caseIndex].dates[dateIndex].kind == .hearing, status != .scheduled {
-            let nextScheduledHearing = persisted.cases[caseIndex].dates
+        var caseMatter = persisted.cases[caseIndex]
+        guard let dateIndex = caseMatter.dates.firstIndex(where: { $0.id == dateId }) else { return }
+        caseMatter.dates[dateIndex].status = status
+        caseMatter.dates[dateIndex].updatedAt = .now
+        if caseMatter.dates[dateIndex].kind == .hearing, status != .scheduled {
+            let nextScheduledHearing = caseMatter.dates
                 .filter { $0.kind == .hearing && $0.status == .scheduled }
                 .map(\.date)
                 .sorted()
                 .first
-            persisted.cases[caseIndex].nextHearing = nextScheduledHearing
+            caseMatter.nextHearing = nextScheduledHearing
         }
-        refreshCaseWorkspace(at: caseIndex)
+        refreshCaseWorkspace(caseMatter: &caseMatter)
+        persisted.cases[caseIndex] = caseMatter
         persist(workspaceChanged: true)
     }
 
@@ -2058,9 +2104,7 @@ final class AlphaRossModel {
         publicLawResults = []
         publicLawSearchStatus = .idle
         if latestAskResult?.chatTurnID == pendingPublicLawTurnID, latestAskResult?.publicLawResults.isEmpty == true {
-            latestAskResult?.statusNote = "Answered from your files"
-            latestAskResult?.publicLawPreview = nil
-            latestAskResult?.publicLawResults = []
+            latestAskResult = nil
         }
         updateStoredAskTurn(
             scopeCaseID: pendingPublicLawScopeCaseID,
@@ -2069,7 +2113,9 @@ final class AlphaRossModel {
         ) { turn in
             turn.publicLawPreview = nil
             turn.publicLawResults = []
-            turn.statusNote = "Answered from your files"
+            turn.answerTitle = "Public-law search canceled"
+            turn.answerSections = ["No public-law search was run. Ask again when you want Ross to search public law."]
+            turn.statusNote = "Canceled"
         }
         if hadPendingPreview {
             persisted.ledgerEntries.insert(
@@ -2750,10 +2796,11 @@ final class AlphaRossModel {
                 )
             ]
 
-            persisted.cases[caseIndex].documents.insert(document, at: 0)
-            refreshCaseWorkspace(at: caseIndex)
+            var caseMatter = persisted.cases[caseIndex]
+            caseMatter.documents.insert(document, at: 0)
+            refreshCaseWorkspace(caseMatter: &caseMatter)
             completeImportFirstDocumentTask(caseId: targetCaseID)
-            persisted.cases[caseIndex].updatedAt = .now
+            caseMatter.updatedAt = .now
             if targetCaseID != alphaSharedWorkspaceID {
                 selectedCaseID = targetCaseID
                 askSelectedScopeCaseID = targetCaseID
@@ -2771,7 +2818,8 @@ final class AlphaRossModel {
                 textSnippet: document.dominantSourceSnippet ?? document.extractedText ?? "Imported source reference",
                 ocrConfidence: document.kind == .image ? nil : 0.92
             )
-            persisted.cases[caseIndex].sourceRefs.insert(sourceRef, at: 0)
+            caseMatter.sourceRefs.insert(sourceRef, at: 0)
+            persisted.cases[caseIndex] = caseMatter
 
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
@@ -2831,12 +2879,15 @@ final class AlphaRossModel {
 
     func deleteDocument(caseId: UUID, documentId: UUID) {
         guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }) else { return }
-        let removedDocument = persisted.cases[caseIndex].documents.first(where: { $0.id == documentId })
+        var caseMatter = persisted.cases[caseIndex]
+        let removedDocument = caseMatter.documents.first(where: { $0.id == documentId })
         if let relativePath = removedDocument?.storedRelativePath {
             try? FileManager.default.removeItem(at: alphaAbsoluteURL(for: relativePath))
         }
-        persisted.cases[caseIndex].documents.removeAll { $0.id == documentId }
-        persisted.cases[caseIndex].sourceRefs.removeAll { $0.documentId == documentId }
+        caseMatter.documents.removeAll { $0.id == documentId }
+        caseMatter.sourceRefs.removeAll { $0.documentId == documentId }
+        refreshCaseWorkspace(caseMatter: &caseMatter)
+        persisted.cases[caseIndex] = caseMatter
         persisted.tasks = (persisted.tasks ?? []).filter { $0.caseId != caseId || !($0.notes?.contains(removedDocument?.title ?? "") ?? false) }
         globalAskSelectedDocumentIDs.remove(documentId)
         askSelectedDocumentIDs = askSelectedDocumentIDs.mapValues { ids in
@@ -2860,28 +2911,30 @@ final class AlphaRossModel {
 
     func moveDocument(caseId: UUID, documentId: UUID, by offset: Int) {
         guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }) else { return }
-        guard let currentIndex = persisted.cases[caseIndex].documents.firstIndex(where: { $0.id == documentId }) else { return }
+        var caseMatter = persisted.cases[caseIndex]
+        guard let currentIndex = caseMatter.documents.firstIndex(where: { $0.id == documentId }) else { return }
         let targetIndex = min(
             max(currentIndex + offset, 0),
-            persisted.cases[caseIndex].documents.count - 1
+            caseMatter.documents.count - 1
         )
         guard targetIndex != currentIndex else { return }
 
-        let movedDocument = persisted.cases[caseIndex].documents.remove(at: currentIndex)
-        persisted.cases[caseIndex].documents.insert(movedDocument, at: targetIndex)
-        persisted.cases[caseIndex].updatedAt = .now
+        let movedDocument = caseMatter.documents.remove(at: currentIndex)
+        caseMatter.documents.insert(movedDocument, at: targetIndex)
+        caseMatter.updatedAt = .now
+        persisted.cases[caseIndex] = caseMatter
         persist(workspaceChanged: true)
     }
 
     func updateDocumentAdvocateNote(caseId: UUID, documentId: UUID, note: String) {
-        guard
-            let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }),
-            let documentIndex = persisted.cases[caseIndex].documents.firstIndex(where: { $0.id == documentId })
-        else { return }
+        guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }) else { return }
+        var caseMatter = persisted.cases[caseIndex]
+        guard let documentIndex = caseMatter.documents.firstIndex(where: { $0.id == documentId }) else { return }
 
         let cleaned = note.trimmingCharacters(in: .whitespacesAndNewlines)
-        persisted.cases[caseIndex].documents[documentIndex].advocateNote = cleaned.isEmpty ? nil : cleaned
-        persisted.cases[caseIndex].updatedAt = .now
+        caseMatter.documents[documentIndex].advocateNote = cleaned.isEmpty ? nil : cleaned
+        caseMatter.updatedAt = .now
+        persisted.cases[caseIndex] = caseMatter
         persist(workspaceChanged: true)
     }
 
@@ -2961,27 +3014,30 @@ final class AlphaRossModel {
     }
 
     func acceptExtractedField(caseId: UUID, documentId: UUID, fieldId: UUID) {
+        guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }) else { return }
+        var caseMatter = persisted.cases[caseIndex]
         guard
-            let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }),
-            let documentIndex = persisted.cases[caseIndex].documents.firstIndex(where: { $0.id == documentId }),
-            let fieldIndex = persisted.cases[caseIndex].documents[documentIndex].extractedFields.firstIndex(where: { $0.id == fieldId })
+            let documentIndex = caseMatter.documents.firstIndex(where: { $0.id == documentId }),
+            let fieldIndex = caseMatter.documents[documentIndex].extractedFields.firstIndex(where: { $0.id == fieldId })
         else { return }
 
-        persisted.cases[caseIndex].documents[documentIndex].extractedFields[fieldIndex].needsReview = false
-        persisted.cases[caseIndex].documents[documentIndex].extractedFields[fieldIndex].updatedAt = .now
-        refreshCaseWorkspace(at: caseIndex)
+        caseMatter.documents[documentIndex].extractedFields[fieldIndex].needsReview = false
+        caseMatter.documents[documentIndex].extractedFields[fieldIndex].updatedAt = .now
+        refreshCaseWorkspace(caseMatter: &caseMatter)
+        persisted.cases[caseIndex] = caseMatter
         syncReviewTasks(caseId: caseId, documentId: documentId)
         persist(workspaceChanged: true)
     }
 
     func ignoreExtractedField(caseId: UUID, documentId: UUID, fieldId: UUID) {
+        guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }) else { return }
+        var caseMatter = persisted.cases[caseIndex]
         guard
-            let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }),
-            let documentIndex = persisted.cases[caseIndex].documents.firstIndex(where: { $0.id == documentId }),
-            let field = persisted.cases[caseIndex].documents[documentIndex].extractedFields.first(where: { $0.id == fieldId })
+            let documentIndex = caseMatter.documents.firstIndex(where: { $0.id == documentId }),
+            let field = caseMatter.documents[documentIndex].extractedFields.first(where: { $0.id == fieldId })
         else { return }
 
-        persisted.cases[caseIndex].advocateCorrections.insert(
+        caseMatter.advocateCorrections.insert(
             AlphaAdvocateCorrection(
                 caseId: caseId,
                 documentId: documentId,
@@ -2992,7 +3048,8 @@ final class AlphaRossModel {
             ),
             at: 0
         )
-        refreshCaseWorkspace(at: caseIndex)
+        refreshCaseWorkspace(caseMatter: &caseMatter)
+        persisted.cases[caseIndex] = caseMatter
         syncReviewTasks(caseId: caseId, documentId: documentId)
         persist(workspaceChanged: true)
     }
@@ -3000,20 +3057,21 @@ final class AlphaRossModel {
     func applyFieldCorrection(caseId: UUID, documentId: UUID, fieldId: UUID, newValue: String) {
         let cleaned = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleaned.isEmpty else { return }
+        guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }) else { return }
+        var caseMatter = persisted.cases[caseIndex]
         guard
-            let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }),
-            let documentIndex = persisted.cases[caseIndex].documents.firstIndex(where: { $0.id == documentId }),
-            let fieldIndex = persisted.cases[caseIndex].documents[documentIndex].extractedFields.firstIndex(where: { $0.id == fieldId })
+            let documentIndex = caseMatter.documents.firstIndex(where: { $0.id == documentId }),
+            let fieldIndex = caseMatter.documents[documentIndex].extractedFields.firstIndex(where: { $0.id == fieldId })
         else { return }
 
-        let original = persisted.cases[caseIndex].documents[documentIndex].extractedFields[fieldIndex]
-        persisted.cases[caseIndex].documents[documentIndex].extractedFields[fieldIndex].value = cleaned
-        persisted.cases[caseIndex].documents[documentIndex].extractedFields[fieldIndex].normalizedValue = cleaned.lowercased()
-        persisted.cases[caseIndex].documents[documentIndex].extractedFields[fieldIndex].needsReview = false
-        persisted.cases[caseIndex].documents[documentIndex].extractedFields[fieldIndex].userCorrected = true
-        persisted.cases[caseIndex].documents[documentIndex].extractedFields[fieldIndex].extractionPass = .userCorrected
-        persisted.cases[caseIndex].documents[documentIndex].extractedFields[fieldIndex].updatedAt = .now
-        persisted.cases[caseIndex].advocateCorrections.insert(
+        let original = caseMatter.documents[documentIndex].extractedFields[fieldIndex]
+        caseMatter.documents[documentIndex].extractedFields[fieldIndex].value = cleaned
+        caseMatter.documents[documentIndex].extractedFields[fieldIndex].normalizedValue = cleaned.lowercased()
+        caseMatter.documents[documentIndex].extractedFields[fieldIndex].needsReview = false
+        caseMatter.documents[documentIndex].extractedFields[fieldIndex].userCorrected = true
+        caseMatter.documents[documentIndex].extractedFields[fieldIndex].extractionPass = .userCorrected
+        caseMatter.documents[documentIndex].extractedFields[fieldIndex].updatedAt = .now
+        caseMatter.advocateCorrections.insert(
             AlphaAdvocateCorrection(
                 caseId: caseId,
                 documentId: documentId,
@@ -3024,7 +3082,7 @@ final class AlphaRossModel {
             ),
             at: 0
         )
-        persisted.cases[caseIndex].caseMemoryUpdates.insert(
+        caseMatter.caseMemoryUpdates.insert(
             AlphaCaseMemoryUpdate(
                 caseId: caseId,
                 source: .userCorrection,
@@ -3033,19 +3091,19 @@ final class AlphaRossModel {
             ),
             at: 0
         )
-        refreshCaseWorkspace(at: caseIndex)
+        refreshCaseWorkspace(caseMatter: &caseMatter)
+        persisted.cases[caseIndex] = caseMatter
         syncReviewTasks(caseId: caseId, documentId: documentId)
         persist(workspaceChanged: true)
     }
 
     func updateDocumentClassification(caseId: UUID, documentId: UUID, type: AlphaLegalDocumentType) {
-        guard
-            let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }),
-            let documentIndex = persisted.cases[caseIndex].documents.firstIndex(where: { $0.id == documentId })
-        else { return }
+        guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }) else { return }
+        var caseMatter = persisted.cases[caseIndex]
+        guard let documentIndex = caseMatter.documents.firstIndex(where: { $0.id == documentId }) else { return }
 
-        if persisted.cases[caseIndex].documents[documentIndex].classification == nil {
-            persisted.cases[caseIndex].documents[documentIndex].classification = AlphaLegalDocumentClassification(
+        if caseMatter.documents[documentIndex].classification == nil {
+            caseMatter.documents[documentIndex].classification = AlphaLegalDocumentClassification(
                 documentId: documentId,
                 type: type,
                 subtype: nil,
@@ -3054,14 +3112,15 @@ final class AlphaRossModel {
                 needsReview: false
             )
         } else {
-            persisted.cases[caseIndex].documents[documentIndex].classification?.type = type
-            persisted.cases[caseIndex].documents[documentIndex].classification?.needsReview = false
-            persisted.cases[caseIndex].documents[documentIndex].classification?.confidence = max(persisted.cases[caseIndex].documents[documentIndex].classification?.confidence ?? 0.64, 0.64)
+            let confidence = caseMatter.documents[documentIndex].classification?.confidence ?? 0.64
+            caseMatter.documents[documentIndex].classification?.type = type
+            caseMatter.documents[documentIndex].classification?.needsReview = false
+            caseMatter.documents[documentIndex].classification?.confidence = max(confidence, 0.64)
         }
 
         if type.blocksAutomaticLegalFactSaving {
-            persisted.cases[caseIndex].documents[documentIndex].extractedFields.removeAll()
-            persisted.cases[caseIndex].documents[documentIndex].extractionFindings.removeAll { finding in
+            caseMatter.documents[documentIndex].extractedFields.removeAll()
+            caseMatter.documents[documentIndex].extractionFindings.removeAll { finding in
                 finding.kind == .documentClassificationNeedsReview ||
                     finding.kind == .caseNumberConflict ||
                     finding.kind == .dateConflict ||
@@ -3070,7 +3129,7 @@ final class AlphaRossModel {
             }
         }
 
-        persisted.cases[caseIndex].advocateCorrections.insert(
+        caseMatter.advocateCorrections.insert(
             AlphaAdvocateCorrection(
                 caseId: caseId,
                 documentId: documentId,
@@ -3080,20 +3139,22 @@ final class AlphaRossModel {
             ),
             at: 0
         )
-        refreshCaseWorkspace(at: caseIndex)
+        refreshCaseWorkspace(caseMatter: &caseMatter)
+        persisted.cases[caseIndex] = caseMatter
         syncReviewTasks(caseId: caseId, documentId: documentId)
         persist(workspaceChanged: true)
     }
 
     func resolveFinding(caseId: UUID, documentId: UUID, findingId: UUID, resolution: String) {
+        guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }) else { return }
+        var caseMatter = persisted.cases[caseIndex]
         guard
-            let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }),
-            let documentIndex = persisted.cases[caseIndex].documents.firstIndex(where: { $0.id == documentId }),
-            let findingIndex = persisted.cases[caseIndex].documents[documentIndex].extractionFindings.firstIndex(where: { $0.id == findingId })
+            let documentIndex = caseMatter.documents.firstIndex(where: { $0.id == documentId }),
+            let findingIndex = caseMatter.documents[documentIndex].extractionFindings.firstIndex(where: { $0.id == findingId })
         else { return }
 
-        persisted.cases[caseIndex].documents[documentIndex].extractionFindings[findingIndex].resolved = true
-        persisted.cases[caseIndex].caseMemoryUpdates.insert(
+        caseMatter.documents[documentIndex].extractionFindings[findingIndex].resolved = true
+        caseMatter.caseMemoryUpdates.insert(
             AlphaCaseMemoryUpdate(
                 caseId: caseId,
                 source: .userCorrection,
@@ -3102,33 +3163,35 @@ final class AlphaRossModel {
             ),
             at: 0
         )
-        refreshCaseWorkspace(at: caseIndex)
+        refreshCaseWorkspace(caseMatter: &caseMatter)
+        persisted.cases[caseIndex] = caseMatter
         syncReviewTasks(caseId: caseId, documentId: documentId)
         persist(workspaceChanged: true)
     }
 
     func useFileValueForConflict(caseId: UUID, documentId: UUID, findingId: UUID) {
+        guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }) else { return }
+        var caseMatter = persisted.cases[caseIndex]
         guard
-            let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }),
-            let documentIndex = persisted.cases[caseIndex].documents.firstIndex(where: { $0.id == documentId }),
-            let findingIndex = persisted.cases[caseIndex].documents[documentIndex].extractionFindings.firstIndex(where: { $0.id == findingId })
+            let documentIndex = caseMatter.documents.firstIndex(where: { $0.id == documentId }),
+            let findingIndex = caseMatter.documents[documentIndex].extractionFindings.firstIndex(where: { $0.id == findingId })
         else { return }
 
-        let finding = persisted.cases[caseIndex].documents[documentIndex].extractionFindings[findingIndex]
+        let finding = caseMatter.documents[documentIndex].extractionFindings[findingIndex]
         guard let value = finding.fileValue?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else { return }
 
         switch finding.fieldType {
         case .caseNumber:
-            persisted.cases[caseIndex].caseNumber = value
+            caseMatter.caseNumber = value
         case .court:
-            persisted.cases[caseIndex].forum = value
+            caseMatter.forum = value
         case .partyName:
-            persisted.cases[caseIndex].partiesSummary = value
+            caseMatter.partiesSummary = value
         case .nextDate, .date:
             if let parsedDate = alphaParsedDate(from: value) {
-                persisted.cases[caseIndex].nextHearing = parsedDate
+                caseMatter.nextHearing = parsedDate
                 upsertMatterDate(
-                    in: &persisted.cases[caseIndex],
+                    in: &caseMatter,
                     title: "Next hearing",
                     kind: .hearing,
                     date: parsedDate,
@@ -3139,8 +3202,8 @@ final class AlphaRossModel {
             break
         }
 
-        persisted.cases[caseIndex].documents[documentIndex].extractionFindings[findingIndex].resolved = true
-        persisted.cases[caseIndex].caseMemoryUpdates.insert(
+        caseMatter.documents[documentIndex].extractionFindings[findingIndex].resolved = true
+        caseMatter.caseMemoryUpdates.insert(
             AlphaCaseMemoryUpdate(
                 caseId: caseId,
                 source: .userCorrection,
@@ -3149,25 +3212,28 @@ final class AlphaRossModel {
             ),
             at: 0
         )
-        refreshCaseWorkspace(at: caseIndex)
+        refreshCaseWorkspace(caseMatter: &caseMatter)
+        persisted.cases[caseIndex] = caseMatter
         syncReviewTasks(caseId: caseId, documentId: documentId)
         persist(workspaceChanged: true)
     }
 
     func saveConflictAsAlternateReference(caseId: UUID, documentId: UUID, findingId: UUID) {
+        guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }) else { return }
+        var caseMatter = persisted.cases[caseIndex]
         guard
-            let caseIndex = persisted.cases.firstIndex(where: { $0.id == caseId }),
-            let documentIndex = persisted.cases[caseIndex].documents.firstIndex(where: { $0.id == documentId }),
-            let findingIndex = persisted.cases[caseIndex].documents[documentIndex].extractionFindings.firstIndex(where: { $0.id == findingId })
+            let documentIndex = caseMatter.documents.firstIndex(where: { $0.id == documentId }),
+            let findingIndex = caseMatter.documents[documentIndex].extractionFindings.firstIndex(where: { $0.id == findingId })
         else { return }
 
-        let finding = persisted.cases[caseIndex].documents[documentIndex].extractionFindings[findingIndex]
+        let finding = caseMatter.documents[documentIndex].extractionFindings[findingIndex]
         let alternate = finding.fileValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "source not available"
-        let existingNotes = persisted.cases[caseIndex].notes?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let noteLine = "Alternate reference from \(persisted.cases[caseIndex].documents[documentIndex].title): \(alternate)."
-        persisted.cases[caseIndex].notes = [existingNotes, noteLine].compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: "\n")
-        persisted.cases[caseIndex].documents[documentIndex].extractionFindings[findingIndex].resolved = true
-        refreshCaseWorkspace(at: caseIndex)
+        let existingNotes = caseMatter.notes?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let noteLine = "Alternate reference from \(caseMatter.documents[documentIndex].title): \(alternate)."
+        caseMatter.notes = [existingNotes, noteLine].compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: "\n")
+        caseMatter.documents[documentIndex].extractionFindings[findingIndex].resolved = true
+        refreshCaseWorkspace(caseMatter: &caseMatter)
+        persisted.cases[caseIndex] = caseMatter
         syncReviewTasks(caseId: caseId, documentId: documentId)
         persist(workspaceChanged: true)
     }
@@ -6529,6 +6595,19 @@ private struct AlphaSetupBackdrop: View {
     }
 }
 
+private struct AlphaTopSafeAreaGlass: View {
+    let height: CGFloat
+
+    var body: some View {
+        Rectangle()
+            .fill(Color.rossGroupedBackground.opacity(0.34))
+            .background(.ultraThinMaterial)
+            .frame(height: max(height, 0))
+            .ignoresSafeArea(edges: .top)
+            .allowsHitTesting(false)
+    }
+}
+
 private struct AlphaSetupWordmarkRow: View {
     let title: String
     let stepLabel: String?
@@ -6616,9 +6695,12 @@ private struct AlphaOnboardingScreen: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let contentWidth = min(proxy.size.width - 32, 430)
             ZStack {
                 AlphaSetupBackdrop()
+                VStack(spacing: 0) {
+                    AlphaTopSafeAreaGlass(height: proxy.safeAreaInsets.top + 18)
+                    Spacer(minLength: 0)
+                }
 
                 VStack(spacing: 20) {
                     Spacer(minLength: max(proxy.safeAreaInsets.top + 18, 44))
@@ -6635,15 +6717,17 @@ private struct AlphaOnboardingScreen: View {
                             .font(.subheadline.weight(.medium))
                             .foregroundStyle(Color.rossInk.opacity(0.72))
                             .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    .frame(maxWidth: contentWidth)
+                    .frame(maxWidth: .infinity)
 
                     VStack(spacing: 10) {
                         ForEach(Array(featurePills.enumerated()), id: \.offset) { _, pill in
                             RossInfoPill(title: pill.0, systemImage: pill.1)
                         }
                     }
-                    .frame(maxWidth: contentWidth)
+                    .frame(maxWidth: .infinity)
 
                     Spacer(minLength: 16)
 
@@ -6651,18 +6735,21 @@ private struct AlphaOnboardingScreen: View {
                         model.advanceOnboarding()
                     }
                     .buttonStyle(AlphaSetupPrimaryButtonStyle())
-                    .frame(maxWidth: contentWidth)
+                    .frame(maxWidth: .infinity)
 
                     Text("No matter files leave this phone during setup.")
                         .font(.caption.weight(.medium))
                         .foregroundStyle(Color.rossInk.opacity(0.58))
                         .multilineTextAlignment(.center)
-                        .frame(maxWidth: contentWidth)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity)
 
                     Spacer(minLength: max(proxy.safeAreaInsets.bottom + 18, 36))
                 }
+                .frame(maxWidth: 430)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 24)
             }
         }
     }
@@ -6679,10 +6766,13 @@ private struct AlphaPackSetupScreen: View {
     var body: some View {
         GeometryReader { proxy in
             let compact = proxy.size.height < 760
-            let contentWidth = min(proxy.size.width - 32, 460)
 
             ZStack {
                 AlphaSetupBackdrop()
+                VStack(spacing: 0) {
+                    AlphaTopSafeAreaGlass(height: proxy.safeAreaInsets.top + 18)
+                    Spacer(minLength: 0)
+                }
 
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: compact ? 12 : 16) {
@@ -6734,12 +6824,12 @@ private struct AlphaPackSetupScreen: View {
                             .foregroundStyle(Color.rossInk.opacity(0.62))
                         }
                     }
-                    .frame(maxWidth: contentWidth, alignment: .leading)
+                    .frame(maxWidth: 460, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .center)
                     .frame(minHeight: proxy.size.height - proxy.safeAreaInsets.top - proxy.safeAreaInsets.bottom)
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, 24)
                     .padding(.top, max(proxy.safeAreaInsets.top + 14, 28))
                     .padding(.bottom, max(proxy.safeAreaInsets.bottom + 16, 28))
-                    .frame(maxWidth: .infinity)
                 }
             }
         }
@@ -6820,6 +6910,12 @@ private struct AlphaTabShell: View {
                             .padding(.horizontal, 12)
                             .padding(.top, 2)
                             .padding(.bottom, 6)
+                            .background {
+                                Rectangle()
+                                    .fill(Color.rossGroupedBackground.opacity(0.36))
+                                    .background(.ultraThinMaterial)
+                                    .ignoresSafeArea(edges: .top)
+                            }
                     }
                 }
                 .safeAreaInset(edge: .bottom) {
@@ -7783,52 +7879,75 @@ private struct AlphaRootAskDock: View {
         )) {
             if let preview = model.publicLawPreview {
                 NavigationStack {
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Review public law search")
-                            .font(.title3.weight(.semibold))
-                        Text("Ross will search using only the query below. Your case files, party names, and private details stay on this device.")
-                            .font(.footnote)
-                            .foregroundStyle(Color.rossInk.opacity(0.72))
-                            .fixedSize(horizontal: false, vertical: true)
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Review public law search")
+                                .font(.title3.weight(.semibold))
+                            Text("Ross will search using only the query below. Your case files, party names, and private details stay on this device.")
+                                .font(.footnote)
+                                .foregroundStyle(Color.rossInk.opacity(0.72))
+                                .fixedSize(horizontal: false, vertical: true)
 
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Query to be sent")
-                                .font(.subheadline.weight(.semibold))
-                            if editingPublicLawQuery {
-                                TextEditor(text: Binding(
-                                    get: { model.publicLawPreview?.query ?? "" },
-                                    set: { model.updatePendingPublicLawQuery($0) }
-                                ))
-                                .font(.callout.weight(.medium))
-                                .frame(minHeight: 96)
-                                .padding(8)
-                                .background(Color.rossSecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            } else {
-                                Text(preview.query)
-                                    .font(.callout.weight(.semibold))
-                                    .foregroundStyle(Color.rossInk)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    .padding(12)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Query to be sent")
+                                    .font(.subheadline.weight(.semibold))
+                                if editingPublicLawQuery {
+                                    TextEditor(text: Binding(
+                                        get: { model.publicLawPreview?.query ?? "" },
+                                        set: { model.updatePendingPublicLawQuery($0) }
+                                    ))
+                                    .font(.callout.weight(.medium))
+                                    .frame(minHeight: 96)
+                                    .padding(8)
                                     .background(Color.rossSecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                } else {
+                                    Text(preview.query)
+                                        .font(.callout.weight(.semibold))
+                                        .foregroundStyle(Color.rossInk)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .padding(12)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .background(Color.rossSecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                }
                             }
-                        }
 
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Removed private details")
-                                .font(.subheadline.weight(.semibold))
-                            ForEach(preview.removed, id: \.self) { item in
-                                RossBulletRow(text: item)
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Privacy check")
+                                    .font(.subheadline.weight(.semibold))
+
+                                if preview.removed == ["No private case data detected"] {
+                                    Text("No private case details detected. 0 private case details sent.")
+                                        .font(.footnote)
+                                        .foregroundStyle(Color.rossInk.opacity(0.68))
+                                        .fixedSize(horizontal: false, vertical: true)
+                                } else {
+                                    DisclosureGroup("Details removed") {
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            ForEach(preview.removed, id: \.self) { item in
+                                                RossBulletRow(text: item)
+                                            }
+                                        }
+                                        .padding(.top, 8)
+                                    }
+                                    .font(.footnote.weight(.semibold))
+                                    .tint(Color.rossAccent)
+                                    RossBulletRow(text: "0 private case details sent")
+                                }
                             }
-                            RossBulletRow(text: "0 private case details sent")
+                            .padding(12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.rossSecondaryGroupedBackground.opacity(0.72), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+                            if model.publicLawSearchInFlight {
+                                ProgressView("Searching public law…")
+                                    .progressViewStyle(.circular)
+                                    .tint(Color.rossAccent)
+                                    .font(.footnote.weight(.medium))
+                            }
                         }
-                        if model.publicLawSearchInFlight {
-                            ProgressView("Searching public law…")
-                                .progressViewStyle(.circular)
-                                .tint(Color.rossAccent)
-                                .font(.footnote.weight(.medium))
-                        }
-                        Spacer()
+                        .padding(alphaScreenPadding)
+                    }
+                    .safeAreaInset(edge: .bottom, spacing: 0) {
                         HStack(spacing: 10) {
                             Button("Cancel") {
                                 model.cancelPendingPublicLawSearch()
@@ -7847,6 +7966,7 @@ private struct AlphaRootAskDock: View {
                         .disabled(model.publicLawSearchInFlight || (model.publicLawPreview?.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true))
                     }
                     .padding(alphaScreenPadding)
+                    .background(Color.rossGroupedBackground.opacity(0.94))
                 }
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.hidden)
@@ -9419,7 +9539,7 @@ private struct AlphaHomeScreen: View {
     @Bindable var model: AlphaRossModel
     @State private var dueTodayExpanded = false
     @State private var upcomingExpanded = false
-    @State private var needsReviewExpanded = false
+    @State private var needsReviewExpanded = true
     @State private var recentFilesExpanded = false
 
     var body: some View {
@@ -12103,10 +12223,6 @@ private struct AlphaMatterDraftActionStrip: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Make a local draft without leaving this matter.")
-                .font(.subheadline)
-                .foregroundStyle(Color.rossInk.opacity(0.72))
-
             HStack(spacing: 10) {
                 AlphaCompactDraftActionButton(title: "Chronology", systemImage: "list.bullet.rectangle") {
                     onGenerateChronology()
@@ -12378,7 +12494,7 @@ private struct AlphaAskConversationScreen: View {
                 }
             }
             .padding(alphaScreenPadding)
-            .padding(.bottom, 112)
+            .padding(.bottom, 76)
         }
         .alphaDismissesKeyboardOnScroll()
         .safeAreaInset(edge: .top, spacing: 0) {
@@ -12411,7 +12527,7 @@ private struct AlphaAskConversationScreen: View {
                 model: model,
                 fixedScopeCaseID: fixedScopeCaseID,
                 showsInlineResponseCard: false,
-                collapsesWhenIdle: false
+                collapsesWhenIdle: true
             )
                 .padding(.horizontal, 12)
                 .padding(.top, 8)
@@ -12545,10 +12661,11 @@ private struct AlphaAskTurnCard: View {
                         .accessibilityLabel("Answer actions")
                     }
 
-                    ForEach(Array(result.answerSectionItems().enumerated()), id: \.element.id) { index, section in
+                    let answerItems = result.answerSectionItems()
+                    ForEach(Array(answerItems.enumerated()), id: \.element.id) { index, section in
                         VStack(alignment: .leading, spacing: 10) {
                             AlphaFormattedAnswerText(text: section.text)
-                            if index < result.answerSections.count - 1 {
+                            if index < answerItems.count - 1 {
                                 Divider().overlay(Color.rossBorder.opacity(0.4))
                             }
                         }
@@ -12805,7 +12922,7 @@ private struct AlphaPublicLawWarningsView: View {
 }
 
 private func alphaCopyAskResultToPasteboard(_ result: AlphaAskResult) {
-    let text = ([result.answerTitle] + result.answerSections).joined(separator: "\n\n")
+    let text = ([result.answerTitle] + AlphaMatterAskPayloadParser.displaySections(from: result.answerSections)).joined(separator: "\n\n")
     #if canImport(UIKit)
     UIPasteboard.general.string = text
     #elseif canImport(AppKit)
@@ -12904,7 +13021,8 @@ private extension AlphaAskResult {
     }
 
     func answerSectionItems(limit: Int? = nil) -> [AlphaAnswerSectionItem] {
-        let sections = limit.map { Array(answerSections.prefix($0)) } ?? answerSections
+        let displaySections = AlphaMatterAskPayloadParser.displaySections(from: answerSections)
+        let sections = limit.map { Array(displaySections.prefix($0)) } ?? displaySections
         return sections.enumerated().map { index, section in
             AlphaAnswerSectionItem(id: "\(stableIdentity)-section-\(index)", text: section)
         }
@@ -13226,7 +13344,11 @@ private struct AlphaCaseWorkspaceScreen: View {
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            AlphaRootAskDock(model: model, fixedScopeCaseID: caseId)
+            AlphaRootAskDock(
+                model: model,
+                fixedScopeCaseID: caseId,
+                showsInlineResponseCard: false
+            )
                 .padding(.horizontal, 12)
                 .padding(.top, 6)
                 .padding(.bottom, 6)
@@ -13634,7 +13756,7 @@ private struct AlphaDocumentViewerScreen: View {
                         needsReviewCount: needsReviewCount,
                         detail: alphaDocumentReviewBannerDetail(
                             run: activeExtractionRun,
-                            fallback: reviewSummaryText ?? alphaDocumentFallbackReviewDetail(document: document, needsReviewCount: needsReviewCount)
+                            fallback: alphaDocumentFallbackReviewDetail(document: document, needsReviewCount: needsReviewCount)
                         ),
                         isWorking: alphaExtractionRunIsWorking(activeExtractionRun),
                         progressLabel: alphaExtractionProgressLabel(activeExtractionRun),
@@ -13781,18 +13903,31 @@ private struct AlphaDocumentViewerScreen: View {
                         }
                     }
 
+                    if sourceDetailsExpanded || rawTextExpanded {
+                        AlphaDocumentInspectCard(
+                            documentTitle: document.title,
+                            extractedText: document.extractedText,
+                            sourceRefs: displayedSourceRefs,
+                            sourceDetailsExpanded: $sourceDetailsExpanded,
+                            rawTextExpanded: $rawTextExpanded,
+                            onOpenSourceRef: model.openSourceRef
+                        )
+                    }
+
                     if let preview = AlphaDocumentPreview(document: document, initialPage: resolvedPage) {
                         preview
                     }
 
-                    AlphaDocumentInspectCard(
-                        documentTitle: document.title,
-                        extractedText: document.extractedText,
-                        sourceRefs: displayedSourceRefs,
-                        sourceDetailsExpanded: $sourceDetailsExpanded,
-                        rawTextExpanded: $rawTextExpanded,
-                        onOpenSourceRef: model.openSourceRef
-                    )
+                    if !sourceDetailsExpanded && !rawTextExpanded {
+                        AlphaDocumentInspectCard(
+                            documentTitle: document.title,
+                            extractedText: document.extractedText,
+                            sourceRefs: displayedSourceRefs,
+                            sourceDetailsExpanded: $sourceDetailsExpanded,
+                            rawTextExpanded: $rawTextExpanded,
+                            onOpenSourceRef: model.openSourceRef
+                        )
+                    }
 
                     AlphaDocumentAdvocateNoteCard(
                         note: $advocateNoteDraft,
@@ -13830,7 +13965,43 @@ private struct AlphaDocumentViewerScreen: View {
                 }
         )
         .navigationTitle(document?.title ?? "Document")
+        .navigationBarBackButtonHidden(true)
         .rossInlineNavigationTitle()
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: exitDocument) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(Color.rossInk)
+                        .frame(width: 32, height: 32)
+                        .background(Color.rossGlassFill, in: Circle())
+                        .overlay {
+                            Circle()
+                                .stroke(Color.rossGlassStroke.opacity(0.78), lineWidth: 1)
+                        }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Back")
+            }
+
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    Task { await model.rerunReview(caseId: caseId, documentId: documentId) }
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(Color.rossInk)
+                        .frame(width: 32, height: 32)
+                        .background(Color.rossGlassFill, in: Circle())
+                        .overlay {
+                            Circle()
+                                .stroke(Color.rossGlassStroke.opacity(0.78), lineWidth: 1)
+                        }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Review document again")
+            }
+        }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 10) {
                 if let document, document.processingState == .readingText || document.processingState == .imported {
@@ -13841,7 +14012,12 @@ private struct AlphaDocumentViewerScreen: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(Color.rossCardBackground.opacity(0.96), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 } else {
-                    AlphaRootAskDock(model: model, fixedScopeCaseID: caseId, fixedDocumentIDs: [documentId])
+                    AlphaRootAskDock(
+                        model: model,
+                        fixedScopeCaseID: caseId,
+                        fixedDocumentIDs: [documentId],
+                        showsInlineResponseCard: false
+                    )
                 }
             }
             .padding(.horizontal, 12)
@@ -13940,14 +14116,14 @@ private struct AlphaDocumentAdvocateNoteCard: View {
                     }
                     .buttonStyle(.bordered)
 
-                    Menu {
-                        Button("Review again", action: onReviewAgain)
+                    Button {
+                        onReviewAgain()
                     } label: {
-                        Image(systemName: "ellipsis.circle")
-                            .font(.body.weight(.semibold))
+                        Label("Review", systemImage: "arrow.clockwise")
+                            .font(.footnote.weight(.semibold))
                     }
                     .buttonStyle(.bordered)
-                    .accessibilityLabel("More document actions")
+                    .accessibilityLabel("Review document again")
                 }
             }
         }
@@ -14010,11 +14186,15 @@ private struct AlphaDocumentInspectCard: View {
                 Divider()
 
                 DisclosureGroup(rawTextExpanded ? "Hide raw text" : "Raw text", isExpanded: $rawTextExpanded) {
-                    Text(extractedText ?? "No extracted text is available for this page yet.")
-                        .font(.footnote)
-                        .foregroundStyle(Color.rossInk.opacity(0.76))
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.top, 8)
+                    ScrollView {
+                        Text(extractedText ?? "No extracted text is available for this page yet.")
+                            .font(.footnote)
+                            .foregroundStyle(Color.rossInk.opacity(0.76))
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .frame(maxHeight: 220)
+                    .padding(.top, 8)
                 }
                 .font(.subheadline.weight(.semibold))
                 .tint(Color.rossAccent)
@@ -14983,6 +15163,7 @@ private struct AlphaSettingsScreen: View {
                 #endif
             }
             .padding(alphaScreenPadding)
+            .padding(.top, 56)
         }
         .rossHideNavigationBarIfSupported()
         .simultaneousGesture(
@@ -15910,7 +16091,7 @@ private struct AlphaPDFPreview: View {
     var body: some View {
         RossSectionCard {
             PDFRepresentedView(url: alphaAbsoluteURL(for: relativePath), initialPage: initialPage)
-                .frame(minHeight: 360)
+                .frame(minHeight: 260)
         }
     }
 }

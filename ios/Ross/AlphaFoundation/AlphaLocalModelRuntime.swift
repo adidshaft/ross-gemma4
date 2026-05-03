@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(Darwin)
+import Darwin
+#endif
 #if canImport(FoundationModels)
 import FoundationModels
 #endif
@@ -372,6 +375,43 @@ struct AlphaUnavailableRealLocalModelProvider: AlphaRealLocalModelProvider {
 }
 
 #if canImport(SwiftGemmaRuntime)
+private actor AlphaLocalModelOutputSilencer {
+    static let shared = AlphaLocalModelOutputSilencer()
+
+    func run<T>(_ operation: () async throws -> T) async throws -> T {
+        #if canImport(Darwin)
+        let stdoutCopy = dup(STDOUT_FILENO)
+        let stderrCopy = dup(STDERR_FILENO)
+        let nullDescriptor = open("/dev/null", O_WRONLY)
+
+        if nullDescriptor >= 0 {
+            fflush(stdout)
+            fflush(stderr)
+            dup2(nullDescriptor, STDOUT_FILENO)
+            dup2(nullDescriptor, STDERR_FILENO)
+        }
+
+        defer {
+            fflush(stdout)
+            fflush(stderr)
+            if stdoutCopy >= 0 {
+                dup2(stdoutCopy, STDOUT_FILENO)
+                close(stdoutCopy)
+            }
+            if stderrCopy >= 0 {
+                dup2(stderrCopy, STDERR_FILENO)
+                close(stderrCopy)
+            }
+            if nullDescriptor >= 0 {
+                close(nullDescriptor)
+            }
+        }
+        #endif
+
+        return try await operation()
+    }
+}
+
 struct AlphaGemmaLocalModelProvider: AlphaRealLocalModelProvider {
     let capabilityTier: AlphaCapabilityTier
     let modelPath: String
@@ -395,6 +435,7 @@ struct AlphaGemmaLocalModelProvider: AlphaRealLocalModelProvider {
         #else
         let useGPU = true
         #endif
+        GemmaLog.setLogger(nil)
         self.service = GemmaService(
             modelUrl: URL(fileURLWithPath: modelPath),
             config: GemmaConfig(batchSize: 256, maxTokenCount: UInt32(Self.contextTokens(for: capabilityTier)), useGPU: useGPU)
@@ -564,6 +605,22 @@ struct AlphaGemmaLocalModelProvider: AlphaRealLocalModelProvider {
     }
 
     private static func generateLimitedResponse(
+        service: GemmaService,
+        to messages: [GemmaChatMessage],
+        samplingConfig: GemmaSamplingConfig,
+        maxTokens: Int
+    ) async throws -> (text: String, tokenCount: Int, stoppedAtJSON: Bool, hitTokenCap: Bool) {
+        try await AlphaLocalModelOutputSilencer.shared.run {
+            try await generateLimitedResponseUnsilenced(
+                service: service,
+                to: messages,
+                samplingConfig: samplingConfig,
+                maxTokens: maxTokens
+            )
+        }
+    }
+
+    private static func generateLimitedResponseUnsilenced(
         service: GemmaService,
         to messages: [GemmaChatMessage],
         samplingConfig: GemmaSamplingConfig,

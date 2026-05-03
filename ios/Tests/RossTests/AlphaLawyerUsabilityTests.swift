@@ -304,8 +304,10 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             let preview = await MainActor.run { model.publicLawPreview }
             let results = await MainActor.run { model.publicLawResults }
             let latestPreview = await MainActor.run { model.latestAskResult?.publicLawPreview }
+            let latestResult = await MainActor.run { model.latestAskResult }
             XCTAssertNil(preview)
             XCTAssertNil(latestPreview)
+            XCTAssertNil(latestResult)
             XCTAssertTrue(results.isEmpty)
             XCTAssertEqual(0, publicLawCalls.value)
         }

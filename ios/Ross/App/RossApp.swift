@@ -1179,9 +1179,9 @@ private struct RossSignInScreen: View {
 
     private var reservedSheetHeight: CGFloat {
         if emailOptionExpanded {
-            return 430
+            return 398
         }
-        return signInCardExpanded ? 274 : 128
+        return signInCardExpanded ? 258 : 126
     }
 
     var body: some View {
@@ -1189,7 +1189,7 @@ private struct RossSignInScreen: View {
             let heroPanelWidth = min(proxy.size.width - 32, 430)
             let signInPanelWidth = min(proxy.size.width - 32, 440)
             ZStack(alignment: .bottom) {
-                VStack(alignment: .center, spacing: 28) {
+                VStack(alignment: .center, spacing: 24) {
                     HStack(spacing: 14) {
                         RossAuthHeroMark(size: 58)
 
@@ -1216,7 +1216,7 @@ private struct RossSignInScreen: View {
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }
-                    .padding(.top, 8)
+                    .padding(.top, 2)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .padding(.horizontal, 16)
@@ -1274,7 +1274,7 @@ private struct RossAuthSignInSheet: View {
 
     var body: some View {
         RossAuthGlassPanel(cornerRadius: 24, padding: 18, forcedWidth: panelWidth) {
-            VStack(alignment: .leading, spacing: isExpanded ? 14 : 10) {
+            VStack(alignment: .leading, spacing: isExpanded ? 12 : 10) {
                 Button {
                     withAnimation(.easeOut(duration: 0.16)) {
                         isExpanded.toggle()
@@ -1284,12 +1284,12 @@ private struct RossAuthSignInSheet: View {
                         RossAuthSheetCue(isExpanded: isExpanded)
 
                         VStack(spacing: 4) {
-                            Text(isExpanded ? "Sign in" : "Get Started")
+                            Text(isExpanded ? "Get started" : "Get Started")
                                 .font(.system(size: isExpanded ? 19 : 24, weight: isExpanded ? .semibold : .semibold))
                                 .foregroundStyle(Color.rossInk)
                                 .multilineTextAlignment(.center)
 
-                            Text(isExpanded ? "Start with a demo or your account." : "Tap to sign in.")
+                            Text(isExpanded ? "Choose a private workspace." : "Tap to sign in.")
                                 .font(.system(size: isExpanded ? 13 : 14, weight: .regular))
                                 .foregroundStyle(Color.rossInk.opacity(0.62))
                                 .multilineTextAlignment(.center)
@@ -1304,7 +1304,7 @@ private struct RossAuthSignInSheet: View {
                 if isExpanded {
                     VStack(alignment: .leading, spacing: 12) {
                         if isEmailExpanded {
-                            VStack(alignment: .leading, spacing: 10) {
+                            VStack(alignment: .leading, spacing: 8) {
                                 HStack {
                                     Text("Email access")
                                         .font(.system(size: 14, weight: .semibold))
@@ -1351,11 +1351,6 @@ private struct RossAuthSignInSheet: View {
                                         authController.signInWithEmailAccess(emailAddress)
                                     }
                                 )
-
-                                Text("Use the sample matter or enter your email.")
-                                    .font(.system(size: 11.5, weight: .medium))
-                                    .foregroundStyle(Color.rossInk.opacity(0.7))
-                                    .fixedSize(horizontal: false, vertical: true)
 
                                 Button {
                                     authController.signInWithEmailAccess(emailAddress)
@@ -1515,7 +1510,7 @@ private struct RossEmailAccessPresetRow: View {
                         .foregroundStyle(Color.rossInk)
 
                     Text(profile.detail)
-                        .font(.system(size: 11, weight: .regular))
+                        .font(.system(size: 10.5, weight: .regular))
                         .foregroundStyle(Color.rossInk.opacity(0.7))
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -1528,7 +1523,7 @@ private struct RossEmailAccessPresetRow: View {
                     .padding(.top, 2)
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .padding(.vertical, 8)
             .background(
                 (isSelected ? Color.rossAccent.opacity(0.08) : Color.white.opacity(0.08)),
                 in: RoundedRectangle(cornerRadius: 16, style: .continuous)

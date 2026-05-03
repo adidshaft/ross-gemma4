@@ -115,19 +115,19 @@ struct RossLocalModelSmokeView: View {
         let sourceBoundOutput = await provider.run(sourceBoundInput)
         let generalOutput = await provider.run(generalInput)
         let elapsed = Date().timeIntervalSince(started)
-        let rawPreview = String(sourceBoundOutput.rawText.replacingOccurrences(of: "\n", with: " ").prefix(500))
-        let parsedPreview = String((sourceBoundOutput.parsedJson ?? "").prefix(500))
-        let generalParsedPreview = String((generalOutput.parsedJson ?? generalOutput.rawText).replacingOccurrences(of: "\n", with: " ").prefix(500))
+        let sourceRawLength = sourceBoundOutput.rawText.count
+        let sourceParsedLength = sourceBoundOutput.parsedJson?.count ?? 0
+        let generalOutputLength = (generalOutput.parsedJson ?? generalOutput.rawText).count
 
         if sourceBoundOutput.schemaValid,
            sourceBoundOutput.errorCategory == nil,
            generalOutput.schemaValid,
            generalOutput.errorCategory == nil {
             status = "Local model smoke passed."
-            print("ROSS_LOCAL_MODEL_SMOKE_PASS runtime=\(provider.runtimeMode.rawValue) tier=\(activePack.tier.rawValue) elapsed=\(String(format: "%.2f", elapsed))s source_raw=\(rawPreview) source_parsed=\(parsedPreview) general_parsed=\(generalParsedPreview)")
+            print("ROSS_LOCAL_MODEL_SMOKE_PASS runtime=\(provider.runtimeMode.rawValue) tier=\(activePack.tier.rawValue) elapsed=\(String(format: "%.2f", elapsed))s source_raw_chars=\(sourceRawLength) source_parsed_chars=\(sourceParsedLength) general_output_chars=\(generalOutputLength)")
         } else {
             status = "Local model smoke failed."
-            print("ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(provider.runtimeMode.rawValue) tier=\(activePack.tier.rawValue) elapsed=\(String(format: "%.2f", elapsed))s source_error=\(sourceBoundOutput.errorCategory ?? "nil") general_error=\(generalOutput.errorCategory ?? "nil") source_warnings=\(sourceBoundOutput.warnings.joined(separator: " | ")) general_warnings=\(generalOutput.warnings.joined(separator: " | ")) source_raw=\(rawPreview) general_raw=\(generalParsedPreview)")
+            print("ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(provider.runtimeMode.rawValue) tier=\(activePack.tier.rawValue) elapsed=\(String(format: "%.2f", elapsed))s source_error=\(sourceBoundOutput.errorCategory ?? "nil") general_error=\(generalOutput.errorCategory ?? "nil") source_warning_count=\(sourceBoundOutput.warnings.count) general_warning_count=\(generalOutput.warnings.count) source_raw_chars=\(sourceRawLength) general_output_chars=\(generalOutputLength)")
         }
     }
 }
