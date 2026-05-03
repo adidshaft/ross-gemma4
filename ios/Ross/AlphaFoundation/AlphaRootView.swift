@@ -86,10 +86,229 @@ enum AlphaPublicLawSearchStatus: Hashable {
     case failed
 }
 
-private struct AlphaMatterAskRuntimePayload: Codable, Hashable {
+struct AlphaMatterAskRuntimePayload: Codable, Hashable {
     var headline: String
     var sections: [String]
     var statusNote: String?
+}
+
+enum AlphaMatterAskPayloadParser {
+    static func parse(
+        output: AlphaLocalModelOutput,
+        baseResult: AlphaAskResult
+    ) -> AlphaMatterAskRuntimePayload? {
+        let sanitizedRawText = sanitizedResponseText(output.rawText)
+        let candidates = [
+            output.parsedJson,
+            extractLikelyJSON(from: sanitizedRawText),
+            sanitizedRawText
+        ]
+            .compactMap { candidate in
+                candidate?
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                    .nilIfEmpty
+            }
+
+        for candidate in candidates {
+            if let payload = decodedPayload(from: candidate, baseResult: baseResult) {
+                return payload
+            }
+            if let payload = salvagedPayload(from: candidate, baseResult: baseResult) {
+                return payload
+            }
+        }
+
+        let paragraphs = humanReadableParagraphs(from: sanitizedRawText)
+        guard !paragraphs.isEmpty else { return nil }
+        return normalizedPayload(
+            AlphaMatterAskRuntimePayload(
+                headline: baseResult.answerTitle,
+                sections: Array(paragraphs.prefix(3)),
+                statusNote: baseResult.statusNote ?? "Private assistant"
+            ),
+            baseResult: baseResult
+        )
+    }
+
+    private static func decodedPayload(
+        from candidate: String,
+        baseResult: AlphaAskResult
+    ) -> AlphaMatterAskRuntimePayload? {
+        let decoder = JSONDecoder()
+        guard let data = candidate.data(using: .utf8),
+              let payload = try? decoder.decode(AlphaMatterAskRuntimePayload.self, from: data) else {
+            return nil
+        }
+        return normalizedPayload(payload, baseResult: baseResult)
+    }
+
+    private static func normalizedPayload(
+        _ payload: AlphaMatterAskRuntimePayload,
+        baseResult: AlphaAskResult
+    ) -> AlphaMatterAskRuntimePayload? {
+        let headline = payload.headline
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .ifEmpty(baseResult.answerTitle)
+        let sections = payload.sections
+            .map {
+                $0
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                    .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            }
+            .filter {
+                !$0.isEmpty &&
+                !$0.caseInsensitiveContains("<think") &&
+                !looksLikeStructuredOutput($0)
+            }
+        guard !sections.isEmpty else { return nil }
+        let statusNote = payload.statusNote?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .ifEmpty(baseResult.statusNote ?? "Private assistant")
+        return AlphaMatterAskRuntimePayload(
+            headline: headline,
+            sections: Array(sections.prefix(3)),
+            statusNote: statusNote
+        )
+    }
+
+    private static func sanitizedResponseText(_ rawText: String) -> String {
+        rawText
+            .replacingOccurrences(of: #"(?is)<think\b[^>]*>.*?</think>"#, with: " ", options: .regularExpression)
+            .replacingOccurrences(of: #"(?i)</?think\b[^>]*>"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func extractLikelyJSON(from text: String) -> String? {
+        guard let startIndex = text.firstIndex(where: { $0 == "{" || $0 == "[" }) else { return nil }
+        let candidate = text[startIndex...]
+        var depth = 0
+        var inString = false
+        var escaped = false
+        for index in candidate.indices {
+            let character = candidate[index]
+            if escaped {
+                escaped = false
+                continue
+            }
+            if character == "\\" {
+                escaped = true
+                continue
+            }
+            if character == "\"" {
+                inString.toggle()
+                continue
+            }
+            guard !inString else { continue }
+            if character == "{" || character == "[" {
+                depth += 1
+            } else if character == "}" || character == "]" {
+                depth -= 1
+                if depth == 0 {
+                    return String(candidate[...index])
+                }
+            }
+        }
+        return nil
+    }
+
+    private static func salvagedPayload(
+        from text: String,
+        baseResult: AlphaAskResult
+    ) -> AlphaMatterAskRuntimePayload? {
+        let headline = extractJSONStringValue(for: "headline", in: text)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .ifEmpty(baseResult.answerTitle) ?? baseResult.answerTitle
+        let statusNote = extractJSONStringValue(for: "statusNote", in: text)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .ifEmpty(baseResult.statusNote ?? "Private assistant")
+        let sections = extractJSONStringArray(for: "sections", in: text)
+        guard !sections.isEmpty else { return nil }
+        return normalizedPayload(
+            AlphaMatterAskRuntimePayload(
+                headline: headline,
+                sections: sections,
+                statusNote: statusNote
+            ),
+            baseResult: baseResult
+        )
+    }
+
+    private static func extractJSONStringValue(for key: String, in text: String) -> String? {
+        let pattern = #""\#(key)"\s*:\s*("(?:\\.|[^"\\])*")"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators]) else {
+            return nil
+        }
+        let nsRange = NSRange(text.startIndex..., in: text)
+        guard let match = regex.firstMatch(in: text, range: nsRange),
+              let range = Range(match.range(at: 1), in: text) else {
+            return nil
+        }
+        return decodeJSONStringLiteral(String(text[range]))
+    }
+
+    private static func extractJSONStringArray(for key: String, in text: String) -> [String] {
+        let pattern = #""\#(key)"\s*:\s*\[(.*?)\]"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators]) else {
+            return []
+        }
+        let nsRange = NSRange(text.startIndex..., in: text)
+        guard let match = regex.firstMatch(in: text, range: nsRange),
+              let range = Range(match.range(at: 1), in: text) else {
+            return []
+        }
+        let arrayBody = String(text[range])
+        guard let literalRegex = try? NSRegularExpression(pattern: #""(?:\\.|[^"\\])*""#) else {
+            return []
+        }
+        let literalRange = NSRange(arrayBody.startIndex..., in: arrayBody)
+        return literalRegex.matches(in: arrayBody, range: literalRange).compactMap { match in
+            guard let range = Range(match.range, in: arrayBody) else { return nil }
+            let suffix = arrayBody[range.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines)
+            guard suffix.first != ":" else { return nil }
+            return decodeJSONStringLiteral(String(arrayBody[range]))?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .nilIfEmpty
+        }
+    }
+
+    private static func decodeJSONStringLiteral(_ literal: String) -> String? {
+        guard let data = literal.data(using: .utf8) else { return nil }
+        return try? JSONDecoder().decode(String.self, from: data)
+    }
+
+    private static func humanReadableParagraphs(from text: String) -> [String] {
+        text.components(separatedBy: "\n\n")
+            .flatMap { block -> [String] in
+                let trimmed = block.trimmingCharacters(in: .whitespacesAndNewlines)
+                if trimmed.contains("\n- ") || trimmed.hasPrefix("- ") {
+                    return trimmed
+                        .components(separatedBy: .newlines)
+                        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                        .filter { !$0.isEmpty }
+                }
+                return [trimmed]
+            }
+            .map {
+                $0.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            }
+            .filter {
+                !$0.isEmpty &&
+                !$0.caseInsensitiveContains("<think") &&
+                !looksLikeStructuredOutput($0)
+            }
+    }
+
+    private static func looksLikeStructuredOutput(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        if trimmed.first == "{" || trimmed.first == "[" {
+            return true
+        }
+        if trimmed.contains(#""headline""#) || trimmed.contains(#""sections""#) || trimmed.contains(#""statusNote""#) {
+            return true
+        }
+        return false
+    }
 }
 
 struct AlphaReviewQueueItem: Identifiable, Hashable {
@@ -5563,39 +5782,7 @@ final class AlphaRossModel {
         from output: AlphaLocalModelOutput,
         baseResult: AlphaAskResult
     ) -> AlphaMatterAskRuntimePayload? {
-        let candidate = output.parsedJson ?? output.rawText
-        let decoder = JSONDecoder()
-        if let data = candidate.data(using: .utf8),
-           let payload = try? decoder.decode(AlphaMatterAskRuntimePayload.self, from: data),
-           !payload.sections.isEmpty {
-            let cleanedPayload = AlphaMatterAskRuntimePayload(
-                headline: payload.headline.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).ifEmpty(baseResult.answerTitle),
-                sections: payload.sections.map { $0.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines) }.filter { !$0.isEmpty },
-                statusNote: payload.statusNote?.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).ifEmpty(baseResult.statusNote ?? "Private assistant")
-            )
-            guard !cleanedPayload.sections.isEmpty else { return nil }
-            return AlphaMatterAskRuntimePayload(
-                headline: cleanedPayload.headline,
-                sections: Array(cleanedPayload.sections.prefix(3)),
-                statusNote: cleanedPayload.statusNote
-            )
-        }
-
-        let paragraphs = output.rawText
-            .components(separatedBy: "\n\n")
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-        guard !paragraphs.isEmpty else { return nil }
-        let cleanedPayload = AlphaMatterAskRuntimePayload(
-            headline: baseResult.answerTitle,
-            sections: Array(paragraphs.prefix(3)),
-            statusNote: "Private assistant"
-        )
-        return AlphaMatterAskRuntimePayload(
-            headline: cleanedPayload.headline,
-            sections: Array(cleanedPayload.sections.prefix(3)),
-            statusNote: cleanedPayload.statusNote
-        )
+        AlphaMatterAskPayloadParser.parse(output: output, baseResult: baseResult)
     }
 
     private func buildAskPublicLawPreview(question: String, scopeCaseID: UUID?) -> AlphaPublicLawPreview {
@@ -7064,6 +7251,14 @@ private struct AlphaRootAskDock: View {
         colorScheme == .dark ? Color.black.opacity(0.10) : Color.rossShadow.opacity(0.08)
     }
 
+    private var dockBackdropTint: Color {
+        colorScheme == .dark ? Color.rossBackdropGlow.opacity(0.12) : Color.white.opacity(0.62)
+    }
+
+    private var dockLiftHighlight: Color {
+        colorScheme == .dark ? Color.white.opacity(0.04) : Color.white.opacity(0.42)
+    }
+
     private var mentionSuggestions: [AlphaAskDocumentOption] {
         guard fixedDocumentIDs.isEmpty, let query = alphaAskMentionQuery(in: draftText) else { return [] }
         return alphaAskMentionSuggestions(
@@ -7491,25 +7686,34 @@ private struct AlphaRootAskDock: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(colorScheme == .dark ? Color.white.opacity(0.045) : Color.white.opacity(0.64))
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: dockGradient,
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+            ZStack {
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(dockBackdropTint)
+                    .blur(radius: colorScheme == .dark ? 26 : 20)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 5)
+
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(colorScheme == .dark ? Color.white.opacity(0.052) : Color.white.opacity(0.7))
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: dockGradient,
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
                             )
-                        )
-                }
+                    }
+            }
         )
         .overlay {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(dockStroke, lineWidth: 1)
+                .stroke(dockStroke.opacity(colorScheme == .dark ? 1 : 0.94), lineWidth: 1)
         }
-        .shadow(color: dockShadow, radius: 16, x: 0, y: 8)
+        .shadow(color: dockLiftHighlight, radius: 12, x: 0, y: -2)
+        .shadow(color: dockShadow.opacity(colorScheme == .dark ? 1.3 : 1.15), radius: 22, x: 0, y: 12)
     }
 
     var body: some View {
@@ -7674,6 +7878,14 @@ private struct AlphaCollapsedAskDockPill: View {
     @Environment(\.colorScheme) private var colorScheme
     let title: String
 
+    private var dockBackdropTint: Color {
+        colorScheme == .dark ? Color.rossBackdropGlow.opacity(0.12) : Color.white.opacity(0.62)
+    }
+
+    private var dockLiftHighlight: Color {
+        colorScheme == .dark ? Color.white.opacity(0.04) : Color.white.opacity(0.42)
+    }
+
     var body: some View {
         HStack(spacing: 10) {
             Text(title)
@@ -7693,15 +7905,24 @@ private struct AlphaCollapsedAskDockPill: View {
         .frame(height: 44)
         .contentShape(Capsule())
         .background(
-            RoundedRectangle(cornerRadius: 999, style: .continuous)
-                .fill(colorScheme == .dark ? Color.rossGlassFill.opacity(0.86) : Color.white.opacity(0.78))
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 999, style: .continuous))
+            ZStack {
+                RoundedRectangle(cornerRadius: 999, style: .continuous)
+                    .fill(dockBackdropTint)
+                    .blur(radius: colorScheme == .dark ? 24 : 18)
+                    .padding(.horizontal, 3)
+                    .padding(.vertical, 4)
+
+                RoundedRectangle(cornerRadius: 999, style: .continuous)
+                    .fill(colorScheme == .dark ? Color.rossGlassFill.opacity(0.88) : Color.white.opacity(0.82))
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 999, style: .continuous))
+            }
         )
         .overlay {
             RoundedRectangle(cornerRadius: 999, style: .continuous)
                 .stroke(colorScheme == .dark ? Color.white.opacity(0.12) : Color.white.opacity(0.78), lineWidth: 1)
         }
-        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.14 : 0.08), radius: 10, y: 5)
+        .shadow(color: dockLiftHighlight, radius: 10, y: -1)
+        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.2 : 0.1), radius: 14, y: 7)
     }
 }
 
@@ -15670,6 +15891,14 @@ private func alphaStorageSnapshot(_ model: AlphaRossModel) -> AlphaStorageSnapsh
 private extension String {
     func ifEmpty(_ fallback: String) -> String {
         isEmpty ? fallback : self
+    }
+
+    var nilIfEmpty: String? {
+        isEmpty ? nil : self
+    }
+
+    func caseInsensitiveContains(_ value: String) -> Bool {
+        range(of: value, options: [.caseInsensitive]) != nil
     }
 }
 

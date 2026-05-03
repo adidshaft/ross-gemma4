@@ -20,6 +20,78 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    private func baseAskResult(
+        answerTitle: String = "Answered from your files",
+        statusNote: String? = "Private assistant"
+    ) -> AlphaAskResult {
+        AlphaAskResult(
+            chatSessionID: nil,
+            chatTurnID: nil,
+            kind: .userAsk,
+            question: "What is the next hearing date?",
+            scopeCaseID: nil,
+            scopeLabel: "All work",
+            selectedDocumentTitles: [],
+            answerTitle: answerTitle,
+            answerSections: [],
+            caseFileSources: [],
+            publicLawPreview: nil,
+            publicLawResults: [],
+            statusNote: statusNote,
+            needsReviewWarning: nil
+        )
+    }
+
+    func testMatterAskPayloadParserStripsThinkTagsAndSalvagesMalformedJSON() {
+        let output = AlphaLocalModelOutput(
+            rawText: """
+            <think>
+            Compare the latest order and earlier summary before answering.
+            </think>
+            {"headline":"Next hearing found","sections":["The next hearing date in this matter is 7 May 2026.","statusNote":"Private assistant","Check the signed order before relying on the date."],"statusNote":"Answered from selected files"}
+            """,
+            parsedJson: nil,
+            schemaValid: false,
+            warnings: [],
+            sourceRefs: []
+        )
+
+        let payload = AlphaMatterAskPayloadParser.parse(
+            output: output,
+            baseResult: baseAskResult()
+        )
+
+        XCTAssertEqual("Next hearing found", payload?.headline)
+        XCTAssertEqual(
+            [
+                "The next hearing date in this matter is 7 May 2026.",
+                "Check the signed order before relying on the date."
+            ],
+            payload?.sections
+        )
+        XCTAssertEqual("Answered from selected files", payload?.statusNote)
+    }
+
+    func testMatterAskPayloadParserFailsClosedForStructuredJunk() {
+        let output = AlphaLocalModelOutput(
+            rawText: """
+            <think>Need more context</think>
+            {"headline":"Next hearing found","sections":[
+            """,
+            parsedJson: nil,
+            schemaValid: false,
+            warnings: [],
+            sourceRefs: []
+        )
+
+        let payload = AlphaMatterAskPayloadParser.parse(
+            output: output,
+            baseResult: baseAskResult()
+        )
+
+        XCTAssertNil(payload)
+    }
+
     func testPrivateAssistantTierCopyHidesTechnicalModelNames() {
         XCTAssertEqual(AlphaCapabilityTier.quickStart.downloadSizeLabel, "about 430 MB")
         XCTAssertEqual(AlphaCapabilityTier.caseAssociate.downloadSizeLabel, "about 1.1-1.3 GB")

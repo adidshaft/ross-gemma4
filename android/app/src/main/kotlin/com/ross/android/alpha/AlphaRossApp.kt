@@ -78,6 +78,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.ui.draw.shadow
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -1493,6 +1494,7 @@ private fun AlphaRootAskDock(
     val chromeBackground = alphaChromeBackgroundColor()
     val chromeForeground = alphaChromeForegroundColor()
     val chromeMuted = alphaChromeMutedColor()
+    val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.3f
     val storedDraftText = controller.askDraft(activeScopeCaseId)
     val usesHindiUi = alphaUsesHindiUi()
     var localDraftText by rememberSaveable(
@@ -1612,12 +1614,25 @@ private fun AlphaRootAskDock(
             OutlinedCard(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .animateContentSize(),
+                    .animateContentSize()
+                    .shadow(
+                        elevation = if (isDarkTheme) 18.dp else 14.dp,
+                        shape = RoundedCornerShape(alphaCardCornerRadius),
+                        ambientColor = if (isDarkTheme) Color.Black.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.34f),
+                        spotColor = if (isDarkTheme) Color.Black.copy(alpha = 0.36f) else Color.Black.copy(alpha = 0.12f),
+                    ),
                 shape = RoundedCornerShape(alphaCardCornerRadius),
                 colors = CardDefaults.outlinedCardColors(
-                    containerColor = chromeBackground,
+                    containerColor = chromeBackground.copy(alpha = if (isDarkTheme) 0.94f else 0.98f),
                 ),
-                border = androidx.compose.foundation.BorderStroke(1.dp, alphaChromeStrokeColor()),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    alphaChromeStrokeColor().copy(alpha = if (isDarkTheme) 0.96f else 0.82f),
+                ),
+                elevation = CardDefaults.outlinedCardElevation(
+                    defaultElevation = if (isDarkTheme) 12.dp else 10.dp,
+                    pressedElevation = if (isDarkTheme) 9.dp else 8.dp,
+                ),
             ) {
                 Column(
                     modifier = Modifier.padding(horizontal = 11.dp, vertical = 9.dp),
@@ -1924,11 +1939,23 @@ private fun AlphaCollapsedAskDockPill(
     chromeForeground: Color,
     onClick: () -> Unit,
 ) {
+    val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.3f
     OutlinedCard(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = if (isDarkTheme) 14.dp else 10.dp,
+                shape = RoundedCornerShape(999.dp),
+                ambientColor = if (isDarkTheme) Color.Black.copy(alpha = 0.28f) else Color.White.copy(alpha = 0.30f),
+                spotColor = if (isDarkTheme) Color.Black.copy(alpha = 0.34f) else Color.Black.copy(alpha = 0.10f),
+            ),
         shape = RoundedCornerShape(999.dp),
-        colors = CardDefaults.outlinedCardColors(containerColor = chromeBackground),
-        border = androidx.compose.foundation.BorderStroke(1.dp, alphaChromeStrokeColor()),
+        colors = CardDefaults.outlinedCardColors(containerColor = chromeBackground.copy(alpha = if (isDarkTheme) 0.94f else 0.98f)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, alphaChromeStrokeColor().copy(alpha = if (isDarkTheme) 0.96f else 0.82f)),
+        elevation = CardDefaults.outlinedCardElevation(
+            defaultElevation = if (isDarkTheme) 10.dp else 8.dp,
+            pressedElevation = if (isDarkTheme) 7.dp else 6.dp,
+        ),
         onClick = onClick,
     ) {
         Row(
