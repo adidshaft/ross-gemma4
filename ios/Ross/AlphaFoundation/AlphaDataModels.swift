@@ -2,27 +2,22 @@ import Foundation
 
 enum AlphaOnboardingStage: String, Codable, Hashable, Sendable {
     case onboarding
+    // Kept so older saved state can migrate into the simplified onboarding flow.
     case privateAIPack
     case completed
 }
 
 enum AlphaAppTab: String, Codable, Hashable, CaseIterable, Sendable {
     case home
-    case cases
-    case capture
-    case ask
-    case settings
-    case publicLawLegacy = "publicLaw"
-    case exportsLegacy = "exports"
-}
 
-extension AlphaAppTab {
-    var normalizedForLawyerShell: AlphaAppTab {
-        switch self {
-        case .home, .cases, .ask, .settings:
-            self
-        case .capture, .publicLawLegacy, .exportsLegacy:
-            .home
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let rawValue = (try? container.decode(String.self)) ?? Self.home.rawValue
+        switch rawValue {
+        case Self.home.rawValue:
+            self = .home
+        default:
+            self = .home
         }
     }
 }
@@ -67,22 +62,22 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
     var title: String {
         switch self {
         case .quickStart:
-            "Basic"
+            "Small"
         case .caseAssociate:
             "Standard"
         case .seniorDraftingSupport:
-            "Advanced"
+            "Full"
         }
     }
 
     var setupTitle: String {
         switch self {
         case .quickStart:
-            "Basic - short orders only"
+            "Small - short orders only"
         case .caseAssociate:
             "Standard - most matters"
         case .seniorDraftingSupport:
-            "Advanced - long bundles and drafting"
+            "Full - long bundles and drafting"
         }
     }
 
@@ -91,7 +86,7 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
         case .quickStart:
             "Lighter setup for short orders, quick summaries, and simple private Ask Ross actions."
         case .caseAssociate:
-            "Recommended for everyday matters, document review, chronology work, and source-backed answers."
+            "Recommended for everyday matters, document review, chronology work, and answers from your files."
         case .seniorDraftingSupport:
             "Best for longer bundles, deeper review, and heavier drafting on this phone."
         }
@@ -135,7 +130,7 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
         case .quickStart:
             "Fast intake, smaller devices, and short document Q&A after the model is installed."
         case .caseAssociate:
-            "Most advocates who need document review, next dates, chronologies, notes, and source-backed answers on-device."
+            "Most advocates who need document review, next dates, chronologies, notes, and answers from your files on-device."
         case .seniorDraftingSupport:
             "Longer bundles, deeper review, hearing preparation, and more detailed drafting support."
         }
@@ -534,7 +529,7 @@ struct AlphaSourceRef: Identifiable, Codable, Hashable, Sendable {
     let id: UUID
     let caseId: UUID
     let documentId: UUID
-    let documentTitle: String
+    var documentTitle: String
     let pageNumber: Int
     let paragraphRange: String?
     let textSnippet: String?
@@ -591,7 +586,7 @@ struct AlphaSourceRef: Identifiable, Codable, Hashable, Sendable {
             let confirmedAt = paragraphRange?.trimmingCharacters(in: .whitespacesAndNewlines)
             return "Confirmed by advocate · \((confirmedAt?.isEmpty == false ? confirmedAt : "source not available") ?? "source not available")"
         case .publicLawSource:
-            return "Public law · \(!title.isEmpty ? title : "source not available")"
+            return "Legal Search · \(!title.isEmpty ? title : "source not available")"
         }
     }
 
@@ -2192,7 +2187,7 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
 
         let sharedWorkspace = AlphaCaseMatter(
             id: sharedWorkspaceID,
-            title: "Shared files",
+            title: "General files",
             forum: "Available across matters",
             stage: .intake,
             nextHearing: nil,
@@ -2287,7 +2282,7 @@ private extension AlphaPersistedState {
     static func sharedWorkspaceMatter() -> AlphaCaseMatter {
         AlphaCaseMatter(
             id: UUID(uuidString: "0D9E5220-4D3C-4B49-9A67-10B42B593B7D")!,
-            title: "Shared files",
+            title: "General files",
             forum: "Available across matters",
             stage: .intake,
             nextHearing: nil,
@@ -2391,14 +2386,14 @@ extension AlphaPrivacyLedgerEntry {
             "Checked private assistant setup"
         case "Private AI Pack queued", "Private AI Pack verified":
             "Set up private assistant"
-        case "Public-law search reviewed by user":
+        case "Public-law search reviewed by user", "Legal Search reviewed by user":
             "Reviewed public-law search"
         case "Public-law query sent":
-            "Searched public law"
-        case "Public-law search cancelled":
+            "Used Legal Search"
+        case "Public-law search cancelled", "Legal Search cancelled":
             "Cancelled public-law search"
-        case "Public-law search unavailable":
-            "Public-law search needs attention"
+        case "Public-law search unavailable", "Legal Search unavailable":
+            "Legal Search needs attention"
         case "Local export generated":
             "Generated Notes & Drafts"
         case "Local case review run":
@@ -2414,13 +2409,13 @@ extension AlphaPrivacyLedgerEntry {
 
     var lawyerDetail: String {
         switch title {
-        case "Public-law search reviewed by user":
+        case "Public-law search reviewed by user", "Legal Search reviewed by user":
             "Ross prepared the sanitized query locally. 0 private case details left the device."
         case "Public-law query sent":
             "Sanitized query sent. 0 private case details sent; case files stayed on this device."
-        case "Public-law search cancelled":
+        case "Public-law search cancelled", "Legal Search cancelled":
             "No public-law network request was made."
-        case "Public-law search unavailable":
+        case "Public-law search unavailable", "Legal Search unavailable":
             "Ross could not complete the sanitized public-law search. Your case files stayed on this device."
         case "Private AI Pack verified":
             "Private assistant was prepared on this device."

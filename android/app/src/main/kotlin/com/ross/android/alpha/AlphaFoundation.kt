@@ -14,6 +14,7 @@ import androidx.work.WorkManager
 import com.ross.android.BuildConfig
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -75,7 +76,13 @@ private fun Context.writeRossBackendBaseUrlOverride(rawValue: String?) {
 }
 
 enum class AlphaOnboardingStage { Onboarding, PrivateAiPack, Completed }
-enum class AlphaAppTab { Home, Cases, Capture, Ask, Settings, PublicLaw, Exports }
+enum class AlphaAppTab {
+    @SerializedName(
+        value = "Home",
+        alternate = ["Cases", "Capture", "Ask", "Settings", "PublicLaw", "Exports"],
+    )
+    Home,
+}
 enum class AlphaAppearanceMode(val label: String) {
     Auto("Auto (Default)"),
     Dark("Dark"),
@@ -83,7 +90,7 @@ enum class AlphaAppearanceMode(val label: String) {
 }
 enum class AlphaCapabilityTier(val tierId: String, val title: String, val summary: String, val downloadSizeLabel: String, val installedSizeLabel: String) {
     QuickStart("quick_start", "Basic", "Lighter setup for short orders, quick summaries, and simple private Ask Ross actions.", "about 304 MB", "about 304 MB"),
-    CaseAssociate("case_associate", "Standard", "Recommended for everyday matters, document review, chronology work, and source-backed answers.", "about 555 MB", "about 555 MB"),
+    CaseAssociate("case_associate", "Standard", "Recommended for everyday matters, document review, chronology work, and answers from your files.", "about 555 MB", "about 555 MB"),
     SeniorDraftingSupport("senior_drafting_support", "Advanced", "Best for longer bundles, deeper review, and heavier drafting on this phone.", "about 690 MB", "about 690 MB");
 
     val setupTitle: String
@@ -110,7 +117,7 @@ enum class AlphaCapabilityTier(val tierId: String, val title: String, val summar
     val bestFor: String
         get() = when (this) {
             QuickStart -> "Fast intake, smaller devices, and short document Q&A after the model is installed."
-            CaseAssociate -> "Most advocates who need document review, next dates, chronologies, notes, and source-backed answers on-device."
+            CaseAssociate -> "Most advocates who need document review, next dates, chronologies, notes, and answers from your files on-device."
             SeniorDraftingSupport -> "Longer bundles, deeper review, hearing preparation, and more detailed drafting support."
         }
 
@@ -285,6 +292,8 @@ data class AlphaReviewQueueItem(
     val title: String,
     val detail: String,
     val sourceRef: AlphaSourceRef? = null,
+    val fieldId: String? = null,
+    val findingId: String? = null,
 )
 
 data class AlphaAskResult(
@@ -530,10 +539,7 @@ data class AlphaAskDocumentOption(
 
 sealed interface AndroidAlphaRoute {
     data object Onboarding : AndroidAlphaRoute
-    data object PrivateAiPack : AndroidAlphaRoute
     data object Home : AndroidAlphaRoute
-    data object CaseList : AndroidAlphaRoute
-    data object Capture : AndroidAlphaRoute
     data object AskRoss : AndroidAlphaRoute
     data object CreateCase : AndroidAlphaRoute
     data class CaseWorkspace(val caseId: String) : AndroidAlphaRoute
@@ -587,7 +593,6 @@ internal class AlphaRossController(
     var selectedCaseId by mutableStateOf(persisted.cases.firstOrNull { it.id != ALPHA_SHARED_WORKSPACE_ID }?.id)
     var selectedTier by mutableStateOf(persisted.settings.activeTier ?: AlphaCapabilityTier.CaseAssociate)
     var caseDraftTitle by mutableStateOf("")
-    var caseDraftForum by mutableStateOf("")
     var askDrafts by mutableStateOf<Map<String, String>>(emptyMap())
     var globalAskDraft by mutableStateOf("")
     var askSelectedScopeCaseId by mutableStateOf<String?>(null)
@@ -708,6 +713,18 @@ internal class AlphaRossController(
             context = context,
             appPrivateRoot = rootDir,
         )
+
+    fun clearStaleAskState(currentRoute: AndroidAlphaRoute?) {
+        val latest = latestAskResult ?: return
+        val routeCaseId = when (currentRoute) {
+            is AndroidAlphaRoute.CaseWorkspace -> currentRoute.caseId
+            is AndroidAlphaRoute.AskCase -> currentRoute.caseId
+            else -> null
+        }
+        if (latest.scopeCaseId != routeCaseId) {
+            latestAskResult = null
+        }
+    }
 
     fun lastModelInvocationRuntimeMode(): String? =
         lastModelInvocation()?.runtimeMode
@@ -841,16 +858,17 @@ internal class AlphaRossController(
     }
 
     fun openAsk(scopeCaseId: String? = null, documentId: String? = null) {
+        val resolvedScopeCaseId = scopeCaseId ?: selectedCaseId ?: ALPHA_SHARED_WORKSPACE_ID
         if (documentId != null) {
-            setSelectedAskDocumentIds(scopeCaseId, setOf(documentId))
+            setSelectedAskDocumentIds(resolvedScopeCaseId, setOf(documentId))
         }
-        pendingRoute = scopeCaseId?.let(AndroidAlphaRoute::AskCase) ?: AndroidAlphaRoute.AskRoss
+        pendingRoute = AndroidAlphaRoute.AskCase(resolvedScopeCaseId)
     }
 
     fun scopeLabel(caseId: String?): String =
         when {
             caseId == null -> "All work"
-            caseId == ALPHA_SHARED_WORKSPACE_ID -> "Shared files"
+            caseId == ALPHA_SHARED_WORKSPACE_ID -> "General files"
             else -> cases.firstOrNull { it.id == caseId }?.title ?: "All work"
         }
 
@@ -1010,7 +1028,7 @@ internal class AlphaRossController(
 
     fun startRoute(): AndroidAlphaRoute = when (persisted.onboardingStage) {
         AlphaOnboardingStage.Onboarding -> AndroidAlphaRoute.Onboarding
-        AlphaOnboardingStage.PrivateAiPack -> AndroidAlphaRoute.PrivateAiPack
+        AlphaOnboardingStage.PrivateAiPack -> AndroidAlphaRoute.Onboarding
         AlphaOnboardingStage.Completed -> AndroidAlphaRoute.Home
     }
 
@@ -1386,7 +1404,7 @@ internal class AlphaRossController(
         if (title.isEmpty()) return null
         val case = AlphaCaseMatter(
             title = title,
-            forum = caseDraftForum.trim().ifBlank { "Court not yet specified" },
+            forum = "Court not yet specified",
             stage = AlphaCaseStage.Intake,
             summary = "New matter created locally. Import the first source document to begin chronology work.",
             issueHighlights = listOf("Import the first source document to begin chronology work."),
@@ -1410,7 +1428,6 @@ internal class AlphaRossController(
         )
         selectedCaseId = case.id
         caseDraftTitle = ""
-        caseDraftForum = ""
         save()
         if (openWorkspace) {
             pendingRoute = AndroidAlphaRoute.CaseWorkspace(case.id)
@@ -2043,8 +2060,8 @@ internal class AlphaRossController(
             persisted = persisted.copy(
                 ledgerEntries = listOf(
                     AlphaPrivacyLedgerEntry(
-                        title = "Public-law search cancelled",
-                        detail = "The sanitized query was reviewed, then cancelled. No public-law network request was made.",
+                        title = "Legal Search cancelled",
+                        detail = "The sanitized query was reviewed, then cancelled. No legal search network request was made.",
                         purpose = AlphaPrivacyPurpose.PublicLawSearch,
                         payloadClass = AlphaPayloadClass.NoCaseData,
                         endpointLabel = "device://public-law-review",
@@ -2061,7 +2078,7 @@ internal class AlphaRossController(
         persisted = persisted.copy(
             ledgerEntries = listOf(
                 AlphaPrivacyLedgerEntry(
-                    title = "Public-law search reviewed by user",
+                    title = "Legal Search reviewed by user",
                     detail = "Sanitized query reviewed: ${preview.query}. Removed private details: ${preview.removed.joinToString(", ")}. 0 private case details sent.",
                     purpose = AlphaPrivacyPurpose.PublicLawSearch,
                     payloadClass = AlphaPayloadClass.NoCaseData,
@@ -2078,14 +2095,14 @@ internal class AlphaRossController(
             latestAskResult = latestAskResult?.copy(
                 publicLawPreview = preview,
                 publicLawResults = results,
-                statusNote = if (results.isEmpty()) "Public-law results are unavailable right now." else "Public-law results",
+                statusNote = if (results.isEmpty()) "Legal Search results are unavailable right now." else "Legal Search results",
             )
             pendingPublicLawQuestion?.let { pendingQuestion ->
                 updateLatestAskHistory(pendingPublicLawScopeCaseId, pendingQuestion) { result ->
                     result.copy(
                         publicLawPreview = preview,
                         publicLawResults = results,
-                        statusNote = if (results.isEmpty()) "Public-law results are unavailable right now." else "Public-law results",
+                        statusNote = if (results.isEmpty()) "Legal Search results are unavailable right now." else "Legal Search results",
                     )
                 }
             }
@@ -2093,9 +2110,9 @@ internal class AlphaRossController(
                 publicLawCache = listOf(AlphaPublicLawCacheItem(query = preview.query, resultTitles = results.map { it.title })) + persisted.publicLawCache,
                 ledgerEntries = listOf(
                     AlphaPrivacyLedgerEntry(
-                        title = if (results.isEmpty()) "Public-law search unavailable" else "Public-law query sent",
+                        title = if (results.isEmpty()) "Legal Search unavailable" else "Legal Search query sent",
                         detail = if (results.isEmpty()) {
-                            "Could not search public law right now. Your files stayed on this device."
+                            "Could not use Legal Search right now. Your files stayed on this device."
                         } else {
                             "Only a sanitized public query crossed the network boundary."
                         },
@@ -2136,7 +2153,7 @@ internal class AlphaRossController(
                 ledgerEntries = listOf(
                     localLedger(
                         if (scopeCaseId == null) "Review run" else "Case review run",
-                        "The question and source-backed draft stayed on-device.",
+                        "The question and draft from your files stayed on-device.",
                     )
                 ) + persisted.ledgerEntries,
             )
@@ -2199,12 +2216,12 @@ internal class AlphaRossController(
 
         if (sourcePack.isEmpty() && alphaAskQuestionNeedsPublicLawSearch(question)) {
             val payload = AlphaMatterAskRuntimePayload(
-                headline = "Public-law search needed",
+                headline = "Legal Search needed",
                 sections = listOf(
                     "No local source excerpt supports this legal question.",
-                    "Ross should check public-law sources and citations before giving a usable answer.",
+                    "Ross should check legal sources and citations before giving a usable answer.",
                 ),
-                statusNote = "Needs public-law search",
+                statusNote = "Needs Legal Search",
             )
             val update: (AlphaAskResult) -> AlphaAskResult = { result ->
                 result.copy(
@@ -2525,9 +2542,9 @@ internal class AlphaRossController(
                 publicLawCache = listOf(AlphaPublicLawCacheItem(query = preview.query, resultTitles = results.map { it.title })) + persisted.publicLawCache,
                 ledgerEntries = listOf(
                     AlphaPrivacyLedgerEntry(
-                        title = if (results.isEmpty()) "Public-law search unavailable" else "Public-law query sent",
+                        title = if (results.isEmpty()) "Legal Search unavailable" else "Legal Search query sent",
                         detail = if (results.isEmpty()) {
-                            "Could not search public law right now. Your files stayed on this device."
+                            "Could not use Legal Search right now. Your files stayed on this device."
                         } else {
                             "Only a sanitized public query crossed the network boundary."
                         },
@@ -2912,6 +2929,8 @@ internal class AlphaRossController(
                             title = alphaReviewTitle(field.fieldType),
                             detail = field.value,
                             sourceRef = field.sourceRefs.firstOrNull(),
+                            id = field.id,
+                            fieldId = field.id,
                         )
                     }
                 val findings = document.extractionFindings
@@ -2924,6 +2943,8 @@ internal class AlphaRossController(
                             title = alphaReviewTitle(finding.kind),
                             detail = finding.message,
                             sourceRef = finding.sourceRefs.firstOrNull(),
+                            id = finding.id,
+                            findingId = finding.id,
                         )
                     }
                 fields + findings
@@ -3019,7 +3040,7 @@ internal class AlphaRossController(
             .flatMap { it.extractionFindings }
             .filterNot { it.resolved }
             .map { it.message }
-            .ifEmpty { listOf("Source-backed extraction is available for this matter.") }
+            .ifEmpty { listOf("Extraction from your files is available for this matter.") }
             .take(4)
 
         val generatedTasks = buildList {
@@ -3088,7 +3109,7 @@ internal class AlphaRossController(
                 answerTitle = "Private assistant setup",
                 answerSections = listOf(
                     "Before setup, Ross can still organize matters, tasks, dates, and files on this device.",
-                    "After setup, the private assistant adds stronger document review, summaries, chronologies, and source-backed answers.",
+                    "After setup, the private assistant adds stronger document review, summaries, chronologies, and answers from your files.",
                     "Open Settings, then My assistant, to choose Basic, Standard, or Advanced.",
                 ),
                 caseFileSources = emptyList(),
@@ -3199,7 +3220,7 @@ internal class AlphaRossController(
             answerTitle = answerTitle,
             answerSections = if (notFound) listOf("Ross could not find this in your files yet.") else sections.take(3),
             caseFileSources = matchedSources.take(3),
-            statusNote = if (notFound) "Public law is off" else if (selectedDocuments.isEmpty()) "Answered from your files" else "Answered from selected files",
+            statusNote = if (notFound) "Legal Search is off" else if (selectedDocuments.isEmpty()) "Answered from your files" else "Answered from selected files",
             needsReviewWarning = reviewQueue(scopeCaseId)
                 .filter { selectedDocumentIds.isEmpty() || it.documentId in selectedDocumentIds }
                 .takeIf { it.isNotEmpty() }
@@ -3373,6 +3394,29 @@ internal class AlphaRossController(
                                 affectedDocuments = listOf(documentId),
                             )
                         ) + case.caseMemoryUpdates,
+                        updatedAt = nowIso(),
+                    )
+                } else case
+            }
+        )
+        refreshDerivedCaseState(caseId, documentId)
+        save()
+    }
+
+    fun resolveExtractionFinding(caseId: String, documentId: String, findingId: String) {
+        persisted = persisted.copy(
+            cases = persisted.cases.map { case ->
+                if (case.id == caseId) {
+                    case.copy(
+                        documents = case.documents.map { document ->
+                            if (document.id == documentId) {
+                                document.copy(
+                                    extractionFindings = document.extractionFindings.map { finding ->
+                                        if (finding.id == findingId) finding.copy(resolved = true) else finding
+                                    }
+                                )
+                            } else document
+                        },
                         updatedAt = nowIso(),
                     )
                 } else case
@@ -3563,7 +3607,7 @@ internal class AlphaRossController(
             localInferenceMetrics = (result.localInferenceMetrics + persisted.localInferenceMetrics)
                 .sortedByDescending { it.createdAt }
                 .take(120),
-            ledgerEntries = listOf(localLedger("Local extraction completed", "Ross reviewed the document locally and prepared source-backed fields for advocate review.")) + persisted.ledgerEntries,
+            ledgerEntries = listOf(localLedger("Local extraction completed", "Ross reviewed the document locally and prepared fields from your files for advocate review.")) + persisted.ledgerEntries,
         )
         refreshDerivedCaseState(caseId, documentId)
         save()
@@ -3732,19 +3776,19 @@ internal class AlphaRossController(
         askDrafts = askDrafts - caseId
         askSelectedDocumentIds = askSelectedDocumentIds - caseId
         if (pendingRoute is AndroidAlphaRoute.CaseWorkspace && (pendingRoute as AndroidAlphaRoute.CaseWorkspace).caseId == caseId) {
-            pendingRoute = AndroidAlphaRoute.CaseList
+            pendingRoute = AndroidAlphaRoute.Home
         }
         if (pendingRoute is AndroidAlphaRoute.DocumentList && (pendingRoute as AndroidAlphaRoute.DocumentList).caseId == caseId) {
-            pendingRoute = AndroidAlphaRoute.CaseList
+            pendingRoute = AndroidAlphaRoute.Home
         }
         if (pendingRoute is AndroidAlphaRoute.DocumentViewer && (pendingRoute as AndroidAlphaRoute.DocumentViewer).caseId == caseId) {
-            pendingRoute = AndroidAlphaRoute.CaseList
+            pendingRoute = AndroidAlphaRoute.Home
         }
         if (pendingRoute is AndroidAlphaRoute.AskCase && (pendingRoute as AndroidAlphaRoute.AskCase).caseId == caseId) {
-            pendingRoute = AndroidAlphaRoute.CaseList
+            pendingRoute = AndroidAlphaRoute.Home
         }
         if (pendingRoute is AndroidAlphaRoute.DraftsExports && (pendingRoute as AndroidAlphaRoute.DraftsExports).caseId == caseId) {
-            pendingRoute = AndroidAlphaRoute.CaseList
+            pendingRoute = AndroidAlphaRoute.Home
         }
     }
 
@@ -3768,13 +3812,7 @@ internal class AlphaRossController(
         notes?.startsWith(ALPHA_ROSS_SUGGESTED_TASK_NOTE_PREFIX) == true
 
     private fun normalizeLoadedState(state: AlphaPersistedState): AlphaPersistedState {
-        val normalizedTab = when (state.selectedTab) {
-            AlphaAppTab.Capture -> AlphaAppTab.Home
-            AlphaAppTab.Ask -> AlphaAppTab.Home
-            AlphaAppTab.PublicLaw -> AlphaAppTab.Home
-            AlphaAppTab.Exports -> AlphaAppTab.Home
-            else -> state.selectedTab
-        }
+        val normalizedTab = AlphaAppTab.Home
         val normalizedCases = if (state.cases.any { it.id == ALPHA_SHARED_WORKSPACE_ID }) {
             state.cases
         } else {
@@ -3878,6 +3916,8 @@ internal class AlphaRossController(
                     title = alphaReviewTitle(field.fieldType),
                     detail = field.value,
                     sourceRef = field.sourceRefs.firstOrNull(),
+                    id = field.id,
+                    fieldId = field.id,
                 )
             }
         val findingItems = document.extractionFindings
@@ -3890,6 +3930,8 @@ internal class AlphaRossController(
                     title = alphaReviewTitle(finding.kind),
                     detail = finding.message,
                     sourceRef = finding.sourceRefs.firstOrNull(),
+                    id = finding.id,
+                    findingId = finding.id,
                 )
             }
         return fieldItems + findingItems
@@ -4437,7 +4479,7 @@ private fun seedCases(): List<AlphaCaseMatter> {
 private fun sharedWorkspaceMatter(): AlphaCaseMatter =
     AlphaCaseMatter(
         id = ALPHA_SHARED_WORKSPACE_ID,
-        title = "Shared files",
+        title = "General files",
         forum = "Available across matters",
         stage = AlphaCaseStage.Intake,
         nextHearing = null,
@@ -4579,8 +4621,8 @@ fun AlphaCaseDocument.lawyerStatusTitle(): String {
 fun AlphaPrivacyLedgerEntry.lawyerTitle(): String = when (title) {
     "Model catalog checked" -> "Checked private assistant setup"
     "Private AI Pack queued", "Private AI Pack verified" -> "Set up private assistant"
-    "Public-law query sent" -> "Searched public law"
-    "Public-law search unavailable" -> "Public-law search needs attention"
+    "Legal Search query sent", "Public-law query sent" -> "Used Legal Search"
+    "Legal Search unavailable", "Public-law search unavailable" -> "Legal Search needs attention"
     "Local export generated" -> "Generated Notes & Drafts"
     "Case review run" -> "Reviewed case"
     "Document imported locally" -> "Imported document"
@@ -4589,10 +4631,10 @@ fun AlphaPrivacyLedgerEntry.lawyerTitle(): String = when (title) {
 }
 
 fun AlphaPrivacyLedgerEntry.lawyerDetail(): String = when (title) {
-    "Public-law query sent" ->
-        "Ross sent only a generic public-law query. Your case files stayed on this device."
-    "Public-law search unavailable" ->
-        "Ross could not complete the sanitized public-law search. Your case files stayed on this device."
+    "Legal Search query sent", "Public-law query sent" ->
+        "Ross sent only a generic legal search query. Your case files stayed on this device."
+    "Legal Search unavailable", "Public-law search unavailable" ->
+        "Ross could not complete the sanitized legal search. Your case files stayed on this device."
     "Private AI Pack verified" ->
         "Private assistant was prepared on this device."
     else -> detail

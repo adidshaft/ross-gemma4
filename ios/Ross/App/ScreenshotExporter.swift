@@ -183,7 +183,7 @@ private struct RossScreenshotExporter {
         let onboardingState = makePreviewState(stage: .onboarding)
         let assistantSetupState = makePreviewState(stage: .privateAIPack)
         let homeState = makePreviewState(stage: .completed, selectedTab: .home, activePack: .caseAssociate)
-        let importState = makePreviewState(stage: .completed, selectedTab: .capture, activePack: .caseAssociate)
+        let importState = makePreviewState(stage: .completed, selectedTab: .home, activePack: .caseAssociate)
         let workspaceState = makePreviewState(stage: .completed, selectedTab: .home, activePack: .caseAssociate)
         let reviewFixture = makeReviewFixtureState()
 

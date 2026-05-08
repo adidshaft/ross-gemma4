@@ -20,6 +20,20 @@ public enum RossSurface {
     public static let largeCornerRadius: CGFloat = 20
 }
 
+public enum RossSpacing {
+    public static let xs: CGFloat = 4
+    public static let sm: CGFloat = 8
+    public static let md: CGFloat = 12
+    public static let lg: CGFloat = 16
+    public static let xl: CGFloat = 24
+}
+
+public enum RossCorner {
+    public static let sm: CGFloat = 12
+    public static let md: CGFloat = 16
+    public static let lg: CGFloat = 20
+}
+
 public struct RossCardStyle: ViewModifier {
     @Environment(\.colorScheme) private var colorScheme
 
@@ -204,6 +218,34 @@ public struct RossGlassButtonStyle: ButtonStyle {
 }
 
 public extension View {
+    func rossDisplay() -> some View {
+        self.font(.system(size: 28, weight: .bold, design: .serif))
+    }
+
+    func rossTitle() -> some View {
+        self.font(.system(size: 20, weight: .semibold, design: .serif))
+    }
+
+    func rossHeadline() -> some View {
+        self.font(.system(size: 16, weight: .semibold))
+    }
+
+    func rossBody() -> some View {
+        self.font(.system(size: 15, weight: .regular))
+    }
+
+    func rossCaption() -> some View {
+        self.font(.system(size: 13, weight: .medium))
+    }
+
+    func rossMicro() -> some View {
+        self.font(.system(size: 11, weight: .regular))
+    }
+
+    func rossLabel() -> some View {
+        self.font(.system(size: 14, weight: .semibold))
+    }
+
     func rossCardStyle() -> some View {
         self.modifier(RossCardStyle())
     }
