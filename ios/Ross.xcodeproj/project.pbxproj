@@ -7,6 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4EDD7189C73F488685AC434E /* AlphaRossModel+Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9809D97103069F0C070CE92 /* AlphaRossModel+Persistence.swift */; };
+		45245CFDFB8C93341A0FD6E6 /* AlphaRossModel+Cases.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D2616320DB3777B6FD56F98 /* AlphaRossModel+Cases.swift */; };
+		9FA0D4D5DCC3EC9A6D0EF8FD /* AlphaRossModel+Tasks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 603C97CAC42A986BAED9F76A /* AlphaRossModel+Tasks.swift */; };
+		995E8390EFE576ADF57D6246 /* AlphaRossModel+Documents.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFE4DDD6B3A1640D6B82DFDE /* AlphaRossModel+Documents.swift */; };
+		4B28345FD8749123BE2A4C00 /* AlphaRossModel+Ask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78CFA00F7A178BB5BA876FD0 /* AlphaRossModel+Ask.swift */; };
+		5A0C1E1CA29273D15A0A9006 /* AlphaRossModel+PublicLaw.swift in Sources */ = {isa = PBXBuildFile; fileRef = EED3B0444E9AA1B7907DE151 /* AlphaRossModel+PublicLaw.swift */; };
+		8F0729840EB1F8B057CD8663 /* AlphaRossModel+Exports.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39268901D8E50BC4FE3FEAA0 /* AlphaRossModel+Exports.swift */; };
+		2F2738401417D3E3C600DF81 /* AlphaRossModel+PrivateAI.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA11E396A69D5571D36ACBAE /* AlphaRossModel+PrivateAI.swift */; };
 		0ECCBB7AFD2564D438417E4C /* PrivacyLedgerModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9791BC5E68F179CB5B4CF7F2 /* PrivacyLedgerModels.swift */; };
 		0EDB9F7CC43DFFD0087DF346 /* AppColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33E32AA2139827A918D6F370 /* AppColors.swift */; };
 		240379AAA597D8305ADB7E74 /* CapabilityTier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B1B86C4EA73F7EFEB2A2957 /* CapabilityTier.swift */; };
@@ -14,7 +22,22 @@
 		3A0D92B1EBC4BCEF456D7CBA /* AIInteractionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96933B6A6262C9829C993B58 /* AIInteractionModels.swift */; };
 		5411194E81EF04A19C89CC5E /* RossChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = A36625048660A9BEF1C77916 /* RossChrome.swift */; };
 		5EB6D4908BD6084EA7D6504F /* PrivacyLedgerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E8BFA313EEFE8B4B54875F9 /* PrivacyLedgerService.swift */; };
-		762FC2EFCA6F7FAD2AE84BED /* AlphaRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A64616242F098492C6821152 /* AlphaRootView.swift */; };
+		63068AD85A3C874FBA2F1345 /* AlphaRootNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45966E3C3DDFFF66C005FCF2 /* AlphaRootNavigation.swift */; };
+		50D19919F6D5FA75C7EEEA93 /* AlphaOnboardingViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA30A9973616B2AD314EE06C /* AlphaOnboardingViews.swift */; };
+		F585E414B3D2CF87F5E2BAD6 /* AlphaTopRail.swift in Sources */ = {isa = PBXBuildFile; fileRef = 196703DCA7B85696BEDB6559 /* AlphaTopRail.swift */; };
+		7920B4B71A1ECA34D41799B1 /* AlphaAskDock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06904396E0CCA81C73FA5493 /* AlphaAskDock.swift */; };
+		E4977679360C6560C5579C69 /* AlphaFeedScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 883B13980E5007785CA4FC9E /* AlphaFeedScreen.swift */; };
+		23F98036545C8177DED94BB2 /* AlphaMatterComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81AF01447E021B2938571339 /* AlphaMatterComponents.swift */; };
+		550F4D2A71DF1E6C6CBD2F2B /* AlphaCreateCaseScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = C19E627B68E4510B922ED51E /* AlphaCreateCaseScreen.swift */; };
+		7BECFCE7A37C5B6B878B0CBC /* AlphaCaseWorkspaceSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = E953D96708CB02864B7ADEF7 /* AlphaCaseWorkspaceSupport.swift */; };
+		B848653B9380EA23842E784A /* AlphaAskConversationScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03322AF5E367E4E6A7817E2F /* AlphaAskConversationScreen.swift */; };
+		30F8307F480F755204C828BF /* AlphaCaseWorkspaceScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB891701B2882A98948FE119 /* AlphaCaseWorkspaceScreen.swift */; };
+		8D087E557DDA0DAA81F8B7A4 /* AlphaDocumentViewerScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57B2AC41BA37698D79AED251 /* AlphaDocumentViewerScreen.swift */; };
+		1409F115184590B0CE6B5DC1 /* AlphaExportsLedger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29945237E9D4FABF1F87333E /* AlphaExportsLedger.swift */; };
+		93A4C96BB6E286729B9A33F9 /* AlphaSettingsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C7C4008A64A00ADDDF59394 /* AlphaSettingsScreen.swift */; };
+		9254FBF0D12C332E947D9B5C /* AlphaPrivateAIViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5993A6ABEC3B3ACA05CDEFD6 /* AlphaPrivateAIViews.swift */; };
+		5F8B84862A04E1C0A3B74DDC /* AlphaDocumentPreviews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E2E70AB92D1E9D4CD052E3B /* AlphaDocumentPreviews.swift */; };
+		762FC2EFCA6F7FAD2AE84BED /* AlphaRossModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A64616242F098492C6821152 /* AlphaRossModel.swift */; };
 		79665FD65AED0703B4E6CE18 /* PublicLawSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B78B6D618FCC9AB6389E9840 /* PublicLawSearchService.swift */; };
 		8ADED04F785C7104364942AB /* AlphaStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6263477CDD4DB63E41096E91 /* AlphaStore.swift */; };
 		9574008E6F558766CA89AADC /* ModelDownloadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9500C3C48AB19DA431C6DB9E /* ModelDownloadService.swift */; };
@@ -38,6 +61,14 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		D9809D97103069F0C070CE92 /* AlphaRossModel+Persistence.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "AlphaRossModel+Persistence.swift"; sourceTree = "<group>"; };
+		8D2616320DB3777B6FD56F98 /* AlphaRossModel+Cases.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "AlphaRossModel+Cases.swift"; sourceTree = "<group>"; };
+		603C97CAC42A986BAED9F76A /* AlphaRossModel+Tasks.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "AlphaRossModel+Tasks.swift"; sourceTree = "<group>"; };
+		BFE4DDD6B3A1640D6B82DFDE /* AlphaRossModel+Documents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "AlphaRossModel+Documents.swift"; sourceTree = "<group>"; };
+		78CFA00F7A178BB5BA876FD0 /* AlphaRossModel+Ask.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "AlphaRossModel+Ask.swift"; sourceTree = "<group>"; };
+		EED3B0444E9AA1B7907DE151 /* AlphaRossModel+PublicLaw.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "AlphaRossModel+PublicLaw.swift"; sourceTree = "<group>"; };
+		39268901D8E50BC4FE3FEAA0 /* AlphaRossModel+Exports.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "AlphaRossModel+Exports.swift"; sourceTree = "<group>"; };
+		EA11E396A69D5571D36ACBAE /* AlphaRossModel+PrivateAI.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "AlphaRossModel+PrivateAI.swift"; sourceTree = "<group>"; };
 		04E71658210E395C620C6267 /* RossApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RossApp.swift; sourceTree = "<group>"; };
 		1E8BFA313EEFE8B4B54875F9 /* PrivacyLedgerService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PrivacyLedgerService.swift; sourceTree = "<group>"; };
 		33E32AA2139827A918D6F370 /* AppColors.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppColors.swift; sourceTree = "<group>"; };
@@ -56,7 +87,22 @@
 		A1B2C3D4E5F60718293A4B62 /* AlphaModelInvocationStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaModelInvocationStore.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B63 /* AlphaModelOutputValidator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaModelOutputValidator.swift; sourceTree = "<group>"; };
 		A36625048660A9BEF1C77916 /* RossChrome.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RossChrome.swift; sourceTree = "<group>"; };
-		A64616242F098492C6821152 /* AlphaRootView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaRootView.swift; sourceTree = "<group>"; };
+		45966E3C3DDFFF66C005FCF2 /* AlphaRootNavigation.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaRootNavigation.swift; sourceTree = "<group>"; };
+		AA30A9973616B2AD314EE06C /* AlphaOnboardingViews.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaOnboardingViews.swift; sourceTree = "<group>"; };
+		196703DCA7B85696BEDB6559 /* AlphaTopRail.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaTopRail.swift; sourceTree = "<group>"; };
+		06904396E0CCA81C73FA5493 /* AlphaAskDock.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaAskDock.swift; sourceTree = "<group>"; };
+		883B13980E5007785CA4FC9E /* AlphaFeedScreen.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaFeedScreen.swift; sourceTree = "<group>"; };
+		81AF01447E021B2938571339 /* AlphaMatterComponents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaMatterComponents.swift; sourceTree = "<group>"; };
+		C19E627B68E4510B922ED51E /* AlphaCreateCaseScreen.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaCreateCaseScreen.swift; sourceTree = "<group>"; };
+		E953D96708CB02864B7ADEF7 /* AlphaCaseWorkspaceSupport.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaCaseWorkspaceSupport.swift; sourceTree = "<group>"; };
+		03322AF5E367E4E6A7817E2F /* AlphaAskConversationScreen.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaAskConversationScreen.swift; sourceTree = "<group>"; };
+		DB891701B2882A98948FE119 /* AlphaCaseWorkspaceScreen.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaCaseWorkspaceScreen.swift; sourceTree = "<group>"; };
+		57B2AC41BA37698D79AED251 /* AlphaDocumentViewerScreen.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaDocumentViewerScreen.swift; sourceTree = "<group>"; };
+		29945237E9D4FABF1F87333E /* AlphaExportsLedger.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaExportsLedger.swift; sourceTree = "<group>"; };
+		5C7C4008A64A00ADDDF59394 /* AlphaSettingsScreen.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaSettingsScreen.swift; sourceTree = "<group>"; };
+		5993A6ABEC3B3ACA05CDEFD6 /* AlphaPrivateAIViews.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaPrivateAIViews.swift; sourceTree = "<group>"; };
+		9E2E70AB92D1E9D4CD052E3B /* AlphaDocumentPreviews.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaDocumentPreviews.swift; sourceTree = "<group>"; };
+		A64616242F098492C6821152 /* AlphaRossModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaRossModel.swift; sourceTree = "<group>"; };
 		A90D3BC98733B6000CDDD236 /* SettingsModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SettingsModels.swift; sourceTree = "<group>"; };
 		B079B9809A778D83A52CDD22 /* DeviceCapability.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeviceCapability.swift; sourceTree = "<group>"; };
 		B44F9771029315078F6814ED /* LocalRuntimeService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LocalRuntimeService.swift; sourceTree = "<group>"; };
@@ -132,7 +178,30 @@
 				A1B2C3D4E5F60718293A4B62 /* AlphaModelInvocationStore.swift */,
 				A1B2C3D4E5F60718293A4B63 /* AlphaModelOutputValidator.swift */,
 				6263477CDD4DB63E41096E91 /* AlphaStore.swift */,
-				A64616242F098492C6821152 /* AlphaRootView.swift */,
+				45966E3C3DDFFF66C005FCF2 /* AlphaRootNavigation.swift */,
+				AA30A9973616B2AD314EE06C /* AlphaOnboardingViews.swift */,
+				196703DCA7B85696BEDB6559 /* AlphaTopRail.swift */,
+				06904396E0CCA81C73FA5493 /* AlphaAskDock.swift */,
+				883B13980E5007785CA4FC9E /* AlphaFeedScreen.swift */,
+				81AF01447E021B2938571339 /* AlphaMatterComponents.swift */,
+				C19E627B68E4510B922ED51E /* AlphaCreateCaseScreen.swift */,
+				E953D96708CB02864B7ADEF7 /* AlphaCaseWorkspaceSupport.swift */,
+				03322AF5E367E4E6A7817E2F /* AlphaAskConversationScreen.swift */,
+				DB891701B2882A98948FE119 /* AlphaCaseWorkspaceScreen.swift */,
+				57B2AC41BA37698D79AED251 /* AlphaDocumentViewerScreen.swift */,
+				29945237E9D4FABF1F87333E /* AlphaExportsLedger.swift */,
+				5C7C4008A64A00ADDDF59394 /* AlphaSettingsScreen.swift */,
+				5993A6ABEC3B3ACA05CDEFD6 /* AlphaPrivateAIViews.swift */,
+				9E2E70AB92D1E9D4CD052E3B /* AlphaDocumentPreviews.swift */,
+				A64616242F098492C6821152 /* AlphaRossModel.swift */,
+				D9809D97103069F0C070CE92 /* AlphaRossModel+Persistence.swift */,
+				8D2616320DB3777B6FD56F98 /* AlphaRossModel+Cases.swift */,
+				603C97CAC42A986BAED9F76A /* AlphaRossModel+Tasks.swift */,
+				BFE4DDD6B3A1640D6B82DFDE /* AlphaRossModel+Documents.swift */,
+				78CFA00F7A178BB5BA876FD0 /* AlphaRossModel+Ask.swift */,
+				EED3B0444E9AA1B7907DE151 /* AlphaRossModel+PublicLaw.swift */,
+				39268901D8E50BC4FE3FEAA0 /* AlphaRossModel+Exports.swift */,
+				EA11E396A69D5571D36ACBAE /* AlphaRossModel+PrivateAI.swift */,
 			);
 			path = AlphaFoundation;
 			sourceTree = "<group>";
@@ -278,7 +347,30 @@
 				A1B2C3D4E5F60718293A4B52 /* AlphaModelInvocationStore.swift in Sources */,
 				A1B2C3D4E5F60718293A4B53 /* AlphaModelOutputValidator.swift in Sources */,
 				8ADED04F785C7104364942AB /* AlphaStore.swift in Sources */,
-				762FC2EFCA6F7FAD2AE84BED /* AlphaRootView.swift in Sources */,
+				63068AD85A3C874FBA2F1345 /* AlphaRootNavigation.swift in Sources */,
+				50D19919F6D5FA75C7EEEA93 /* AlphaOnboardingViews.swift in Sources */,
+				F585E414B3D2CF87F5E2BAD6 /* AlphaTopRail.swift in Sources */,
+				7920B4B71A1ECA34D41799B1 /* AlphaAskDock.swift in Sources */,
+				E4977679360C6560C5579C69 /* AlphaFeedScreen.swift in Sources */,
+				23F98036545C8177DED94BB2 /* AlphaMatterComponents.swift in Sources */,
+				550F4D2A71DF1E6C6CBD2F2B /* AlphaCreateCaseScreen.swift in Sources */,
+				7BECFCE7A37C5B6B878B0CBC /* AlphaCaseWorkspaceSupport.swift in Sources */,
+				B848653B9380EA23842E784A /* AlphaAskConversationScreen.swift in Sources */,
+				30F8307F480F755204C828BF /* AlphaCaseWorkspaceScreen.swift in Sources */,
+				8D087E557DDA0DAA81F8B7A4 /* AlphaDocumentViewerScreen.swift in Sources */,
+				1409F115184590B0CE6B5DC1 /* AlphaExportsLedger.swift in Sources */,
+				93A4C96BB6E286729B9A33F9 /* AlphaSettingsScreen.swift in Sources */,
+				9254FBF0D12C332E947D9B5C /* AlphaPrivateAIViews.swift in Sources */,
+				5F8B84862A04E1C0A3B74DDC /* AlphaDocumentPreviews.swift in Sources */,
+				762FC2EFCA6F7FAD2AE84BED /* AlphaRossModel.swift in Sources */,
+				4EDD7189C73F488685AC434E /* AlphaRossModel+Persistence.swift in Sources */,
+				45245CFDFB8C93341A0FD6E6 /* AlphaRossModel+Cases.swift in Sources */,
+				9FA0D4D5DCC3EC9A6D0EF8FD /* AlphaRossModel+Tasks.swift in Sources */,
+				995E8390EFE576ADF57D6246 /* AlphaRossModel+Documents.swift in Sources */,
+				4B28345FD8749123BE2A4C00 /* AlphaRossModel+Ask.swift in Sources */,
+				5A0C1E1CA29273D15A0A9006 /* AlphaRossModel+PublicLaw.swift in Sources */,
+				8F0729840EB1F8B057CD8663 /* AlphaRossModel+Exports.swift in Sources */,
+				2F2738401417D3E3C600DF81 /* AlphaRossModel+PrivateAI.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -37,3 +37,5 @@ tmp/
 *.trace
 model-cache/
 downloads/
+ios/build-device/
+qa-screenshots/
