@@ -69,21 +69,21 @@ test("canonical private assistant registry maps tiers to qwen gguf models and se
 
   assert.equal(quickStart.displayName, "Basic");
   assert.equal(quickStart.technicalModelName, "Gemma 4 E2B Q4");
-  assert.equal(quickStart.repo, "google/gemma-4-E2B-it");
+  assert.equal(quickStart.repo, "google/gemma-4-e2b-q4");
   assert.equal(quickStart.quantization, "Q4");
   assert.equal(quickStart.runtimeMode, "gemma_local_runtime");
   assert.equal(quickStart.approxDownloadSizeMb, 429);
 
   assert.equal(caseAssociate.displayName, "Standard");
   assert.equal(caseAssociate.technicalModelName, "Gemma 4 E4B Q4");
-  assert.equal(caseAssociate.repo, "google/gemma-4-E4B-it");
-  assert.equal(caseAssociate.alternateRepo, "google/gemma-4-E4B-it");
+  assert.equal(caseAssociate.repo, "google/gemma-4-e4b-q4");
+  assert.equal(caseAssociate.alternateRepo, "jc-builds/gemma-4-e4b-q4-Q4");
   assert.equal(caseAssociate.quantization, "Q4");
 
   assert.equal(seniorDrafting.displayName, "Advanced");
   assert.equal(seniorDrafting.technicalModelName, "Gemma 4 26B-A4B Q4");
-  assert.equal(seniorDrafting.repo, "google/gemma-4-26B-A4B-it");
-  assert.equal(seniorDrafting.alternateRepo, "google/gemma-4-26B-A4B-it");
+  assert.equal(seniorDrafting.repo, "google/gemma-4-26b-a4b-q4");
+  assert.equal(seniorDrafting.alternateRepo, "Gemma/gemma-4-26b-a4b-q4");
   assert.equal(seniorDrafting.quantization, "Q4");
 
   assert.equal(preferredRetrieval.displayName, "Matter Search");

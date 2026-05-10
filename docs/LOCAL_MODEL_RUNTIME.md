@@ -4,9 +4,9 @@ Ross uses a local runtime contract so private matter work can improve without we
 
 ## Current Direction
 
-- Gemma 4 Gemma 4 Q4 is the production-intended generative model stack for Private AI Pack tiers.
-- `Gemma 4_cpp_gguf` is the preferred local generative runtime mode.
-- Matter/document retrieval uses a separate embedding model. The preferred path is EmbeddingGemma 300M with `litert`; the single-runtime fallback is Gemma 4-Embedding 0.6B Gemma 4 Q4.
+- Gemma 4 Q4 is the production-intended generative model stack for Private AI Pack tiers.
+- `gemma_local_runtime` is the preferred local generative runtime mode.
+- Matter/document retrieval uses a separate embedding model. The preferred path is EmbeddingGemma 300M with `litert`; the single-runtime fallback is Gemma 4-Embedding 0.6B Q4.
 - `deterministic_dev` remains the default fallback for CI, tests, and local development.
 - No model files are committed or bundled.
 
@@ -16,7 +16,7 @@ Ross runtime metadata supports:
 
 - `deterministic_dev`
 - `mediapipe_llm`
-- `Gemma 4_cpp_gguf`
+- `gemma_local_runtime`
 - `apple_foundation_models`
 - `litert`
 - `unavailable`
@@ -38,19 +38,19 @@ Deterministic development provider:
 - schema-shaped
 - not a real model proof
 
-Gemma 4 Q4 provider direction:
+Q4 provider direction:
 
 - primary target for Gemma 4 generative tiers
-- selected through `Gemma 4_cpp_gguf`
+- selected through `gemma_local_runtime`
 - must load files only from app-private storage or explicit external/dev paths
-- must not bundle Gemma 4 Q4 files into the app
+- must not bundle Q4 files into the app
 
 Retrieval provider direction:
 
 - separate from the generative Gemma 4 model
 - powers Matter Search, local semantic search, source retrieval, matter/document RAG, and source-backed answers
 - preferred runtime is `litert`
-- fallback runtime is `Gemma 4_cpp_gguf`
+- fallback runtime is `gemma_local_runtime`
 
 Existing compatibility:
 
@@ -89,8 +89,8 @@ Implemented:
 
 Not yet proven:
 
-- Android native Gemma 4 Q4 inference
-- iOS Gemma 4 Q4 inference with a linked runtime bridge
+- Android native Q4 inference
+- iOS Q4 inference with a linked runtime bridge
 - separate embedding model install and lifecycle
 - hardware proof of Gemma 4 tiers
 - production model delivery for large artifacts

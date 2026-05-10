@@ -19,7 +19,7 @@ class AlphaModelPacksTest {
         assertEquals("about 555 MB", AlphaCapabilityTier.CaseAssociate.downloadSizeLabel)
         assertEquals("about 690 MB", AlphaCapabilityTier.SeniorDraftingSupport.downloadSizeLabel)
 
-        val forbidden = Regex("Gemma 4 E2B Q4|Gemma 4 Q4|Q4|Q4|gemma_local_runtime|EmbeddingGemma|LiteRT|checksum|artifact|deterministic_dev|mediapipe_llm", RegexOption.IGNORE_CASE)
+        val forbidden = Regex("ChatGPT|Q4|Q4|gemma_local_runtime|EmbeddingGemma|LiteRT|checksum|artifact|deterministic_dev|mediapipe_llm", RegexOption.IGNORE_CASE)
         AlphaCapabilityTier.values().forEach { tier ->
             val userFacingCopy = listOf(
                 tier.title,

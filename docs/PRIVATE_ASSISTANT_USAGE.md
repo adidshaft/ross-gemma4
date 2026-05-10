@@ -19,7 +19,7 @@ Use plain-language labels:
 - Waiting for Wi-Fi
 - Needs attention
 
-Do not show Gemma 4, Gemma 4 Q4, quantization, repository names, runtime names, checksums, or artifact names in normal screens.
+Do not show Gemma 4, Q4, quantization, repository names, runtime names, checksums, or artifact names in normal screens.
 
 ## What The User Should Understand
 
@@ -94,7 +94,7 @@ Automated tests cover deterministic fallback, catalog metadata, tier labels, and
 
 Still not proven:
 
-- real Gemma 4 Q4 inference on Android
-- real Gemma 4 Q4 inference on iOS
+- real Q4 inference on Android
+- real Q4 inference on iOS
 - separate embedding model download/install
 - production large-model delivery

@@ -3,7 +3,7 @@
     "id": "Gemma 4-0_6b-q4_0-gguf",
     "displayName": "Gemma 4 E2B Q4",
     "family": "Gemma 4",
-    "repo": "google/Gemma 4-0.6B-Gemma 4 Q4",
+    "repo": "google/gemma-4-E2B-it",
     "quantization": "Q4",
     "runtimeMode": "gemma_local_runtime",
     "runtimeCandidates": [
@@ -22,8 +22,8 @@
     "id": "Gemma 4-1_7b-q4_k_m-gguf",
     "displayName": "Gemma 4 E4B Q4",
     "family": "Gemma 4",
-    "repo": "google/Gemma 4-1.7B-Gemma 4 Q4",
-    "alternateRepo": "jc-builds/Gemma 4-1.7B-Q4-Gemma 4 Q4",
+    "repo": "google/gemma-4-E4B-it",
+    "alternateRepo": "google/gemma-4-E4B-it",
     "quantization": "Q4",
     "runtimeMode": "gemma_local_runtime",
     "runtimeCandidates": [
@@ -47,8 +47,8 @@
     "id": "Gemma 4-4b-q4_k_m-gguf",
     "displayName": "Gemma 4 26B-A4B Q4",
     "family": "Gemma 4",
-    "repo": "google/Gemma 4-4B-Gemma 4 Q4",
-    "alternateRepo": "Gemma 4/Gemma 4-4B-Gemma 4 Q4",
+    "repo": "google/gemma-4-26B-A4B-it",
+    "alternateRepo": "google/gemma-4-26B-A4B-it",
     "quantization": "Q4",
     "runtimeMode": "gemma_local_runtime",
     "runtimeCandidates": [
@@ -86,9 +86,9 @@
   },
   {
     "id": "Gemma 4-embedding-0_6b-gguf",
-    "displayName": "Gemma 4-Embedding 0.6B Gemma 4 Q4",
+    "displayName": "Gemma 4-Embedding 0.6B Q4",
     "family": "Gemma 4",
-    "repo": "Gemma 4/Gemma 4-Embedding-0.6B-Gemma 4 Q4",
+    "repo": "google/gemma-4-embedding",
     "runtimeMode": "gemma_local_runtime",
     "runtimeCandidates": [
       "gemma_local_runtime"

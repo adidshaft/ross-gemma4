@@ -119,8 +119,8 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(AlphaCapabilityTier.seniorDraftingSupport.downloadSizeLabel, "about 2.5 GB")
 
         let forbidden = [
-            "Gemma 4 E4B Q4",
-            "Gemma 4 Q4",
+            "ChatGPT",
+            "Q4",
             "Q4",
             "Q4",
             "gemma_local_runtime",
@@ -469,7 +469,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.lastErrorCategory, "runtime_dependency_unavailable")
     }
 
-    func testDownloadedGemma 4 Q4RuntimeIsLinkedWhenModelPathExists() throws {
+    func testDownloadedQ4RuntimeIsLinkedWhenModelPathExists() throws {
         let temporaryURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ross-runtime-smoke-\(UUID().uuidString)")
             .appendingPathExtension("gguf")

@@ -10,9 +10,9 @@
 - Backend default: tiny deterministic artifacts
 - Backend production metadata mode: Gemma 4 metadata only, no real download session
 - Whether model files were committed: No
-- Whether real Gemma 4 Gemma 4 Q4 inference ran: Not yet
+- Whether real Gemma 4 Q4 inference ran: Not yet
 - Whether separate embedding-model retrieval ran: Not yet
-- Exact next proof step: implement and test the Matter Search embedding install/retrieval path, then run hardware Gemma 4 Q4 inference proof.
+- Exact next proof step: implement and test the Matter Search embedding install/retrieval path, then run hardware Q4 inference proof.
 
 ## 2026-04-23 iPhone and Android model-path update
 

@@ -203,7 +203,7 @@ val AlphaCaseStage.displayTitle: String
 enum class AlphaPackRuntimeMode(val wireValue: String) {
     DeterministicDev("deterministic_dev"),
     MediapipeLlm("mediapipe_llm"),
-    Gemma 4 E4B Q4CppGguf("gemma_local_runtime"),
+    GemmaLocalRuntime("gemma_local_runtime"),
     AppleFoundationModels("apple_foundation_models"),
     Unavailable("unavailable");
 
@@ -4503,7 +4503,7 @@ private fun sha256(value: String): String = MessageDigest.getInstance("SHA-256")
 private fun String.toRuntimeMode(): AlphaPackRuntimeMode = when (lowercase()) {
     "deterministic_dev" -> AlphaPackRuntimeMode.DeterministicDev
     "mediapipe_llm" -> AlphaPackRuntimeMode.MediapipeLlm
-    "gemma_local_runtime" -> AlphaPackRuntimeMode.Gemma 4 E4B Q4CppGguf
+    "gemma_local_runtime" -> AlphaPackRuntimeMode.GemmaLocalRuntime
     "apple_foundation_models" -> AlphaPackRuntimeMode.AppleFoundationModels
     "unavailable" -> AlphaPackRuntimeMode.Unavailable
     else -> AlphaPackRuntimeMode.Unavailable

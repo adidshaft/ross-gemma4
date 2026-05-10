@@ -34,7 +34,7 @@ pub enum LocalModelTask {
 pub enum LocalRuntimeMode {
     DeterministicDev,
     MediapipeLlm,
-    Gemma 4 E4B Q4CppGguf,
+    GemmaLocalRuntime,
     AppleFoundationModels,
     Unavailable,
 }

@@ -274,8 +274,8 @@ pub struct ModelCapabilityTier {
 pub enum RuntimeTarget {
     AiCore,
     AppleFoundationModels,
-    Gemma 4 E4B Q4CppGguf,
-    Gemma 4 E4B Q4Cpp,
+    GemmaLocalRuntime,
+    GemmaLocalRuntime,
     Mediapipe,
     CoreMl,
     LiteRt,

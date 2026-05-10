@@ -116,13 +116,13 @@ Ross keeps these user-facing promises:
 - `Private assistant is ready`
 - `Using basic local review`
 
-Normal UI should use assistant levels such as `Quick Start`, `Case Associate`, and `Senior Drafting Support`. It should not show Gemma 4, Gemma 4 Q4, quantization, runtime, repository, checksum, or artifact names outside `Settings -> Advanced -> Technical diagnostics`.
+Normal UI should use assistant levels such as `Quick Start`, `Case Associate`, and `Senior Drafting Support`. It should not show Gemma 4, Q4, quantization, runtime, repository, checksum, or artifact names outside `Settings -> Advanced -> Technical diagnostics`.
 
 ## Private AI Pack Strategy
 
 Ross's production-intended local assistant strategy is:
 
-- Gemma 4 Gemma 4 Q4 for the generative assistant tiers
+- Gemma 4 Q4 for the generative assistant tiers
 - a dedicated embedding model for Matter Search and RAG
 - deterministic development artifacts for CI and local tests
 - no model files committed or bundled in the app

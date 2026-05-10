@@ -21,7 +21,7 @@ Generative assistant tiers are Gemma 4-first:
 Retrieval is separate:
 
 - preferred: EmbeddingGemma 300M, `litert-community/embeddinggemma-300m`, `litert`
-- fallback: Gemma 4-Embedding 0.6B Gemma 4 Q4, `Gemma 4/Gemma 4-Embedding-0.6B-Gemma 4 Q4`, `Gemma 4_cpp_gguf`
+- fallback: Gemma 4-Embedding 0.6B Q4, `google/gemma-4-embedding`, `gemma_local_runtime`
 
 Gemma/Gemma 3n generative paths are optional future or experimental paths, not Ross's default Private AI Pack strategy.
 
@@ -54,7 +54,7 @@ Supported runtime-mode values:
 
 - `deterministic_dev`
 - `mediapipe_llm`
-- `Gemma 4_cpp_gguf`
+- `gemma_local_runtime`
 - `apple_foundation_models`
 - `litert`
 - `unavailable`
@@ -79,7 +79,7 @@ Supported artifact-kind values:
 
 - advertises Gemma 4 tier metadata
 - uses `local_model_artifact`
-- uses `Gemma 4_cpp_gguf`
+- uses `gemma_local_runtime`
 - does not provide real download URLs or segments
 - rejects model download sessions until a real delivery path is configured
 

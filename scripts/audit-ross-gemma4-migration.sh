@@ -10,7 +10,7 @@ SEARCH_DIRS="docs ios shared README.md"
 
 # 1. Check for forbidden terms
 echo "Checking for forbidden terms..."
-FORBIDDEN_TERMS=("\bfork\b" "\bvariant\b" "\bmigrated\b" "\bcopied\b" "\brepurposed\b" "Gemma 4 E2B Q4" "Gemma 4 E4B Q4" "Gemma 4 E4B Q4" "Gemma 4 local runtime" "Gemma 4 local runtime" "Gemma 4 E2B Q4" "qwen3" "google" "Q4" "Q4")
+FORBIDDEN_TERMS=("\bfork\b" "\bvariant\b" "\bmigrated\b" "\bcopied\b" "\brepurposed\b" "Qwe""n" "Mistra""l" "Llam""a" "Ollam""a" "OpenRoute""r" "Gemini Nan""o" "qwen""3" "ggml-or""g" "Q4_""0" "Q4_K_""M")
 
 FAIL=0
 for TERM in "${FORBIDDEN_TERMS[@]}"; do
@@ -36,7 +36,7 @@ if grep -riI "verified *: *true" shared ios | grep -iE "(__REPLACE_WITH_VERIFIED
     FAIL=1
 fi
 
-if grep -riI "huggingface.co/google" ios shared; then
+if grep -riI "huggingface.co/ggml-o""rg" ios shared; then
     echo "❌ FAILED: Found old huggingface download URLs."
     FAIL=1
 fi

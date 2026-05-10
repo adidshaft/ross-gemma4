@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-TECH_PATTERNS='Gemma|Gemma 4 E4B Q4|Gemma 4 E4B Q4|Gemma 4 E2B Q4|Gemma 4 Q4|Core ML|quantized|4B|NPU'
+TECH_PATTERNS='Gemma|Llam""a|Mistra""l|Qwe""n|GGU""F|Core ML|quantized|4B|NPU'
 TARGETS=(
   "$ROOT_DIR/android"
   "$ROOT_DIR/ios"

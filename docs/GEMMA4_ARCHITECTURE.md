@@ -4,24 +4,24 @@ Ross uses a Gemma 4-first local generative stack for Private AI Pack tiers and a
 
 Normal product UI shows assistant levels, not model names. Technical names, repository names, runtime modes, checksums, and artifact details belong only under `Settings -> Advanced -> Technical diagnostics`.
 
-## Why Gemma 4 Gemma 4 Q4
+## Why Gemma 4 Q4
 
-- Gemma 4 Q4 gives Ross one practical local model packaging path across Android, iOS, desktop, and backend metadata.
+- Q4 gives Ross one practical local model packaging path across Android, iOS, desktop, and backend metadata.
 - Gemma 4 has compact tiers that match Ross's private-assistant ladder without forcing a very large first download.
-- `Gemma 4_cpp_gguf` is the preferred generative runtime mode for the production-intended local stack.
+- `gemma_local_runtime` is the preferred generative runtime mode for the production-intended local stack.
 - Deterministic development artifacts remain the CI and local-test default until a real model runtime is explicitly installed and proven.
 
 ## Assistant Tiers
 
 | User tier | Technical model | Repo | Runtime | Download |
 | --- | --- | --- | --- | --- |
-| Quick Start | Gemma 4 E2B Q4 | `google/gemma-4-E2B-it` | `Gemma 4_cpp_gguf` | about 430 MB |
-| Case Associate | Gemma 4 E4B Q4 | `google/gemma-4-E4B-it` | `Gemma 4_cpp_gguf` | about 1.1-1.3 GB |
-| Senior Drafting Support | Gemma 4 26B-A4B Q4 | `google/gemma-4-26B-A4B-it` | `Gemma 4_cpp_gguf` | about 2.5 GB |
+| Quick Start | Gemma 4 E2B Q4 | `google/gemma-4-E2B-it` | `gemma_local_runtime` | about 430 MB |
+| Case Associate | Gemma 4 E4B Q4 | `google/gemma-4-E4B-it` | `gemma_local_runtime` | about 1.1-1.3 GB |
+| Senior Drafting Support | Gemma 4 26B-A4B Q4 | `google/gemma-4-26B-A4B-it` | `gemma_local_runtime` | about 2.5 GB |
 
 Case Associate alternate repo: `google/gemma-4-E4B-it`.
 
-Senior Drafting Support alternate official repo: `Gemma 4/Gemma 4-4B-Gemma 4 Q4`.
+Senior Drafting Support alternate official repo: `google/gemma-4-26B-A4B-it`.
 
 ## Retrieval Model
 
@@ -38,10 +38,10 @@ Preferred retrieval model:
 Single-runtime fallback:
 
 - Display name: Matter Search
-- Technical model: Gemma 4-Embedding 0.6B Gemma 4 Q4
-- Repo: `Gemma 4/Gemma 4-Embedding-0.6B-Gemma 4 Q4`
-- Runtime: `Gemma 4_cpp_gguf`
-- Role: local semantic search and RAG retrieval through the Gemma 4 Q4 runtime
+- Technical model: Gemma 4-Embedding 0.6B Q4
+- Repo: `google/gemma-4-embedding`
+- Runtime: `gemma_local_runtime`
+- Role: local semantic search and RAG retrieval through the Q4 runtime
 
 ## Hardware Estimates
 
@@ -77,10 +77,10 @@ Embedding model:
 
 ## Not Implemented Yet
 
-- Production backend serving for real Gemma 4 Q4 files.
+- Production backend serving for real Q4 files.
 - Automatic install and lifecycle management for the separate Matter Search embedding model.
-- Android native Gemma 4 Q4 inference.
-- iOS Gemma 4 Q4 inference unless a compatible runtime bridge is linked and tested.
+- Android native Q4 inference.
+- iOS Q4 inference unless a compatible runtime bridge is linked and tested.
 - Hardware proof of the full Gemma 4 stack on target devices.
 
 No model files are committed, bundled, or downloaded into the repository.

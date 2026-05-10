@@ -825,7 +825,7 @@ internal data class AlphaLocalRuntimeEnvironment(
             return when (normalized) {
                 AlphaPackRuntimeMode.DeterministicDev.wireValue -> AlphaPackRuntimeMode.DeterministicDev
                 AlphaPackRuntimeMode.MediapipeLlm.wireValue -> AlphaPackRuntimeMode.MediapipeLlm
-                AlphaPackRuntimeMode.Gemma 4 E4B Q4CppGguf.wireValue -> AlphaPackRuntimeMode.Gemma 4 E4B Q4CppGguf
+                AlphaPackRuntimeMode.GemmaLocalRuntime.wireValue -> AlphaPackRuntimeMode.GemmaLocalRuntime
                 AlphaPackRuntimeMode.AppleFoundationModels.wireValue -> AlphaPackRuntimeMode.AppleFoundationModels
                 AlphaPackRuntimeMode.Unavailable.wireValue -> AlphaPackRuntimeMode.Unavailable
                 else -> null
@@ -856,7 +856,7 @@ internal object AlphaLocalModelRuntime {
 
     private fun AlphaPackRuntimeMode?.isRealLocal(): Boolean =
         this == AlphaPackRuntimeMode.MediapipeLlm ||
-            this == AlphaPackRuntimeMode.Gemma 4 E4B Q4CppGguf ||
+            this == AlphaPackRuntimeMode.GemmaLocalRuntime ||
             this == AlphaPackRuntimeMode.AppleFoundationModels
 
     private fun requestedRuntimeMode(
@@ -920,7 +920,7 @@ internal object AlphaLocalModelRuntime {
             activePack?.runtimeMode?.isRealLocal() == true && packFile?.exists() == false ->
                 "Ross could not find the private assistant file on this device." to "model_file_not_found"
 
-            requestedRuntimeMode == AlphaPackRuntimeMode.Gemma 4 E4B Q4CppGguf ->
+            requestedRuntimeMode == AlphaPackRuntimeMode.GemmaLocalRuntime ->
                 "Private assistant support is not ready on this Android build yet." to "unsupported_runtime"
 
             requestedRuntimeMode == AlphaPackRuntimeMode.AppleFoundationModels ->
@@ -1073,7 +1073,7 @@ internal object AlphaLocalModelRuntime {
                 }
 
             AlphaPackRuntimeMode.MediapipeLlm,
-            AlphaPackRuntimeMode.Gemma 4 E4B Q4CppGguf,
+            AlphaPackRuntimeMode.GemmaLocalRuntime,
             AlphaPackRuntimeMode.AppleFoundationModels,
             AlphaPackRuntimeMode.Unavailable ->
                 realProviderFor(
