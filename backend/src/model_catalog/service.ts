@@ -148,7 +148,7 @@ export const PRODUCTION_METADATA_MODEL_PACKS: ModelPack[] = [
     minimumAppVersion: null,
     downloadConfigured: true,
     fileName: "gemma-4-e2b-q4.gguf",
-    downloadUrl: "https://huggingface.co/google/gemma-4-e2b-q4/resolve/main/gemma-4-e2b-q4.gguf",
+    downloadUrl: "__REPLACE_WITH_VERIFIED_GEMMA4_E2B_Q4_ARTIFACT_URL__",
     finalSha256: "da2572f16c06133561ce56accaa822216f2391ef4d37fba427801cd6736417d4"
   },
   {
@@ -171,7 +171,7 @@ export const PRODUCTION_METADATA_MODEL_PACKS: ModelPack[] = [
     minimumAppVersion: null,
     downloadConfigured: true,
     fileName: "gemma-4-e4b-q4.gguf",
-    downloadUrl: "https://huggingface.co/google/gemma-4-e4b-q4/resolve/main/gemma-4-e4b-q4.gguf",
+    downloadUrl: "__REPLACE_WITH_VERIFIED_GEMMA4_E4B_Q4_ARTIFACT_URL__",
     finalSha256: "d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5"
   },
   {
@@ -194,7 +194,7 @@ export const PRODUCTION_METADATA_MODEL_PACKS: ModelPack[] = [
     minimumAppVersion: null,
     downloadConfigured: true,
     fileName: "gemma-4-26b-a4b-q4.gguf",
-    downloadUrl: "https://huggingface.co/google/gemma-4-26b-a4b-q4/resolve/main/gemma-4-26b-a4b-q4.gguf",
+    downloadUrl: "__REPLACE_WITH_VERIFIED_GEMMA4_26B_A4B_Q4_ARTIFACT_URL__",
     finalSha256: "ab27b9bfa375a178d6cba48f3ad892b94b7739659dcc7aae8058ce0ffed6b328"
   }
 ];
