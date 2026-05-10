@@ -39,3 +39,4 @@ model-cache/
 downloads/
 ios/build-device/
 qa-screenshots/
+.migration/
