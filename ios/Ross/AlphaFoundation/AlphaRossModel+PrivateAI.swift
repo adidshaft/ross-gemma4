@@ -269,6 +269,11 @@ extension AlphaRossModel {
     }
 
     func downloadAssistantModelArtifact(_ artifact: AlphaAssistantModelArtifact, jobID: UUID) async throws -> URL {
+        let isRealMode = ProcessInfo.processInfo.environment["REAL_LOCAL_GEMMA4"] == "true"
+        if isRealMode && (artifact.downloadURLString.contains("__REPLACE_WITH_VERIFIED") || !artifact.verified || !artifact.releaseReady) {
+            throw AlphaAssistantDownloadError.invalidURL
+        }
+
         guard let url = artifact.downloadURL else {
             throw AlphaAssistantDownloadError.invalidURL
         }

@@ -41,6 +41,12 @@ export interface ModelPack {
   downloadUrl?: string;
   finalSha256?: string;
   requiresBackendProxy?: boolean;
+  verified: boolean;
+  releaseReady: boolean;
+  downloadSource: string;
+  licenseNotice: string;
+  safetyNotice: string;
+  isActiveTier: boolean;
 }
 
 export const EXTERNAL_DEBUG_PACK_ID = "case-associate-local-debug-pack";
@@ -84,7 +90,13 @@ export const DEV_MODEL_PACKS: ModelPack[] = [
     runtimeMode: "deterministic_dev",
     developmentOnly: true,
     minimumAppVersion: null,
-    downloadConfigured: true
+    downloadConfigured: true,
+    verified: false,
+    releaseReady: false,
+    downloadSource: "huggingface",
+    licenseNotice: "Gemma License",
+    safetyNotice: "Review generated content.",
+    isActiveTier: true
   },
   {
     packId: "case-associate-pack",
@@ -104,7 +116,13 @@ export const DEV_MODEL_PACKS: ModelPack[] = [
     runtimeMode: "deterministic_dev",
     developmentOnly: true,
     minimumAppVersion: null,
-    downloadConfigured: true
+    downloadConfigured: true,
+    verified: false,
+    releaseReady: false,
+    downloadSource: "huggingface",
+    licenseNotice: "Gemma License",
+    safetyNotice: "Review generated content.",
+    isActiveTier: true
   },
   {
     packId: "senior-drafting-support-pack",
@@ -124,7 +142,13 @@ export const DEV_MODEL_PACKS: ModelPack[] = [
     runtimeMode: "deterministic_dev",
     developmentOnly: true,
     minimumAppVersion: null,
-    downloadConfigured: true
+    downloadConfigured: true,
+    verified: false,
+    releaseReady: false,
+    downloadSource: "huggingface",
+    licenseNotice: "Gemma License",
+    safetyNotice: "Review generated content.",
+    isActiveTier: true
   }
 ];
 
@@ -149,7 +173,13 @@ export const PRODUCTION_METADATA_MODEL_PACKS: ModelPack[] = [
     downloadConfigured: true,
     fileName: "gemma-4-e2b-q4.gguf",
     downloadUrl: "__REPLACE_WITH_VERIFIED_GEMMA4_E2B_Q4_ARTIFACT_URL__",
-    finalSha256: "da2572f16c06133561ce56accaa822216f2391ef4d37fba427801cd6736417d4"
+    finalSha256: "__REPLACE_WITH_VERIFIED_SHA256__",
+    verified: false,
+    releaseReady: false,
+    downloadSource: "huggingface",
+    licenseNotice: "Gemma License",
+    safetyNotice: "Review generated content.",
+    isActiveTier: true
   },
   {
     packId: "gemma-4-e4b-q4",
@@ -172,7 +202,13 @@ export const PRODUCTION_METADATA_MODEL_PACKS: ModelPack[] = [
     downloadConfigured: true,
     fileName: "gemma-4-e4b-q4.gguf",
     downloadUrl: "__REPLACE_WITH_VERIFIED_GEMMA4_E4B_Q4_ARTIFACT_URL__",
-    finalSha256: "d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5"
+    finalSha256: "__REPLACE_WITH_VERIFIED_SHA256__",
+    verified: false,
+    releaseReady: false,
+    downloadSource: "huggingface",
+    licenseNotice: "Gemma License",
+    safetyNotice: "Review generated content.",
+    isActiveTier: true
   },
   {
     packId: "gemma-4-26b-a4b-q4",
@@ -195,7 +231,13 @@ export const PRODUCTION_METADATA_MODEL_PACKS: ModelPack[] = [
     downloadConfigured: true,
     fileName: "gemma-4-26b-a4b-q4.gguf",
     downloadUrl: "__REPLACE_WITH_VERIFIED_GEMMA4_26B_A4B_Q4_ARTIFACT_URL__",
-    finalSha256: "ab27b9bfa375a178d6cba48f3ad892b94b7739659dcc7aae8058ce0ffed6b328"
+    finalSha256: "__REPLACE_WITH_VERIFIED_SHA256__",
+    verified: false,
+    releaseReady: false,
+    downloadSource: "huggingface",
+    licenseNotice: "Gemma License",
+    safetyNotice: "Review generated content.",
+    isActiveTier: true
   }
 ];
 
@@ -223,7 +265,13 @@ export const PRODUCTION_ANDROID_MODEL_PACKS: ModelPack[] = [
     fileName: "gemma3-270m-it-q8.task",
     downloadUrl: "https://huggingface.co/litert-community/gemma-3-270m-it/resolve/main/gemma3-270m-it-q8.task",
     finalSha256: "0f7147f1c22eaf758b819bbf7841793e4c90096c9352cde7fbe5c631f2265ef5",
-    requiresBackendProxy: true
+    requiresBackendProxy: true,
+    verified: false,
+    releaseReady: false,
+    downloadSource: "huggingface",
+    licenseNotice: "Gemma License",
+    safetyNotice: "Review generated content.",
+    isActiveTier: true
   },
   {
     packId: "gemma3-case-associate-mediapipe-task",
@@ -246,7 +294,13 @@ export const PRODUCTION_ANDROID_MODEL_PACKS: ModelPack[] = [
     fileName: "Gemma3-1B-IT_multi-prefill-seq_q4_ekv2048.task",
     downloadUrl: "https://huggingface.co/litert-community/Gemma3-1B-IT/resolve/main/Gemma3-1B-IT_multi-prefill-seq_q4_ekv2048.task",
     finalSha256: "ddfaf1210d8b4d1b812b5fadb6652999e852c8be6dd9abe353b9213a25262c10",
-    requiresBackendProxy: true
+    requiresBackendProxy: true,
+    verified: false,
+    releaseReady: false,
+    downloadSource: "huggingface",
+    licenseNotice: "Gemma License",
+    safetyNotice: "Review generated content.",
+    isActiveTier: true
   },
   {
     packId: "gemma3-senior-drafting-support-mediapipe-task",
@@ -269,7 +323,13 @@ export const PRODUCTION_ANDROID_MODEL_PACKS: ModelPack[] = [
     fileName: "Gemma3-1B-IT_multi-prefill-seq_q4_block128_ekv4096.task",
     downloadUrl: "https://huggingface.co/litert-community/Gemma3-1B-IT/resolve/main/Gemma3-1B-IT_multi-prefill-seq_q4_block128_ekv4096.task",
     finalSha256: "036e15114d1868fc7be7ccc552fc8da2fe31d64af02b48847ff99f0185d37891",
-    requiresBackendProxy: true
+    requiresBackendProxy: true,
+    verified: false,
+    releaseReady: false,
+    downloadSource: "huggingface",
+    licenseNotice: "Gemma License",
+    safetyNotice: "Review generated content.",
+    isActiveTier: true
   }
 ];
 
@@ -394,7 +454,13 @@ function buildExternalDebugPack(env: RuntimeEnv): ModelPack | null {
     runtimeMode: "mediapipe_llm",
     developmentOnly: true,
     minimumAppVersion: env.externalModelMinAppVersion ?? null,
-    downloadConfigured: true
+    downloadConfigured: true,
+    verified: false,
+    releaseReady: false,
+    downloadSource: "huggingface",
+    licenseNotice: "Gemma License",
+    safetyNotice: "Review generated content.",
+    isActiveTier: true
   };
 }
 

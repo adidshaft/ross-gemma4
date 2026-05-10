@@ -230,10 +230,12 @@ struct AlphaRootAskDock: View {
                 context = "your workspace"
             }
 
+            let isDemo = ProcessInfo.processInfo.environment["DEMO_MODE"] == "true" || ProcessInfo.processInfo.environment["REAL_LOCAL_GEMMA4"] == "false"
+            
             return (
-                "Ross is answering",
-                "Checking \(context) with the private on-device assistant.",
-                "Working",
+                isDemo ? "Demo Mode" : "Ross is answering",
+                isDemo ? "Demo Mode — model response simulated for walkthrough." : "Checking \(context) with the private on-device assistant.",
+                isDemo ? "Simulated" : "Working",
                 nil
             )
         }
@@ -971,9 +973,10 @@ struct AlphaInlineAskResponseCard: View {
                         .fixedSize(horizontal: false, vertical: true)
 
                     if let note = result.statusNote {
-                        Text(note)
+                        let isDemo = ProcessInfo.processInfo.environment["DEMO_MODE"] == "true" || ProcessInfo.processInfo.environment["REAL_LOCAL_GEMMA4"] == "false"
+                        Text(isDemo ? "Demo Mode — model response simulated for walkthrough." : note)
                             .font(.caption2.weight(.medium))
-                            .foregroundStyle(Color.rossAccent)
+                            .foregroundStyle(isDemo ? Color.orange : Color.rossAccent)
                     }
                 }
                 Spacer(minLength: 8)

@@ -869,6 +869,12 @@ struct AlphaAssistantModelArtifact: Hashable, Sendable {
     let requiredFreeSpaceGB: Int
     let recommendedPhone: String
     let sourcePageURLString: String
+    let downloadSource: String
+    let verified: Bool
+    let releaseReady: Bool
+    let licenseNotice: String
+    let safetyNotice: String
+    let isActiveTier: Bool
 
     var downloadURL: URL? {
         URL(string: downloadURLString)
@@ -909,7 +915,13 @@ let alphaAssistantModelArtifacts: [AlphaCapabilityTier: AlphaAssistantModelArtif
         recommendedMemoryGB: 6,
         requiredFreeSpaceGB: 2,
         recommendedPhone: "Fastest local setup for intake and checklists.",
-        sourcePageURLString: "https://huggingface.co/google/gemma-4-E2B-it"
+        sourcePageURLString: "https://huggingface.co/google/gemma-4-E2B-it",
+        downloadSource: "huggingface",
+        verified: false,
+        releaseReady: false,
+        licenseNotice: "Gemma License",
+        safetyNotice: "Review generated content.",
+        isActiveTier: true
     ),
     .caseAssociate: AlphaAssistantModelArtifact(
         tier: .caseAssociate,
@@ -925,7 +937,13 @@ let alphaAssistantModelArtifacts: [AlphaCapabilityTier: AlphaAssistantModelArtif
         recommendedMemoryGB: 8,
         requiredFreeSpaceGB: 4,
         recommendedPhone: "Chronology building, issue extraction, missing-fact analysis.",
-        sourcePageURLString: "https://huggingface.co/google/gemma-4-E4B-it"
+        sourcePageURLString: "https://huggingface.co/google/gemma-4-E4B-it",
+        downloadSource: "huggingface",
+        verified: false,
+        releaseReady: false,
+        licenseNotice: "Gemma License",
+        safetyNotice: "Review generated content.",
+        isActiveTier: true
     ),
     .seniorDraftingSupport: AlphaAssistantModelArtifact(
         tier: .seniorDraftingSupport,
@@ -941,7 +959,13 @@ let alphaAssistantModelArtifacts: [AlphaCapabilityTier: AlphaAssistantModelArtif
         recommendedMemoryGB: 24,
         requiredFreeSpaceGB: 20,
         recommendedPhone: "Advanced drafting, clinic workstation mode.",
-        sourcePageURLString: "https://huggingface.co/google/gemma-4-26B-A4B-it"
+        sourcePageURLString: "https://huggingface.co/google/gemma-4-26B-A4B-it",
+        downloadSource: "huggingface",
+        verified: false,
+        releaseReady: false,
+        licenseNotice: "Gemma License",
+        safetyNotice: "Review generated content.",
+        isActiveTier: true
     )
 ]
 
