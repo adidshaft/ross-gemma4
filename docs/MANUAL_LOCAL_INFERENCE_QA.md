@@ -29,7 +29,7 @@ For any platform:
 
 - model files are not committed to git
 - model files are not bundled in app assets or app bundles
-- model artifacts used for manual proof must stay outside the repo until copied into app-private storage during QA
+- model artifacts used for manual proof must stay outside the repo until transferred into app-private storage during QA
 - no cloud inference is used
 - raw prompts are not persisted by default
 - raw source text is not persisted in invocation metadata

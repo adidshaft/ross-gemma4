@@ -1,0 +1,1021 @@
+commit 6468a45ffb74261c0a8aa21f6891a190352d26ac
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-18 16:38:03 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-18 16:38:03 +0530
+
+    chore: initialize private digital clerk architecture
+
+commit 718be6b467c283746151e8d87a2d219c5227d8e7
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-18 16:55:18 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-18 16:55:18 +0530
+
+    feat: add shared privacy contracts and repo guards
+
+commit fb07637c29cb6575e29fb1e68af725274c7cbace
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-18 18:03:40 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-18 18:03:40 +0530
+
+    feat: add local privacy core and backend boundary services
+
+commit c3db8551adcecb30251fe015f1f8d49863fda94d
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-18 18:03:50 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-18 18:03:50 +0530
+
+    feat: add mobile workbench scaffolds and onboarding flows
+
+commit 41380b261cd9213d253aa42e68c40324f3797de7
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-18 18:04:17 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-18 18:04:17 +0530
+
+    chore: harden repo checks and clean generated artifacts
+
+commit befbb4bf3213be36640836340e2521146aede5ce
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-18 18:29:23 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-18 18:29:23 +0530
+
+    refactor: flatten repo into ross root
+
+commit d9118365ae8ad07977069dffa90d10db1d7575c7
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-18 22:17:14 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-18 22:17:14 +0530
+
+    feat: refine mobile workbench ui
+
+commit 4d74546d3b77fca3c138c925d66edf7f3b4cce1a
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-18 23:26:47 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-18 23:26:47 +0530
+
+    UI/UX Overhaul: Modern Legal Premiere & Linear/Notion layout for iOS and Android
+
+commit 6f552d7abbe6190481588caced6cc84076a6080b
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 00:00:01 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 00:00:01 +0530
+
+    build: add mobile packaging and alpha foundation scaffolds
+
+commit b1df86ea6f93f2e8b5aab8c6aebcd089d21d078f
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 00:00:04 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 00:00:04 +0530
+
+    test: harden privacy boundaries and update alpha runbooks
+
+commit 38a620925346299f1843acb4c60dd4a4f5b5c0f7
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 00:37:46 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 00:37:46 +0530
+
+    feat: harden backend dev artifact delivery and public search
+
+commit a1c27b9bbd6b34dfb771f9065bf2dc3375f64897
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 00:37:53 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 00:37:53 +0530
+
+    feat: add encrypted mobile alpha storage and document flows
+
+commit c9897316aa87e0d323fca9c45d86aa1aba8a4a5b
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 00:37:56 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 00:37:56 +0530
+
+    docs: update alpha document intelligence runbooks
+
+commit 84815b73da0b41c9334b125b3b90a24d12a7751b
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 01:25:01 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 01:25:01 +0530
+
+    feat: add law-grade extraction domain and core prompts
+
+commit 93937cacbdb21f3b27c4c9d73689e5d69a4ee5a8
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 01:25:09 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 01:25:09 +0530
+
+    feat: add local extraction orchestrators and review queues
+
+commit c7eb226bd68047c20a5ebaa1342f939672b70560
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 01:25:13 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 01:25:13 +0530
+
+    docs: document local legal extraction pipeline
+
+commit f723656372dc43e76fb2111fa1b7b3e5f1479f35
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 02:14:24 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 02:14:24 +0530
+
+    feat: add local model runtime contracts and deterministic provider
+
+commit 2ad2f178f1c03693550662e7dc7a2c1fad11a30d
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 02:14:34 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 02:14:34 +0530
+
+    feat: connect android and ios extraction orchestrators to local model runtime
+
+commit 3cc6ed9d2b8cf74daa87c64dd0b1476c41f692fd
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 02:14:42 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 02:14:42 +0530
+
+    docs: document local model runtime and extraction evaluation
+
+commit 39c517219d4a13b681cf91c1decf85645527197f
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 03:21:41 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 03:21:41 +0530
+
+    feat: add real local runtime adapter contracts and runtime health
+
+commit e425e812f12684ad300b15d8888800eb2a067bf4
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 03:21:54 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 03:21:54 +0530
+
+    feat: scaffold android and ios real local inference providers
+
+commit a36e087392dc394bd16173a45c4548f490a67d4a
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 03:22:01 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 03:22:01 +0530
+
+    docs: add manual local inference qa and runtime notes
+
+commit 270b901714337c7ffa04c1b117845efbb0cf4cce
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 11:26:05 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 11:26:05 +0530
+
+    feat: implement android real local inference adapter path
+
+commit b53385d22c01eaca82e4afdd479f84d51c97d6a1
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 11:26:09 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 11:26:09 +0530
+
+    feat: refine ios real-runtime opt-in and fallback behavior
+
+commit 49823b88de1b8f822c8103ef6937d5937743ee3e
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 11:26:17 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 11:26:17 +0530
+
+    docs: add runtime decision memo and real inference qa runbooks
+
+commit 675a9e3ae9bf060f5dbf86d66fc410a38b4644ca
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 14:06:55 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 14:06:55 +0530
+
+    feat: add backend external debug model metadata support
+
+commit de3fdacb206d91da92a6a42120a51d52b4fddce3
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 14:07:01 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 14:07:01 +0530
+
+    feat: harden android real model path validation and runtime metrics
+
+commit 1b944b730dcb0aba548d2b1317bb8f2190518d2e
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 14:07:04 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 14:07:04 +0530
+
+    feat: refine ios runtime qa readiness
+
+commit aa7af90f5e1c558c5c282f73d3ef28d08d4ffce1
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 14:07:08 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 14:07:08 +0530
+
+    docs: define model artifact strategy and real model qa reporting
+
+commit e10c7f4a91be2ae36f83e9ccc2f723c920d68146
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 14:30:35 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 14:30:35 +0530
+
+    fix: fail safely when ios adapter path is missing
+
+commit b2b051fa6821e1fa45979bc9b061af7383d0fa96
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 15:08:58 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 15:08:58 +0530
+
+    docs: record android real proof blocker and runbook state
+
+commit 8590501318d89a162b7a02eb42d638268a1a73ee
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 15:22:43 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 15:22:43 +0530
+
+    UI: Improve mobile responsiveness & implement dynamic light/dark mode
+    
+    - Update iOS theme colors to support trait collection changes
+    - Ensure text wrapping constraints and responsive mobile padding on iOS
+    - Configure DarkColors schema and responsive palette on Android
+    - Remove hardcoded colors from UI components
+
+commit 3493628a9b03899ca0d7b92802ab7f8cb4bfb0cc
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 16:44:32 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 16:44:32 +0530
+
+    feat: add lawyer-focused dashboard and ask flow
+
+commit c7b53a68537c0393df66d9098dd12471f3d5cee4
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 16:44:37 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 16:44:37 +0530
+
+    test: add lawyer usability and privacy regressions
+
+commit 6d714b99d8d2ebb8b8b324ac1f88b399a4407a1c
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 16:44:43 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 16:44:43 +0530
+
+    docs: document lawyer usability alpha
+
+commit 186c0278abd30ecca668b18ea3462a1f2246f2b4
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 19:38:56 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 19:38:56 +0530
+
+    feat: apply lawyer usability ux audit refinements
+
+commit 7da3d3aa47ff3689da6e82f7b74db9b5093679e9
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 19:42:42 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 19:42:42 +0530
+
+    fix: polish lawyer-facing follow-up ux copy
+
+commit eecbf01a5b8717402b9163cfba1e4883a81a3675
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-19 20:26:02 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-19 20:26:02 +0530
+
+    feat: collapse legacy lawyer surfaces into leaner layouts
+
+commit 135c1f9e4716c5fd97d44644f1a4594f3ee0f0d2
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-20 14:23:32 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-20 14:23:32 +0530
+
+    feat: implement minimalist zero-scroll redesign across iOS and Android
+    
+    - Redesigned iOS CaseWorkspaceView into a single, glanceable surface without cards or scrolling.
+    - Replaced 4-tab navigation with a 3-tab layout: Cases, Capture, and More.
+    - Consolidated Public Law and Activity Ledger into the new More tab.
+    - Introduced bottom sheet case switcher and dedicated document list screens on iOS.
+    - Refactored Android WorkbenchScreen with a BottomNavigationBar and no-scroll CasesPane.
+    - Removed redundant card wrappers and compressed UI density for the advocate persona.
+
+commit 09f4a0d2608b7f77617ba17046be41f46b4f0a42
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-20 19:56:01 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-20 19:56:01 +0530
+
+    feat: polish alpha matter flows and prune legacy shell
+
+commit d66d7c55a3f6db99b44b7b4afe0f131120de8edd
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-20 19:58:24 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-20 19:58:24 +0530
+
+    chore: remove unused android legacy feature stack
+
+commit acb1433ce4e6ad256e66921d11968c273b832dc9
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-21 02:21:45 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-21 02:21:45 +0530
+
+    feat: refine ross shell and bottom ask dock
+
+commit 1d1136b36d34f3f081869cba14c70cd326263c39
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-21 12:30:41 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-21 12:30:41 +0530
+
+    feat: tighten ross shell and ask composer
+
+commit b5ca352ade172d0824e4da140d2f32181975dba7
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-21 13:20:07 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-21 13:20:07 +0530
+
+    feat: streamline ross shell and drawer
+
+commit c301608f82053d2919e4a433fe1acaf271e27da8
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-21 14:14:37 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-21 14:14:37 +0530
+
+    feat: add matter management drawer controls
+
+commit 5d6c4c0867e50192e7fe2e870d8d7b8901c104d2
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-21 14:43:07 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-21 14:43:07 +0530
+
+    feat: add document folder browser on mobile
+
+commit 76082d0ae8fa1b57b0b5df5d6a621497acc4be76
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-21 17:33:46 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-21 17:33:46 +0530
+
+    Implement matter-scoped chat threading
+
+commit fc5e9ac6f05e7899d5604e778d01f97b9f9d4675
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-21 18:07:13 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-21 18:07:13 +0530
+
+    Refine Ross onboarding and ask composer UX
+
+commit b2574a04305d3245cfcc3fdc405080815378d99d
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-21 18:55:01 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-21 18:55:01 +0530
+
+    Polish Ross iOS chat surfaces and capture screenshots
+
+commit 180b6254e37c58e3c7dfcad961be926ff8df72f9
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-21 19:15:01 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-21 19:15:01 +0530
+
+    Refine file tagging and harden iOS pack readiness
+
+commit a42492c10f7344ddf3121453fd0206f3543a4a8e
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-21 20:08:47 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-21 20:08:47 +0530
+
+    Polish iOS auth shell and staged chat attachments
+
+commit f175590f84564a083462f5dea3081b652dfe5b7c
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-21 20:24:33 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-21 20:24:33 +0530
+
+    Revert "Polish iOS auth shell and staged chat attachments"
+    
+    This reverts commit a42492c10f7344ddf3121453fd0206f3543a4a8e.
+
+commit e7470c87745fd8ba408b0faeef55d6c53240492a
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-21 20:45:43 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-21 20:45:43 +0530
+
+    Refine iOS auth shell and matter setup UI
+
+commit 999c3f8d0782656b232334e2088cbfa59573c63a
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-21 20:46:44 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-21 20:46:44 +0530
+
+    Remove unused iOS auth and color helpers
+
+commit 49046e93e1e4361c7381d2df6bf5fa331566fad6
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-21 20:57:19 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-21 20:57:19 +0530
+
+    Refine iOS local-first auth experience
+
+commit a59cbe2f056dce9d0a4972ecdfe64b4cf075a177
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-21 23:47:09 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-21 23:47:09 +0530
+
+    Restore Ross auth glass UI and app icons
+
+commit f4129f4136ce7e294ad1c07c9c7c34bb2b11c53a
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-22 00:40:18 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-22 00:40:18 +0530
+
+    Refine Ross auth sheet and legal workspace UI
+
+commit 0ea3630ccb39d1b631fe5de6b573e09bae068859
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-22 00:58:36 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-22 00:58:36 +0530
+
+    Optimize Ross workspace rendering
+
+commit 5b23007bafd462a1d00b5fd5f26ad12252e79157
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-22 01:09:37 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-22 01:09:37 +0530
+
+    Harden local model runtime lifecycle
+
+commit 14bfca987ac000d24e407c0f91f5c7c944e29219
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-22 01:25:54 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-22 01:25:54 +0530
+
+    Unify Ross auth and workspace UI
+
+commit 9e98d7bc706d93b71c947bc4e76c0a1dbdbbb10c
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-22 01:27:44 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-22 01:27:44 +0530
+
+    Refine local matter creation flow
+
+commit 09d5b2e6870cb763b58d05550e72fe41d376e48e
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-22 11:36:58 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-22 11:36:58 +0530
+
+    Refine Ross glass auth and onboarding UI
+
+commit 4661ce9f69117895e0af29150a26fc2a59ad21ad
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-22 13:02:33 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-22 13:02:33 +0530
+
+    feat: stabilize auth and public-law backend flows
+
+commit 6bdd89fed8d2213ad16bacd3b0864a4bf76f6390
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-22 13:02:44 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-22 13:02:44 +0530
+
+    feat: stabilize mobile auth and matter workflow shell
+
+commit 6c2dacbc1f2e138c22b266bac5eb7ab9df306741
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-22 13:02:53 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-22 13:02:53 +0530
+
+    docs: add internal alpha runbooks and status notes
+
+commit 135c1316e787c75855efc8dc59d0294ebecd49bd
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-22 13:15:34 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-22 13:15:34 +0530
+
+    feat: add secure gemini public-law connector
+
+commit 13352e15c846150254c57210fc1eb6d1e795f783
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-22 13:25:41 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-22 13:25:41 +0530
+
+    chore: add local backend env loading and search guardrails
+
+commit c4fd1c36b3137b4dbdd6fc88d7d47f1ccd470432
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-22 13:27:38 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-22 13:27:38 +0530
+
+    chore: refresh internal alpha screenshots
+
+commit c1105cb20a30462956b59ee976819a1d78e041a6
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-22 13:54:27 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-22 13:54:27 +0530
+
+    fix: harden public-law preview and gemini fallback
+
+commit 0fa03afca50173948f34c92b4995ab9c4a2a60c9
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-22 13:54:39 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-22 13:54:39 +0530
+
+    chore: refresh simulator screenshots for alpha shell
+
+commit 96813509ec34f55398b9f08fe5e6c40d3a619587
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-22 15:57:29 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-22 15:57:29 +0530
+
+    chore: refresh current ios screenshot bundle
+
+commit 679d8f03b25267979df3691632078810bf34b0e1
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-22 15:57:42 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-22 15:57:42 +0530
+
+    feat: harden daily matter workflow and demo workspace
+
+commit d6bccc1f25e713400f0841743030714fb87ec3c9
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-22 15:57:47 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-22 15:57:47 +0530
+
+    docs: add real-world usage alpha runbooks
+
+commit 399b83bccf41fc882f803fd44c385c9ea57d55f6
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-22 16:36:28 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-22 16:36:28 +0530
+
+    feat: streamline dock-driven matter actions
+
+commit 76c387ed14619e6d318cea5c99557c75bf6eb6c5
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-22 17:48:49 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-22 17:48:49 +0530
+
+    feat: strengthen private assistant flow and ask ross actions
+
+commit cc2a12ba6005f763bc76a6e3c1e204d1c2a9dc40
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-22 20:17:59 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-22 20:17:59 +0530
+
+    docs: record dogfood proof status and blockers
+
+commit 55e218051a5526224476d06d3154f9f9403b18db
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-22 23:19:52 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-22 23:19:52 +0530
+
+    fix: polish lawyer-facing shell and matter workspace UI
+
+commit d49bd27e4237fe6cce682bbe190843273d1bc0f7
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-22 23:48:58 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-22 23:48:58 +0530
+
+    fix: reduce home and document viewer UI noise
+
+commit 6dbec79833a1236bb81f1ac31efecbd1255d8932
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-23 00:06:29 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-23 00:06:29 +0530
+
+    fix: trim document viewer redundancy and dock noise
+
+commit 4e8cec39f761368a1b4b4d3766d65a33f46f0e07
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-23 00:26:01 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-23 00:26:01 +0530
+
+    fix: refine ask ross dock and matter file polish
+
+commit c931752cd719f30cbfeee692de9c6e941caf20f1
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-23 01:07:29 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-23 01:07:29 +0530
+
+    Polish Ross auth and home UI
+
+commit c5934a3a70a73ae841f958d064b37eacb82a3ad8
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-23 02:07:30 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-23 02:07:30 +0530
+
+    fix: preserve legal citations in public-law sanitizer
+
+commit 45bf83004a2cdabaac7c8eee5af53bdb1ac4255b
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-23 02:07:39 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-23 02:07:39 +0530
+
+    fix: harden proof flows and export handling
+
+commit bf264e02f52985e025749caa5a2f7e35b5131a34
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-23 02:07:44 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-23 02:07:44 +0530
+
+    docs: record dogfood proof and sanitization rules
+
+commit f959f5e5ba002438ad7ee82c4a09665ee2d74730
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-23 11:18:58 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-23 11:18:58 +0530
+
+    fix: simplify iOS dogfood UI surfaces
+
+commit de3cf6b30f8b2f80ea6e9b6c94c7c55d6e53132d
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-23 17:22:58 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-23 17:22:58 +0530
+
+    fix: restore Ask Ross back and keyboard controls
+
+commit 457dfd30c899558926b2c45bfc0fa8f9792dc83b
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-23 17:29:31 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-23 17:29:31 +0530
+
+    Polish Ross UI and email login
+
+commit cf42c405dff349ab117ed86d6a10a6e44a9ac116
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-23 17:33:43 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-23 17:33:43 +0530
+
+    fix: add root Ask Ross back action
+
+commit 7996e27705f45f9c802315d168b63441f4d0ae19
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-23 17:38:09 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-23 17:38:09 +0530
+
+    fix: simplify Ask Ross dock controls
+
+commit 0d76bde73888c2ef170d80ddc88c51cb73884a50
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-23 18:54:44 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-23 18:54:44 +0530
+
+    fix: enable private assistant setup and model-backed ask
+
+commit 32ea4cc670fb57ccff0d7a83a3077bc2a2de81fe
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-23 19:25:08 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-23 19:25:08 +0530
+
+    test: cover Android private assistant ask flow
+
+commit cee8637784197dfaf6347d8a48764b0ab43df3b6
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-23 21:31:16 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-23 21:31:16 +0530
+
+    Polish Ross iOS assistant setup and dock UI
+
+commit 6ed37cc2720e8cba048cff5a2831ac42c80a6c9c
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-24 01:21:03 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-24 01:21:03 +0530
+
+    Improve assistant feedback and setup UX
+
+commit 025fe0b845a4c0574b47e1b4436b9e634f118031
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-24 01:48:34 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-24 01:48:34 +0530
+
+    feat: update private assistant model registry to qwen gguf tiers
+
+commit a9efaa8ad5f9478588908ba00eb0484976e4a1bb
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-24 01:48:40 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-24 01:48:40 +0530
+
+    test: verify qwen model metadata and ui copy boundaries
+
+commit 831cb9315996e9e5cc5d0d251a6970f29e9e7ee7
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-24 01:48:48 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-24 01:48:48 +0530
+
+    docs: document qwen model strategy and hardware requirements
+
+commit b236fc250dc221ed32bcaa3a742c0947ba283eee
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-24 02:21:46 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-24 02:21:46 +0530
+
+    fix: improve private assistant setup experience
+
+commit 4837ae6676332f5f060cd9f9142f6f75573bf0d3
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-24 02:21:54 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-24 02:21:54 +0530
+
+    test: capture private assistant e2e artifacts
+
+commit c5949ee5e9697b403bd1533b3f953515018c441c
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-24 02:28:42 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-24 02:28:42 +0530
+
+    fix: simplify auth return transitions
+
+commit f0be5887a1fc9c46dd2cec35224297c96504eb20
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-24 02:45:40 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-24 02:45:40 +0530
+
+    fix: simplify unlock screen and startup flow
+
+commit fec0672a2f8fca13222eb5729984b3e406d7d8bb
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-24 03:28:07 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-24 03:28:07 +0530
+
+    fix: add ios auth entitlements and device metadata
+
+commit d157e481974714f0c1842ff021739e27f52f12bd
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-24 10:14:06 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-24 10:14:06 +0530
+
+    fix: restore onboarding when assistant setup is incomplete
+
+commit bb256f3cff3967bbd1ab37cab2c885c2d9526412
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-24 10:38:15 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-24 10:38:15 +0530
+
+    fix: smooth quick unlock return flow
+
+commit 36bbe3ff9ccdb0776cfc3f24fe36e2f91da9e568
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-25 21:34:10 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-25 21:34:10 +0530
+
+    Build store-ready private assistant foundation
+
+commit 2781e39f54c731557010c4cc5871674f2d529235
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-25 22:02:15 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-25 22:02:15 +0530
+
+    Stabilize Android Ask composer
+
+commit d599aa5ab80995b8f988669ad2a8c1f440ae74c7
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-27 14:22:37 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-27 14:22:37 +0530
+
+    Make local assistant use real model runtime
+
+commit 887a7f02e71672264dbb1ca163e647ba66e86449
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-27 14:37:00 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-27 14:37:00 +0530
+
+    Allow Android emulator local runtime QA
+
+commit 6881cf63ff3b4fec9681ccd20d6f9bfa28c627ed
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-27 15:43:45 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-27 15:43:45 +0530
+
+    Make iOS local LLM path real-only
+
+commit 89e41d856d5163c791bce9ec2b5bcb3d5e1fe8fa
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-28 00:11:49 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-28 00:11:49 +0530
+
+    Enforce real local assistant flows
+
+commit 5676f273146662a9a7cdaf84ad0aac455f84e030
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-28 00:53:47 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-28 00:53:47 +0530
+
+    Fix local assistant model activation
+
+commit e52a70f4f76f09b753eeea1a5ff97b70ad0b9288
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-28 01:55:44 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-28 01:55:44 +0530
+
+    Fix Android local assistant setup
+
+commit e366f5684d95ba1c56c5e124b8b65ec73c3b7249
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-28 02:08:05 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-28 02:08:05 +0530
+
+    Trust-first public law and document review cleanup
+
+commit fd1661eee4e151e1cee9041f76172500ee53fac3
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-28 02:16:28 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-28 02:16:28 +0530
+
+    Prune trust cleanup dead code
+
+commit 68f55c6a0a5ae5e02f113a208efef4b4ab31a9f9
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-28 17:42:38 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-28 17:42:38 +0530
+
+    Clean up Ross workbench IA and local clerk routing
+
+commit a0995c8647d36f19edd619804d6d9011e2b876bf
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-28 19:58:40 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-28 19:58:40 +0530
+
+    Refine Ross theme and matter workspace IA
+
+commit ac87dd8f376e84ee2dba69290a50b479578c2f00
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-28 20:23:40 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-28 20:23:40 +0530
+
+    Simplify matter and document workspaces
+
+commit f5e543c98e8081229abc1dfc93fc2f4fecb84a75
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-28 23:02:14 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-28 23:02:14 +0530
+
+    Simplify iOS workspace UI and setup surfaces
+
+commit 79d3ea75d3ce751b1cabb82ba52102bdb5972a1b
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-29 01:39:44 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-29 01:39:44 +0530
+
+    Remove dead mobile code and cache derived state
+
+commit 7e54045108282d98b0750055e04ee56e4e1e7a1d
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-29 01:57:04 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-29 01:57:04 +0530
+
+    Simplify auth and setup screens
+
+commit ba181602d38ceac5bc60821927977b807f22626c
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-29 02:25:51 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-29 02:25:51 +0530
+
+    Clean up iOS visual hierarchy
+
+commit 9293e6b5194a378c285af3f9db58dbcca07c7407
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-29 02:34:10 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-29 02:34:10 +0530
+
+    Center auth hero card
+
+commit 4daf0b7553e47c7b88491b6c5440c80766755806
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-04-29 03:17:46 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-04-29 03:17:46 +0530
+
+    Align Android with iOS cleanup
+
+commit 4c63493c0a3bc953c5e75e91c6525da93383b6c8
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-05-03 20:30:42 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-05-03 20:30:42 +0530
+
+    Fix ask payload sanitization and dock chrome
+
+commit c8ff44360580df1cb5b2438f4389fe98eaaf3098
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-05-03 22:10:13 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-05-03 22:10:13 +0530
+
+    Fix document review crash and device UI polish
+
+commit 5f285c283263c4933b519bb23c385b3c8591e302
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-05-08 18:11:58 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-05-08 18:11:58 +0530
+
+    Refine Ross minimal product flow
+
+commit 1cb45bf3b3b62153da9c795ecb77151b9a42ae72
+Author:     adidshaft <adidshaft@gmail.com>
+AuthorDate: 2026-05-11 00:58:58 +0530
+Commit:     adidshaft <adidshaft@gmail.com>
+CommitDate: 2026-05-11 00:58:58 +0530
+
+    feat: complete minimal product improvements and Alpha Foundation structure

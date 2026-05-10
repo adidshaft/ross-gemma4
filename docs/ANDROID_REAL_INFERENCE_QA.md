@@ -27,7 +27,7 @@ Model files:
 
 - are not committed
 - are not bundled
-- stay outside the repo unless copied into app-private storage during manual QA
+- stay outside the repo unless transferred into app-private storage during manual QA
 
 ## Recommended path
 

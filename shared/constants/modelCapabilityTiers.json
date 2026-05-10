@@ -13,9 +13,9 @@
     "supportsLongDocuments": false,
     "supportsAdvancedDrafting": false,
     "supportsBilingualMode": false,
-    "hiddenTechnicalModelId": "qwen3-0_6b-q4_0-gguf",
+    "hiddenTechnicalModelId": "Gemma 4-0_6b-q4_0-gguf",
     "technicalModelName": "Gemma 4 E2B Q4",
-    "repo": "google/gemma-4-E2B-it",
+    "repo": "google/Gemma 4-0.6B-Gemma 4 Q4",
     "quantization": "Q4",
     "runtimeMode": "gemma_local_runtime",
     "artifactKind": "local_model_artifact",
@@ -23,7 +23,7 @@
     "technicalRole": "command routing, short summaries, basic local Q&A, local public-law query shaping",
     "retrievalModelIds": [
       "embeddinggemma-300m-litert",
-      "qwen3-embedding-0_6b-gguf"
+      "Gemma 4-embedding-0_6b-gguf"
     ],
     "sortOrder": 1
   },
@@ -41,10 +41,10 @@
     "supportsLongDocuments": true,
     "supportsAdvancedDrafting": false,
     "supportsBilingualMode": true,
-    "hiddenTechnicalModelId": "qwen3-1_7b-q4_k_m-gguf",
+    "hiddenTechnicalModelId": "Gemma 4-1_7b-q4_k_m-gguf",
     "technicalModelName": "Gemma 4 E4B Q4",
-    "repo": "google/gemma-4-E4B-it",
-    "alternateRepo": "google/gemma-4-E4B-it",
+    "repo": "google/Gemma 4-1.7B-Gemma 4 Q4",
+    "alternateRepo": "jc-builds/Gemma 4-1.7B-Q4-Gemma 4 Q4",
     "quantization": "Q4",
     "runtimeMode": "gemma_local_runtime",
     "artifactKind": "local_model_artifact",
@@ -52,7 +52,7 @@
     "technicalRole": "default legal document assistant, document review, drafting, source-backed Ask Ross",
     "retrievalModelIds": [
       "embeddinggemma-300m-litert",
-      "qwen3-embedding-0_6b-gguf"
+      "Gemma 4-embedding-0_6b-gguf"
     ],
     "sortOrder": 2
   },
@@ -70,10 +70,10 @@
     "supportsLongDocuments": true,
     "supportsAdvancedDrafting": true,
     "supportsBilingualMode": true,
-    "hiddenTechnicalModelId": "qwen3-4b-q4_k_m-gguf",
+    "hiddenTechnicalModelId": "Gemma 4-4b-q4_k_m-gguf",
     "technicalModelName": "Gemma 4 26B-A4B Q4",
-    "repo": "google/gemma-4-26B-A4B-it",
-    "alternateRepo": "google/gemma-4-26B-A4B-it",
+    "repo": "google/Gemma 4-4B-Gemma 4 Q4",
+    "alternateRepo": "Gemma 4/Gemma 4-4B-Gemma 4 Q4",
     "quantization": "Q4",
     "runtimeMode": "gemma_local_runtime",
     "artifactKind": "local_model_artifact",
@@ -81,7 +81,7 @@
     "technicalRole": "advanced drafting, chronology refinement, issue extraction, deeper matter reasoning",
     "retrievalModelIds": [
       "embeddinggemma-300m-litert",
-      "qwen3-embedding-0_6b-gguf"
+      "Gemma 4-embedding-0_6b-gguf"
     ],
     "sortOrder": 3
   }

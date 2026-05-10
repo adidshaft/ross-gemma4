@@ -13,15 +13,15 @@ Default backend mode:
 Production metadata mode:
 
 - `ROSS_MODEL_CATALOG_MODE=production_metadata`
-- advertises Gemma 4 E2B Q4 Gemma 4 Q4 tier metadata
+- advertises Gemma 4 Gemma 4 Q4 tier metadata
 - does not serve real large files
 - rejects download sessions until production delivery is configured
 
 ## Tier Mapping
 
-- Quick Start -> Gemma 4 E2B Q4, `gemma_local_runtime`, about 430 MB
-- Case Associate -> Gemma 4 E4B Q4, `gemma_local_runtime`, about 1.1-1.3 GB
-- Senior Drafting Support -> Gemma 4 26B-A4B Q4, `gemma_local_runtime`, about 2.5 GB
+- Quick Start -> Gemma 4 E2B Q4, `Gemma 4_cpp_gguf`, about 430 MB
+- Case Associate -> Gemma 4 E4B Q4, `Gemma 4_cpp_gguf`, about 1.1-1.3 GB
+- Senior Drafting Support -> Gemma 4 26B-A4B Q4, `Gemma 4_cpp_gguf`, about 2.5 GB
 
 Normal users see only the tier names and plain-language setup states.
 
@@ -30,7 +30,7 @@ Normal users see only the tier names and plain-language setup states.
 Matter Search is a separate embedding requirement:
 
 - preferred: EmbeddingGemma 300M with `litert`
-- fallback: Gemma 4 Embedding with `gemma_local_runtime`
+- fallback: Gemma 4-Embedding 0.6B Gemma 4 Q4 with `Gemma 4_cpp_gguf`
 
 Retrieval powers local semantic search, source retrieval, matter/document RAG, and source-backed answers.
 

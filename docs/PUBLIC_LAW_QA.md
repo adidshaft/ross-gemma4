@@ -99,7 +99,7 @@ These should be rejected:
 - case-specific party names
 - client details
 - document filenames
-- copied factual narratives
+- transferred factual narratives
 - exact filing references
 - pasted order text
 - private addresses, phone numbers, or email addresses

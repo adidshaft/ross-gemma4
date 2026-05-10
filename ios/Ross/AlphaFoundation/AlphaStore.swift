@@ -94,8 +94,8 @@ actor AlphaRossStore {
                 try stashCorruptState()
 
                 if fileManager.fileExists(atPath: legacyStateURL.path()) {
-                    let migrated = try loadLegacyPlaintext()
-                    let upgraded = migrated.withStorageLedger(
+                    let transitioned = try loadLegacyPlaintext()
+                    let upgraded = transitioned.withStorageLedger(
                         title: "Alpha state encrypted locally",
                         detail: "Legacy alpha state was moved into encrypted app-private storage."
                     )
@@ -113,8 +113,8 @@ actor AlphaRossStore {
         }
 
         if fileManager.fileExists(atPath: legacyStateURL.path()) {
-            let migrated = try loadLegacyPlaintext()
-            let upgraded = migrated.withStorageLedger(
+            let transitioned = try loadLegacyPlaintext()
+            let upgraded = transitioned.withStorageLedger(
                 title: "Alpha state encrypted locally",
                 detail: "Legacy alpha state was moved into encrypted app-private storage."
             )

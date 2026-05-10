@@ -1,9 +1,9 @@
 [
   {
-    "id": "qwen3-0_6b-q4_0-gguf",
+    "id": "Gemma 4-0_6b-q4_0-gguf",
     "displayName": "Gemma 4 E2B Q4",
-    "family": "qwen",
-    "repo": "google/gemma-4-E2B-it",
+    "family": "Gemma 4",
+    "repo": "google/Gemma 4-0.6B-Gemma 4 Q4",
     "quantization": "Q4",
     "runtimeMode": "gemma_local_runtime",
     "runtimeCandidates": [
@@ -15,15 +15,15 @@
       "basic_local_qa",
       "public_law_query_shaping"
     ],
-    "licenseName": "Gemma 4 E2B Q4 license",
+    "licenseName": "Gemma 4 license",
     "onboardingVisible": false
   },
   {
-    "id": "qwen3-1_7b-q4_k_m-gguf",
+    "id": "Gemma 4-1_7b-q4_k_m-gguf",
     "displayName": "Gemma 4 E4B Q4",
-    "family": "qwen",
-    "repo": "google/gemma-4-E4B-it",
-    "alternateRepo": "google/gemma-4-E4B-it",
+    "family": "Gemma 4",
+    "repo": "google/Gemma 4-1.7B-Gemma 4 Q4",
+    "alternateRepo": "jc-builds/Gemma 4-1.7B-Q4-Gemma 4 Q4",
     "quantization": "Q4",
     "runtimeMode": "gemma_local_runtime",
     "runtimeCandidates": [
@@ -40,15 +40,15 @@
       "source_backed_answers",
       "public_law_query_shaping"
     ],
-    "licenseName": "Gemma 4 E2B Q4 license",
+    "licenseName": "Gemma 4 license",
     "onboardingVisible": false
   },
   {
-    "id": "qwen3-4b-q4_k_m-gguf",
+    "id": "Gemma 4-4b-q4_k_m-gguf",
     "displayName": "Gemma 4 26B-A4B Q4",
-    "family": "qwen",
-    "repo": "google/gemma-4-26B-A4B-it",
-    "alternateRepo": "google/gemma-4-26B-A4B-it",
+    "family": "Gemma 4",
+    "repo": "google/Gemma 4-4B-Gemma 4 Q4",
+    "alternateRepo": "Gemma 4/Gemma 4-4B-Gemma 4 Q4",
     "quantization": "Q4",
     "runtimeMode": "gemma_local_runtime",
     "runtimeCandidates": [
@@ -63,7 +63,7 @@
       "order_summary_refinement",
       "hearing_preparation"
     ],
-    "licenseName": "Gemma 4 E2B Q4 license",
+    "licenseName": "Gemma 4 license",
     "onboardingVisible": false
   },
   {
@@ -85,10 +85,10 @@
     "onboardingVisible": false
   },
   {
-    "id": "qwen3-embedding-0_6b-gguf",
-    "displayName": "Gemma 4 Embedding",
-    "family": "qwen",
-    "repo": "Gemma 4 E2B Q4/Gemma-4-Embedding",
+    "id": "Gemma 4-embedding-0_6b-gguf",
+    "displayName": "Gemma 4-Embedding 0.6B Gemma 4 Q4",
+    "family": "Gemma 4",
+    "repo": "Gemma 4/Gemma 4-Embedding-0.6B-Gemma 4 Q4",
     "runtimeMode": "gemma_local_runtime",
     "runtimeCandidates": [
       "gemma_local_runtime"
@@ -99,7 +99,7 @@
       "source_retrieval",
       "source_backed_answers"
     ],
-    "licenseName": "Gemma 4 E2B Q4 license",
+    "licenseName": "Gemma 4 license",
     "onboardingVisible": false
   },
   {

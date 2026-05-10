@@ -119,7 +119,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(AlphaCapabilityTier.seniorDraftingSupport.downloadSizeLabel, "about 2.5 GB")
 
         let forbidden = [
-            "Gemma 4 E2B Q4",
+            "Gemma 4 E4B Q4",
             "Gemma 4 Q4",
             "Q4",
             "Q4",

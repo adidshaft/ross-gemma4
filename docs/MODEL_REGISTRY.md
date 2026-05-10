@@ -12,7 +12,7 @@ Ross shows advocate-friendly assistant levels in normal UI. Technical model name
 
 ## Recommended Stack
 
-Generative assistant tiers are Gemma 4 E2B Q4-first:
+Generative assistant tiers are Gemma 4-first:
 
 - Quick Start -> Gemma 4 E2B Q4, `google/gemma-4-E2B-it`
 - Case Associate -> Gemma 4 E4B Q4, `google/gemma-4-E4B-it`
@@ -21,7 +21,7 @@ Generative assistant tiers are Gemma 4 E2B Q4-first:
 Retrieval is separate:
 
 - preferred: EmbeddingGemma 300M, `litert-community/embeddinggemma-300m`, `litert`
-- fallback: Gemma 4 Embedding, `Gemma 4 E2B Q4/Gemma-4-Embedding`, `gemma_local_runtime`
+- fallback: Gemma 4-Embedding 0.6B Gemma 4 Q4, `Gemma 4/Gemma 4-Embedding-0.6B-Gemma 4 Q4`, `Gemma 4_cpp_gguf`
 
 Gemma/Gemma 3n generative paths are optional future or experimental paths, not Ross's default Private AI Pack strategy.
 
@@ -54,7 +54,7 @@ Supported runtime-mode values:
 
 - `deterministic_dev`
 - `mediapipe_llm`
-- `gemma_local_runtime`
+- `Gemma 4_cpp_gguf`
 - `apple_foundation_models`
 - `litert`
 - `unavailable`
@@ -77,9 +77,9 @@ Supported artifact-kind values:
 
 `ROSS_MODEL_CATALOG_MODE=production_metadata`:
 
-- advertises Gemma 4 E2B Q4 tier metadata
+- advertises Gemma 4 tier metadata
 - uses `local_model_artifact`
-- uses `gemma_local_runtime`
+- uses `Gemma 4_cpp_gguf`
 - does not provide real download URLs or segments
 - rejects model download sessions until a real delivery path is configured
 

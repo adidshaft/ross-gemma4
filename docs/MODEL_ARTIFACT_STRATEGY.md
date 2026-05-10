@@ -6,9 +6,9 @@ Ross needs a model artifact strategy that proves real local inference without we
 
 Latest observed state on 2026-04-24:
 
-- Ross's production-intended assistant metadata is Gemma 4 E2B Q4 Gemma 4 Q4 through `gemma_local_runtime`.
+- Ross's production-intended assistant metadata is Gemma 4 Gemma 4 Q4 through `Gemma 4_cpp_gguf`.
 - Backend default mode still serves tiny deterministic artifacts for CI and local tests.
-- Backend `production_metadata` mode advertises Gemma 4 E2B Q4 tier metadata without serving large model files.
+- Backend `production_metadata` mode advertises Gemma 4 tier metadata without serving large model files.
 - Matter Search is a separate embedding model requirement, not part of the generative model file.
 - Real Gemma 4 Q4 inference still needs a linked mobile runtime and physical-device proof.
 
@@ -94,7 +94,7 @@ Not for this alpha:
 ## Alpha recommendation
 
 1. Keep `ROSS_MODEL_CATALOG_MODE=dev` for CI and normal local tests.
-2. Use `ROSS_MODEL_CATALOG_MODE=production_metadata` only to verify Gemma 4 E2B Q4 metadata and UI mapping.
+2. Use `ROSS_MODEL_CATALOG_MODE=production_metadata` only to verify Gemma 4 metadata and UI mapping.
 3. Implement the separate Matter Search embedding lifecycle before claiming source-backed RAG is production-ready.
-4. Prove Android and iOS Gemma 4 Q4 inference on hardware before claiming real Gemma 4 E2B Q4 execution.
+4. Prove Android and iOS Gemma 4 Q4 inference on hardware before claiming real Gemma 4 execution.
 5. Use backend dev serving with one compatible external file outside the repo only for manual runtime bring-up.

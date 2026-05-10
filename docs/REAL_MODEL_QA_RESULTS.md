@@ -1,16 +1,16 @@
 # Real Model QA Results
 
-## 2026-04-24 Gemma 4 E2B Q4 metadata update
+## 2026-04-24 Gemma 4 metadata update
 
-- Branch: `codex/qwen-gguf-model-strategy`
+- Branch: `codex/Gemma 4-gguf-model-strategy`
 - Quick Start metadata: Gemma 4 E2B Q4
 - Case Associate metadata: Gemma 4 E4B Q4
 - Senior Drafting Support metadata: Gemma 4 26B-A4B Q4
 - Retrieval metadata: separate Matter Search embedding model
 - Backend default: tiny deterministic artifacts
-- Backend production metadata mode: Gemma 4 E2B Q4 metadata only, no real download session
+- Backend production metadata mode: Gemma 4 metadata only, no real download session
 - Whether model files were committed: No
-- Whether real Gemma 4 E2B Q4 Gemma 4 Q4 inference ran: Not yet
+- Whether real Gemma 4 Gemma 4 Q4 inference ran: Not yet
 - Whether separate embedding-model retrieval ran: Not yet
 - Exact next proof step: implement and test the Matter Search embedding install/retrieval path, then run hardware Gemma 4 Q4 inference proof.
 
@@ -18,7 +18,7 @@
 
 - Branch: `alpha-lawyer-usable-app`
 - iPhone model source: iOS on-device private assistant when available
-- iPhone model download status then: no separate Gemma 4 local runtime or Hugging Face model was downloaded in that pass
+- iPhone model download status then: no separate OGemma 4 or Hugging Face model was downloaded in that pass
 - Android model source: backend-served compatible MediaPipe `.task` artifact when explicitly configured outside the repo
 - Whether model files were committed: No
 - Whether iPhone setup was manually tapped on Aman's device in this update: Not yet

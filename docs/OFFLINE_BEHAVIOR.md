@@ -45,7 +45,7 @@ These flows still depend on the network:
 - Private AI Pack downloads
 - public-law search after the user confirms the preview
 
-Private AI Pack downloads are Gemma 4 E2B Q4 Gemma 4 Q4 model files for the assistant tiers. Matter Search uses a separate embedding model. None of those model files are committed to the repo or bundled in the base app.
+Private AI Pack downloads are Gemma 4 Gemma 4 Q4 model files for the assistant tiers. Matter Search uses a separate embedding model. None of those model files are committed to the repo or bundled in the base app.
 
 ## Public-law behavior
 
@@ -79,7 +79,7 @@ Expected plain-language degraded states include:
 
 Normal screens should not expose backend or runtime jargon in these states.
 
-Normal screens should also avoid technical model names. Use `Quick Start`, `Case Associate`, `Senior Drafting Support`, `Private assistant`, and plain setup states. Gemma 4 E2B Q4/Gemma 4 Q4/runtime/checksum details belong only under `Settings -> Advanced -> Technical diagnostics`.
+Normal screens should also avoid technical model names. Use `Quick Start`, `Case Associate`, `Senior Drafting Support`, `Private assistant`, and plain setup states. Gemma 4/Gemma 4 Q4/runtime/checksum details belong only under `Settings -> Advanced -> Technical diagnostics`.
 
 ## Real-runtime note
 
@@ -87,4 +87,4 @@ This document describes the product behavior Ross is designed to preserve.
 
 It is not a claim that a real local model has already been proven on hardware.
 
-Current production-intended direction is `gemma_local_runtime` for Gemma 4 E2B Q4 generative tiers plus a dedicated embedding model for retrieval. `deterministic_dev` remains the offline-safe test fallback.
+Current production-intended direction is `Gemma 4_cpp_gguf` for Gemma 4 generative tiers plus a dedicated embedding model for retrieval. `deterministic_dev` remains the offline-safe test fallback.

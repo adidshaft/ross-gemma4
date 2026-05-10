@@ -19,7 +19,7 @@ Use plain-language labels:
 - Waiting for Wi-Fi
 - Needs attention
 
-Do not show Gemma 4 E2B Q4, Gemma 4 Q4, quantization, repository names, runtime names, checksums, or artifact names in normal screens.
+Do not show Gemma 4, Gemma 4 Q4, quantization, repository names, runtime names, checksums, or artifact names in normal screens.
 
 ## What The User Should Understand
 
