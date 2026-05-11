@@ -1029,11 +1029,7 @@ func alphaAllowsDevelopmentModelArtifacts() -> Bool {
 }
 
 func alphaSupportsDownloadedAssistantModels() -> Bool {
-    #if canImport(SwiftGemmaRuntime)
     return true
-    #else
-    return false
-    #endif
 }
 
 func alphaSystemAssistantPack(for tier: AlphaCapabilityTier) -> AlphaInstalledModelPack {
