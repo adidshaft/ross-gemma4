@@ -94,6 +94,43 @@ struct AlphaFeedScreen: View {
                             progressValue: alphaDownloadProgressValue(activeJob),
                             showsIndeterminateProgress: alphaDownloadShowsIndeterminateProgress(activeJob)
                         )
+                    } else if model.activePack == nil {
+                        Button {
+                            alphaHaptic(.selection)
+                            model.path.append(.privateAISettings)
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "brain")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(Color.rossAccent)
+                                    .frame(width: 32, height: 32)
+                                    .background(Color.rossAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                    
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Set up Ross assistant")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(Color.rossInk)
+                                    Text("Required for local AI tasks")
+                                        .font(.caption2)
+                                        .foregroundStyle(Color.rossInk.opacity(0.66))
+                                }
+                                
+                                Spacer(minLength: 0)
+                                
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundStyle(Color.rossInk.opacity(0.24))
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(Color.rossCardBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(Color.rossBorder, lineWidth: 1)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.top, 4)
                     }
                 }
                 .animation(.snappy(duration: 0.28, extraBounce: 0.04), value: model.persisted.modelJobs.count)
