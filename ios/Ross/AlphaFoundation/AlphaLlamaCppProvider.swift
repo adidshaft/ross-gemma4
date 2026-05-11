@@ -55,6 +55,27 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         return 16000
     }
     
+    private static var cachedContext: LlamaContext?
+    private static var cachedPath: String?
+    private static let cacheLock = NSLock()
+
+    private func getOrContext(path: String) throws -> LlamaContext {
+        AlphaLlamaCppProvider.cacheLock.lock()
+        defer { AlphaLlamaCppProvider.cacheLock.unlock() }
+        
+        if let cached = AlphaLlamaCppProvider.cachedContext, AlphaLlamaCppProvider.cachedPath == path {
+            return cached
+        }
+        
+        // Clear old context if path changed
+        AlphaLlamaCppProvider.cachedContext = nil
+        
+        let newContext = try LlamaContext.create_context(path: path)
+        AlphaLlamaCppProvider.cachedContext = newContext
+        AlphaLlamaCppProvider.cachedPath = path
+        return newContext
+    }
+    
     func run(_ taskInput: AlphaLocalModelInput) async -> AlphaLocalModelOutput {
         let pack = AlphaPromptPackBuilder(maxInputChars: maxInputChars() ?? 16000).build(input: taskInput)
         
@@ -70,7 +91,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         }
         
         do {
-            let context = try LlamaContext.create_context(path: modelPath)
+            let context = try getOrContext(path: modelPath)
             
             let systemPrompt = pack.systemInstructions
             let userPrompt = pack.promptText

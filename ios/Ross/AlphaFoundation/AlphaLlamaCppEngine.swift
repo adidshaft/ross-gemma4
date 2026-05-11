@@ -58,16 +58,36 @@ actor LlamaContext {
         llama_batch_free(batch)
         llama_model_free(model)
         llama_free(context)
-        llama_backend_free()
     }
 
+    private static var backendInitialized = false
+    private static let backendLock = NSLock()
+
     static func create_context(path: String) throws -> LlamaContext {
-        llama_backend_init()
+        backendLock.lock()
+        if !backendInitialized {
+            llama_backend_init()
+            backendInitialized = true
+        }
+        backendLock.unlock()
+
         var model_params = llama_model_default_params()
+
+        // Check for sufficient RAM (simplified check)
+        let memory = ProcessInfo.processInfo.physicalMemory
+        print("System physical memory: \(memory / 1024 / 1024 / 1024) GB")
 
 #if targetEnvironment(simulator)
         model_params.n_gpu_layers = 0
         print("Running on simulator, force use n_gpu_layers = 0")
+#else
+        // For very large models on constrained devices, limit GPU offloading to avoid OOM
+        if memory < 12_000_000_000 && path.contains("26B") {
+            model_params.n_gpu_layers = 0 // Run on CPU for the big MoE if RAM is tight
+            print("Constrained memory for 26B model, using CPU only to prevent crash")
+        } else {
+            model_params.n_gpu_layers = 99 // Offload as much as possible
+        }
 #endif
         let model = llama_model_load_from_file(path, model_params)
         guard let model else {
