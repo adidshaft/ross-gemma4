@@ -40,3 +40,4 @@ downloads/
 ios/build-device/
 qa-screenshots/
 .migration/
+*.gguf
