@@ -470,27 +470,54 @@ struct AlphaPrivateAIJobCard: View {
             job.state == .failed
     }
 
+    private var downloadedBytesLabel: String? {
+        guard job.totalBytes > 0, job.progress > 0 else { return nil }
+        let downloaded = Int64(Double(job.totalBytes) * job.progress)
+        let dl = ByteCountFormatter.string(fromByteCount: downloaded, countStyle: .file)
+        let tot = ByteCountFormatter.string(fromByteCount: job.totalBytes, countStyle: .file)
+        return "\(dl) of \(tot)"
+    }
+
+    private var etaLabel: String? {
+        guard job.state == .downloading, job.totalBytes > 0, job.progress > 0 else { return nil }
+        let remaining = max(0, 1 - job.progress)
+        let assumedBytesPerSec: Double = 12_000_000 // conservative 12 MB/s on Wi-Fi
+        let seconds = Double(job.totalBytes) * remaining / assumedBytesPerSec
+        if seconds < 90 {
+            return "About \(max(1, Int(seconds))) sec left"
+        } else if seconds < 3600 {
+            return "About \(Int(ceil(seconds / 60))) min left"
+        } else {
+            return "About \(Int(ceil(seconds / 3600))) hr left"
+        }
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
+            // Header
             HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(job.tier.title)
-                        .font(.headline)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(job.tier.setupTitle)
+                        .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.rossInk)
 
                     Text(alphaAssistantStateLabel(job.state))
-                        .font(.subheadline.weight(.semibold))
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(Color.rossAccent)
                 }
 
                 Spacer(minLength: 8)
 
-                AlphaPrivateAIInlineBadge(title: alphaAssistantStateLabel(job.state), tint: .orange)
+                AlphaPrivateAIInlineBadge(
+                    title: alphaAssistantStateLabel(job.state),
+                    tint: (job.state == .failed || job.state == .pausedError) ? .orange : Color.rossAccent
+                )
             }
 
+            // Detail
             Text(alphaAssistantActivityDetail(for: job.state))
                 .font(.caption)
-                .foregroundStyle(Color.rossInk.opacity(0.6))
+                .foregroundStyle(Color.rossInk.opacity(0.60))
                 .fixedSize(horizontal: false, vertical: true)
 
             if let failureReason = job.failureReason,
@@ -501,16 +528,42 @@ struct AlphaPrivateAIJobCard: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
+            // Progress
             if let progressValue = alphaDownloadProgressValue(job) {
-                VStack(alignment: .leading, spacing: 6) {
-                    ProgressView(value: progressValue, total: 1)
-                        .progressViewStyle(.linear)
-                        .tint(Color.rossAccent)
+                VStack(alignment: .leading, spacing: 8) {
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule()
+                                .fill(Color.rossAccent.opacity(0.12))
+                                .frame(height: 7)
+                            Capsule()
+                                .fill(LinearGradient(
+                                    colors: [Color.rossAccent.opacity(0.80), Color.rossAccent],
+                                    startPoint: .leading, endPoint: .trailing
+                                ))
+                                .frame(width: max(7, geo.size.width * CGFloat(progressValue)), height: 7)
+                                .shadow(color: Color.rossAccent.opacity(0.35), radius: 4)
+                                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: progressValue)
+                        }
+                    }
+                    .frame(height: 7)
 
-                    if let estimateLabel = alphaDownloadEstimateLabel(job) {
-                        Text(estimateLabel)
-                            .font(.caption)
-                            .foregroundStyle(Color.rossInk.opacity(0.6))
+                    HStack {
+                        if let bytesLabel = downloadedBytesLabel {
+                            Text(bytesLabel)
+                                .font(.caption2.weight(.medium))
+                                .foregroundStyle(Color.rossInk.opacity(0.55))
+                        }
+                        Spacer(minLength: 8)
+                        if let eta = etaLabel {
+                            Text(eta)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(Color.rossAccent.opacity(0.80))
+                        } else if let estimateLabel = alphaDownloadEstimateLabel(job) {
+                            Text(estimateLabel)
+                                .font(.caption2)
+                                .foregroundStyle(Color.rossInk.opacity(0.50))
+                        }
                     }
                 }
                 .accessibilityElement(children: .combine)
@@ -519,7 +572,6 @@ struct AlphaPrivateAIJobCard: View {
                     ProgressView()
                         .controlSize(.small)
                         .tint(Color.rossAccent)
-
                     Text(alphaAssistantStateLabel(job.state))
                         .font(.caption)
                         .foregroundStyle(Color.rossInk.opacity(0.68))
@@ -527,28 +579,43 @@ struct AlphaPrivateAIJobCard: View {
                 .accessibilityElement(children: .combine)
             }
 
+            // Actions
             if canPause || canResume {
                 HStack(spacing: 10) {
                     if canPause {
                         Button("Pause") { model.pauseJob(job) }
                             .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 16)
                     }
-
                     if canResume {
                         Button(job.state == .failed ? "Retry" : "Resume") { model.resumeJob(job) }
                             .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
                     }
                 }
             }
+
+            // Wi-Fi advisory during active download
+            if job.state == .downloading || job.state == .queued {
+                HStack(spacing: 6) {
+                    Image(systemName: "wifi")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Color.rossInk.opacity(0.36))
+                    Text("Stay on Wi-Fi — the download resumes automatically if interrupted.")
+                        .font(.caption2)
+                        .foregroundStyle(Color.rossInk.opacity(0.44))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
         }
-        .padding(14)
-        .background(Color.rossGlassSubtleFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(16)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(Color.rossGlassStroke.opacity(0.72), lineWidth: 1)
         }
+        .shadow(color: Color.rossShadow.opacity(0.10), radius: 12, y: 4)
     }
 }
+
 
 struct AlphaPrivateAIInstalledPackCard: View {
     @Bindable var model: AlphaRossModel
