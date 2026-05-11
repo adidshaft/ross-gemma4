@@ -14,11 +14,15 @@ let package = Package(
             targets: ["Ross"]
         )
     ],
-    dependencies: [],
+    dependencies: [
+        .package(url: "https://github.com/mattt/llama.swift", branch: "main")
+    ],
     targets: [
         .executableTarget(
             name: "Ross",
-            dependencies: [],
+            dependencies: [
+                .product(name: "LlamaSwift", package: "llama.swift")
+            ],
             path: "Ross",
             exclude: [
                 "Resources/Info.plist",

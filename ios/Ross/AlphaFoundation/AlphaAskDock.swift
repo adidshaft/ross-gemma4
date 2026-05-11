@@ -230,7 +230,7 @@ struct AlphaRootAskDock: View {
                 context = "your workspace"
             }
 
-            let isDemo = ProcessInfo.processInfo.environment["DEMO_MODE"] == "true" || ProcessInfo.processInfo.environment["REAL_LOCAL_GEMMA4"] == "false"
+            let isDemo = false
             
             return (
                 isDemo ? "Demo Mode" : "Ross is answering",
@@ -973,7 +973,7 @@ struct AlphaInlineAskResponseCard: View {
                         .fixedSize(horizontal: false, vertical: true)
 
                     if let note = result.statusNote {
-                        let isDemo = ProcessInfo.processInfo.environment["DEMO_MODE"] == "true" || ProcessInfo.processInfo.environment["REAL_LOCAL_GEMMA4"] == "false"
+                        let isDemo = false
                         Text(isDemo ? "Demo Mode — model response simulated for walkthrough." : note)
                             .font(.caption2.weight(.medium))
                             .foregroundStyle(isDemo ? Color.orange : Color.rossAccent)

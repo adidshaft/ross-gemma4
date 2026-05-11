@@ -674,17 +674,11 @@ enum AlphaLocalModelRuntime {
                 explicitOptInEnabled: debug.enableRealInference
             )
         case .llamaCppGguf:
-            let statusMessage = "Private assistant support is not ready on this iOS build. A verified Gemma 4 runtime is missing."
-            let errorCategory = "runtime_dependency_unavailable"
-            return AlphaUnavailableRealLocalModelProvider(
-                    capabilityTier: tier,
-                    runtimeMode: .llamaCppGguf,
-                    modelPathLabel: modelPathLabel,
-                    checksumVerified: checksumVerified,
-                statusMessage: statusMessage,
-                plannedTasks: [.documentClassification, .legalFieldExtraction, .legalFieldVerification, .caseMemorySynthesis, .chronologyGeneration, .orderSummary],
-                errorCategory: errorCategory,
-                explicitOptInEnabled: debug.enableRealInference
+            return AlphaLlamaCppProvider(
+                capabilityTier: tier,
+                modelPathLabel: modelPathLabel,
+                modelPath: modelPath,
+                checksumVerified: checksumVerified
             )
         case .appleFoundationModels:
             #if canImport(FoundationModels)

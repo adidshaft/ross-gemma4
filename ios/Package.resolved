@@ -1,5 +1,5 @@
 {
-  "originHash" : "2e6f1b0e9206478dbf0dd12a35f74562cb1e0efa60df66f116594f050d84c0dd",
+  "originHash" : "cbbc9bb6a837f3c8023b73b5cb3602352eb3033d4697dee8e778b0acbbf1bb04",
   "pins" : [
     {
       "identity" : "llama.swift",
@@ -7,7 +7,7 @@
       "location" : "https://github.com/mattt/llama.swift",
       "state" : {
         "branch" : "main",
-        "revision" : "1f9e698e8e732697ba98f5b98df8402e978ec904"
+        "revision" : "c4c245170ae775eac23f7596a19b8174fa6f9786"
       }
     }
   ],

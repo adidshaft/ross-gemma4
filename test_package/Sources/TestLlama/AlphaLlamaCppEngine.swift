@@ -14,9 +14,7 @@ func llama_batch_add(_ batch: inout llama_batch, _ id: llama_token, _ pos: llama
     batch.pos     [Int(batch.n_tokens)] = pos
     batch.n_seq_id[Int(batch.n_tokens)] = Int32(seq_ids.count)
     for i in 0..<seq_ids.count {
-        if let seqIdPtr = batch.seq_id[Int(batch.n_tokens)] {
-            seqIdPtr[Int(i)] = seq_ids[i]
-        }
+        batch.seq_id[Int(batch.n_tokens)]![Int(i)] = seq_ids[i]
     }
     batch.logits  [Int(batch.n_tokens)] = logits ? 1 : 0
 
@@ -24,11 +22,11 @@ func llama_batch_add(_ batch: inout llama_batch, _ id: llama_token, _ pos: llama
 }
 
 actor LlamaContext {
-    nonisolated(unsafe) private var model: OpaquePointer
-    nonisolated(unsafe) private var context: OpaquePointer
+    private var model: OpaquePointer
+    private var context: OpaquePointer
     private var vocab: OpaquePointer
-    nonisolated(unsafe) private var sampling: UnsafeMutablePointer<llama_sampler>
-    nonisolated(unsafe) private var batch: llama_batch
+    private var sampling: UnsafeMutablePointer<llama_sampler>
+    private var batch: llama_batch
     private var tokens_list: [llama_token]
     var is_done: Bool = false
 
