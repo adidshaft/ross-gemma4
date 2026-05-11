@@ -54,7 +54,7 @@
 		C704A78AF33415BCC6CF20E6 /* ModelCatalogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA11EC2983D1813DE6D0B242 /* ModelCatalogService.swift */; };
 		CCEFEC94E7BC87A862C8F913 /* AlphaDataModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BDF2721944CAB65DC4F629C /* AlphaDataModels.swift */; };
 		CF913D4FB64C57942D3BA1BA /* CaseRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = E74DB047A5F457623AD25580 /* CaseRepository.swift */; };
-		AABBCCDD0011223344556677 /* SwiftGemmaRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = AABBCCDD0011223344556678 /* SwiftGemmaRuntime */; };
+		AABBCCDD0011223344556677 /* LlamaSwift in Frameworks */ = {isa = PBXBuildFile; productRef = AABBCCDD0011223344556678 /* LlamaSwift */; };
 			D59528BC93111C2F548C1C55 /* DeviceCapabilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF026A2C0B93DFBD17AEFF9A /* DeviceCapabilityService.swift */; };
 			F1A1B2C3D4E5F60718293A40 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F1A1B2C3D4E5F60718293A41 /* Assets.xcassets */; };
 			FC118081573E2805C554D5A8 /* RossApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04E71658210E395C620C6267 /* RossApp.swift */; };
@@ -119,7 +119,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AABBCCDD0011223344556677 /* SwiftGemmaRuntime in Frameworks */,
+				AABBCCDD0011223344556677 /* LlamaSwift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -264,7 +264,7 @@
 			);
 			name = Ross;
 			packageProductDependencies = (
-				AABBCCDD0011223344556678 /* SwiftGemmaRuntime */,
+				AABBCCDD0011223344556678 /* LlamaSwift */,
 			);
 			productName = Ross;
 			productReference = 64DE66B33156149EA2DB94E5 /* Ross.app */;
@@ -297,7 +297,7 @@
 			productRefGroup = 5735844495CBC90D3295DF8A /* Products */;
 			projectDirPath = "";
 			packageReferences = (
-				AABBCCDD0011223344556679 /* XCRemoteSwiftPackageReference "swift-gemma-runtime" */,
+				AABBCCDD0011223344556679 /* XCRemoteSwiftPackageReference "llama.swift" */,
 			);
 			projectRoot = "";
 			targets = (
@@ -576,21 +576,21 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		AABBCCDD0011223344556679 /* XCRemoteSwiftPackageReference "swift-gemma-runtime" */ = {
+		AABBCCDD0011223344556679 /* XCRemoteSwiftPackageReference "llama.swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/pgorzelany/swift-gemma-runtime";
+			repositoryURL = "https://github.com/mattt/llama.swift";
 			requirement = {
-				kind = exactVersion;
-				version = 1.2.0;
+				kind = branch;
+				branch = main;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		AABBCCDD0011223344556678 /* SwiftGemmaRuntime */ = {
+		AABBCCDD0011223344556678 /* LlamaSwift */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = AABBCCDD0011223344556679 /* XCRemoteSwiftPackageReference "swift-gemma-runtime" */;
-			productName = SwiftGemmaRuntime;
+			package = AABBCCDD0011223344556679 /* XCRemoteSwiftPackageReference "llama.swift" */;
+			productName = LlamaSwift;
 		};
 /* End XCSwiftPackageProductDependency section */
 		};
