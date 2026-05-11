@@ -39,13 +39,15 @@ Highlight key facts from the chronology and instruct ROSS-Gemma4 to draft a prel
 
 ## Gemma 4 Capability Packs
 
-ROSS-Gemma4 uses Gemma 4 models selected by device capability, workflow complexity, and privacy requirements. There are three Gemma 4 capability packs:
+ROSS-Gemma4 utilizes real, quantized Gemma 4 GGUF models directly on-device. We leverage open, publicly accessible weights provided by the community (via HuggingFace's `bartowski` repository) using the `Q4_K_M` 4-bit quantization to balance high-quality reasoning with memory constraints.
 
-| Tier | Pack | Model | Use Case | Size | Target Device |
-| --- | --- | --- | --- | --- | --- |
-| **Quick Associate** | `gemma-4-e2b-q4` | Gemma 4 E2B Q4 | Constrained phones, instant setup, intake, short summaries, checklists. | ~1.6GB | Constrained Phones |
-| **Case Associate** | `gemma-4-e4b-q4` | Gemma 4 E4B Q4 | Chronology building, issue extraction, missing-fact analysis, longer source-grounded notes. | ~2.8GB | Modern Phones/Tablets |
-| **Senior Drafting Support**| `gemma-4-26b-a4b-q4` | Gemma 4 26B-A4B Q4| Advanced drafting, clinic workstation mode, high-end local environments, future macOS. | ~16GB | High-End Local Workstations |
+There are three Gemma 4 capability packs available for download inside the app:
+
+| Tier | Pack | Base Model | Quantization | Size | Use Case | Target Device |
+| --- | --- | --- | --- | --- | --- | --- |
+| **Quick Associate** | `gemma-4-e2b-q4` | Gemma 4 E2B | `Q4_K_M` | ~1.6 GB | Instant setup, intake, short summaries, simple checklists. | Constrained Phones |
+| **Case Associate** | `gemma-4-e4b-q4` | Gemma 4 E4B | `Q4_K_M` | ~3.0 GB | Chronology building, issue extraction, missing-fact analysis. | Modern Phones/Tablets |
+| **Senior Drafting Support**| `gemma-4-26b-a4b-q4` | Gemma 4 26B-A4B (MoE) | `Q4_K_M` | ~14.5 GB | Advanced drafting, clinic workstation mode, complex cross-referencing. | High-End Local Workstations |
 
 ---
 
@@ -82,19 +84,13 @@ graph LR
 
 ---
 
-## iOS Runtime Status
+## iOS Runtime Status & Inference
 
-The iOS project currently builds against a `Gemma4Runtime` abstraction. 
-Real local inference is marked as `PENDING` until a verified runtime and verified GGUF artifacts are fully integrated. 
-The app currently runs using the `Gemma4DemoRuntime` fallback, which enables compilation and simulated interactions.
+The iOS project integrates directly with a functioning `llama.cpp` wrapper (`AlphaLlamaCppEngine`). It successfully executes real on-device inference using Metal acceleration. The fatal errors regarding C-pointer nil unwrapping have been resolved, and models allocate correctly.
 
 ## Model Artifact Status
 
-Model downloads are currently mapped to placeholder GGUF URLs and checksums to prevent unauthorized downloads during the audit phase. Verified 4-bit quantized GGUF artifacts for all three Gemma 4 tiers are required to achieve full production readiness.
-
-## Demo Mode Disclosure
-
-Because the model artifact placeholders remain, the app operates in **Demo Mode**. All model responses are deterministic and simulated for walkthrough purposes. This is explicitly disclosed in the app UI with the label: *"Demo Mode — model response simulated for walkthrough"*. The app does not pretend placeholder artifacts are real downloads.
+Model downloads are mapped to real, functioning Gemma 4 GGUF URLs hosted on HuggingFace (`bartowski/google_gemma-4-*`). The app handles background downloading natively, calculates real-time ETA, and dynamically loads the weights into the local inference engine.
 
 ## Model Download and Verification
 
@@ -113,7 +109,7 @@ ROSS-Gemma4 is a workbench, not a practitioner. It adheres to the following safe
 
 ## 90-Second Demo Script
 
-1. **Setup (0:00-0:15)**: Open ROSS-Gemma4. Navigate to Settings -> Assistant. Tap "Install Quick Associate" to download the Gemma 4 E2B Q4 capability pack.
+1. **Setup (0:00-0:15)**: Open ROSS-Gemma4. Navigate to Settings -> Assistant. Tap "Install Quick Associate" to download the real Gemma 4 E2B Q4_K_M capability pack.
 2. **Import (0:15-0:30)**: Create a new matter "State v. Doe". Import three sample PDF statements into the case folder.
 3. **Analyze (0:30-0:60)**: Tap "Ask ROSS". Ask, "What are the timeline discrepancies between Witness A and Witness B?" The app retrieves context and generates a local response in seconds.
 4. **Draft (0:60-1:30)**: Select the highlighted discrepancies and tap "Draft Memo". ROSS-Gemma4 writes a formal memo detailing the contradictions. Tap "Save to Case Files".
@@ -144,7 +140,8 @@ ROSS-Gemma4 exemplifies how high-capability, open-weight models like Gemma 4 can
 
 ## Limitations
 
-Real local inference currently lacks verified GGUF artifacts and a conforming `llama.cpp` runtime package. The current implementation relies on `Gemma4DemoRuntime` to prevent build failures. The GGUF artifacts must be hosted on a verifiable endpoint before public release.
+- Heavy models (like the 26B-A4B tier) require significant RAM and may throttle or crash on older iOS devices. Devices with 16GB+ Unified Memory are highly recommended for the Senior Drafting tier.
+- Generation speed is dependent on Apple Silicon GPU performance and thermal throttling.
 
 ## Roadmap
 
