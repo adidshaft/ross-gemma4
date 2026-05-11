@@ -106,22 +106,22 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
     var downloadSizeLabel: String {
         switch self {
         case .quickStart:
-            "1.6 GB"
+            "3.5 GB"
         case .caseAssociate:
-            "3.0 GB"
+            "5.4 GB"
         case .seniorDraftingSupport:
-            "14.5 GB"
+            "17.0 GB"
         }
     }
 
     var installedSizeLabel: String {
         switch self {
         case .quickStart:
-            "1.6 GB"
+            "3.5 GB"
         case .caseAssociate:
-            "3.0 GB"
+            "5.4 GB"
         case .seniorDraftingSupport:
-            "14.5 GB"
+            "17.0 GB"
         }
     }
 
