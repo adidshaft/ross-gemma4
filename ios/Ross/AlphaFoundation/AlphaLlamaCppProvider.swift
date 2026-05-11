@@ -55,8 +55,8 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         return 16000
     }
     
-    private static var cachedContext: LlamaContext?
-    private static var cachedPath: String?
+    nonisolated(unsafe) private static var cachedContext: LlamaContext?
+    nonisolated(unsafe) private static var cachedPath: String?
     private static let cacheLock = NSLock()
 
     private func getOrContext(path: String) throws -> LlamaContext {

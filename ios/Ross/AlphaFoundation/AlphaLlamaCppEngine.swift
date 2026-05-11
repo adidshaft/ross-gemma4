@@ -60,7 +60,7 @@ actor LlamaContext {
         llama_free(context)
     }
 
-    private static var backendInitialized = false
+    nonisolated(unsafe) private static var backendInitialized = false
     private static let backendLock = NSLock()
 
     static func create_context(path: String) throws -> LlamaContext {
