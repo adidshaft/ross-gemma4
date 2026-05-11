@@ -329,7 +329,7 @@ extension AlphaRossModel {
                     var lastReceived: Int64 = -1
                     var lastExpected: Int64 = -1
                     while !Task.isCancelled {
-                        try? await Task.sleep(nanoseconds: 500_000_000)
+                        try? await Task.sleep(nanoseconds: 1_000_000_000)
                         guard !Task.isCancelled else { break }
 
                         if persisted.modelJobs.first(where: { $0.id == jobID })?.state == .pausedUser {
@@ -351,7 +351,8 @@ extension AlphaRossModel {
                             }
                             $0.updatedAt = .now
                         }
-                        persist()
+                        // Intentionally not calling persist() here to avoid massive I/O and OOM crashes.
+                        // The UI updates automatically via @Observable, and the final state is saved on completion.
 
                         if task.state == .completed {
                             break
