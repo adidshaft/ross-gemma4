@@ -215,19 +215,11 @@ struct AlphaOnboardingDownloadCard: View {
     @Environment(\.colorScheme) private var colorScheme
     let tier: AlphaCapabilityTier
 
-    private var sizeLabel: String {
-        switch tier {
-        case .quickStart:         return "1.6 GB"
-        case .caseAssociate:      return "5.4 GB"
-        case .seniorDraftingSupport: return "15.5 GB"
-        }
-    }
-
     private var etaLabel: String {
         switch tier {
-        case .quickStart:         return "~3 min on Wi-Fi"
-        case .caseAssociate:      return "~10 min on Wi-Fi"
-        case .seniorDraftingSupport: return "~30 min on Wi-Fi"
+        case .quickStart:         return "~3 min"
+        case .caseAssociate:      return "~10 min"
+        case .seniorDraftingSupport: return "~30 min"
         }
     }
 
@@ -278,9 +270,8 @@ struct AlphaOnboardingDownloadCard: View {
             Divider()
                 .opacity(0.45)
 
-            // Size + ETA row
             HStack(spacing: 0) {
-                AlphaOnboardingStatCell(label: "Download size", value: sizeLabel, icon: "arrow.down.circle.fill")
+                AlphaOnboardingStatCell(label: "Download size", value: tier.downloadSizeLabel, icon: "arrow.down.circle.fill")
                 Divider().frame(height: 36).opacity(0.38)
                 AlphaOnboardingStatCell(label: "On fast Wi-Fi", value: etaLabel, icon: "wifi")
             }

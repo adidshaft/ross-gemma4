@@ -12,6 +12,11 @@ ROSS-Gemma4 is a mobile-first, privacy-preserving legal workbench built around G
 [![Source Grounded RAG](https://img.shields.io/badge/Source_Grounded-RAG-orange.svg)](#)
 [![Human Review Required](https://img.shields.io/badge/Human_Review-Required-red.svg)](#)
 
+<p align="center">
+  <img src="docs/images/onboarding_welcome.png" width="250" alt="Private Onboarding" />
+  <img src="docs/images/dashboard_needs_attention.png" width="250" alt="Dashboard" />
+  <img src="docs/images/matter_needs_review.png" width="250" alt="Matter Needs Review" />
+</p>
 ---
 
 ## Problem Statement
