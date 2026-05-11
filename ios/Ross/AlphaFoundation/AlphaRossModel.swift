@@ -1048,3 +1048,16 @@ func alphaSystemAssistantPack(for tier: AlphaCapabilityTier) -> AlphaInstalledMo
         isActive: true
     )
 }
+
+extension AlphaRossModel {
+    var freeDiskSpaceLabel: String {
+        guard let systemAttributes = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory()),
+              let freeSize = systemAttributes[.systemFreeSize] as? NSNumber else {
+            return "Unknown free space"
+        }
+        let formatter = ByteCountFormatter()
+        formatter.allowedUnits = [.useGB, .useMB]
+        formatter.countStyle = .file
+        return "\(formatter.string(fromByteCount: freeSize.int64Value)) available"
+    }
+}

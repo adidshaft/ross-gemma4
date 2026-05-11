@@ -405,6 +405,14 @@ struct AlphaPrivateAIOfferCard: View {
                     .foregroundStyle(Color.rossInk.opacity(0.66))
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 12) {
+                    Label(offer.tier.downloadSizeLabel, systemImage: "arrow.down.circle")
+                    Label(model.freeDiskSpaceLabel, systemImage: "internaldrive")
+                }
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(Color.rossInk.opacity(0.55))
+                .padding(.top, 2)
             }
 
             if let latestJob,

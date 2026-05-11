@@ -407,6 +407,7 @@ struct AlphaModelPickerSheet: View {
 
                     ForEach(AlphaCapabilityTier.allCases, id: \.self) { tier in
                         AlphaModelPickerRow(
+                            model: model,
                             tier: tier,
                             isRecommended: tier == model.recommendedOnDeviceTier()
                         ) {
@@ -441,17 +442,10 @@ struct AlphaModelPickerSheet: View {
 
 struct AlphaModelPickerRow: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Bindable var model: AlphaRossModel
     let tier: AlphaCapabilityTier
     let isRecommended: Bool
     let onSelect: () -> Void
-
-    private var sizeLabel: String {
-        switch tier {
-        case .quickStart:            return "1.6 GB"
-        case .caseAssociate:         return "5.4 GB"
-        case .seniorDraftingSupport: return "15.5 GB"
-        }
-    }
 
     private var etaLabel: String {
         switch tier {
@@ -502,14 +496,20 @@ struct AlphaModelPickerRow: View {
                         }
 
                         HStack(spacing: 10) {
-                            Label(sizeLabel, systemImage: "arrow.down.circle")
+                            Label(tier.downloadSizeLabel, systemImage: "arrow.down.circle")
                                 .font(.caption.weight(.medium))
                                 .foregroundStyle(Color.rossInk.opacity(0.55))
 
                             Label(etaLabel, systemImage: "wifi")
                                 .font(.caption.weight(.medium))
                                 .foregroundStyle(Color.rossInk.opacity(0.55))
+
+                            Label(model.freeDiskSpaceLabel, systemImage: "internaldrive")
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(Color.rossInk.opacity(0.55))
                         }
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                     }
 
                     Spacer(minLength: 0)
