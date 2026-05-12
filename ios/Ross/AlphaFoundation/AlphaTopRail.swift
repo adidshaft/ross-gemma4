@@ -16,15 +16,26 @@ import AppKit
 struct AlphaTabShell: View {
     @Bindable var model: AlphaRossModel
     let authController: RossAuthController?
-    @State private var showingSettings = false
 
     var body: some View {
-        AlphaFeedScreen(model: model)
+        Group {
+            switch model.persisted.selectedTab {
+            case .today, .home:
+                AlphaTodayWorkbenchScreen(model: model)
+            case .matters:
+                AlphaMattersWorkbenchScreen(model: model)
+            case .files:
+                AlphaFilesWorkbenchScreen(model: model)
+            case .work:
+                AlphaPreparedWorkScreen(model: model)
+            case .settings:
+                AlphaSettingsScreen(model: model, authController: authController)
+            }
+        }
             .safeAreaInset(edge: .top, spacing: 0) {
                 AlphaRootTopRail(
                     model: model,
                     onCompose: { model.openAsk() },
-                    onOpenSettings: { showingSettings = true },
                     onCreateMatter: { model.path.append(.createCase) }
                 )
                 .padding(.horizontal, 12)
@@ -37,39 +48,383 @@ struct AlphaTabShell: View {
                         .ignoresSafeArea(edges: .top)
                 }
             }
-            .safeAreaInset(edge: .bottom) {
-                AlphaRootAskDock(
-                    model: model,
-                    fixedScopeCaseID: nil,
-                    showsInlineResponseCard: true,
-                    collapsesWhenIdle: true
-                )
-                .padding(.horizontal, 12)
-                .padding(.top, 8)
-            }
-            .sheet(isPresented: $showingSettings) {
-                NavigationStack {
-                    AlphaSettingsScreen(model: model, authController: authController)
-                        .navigationDestination(for: AlphaRoute.self) { route in
-                            switch route {
-                            case .privacyLedger:
-                                AlphaPrivacyLedgerScreen(model: model)
-                            case .privateAISettings:
-                                AlphaPrivateAISettingsScreen(model: model)
-                            default:
-                                EmptyView()
-                            }
-                        }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                VStack(spacing: 8) {
+                    if model.persisted.selectedTab != .settings {
+                        AlphaRootAskDock(
+                            model: model,
+                            fixedScopeCaseID: nil,
+                            showsInlineResponseCard: true,
+                            collapsesWhenIdle: true
+                        )
+                        .padding(.horizontal, 12)
+                        .padding(.top, 8)
+                    }
+
+                    AlphaWorkbenchTabBar(model: model)
+                        .padding(.horizontal, 12)
+                        .padding(.bottom, 6)
+                }
+                .background {
+                    Rectangle()
+                        .fill(Color.rossGroupedBackground.opacity(0.78))
+                        .background(.ultraThinMaterial)
+                        .ignoresSafeArea(edges: .bottom)
                 }
             }
             .tint(Color.rossAccent)
     }
 }
 
+struct AlphaWorkbenchTabBar: View {
+    @Bindable var model: AlphaRossModel
+
+    private let tabs: [AlphaAppTab] = [.today, .matters, .files, .work, .settings]
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(tabs, id: \.rawValue) { tab in
+                let isSelected = tab == model.persisted.selectedTab || (tab == .today && model.persisted.selectedTab == .home)
+                Button {
+                    alphaHaptic(.selection)
+                    model.persisted.selectedTab = tab
+                    model.persist(workspaceChanged: false)
+                } label: {
+                    VStack(spacing: 3) {
+                        Image(systemName: tab.systemImage)
+                            .font(.system(size: 14, weight: .semibold))
+                        Text(tab.title)
+                            .font(.system(size: 10, weight: .semibold))
+                    }
+                    .foregroundStyle(isSelected ? Color.rossAccent : Color.rossInk.opacity(0.56))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 46)
+                    .background(isSelected ? Color.rossAccent.opacity(0.1) : Color.clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(tab.title)
+            }
+        }
+        .padding(4)
+        .background(Color.rossCardBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.rossBorder.opacity(0.9), lineWidth: 1)
+        }
+    }
+}
+
+struct AlphaTodayWorkbenchScreen: View {
+    @Bindable var model: AlphaRossModel
+
+    var body: some View {
+        let work = model.preparedWorkNeedingAttention()
+        let todayDates = model.todayDateRows()
+        let todayTasks = model.todayTasks()
+        let upcomingDates = model.upcomingDateRows()
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: alphaSectionSpacing) {
+                RossHeroCard(
+                    eyebrow: alphaGreeting(),
+                    title: work.isEmpty ? "No prepared work needs review" : "\(work.count) item(s) need review",
+                    detail: "Works locally on this device",
+                    showsMedia: false,
+                    mediaHeight: 108,
+                    logoSize: 58
+                ) {
+                    AlphaLocalPrivacyBadge()
+                }
+
+                if let first = work.first {
+                    AlphaPreparedWorkCard(model: model, item: first, prominent: true)
+                } else {
+                    AlphaHonestEmptyCard(title: "Nothing prepared yet", detail: "Import matter files or ask Ross to prepare today. Ross will not invent work without local matter state.")
+                }
+
+                AlphaTodayDatesCard(title: "Upcoming dates and urgent tasks", dates: todayDates + Array(upcomingDates.prefix(3)), tasks: Array(todayTasks.prefix(3)), model: model)
+            }
+            .padding(alphaScreenPadding)
+            .padding(.bottom, 116)
+        }
+        .rossHideNavigationBarIfSupported()
+    }
+}
+
+struct AlphaMattersWorkbenchScreen: View {
+    @Bindable var model: AlphaRossModel
+
+    var body: some View {
+        let matters = model.cases.filter { $0.id != alphaSharedWorkspaceID }
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 14) {
+                AlphaInlineHeader(eyebrow: "Matters", title: "Matter workspaces", detail: "\(matters.count) active")
+                if matters.isEmpty {
+                    AlphaMatterStarterCard(model: model)
+                } else {
+                    ForEach(matters) { caseMatter in
+                        Button {
+                            model.focusCase(caseMatter.id)
+                            model.path.append(.caseWorkspace(caseMatter.id))
+                        } label: {
+                            AlphaCaseSummaryCard(model: model, caseMatter: caseMatter)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            .padding(alphaScreenPadding)
+            .padding(.bottom, 116)
+        }
+        .rossHideNavigationBarIfSupported()
+    }
+}
+
+struct AlphaFilesWorkbenchScreen: View {
+    @Bindable var model: AlphaRossModel
+
+    var body: some View {
+        let documents = model.recentDocumentItems()
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 14) {
+                AlphaInlineHeader(eyebrow: "Files", title: "Local file room", detail: "\(documents.count) file(s) across matters")
+                if documents.isEmpty {
+                    AlphaHonestEmptyCard(title: "No files imported", detail: "Files you import stay inspectable here after local extraction.")
+                } else {
+                    ForEach(documents) { entry in
+                        Button {
+                            model.focusCase(entry.caseId)
+                            model.path.append(.documentViewer(entry.caseId, entry.document.id, 1))
+                        } label: {
+                            AlphaDocumentRow(caseTitle: entry.caseTitle, document: entry.document, showChevron: true)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            .padding(alphaScreenPadding)
+            .padding(.bottom, 116)
+        }
+        .rossHideNavigationBarIfSupported()
+    }
+}
+
+struct AlphaPreparedWorkScreen: View {
+    @Bindable var model: AlphaRossModel
+    @State private var statusFilter: AlphaPreparedWorkStatus?
+
+    var body: some View {
+        let items = model.preparedWorkItems(includeDismissed: true)
+            .filter { statusFilter == nil || $0.status == statusFilter }
+        let grouped = Dictionary(grouping: items, by: { $0.matterName })
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 14) {
+                HStack {
+                    AlphaInlineHeader(eyebrow: "Work", title: "Prepared work inbox", detail: "\(items.count) item(s)")
+                    Spacer(minLength: 0)
+                    Menu {
+                        Button("All") { statusFilter = nil }
+                        ForEach(AlphaPreparedWorkStatus.allCases, id: \.rawValue) { status in
+                            Button(status.title) { statusFilter = status }
+                        }
+                    } label: {
+                        Image(systemName: "line.3.horizontal.decrease")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Color.rossInk)
+                            .frame(width: 34, height: 34)
+                            .background(Color.rossCardBackground, in: Circle())
+                    }
+                }
+
+                if items.isEmpty {
+                    AlphaHonestEmptyCard(title: "No prepared work", detail: "Ross only shows prepared work generated from real saved matters, files, dates, tasks, drafts, public-law previews, and source refs.")
+                } else {
+                    ForEach(grouped.keys.sorted(), id: \.self) { matterName in
+                        VStack(alignment: .leading, spacing: 10) {
+                            AlphaWorkspaceSectionLabel(title: matterName, detail: "\(grouped[matterName]?.count ?? 0) item(s)")
+                            ForEach(grouped[matterName] ?? []) { item in
+                                AlphaPreparedWorkCard(model: model, item: item, prominent: false)
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(alphaScreenPadding)
+            .padding(.bottom, 116)
+        }
+        .rossHideNavigationBarIfSupported()
+    }
+}
+
+struct AlphaLocalPrivacyBadge: View {
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "lock.shield")
+                .font(.system(size: 13, weight: .semibold))
+            Text("Works locally on this device")
+                .font(.caption.weight(.semibold))
+        }
+        .foregroundStyle(Color.rossInk.opacity(0.76))
+        .padding(.horizontal, 12)
+        .frame(height: 32)
+        .background(Color.rossCardBackground, in: Capsule())
+        .overlay { Capsule().stroke(Color.rossBorder, lineWidth: 1) }
+    }
+}
+
+struct AlphaPreparedWorkCard: View {
+    @Bindable var model: AlphaRossModel
+    let item: AlphaPreparedWorkItem
+    let prominent: Bool
+
+    var body: some View {
+        RossSectionCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(item.matterName)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.rossInk.opacity(0.58))
+                        Text(item.title)
+                            .font((prominent ? Font.headline : Font.subheadline).weight(.semibold))
+                            .foregroundStyle(Color.rossInk)
+                        Text(item.summary)
+                            .font(.subheadline)
+                            .foregroundStyle(Color.rossInk.opacity(0.72))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
+                    Text(item.badge.title)
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(alphaPreparedBadgeColor(item.badge))
+                        .padding(.horizontal, 8)
+                        .frame(height: 24)
+                        .background(alphaPreparedBadgeColor(item.badge).opacity(0.1), in: Capsule())
+                }
+
+                if !item.sourceRefs.isEmpty {
+                    AlphaSourceRefChips(sourceRefs: item.sourceRefs, contextDocumentTitle: nil) { sourceRef in
+                        model.path.append(.documentViewer(sourceRef.caseId, sourceRef.documentId, sourceRef.pageNumber))
+                    }
+                }
+
+                HStack(spacing: 8) {
+                    Button(item.primaryAction) {
+                        alphaHaptic(.selection)
+                        alphaHandlePreparedPrimaryAction(item, model: model)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.rossAccent)
+
+                    Button("Accept") {
+                        model.setPreparedWorkStatus(item.id, status: .accepted)
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button("Edit") {
+                        alphaHandlePreparedEdit(item, model: model)
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button("Dismiss") {
+                        model.setPreparedWorkStatus(item.id, status: .dismissed)
+                    }
+                    .buttonStyle(.bordered)
+                }
+                .font(.caption.weight(.semibold))
+            }
+        }
+    }
+}
+
+struct AlphaTodayDatesCard: View {
+    let title: String
+    let dates: [AlphaUpcomingDateRow]
+    let tasks: [AlphaTaskItem]
+    @Bindable var model: AlphaRossModel
+
+    var body: some View {
+        RossSectionCard {
+            VStack(alignment: .leading, spacing: 12) {
+                AlphaWorkspaceSectionLabel(title: title, detail: "\(dates.count + tasks.count) item(s)")
+                if dates.isEmpty && tasks.isEmpty {
+                    Text("No dates or urgent tasks saved for today.")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.rossInk.opacity(0.66))
+                } else {
+                    ForEach(dates, id: \.title) { row in
+                        AlphaSummaryRow(title: row.title, detail: row.detail, tint: Color.rossAccent)
+                    }
+                    ForEach(tasks) { task in
+                        AlphaTaskRow(task: task, onToggle: { model.toggleTaskDone(task.id) })
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct AlphaHonestEmptyCard: View {
+    let title: String
+    let detail: String
+
+    var body: some View {
+        RossSectionCard {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(title)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(Color.rossInk)
+                Text(detail)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.rossInk.opacity(0.68))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+}
+
+private func alphaPreparedBadgeColor(_ badge: AlphaPreparedWorkBadge) -> Color {
+    switch badge {
+    case .sourceBacked:
+        Color.green
+    case .preparedLocally:
+        Color.rossAccent
+    case .needsReview:
+        Color.orange
+    case .approvalRequired:
+        Color.red
+    }
+}
+
+@MainActor
+private func alphaHandlePreparedPrimaryAction(_ item: AlphaPreparedWorkItem, model: AlphaRossModel) {
+    if item.type == .publicLawQueryAwaitingApproval {
+        Task { await model.confirmPendingPublicLawSearch() }
+        return
+    }
+    if let ref = item.sourceRefs.first {
+        model.path.append(.documentViewer(ref.caseId, ref.documentId, ref.pageNumber))
+        model.setPreparedWorkStatus(item.id, status: .reviewed)
+        return
+    }
+    if let caseId = item.caseId {
+        model.path.append(.caseWorkspace(caseId))
+        model.setPreparedWorkStatus(item.id, status: .reviewed)
+    }
+}
+
+@MainActor
+private func alphaHandlePreparedEdit(_ item: AlphaPreparedWorkItem, model: AlphaRossModel) {
+    if let caseId = item.caseId {
+        model.openAsk(scopeCaseID: caseId)
+    } else {
+        model.openAsk()
+    }
+    model.setPreparedWorkStatus(item.id, status: .reviewed)
+}
+
 struct AlphaRootTopRail: View {
     @Bindable var model: AlphaRossModel
     let onCompose: () -> Void
-    let onOpenSettings: () -> Void
     let onCreateMatter: () -> Void
 
     var body: some View {
@@ -103,22 +458,15 @@ struct AlphaRootTopRail: View {
                 onCreateMatter()
             }
 
-            Button {
-                alphaHaptic(.selection)
-                onOpenSettings()
-            } label: {
-                Image(systemName: "gearshape")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.rossInk)
-                    .frame(width: 34, height: 34)
-                    .background(.ultraThinMaterial, in: Circle())
-                    .overlay {
-                        Circle()
-                            .stroke(Color.rossBorder.opacity(0.9), lineWidth: 1)
-                    }
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Settings")
+            AlphaTopRailIconButton(
+                systemImage: "slider.horizontal.3",
+                accessibilityLabel: "Settings",
+                action: {
+                    alphaHaptic(.selection)
+                    model.persisted.selectedTab = .settings
+                    model.persist()
+                }
+            )
         }
     }
 }

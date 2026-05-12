@@ -264,6 +264,20 @@ extension AlphaRossModel {
         path.append(.askCase(caseId))
     }
 
+    func prepareDocumentTranslation(caseId: UUID, documentId: UUID, targetLanguageCode: String) {
+        guard let caseMatter = persisted.cases.first(where: { $0.id == caseId }),
+              let document = caseMatter.documents.first(where: { $0.id == documentId }) else { return }
+
+        let targetLanguage = rossLanguageDisplayName(code: targetLanguageCode)
+        openDocumentInChat(caseId: caseId, documentId: documentId, startNewThread: false)
+        setAskDraft(
+            """
+            Translate "\(document.title)" into \(targetLanguage) for advocate review. Preserve legal terms, dates, party names, and quoted text carefully. Use only this selected document and cite source pages where the translation depends on page text.
+            """,
+            for: caseMatter.id
+        )
+    }
+
     func submitAsk(question: String, scopeCaseID: UUID?, webEnabled: Bool) {
         let cleaned = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleaned.isEmpty else { return }
@@ -730,6 +744,30 @@ extension AlphaRossModel {
                 publicLawPreview: nil,
                 publicLawResults: [],
                 statusNote: addedCount == 0 ? "No change made" : "Saved locally",
+                needsReviewWarning: nil
+            )
+
+        case let .runRoutine(kind):
+            let targetCaseID = scopeCaseID == alphaSharedWorkspaceID ? nil : scopeCaseID
+            runWorkbenchRoutine(kind, caseId: targetCaseID)
+            let preparedCount = preparedWorkNeedingAttention(caseId: targetCaseID).count
+            result = AlphaAskResult(
+                kind: .matterUpdate,
+                question: rawInput,
+                scopeCaseID: targetCaseID,
+                scopeLabel: scopeLabel(for: targetCaseID),
+                selectedDocumentTitles: selectedDocumentTitles,
+                answerTitle: kind == .publicLawPreview ? "Approval required" : "\(kind.title) prepared",
+                answerSections: [
+                    kind == .publicLawPreview
+                        ? "Ross prepared a sanitized public-law query preview. No web search has run."
+                        : "Ross reviewed saved local matter state and updated prepared work.",
+                    preparedCount == 0 ? "No items need advocate attention right now." : "\(preparedCount) item(s) need advocate attention."
+                ],
+                caseFileSources: [],
+                publicLawPreview: kind == .publicLawPreview ? publicLawPreview : nil,
+                publicLawResults: [],
+                statusNote: kind == .publicLawPreview ? "Review required" : "Prepared locally",
                 needsReviewWarning: nil
             )
 

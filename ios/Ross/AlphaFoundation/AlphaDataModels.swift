@@ -8,16 +8,61 @@ enum AlphaOnboardingStage: String, Codable, Hashable, Sendable {
 }
 
 enum AlphaAppTab: String, Codable, Hashable, CaseIterable, Sendable {
+    case today
+    case matters
+    case files
+    case work
+    case settings
     case home
 
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
-        let rawValue = (try? container.decode(String.self)) ?? Self.home.rawValue
+        let rawValue = (try? container.decode(String.self)) ?? Self.today.rawValue
         switch rawValue {
+        case Self.today.rawValue:
+            self = .today
         case Self.home.rawValue:
             self = .home
+        case Self.matters.rawValue:
+            self = .matters
+        case Self.files.rawValue:
+            self = .files
+        case Self.work.rawValue:
+            self = .work
+        case Self.settings.rawValue:
+            self = .settings
         default:
-            self = .home
+            self = .today
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .today, .home:
+            "Today"
+        case .matters:
+            "Matters"
+        case .files:
+            "Files"
+        case .work:
+            "Work"
+        case .settings:
+            "Settings"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .today, .home:
+            "sun.max"
+        case .matters:
+            "folder"
+        case .files:
+            "doc.text"
+        case .work:
+            "tray.full"
+        case .settings:
+            "slider.horizontal.3"
         }
     }
 }
@@ -665,6 +710,8 @@ enum AlphaExtractionMode: String, Codable, Hashable, Sendable {
 enum AlphaDocumentLanguage: String, Codable, Hashable, Sendable {
     case english
     case hindi
+    case tamil
+    case telugu
     case mixed
     case unknown
 }
@@ -672,6 +719,8 @@ enum AlphaDocumentLanguage: String, Codable, Hashable, Sendable {
 enum AlphaDocumentScript: String, Codable, Hashable, Sendable {
     case latin
     case devanagari
+    case tamil
+    case telugu
     case mixed
     case other
     case unknown
@@ -1607,6 +1656,7 @@ struct AlphaModelDownloadJob: Identifiable, Codable, Hashable, Sendable {
     var developmentOnly: Bool
     var minimumAppVersion: String
     var failureReason: String?
+    var resumeDataRelativePath: String?
     var createdAt: Date
     var updatedAt: Date
     var completedAt: Date?
@@ -1626,6 +1676,7 @@ struct AlphaModelDownloadJob: Identifiable, Codable, Hashable, Sendable {
         developmentOnly: Bool = false,
         minimumAppVersion: String = "0.1.0",
         failureReason: String? = nil,
+        resumeDataRelativePath: String? = nil,
         createdAt: Date = .now,
         updatedAt: Date = .now,
         completedAt: Date? = nil
@@ -1644,6 +1695,7 @@ struct AlphaModelDownloadJob: Identifiable, Codable, Hashable, Sendable {
         self.developmentOnly = developmentOnly
         self.minimumAppVersion = minimumAppVersion
         self.failureReason = failureReason
+        self.resumeDataRelativePath = resumeDataRelativePath
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.completedAt = completedAt
@@ -1669,6 +1721,7 @@ struct AlphaModelDownloadJob: Identifiable, Codable, Hashable, Sendable {
         case developmentOnly
         case minimumAppVersion
         case failureReason
+        case resumeDataRelativePath
         case createdAt
         case updatedAt
         case completedAt
@@ -1690,6 +1743,7 @@ struct AlphaModelDownloadJob: Identifiable, Codable, Hashable, Sendable {
         developmentOnly = try container.decodeIfPresent(Bool.self, forKey: .developmentOnly) ?? false
         minimumAppVersion = try container.decodeIfPresent(String.self, forKey: .minimumAppVersion) ?? "0.1.0"
         failureReason = try container.decodeIfPresent(String.self, forKey: .failureReason)
+        resumeDataRelativePath = try container.decodeIfPresent(String.self, forKey: .resumeDataRelativePath)
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? .now
         updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? createdAt
         completedAt = try container.decodeIfPresent(Date.self, forKey: .completedAt)
@@ -1800,6 +1854,37 @@ struct AlphaPublicLawCacheItem: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
+struct AlphaModelUpdateCandidate: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID
+    var tier: AlphaCapabilityTier
+    var installedPackId: String
+    var availablePackId: String
+    var availableSizeBytes: Int64
+    var requiresWifi: Bool
+    var checkedAt: Date
+    var dismissedAt: Date?
+
+    init(
+        id: UUID = UUID(),
+        tier: AlphaCapabilityTier,
+        installedPackId: String,
+        availablePackId: String,
+        availableSizeBytes: Int64,
+        requiresWifi: Bool = true,
+        checkedAt: Date = .now,
+        dismissedAt: Date? = nil
+    ) {
+        self.id = id
+        self.tier = tier
+        self.installedPackId = installedPackId
+        self.availablePackId = availablePackId
+        self.availableSizeBytes = availableSizeBytes
+        self.requiresWifi = requiresWifi
+        self.checkedAt = checkedAt
+        self.dismissedAt = dismissedAt
+    }
+}
+
 struct AlphaExportedReport: Identifiable, Codable, Hashable, Sendable {
     let id: UUID
     let caseId: UUID?
@@ -1818,6 +1903,178 @@ struct AlphaExportedReport: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
+enum AlphaPreparedWorkType: String, Codable, CaseIterable, Hashable, Sendable {
+    case documentReviewed = "document_reviewed"
+    case nextDateFound = "next_date_found"
+    case suggestedTasks = "suggested_tasks"
+    case chronologyReady = "chronology_ready"
+    case caseNoteReady = "case_note_ready"
+    case orderSummaryReady = "order_summary_ready"
+    case hearingNoteReady = "hearing_note_ready"
+    case publicLawQueryAwaitingApproval = "public_law_query_awaiting_approval"
+    case missingFactsFound = "missing_facts_found"
+    case evidenceSummaryNeedsReview = "evidence_summary_needs_review"
+    case matterNeedsAttention = "matter_needs_attention"
+
+    var title: String {
+        switch self {
+        case .documentReviewed: "Document reviewed"
+        case .nextDateFound: "Next date found"
+        case .suggestedTasks: "Suggested tasks"
+        case .chronologyReady: "Chronology ready"
+        case .caseNoteReady: "Case note ready"
+        case .orderSummaryReady: "Order summary ready"
+        case .hearingNoteReady: "Hearing note ready"
+        case .publicLawQueryAwaitingApproval: "Public-law query awaiting approval"
+        case .missingFactsFound: "Missing facts found"
+        case .evidenceSummaryNeedsReview: "Evidence summary needs review"
+        case .matterNeedsAttention: "Matter needs attention"
+        }
+    }
+}
+
+enum AlphaPreparedWorkStatus: String, Codable, CaseIterable, Hashable, Sendable {
+    case new
+    case reviewed
+    case accepted
+    case dismissed
+
+    var title: String {
+        switch self {
+        case .new: "New"
+        case .reviewed: "Reviewed"
+        case .accepted: "Accepted"
+        case .dismissed: "Dismissed"
+        }
+    }
+}
+
+enum AlphaPreparedWorkBadge: String, Codable, CaseIterable, Hashable, Sendable {
+    case sourceBacked = "source_backed"
+    case preparedLocally = "prepared_locally"
+    case needsReview = "needs_review"
+    case approvalRequired = "approval_required"
+
+    var title: String {
+        switch self {
+        case .sourceBacked: "Source-backed"
+        case .preparedLocally: "Prepared locally"
+        case .needsReview: "Needs review"
+        case .approvalRequired: "Approval required"
+        }
+    }
+}
+
+struct AlphaPreparedWorkItem: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID
+    var stableKey: String
+    var caseId: UUID?
+    var type: AlphaPreparedWorkType
+    var matterName: String
+    var title: String
+    var summary: String
+    var badge: AlphaPreparedWorkBadge
+    var status: AlphaPreparedWorkStatus
+    var sourceRefs: [AlphaSourceRef]
+    var sourceFingerprint: String
+    var primaryAction: String
+    var secondaryActions: [String]
+    var createdAt: Date
+    var updatedAt: Date
+
+    init(
+        id: UUID = UUID(),
+        stableKey: String,
+        caseId: UUID?,
+        type: AlphaPreparedWorkType,
+        matterName: String,
+        title: String,
+        summary: String,
+        badge: AlphaPreparedWorkBadge,
+        status: AlphaPreparedWorkStatus = .new,
+        sourceRefs: [AlphaSourceRef] = [],
+        sourceFingerprint: String,
+        primaryAction: String,
+        secondaryActions: [String] = [],
+        createdAt: Date = .now,
+        updatedAt: Date = .now
+    ) {
+        self.id = id
+        self.stableKey = stableKey
+        self.caseId = caseId
+        self.type = type
+        self.matterName = matterName
+        self.title = title
+        self.summary = summary
+        self.badge = badge
+        self.status = status
+        self.sourceRefs = sourceRefs
+        self.sourceFingerprint = sourceFingerprint
+        self.primaryAction = primaryAction
+        self.secondaryActions = secondaryActions
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+}
+
+enum AlphaRoutineKind: String, Codable, CaseIterable, Identifiable, Hashable, Sendable {
+    case morningBrief = "morning_brief"
+    case afterDocumentImport = "after_document_import"
+    case beforeHearing = "before_hearing"
+    case missingFactsScan = "missing_facts_scan"
+    case draftRefresh = "draft_refresh"
+    case publicLawPreview = "public_law_preview"
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .morningBrief: "Morning brief"
+        case .afterDocumentImport: "After document import"
+        case .beforeHearing: "Before hearing"
+        case .missingFactsScan: "Missing facts scan"
+        case .draftRefresh: "Draft refresh"
+        case .publicLawPreview: "Public-law search preview"
+        }
+    }
+}
+
+struct AlphaRoutineRun: Identifiable, Codable, Hashable, Sendable {
+    var id: UUID
+    var kind: AlphaRoutineKind
+    var caseId: UUID?
+    var ranAt: Date
+    var preparedItemIDs: [UUID]
+    var summary: String
+
+    init(id: UUID = UUID(), kind: AlphaRoutineKind, caseId: UUID? = nil, ranAt: Date = .now, preparedItemIDs: [UUID] = [], summary: String) {
+        self.id = id
+        self.kind = kind
+        self.caseId = caseId
+        self.ranAt = ranAt
+        self.preparedItemIDs = preparedItemIDs
+        self.summary = summary
+    }
+}
+
+struct AlphaRoutineSettings: Codable, Hashable, Sendable {
+    var morningBriefEnabled: Bool
+    var afterDocumentImportEnabled: Bool
+    var beforeHearingEnabled: Bool
+    var missingFactsScanEnabled: Bool
+    var draftRefreshEnabled: Bool
+    var requirePublicLawApproval: Bool
+
+    static let `default` = AlphaRoutineSettings(
+        morningBriefEnabled: true,
+        afterDocumentImportEnabled: true,
+        beforeHearingEnabled: true,
+        missingFactsScanEnabled: true,
+        draftRefreshEnabled: true,
+        requirePublicLawApproval: true
+    )
+}
+
 struct AlphaSettings: Codable, Hashable, Sendable {
     var activeTier: AlphaCapabilityTier?
     var appearanceMode: AlphaAppearanceMode
@@ -1826,6 +2083,10 @@ struct AlphaSettings: Codable, Hashable, Sendable {
     var requirePublicLawApproval: Bool
     var instantModeEnabled: Bool
     var privateByDefault: Bool
+    var deviceCacheEnabled: Bool
+    var backgroundWorkEnabled: Bool
+    var autoModelUpdateChecksEnabled: Bool
+    var keepModelFilesOnWorkspaceReset: Bool
 
     static let `default` = AlphaSettings(
         activeTier: nil,
@@ -1834,8 +2095,67 @@ struct AlphaSettings: Codable, Hashable, Sendable {
         allowMobileDataForLargePacks: false,
         requirePublicLawApproval: false,
         instantModeEnabled: true,
-        privateByDefault: true
+        privateByDefault: true,
+        deviceCacheEnabled: true,
+        backgroundWorkEnabled: true,
+        autoModelUpdateChecksEnabled: true,
+        keepModelFilesOnWorkspaceReset: true
     )
+
+    private enum CodingKeys: String, CodingKey {
+        case activeTier
+        case appearanceMode
+        case wifiOnlyDownloads
+        case allowMobileDataForLargePacks
+        case requirePublicLawApproval
+        case instantModeEnabled
+        case privateByDefault
+        case deviceCacheEnabled
+        case backgroundWorkEnabled
+        case autoModelUpdateChecksEnabled
+        case keepModelFilesOnWorkspaceReset
+    }
+
+    init(
+        activeTier: AlphaCapabilityTier?,
+        appearanceMode: AlphaAppearanceMode,
+        wifiOnlyDownloads: Bool,
+        allowMobileDataForLargePacks: Bool,
+        requirePublicLawApproval: Bool,
+        instantModeEnabled: Bool,
+        privateByDefault: Bool,
+        deviceCacheEnabled: Bool,
+        backgroundWorkEnabled: Bool,
+        autoModelUpdateChecksEnabled: Bool,
+        keepModelFilesOnWorkspaceReset: Bool
+    ) {
+        self.activeTier = activeTier
+        self.appearanceMode = appearanceMode
+        self.wifiOnlyDownloads = wifiOnlyDownloads
+        self.allowMobileDataForLargePacks = allowMobileDataForLargePacks
+        self.requirePublicLawApproval = requirePublicLawApproval
+        self.instantModeEnabled = instantModeEnabled
+        self.privateByDefault = privateByDefault
+        self.deviceCacheEnabled = deviceCacheEnabled
+        self.backgroundWorkEnabled = backgroundWorkEnabled
+        self.autoModelUpdateChecksEnabled = autoModelUpdateChecksEnabled
+        self.keepModelFilesOnWorkspaceReset = keepModelFilesOnWorkspaceReset
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        activeTier = try container.decodeIfPresent(AlphaCapabilityTier.self, forKey: .activeTier)
+        appearanceMode = try container.decodeIfPresent(AlphaAppearanceMode.self, forKey: .appearanceMode) ?? .auto
+        wifiOnlyDownloads = try container.decodeIfPresent(Bool.self, forKey: .wifiOnlyDownloads) ?? true
+        allowMobileDataForLargePacks = try container.decodeIfPresent(Bool.self, forKey: .allowMobileDataForLargePacks) ?? false
+        requirePublicLawApproval = try container.decodeIfPresent(Bool.self, forKey: .requirePublicLawApproval) ?? true
+        instantModeEnabled = try container.decodeIfPresent(Bool.self, forKey: .instantModeEnabled) ?? true
+        privateByDefault = try container.decodeIfPresent(Bool.self, forKey: .privateByDefault) ?? true
+        deviceCacheEnabled = try container.decodeIfPresent(Bool.self, forKey: .deviceCacheEnabled) ?? true
+        backgroundWorkEnabled = try container.decodeIfPresent(Bool.self, forKey: .backgroundWorkEnabled) ?? true
+        autoModelUpdateChecksEnabled = try container.decodeIfPresent(Bool.self, forKey: .autoModelUpdateChecksEnabled) ?? true
+        keepModelFilesOnWorkspaceReset = try container.decodeIfPresent(Bool.self, forKey: .keepModelFilesOnWorkspaceReset) ?? true
+    }
 }
 
 struct AlphaPublicLawPreview: Codable, Hashable, Sendable {
@@ -1887,6 +2207,10 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
     var publicLawPreview: AlphaPublicLawPreview?
     var publicLawResults: [AlphaPublicLawResult]?
     var exports: [AlphaExportedReport]
+    var preparedWorkItems: [AlphaPreparedWorkItem]?
+    var routineRuns: [AlphaRoutineRun]?
+    var routineSettings: AlphaRoutineSettings?
+    var modelUpdateCandidates: [AlphaModelUpdateCandidate]?
 
     static func empty() -> AlphaPersistedState {
         AlphaPersistedState(
@@ -1913,7 +2237,11 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
             publicLawDraft: "Find Indian public-law guidance on delay condonation and filing compliance.",
             publicLawPreview: nil,
             publicLawResults: [],
-            exports: []
+            exports: [],
+            preparedWorkItems: [],
+            routineRuns: [],
+            routineSettings: .default,
+            modelUpdateCandidates: []
         )
     }
 
@@ -2302,7 +2630,11 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
             publicLawDraft: "Find Indian public-law guidance on delay condonation and filing compliance after an interim order.",
             publicLawPreview: nil,
             publicLawResults: [],
-            exports: []
+            exports: [],
+            preparedWorkItems: [],
+            routineRuns: [],
+            routineSettings: .default,
+            modelUpdateCandidates: []
         )
     }
 }

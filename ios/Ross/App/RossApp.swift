@@ -7,6 +7,21 @@ import SwiftUI
 import UIKit
 #endif
 
+#if canImport(UIKit)
+final class RossAppDelegate: NSObject, UIApplicationDelegate {
+    func application(
+        _ application: UIApplication,
+        handleEventsForBackgroundURLSession identifier: String,
+        completionHandler: @escaping () -> Void
+    ) {
+        AlphaBackgroundModelDownloadCenter.shared.setBackgroundCompletionHandler(
+            completionHandler,
+            for: identifier
+        )
+    }
+}
+#endif
+
 // MARK: - Language Preference
 
 private let rossLanguageSelectedKey = "ross.language.selected"
@@ -39,6 +54,103 @@ func rossLanguageDisplayName(code: String) -> String {
     case "bn": "Bengali"
     default: code.uppercased()
     }
+}
+
+func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    let normalizedCode = languageCode.split(separator: "-").first.map(String.init) ?? languageCode
+    let table: [String: [String: String]] = [
+        "choose_language_title": [
+            "en": "Choose your preferred language",
+            "hi": "अपनी पसंदीदा भाषा चुनें",
+            "ta": "உங்கள் விருப்ப மொழியைத் தேர்வுசெய்யவும்",
+            "te": "మీకు ఇష్టమైన భాషను ఎంచుకోండి"
+        ],
+        "choose_language_detail": [
+            "en": "Ross can answer in this language where supported.",
+            "hi": "जहाँ समर्थित हो, Ross इसी भाषा में उत्तर दे सकता है।",
+            "ta": "ஆதரவு உள்ள இடங்களில் Ross இந்த மொழியில் பதிலளிக்கும்.",
+            "te": "మద్దతు ఉన్న చోట Ross ఈ భాషలో సమాధానం ఇస్తుంది."
+        ],
+        "continue": [
+            "en": "Continue",
+            "hi": "जारी रखें",
+            "ta": "தொடரவும்",
+            "te": "కొనసాగించండి"
+        ],
+        "private_legal_work": [
+            "en": "Private legal work.\nOn this phone.",
+            "hi": "निजी कानूनी काम।\nइसी फ़ोन पर।",
+            "ta": "தனிப்பட்ட சட்ட வேலை.\nஇந்த தொலைபேசியில்.",
+            "te": "వ్యక్తిగత న్యాయ పని.\nఈ ఫోన్‌లో."
+        ],
+        "matters_private": [
+            "en": "Your matters stay private on this device.",
+            "hi": "आपके मामले इसी डिवाइस पर निजी रहते हैं।",
+            "ta": "உங்கள் வழக்குகள் இந்த சாதனத்தில் தனிப்பட்டதாக இருக்கும்.",
+            "te": "మీ కేసులు ఈ పరికరంలోనే ప్రైవేట్‌గా ఉంటాయి."
+        ],
+        "get_started": [
+            "en": "Get Started",
+            "hi": "शुरू करें",
+            "ta": "தொடங்கவும்",
+            "te": "ప్రారంభించండి"
+        ],
+        "choose_workspace": [
+            "en": "Choose a private workspace.",
+            "hi": "निजी कार्यस्थान चुनें।",
+            "ta": "ஒரு தனிப்பட்ட பணியிடத்தைத் தேர்வுசெய்யவும்.",
+            "te": "ప్రైవేట్ వర్క్‌స్పేస్ ఎంచుకోండి."
+        ],
+        "tap_to_sign_in": [
+            "en": "Tap to sign in.",
+            "hi": "साइन इन करने के लिए टैप करें।",
+            "ta": "உள்நுழைய தட்டவும்.",
+            "te": "సైన్ ఇన్ చేయడానికి నొక్కండి."
+        ],
+        "continue_email": [
+            "en": "Continue with email",
+            "hi": "ईमेल से जारी रखें",
+            "ta": "மின்னஞ்சலுடன் தொடரவும்",
+            "te": "ఇమెయిల్‌తో కొనసాగండి"
+        ],
+        "email_subtitle": [
+            "en": "Sample matter or empty workspace",
+            "hi": "नमूना मामला या खाली कार्यस्थान",
+            "ta": "மாதிரி வழக்கு அல்லது காலியான பணியிடம்",
+            "te": "నమూనా కేసు లేదా ఖాళీ వర్క్‌స్పేస్"
+        ],
+        "setup_assistant": [
+            "en": "Set up assistant",
+            "hi": "सहायक सेट करें",
+            "ta": "உதவியாளரை அமைக்கவும்",
+            "te": "సహాయకుడిని సెటప్ చేయండి"
+        ],
+        "download_setup_ross": [
+            "en": "Download & set up Ross",
+            "hi": "Ross डाउनलोड और सेट करें",
+            "ta": "Ross-ஐ பதிவிறக்கி அமைக்கவும்",
+            "te": "Ross డౌన్‌లోడ్ చేసి సెటప్ చేయండి"
+        ],
+        "translate_to": [
+            "en": "Translate to %@",
+            "hi": "%@ में अनुवाद करें",
+            "ta": "%@ மொழிக்கு மொழிபெயர்க்கவும்",
+            "te": "%@ కు అనువదించండి"
+        ],
+        "translation_ready": [
+            "en": "AI translation is available for advocate review.",
+            "hi": "AI अनुवाद अधिवक्ता समीक्षा के लिए उपलब्ध है।",
+            "ta": "AI மொழிபெயர்ப்பு வழக்கறிஞர் மதிப்பாய்வுக்கு கிடைக்கிறது.",
+            "te": "AI అనువాదం న్యాయవాది సమీక్ష కోసం అందుబాటులో ఉంది."
+        ],
+        "translation_needs_assistant": [
+            "en": "Set up the private assistant to translate locally.",
+            "hi": "स्थानीय अनुवाद के लिए निजी सहायक सेट करें।",
+            "ta": "உள்ளூரில் மொழிபெயர்க்க தனிப்பட்ட உதவியாளரை அமைக்கவும்.",
+            "te": "స్థానికంగా అనువదించడానికి ప్రైవేట్ సహాయకుడిని సెటప్ చేయండి."
+        ]
+    ]
+    return table[key]?[normalizedCode] ?? table[key]?["en"] ?? key
 }
 
 func rossQuickUnlockEnabled() -> Bool {
@@ -1052,12 +1164,12 @@ private struct RossLanguageSelectionScreen: View {
 
                         RossAuthGlassPanel(cornerRadius: 20, padding: 18) {
                             VStack(alignment: .leading, spacing: 20) {
-                                Text("Choose your preferred language")
+                                Text(rossLocalized("choose_language_title", languageCode: selectedCode ?? "en"))
                                     .font(.system(size: 28, weight: .semibold))
                                     .foregroundStyle(Color.rossInk)
                                     .fixedSize(horizontal: false, vertical: true)
 
-                                Text("Ross can answer in this language where supported.")
+                                Text(rossLocalized("choose_language_detail", languageCode: selectedCode ?? "en"))
                                     .font(.footnote)
                                     .foregroundStyle(Color.rossInk.opacity(0.7))
                                     .fixedSize(horizontal: false, vertical: true)
@@ -1086,7 +1198,7 @@ private struct RossLanguageSelectionScreen: View {
                             guard let code = selectedCode else { return }
                             authController.markLanguageSelected(code: code)
                         } label: {
-                            Text("Continue")
+                            Text(rossLocalized("continue", languageCode: selectedCode ?? "en"))
                         }
                         .rossPrimaryButtonStyle()
                         .disabled(selectedCode == nil)
@@ -1205,12 +1317,12 @@ private struct RossSignInScreen: View {
 
                     RossAuthGlassPanel(cornerRadius: 24, padding: 22, forcedWidth: heroPanelWidth) {
                         VStack(alignment: .leading, spacing: 14) {
-                            Text("Private legal work.\nOn this phone.")
+                            Text(rossLocalized("private_legal_work"))
                                 .font(.system(size: 34, weight: .regular))
                                 .foregroundStyle(Color.rossInk.opacity(0.96))
                                 .fixedSize(horizontal: false, vertical: true)
 
-                            Text("Your matters stay private on this device.")
+                            Text(rossLocalized("matters_private"))
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundStyle(Color.rossInk.opacity(0.78))
                                 .fixedSize(horizontal: false, vertical: true)
@@ -1284,12 +1396,12 @@ private struct RossAuthSignInSheet: View {
                         RossAuthSheetCue(isExpanded: isExpanded)
 
                         VStack(spacing: 4) {
-                            Text(isExpanded ? "Get started" : "Get Started")
+                            Text(rossLocalized("get_started"))
                                 .font(.system(size: isExpanded ? 19 : 24, weight: isExpanded ? .semibold : .semibold))
                                 .foregroundStyle(Color.rossInk)
                                 .multilineTextAlignment(.center)
 
-                            Text(isExpanded ? "Choose a private workspace." : "Tap to sign in.")
+                            Text(isExpanded ? rossLocalized("choose_workspace") : rossLocalized("tap_to_sign_in"))
                                 .font(.system(size: isExpanded ? 13 : 14, weight: .regular))
                                 .foregroundStyle(Color.rossInk.opacity(0.62))
                                 .multilineTextAlignment(.center)
@@ -1356,7 +1468,7 @@ private struct RossAuthSignInSheet: View {
                                     authController.signInWithEmailAccess(emailAddress)
                                 } label: {
                                     RossAuthActionLabel(
-                                        title: "Continue",
+                                        title: rossLocalized("continue"),
                                         tone: .secondary
                                     ) {
                                         RossGlassIconView(.userMsg, variant: .neutral, size: 17, fallbackSystemImage: "envelope.fill")
@@ -1403,8 +1515,8 @@ private struct RossAuthSignInSheet: View {
                                     }
                                 } label: {
                                     RossAuthActionLabel(
-                                        title: "Continue with email",
-                                        subtitle: "Sample matter or empty workspace",
+                                        title: rossLocalized("continue_email"),
+                                        subtitle: rossLocalized("email_subtitle"),
                                         tone: .secondary
                                     ) {
                                         Image(systemName: "envelope.fill")
@@ -1930,6 +2042,9 @@ struct RossApp: App {
     private let launchMode = RossLaunchMode.current
     @Environment(\.scenePhase) private var scenePhase
     @State private var authController = RossAuthController()
+    #if canImport(UIKit)
+    @UIApplicationDelegateAdaptor(RossAppDelegate.self) private var appDelegate
+    #endif
 
     var body: some Scene {
         WindowGroup {

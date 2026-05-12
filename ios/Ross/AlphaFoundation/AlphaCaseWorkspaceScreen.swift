@@ -180,13 +180,6 @@ struct AlphaCaseWorkspaceScreen: View {
                 let matterTasks = model.tasks(for: caseId)
                 let openTaskCount = model.openTaskCount(for: caseId)
                 let timelineEntries = alphaMatterTimelineEntries(dates: matterDates, tasks: matterTasks)
-                let notesDetailCount = [
-                    caseMatter.caseNumber,
-                    caseMatter.partiesSummary,
-                    caseMatter.notes
-                ]
-                    .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty }
-                    .count
                 let draftCount = model.persisted.exports.filter { $0.caseId == caseId }.count
                 let matterExports = model.persisted.exports
                     .filter { $0.caseId == caseId }
@@ -199,199 +192,152 @@ struct AlphaCaseWorkspaceScreen: View {
                         detail: caseMatter.stage.title
                     )
 
-                    AlphaMatterSectionPicker(
-                        selectedSection: $selectedSection,
-                        fileCount: caseMatter.documents.count,
-                        taskCount: openTaskCount + matterDates.count,
-                        noteCount: notesDetailCount,
-                        draftCount: draftCount
-                    )
-
-                    switch selectedSection {
-                    case .documents:
-                        AlphaMatterAttentionCard(
-                            caseMatter: caseMatter,
-                            matterTasks: matterTasks,
-                            reviewItems: reviewItems,
-                            isRefreshing: model.refreshingCaseOverviewIDs.contains(caseId),
-                            onRefresh: { Task { await model.refreshCaseOverview(caseId: caseId) } },
-                            onOpenReview: {
-                                if let first = reviewItems.first {
-                                    model.path.append(.documentViewer(first.caseId, first.documentId, first.sourceRef?.pageNumber))
-                                }
+                    RossSectionCard(title: "Ross Summary") {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text(caseMatter.summary)
+                                .rossBody()
+                                .foregroundStyle(Color.rossInk.opacity(0.8))
+                                .fixedSize(horizontal: false, vertical: true)
+                            if let caseNumber = caseMatter.caseNumber, !caseNumber.isEmpty {
+                                AlphaSettingsValueRow(label: "Case number", value: caseNumber)
                             }
-                        )
-
-                        if !reviewItems.isEmpty {
-                            VStack(alignment: .leading, spacing: 10) {
-                                AlphaWorkspaceSectionLabel(title: "Needs review", detail: "Accept, edit, or dismiss facts before Ross relies on them.")
-
-                                ForEach(reviewItems.prefix(3)) { item in
-                                    AlphaReviewNudgeCard(
-                                        item: item,
-                                        onAccept: {
-                                            alphaHaptic(.medium)
-                                            model.acceptReviewQueueItem(item)
-                                        },
-                                        onEdit: {
-                                            model.path.append(.documentViewer(item.caseId, item.documentId, item.sourceRef?.pageNumber))
-                                        },
-                                        onDismiss: {
-                                            alphaHaptic(.medium)
-                                            model.dismissReviewQueueItem(item)
-                                        }
-                                    )
-                                }
+                            if let partiesSummary = caseMatter.partiesSummary, !partiesSummary.isEmpty {
+                                AlphaSettingsValueRow(label: "Parties", value: partiesSummary)
+                            }
+                            if let nextHearing = caseMatter.nextHearing {
+                                AlphaSettingsValueRow(label: "Next hearing/deadline", value: nextHearing.formatted(date: .abbreviated, time: .omitted))
                             }
                         }
+                    }
 
-                        AlphaDisclosureCard(
-                            title: "Documents",
-                            badge: "\(caseMatter.documents.count)",
-                            isExpanded: $filesExpanded
-                        ) {
-                            VStack(alignment: .leading, spacing: 12) {
-                                HStack(spacing: 10) {
-                                    Text("\(alphaFileCountLabel(caseMatter.documents.count)) on this matter")
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(Color.rossInk.opacity(0.7))
-
-                                    Spacer(minLength: 0)
-
-                                    AlphaDocumentLayoutMenu(layoutMode: $documentLayoutMode)
-                                }
-
-                                if caseMatter.documents.isEmpty {
-                                    RossSectionCard {
-                                        Text("Import the first file for this case.")
-                                            .font(.subheadline)
-                                            .foregroundStyle(Color.rossInk.opacity(0.7))
-                                    }
-                                } else {
-                                    AlphaDocumentCollectionView(
-                                        documents: caseMatter.documents,
-                                        caseTitle: nil,
-                                        layoutMode: documentLayoutMode,
-                                        expandedDocumentIDs: $expandedDocumentIDs,
-                                        onOpen: { documentId in
-                                            model.path.append(.documentViewer(caseId, documentId, 1))
-                                        },
-                                        onMoveDocument: { documentId, offset in
-                                            model.moveDocument(caseId: caseId, documentId: documentId, by: offset)
-                                        },
-                                        onOpenChat: { documentId in
-                                            model.openDocumentInChat(caseId: caseId, documentId: documentId, startNewThread: false)
-                                        },
-                                        onStartReviewChat: { documentId in
-                                            model.openDocumentInChat(caseId: caseId, documentId: documentId, startNewThread: true)
-                                        }
-                                    )
-                                }
-
-                                Button("Import document") {
-                                    showingImporter = true
-                                }
-                                .rossPrimaryButtonStyle()
-                            }
-                        }
-
-                    case .notes:
-                        AlphaDisclosureCard(
-                            title: "Dates & Tasks",
-                            badge: "\(openTaskCount + matterDates.count)",
-                            isExpanded: $timelineExpanded
-                        ) {
-                            VStack(alignment: .leading, spacing: 12) {
-                                if timelineEntries.isEmpty {
-                                    AlphaMatterCommandHintCard(
-                                        detail: "Add tasks, save hearing dates, and generate notes from the Ask Ross bar.",
-                                        actionSystemImage: "arrow.clockwise",
-                                        actionLabel: "Refresh matter overview with Ross",
-                                        actionDisabled: model.refreshingCaseOverviewIDs.contains(caseId),
-                                        action: {
-                                            Task { await model.refreshCaseOverview(caseId: caseId) }
-                                        }
-                                    )
-                                } else {
-                                    ForEach(timelineEntries) { entry in
-                                        AlphaMatterTimelineRow(
-                                            entry: entry,
-                                            onToggleTask: { task in
-                                                alphaHaptic(.light)
-                                                model.toggleTaskDone(task.id)
-                                            },
-                                            onSnoozeTask: { task in model.snoozeTask(task.id, by: 1) },
-                                            onDeleteTask: { task in model.removeTask(task.id) },
-                                            onMarkDateDone: { matterDate in model.setMatterDateStatus(caseId: caseId, dateId: matterDate.id, status: .done) },
-                                            onCancelDate: { matterDate in model.setMatterDateStatus(caseId: caseId, dateId: matterDate.id, status: .cancelled) }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        AlphaDisclosureCard(
-                            title: "Notes",
-                            badge: notesDetailCount == 0 ? nil : "\(notesDetailCount)",
-                            isExpanded: $notesExpanded
-                        ) {
-                            VStack(alignment: .leading, spacing: 12) {
-                                RossSectionCard {
-                                    VStack(alignment: .leading, spacing: 12) {
-                                        AlphaWorkspaceSectionLabel(title: "Matter details", detail: "Secondary context kept out of the document view.")
-
-                                        Text(caseMatter.summary)
-                                            .rossBody()
-                                            .foregroundStyle(Color.rossInk.opacity(0.8))
-                                            .fixedSize(horizontal: false, vertical: true)
-
-                                        if let caseNumber = caseMatter.caseNumber, !caseNumber.isEmpty {
-                                            AlphaSettingsValueRow(label: "Court case number", value: caseNumber)
-                                        }
-                                        if let partiesSummary = caseMatter.partiesSummary, !partiesSummary.isEmpty {
-                                            AlphaSettingsValueRow(label: "Parties", value: partiesSummary)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        AlphaDisclosureCard(
-                            title: "Drafts",
-                            badge: draftCount == 0 ? nil : "\(draftCount)",
-                            isExpanded: $draftsExpanded
-                        ) {
-                            VStack(alignment: .leading, spacing: 12) {
-                                if matterExports.isEmpty {
-                                    Text("No drafts generated yet.")
-                                        .font(.subheadline)
-                                        .foregroundStyle(Color.rossInk.opacity(0.66))
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                } else {
-                                    ForEach(matterExports.prefix(4)) { export in
-                                        Button {
-                                            model.path.append(.exports(caseId))
-                                        } label: {
-                                            AlphaDraftPreviewRow(export: export)
-                                        }
-                                        .buttonStyle(.plain)
-                                    }
-                                }
-
-                                AlphaMatterCommandHintCard(
-                                    detail: "Ask Ross to generate a chronology, case note, or order summary from the dock below.",
-                                    actionSystemImage: "bubble.right",
-                                    actionLabel: matterExports.isEmpty ? "Ask about this matter" : "Open drafts",
-                                    actionDisabled: false,
-                                    action: {
-                                        if matterExports.isEmpty {
-                                            model.openAsk(scopeCaseID: caseId)
-                                        } else {
-                                            model.path.append(.exports(caseId))
-                                        }
+                    if !reviewItems.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            AlphaWorkspaceSectionLabel(title: "Needs Review", detail: "Accept, edit, or dismiss facts before Ross relies on them.")
+                            ForEach(reviewItems.prefix(4)) { item in
+                                AlphaReviewNudgeCard(
+                                    item: item,
+                                    onAccept: {
+                                        alphaHaptic(.medium)
+                                        model.acceptReviewQueueItem(item)
+                                    },
+                                    onEdit: {
+                                        model.path.append(.documentViewer(item.caseId, item.documentId, item.sourceRef?.pageNumber))
+                                    },
+                                    onDismiss: {
+                                        alphaHaptic(.medium)
+                                        model.dismissReviewQueueItem(item)
                                     }
                                 )
                             }
+                        }
+                    }
+
+                    AlphaDisclosureCard(
+                        title: "Suggested Next Steps",
+                        badge: "\(caseMatter.draftTasks.count + openTaskCount + matterDates.count)",
+                        isExpanded: $timelineExpanded
+                    ) {
+                        VStack(alignment: .leading, spacing: 12) {
+                            ForEach(caseMatter.draftTasks, id: \.self) { task in
+                                AlphaSummaryRow(title: task, detail: "Prepared locally")
+                            }
+                            ForEach(timelineEntries) { entry in
+                                AlphaMatterTimelineRow(
+                                    entry: entry,
+                                    onToggleTask: { task in
+                                        alphaHaptic(.light)
+                                        model.toggleTaskDone(task.id)
+                                    },
+                                    onSnoozeTask: { task in model.snoozeTask(task.id, by: 1) },
+                                    onDeleteTask: { task in model.removeTask(task.id) },
+                                    onMarkDateDone: { matterDate in model.setMatterDateStatus(caseId: caseId, dateId: matterDate.id, status: .done) },
+                                    onCancelDate: { matterDate in model.setMatterDateStatus(caseId: caseId, dateId: matterDate.id, status: .cancelled) }
+                                )
+                            }
+                            if caseMatter.draftTasks.isEmpty && timelineEntries.isEmpty {
+                                AlphaMatterCommandHintCard(
+                                    detail: "Ask Ross to refresh this matter after importing real files.",
+                                    actionSystemImage: "arrow.clockwise",
+                                    actionLabel: "Refresh matter",
+                                    actionDisabled: model.refreshingCaseOverviewIDs.contains(caseId),
+                                    action: { Task { await model.refreshCaseOverview(caseId: caseId) } }
+                                )
+                            }
+                        }
+                    }
+
+                    AlphaDisclosureCard(
+                        title: "Drafts",
+                        badge: draftCount == 0 ? nil : "\(draftCount)",
+                        isExpanded: $draftsExpanded
+                    ) {
+                        VStack(alignment: .leading, spacing: 12) {
+                            if matterExports.isEmpty {
+                                Text("No drafts generated yet.")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.rossInk.opacity(0.66))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            } else {
+                                ForEach(matterExports.prefix(4)) { export in
+                                    Button {
+                                        model.path.append(.exports(caseId))
+                                    } label: {
+                                        AlphaDraftPreviewRow(export: export)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            AlphaMatterCommandHintCard(
+                                detail: "Ask Ross to prepare a chronology, case note, or order summary from local matter state.",
+                                actionSystemImage: "bubble.right",
+                                actionLabel: matterExports.isEmpty ? "Ask about this matter" : "Open drafts",
+                                actionDisabled: false,
+                                action: {
+                                    if matterExports.isEmpty {
+                                        model.openAsk(scopeCaseID: caseId)
+                                    } else {
+                                        model.path.append(.exports(caseId))
+                                    }
+                                }
+                            )
+                        }
+                    }
+
+                    AlphaDisclosureCard(
+                        title: "File Room",
+                        badge: "\(caseMatter.documents.count)",
+                        isExpanded: $filesExpanded
+                    ) {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack(spacing: 10) {
+                                Text("\(alphaFileCountLabel(caseMatter.documents.count)) on this matter")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(Color.rossInk.opacity(0.7))
+                                Spacer(minLength: 0)
+                                AlphaDocumentLayoutMenu(layoutMode: $documentLayoutMode)
+                            }
+                            if caseMatter.documents.isEmpty {
+                                RossSectionCard {
+                                    Text("Import the first real file for this matter.")
+                                        .font(.subheadline)
+                                        .foregroundStyle(Color.rossInk.opacity(0.7))
+                                }
+                            } else {
+                                AlphaDocumentCollectionView(
+                                    documents: caseMatter.documents,
+                                    caseTitle: nil,
+                                    layoutMode: documentLayoutMode,
+                                    expandedDocumentIDs: $expandedDocumentIDs,
+                                    onOpen: { documentId in model.path.append(.documentViewer(caseId, documentId, 1)) },
+                                    onMoveDocument: { documentId, offset in model.moveDocument(caseId: caseId, documentId: documentId, by: offset) },
+                                    onOpenChat: { documentId in model.openDocumentInChat(caseId: caseId, documentId: documentId, startNewThread: false) },
+                                    onStartReviewChat: { documentId in model.openDocumentInChat(caseId: caseId, documentId: documentId, startNewThread: true) }
+                                )
+                            }
+                            Button("Import document") {
+                                showingImporter = true
+                            }
+                            .rossPrimaryButtonStyle()
                         }
                     }
                 }

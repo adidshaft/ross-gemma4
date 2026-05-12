@@ -216,7 +216,7 @@ struct AlphaRootAskDock: View {
 
         if let latest = model.latestAskResult,
            latest.scopeCaseID == activeScopeCaseID,
-           latest.statusNote == "Private assistant running locally" {
+           latest.isPendingLocalModelResponse {
             let context: String
             if latest.selectedDocumentTitles.count == 1, let title = latest.selectedDocumentTitles.first {
                 context = title
@@ -943,52 +943,59 @@ struct AlphaInlineAskResponseCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(result.answerTitle)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.rossInk)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    if let note = result.statusNote {
-                        Text(note)
-                            .font(.caption2.weight(.medium))
-                            .foregroundStyle(Color.rossAccent)
-                    }
-                }
-                Spacer(minLength: 8)
-                Button(action: onClose) {
-                    Image(systemName: "xmark")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(Color.rossInk.opacity(0.45))
-                        .padding(6)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Dismiss")
-            }
-
-            ForEach(result.answerSectionItems(limit: 2)) { section in
-                Text(section.text)
-                    .font(.footnote)
-                    .lineSpacing(4)
-                    .foregroundStyle(Color.rossInk.opacity(0.85))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            if !result.caseFileSources.isEmpty {
-                AlphaSourceRefChips(
-                    sourceRefs: Array(result.caseFileSources.prefix(2)),
-                    contextDocumentTitle: contextDocumentTitle,
-                    onOpenSourceRef: onOpenSource
+            if result.isPendingLocalModelResponse {
+                AlphaPendingLocalModelCard(
+                    result: result,
+                    style: .compact
                 )
-            }
+            } else {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(result.answerTitle)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.rossInk)
+                            .fixedSize(horizontal: false, vertical: true)
 
-            HStack {
-                Spacer()
-                Button("View full answer", action: onOpenConversation)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.rossAccent)
+                        if let note = result.statusNote {
+                            Text(note)
+                                .font(.caption2.weight(.medium))
+                                .foregroundStyle(Color.rossAccent)
+                        }
+                    }
+                    Spacer(minLength: 8)
+                    Button(action: onClose) {
+                        Image(systemName: "xmark")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(Color.rossInk.opacity(0.45))
+                            .padding(6)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Dismiss")
+                }
+
+                ForEach(result.answerSectionItems(limit: 2)) { section in
+                    Text(section.text)
+                        .font(.footnote)
+                        .lineSpacing(4)
+                        .foregroundStyle(Color.rossInk.opacity(0.85))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                if !result.caseFileSources.isEmpty {
+                    AlphaSourceRefChips(
+                        sourceRefs: Array(result.caseFileSources.prefix(2)),
+                        contextDocumentTitle: contextDocumentTitle,
+                        onOpenSourceRef: onOpenSource
+                    )
+                }
+
+                HStack {
+                    Spacer()
+                    Button("View full answer", action: onOpenConversation)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.rossAccent)
+                }
             }
         }
         .padding(14)

@@ -109,6 +109,9 @@ extension AlphaRossModel {
             statusNote: reviewItemCount == 0 ? "Matter chat updated · ready to use" : "Matter chat updated · needs review",
             needsReviewWarning: reviewItemCount == 0 ? nil : "\(alphaReviewItemCountLabel(reviewItemCount)) still need advocate review."
         )
+        if routineSettings.afterDocumentImportEnabled {
+            rebuildPreparedWork(reason: .afterDocumentImport, caseId: caseId, persistAfter: false)
+        }
         persist(workspaceChanged: true)
     }
 }

@@ -50,6 +50,43 @@ struct AlphaPrivateAISettingsScreen: View {
         )
     }
 
+    private var backgroundWorkBinding: Binding<Bool> {
+        Binding(
+            get: { model.persisted.settings.backgroundWorkEnabled },
+            set: { newValue in
+                model.updateSettings { settings in
+                    settings.backgroundWorkEnabled = newValue
+                }
+            }
+        )
+    }
+
+    private var autoUpdatesBinding: Binding<Bool> {
+        Binding(
+            get: { model.persisted.settings.autoModelUpdateChecksEnabled },
+            set: { newValue in
+                model.updateSettings { settings in
+                    settings.autoModelUpdateChecksEnabled = newValue
+                }
+                if newValue {
+                    model.checkForAssistantModelUpdates(force: true)
+                }
+            }
+        )
+    }
+
+    private var deviceCacheBinding: Binding<Bool> {
+        Binding(
+            get: { model.persisted.settings.deviceCacheEnabled },
+            set: { newValue in
+                model.updateSettings { settings in
+                    settings.deviceCacheEnabled = newValue
+                }
+                model.persist(workspaceChanged: true)
+            }
+        )
+    }
+
     var body: some View {
         let assistantStatus = alphaAssistantStatusSnapshot(model)
 
@@ -107,12 +144,75 @@ struct AlphaPrivateAISettingsScreen: View {
                                 detail: "Only use cellular data for assistant setup when you choose to.",
                                 isOn: allowMobileDataBinding
                             )
+                            Divider()
+                            AlphaSettingsToggleRow(
+                                title: "Background downloads",
+                                detail: "Keep model downloads eligible to continue when Ross is backgrounded.",
+                                isOn: backgroundWorkBinding
+                            )
+                            Divider()
+                            AlphaSettingsToggleRow(
+                                title: "Check for model updates",
+                                detail: "Ross checks model listings and asks before replacing a downloaded assistant.",
+                                isOn: autoUpdatesBinding
+                            )
+                            Divider()
+                            AlphaSettingsToggleRow(
+                                title: "Device cache",
+                                detail: "Keep local workspace indexes on this device so Ross opens faster.",
+                                isOn: deviceCacheBinding
+                            )
                         }
                         .padding(.top, 10)
                     } label: {
                         AlphaSettingsValueRow(label: "Network", value: model.persisted.settings.allowMobileDataForLargePacks ? "Wi-Fi or mobile data" : "Wi-Fi preferred")
                     }
                     .tint(Color.rossAccent)
+                }
+
+                if let update = (model.persisted.modelUpdateCandidates ?? []).first(where: { $0.dismissedAt == nil }) {
+                    RossSectionCard(title: "Assistant update") {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("\(update.tier.title) has a newer assistant file available.")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Color.rossInk)
+                            Text("Ross will download it with the same resumable Wi-Fi-first rules. Existing model files stay until the new file verifies.")
+                                .font(.caption)
+                                .foregroundStyle(Color.rossInk.opacity(0.68))
+                                .fixedSize(horizontal: false, vertical: true)
+                            HStack(spacing: 8) {
+                                Button("Update on Wi-Fi") {
+                                    model.startAssistantModelUpdate(update, mobileAllowed: false)
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(Color.rossAccent)
+
+                                Button("Dismiss") {
+                                    model.dismissAssistantModelUpdate(update)
+                                }
+                                .buttonStyle(.bordered)
+                            }
+                        }
+                    }
+                }
+
+                RossSectionCard(title: "Model storage") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("App updates keep downloaded models in Ross storage. A full uninstall removes the app container; iOS does not let Ross ask a question during uninstall.")
+                            .font(.caption)
+                            .foregroundStyle(Color.rossInk.opacity(0.68))
+                            .fixedSize(horizontal: false, vertical: true)
+                        Button(role: .destructive) {
+                            model.removeAllDownloadedModelFiles()
+                        } label: {
+                            AlphaSettingsNavigationRow(
+                                title: "Delete downloaded model files",
+                                detail: "Keeps matters and drafts, removes local assistant files and resume data.",
+                                systemImage: "trash"
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
 
                 AlphaPrivateAITechnicalDiagnosticsCard(model: model)

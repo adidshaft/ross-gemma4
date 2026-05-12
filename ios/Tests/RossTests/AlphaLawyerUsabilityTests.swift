@@ -1042,6 +1042,53 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    func testLaunchRecoveryPausesActiveDownloadedModelAfterUnfinishedValidation() async throws {
+        let startupValidationKey = "ross.private_ai.startup_validation_started_at"
+        let model = await MainActor.run {
+            AlphaRossModel()
+        }
+        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: startupValidationKey)
+        defer { UserDefaults.standard.removeObject(forKey: startupValidationKey) }
+
+        let pack = AlphaInstalledModelPack(
+            packId: "gemma-4-e4b-q4",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/gemma-4-e4b-q4.gguf",
+            checksumSha256: String(repeating: "b", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+        var state = AlphaPersistedState.seed()
+        state.installedPacks = [pack]
+        state.modelJobs = [
+            AlphaModelDownloadJob(
+                sessionId: "installed-pack",
+                packId: pack.packId,
+                tier: pack.tier,
+                state: .installed,
+                networkPolicy: .wifiOnly,
+                bytesDownloaded: 1,
+                totalBytes: 1,
+                checksumSha256: pack.checksumSha256,
+                artifactKind: pack.artifactKind,
+                runtimeMode: pack.runtimeMode,
+                developmentOnly: false
+            )
+        ]
+        state.settings.activeTier = .caseAssociate
+
+        let normalized = await MainActor.run {
+            model.normalizeLoadedState(state)
+        }
+
+        XCTAssertNil(normalized.settings.activeTier)
+        XCTAssertFalse(normalized.installedPacks.first?.isActive ?? true)
+        XCTAssertTrue(normalized.ledgerEntries.contains { $0.title == "Assistant model paused" })
+    }
+
     func testInstalledPackActivationAndRemovalDeleteLocalArtifact() async throws {
         try await withRestoredStore { store in
             let basicPath = "model-packs/quick_start/lifecycle-basic.gguf"
@@ -1344,6 +1391,155 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertEqual(askDraft, "What should I note from \(document.title)?")
             XCTAssertEqual(routeDescription, .askCase(caseMatter.id))
         }
+    }
+
+    func testPrepareDocumentTranslationSelectsDocumentAndSetsLocalizedDraft() async throws {
+        try await withRestoredStore { store in
+            try await store.replace(with: AlphaPersistedState.seed())
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+
+            let maybeCaseMatter = await MainActor.run { model.cases.first }
+            let caseMatter = try XCTUnwrap(maybeCaseMatter)
+            let document = try XCTUnwrap(caseMatter.documents.first)
+
+            await MainActor.run {
+                model.prepareDocumentTranslation(caseId: caseMatter.id, documentId: document.id, targetLanguageCode: "ta")
+            }
+
+            let selectedDocumentIDs = await MainActor.run { model.selectedAskDocumentIDs(for: caseMatter.id) }
+            let askDraft = await MainActor.run { model.askDraft(for: caseMatter.id) }
+            let routeDescription = await MainActor.run { model.path.last }
+
+            XCTAssertEqual(selectedDocumentIDs, Set([document.id]))
+            XCTAssertTrue(askDraft.contains("Translate \"\(document.title)\" into Tamil"))
+            XCTAssertTrue(askDraft.contains("cite source pages"))
+            XCTAssertEqual(routeDescription, .askCase(caseMatter.id))
+        }
+    }
+
+    func testPreparedWorkUsesOnlyPersistedMatterState() async throws {
+        try await withRestoredStore { store in
+            var state = AlphaPersistedState.empty()
+            state.onboardingStage = .completed
+            try await store.replace(with: state)
+
+            let emptyModel = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await emptyModel.loadIfNeeded()
+            await MainActor.run {
+                emptyModel.runWorkbenchRoutine(.morningBrief)
+            }
+
+            let emptyItems = await MainActor.run { emptyModel.preparedWorkItems() }
+            XCTAssertTrue(emptyItems.isEmpty)
+
+            try await store.replace(with: AlphaPersistedState.seed())
+            let seededModel = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await seededModel.loadIfNeeded()
+            await MainActor.run {
+                seededModel.runWorkbenchRoutine(.morningBrief)
+            }
+
+            let items = await MainActor.run { seededModel.preparedWorkItems() }
+            XCTAssertFalse(items.isEmpty)
+            XCTAssertTrue(items.allSatisfy { $0.caseId != nil && !$0.matterName.isEmpty })
+        }
+    }
+
+    func testPublicLawRoutinePreparesPreviewWithoutNetworkUntilApproval() async throws {
+        try await withRestoredStore { store in
+            try await store.replace(with: AlphaPersistedState.seed())
+            let publicLawCalls = SendableBox(0)
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in
+                    publicLawCalls.value += 1
+                    return []
+                })
+            }
+            await model.loadIfNeeded()
+
+            await MainActor.run {
+                model.runWorkbenchRoutine(.publicLawPreview)
+            }
+
+            let status = await MainActor.run { model.publicLawSearchStatus }
+            let prepared = await MainActor.run { model.preparedWorkItems().first { $0.type == .publicLawQueryAwaitingApproval } }
+            XCTAssertEqual(status, .reviewing)
+            XCTAssertEqual(publicLawCalls.value, 0)
+            XCTAssertEqual(prepared?.badge, .approvalRequired)
+
+            await model.confirmPendingPublicLawSearch()
+            XCTAssertEqual(publicLawCalls.value, 1)
+        }
+    }
+
+    func testDismissedPreparedWorkStaysDismissedUntilSourceChanges() async throws {
+        try await withRestoredStore { store in
+            try await store.replace(with: AlphaPersistedState.seed())
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+
+            guard let caseID = await MainActor.run(body: { model.cases.first { $0.id != alphaSharedWorkspaceID }?.id }) else {
+                XCTFail("Expected seeded matter")
+                return
+            }
+            await MainActor.run {
+                model.runWorkbenchRoutine(.morningBrief, caseId: caseID)
+            }
+            guard let item = await MainActor.run(body: { model.preparedWorkItems(caseId: caseID).first { $0.type == .suggestedTasks } }) else {
+                XCTFail("Expected suggested task prepared work")
+                return
+            }
+
+            await MainActor.run {
+                model.setPreparedWorkStatus(item.id, status: .dismissed)
+                model.runWorkbenchRoutine(.morningBrief, caseId: caseID)
+            }
+            let stillDismissed = await MainActor.run {
+                model.preparedWorkItems(caseId: caseID, includeDismissed: true).first { $0.id == item.id }?.status
+            }
+            XCTAssertEqual(stillDismissed, .dismissed)
+
+            await MainActor.run {
+                model.addTask(title: "Review updated source bundle", caseId: caseID, dueDate: nil)
+                model.runWorkbenchRoutine(.morningBrief, caseId: caseID)
+            }
+            let regenerated = await MainActor.run {
+                model.preparedWorkItems(caseId: caseID, includeDismissed: true).first { $0.stableKey == item.stableKey }?.status
+            }
+            XCTAssertEqual(regenerated, .new)
+        }
+    }
+
+    func testLegacyPersistedStateDecodesWithoutWorkbenchFields() throws {
+        var state = AlphaPersistedState.empty()
+        state.preparedWorkItems = nil
+        state.routineRuns = nil
+        state.routineSettings = nil
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let data = try encoder.encode(state)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        object.removeValue(forKey: "preparedWorkItems")
+        object.removeValue(forKey: "routineRuns")
+        object.removeValue(forKey: "routineSettings")
+        let legacyData = try JSONSerialization.data(withJSONObject: object)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        let decoded = try decoder.decode(AlphaPersistedState.self, from: legacyData)
+        XCTAssertNil(decoded.preparedWorkItems)
+        XCTAssertNil(decoded.routineRuns)
+        XCTAssertNil(decoded.routineSettings)
     }
 
     private func withRestoredStore(

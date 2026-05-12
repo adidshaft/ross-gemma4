@@ -197,6 +197,46 @@ struct AlphaSettingsScreen: View {
                     }
                 }
 
+                RossSectionCard(title: "Ross Routines") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Routines run locally from saved matters, files, dates, tasks, drafts, and accepted corrections.")
+                            .font(.footnote)
+                            .foregroundStyle(Color.rossInk.opacity(0.7))
+                            .fixedSize(horizontal: false, vertical: true)
+                        Divider()
+                        AlphaRoutineToggleRow(title: "Morning brief", detail: "On app open, once per day.", isOn: Binding(
+                            get: { model.routineSettings.morningBriefEnabled },
+                            set: { value in model.updateRoutineSettings { $0.morningBriefEnabled = value } }
+                        ))
+                        Divider()
+                        AlphaRoutineToggleRow(title: "After document import", detail: "Update case memory and review items after extraction.", isOn: Binding(
+                            get: { model.routineSettings.afterDocumentImportEnabled },
+                            set: { value in model.updateRoutineSettings { $0.afterDocumentImportEnabled = value } }
+                        ))
+                        Divider()
+                        AlphaRoutineToggleRow(title: "Before hearing", detail: "Prepare checklist, missing facts, and hearing note prompt.", isOn: Binding(
+                            get: { model.routineSettings.beforeHearingEnabled },
+                            set: { value in model.updateRoutineSettings { $0.beforeHearingEnabled = value } }
+                        ))
+                        Divider()
+                        AlphaRoutineToggleRow(title: "Missing facts scan", detail: "Find gaps and weak support in source-backed matter memory.", isOn: Binding(
+                            get: { model.routineSettings.missingFactsScanEnabled },
+                            set: { value in model.updateRoutineSettings { $0.missingFactsScanEnabled = value } }
+                        ))
+                        Divider()
+                        AlphaRoutineToggleRow(title: "Draft refresh", detail: "Refresh local drafts from latest files and corrections.", isOn: Binding(
+                            get: { model.routineSettings.draftRefreshEnabled },
+                            set: { value in model.updateRoutineSettings { $0.draftRefreshEnabled = value } }
+                        ))
+                        Divider()
+                        AlphaSettingsValueRow(label: "Public-law search", value: "Approval required")
+                        Text("Ross may prepare a sanitized query preview. It must not search the web until you approve it.")
+                            .font(.footnote)
+                            .foregroundStyle(Color.rossInk.opacity(0.7))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
                 RossSectionCard(title: "Storage") {
                     DisclosureGroup(isExpanded: $storageExpanded) {
                         VStack(alignment: .leading, spacing: 12) {
@@ -278,6 +318,27 @@ struct AlphaSettingsScreen: View {
             .padding(.top, 56)
         }
         .rossHideNavigationBarIfSupported()
+    }
+}
+
+struct AlphaRoutineToggleRow: View {
+    let title: String
+    let detail: String
+    @Binding var isOn: Bool
+
+    var body: some View {
+        Toggle(isOn: $isOn) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color.rossInk)
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(Color.rossInk.opacity(0.66))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .tint(Color.rossAccent)
     }
 }
 

@@ -539,6 +539,7 @@ final class AlphaRossModel {
         case generateExport(kind: String, label: String)
         case rerunDocumentReview
         case createTasksFromDocument
+        case runRoutine(AlphaRoutineKind)
         case guidance(title: String, detail: String)
     }
 
@@ -1029,9 +1030,172 @@ func alphaAssistantModelArtifact(for tier: AlphaCapabilityTier) -> AlphaAssistan
 
 final class AlphaAssistantDownloadTaskBox: @unchecked Sendable {
     var task: URLSessionDownloadTask?
+    var session: URLSession?
     var progressTask: Task<Void, Never>?
     var pausedByUser = false
     var resumeData: Data?
+}
+
+final class AlphaBackgroundModelDownloadCenter: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
+    static let shared = AlphaBackgroundModelDownloadCenter()
+
+    typealias ProgressHandler = @Sendable (Int64, Int64) async -> Void
+
+    private struct Entry {
+        var continuation: CheckedContinuation<URL, any Error>
+        var destinationURL: URL
+        var progress: ProgressHandler
+        var session: URLSession
+        var finishedURL: URL?
+    }
+
+    private let lock = NSLock()
+    private var entries: [Int: Entry] = [:]
+    private var taskIdentifierByJobID: [UUID: Int] = [:]
+    private var taskByIdentifier: [Int: URLSessionDownloadTask] = [:]
+    private var sessionsByIdentifier: [String: URLSession] = [:]
+    private var backgroundCompletionHandlers: [String: () -> Void] = [:]
+
+    func download(
+        request: URLRequest,
+        jobID: UUID,
+        resumeData: Data?,
+        allowsMobileData: Bool,
+        destinationURL: URL,
+        progress: @escaping ProgressHandler
+    ) async throws -> URL {
+        try await withCheckedThrowingContinuation { continuation in
+            let identifier = "com.ross.local-model-download.\(jobID.uuidString)"
+            let configuration = URLSessionConfiguration.background(withIdentifier: identifier)
+            configuration.sessionSendsLaunchEvents = true
+            configuration.isDiscretionary = false
+            configuration.allowsCellularAccess = allowsMobileData
+            configuration.waitsForConnectivity = true
+            if #available(iOS 13.0, macOS 10.15, *) {
+                configuration.allowsExpensiveNetworkAccess = allowsMobileData
+                configuration.allowsConstrainedNetworkAccess = allowsMobileData
+            }
+
+            let session = URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
+            let task = resumeData.map { session.downloadTask(withResumeData: $0) } ?? session.downloadTask(with: request)
+            let entry = Entry(
+                continuation: continuation,
+                destinationURL: destinationURL,
+                progress: progress,
+                session: session
+            )
+            lock.lock()
+            entries[task.taskIdentifier] = entry
+            taskIdentifierByJobID[jobID] = task.taskIdentifier
+            taskByIdentifier[task.taskIdentifier] = task
+            sessionsByIdentifier[identifier] = session
+            lock.unlock()
+            task.resume()
+        }
+    }
+
+    func cancel(jobID: UUID, completion: @escaping @Sendable (Data?) -> Void) {
+        lock.lock()
+        let taskIdentifier = taskIdentifierByJobID[jobID]
+        let task = taskIdentifier.flatMap { taskByIdentifier[$0] }
+        lock.unlock()
+        guard let task else {
+            completion(nil)
+            return
+        }
+        task.cancel { resumeData in
+            completion(resumeData)
+        }
+    }
+
+    func setBackgroundCompletionHandler(_ handler: @escaping () -> Void, for identifier: String) {
+        let configuration = URLSessionConfiguration.background(withIdentifier: identifier)
+        configuration.sessionSendsLaunchEvents = true
+        configuration.waitsForConnectivity = true
+        let session = URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
+        lock.lock()
+        backgroundCompletionHandlers[identifier] = handler
+        sessionsByIdentifier[identifier] = session
+        lock.unlock()
+    }
+
+    nonisolated func urlSession(
+        _ session: URLSession,
+        downloadTask: URLSessionDownloadTask,
+        didWriteData bytesWritten: Int64,
+        totalBytesWritten: Int64,
+        totalBytesExpectedToWrite: Int64
+    ) {
+        let progress: ProgressHandler?
+        lock.lock()
+        progress = entries[downloadTask.taskIdentifier]?.progress
+        lock.unlock()
+        guard let progress else { return }
+        Task {
+            await progress(totalBytesWritten, totalBytesExpectedToWrite)
+        }
+    }
+
+    nonisolated func urlSession(
+        _ session: URLSession,
+        downloadTask: URLSessionDownloadTask,
+        didFinishDownloadingTo location: URL
+    ) {
+        lock.lock()
+        let storedEntry = entries[downloadTask.taskIdentifier]
+        lock.unlock()
+        guard var entry = storedEntry else { return }
+
+        do {
+            try? FileManager.default.removeItem(at: entry.destinationURL)
+            try FileManager.default.moveItem(at: location, to: entry.destinationURL)
+            entry.finishedURL = entry.destinationURL
+            lock.lock()
+            entries[downloadTask.taskIdentifier] = entry
+            lock.unlock()
+        } catch {
+            lock.lock()
+            entries.removeValue(forKey: downloadTask.taskIdentifier)
+            lock.unlock()
+            entry.continuation.resume(throwing: error)
+            session.invalidateAndCancel()
+        }
+    }
+
+    nonisolated func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        didCompleteWithError error: (any Error)?
+    ) {
+        lock.lock()
+        let entry = entries.removeValue(forKey: task.taskIdentifier)
+        taskByIdentifier.removeValue(forKey: task.taskIdentifier)
+        taskIdentifierByJobID = taskIdentifierByJobID.filter { $0.value != task.taskIdentifier }
+        if let identifier = session.configuration.identifier {
+            sessionsByIdentifier.removeValue(forKey: identifier)
+        }
+        lock.unlock()
+        guard let entry else { return }
+
+        if let error {
+            entry.continuation.resume(throwing: error)
+        } else if let finishedURL = entry.finishedURL {
+            entry.continuation.resume(returning: finishedURL)
+        } else {
+            entry.continuation.resume(throwing: AlphaAssistantDownloadError.missingDownloadedFile)
+        }
+        session.finishTasksAndInvalidate()
+    }
+
+    nonisolated func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
+        guard let identifier = session.configuration.identifier else { return }
+        lock.lock()
+        let handler = backgroundCompletionHandlers.removeValue(forKey: identifier)
+        lock.unlock()
+        DispatchQueue.main.async {
+            handler?()
+        }
+    }
 }
 
 enum AlphaAssistantDownloadError: LocalizedError {

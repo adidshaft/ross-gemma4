@@ -447,68 +447,166 @@ struct AlphaFullScreenChatTurn: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(alignment: .top, spacing: 10) {
-                    Text(result.answerTitle)
+            if result.isPendingLocalModelResponse {
+                AlphaPendingLocalModelCard(
+                    result: result,
+                    style: .fullScreen
+                )
+            } else {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack(alignment: .top, spacing: 10) {
+                        Text(result.answerTitle)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.rossInk)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Spacer(minLength: 8)
+
+                        if let note = deduplicatedStatusNote {
+                            HStack(spacing: 6) {
+                                RossGlassIconView(.badgeSparkle, variant: .accent, size: 12, fallbackSystemImage: "sparkles")
+                                Text(note)
+                                    .font(.caption.weight(.semibold))
+                                    .lineLimit(1)
+                            }
+                            .foregroundStyle(Color.rossAccent)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 7)
+                            .background(Color.rossAccent.opacity(0.08), in: Capsule())
+                        }
+                    }
+
+                    ForEach(Array(answerItems.enumerated()), id: \.element.id) { index, section in
+                        VStack(alignment: .leading, spacing: 10) {
+                            AlphaFormattedAnswerText(text: section.text)
+                            if index < answerItems.count - 1 {
+                                Divider()
+                                    .overlay(Color.rossBorder.opacity(0.4))
+                            }
+                        }
+                    }
+
+                    if !result.caseFileSources.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Sources from your files")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Color.rossInk.opacity(0.54))
+                            AlphaSourceRefChips(
+                                sourceRefs: result.caseFileSources,
+                                contextDocumentTitle: contextDocumentTitle,
+                                onOpenSourceRef: onOpenSource
+                            )
+                        }
+                        .padding(12)
+                        .background(Color.rossSecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    }
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.rossGlassFill, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(Color.rossGlassStroke.opacity(0.86), lineWidth: 1)
+                }
+                .contextMenu {
+                    Button {
+                        alphaCopyAskResultToPasteboard(result)
+                    } label: {
+                        Label("Copy answer", systemImage: "doc.on.doc")
+                    }
+                }
+            }
+        }
+    }
+}
+
+enum AlphaPendingLocalModelCardStyle {
+    case compact
+    case fullScreen
+
+    var showsTaggedFilesAsChips: Bool {
+        switch self {
+        case .compact:
+            return false
+        case .fullScreen:
+            return true
+        }
+    }
+
+    var cornerRadius: CGFloat {
+        switch self {
+        case .compact:
+            return 18
+        case .fullScreen:
+            return 20
+        }
+    }
+}
+
+struct AlphaPendingLocalModelCard: View {
+    let result: AlphaAskResult
+    let style: AlphaPendingLocalModelCardStyle
+
+    private var taggedFilesLine: String? {
+        guard !result.selectedDocumentTitles.isEmpty else { return nil }
+        if result.selectedDocumentTitles.count == 1, let title = result.selectedDocumentTitles.first {
+            return "Tagged file: \(title)"
+        }
+        return "Tagged files: \(result.selectedDocumentTitles.joined(separator: ", "))"
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center, spacing: 12) {
+                ProgressView()
+                    .controlSize(.small)
+                    .tint(Color.rossAccent)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Ross is answering...")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.rossInk)
-                        .fixedSize(horizontal: false, vertical: true)
 
-                    Spacer(minLength: 8)
+                    if let label = result.pendingLocalModelLabel {
+                        Text("\(label) is running on this iPhone")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(Color.rossAccent)
+                    }
+                }
 
-                    if let note = deduplicatedStatusNote {
-                        HStack(spacing: 6) {
-                            RossGlassIconView(.badgeSparkle, variant: .accent, size: 12, fallbackSystemImage: "sparkles")
-                            Text(note)
-                                .font(.caption.weight(.semibold))
-                                .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+
+            Text("Ross is checking your local files and will replace this loading state with the final answer.")
+                .font(.footnote)
+                .lineSpacing(4)
+                .foregroundStyle(Color.rossInk.opacity(0.78))
+
+            if style.showsTaggedFilesAsChips, !result.selectedDocumentTitles.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(result.selectedDocumentTitles, id: \.self) { title in
+                            AlphaRossTokenChip(
+                                title: title,
+                                detail: nil,
+                                systemImage: "paperclip"
+                            )
                         }
-                        .foregroundStyle(Color.rossAccent)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 7)
-                        .background(Color.rossAccent.opacity(0.08), in: Capsule())
                     }
                 }
-
-                ForEach(Array(answerItems.enumerated()), id: \.element.id) { index, section in
-                    VStack(alignment: .leading, spacing: 10) {
-                        AlphaFormattedAnswerText(text: section.text)
-                        if index < answerItems.count - 1 {
-                            Divider()
-                                .overlay(Color.rossBorder.opacity(0.4))
-                        }
-                    }
-                }
-
-                if !result.caseFileSources.isEmpty {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Sources from your files")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color.rossInk.opacity(0.54))
-                        AlphaSourceRefChips(
-                            sourceRefs: result.caseFileSources,
-                            contextDocumentTitle: contextDocumentTitle,
-                            onOpenSourceRef: onOpenSource
-                        )
-                    }
-                    .padding(12)
-                    .background(Color.rossSecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                }
+            } else if let taggedFilesLine {
+                Text(taggedFilesLine)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(Color.rossInk.opacity(0.6))
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.rossGlassFill, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(Color.rossGlassStroke.opacity(0.86), lineWidth: 1)
-            }
-            .contextMenu {
-                Button {
-                    alphaCopyAskResultToPasteboard(result)
-                } label: {
-                    Label("Copy answer", systemImage: "doc.on.doc")
-                }
-            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.rossGlassFill, in: RoundedRectangle(cornerRadius: style.cornerRadius, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: style.cornerRadius, style: .continuous)
+                .stroke(Color.rossGlassStroke.opacity(0.86), lineWidth: 1)
         }
     }
 }
@@ -1060,6 +1158,21 @@ extension AlphaAskResult {
             return "Ross used Legal Search after you approved. Your case files stayed on this device."
         }
         return "Answered using only your files on this device. Nothing was sent online."
+    }
+
+    var isPendingLocalModelResponse: Bool {
+        answerTitle == "Private assistant is reading your files"
+            && (statusNote?.hasSuffix("running locally") ?? false)
+            && publicLawPreview == nil
+            && publicLawResults.isEmpty
+    }
+
+    var pendingLocalModelLabel: String? {
+        guard isPendingLocalModelResponse,
+              let statusNote,
+              let range = statusNote.range(of: " running locally") else { return nil }
+        let label = String(statusNote[..<range.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+        return label.isEmpty ? nil : label
     }
 
     func answerSectionItems(limit: Int? = nil) -> [AlphaAnswerSectionItem] {

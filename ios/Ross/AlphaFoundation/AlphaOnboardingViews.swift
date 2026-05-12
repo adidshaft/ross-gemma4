@@ -126,6 +126,8 @@ struct AlphaOnboardingScreen: View {
 
     var body: some View {
         GeometryReader { proxy in
+            let horizontalPadding: CGFloat = 16
+
             ZStack {
                 AlphaSetupBackdrop()
                 VStack(spacing: 0) {
@@ -133,80 +135,77 @@ struct AlphaOnboardingScreen: View {
                     Spacer(minLength: 0)
                 }
 
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 0) {
-                        Spacer(minLength: max(proxy.safeAreaInsets.top + 24, 52))
+                VStack(spacing: 0) {
+                    Spacer(minLength: max(proxy.safeAreaInsets.top + 20, 44))
 
-                        // Hero
-                        VStack(spacing: 16) {
-                            RossAuthHeroMark(size: 80)
+                    VStack(spacing: 16) {
+                        RossAuthHeroMark(size: 78)
 
-                            VStack(spacing: 8) {
-                                Text("Ross")
-                                    .font(.system(size: 40, weight: .bold, design: .serif))
-                                    .foregroundStyle(Color.rossInk)
-
-                                Text("Your private legal workbench.")
-                                    .font(.title3.weight(.medium))
-                                    .foregroundStyle(Color.rossInk.opacity(0.70))
-                                    .multilineTextAlignment(.center)
-                            }
-                        }
-                        .frame(maxWidth: 430)
-
-                        Spacer(minLength: 36)
-
-                        // Download explainer card
-                        AlphaOnboardingDownloadCard(tier: recommendedTier)
-                            .frame(maxWidth: 430)
-
-                        Spacer(minLength: 20)
-
-                        // Privacy pills
                         VStack(spacing: 8) {
-                            AlphaOnboardingPrivacyPill(icon: "lock.fill", text: "Everything stays on this device")
-                            AlphaOnboardingPrivacyPill(icon: "network.slash", text: "No cloud after setup — fully offline")
-                            AlphaOnboardingPrivacyPill(icon: "arrow.down.circle", text: "One download, then always private")
+                            Text("Ross")
+                                .font(.system(size: 38, weight: .bold, design: .serif))
+                                .foregroundStyle(Color.rossInk)
+
+                            Text("Your private legal workbench.")
+                                .font(.title3.weight(.medium))
+                                .foregroundStyle(Color.rossInk.opacity(0.70))
+                                .multilineTextAlignment(.center)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
-                        .frame(maxWidth: 430)
-
-                        Spacer(minLength: 28)
-
-                        // CTA
-                        VStack(spacing: 12) {
-                            Button("Download & set up Ross") {
-                                model.selectedTier = recommendedTier
-                                model.finishPackSetup()
-                            }
-                            .buttonStyle(AlphaSetupPrimaryButtonStyle())
-                            .frame(maxWidth: 430)
-
-                            Button("Choose a different model") {
-                                showModelPicker = true
-                            }
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(Color.rossAccent.opacity(0.80))
-
-                            Button("Skip for now") {
-                                model.skipPackSetup()
-                            }
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(Color.rossInk.opacity(0.44))
-                        }
-                        .frame(maxWidth: 430)
-
-                        Spacer(minLength: max(proxy.safeAreaInsets.bottom + 24, 40))
                     }
-                    .frame(minHeight: proxy.size.height)
-                    .padding(.horizontal, 24)
-                    .frame(maxWidth: 430)
-                    .frame(maxWidth: .infinity)
+
+                    Spacer(minLength: 28)
+
+                    AlphaOnboardingDownloadCard(tier: recommendedTier)
+
+                    Spacer(minLength: 16)
+
+                    VStack(spacing: 8) {
+                        AlphaOnboardingPrivacyPill(icon: "lock.fill", text: "Everything stays on this device")
+                        AlphaOnboardingPrivacyPill(icon: "network.slash", text: "No cloud after setup — fully offline")
+                        AlphaOnboardingPrivacyPill(icon: "arrow.down.circle", text: "One download, then always private")
+                    }
+
+                    Spacer(minLength: 22)
+
+                    VStack(spacing: 12) {
+                        Button {
+                            model.selectedTier = recommendedTier
+                            model.finishPackSetup()
+                        } label: {
+                            Text(rossLocalized("setup_assistant"))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.72)
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(AlphaSetupPrimaryButtonStyle())
+
+                        Button("Choose a different model") {
+                            showModelPicker = true
+                        }
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.rossAccent.opacity(0.80))
+
+                        Button("Skip for now") {
+                            model.skipPackSetup()
+                        }
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Color.rossInk.opacity(0.44))
+                    }
+
+                    Spacer(minLength: max(proxy.safeAreaInsets.bottom + 18, 28))
                 }
+                .padding(.horizontal, horizontalPadding)
+                .frame(maxWidth: 430)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             }
         }
         .sheet(isPresented: $showModelPicker) {
             AlphaModelPickerSheet(model: model, isPresented: $showModelPicker)
         }
+        #if os(iOS)
+        .toolbar(.hidden, for: .navigationBar)
+        #endif
     }
 }
 

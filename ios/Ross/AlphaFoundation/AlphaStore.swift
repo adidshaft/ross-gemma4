@@ -55,6 +55,8 @@ actor AlphaRossStore {
     private let documentsURL: URL
     private let modelPacksURL: URL
     private let exportsURL: URL
+    private let modelResumeURL: URL
+    private let deviceCacheURL: URL
     private let keychainAccount: String
     private let usePlaintextStateStorage: Bool
 
@@ -68,6 +70,8 @@ actor AlphaRossStore {
         documentsURL = rootURL.appendingPathComponent("documents", isDirectory: true)
         modelPacksURL = rootURL.appendingPathComponent("model-packs", isDirectory: true)
         exportsURL = rootURL.appendingPathComponent("exports", isDirectory: true)
+        modelResumeURL = rootURL.appendingPathComponent("model-download-resume", isDirectory: true)
+        deviceCacheURL = rootURL.appendingPathComponent("device-cache", isDirectory: true)
         keychainAccount = isRunningTests ? "ross.ios.alpha.state.tests" : "ross.ios.alpha.state"
         usePlaintextStateStorage = isRunningTests
     }
@@ -269,6 +273,52 @@ actor AlphaRossStore {
         return (relativePath(for: artifactURL), verified.checksum, verified.bytes)
     }
 
+    func saveModelResumeData(_ data: Data, for jobID: UUID) throws -> String {
+        try ensureFolders()
+        let url = modelResumeURL.appendingPathComponent("\(jobID.uuidString).resume")
+        try data.write(to: url, options: .atomic)
+        return relativePath(for: url)
+    }
+
+    func loadModelResumeData(relativePath: String?) throws -> Data? {
+        guard let relativePath, !relativePath.isEmpty else { return nil }
+        let url = alphaAbsoluteURL(for: relativePath)
+        guard fileManager.fileExists(atPath: url.path()) else { return nil }
+        return try Data(contentsOf: url)
+    }
+
+    func removeModelResumeData(relativePath: String?) {
+        guard let relativePath, !relativePath.isEmpty else { return }
+        try? fileManager.removeItem(at: alphaAbsoluteURL(for: relativePath))
+    }
+
+    func writeDeviceCacheMetadata(_ state: AlphaPersistedState) throws {
+        try ensureFolders()
+        let matters = state.cases.filter { $0.id != alphaSharedWorkspaceID && $0.archivedAt == nil }
+        let payload: [String: Any] = [
+            "cachedAt": ISO8601DateFormatter().string(from: .now),
+            "matterCount": matters.count,
+            "documentCount": matters.flatMap(\.documents).count,
+            "preparedWorkCount": state.preparedWorkItems?.count ?? 0,
+            "routineRunCount": state.routineRuns?.count ?? 0
+        ]
+        let data = try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
+        try data.write(to: deviceCacheURL.appendingPathComponent("workspace-index.json"), options: .atomic)
+    }
+
+    func clearDeviceCache() throws {
+        try? fileManager.removeItem(at: deviceCacheURL)
+        try fileManager.createDirectory(at: deviceCacheURL, withIntermediateDirectories: true)
+    }
+
+    func modelStorageBytes() -> Int64 {
+        directoryByteCount(modelPacksURL)
+    }
+
+    func deviceCacheBytes() -> Int64 {
+        directoryByteCount(deviceCacheURL)
+    }
+
     private func removeExistingItemIfNeeded(at url: URL) throws {
         do {
             try fileManager.removeItem(at: url)
@@ -331,6 +381,23 @@ actor AlphaRossStore {
         try fileManager.createDirectory(at: documentsURL, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: modelPacksURL, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: exportsURL, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: modelResumeURL, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: deviceCacheURL, withIntermediateDirectories: true)
+    }
+
+    private func directoryByteCount(_ url: URL) -> Int64 {
+        guard let enumerator = fileManager.enumerator(
+            at: url,
+            includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        ) else { return 0 }
+        var total: Int64 = 0
+        for case let fileURL as URL in enumerator {
+            let values = try? fileURL.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey])
+            guard values?.isRegularFile == true else { continue }
+            total += Int64(values?.fileSize ?? 0)
+        }
+        return total
     }
 
     private func safeFileName(_ value: String) -> String {
@@ -592,7 +659,12 @@ actor AlphaRossStore {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = true
-        request.recognitionLanguages = ["hi-IN", "en-IN"]
+        let preferredLanguages = ["en-IN", "hi-IN", "ta-IN", "te-IN"]
+        let supportedLanguages = (try? request.supportedRecognitionLanguages()) ?? preferredLanguages
+        request.recognitionLanguages = preferredLanguages.filter { supportedLanguages.contains($0) }
+        if request.recognitionLanguages.isEmpty {
+            request.recognitionLanguages = ["en-IN"]
+        }
         try handler.perform([request])
         let candidates = (request.results ?? []).compactMap { $0.topCandidates(1).first }
         let text = candidates
@@ -1843,15 +1915,27 @@ private struct AlphaLocalExtractionOrchestrator {
     private func detectLanguageProfile(documentID: UUID, pages: [AlphaDocumentPage]) -> AlphaDocumentLanguageProfile {
         let pageProfiles = pages.map { page -> AlphaDocumentLanguageProfilePage in
             let counts = scriptCounts(in: page.extractedText ?? page.snippet ?? "")
-            let total = counts.latin + counts.devanagari + counts.other
+            let total = counts.latin + counts.devanagari + counts.tamil + counts.telugu + counts.other
             if total == 0 {
                 return AlphaDocumentLanguageProfilePage(pageNumber: page.pageNumber, language: .unknown, script: .unknown, confidence: 0)
             }
-            if counts.latin > 0 && counts.devanagari > 0 {
+            let detectedScripts = [
+                counts.latin > 0,
+                counts.devanagari > 0,
+                counts.tamil > 0,
+                counts.telugu > 0
+            ].filter { $0 }.count
+            if detectedScripts > 1 {
                 return AlphaDocumentLanguageProfilePage(pageNumber: page.pageNumber, language: .mixed, script: .mixed, confidence: 0.64)
             }
             if counts.devanagari > 0 {
                 return AlphaDocumentLanguageProfilePage(pageNumber: page.pageNumber, language: .hindi, script: .devanagari, confidence: 0.88)
+            }
+            if counts.tamil > 0 {
+                return AlphaDocumentLanguageProfilePage(pageNumber: page.pageNumber, language: .tamil, script: .tamil, confidence: 0.88)
+            }
+            if counts.telugu > 0 {
+                return AlphaDocumentLanguageProfilePage(pageNumber: page.pageNumber, language: .telugu, script: .telugu, confidence: 0.88)
             }
             if counts.latin > 0 {
                 return AlphaDocumentLanguageProfilePage(pageNumber: page.pageNumber, language: .english, script: .latin, confidence: 0.88)
@@ -1860,22 +1944,33 @@ private struct AlphaLocalExtractionOrchestrator {
         }
         let hasLatin = pageProfiles.contains { $0.script == .latin || $0.script == .mixed }
         let hasDevanagari = pageProfiles.contains { $0.script == .devanagari || $0.script == .mixed }
+        let hasTamil = pageProfiles.contains { $0.script == .tamil || $0.script == .mixed }
+        let hasTelugu = pageProfiles.contains { $0.script == .telugu || $0.script == .mixed }
         let primary: AlphaDocumentLanguage = {
-            switch (hasLatin, hasDevanagari) {
-            case (true, true):
+            let languageCount = [hasLatin, hasDevanagari, hasTamil, hasTelugu].filter { $0 }.count
+            if languageCount > 1 {
                 return .mixed
-            case (false, true):
-                return .hindi
-            case (true, false):
-                return .english
-            default:
-                return .unknown
             }
+            if hasDevanagari {
+                return .hindi
+            }
+            if hasTamil {
+                return .tamil
+            }
+            if hasTelugu {
+                return .telugu
+            }
+            if hasLatin {
+                return .english
+            }
+            return .unknown
         }()
         let scripts = [
             hasLatin ? "latin" : nil,
             hasDevanagari ? "devanagari" : nil,
-            (!hasLatin && !hasDevanagari) ? "other" : nil
+            hasTamil ? "tamil" : nil,
+            hasTelugu ? "telugu" : nil,
+            (!hasLatin && !hasDevanagari && !hasTamil && !hasTelugu) ? "other" : nil
         ].compactMap { $0 }
 
         return AlphaDocumentLanguageProfile(
@@ -2155,6 +2250,8 @@ private extension AlphaLocalExtractionOrchestrator {
     struct ScriptCounts {
         var latin = 0
         var devanagari = 0
+        var tamil = 0
+        var telugu = 0
         var other = 0
     }
 
@@ -2172,6 +2269,10 @@ private extension AlphaLocalExtractionOrchestrator {
                 counts.latin += 1
             case 0x0900 ... 0x097F, 0xA8E0 ... 0xA8FF:
                 counts.devanagari += 1
+            case 0x0B80 ... 0x0BFF:
+                counts.tamil += 1
+            case 0x0C00 ... 0x0C7F:
+                counts.telugu += 1
             default:
                 if CharacterSet.letters.contains(scalar) {
                     counts.other += 1

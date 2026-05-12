@@ -29,6 +29,37 @@ private var alphaNavigationBarTrailingPlacement: ToolbarItemPlacement {
     #endif
 }
 
+private func alphaDocumentLanguage(forAppLanguageCode code: String) -> AlphaDocumentLanguage? {
+    switch code.split(separator: "-").first.map(String.init) ?? code {
+    case "en": .english
+    case "hi": .hindi
+    case "ta": .tamil
+    case "te": .telugu
+    default: nil
+    }
+}
+
+private func alphaDocumentLanguageDisplayName(_ language: AlphaDocumentLanguage) -> String {
+    switch language {
+    case .english: rossLanguageDisplayName(code: "en")
+    case .hindi: rossLanguageDisplayName(code: "hi")
+    case .tamil: rossLanguageDisplayName(code: "ta")
+    case .telugu: rossLanguageDisplayName(code: "te")
+    case .mixed: "Mixed language"
+    case .unknown: "Unknown"
+    }
+}
+
+private func alphaDocumentNeedsTranslation(_ document: AlphaCaseDocument, selectedLanguageCode: String) -> Bool {
+    guard let profile = document.languageProfile else { return false }
+    guard profile.primaryLanguage != .unknown else { return false }
+    guard let selectedLanguage = alphaDocumentLanguage(forAppLanguageCode: selectedLanguageCode) else { return false }
+    if profile.primaryLanguage == .mixed {
+        return !profile.scriptsDetected.isEmpty
+    }
+    return profile.primaryLanguage != selectedLanguage
+}
+
 struct AlphaDocumentListScreen: View {
     @Bindable var model: AlphaRossModel
     let caseId: UUID
@@ -275,6 +306,24 @@ struct AlphaDocumentViewerScreen: View {
                         progressLabel: alphaExtractionProgressLabel(activeExtractionRun),
                         progressValue: alphaExtractionProgressValue(activeExtractionRun)
                     )
+
+                    if alphaDocumentNeedsTranslation(document, selectedLanguageCode: rossSelectedLanguageCode()) {
+                        AlphaDocumentTranslationCard(
+                            documentLanguage: alphaDocumentLanguageDisplayName(document.languageProfile?.primaryLanguage ?? .unknown),
+                            targetLanguage: rossLanguageDisplayName(code: rossSelectedLanguageCode()),
+                            isAssistantReady: model.activeRuntimeHealth?.available == true,
+                            onTranslate: {
+                                model.prepareDocumentTranslation(
+                                    caseId: caseId,
+                                    documentId: document.id,
+                                    targetLanguageCode: rossSelectedLanguageCode()
+                                )
+                            },
+                            onSetupAssistant: {
+                                model.path.append(.privateAISettings)
+                            }
+                        )
+                    }
 
                     if let suggestedTitle {
                         AlphaDocumentTitleSuggestionCard(
@@ -618,6 +667,56 @@ struct AlphaDocumentReviewWorkbenchCard<Content: View>: View {
         .overlay {
             RoundedRectangle(cornerRadius: RossSurface.cornerRadius, style: .continuous)
                 .stroke(Color.rossBorder.opacity(0.82), lineWidth: 1)
+        }
+    }
+}
+
+struct AlphaDocumentTranslationCard: View {
+    let documentLanguage: String
+    let targetLanguage: String
+    let isAssistantReady: Bool
+    let onTranslate: () -> Void
+    let onSetupAssistant: () -> Void
+
+    var body: some View {
+        RossSectionCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "translate")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Color.rossAccent)
+                        .frame(width: 30, height: 30)
+                        .background(Color.rossAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Document language: \(documentLanguage)")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.rossInk)
+
+                        Text(isAssistantReady ? rossLocalized("translation_ready") : rossLocalized("translation_needs_assistant"))
+                            .font(.caption)
+                            .foregroundStyle(Color.rossInk.opacity(0.66))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer(minLength: 0)
+                }
+
+                Button {
+                    isAssistantReady ? onTranslate() : onSetupAssistant()
+                } label: {
+                    Label(
+                        isAssistantReady
+                            ? String(format: rossLocalized("translate_to"), targetLanguage)
+                            : rossLocalized("setup_assistant"),
+                        systemImage: isAssistantReady ? "sparkles" : "arrow.down.circle"
+                    )
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(AlphaReviewActionButtonStyle(tint: Color.rossAccent))
+            }
         }
     }
 }
