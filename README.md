@@ -17,6 +17,11 @@ ROSS-Gemma4 is a mobile-first, privacy-preserving legal workbench built around G
   <img src="docs/images/dashboard_needs_attention.png" width="250" alt="Dashboard" />
   <img src="docs/images/matter_needs_review.png" width="250" alt="Matter Needs Review" />
 </p>
+
+<p align="center">
+  <img src="docs/images/ross_mock_case_source_backed_answer.png" width="320" alt="ROSS source-backed answer for the Rivera v. Northstar mock case" />
+</p>
+
 ---
 
 ## Problem Statement
@@ -30,6 +35,10 @@ ROSS-Gemma4 bridges the gap between advanced AI capabilities and strict legal pr
 ---
 
 ## Demo Workflows
+
+### Synthetic Case Bundle Demo
+
+The repository includes `Ross_Mock_Case_Bundle`, a synthetic six-file civil litigation bundle for **Maira Rivera d/b/a Rivera Instruments v. Northstar Courier, LLC**. It contains pleadings/discovery, a motion hearing transcript, a camera-retention affidavit, exhibit records, and two evidence images. The bundle is designed to show ROSS reading private case files, producing source-backed case answers, flagging timestamp and preservation issues, and separating evidence from inference.
 
 ### 1. Intake & Chronology Building
 Import a bundle of witness statements and police reports. ROSS-Gemma4 uses the local runtime to cross-reference timestamps, align conflicting accounts, and generate a structured chronology of events, citing the exact source document for every fact.
