@@ -54,6 +54,25 @@ extension AlphaRossModel {
 
     func pauseJob(_ job: AlphaModelDownloadJob) {
         guard job.state == .queued || job.state == .downloading else { return }
+
+        if let taskBox = assistantDownloadTaskBoxes[job.id], let task = taskBox.task {
+            taskBox.pausedByUser = true
+            taskBox.progressTask?.cancel()
+            task.cancel { [weak self] resumeData in
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    self.assistantDownloadTaskBoxes[job.id]?.resumeData = resumeData
+                    self.assistantDownloadTaskBoxes[job.id]?.task = nil
+                    self.updateJob(job.id) {
+                        $0.state = .pausedUser
+                        $0.updatedAt = .now
+                    }
+                    self.persist()
+                }
+            }
+            return
+        }
+
         updateJob(job.id) {
             $0.state = .pausedUser
             $0.updatedAt = .now
@@ -67,7 +86,14 @@ extension AlphaRossModel {
             job.state == .pausedError ||
             job.state == .pausedNoStorage ||
             job.state == .failed else { return }
-        Task { await startPackDownload(for: job.tier, mobileAllowed: job.networkPolicy == .mobileAllowed) }
+        assistantDownloadTaskBoxes[job.id]?.pausedByUser = false
+        Task {
+            await startPackDownload(
+                for: job.tier,
+                mobileAllowed: job.networkPolicy == .mobileAllowed,
+                existingJobID: job.id
+            )
+        }
     }
 
     func removeInstalledPack(_ pack: AlphaInstalledModelPack) {
@@ -282,15 +308,21 @@ extension AlphaRossModel {
         request.timeoutInterval = 10_800
         request.setValue("Ross-iOS/0.1 model-downloader", forHTTPHeaderField: "User-Agent")
 
-        let taskBox = AlphaAssistantDownloadTaskBox()
+        let taskBox = assistantDownloadTaskBoxes[jobID] ?? {
+            let created = AlphaAssistantDownloadTaskBox()
+            assistantDownloadTaskBoxes[jobID] = created
+            return created
+        }()
+        taskBox.pausedByUser = false
         let destinationURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ross-\(artifact.packId)-\(UUID().uuidString)")
             .appendingPathExtension((artifact.fileName as NSString).pathExtension.isEmpty ? "gguf" : (artifact.fileName as NSString).pathExtension)
 
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
-                let task = URLSession.shared.downloadTask(with: request) { temporaryURL, response, error in
+                let complete: @Sendable (URL?, URLResponse?, (any Error)?) -> Void = { temporaryURL, response, error in
                     taskBox.progressTask?.cancel()
+                    taskBox.task = nil
 
                     if let error {
                         let nsError = error as NSError
@@ -318,10 +350,19 @@ extension AlphaRossModel {
                     do {
                         try? FileManager.default.removeItem(at: destinationURL)
                         try FileManager.default.moveItem(at: temporaryURL, to: destinationURL)
+                        taskBox.resumeData = nil
                         continuation.resume(returning: destinationURL)
                     } catch {
                         continuation.resume(throwing: error)
                     }
+                }
+
+                let task: URLSessionDownloadTask
+                if let resumeData = taskBox.resumeData {
+                    task = URLSession.shared.downloadTask(withResumeData: resumeData, completionHandler: complete)
+                    taskBox.resumeData = nil
+                } else {
+                    task = URLSession.shared.downloadTask(with: request, completionHandler: complete)
                 }
 
                 taskBox.task = task
@@ -331,12 +372,6 @@ extension AlphaRossModel {
                     while !Task.isCancelled {
                         try? await Task.sleep(nanoseconds: 1_000_000_000)
                         guard !Task.isCancelled else { break }
-
-                        if persisted.modelJobs.first(where: { $0.id == jobID })?.state == .pausedUser {
-                            taskBox.pausedByUser = true
-                            task.cancel()
-                            break
-                        }
 
                         let received = max(0, task.countOfBytesReceived)
                         let expected = task.countOfBytesExpectedToReceive
@@ -419,43 +454,67 @@ extension AlphaRossModel {
     }
 
     func startPackDownload(for tier: AlphaCapabilityTier, mobileAllowed: Bool) async {
+        await startPackDownload(for: tier, mobileAllowed: mobileAllowed, existingJobID: nil)
+    }
+
+    func startPackDownload(for tier: AlphaCapabilityTier, mobileAllowed: Bool, existingJobID: UUID?) async {
         let artifact = alphaAssistantModelArtifact(for: tier)
         let policy: AlphaDownloadPolicy = mobileAllowed ? .mobileAllowed : .wifiOnly
-        let sessionId = "hf-\(UUID().uuidString.prefix(8))"
+        let existingJob = existingJobID.flatMap { requestedID in
+            persisted.modelJobs.first { $0.id == requestedID }
+        } ?? persisted.modelJobs.first {
+            $0.tier == tier && $0.state != .installed
+        }
 
-        let job = AlphaModelDownloadJob(
-            sessionId: sessionId,
-            packId: artifact.packId,
-            tier: tier,
-            state: .queued,
-            networkPolicy: policy,
-            bytesDownloaded: 0,
-            totalBytes: artifact.sizeBytes,
-            checksumSha256: artifact.sha256,
-            artifactKind: "local_model_artifact",
-            runtimeMode: .llamaCppGguf,
-            developmentOnly: false
-        )
+        let job: AlphaModelDownloadJob
+        let shouldRecordSelection: Bool
+        if let existingJob {
+            job = existingJob
+            shouldRecordSelection = false
+        } else {
+            let sessionId = "hf-\(UUID().uuidString.prefix(8))"
+            job = AlphaModelDownloadJob(
+                sessionId: sessionId,
+                packId: artifact.packId,
+                tier: tier,
+                state: .queued,
+                networkPolicy: policy,
+                bytesDownloaded: 0,
+                totalBytes: artifact.sizeBytes,
+                checksumSha256: artifact.sha256,
+                artifactKind: "local_model_artifact",
+                runtimeMode: .llamaCppGguf,
+                developmentOnly: false
+            )
+            shouldRecordSelection = true
+        }
 
         upsertJob(job)
-        persisted.lastModelCatalogRefresh = .now
-        persisted.ledgerEntries.insert(
-            AlphaPrivacyLedgerEntry(
-                title: "Assistant model selected",
-                detail: "\(tier.title) was selected. Ross has not read any case files.",
-                purpose: .model_catalog,
-                payloadClass: .no_case_data,
-                endpointLabel: "model-provider://private-assistant",
-                success: true
-            ),
-            at: 0
-        )
-        persist()
+        if shouldRecordSelection {
+            persisted.lastModelCatalogRefresh = .now
+            persisted.ledgerEntries.insert(
+                AlphaPrivacyLedgerEntry(
+                    title: "Assistant model selected",
+                    detail: "\(tier.title) was selected. Ross has not read any case files.",
+                    purpose: .model_catalog,
+                    payloadClass: .no_case_data,
+                    endpointLabel: "model-provider://private-assistant",
+                    success: true
+                ),
+                at: 0
+            )
+            persist()
+        }
+
+        let isResumingPartialDownload = assistantDownloadTaskBoxes[job.id]?.resumeData != nil
 
         updateJob(job.id) {
             $0.packId = artifact.packId
+            $0.networkPolicy = policy
             $0.totalBytes = artifact.sizeBytes
-            $0.bytesDownloaded = 0
+            if !isResumingPartialDownload {
+                $0.bytesDownloaded = 0
+            }
             $0.checksumSha256 = artifact.sha256
             $0.artifactKind = "local_model_artifact"
             $0.runtimeMode = .llamaCppGguf
@@ -520,6 +579,7 @@ extension AlphaRossModel {
                 ),
                 at: 0
             )
+            assistantDownloadTaskBoxes[job.id] = nil
             persist()
             return
         }
@@ -620,6 +680,7 @@ extension AlphaRossModel {
                 ),
                 at: 0
             )
+            assistantDownloadTaskBoxes[job.id] = nil
             persist()
         } catch AlphaAssistantDownloadError.pausedByUser {
             persist()
@@ -640,6 +701,9 @@ extension AlphaRossModel {
                 ),
                 at: 0
             )
+            if assistantDownloadTaskBoxes[job.id]?.resumeData == nil {
+                assistantDownloadTaskBoxes[job.id] = nil
+            }
             persist()
         }
     }

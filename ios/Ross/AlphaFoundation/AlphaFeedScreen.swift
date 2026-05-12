@@ -72,7 +72,7 @@ struct AlphaFeedScreen: View {
         let hasVisibleMatters = !sortedCases.isEmpty
 
         ScrollView {
-            VStack(alignment: .leading, spacing: alphaSectionSpacing) {
+            LazyVStack(alignment: .leading, spacing: alphaSectionSpacing) {
                 RossHeroCard(
                     eyebrow: alphaGreeting(),
                     title: alphaAttentionHeadline(attentionCount),

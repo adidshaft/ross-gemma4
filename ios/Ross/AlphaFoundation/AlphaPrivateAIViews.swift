@@ -54,7 +54,7 @@ struct AlphaPrivateAISettingsScreen: View {
         let assistantStatus = alphaAssistantStatusSnapshot(model)
 
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
+            LazyVStack(alignment: .leading, spacing: 12) {
                 RossSectionCard(
                     title: "Ross assistant",
                     subtitle: "Local answers need setup on this iPhone."

@@ -230,12 +230,10 @@ struct AlphaRootAskDock: View {
                 context = "your workspace"
             }
 
-            let isDemo = false
-            
             return (
-                isDemo ? "Demo Mode" : "Ross is answering",
-                isDemo ? "Demo Mode — model response simulated for walkthrough." : "Checking \(context) with the private on-device assistant.",
-                isDemo ? "Simulated" : "Working",
+                "Ross is answering",
+                "Checking \(context) with the private on-device assistant.",
+                "Working",
                 nil
             )
         }
@@ -603,35 +601,25 @@ struct AlphaRootAskDock: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(
-            ZStack {
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(dockBackdropTint)
-                    .blur(radius: colorScheme == .dark ? 26 : 20)
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 5)
-
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(colorScheme == .dark ? Color.white.opacity(0.052) : Color.white.opacity(0.7))
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: dockGradient,
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                    }
-            }
-        )
-        .overlay {
+        .background {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(dockStroke.opacity(colorScheme == .dark ? 1 : 0.94), lineWidth: 1)
+                .fill(
+                    LinearGradient(
+                        colors: dockGradient,
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
         }
-        .shadow(color: dockLiftHighlight, radius: 12, x: 0, y: -2)
-        .shadow(color: dockShadow.opacity(colorScheme == .dark ? 1.3 : 1.15), radius: 22, x: 0, y: 12)
+        .rossGlassSurface(
+            tint: dockBackdropTint,
+            cornerRadius: 22,
+            shadowOpacity: colorScheme == .dark ? 0.2 : 0.12,
+            shadowRadius: colorScheme == .dark ? 18 : 14,
+            shadowY: colorScheme == .dark ? 10 : 7,
+            fillOpacity: colorScheme == .dark ? 0.78 : 0.86,
+            strokeOpacity: colorScheme == .dark ? 0.22 : 0.7
+        )
     }
 
     var body: some View {
@@ -833,25 +821,15 @@ struct AlphaCollapsedAskDockPill: View {
         .padding(.trailing, 10)
         .frame(height: 44)
         .contentShape(Capsule())
-        .background(
-            ZStack {
-                RoundedRectangle(cornerRadius: 999, style: .continuous)
-                    .fill(dockBackdropTint)
-                    .blur(radius: colorScheme == .dark ? 24 : 18)
-                    .padding(.horizontal, 3)
-                    .padding(.vertical, 4)
-
-                RoundedRectangle(cornerRadius: 999, style: .continuous)
-                    .fill(colorScheme == .dark ? Color.rossGlassFill.opacity(0.88) : Color.white.opacity(0.82))
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 999, style: .continuous))
-            }
+        .rossGlassSurface(
+            tint: dockBackdropTint,
+            cornerRadius: 999,
+            shadowOpacity: colorScheme == .dark ? 0.18 : 0.1,
+            shadowRadius: 12,
+            shadowY: 6,
+            fillOpacity: colorScheme == .dark ? 0.82 : 0.88,
+            strokeOpacity: colorScheme == .dark ? 0.18 : 0.72
         )
-        .overlay {
-            RoundedRectangle(cornerRadius: 999, style: .continuous)
-                .stroke(colorScheme == .dark ? Color.white.opacity(0.12) : Color.white.opacity(0.78), lineWidth: 1)
-        }
-        .shadow(color: dockLiftHighlight, radius: 10, y: -1)
-        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.2 : 0.1), radius: 14, y: 7)
     }
 }
 
@@ -973,10 +951,9 @@ struct AlphaInlineAskResponseCard: View {
                         .fixedSize(horizontal: false, vertical: true)
 
                     if let note = result.statusNote {
-                        let isDemo = false
-                        Text(isDemo ? "Demo Mode — model response simulated for walkthrough." : note)
+                        Text(note)
                             .font(.caption2.weight(.medium))
-                            .foregroundStyle(isDemo ? Color.orange : Color.rossAccent)
+                            .foregroundStyle(Color.rossAccent)
                     }
                 }
                 Spacer(minLength: 8)

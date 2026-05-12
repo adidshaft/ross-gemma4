@@ -85,28 +85,29 @@ struct AlphaSetupPrimaryButtonStyle: ButtonStyle {
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
             .frame(minHeight: 52)
-            .background(
+            .background {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        Color.rossAccent.opacity(configuration.isPressed ? 0.82 : 0.94),
-                                        Color.rossAccent.opacity(configuration.isPressed ? 0.7 : 0.84)
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                    }
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(Color.rossGlassStroke.opacity(0.45), lineWidth: 1)
-                    }
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.rossAccent.opacity(configuration.isPressed ? 0.82 : 0.94),
+                                Color.rossAccent.opacity(configuration.isPressed ? 0.7 : 0.84)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            }
+            .rossGlassSurface(
+                tint: Color.rossAccent,
+                cornerRadius: 16,
+                interactive: true,
+                shadowOpacity: configuration.isPressed ? 0.2 : 0.28,
+                shadowRadius: configuration.isPressed ? 8 : 18,
+                shadowY: configuration.isPressed ? 4 : 10,
+                fillOpacity: configuration.isPressed ? 0.7 : 0.88,
+                strokeOpacity: 0.45
             )
-            .shadow(color: Color.rossShadow.opacity(configuration.isPressed ? 0.2 : 0.28), radius: configuration.isPressed ? 8 : 18, y: configuration.isPressed ? 4 : 10)
             .scaleEffect(configuration.isPressed ? 0.988 : 1)
             .animation(.spring(response: 0.22, dampingFraction: 0.72), value: configuration.isPressed)
             .sensoryFeedback(.impact(weight: .medium), trigger: configuration.isPressed)

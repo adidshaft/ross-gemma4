@@ -557,6 +557,7 @@ final class AlphaRossModel {
     @ObservationIgnored var workspaceRevision: UInt64 = 0
     @ObservationIgnored var cachedWorkspaceRevision: UInt64 = .max
     @ObservationIgnored var workspaceDerivedState = AlphaWorkspaceDerivedState()
+    @ObservationIgnored var assistantDownloadTaskBoxes: [UUID: AlphaAssistantDownloadTaskBox] = [:]
 
     init(
         store: AlphaRossStore = AlphaRossStore(),
@@ -1001,6 +1002,7 @@ final class AlphaAssistantDownloadTaskBox: @unchecked Sendable {
     var task: URLSessionDownloadTask?
     var progressTask: Task<Void, Never>?
     var pausedByUser = false
+    var resumeData: Data?
 }
 
 enum AlphaAssistantDownloadError: LocalizedError {

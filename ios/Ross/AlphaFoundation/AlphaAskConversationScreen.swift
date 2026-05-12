@@ -111,6 +111,9 @@ struct AlphaAskConversationScreen: View {
     }
 
     var body: some View {
+        let conversation = conversation
+        let contextDocumentTitle = model.askDocumentTitle(for: activeScopeCaseID)
+
         VStack(spacing: 0) {
             AlphaFullScreenChatTopBar(
                 scopeTitle: scopeTitle,
@@ -133,7 +136,7 @@ struct AlphaAskConversationScreen: View {
                     ForEach(conversation, id: \.stableIdentity) { result in
                         AlphaFullScreenChatTurn(
                             result: result,
-                            contextDocumentTitle: model.askDocumentTitle(for: activeScopeCaseID),
+                            contextDocumentTitle: contextDocumentTitle,
                             onOpenSource: model.openSourceRef
                         )
                         .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))

@@ -8,9 +8,6 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     let modelPath: String?
     let checksumVerified: Bool
     
-    // Shared state or context
-    private let queue = DispatchQueue(label: "com.ross.AlphaLlamaCppProvider", qos: .userInitiated)
-    
     init(
         capabilityTier: AlphaCapabilityTier,
         modelPathLabel: String?,
@@ -48,11 +45,11 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     }
     
     func contextWindowEstimate() -> Int? {
-        return 4096
+        return 2048
     }
     
     func maxInputChars() -> Int? {
-        return 16000
+        return 7000
     }
     
     nonisolated(unsafe) private static var cachedContext: LlamaContext?
@@ -77,7 +74,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     }
     
     func run(_ taskInput: AlphaLocalModelInput) async -> AlphaLocalModelOutput {
-        let pack = AlphaPromptPackBuilder(maxInputChars: maxInputChars() ?? 16000).build(input: taskInput)
+        let pack = AlphaPromptPackBuilder(maxInputChars: maxInputChars() ?? 7000).build(input: taskInput)
         
         guard let modelPath = self.modelPath, !modelPath.isEmpty else {
             return AlphaLocalModelOutput(
@@ -92,6 +89,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         
         do {
             let context = try getOrContext(path: modelPath)
+            await context.clear()
             
             let systemPrompt = pack.systemInstructions
             let userPrompt = pack.promptText

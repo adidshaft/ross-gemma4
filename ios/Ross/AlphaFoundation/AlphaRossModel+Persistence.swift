@@ -184,6 +184,7 @@ extension AlphaRossModel {
     struct AlphaWorkspaceDerivedState {
         var visibleCases: [AlphaCaseMatter] = []
         var activeCaseIDs: Set<UUID> = []
+        var nextActionDateByCase: [UUID: Date] = [:]
         var tasks: [AlphaTaskItem] = []
         var tasksByCase: [UUID: [AlphaTaskItem]] = [:]
         var openTasks: [AlphaTaskItem] = []
@@ -258,6 +259,7 @@ extension AlphaRossModel {
             var recentDocumentItems: [AlphaRecentDocumentItem] = []
             var todayDateRows: [AlphaUpcomingDateRow] = []
             var upcomingDateRows: [AlphaUpcomingDateRow] = []
+            var nextActionDateByCase: [UUID: Date] = [:]
 
             for caseMatter in visibleCases {
                 let caseReviewQueue = buildReviewQueue(for: caseMatter)
@@ -275,6 +277,12 @@ extension AlphaRossModel {
                 let scheduledDates = caseMatter.dates
                     .filter { $0.status == .scheduled }
                     .sorted { $0.date < $1.date }
+                let nextTaskDate = tasksByCase[caseMatter.id]?
+                    .first { $0.status == .open && $0.dueDate != nil }?
+                    .dueDate
+                nextActionDateByCase[caseMatter.id] = [nextTaskDate, scheduledDates.first?.date, caseMatter.nextHearing]
+                    .compactMap { $0 }
+                    .min()
 
                 let dateRows: [AlphaUpcomingDateRow]
                 if scheduledDates.isEmpty, let nextHearing = caseMatter.nextHearing {
@@ -328,6 +336,7 @@ extension AlphaRossModel {
             var state = AlphaWorkspaceDerivedState()
             state.visibleCases = visibleCases
             state.activeCaseIDs = activeCaseIDs
+            state.nextActionDateByCase = nextActionDateByCase
             state.tasks = allTasks
             state.tasksByCase = tasksByCase
             state.openTasks = openTasks
@@ -505,7 +514,11 @@ extension AlphaRossModel {
            installedModelPackFileIsUsable(active) {
             return active
         }
-        return recoveredInstalledPackFromDisk(preferredTier: persisted.settings.activeTier ?? selectedTier)
+        if let preferredTier = persisted.settings.activeTier,
+           let preferred = persisted.installedPacks.first(where: { $0.tier == preferredTier && installedModelPackFileIsUsable($0) }) {
+            return preferred
+        }
+        return persisted.installedPacks.first(where: installedModelPackFileIsUsable)
     }
 
     func submitDockInput(question: String, scopeCaseID: UUID?, webEnabled: Bool) async {

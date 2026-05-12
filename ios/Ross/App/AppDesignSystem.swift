@@ -225,7 +225,6 @@ public struct RossGlassButtonStyle: ButtonStyle {
 
     public func makeBody(configuration: Configuration) -> some View {
         let isPressed = configuration.isPressed
-        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
 
         configuration.label
             .font(.subheadline.weight(.semibold))
@@ -233,51 +232,97 @@ public struct RossGlassButtonStyle: ButtonStyle {
             .frame(maxWidth: expandsHorizontally ? .infinity : nil)
             .padding(.horizontal, 18)
             .padding(.vertical, 14)
-            .background {
-                ZStack {
-                    shape.fill(.ultraThinMaterial)
-                    shape.fill(
-                        LinearGradient(
-                            colors: [
-                                Color.rossGlassFill.opacity(isPressed ? 0.60 : 0.82),
-                                tint.opacity(isPressed ? 0.04 : 0.08),
-                                Color.rossGlassSubtleFill.opacity(isPressed ? 0.58 : 0.72)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    // Specular inner sheen
-                    shape.fill(
-                        LinearGradient(
-                            colors: [Color.white.opacity(isPressed ? 0.08 : 0.18), Color.clear],
-                            startPoint: .top,
-                            endPoint: .center
-                        )
-                    )
-                }
-            }
-            .overlay {
-                shape.strokeBorder(
-                    LinearGradient(
-                        colors: [
-                            Color.rossGlassStroke.opacity(isPressed ? 0.30 : 0.58),
-                            tint.opacity(isPressed ? 0.08 : 0.16)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
-            }
-            .shadow(
-                color: Color.rossShadow.opacity(isPressed ? 0.06 : 0.14),
-                radius: isPressed ? 4 : 10,
-                y: isPressed ? 2 : 5
+            .rossGlassSurface(
+                tint: tint,
+                cornerRadius: cornerRadius,
+                interactive: true,
+                shadowOpacity: isPressed ? 0.06 : 0.14,
+                shadowRadius: isPressed ? 4 : 10,
+                shadowY: isPressed ? 2 : 5,
+                fillOpacity: isPressed ? 0.66 : 0.84,
+                strokeOpacity: isPressed ? 0.34 : 0.58
             )
             .scaleEffect(isPressed ? 0.98 : 1)
             .animation(.spring(response: 0.22, dampingFraction: 0.72), value: isPressed)
             .sensoryFeedback(.impact(weight: .medium), trigger: isPressed)
+    }
+}
+
+private struct RossGlassSurfaceModifier: ViewModifier {
+    @Environment(\.colorScheme) private var colorScheme
+
+    let tint: Color
+    let cornerRadius: CGFloat
+    let interactive: Bool
+    let shadowOpacity: Double
+    let shadowRadius: CGFloat
+    let shadowY: CGFloat
+    let fillOpacity: Double
+    let strokeOpacity: Double
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+
+        if #available(iOS 26, macOS 26, *) {
+            let glassTint = tint.opacity(colorScheme == .dark ? 0.22 : 0.12)
+            let stroked = content
+                .overlay {
+                    shape.strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(colorScheme == .dark ? strokeOpacity * 0.55 : strokeOpacity),
+                                tint.opacity(strokeOpacity * 0.22)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 0.9
+                    )
+                }
+                .shadow(color: Color.rossShadow.opacity(shadowOpacity), radius: shadowRadius, y: shadowY)
+
+            if interactive {
+                stroked
+                    .glassEffect(.regular.tint(glassTint).interactive(), in: .rect(cornerRadius: cornerRadius))
+            } else {
+                stroked
+                    .glassEffect(.regular.tint(glassTint), in: .rect(cornerRadius: cornerRadius))
+            }
+        } else {
+            content
+                .background {
+                    ZStack {
+                        shape.fill(.ultraThinMaterial)
+                        shape.fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.rossGlassFill.opacity(fillOpacity),
+                                    tint.opacity(colorScheme == .dark ? 0.08 : 0.05),
+                                    Color.rossGlassSubtleFill.opacity(fillOpacity * 0.82)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                    }
+                }
+                .overlay {
+                    shape.strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                Color.rossGlassStroke.opacity(strokeOpacity),
+                                tint.opacity(strokeOpacity * 0.28)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+                }
+                .clipShape(shape)
+                .shadow(color: Color.rossShadow.opacity(shadowOpacity), radius: shadowRadius, y: shadowY)
+        }
     }
 }
 
@@ -330,6 +375,30 @@ public extension View {
                 tint: tint ?? Color.rossAccent,
                 cornerRadius: cornerRadius,
                 expandsHorizontally: expandsHorizontally
+            )
+        )
+    }
+
+    func rossGlassSurface(
+        tint: Color? = nil,
+        cornerRadius: CGFloat = RossSurface.cornerRadius,
+        interactive: Bool = false,
+        shadowOpacity: Double = 0.12,
+        shadowRadius: CGFloat = 12,
+        shadowY: CGFloat = 5,
+        fillOpacity: Double = 0.84,
+        strokeOpacity: Double = 0.58
+    ) -> some View {
+        modifier(
+            RossGlassSurfaceModifier(
+                tint: tint ?? Color.rossAccent,
+                cornerRadius: cornerRadius,
+                interactive: interactive,
+                shadowOpacity: shadowOpacity,
+                shadowRadius: shadowRadius,
+                shadowY: shadowY,
+                fillOpacity: fillOpacity,
+                strokeOpacity: strokeOpacity
             )
         )
     }

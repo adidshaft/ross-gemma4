@@ -192,7 +192,7 @@ struct AlphaCaseWorkspaceScreen: View {
                     .filter { $0.caseId == caseId }
                     .sorted { $0.createdAt > $1.createdAt }
 
-                VStack(alignment: .leading, spacing: 16) {
+                LazyVStack(alignment: .leading, spacing: 16) {
                     AlphaInlineHeader(
                         eyebrow: caseMatter.forum,
                         title: caseMatter.title,

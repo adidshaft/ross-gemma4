@@ -716,8 +716,8 @@ func alphaSortedCases(for sortMode: AlphaCaseSortMode, model: AlphaRossModel) ->
         return model.cases
     case .earliestActionNeeded:
         return model.cases.sorted { lhs, rhs in
-            let lhsDate = alphaNextActionDate(for: lhs, model: model)
-            let rhsDate = alphaNextActionDate(for: rhs, model: model)
+            let lhsDate = model.nextActionDate(for: lhs.id)
+            let rhsDate = model.nextActionDate(for: rhs.id)
             switch (lhsDate, rhsDate) {
             case let (.some(lhsDate), .some(rhsDate)):
                 if lhsDate != rhsDate {
@@ -737,12 +737,7 @@ func alphaSortedCases(for sortMode: AlphaCaseSortMode, model: AlphaRossModel) ->
 
 @MainActor
 func alphaNextActionDate(for caseMatter: AlphaCaseMatter, model: AlphaRossModel) -> Date? {
-    let nextTaskDate = model.tasks(for: caseMatter.id)
-        .first { $0.status == .open && $0.dueDate != nil }?
-        .dueDate
-    return [nextTaskDate, caseMatter.nextHearing]
-        .compactMap { $0 }
-        .min()
+    model.nextActionDate(for: caseMatter.id)
 }
 
 @MainActor

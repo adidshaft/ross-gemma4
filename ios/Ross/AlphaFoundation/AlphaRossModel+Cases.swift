@@ -57,6 +57,11 @@ extension AlphaRossModel {
         return workspaceDerivedState.tasksByCase[caseId] ?? []
     }
 
+    func nextActionDate(for caseId: UUID) -> Date? {
+        ensureWorkspaceDerivedState()
+        return workspaceDerivedState.nextActionDateByCase[caseId]
+    }
+
     func askDraft(for scopeCaseID: UUID?) -> String {
         if let scopeCaseID {
             return askDrafts[scopeCaseID] ?? ""

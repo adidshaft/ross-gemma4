@@ -130,8 +130,6 @@ struct RossSectionCard<Content: View>: View {
     }
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: RossSurface.cornerRadius, style: .continuous)
-
         VStack(alignment: .leading, spacing: 12) {
             if title != nil || subtitle != nil {
                 VStack(alignment: .leading, spacing: 8) {
@@ -158,27 +156,15 @@ struct RossSectionCard<Content: View>: View {
         }
         .padding(.vertical, 16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            ZStack {
-                shape.fill(.ultraThinMaterial)
-                shape.fill(Color.rossCardBackground.opacity(colorScheme == .dark ? 0.72 : 0.88))
-            }
-        }
-        .overlay {
-            shape.strokeBorder(
-                LinearGradient(
-                    colors: [
-                        colorScheme == .dark ? Color.white.opacity(0.16) : Color.white.opacity(0.88),
-                        colorScheme == .dark ? Color.rossBorder.opacity(0.18) : Color.rossBorder.opacity(0.45)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                ),
-                lineWidth: 1
-            )
-        }
-        .clipShape(shape)
-        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.22 : 0.08), radius: 16, y: 6)
+        .rossGlassSurface(
+            tint: colorScheme == .dark ? Color.rossHighlight : Color.white,
+            cornerRadius: RossSurface.cornerRadius,
+            shadowOpacity: colorScheme == .dark ? 0.18 : 0.08,
+            shadowRadius: 14,
+            shadowY: 6,
+            fillOpacity: colorScheme == .dark ? 0.74 : 0.9,
+            strokeOpacity: colorScheme == .dark ? 0.26 : 0.68
+        )
     }
 }
 

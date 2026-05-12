@@ -323,8 +323,12 @@ actor LlamaContext {
     }
 
     func clear() {
+        is_done = false
+        n_cur = 0
+        n_decode = 0
         tokens_list.removeAll()
         temporary_invalid_cchars.removeAll()
+        llama_batch_clear(&batch)
         llama_memory_clear(llama_get_memory(context), true)
     }
 
