@@ -127,6 +127,17 @@ struct AlphaOnboardingScreen: View {
     var body: some View {
         GeometryReader { proxy in
             let horizontalPadding: CGFloat = 16
+            #if canImport(UIKit)
+            let viewportWidth = min(proxy.size.width, UIScreen.main.bounds.width)
+            #else
+            let viewportWidth = proxy.size.width
+            #endif
+            let contentWidth = min(max(viewportWidth - (horizontalPadding * 2), 280), 430)
+            let compact = proxy.size.height < 880
+            let topGap: CGFloat = compact ? 18 : 44
+            let logoSize: CGFloat = compact ? 58 : 78
+            let titleSize: CGFloat = compact ? 32 : 38
+            let heroGap: CGFloat = compact ? 8 : 16
 
             ZStack {
                 AlphaSetupBackdrop()
@@ -136,39 +147,41 @@ struct AlphaOnboardingScreen: View {
                 }
 
                 VStack(spacing: 0) {
-                    Spacer(minLength: max(proxy.safeAreaInsets.top + 20, 44))
+                    Spacer(minLength: max(proxy.safeAreaInsets.top + topGap, compact ? 54 : 72))
 
-                    VStack(spacing: 16) {
-                        RossAuthHeroMark(size: 78)
+                    VStack(spacing: heroGap) {
+                        RossAuthHeroMark(size: logoSize)
 
-                        VStack(spacing: 8) {
+                        VStack(spacing: compact ? 4 : 8) {
                             Text("Ross")
-                                .font(.system(size: 38, weight: .bold, design: .serif))
+                                .font(.system(size: titleSize, weight: .bold, design: .serif))
                                 .foregroundStyle(Color.rossInk)
 
                             Text("Your private legal workbench.")
-                                .font(.title3.weight(.medium))
+                                .font((compact ? Font.callout : Font.title3).weight(.medium))
                                 .foregroundStyle(Color.rossInk.opacity(0.70))
                                 .multilineTextAlignment(.center)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.72)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }
 
-                    Spacer(minLength: 28)
+                    Spacer(minLength: compact ? 14 : 28)
 
-                    AlphaOnboardingDownloadCard(tier: recommendedTier)
+                    AlphaOnboardingDownloadCard(tier: recommendedTier, compact: compact)
 
-                    Spacer(minLength: 16)
+                    Spacer(minLength: compact ? 10 : 16)
 
-                    VStack(spacing: 8) {
-                        AlphaOnboardingPrivacyPill(icon: "lock.fill", text: "Everything stays on this device")
-                        AlphaOnboardingPrivacyPill(icon: "network.slash", text: "No cloud after setup — fully offline")
-                        AlphaOnboardingPrivacyPill(icon: "arrow.down.circle", text: "One download, then always private")
+                    VStack(spacing: compact ? 6 : 8) {
+                        AlphaOnboardingPrivacyPill(icon: "lock.fill", text: "Everything stays on this device", compact: compact)
+                        AlphaOnboardingPrivacyPill(icon: "network.slash", text: "No cloud after setup - fully offline", compact: compact)
+                        AlphaOnboardingPrivacyPill(icon: "arrow.down.circle", text: "One download, then always private", compact: compact)
                     }
 
-                    Spacer(minLength: 22)
+                    Spacer(minLength: compact ? 12 : 22)
 
-                    VStack(spacing: 12) {
+                    VStack(spacing: compact ? 8 : 12) {
                         Button {
                             model.selectedTier = recommendedTier
                             model.finishPackSetup()
@@ -179,26 +192,33 @@ struct AlphaOnboardingScreen: View {
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(AlphaSetupPrimaryButtonStyle())
+                        .frame(height: compact ? 48 : 52)
 
                         Button("Choose a different model") {
                             showModelPicker = true
                         }
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: compact ? 12 : 13, weight: .semibold))
                         .foregroundStyle(Color.rossAccent.opacity(0.80))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
 
                         Button("Skip for now") {
                             model.skipPackSetup()
                         }
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.system(size: compact ? 12 : 13, weight: .medium))
                         .foregroundStyle(Color.rossInk.opacity(0.44))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
                     }
 
-                    Spacer(minLength: max(proxy.safeAreaInsets.bottom + 18, 28))
+                    Spacer(minLength: max(proxy.safeAreaInsets.bottom + (compact ? 8 : 18), compact ? 18 : 28))
                 }
-                .padding(.horizontal, horizontalPadding)
-                .frame(maxWidth: 430)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                .frame(width: contentWidth)
+                .position(x: viewportWidth / 2, y: proxy.size.height / 2)
+                .clipped()
             }
+            .frame(width: viewportWidth, height: proxy.size.height, alignment: .topLeading)
+            .clipped()
         }
         .sheet(isPresented: $showModelPicker) {
             AlphaModelPickerSheet(model: model, isPresented: $showModelPicker)
@@ -214,6 +234,7 @@ struct AlphaOnboardingScreen: View {
 struct AlphaOnboardingDownloadCard: View {
     @Environment(\.colorScheme) private var colorScheme
     let tier: AlphaCapabilityTier
+    var compact = false
 
     private var etaLabel: String {
         switch tier {
@@ -234,38 +255,41 @@ struct AlphaOnboardingDownloadCard: View {
     }
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: compact ? 16 : 20, style: .continuous)
 
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: compact ? 9 : 14) {
             // Header
-            HStack(spacing: 12) {
+            HStack(spacing: compact ? 9 : 12) {
                 Image(systemName: tierIcon)
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.system(size: compact ? 14 : 17, weight: .semibold))
                     .foregroundStyle(Color.rossAccent)
-                    .frame(width: 40, height: 40)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .frame(width: compact ? 32 : 40, height: compact ? 32 : 40)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: compact ? 10 : 12, style: .continuous))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        RoundedRectangle(cornerRadius: compact ? 10 : 12, style: .continuous)
                             .stroke(Color.rossAccent.opacity(0.22), lineWidth: 1)
                     }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(tier.setupTitle)
-                        .font(.subheadline.weight(.semibold))
+                        .font((compact ? Font.caption : Font.subheadline).weight(.semibold))
                         .foregroundStyle(Color.rossInk)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.72)
 
                     Text("Recommended for your device")
-                        .font(.caption)
+                        .font(compact ? .caption2 : .caption)
                         .foregroundStyle(Color.rossAccent.opacity(0.80))
+                        .lineLimit(1)
                 }
 
                 Spacer(minLength: 0)
 
                 Text("Recommended")
-                    .font(.caption2.weight(.bold))
+                    .font(.system(size: compact ? 10 : 11, weight: .bold))
                     .foregroundStyle(Color.rossAccent)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
+                    .padding(.horizontal, compact ? 7 : 8)
+                    .padding(.vertical, compact ? 3 : 4)
                     .background(Color.rossAccent.opacity(0.10), in: Capsule())
             }
 
@@ -273,31 +297,35 @@ struct AlphaOnboardingDownloadCard: View {
                 .opacity(0.45)
 
             HStack(spacing: 0) {
-                AlphaOnboardingStatCell(label: "Download size", value: tier.downloadSizeLabel, icon: "arrow.down.circle.fill")
-                Divider().frame(height: 36).opacity(0.38)
-                AlphaOnboardingStatCell(label: "On fast Wi-Fi", value: etaLabel, icon: "wifi")
+                AlphaOnboardingStatCell(label: "Download size", value: tier.downloadSizeLabel, icon: "arrow.down.circle.fill", compact: compact)
+                Divider().frame(height: compact ? 28 : 36).opacity(0.38)
+                AlphaOnboardingStatCell(label: "On fast Wi-Fi", value: etaLabel, icon: "wifi", compact: compact)
             }
 
             // Model description
             Text(tier.summary)
-                .font(.caption)
+                .font(compact ? .caption2 : .caption)
                 .foregroundStyle(Color.rossInk.opacity(0.65))
+                .lineLimit(compact ? 2 : 3)
+                .minimumScaleFactor(0.82)
                 .fixedSize(horizontal: false, vertical: true)
-                .lineSpacing(3)
+                .lineSpacing(compact ? 1.5 : 3)
 
             // Wi-Fi advisory
-            HStack(spacing: 8) {
+            HStack(spacing: compact ? 6 : 8) {
                 Image(systemName: "wifi")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: compact ? 10 : 11, weight: .semibold))
                     .foregroundStyle(Color.rossInk.opacity(0.44))
 
                 Text("Connect to Wi-Fi for the fastest setup. The download resumes automatically if interrupted.")
-                    .font(.caption2.weight(.medium))
+                    .font(.system(size: compact ? 10 : 11, weight: .medium))
                     .foregroundStyle(Color.rossInk.opacity(0.50))
+                    .lineLimit(compact ? 2 : 3)
+                    .minimumScaleFactor(0.82)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(18)
+        .padding(compact ? 13 : 18)
         .background {
             ZStack {
                 shape.fill(.ultraThinMaterial)
@@ -325,19 +353,20 @@ struct AlphaOnboardingStatCell: View {
     let label: String
     let value: String
     let icon: String
+    var compact = false
 
     var body: some View {
-        HStack(spacing: 7) {
+        HStack(spacing: compact ? 5 : 7) {
             Image(systemName: icon)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: compact ? 10 : 12, weight: .semibold))
                 .foregroundStyle(Color.rossAccent.opacity(0.70))
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(value)
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(size: compact ? 12 : 13, weight: .bold))
                     .foregroundStyle(Color.rossInk)
                 Text(label)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: compact ? 9 : 10, weight: .medium))
                     .foregroundStyle(Color.rossInk.opacity(0.50))
             }
         }
@@ -348,25 +377,28 @@ struct AlphaOnboardingStatCell: View {
 struct AlphaOnboardingPrivacyPill: View {
     let icon: String
     let text: String
+    var compact = false
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: compact ? 10 : 12) {
             Image(systemName: icon)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: compact ? 11 : 12, weight: .semibold))
                 .foregroundStyle(Color.rossAccent.opacity(0.70))
-                .frame(width: 22, height: 22)
+                .frame(width: compact ? 18 : 22, height: compact ? 18 : 22)
 
             Text(text)
-                .font(.subheadline.weight(.medium))
+                .font((compact ? Font.caption : Font.subheadline).weight(.medium))
                 .foregroundStyle(Color.rossInk.opacity(0.72))
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
 
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 11)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .padding(.horizontal, compact ? 12 : 16)
+        .padding(.vertical, compact ? 8 : 11)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: compact ? 12 : 14, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: compact ? 12 : 14, style: .continuous)
                 .stroke(Color.rossGlassStroke.opacity(0.58), lineWidth: 1)
         }
     }
