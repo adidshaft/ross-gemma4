@@ -321,7 +321,7 @@ extension AlphaRossModel {
             publicLawPreview = nil
             publicLawSearchStatus = .idle
             let offlineStatusNote = hasRealLocalAsk
-                ? "Private assistant running locally"
+                ? activeLocalModelRunningStatus()
                 : (initialResult.statusNote ?? localResult.statusNote ?? "Answered from your files")
             latestAskResult?.statusNote = offlineStatusNote
             updateStoredAskTurn(
@@ -354,12 +354,31 @@ extension AlphaRossModel {
         return true
     }
 
+    func activeLocalModelDisplayLabel() -> String {
+        guard let activePack else { return "Private assistant" }
+        return alphaAssistantModelArtifact(for: activePack.tier).displayName
+    }
+
+    func activeLocalModelRunningStatus() -> String {
+        "\(activeLocalModelDisplayLabel()) running locally"
+    }
+
     func buildPendingLocalModelAskResult(
         question: String,
         scopeCaseID: UUID?,
         baseResult: AlphaAskResult
     ) -> AlphaAskResult {
-        AlphaAskResult(
+        let taggedFiles = baseResult.selectedDocumentTitles
+        let taggedFilesSection: String?
+        if taggedFiles.count == 1, let title = taggedFiles.first {
+            taggedFilesSection = "Tagged file: \(title)."
+        } else if !taggedFiles.isEmpty {
+            taggedFilesSection = "Tagged files: \(taggedFiles.joined(separator: ", "))."
+        } else {
+            taggedFilesSection = nil
+        }
+
+        return AlphaAskResult(
             chatSessionID: nil,
             chatTurnID: nil,
             kind: .userAsk,
@@ -367,14 +386,15 @@ extension AlphaRossModel {
             scopeCaseID: scopeCaseID,
             scopeLabel: scopeLabel(for: scopeCaseID),
             selectedDocumentTitles: baseResult.selectedDocumentTitles,
-            answerTitle: baseResult.answerTitle,
-            answerSections: baseResult.answerSections.isEmpty
-                ? ["Ross is reading the selected local context with the on-device model."]
-                : baseResult.answerSections,
-            caseFileSources: baseResult.caseFileSources,
+            answerTitle: "Private assistant is reading your files",
+            answerSections: [
+                "\(activeLocalModelDisplayLabel()) is running on this iPhone and will replace this placeholder with a real local answer.",
+                taggedFilesSection
+            ].compactMap { $0 },
+            caseFileSources: [],
             publicLawPreview: nil,
             publicLawResults: [],
-            statusNote: "Private assistant running locally",
+            statusNote: activeLocalModelRunningStatus(),
             needsReviewWarning: baseResult.needsReviewWarning
         )
     }
@@ -1067,7 +1087,7 @@ extension AlphaRossModel {
             sessionID: chatSessionID,
             turnID: chatTurnID
         ) { turn in
-            turn.statusNote = "Private assistant running locally"
+            turn.statusNote = self.activeLocalModelRunningStatus()
             turn.modelInvocation = invocation
         }
         Task {

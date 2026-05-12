@@ -119,6 +119,58 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    func testPendingLocalAskResultMakesDownloadedModelVisible() async {
+        let model = await MainActor.run {
+            AlphaRossModel(previewState: AlphaPersistedState.demoSeed())
+        }
+
+        await MainActor.run {
+            model.privateAISnapshot.activePack = AlphaInstalledModelPack(
+                packId: "gemma-4-e2b-q2",
+                tier: .flash,
+                installPath: "model-packs/flash/google_gemma-4-E2B-it-Q2_K.gguf",
+                checksumSha256: "local-test-checksum",
+                artifactKind: "local_model_artifact",
+                runtimeMode: .llamaCppGguf,
+                developmentOnly: false,
+                checksumVerified: true,
+                isActive: true
+            )
+
+            let baseResult = AlphaAskResult(
+                kind: .userAsk,
+                question: "Give me summaries from selected files.",
+                scopeCaseID: nil,
+                scopeLabel: "All work",
+                selectedDocumentTitles: ["Demo affidavit", "Demo order"],
+                answerTitle: "Ross drafted this from your files",
+                answerSections: ["Demo affidavit: included for this answer."],
+                caseFileSources: [],
+                publicLawPreview: nil,
+                publicLawResults: [],
+                statusNote: nil,
+                needsReviewWarning: nil
+            )
+
+            let pending = model.buildPendingLocalModelAskResult(
+                question: "Give me summaries from selected files.",
+                scopeCaseID: nil,
+                baseResult: baseResult
+            )
+
+            XCTAssertEqual("Private assistant is reading your files", pending.answerTitle)
+            XCTAssertEqual("Gemma 4 E2B Q2_K running locally", pending.statusNote)
+            XCTAssertTrue(
+                pending.answerSections.joined(separator: " ").contains("replace this placeholder with a real local answer")
+            )
+            XCTAssertTrue(
+                pending.answerSections.joined(separator: " ").contains("Tagged files: Demo affidavit, Demo order.")
+            )
+            XCTAssertEqual(["Demo affidavit", "Demo order"], pending.selectedDocumentTitles)
+            XCTAssertEqual([], pending.caseFileSources)
+        }
+    }
+
     func testEmptyStateStartsAtOnboarding() async throws {
         try await withRestoredStore { store in
             try await store.replace(with: AlphaPersistedState.empty())

@@ -51,6 +51,19 @@ struct AlphaAskConversationScreen: View {
         model.askDraft(for: activeScopeCaseID)
     }
 
+    private var activeSelectedDocuments: [AlphaAskDocumentOption] {
+        model.selectedAskDocuments(for: activeScopeCaseID)
+    }
+
+    private var mentionSuggestions: [AlphaAskDocumentOption] {
+        guard let query = alphaAskMentionQuery(in: draftText) else { return [] }
+        return alphaAskMentionSuggestions(
+            query: query,
+            documents: model.availableAskDocuments(for: activeScopeCaseID),
+            selectedDocumentIDs: model.selectedAskDocumentIDs(for: activeScopeCaseID)
+        )
+    }
+
     private var draftBinding: Binding<String> {
         Binding(
             get: { model.askDraft(for: activeScopeCaseID) },
@@ -110,6 +123,21 @@ struct AlphaAskConversationScreen: View {
         }
     }
 
+    private func removeDocumentSelection(_ documentID: UUID) {
+        var selected = model.selectedAskDocumentIDs(for: activeScopeCaseID)
+        selected.remove(documentID)
+        model.setSelectedAskDocumentIDs(selected, for: activeScopeCaseID)
+    }
+
+    private func applyMention(_ document: AlphaAskDocumentOption) {
+        let scopeCaseID = activeScopeCaseID
+        model.toggleAskDocumentSelection(document.id, for: scopeCaseID)
+        model.setAskDraft(
+            alphaAskReplacingTrailingMention(in: draftText, with: document.displayTitle),
+            for: scopeCaseID
+        )
+    }
+
     var body: some View {
         let conversation = conversation
         let contextDocumentTitle = model.askDocumentTitle(for: activeScopeCaseID)
@@ -153,8 +181,13 @@ struct AlphaAskConversationScreen: View {
                 text: draftBinding,
                 canSend: canSend,
                 resetToken: composerResetToken,
+                selectedDocuments: activeSelectedDocuments,
+                mentionSuggestions: mentionSuggestions,
+                scopeCaseID: activeScopeCaseID,
                 focused: $composerFocused,
                 onShowTools: { showingTools = true },
+                onRemoveDocumentSelection: removeDocumentSelection,
+                onSelectMention: applyMention,
                 onSend: send
             )
         }
@@ -264,36 +297,68 @@ struct AlphaFullScreenChatComposer: View {
     @Binding var text: String
     let canSend: Bool
     let resetToken: UUID
+    let selectedDocuments: [AlphaAskDocumentOption]
+    let mentionSuggestions: [AlphaAskDocumentOption]
+    let scopeCaseID: UUID?
     var focused: FocusState<Bool>.Binding
     let onShowTools: () -> Void
+    let onRemoveDocumentSelection: (UUID) -> Void
+    let onSelectMention: (AlphaAskDocumentOption) -> Void
     let onSend: () -> Void
 
     var body: some View {
-        HStack(spacing: 10) {
-            Button(action: onShowTools) {
-                Image(systemName: "plus")
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundStyle(Color.rossInk.opacity(0.72))
-                    .frame(width: 40, height: 40)
-                    .background(Color.rossCardBackground, in: Circle())
-                    .overlay {
-                        Circle()
-                            .stroke(Color.rossBorder.opacity(0.74), lineWidth: 1)
+        VStack(alignment: .leading, spacing: 10) {
+            if !selectedDocuments.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(selectedDocuments) { document in
+                            AlphaAskSelectionChip(
+                                title: document.displayTitle,
+                                detail: scopeCaseID == nil ? (document.isShared ? "shared" : document.caseTitle) : (document.isShared ? "shared" : nil),
+                                isShared: document.isShared,
+                                tone: .sheet,
+                                onRemove: {
+                                    onRemoveDocumentSelection(document.id)
+                                }
+                            )
+                        }
                     }
+                }
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Add files or images")
 
-            TextField("Ask Ross...", text: $text, axis: .vertical)
-                .id(resetToken)
-                .lineLimit(1...4)
-                .textFieldStyle(.plain)
-                .font(.body)
-                .foregroundStyle(Color.rossInk)
-                .focused(focused)
-                .submitLabel(.send)
-                .onSubmit {
-                    if canSend { onSend() }
+            HStack(spacing: 10) {
+                Button(action: onShowTools) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(Color.rossInk.opacity(0.72))
+                        .frame(width: 40, height: 40)
+                        .background(Color.rossCardBackground, in: Circle())
+                        .overlay {
+                            Circle()
+                                .stroke(Color.rossBorder.opacity(0.74), lineWidth: 1)
+                        }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Add files or images")
+
+                VStack(alignment: .leading, spacing: 4) {
+                    TextField("Ask Ross... Type @ to tag a file", text: $text, axis: .vertical)
+                        .id(resetToken)
+                        .lineLimit(1...5)
+                        .textFieldStyle(.plain)
+                        .font(.body)
+                        .foregroundStyle(Color.rossInk)
+                        .focused(focused)
+                        .submitLabel(.send)
+                        .onSubmit {
+                            if canSend { onSend() }
+                        }
+
+                    if selectedDocuments.isEmpty {
+                        Text("Tag files with @ or tap + to attach them before asking.")
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(Color.rossInk.opacity(0.46))
+                    }
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 11)
@@ -303,16 +368,26 @@ struct AlphaFullScreenChatComposer: View {
                         .stroke(Color.rossBorder.opacity(0.74), lineWidth: 1)
                 }
 
-            Button(action: onSend) {
-                Image(systemName: "arrow.up")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(canSend ? Color.rossCardBackground : Color.rossInk.opacity(0.44))
-                    .frame(width: 40, height: 40)
-                    .background(canSend ? Color.rossAccent : Color.rossSecondaryGroupedBackground, in: Circle())
+                Button(action: onSend) {
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(canSend ? Color.rossCardBackground : Color.rossInk.opacity(0.44))
+                        .frame(width: 40, height: 40)
+                        .background(canSend ? Color.rossAccent : Color.rossSecondaryGroupedBackground, in: Circle())
+                }
+                .buttonStyle(.plain)
+                .disabled(!canSend)
+                .accessibilityLabel("Send")
             }
-            .buttonStyle(.plain)
-            .disabled(!canSend)
-            .accessibilityLabel("Send")
+
+            if !mentionSuggestions.isEmpty {
+                AlphaAskMentionSuggestionsCard(
+                    documents: mentionSuggestions,
+                    scopeCaseID: scopeCaseID,
+                    tone: .sheet,
+                    onSelect: onSelectMention
+                )
+            }
         }
         .padding(.horizontal, 12)
         .padding(.top, 10)
@@ -326,41 +401,98 @@ struct AlphaFullScreenChatTurn: View {
     let contextDocumentTitle: String?
     let onOpenSource: (AlphaSourceRef) -> Void
 
+    private var deduplicatedStatusNote: String? {
+        guard let note = result.statusNote?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !note.isEmpty else { return nil }
+        let titleNormalized = result.answerTitle.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard titleNormalized != note.lowercased() else { return nil }
+        return note
+    }
+
     var body: some View {
+        let answerItems = result.answerSectionItems()
+
         VStack(alignment: .leading, spacing: 12) {
             if !result.question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 HStack {
                     Spacer(minLength: 46)
-                    Text(result.question)
-                        .font(.footnote)
-                        .foregroundStyle(Color.rossInk)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.horizontal, 13)
-                        .padding(.vertical, 10)
-                        .background(Color.rossCardBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    VStack(alignment: .trailing, spacing: 8) {
+                        if !result.selectedDocumentTitles.isEmpty {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    ForEach(result.selectedDocumentTitles, id: \.self) { title in
+                                        AlphaRossTokenChip(
+                                            title: title,
+                                            detail: nil,
+                                            systemImage: "paperclip"
+                                        )
+                                    }
+                                }
+                            }
+                            .frame(maxWidth: 280, alignment: .trailing)
+                        }
+
+                        Text(result.question)
+                            .font(.footnote)
+                            .foregroundStyle(Color.rossInk)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.horizontal, 13)
+                            .padding(.vertical, 10)
+                            .background(Color.rossCardBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    .stroke(Color.rossBorder.opacity(0.64), lineWidth: 1)
+                            }
+                    }
                 }
             }
 
-            VStack(alignment: .leading, spacing: 10) {
-                Text(result.answerTitle)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.rossInk)
-                    .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .top, spacing: 10) {
+                    Text(result.answerTitle)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.rossInk)
+                        .fixedSize(horizontal: false, vertical: true)
 
-                ForEach(result.answerSectionItems()) { section in
-                    AlphaFormattedAnswerText(text: section.text)
+                    Spacer(minLength: 8)
+
+                    if let note = deduplicatedStatusNote {
+                        HStack(spacing: 6) {
+                            RossGlassIconView(.badgeSparkle, variant: .accent, size: 12, fallbackSystemImage: "sparkles")
+                            Text(note)
+                                .font(.caption.weight(.semibold))
+                                .lineLimit(1)
+                        }
+                        .foregroundStyle(Color.rossAccent)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                        .background(Color.rossAccent.opacity(0.08), in: Capsule())
+                    }
                 }
 
-                ForEach(result.caseFileSources.prefix(3)) { sourceRef in
-                    Button {
-                        onOpenSource(sourceRef)
-                    } label: {
-                        Text("Source: \(alphaSourceRefDisplayLabel(sourceRef, contextDocumentTitle: contextDocumentTitle))")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color.rossAccent)
-                            .lineLimit(1)
+                ForEach(Array(answerItems.enumerated()), id: \.element.id) { index, section in
+                    VStack(alignment: .leading, spacing: 10) {
+                        AlphaFormattedAnswerText(text: section.text)
+                        if index < answerItems.count - 1 {
+                            Divider()
+                                .overlay(Color.rossBorder.opacity(0.4))
+                        }
                     }
-                    .buttonStyle(.plain)
+                }
+
+                if !result.caseFileSources.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Sources from your files")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.rossInk.opacity(0.54))
+                        AlphaSourceRefChips(
+                            sourceRefs: result.caseFileSources,
+                            contextDocumentTitle: contextDocumentTitle,
+                            onOpenSourceRef: onOpenSource
+                        )
+                    }
+                    .padding(12)
+                    .background(Color.rossSecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                 }
             }
             .padding(14)
