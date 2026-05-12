@@ -887,13 +887,13 @@ struct AlphaAssistantModelArtifact: Hashable, Sendable {
     var sizeLabel: String {
         switch tier {
         case .flash:
-            "about 1.6 GB"
+            "about 3.0 GB"
         case .quickStart:
-            "about 430 MB"
+            "about 3.5 GB"
         case .caseAssociate:
-            "about 1.1-1.3 GB"
+            "about 5.4 GB"
         case .seniorDraftingSupport:
-            "about 2.5 GB"
+            "about 17.0 GB"
         }
     }
 
@@ -911,11 +911,11 @@ let alphaAssistantModelArtifacts: [AlphaCapabilityTier: AlphaAssistantModelArtif
         fileName: "google_gemma-4-E2B-it-Q2_K.gguf",
         quantization: "Q2_K",
         downloadURLString: "https://huggingface.co/bartowski/google_gemma-4-E2B-it-GGUF/resolve/main/google_gemma-4-E2B-it-Q2_K.gguf",
-        sizeBytes: 1_650_000_000,
+        sizeBytes: 3_020_052_224,
         sha256: "",
         minimumMemoryGB: 3,
         recommendedMemoryGB: 4,
-        requiredFreeSpaceGB: 2,
+        requiredFreeSpaceGB: 4,
         recommendedPhone: "Fastest setup — simple answers.",
         sourcePageURLString: "https://huggingface.co/bartowski/google_gemma-4-E2B-it-GGUF",
         downloadSource: "huggingface",

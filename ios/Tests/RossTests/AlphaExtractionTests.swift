@@ -114,9 +114,10 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     func testPrivateAssistantTierCopyHidesTechnicalModelNames() {
-        XCTAssertEqual(AlphaCapabilityTier.quickStart.downloadSizeLabel, "about 430 MB")
-        XCTAssertEqual(AlphaCapabilityTier.caseAssociate.downloadSizeLabel, "about 1.1-1.3 GB")
-        XCTAssertEqual(AlphaCapabilityTier.seniorDraftingSupport.downloadSizeLabel, "about 2.5 GB")
+        XCTAssertEqual(AlphaCapabilityTier.flash.downloadSizeLabel, "3.0 GB")
+        XCTAssertEqual(AlphaCapabilityTier.quickStart.downloadSizeLabel, "3.5 GB")
+        XCTAssertEqual(AlphaCapabilityTier.caseAssociate.downloadSizeLabel, "5.4 GB")
+        XCTAssertEqual(AlphaCapabilityTier.seniorDraftingSupport.downloadSizeLabel, "17.0 GB")
 
         let forbidden = [
             "ChatGPT",
@@ -151,6 +152,36 @@ final class AlphaExtractionTests: XCTestCase {
                 )
             }
         }
+    }
+
+    @MainActor
+    func testAssistantChecksumMatchingAcceptsLocallyComputedChecksumWhenCatalogValueIsMissing() {
+        let model = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
+
+        XCTAssertTrue(
+            model.alphaAssistantChecksumMatches(
+                expected: "",
+                actual: String(repeating: "a", count: 64)
+            )
+        )
+        XCTAssertFalse(
+            model.alphaAssistantChecksumMatches(
+                expected: "",
+                actual: ""
+            )
+        )
+        XCTAssertTrue(
+            model.alphaAssistantChecksumMatches(
+                expected: String(repeating: "b", count: 64),
+                actual: String(repeating: "B", count: 64)
+            )
+        )
+        XCTAssertFalse(
+            model.alphaAssistantChecksumMatches(
+                expected: String(repeating: "c", count: 64),
+                actual: String(repeating: "d", count: 64)
+            )
+        )
     }
 
     func testLocalExtractionDetectsMixedLanguageProfile() async {

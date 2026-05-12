@@ -115,7 +115,7 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
     var downloadSizeLabel: String {
         switch self {
         case .flash:
-            "1.6 GB"
+            "3.0 GB"
         case .quickStart:
             "3.5 GB"
         case .caseAssociate:
@@ -128,7 +128,7 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
     var installedSizeLabel: String {
         switch self {
         case .flash:
-            "1.6 GB"
+            "3.0 GB"
         case .quickStart:
             "3.5 GB"
         case .caseAssociate:
@@ -167,7 +167,7 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
     var setupWarning: String {
         switch self {
         case .flash:
-            "Download about 1.6 GB before you begin. Wi-Fi is still the safest option."
+            "Download about 3.0 GB before you begin. Wi-Fi is still the safest option."
         case .quickStart:
             "Download about 3.5 GB before you begin. Wi-Fi is still the safest option."
         case .caseAssociate:
@@ -180,7 +180,7 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
     var setupTimeLabel: String {
         switch self {
         case .flash:
-            "about 1 min"
+            "about 2 min"
         case .quickStart:
             "about 2 min"
         case .caseAssociate:

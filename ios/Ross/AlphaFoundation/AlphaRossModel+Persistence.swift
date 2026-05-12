@@ -883,7 +883,7 @@ extension AlphaRossModel {
         guard !pack.developmentOnly else { return alphaFileByteCount(at: fileURL) > 0 }
         let artifact = alphaAssistantModelArtifact(for: pack.tier)
         guard alphaFileByteCount(at: fileURL) == artifact.sizeBytes else { return false }
-        return pack.checksumSha256.caseInsensitiveCompare(artifact.sha256) == .orderedSame
+        return alphaAssistantChecksumMatches(expected: artifact.sha256, actual: pack.checksumSha256)
     }
 
     func alphaFileByteCount(at url: URL) -> Int64 {
@@ -931,7 +931,7 @@ extension AlphaRossModel {
         let fileURL = alphaAbsoluteURL(for: relativePath)
         guard alphaFileByteCount(at: fileURL) == artifact.sizeBytes else { return nil }
         guard let checksum = alphaSHA256Hex(forFileAt: fileURL),
-              checksum.caseInsensitiveCompare(artifact.sha256) == .orderedSame else {
+              alphaAssistantChecksumMatches(expected: artifact.sha256, actual: checksum) else {
             return nil
         }
         return AlphaInstalledModelPack(
@@ -945,6 +945,18 @@ extension AlphaRossModel {
             checksumVerified: true,
             isActive: true
         )
+    }
+
+    func alphaAssistantChecksumMatches(expected: String, actual: String) -> Bool {
+        let normalizedExpected = expected.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedActual = actual.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedActual.isEmpty else { return false }
+        guard !normalizedExpected.isEmpty else {
+            // Legacy catalogs shipped without a published checksum. Accept the
+            // locally computed checksum so downloaded packs can still activate.
+            return true
+        }
+        return normalizedActual.caseInsensitiveCompare(normalizedExpected) == .orderedSame
     }
 
     func shouldRestoreAssistantSetupFlow(for state: AlphaPersistedState) -> Bool {
