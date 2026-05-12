@@ -97,6 +97,28 @@ struct AlphaLocalInferenceSmokeReport: Hashable {
     var createdAt: Date = .now
 }
 
+struct AlphaPrivateAISnapshot: Hashable, Sendable {
+    var installedPacks: [AlphaInstalledModelPack] = []
+    var activePack: AlphaInstalledModelPack?
+    var activeRuntimeHealth: AlphaLocalRuntimeHealth?
+    var recommendedTier: AlphaCapabilityTier = .caseAssociate
+    var freeDiskSpaceLabel = "Checking available space..."
+    var lastModelInvocation: AlphaLocalModelInvocation?
+    var resetCount = 0
+
+    func installedPack(for tier: AlphaCapabilityTier) -> AlphaInstalledModelPack? {
+        installedPacks.first { $0.tier == tier }
+    }
+}
+
+struct AlphaPrivateAISnapshotRefreshKey: Hashable, Sendable {
+    var installedPacks: [AlphaInstalledModelPack]
+    var activeTier: AlphaCapabilityTier?
+    var ledgerCount: Int
+    var documentInvocationCount: Int
+    var chatInvocationCount: Int
+}
+
 struct AlphaAskResult: Hashable {
     var chatSessionID: UUID?
     var chatTurnID: UUID?
@@ -527,6 +549,8 @@ final class AlphaRossModel {
     var persisted = AlphaPersistedState.empty() {
         didSet {
             invalidateWorkspaceDerivedState()
+            syncPrivateAISnapshotFromPersisted()
+            refreshPrivateAISnapshot()
         }
     }
     var path: [AlphaRoute] = []
@@ -552,12 +576,15 @@ final class AlphaRossModel {
     var publicLawSearchInFlight: Bool { publicLawSearchStatus == .running }
     var localInferenceSmokeReport: AlphaLocalInferenceSmokeReport?
     var localInferenceSmokeRunning = false
+    var privateAISnapshot = AlphaPrivateAISnapshot()
     var refreshingCaseOverviewIDs: Set<UUID> = []
     var loaded = false
     @ObservationIgnored var workspaceRevision: UInt64 = 0
     @ObservationIgnored var cachedWorkspaceRevision: UInt64 = .max
     @ObservationIgnored var workspaceDerivedState = AlphaWorkspaceDerivedState()
     @ObservationIgnored var assistantDownloadTaskBoxes: [UUID: AlphaAssistantDownloadTaskBox] = [:]
+    @ObservationIgnored var privateAISnapshotTask: Task<Void, Never>?
+    @ObservationIgnored var privateAISnapshotRefreshKey: AlphaPrivateAISnapshotRefreshKey?
 
     init(
         store: AlphaRossStore = AlphaRossStore(),
@@ -578,6 +605,8 @@ final class AlphaRossModel {
             invalidateWorkspaceDerivedState()
             path = previewPath
             syncDerivedStateFromPersisted()
+            syncPrivateAISnapshotFromPersisted()
+            refreshPrivateAISnapshot(forceValidation: true)
             loaded = true
         }
     }
@@ -1077,13 +1106,6 @@ func alphaSystemAssistantPack(for tier: AlphaCapabilityTier) -> AlphaInstalledMo
 
 extension AlphaRossModel {
     var freeDiskSpaceLabel: String {
-        guard let systemAttributes = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory()),
-              let freeSize = systemAttributes[.systemFreeSize] as? NSNumber else {
-            return "Unknown free space"
-        }
-        let formatter = ByteCountFormatter()
-        formatter.allowedUnits = [.useGB, .useMB]
-        formatter.countStyle = .file
-        return "\(formatter.string(fromByteCount: freeSize.int64Value)) available"
+        privateAISnapshot.freeDiskSpaceLabel
     }
 }

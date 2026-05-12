@@ -22,16 +22,11 @@ private extension String {
 extension AlphaRossModel {
 
     func installedPack(for tier: AlphaCapabilityTier) -> AlphaInstalledModelPack? {
-        persisted.installedPacks.first { pack in
-            pack.tier == tier && installedModelPackFileIsUsable(pack)
-        }
+        privateAISnapshot.installedPack(for: tier)
     }
 
     var activeRuntimeHealth: AlphaLocalRuntimeHealth? {
-        AlphaLocalModelRuntime.runtimeHealth(
-            activePack: activePack,
-            requestedTier: activePack?.tier ?? persisted.settings.activeTier
-        )
+        privateAISnapshot.activeRuntimeHealth
     }
 
     var lastModelInvocationRuntimeMode: String? {
@@ -39,17 +34,7 @@ extension AlphaRossModel {
     }
 
     var lastModelInvocation: AlphaLocalModelInvocation? {
-        let documentInvocations = persisted.cases
-            .flatMap(\.documents)
-            .flatMap(\.modelInvocations)
-        let chatInvocations = persisted.cases
-            .flatMap(\.chatSessions)
-            .flatMap(\.turns)
-            .compactMap(\.modelInvocation)
-        return (documentInvocations + chatInvocations)
-            .max { lhs, rhs in
-                (lhs.completedAt ?? lhs.startedAt) < (rhs.completedAt ?? rhs.startedAt)
-            }
+        privateAISnapshot.lastModelInvocation
     }
 
     func pauseJob(_ job: AlphaModelDownloadJob) {

@@ -131,9 +131,9 @@ struct AlphaPrivateAITechnicalDiagnosticsCard: View {
         RossSectionCard(title: "Advanced") {
             DisclosureGroup("Technical diagnostics") {
                 VStack(alignment: .leading, spacing: 10) {
-                    if !model.persisted.installedPacks.isEmpty {
+                    if !model.privateAISnapshot.installedPacks.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
-                            ForEach(model.persisted.installedPacks) { pack in
+                            ForEach(model.privateAISnapshot.installedPacks) { pack in
                                 AlphaPrivateAIInstalledPackCard(model: model, pack: pack)
                             }
                         }
@@ -143,7 +143,7 @@ struct AlphaPrivateAITechnicalDiagnosticsCard: View {
                     if let runtimeHealth = model.activeRuntimeHealth {
                         let lastInvocation = model.lastModelInvocation
                         let lastPreview = model.persisted.publicLawPreview
-                        let resetCount = model.persisted.ledgerEntries.filter { $0.title.localizedCaseInsensitiveContains("reset") }.count
+                        let resetCount = model.privateAISnapshot.resetCount
 
                         AlphaSettingsValueRow(label: "Runtime mode", value: runtimeHealth.runtimeMode.rawValue)
                         AlphaSettingsValueRow(label: "Artifact kind", value: model.activePack?.artifactKind ?? "Missing")
