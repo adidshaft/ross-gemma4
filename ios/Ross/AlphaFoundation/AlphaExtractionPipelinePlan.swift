@@ -30,14 +30,14 @@ enum AlphaExtractionPipelinePlanner {
     static func plan(for pack: AlphaInstalledModelPack?) -> AlphaExtractionPipelinePlan {
         let mode = AlphaExtractionMode.fromInstalledPack(pack)
         switch mode {
-        case .basic:
+        case .basic, .flash:
             return AlphaExtractionPipelinePlan(
                 mode: mode,
                 passes: [
                     AlphaExtractionPipelinePass(task: .languageCorrection, required: false, maxPagesPerBatch: 8, fallback: .deterministic),
                     AlphaExtractionPipelinePass(task: .legalFieldVerification, required: true, maxPagesPerBatch: 12, fallback: .deterministic)
                 ],
-                requiresInstalledPack: false,
+                requiresInstalledPack: mode == .flash,
                 userFacingQuality: .Basic
             )
 

@@ -85,6 +85,8 @@ func alphaDocumentFallbackSymbolName(_ kind: AlphaDocumentKind) -> String {
 
 func alphaTierGlassIcon(_ tier: AlphaCapabilityTier) -> (RossGlassIconName, RossGlassIconVariant, String) {
     switch tier {
+    case .flash:
+        return (.badgeSparkle, .accent, "paperplane.fill")
     case .quickStart:
         return (.badgeSparkle, .accent, "sparkles")
     case .caseAssociate:
@@ -490,6 +492,8 @@ struct AlphaMatterContextMenu: View {
 
 func alphaTierTint(_ tier: AlphaCapabilityTier) -> Color {
     switch tier {
+    case .flash:
+        return Color.rossHighlight
     case .quickStart:
         return Color.rossHighlight
     case .caseAssociate:

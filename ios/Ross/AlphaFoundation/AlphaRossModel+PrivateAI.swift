@@ -868,6 +868,8 @@ extension AlphaRossModel {
 
     var recommendedAssistantTitle: String {
         switch recommendedOnDeviceTier() {
+        case .flash:
+            return "Ultra-fast flash setup"
         case .quickStart:
             return "Phone-optimized reading"
         case .caseAssociate:
@@ -882,6 +884,8 @@ extension AlphaRossModel {
         let freeStorageGB = max(4, alphaAvailableStorageInGigabytes())
         let summary: String
         switch recommendedOnDeviceTier() {
+        case .flash:
+            summary = "Ross will use the lightest, fastest assistant for immediate short answers and basic review."
         case .quickStart:
             summary = "Ross will keep setup lighter on this phone so imports, case review, and short legal questions stay responsive."
         case .caseAssociate:
@@ -894,6 +898,8 @@ extension AlphaRossModel {
 
     var recommendedAssistantSetupNote: String {
         switch recommendedOnDeviceTier() {
+        case .flash:
+            return "This will be the fastest to download and set up."
         case .quickStart:
             return "Setup stays smaller and mobile-friendly for this device."
         case .caseAssociate:

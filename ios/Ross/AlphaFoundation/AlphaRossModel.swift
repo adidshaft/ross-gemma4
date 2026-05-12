@@ -886,6 +886,8 @@ struct AlphaAssistantModelArtifact: Hashable, Sendable {
 
     var sizeLabel: String {
         switch tier {
+        case .flash:
+            "about 1.6 GB"
         case .quickStart:
             "about 430 MB"
         case .caseAssociate:
@@ -901,6 +903,28 @@ struct AlphaAssistantModelArtifact: Hashable, Sendable {
 }
 
 let alphaAssistantModelArtifacts: [AlphaCapabilityTier: AlphaAssistantModelArtifact] = [
+    .flash: AlphaAssistantModelArtifact(
+        tier: .flash,
+        packId: "gemma-4-e2b-q2",
+        displayName: "Gemma 4 E2B Q2_K",
+        repository: "bartowski/google_gemma-4-E2B-it-GGUF",
+        fileName: "google_gemma-4-E2B-it-Q2_K.gguf",
+        quantization: "Q2_K",
+        downloadURLString: "https://huggingface.co/bartowski/google_gemma-4-E2B-it-GGUF/resolve/main/google_gemma-4-E2B-it-Q2_K.gguf",
+        sizeBytes: 1_650_000_000,
+        sha256: "",
+        minimumMemoryGB: 3,
+        recommendedMemoryGB: 4,
+        requiredFreeSpaceGB: 2,
+        recommendedPhone: "Fastest setup — simple answers.",
+        sourcePageURLString: "https://huggingface.co/bartowski/google_gemma-4-E2B-it-GGUF",
+        downloadSource: "huggingface",
+        verified: true,
+        releaseReady: true,
+        licenseNotice: "Gemma License",
+        safetyNotice: "Review generated content.",
+        isActiveTier: true
+    ),
     .quickStart: AlphaAssistantModelArtifact(
         tier: .quickStart,
         packId: "gemma-4-e2b-q4",

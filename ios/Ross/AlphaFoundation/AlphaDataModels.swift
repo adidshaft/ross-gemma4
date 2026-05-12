@@ -53,6 +53,7 @@ enum AlphaAppearanceMode: String, Codable, CaseIterable, Identifiable, Hashable,
 }
 
 enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable, Sendable {
+    case flash = "flash"
     case quickStart = "quick_start"
     case caseAssociate = "case_associate"
     case seniorDraftingSupport = "senior_drafting_support"
@@ -61,6 +62,8 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
 
     var title: String {
         switch self {
+        case .flash:
+            "Flash"
         case .quickStart:
             "Small"
         case .caseAssociate:
@@ -72,6 +75,8 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
 
     var setupTitle: String {
         switch self {
+        case .flash:
+            "Flash - simplest, ultra-fast"
         case .quickStart:
             "Small - short orders only"
         case .caseAssociate:
@@ -83,6 +88,8 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
 
     var summary: String {
         switch self {
+        case .flash:
+            "Lighter footprint for immediate, fast answers and simple checklists."
         case .quickStart:
             "Lighter setup for short orders, quick summaries, and simple private Ask Ross actions."
         case .caseAssociate:
@@ -94,6 +101,8 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
 
     var storageNote: String {
         switch self {
+        case .flash:
+            "Smallest footprint"
         case .quickStart:
             "Light footprint"
         case .caseAssociate:
@@ -105,6 +114,8 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
 
     var downloadSizeLabel: String {
         switch self {
+        case .flash:
+            "1.6 GB"
         case .quickStart:
             "3.5 GB"
         case .caseAssociate:
@@ -116,6 +127,8 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
 
     var installedSizeLabel: String {
         switch self {
+        case .flash:
+            "1.6 GB"
         case .quickStart:
             "3.5 GB"
         case .caseAssociate:
@@ -127,6 +140,8 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
 
     var bestFor: String {
         switch self {
+        case .flash:
+            "Ultra-fast short document Q&A."
         case .quickStart:
             "Fast intake, smaller devices, and short document Q&A after the model is installed."
         case .caseAssociate:
@@ -138,6 +153,8 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
 
     var compactSetupSummary: String {
         switch self {
+        case .flash:
+            "Simple answers"
         case .quickStart:
             "Short orders"
         case .caseAssociate:
@@ -149,17 +166,21 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
 
     var setupWarning: String {
         switch self {
+        case .flash:
+            "Download about 1.6 GB before you begin. Wi-Fi is still the safest option."
         case .quickStart:
-            "Download about 430 MB before you begin. Wi-Fi is still the safest option."
+            "Download about 3.5 GB before you begin. Wi-Fi is still the safest option."
         case .caseAssociate:
-            "Download about 1.3 GB before you begin. Keep this phone on Wi-Fi and make sure there is enough free space."
+            "Download about 5.4 GB before you begin. Keep this phone on Wi-Fi and make sure there is enough free space."
         case .seniorDraftingSupport:
-            "Download about 2.5 GB before you begin. Use strong Wi-Fi and check that this phone has plenty of free space."
+            "Download about 17.0 GB before you begin. Use strong Wi-Fi and check that this phone has plenty of free space."
         }
     }
 
     var setupTimeLabel: String {
         switch self {
+        case .flash:
+            "about 1 min"
         case .quickStart:
             "about 2 min"
         case .caseAssociate:
@@ -171,6 +192,8 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
 
     var extractionQuality: String {
         switch self {
+        case .flash:
+            "Basic"
         case .quickStart:
             "Standard"
         case .caseAssociate:
@@ -186,6 +209,8 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
 
     var rank: Int {
         switch self {
+        case .flash:
+            0
         case .quickStart:
             1
         case .caseAssociate:
@@ -204,6 +229,7 @@ struct AlphaPackOffer: Identifiable, Codable, Hashable, Sendable {
     var id: AlphaCapabilityTier { tier }
 
     static let catalog: [AlphaPackOffer] = [
+        AlphaPackOffer(tier: .flash, runtimeLabel: "Flash", supportsBilingualDrafting: false),
         AlphaPackOffer(tier: .quickStart, runtimeLabel: "Basic", supportsBilingualDrafting: false),
         AlphaPackOffer(tier: .caseAssociate, runtimeLabel: "Standard", supportsBilingualDrafting: true),
         AlphaPackOffer(tier: .seniorDraftingSupport, runtimeLabel: "Advanced", supportsBilingualDrafting: true)
@@ -598,6 +624,7 @@ struct AlphaSourceRef: Identifiable, Codable, Hashable, Sendable {
 
 enum AlphaExtractionMode: String, Codable, Hashable, Sendable {
     case basic
+    case flash = "flash"
     case quickStart = "quick_start"
     case caseAssociate = "case_associate"
     case seniorDraftingSupport = "senior_drafting_support"
@@ -606,11 +633,13 @@ enum AlphaExtractionMode: String, Codable, Hashable, Sendable {
         switch tier {
         case .none:
             .basic
-        case .quickStart:
+        case .some(.flash):
+            .flash
+        case .some(.quickStart):
             .quickStart
-        case .caseAssociate:
+        case .some(.caseAssociate):
             .caseAssociate
-        case .seniorDraftingSupport:
+        case .some(.seniorDraftingSupport):
             .seniorDraftingSupport
         }
     }
@@ -621,7 +650,7 @@ enum AlphaExtractionMode: String, Codable, Hashable, Sendable {
 
     var qualityLabel: String {
         switch self {
-        case .basic:
+        case .basic, .flash:
             "Basic"
         case .quickStart:
             "Standard"

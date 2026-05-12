@@ -46,10 +46,11 @@ Highlight key facts from the chronology and instruct ROSS-Gemma4 to draft a prel
 
 ROSS-Gemma4 utilizes real, quantized Gemma 4 GGUF models directly on-device. We leverage open, publicly accessible weights provided by the community (via HuggingFace's `bartowski` repository) using the `Q4_K_M` 4-bit quantization to balance high-quality reasoning with memory constraints.
 
-There are three Gemma 4 capability packs available for download inside the app:
+There are four Gemma 4 capability packs available for download inside the app:
 
 | Tier | Pack | Base Model | Quantization | Size | Use Case | Target Device |
 | --- | --- | --- | --- | --- | --- | --- |
+| **Flash Setup** | `gemma-4-e2b-q2` | Gemma 4 E2B | `Q2_K` | ~1.6 GB | Ultra-fast flash setup, immediate short answers, basic review. | Ultra-Constrained Phones |
 | **Quick Associate** | `gemma-4-e2b-q4` | Gemma 4 E2B | `Q4_K_M` | ~3.5 GB | Instant setup, intake, short summaries, simple checklists. | Constrained Phones |
 | **Case Associate** | `gemma-4-e4b-q4` | Gemma 4 E4B | `Q4_K_M` | ~5.4 GB | Chronology building, issue extraction, missing-fact analysis. | Modern Phones/Tablets |
 | **Senior Drafting Support**| `gemma-4-26b-a4b-q4` | Gemma 4 26B-A4B (MoE) | `Q4_K_M` | ~17.0 GB | Advanced drafting, clinic workstation mode, complex cross-referencing. | High-End Local Workstations |

@@ -217,6 +217,7 @@ struct AlphaOnboardingDownloadCard: View {
 
     private var etaLabel: String {
         switch tier {
+        case .flash:              return "~1 min"
         case .quickStart:         return "~3 min"
         case .caseAssociate:      return "~10 min"
         case .seniorDraftingSupport: return "~30 min"
@@ -225,6 +226,7 @@ struct AlphaOnboardingDownloadCard: View {
 
     private var tierIcon: String {
         switch tier {
+        case .flash:              return "paperplane.fill"
         case .quickStart:         return "bolt.fill"
         case .caseAssociate:      return "brain"
         case .seniorDraftingSupport: return "star.fill"
@@ -440,6 +442,7 @@ struct AlphaModelPickerRow: View {
 
     private var etaLabel: String {
         switch tier {
+        case .flash:                 return "~1 min"
         case .quickStart:            return "~3 min"
         case .caseAssociate:         return "~10 min"
         case .seniorDraftingSupport: return "~30 min"
@@ -448,6 +451,7 @@ struct AlphaModelPickerRow: View {
 
     private var tierIcon: String {
         switch tier {
+        case .flash:                 return "paperplane.fill"
         case .quickStart:            return "bolt.fill"
         case .caseAssociate:         return "brain"
         case .seniorDraftingSupport: return "star.fill"

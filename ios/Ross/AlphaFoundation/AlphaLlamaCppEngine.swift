@@ -141,6 +141,7 @@ actor LlamaContext {
 
         tokens_list = tokenize(text: text, add_bos: true)
         temporary_invalid_cchars = []
+        is_done = false
 
         let n_ctx = llama_n_ctx(context)
         let n_kv_req = tokens_list.count + (Int(n_len) - tokens_list.count)
@@ -148,26 +149,36 @@ actor LlamaContext {
         print("\n n_len = \(n_len), n_ctx = \(n_ctx), n_kv_req = \(n_kv_req)")
 
         if n_kv_req > n_ctx {
-            print("error: n_kv_req > n_ctx, the required KV cache size is not big enough")
+            print("error: n_kv_req > n_ctx, the required KV cache size is not big enough. Truncating input.")
+            let max_input_tokens = Int(n_ctx) - 256
+            if tokens_list.count > max_input_tokens {
+                tokens_list = Array(tokens_list.suffix(max_input_tokens))
+            }
         }
 
-        for id in tokens_list {
-            print(String(cString: token_to_piece(token: id) + [0]))
-        }
-
+        // We don't need to print all tokens, it spams the log for large inputs
         llama_batch_clear(&batch)
 
-        for i1 in 0..<tokens_list.count {
-            let i = Int(i1)
+        for i in 0..<tokens_list.count {
             llama_batch_add(&batch, tokens_list[i], Int32(i), [0], false)
+            
+            // Chunk prompt evaluation to avoid exceeding batch size (512)
+            if batch.n_tokens >= 512 {
+                if llama_decode(context, batch) != 0 {
+                    print("llama_decode() failed during prompt evaluation chunk")
+                }
+                llama_batch_clear(&batch)
+            }
         }
-        batch.logits[Int(batch.n_tokens) - 1] = 1 // true
 
-        if llama_decode(context, batch) != 0 {
-            print("llama_decode() failed")
+        if batch.n_tokens > 0 {
+            batch.logits[Int(batch.n_tokens) - 1] = 1 // true
+            if llama_decode(context, batch) != 0 {
+                print("llama_decode() failed during final prompt chunk")
+            }
         }
 
-        n_cur = batch.n_tokens
+        n_cur = Int32(tokens_list.count)
     }
 
     func completion_loop() -> String {

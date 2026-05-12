@@ -715,6 +715,8 @@ func alphaDownloadEstimateLabel(_ job: AlphaModelDownloadJob) -> String? {
         let remainingFraction = max(0, min(1, 1 - job.progress))
         let baselineMinutes: Double
         switch job.tier {
+        case .flash:
+            baselineMinutes = 1
         case .quickStart:
             baselineMinutes = 2
         case .caseAssociate:
