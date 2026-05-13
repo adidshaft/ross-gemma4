@@ -218,7 +218,7 @@ actor LlamaContext {
         if llama_vocab_is_eog(vocab, new_token_id) || n_cur >= n_len {
             print("\n")
             is_done = true
-            let new_token_str = String(cString: temporary_invalid_cchars + [0])
+            let new_token_str = decodeTokenBytes(temporary_invalid_cchars, repairingInvalidUTF8: true) ?? ""
             temporary_invalid_cchars.removeAll()
             return new_token_str
         }
@@ -226,12 +226,12 @@ actor LlamaContext {
         let new_token_cchars = token_to_piece(token: new_token_id)
         temporary_invalid_cchars.append(contentsOf: new_token_cchars)
         let new_token_str: String
-        if let string = String(validatingUTF8: temporary_invalid_cchars + [0]) {
+        if let string = decodeTokenBytes(temporary_invalid_cchars, repairingInvalidUTF8: false) {
             temporary_invalid_cchars.removeAll()
             new_token_str = string
-        } else if (0 ..< temporary_invalid_cchars.count).contains(where: {$0 != 0 && String(validatingUTF8: Array(temporary_invalid_cchars.suffix($0)) + [0]) != nil}) {
+        } else if (0 ..< temporary_invalid_cchars.count).contains(where: { $0 != 0 && decodeTokenBytes(Array(temporary_invalid_cchars.suffix($0)), repairingInvalidUTF8: false) != nil }) {
             // in this case, at least the suffix of the temporary_invalid_cchars can be interpreted as UTF8 string
-            let string = String(cString: temporary_invalid_cchars + [0])
+            let string = decodeTokenBytes(temporary_invalid_cchars, repairingInvalidUTF8: true) ?? ""
             temporary_invalid_cchars.removeAll()
             new_token_str = string
         } else {
@@ -255,6 +255,14 @@ actor LlamaContext {
         hasDecodableLogits = true
 
         return new_token_str
+    }
+
+    private func decodeTokenBytes(_ cchars: [CChar], repairingInvalidUTF8: Bool) -> String? {
+        let bytes = cchars.map { UInt8(bitPattern: $0) }
+        if repairingInvalidUTF8 {
+            return String(decoding: bytes, as: UTF8.self)
+        }
+        return String(bytes: bytes, encoding: .utf8)
     }
 
     func bench(pp: Int, tg: Int, pl: Int, nr: Int = 1) -> String {

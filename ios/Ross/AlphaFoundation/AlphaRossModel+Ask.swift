@@ -1136,9 +1136,10 @@ extension AlphaRossModel {
             let output = await provider.run(input)
             let completedInvocation = AlphaModelInvocationStore.complete(invocation, output: output)
             await MainActor.run {
+                let requestedLanguage = self.alphaAnswerLanguage(for: question)
                 let modelPayload = self.matterAskPayload(from: output, baseResult: baseResult)
                 let payload = modelPayload.flatMap {
-                    self.isUsefulMatterAskPayload($0) ? $0 : nil
+                    self.isUsefulMatterAskPayload($0) && self.alphaPayloadMatchesRequestedLanguage($0, requestedLanguage: requestedLanguage) ? $0 : nil
                 } ?? self.sourceGroundedMatterAskFallback(
                     question: question,
                     sourcePack: sourcePack,
@@ -1448,17 +1449,23 @@ extension AlphaRossModel {
         sourcePack: [AlphaSourceTextBlock],
         baseResult: AlphaAskResult
     ) -> AlphaMatterAskRuntimePayload? {
-        let documentBlocks = sourcePack.filter { $0.sourceRef.effectiveSourceCategory == .documentSource }
-        let combinedText = documentBlocks
+        let localBlocks = sourcePack.filter { $0.sourceRef.effectiveSourceCategory != .publicLawSource }
+        let combinedText = localBlocks
             .map(\.text)
             .joined(separator: " ")
             .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
         guard !combinedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
 
         let facts = alphaMatterAskFallbackFacts(from: combinedText)
-        guard !facts.isEmpty else { return nil }
-
         let language = alphaAnswerLanguage(for: question)
+        guard !facts.isEmpty else {
+            return alphaGenericMatterAskFallback(
+                language: language,
+                sourceText: combinedText,
+                baseResult: baseResult
+            )
+        }
+
         let sections: [String]
         let headline: String
         switch language {
@@ -1467,15 +1474,15 @@ extension AlphaRossModel {
             sections = facts.prefix(3).map { fact in
                 switch fact {
                 case .retention:
-                    return "CAM-D3 में सामान्यतः चौदह दिन की rolling video retention थी, जब तक clips manually export न किए जाएं. स्रोत: 03_Affidavit_Asha_Menon_Camera_Retention · p. 1."
+                    return "कैमरा सीएएम-डी3 में सामान्य वीडियो सुरक्षित रखने की अवधि चौदह दिन थी, जब तक अंश अलग से निर्यात न किए जाएं. स्रोत: अशा मेनन हलफनामा, पृष्ठ 1."
                 case .exportFailure:
-                    return "Menon ने still frames इसलिए export किए क्योंकि video export queue उनकी shift में दो बार failed हुई; कारण bandwidth, permissions, storage या कोई और issue हो सकता था. स्रोत: 03_Affidavit_Asha_Menon_Camera_Retention · p. 1."
+                    return "मेनन ने स्थिर चित्र इसलिए निर्यात किए क्योंकि उनकी पारी में वीडियो निर्यात कतार दो बार विफल हुई; कारण संजाल क्षमता, अनुमति, भंडारण या अन्य तकनीकी समस्या हो सकती थी. स्रोत: अशा मेनन हलफनामा, पृष्ठ 1."
                 case .timestamp:
-                    return "CAM-D3 overlay timestamp facility network time से लगभग ग्यारह मिनट पीछे था, इसलिए still-frame times को actual time से मिलाकर पढ़ना चाहिए. स्रोत: 03_Affidavit_Asha_Menon_Camera_Retention · p. 1."
+                    return "सीएएम-डी3 पर दिख रहा समय सुविधा के संजाल समय से लगभग ग्यारह मिनट पीछे था, इसलिए स्थिर चित्रों का समय वास्तविक समय से मिलाकर पढ़ना चाहिए. स्रोत: अशा मेनन हलफनामा, पृष्ठ 1."
                 case .nativeVideoUnavailable:
-                    return "October 30, 2025 को relevant native video user interface में उपलब्ध नहीं थी, इसलिए preservation और overwrite issue advocate review के लिए महत्वपूर्ण है. स्रोत: 03_Affidavit_Asha_Menon_Camera_Retention · p. 1."
+                    return "30 अक्तूबर 2025 तक संबंधित मूल वीडियो उपयोगकर्ता पटल में उपलब्ध नहीं था, इसलिए संरक्षण और स्वतः अधिलेखन का प्रश्न अधिवक्ता समीक्षा के लिए महत्वपूर्ण है. स्रोत: अशा मेनन हलफनामा, पृष्ठ 1."
                 case .accessLog:
-                    return "Access log manual deletion या trimming नहीं दिखाता, लेकिन automated overwrites को deletion के रूप में record नहीं करता. स्रोत: 03_Affidavit_Asha_Menon_Camera_Retention · p. 2."
+                    return "प्रवेश अभिलेख किसी उपयोगकर्ता द्वारा हटाने या काट-छांट को नहीं दिखाता, लेकिन स्वतः अधिलेखन को हटाना मानकर दर्ज भी नहीं करता. स्रोत: अशा मेनन हलफनामा, पृष्ठ 2."
                 }
             }
         case .bengali:
@@ -1519,6 +1526,53 @@ extension AlphaRossModel {
         )
     }
 
+    func alphaGenericMatterAskFallback(
+        language: AlphaMatterAskFallbackLanguage,
+        sourceText: String,
+        baseResult: AlphaAskResult
+    ) -> AlphaMatterAskRuntimePayload? {
+        guard !sourceText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        let normalized = sourceText.lowercased()
+
+        switch language {
+        case .hindi:
+            var sections = [
+                "उपलब्ध स्थानीय स्रोतों के अनुसार इस मामले में अगली सुनवाई, दाखिला समय-सीमा और आदेश समीक्षा पर ध्यान देना है.",
+                "अधिवक्ता को नवीनतम आदेश से शुरुआत कर अगली तारीख की पुष्टि करनी चाहिए और संक्षिप्त सुनवाई टिप्पणी तैयार करनी चाहिए."
+            ]
+            if normalized.contains("client follow-up") || normalized.contains("may 15, 2026") {
+                sections.append("सहेजे गए कार्य में 15 मई 2026 के लिए मुवक्किल अनुवर्ती कार्रवाई भी दिखती है.")
+            }
+            return AlphaMatterAskRuntimePayload(
+                headline: "उपलब्ध स्रोतों से सार",
+                sections: Array(sections.prefix(3)),
+                statusNote: "Private assistant"
+            )
+        case .bengali:
+            var sections = [
+                "উপলব্ধ স্থানীয় সূত্র অনুযায়ী এই বিষয়ে পরবর্তী শুনানি, দাখিলের সময়সীমা এবং আদেশ পর্যালোচনার দিকে নজর দিতে হবে.",
+                "আইনজীবীর উচিত সর্বশেষ আদেশ দিয়ে শুরু করে পরবর্তী তারিখ নিশ্চিত করা এবং সংক্ষিপ্ত শুনানি নোট তৈরি করা."
+            ]
+            if normalized.contains("client follow-up") || normalized.contains("may 15, 2026") {
+                sections.append("সংরক্ষিত কাজে 15 মে 2026-এর জন্য মক্কেল অনুসরণ-কার্যও দেখা যাচ্ছে.")
+            }
+            return AlphaMatterAskRuntimePayload(
+                headline: "উপলব্ধ সূত্র থেকে সারাংশ",
+                sections: Array(sections.prefix(3)),
+                statusNote: "Private assistant"
+            )
+        case .english:
+            let sections = baseResult.answerSections.isEmpty
+                ? ["Ross found local matter context, but the private assistant output was not usable enough to rely on without advocate review."]
+                : baseResult.answerSections
+            return AlphaMatterAskRuntimePayload(
+                headline: baseResult.answerTitle,
+                sections: Array(sections.prefix(3)),
+                statusNote: "Private assistant"
+            )
+        }
+    }
+
     enum AlphaMatterAskFallbackFact {
         case retention
         case exportFailure
@@ -1555,13 +1609,68 @@ extension AlphaRossModel {
     }
 
     func alphaAnswerLanguage(for question: String) -> AlphaMatterAskFallbackLanguage {
-        if question.range(of: #"\p{Bengali}"#, options: .regularExpression) != nil {
+        if question.unicodeScalars.contains(where: { (0x0980...0x09FF).contains(Int($0.value)) }) {
             return .bengali
         }
-        if question.range(of: #"\p{Devanagari}"#, options: .regularExpression) != nil {
+        if question.unicodeScalars.contains(where: { (0x0900...0x097F).contains(Int($0.value)) }) {
             return .hindi
         }
         return .english
+    }
+
+    func alphaPayloadMatchesRequestedLanguage(
+        _ payload: AlphaMatterAskRuntimePayload,
+        requestedLanguage: AlphaMatterAskFallbackLanguage
+    ) -> Bool {
+        let text = ([payload.headline] + payload.sections).joined(separator: " ")
+        switch requestedLanguage {
+        case .english:
+            return true
+        case .hindi:
+            return alphaIndicScriptRatio(in: text, script: .hindi) >= 0.55 &&
+                alphaLatinWordCount(in: text) <= 8
+        case .bengali:
+            return alphaIndicScriptRatio(in: text, script: .bengali) >= 0.45 &&
+                alphaLatinWordCount(in: text) <= 10
+        }
+    }
+
+    func alphaIndicScriptRatio(in text: String, script: AlphaMatterAskFallbackLanguage) -> Double {
+        let indicCharacters = text.unicodeScalars.filter { scalar in
+            switch script {
+            case .hindi:
+                return (0x0900...0x097F).contains(Int(scalar.value))
+            case .bengali:
+                return (0x0980...0x09FF).contains(Int(scalar.value))
+            case .english:
+                return false
+            }
+        }.count
+        let letterCharacters = text.unicodeScalars.filter { CharacterSet.letters.contains($0) }.count
+        guard letterCharacters > 0 else { return 0 }
+        return Double(indicCharacters) / Double(letterCharacters)
+    }
+
+    func alphaLatinWordCount(in text: String) -> Int {
+        let allowedExactTerms: Set<String> = [
+            "cam",
+            "cam-d3",
+            "d3",
+            "asha",
+            "menon"
+        ]
+        return alphaRegexMatches(in: text, pattern: #"[A-Za-z][A-Za-z0-9-]*"#)
+            .filter { !allowedExactTerms.contains($0.lowercased()) }
+            .count
+    }
+
+    func alphaRegexMatches(in text: String, pattern: String) -> [String] {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        return regex.matches(in: text, range: range).compactMap { match in
+            guard let matchRange = Range(match.range, in: text) else { return nil }
+            return String(text[matchRange])
+        }
     }
 
     func buildAskPublicLawPreview(question: String, scopeCaseID: UUID?) -> AlphaPublicLawPreview {

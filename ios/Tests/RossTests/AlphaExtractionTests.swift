@@ -113,6 +113,94 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertFalse(sections.joined(separator: "\n").contains(#""headline""#))
     }
 
+    @MainActor
+    func testHindiMatterAnswerRejectsHinglishRuntimePayload() {
+        let model = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
+        let hinglish = AlphaMatterAskRuntimePayload(
+            headline: "Asha Menon affidavit ke points",
+            sections: [
+                "CAM-D3 rolling video retention fourteen days thi aur clips manually export hone par preserve hoti thi.",
+                "Video export queue failed twice, isliye still frames use karne padenge."
+            ],
+            statusNote: "Private assistant"
+        )
+
+        XCTAssertFalse(
+            model.alphaPayloadMatchesRequestedLanguage(
+                hinglish,
+                requestedLanguage: .hindi
+            )
+        )
+    }
+
+    @MainActor
+    func testHindiSourceGroundedFallbackUsesDevanagariText() {
+        let model = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "03_Affidavit_Asha_Menon_Camera_Retention",
+            pageNumber: 1,
+            textSnippet: "CAM-D3 fourteen-day retention and video export queue failed twice."
+        )
+        let sourcePack = [
+            AlphaSourceTextBlock(
+                sourceRef: sourceRef,
+                text: "CAM-D3 had fourteen-day retention. The video export queue failed twice. The overlay timestamp lagged by eleven minutes.",
+                pageNumber: 1,
+                languageHint: "en",
+                ocrConfidence: 0.91
+            )
+        ]
+
+        let payload = model.sourceGroundedMatterAskFallback(
+            question: "इस हलफनामे के मुख्य बिंदु बताइए",
+            sourcePack: sourcePack,
+            baseResult: baseAskResult()
+        )
+
+        let text = ([payload?.headline ?? ""] + (payload?.sections ?? [])).joined(separator: " ")
+        XCTAssertNotNil(payload)
+        XCTAssertGreaterThanOrEqual(model.alphaIndicScriptRatio(in: text, script: .hindi), 0.55)
+        XCTAssertLessThanOrEqual(model.alphaLatinWordCount(in: text), 8)
+        XCTAssertFalse(text.localizedCaseInsensitiveContains("rolling video retention"))
+        XCTAssertFalse(text.localizedCaseInsensitiveContains("export queue"))
+    }
+
+    @MainActor
+    func testHindiGenericFallbackAvoidsCouldNotAnswerWhenSourcesExist() {
+        let model = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "Matter details",
+            pageNumber: 1,
+            textSnippet: "Matter has next hearing and filing deadline.",
+            sourceCategory: .matterDetail
+        )
+        let sourcePack = [
+            AlphaSourceTextBlock(
+                sourceRef: sourceRef,
+                text: "This demo matter has one next hearing, one filing deadline, and one order that still needs advocate review. Client follow-up: May 15, 2026.",
+                pageNumber: 1,
+                languageHint: "en",
+                ocrConfidence: nil
+            )
+        ]
+
+        let payload = model.sourceGroundedMatterAskFallback(
+            question: "इस आदेश का हिंदी में अनुवाद और सार केवल हिंदी में दीजिए।",
+            sourcePack: sourcePack,
+            baseResult: baseAskResult(answerTitle: "Private assistant could not answer")
+        )
+
+        let text = ([payload?.headline ?? ""] + (payload?.sections ?? [])).joined(separator: " ")
+        XCTAssertNotNil(payload)
+        XCTAssertNotEqual(payload?.headline, "Private assistant could not answer")
+        XCTAssertGreaterThanOrEqual(model.alphaIndicScriptRatio(in: text, script: .hindi), 0.55)
+        XCTAssertLessThanOrEqual(model.alphaLatinWordCount(in: text), 8)
+    }
+
     func testMatterAskPayloadParserSalvagesJsonPrefixedLooseObject() {
         let output = AlphaLocalModelOutput(
             rawText: """
