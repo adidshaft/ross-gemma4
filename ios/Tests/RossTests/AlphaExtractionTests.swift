@@ -113,6 +113,73 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertFalse(sections.joined(separator: "\n").contains(#""headline""#))
     }
 
+    func testMatterAskPayloadParserSalvagesJsonPrefixedLooseObject() {
+        let output = AlphaLocalModelOutput(
+            rawText: """
+            json{headline "CAM-D3 affidavit notes", sections [ The affidavit says Menon oversaw CAM-D3 retention and legal holds. The access log does not show manual deletion, but automated overwrites are not recorded as deletions. ], statusNote:"Answered from selected files"}
+            """,
+            parsedJson: nil,
+            schemaValid: false,
+            warnings: [],
+            sourceRefs: []
+        )
+
+        let payload = AlphaMatterAskPayloadParser.parse(
+            output: output,
+            baseResult: baseAskResult()
+        )
+
+        XCTAssertEqual("CAM-D3 affidavit notes", payload?.headline)
+        XCTAssertEqual([
+            "The affidavit says Menon oversaw CAM-D3 retention and legal holds. The access log does not show manual deletion, but automated overwrites are not recorded as deletions."
+        ], payload?.sections)
+        XCTAssertEqual("Answered from selected files", payload?.statusNote)
+    }
+
+    func testMatterAskPayloadParserSalvagesLooseGemmaFragments() {
+        let output = AlphaLocalModelOutput(
+            rawText: """
+            json{ headline "ention", "": " retention for-3 fourteen unless are exported " "overlay lagged facility time approximately minutes" "retention the was by still because video queue twice the.", "Note" "retention the was by still."}```
+            """,
+            parsedJson: nil,
+            schemaValid: false,
+            warnings: [],
+            sourceRefs: []
+        )
+
+        let payload = AlphaMatterAskPayloadParser.parse(
+            output: output,
+            baseResult: baseAskResult(answerTitle: "Ross drafted this from your files", statusNote: "Answered from selected files")
+        )
+
+        XCTAssertEqual("ention", payload?.headline)
+        XCTAssertEqual([
+            "retention for-3 fourteen unless are exported",
+            "overlay lagged facility time approximately minutes",
+            "retention the was by still because video queue twice the."
+        ], payload?.sections)
+        XCTAssertNil(payload?.statusNote)
+    }
+
+    func testMatterAskPayloadParserDropsTurnMarkerFragments() {
+        let output = AlphaLocalModelOutput(
+            rawText: """
+            startofturn
+            """,
+            parsedJson: nil,
+            schemaValid: false,
+            warnings: [],
+            sourceRefs: []
+        )
+
+        let payload = AlphaMatterAskPayloadParser.parse(
+            output: output,
+            baseResult: baseAskResult()
+        )
+
+        XCTAssertNil(payload)
+    }
+
     func testPrivateAssistantTierCopyHidesTechnicalModelNames() {
         XCTAssertEqual(AlphaCapabilityTier.flash.downloadSizeLabel, "3.0 GB")
         XCTAssertEqual(AlphaCapabilityTier.quickStart.downloadSizeLabel, "3.5 GB")

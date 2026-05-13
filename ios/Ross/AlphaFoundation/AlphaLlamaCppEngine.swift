@@ -36,9 +36,11 @@ actor LlamaContext {
     private var temporary_invalid_cchars: [CChar]
 
     var n_len: Int32 = 1024
+    private let maxNewTokens: Int32 = 256
     var n_cur: Int32 = 0
 
     var n_decode: Int32 = 0
+    private var hasDecodableLogits = false
 
     init(model: OpaquePointer, context: OpaquePointer) {
         self.model = model
@@ -48,7 +50,9 @@ actor LlamaContext {
         self.temporary_invalid_cchars = []
         let sparams = llama_sampler_chain_default_params()
         self.sampling = llama_sampler_chain_init(sparams)
-        llama_sampler_chain_add(self.sampling, llama_sampler_init_temp(0.4))
+        llama_sampler_chain_add(self.sampling, llama_sampler_init_top_k(40))
+        llama_sampler_chain_add(self.sampling, llama_sampler_init_top_p(0.9, 1))
+        llama_sampler_chain_add(self.sampling, llama_sampler_init_temp(0.2))
         llama_sampler_chain_add(self.sampling, llama_sampler_init_dist(1234))
         vocab = llama_model_get_vocab(model)
     }
@@ -142,51 +146,76 @@ actor LlamaContext {
         tokens_list = tokenize(text: text, add_bos: true)
         temporary_invalid_cchars = []
         is_done = false
+        hasDecodableLogits = false
+        llama_memory_clear(llama_get_memory(context), false)
+        llama_sampler_reset(sampling)
 
-        let n_ctx = llama_n_ctx(context)
-        let n_kv_req = tokens_list.count + (Int(n_len) - tokens_list.count)
-
-        print("\n n_len = \(n_len), n_ctx = \(n_ctx), n_kv_req = \(n_kv_req)")
-
-        if n_kv_req > n_ctx {
-            print("error: n_kv_req > n_ctx, the required KV cache size is not big enough. Truncating input.")
-            let max_input_tokens = Int(n_ctx) - 256
-            if tokens_list.count > max_input_tokens {
-                tokens_list = Array(tokens_list.suffix(max_input_tokens))
-            }
+        let n_ctx = Int32(llama_n_ctx(context))
+        let maxInputTokens = max(1, Int(n_ctx - maxNewTokens))
+        if tokens_list.count > maxInputTokens {
+            print("Prompt is too large for requested output budget. Truncating input.")
+            let prefixCount = min(256, maxInputTokens / 4)
+            let suffixCount = maxInputTokens - prefixCount
+            tokens_list = Array(tokens_list.prefix(prefixCount)) + Array(tokens_list.suffix(suffixCount))
         }
+        n_len = min(n_ctx, Int32(tokens_list.count) + maxNewTokens)
+
+        print("\n n_len = \(n_len), n_ctx = \(n_ctx), prompt_tokens = \(tokens_list.count), max_new_tokens = \(maxNewTokens)")
 
         // We don't need to print all tokens, it spams the log for large inputs
         llama_batch_clear(&batch)
 
+        var decodedFinalPromptChunk = false
         for i in 0..<tokens_list.count {
-            llama_batch_add(&batch, tokens_list[i], Int32(i), [0], false)
-            
+            let isFinalPromptToken = i == tokens_list.count - 1
+            llama_batch_add(&batch, tokens_list[i], Int32(i), [0], isFinalPromptToken)
+
             // Chunk prompt evaluation to avoid exceeding batch size (512)
             if batch.n_tokens >= 512 {
                 if llama_decode(context, batch) != 0 {
                     print("llama_decode() failed during prompt evaluation chunk")
+                    hasDecodableLogits = false
+                    is_done = true
+                    llama_batch_clear(&batch)
+                    return
                 }
-                llama_batch_clear(&batch)
+                if isFinalPromptToken {
+                    decodedFinalPromptChunk = true
+                    hasDecodableLogits = true
+                } else {
+                    llama_batch_clear(&batch)
+                }
             }
         }
 
-        if batch.n_tokens > 0 {
+        if batch.n_tokens > 0 && !decodedFinalPromptChunk {
             batch.logits[Int(batch.n_tokens) - 1] = 1 // true
             if llama_decode(context, batch) != 0 {
                 print("llama_decode() failed during final prompt chunk")
+                hasDecodableLogits = false
+                is_done = true
+                llama_batch_clear(&batch)
+                return
             }
+            hasDecodableLogits = true
         }
 
         n_cur = Int32(tokens_list.count)
     }
 
     func completion_loop() -> String {
+        guard hasDecodableLogits else {
+            print("llama_sampler_sample skipped because no prompt logits are available")
+            is_done = true
+            return ""
+        }
+
         var new_token_id: llama_token = 0
 
-        new_token_id = llama_sampler_sample(sampling, context, batch.n_tokens - 1)
+        new_token_id = llama_sampler_sample(sampling, context, -1)
+        llama_sampler_accept(sampling, new_token_id)
 
-        if llama_vocab_is_eog(vocab, new_token_id) || n_cur == n_len {
+        if llama_vocab_is_eog(vocab, new_token_id) || n_cur >= n_len {
             print("\n")
             is_done = true
             let new_token_str = String(cString: temporary_invalid_cchars + [0])
@@ -219,7 +248,11 @@ actor LlamaContext {
 
         if llama_decode(context, batch) != 0 {
             print("failed to evaluate llama!")
+            hasDecodableLogits = false
+            is_done = true
+            return new_token_str
         }
+        hasDecodableLogits = true
 
         return new_token_str
     }
@@ -336,7 +369,7 @@ actor LlamaContext {
         let utf8Count = text.utf8.count
         let n_tokens = utf8Count + (add_bos ? 1 : 0) + 1
         let tokens = UnsafeMutablePointer<llama_token>.allocate(capacity: n_tokens)
-        let tokenCount = llama_tokenize(vocab, text, Int32(utf8Count), tokens, Int32(n_tokens), add_bos, false)
+        let tokenCount = llama_tokenize(vocab, text, Int32(utf8Count), tokens, Int32(n_tokens), add_bos, true)
 
         var swiftTokens: [llama_token] = []
         for i in 0..<tokenCount {

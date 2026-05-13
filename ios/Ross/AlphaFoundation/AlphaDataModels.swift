@@ -2664,6 +2664,15 @@ private extension AlphaPersistedState {
 }
 
 extension AlphaCaseDocument {
+    var hasAskUsableExtractedText: Bool {
+        extractedText?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ||
+            pages.contains {
+                ($0.extractedText ?? $0.snippet ?? "")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                    .isEmpty == false
+            }
+    }
+
     var effectiveIndexingStatus: AlphaIndexingStatus {
         if let indexingStatus {
             return indexingStatus

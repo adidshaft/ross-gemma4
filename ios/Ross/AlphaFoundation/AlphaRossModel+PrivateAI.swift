@@ -477,10 +477,13 @@ extension AlphaRossModel {
             let path = fileURL.path()
             let attributes = try? FileManager.default.attributesOfItem(atPath: path)
             guard let bytes = (attributes?[.size] as? NSNumber)?.int64Value,
-                  bytes == expectedBytes,
-                  let handle = try? FileHandle(forReadingFrom: fileURL) else {
+                  bytes == expectedBytes else {
                 return nil
             }
+            guard !expectedChecksum.isEmpty else {
+                return (relativePath, "catalog-size:\(artifact.fileName):\(bytes)", bytes)
+            }
+            guard let handle = try? FileHandle(forReadingFrom: fileURL) else { return nil }
             defer { try? handle.close() }
 
             var hasher = SHA256()
@@ -627,6 +630,7 @@ extension AlphaRossModel {
             persisted.installedPacks.removeAll { $0.tier == tier }
             persisted.installedPacks.insert(installed, at: 0)
             persisted.settings.activeTier = tier
+            persisted.modelJobs.removeAll { $0.tier == tier && $0.state != .installed && $0.id != job.id }
             updateJob(job.id) {
                 $0.state = .installed
                 $0.bytesDownloaded = existingArtifact.bytes
@@ -1116,6 +1120,7 @@ extension AlphaRossModel {
         let selectedDocumentTarget = selectedOrLatestAskDocument(for: scopeCaseID)
         if let target = selectedDocumentTarget,
            target.document.processingState == .readingText || target.document.processingState == .imported,
+           !target.document.hasAskUsableExtractedText,
            asksForDocumentSummary || asksAboutReview {
             return AlphaAskResult(
                 chatSessionID: nil,

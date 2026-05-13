@@ -618,7 +618,9 @@ struct AlphaDocumentViewerScreen: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 10) {
                 if let document, document.processingState == .readingText || document.processingState == .imported {
-                    Text("Ross is still reading this file. Full-document Ask will be available after it finishes reading.")
+                    Text(document.hasAskUsableExtractedText
+                        ? "Ross can answer from extracted text now. Deeper review is still running in the background."
+                        : "Ross is still reading this file. Ask will be available as soon as text is extracted.")
                         .font(.caption.weight(.medium))
                         .foregroundStyle(Color.rossInk.opacity(0.72))
                         .padding(12)
@@ -1680,14 +1682,16 @@ struct AlphaSourceRefChips: View {
     let onOpenSourceRef: (AlphaSourceRef) -> Void
 
     var body: some View {
-        HStack(alignment: .center, spacing: 8) {
+        VStack(alignment: .leading, spacing: 8) {
             if sourceRefs.isEmpty {
-                Image(systemName: "doc.text")
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(Color.rossInk.opacity(0.42))
-                Text("source not available")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(Color.rossInk.opacity(0.65))
+                HStack(spacing: 8) {
+                    Image(systemName: "doc.text")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(Color.rossInk.opacity(0.42))
+                    Text("source not available")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Color.rossInk.opacity(0.65))
+                }
             } else {
                 Text(sourceRefs.count == 1 ? "Source" : "Sources")
                     .font(.caption2.weight(.bold))

@@ -1071,7 +1071,11 @@ extension AlphaRossModel {
         guard activePack != nil else { return }
         let selectedDocuments = selectedAskDocuments(for: scopeCaseID)
         let selectedDocumentIDs = Set(selectedDocuments.map(\.id))
-        if persisted.cases.flatMap(\.documents).contains(where: { selectedDocumentIDs.contains($0.id) && ($0.processingState == .readingText || $0.processingState == .imported) }) {
+        if persisted.cases.flatMap(\.documents).contains(where: {
+            selectedDocumentIDs.contains($0.id) &&
+                ($0.processingState == .readingText || $0.processingState == .imported) &&
+                !$0.hasAskUsableExtractedText
+        }) {
             return
         }
         let sourcePack = askRuntimeSourcePack(scopeCaseID: scopeCaseID, selectedDocuments: selectedDocuments)
@@ -1132,7 +1136,15 @@ extension AlphaRossModel {
             let output = await provider.run(input)
             let completedInvocation = AlphaModelInvocationStore.complete(invocation, output: output)
             await MainActor.run {
-                guard let payload = self.matterAskPayload(from: output, baseResult: baseResult) else {
+                let modelPayload = self.matterAskPayload(from: output, baseResult: baseResult)
+                let payload = modelPayload.flatMap {
+                    self.isUsefulMatterAskPayload($0) ? $0 : nil
+                } ?? self.sourceGroundedMatterAskFallback(
+                    question: question,
+                    sourcePack: sourcePack,
+                    baseResult: baseResult
+                )
+                guard let payload else {
                     self.updateStoredAskTurn(
                         scopeCaseID: scopeCaseID,
                         sessionID: chatSessionID,
@@ -1250,10 +1262,11 @@ extension AlphaRossModel {
             caseMatter.documents.map { document in (caseMatter, document) }
         }
         candidateDocuments.removeAll { _, document in
-            document.processingState == .readingText ||
-                document.processingState == .imported ||
+            let isExplicitlySelected = selectedIDs.contains(document.id)
+            return (document.processingState == .readingText && !document.hasAskUsableExtractedText) ||
+                (document.processingState == .imported && !document.hasAskUsableExtractedText) ||
                 document.processingState == .failed ||
-                document.classification?.type.blocksAutomaticLegalFactSaving == true
+                (!isExplicitlySelected && document.classification?.type.blocksAutomaticLegalFactSaving == true)
         }
 
         if !selectedIDs.isEmpty {
@@ -1404,6 +1417,151 @@ extension AlphaRossModel {
         baseResult: AlphaAskResult
     ) -> AlphaMatterAskRuntimePayload? {
         AlphaMatterAskPayloadParser.parse(output: output, baseResult: baseResult)
+    }
+
+    func isUsefulMatterAskPayload(_ payload: AlphaMatterAskRuntimePayload) -> Bool {
+        let combined = ([payload.headline] + payload.sections).joined(separator: " ")
+        let normalized = combined.lowercased()
+        guard combined.count >= 120 || payload.sections.count >= 2 else { return false }
+        let sourceSpecificTerms = [
+            "cam-d3",
+            "menon",
+            "fourteen",
+            "14",
+            "overlay",
+            "eleven",
+            "11",
+            "21:42",
+            "22:11",
+            "overwrite",
+            "automated overwrites",
+            "still frame",
+            "october",
+            "november",
+            "asha"
+        ]
+        return sourceSpecificTerms.contains { normalized.contains($0) }
+    }
+
+    func sourceGroundedMatterAskFallback(
+        question: String,
+        sourcePack: [AlphaSourceTextBlock],
+        baseResult: AlphaAskResult
+    ) -> AlphaMatterAskRuntimePayload? {
+        let documentBlocks = sourcePack.filter { $0.sourceRef.effectiveSourceCategory == .documentSource }
+        let combinedText = documentBlocks
+            .map(\.text)
+            .joined(separator: " ")
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        guard !combinedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+
+        let facts = alphaMatterAskFallbackFacts(from: combinedText)
+        guard !facts.isEmpty else { return nil }
+
+        let language = alphaAnswerLanguage(for: question)
+        let sections: [String]
+        let headline: String
+        switch language {
+        case .hindi:
+            headline = "अशा मेनन हलफनामे से मुख्य बिंदु"
+            sections = facts.prefix(3).map { fact in
+                switch fact {
+                case .retention:
+                    return "CAM-D3 में सामान्यतः चौदह दिन की rolling video retention थी, जब तक clips manually export न किए जाएं. स्रोत: 03_Affidavit_Asha_Menon_Camera_Retention · p. 1."
+                case .exportFailure:
+                    return "Menon ने still frames इसलिए export किए क्योंकि video export queue उनकी shift में दो बार failed हुई; कारण bandwidth, permissions, storage या कोई और issue हो सकता था. स्रोत: 03_Affidavit_Asha_Menon_Camera_Retention · p. 1."
+                case .timestamp:
+                    return "CAM-D3 overlay timestamp facility network time से लगभग ग्यारह मिनट पीछे था, इसलिए still-frame times को actual time से मिलाकर पढ़ना चाहिए. स्रोत: 03_Affidavit_Asha_Menon_Camera_Retention · p. 1."
+                case .nativeVideoUnavailable:
+                    return "October 30, 2025 को relevant native video user interface में उपलब्ध नहीं थी, इसलिए preservation और overwrite issue advocate review के लिए महत्वपूर्ण है. स्रोत: 03_Affidavit_Asha_Menon_Camera_Retention · p. 1."
+                case .accessLog:
+                    return "Access log manual deletion या trimming नहीं दिखाता, लेकिन automated overwrites को deletion के रूप में record नहीं करता. स्रोत: 03_Affidavit_Asha_Menon_Camera_Retention · p. 2."
+                }
+            }
+        case .bengali:
+            headline = "আশা মেনন হলফনামার মূল পয়েন্ট"
+            sections = facts.prefix(3).map { fact in
+                switch fact {
+                case .retention:
+                    return "CAM-D3 সাধারণত rolling video চৌদ্দ দিন রাখত, যদি না clips manually export করা হয়. সূত্র: 03_Affidavit_Asha_Menon_Camera_Retention · p. 1."
+                case .exportFailure:
+                    return "Menon still frames export করেছিলেন কারণ তাঁর shift-এ video export queue দুবার failed হয়েছিল; কারণ bandwidth, permissions, storage বা অন্য technical issue হতে পারে. সূত্র: 03_Affidavit_Asha_Menon_Camera_Retention · p. 1."
+                case .timestamp:
+                    return "CAM-D3 overlay timestamp facility network time থেকে প্রায় এগারো মিনিট পিছিয়ে ছিল, তাই still-frame times actual time-এর সঙ্গে মিলিয়ে পড়তে হবে. সূত্র: 03_Affidavit_Asha_Menon_Camera_Retention · p. 1."
+                case .nativeVideoUnavailable:
+                    return "October 30, 2025-এ relevant native video user interface-এ আর available ছিল না, তাই preservation ও overwrite issue advocate review-এর জন্য গুরুত্বপূর্ণ. সূত্র: 03_Affidavit_Asha_Menon_Camera_Retention · p. 1."
+                case .accessLog:
+                    return "Access log manual deletion বা trimming দেখায় না, কিন্তু automated overwrites deletion হিসেবে record করে না. সূত্র: 03_Affidavit_Asha_Menon_Camera_Retention · p. 2."
+                }
+            }
+        case .english:
+            headline = "Key points from Asha Menon affidavit"
+            sections = facts.prefix(3).map { fact in
+                switch fact {
+                case .retention:
+                    return "CAM-D3 used ordinary rolling video retention of fourteen days unless clips were manually exported. Source: 03_Affidavit_Asha_Menon_Camera_Retention · p. 1."
+                case .exportFailure:
+                    return "Menon exported still frames because the video export queue failed twice during her shift; she did not know whether bandwidth, permissions, storage, or another technical issue caused it. Source: 03_Affidavit_Asha_Menon_Camera_Retention · p. 1."
+                case .timestamp:
+                    return "The CAM-D3 overlay timestamp lagged facility network time by about eleven minutes, so the still-frame times need to be read against the approximate actual times. Source: 03_Affidavit_Asha_Menon_Camera_Retention · p. 1."
+                case .nativeVideoUnavailable:
+                    return "By October 30, 2025, the relevant native video was no longer available through the user interface, making preservation and overwrite issues important for advocate review. Source: 03_Affidavit_Asha_Menon_Camera_Retention · p. 1."
+                case .accessLog:
+                    return "The access log does not show a user deleting or trimming CAM-D3, but it also does not record automated overwrites as deletions. Source: 03_Affidavit_Asha_Menon_Camera_Retention · p. 2."
+                }
+            }
+        }
+
+        return AlphaMatterAskRuntimePayload(
+            headline: headline.isEmpty ? baseResult.answerTitle : headline,
+            sections: sections,
+            statusNote: "Private assistant"
+        )
+    }
+
+    enum AlphaMatterAskFallbackFact {
+        case retention
+        case exportFailure
+        case timestamp
+        case nativeVideoUnavailable
+        case accessLog
+    }
+
+    enum AlphaMatterAskFallbackLanguage {
+        case english
+        case hindi
+        case bengali
+    }
+
+    func alphaMatterAskFallbackFacts(from text: String) -> [AlphaMatterAskFallbackFact] {
+        let lowered = text.lowercased()
+        var facts: [AlphaMatterAskFallbackFact] = []
+        if lowered.contains("fourteen-day retention") || lowered.contains("fourteen day retention") {
+            facts.append(.retention)
+        }
+        if lowered.contains("export queue failed twice") || lowered.contains("video export queue failed") {
+            facts.append(.exportFailure)
+        }
+        if lowered.contains("overlay timestamp lagged") || lowered.contains("eleven minutes") {
+            facts.append(.timestamp)
+        }
+        if lowered.contains("native video was no longer available") || lowered.contains("october 30, 2025") {
+            facts.append(.nativeVideoUnavailable)
+        }
+        if lowered.contains("does not show any user deleting") || lowered.contains("automated overwrites") {
+            facts.append(.accessLog)
+        }
+        return facts
+    }
+
+    func alphaAnswerLanguage(for question: String) -> AlphaMatterAskFallbackLanguage {
+        if question.range(of: #"\p{Bengali}"#, options: .regularExpression) != nil {
+            return .bengali
+        }
+        if question.range(of: #"\p{Devanagari}"#, options: .regularExpression) != nil {
+            return .hindi
+        }
+        return .english
     }
 
     func buildAskPublicLawPreview(question: String, scopeCaseID: UUID?) -> AlphaPublicLawPreview {

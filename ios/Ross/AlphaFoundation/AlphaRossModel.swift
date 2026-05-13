@@ -174,6 +174,9 @@ enum AlphaMatterAskPayloadParser {
             if let payload = salvagedPayload(from: candidate, baseResult: baseResult) {
                 return payload
             }
+            if let payload = lenientPayload(from: candidate, baseResult: baseResult) {
+                return payload
+            }
         }
 
         let paragraphs = humanReadableParagraphs(from: sanitizedRawText)
@@ -237,12 +240,19 @@ enum AlphaMatterAskPayloadParser {
         rawText
             .replacingOccurrences(of: #"(?is)<think\b[^>]*>.*?</think>"#, with: " ", options: .regularExpression)
             .replacingOccurrences(of: #"(?i)</?think\b[^>]*>"#, with: " ", options: .regularExpression)
+            .replacingOccurrences(of: #"(?is)(</?\s*(start|end)\s*_\s*of\s*_\s*turn\s*>|start\s*of\s*turn|end\s*of\s*turn).*$"#, with: " ", options: .regularExpression)
+            .replacingOccurrences(of: #"(?is)<\s*bos\s*>"#, with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     static func extractLikelyJSON(from text: String) -> String? {
-        guard let startIndex = text.firstIndex(where: { $0 == "{" || $0 == "[" }) else { return nil }
-        let candidate = text[startIndex...]
+        let normalizedText = text.replacingOccurrences(
+            of: #"(?i)^\s*json\s*(?=[\{\[])"#,
+            with: "",
+            options: .regularExpression
+        )
+        guard let startIndex = normalizedText.firstIndex(where: { $0 == "{" || $0 == "[" }) else { return nil }
+        let candidate = normalizedText[startIndex...]
         var depth = 0
         var inString = false
         var escaped = false
@@ -394,6 +404,9 @@ enum AlphaMatterAskPayloadParser {
             if !salvaged.isEmpty {
                 return normalizedDisplaySections(salvaged)
             }
+            if let payload = lenientPayload(from: candidate, baseResult: alphaEmptyMatterAskBaseResult()) {
+                return normalizedDisplaySections(payload.sections)
+            }
         }
 
         guard !looksLikeStructuredOutput(sanitized) else { return [] }
@@ -411,6 +424,120 @@ enum AlphaMatterAskPayloadParser {
                 !looksLikeStructuredOutput($0)
             }
     }
+
+    static func lenientPayload(
+        from text: String,
+        baseResult: AlphaAskResult
+    ) -> AlphaMatterAskRuntimePayload? {
+        let normalized = text
+            .replacingOccurrences(of: #"(?i)^\s*json\s*(?=\{)"#, with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard normalized.contains("headline") || normalized.contains("sections") else { return nil }
+
+        let headline = extractLenientScalar(for: "headline", in: normalized)?
+            .ifEmpty(baseResult.answerTitle) ?? baseResult.answerTitle
+        let statusNote = extractLenientScalar(for: "statusNote", in: normalized)?
+            .ifEmpty(baseResult.statusNote ?? "Private assistant")
+        let strictSections = extractLenientSections(in: normalized)
+        let sections = strictSections.isEmpty ? extractLooseQuotedSections(in: normalized) : strictSections
+        guard !sections.isEmpty else { return nil }
+
+        return normalizedPayload(
+            AlphaMatterAskRuntimePayload(
+                headline: headline,
+                sections: sections,
+                statusNote: statusNote
+            ),
+            baseResult: baseResult
+        )
+    }
+
+    static func extractLenientScalar(for key: String, in text: String) -> String? {
+        let quotedPattern = #"(?is)\b\#(key)\b\s*:?\s*"((?:\\.|[^"\\])*)""#
+        if let value = firstRegexCapture(pattern: quotedPattern, in: text) {
+            return value
+                .replacingOccurrences(of: #"\""#, with: #"""#)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .nilIfEmpty
+        }
+
+        let barePattern = #"(?is)\b\#(key)\b\s*:?\s*([^,\]\}]+)"#
+        return firstRegexCapture(pattern: barePattern, in: text)?
+            .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: #""'"#)))
+            .nilIfEmpty
+    }
+
+    static func extractLenientSections(in text: String) -> [String] {
+        guard let body = firstRegexCapture(pattern: #"(?is)\bsections\b\s*:?\s*\[(.*?)\]"#, in: text) else {
+            return []
+        }
+
+        let quoted = extractJSONStringArray(for: "sections", in: #""sections":[\#(body)]"#)
+        if !quoted.isEmpty { return quoted }
+
+        return body
+            .components(separatedBy: ".,")
+            .flatMap { $0.components(separatedBy: "\n") }
+            .map {
+                $0.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: #","'"#)))
+            }
+            .map { $0.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression) }
+            .filter { !$0.isEmpty }
+    }
+
+    static func extractLooseQuotedSections(in text: String) -> [String] {
+        let normalized = text
+            .replacingOccurrences(of: #"(?i)^\s*json\s*(?=\{)"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: "```", with: " ")
+        guard normalized.contains("headline") else { return [] }
+        guard let regex = try? NSRegularExpression(pattern: #""((?:\\.|[^"\\])*)""#, options: [.dotMatchesLineSeparators]) else {
+            return []
+        }
+
+        let nsRange = NSRange(normalized.startIndex..., in: normalized)
+        let fragments = regex.matches(in: normalized, range: nsRange).compactMap { match -> String? in
+            guard let range = Range(match.range(at: 1), in: normalized) else { return nil }
+            let raw = String(normalized[range])
+                .replacingOccurrences(of: #"\""#, with: #"""#)
+                .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let lowered = raw.lowercased()
+            guard raw.count >= 20 else { return nil }
+            guard !["headline", "sections", "statusnote", "status note"].contains(lowered) else { return nil }
+            return raw
+        }
+
+        return Array(fragments.prefix(3))
+    }
+
+    static func firstRegexCapture(pattern: String, in text: String) -> String? {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators]) else {
+            return nil
+        }
+        let nsRange = NSRange(text.startIndex..., in: text)
+        guard let match = regex.firstMatch(in: text, range: nsRange),
+              match.numberOfRanges > 1,
+              let range = Range(match.range(at: 1), in: text) else {
+            return nil
+        }
+        return String(text[range])
+    }
+}
+
+private func alphaEmptyMatterAskBaseResult() -> AlphaAskResult {
+    AlphaAskResult(
+        kind: .userAsk,
+        question: "",
+        scopeCaseID: nil,
+        scopeLabel: "",
+        selectedDocumentTitles: [],
+        answerTitle: "",
+        answerSections: [],
+        caseFileSources: [],
+        publicLawPreview: nil,
+        publicLawResults: [],
+        statusNote: nil
+    )
 }
 
 struct AlphaReviewQueueItem: Identifiable, Hashable {

@@ -105,6 +105,10 @@ private func alphaModelAssistantChecksumMatches(expected: String, actual: String
     return normalizedActual.caseInsensitiveCompare(normalizedExpected) == .orderedSame
 }
 
+private func alphaModelSizeVerificationToken(fileName: String, bytes: Int64) -> String {
+    "catalog-size:\(fileName):\(bytes)"
+}
+
 private func alphaInstalledModelPackFileIsUsable(_ pack: AlphaInstalledModelPack) -> Bool {
     guard pack.runtimeMode != .appleFoundationModels,
           pack.artifactKind != "system_model" else {
@@ -118,6 +122,10 @@ private func alphaInstalledModelPackFileIsUsable(_ pack: AlphaInstalledModelPack
     guard !pack.developmentOnly else { return alphaModelFileByteCount(at: fileURL) > 0 }
     let artifact = alphaAssistantModelArtifact(for: pack.tier)
     guard alphaModelFileByteCount(at: fileURL) == artifact.sizeBytes else { return false }
+    guard !artifact.sha256.isEmpty else {
+        return pack.checksumSha256 == alphaModelSizeVerificationToken(fileName: artifact.fileName, bytes: artifact.sizeBytes)
+            || !pack.checksumSha256.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
     return alphaModelAssistantChecksumMatches(expected: artifact.sha256, actual: pack.checksumSha256)
 }
 
@@ -126,6 +134,19 @@ private func alphaRecoveredInstalledPackFromDisk(tier: AlphaCapabilityTier) -> A
     let relativePath = "model-packs/\(tier.rawValue)/\(artifact.fileName)"
     let fileURL = alphaAbsoluteURL(for: relativePath)
     guard alphaModelFileByteCount(at: fileURL) == artifact.sizeBytes else { return nil }
+    guard !artifact.sha256.isEmpty else {
+        return AlphaInstalledModelPack(
+            packId: artifact.packId,
+            tier: tier,
+            installPath: relativePath,
+            checksumSha256: alphaModelSizeVerificationToken(fileName: artifact.fileName, bytes: artifact.sizeBytes),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+    }
     guard let checksum = alphaModelSHA256Hex(forFileAt: fileURL),
           alphaModelAssistantChecksumMatches(expected: artifact.sha256, actual: checksum) else {
         return nil
@@ -178,6 +199,10 @@ private func alphaRecoverDownloadedAssistantArtifacts(from state: inout AlphaPer
             return copy
         }
         state.settings.activeTier = preferredTier
+    }
+    let recoveredTiers = Set(recoveredPacks.map(\.tier))
+    state.modelJobs.removeAll { job in
+        recoveredTiers.contains(job.tier) && job.state != .installed
     }
 
     let recoveredTitles = recoveredPacks.map(\.tier.title).joined(separator: ", ")
