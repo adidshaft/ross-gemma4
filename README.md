@@ -13,13 +13,10 @@ ROSS-Gemma4 is a mobile-first, privacy-preserving legal workbench built around G
 [![Human Review Required](https://img.shields.io/badge/Human_Review-Required-red.svg)](#)
 
 <p align="center">
-  <img src="docs/images/onboarding_welcome.png" width="250" alt="Private Onboarding" />
-  <img src="docs/images/dashboard_needs_attention.png" width="250" alt="Dashboard" />
-  <img src="docs/images/matter_needs_review.png" width="250" alt="Matter Needs Review" />
-</p>
-
-<p align="center">
-  <img src="docs/images/ross_mock_case_source_backed_answer.png" width="320" alt="ROSS source-backed answer for the Rivera v. Northstar mock case" />
+  <img src="docs/images/onboarding_welcome.png" width="220" alt="Private Onboarding" />
+  <img src="docs/images/dashboard_needs_attention.png" width="220" alt="Dashboard" />
+  <img src="docs/images/matter_needs_review.png" width="220" alt="Matter Needs Review" />
+  <img src="docs/images/ross_mock_case_source_backed_answer.png" width="220" alt="ROSS source-backed answer for the Rivera v. Northstar mock case" />
 </p>
 
 ---
