@@ -1032,28 +1032,13 @@ extension AlphaRossModel {
         finishPackSetup()
     }
 
-    func importDocument(caseId: UUID?, from sourceURL: URL, openAfterImport: Bool = true) async {
+    @discardableResult
+    func importDocument(caseId: UUID?, from sourceURL: URL, openAfterImport: Bool = true) async -> UUID? {
         let targetCaseID = caseId ?? alphaSharedWorkspaceID
         do {
             let imported = try await store.importDocument(from: sourceURL, into: targetCaseID)
-            guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == targetCaseID }) else { return }
-            var document = imported.document
-            document.indexingStatus = .extracting
-            document.extractionRuns = [
-                AlphaExtractionRun(
-                    caseId: targetCaseID,
-                    documentId: document.id,
-                    mode: .fromInstalledPack(activePack),
-                    status: .running,
-                    progressState: .acquiringText,
-                    startedAt: .now,
-                    pagesProcessed: 0,
-                    totalPages: document.pageCount,
-                    fieldsExtracted: 0,
-                    fieldsNeedingReview: 0,
-                    warnings: []
-                )
-            ]
+            guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == targetCaseID }) else { return nil }
+            let document = imported.document
 
             var caseMatter = persisted.cases[caseIndex]
             caseMatter.documents.insert(document, at: 0)
@@ -1097,23 +1082,21 @@ extension AlphaRossModel {
                 title: "File added to this matter",
                 sections: [
                     "\(document.title) was copied into private storage and linked to the current matter.",
-                    "Ross is reading this file so the active chat can pick up dates, directions, and follow-up work."
+                    "Ross can use this file in chat now; deeper local review continues quietly in the background."
                 ],
                 sourceRefs: [sourceRef],
                 selectedDocumentIDs: [document.id],
                 selectedDocumentTitles: [document.title],
-                statusNote: "Matter chat updated · reading file"
+                statusNote: "Matter chat updated · file ready"
             )
             if openAfterImport {
                 path.append(.documentViewer(targetCaseID, document.id, 1))
             }
 
-            let result = await store.runLocalExtraction(
-                caseId: targetCaseID,
-                document: document,
-                activePack: activePack
-            )
-            applyExtractionResult(result, caseId: targetCaseID, documentId: document.id)
+            Task(priority: .utility) {
+                await finishImportedDocumentExtraction(caseId: targetCaseID, document: document)
+            }
+            return document.id
         } catch {
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
@@ -1127,6 +1110,7 @@ extension AlphaRossModel {
                 at: 0
             )
             persist()
+            return nil
         }
     }
 
@@ -1322,15 +1306,35 @@ extension AlphaRossModel {
             return
         }
 
+        var importedDocumentIDs: [UUID] = []
         for url in urls {
-            await importDocument(caseId: caseId, from: url, openAfterImport: false)
+            if let documentID = await importDocument(caseId: caseId, from: url, openAfterImport: false) {
+                importedDocumentIDs.append(documentID)
+            }
         }
 
         let targetCaseID = caseId ?? alphaSharedWorkspaceID
+        if !importedDocumentIDs.isEmpty {
+            let importedDocumentIDSet = Set(importedDocumentIDs)
+            if targetCaseID != alphaSharedWorkspaceID {
+                setSelectedAskDocumentIDs(importedDocumentIDSet, for: targetCaseID)
+            } else {
+                setSelectedAskDocumentIDs(importedDocumentIDSet, for: nil)
+            }
+        }
         if openAfterImport, targetCaseID != alphaSharedWorkspaceID {
             path.removeAll()
             path.append(.documentList(targetCaseID))
         }
+    }
+
+    private func finishImportedDocumentExtraction(caseId: UUID, document: AlphaCaseDocument) async {
+        let result = await store.runLocalExtraction(
+            caseId: caseId,
+            document: document,
+            activePack: activePack
+        )
+        applyExtractionResult(result, caseId: caseId, documentId: document.id)
     }
 
     func queueIncomingDocumentURL(_ url: URL) {
