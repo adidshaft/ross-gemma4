@@ -19,6 +19,56 @@ private struct AlphaPrivateAISnapshotBuildResult: Sendable {
     var stateChanged: Bool
 }
 
+private let alphaPrivateAIStartupValidationStartedAtKey = "ross.private_ai.startup_validation_started_at"
+
+private func alphaHadUnfinishedPrivateAIStartupValidation() -> Bool {
+    UserDefaults.standard.object(forKey: alphaPrivateAIStartupValidationStartedAtKey) != nil
+}
+
+private func alphaMarkPrivateAIStartupValidationStarted() {
+    UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: alphaPrivateAIStartupValidationStartedAtKey)
+}
+
+private func alphaMarkPrivateAIStartupValidationFinished() {
+    UserDefaults.standard.removeObject(forKey: alphaPrivateAIStartupValidationStartedAtKey)
+}
+
+private func alphaQuarantineActiveAssistantAfterStartupFailure(_ state: inout AlphaPersistedState) {
+    guard let activePack = alphaOptimisticActivePack(from: state),
+          activePack.runtimeMode == .llamaCppGguf,
+          !activePack.developmentOnly else {
+        return
+    }
+
+    state.installedPacks = state.installedPacks.map { pack in
+        var copy = pack
+        if copy.id == activePack.id {
+            copy.isActive = false
+        }
+        return copy
+    }
+    state.settings.activeTier = nil
+    state.modelJobs = state.modelJobs.map { job in
+        var copy = job
+        if copy.tier == activePack.tier, copy.state == .installed {
+            copy.failureReason = "Ross paused this assistant after the previous launch did not finish model validation. Re-verify or delete it from Settings."
+            copy.updatedAt = .now
+        }
+        return copy
+    }
+    state.ledgerEntries.insert(
+        AlphaPrivacyLedgerEntry(
+            title: "Assistant model paused",
+            detail: "Ross kept the downloaded assistant file on this device, but stopped auto-selecting it after startup validation did not finish on the previous launch.",
+            purpose: .model_verification,
+            payloadClass: .no_case_data,
+            endpointLabel: "device://model-startup-recovery",
+            success: false
+        ),
+        at: 0
+    )
+}
+
 private func alphaModelFileByteCount(at url: URL) -> Int64 {
     let attributes = try? FileManager.default.attributesOfItem(atPath: url.path())
     if let size = attributes?[.size] as? NSNumber {
@@ -55,6 +105,10 @@ private func alphaModelAssistantChecksumMatches(expected: String, actual: String
     return normalizedActual.caseInsensitiveCompare(normalizedExpected) == .orderedSame
 }
 
+private func alphaModelSizeVerificationToken(fileName: String, bytes: Int64) -> String {
+    "catalog-size:\(fileName):\(bytes)"
+}
+
 private func alphaInstalledModelPackFileIsUsable(_ pack: AlphaInstalledModelPack) -> Bool {
     guard pack.runtimeMode != .appleFoundationModels,
           pack.artifactKind != "system_model" else {
@@ -68,6 +122,10 @@ private func alphaInstalledModelPackFileIsUsable(_ pack: AlphaInstalledModelPack
     guard !pack.developmentOnly else { return alphaModelFileByteCount(at: fileURL) > 0 }
     let artifact = alphaAssistantModelArtifact(for: pack.tier)
     guard alphaModelFileByteCount(at: fileURL) == artifact.sizeBytes else { return false }
+    guard !artifact.sha256.isEmpty else {
+        return pack.checksumSha256 == alphaModelSizeVerificationToken(fileName: artifact.fileName, bytes: artifact.sizeBytes)
+            || !pack.checksumSha256.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
     return alphaModelAssistantChecksumMatches(expected: artifact.sha256, actual: pack.checksumSha256)
 }
 
@@ -76,6 +134,19 @@ private func alphaRecoveredInstalledPackFromDisk(tier: AlphaCapabilityTier) -> A
     let relativePath = "model-packs/\(tier.rawValue)/\(artifact.fileName)"
     let fileURL = alphaAbsoluteURL(for: relativePath)
     guard alphaModelFileByteCount(at: fileURL) == artifact.sizeBytes else { return nil }
+    guard !artifact.sha256.isEmpty else {
+        return AlphaInstalledModelPack(
+            packId: artifact.packId,
+            tier: tier,
+            installPath: relativePath,
+            checksumSha256: alphaModelSizeVerificationToken(fileName: artifact.fileName, bytes: artifact.sizeBytes),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+    }
     guard let checksum = alphaModelSHA256Hex(forFileAt: fileURL),
           alphaModelAssistantChecksumMatches(expected: artifact.sha256, actual: checksum) else {
         return nil
@@ -129,6 +200,10 @@ private func alphaRecoverDownloadedAssistantArtifacts(from state: inout AlphaPer
         }
         state.settings.activeTier = preferredTier
     }
+    let recoveredTiers = Set(recoveredPacks.map(\.tier))
+    state.modelJobs.removeAll { job in
+        recoveredTiers.contains(job.tier) && job.state != .installed
+    }
 
     let recoveredTitles = recoveredPacks.map(\.tier.title).joined(separator: ", ")
     state.ledgerEntries.insert(
@@ -153,7 +228,7 @@ private func alphaOptimisticActivePack(from state: AlphaPersistedState) -> Alpha
        let preferred = state.installedPacks.first(where: { $0.tier == preferredTier }) {
         return preferred
     }
-    return state.installedPacks.first
+    return nil
 }
 
 private func alphaValidatedActivePack(from state: AlphaPersistedState) -> AlphaInstalledModelPack? {
@@ -165,7 +240,7 @@ private func alphaValidatedActivePack(from state: AlphaPersistedState) -> AlphaI
        let preferred = state.installedPacks.first(where: { $0.tier == preferredTier && alphaInstalledModelPackFileIsUsable($0) }) {
         return preferred
     }
-    return state.installedPacks.first(where: alphaInstalledModelPackFileIsUsable)
+    return nil
 }
 
 private func alphaNormalizedInstalledPacks(
@@ -254,10 +329,20 @@ private func alphaPrivateAISnapshotRefreshKey(for state: AlphaPersistedState) ->
     )
 }
 
-private func alphaBuildPrivateAISnapshot(from state: AlphaPersistedState) async -> AlphaPrivateAISnapshotBuildResult {
+private func alphaBuildPrivateAISnapshot(
+    from state: AlphaPersistedState,
+    allowDiskRecovery: Bool
+) async -> AlphaPrivateAISnapshotBuildResult {
     await Task.detached(priority: .utility) {
         var recoveredState = state
-        let stateChangedByRecovery = alphaRecoverDownloadedAssistantArtifacts(from: &recoveredState)
+        let stateChangedByRecovery: Bool
+        if allowDiskRecovery {
+            stateChangedByRecovery = alphaRecoverDownloadedAssistantArtifacts(from: &recoveredState)
+        } else {
+            let invalidPackIDs = Set(recoveredState.installedPacks.filter { !alphaInstalledModelPackFileIsUsable($0) }.map(\.id))
+            recoveredState.installedPacks.removeAll { invalidPackIDs.contains($0.id) }
+            stateChangedByRecovery = !invalidPackIDs.isEmpty
+        }
         let activePack = alphaValidatedActivePack(from: recoveredState)
         recoveredState.installedPacks = alphaNormalizedInstalledPacks(from: recoveredState, activePack: activePack)
         if recoveredState.settings.activeTier != activePack?.tier {
@@ -306,9 +391,16 @@ extension AlphaRossModel {
 
         privateAISnapshotRefreshKey = refreshKey
         let state = persisted
+        let allowDiskRecovery = !alphaHadUnfinishedPrivateAIStartupValidation()
+        if forceValidation {
+            alphaMarkPrivateAIStartupValidationStarted()
+        }
         privateAISnapshotTask?.cancel()
         privateAISnapshotTask = Task {
-            let result = await alphaBuildPrivateAISnapshot(from: state)
+            let result = await alphaBuildPrivateAISnapshot(from: state, allowDiskRecovery: allowDiskRecovery)
+            if forceValidation {
+                alphaMarkPrivateAIStartupValidationFinished()
+            }
             guard !Task.isCancelled else { return }
 
             privateAISnapshot = result.snapshot
@@ -1087,6 +1179,9 @@ extension AlphaRossModel {
         var normalized = state
         removeSystemAssistantShortcutState(from: &normalized)
         purgeDevelopmentModelArtifactsFromDisk()
+        if alphaHadUnfinishedPrivateAIStartupValidation() {
+            alphaQuarantineActiveAssistantAfterStartupFailure(&normalized)
+        }
         if shouldRestoreAssistantSetupFlow(for: normalized) {
             normalized.onboardingStage = looksLikePristineWorkspace(normalized) ? .onboarding : .privateAIPack
         }
@@ -1096,6 +1191,20 @@ extension AlphaRossModel {
         if normalized.tasks == nil {
             normalized.tasks = initialTasks(from: normalized.cases)
         }
+        if normalized.preparedWorkItems == nil {
+            normalized.preparedWorkItems = []
+        }
+        if normalized.routineRuns == nil {
+            normalized.routineRuns = []
+        }
+        if normalized.routineSettings == nil {
+            normalized.routineSettings = .default
+        }
+        if normalized.modelUpdateCandidates == nil {
+            normalized.modelUpdateCandidates = []
+        }
+        normalized.routineSettings?.requirePublicLawApproval = true
+        normalized.settings.requirePublicLawApproval = true
         return normalized
     }
 

@@ -255,6 +255,9 @@ extension AlphaRossModel {
                 bodyLines: bodyLines
             )
             persisted.exports.insert(report, at: 0)
+            if routineSettings.draftRefreshEnabled {
+                rebuildPreparedWork(reason: .draftRefresh, caseId: caseId, persistAfter: false)
+            }
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
                     title: "Local export generated",

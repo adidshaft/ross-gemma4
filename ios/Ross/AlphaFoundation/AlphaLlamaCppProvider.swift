@@ -49,7 +49,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     }
     
     func maxInputChars() -> Int? {
-        return 7000
+        return 5000
     }
     
     nonisolated(unsafe) private static var cachedContext: LlamaContext?
@@ -92,8 +92,10 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             await context.clear()
             
             let systemPrompt = pack.systemInstructions
-            let userPrompt = pack.promptText
-            let combinedPrompt = "<bos><start_of_turn>user\n\(systemPrompt)\n\n\(userPrompt)<end_of_turn>\n<start_of_turn>model\n"
+            let userPrompt = taskInput.task == .matterQuestionAnswer
+                ? conciseMatterQuestionPrompt(for: taskInput)
+                : pack.promptText
+            let combinedPrompt = "<start_of_turn>user\n\(systemPrompt)\n\n\(userPrompt)<end_of_turn>\n<start_of_turn>model\n"
             
             await context.completion_init(text: combinedPrompt)
             
@@ -101,16 +103,21 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             while await !context.is_done {
                 let tokenStr = await context.completion_loop()
                 generatedResponse += tokenStr
+                if containsTurnMarkerFragment(generatedResponse) {
+                    generatedResponse = stripTurnMarkerFragments(from: generatedResponse)
+                    break
+                }
                 
                 // Safety cutoff for runaway generation
                 if generatedResponse.count > 10000 { break }
             }
             
-            let schemaValid = generatedResponse.contains("{") && generatedResponse.contains("}")
-            let jsonString = extractJSON(from: generatedResponse)
+            let cleanedResponse = stripTurnMarkerFragments(from: generatedResponse)
+            let schemaValid = cleanedResponse.contains("{") && cleanedResponse.contains("}")
+            let jsonString = extractJSON(from: cleanedResponse)
             
             return AlphaLocalModelOutput(
-                rawText: generatedResponse,
+                rawText: cleanedResponse,
                 parsedJson: jsonString,
                 schemaValid: schemaValid,
                 warnings: pack.truncated ? ["Input was truncated."] : [],
@@ -148,5 +155,60 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     private func extractJSON(from text: String) -> String? {
         guard let start = text.firstIndex(of: "{"), let end = text.lastIndex(of: "}") else { return nil }
         return String(text[start...end])
+    }
+
+    private func conciseMatterQuestionPrompt(for input: AlphaLocalModelInput) -> String {
+        var prompt = """
+        You are Ross, a private legal assistant running locally on this device.
+        Use only the SOURCES below. Do not invent facts.
+        Match the advocate's language exactly.
+        If the question uses Devanagari/Hindi, answer only in natural Hindi using Devanagari script. Do not use Hinglish or English words except exact names, dates, and source labels.
+        If the question uses Bengali, answer only in natural Bengali using Bengali script. Do not use English words except exact names, dates, and source labels.
+        Do not output JSON, XML, markdown fences, or chat template tokens.
+        Write a short heading and 2 to 4 useful bullet points.
+        Cite local source labels in parentheses, for example: (03_Affidavit_Asha_Menon_Camera_Retention · p. 1).
+
+        TASK:
+        \(input.instruction)
+
+        SOURCES:
+        """
+
+        var remainingBudget = 3_600
+        for block in input.sourcePack.prefix(5) {
+            guard remainingBudget > 120 else { break }
+            let label = block.sourceRef.label
+            let cleanedText = block.text
+                .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let excerpt = String(cleanedText.prefix(min(cleanedText.count, remainingBudget)))
+            prompt += "\n[\(label)] \(excerpt)\n"
+            remainingBudget -= excerpt.count + label.count + 8
+        }
+
+        prompt += "\nANSWER:"
+        return prompt
+    }
+
+    private func containsTurnMarkerFragment(_ text: String) -> Bool {
+        text.range(
+            of: #"(?is)(</?\s*(start|end)\s*_\s*of\s*_\s*turn\s*>|start\s*of\s*turn|end\s*of\s*turn)"#,
+            options: .regularExpression
+        ) != nil
+    }
+
+    private func stripTurnMarkerFragments(from text: String) -> String {
+        text
+            .replacingOccurrences(
+                of: #"(?is)(</?\s*(start|end)\s*_\s*of\s*_\s*turn\s*>|start\s*of\s*turn|end\s*of\s*turn).*$"#,
+                with: "",
+                options: .regularExpression
+            )
+            .replacingOccurrences(
+                of: #"(?is)<\s*bos\s*>"#,
+                with: "",
+                options: .regularExpression
+            )
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

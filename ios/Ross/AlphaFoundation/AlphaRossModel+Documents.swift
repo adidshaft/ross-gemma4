@@ -871,6 +871,20 @@ extension AlphaRossModel {
             return .createTasksFromDocument
         }
 
+        let routineCommands: [([String], AlphaRoutineKind)] = [
+            (["prepare today", "run morning brief"], .morningBrief),
+            (["refresh this matter", "update summary"], .afterDocumentImport),
+            (["prepare hearing note"], .beforeHearing),
+            (["scan missing facts"], .missingFactsScan),
+            (["refresh drafts"], .draftRefresh),
+            (["prepare public-law search", "prepare public law search"], .publicLawPreview)
+        ]
+        if let command = routineCommands.first(where: { prefixes, _ in
+            prefixes.contains(where: { lowered.hasPrefix($0) })
+        }) {
+            return .runRoutine(command.1)
+        }
+
         if let body = dockCommandBody(in: normalized, prefixes: ["add task ", "create task ", "save task ", "add reminder ", "save reminder ", "remind me to "]) {
             let (title, dueDate) = dockCommandTitleAndDate(from: body)
             guard !title.isEmpty else {
@@ -957,6 +971,11 @@ extension AlphaRossModel {
         snapshot.publicLawResults = publicLawResults
         Task {
             try? await store.replace(with: snapshot)
+            if snapshot.settings.deviceCacheEnabled {
+                try? await store.writeDeviceCacheMetadata(snapshot)
+            } else {
+                try? await store.clearDeviceCache()
+            }
         }
     }
 }

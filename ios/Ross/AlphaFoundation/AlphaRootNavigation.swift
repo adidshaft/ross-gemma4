@@ -16,6 +16,7 @@ import AppKit
 struct AlphaRossRootView: View {
     @State private var model: AlphaRossModel
     @State private var showingLaunchSplash = true
+    @Environment(\.scenePhase) private var scenePhase
     private let authController: RossAuthController?
 
     init(initialModel: AlphaRossModel = AlphaRossModel(), authController: RossAuthController? = nil) {
@@ -71,6 +72,8 @@ struct AlphaRossRootView: View {
             await model.loadIfNeeded()
             await MainActor.run {
                 model.syncWorkspaceForSession(authController?.session)
+                model.runMorningRoutineIfNeeded()
+                model.checkForAssistantModelUpdates()
                 if showingLaunchSplash {
                     withAnimation(.easeOut(duration: 0.12)) {
                         showingLaunchSplash = false
@@ -80,6 +83,10 @@ struct AlphaRossRootView: View {
         }
         .onChange(of: model.path) { _, newPath in
             model.clearStaleAskState(for: newPath.last)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            model.runMorningRoutineIfNeeded()
         }
         .preferredColorScheme(model.persisted.settings.appearanceMode.preferredColorScheme)
     }

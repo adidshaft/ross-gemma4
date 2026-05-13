@@ -113,6 +113,161 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertFalse(sections.joined(separator: "\n").contains(#""headline""#))
     }
 
+    @MainActor
+    func testHindiMatterAnswerRejectsHinglishRuntimePayload() {
+        let model = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
+        let hinglish = AlphaMatterAskRuntimePayload(
+            headline: "Asha Menon affidavit ke points",
+            sections: [
+                "CAM-D3 rolling video retention fourteen days thi aur clips manually export hone par preserve hoti thi.",
+                "Video export queue failed twice, isliye still frames use karne padenge."
+            ],
+            statusNote: "Private assistant"
+        )
+
+        XCTAssertFalse(
+            model.alphaPayloadMatchesRequestedLanguage(
+                hinglish,
+                requestedLanguage: .hindi
+            )
+        )
+    }
+
+    @MainActor
+    func testHindiSourceGroundedFallbackUsesDevanagariText() {
+        let model = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "03_Affidavit_Asha_Menon_Camera_Retention",
+            pageNumber: 1,
+            textSnippet: "CAM-D3 fourteen-day retention and video export queue failed twice."
+        )
+        let sourcePack = [
+            AlphaSourceTextBlock(
+                sourceRef: sourceRef,
+                text: "CAM-D3 had fourteen-day retention. The video export queue failed twice. The overlay timestamp lagged by eleven minutes.",
+                pageNumber: 1,
+                languageHint: "en",
+                ocrConfidence: 0.91
+            )
+        ]
+
+        let payload = model.sourceGroundedMatterAskFallback(
+            question: "इस हलफनामे के मुख्य बिंदु बताइए",
+            sourcePack: sourcePack,
+            baseResult: baseAskResult()
+        )
+
+        let text = ([payload?.headline ?? ""] + (payload?.sections ?? [])).joined(separator: " ")
+        XCTAssertNotNil(payload)
+        XCTAssertGreaterThanOrEqual(model.alphaIndicScriptRatio(in: text, script: .hindi), 0.55)
+        XCTAssertLessThanOrEqual(model.alphaLatinWordCount(in: text), 8)
+        XCTAssertFalse(text.localizedCaseInsensitiveContains("rolling video retention"))
+        XCTAssertFalse(text.localizedCaseInsensitiveContains("export queue"))
+    }
+
+    @MainActor
+    func testHindiGenericFallbackAvoidsCouldNotAnswerWhenSourcesExist() {
+        let model = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "Matter details",
+            pageNumber: 1,
+            textSnippet: "Matter has next hearing and filing deadline.",
+            sourceCategory: .matterDetail
+        )
+        let sourcePack = [
+            AlphaSourceTextBlock(
+                sourceRef: sourceRef,
+                text: "This demo matter has one next hearing, one filing deadline, and one order that still needs advocate review. Client follow-up: May 15, 2026.",
+                pageNumber: 1,
+                languageHint: "en",
+                ocrConfidence: nil
+            )
+        ]
+
+        let payload = model.sourceGroundedMatterAskFallback(
+            question: "इस आदेश का हिंदी में अनुवाद और सार केवल हिंदी में दीजिए।",
+            sourcePack: sourcePack,
+            baseResult: baseAskResult(answerTitle: "Private assistant could not answer")
+        )
+
+        let text = ([payload?.headline ?? ""] + (payload?.sections ?? [])).joined(separator: " ")
+        XCTAssertNotNil(payload)
+        XCTAssertNotEqual(payload?.headline, "Private assistant could not answer")
+        XCTAssertGreaterThanOrEqual(model.alphaIndicScriptRatio(in: text, script: .hindi), 0.55)
+        XCTAssertLessThanOrEqual(model.alphaLatinWordCount(in: text), 8)
+    }
+
+    func testMatterAskPayloadParserSalvagesJsonPrefixedLooseObject() {
+        let output = AlphaLocalModelOutput(
+            rawText: """
+            json{headline "CAM-D3 affidavit notes", sections [ The affidavit says Menon oversaw CAM-D3 retention and legal holds. The access log does not show manual deletion, but automated overwrites are not recorded as deletions. ], statusNote:"Answered from selected files"}
+            """,
+            parsedJson: nil,
+            schemaValid: false,
+            warnings: [],
+            sourceRefs: []
+        )
+
+        let payload = AlphaMatterAskPayloadParser.parse(
+            output: output,
+            baseResult: baseAskResult()
+        )
+
+        XCTAssertEqual("CAM-D3 affidavit notes", payload?.headline)
+        XCTAssertEqual([
+            "The affidavit says Menon oversaw CAM-D3 retention and legal holds. The access log does not show manual deletion, but automated overwrites are not recorded as deletions."
+        ], payload?.sections)
+        XCTAssertEqual("Answered from selected files", payload?.statusNote)
+    }
+
+    func testMatterAskPayloadParserSalvagesLooseGemmaFragments() {
+        let output = AlphaLocalModelOutput(
+            rawText: """
+            json{ headline "ention", "": " retention for-3 fourteen unless are exported " "overlay lagged facility time approximately minutes" "retention the was by still because video queue twice the.", "Note" "retention the was by still."}```
+            """,
+            parsedJson: nil,
+            schemaValid: false,
+            warnings: [],
+            sourceRefs: []
+        )
+
+        let payload = AlphaMatterAskPayloadParser.parse(
+            output: output,
+            baseResult: baseAskResult(answerTitle: "Ross drafted this from your files", statusNote: "Answered from selected files")
+        )
+
+        XCTAssertEqual("ention", payload?.headline)
+        XCTAssertEqual([
+            "retention for-3 fourteen unless are exported",
+            "overlay lagged facility time approximately minutes",
+            "retention the was by still because video queue twice the."
+        ], payload?.sections)
+        XCTAssertNil(payload?.statusNote)
+    }
+
+    func testMatterAskPayloadParserDropsTurnMarkerFragments() {
+        let output = AlphaLocalModelOutput(
+            rawText: """
+            startofturn
+            """,
+            parsedJson: nil,
+            schemaValid: false,
+            warnings: [],
+            sourceRefs: []
+        )
+
+        let payload = AlphaMatterAskPayloadParser.parse(
+            output: output,
+            baseResult: baseAskResult()
+        )
+
+        XCTAssertNil(payload)
+    }
+
     func testPrivateAssistantTierCopyHidesTechnicalModelNames() {
         XCTAssertEqual(AlphaCapabilityTier.flash.downloadSizeLabel, "3.0 GB")
         XCTAssertEqual(AlphaCapabilityTier.quickStart.downloadSizeLabel, "3.5 GB")

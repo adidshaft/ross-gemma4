@@ -118,7 +118,7 @@ struct AlphaSetupPrimaryButtonStyle: ButtonStyle {
 
 struct AlphaOnboardingScreen: View {
     @Bindable var model: AlphaRossModel
-    @State private var showModelPicker = false
+    @State private var didChooseModel = false
 
     private var recommendedTier: AlphaCapabilityTier {
         model.recommendedOnDeviceTier()
@@ -126,86 +126,298 @@ struct AlphaOnboardingScreen: View {
 
     var body: some View {
         GeometryReader { proxy in
+            let horizontalPadding: CGFloat = 16
+            #if canImport(UIKit)
+            let viewportWidth = min(proxy.size.width, UIScreen.main.bounds.width)
+            #else
+            let viewportWidth = proxy.size.width
+            #endif
+            let contentWidth = min(max(viewportWidth - (horizontalPadding * 2), 280), 430)
+            let compact = proxy.size.height < 880
+            let logoSize: CGFloat = compact ? 38 : 52
+            let titleSize: CGFloat = compact ? 24 : 30
+            let heroGap: CGFloat = compact ? 6 : 8
+            let topPadding = max(proxy.safeAreaInsets.top + (compact ? 14 : 18), compact ? 72 : 82)
+            let bottomPadding = max(proxy.safeAreaInsets.bottom + (compact ? 10 : 14), compact ? 22 : 28)
+
             ZStack {
                 AlphaSetupBackdrop()
+                    .ignoresSafeArea()
+
                 VStack(spacing: 0) {
-                    AlphaTopSafeAreaGlass(height: proxy.safeAreaInsets.top + 18)
-                    Spacer(minLength: 0)
-                }
+                    VStack(spacing: heroGap) {
+                        RossAuthHeroMark(size: logoSize)
 
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 0) {
-                        Spacer(minLength: max(proxy.safeAreaInsets.top + 24, 52))
+                        VStack(spacing: compact ? 4 : 8) {
+                            Text("Ross")
+                                .font(.system(size: titleSize, weight: .bold, design: .serif))
+                                .foregroundStyle(Color.rossInk)
 
-                        // Hero
-                        VStack(spacing: 16) {
-                            RossAuthHeroMark(size: 80)
-
-                            VStack(spacing: 8) {
-                                Text("Ross")
-                                    .font(.system(size: 40, weight: .bold, design: .serif))
-                                    .foregroundStyle(Color.rossInk)
-
-                                Text("Your private legal workbench.")
-                                    .font(.title3.weight(.medium))
-                                    .foregroundStyle(Color.rossInk.opacity(0.70))
-                                    .multilineTextAlignment(.center)
-                            }
+                            Text("Your private legal workbench.")
+                                .font((compact ? Font.callout : Font.title3).weight(.medium))
+                                .foregroundStyle(Color.rossInk.opacity(0.70))
+                                .multilineTextAlignment(.center)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.72)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
-                        .frame(maxWidth: 430)
-
-                        Spacer(minLength: 36)
-
-                        // Download explainer card
-                        AlphaOnboardingDownloadCard(tier: recommendedTier)
-                            .frame(maxWidth: 430)
-
-                        Spacer(minLength: 20)
-
-                        // Privacy pills
-                        VStack(spacing: 8) {
-                            AlphaOnboardingPrivacyPill(icon: "lock.fill", text: "Everything stays on this device")
-                            AlphaOnboardingPrivacyPill(icon: "network.slash", text: "No cloud after setup — fully offline")
-                            AlphaOnboardingPrivacyPill(icon: "arrow.down.circle", text: "One download, then always private")
-                        }
-                        .frame(maxWidth: 430)
-
-                        Spacer(minLength: 28)
-
-                        // CTA
-                        VStack(spacing: 12) {
-                            Button("Download & set up Ross") {
-                                model.selectedTier = recommendedTier
-                                model.finishPackSetup()
-                            }
-                            .buttonStyle(AlphaSetupPrimaryButtonStyle())
-                            .frame(maxWidth: 430)
-
-                            Button("Choose a different model") {
-                                showModelPicker = true
-                            }
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(Color.rossAccent.opacity(0.80))
-
-                            Button("Skip for now") {
-                                model.skipPackSetup()
-                            }
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(Color.rossInk.opacity(0.44))
-                        }
-                        .frame(maxWidth: 430)
-
-                        Spacer(minLength: max(proxy.safeAreaInsets.bottom + 24, 40))
                     }
-                    .frame(minHeight: proxy.size.height)
-                    .padding(.horizontal, 24)
-                    .frame(maxWidth: 430)
-                    .frame(maxWidth: .infinity)
+
+                    Spacer(minLength: compact ? 14 : 18)
+
+                    AlphaOnboardingModelSelector(
+                        selectedTier: model.selectedTier,
+                        recommendedTier: recommendedTier,
+                        compact: compact
+                    ) { tier in
+                        withAnimation(.snappy(duration: 0.18)) {
+                            didChooseModel = true
+                            model.selectedTier = tier
+                        }
+                    }
+
+                    Spacer(minLength: compact ? 12 : 14)
+
+                    AlphaOnboardingSetupNotes(compact: compact)
+
+                    Spacer(minLength: compact ? 14 : 18)
+
+                    VStack(spacing: compact ? 7 : 9) {
+                        Button {
+                            model.finishPackSetup()
+                        } label: {
+                            Text(rossLocalized("setup_assistant"))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.72)
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(AlphaSetupPrimaryButtonStyle())
+                        .frame(height: compact ? 50 : 54)
+
+                        Button("Skip for now") {
+                            model.skipPackSetup()
+                        }
+                        .font(.system(size: compact ? 12 : 13, weight: .medium))
+                        .foregroundStyle(Color.rossInk.opacity(0.44))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
+                    }
+                }
+                .frame(width: contentWidth)
+                .padding(.top, topPadding)
+                .padding(.bottom, bottomPadding)
+                .frame(width: viewportWidth, height: proxy.size.height, alignment: .top)
+                .position(x: viewportWidth / 2, y: proxy.size.height / 2)
+            }
+            .frame(width: viewportWidth, height: proxy.size.height, alignment: .topLeading)
+            .clipped()
+        }
+        .onAppear {
+            if !didChooseModel {
+                model.selectedTier = recommendedTier
+            }
+        }
+        .onChange(of: recommendedTier) { _, newValue in
+            if !didChooseModel {
+                model.selectedTier = newValue
+            }
+        }
+        #if os(iOS)
+        .toolbar(.hidden, for: .navigationBar)
+        .statusBarHidden(true)
+        .persistentSystemOverlays(.hidden)
+        #endif
+    }
+}
+
+struct AlphaOnboardingModelSelector: View {
+    let selectedTier: AlphaCapabilityTier
+    let recommendedTier: AlphaCapabilityTier
+    let compact: Bool
+    let onSelect: (AlphaCapabilityTier) -> Void
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: compact ? 16 : 18, style: .continuous)
+
+        VStack(alignment: .leading, spacing: compact ? 6 : 8) {
+            HStack {
+                Text("Choose assistant model")
+                    .font(.system(size: compact ? 13 : 15, weight: .bold))
+                    .foregroundStyle(Color.rossInk)
+                Spacer(minLength: 0)
+                Text("\(selectedTier.downloadSizeLabel)")
+                    .font(.system(size: compact ? 11 : 12, weight: .bold))
+                    .foregroundStyle(Color.rossAccent)
+            }
+
+            ForEach(AlphaCapabilityTier.allCases, id: \.self) { tier in
+                AlphaOnboardingModelChoiceRow(
+                    tier: tier,
+                    isSelected: tier == selectedTier,
+                    isRecommended: tier == recommendedTier,
+                    compact: compact
+                ) {
+                    onSelect(tier)
                 }
             }
         }
-        .sheet(isPresented: $showModelPicker) {
-            AlphaModelPickerSheet(model: model, isPresented: $showModelPicker)
+        .padding(compact ? 9 : 11)
+        .background {
+            ZStack {
+                shape.fill(.ultraThinMaterial)
+                shape.fill(Color.rossCardBackground.opacity(0.78))
+            }
+        }
+        .overlay {
+            shape.stroke(Color.rossGlassStroke.opacity(0.62), lineWidth: 1)
+        }
+    }
+}
+
+struct AlphaOnboardingModelChoiceRow: View {
+    let tier: AlphaCapabilityTier
+    let isSelected: Bool
+    let isRecommended: Bool
+    let compact: Bool
+    let onSelect: () -> Void
+
+    var body: some View {
+        Button(action: onSelect) {
+            HStack(alignment: .top, spacing: compact ? 8 : 10) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : tier.setupSymbolName)
+                    .font(.system(size: compact ? 14 : 16, weight: .semibold))
+                    .foregroundStyle(isSelected ? Color.rossAccent : Color.rossInk.opacity(0.50))
+                    .frame(width: compact ? 20 : 22, height: compact ? 20 : 22)
+                    .padding(.top, 2)
+
+                VStack(alignment: .leading, spacing: compact ? 2 : 3) {
+                    HStack(spacing: 6) {
+                        Text(tier.title)
+                            .font(.system(size: compact ? 11 : 13, weight: .bold))
+                            .foregroundStyle(Color.rossInk)
+                            .lineLimit(1)
+
+                        Text(tier.downloadSizeLabel)
+                            .font(.system(size: compact ? 9 : 11, weight: .semibold))
+                            .foregroundStyle(Color.rossInk.opacity(0.56))
+                            .lineLimit(1)
+
+                        if isRecommended {
+                            Text("Recommended")
+                                .font(.system(size: compact ? 9 : 10, weight: .bold))
+                                .foregroundStyle(Color.rossAccent)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Color.rossAccent.opacity(0.11), in: Capsule())
+                        }
+                    }
+
+                    Text(tier.setupOneLine)
+                        .font(.system(size: compact ? 9 : 10, weight: .medium))
+                        .foregroundStyle(Color.rossInk.opacity(0.62))
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.78)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, compact ? 9 : 10)
+            .padding(.vertical, compact ? 6 : 8)
+            .background(
+                isSelected ? Color.rossAccent.opacity(0.10) : Color.rossGlassSubtleFill,
+                in: RoundedRectangle(cornerRadius: compact ? 11 : 12, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: compact ? 11 : 12, style: .continuous)
+                    .stroke(isSelected ? Color.rossAccent.opacity(0.40) : Color.rossGlassStroke.opacity(0.46), lineWidth: 1)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
+private extension AlphaCapabilityTier {
+    var setupSymbolName: String {
+        switch self {
+        case .flash: "paperplane.fill"
+        case .quickStart: "bolt.fill"
+        case .caseAssociate: "brain"
+        case .seniorDraftingSupport: "star.fill"
+        }
+    }
+
+    var setupOneLine: String {
+        switch self {
+        case .flash:
+            "Fastest setup for quick questions and simple checklists."
+        case .quickStart:
+            "Short orders, notices, and lighter document review."
+        case .caseAssociate:
+            "Everyday matters, summaries, dates, and source-backed Ask."
+        case .seniorDraftingSupport:
+            "Long bundles, deeper review, hearing prep, and drafting."
+        }
+    }
+}
+
+struct AlphaOnboardingSetupNotes: View {
+    let compact: Bool
+
+    var body: some View {
+        VStack(spacing: compact ? 6 : 7) {
+            AlphaOnboardingSetupNoteRow(
+                icon: "lock.fill",
+                title: "Works locally on this device",
+                detail: "Matter files and assistant work stay on this phone.",
+                compact: compact
+            )
+            AlphaOnboardingSetupNoteRow(
+                icon: "wifi",
+                title: "Use Wi-Fi for model setup",
+                detail: "Large downloads can pause and resume if interrupted.",
+                compact: compact
+            )
+        }
+    }
+}
+
+struct AlphaOnboardingSetupNoteRow: View {
+    let icon: String
+    let title: String
+    let detail: String
+    let compact: Bool
+
+    var body: some View {
+        HStack(alignment: .top, spacing: compact ? 8 : 10) {
+            Image(systemName: icon)
+                .font(.system(size: compact ? 10 : 11, weight: .bold))
+                .foregroundStyle(Color.rossAccent.opacity(0.78))
+                .frame(width: compact ? 18 : 20, height: compact ? 18 : 20)
+                .padding(.top, 1)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title)
+                    .font(.system(size: compact ? 10 : 11, weight: .bold))
+                    .foregroundStyle(Color.rossInk.opacity(0.72))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.76)
+                Text(detail)
+                    .font(.system(size: compact ? 9 : 10, weight: .medium))
+                    .foregroundStyle(Color.rossInk.opacity(0.54))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, compact ? 10 : 12)
+        .padding(.vertical, compact ? 7 : 8)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color.rossGlassStroke.opacity(0.50), lineWidth: 1)
         }
     }
 }
@@ -215,6 +427,7 @@ struct AlphaOnboardingScreen: View {
 struct AlphaOnboardingDownloadCard: View {
     @Environment(\.colorScheme) private var colorScheme
     let tier: AlphaCapabilityTier
+    var compact = false
 
     private var etaLabel: String {
         switch tier {
@@ -235,38 +448,41 @@ struct AlphaOnboardingDownloadCard: View {
     }
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: compact ? 16 : 20, style: .continuous)
 
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: compact ? 9 : 14) {
             // Header
-            HStack(spacing: 12) {
+            HStack(spacing: compact ? 9 : 12) {
                 Image(systemName: tierIcon)
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.system(size: compact ? 14 : 17, weight: .semibold))
                     .foregroundStyle(Color.rossAccent)
-                    .frame(width: 40, height: 40)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .frame(width: compact ? 32 : 40, height: compact ? 32 : 40)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: compact ? 10 : 12, style: .continuous))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        RoundedRectangle(cornerRadius: compact ? 10 : 12, style: .continuous)
                             .stroke(Color.rossAccent.opacity(0.22), lineWidth: 1)
                     }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(tier.setupTitle)
-                        .font(.subheadline.weight(.semibold))
+                        .font((compact ? Font.caption : Font.subheadline).weight(.semibold))
                         .foregroundStyle(Color.rossInk)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.72)
 
                     Text("Recommended for your device")
-                        .font(.caption)
+                        .font(compact ? .caption2 : .caption)
                         .foregroundStyle(Color.rossAccent.opacity(0.80))
+                        .lineLimit(1)
                 }
 
                 Spacer(minLength: 0)
 
                 Text("Recommended")
-                    .font(.caption2.weight(.bold))
+                    .font(.system(size: compact ? 10 : 11, weight: .bold))
                     .foregroundStyle(Color.rossAccent)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
+                    .padding(.horizontal, compact ? 7 : 8)
+                    .padding(.vertical, compact ? 3 : 4)
                     .background(Color.rossAccent.opacity(0.10), in: Capsule())
             }
 
@@ -274,31 +490,35 @@ struct AlphaOnboardingDownloadCard: View {
                 .opacity(0.45)
 
             HStack(spacing: 0) {
-                AlphaOnboardingStatCell(label: "Download size", value: tier.downloadSizeLabel, icon: "arrow.down.circle.fill")
-                Divider().frame(height: 36).opacity(0.38)
-                AlphaOnboardingStatCell(label: "On fast Wi-Fi", value: etaLabel, icon: "wifi")
+                AlphaOnboardingStatCell(label: "Download size", value: tier.downloadSizeLabel, icon: "arrow.down.circle.fill", compact: compact)
+                Divider().frame(height: compact ? 28 : 36).opacity(0.38)
+                AlphaOnboardingStatCell(label: "On fast Wi-Fi", value: etaLabel, icon: "wifi", compact: compact)
             }
 
             // Model description
             Text(tier.summary)
-                .font(.caption)
+                .font(compact ? .caption2 : .caption)
                 .foregroundStyle(Color.rossInk.opacity(0.65))
+                .lineLimit(compact ? 2 : 3)
+                .minimumScaleFactor(0.82)
                 .fixedSize(horizontal: false, vertical: true)
-                .lineSpacing(3)
+                .lineSpacing(compact ? 1.5 : 3)
 
             // Wi-Fi advisory
-            HStack(spacing: 8) {
+            HStack(spacing: compact ? 6 : 8) {
                 Image(systemName: "wifi")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: compact ? 10 : 11, weight: .semibold))
                     .foregroundStyle(Color.rossInk.opacity(0.44))
 
                 Text("Connect to Wi-Fi for the fastest setup. The download resumes automatically if interrupted.")
-                    .font(.caption2.weight(.medium))
+                    .font(.system(size: compact ? 10 : 11, weight: .medium))
                     .foregroundStyle(Color.rossInk.opacity(0.50))
+                    .lineLimit(compact ? 2 : 3)
+                    .minimumScaleFactor(0.82)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(18)
+        .padding(compact ? 13 : 18)
         .background {
             ZStack {
                 shape.fill(.ultraThinMaterial)
@@ -326,19 +546,20 @@ struct AlphaOnboardingStatCell: View {
     let label: String
     let value: String
     let icon: String
+    var compact = false
 
     var body: some View {
-        HStack(spacing: 7) {
+        HStack(spacing: compact ? 5 : 7) {
             Image(systemName: icon)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: compact ? 10 : 12, weight: .semibold))
                 .foregroundStyle(Color.rossAccent.opacity(0.70))
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(value)
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(size: compact ? 12 : 13, weight: .bold))
                     .foregroundStyle(Color.rossInk)
                 Text(label)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: compact ? 9 : 10, weight: .medium))
                     .foregroundStyle(Color.rossInk.opacity(0.50))
             }
         }
@@ -349,25 +570,28 @@ struct AlphaOnboardingStatCell: View {
 struct AlphaOnboardingPrivacyPill: View {
     let icon: String
     let text: String
+    var compact = false
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: compact ? 10 : 12) {
             Image(systemName: icon)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: compact ? 11 : 12, weight: .semibold))
                 .foregroundStyle(Color.rossAccent.opacity(0.70))
-                .frame(width: 22, height: 22)
+                .frame(width: compact ? 18 : 22, height: compact ? 18 : 22)
 
             Text(text)
-                .font(.subheadline.weight(.medium))
+                .font((compact ? Font.caption : Font.subheadline).weight(.medium))
                 .foregroundStyle(Color.rossInk.opacity(0.72))
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
 
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 11)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .padding(.horizontal, compact ? 12 : 16)
+        .padding(.vertical, compact ? 8 : 11)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: compact ? 12 : 14, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: compact ? 12 : 14, style: .continuous)
                 .stroke(Color.rossGlassStroke.opacity(0.58), lineWidth: 1)
         }
     }

@@ -174,6 +174,9 @@ enum AlphaMatterAskPayloadParser {
             if let payload = salvagedPayload(from: candidate, baseResult: baseResult) {
                 return payload
             }
+            if let payload = lenientPayload(from: candidate, baseResult: baseResult) {
+                return payload
+            }
         }
 
         let paragraphs = humanReadableParagraphs(from: sanitizedRawText)
@@ -237,12 +240,19 @@ enum AlphaMatterAskPayloadParser {
         rawText
             .replacingOccurrences(of: #"(?is)<think\b[^>]*>.*?</think>"#, with: " ", options: .regularExpression)
             .replacingOccurrences(of: #"(?i)</?think\b[^>]*>"#, with: " ", options: .regularExpression)
+            .replacingOccurrences(of: #"(?is)(</?\s*(start|end)\s*_\s*of\s*_\s*turn\s*>|start\s*of\s*turn|end\s*of\s*turn).*$"#, with: " ", options: .regularExpression)
+            .replacingOccurrences(of: #"(?is)<\s*bos\s*>"#, with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     static func extractLikelyJSON(from text: String) -> String? {
-        guard let startIndex = text.firstIndex(where: { $0 == "{" || $0 == "[" }) else { return nil }
-        let candidate = text[startIndex...]
+        let normalizedText = text.replacingOccurrences(
+            of: #"(?i)^\s*json\s*(?=[\{\[])"#,
+            with: "",
+            options: .regularExpression
+        )
+        guard let startIndex = normalizedText.firstIndex(where: { $0 == "{" || $0 == "[" }) else { return nil }
+        let candidate = normalizedText[startIndex...]
         var depth = 0
         var inString = false
         var escaped = false
@@ -394,6 +404,9 @@ enum AlphaMatterAskPayloadParser {
             if !salvaged.isEmpty {
                 return normalizedDisplaySections(salvaged)
             }
+            if let payload = lenientPayload(from: candidate, baseResult: alphaEmptyMatterAskBaseResult()) {
+                return normalizedDisplaySections(payload.sections)
+            }
         }
 
         guard !looksLikeStructuredOutput(sanitized) else { return [] }
@@ -411,6 +424,120 @@ enum AlphaMatterAskPayloadParser {
                 !looksLikeStructuredOutput($0)
             }
     }
+
+    static func lenientPayload(
+        from text: String,
+        baseResult: AlphaAskResult
+    ) -> AlphaMatterAskRuntimePayload? {
+        let normalized = text
+            .replacingOccurrences(of: #"(?i)^\s*json\s*(?=\{)"#, with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard normalized.contains("headline") || normalized.contains("sections") else { return nil }
+
+        let headline = extractLenientScalar(for: "headline", in: normalized)?
+            .ifEmpty(baseResult.answerTitle) ?? baseResult.answerTitle
+        let statusNote = extractLenientScalar(for: "statusNote", in: normalized)?
+            .ifEmpty(baseResult.statusNote ?? "Private assistant")
+        let strictSections = extractLenientSections(in: normalized)
+        let sections = strictSections.isEmpty ? extractLooseQuotedSections(in: normalized) : strictSections
+        guard !sections.isEmpty else { return nil }
+
+        return normalizedPayload(
+            AlphaMatterAskRuntimePayload(
+                headline: headline,
+                sections: sections,
+                statusNote: statusNote
+            ),
+            baseResult: baseResult
+        )
+    }
+
+    static func extractLenientScalar(for key: String, in text: String) -> String? {
+        let quotedPattern = #"(?is)\b\#(key)\b\s*:?\s*"((?:\\.|[^"\\])*)""#
+        if let value = firstRegexCapture(pattern: quotedPattern, in: text) {
+            return value
+                .replacingOccurrences(of: #"\""#, with: #"""#)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .nilIfEmpty
+        }
+
+        let barePattern = #"(?is)\b\#(key)\b\s*:?\s*([^,\]\}]+)"#
+        return firstRegexCapture(pattern: barePattern, in: text)?
+            .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: #""'"#)))
+            .nilIfEmpty
+    }
+
+    static func extractLenientSections(in text: String) -> [String] {
+        guard let body = firstRegexCapture(pattern: #"(?is)\bsections\b\s*:?\s*\[(.*?)\]"#, in: text) else {
+            return []
+        }
+
+        let quoted = extractJSONStringArray(for: "sections", in: #""sections":[\#(body)]"#)
+        if !quoted.isEmpty { return quoted }
+
+        return body
+            .components(separatedBy: ".,")
+            .flatMap { $0.components(separatedBy: "\n") }
+            .map {
+                $0.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: #","'"#)))
+            }
+            .map { $0.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression) }
+            .filter { !$0.isEmpty }
+    }
+
+    static func extractLooseQuotedSections(in text: String) -> [String] {
+        let normalized = text
+            .replacingOccurrences(of: #"(?i)^\s*json\s*(?=\{)"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: "```", with: " ")
+        guard normalized.contains("headline") else { return [] }
+        guard let regex = try? NSRegularExpression(pattern: #""((?:\\.|[^"\\])*)""#, options: [.dotMatchesLineSeparators]) else {
+            return []
+        }
+
+        let nsRange = NSRange(normalized.startIndex..., in: normalized)
+        let fragments = regex.matches(in: normalized, range: nsRange).compactMap { match -> String? in
+            guard let range = Range(match.range(at: 1), in: normalized) else { return nil }
+            let raw = String(normalized[range])
+                .replacingOccurrences(of: #"\""#, with: #"""#)
+                .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let lowered = raw.lowercased()
+            guard raw.count >= 20 else { return nil }
+            guard !["headline", "sections", "statusnote", "status note"].contains(lowered) else { return nil }
+            return raw
+        }
+
+        return Array(fragments.prefix(3))
+    }
+
+    static func firstRegexCapture(pattern: String, in text: String) -> String? {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators]) else {
+            return nil
+        }
+        let nsRange = NSRange(text.startIndex..., in: text)
+        guard let match = regex.firstMatch(in: text, range: nsRange),
+              match.numberOfRanges > 1,
+              let range = Range(match.range(at: 1), in: text) else {
+            return nil
+        }
+        return String(text[range])
+    }
+}
+
+private func alphaEmptyMatterAskBaseResult() -> AlphaAskResult {
+    AlphaAskResult(
+        kind: .userAsk,
+        question: "",
+        scopeCaseID: nil,
+        scopeLabel: "",
+        selectedDocumentTitles: [],
+        answerTitle: "",
+        answerSections: [],
+        caseFileSources: [],
+        publicLawPreview: nil,
+        publicLawResults: [],
+        statusNote: nil
+    )
 }
 
 struct AlphaReviewQueueItem: Identifiable, Hashable {
@@ -539,6 +666,7 @@ final class AlphaRossModel {
         case generateExport(kind: String, label: String)
         case rerunDocumentReview
         case createTasksFromDocument
+        case runRoutine(AlphaRoutineKind)
         case guidance(title: String, detail: String)
     }
 
@@ -1029,9 +1157,172 @@ func alphaAssistantModelArtifact(for tier: AlphaCapabilityTier) -> AlphaAssistan
 
 final class AlphaAssistantDownloadTaskBox: @unchecked Sendable {
     var task: URLSessionDownloadTask?
+    var session: URLSession?
     var progressTask: Task<Void, Never>?
     var pausedByUser = false
     var resumeData: Data?
+}
+
+final class AlphaBackgroundModelDownloadCenter: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
+    static let shared = AlphaBackgroundModelDownloadCenter()
+
+    typealias ProgressHandler = @Sendable (Int64, Int64) async -> Void
+
+    private struct Entry {
+        var continuation: CheckedContinuation<URL, any Error>
+        var destinationURL: URL
+        var progress: ProgressHandler
+        var session: URLSession
+        var finishedURL: URL?
+    }
+
+    private let lock = NSLock()
+    private var entries: [Int: Entry] = [:]
+    private var taskIdentifierByJobID: [UUID: Int] = [:]
+    private var taskByIdentifier: [Int: URLSessionDownloadTask] = [:]
+    private var sessionsByIdentifier: [String: URLSession] = [:]
+    private var backgroundCompletionHandlers: [String: () -> Void] = [:]
+
+    func download(
+        request: URLRequest,
+        jobID: UUID,
+        resumeData: Data?,
+        allowsMobileData: Bool,
+        destinationURL: URL,
+        progress: @escaping ProgressHandler
+    ) async throws -> URL {
+        try await withCheckedThrowingContinuation { continuation in
+            let identifier = "com.ross.local-model-download.\(jobID.uuidString)"
+            let configuration = URLSessionConfiguration.background(withIdentifier: identifier)
+            configuration.sessionSendsLaunchEvents = true
+            configuration.isDiscretionary = false
+            configuration.allowsCellularAccess = allowsMobileData
+            configuration.waitsForConnectivity = true
+            if #available(iOS 13.0, macOS 10.15, *) {
+                configuration.allowsExpensiveNetworkAccess = allowsMobileData
+                configuration.allowsConstrainedNetworkAccess = allowsMobileData
+            }
+
+            let session = URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
+            let task = resumeData.map { session.downloadTask(withResumeData: $0) } ?? session.downloadTask(with: request)
+            let entry = Entry(
+                continuation: continuation,
+                destinationURL: destinationURL,
+                progress: progress,
+                session: session
+            )
+            lock.lock()
+            entries[task.taskIdentifier] = entry
+            taskIdentifierByJobID[jobID] = task.taskIdentifier
+            taskByIdentifier[task.taskIdentifier] = task
+            sessionsByIdentifier[identifier] = session
+            lock.unlock()
+            task.resume()
+        }
+    }
+
+    func cancel(jobID: UUID, completion: @escaping @Sendable (Data?) -> Void) {
+        lock.lock()
+        let taskIdentifier = taskIdentifierByJobID[jobID]
+        let task = taskIdentifier.flatMap { taskByIdentifier[$0] }
+        lock.unlock()
+        guard let task else {
+            completion(nil)
+            return
+        }
+        task.cancel { resumeData in
+            completion(resumeData)
+        }
+    }
+
+    func setBackgroundCompletionHandler(_ handler: @escaping () -> Void, for identifier: String) {
+        let configuration = URLSessionConfiguration.background(withIdentifier: identifier)
+        configuration.sessionSendsLaunchEvents = true
+        configuration.waitsForConnectivity = true
+        let session = URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
+        lock.lock()
+        backgroundCompletionHandlers[identifier] = handler
+        sessionsByIdentifier[identifier] = session
+        lock.unlock()
+    }
+
+    nonisolated func urlSession(
+        _ session: URLSession,
+        downloadTask: URLSessionDownloadTask,
+        didWriteData bytesWritten: Int64,
+        totalBytesWritten: Int64,
+        totalBytesExpectedToWrite: Int64
+    ) {
+        let progress: ProgressHandler?
+        lock.lock()
+        progress = entries[downloadTask.taskIdentifier]?.progress
+        lock.unlock()
+        guard let progress else { return }
+        Task {
+            await progress(totalBytesWritten, totalBytesExpectedToWrite)
+        }
+    }
+
+    nonisolated func urlSession(
+        _ session: URLSession,
+        downloadTask: URLSessionDownloadTask,
+        didFinishDownloadingTo location: URL
+    ) {
+        lock.lock()
+        let storedEntry = entries[downloadTask.taskIdentifier]
+        lock.unlock()
+        guard var entry = storedEntry else { return }
+
+        do {
+            try? FileManager.default.removeItem(at: entry.destinationURL)
+            try FileManager.default.moveItem(at: location, to: entry.destinationURL)
+            entry.finishedURL = entry.destinationURL
+            lock.lock()
+            entries[downloadTask.taskIdentifier] = entry
+            lock.unlock()
+        } catch {
+            lock.lock()
+            entries.removeValue(forKey: downloadTask.taskIdentifier)
+            lock.unlock()
+            entry.continuation.resume(throwing: error)
+            session.invalidateAndCancel()
+        }
+    }
+
+    nonisolated func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        didCompleteWithError error: (any Error)?
+    ) {
+        lock.lock()
+        let entry = entries.removeValue(forKey: task.taskIdentifier)
+        taskByIdentifier.removeValue(forKey: task.taskIdentifier)
+        taskIdentifierByJobID = taskIdentifierByJobID.filter { $0.value != task.taskIdentifier }
+        if let identifier = session.configuration.identifier {
+            sessionsByIdentifier.removeValue(forKey: identifier)
+        }
+        lock.unlock()
+        guard let entry else { return }
+
+        if let error {
+            entry.continuation.resume(throwing: error)
+        } else if let finishedURL = entry.finishedURL {
+            entry.continuation.resume(returning: finishedURL)
+        } else {
+            entry.continuation.resume(throwing: AlphaAssistantDownloadError.missingDownloadedFile)
+        }
+        session.finishTasksAndInvalidate()
+    }
+
+    nonisolated func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
+        guard let identifier = session.configuration.identifier else { return }
+        lock.lock()
+        let handler = backgroundCompletionHandlers.removeValue(forKey: identifier)
+        lock.unlock()
+        DispatchQueue.main.async {
+            handler?()
+        }
+    }
 }
 
 enum AlphaAssistantDownloadError: LocalizedError {

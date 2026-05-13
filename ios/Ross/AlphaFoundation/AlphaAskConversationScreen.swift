@@ -141,6 +141,7 @@ struct AlphaAskConversationScreen: View {
     var body: some View {
         let conversation = conversation
         let contextDocumentTitle = model.askDocumentTitle(for: activeScopeCaseID)
+        let latestTurnID = conversation.last?.stableIdentity
 
         VStack(spacing: 0) {
             AlphaFullScreenChatTopBar(
@@ -151,31 +152,45 @@ struct AlphaAskConversationScreen: View {
                 onShowThreads: { showingThreads = true }
             )
 
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 18) {
-                if conversation.isEmpty {
-                    Spacer(minLength: 120)
-                    Text("Ask Ross...")
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(Color.rossInk.opacity(0.42))
-                        .frame(maxWidth: .infinity, alignment: .center)
-                    Spacer(minLength: 120)
-                } else {
-                    ForEach(conversation, id: \.stableIdentity) { result in
-                        AlphaFullScreenChatTurn(
-                            result: result,
-                            contextDocumentTitle: contextDocumentTitle,
-                            onOpenSource: model.openSourceRef
-                        )
-                        .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 18) {
+                        if conversation.isEmpty {
+                            Spacer(minLength: 120)
+                            Text("Ask Ross...")
+                                .font(.title3.weight(.semibold))
+                                .foregroundStyle(Color.rossInk.opacity(0.42))
+                                .frame(maxWidth: .infinity, alignment: .center)
+                            Spacer(minLength: 120)
+                        } else {
+                            ForEach(conversation, id: \.stableIdentity) { result in
+                                AlphaFullScreenChatTurn(
+                                    result: result,
+                                    contextDocumentTitle: contextDocumentTitle,
+                                    onOpenSource: model.openSourceRef
+                                )
+                                .id(result.stableIdentity)
+                                .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 18)
+                    .animation(.snappy(duration: 0.3), value: conversation.count)
+                }
+                .alphaDismissesKeyboardOnScroll()
+                .onAppear {
+                    if let latestTurnID {
+                        proxy.scrollTo(latestTurnID, anchor: .bottom)
+                    }
+                }
+                .onChange(of: latestTurnID) { _, newValue in
+                    guard let newValue else { return }
+                    withAnimation(.snappy(duration: 0.28)) {
+                        proxy.scrollTo(newValue, anchor: .bottom)
                     }
                 }
             }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 18)
-                .animation(.snappy(duration: 0.3), value: conversation.count)
-            }
-            .alphaDismissesKeyboardOnScroll()
 
             AlphaFullScreenChatComposer(
                 text: draftBinding,
@@ -306,6 +321,10 @@ struct AlphaFullScreenChatComposer: View {
     let onSelectMention: (AlphaAskDocumentOption) -> Void
     let onSend: () -> Void
 
+    private var liveCanSend: Bool {
+        canSend || !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             if !selectedDocuments.isEmpty {
@@ -351,7 +370,7 @@ struct AlphaFullScreenChatComposer: View {
                         .focused(focused)
                         .submitLabel(.send)
                         .onSubmit {
-                            if canSend { onSend() }
+                            if liveCanSend { onSend() }
                         }
 
                     if selectedDocuments.isEmpty {
@@ -371,12 +390,12 @@ struct AlphaFullScreenChatComposer: View {
                 Button(action: onSend) {
                     Image(systemName: "arrow.up")
                         .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(canSend ? Color.rossCardBackground : Color.rossInk.opacity(0.44))
+                        .foregroundStyle(liveCanSend ? Color.rossCardBackground : Color.rossInk.opacity(0.44))
                         .frame(width: 40, height: 40)
-                        .background(canSend ? Color.rossAccent : Color.rossSecondaryGroupedBackground, in: Circle())
+                        .background(liveCanSend ? Color.rossAccent : Color.rossSecondaryGroupedBackground, in: Circle())
                 }
                 .buttonStyle(.plain)
-                .disabled(!canSend)
+                .disabled(!liveCanSend)
                 .accessibilityLabel("Send")
             }
 
@@ -447,68 +466,169 @@ struct AlphaFullScreenChatTurn: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(alignment: .top, spacing: 10) {
-                    Text(result.answerTitle)
+            if result.isPendingLocalModelResponse {
+                AlphaPendingLocalModelCard(
+                    result: result,
+                    style: .fullScreen
+                )
+            } else {
+                VStack(alignment: .leading, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(alignment: .top, spacing: 10) {
+                            Text(result.answerTitle)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Color.rossInk)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            Spacer(minLength: 8)
+
+                            Button {
+                                alphaCopyAskResultToPasteboard(result)
+                                alphaHaptic(.light)
+                            } label: {
+                                Image(systemName: "doc.on.doc")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(Color.rossInk.opacity(0.58))
+                                    .frame(width: 30, height: 30)
+                                    .background(Color.rossSecondaryGroupedBackground.opacity(0.82), in: Circle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Copy answer")
+                        }
+
+                        if let note = deduplicatedStatusNote {
+                            AlphaAnswerStatusPill(note: note)
+                        }
+                    }
+
+                    ForEach(Array(answerItems.enumerated()), id: \.element.id) { index, section in
+                        VStack(alignment: .leading, spacing: 10) {
+                            AlphaFormattedAnswerText(text: section.text)
+                            if index < answerItems.count - 1 {
+                                Divider()
+                                    .overlay(Color.rossBorder.opacity(0.4))
+                            }
+                        }
+                    }
+
+                    if !result.caseFileSources.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            AlphaSourceRefChips(
+                                sourceRefs: result.caseFileSources,
+                                contextDocumentTitle: contextDocumentTitle,
+                                onOpenSourceRef: onOpenSource
+                            )
+                        }
+                        .padding(12)
+                        .background(Color.rossSecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    }
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.rossGlassFill, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(Color.rossGlassStroke.opacity(0.86), lineWidth: 1)
+                }
+                .contextMenu {
+                    Button {
+                        alphaCopyAskResultToPasteboard(result)
+                    } label: {
+                        Label("Copy answer", systemImage: "doc.on.doc")
+                    }
+                }
+            }
+        }
+    }
+}
+
+enum AlphaPendingLocalModelCardStyle {
+    case compact
+    case fullScreen
+
+    var showsTaggedFilesAsChips: Bool {
+        switch self {
+        case .compact:
+            return false
+        case .fullScreen:
+            return true
+        }
+    }
+
+    var cornerRadius: CGFloat {
+        switch self {
+        case .compact:
+            return 18
+        case .fullScreen:
+            return 20
+        }
+    }
+}
+
+struct AlphaPendingLocalModelCard: View {
+    let result: AlphaAskResult
+    let style: AlphaPendingLocalModelCardStyle
+
+    private var taggedFilesLine: String? {
+        guard !result.selectedDocumentTitles.isEmpty else { return nil }
+        if result.selectedDocumentTitles.count == 1, let title = result.selectedDocumentTitles.first {
+            return "Tagged file: \(title)"
+        }
+        return "Tagged files: \(result.selectedDocumentTitles.joined(separator: ", "))"
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center, spacing: 12) {
+                ProgressView()
+                    .controlSize(.small)
+                    .tint(Color.rossAccent)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Ross is answering...")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.rossInk)
-                        .fixedSize(horizontal: false, vertical: true)
 
-                    Spacer(minLength: 8)
+                    if let label = result.pendingLocalModelLabel {
+                        Text("\(label) is running on this iPhone")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(Color.rossAccent)
+                    }
+                }
 
-                    if let note = deduplicatedStatusNote {
-                        HStack(spacing: 6) {
-                            RossGlassIconView(.badgeSparkle, variant: .accent, size: 12, fallbackSystemImage: "sparkles")
-                            Text(note)
-                                .font(.caption.weight(.semibold))
-                                .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+
+            Text("Ross is checking your local files and will replace this loading state with the final answer.")
+                .font(.footnote)
+                .lineSpacing(4)
+                .foregroundStyle(Color.rossInk.opacity(0.78))
+
+            if style.showsTaggedFilesAsChips, !result.selectedDocumentTitles.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(result.selectedDocumentTitles, id: \.self) { title in
+                            AlphaRossTokenChip(
+                                title: title,
+                                detail: nil,
+                                systemImage: "paperclip"
+                            )
                         }
-                        .foregroundStyle(Color.rossAccent)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 7)
-                        .background(Color.rossAccent.opacity(0.08), in: Capsule())
                     }
                 }
-
-                ForEach(Array(answerItems.enumerated()), id: \.element.id) { index, section in
-                    VStack(alignment: .leading, spacing: 10) {
-                        AlphaFormattedAnswerText(text: section.text)
-                        if index < answerItems.count - 1 {
-                            Divider()
-                                .overlay(Color.rossBorder.opacity(0.4))
-                        }
-                    }
-                }
-
-                if !result.caseFileSources.isEmpty {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Sources from your files")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color.rossInk.opacity(0.54))
-                        AlphaSourceRefChips(
-                            sourceRefs: result.caseFileSources,
-                            contextDocumentTitle: contextDocumentTitle,
-                            onOpenSourceRef: onOpenSource
-                        )
-                    }
-                    .padding(12)
-                    .background(Color.rossSecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                }
+            } else if let taggedFilesLine {
+                Text(taggedFilesLine)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(Color.rossInk.opacity(0.6))
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.rossGlassFill, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(Color.rossGlassStroke.opacity(0.86), lineWidth: 1)
-            }
-            .contextMenu {
-                Button {
-                    alphaCopyAskResultToPasteboard(result)
-                } label: {
-                    Label("Copy answer", systemImage: "doc.on.doc")
-                }
-            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.rossGlassFill, in: RoundedRectangle(cornerRadius: style.cornerRadius, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: style.cornerRadius, style: .continuous)
+                .stroke(Color.rossGlassStroke.opacity(0.86), lineWidth: 1)
         }
     }
 }
@@ -668,12 +788,13 @@ struct AlphaAskTurnCard: View {
                 }
             } else {
                 HStack(spacing: 8) {
-                    RossGlassIconView(.badgeSparkle, variant: .accent, size: 16, fallbackSystemImage: "sparkles")
+                    Image(systemName: "doc.text")
+                        .font(.caption.weight(.semibold))
                     Text("Matter update")
                         .font(.caption.weight(.semibold))
                         .tracking(0.2)
-                        .foregroundStyle(Color.rossAccent)
                 }
+                .foregroundStyle(Color.rossInk.opacity(0.62))
             }
 
             HStack(alignment: .top) {
@@ -714,9 +835,7 @@ struct AlphaAskTurnCard: View {
                     }
 
                     if let note = deduplicatedStatusNote {
-                        Text(note)
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(Color.rossAccent)
+                        AlphaAnswerStatusPill(note: note)
                     }
 
                     if !result.selectedDocumentTitles.isEmpty, contextDocumentTitle == nil {
@@ -735,7 +854,6 @@ struct AlphaAskTurnCard: View {
 
                     if !result.caseFileSources.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
-                            AlphaSectionLabel(title: "Sources", detail: "From your files on this device.")
                             if result.caseFileSources.count > 2 {
                                 Button {
                                     withAnimation(.snappy(duration: 0.18)) {
@@ -878,17 +996,33 @@ struct AlphaAskToolbarButton: View {
 
 struct AlphaSectionLabel: View {
     let title: String
-    let detail: String
+    var detail: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(Color.rossInk.opacity(0.74))
-            Text(detail)
-                .font(.caption2)
-                .foregroundStyle(Color.rossInk.opacity(0.62))
+            if let detail, !detail.isEmpty {
+                Text(detail)
+                    .font(.caption2)
+                    .foregroundStyle(Color.rossInk.opacity(0.62))
+            }
         }
+    }
+}
+
+struct AlphaAnswerStatusPill: View {
+    let note: String
+
+    var body: some View {
+        Text(note)
+            .font(.caption.weight(.semibold))
+            .lineLimit(1)
+            .foregroundStyle(Color.rossInk.opacity(0.68))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(Color.rossSecondaryGroupedBackground.opacity(0.86), in: Capsule())
     }
 }
 
@@ -1060,6 +1194,21 @@ extension AlphaAskResult {
             return "Ross used Legal Search after you approved. Your case files stayed on this device."
         }
         return "Answered using only your files on this device. Nothing was sent online."
+    }
+
+    var isPendingLocalModelResponse: Bool {
+        answerTitle == "Private assistant is reading your files"
+            && (statusNote?.hasSuffix("running locally") ?? false)
+            && publicLawPreview == nil
+            && publicLawResults.isEmpty
+    }
+
+    var pendingLocalModelLabel: String? {
+        guard isPendingLocalModelResponse,
+              let statusNote,
+              let range = statusNote.range(of: " running locally") else { return nil }
+        let label = String(statusNote[..<range.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+        return label.isEmpty ? nil : label
     }
 
     func answerSectionItems(limit: Int? = nil) -> [AlphaAnswerSectionItem] {
