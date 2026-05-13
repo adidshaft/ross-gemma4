@@ -214,6 +214,10 @@ struct AlphaRootAskDock: View {
             )
         }
 
+        if showsInlineResponseCard {
+            return nil
+        }
+
         if let latest = model.latestAskResult,
            latest.scopeCaseID == activeScopeCaseID,
            latest.isPendingLocalModelResponse {
@@ -399,8 +403,8 @@ struct AlphaRootAskDock: View {
 
     private func handleImport(_ result: Result<[URL], any Error>) {
         defer { pendingImportKind = nil }
-        guard case let .success(urls) = result, let url = urls.first else { return }
-        Task { await model.importDocument(caseId: activeScopeCaseID, from: url) }
+        guard case let .success(urls) = result else { return }
+        Task { await model.importDocuments(caseId: activeScopeCaseID, from: urls) }
     }
 
     private var expandedDock: some View {
@@ -689,7 +693,7 @@ struct AlphaRootAskDock: View {
                 set: { if !$0 { pendingImportKind = nil } }
             ),
             allowedContentTypes: pendingImportKind?.allowedTypes ?? [.pdf, .plainText, .image],
-            allowsMultipleSelection: false,
+            allowsMultipleSelection: true,
             onCompletion: handleImport
         )
         .sheet(isPresented: Binding(

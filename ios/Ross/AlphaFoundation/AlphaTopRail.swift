@@ -458,15 +458,6 @@ struct AlphaRootTopRail: View {
                 onCreateMatter()
             }
 
-            AlphaTopRailIconButton(
-                systemImage: "slider.horizontal.3",
-                accessibilityLabel: "Settings",
-                action: {
-                    alphaHaptic(.selection)
-                    model.persisted.selectedTab = .settings
-                    model.persist()
-                }
-            )
         }
     }
 }

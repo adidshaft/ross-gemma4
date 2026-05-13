@@ -691,6 +691,7 @@ final class AlphaRossModel {
     var askSelectedDocumentIDs: [UUID: Set<UUID>] = [:]
     var globalAskSelectedDocumentIDs: Set<UUID> = []
     var askWebEnabled = false
+    var pendingIncomingDocumentURLs: [URL] = []
     var pendingPublicLawQuestion: String?
     var pendingPublicLawScopeCaseID: UUID?
     var pendingPublicLawSessionID: UUID?

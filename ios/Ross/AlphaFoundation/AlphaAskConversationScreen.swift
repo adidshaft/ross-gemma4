@@ -116,10 +116,10 @@ struct AlphaAskConversationScreen: View {
 
     private func handleImport(_ result: Result<[URL], any Error>) {
         defer { pendingImportKind = nil }
-        guard case let .success(urls) = result, let url = urls.first else { return }
+        guard case let .success(urls) = result else { return }
         let scopeCaseID = activeScopeCaseID
         Task {
-            await model.importDocument(caseId: scopeCaseID, from: url, openAfterImport: false)
+            await model.importDocuments(caseId: scopeCaseID, from: urls, openAfterImport: false)
         }
     }
 
@@ -244,7 +244,7 @@ struct AlphaAskConversationScreen: View {
                 set: { if !$0 { pendingImportKind = nil } }
             ),
             allowedContentTypes: pendingImportKind?.allowedTypes ?? [.pdf, .plainText, .image],
-            allowsMultipleSelection: false,
+            allowsMultipleSelection: true,
             onCompletion: handleImport
         )
     }

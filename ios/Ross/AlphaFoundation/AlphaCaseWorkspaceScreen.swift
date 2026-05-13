@@ -358,10 +358,10 @@ struct AlphaCaseWorkspaceScreen: View {
         .fileImporter(
             isPresented: $showingImporter,
             allowedContentTypes: [.pdf, .image, .plainText],
-            allowsMultipleSelection: false
+            allowsMultipleSelection: true
         ) { result in
-            if case let .success(urls) = result, let url = urls.first {
-                Task { await model.importDocument(caseId: caseId, from: url) }
+            if case let .success(urls) = result {
+                Task { await model.importDocuments(caseId: caseId, from: urls) }
             }
         }
         .navigationTitle(caseMatter?.title ?? "Matter")

@@ -314,17 +314,7 @@ struct AlphaDocumentFolderTile: View {
                 .lineLimit(3)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text(document.lawyerStatusTitle)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(tint.opacity(0.92))
-                .lineLimit(1)
-
-            if let lastIndexedAt = document.lastIndexedAt {
-                Text("Processed \(lastIndexedAt.formatted(date: .abbreviated, time: .omitted))")
-                    .font(.caption2)
-                    .foregroundStyle(Color.rossInk.opacity(0.48))
-                    .lineLimit(1)
-            }
+            AlphaDocumentStatusLight(state: document.processingState, label: document.lawyerStatusTitle)
         }
         .frame(maxWidth: .infinity, minHeight: 168, alignment: .topLeading)
         .padding(11)
@@ -373,7 +363,7 @@ struct AlphaExpandableDocumentRow: View {
                                 .lineLimit(1)
                         }
 
-                        Text("\(document.kind.title) • \(alphaPageCountLabel(document.pageCount)) • \(document.lawyerStatusTitle)")
+                        Text("\(document.kind.title) • \(alphaPageCountLabel(document.pageCount))")
                             .font(.caption)
                             .foregroundStyle(tint.opacity(0.9))
                             .fixedSize(horizontal: false, vertical: true)
@@ -445,6 +435,41 @@ struct AlphaExpandableDocumentRow: View {
         }
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .animation(.snappy(duration: 0.24), value: isExpanded)
+    }
+}
+
+struct AlphaDocumentStatusLight: View {
+    let state: AlphaDocumentProcessingState
+    let label: String
+
+    private var tint: Color {
+        switch state {
+        case .ready:
+            Color.green
+        case .readingText, .imported:
+            Color.yellow
+        case .reviewingFindings, .needsConfirmation:
+            Color.orange
+        case .failed:
+            Color.red
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Circle()
+                .fill(tint)
+                .frame(width: 7, height: 7)
+                .shadow(color: tint.opacity(0.35), radius: 4, y: 1)
+
+            Text(label)
+                .font(.caption2.weight(.bold))
+                .lineLimit(1)
+        }
+        .foregroundStyle(Color.rossInk.opacity(0.72))
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(tint.opacity(0.13), in: Capsule())
     }
 }
 

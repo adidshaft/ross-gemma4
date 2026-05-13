@@ -88,7 +88,142 @@ struct AlphaRossRootView: View {
             guard phase == .active else { return }
             model.runMorningRoutineIfNeeded()
         }
+        .onOpenURL { url in
+            model.queueIncomingDocumentURL(url)
+        }
+        .sheet(isPresented: Binding(
+            get: { !model.pendingIncomingDocumentURLs.isEmpty },
+            set: { if !$0 { model.clearIncomingDocumentQueue() } }
+        )) {
+            AlphaIncomingDocumentsSheet(model: model)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
         .preferredColorScheme(model.persisted.settings.appearanceMode.preferredColorScheme)
+    }
+}
+
+private struct AlphaIncomingDocumentsSheet: View {
+    @Bindable var model: AlphaRossModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var newMatterTitle = ""
+
+    private var matterOptions: [AlphaCaseMatter] {
+        model.cases.filter { $0.id != alphaSharedWorkspaceID }
+    }
+
+    private var incomingFileNames: [String] {
+        model.pendingIncomingDocumentURLs.map { $0.lastPathComponent }
+    }
+
+    private var defaultMatterTitle: String {
+        model.pendingIncomingDocumentURLs.first.map {
+            $0.deletingPathExtension().lastPathComponent
+                .replacingOccurrences(of: "_", with: " ")
+                .replacingOccurrences(of: "-", with: " ")
+        } ?? "New matter"
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Add shared files to Ross")
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(Color.rossInk)
+                        Text("Choose an existing matter, or create a new one before Ross copies the files into private storage.")
+                            .font(.footnote)
+                            .foregroundStyle(Color.rossInk.opacity(0.68))
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("\(incomingFileNames.count) file\(incomingFileNames.count == 1 ? "" : "s") ready")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(Color.rossInk.opacity(0.58))
+                        ForEach(incomingFileNames, id: \.self) { fileName in
+                            Label(fileName, systemImage: "doc")
+                                .font(.subheadline.weight(.medium))
+                                .lineLimit(1)
+                                .foregroundStyle(Color.rossInk)
+                                .padding(10)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color.rossGlassFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        }
+                    }
+
+                    if !matterOptions.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Existing matters")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(Color.rossInk.opacity(0.58))
+                            ForEach(matterOptions) { matter in
+                                Button {
+                                    model.importQueuedIncomingDocuments(to: matter.id)
+                                    dismiss()
+                                } label: {
+                                    HStack(spacing: 10) {
+                                        Image(systemName: "folder")
+                                            .foregroundStyle(Color.rossAccent)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(matter.title)
+                                                .font(.subheadline.weight(.semibold))
+                                                .foregroundStyle(Color.rossInk)
+                                            Text(matter.forum)
+                                                .font(.caption)
+                                                .foregroundStyle(Color.rossInk.opacity(0.58))
+                                                .lineLimit(1)
+                                        }
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(Color.rossInk.opacity(0.38))
+                                    }
+                                    .padding(12)
+                                    .background(Color.rossCardBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Create a new matter")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(Color.rossInk.opacity(0.58))
+                        TextField(defaultMatterTitle, text: $newMatterTitle)
+                            .textFieldStyle(.roundedBorder)
+                        Button {
+                            model.createMatterForQueuedIncomingDocuments(
+                                title: newMatterTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? defaultMatterTitle : newMatterTitle
+                            )
+                            dismiss()
+                        } label: {
+                            Label("Create matter and import", systemImage: "plus.circle.fill")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .rossPrimaryButtonStyle()
+                    }
+                }
+                .padding(alphaScreenPadding)
+            }
+            .background(Color.rossGroupedBackground.ignoresSafeArea())
+            .navigationTitle("Shared files")
+            .rossInlineNavigationTitle()
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        model.clearIncomingDocumentQueue()
+                        dismiss()
+                    }
+                }
+            }
+            .onAppear {
+                if newMatterTitle.isEmpty {
+                    newMatterTitle = defaultMatterTitle
+                }
+            }
+        }
     }
 }
 

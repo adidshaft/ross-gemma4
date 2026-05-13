@@ -22,6 +22,11 @@ ROSS-Gemma4 is a mobile-first, privacy-preserving legal workbench built around G
   <img src="docs/images/ross_mock_case_source_backed_answer.png" width="320" alt="ROSS source-backed answer for the Rivera v. Northstar mock case" />
 </p>
 
+<p align="center">
+  <img src="docs/images/gemma_hindi_answer.png" width="260" alt="Gemma 4 answering a Hindi legal query in Ross" />
+  <img src="docs/images/gemma_bengali_answer.png" width="260" alt="Gemma 4 answering a Bengali legal query in Ross" />
+</p>
+
 ---
 
 ## Problem Statement
@@ -49,6 +54,9 @@ Ask ROSS-Gemma4 to review a lease agreement against tenant communications. The s
 ### 3. First-Pass Drafting
 Highlight key facts from the chronology and instruct ROSS-Gemma4 to draft a preliminary case summary or a formal notice. The model grounds its draft exclusively in the selected evidence, reducing hallucination risk while accelerating the drafting process.
 
+### 4. Multilingual Legal Assistance
+Ask in Hindi or Bengali and Ross keeps the answer in that language while still grounding the response in local matter files. This is especially important in India, where courts, clients, clerks, and advocates routinely work across languages. The Census of India publishes language data across 122 listed language rows, and the Constitution's Eighth Schedule recognizes 22 scheduled languages. Ross uses Gemma 4's multilingual capability so legal help does not assume English-first workflows.
+
 ---
 
 ## Gemma 4 Capability Packs
@@ -63,6 +71,17 @@ There are four Gemma 4 capability packs available for download inside the app:
 | **Quick Associate** | `gemma-4-e2b-q4` | Gemma 4 E2B | `Q4_K_M` | ~3.5 GB | Instant setup, intake, short summaries, simple checklists. | Constrained Phones |
 | **Case Associate** | `gemma-4-e4b-q4` | Gemma 4 E4B | `Q4_K_M` | ~5.4 GB | Chronology building, issue extraction, missing-fact analysis. | Modern Phones/Tablets |
 | **Senior Drafting Support**| `gemma-4-26b-a4b-q4` | Gemma 4 26B-A4B (MoE) | `Q4_K_M` | ~17.0 GB | Advanced drafting, clinic workstation mode, complex cross-referencing. | High-End Local Workstations |
+
+### Multilingual Coverage
+
+Gemma 4's official model card states that the family maintains multilingual support in **140+ languages**, with **35+ languages supported out of the box**. Google does not publish an exhaustive public table of all 140+ language names on the model card, so Ross links to the primary source instead of inventing one.
+
+| Scope | What Ross documents | Source |
+| --- | --- | --- |
+| Gemma 4 official coverage | 35+ out-of-the-box languages; pre-trained on 140+ languages. | [Gemma 4 model card](https://ai.google.dev/gemma/docs/core/model_card_4) |
+| India scheduled languages | 22 constitutionally scheduled languages: Assamese, Bengali, Bodo, Dogri, Gujarati, Hindi, Kannada, Kashmiri, Konkani, Maithili, Malayalam, Manipuri, Marathi, Nepali, Oriya/Odia, Punjabi, Sanskrit, Santhali, Sindhi, Tamil, Telugu, Urdu. | [Government of India, Ministry of Education](https://www.education.gov.in/en/constitutional-provision-1) |
+| India language data | Census mother-tongue tables, including the national C-16 language rows. | [Census of India C-16 mother tongue table](https://censusindia.gov.in/nada/index.php/catalog/10191) |
+| Ross verified app flows | English, Hindi, and Bengali prompts tested in the simulator with local Gemma answers and source pills. | `docs/images/gemma_hindi_answer.png`, `docs/images/gemma_bengali_answer.png` |
 
 ---
 

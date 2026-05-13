@@ -1314,6 +1314,53 @@ extension AlphaRossModel {
         }
     }
 
+    func importDocuments(caseId: UUID?, from sourceURLs: [URL], openAfterImport: Bool = true) async {
+        let urls = sourceURLs.filter { $0.isFileURL }
+        guard !urls.isEmpty else { return }
+        if urls.count == 1, let url = urls.first {
+            await importDocument(caseId: caseId, from: url, openAfterImport: openAfterImport)
+            return
+        }
+
+        for url in urls {
+            await importDocument(caseId: caseId, from: url, openAfterImport: false)
+        }
+
+        let targetCaseID = caseId ?? alphaSharedWorkspaceID
+        if openAfterImport, targetCaseID != alphaSharedWorkspaceID {
+            path.removeAll()
+            path.append(.documentList(targetCaseID))
+        }
+    }
+
+    func queueIncomingDocumentURL(_ url: URL) {
+        guard url.isFileURL else { return }
+        if !pendingIncomingDocumentURLs.contains(url) {
+            pendingIncomingDocumentURLs.append(url)
+        }
+    }
+
+    func clearIncomingDocumentQueue() {
+        pendingIncomingDocumentURLs.removeAll()
+    }
+
+    func importQueuedIncomingDocuments(to caseID: UUID) {
+        let urls = pendingIncomingDocumentURLs
+        clearIncomingDocumentQueue()
+        Task { await importDocuments(caseId: caseID, from: urls, openAfterImport: true) }
+    }
+
+    func createMatterForQueuedIncomingDocuments(title: String) {
+        let cleanedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanedTitle.isEmpty else { return }
+        let urls = pendingIncomingDocumentURLs
+        clearIncomingDocumentQueue()
+        caseDraftTitle = cleanedTitle
+        createCase(openWorkspace: false)
+        guard let targetCaseID = selectedCaseID else { return }
+        Task { await importDocuments(caseId: targetCaseID, from: urls, openAfterImport: true) }
+    }
+
     func isRossSuggestedTask(_ task: AlphaTaskItem) -> Bool {
         task.notes?.hasPrefix(alphaRossSuggestedTaskNotePrefix) == true
     }
