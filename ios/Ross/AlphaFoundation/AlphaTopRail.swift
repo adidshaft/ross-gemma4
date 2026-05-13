@@ -127,7 +127,7 @@ struct AlphaTodayWorkbenchScreen: View {
                 RossHeroCard(
                     eyebrow: alphaGreeting(),
                     title: work.isEmpty ? "No prepared work needs review" : "\(work.count) item(s) need review",
-                    detail: "Works locally on this device",
+                    detail: nil,
                     showsMedia: false,
                     mediaHeight: 108,
                     logoSize: 58
