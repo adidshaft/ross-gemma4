@@ -885,7 +885,7 @@ private struct AlphaLocalExtractionOrchestrator {
         }
         let realProviderReady = provider.map { $0.runtimeMode != .deterministicDev && $0.isAvailable() } ?? false
         if pipelinePlan.requiresInstalledPack, !alphaAllowsDevelopmentModelArtifacts(), !realProviderReady {
-            return failedExtractionResult(
+            return assistantUnavailableExtractionResult(
                 caseId: caseId,
                 document: document,
                 pages: pages,
@@ -1060,9 +1060,19 @@ private struct AlphaLocalExtractionOrchestrator {
                 : "Ross found key details."
         )
         let warnings = findings.map(\.message)
-        let status: AlphaExtractionRunStatus = verification.fields.isEmpty
-            ? .failed
-            : (verification.fields.contains(where: \.needsReview) || findings.contains(where: { !$0.resolved }) ? .needsReview : .complete)
+        let hasReadableText = cleanedPages.contains {
+            (($0.extractedText ?? $0.snippet) ?? "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .isEmpty == false
+        }
+        let status: AlphaExtractionRunStatus
+        if verification.fields.isEmpty {
+            status = hasReadableText ? .needsReview : .failed
+        } else {
+            status = verification.fields.contains(where: \.needsReview) || findings.contains(where: { !$0.resolved })
+                ? .needsReview
+                : .complete
+        }
         let progressState: AlphaExtractionProgressState
         switch status {
         case .complete:
@@ -1096,7 +1106,7 @@ private struct AlphaLocalExtractionOrchestrator {
                 fieldsExtracted: verification.fields.count,
                 fieldsNeedingReview: verification.fields.filter(\.needsReview).count,
                 warnings: warnings,
-                errorMessage: verification.fields.isEmpty ? "Ross could not find supported legal fields in this document yet." : nil
+                errorMessage: verification.fields.isEmpty && !hasReadableText ? "Ross could not read useful text in this document yet." : nil
             ),
             findings: findings,
             caseMemoryUpdates: caseMemory,
@@ -1151,6 +1161,60 @@ private struct AlphaLocalExtractionOrchestrator {
                 fieldsNeedingReview: 0,
                 warnings: [warning],
                 errorMessage: "Private assistant setup required."
+            ),
+            findings: [finding],
+            caseMemoryUpdates: [],
+            reviewQueue: AlphaReviewQueue(fieldIDs: [], findingIDs: [finding.id], summary: warning),
+            modelInvocations: [],
+            pipelinePlan: pipelinePlan
+        )
+    }
+
+    private func assistantUnavailableExtractionResult(
+        caseId: UUID,
+        document: AlphaCaseDocument,
+        pages: [AlphaDocumentPage],
+        pipelinePlan: AlphaExtractionPipelinePlan,
+        extractionRunID: UUID,
+        warning: String
+    ) -> AlphaLocalExtractionResult {
+        let finding = AlphaExtractionFinding(
+            caseId: caseId,
+            documentId: document.id,
+            kind: .unsupportedLayout,
+            message: warning,
+            sourceRefs: pages.prefix(1).map { page in
+                AlphaSourceRef(
+                    caseId: caseId,
+                    documentId: document.id,
+                    documentTitle: document.title,
+                    pageNumber: page.pageNumber,
+                    textSnippet: page.snippet,
+                    ocrConfidence: page.ocrConfidence
+                )
+            },
+            severity: .warning
+        )
+        return AlphaLocalExtractionResult(
+            pages: pages,
+            languageProfile: detectLanguageProfile(documentID: document.id, pages: pages),
+            classification: nil,
+            extractedFields: [],
+            extractionRun: AlphaExtractionRun(
+                id: extractionRunID,
+                caseId: caseId,
+                documentId: document.id,
+                mode: pipelinePlan.mode,
+                status: .needsReview,
+                progressState: .needsReview,
+                startedAt: .now,
+                completedAt: .now,
+                pagesProcessed: pages.count,
+                totalPages: document.pageCount,
+                fieldsExtracted: 0,
+                fieldsNeedingReview: 0,
+                warnings: [warning],
+                errorMessage: nil
             ),
             findings: [finding],
             caseMemoryUpdates: [],

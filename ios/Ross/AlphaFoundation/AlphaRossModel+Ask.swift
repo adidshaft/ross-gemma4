@@ -362,7 +362,7 @@ extension AlphaRossModel {
             activePack: activePack,
             requestedTier: activePack?.tier ?? persisted.settings.activeTier ?? selectedTier,
             executor: { _ in AlphaLocalModelOutput(rawText: "", parsedJson: nil, schemaValid: false, warnings: [], sourceRefs: []) }
-        ), provider.runtimeMode != .deterministicDev, provider.supportedTasks().contains(.matterQuestionAnswer) else {
+        ), provider.runtimeMode != .deterministicDev, provider.isAvailable(), provider.supportedTasks().contains(.matterQuestionAnswer) else {
             return false
         }
         return true
@@ -1078,7 +1078,13 @@ extension AlphaRossModel {
         }) {
             return
         }
-        let sourcePack = askRuntimeSourcePack(scopeCaseID: scopeCaseID, selectedDocuments: selectedDocuments)
+        let sourcePack = shouldUseMatterSourcesForAsk(
+            question: question,
+            scopeCaseID: scopeCaseID,
+            selectedDocuments: selectedDocuments
+        )
+            ? askRuntimeSourcePack(scopeCaseID: scopeCaseID, selectedDocuments: selectedDocuments)
+            : []
 
         let input = AlphaLocalModelInput(
             task: .matterQuestionAnswer,
@@ -1109,7 +1115,7 @@ extension AlphaRossModel {
                     errorCategory: "development_artifact_blocked"
                 )
             }
-        ), provider.runtimeMode != .deterministicDev, provider.supportedTasks().contains(.matterQuestionAnswer) else {
+        ), provider.runtimeMode != .deterministicDev, provider.isAvailable(), provider.supportedTasks().contains(.matterQuestionAnswer) else {
             return
         }
 
@@ -1140,11 +1146,7 @@ extension AlphaRossModel {
                 let modelPayload = self.matterAskPayload(from: output, baseResult: baseResult)
                 let payload = modelPayload.flatMap {
                     self.isUsefulMatterAskPayload($0) && self.alphaPayloadMatchesRequestedLanguage($0, requestedLanguage: requestedLanguage) ? $0 : nil
-                } ?? self.sourceGroundedMatterAskFallback(
-                    question: question,
-                    sourcePack: sourcePack,
-                    baseResult: baseResult
-                )
+                }
                 guard let payload else {
                     self.updateStoredAskTurn(
                         scopeCaseID: scopeCaseID,
@@ -1245,6 +1247,36 @@ extension AlphaRossModel {
             instruction += "\nDo not pretend this is current legal research. Keep the answer brief and verification-oriented."
         }
         return instruction
+    }
+
+    func shouldUseMatterSourcesForAsk(
+        question: String,
+        scopeCaseID: UUID?,
+        selectedDocuments: [AlphaAskDocumentOption]
+    ) -> Bool {
+        if !selectedDocuments.isEmpty || scopeCaseID != nil {
+            return true
+        }
+        let lowered = question.lowercased()
+        let matterTerms = [
+            "this matter",
+            "this case",
+            "my matter",
+            "my case",
+            "case file",
+            "case files",
+            "document",
+            "file",
+            "order",
+            "affidavit",
+            "hearing",
+            "deadline",
+            "summarize",
+            "summarise",
+            "source",
+            "tagged"
+        ]
+        return matterTerms.contains { lowered.contains($0) }
     }
 
     func askRuntimeSourcePack(
@@ -1423,25 +1455,17 @@ extension AlphaRossModel {
     func isUsefulMatterAskPayload(_ payload: AlphaMatterAskRuntimePayload) -> Bool {
         let combined = ([payload.headline] + payload.sections).joined(separator: " ")
         let normalized = combined.lowercased()
-        guard combined.count >= 120 || payload.sections.count >= 2 else { return false }
-        let sourceSpecificTerms = [
-            "cam-d3",
-            "menon",
-            "fourteen",
-            "14",
-            "overlay",
-            "eleven",
-            "11",
-            "21:42",
-            "22:11",
-            "overwrite",
-            "automated overwrites",
-            "still frame",
-            "october",
-            "november",
-            "asha"
+        guard combined.count >= 80 || payload.sections.count >= 2 else { return false }
+        let rejectedFragments = [
+            "included for this answer",
+            "shared across matters",
+            "private assistant is reading",
+            "will replace this placeholder",
+            "json{",
+            "<start_of_turn>",
+            "<end_of_turn>"
         ]
-        return sourceSpecificTerms.contains { normalized.contains($0) }
+        return rejectedFragments.contains { normalized.contains($0) } == false
     }
 
     func sourceGroundedMatterAskFallback(

@@ -907,7 +907,7 @@ extension AlphaRossModel {
     }
 
     var activePack: AlphaInstalledModelPack? {
-        privateAISnapshot.activePack
+        privateAISnapshot.activePack ?? alphaOptimisticActivePack(from: persisted)
     }
 
     func submitDockInput(question: String, scopeCaseID: UUID?, webEnabled: Bool) async {
@@ -1033,10 +1033,40 @@ extension AlphaRossModel {
     }
 
     func importDocument(caseId: UUID?, from sourceURL: URL, openAfterImport: Bool = true) async {
+        await importDocuments(caseId: caseId, from: [sourceURL], openAfterImport: openAfterImport)
+    }
+
+    func importDocuments(caseId: UUID?, from sourceURLs: [URL], openAfterImport: Bool = true) async {
+        let uniqueURLs = sourceURLs.reduce(into: [URL]()) { urls, url in
+            guard !urls.contains(url) else { return }
+            urls.append(url)
+        }
+        guard !uniqueURLs.isEmpty else { return }
+
+        var importedDocumentIDs: [UUID] = []
+        for (index, sourceURL) in uniqueURLs.prefix(20).enumerated() {
+            if let document = await importSingleDocument(
+                caseId: caseId,
+                from: sourceURL,
+                openAfterImport: openAfterImport && index == 0
+            ) {
+                importedDocumentIDs.append(document.id)
+            }
+        }
+
+        let targetCaseID = caseId ?? alphaSharedWorkspaceID
+        if !importedDocumentIDs.isEmpty {
+            setSelectedAskDocumentIDs(Set(importedDocumentIDs), for: targetCaseID == alphaSharedWorkspaceID ? nil : targetCaseID)
+            persist(workspaceChanged: true)
+        }
+    }
+
+    @discardableResult
+    private func importSingleDocument(caseId: UUID?, from sourceURL: URL, openAfterImport: Bool) async -> AlphaCaseDocument? {
         let targetCaseID = caseId ?? alphaSharedWorkspaceID
         do {
             let imported = try await store.importDocument(from: sourceURL, into: targetCaseID)
-            guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == targetCaseID }) else { return }
+            guard let caseIndex = persisted.cases.firstIndex(where: { $0.id == targetCaseID }) else { return nil }
             var document = imported.document
             document.indexingStatus = .extracting
             document.extractionRuns = [
@@ -1114,6 +1144,7 @@ extension AlphaRossModel {
                 activePack: activePack
             )
             applyExtractionResult(result, caseId: targetCaseID, documentId: document.id)
+            return document
         } catch {
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
@@ -1127,6 +1158,7 @@ extension AlphaRossModel {
                 at: 0
             )
             persist()
+            return nil
         }
     }
 
@@ -1179,9 +1211,6 @@ extension AlphaRossModel {
         var normalized = state
         removeSystemAssistantShortcutState(from: &normalized)
         purgeDevelopmentModelArtifactsFromDisk()
-        if alphaHadUnfinishedPrivateAIStartupValidation() {
-            alphaQuarantineActiveAssistantAfterStartupFailure(&normalized)
-        }
         if shouldRestoreAssistantSetupFlow(for: normalized) {
             normalized.onboardingStage = looksLikePristineWorkspace(normalized) ? .onboarding : .privateAIPack
         }
