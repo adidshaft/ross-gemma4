@@ -113,6 +113,71 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertFalse(sections.joined(separator: "\n").contains(#""headline""#))
     }
 
+    func testMatterAskPayloadParserFormatsGemmaPlainTextBullets() {
+        let output = AlphaLocalModelOutput(
+            rawText: """
+            Heading
+            :
+             Demo
+             Matter
+            :
+             Sharma
+             v
+            .
+             Rana
+
+            *
+             Next
+             hearing
+             date
+            :
+             May
+             23, 2026
+             (Demo order · p. 1)
+
+            *
+             Next
+             steps
+            :
+             Review
+             the
+             latest
+             order
+            ;
+             Call
+             client
+             with
+             next
+             date
+            ;
+             Prepare
+             hearing
+             note
+            .
+             (Demo order · p. 1)
+            """,
+            parsedJson: nil,
+            schemaValid: false,
+            warnings: [],
+            sourceRefs: []
+        )
+
+        let payload = AlphaMatterAskPayloadParser.parse(
+            output: output,
+            baseResult: baseAskResult(answerTitle: "Ross answered locally")
+        )
+
+        XCTAssertEqual("Demo Matter: Sharma v. Rana", payload?.headline)
+        XCTAssertEqual(
+            [
+                "Next hearing date: May 23, 2026 (Demo order · p. 1)",
+                "Next steps: Review the latest order; Call client with next date; Prepare hearing note. (Demo order · p. 1)"
+            ],
+            payload?.sections
+        )
+        XCTAssertEqual("Private assistant", payload?.statusNote)
+    }
+
     @MainActor
     func testHindiMatterAnswerRejectsHinglishRuntimePayload() {
         let model = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })

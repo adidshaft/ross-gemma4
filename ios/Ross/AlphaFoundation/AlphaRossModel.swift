@@ -179,16 +179,7 @@ enum AlphaMatterAskPayloadParser {
             }
         }
 
-        let paragraphs = humanReadableParagraphs(from: sanitizedRawText)
-        guard !paragraphs.isEmpty else { return nil }
-        return normalizedPayload(
-            AlphaMatterAskRuntimePayload(
-                headline: baseResult.answerTitle,
-                sections: Array(paragraphs.prefix(3)),
-                statusNote: baseResult.statusNote ?? "Private assistant"
-            ),
-            baseResult: baseResult
-        )
+        return plainTextPayload(from: sanitizedRawText, baseResult: baseResult)
     }
 
     static func displaySections(from sections: [String]) -> [String] {
@@ -351,25 +342,7 @@ enum AlphaMatterAskPayloadParser {
     }
 
     static func humanReadableParagraphs(from text: String) -> [String] {
-        text.components(separatedBy: "\n\n")
-            .flatMap { block -> [String] in
-                let trimmed = block.trimmingCharacters(in: .whitespacesAndNewlines)
-                if trimmed.contains("\n- ") || trimmed.hasPrefix("- ") {
-                    return trimmed
-                        .components(separatedBy: .newlines)
-                        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                        .filter { !$0.isEmpty }
-                }
-                return [trimmed]
-            }
-            .map {
-                $0.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
-            }
-            .filter {
-                !$0.isEmpty &&
-                !$0.caseInsensitiveContains("<think") &&
-                !looksLikeStructuredOutput($0)
-            }
+        plainTextFragments(from: text, preserveHeadline: true)
     }
 
     static func looksLikeStructuredOutput(_ text: String) -> Bool {
@@ -416,13 +389,110 @@ enum AlphaMatterAskPayloadParser {
     static func normalizedDisplaySections(_ sections: [String]) -> [String] {
         sections
             .map(sanitizedResponseText)
-            .map { $0.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression) }
+            .map(cleanPlainTextFragment)
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter {
                 !$0.isEmpty &&
                 !$0.caseInsensitiveContains("<think") &&
                 !looksLikeStructuredOutput($0)
             }
+    }
+
+    static func plainTextPayload(
+        from text: String,
+        baseResult: AlphaAskResult
+    ) -> AlphaMatterAskRuntimePayload? {
+        let fragments = plainTextFragments(from: text, preserveHeadline: true)
+        guard !fragments.isEmpty else { return nil }
+
+        var headline = baseResult.answerTitle
+        var sections = fragments
+        if let first = sections.first, isLikelyPlainTextHeadline(first) {
+            headline = cleanPlainTextHeadline(first).ifEmpty(baseResult.answerTitle)
+            sections.removeFirst()
+        }
+
+        sections = sections
+            .map(cleanPlainTextFragment)
+            .filter { !$0.isEmpty && $0 != headline }
+        guard !sections.isEmpty else { return nil }
+
+        return normalizedPayload(
+            AlphaMatterAskRuntimePayload(
+                headline: headline,
+                sections: Array(sections.prefix(3)),
+                statusNote: baseResult.statusNote ?? "Private assistant"
+            ),
+            baseResult: baseResult
+        )
+    }
+
+    static func plainTextFragments(from text: String, preserveHeadline: Bool) -> [String] {
+        let sanitized = sanitizedResponseText(text)
+            .replacingOccurrences(of: "```", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !sanitized.isEmpty, !looksLikeStructuredOutput(sanitized) else { return [] }
+
+        let bulletSeparated = sanitized
+            .replacingOccurrences(of: #"(^|\s)[\*•]\s+"#, with: "\n- ", options: .regularExpression)
+            .replacingOccurrences(of: #"(?m)^\s*-\s+"#, with: "\n- ", options: .regularExpression)
+
+        let rawFragments = bulletSeparated
+            .components(separatedBy: .newlines)
+            .flatMap { line -> [String] in
+                let cleanedLine = cleanPlainTextFragment(line)
+                guard !cleanedLine.isEmpty else { return [] }
+                if cleanedLine.contains(" - ") {
+                    return cleanedLine
+                        .components(separatedBy: " - ")
+                        .map(cleanPlainTextFragment)
+                        .filter { !$0.isEmpty }
+                }
+                return [cleanedLine]
+            }
+
+        return rawFragments
+            .map { preserveHeadline ? $0 : cleanPlainTextHeadline($0) }
+            .filter {
+                !$0.isEmpty &&
+                !$0.caseInsensitiveContains("<think") &&
+                !looksLikeStructuredOutput($0)
+            }
+    }
+
+    static func cleanPlainTextHeadline(_ text: String) -> String {
+        cleanPlainTextFragment(text)
+            .replacingOccurrences(
+                of: #"(?i)^(heading|headline|title|answer)\s*:\s*"#,
+                with: "",
+                options: .regularExpression
+            )
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    static func cleanPlainTextFragment(_ text: String) -> String {
+        text
+            .replacingOccurrences(of: #"(?i)^\s*json\s*(?=\{)"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"^\s*[\-•\*]\s*"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .replacingOccurrences(of: #"\s+([,.;:!?\)])"#, with: "$1", options: .regularExpression)
+            .replacingOccurrences(of: #"([\(\[])\s+"#, with: "$1", options: .regularExpression)
+            .replacingOccurrences(of: #"(?<=\w)\s*-\s*(?=\w)"#, with: "-", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    static func isLikelyPlainTextHeadline(_ text: String) -> Bool {
+        let cleaned = cleanPlainTextFragment(text)
+        guard !cleaned.isEmpty else { return false }
+        if cleaned.range(of: #"(?i)^(heading|headline|title|answer)\s*:"#, options: .regularExpression) != nil {
+            return true
+        }
+        if cleaned.count <= 72,
+           cleaned.components(separatedBy: ". ").count == 1,
+           cleaned.range(of: #"(?i)\b(date|next steps|should|must|because|source)\b"#, options: .regularExpression) == nil {
+            return true
+        }
+        return false
     }
 
     static func lenientPayload(
@@ -676,14 +746,20 @@ final class AlphaRossModel {
 
     var persisted = AlphaPersistedState.empty() {
         didSet {
+            // Hot-path performance: every persisted-state write (including a
+            // single chat-turn field update) fires this didSet. We MUST keep
+            // the body cheap. The expensive O(N*M*K) refresh-key computation
+            // and disk-recovery snapshot rebuild are scheduled via a debounced
+            // task instead of running synchronously here. See
+            // scheduleDebouncedPrivateAISnapshotRefresh().
             invalidateWorkspaceDerivedState()
             syncPrivateAISnapshotFromPersisted()
-            refreshPrivateAISnapshot()
+            scheduleDebouncedPrivateAISnapshotRefresh()
         }
     }
     var path: [AlphaRoute] = []
     var selectedCaseID: UUID?
-    var selectedTier: AlphaCapabilityTier = .caseAssociate
+    var selectedTier: AlphaCapabilityTier = .flash
     var caseDraftTitle = ""
     var askDrafts: [UUID: String] = [:]
     var globalAskDraft = ""
@@ -713,6 +789,8 @@ final class AlphaRossModel {
     @ObservationIgnored var assistantDownloadTaskBoxes: [UUID: AlphaAssistantDownloadTaskBox] = [:]
     @ObservationIgnored var privateAISnapshotTask: Task<Void, Never>?
     @ObservationIgnored var privateAISnapshotRefreshKey: AlphaPrivateAISnapshotRefreshKey?
+    @ObservationIgnored var pendingPersistTask: Task<Void, Never>?
+    @ObservationIgnored var debouncedSnapshotRefreshTask: Task<Void, Never>?
 
     init(
         store: AlphaRossStore = AlphaRossStore(),
@@ -1161,6 +1239,8 @@ final class AlphaAssistantDownloadTaskBox: @unchecked Sendable {
     var progressTask: Task<Void, Never>?
     var pausedByUser = false
     var resumeData: Data?
+    var lastPublishedProgressBytes: Int64 = 0
+    var lastPublishedProgressAt: Date = .distantPast
 }
 
 final class AlphaBackgroundModelDownloadCenter: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
@@ -1192,12 +1272,11 @@ final class AlphaBackgroundModelDownloadCenter: NSObject, URLSessionDownloadDele
         progress: @escaping ProgressHandler
     ) async throws -> URL {
         try await withCheckedThrowingContinuation { continuation in
-            let identifier = "com.ross.local-model-download.\(jobID.uuidString)"
-            let configuration = URLSessionConfiguration.background(withIdentifier: identifier)
-            configuration.sessionSendsLaunchEvents = true
-            configuration.isDiscretionary = false
+            let configuration = URLSessionConfiguration.default
             configuration.allowsCellularAccess = allowsMobileData
             configuration.waitsForConnectivity = true
+            configuration.timeoutIntervalForRequest = 120
+            configuration.timeoutIntervalForResource = 10_800
             if #available(iOS 13.0, macOS 10.15, *) {
                 configuration.allowsExpensiveNetworkAccess = allowsMobileData
                 configuration.allowsConstrainedNetworkAccess = allowsMobileData
@@ -1215,7 +1294,6 @@ final class AlphaBackgroundModelDownloadCenter: NSObject, URLSessionDownloadDele
             entries[task.taskIdentifier] = entry
             taskIdentifierByJobID[jobID] = task.taskIdentifier
             taskByIdentifier[task.taskIdentifier] = task
-            sessionsByIdentifier[identifier] = session
             lock.unlock()
             task.resume()
         }
@@ -1361,6 +1439,11 @@ func sha256Hex(_ data: Data) -> String {
 }
 
 func alphaAllowsDevelopmentModelArtifacts() -> Bool {
+    // Development packs are placeholder artifacts used only for unit/UI tests.
+    // They are NEVER enabled for the normal simulator/device app run, because
+    // they would short-circuit the real model download and silently install a
+    // fake artifact that cannot answer questions. Only opt-in explicitly via
+    // env var, or implicitly via XCTest.
     let environment = ProcessInfo.processInfo.environment
     if environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"] == "1" {
         return false

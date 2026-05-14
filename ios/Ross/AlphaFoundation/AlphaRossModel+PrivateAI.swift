@@ -19,6 +19,11 @@ private extension String {
     }
 }
 
+@discardableResult
+private func alphaPurgeTemporaryAssistantDownloadFiles() -> Int64 {
+    alphaSweepTemporaryAssistantDownloads()
+}
+
 extension AlphaRossModel {
 
     func installedPack(for tier: AlphaCapabilityTier) -> AlphaInstalledModelPack? {
@@ -121,10 +126,12 @@ extension AlphaRossModel {
     }
 
     func removeAllDownloadedModelFiles() {
-        for pack in persisted.installedPacks where !pack.installPath.hasPrefix("system://") {
-            try? FileManager.default.removeItem(at: alphaAbsoluteURL(for: pack.installPath))
+        for (jobID, taskBox) in assistantDownloadTaskBoxes {
+            taskBox.pausedByUser = true
+            taskBox.progressTask?.cancel()
+            AlphaBackgroundModelDownloadCenter.shared.cancel(jobID: jobID) { _ in }
         }
-        let resumePaths = persisted.modelJobs.map(\.resumeDataRelativePath)
+        assistantDownloadTaskBoxes.removeAll()
         persisted.installedPacks.removeAll { !$0.installPath.hasPrefix("system://") }
         persisted.modelJobs.removeAll { $0.artifactKind == "local_model_artifact" || $0.runtimeMode == .llamaCppGguf }
         persisted.settings.activeTier = persisted.installedPacks.first(where: \.isActive)?.tier
@@ -142,9 +149,16 @@ extension AlphaRossModel {
         )
         persist(workspaceChanged: true)
         Task {
-            for resumePath in resumePaths {
-                await store.removeModelResumeData(relativePath: resumePath)
-            }
+            await store.removeAllModelArtifacts()
+            _ = alphaSweepTemporaryAssistantDownloads()
+        }
+    }
+
+    func reclaimAssistantStorageLeaks() {
+        let keptResumePaths = Set(persisted.modelJobs.compactMap(\.resumeDataRelativePath))
+        Task {
+            await store.sweepTemporaryAssistantDownloads()
+            await store.sweepModelResumeData(keeping: keptResumePaths)
         }
     }
 
@@ -384,7 +398,8 @@ extension AlphaRossModel {
         }
     }
 
-    func downloadAssistantModelArtifact(_ artifact: AlphaAssistantModelArtifact, jobID: UUID) async throws -> URL {
+    func downloadAssistantModelArtifact(_ artifact: AlphaAssistantModelArtifact, tier: AlphaCapabilityTier, jobID: UUID) async throws -> URL {
+        alphaPurgeTemporaryAssistantDownloadFiles()
         let isRealMode = true
         if isRealMode && (artifact.downloadURLString.contains("__REPLACE_WITH_VERIFIED") || !artifact.verified || !artifact.releaseReady) {
             throw AlphaAssistantDownloadError.invalidURL
@@ -397,6 +412,8 @@ extension AlphaRossModel {
         request.httpMethod = "GET"
         request.timeoutInterval = 10_800
         request.setValue("Ross-iOS/0.1 model-downloader", forHTTPHeaderField: "User-Agent")
+        request.setValue("application/octet-stream", forHTTPHeaderField: "Accept")
+        request.setValue("identity", forHTTPHeaderField: "Accept-Encoding")
 
         let taskBox = assistantDownloadTaskBoxes[jobID] ?? {
             let created = AlphaAssistantDownloadTaskBox()
@@ -404,9 +421,13 @@ extension AlphaRossModel {
             return created
         }()
         taskBox.pausedByUser = false
+        let fileExtension = (artifact.fileName as NSString).pathExtension.isEmpty
+            ? "gguf"
+            : (artifact.fileName as NSString).pathExtension
         let destinationURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("ross-\(artifact.packId)-\(UUID().uuidString)")
-            .appendingPathExtension((artifact.fileName as NSString).pathExtension.isEmpty ? "gguf" : (artifact.fileName as NSString).pathExtension)
+            .appendingPathComponent("ross-pending-\(tier.rawValue)")
+            .appendingPathExtension(fileExtension)
+        try? FileManager.default.removeItem(at: destinationURL)
 
         let persistedResumeData = try? await store.loadModelResumeData(
             relativePath: persisted.modelJobs.first(where: { $0.id == jobID })?.resumeDataRelativePath
@@ -417,15 +438,21 @@ extension AlphaRossModel {
 
         return try await withTaskCancellationHandler {
             do {
-                let fileURL = try await AlphaBackgroundModelDownloadCenter.shared.download(
-                    request: request,
-                    jobID: jobID,
-                    resumeData: resumeData,
-                    allowsMobileData: allowsMobileData,
-                    destinationURL: destinationURL
-                ) { [weak self] received, expected in
+                let progress: AlphaBackgroundModelDownloadCenter.ProgressHandler = { [weak self] received, expected in
                     await MainActor.run {
                         guard let self else { return }
+                        let expectedBytes = expected > 0 ? expected : artifact.sizeBytes
+                        let minimumByteDelta = max(Int64(8 * 1024 * 1024), expectedBytes / 200)
+                        let now = Date()
+                        let finished = expectedBytes > 0 && received >= expectedBytes
+                        let byteDelta = received - taskBox.lastPublishedProgressBytes
+                        guard finished ||
+                            byteDelta >= minimumByteDelta ||
+                            now.timeIntervalSince(taskBox.lastPublishedProgressAt) >= 0.75 else {
+                            return
+                        }
+                        taskBox.lastPublishedProgressBytes = max(0, received)
+                        taskBox.lastPublishedProgressAt = now
                         self.updateJob(jobID) {
                             $0.bytesDownloaded = max(0, received)
                             if expected > 0 {
@@ -433,6 +460,29 @@ extension AlphaRossModel {
                             }
                             $0.updatedAt = .now
                         }
+                    }
+                }
+                let fileURL: URL
+                do {
+                    fileURL = try await AlphaBackgroundModelDownloadCenter.shared.download(
+                        request: request,
+                        jobID: jobID,
+                        resumeData: resumeData,
+                        allowsMobileData: allowsMobileData,
+                        destinationURL: destinationURL,
+                        progress: progress
+                    )
+                } catch {
+                    let nsError = error as NSError
+                    if resumeData == nil, shouldRetryAssistantDownloadInForeground(nsError) {
+                        fileURL = try await foregroundDownloadAssistantModelArtifact(
+                            request: request,
+                            jobID: jobID,
+                            destinationURL: destinationURL,
+                            progress: progress
+                        )
+                    } else {
+                        throw error
                     }
                 }
                 taskBox.resumeData = nil
@@ -443,8 +493,10 @@ extension AlphaRossModel {
                     $0.resumeDataRelativePath = nil
                     $0.updatedAt = .now
                 }
+                _ = alphaSweepTemporaryAssistantDownloads()
                 return fileURL
             } catch {
+                _ = alphaSweepTemporaryAssistantDownloads()
                 let nsError = error as NSError
                 if nsError.domain == NSURLErrorDomain,
                    nsError.code == NSURLErrorCancelled,
@@ -456,7 +508,46 @@ extension AlphaRossModel {
         } onCancel: {
             taskBox.progressTask?.cancel()
             taskBox.task?.cancel()
+            _ = alphaSweepTemporaryAssistantDownloads()
         }
+    }
+
+    func shouldRetryAssistantDownloadInForeground(_ error: NSError) -> Bool {
+        guard error.domain == NSURLErrorDomain else { return false }
+        switch error.code {
+        case NSURLErrorUnknown,
+             NSURLErrorCancelled,
+             NSURLErrorNetworkConnectionLost,
+             NSURLErrorCannotDecodeRawData,
+             NSURLErrorCannotDecodeContentData:
+            return true
+        default:
+            return false
+        }
+    }
+
+    func foregroundDownloadAssistantModelArtifact(
+        request: URLRequest,
+        jobID: UUID,
+        destinationURL: URL,
+        progress: @escaping AlphaBackgroundModelDownloadCenter.ProgressHandler
+    ) async throws -> URL {
+        updateJob(jobID) {
+            $0.failureReason = nil
+            $0.updatedAt = .now
+        }
+        let (temporaryURL, response) = try await URLSession.shared.download(for: request)
+        if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+            try? FileManager.default.removeItem(at: temporaryURL)
+            _ = alphaSweepTemporaryAssistantDownloads()
+            throw AlphaAssistantDownloadError.httpStatus(http.statusCode)
+        }
+        let bytes = downloadedFileSize(at: temporaryURL)
+        await progress(bytes, bytes)
+        try? FileManager.default.removeItem(at: destinationURL)
+        try FileManager.default.moveItem(at: temporaryURL, to: destinationURL)
+        _ = alphaSweepTemporaryAssistantDownloads()
+        return destinationURL
     }
 
     func downloadedFileSize(at url: URL) -> Int64 {
@@ -506,6 +597,21 @@ extension AlphaRossModel {
     }
 
     func assistantDownloadFailureMessage(_ error: any Error) -> String {
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain {
+            switch nsError.code {
+            case NSURLErrorUnknown:
+                return "The model download service interrupted setup before iOS could classify the error. Retry on Wi-Fi; Ross will use a foreground fallback if the background download fails again."
+            case NSURLErrorNotConnectedToInternet:
+                return "Ross could not reach the model download service. Check the connection and retry on Wi-Fi."
+            case NSURLErrorCancelled:
+                return "The model download was interrupted before it could start. Retry setup; Ross will resume if resume data is available."
+            case NSURLErrorNetworkConnectionLost:
+                return "The model download connection was interrupted. Retry setup; Ross will resume if the server provided resume data."
+            default:
+                break
+            }
+        }
         if let localized = error as? LocalizedError, let description = localized.errorDescription {
             return description
         }
@@ -514,14 +620,7 @@ extension AlphaRossModel {
             return message
         }
 
-        let nsError = error as NSError
         switch (nsError.domain, nsError.code) {
-        case (NSURLErrorDomain, NSURLErrorNotConnectedToInternet):
-            return "Ross could not reach the model download service. Check the connection and retry on Wi-Fi."
-        case (NSURLErrorDomain, NSURLErrorCancelled):
-            return "The model download was interrupted before it could start. Retry setup; Ross will resume if resume data is available."
-        case (NSURLErrorDomain, NSURLErrorNetworkConnectionLost):
-            return "The model download connection was interrupted. Retry setup; Ross will resume if the server provided resume data."
         default:
             return "Ross could not download and verify the selected private assistant. Error \(nsError.domain) \(nsError.code)."
         }
@@ -534,10 +633,21 @@ extension AlphaRossModel {
     func startPackDownload(for tier: AlphaCapabilityTier, mobileAllowed: Bool, existingJobID: UUID?) async {
         let artifact = alphaAssistantModelArtifact(for: tier)
         let policy: AlphaDownloadPolicy = mobileAllowed ? .mobileAllowed : .wifiOnly
+        if let existingInstalled = persisted.installedPacks.first(where: { $0.tier == tier && installedModelPackFileIsUsable($0) }) {
+            activateInstalledPack(existingInstalled)
+            return
+        }
         let existingJob = existingJobID.flatMap { requestedID in
             persisted.modelJobs.first { $0.id == requestedID }
-        } ?? persisted.modelJobs.first {
-            $0.tier == tier && $0.state != .installed
+        } ?? persisted.modelJobs.first { job in
+            job.tier == tier &&
+                (job.state == .queued ||
+                 job.state == .downloading ||
+                 job.state == .verifying ||
+                 job.state == .pausedWaitingForWifi ||
+                 job.state == .pausedUser ||
+                 job.state == .pausedNoStorage ||
+                 job.state == .pausedError)
         }
 
         let job: AlphaModelDownloadJob
@@ -564,6 +674,10 @@ extension AlphaRossModel {
         }
 
         upsertJob(job)
+        let keptResumePaths = Set(persisted.modelJobs.compactMap(\.resumeDataRelativePath))
+        Task {
+            await store.sweepModelResumeData(keeping: keptResumePaths)
+        }
         if shouldRecordSelection {
             persisted.lastModelCatalogRefresh = .now
             persisted.ledgerEntries.insert(
@@ -692,7 +806,7 @@ extension AlphaRossModel {
             )
             persist()
 
-            let downloadedFileURL = try await downloadAssistantModelArtifact(artifact, jobID: job.id)
+            let downloadedFileURL = try await downloadAssistantModelArtifact(artifact, tier: tier, jobID: job.id)
             let downloadedBytes = downloadedFileSize(at: downloadedFileURL)
 
             guard persisted.modelJobs.first(where: { $0.id == job.id })?.state != .pausedUser else {
@@ -706,12 +820,13 @@ extension AlphaRossModel {
             }
             persist()
 
-            let installedArtifact = try await store.installDownloadedPackArtifact(
-                for: tier,
-                fileName: artifact.fileName,
-                downloadedFileURL: downloadedFileURL,
-                expectedChecksum: artifact.sha256
-            )
+                let installedArtifact = try await store.installDownloadedPackArtifact(
+                    for: tier,
+                    fileName: artifact.fileName,
+                    downloadedFileURL: downloadedFileURL,
+                    expectedChecksum: artifact.sha256,
+                    expectedBytes: artifact.sizeBytes
+                )
             let installed = AlphaInstalledModelPack(
                 packId: artifact.packId,
                 tier: tier,
@@ -758,8 +873,10 @@ extension AlphaRossModel {
             assistantDownloadTaskBoxes[job.id] = nil
             persist()
         } catch AlphaAssistantDownloadError.pausedByUser {
+            alphaPurgeTemporaryAssistantDownloadFiles()
             persist()
         } catch {
+            alphaPurgeTemporaryAssistantDownloadFiles()
             updateJob(job.id) {
                 $0.state = .failed
                 $0.failureReason = assistantDownloadFailureMessage(error)
@@ -1118,6 +1235,38 @@ extension AlphaRossModel {
         }
         let scopedPrimaryCase = scopeCaseID.flatMap { id in persisted.cases.first(where: { $0.id == id }) }
         let selectedDocumentTarget = selectedOrLatestAskDocument(for: scopeCaseID)
+        let selectedDocumentsAwaitingExtraction = selectedDocuments.filter { option in
+            guard let document = persisted.cases.first(where: { $0.id == option.caseId })?.documents.first(where: { $0.id == option.id }) else {
+                return false
+            }
+            return (document.processingState == .readingText || document.processingState == .imported) &&
+                !document.hasAskUsableExtractedText
+        }
+        if !selectedDocuments.isEmpty && selectedDocumentsAwaitingExtraction.count == selectedDocuments.count {
+            let titles = selectedDocumentsAwaitingExtraction.prefix(3).map(\.title)
+            let waitingList = titles.joined(separator: ", ")
+            return AlphaAskResult(
+                chatSessionID: nil,
+                chatTurnID: nil,
+                kind: .userAsk,
+                question: question,
+                scopeCaseID: scopeCaseID,
+                scopeLabel: scopeLabel(for: scopeCaseID),
+                selectedDocumentTitles: selectedDocuments.map(\.title),
+                answerTitle: selectedDocuments.count == 1 ? "Ross is still reading this file" : "Ross is still reading these files",
+                answerSections: [
+                    selectedDocuments.count == 1
+                        ? "Ross is still reading \(waitingList). Ask again after extraction finishes."
+                        : "Ross is still reading \(waitingList). Ask again after extraction finishes for the tagged files.",
+                    "Ross will not answer from placeholders before the selected files are ready."
+                ],
+                caseFileSources: [],
+                publicLawPreview: nil,
+                publicLawResults: [],
+                statusNote: "Reading",
+                needsReviewWarning: nil
+            )
+        }
         if let target = selectedDocumentTarget,
            target.document.processingState == .readingText || target.document.processingState == .imported,
            !target.document.hasAskUsableExtractedText,
@@ -1223,12 +1372,6 @@ extension AlphaRossModel {
                 .prefix(3)
                 .map { "\($0.title): \($0.detail)" }
             sections.append(contentsOf: reviewItems)
-        }
-
-        if sections.isEmpty, !selectedDocuments.isEmpty {
-            sections.append(contentsOf: selectedDocuments.prefix(3).map { option in
-                option.isShared ? "\(option.title): shared across matters." : "\(option.title): included for this answer."
-            })
         }
 
         let warnings = scopedReviewItems

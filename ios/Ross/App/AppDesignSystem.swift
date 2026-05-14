@@ -264,65 +264,41 @@ private struct RossGlassSurfaceModifier: ViewModifier {
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
 
-        if #available(iOS 26, macOS 26, *) {
-            let glassTint = tint.opacity(colorScheme == .dark ? 0.22 : 0.12)
-            let stroked = content
-                .overlay {
-                    shape.strokeBorder(
+        // Native iOS 26 glassEffect is visually beautiful, but it currently causes
+        // AttributeGraph churn on the assistant setup screen. Keep the glass look
+        // with stable material/gradient layers until the renderer is safe here.
+        content
+            .background {
+                ZStack {
+                    shape.fill(.ultraThinMaterial)
+                    shape.fill(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(colorScheme == .dark ? strokeOpacity * 0.55 : strokeOpacity),
-                                tint.opacity(strokeOpacity * 0.22)
+                                Color.rossGlassFill.opacity(fillOpacity),
+                                tint.opacity(colorScheme == .dark ? 0.08 : 0.05),
+                                Color.rossGlassSubtleFill.opacity(fillOpacity * 0.82)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 0.9
-                    )
-                }
-                .shadow(color: Color.rossShadow.opacity(shadowOpacity), radius: shadowRadius, y: shadowY)
-
-            if interactive {
-                stroked
-                    .glassEffect(.regular.tint(glassTint).interactive(), in: .rect(cornerRadius: cornerRadius))
-            } else {
-                stroked
-                    .glassEffect(.regular.tint(glassTint), in: .rect(cornerRadius: cornerRadius))
-            }
-        } else {
-            content
-                .background {
-                    ZStack {
-                        shape.fill(.ultraThinMaterial)
-                        shape.fill(
-                            LinearGradient(
-                                colors: [
-                                    Color.rossGlassFill.opacity(fillOpacity),
-                                    tint.opacity(colorScheme == .dark ? 0.08 : 0.05),
-                                    Color.rossGlassSubtleFill.opacity(fillOpacity * 0.82)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
                         )
-                    }
-                }
-                .overlay {
-                    shape.strokeBorder(
-                        LinearGradient(
-                            colors: [
-                                Color.rossGlassStroke.opacity(strokeOpacity),
-                                tint.opacity(strokeOpacity * 0.28)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
                     )
                 }
-                .clipShape(shape)
-                .shadow(color: Color.rossShadow.opacity(shadowOpacity), radius: shadowRadius, y: shadowY)
-        }
+            }
+            .overlay {
+                shape.strokeBorder(
+                    LinearGradient(
+                        colors: [
+                            Color.rossGlassStroke.opacity(strokeOpacity),
+                            tint.opacity(strokeOpacity * 0.28)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+            }
+            .clipShape(shape)
+            .shadow(color: Color.rossShadow.opacity(shadowOpacity), radius: shadowRadius, y: shadowY)
     }
 }
 

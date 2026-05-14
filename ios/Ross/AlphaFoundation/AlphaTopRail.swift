@@ -119,6 +119,7 @@ struct AlphaTodayWorkbenchScreen: View {
 
     var body: some View {
         let work = model.preparedWorkNeedingAttention()
+        let visibleWork = Array(work.prefix(3))
         let todayDates = model.todayDateRows()
         let todayTasks = model.todayTasks()
         let upcomingDates = model.upcomingDateRows()
@@ -126,8 +127,8 @@ struct AlphaTodayWorkbenchScreen: View {
             LazyVStack(alignment: .leading, spacing: alphaSectionSpacing) {
                 RossHeroCard(
                     eyebrow: alphaGreeting(),
-                    title: work.isEmpty ? "No prepared work needs review" : "\(work.count) item(s) need review",
-                    detail: "Works locally on this device",
+                    title: work.isEmpty ? "No prepared work needs review" : alphaPreparedWorkHeadline(work.count),
+                    detail: nil,
                     showsMedia: false,
                     mediaHeight: 108,
                     logoSize: 58
@@ -135,10 +136,41 @@ struct AlphaTodayWorkbenchScreen: View {
                     AlphaLocalPrivacyBadge()
                 }
 
-                if let first = work.first {
-                    AlphaPreparedWorkCard(model: model, item: first, prominent: true)
-                } else {
+                if let setupJob = alphaActiveAssistantSetupJob(from: model.persisted.modelJobs) {
+                    AlphaAssistantSetupProgressCard(model: model, job: setupJob)
+                }
+
+                if visibleWork.isEmpty {
                     AlphaHonestEmptyCard(title: "Nothing prepared yet", detail: "Import matter files or ask Ross to prepare today. Ross will not invent work without local matter state.")
+                } else {
+                    ForEach(visibleWork) { item in
+                        AlphaPreparedWorkCard(model: model, item: item, prominent: visibleWork.first?.id == item.id)
+                    }
+
+                    if work.count > visibleWork.count {
+                        Button {
+                            alphaHaptic(.selection)
+                            model.persisted.selectedTab = .work
+                            model.persist(workspaceChanged: false)
+                        } label: {
+                            HStack(spacing: 10) {
+                                Text("View all \(alphaPreparedWorkCountLabel(work.count))")
+                                    .font(.subheadline.weight(.semibold))
+                                Spacer(minLength: 0)
+                                Image(systemName: "arrow.right")
+                                    .font(.system(size: 13, weight: .bold))
+                            }
+                            .foregroundStyle(Color.rossInk)
+                            .padding(.horizontal, 16)
+                            .frame(height: 48)
+                            .background(Color.rossCardBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    .stroke(Color.rossBorder, lineWidth: 1)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
 
                 AlphaTodayDatesCard(title: "Upcoming dates and urgent tasks", dates: todayDates + Array(upcomingDates.prefix(3)), tasks: Array(todayTasks.prefix(3)), model: model)
@@ -219,7 +251,7 @@ struct AlphaPreparedWorkScreen: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 14) {
                 HStack {
-                    AlphaInlineHeader(eyebrow: "Work", title: "Prepared work inbox", detail: "\(items.count) item(s)")
+                    AlphaInlineHeader(eyebrow: "Work", title: "Prepared work inbox", detail: alphaPreparedWorkCountLabel(items.count))
                     Spacer(minLength: 0)
                     Menu {
                         Button("All") { statusFilter = nil }
@@ -240,7 +272,7 @@ struct AlphaPreparedWorkScreen: View {
                 } else {
                     ForEach(grouped.keys.sorted(), id: \.self) { matterName in
                         VStack(alignment: .leading, spacing: 10) {
-                            AlphaWorkspaceSectionLabel(title: matterName, detail: "\(grouped[matterName]?.count ?? 0) item(s)")
+                            AlphaWorkspaceSectionLabel(title: matterName, detail: alphaPreparedWorkCountLabel(grouped[matterName]?.count ?? 0))
                             ForEach(grouped[matterName] ?? []) { item in
                                 AlphaPreparedWorkCard(model: model, item: item, prominent: false)
                             }
@@ -345,13 +377,13 @@ struct AlphaTodayDatesCard: View {
     var body: some View {
         RossSectionCard {
             VStack(alignment: .leading, spacing: 12) {
-                AlphaWorkspaceSectionLabel(title: title, detail: "\(dates.count + tasks.count) item(s)")
+                AlphaWorkspaceSectionLabel(title: title, detail: alphaPlainItemCountLabel(dates.count + tasks.count))
                 if dates.isEmpty && tasks.isEmpty {
                     Text("No dates or urgent tasks saved for today.")
                         .font(.subheadline)
                         .foregroundStyle(Color.rossInk.opacity(0.66))
                 } else {
-                    ForEach(dates, id: \.title) { row in
+                    ForEach(Array(dates.enumerated()), id: \.offset) { _, row in
                         AlphaSummaryRow(title: row.title, detail: row.detail, tint: Color.rossAccent)
                     }
                     ForEach(tasks) { task in
@@ -380,6 +412,71 @@ struct AlphaHonestEmptyCard: View {
             }
         }
     }
+}
+
+private struct AlphaAssistantSetupProgressCard: View {
+    @Bindable var model: AlphaRossModel
+    let job: AlphaModelDownloadJob
+
+    var body: some View {
+        RossSectionCard(title: "Setting up Ross", subtitle: alphaAssistantStateLabel(job.state)) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("\(job.tier.title) is being prepared on this iPhone. You can keep using Ross while setup continues.")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.rossInk.opacity(0.72))
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let progress = alphaDownloadProgressValue(job) {
+                    ProgressView(value: progress)
+                        .tint(Color.rossAccent)
+                    Text(alphaAssistantSetupProgressLabel(job))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.rossInk.opacity(0.62))
+                }
+
+                Button("Open assistant setup") {
+                    alphaHaptic(.selection)
+                    model.path.append(.privateAISettings)
+                }
+                .buttonStyle(.bordered)
+                .tint(Color.rossAccent)
+            }
+        }
+    }
+}
+
+private func alphaActiveAssistantSetupJob(from jobs: [AlphaModelDownloadJob]) -> AlphaModelDownloadJob? {
+    jobs
+        .filter {
+            $0.state == .queued ||
+                $0.state == .downloading ||
+                $0.state == .verifying ||
+                $0.state == .pausedWaitingForWifi ||
+                $0.state == .pausedNoStorage ||
+                $0.state == .pausedError
+        }
+        .sorted { $0.updatedAt > $1.updatedAt }
+        .first
+}
+
+private func alphaAssistantSetupProgressLabel(_ job: AlphaModelDownloadJob) -> String {
+    guard job.totalBytes > 0 else { return alphaAssistantStateLabel(job.state) }
+    let downloaded = max(0, job.bytesDownloaded)
+    let downloadedLabel = ByteCountFormatter.string(fromByteCount: downloaded, countStyle: .file)
+    let totalLabel = ByteCountFormatter.string(fromByteCount: job.totalBytes, countStyle: .file)
+    return "\(downloadedLabel) of \(totalLabel)"
+}
+
+private func alphaPreparedWorkHeadline(_ count: Int) -> String {
+    count == 1 ? "1 prepared item needs review" : "\(count) prepared items need review"
+}
+
+private func alphaPreparedWorkCountLabel(_ count: Int) -> String {
+    count == 1 ? "1 prepared item" : "\(count) prepared items"
+}
+
+private func alphaPlainItemCountLabel(_ count: Int) -> String {
+    count == 1 ? "1 item" : "\(count) items"
 }
 
 private func alphaPreparedBadgeColor(_ badge: AlphaPreparedWorkBadge) -> Color {

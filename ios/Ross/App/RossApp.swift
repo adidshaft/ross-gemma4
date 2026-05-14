@@ -2046,6 +2046,10 @@ struct RossApp: App {
     @UIApplicationDelegateAdaptor(RossAppDelegate.self) private var appDelegate
     #endif
 
+    init() {
+        alphaSweepTemporaryAssistantDownloadsAtLaunch()
+    }
+
     var body: some Scene {
         WindowGroup {
             switch launchMode {

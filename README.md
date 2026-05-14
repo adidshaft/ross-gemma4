@@ -15,8 +15,7 @@ ROSS-Gemma4 is a mobile-first, privacy-preserving legal workbench built around G
 <p align="center">
   <img src="docs/images/onboarding_welcome.png" width="220" alt="Private Onboarding" />
   <img src="docs/images/dashboard_needs_attention.png" width="220" alt="Dashboard" />
-  <img src="docs/images/matter_needs_review.png" width="220" alt="Matter Needs Review" />
-  <img src="docs/images/ross_mock_case_source_backed_answer.png" width="220" alt="ROSS source-backed answer for the Rivera v. Northstar mock case" />
+  <img src="docs/images/ross_multilingual_gemma_verified.png" width="220" alt="ROSS answering Hindi and Bengali prompts locally with Gemma on the mock Menon case" />
 </p>
 
 ---

@@ -742,7 +742,17 @@ func alphaNextActionDate(for caseMatter: AlphaCaseMatter, model: AlphaRossModel)
 
 @MainActor
 func alphaActiveSetupJob(_ model: AlphaRossModel) -> AlphaModelDownloadJob? {
-    model.persisted.modelJobs.first {
+    if model.activeRuntimeHealth?.available == true {
+        return model.persisted.modelJobs.first {
+            switch $0.state {
+            case .queued, .downloading, .pausedWaitingForWifi, .verifying:
+                return true
+            case .pausedUser, .pausedNoStorage, .pausedError, .failed, .notStarted, .installed, .cancelled:
+                return false
+            }
+        }
+    }
+    return model.persisted.modelJobs.first {
         switch $0.state {
         case .queued, .downloading, .pausedWaitingForWifi, .pausedUser, .pausedNoStorage, .pausedError, .verifying, .failed:
             true

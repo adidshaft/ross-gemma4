@@ -121,7 +121,9 @@ struct AlphaOnboardingScreen: View {
     @State private var didChooseModel = false
 
     private var recommendedTier: AlphaCapabilityTier {
-        model.recommendedOnDeviceTier()
+        // First-run setup must be the fastest reliable path. Larger packs remain
+        // available explicitly from assistant settings after Ross is usable.
+        .flash
     }
 
     var body: some View {
@@ -139,6 +141,7 @@ struct AlphaOnboardingScreen: View {
             let heroGap: CGFloat = compact ? 6 : 8
             let topPadding = max(proxy.safeAreaInsets.top + (compact ? 14 : 18), compact ? 72 : 82)
             let bottomPadding = max(proxy.safeAreaInsets.bottom + (compact ? 10 : 14), compact ? 22 : 28)
+            let displayedTier = didChooseModel ? model.selectedTier : recommendedTier
 
             ZStack {
                 AlphaSetupBackdrop()
@@ -166,7 +169,7 @@ struct AlphaOnboardingScreen: View {
                     Spacer(minLength: compact ? 14 : 18)
 
                     AlphaOnboardingModelSelector(
-                        selectedTier: model.selectedTier,
+                        selectedTier: displayedTier,
                         recommendedTier: recommendedTier,
                         compact: compact
                     ) { tier in
@@ -184,6 +187,9 @@ struct AlphaOnboardingScreen: View {
 
                     VStack(spacing: compact ? 7 : 9) {
                         Button {
+                            if !didChooseModel {
+                                model.selectedTier = recommendedTier
+                            }
                             model.finishPackSetup()
                         } label: {
                             Text(rossLocalized("setup_assistant"))

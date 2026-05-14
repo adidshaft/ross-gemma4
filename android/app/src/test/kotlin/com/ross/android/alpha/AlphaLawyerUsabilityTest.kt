@@ -446,6 +446,54 @@ class AlphaLawyerUsabilityTest {
     }
 
     @Test
+    fun `generic legal question without local source does not pretend files were used`() {
+        var runtimeWasCalled = false
+        val controller = buildController(
+            secretKeyProvider = InMemorySecretKeyProvider(),
+            askRuntimeProviderOverride = {
+                TestMatterAnswerProvider { input ->
+                    runtimeWasCalled = true
+                    AlphaLocalModelOutput(
+                        rawText = "Should not be called for an ungrounded generic definition.",
+                        parsedJson = null,
+                        schemaValid = false,
+                        warnings = emptyList(),
+                        sourceRefs = input.sourcePack.map { it.sourceRef },
+                    )
+                }
+            },
+        )
+        controller.persisted = controller.persisted.copy(
+            settings = controller.persisted.settings.copy(activeTier = AlphaCapabilityTier.CaseAssociate),
+            installedPacks = listOf(
+                AlphaInstalledPack(
+                    packId = "case-associate-local-debug-pack",
+                    tier = AlphaCapabilityTier.CaseAssociate,
+                    installRelativePath = "model-packs/case_associate/case-associate-local-debug.task",
+                    checksumSha256 = "a".repeat(64),
+                    artifactKind = "local_model_artifact",
+                    runtimeMode = AlphaPackRuntimeMode.MediapipeLlm,
+                    developmentOnly = false,
+                    checksumVerified = true,
+                    isActive = true,
+                )
+            ),
+        )
+
+        controller.submitAsk(
+            question = "What is FMLA?",
+            scopeCaseId = null,
+            webEnabled = false,
+        )
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertFalse(runtimeWasCalled)
+        assertEquals("No local source for this question", controller.latestAskResult?.answerTitle)
+        assertTrue(controller.latestAskResult?.caseFileSources?.isEmpty() == true)
+        assertFalse(controller.latestAskResult?.answerTitle == "Ross drafted this from your files")
+    }
+
+    @Test
     fun `dock question still falls back to standard ask flow`() {
         val controller = buildController(secretKeyProvider = InMemorySecretKeyProvider())
 

@@ -439,7 +439,7 @@ struct AlphaFullScreenChatTurn: View {
                         if !result.selectedDocumentTitles.isEmpty {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 8) {
-                                    ForEach(result.selectedDocumentTitles, id: \.self) { title in
+                                    ForEach(Array(result.selectedDocumentTitles.enumerated()), id: \.offset) { _, title in
                                         AlphaRossTokenChip(
                                             title: title,
                                             detail: nil,
@@ -590,7 +590,7 @@ struct AlphaPendingLocalModelCard: View {
             if style.showsTaggedFilesAsChips, !result.selectedDocumentTitles.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        ForEach(result.selectedDocumentTitles, id: \.self) { title in
+                        ForEach(Array(result.selectedDocumentTitles.enumerated()), id: \.offset) { _, title in
                             AlphaRossTokenChip(
                                 title: title,
                                 detail: nil,
@@ -809,7 +809,7 @@ struct AlphaAskTurnCard: View {
                     if !result.selectedDocumentTitles.isEmpty, contextDocumentTitle == nil {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
-                                ForEach(result.selectedDocumentTitles, id: \.self) { title in
+                                ForEach(Array(result.selectedDocumentTitles.enumerated()), id: \.offset) { _, title in
                                     AlphaRossTokenChip(
                                         title: title,
                                         detail: nil,
@@ -1172,6 +1172,25 @@ func alphaCompactPrivacyLabel(_ result: AlphaAskResult) -> String {
     return "On-device only"
 }
 
+// Compile these regex patterns once instead of once per SwiftUI body re-eval.
+// `AlphaFormattedAnswerText` is re-rendered every time a streamed answer
+// token lands, so inline `.replacingOccurrences(of:..., options:.regularExpression)`
+// was recompiling 5 regexes for every line of every render — a major
+// per-frame cost on physical devices.
+private let alphaAnswerHeadingRegex = try! NSRegularExpression(pattern: #"^\s*#{1,6}\s*"#)
+private let alphaAnswerJSONPrefixRegex = try! NSRegularExpression(
+    pattern: #"^\s*json\s*(?=\{)"#,
+    options: [.caseInsensitive]
+)
+private let alphaAnswerBoldRegex = try! NSRegularExpression(pattern: #"\*\*(.*?)\*\*"#)
+private let alphaAnswerQuoteRegex = try! NSRegularExpression(pattern: #"^>\s*"#)
+private let alphaAnswerNumberedRegex = try! NSRegularExpression(pattern: #"^\d+\.\s"#)
+
+private func alphaApplyRegex(_ regex: NSRegularExpression, to text: String, with replacement: String) -> String {
+    let range = NSRange(text.startIndex..., in: text)
+    return regex.stringByReplacingMatches(in: text, range: range, withTemplate: replacement)
+}
+
 /// Renders answer text with basic formatting: bullets, numbered lists, and bold markers.
 struct AlphaFormattedAnswerText: View {
     let text: String
@@ -1186,21 +1205,23 @@ struct AlphaFormattedAnswerText: View {
     private var lines: [AnswerLine] {
         let rawLines = text.components(separatedBy: "\n")
         return rawLines.enumerated().compactMap { index, line in
-            var trimmed = line
-                .trimmingCharacters(in: .whitespaces)
-                .replacingOccurrences(of: #"^\s*#{1,6}\s*"#, with: "", options: .regularExpression)
-                .replacingOccurrences(of: #"(?i)^\s*json\s*(?=\{)"#, with: "", options: .regularExpression)
-                .replacingOccurrences(of: #"\*\*(.*?)\*\*"#, with: "$1", options: .regularExpression)
-                .trimmingCharacters(in: .whitespaces)
+            var trimmed = line.trimmingCharacters(in: .whitespaces)
+            trimmed = alphaApplyRegex(alphaAnswerHeadingRegex, to: trimmed, with: "")
+            trimmed = alphaApplyRegex(alphaAnswerJSONPrefixRegex, to: trimmed, with: "")
+            trimmed = alphaApplyRegex(alphaAnswerBoldRegex, to: trimmed, with: "$1")
+            trimmed = trimmed.trimmingCharacters(in: .whitespaces)
             guard !trimmed.isEmpty else { return nil }
             if trimmed == "---" || trimmed == "```" { return nil }
-            trimmed = trimmed.replacingOccurrences(of: #"^>\s*"#, with: "", options: .regularExpression)
+            trimmed = alphaApplyRegex(alphaAnswerQuoteRegex, to: trimmed, with: "")
             if trimmed.hasPrefix("- ") || trimmed.hasPrefix("• ") || trimmed.hasPrefix("* ") {
                 return AnswerLine(id: index, text: String(trimmed.dropFirst(2)), isBullet: true, bulletPrefix: "•")
             }
-            if let dotRange = trimmed.range(of: #"^\d+\.\s"#, options: .regularExpression) {
-                let prefix = String(trimmed[dotRange]).trimmingCharacters(in: .whitespaces)
-                let body = String(trimmed[dotRange.upperBound...])
+            let nsTrimmed = trimmed as NSString
+            let nsRange = NSRange(location: 0, length: nsTrimmed.length)
+            if let match = alphaAnswerNumberedRegex.firstMatch(in: trimmed, range: nsRange) {
+                let matched = nsTrimmed.substring(with: match.range)
+                let prefix = matched.trimmingCharacters(in: .whitespaces)
+                let body = nsTrimmed.substring(from: match.range.upperBound)
                 return AnswerLine(id: index, text: body, isBullet: true, bulletPrefix: prefix)
             }
             return AnswerLine(id: index, text: trimmed, isBullet: false, bulletPrefix: nil)
@@ -1254,7 +1275,7 @@ extension AlphaAskResult {
     }
 
     var isPendingLocalModelResponse: Bool {
-        answerTitle == "Private assistant is reading your files"
+        answerTitle == "Ross is answering..."
             && (statusNote?.hasSuffix("running locally") ?? false)
             && publicLawPreview == nil
             && publicLawResults.isEmpty

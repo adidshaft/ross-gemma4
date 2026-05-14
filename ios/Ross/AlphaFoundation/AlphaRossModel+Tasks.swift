@@ -158,7 +158,11 @@ extension AlphaRossModel {
             let latestDocument = matter.documents.sorted { $0.importedAt > $1.importedAt }.first
             let sourceRefs = Array(matter.sourceRefs.prefix(3))
 
-            if let latestDocument, latestDocument.indexingStatus == .indexed || latestDocument.indexingStatus == .partial || latestDocument.processingState == .ready || latestDocument.processingState == .needsConfirmation {
+            if let latestDocument,
+               latestDocument.indexingStatus == .indexed ||
+                latestDocument.indexingStatus == .partial ||
+                latestDocument.processingState == .ready ||
+                latestDocument.processingState == .needsConfirmation {
                 let reviewCount = reviews.filter { $0.documentId == latestDocument.id }.count
                 items.append(
                     AlphaPreparedWorkItem(

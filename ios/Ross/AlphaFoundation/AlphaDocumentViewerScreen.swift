@@ -975,7 +975,7 @@ struct AlphaDocumentInspectCard: View {
                                 .foregroundStyle(Color.rossInk.opacity(0.65))
                         }
 
-                        ForEach(sourceRefs) { source in
+                        ForEach(Array(sourceRefs.enumerated()), id: \.offset) { _, source in
                             Button {
                                 onOpenSourceRef(source)
                             } label: {
@@ -1693,14 +1693,9 @@ struct AlphaSourceRefChips: View {
                         .foregroundStyle(Color.rossInk.opacity(0.65))
                 }
             } else {
-                Text(sourceRefs.count == 1 ? "Source" : "Sources")
-                    .font(.caption2.weight(.bold))
-                    .textCase(.uppercase)
-                    .foregroundStyle(Color.rossInk.opacity(0.65))
-
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        ForEach(sourceRefs.prefix(5)) { sourceRef in
+                        ForEach(Array(sourceRefs.prefix(5).enumerated()), id: \.offset) { _, sourceRef in
                             Button {
                                 onOpenSourceRef(sourceRef)
                             } label: {

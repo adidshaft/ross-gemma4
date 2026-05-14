@@ -1067,13 +1067,20 @@ extension AlphaRossModel {
         guard activePack != nil else { return }
         let selectedDocuments = selectedAskDocuments(for: scopeCaseID)
         let selectedDocumentIDs = Set(selectedDocuments.map(\.id))
-        if persisted.cases.flatMap(\.documents).contains(where: {
-            selectedDocumentIDs.contains($0.id) &&
-                ($0.processingState == .readingText || $0.processingState == .imported) &&
-                !$0.hasAskUsableExtractedText
-        }) {
-            return
-        }
+        // Single pass over cases instead of materializing flatMap; bail as
+        // soon as we find any in-progress selected doc.
+        let blockedByPendingExtraction: Bool = {
+            for caseMatter in persisted.cases {
+                for document in caseMatter.documents where selectedDocumentIDs.contains(document.id) {
+                    if (document.processingState == .readingText || document.processingState == .imported)
+                        && !document.hasAskUsableExtractedText {
+                        return true
+                    }
+                }
+            }
+            return false
+        }()
+        if blockedByPendingExtraction { return }
         let sourcePack = shouldUseMatterSourcesForAsk(
             question: question,
             scopeCaseID: scopeCaseID,
@@ -1135,12 +1142,16 @@ extension AlphaRossModel {
             extractionRunId: nil,
             input: input
         )
+        // Precompute outside the mutate closure: `activeLocalModelRunningStatus`
+        // ultimately reads `persisted`, which would trigger an exclusive-access
+        // violation if called while we hold an inout into `persisted.cases[...]`.
+        let initialRunningStatus = self.activeLocalModelRunningStatus()
         updateStoredAskTurn(
             scopeCaseID: scopeCaseID,
             sessionID: chatSessionID,
             turnID: chatTurnID
         ) { turn in
-            turn.statusNote = self.activeLocalModelRunningStatus()
+            turn.statusNote = initialRunningStatus
             turn.modelInvocation = invocation
         }
         Task {
@@ -1157,6 +1168,14 @@ extension AlphaRossModel {
                     await MainActor.run {
                         let sections = AlphaMatterAskPayloadParser.displaySections(from: [cleaned])
                         let displaySections = sections.isEmpty ? [cleaned] : sections
+                        // Pre-compute filtered source refs BEFORE entering the mutation
+                        // closure. Reading `persisted` (via sourceRefPointsToDocument)
+                        // while we hold an inout reference to a path inside `persisted`
+                        // triggers Swift's exclusive-access runtime check and crashes.
+                        let filteredSourceRefs = partial.sourceRefs.filter {
+                            self.sourceRefPointsToDocument($0)
+                        }
+                        let runningStatus = self.activeLocalModelRunningStatus()
                         self.updateStoredAskTurn(
                             scopeCaseID: scopeCaseID,
                             sessionID: chatSessionID,
@@ -1164,15 +1183,15 @@ extension AlphaRossModel {
                         ) { turn in
                             turn.answerTitle = "Ross is drafting..."
                             turn.answerSections = displaySections
-                            turn.sourceRefs = partial.sourceRefs.filter { self.sourceRefPointsToDocument($0) }
-                            turn.statusNote = self.activeLocalModelRunningStatus()
+                            turn.sourceRefs = filteredSourceRefs
+                            turn.statusNote = runningStatus
                             turn.modelInvocation = invocation
                         }
                         if var latest = self.latestAskResult, latest.chatTurnID == chatTurnID {
                             latest.answerTitle = "Ross is drafting..."
                             latest.answerSections = displaySections
-                            latest.caseFileSources = partial.sourceRefs.filter { self.sourceRefPointsToDocument($0) }
-                            latest.statusNote = self.activeLocalModelRunningStatus()
+                            latest.caseFileSources = filteredSourceRefs
+                            latest.statusNote = runningStatus
                             self.latestAskResult = latest
                         }
                     }
@@ -1193,7 +1212,16 @@ extension AlphaRossModel {
                 )
                 let payload = modelPayload.flatMap {
                     self.isUsefulMatterAskPayload($0) && self.alphaPayloadMatchesRequestedLanguage($0, requestedLanguage: requestedLanguage) ? $0 : nil
-                }
+                } ?? {
+                    guard provider.runtimeMode == .deterministicDev else { return nil }
+                    let fallback = self.developmentLocalAskPayload(
+                        question: question,
+                        scopeCaseID: scopeCaseID,
+                        baseResult: baseResult
+                    )
+                    guard self.alphaPayloadMatchesRequestedLanguage(fallback, requestedLanguage: requestedLanguage) else { return nil }
+                    return fallback
+                }()
                 guard let payload else {
                     self.updateStoredAskTurn(
                         scopeCaseID: scopeCaseID,
@@ -1302,6 +1330,27 @@ extension AlphaRossModel {
         copy.answerSections = []
         copy.statusNote = "Private assistant"
         return copy
+    }
+
+    func developmentLocalAskPayload(
+        question: String,
+        scopeCaseID: UUID?,
+        baseResult: AlphaAskResult
+    ) -> AlphaMatterAskRuntimePayload {
+        let localResult = buildLocalAskResult(question: question, scopeCaseID: scopeCaseID)
+        let trimmedHeadline = localResult.answerTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        let fallbackHeadline = localModelAnswerBaseResult(from: baseResult).answerTitle
+        let headline = trimmedHeadline.isEmpty ? fallbackHeadline : trimmedHeadline
+        let sections = AlphaMatterAskPayloadParser.normalizedDisplaySections(localResult.answerSections)
+        let normalizedSections = sections.isEmpty
+            ? ["Ross found local matter context on this device, but advocate review is still recommended."]
+            : sections
+        let trimmedStatusNote = localResult.statusNote?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return AlphaMatterAskRuntimePayload(
+            headline: headline,
+            sections: Array(normalizedSections.prefix(3)),
+            statusNote: trimmedStatusNote.isEmpty ? "Private assistant" : trimmedStatusNote
+        )
     }
 
     func shouldUseMatterSourcesForAsk(

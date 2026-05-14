@@ -69,7 +69,18 @@ struct AlphaRossRootView: View {
             }
         }
         .task(id: authController?.session?.subject) {
-            await model.loadIfNeeded()
+            let loadTask = Task {
+                await model.loadIfNeeded()
+            }
+            try? await Task.sleep(for: .milliseconds(350))
+            await MainActor.run {
+                if showingLaunchSplash {
+                    withAnimation(.easeOut(duration: 0.12)) {
+                        showingLaunchSplash = false
+                    }
+                }
+            }
+            await loadTask.value
             await MainActor.run {
                 model.syncWorkspaceForSession(authController?.session)
                 model.runMorningRoutineIfNeeded()

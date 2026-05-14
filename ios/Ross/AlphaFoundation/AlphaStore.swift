@@ -47,7 +47,12 @@ struct AlphaImportedDocument {
 
 @discardableResult
 func alphaSweepTemporaryAssistantDownloadsAtLaunch(fileManager: FileManager = .default) -> Int64 {
-    let temporaryURL = FileManager.default.temporaryDirectory
+    alphaSweepTemporaryAssistantDownloads(fileManager: fileManager)
+}
+
+@discardableResult
+func alphaSweepTemporaryAssistantDownloads(fileManager: FileManager = .default) -> Int64 {
+    let temporaryURL = fileManager.temporaryDirectory
     var reclaimedBytes: Int64 = 0
     guard let contents = try? fileManager.contentsOfDirectory(
         at: temporaryURL,
