@@ -1,7 +1,7 @@
 # iOS Simulator QA Report
 
 Date: 2026-05-03  
-Branch: `codex/Gemma 4-gguf-model-strategy`  
+Branch: `gemma-4-gguf-model-strategy`  
 Scope: iOS simulator pass for onboarding, matter workspace, document review, Ask Ross, private assistant setup/download, command routing, and public-law review behavior.
 
 ## Summary

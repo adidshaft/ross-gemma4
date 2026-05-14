@@ -2,7 +2,7 @@
 
 ## Branch Used
 
-- `codex/Gemma 4-gguf-model-strategy`
+- `gemma-4-gguf-model-strategy`
 
 ## What Changed
 

@@ -2,7 +2,7 @@
 
 ## 2026-04-24 Gemma 4 metadata update
 
-- Branch: `codex/Gemma 4-gguf-model-strategy`
+- Branch: `gemma-4-gguf-model-strategy`
 - Quick Start metadata: Gemma 4 E2B Q4
 - Case Associate metadata: Gemma 4 E4B Q4
 - Senior Drafting Support metadata: Gemma 4 26B-A4B Q4
