@@ -18,12 +18,16 @@ struct AlphaPrivateAISettingsScreen: View {
     @State private var downloadPreferencesExpanded = false
 
     private var visibleSetupJobs: [AlphaModelDownloadJob] {
-        model.persisted.modelJobs.filter { job in
+        let activeTier = model.activePack?.tier
+        let activeRuntimeReady = model.activeRuntimeHealth?.available == true
+        return model.persisted.modelJobs.filter { job in
             switch job.state {
-            case .queued, .downloading, .pausedWaitingForWifi, .pausedUser, .pausedNoStorage, .pausedError, .verifying, .failed:
-                true
+            case .queued, .downloading, .pausedWaitingForWifi, .verifying:
+                return true
+            case .pausedUser, .pausedNoStorage, .pausedError, .failed:
+                return !activeRuntimeReady || job.tier == activeTier
             case .notStarted, .installed, .cancelled:
-                false
+                return false
             }
         }
     }
@@ -198,6 +202,7 @@ struct AlphaPrivateAISettingsScreen: View {
 
                 RossSectionCard(title: "Model storage") {
                     VStack(alignment: .leading, spacing: 12) {
+                        AlphaAssistantStorageFootprintRow(model: model)
                         Text("App updates keep downloaded models in Ross storage. A full uninstall removes the app container; iOS does not let Ross ask a question during uninstall.")
                             .font(.caption)
                             .foregroundStyle(Color.rossInk.opacity(0.68))
@@ -215,6 +220,7 @@ struct AlphaPrivateAISettingsScreen: View {
                     }
                 }
 
+                AlphaSamplerSettingsCard(model: model)
                 AlphaPrivateAITechnicalDiagnosticsCard(model: model)
             }
             .padding(alphaScreenPadding)
@@ -921,6 +927,155 @@ func alphaConfidenceSupportText(confidence: Double, needsReview: Bool) -> String
 
 func alphaFileSizeLabel(_ bytes: Int64) -> String {
     ByteCountFormatter.string(fromByteCount: max(0, bytes), countStyle: .file)
+}
+
+private struct AlphaAssistantStorageFootprintRow: View {
+    @Bindable var model: AlphaRossModel
+    @State private var breakdown = AlphaAssistantStorageBreakdown(
+        modelPackBytes: 0,
+        resumeBytes: 0,
+        pendingDownloadBytes: 0,
+        deviceCacheBytes: 0
+    )
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 12) {
+                Image(systemName: "internaldrive")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.rossAccent)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Assistant files")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.rossInk)
+                    Text(alphaFileSizeLabel(breakdown.totalBytes))
+                        .font(.caption)
+                        .foregroundStyle(Color.rossInk.opacity(0.66))
+                }
+                Spacer(minLength: 0)
+                Button("Reclaim") {
+                    model.reclaimAssistantStorageLeaks()
+                    Task { await refresh() }
+                }
+                .font(.caption.weight(.semibold))
+                .buttonStyle(.bordered)
+                .tint(Color.rossAccent)
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                storageDetail("Verified models", bytes: breakdown.modelPackBytes)
+                storageDetail("Interrupted downloads", bytes: breakdown.pendingDownloadBytes)
+                storageDetail("Resume data", bytes: breakdown.resumeBytes)
+                storageDetail("Device cache", bytes: breakdown.deviceCacheBytes)
+            }
+        }
+        .task { await refresh() }
+    }
+
+    private func storageDetail(_ label: String, bytes: Int64) -> some View {
+        HStack(spacing: 8) {
+            Text(label)
+            Spacer(minLength: 8)
+            Text(alphaFileSizeLabel(bytes))
+        }
+        .font(.caption)
+        .foregroundStyle(bytes > 0 ? Color.rossInk.opacity(0.72) : Color.rossInk.opacity(0.42))
+    }
+
+    private func refresh() async {
+        breakdown = await model.store.assistantStorageBreakdown()
+    }
+}
+
+private struct AlphaSamplerSettingsCard: View {
+    @Bindable var model: AlphaRossModel
+
+    var body: some View {
+        let settings = model.persisted.settings.llamaSamplerSettings
+        RossSectionCard(title: "Answer tuning") {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("Tune the local Gemma sampler. Legal QA defaults keep answers grounded and less rambly.")
+                    .font(.footnote)
+                    .foregroundStyle(Color.rossInk.opacity(0.66))
+
+                samplerSlider(
+                    title: "Temperature",
+                    value: settings.temperature,
+                    range: 0.0...1.0,
+                    step: 0.05
+                ) { newValue in
+                    model.updateSettings { $0.llamaSamplerSettings.temperature = newValue }
+                }
+
+                samplerSlider(
+                    title: "Top P",
+                    value: settings.topP,
+                    range: 0.5...1.0,
+                    step: 0.05
+                ) { newValue in
+                    model.updateSettings { $0.llamaSamplerSettings.topP = newValue }
+                }
+
+                samplerSlider(
+                    title: "Repeat penalty",
+                    value: settings.repeatPenalty,
+                    range: 1.0...1.4,
+                    step: 0.05
+                ) { newValue in
+                    model.updateSettings { $0.llamaSamplerSettings.repeatPenalty = newValue }
+                }
+
+                HStack(spacing: 10) {
+                    Text("Top K")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Color.rossInk)
+                    Spacer(minLength: 8)
+                    Stepper("\(settings.topK)", value: Binding(
+                        get: { model.persisted.settings.llamaSamplerSettings.topK },
+                        set: { value in
+                            model.updateSettings { $0.llamaSamplerSettings.topK = max(1, min(value, 200)) }
+                        }
+                    ), in: 1...200, step: 5)
+                    .labelsHidden()
+                    Text("\(settings.topK)")
+                        .font(.footnote.monospacedDigit())
+                        .foregroundStyle(Color.rossInk.opacity(0.7))
+                }
+
+                Button("Restore legal QA defaults") {
+                    model.updateSettings { $0.llamaSamplerSettings = .legalQA }
+                }
+                .buttonStyle(.plain)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color.rossAccent)
+            }
+        }
+    }
+
+    private func samplerSlider(
+        title: String,
+        value: Double,
+        range: ClosedRange<Double>,
+        step: Double,
+        onChange: @escaping (Double) -> Void
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Text(title)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color.rossInk)
+                Spacer(minLength: 8)
+                Text(String(format: "%.2f", value))
+                    .font(.footnote.monospacedDigit())
+                    .foregroundStyle(Color.rossInk.opacity(0.7))
+            }
+            Slider(value: Binding(
+                get: { value },
+                set: { onChange($0) }
+            ), in: range, step: step)
+            .tint(Color.rossAccent)
+        }
+    }
 }
 
 func alphaFileSize(relativePath: String?) -> Int64 {

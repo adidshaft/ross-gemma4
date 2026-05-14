@@ -969,7 +969,10 @@ extension AlphaRossModel {
         snapshot.publicLawDraft = publicLawDraft
         snapshot.publicLawPreview = publicLawPreview
         snapshot.publicLawResults = publicLawResults
-        Task {
+        pendingPersistTask?.cancel()
+        pendingPersistTask = Task { [store] in
+            try? await Task.sleep(for: .milliseconds(250))
+            guard !Task.isCancelled else { return }
             try? await store.replace(with: snapshot)
             if snapshot.settings.deviceCacheEnabled {
                 try? await store.writeDeviceCacheMetadata(snapshot)

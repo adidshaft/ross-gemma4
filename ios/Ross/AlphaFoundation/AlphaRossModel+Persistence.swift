@@ -69,6 +69,99 @@ private func alphaQuarantineActiveAssistantAfterStartupFailure(_ state: inout Al
     )
 }
 
+@discardableResult
+private func alphaPurgeAbandonedAssistantDownloadsFromDisk() -> Int64 {
+    let fileManager = FileManager.default
+    var reclaimedBytes: Int64 = 0
+
+    func removeIfExists(_ url: URL) {
+        guard fileManager.fileExists(atPath: url.path()) else { return }
+        reclaimedBytes += alphaModelFileByteCount(at: url)
+        try? fileManager.removeItem(at: url)
+    }
+
+    let temporaryURL = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+    if let contents = try? fileManager.contentsOfDirectory(
+        at: temporaryURL,
+        includingPropertiesForKeys: [.fileSizeKey, .isDirectoryKey],
+        options: [.skipsHiddenFiles]
+    ) {
+        for url in contents {
+            let name = url.lastPathComponent
+            let ext = url.pathExtension.lowercased()
+            guard name.hasPrefix("CFNetworkDownload_") ||
+                name.hasPrefix("ross-") ||
+                ext == "tmp" ||
+                ext == "part" ||
+                ext == "download" else {
+                continue
+            }
+            removeIfExists(url)
+        }
+    }
+
+    // Older builds staged models in Documents/Models; current builds use app-support/model-packs.
+    if let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first {
+        removeIfExists(documentsURL.appendingPathComponent("Models", isDirectory: true))
+    }
+
+    let testsScratchURL = temporaryURL.appendingPathComponent("RossAlphaTests", isDirectory: true)
+    let environment = ProcessInfo.processInfo.environment
+    let isRunningTests = environment["XCTestConfigurationFilePath"] != nil ||
+        environment["ROSS_RUNNING_TESTS"] == "1" ||
+        Bundle.allBundles.contains { $0.bundlePath.hasSuffix(".xctest") }
+    if !isRunningTests {
+        removeIfExists(testsScratchURL)
+    }
+
+    return reclaimedBytes
+}
+
+@discardableResult
+private func alphaPruneUnreferencedAssistantArtifactsFromDisk(installedPacks: [AlphaInstalledModelPack]) -> Int64 {
+    let fileManager = FileManager.default
+    var reclaimedBytes: Int64 = 0
+    let installedPaths = Set(installedPacks.map(\.installPath))
+
+    func removeIfUnreferenced(_ url: URL) {
+        let relativePath = url.path()
+            .replacingOccurrences(of: alphaSupportRootURL().path() + "/", with: "")
+        guard !installedPaths.contains(relativePath) else { return }
+        reclaimedBytes += alphaModelFileByteCount(at: url)
+        try? fileManager.removeItem(at: url)
+    }
+
+    for tier in AlphaCapabilityTier.allCases {
+        let tierDirectory = alphaAbsoluteURL(for: "model-packs/\(tier.rawValue)")
+        guard let contents = try? fileManager.contentsOfDirectory(
+            at: tierDirectory,
+            includingPropertiesForKeys: [.isDirectoryKey, .fileSizeKey],
+            options: [.skipsHiddenFiles]
+        ) else {
+            continue
+        }
+        for url in contents {
+            let name = url.lastPathComponent
+            let ext = url.pathExtension.lowercased()
+            guard name == "pack.dev" ||
+                name.hasPrefix("CFNetworkDownload_") ||
+                name.hasPrefix("ross-") ||
+                ext == "tmp" ||
+                ext == "part" ||
+                ext == "download" else {
+                continue
+            }
+            removeIfUnreferenced(url)
+        }
+        if let remaining = try? fileManager.contentsOfDirectory(atPath: tierDirectory.path()),
+           remaining.isEmpty {
+            try? fileManager.removeItem(at: tierDirectory)
+        }
+    }
+
+    return reclaimedBytes
+}
+
 private func alphaModelFileByteCount(at url: URL) -> Int64 {
     let attributes = try? FileManager.default.attributesOfItem(atPath: url.path())
     if let size = attributes?[.size] as? NSNumber {
@@ -109,6 +202,14 @@ private func alphaModelSizeVerificationToken(fileName: String, bytes: Int64) -> 
     "catalog-size:\(fileName):\(bytes)"
 }
 
+private func alphaModelArtifactManifest(forFileAt fileURL: URL) -> AlphaModelArtifactManifest? {
+    let manifestURL = fileURL.deletingPathExtension().appendingPathExtension("manifest.json")
+    guard let data = try? Data(contentsOf: manifestURL) else { return nil }
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+    return try? decoder.decode(AlphaModelArtifactManifest.self, from: data)
+}
+
 private func alphaInstalledModelPackFileIsUsable(_ pack: AlphaInstalledModelPack) -> Bool {
     guard pack.runtimeMode != .appleFoundationModels,
           pack.artifactKind != "system_model" else {
@@ -134,12 +235,20 @@ private func alphaRecoveredInstalledPackFromDisk(tier: AlphaCapabilityTier) -> A
     let relativePath = "model-packs/\(tier.rawValue)/\(artifact.fileName)"
     let fileURL = alphaAbsoluteURL(for: relativePath)
     guard alphaModelFileByteCount(at: fileURL) == artifact.sizeBytes else { return nil }
+    let manifest = alphaModelArtifactManifest(forFileAt: fileURL)
+    let recoveredChecksum = manifest?.checksumSha256.trimmingCharacters(in: .whitespacesAndNewlines)
+    if let manifest,
+       manifest.fileName != artifact.fileName || manifest.bytes != artifact.sizeBytes {
+        return nil
+    }
     guard !artifact.sha256.isEmpty else {
         return AlphaInstalledModelPack(
             packId: artifact.packId,
             tier: tier,
             installPath: relativePath,
-            checksumSha256: alphaModelSizeVerificationToken(fileName: artifact.fileName, bytes: artifact.sizeBytes),
+            checksumSha256: recoveredChecksum?.isEmpty == false
+                ? recoveredChecksum!
+                : alphaModelSizeVerificationToken(fileName: artifact.fileName, bytes: artifact.sizeBytes),
             artifactKind: "local_model_artifact",
             runtimeMode: .llamaCppGguf,
             developmentOnly: false,
@@ -147,10 +256,11 @@ private func alphaRecoveredInstalledPackFromDisk(tier: AlphaCapabilityTier) -> A
             isActive: true
         )
     }
-    guard let checksum = alphaModelSHA256Hex(forFileAt: fileURL),
-          alphaModelAssistantChecksumMatches(expected: artifact.sha256, actual: checksum) else {
+    if let recoveredChecksum, !recoveredChecksum.isEmpty,
+       !alphaModelAssistantChecksumMatches(expected: artifact.sha256, actual: recoveredChecksum) {
         return nil
     }
+    let checksum = recoveredChecksum?.isEmpty == false ? recoveredChecksum! : artifact.sha256
     return AlphaInstalledModelPack(
         packId: artifact.packId,
         tier: tier,
@@ -271,19 +381,12 @@ private func alphaCurrentLowPowerMode() -> Bool {
 }
 
 private func alphaRecommendedOnDeviceTier(freeStorageGB: Int) -> AlphaCapabilityTier {
-    let totalMemoryGB = max(2, Int(ProcessInfo.processInfo.physicalMemory / 1_073_741_824))
-    let lowPowerModeEnabled = alphaCurrentLowPowerMode()
-
-    if lowPowerModeEnabled || totalMemoryGB < 6 || freeStorageGB < 6 {
-        return .quickStart
-    }
-    if totalMemoryGB >= 12 && freeStorageGB >= 8 {
-        return .seniorDraftingSupport
-    }
-    if totalMemoryGB >= 6 && freeStorageGB >= 6 {
-        return .caseAssociate
-    }
-    return .caseAssociate
+    // Flash is the safe first-run baseline. It's the fastest to download,
+    // the lightest at inference, and the most reliable across devices.
+    // The user can opt into heavier tiers from Settings after onboarding.
+    // See docs/IOS_REMEDIATION_PLAN.md "Problem 1.5: First-Run Picked the Wrong Pack".
+    _ = freeStorageGB
+    return .flash
 }
 
 private func alphaFreeDiskSpaceLabel() -> String {
@@ -385,13 +488,29 @@ extension AlphaRossModel {
         privateAISnapshot.resetCount = persisted.ledgerEntries.filter { $0.title.localizedCaseInsensitiveContains("reset") }.count
     }
 
+    /// Debounce the expensive snapshot refresh so that bursty mutations
+    /// (chat-turn updates, token-streamed answer edits, document edits, etc.)
+    /// only trigger one snapshot refresh per quiet window. Without this,
+    /// every `persisted` write recomputes an O(N*M*K) refresh key and may
+    /// spawn a disk-recovery task — the dominant source of UI lag.
+    func scheduleDebouncedPrivateAISnapshotRefresh() {
+        debouncedSnapshotRefreshTask?.cancel()
+        debouncedSnapshotRefreshTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                self?.refreshPrivateAISnapshot()
+            }
+        }
+    }
+
     func refreshPrivateAISnapshot(forceValidation: Bool = false) {
         let refreshKey = alphaPrivateAISnapshotRefreshKey(for: persisted)
         guard forceValidation || privateAISnapshotRefreshKey != refreshKey else { return }
 
         privateAISnapshotRefreshKey = refreshKey
         let state = persisted
-        let allowDiskRecovery = !alphaHadUnfinishedPrivateAIStartupValidation()
+        let allowDiskRecovery = true
         if forceValidation {
             alphaMarkPrivateAIStartupValidationStarted()
         }
@@ -405,7 +524,24 @@ extension AlphaRossModel {
 
             privateAISnapshot = result.snapshot
             if result.stateChanged && persisted != result.recoveredState {
-                persisted = result.recoveredState
+                var needsPersist = false
+                if persisted.installedPacks != result.recoveredState.installedPacks {
+                    persisted.installedPacks = result.recoveredState.installedPacks
+                    needsPersist = true
+                }
+                if persisted.modelJobs != result.recoveredState.modelJobs {
+                    persisted.modelJobs = result.recoveredState.modelJobs
+                    needsPersist = true
+                }
+                if persisted.settings.activeTier != result.recoveredState.settings.activeTier {
+                    persisted.settings.activeTier = result.recoveredState.settings.activeTier
+                    needsPersist = true
+                }
+                if persisted.ledgerEntries != result.recoveredState.ledgerEntries {
+                    persisted.ledgerEntries = result.recoveredState.ledgerEntries
+                    needsPersist = true
+                }
+                guard needsPersist else { return }
                 persist()
             }
         }
@@ -907,7 +1043,13 @@ extension AlphaRossModel {
     }
 
     var activePack: AlphaInstalledModelPack? {
-        privateAISnapshot.activePack
+        if let activePack = privateAISnapshot.activePack ?? alphaOptimisticActivePack(from: persisted) {
+            return activePack
+        }
+        if let recovered = alphaRecoveredInstalledPackFromDisk(tier: persisted.settings.activeTier ?? selectedTier) {
+            return recovered
+        }
+        return AlphaCapabilityTier.allCases.lazy.compactMap { alphaRecoveredInstalledPackFromDisk(tier: $0) }.first
     }
 
     func submitDockInput(question: String, scopeCaseID: UUID?, webEnabled: Bool) async {
@@ -1028,12 +1170,41 @@ extension AlphaRossModel {
     }
 
     func advanceOnboarding() {
-        selectedTier = recommendedOnDeviceTier()
+        selectedTier = .flash
         finishPackSetup()
     }
 
+    func importDocument(caseId: UUID?, from sourceURL: URL, openAfterImport: Bool = true) async {
+        await importDocuments(caseId: caseId, from: [sourceURL], openAfterImport: openAfterImport)
+    }
+
+    func importDocuments(caseId: UUID?, from sourceURLs: [URL], openAfterImport: Bool = true) async {
+        let uniqueURLs = sourceURLs.reduce(into: [URL]()) { urls, url in
+            guard !urls.contains(url) else { return }
+            urls.append(url)
+        }
+        guard !uniqueURLs.isEmpty else { return }
+
+        var importedDocumentIDs: [UUID] = []
+        for (index, sourceURL) in uniqueURLs.prefix(20).enumerated() {
+            if let document = await importSingleDocument(
+                caseId: caseId,
+                from: sourceURL,
+                openAfterImport: openAfterImport && index == 0
+            ) {
+                importedDocumentIDs.append(document.id)
+            }
+        }
+
+        let targetCaseID = caseId ?? alphaSharedWorkspaceID
+        if !importedDocumentIDs.isEmpty {
+            setSelectedAskDocumentIDs(Set(importedDocumentIDs), for: targetCaseID == alphaSharedWorkspaceID ? nil : targetCaseID)
+            persist(workspaceChanged: true)
+        }
+    }
+
     @discardableResult
-    func importDocument(caseId: UUID?, from sourceURL: URL, openAfterImport: Bool = true) async -> UUID? {
+    private func importSingleDocument(caseId: UUID?, from sourceURL: URL, openAfterImport: Bool) async -> AlphaCaseDocument? {
         let targetCaseID = caseId ?? alphaSharedWorkspaceID
         do {
             let imported = try await store.importDocument(from: sourceURL, into: targetCaseID)
@@ -1082,21 +1253,21 @@ extension AlphaRossModel {
                 title: "File added to this matter",
                 sections: [
                     "\(document.title) was copied into private storage and linked to the current matter.",
-                    "Ross can use this file in chat now; deeper local review continues quietly in the background."
+                    document.hasAskUsableExtractedText
+                        ? "Ross can answer from this file now. Use Review if you want a deeper field-by-field pass."
+                        : "Ross saved the source reference. Review the original before relying on file facts."
                 ],
                 sourceRefs: [sourceRef],
                 selectedDocumentIDs: [document.id],
                 selectedDocumentTitles: [document.title],
-                statusNote: "Matter chat updated · file ready"
+                statusNote: document.hasAskUsableExtractedText
+                    ? "Matter chat updated · file ready"
+                    : "Matter chat updated · source saved"
             )
             if openAfterImport {
                 path.append(.documentViewer(targetCaseID, document.id, 1))
             }
-
-            Task(priority: .utility) {
-                await finishImportedDocumentExtraction(caseId: targetCaseID, document: document)
-            }
-            return document.id
+            return document
         } catch {
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
@@ -1161,11 +1332,28 @@ extension AlphaRossModel {
 
     func normalizeLoadedState(_ state: AlphaPersistedState) -> AlphaPersistedState {
         var normalized = state
+        if normalized.schemaVersion != AlphaCurrentPersistedStateSchemaVersion {
+            normalized.schemaVersion = AlphaCurrentPersistedStateSchemaVersion
+            normalized.cases = normalized.cases.map { caseMatter in
+                var copy = caseMatter
+                copy.chatSessions = copy.chatSessions.map { session in
+                    var sessionCopy = session
+                    sessionCopy.turns.removeAll {
+                        $0.answerTitle.localizedCaseInsensitiveContains("drafted this from your files") ||
+                        $0.answerSections.contains { section in
+                            section.localizedCaseInsensitiveContains("included for this answer")
+                        }
+                    }
+                    return sessionCopy
+                }
+                return copy
+            }
+        }
+        _ = alphaPurgeAbandonedAssistantDownloadsFromDisk()
         removeSystemAssistantShortcutState(from: &normalized)
         purgeDevelopmentModelArtifactsFromDisk()
-        if alphaHadUnfinishedPrivateAIStartupValidation() {
-            alphaQuarantineActiveAssistantAfterStartupFailure(&normalized)
-        }
+        _ = recoverDownloadedAssistantArtifacts(from: &normalized)
+        _ = alphaPruneUnreferencedAssistantArtifactsFromDisk(installedPacks: normalized.installedPacks)
         if shouldRestoreAssistantSetupFlow(for: normalized) {
             normalized.onboardingStage = looksLikePristineWorkspace(normalized) ? .onboarding : .privateAIPack
         }
@@ -1296,73 +1484,6 @@ extension AlphaRossModel {
                 )
             }
         }
-    }
-
-    func importDocuments(caseId: UUID?, from sourceURLs: [URL], openAfterImport: Bool = true) async {
-        let urls = sourceURLs.filter { $0.isFileURL }
-        guard !urls.isEmpty else { return }
-        if urls.count == 1, let url = urls.first {
-            await importDocument(caseId: caseId, from: url, openAfterImport: openAfterImport)
-            return
-        }
-
-        var importedDocumentIDs: [UUID] = []
-        for url in urls {
-            if let documentID = await importDocument(caseId: caseId, from: url, openAfterImport: false) {
-                importedDocumentIDs.append(documentID)
-            }
-        }
-
-        let targetCaseID = caseId ?? alphaSharedWorkspaceID
-        if !importedDocumentIDs.isEmpty {
-            let importedDocumentIDSet = Set(importedDocumentIDs)
-            if targetCaseID != alphaSharedWorkspaceID {
-                setSelectedAskDocumentIDs(importedDocumentIDSet, for: targetCaseID)
-            } else {
-                setSelectedAskDocumentIDs(importedDocumentIDSet, for: nil)
-            }
-        }
-        if openAfterImport, targetCaseID != alphaSharedWorkspaceID {
-            path.removeAll()
-            path.append(.documentList(targetCaseID))
-        }
-    }
-
-    private func finishImportedDocumentExtraction(caseId: UUID, document: AlphaCaseDocument) async {
-        let result = await store.runLocalExtraction(
-            caseId: caseId,
-            document: document,
-            activePack: activePack
-        )
-        applyExtractionResult(result, caseId: caseId, documentId: document.id)
-    }
-
-    func queueIncomingDocumentURL(_ url: URL) {
-        guard url.isFileURL else { return }
-        if !pendingIncomingDocumentURLs.contains(url) {
-            pendingIncomingDocumentURLs.append(url)
-        }
-    }
-
-    func clearIncomingDocumentQueue() {
-        pendingIncomingDocumentURLs.removeAll()
-    }
-
-    func importQueuedIncomingDocuments(to caseID: UUID) {
-        let urls = pendingIncomingDocumentURLs
-        clearIncomingDocumentQueue()
-        Task { await importDocuments(caseId: caseID, from: urls, openAfterImport: true) }
-    }
-
-    func createMatterForQueuedIncomingDocuments(title: String) {
-        let cleanedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleanedTitle.isEmpty else { return }
-        let urls = pendingIncomingDocumentURLs
-        clearIncomingDocumentQueue()
-        caseDraftTitle = cleanedTitle
-        createCase(openWorkspace: false)
-        guard let targetCaseID = selectedCaseID else { return }
-        Task { await importDocuments(caseId: targetCaseID, from: urls, openAfterImport: true) }
     }
 
     func isRossSuggestedTask(_ task: AlphaTaskItem) -> Bool {

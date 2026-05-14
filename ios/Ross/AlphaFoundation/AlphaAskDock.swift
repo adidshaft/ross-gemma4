@@ -214,68 +214,6 @@ struct AlphaRootAskDock: View {
             )
         }
 
-        if showsInlineResponseCard {
-            return nil
-        }
-
-        if let latest = model.latestAskResult,
-           latest.scopeCaseID == activeScopeCaseID,
-           latest.isPendingLocalModelResponse {
-            let context: String
-            if latest.selectedDocumentTitles.count == 1, let title = latest.selectedDocumentTitles.first {
-                context = title
-            } else if latest.selectedDocumentTitles.count > 1 {
-                context = "\(latest.selectedDocumentTitles.count) selected files"
-            } else if activeSelectedDocuments.count == 1, let document = activeSelectedDocuments.first {
-                context = document.displayTitle
-            } else if activeScopeCaseID != nil {
-                context = "this matter"
-            } else {
-                context = "your workspace"
-            }
-
-            return (
-                "Ross is answering",
-                "Checking \(context) with the private on-device assistant.",
-                "Working",
-                nil
-            )
-        }
-
-        if pendingCollapseQuestion != nil {
-            let context: String
-            if activeSelectedDocuments.count == 1, let document = activeSelectedDocuments.first {
-                context = document.displayTitle
-            } else if activeSelectedDocuments.count > 1 {
-                context = "\(activeSelectedDocuments.count) tagged files"
-            } else if activeScopeCaseID != nil {
-                context = "this matter"
-            } else {
-                context = "your workspace"
-            }
-
-            return (
-                "Ross is working",
-                "Reading \(context) and drafting an answer you can verify.",
-                "Thinking",
-                nil
-            )
-        }
-
-        if let setupJob = alphaActiveSetupJob(model) {
-            switch setupJob.state {
-            case .queued, .downloading, .verifying:
-                return (
-                    "Private assistant setup",
-                    alphaAssistantActivityDetail(for: setupJob.state),
-                    alphaAssistantStateLabel(setupJob.state),
-                    alphaDownloadProgressValue(setupJob)
-                )
-            case .pausedWaitingForWifi, .pausedUser, .pausedNoStorage, .pausedError, .failed, .notStarted, .installed, .cancelled:
-                break
-            }
-        }
-
         return nil
     }
 
@@ -403,8 +341,8 @@ struct AlphaRootAskDock: View {
 
     private func handleImport(_ result: Result<[URL], any Error>) {
         defer { pendingImportKind = nil }
-        guard case let .success(urls) = result else { return }
-        Task { await model.importDocuments(caseId: activeScopeCaseID, from: urls) }
+        guard case let .success(urls) = result, !urls.isEmpty else { return }
+        Task { await model.importDocuments(caseId: activeScopeCaseID, from: urls, openAfterImport: false) }
     }
 
     private var expandedDock: some View {
@@ -634,7 +572,7 @@ struct AlphaRootAskDock: View {
                     detail: activity.detail,
                     progressValue: activity.progress
                 )
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .transition(.opacity)
             }
 
             if let inlineResult, !dockComposerFocused {
@@ -850,18 +788,7 @@ struct AlphaDockActivityPill: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 10) {
-            if let clampedProgress {
-                ProgressView(value: clampedProgress, total: 1)
-                    .progressViewStyle(.linear)
-                    .tint(Color.rossAccent)
-                    .frame(width: 46)
-            } else {
-                ProgressView()
-                    .progressViewStyle(.circular)
-                    .controlSize(.small)
-                    .tint(Color.rossAccent)
-                    .frame(width: 22)
-            }
+            AlphaStaticActivityGlyph(progressValue: clampedProgress)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -902,16 +829,7 @@ struct AlphaDockActivityBar: View {
 
     var body: some View {
         HStack(spacing: 9) {
-            if let progressValue {
-                ProgressView(value: min(max(progressValue, 0), 1), total: 1)
-                    .progressViewStyle(.linear)
-                    .tint(Color.rossAccent)
-                    .frame(width: 54)
-            } else {
-                ProgressView()
-                    .controlSize(.small)
-                    .tint(Color.rossAccent)
-            }
+            AlphaStaticActivityGlyph(progressValue: progressValue.map { min(max($0, 0), 1) })
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(title)
@@ -935,6 +853,30 @@ struct AlphaDockActivityBar: View {
         }
         .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.14 : 0.08), radius: 12, y: 5)
         .accessibilityElement(children: .combine)
+    }
+}
+
+struct AlphaStaticActivityGlyph: View {
+    let progressValue: Double?
+
+    var body: some View {
+        ZStack(alignment: .leading) {
+            Capsule()
+                .fill(Color.rossAccent.opacity(0.12))
+                .frame(width: 46, height: 6)
+
+            if let progressValue {
+                Capsule()
+                    .fill(Color.rossAccent.opacity(0.74))
+                    .frame(width: max(6, 46 * min(max(progressValue, 0), 1)), height: 6)
+            } else {
+                Capsule()
+                    .fill(Color.rossAccent.opacity(0.54))
+                    .frame(width: 14, height: 6)
+            }
+        }
+        .frame(width: 46, height: 16)
+        .accessibilityHidden(true)
     }
 }
 

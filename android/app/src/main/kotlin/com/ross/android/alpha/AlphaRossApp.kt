@@ -80,6 +80,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -426,9 +427,8 @@ fun AlphaRossApp() {
 
             AndroidAlphaRoute.CreateCase -> AlphaCreateCaseScreen(
                 controller = controller,
-                onCreated = { caseId ->
+                onCreated = { _ ->
                     replaceWith(AndroidAlphaRoute.Home)
-                    push(AndroidAlphaRoute.CaseWorkspace(caseId))
                 },
                 onBack = { backStack.removeLast() },
             )
@@ -850,11 +850,11 @@ private fun AlphaRootAskDock(
         !showTools &&
         !expandedComposer &&
         draftText.trim().isEmpty()
-    val fileLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) controller.importDocument(activeScopeCaseId, uri)
+    val fileLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        controller.importDocuments(activeScopeCaseId, uris)
     }
-    val imageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if (uri != null) controller.importDocument(activeScopeCaseId, uri)
+    val imageLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+        controller.importDocuments(activeScopeCaseId, uris)
     }
     val activeAskStatus = controller.askWorkStatus?.takeIf { status ->
         status.scopeCaseId == activeScopeCaseId
@@ -1625,9 +1625,10 @@ private fun AlphaFeedScreen(
     var dueTodayExpanded by rememberSaveable { mutableStateOf(false) }
     var upcomingExpanded by rememberSaveable { mutableStateOf(false) }
     var recentFilesExpanded by rememberSaveable { mutableStateOf(false) }
-    val todayDateLines = alphaTodayDateLines(controller.cases)
-    val upcomingDateLines = alphaUpcomingDateLines(controller.cases)
-    val recentDocuments = alphaRecentDocumentItems(controller.cases)
+    val visibleCases = controller.cases
+    val todayDateLines = alphaTodayDateLines(visibleCases)
+    val upcomingDateLines = alphaUpcomingDateLines(visibleCases)
+    val recentDocuments = alphaRecentDocumentItems(visibleCases)
     val todayTasks = controller.todayTasks()
     val upcomingTasks = controller.upcomingTasks()
     val reviewItems = controller.reviewQueue()
@@ -1636,7 +1637,9 @@ private fun AlphaFeedScreen(
     val hasUpcomingItems = upcomingDateLines.isNotEmpty() || upcomingTasks.isNotEmpty()
     val hasReviewItems = reviewItems.isNotEmpty()
     val hasRecentFiles = recentDocuments.isNotEmpty()
-    val sortedCases = alphaSortedCases(AlphaCaseSortMode.RecentlyViewed, controller)
+    val sortedCases = remember(visibleCases, controller.persisted.tasks) {
+        alphaSortedCases(AlphaCaseSortMode.RecentlyViewed, visibleCases, controller)
+    }
 
     AlphaShell(
         title = "Ross",
@@ -1665,7 +1668,7 @@ private fun AlphaFeedScreen(
             AlphaHero(
                 eyebrow = alphaGreeting(),
                 title = alphaAttentionHeadline(attentionCount),
-                body = if (controller.cases.isEmpty()) {
+                body = if (visibleCases.isEmpty()) {
                     "Start by adding your first matter below."
                 } else if (attentionCount == 0) {
                     "Nothing urgent is waiting. Ross grouped the day so the next action stays easy to spot."
@@ -1685,7 +1688,7 @@ private fun AlphaFeedScreen(
                 )
             }
 
-            if (controller.cases.isEmpty()) {
+            if (visibleCases.isEmpty()) {
                 AlphaMatterStarterCard(controller = controller)
             } else {
                 AlphaCard {
@@ -1696,7 +1699,7 @@ private fun AlphaFeedScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                if (controller.cases.size == 1) "1 matter on this device" else "${controller.cases.size} matters on this device",
+                                if (visibleCases.size == 1) "1 matter on this device" else "${visibleCases.size} matters on this device",
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.SemiBold,
                             )
@@ -1705,13 +1708,15 @@ private fun AlphaFeedScreen(
                             }
                         }
                         sortedCases.forEach { case ->
-                            AlphaCaseSummaryRow(
-                                case = case,
-                                openTasks = controller.openTaskCount(case.id),
-                                reviewCount = controller.reviewQueue(case.id).size,
-                                onOpen = { onOpenCase(case.id) },
-                                onLongPress = {},
-                            )
+                            key(case.id) {
+                                AlphaCaseSummaryRow(
+                                    case = case,
+                                    openTasks = controller.openTaskCount(case.id),
+                                    reviewCount = controller.reviewQueue(case.id).size,
+                                    onOpen = { onOpenCase(case.id) },
+                                    onLongPress = {},
+                                )
+                            }
                         }
                     }
                 }
@@ -1821,8 +1826,8 @@ private fun AlphaCaseWorkspaceScreen(
     var expandedDocumentIds by rememberSaveable { mutableStateOf(setOf<String>()) }
     var selectedSection by rememberSaveable { mutableStateOf(AlphaWorkspaceSection.Documents) }
     val case = controller.persisted.cases.firstOrNull { it.id == caseId }
-    val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) controller.importDocument(caseId, uri)
+    val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        controller.importDocuments(caseId, uris)
     }
     val haptics = LocalHapticFeedback.current
     AlphaShell(
@@ -2034,8 +2039,8 @@ private fun AlphaDocumentListScreen(
     val case = controller.persisted.cases.firstOrNull { it.id == caseId }
     var documentLayoutMode by rememberSaveable { mutableStateOf(AlphaDocumentLayoutMode.Grid) }
     var expandedDocumentIds by rememberSaveable { mutableStateOf(setOf<String>()) }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) controller.importDocument(caseId, uri)
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        controller.importDocuments(caseId, uris)
     }
     AlphaShell(title = "Documents", showBack = true, onBack = onBack, actionLabel = "Ask", onAction = onAskCase) {
         Column(
@@ -2514,11 +2519,15 @@ private fun alphaDocumentFallbackReviewDetail(document: AlphaCaseDocument, revie
     val activeRun = document.extractionRuns.firstOrNull()
     val isReading = activeRun?.status == AlphaExtractionRunStatus.Queued ||
         activeRun?.status == AlphaExtractionRunStatus.Running ||
+        document.extractionStatus == AlphaDocumentExtractionStatus.Running ||
         document.indexingStatus == AlphaIndexingStatus.Extracting
-    val failed = document.indexingStatus == AlphaIndexingStatus.Failed || document.ocrStatus == AlphaOcrStatus.Failed
+    val failed = document.fileStatus == AlphaFileStatus.CopyFailed ||
+        document.indexingStatus == AlphaIndexingStatus.Failed ||
+        document.ocrStatus == AlphaOcrStatus.Failed
     return when {
         isReading -> "Ross is still reading this file. Do not rely on full-document facts until review finishes."
         failed -> "Ross could not finish reading this file. Review the source manually before using it."
+        document.extractionStatus == AlphaDocumentExtractionStatus.Skipped -> "Document saved. Set up the private assistant when you want Ross to extract legal fields."
         reviewCount > 0 -> "Check the highlighted items below before relying on this document in a note or export."
         document.indexingStatus == AlphaIndexingStatus.Indexed ||
             document.ocrStatus == AlphaOcrStatus.NativeText ||
@@ -3635,6 +3644,12 @@ private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack
                         ) {
                             Text(if (controller.localInferenceSmokeRunning) "Running local inference smoke..." else "Run local inference smoke")
                         }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        AlphaSectionLabel("On-device remediation checks", "Developer-only checks for setup, import, chat grounding, bulk import, and matter refresh.")
+                        controller.onDeviceRemediationDiagnostics().forEach { (label, value) ->
+                            AlphaSettingsValueRow(label, value)
+                            Spacer(modifier = Modifier.height(6.dp))
+                        }
                     }
                     controller.localInferenceSmokeReport?.let { report ->
                         Spacer(modifier = Modifier.height(8.dp))
@@ -3670,7 +3685,7 @@ private fun AlphaPrivacyLedgerScreen(controller: AlphaRossController, onBack: ()
                     )
                 }
             }
-            items(controller.persisted.ledgerEntries) { entry ->
+            items(controller.persisted.ledgerEntries, key = { it.id }) { entry ->
                 AlphaCard(entry.lawyerTitle(), entry.success.thenCompleted()) {
                     Text(entry.lawyerDetail(), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(6.dp))
@@ -4243,11 +4258,11 @@ private fun AlphaMatterStarterCard(controller: AlphaRossController) {
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
         )
         Button(
-            onClick = { controller.createCase() },
+            onClick = { controller.createCase(openWorkspace = false) },
             modifier = Modifier.fillMaxWidth(),
             enabled = controller.caseDraftTitle.isNotBlank(),
         ) {
-            Text("Save matter and open")
+            Text("Save matter")
         }
     }
 }
@@ -5288,7 +5303,7 @@ private fun AlphaAskConversationScreen(
                         textAlign = TextAlign.Center,
                     )
                 }
-                items(conversation) { result ->
+                items(conversation, key = { "${it.scopeCaseId}:${it.question}:${it.answerTitle}" }) { result ->
                     AlphaAskTurnCard(
                         result = result,
                         contextDocumentTitle = documentTitle,
@@ -5990,11 +6005,11 @@ private fun alphaUpcomingDateLines(cases: List<AlphaCaseMatter>): List<String> =
             "$label: $title on ${alphaDateLabel(instant.toString())}"
         }
 
-private fun alphaSortedCases(sortMode: AlphaCaseSortMode, controller: AlphaRossController): List<AlphaCaseMatter> =
+private fun alphaSortedCases(sortMode: AlphaCaseSortMode, cases: List<AlphaCaseMatter>, controller: AlphaRossController): List<AlphaCaseMatter> =
     when (sortMode) {
-        AlphaCaseSortMode.RecentlyViewed -> controller.cases.sortedByDescending { it.updatedAt }
-        AlphaCaseSortMode.LastAdded -> controller.cases
-        AlphaCaseSortMode.EarliestActionNeeded -> controller.cases.sortedWith(
+        AlphaCaseSortMode.RecentlyViewed -> cases.sortedByDescending { it.updatedAt }
+        AlphaCaseSortMode.LastAdded -> cases
+        AlphaCaseSortMode.EarliestActionNeeded -> cases.sortedWith(
             compareBy<AlphaCaseMatter> { alphaNextActionInstant(it, controller) == null }
                 .thenBy { alphaNextActionInstant(it, controller) ?: java.time.Instant.MAX }
                 .thenByDescending { it.updatedAt }

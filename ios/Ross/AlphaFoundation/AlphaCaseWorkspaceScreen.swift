@@ -180,10 +180,11 @@ struct AlphaCaseWorkspaceScreen: View {
                 let matterTasks = model.tasks(for: caseId)
                 let openTaskCount = model.openTaskCount(for: caseId)
                 let timelineEntries = alphaMatterTimelineEntries(dates: matterDates, tasks: matterTasks)
-                let draftCount = model.persisted.exports.filter { $0.caseId == caseId }.count
+                // Single pass instead of two filter calls; sort the filtered slice.
                 let matterExports = model.persisted.exports
                     .filter { $0.caseId == caseId }
                     .sorted { $0.createdAt > $1.createdAt }
+                let draftCount = matterExports.count
 
                 LazyVStack(alignment: .leading, spacing: 16) {
                     AlphaInlineHeader(
@@ -349,7 +350,7 @@ struct AlphaCaseWorkspaceScreen: View {
             AlphaRootAskDock(
                 model: model,
                 fixedScopeCaseID: caseId,
-                showsInlineResponseCard: false
+                showsInlineResponseCard: true
             )
                 .padding(.horizontal, 12)
                 .padding(.top, 6)

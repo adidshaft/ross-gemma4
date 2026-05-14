@@ -633,15 +633,6 @@ internal class AlphaMediaPipeLocalModelProvider(
         val modelPathPresent = modelFile.exists() && modelFile.isFile
 
         return when {
-            !deviceSupported ->
-                AlphaRuntimeAvailability(
-                    available = false,
-                    modelPathPresent = modelPathPresent,
-                    checksumVerified = checksumVerified,
-                    lastErrorCategory = "unsupported_device",
-                    userFacingStatus = "Private assistant needs a compatible physical Android device and does not reliably support emulators.",
-                )
-
             !modelPathPresent ->
                 AlphaRuntimeAvailability(
                     available = false,
@@ -669,13 +660,13 @@ internal class AlphaMediaPipeLocalModelProvider(
                     userFacingStatus = "Ross blocks bundled assistant files for this setup. Use a developer-provided private assistant file instead.",
                 )
 
-            !modelFile.name.lowercase(Locale.ROOT).endsWith(".task") ->
+            !modelFileExtensionMatchesKind(modelFile, modelKind) ->
                 AlphaRuntimeAvailability(
                     available = false,
                     modelPathPresent = true,
                     checksumVerified = checksumVerified,
                     lastErrorCategory = "unsupported_runtime",
-                    userFacingStatus = "Private assistant file is not configured on this device.",
+                    userFacingStatus = "The configured private assistant file type does not match its manifest.",
                 )
 
             !isSupportedModelKind(modelKind) ->
@@ -702,7 +693,11 @@ internal class AlphaMediaPipeLocalModelProvider(
                     modelPathPresent = true,
                     checksumVerified = checksumVerified,
                     lastErrorCategory = null,
-                    userFacingStatus = "Private assistant runtime is available for manual QA on this device.",
+                    userFacingStatus = if (deviceSupported) {
+                        "Private assistant runtime is available for manual QA on this device."
+                    } else {
+                        "Private assistant runtime is available. Device support was unknown, so Ross will try the runtime and report any native initialization error."
+                    },
                 )
         }
     }
@@ -724,6 +719,20 @@ internal class AlphaMediaPipeLocalModelProvider(
         runCatching { sha256File(file).equals(expectedChecksum.lowercase(Locale.ROOT), ignoreCase = true) }
             .getOrDefault(false)
 
+    private fun modelFileExtensionMatchesKind(file: File, rawKind: String?): Boolean {
+        val name = file.name.lowercase(Locale.ROOT)
+        val normalized = rawKind?.trim()?.lowercase(Locale.ROOT).orEmpty()
+        val allowedExtensions = when (normalized) {
+            "mediapipe_llm", "mediapipe_task" -> setOf(".task", ".tflite")
+            "gemma_gguf" -> setOf(".gguf")
+            "onnx" -> setOf(".onnx")
+            "local_model_artifact", "huggingface_gated_model_artifact", "external_debug_model", "" ->
+                setOf(".task", ".tflite", ".gguf", ".bin", ".onnx")
+            else -> emptySet()
+        }
+        return allowedExtensions.any { name.endsWith(it) }
+    }
+
     private fun isSupportedModelKind(rawKind: String?): Boolean {
         val normalized = rawKind?.trim()?.lowercase(Locale.ROOT).orEmpty()
         if (normalized.isBlank()) {
@@ -735,6 +744,8 @@ internal class AlphaMediaPipeLocalModelProvider(
             "local_model_artifact",
             "huggingface_gated_model_artifact",
             "external_debug_model",
+            "gemma_gguf",
+            "onnx",
         )
     }
 

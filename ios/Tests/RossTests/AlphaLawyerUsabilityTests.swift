@@ -158,16 +158,106 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 baseResult: baseResult
             )
 
-            XCTAssertEqual("Private assistant is reading your files", pending.answerTitle)
+            XCTAssertEqual("Ross is answering...", pending.answerTitle)
             XCTAssertEqual("Gemma 4 E2B Q2_K running locally", pending.statusNote)
             XCTAssertTrue(
-                pending.answerSections.joined(separator: " ").contains("replace this placeholder with a real local answer")
+                pending.answerSections.joined(separator: " ").contains("replace this with the local answer")
             )
             XCTAssertTrue(
                 pending.answerSections.joined(separator: " ").contains("Tagged files: Demo affidavit, Demo order.")
             )
             XCTAssertEqual(["Demo affidavit", "Demo order"], pending.selectedDocumentTitles)
             XCTAssertEqual([], pending.caseFileSources)
+        }
+    }
+
+    func testReadyAssistantStatusWinsOverFailedInactiveDownload() async {
+        let model = await MainActor.run {
+            AlphaRossModel(previewState: AlphaPersistedState.demoSeed())
+        }
+
+        await MainActor.run {
+            let activePack = AlphaInstalledModelPack(
+                packId: "gemma-4-e2b-q2",
+                tier: .flash,
+                installPath: "model-packs/flash/google_gemma-4-E2B-it-Q2_K.gguf",
+                checksumSha256: "local-test-checksum",
+                artifactKind: "local_model_artifact",
+                runtimeMode: .llamaCppGguf,
+                developmentOnly: false,
+                checksumVerified: true,
+                isActive: true
+            )
+            model.privateAISnapshot.activePack = activePack
+            model.privateAISnapshot.installedPacks = [activePack]
+            model.privateAISnapshot.activeRuntimeHealth = AlphaLocalRuntimeHealth(
+                runtimeMode: .llamaCppGguf,
+                available: true,
+                modelPathPresent: true,
+                modelPathLabel: "google_gemma-4-E2B-it-Q2_K.gguf",
+                checksumVerified: true,
+                supportedTasks: [.matterQuestionAnswer],
+                maxInputChars: 5000,
+                estimatedContextTokens: 2048,
+                lastErrorCategory: nil,
+                userFacingStatus: "Gemma 4 (Llama.cpp) Ready",
+                explicitOptInEnabled: true
+            )
+            model.persisted.modelJobs = [
+                AlphaModelDownloadJob(
+                    sessionId: "failed-optional-download",
+                    packId: "gemma-4-e2b-q4",
+                    tier: .quickStart,
+                    state: .failed,
+                    networkPolicy: .wifiOnly,
+                    bytesDownloaded: 0,
+                    totalBytes: 3_462_678_272,
+                    checksumSha256: "",
+                    artifactKind: "local_model_artifact",
+                    runtimeMode: .llamaCppGguf,
+                    developmentOnly: false,
+                    failureReason: "NSURLErrorDomain -1"
+                )
+            ]
+
+            let status = alphaAssistantStatusSnapshot(model)
+            XCTAssertEqual("Ross assistant is ready", status.title)
+        }
+    }
+
+    func testPlainTextModelAnswerUsesNeutralLocalHeadline() async {
+        let model = await MainActor.run {
+            AlphaRossModel(previewState: AlphaPersistedState.demoSeed())
+        }
+
+        await MainActor.run {
+            let baseResult = AlphaAskResult(
+                kind: .userAsk,
+                question: "What is FMLS?",
+                scopeCaseID: nil,
+                scopeLabel: "All work",
+                selectedDocumentTitles: [],
+                answerTitle: "Ross drafted this from your files",
+                answerSections: [],
+                caseFileSources: [],
+                publicLawPreview: nil,
+                publicLawResults: [],
+                statusNote: "Answered from your files",
+                needsReviewWarning: nil
+            )
+            let payload = model.matterAskPayload(
+                from: AlphaLocalModelOutput(
+                    rawText: "FMLS usually means a filing or case-listing system, but confirm the exact local court context before relying on it.",
+                    parsedJson: nil,
+                    schemaValid: false,
+                    warnings: [],
+                    sourceRefs: []
+                ),
+                baseResult: model.localModelAnswerBaseResult(from: baseResult)
+            )
+
+            XCTAssertEqual("Ross answered locally", payload?.headline)
+            XCTAssertTrue(payload?.sections.first?.contains("FMLS") == true)
         }
     }
 

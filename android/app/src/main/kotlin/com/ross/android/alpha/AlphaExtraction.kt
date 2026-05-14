@@ -65,7 +65,7 @@ enum class AlphaExtractionProgressState {
     NeedsReview,
     Failed,
 }
-enum class AlphaExtractionRunStatus { Queued, Running, NeedsReview, Complete, Failed, Cancelled }
+enum class AlphaExtractionRunStatus { Queued, Running, NeedsReview, Complete, Skipped, Failed, Cancelled }
 enum class AlphaExtractionFindingKind {
     LowConfidenceOcr,
     LanguageUncertain,
@@ -468,7 +468,8 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
         val reviewQueue = AlphaReviewQueues.build(verification.fields, findings)
         val warnings = findings.map { it.message }
         val status = when {
-            verification.fields.isEmpty() -> AlphaExtractionRunStatus.Failed
+            verification.fields.isEmpty() && findings.isEmpty() -> AlphaExtractionRunStatus.Complete
+            verification.fields.isEmpty() && findings.isNotEmpty() -> AlphaExtractionRunStatus.NeedsReview
             verification.fields.any { it.needsReview } || findings.any { !it.resolved } -> AlphaExtractionRunStatus.NeedsReview
             else -> AlphaExtractionRunStatus.Complete
         }
@@ -498,6 +499,7 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
                 progressState = when (status) {
                     AlphaExtractionRunStatus.Complete -> AlphaExtractionProgressState.Complete
                     AlphaExtractionRunStatus.NeedsReview -> AlphaExtractionProgressState.NeedsReview
+                    AlphaExtractionRunStatus.Skipped -> AlphaExtractionProgressState.NeedsReview
                     AlphaExtractionRunStatus.Failed -> AlphaExtractionProgressState.Failed
                     AlphaExtractionRunStatus.Cancelled -> AlphaExtractionProgressState.Failed
                     AlphaExtractionRunStatus.Queued -> AlphaExtractionProgressState.AcquiringText
@@ -510,7 +512,11 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
                 fieldsExtracted = verification.fields.size,
                 fieldsNeedingReview = verification.fields.count { it.needsReview },
                 warnings = warnings,
-                errorMessage = if (verification.fields.isEmpty()) "Ross could not find supported legal fields in this document yet." else null,
+                errorMessage = if (verification.fields.isEmpty() && findings.any { !it.resolved }) {
+                    "Ross could not find structured legal fields; text is still saved for chat and review."
+                } else {
+                    null
+                },
             ),
             findings = findings,
             caseMemoryUpdates = caseMemoryUpdates,
@@ -557,6 +563,12 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
             },
             severity = AlphaExtractionFindingSeverity.Warning,
         )
+        val shouldSkip = warning.contains("setup", ignoreCase = true) ||
+            warning.contains("model", ignoreCase = true) ||
+            warning.contains("runtime", ignoreCase = true) ||
+            warning.contains("device", ignoreCase = true)
+        val status = if (shouldSkip) AlphaExtractionRunStatus.Skipped else AlphaExtractionRunStatus.Failed
+        val progress = if (shouldSkip) AlphaExtractionProgressState.NeedsReview else AlphaExtractionProgressState.Failed
         return AlphaLocalExtractionResult(
             pages = updatedPages,
             languageProfile = detectLanguageProfile(document.id, pages),
@@ -567,8 +579,8 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
                 caseId = caseId,
                 documentId = document.id,
                 mode = pipelinePlan.mode,
-                status = AlphaExtractionRunStatus.Failed,
-                progressState = AlphaExtractionProgressState.Failed,
+                status = status,
+                progressState = progress,
                 startedAt = nowIso(),
                 completedAt = nowIso(),
                 pagesProcessed = updatedPages.size,
@@ -576,7 +588,11 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
                 fieldsExtracted = 0,
                 fieldsNeedingReview = 0,
                 warnings = listOf(warning),
-                errorMessage = "Private assistant setup required.",
+                errorMessage = if (shouldSkip) {
+                    "Document saved. Set up the private assistant to extract legal fields."
+                } else {
+                    "Local extraction failed."
+                },
             ),
             findings = listOf(finding),
             caseMemoryUpdates = emptyList(),

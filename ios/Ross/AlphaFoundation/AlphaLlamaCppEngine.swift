@@ -36,7 +36,9 @@ actor LlamaContext {
     private var temporary_invalid_cchars: [CChar]
 
     var n_len: Int32 = 1024
-    private let maxNewTokens: Int32 = 256
+    private let defaultMaxNewTokens: Int32 = 96
+    private var maxNewTokens: Int32 = 96
+    private var currentSamplerSettings = AlphaLlamaSamplerSettings.legalQA
     var n_cur: Int32 = 0
 
     var n_decode: Int32 = 0
@@ -48,12 +50,7 @@ actor LlamaContext {
         self.tokens_list = []
         self.batch = llama_batch_init(512, 0, 1)
         self.temporary_invalid_cchars = []
-        let sparams = llama_sampler_chain_default_params()
-        self.sampling = llama_sampler_chain_init(sparams)
-        llama_sampler_chain_add(self.sampling, llama_sampler_init_top_k(40))
-        llama_sampler_chain_add(self.sampling, llama_sampler_init_top_p(0.9, 1))
-        llama_sampler_chain_add(self.sampling, llama_sampler_init_temp(0.2))
-        llama_sampler_chain_add(self.sampling, llama_sampler_init_dist(1234))
+        self.sampling = Self.makeSampler(settings: currentSamplerSettings)
         vocab = llama_model_get_vocab(model)
     }
 
@@ -86,9 +83,12 @@ actor LlamaContext {
         print("Running on simulator, force use n_gpu_layers = 0")
 #else
         // For very large models on constrained devices, limit GPU offloading to avoid OOM
-        if memory < 12_000_000_000 && path.contains("26B") {
-            model_params.n_gpu_layers = 0 // Run on CPU for the big MoE if RAM is tight
-            print("Constrained memory for 26B model, using CPU only to prevent crash")
+        if memory < 6_000_000_000 || (memory < 12_000_000_000 && path.contains("26B")) {
+            model_params.n_gpu_layers = 0
+            print("Constrained memory, using CPU only to prevent crash")
+        } else if memory < 10_000_000_000 {
+            model_params.n_gpu_layers = 24
+            print("Moderate memory, using bounded GPU offload")
         } else {
             model_params.n_gpu_layers = 99 // Offload as much as possible
         }
@@ -103,7 +103,7 @@ actor LlamaContext {
         print("Using \(n_threads) threads")
 
         var ctx_params = llama_context_default_params()
-        ctx_params.n_ctx = 2048
+        ctx_params.n_ctx = memory < 6_000_000_000 ? 4096 : 8192
         ctx_params.n_threads       = Int32(n_threads)
         ctx_params.n_threads_batch = Int32(n_threads)
 
@@ -140,8 +140,39 @@ actor LlamaContext {
         return batch.n_tokens;
     }
 
-    func completion_init(text: String) {
-        print("attempting to complete \"\(text)\"")
+    private static func makeSampler(settings: AlphaLlamaSamplerSettings) -> UnsafeMutablePointer<llama_sampler> {
+        let sparams = llama_sampler_chain_default_params()
+        guard let sampler = llama_sampler_chain_init(sparams) else {
+            fatalError("llama sampler chain failed to initialize")
+        }
+        let topK = Int32(max(1, min(settings.topK, 200)))
+        let topP = Float(max(0.05, min(settings.topP, 1.0)))
+        let temperature = Float(max(0.0, min(settings.temperature, 1.5)))
+        let repeatPenalty = Float(max(1.0, min(settings.repeatPenalty, 1.5)))
+        llama_sampler_chain_add(sampler, llama_sampler_init_penalties(64, repeatPenalty, 0.0, 0.0))
+        llama_sampler_chain_add(sampler, llama_sampler_init_top_k(topK))
+        llama_sampler_chain_add(sampler, llama_sampler_init_top_p(topP, 1))
+        llama_sampler_chain_add(sampler, llama_sampler_init_temp(temperature))
+        llama_sampler_chain_add(sampler, llama_sampler_init_dist(settings.seed))
+        return sampler
+    }
+
+    func completion_init(
+        text: String,
+        maxNewTokens requestedMaxNewTokens: Int32? = nil,
+        samplerSettings requestedSamplerSettings: AlphaLlamaSamplerSettings? = nil
+    ) {
+        if let requestedMaxNewTokens {
+            maxNewTokens = max(16, min(384, requestedMaxNewTokens))
+        } else {
+            maxNewTokens = defaultMaxNewTokens
+        }
+        if let requestedSamplerSettings, requestedSamplerSettings != currentSamplerSettings {
+            llama_sampler_free(sampling)
+            currentSamplerSettings = requestedSamplerSettings
+            sampling = Self.makeSampler(settings: requestedSamplerSettings)
+        }
+        print("attempting local completion: prompt_chars=\(text.count), max_new_tokens=\(maxNewTokens)")
 
         tokens_list = tokenize(text: text, add_bos: true)
         temporary_invalid_cchars = []
@@ -154,7 +185,7 @@ actor LlamaContext {
         let maxInputTokens = max(1, Int(n_ctx - maxNewTokens))
         if tokens_list.count > maxInputTokens {
             print("Prompt is too large for requested output budget. Truncating input.")
-            let prefixCount = min(256, maxInputTokens / 4)
+            let prefixCount = min(max(768, maxInputTokens / 3), maxInputTokens / 2)
             let suffixCount = maxInputTokens - prefixCount
             tokens_list = Array(tokens_list.prefix(prefixCount)) + Array(tokens_list.suffix(suffixCount))
         }
@@ -237,7 +268,6 @@ actor LlamaContext {
         } else {
             new_token_str = ""
         }
-        print(new_token_str)
         // tokens_list.append(new_token_id)
 
         llama_batch_clear(&batch)

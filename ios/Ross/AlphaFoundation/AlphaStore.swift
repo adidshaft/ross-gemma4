@@ -45,6 +45,45 @@ struct AlphaImportedDocument {
     let storedFileURL: URL
 }
 
+@discardableResult
+func alphaSweepTemporaryAssistantDownloadsAtLaunch(fileManager: FileManager = .default) -> Int64 {
+    alphaSweepTemporaryAssistantDownloads(fileManager: fileManager)
+}
+
+@discardableResult
+func alphaSweepTemporaryAssistantDownloads(fileManager: FileManager = .default) -> Int64 {
+    let temporaryURL = fileManager.temporaryDirectory
+    var reclaimedBytes: Int64 = 0
+    guard let contents = try? fileManager.contentsOfDirectory(
+        at: temporaryURL,
+        includingPropertiesForKeys: [.fileSizeKey],
+        options: [.skipsHiddenFiles]
+    ) else { return 0 }
+    for url in contents {
+        let name = url.lastPathComponent
+        let ext = url.pathExtension.lowercased()
+        guard name.hasPrefix("CFNetworkDownload_") ||
+            name.hasPrefix("ross-") ||
+            ext == "tmp" ||
+            ext == "part" ||
+            ext == "download" else { continue }
+        let values = try? url.resourceValues(forKeys: [.fileSizeKey])
+        reclaimedBytes += Int64(values?.fileSize ?? 0)
+        try? fileManager.removeItem(at: url)
+    }
+    return reclaimedBytes
+}
+
+struct AlphaModelArtifactManifest: Codable, Hashable, Sendable {
+    let packId: String
+    let tier: AlphaCapabilityTier
+    let fileName: String
+    let relativePath: String
+    let checksumSha256: String
+    let bytes: Int64
+    let verifiedAt: Date
+}
+
 actor AlphaRossStore {
     private let fileManager = FileManager.default
     private let rootURL: URL
@@ -74,6 +113,7 @@ actor AlphaRossStore {
         deviceCacheURL = rootURL.appendingPathComponent("device-cache", isDirectory: true)
         keychainAccount = isRunningTests ? "ross.ios.alpha.state.tests" : "ross.ios.alpha.state"
         usePlaintextStateStorage = isRunningTests
+        alphaSweepTemporaryAssistantDownloadsAtLaunch(fileManager: fileManager)
     }
 
     func load() throws -> AlphaPersistedState {
@@ -242,6 +282,14 @@ actor AlphaRossStore {
         try fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
         let artifactURL = folder.appendingPathComponent(fileName)
         try data.write(to: artifactURL, options: .atomic)
+        try writeModelArtifactManifest(
+            tier: tier,
+            fileName: fileName,
+            artifactURL: artifactURL,
+            checksum: checksum,
+            bytes: Int64(data.count)
+        )
+        try pruneModelPackSiblings(in: folder, keeping: artifactURL)
         return (relativePath(for: artifactURL), checksum, Int64(data.count))
     }
 
@@ -249,10 +297,20 @@ actor AlphaRossStore {
         for tier: AlphaCapabilityTier,
         fileName: String,
         downloadedFileURL: URL,
-        expectedChecksum: String
+        expectedChecksum: String,
+        expectedBytes: Int64? = nil
     ) throws -> (relativePath: String, checksum: String, bytes: Int64) {
         try ensureFolders()
         let verified = try sha256Hex(forFileAt: downloadedFileURL)
+        if let expectedBytes, verified.bytes != expectedBytes {
+            throw NSError(
+                domain: "RossAlphaPack",
+                code: 3,
+                userInfo: [
+                    NSLocalizedDescriptionKey: "The private assistant file did not finish downloading. Expected \(ByteCountFormatter.string(fromByteCount: expectedBytes, countStyle: .file)), got \(ByteCountFormatter.string(fromByteCount: verified.bytes, countStyle: .file))."
+                ]
+            )
+        }
         guard expectedChecksum.isEmpty || verified.checksum.caseInsensitiveCompare(expectedChecksum) == .orderedSame else {
             throw NSError(domain: "RossAlphaPack", code: 2, userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."])
         }
@@ -269,6 +327,14 @@ actor AlphaRossStore {
             try fileManager.copyItem(at: downloadedFileURL, to: artifactURL)
             try? fileManager.removeItem(at: downloadedFileURL)
         }
+        try writeModelArtifactManifest(
+            tier: tier,
+            fileName: fileName,
+            artifactURL: artifactURL,
+            checksum: verified.checksum,
+            bytes: verified.bytes
+        )
+        try pruneModelPackSiblings(in: folder, keeping: artifactURL)
 
         return (relativePath(for: artifactURL), verified.checksum, verified.bytes)
     }
@@ -290,6 +356,32 @@ actor AlphaRossStore {
     func removeModelResumeData(relativePath: String?) {
         guard let relativePath, !relativePath.isEmpty else { return }
         try? fileManager.removeItem(at: alphaAbsoluteURL(for: relativePath))
+    }
+
+    func sweepModelResumeData(keeping relativePaths: Set<String>) {
+        guard let contents = try? fileManager.contentsOfDirectory(
+            at: modelResumeURL,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) else { return }
+        for url in contents {
+            let relative = relativePath(for: url)
+            guard !relativePaths.contains(relative) else { continue }
+            try? fileManager.removeItem(at: url)
+        }
+    }
+
+    func removeAllModelArtifacts() {
+        try? fileManager.removeItem(at: modelPacksURL)
+        try? fileManager.removeItem(at: modelResumeURL)
+        try? fileManager.createDirectory(at: modelPacksURL, withIntermediateDirectories: true)
+        try? fileManager.createDirectory(at: modelResumeURL, withIntermediateDirectories: true)
+        sweepTemporaryAssistantDownloads()
+    }
+
+    @discardableResult
+    func sweepTemporaryAssistantDownloads() -> Int64 {
+        alphaSweepTemporaryAssistantDownloadsAtLaunch(fileManager: fileManager)
     }
 
     func writeDeviceCacheMetadata(_ state: AlphaPersistedState) throws {
@@ -315,8 +407,41 @@ actor AlphaRossStore {
         directoryByteCount(modelPacksURL)
     }
 
+    func assistantArtifactsBytes() -> Int64 {
+        directoryByteCount(modelPacksURL) + directoryByteCount(modelResumeURL)
+    }
+
     func deviceCacheBytes() -> Int64 {
         directoryByteCount(deviceCacheURL)
+    }
+
+    func assistantStorageBreakdown() -> AlphaAssistantStorageBreakdown {
+        AlphaAssistantStorageBreakdown(
+            modelPackBytes: directoryByteCount(modelPacksURL),
+            resumeBytes: directoryByteCount(modelResumeURL),
+            pendingDownloadBytes: temporaryAssistantDownloadsByteCount(),
+            deviceCacheBytes: directoryByteCount(deviceCacheURL)
+        )
+    }
+
+    private func temporaryAssistantDownloadsByteCount() -> Int64 {
+        guard let contents = try? fileManager.contentsOfDirectory(
+            at: FileManager.default.temporaryDirectory,
+            includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        ) else { return 0 }
+        return contents.reduce(into: Int64(0)) { total, url in
+            let name = url.lastPathComponent
+            let ext = url.pathExtension.lowercased()
+            guard name.hasPrefix("CFNetworkDownload_") ||
+                name.hasPrefix("ross-") ||
+                ext == "tmp" ||
+                ext == "part" ||
+                ext == "download" else { return }
+            let values = try? url.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey])
+            guard values?.isRegularFile == true else { return }
+            total += Int64(values?.fileSize ?? 0)
+        }
     }
 
     private func removeExistingItemIfNeeded(at url: URL) throws {
@@ -329,6 +454,43 @@ actor AlphaRossStore {
                 throw error
             }
         }
+    }
+
+    private func pruneModelPackSiblings(in folder: URL, keeping artifactURL: URL) throws {
+        guard let siblings = try? fileManager.contentsOfDirectory(
+            at: folder,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        ) else { return }
+        let keep = artifactURL.standardizedFileURL.path()
+        let keepManifest = artifactURL.deletingPathExtension().appendingPathExtension("manifest.json").standardizedFileURL.path()
+        for sibling in siblings {
+            let path = sibling.standardizedFileURL.path()
+            guard path != keep && path != keepManifest else { continue }
+            try? fileManager.removeItem(at: sibling)
+        }
+    }
+
+    private func writeModelArtifactManifest(
+        tier: AlphaCapabilityTier,
+        fileName: String,
+        artifactURL: URL,
+        checksum: String,
+        bytes: Int64
+    ) throws {
+        let artifact = alphaAssistantModelArtifact(for: tier)
+        let manifest = AlphaModelArtifactManifest(
+            packId: artifact.packId,
+            tier: tier,
+            fileName: fileName,
+            relativePath: relativePath(for: artifactURL),
+            checksumSha256: checksum,
+            bytes: bytes,
+            verifiedAt: .now
+        )
+        let manifestURL = artifactURL.deletingPathExtension().appendingPathExtension("manifest.json")
+        let data = try JSONEncoder.ross.encode(manifest)
+        try data.write(to: manifestURL, options: .atomic)
     }
 
     func createPDFExport(title: String, kind: String, caseId: UUID?, bodyLines: [String]) throws -> AlphaExportedReport {
@@ -479,8 +641,8 @@ actor AlphaRossStore {
                 pages: [AlphaDocumentPage(pageNumber: 1, snippet: "PDF imported locally. Text extraction is unavailable for this file.")],
                 extractedText: nil,
                 dominantSourceSnippet: nil,
-                ocrStatus: .failed,
-                indexingStatus: .failed
+                ocrStatus: .placeholder,
+                indexingStatus: .notStarted
             )
         }
 
@@ -528,8 +690,8 @@ actor AlphaRossStore {
         let indexingStatus: AlphaIndexingStatus
         switch readablePages {
         case 0:
-            overallStatus = .failed
-            indexingStatus = .failed
+            overallStatus = .placeholder
+            indexingStatus = .notStarted
         case pageCount:
             overallStatus = pagesUsingOCR > 0 ? .ocrComplete : .nativeText
             indexingStatus = .indexed
@@ -578,8 +740,8 @@ actor AlphaRossStore {
                 pages: [AlphaDocumentPage(pageNumber: 1, snippet: "Imported image page. OCR could not run locally.")],
                 extractedText: nil,
                 dominantSourceSnippet: nil,
-                ocrStatus: .failed,
-                indexingStatus: .failed
+                ocrStatus: .placeholder,
+                indexingStatus: .notStarted
             )
         }
         #else
@@ -885,7 +1047,7 @@ private struct AlphaLocalExtractionOrchestrator {
         }
         let realProviderReady = provider.map { $0.runtimeMode != .deterministicDev && $0.isAvailable() } ?? false
         if pipelinePlan.requiresInstalledPack, !alphaAllowsDevelopmentModelArtifacts(), !realProviderReady {
-            return failedExtractionResult(
+            return assistantUnavailableExtractionResult(
                 caseId: caseId,
                 document: document,
                 pages: pages,
@@ -1060,9 +1222,19 @@ private struct AlphaLocalExtractionOrchestrator {
                 : "Ross found key details."
         )
         let warnings = findings.map(\.message)
-        let status: AlphaExtractionRunStatus = verification.fields.isEmpty
-            ? .failed
-            : (verification.fields.contains(where: \.needsReview) || findings.contains(where: { !$0.resolved }) ? .needsReview : .complete)
+        let hasReadableText = cleanedPages.contains {
+            (($0.extractedText ?? $0.snippet) ?? "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .isEmpty == false
+        }
+        let status: AlphaExtractionRunStatus
+        if verification.fields.isEmpty {
+            status = hasReadableText ? .needsReview : .failed
+        } else {
+            status = verification.fields.contains(where: \.needsReview) || findings.contains(where: { !$0.resolved })
+                ? .needsReview
+                : .complete
+        }
         let progressState: AlphaExtractionProgressState
         switch status {
         case .complete:
@@ -1096,7 +1268,7 @@ private struct AlphaLocalExtractionOrchestrator {
                 fieldsExtracted: verification.fields.count,
                 fieldsNeedingReview: verification.fields.filter(\.needsReview).count,
                 warnings: warnings,
-                errorMessage: verification.fields.isEmpty ? "Ross could not find supported legal fields in this document yet." : nil
+                errorMessage: verification.fields.isEmpty && !hasReadableText ? "Ross could not read useful text in this document yet." : nil
             ),
             findings: findings,
             caseMemoryUpdates: caseMemory,
@@ -1151,6 +1323,60 @@ private struct AlphaLocalExtractionOrchestrator {
                 fieldsNeedingReview: 0,
                 warnings: [warning],
                 errorMessage: "Private assistant setup required."
+            ),
+            findings: [finding],
+            caseMemoryUpdates: [],
+            reviewQueue: AlphaReviewQueue(fieldIDs: [], findingIDs: [finding.id], summary: warning),
+            modelInvocations: [],
+            pipelinePlan: pipelinePlan
+        )
+    }
+
+    private func assistantUnavailableExtractionResult(
+        caseId: UUID,
+        document: AlphaCaseDocument,
+        pages: [AlphaDocumentPage],
+        pipelinePlan: AlphaExtractionPipelinePlan,
+        extractionRunID: UUID,
+        warning: String
+    ) -> AlphaLocalExtractionResult {
+        let finding = AlphaExtractionFinding(
+            caseId: caseId,
+            documentId: document.id,
+            kind: .unsupportedLayout,
+            message: warning,
+            sourceRefs: pages.prefix(1).map { page in
+                AlphaSourceRef(
+                    caseId: caseId,
+                    documentId: document.id,
+                    documentTitle: document.title,
+                    pageNumber: page.pageNumber,
+                    textSnippet: page.snippet,
+                    ocrConfidence: page.ocrConfidence
+                )
+            },
+            severity: .warning
+        )
+        return AlphaLocalExtractionResult(
+            pages: pages,
+            languageProfile: detectLanguageProfile(documentID: document.id, pages: pages),
+            classification: nil,
+            extractedFields: [],
+            extractionRun: AlphaExtractionRun(
+                id: extractionRunID,
+                caseId: caseId,
+                documentId: document.id,
+                mode: pipelinePlan.mode,
+                status: .needsReview,
+                progressState: .needsReview,
+                startedAt: .now,
+                completedAt: .now,
+                pagesProcessed: pages.count,
+                totalPages: document.pageCount,
+                fieldsExtracted: 0,
+                fieldsNeedingReview: 0,
+                warnings: [warning],
+                errorMessage: nil
             ),
             findings: [finding],
             caseMemoryUpdates: [],

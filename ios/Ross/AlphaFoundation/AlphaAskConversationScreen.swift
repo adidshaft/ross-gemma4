@@ -439,7 +439,7 @@ struct AlphaFullScreenChatTurn: View {
                         if !result.selectedDocumentTitles.isEmpty {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 8) {
-                                    ForEach(result.selectedDocumentTitles, id: \.self) { title in
+                                    ForEach(Array(result.selectedDocumentTitles.enumerated()), id: \.offset) { _, title in
                                         AlphaRossTokenChip(
                                             title: title,
                                             detail: nil,
@@ -473,33 +473,14 @@ struct AlphaFullScreenChatTurn: View {
                 )
             } else {
                 VStack(alignment: .leading, spacing: 14) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack(alignment: .top, spacing: 10) {
-                            Text(result.answerTitle)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(Color.rossInk)
-                                .fixedSize(horizontal: false, vertical: true)
-
-                            Spacer(minLength: 8)
-
-                            Button {
-                                alphaCopyAskResultToPasteboard(result)
-                                alphaHaptic(.light)
-                            } label: {
-                                Image(systemName: "doc.on.doc")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundStyle(Color.rossInk.opacity(0.58))
-                                    .frame(width: 30, height: 30)
-                                    .background(Color.rossSecondaryGroupedBackground.opacity(0.82), in: Circle())
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("Copy answer")
+                    AlphaCleanAnswerHeader(
+                        title: result.answerTitle,
+                        statusNote: deduplicatedStatusNote,
+                        onCopy: {
+                            alphaCopyAskResultToPasteboard(result)
+                            alphaHaptic(.light)
                         }
-
-                        if let note = deduplicatedStatusNote {
-                            AlphaAnswerStatusPill(note: note)
-                        }
-                    }
+                    )
 
                     ForEach(Array(answerItems.enumerated()), id: \.element.id) { index, section in
                         VStack(alignment: .leading, spacing: 10) {
@@ -512,15 +493,17 @@ struct AlphaFullScreenChatTurn: View {
                     }
 
                     if !result.caseFileSources.isEmpty {
-                        VStack(alignment: .leading, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Sources")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Color.rossInk.opacity(0.56))
                             AlphaSourceRefChips(
                                 sourceRefs: result.caseFileSources,
                                 contextDocumentTitle: contextDocumentTitle,
                                 onOpenSourceRef: onOpenSource
                             )
                         }
-                        .padding(12)
-                        .background(Color.rossSecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .padding(.top, 2)
                     }
                 }
                 .padding(14)
@@ -607,7 +590,7 @@ struct AlphaPendingLocalModelCard: View {
             if style.showsTaggedFilesAsChips, !result.selectedDocumentTitles.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        ForEach(result.selectedDocumentTitles, id: \.self) { title in
+                        ForEach(Array(result.selectedDocumentTitles.enumerated()), id: \.offset) { _, title in
                             AlphaRossTokenChip(
                                 title: title,
                                 detail: nil,
@@ -799,30 +782,19 @@ struct AlphaAskTurnCard: View {
 
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 14) {
-                    HStack(alignment: .center, spacing: 10) {
-                        Text(result.answerTitle)
-                            .font(.subheadline.weight(.semibold))
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        Spacer(minLength: 8)
-
-                        Menu {
-                            Button {
-                                alphaCopyAskResultToPasteboard(result)
-                            } label: {
-                                Label("Copy answer", systemImage: "doc.on.doc")
-                            }
+                    AlphaCleanAnswerHeader(
+                        title: result.answerTitle,
+                        statusNote: deduplicatedStatusNote,
+                        onCopy: {
+                            alphaCopyAskResultToPasteboard(result)
+                            alphaHaptic(.light)
+                        },
+                        menu: {
                             Button(action: onReport) {
                                 Label("Report answer", systemImage: "exclamationmark.bubble")
                             }
-                        } label: {
-                            Image(systemName: "ellipsis.circle")
-                                .font(.system(size: 17, weight: .semibold))
-                                .foregroundStyle(Color.rossAccent)
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Answer actions")
-                    }
+                    )
 
                     let answerItems = result.answerSectionItems()
                     ForEach(Array(answerItems.enumerated()), id: \.element.id) { index, section in
@@ -834,14 +806,10 @@ struct AlphaAskTurnCard: View {
                         }
                     }
 
-                    if let note = deduplicatedStatusNote {
-                        AlphaAnswerStatusPill(note: note)
-                    }
-
                     if !result.selectedDocumentTitles.isEmpty, contextDocumentTitle == nil {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
-                                ForEach(result.selectedDocumentTitles, id: \.self) { title in
+                                ForEach(Array(result.selectedDocumentTitles.enumerated()), id: \.offset) { _, title in
                                     AlphaRossTokenChip(
                                         title: title,
                                         detail: nil,
@@ -853,7 +821,10 @@ struct AlphaAskTurnCard: View {
                     }
 
                     if !result.caseFileSources.isEmpty {
-                        VStack(alignment: .leading, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Sources")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Color.rossInk.opacity(0.56))
                             if result.caseFileSources.count > 2 {
                                 Button {
                                     withAnimation(.snappy(duration: 0.18)) {
@@ -887,8 +858,7 @@ struct AlphaAskTurnCard: View {
                                 )
                             }
                         }
-                        .padding(12)
-                        .background(Color.rossSecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .padding(.top, 2)
                     }
 
                     if let preview = result.publicLawPreview {
@@ -1012,17 +982,97 @@ struct AlphaSectionLabel: View {
     }
 }
 
+struct AlphaCleanAnswerHeader<MenuContent: View>: View {
+    let title: String
+    let statusNote: String?
+    let onCopy: () -> Void
+    let showsMenu: Bool
+    @ViewBuilder var menu: () -> MenuContent
+
+    init(
+        title: String,
+        statusNote: String?,
+        onCopy: @escaping () -> Void,
+        @ViewBuilder menu: @escaping () -> MenuContent
+    ) {
+        self.title = title
+        self.statusNote = AlphaCleanAnswerHeader.cleanedStatusNote(statusNote)
+        self.onCopy = onCopy
+        self.showsMenu = true
+        self.menu = menu
+    }
+
+    init(
+        title: String,
+        statusNote: String?,
+        onCopy: @escaping () -> Void
+    ) where MenuContent == EmptyView {
+        self.title = title
+        self.statusNote = AlphaCleanAnswerHeader.cleanedStatusNote(statusNote)
+        self.onCopy = onCopy
+        self.showsMenu = false
+        self.menu = { EmptyView() }
+    }
+
+    private static func cleanedStatusNote(_ note: String?) -> String? {
+        guard let note else { return nil }
+        let cleaned = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        return cleaned.isEmpty ? nil : cleaned
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.rossInk)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Spacer(minLength: 8)
+
+                Button(action: onCopy) {
+                    Label("Copy", systemImage: "doc.on.doc")
+                        .font(.caption.weight(.semibold))
+                        .labelStyle(.titleAndIcon)
+                        .foregroundStyle(Color.rossInk.opacity(0.72))
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 6)
+                        .background(Color.rossSecondaryGroupedBackground.opacity(0.9), in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Copy answer")
+
+                if showsMenu {
+                    Menu {
+                        menu()
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(Color.rossInk.opacity(0.48))
+                            .frame(width: 28, height: 28)
+                            .background(Color.rossSecondaryGroupedBackground.opacity(0.72), in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("More answer actions")
+                }
+            }
+
+            if let statusNote {
+                AlphaAnswerStatusPill(note: statusNote)
+            }
+        }
+    }
+}
+
 struct AlphaAnswerStatusPill: View {
     let note: String
 
     var body: some View {
-        Text(note)
-            .font(.caption.weight(.semibold))
+        Label(note, systemImage: "checkmark.seal")
+            .font(.caption2.weight(.semibold))
             .lineLimit(1)
-            .foregroundStyle(Color.rossInk.opacity(0.68))
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
-            .background(Color.rossSecondaryGroupedBackground.opacity(0.86), in: Capsule())
+            .foregroundStyle(Color.rossInk.opacity(0.58))
+            .labelStyle(.titleAndIcon)
     }
 }
 
@@ -1122,6 +1172,25 @@ func alphaCompactPrivacyLabel(_ result: AlphaAskResult) -> String {
     return "On-device only"
 }
 
+// Compile these regex patterns once instead of once per SwiftUI body re-eval.
+// `AlphaFormattedAnswerText` is re-rendered every time a streamed answer
+// token lands, so inline `.replacingOccurrences(of:..., options:.regularExpression)`
+// was recompiling 5 regexes for every line of every render — a major
+// per-frame cost on physical devices.
+private let alphaAnswerHeadingRegex = try! NSRegularExpression(pattern: #"^\s*#{1,6}\s*"#)
+private let alphaAnswerJSONPrefixRegex = try! NSRegularExpression(
+    pattern: #"^\s*json\s*(?=\{)"#,
+    options: [.caseInsensitive]
+)
+private let alphaAnswerBoldRegex = try! NSRegularExpression(pattern: #"\*\*(.*?)\*\*"#)
+private let alphaAnswerQuoteRegex = try! NSRegularExpression(pattern: #"^>\s*"#)
+private let alphaAnswerNumberedRegex = try! NSRegularExpression(pattern: #"^\d+\.\s"#)
+
+private func alphaApplyRegex(_ regex: NSRegularExpression, to text: String, with replacement: String) -> String {
+    let range = NSRange(text.startIndex..., in: text)
+    return regex.stringByReplacingMatches(in: text, range: range, withTemplate: replacement)
+}
+
 /// Renders answer text with basic formatting: bullets, numbered lists, and bold markers.
 struct AlphaFormattedAnswerText: View {
     let text: String
@@ -1136,14 +1205,23 @@ struct AlphaFormattedAnswerText: View {
     private var lines: [AnswerLine] {
         let rawLines = text.components(separatedBy: "\n")
         return rawLines.enumerated().compactMap { index, line in
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            var trimmed = line.trimmingCharacters(in: .whitespaces)
+            trimmed = alphaApplyRegex(alphaAnswerHeadingRegex, to: trimmed, with: "")
+            trimmed = alphaApplyRegex(alphaAnswerJSONPrefixRegex, to: trimmed, with: "")
+            trimmed = alphaApplyRegex(alphaAnswerBoldRegex, to: trimmed, with: "$1")
+            trimmed = trimmed.trimmingCharacters(in: .whitespaces)
             guard !trimmed.isEmpty else { return nil }
+            if trimmed == "---" || trimmed == "```" { return nil }
+            trimmed = alphaApplyRegex(alphaAnswerQuoteRegex, to: trimmed, with: "")
             if trimmed.hasPrefix("- ") || trimmed.hasPrefix("• ") || trimmed.hasPrefix("* ") {
                 return AnswerLine(id: index, text: String(trimmed.dropFirst(2)), isBullet: true, bulletPrefix: "•")
             }
-            if let dotRange = trimmed.range(of: #"^\d+\.\s"#, options: .regularExpression) {
-                let prefix = String(trimmed[dotRange]).trimmingCharacters(in: .whitespaces)
-                let body = String(trimmed[dotRange.upperBound...])
+            let nsTrimmed = trimmed as NSString
+            let nsRange = NSRange(location: 0, length: nsTrimmed.length)
+            if let match = alphaAnswerNumberedRegex.firstMatch(in: trimmed, range: nsRange) {
+                let matched = nsTrimmed.substring(with: match.range)
+                let prefix = matched.trimmingCharacters(in: .whitespaces)
+                let body = nsTrimmed.substring(from: match.range.upperBound)
                 return AnswerLine(id: index, text: body, isBullet: true, bulletPrefix: prefix)
             }
             return AnswerLine(id: index, text: trimmed, isBullet: false, bulletPrefix: nil)
@@ -1197,7 +1275,7 @@ extension AlphaAskResult {
     }
 
     var isPendingLocalModelResponse: Bool {
-        answerTitle == "Private assistant is reading your files"
+        answerTitle == "Ross is answering..."
             && (statusNote?.hasSuffix("running locally") ?? false)
             && publicLawPreview == nil
             && publicLawResults.isEmpty
