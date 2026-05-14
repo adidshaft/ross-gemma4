@@ -1,5 +1,7 @@
 import Foundation
 
+let AlphaCurrentPersistedStateSchemaVersion = 2
+
 enum AlphaOnboardingStage: String, Codable, Hashable, Sendable {
     case onboarding
     // Kept so older saved state can migrate into the simplified onboarding flow.
@@ -2087,6 +2089,7 @@ struct AlphaSettings: Codable, Hashable, Sendable {
     var backgroundWorkEnabled: Bool
     var autoModelUpdateChecksEnabled: Bool
     var keepModelFilesOnWorkspaceReset: Bool
+    var llamaSamplerSettings: AlphaLlamaSamplerSettings
 
     static let `default` = AlphaSettings(
         activeTier: nil,
@@ -2099,7 +2102,8 @@ struct AlphaSettings: Codable, Hashable, Sendable {
         deviceCacheEnabled: true,
         backgroundWorkEnabled: true,
         autoModelUpdateChecksEnabled: true,
-        keepModelFilesOnWorkspaceReset: true
+        keepModelFilesOnWorkspaceReset: true,
+        llamaSamplerSettings: .legalQA
     )
 
     private enum CodingKeys: String, CodingKey {
@@ -2114,6 +2118,7 @@ struct AlphaSettings: Codable, Hashable, Sendable {
         case backgroundWorkEnabled
         case autoModelUpdateChecksEnabled
         case keepModelFilesOnWorkspaceReset
+        case llamaSamplerSettings
     }
 
     init(
@@ -2127,7 +2132,8 @@ struct AlphaSettings: Codable, Hashable, Sendable {
         deviceCacheEnabled: Bool,
         backgroundWorkEnabled: Bool,
         autoModelUpdateChecksEnabled: Bool,
-        keepModelFilesOnWorkspaceReset: Bool
+        keepModelFilesOnWorkspaceReset: Bool,
+        llamaSamplerSettings: AlphaLlamaSamplerSettings = .legalQA
     ) {
         self.activeTier = activeTier
         self.appearanceMode = appearanceMode
@@ -2140,6 +2146,7 @@ struct AlphaSettings: Codable, Hashable, Sendable {
         self.backgroundWorkEnabled = backgroundWorkEnabled
         self.autoModelUpdateChecksEnabled = autoModelUpdateChecksEnabled
         self.keepModelFilesOnWorkspaceReset = keepModelFilesOnWorkspaceReset
+        self.llamaSamplerSettings = llamaSamplerSettings
     }
 
     init(from decoder: any Decoder) throws {
@@ -2155,6 +2162,34 @@ struct AlphaSettings: Codable, Hashable, Sendable {
         backgroundWorkEnabled = try container.decodeIfPresent(Bool.self, forKey: .backgroundWorkEnabled) ?? true
         autoModelUpdateChecksEnabled = try container.decodeIfPresent(Bool.self, forKey: .autoModelUpdateChecksEnabled) ?? true
         keepModelFilesOnWorkspaceReset = try container.decodeIfPresent(Bool.self, forKey: .keepModelFilesOnWorkspaceReset) ?? true
+        llamaSamplerSettings = try container.decodeIfPresent(AlphaLlamaSamplerSettings.self, forKey: .llamaSamplerSettings) ?? .legalQA
+    }
+}
+
+struct AlphaLlamaSamplerSettings: Codable, Hashable, Sendable {
+    var temperature: Double
+    var topP: Double
+    var topK: Int
+    var repeatPenalty: Double
+    var seed: UInt32
+
+    static let legalQA = AlphaLlamaSamplerSettings(
+        temperature: 0.25,
+        topP: 0.90,
+        topK: 40,
+        repeatPenalty: 1.10,
+        seed: 1234
+    )
+}
+
+struct AlphaAssistantStorageBreakdown: Codable, Hashable, Sendable {
+    var modelPackBytes: Int64
+    var resumeBytes: Int64
+    var pendingDownloadBytes: Int64
+    var deviceCacheBytes: Int64
+
+    var totalBytes: Int64 {
+        modelPackBytes + resumeBytes + pendingDownloadBytes + deviceCacheBytes
     }
 }
 
@@ -2192,6 +2227,7 @@ struct AlphaAssistantRuntimeDecision: Codable, Hashable, Sendable {
 }
 
 struct AlphaPersistedState: Codable, Hashable, Sendable {
+    var schemaVersion: Int? = AlphaCurrentPersistedStateSchemaVersion
     var onboardingStage: AlphaOnboardingStage
     var selectedTab: AlphaAppTab
     var settings: AlphaSettings

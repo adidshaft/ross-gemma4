@@ -47,6 +47,7 @@ struct AlphaLocalModelInput: Codable, Hashable, Sendable {
     var documentClassification: AlphaLegalDocumentClassification?
     var extractionMode: AlphaExtractionMode
     var requireSourceRefs: Bool? = nil
+    var samplerSettings: AlphaLlamaSamplerSettings? = nil
 
     var sourceRefsRequired: Bool {
         requireSourceRefs ?? true
@@ -189,7 +190,7 @@ struct AlphaPromptPackBuilder {
 
             if prompt.count + sourceBlock.count + footer.count > maxInputChars {
                 let remainingBudget = max(maxInputChars - prompt.count - footer.count - 64, 48)
-                let shortened = String(block.text.prefix(remainingBudget))
+                let shortened = clippedSourceText(block.text, budget: remainingBudget)
                 prompt += """
                 
                 <source_block page="\(block.pageNumber)" ref="\(block.sourceRef.label)" truncated="true"><![CDATA[\(shortened.replacingOccurrences(of: "]]>", with: "]]]]><![CDATA[>"))]]></source_block>
@@ -206,8 +207,8 @@ struct AlphaPromptPackBuilder {
         prompt += footer
         if prompt.count > maxInputChars {
             let suffix = "\n</document>"
-            let allowedPrefix = max(maxInputChars - suffix.count - 3, 48)
-            prompt = String(prompt.prefix(allowedPrefix)) + "..." + suffix
+            let allowedBody = max(maxInputChars - suffix.count - 3, 48)
+            prompt = clippedSourceText(prompt, budget: allowedBody) + "..." + suffix
             truncated = true
         }
 
@@ -229,6 +230,13 @@ struct AlphaPromptPackBuilder {
         }
         footer += "\n</document>"
         return footer
+    }
+
+    private func clippedSourceText(_ text: String, budget: Int) -> String {
+        guard budget > 0, text.count > budget else { return String(text.prefix(max(budget, 0))) }
+        let headCount = max(1, Int(Double(budget) * 0.62))
+        let tailCount = max(1, budget - headCount - 6)
+        return "\(text.prefix(headCount))\n...\n\(text.suffix(tailCount))"
     }
 }
 
