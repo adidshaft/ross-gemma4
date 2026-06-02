@@ -2457,6 +2457,286 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "இந்த வழக்கு, குறியிட்ட கோப்பு, அல்லது உங்கள் அடுத்த வரைவு படி பற்றி Ross-ஐ கேளுங்கள்.",
             "te": "ఈ కేసు, ట్యాగ్ చేసిన ఫైల్, లేదా మీ తదుపరి డ్రాఫ్టింగ్ అడుగు గురించి Ross‌ను అడగండి."
         ],
+        "ask_ross": [
+            "en": "Ask Ross",
+            "hi": "Ross से पूछें",
+            "bn": "Ross-কে জিজ্ঞাসা করুন",
+            "ta": "Ross-ஐ கேளுங்கள்",
+            "te": "Ross‌ను అడగండి"
+        ],
+        "send_ask_ross_question": [
+            "en": "Send Ask Ross question",
+            "hi": "Ask Ross question भेजें",
+            "bn": "Ask Ross question পাঠান",
+            "ta": "Ask Ross question அனுப்பவும்",
+            "te": "Ask Ross question పంపండి"
+        ],
+        "close_ask_ross": [
+            "en": "Close Ask Ross",
+            "hi": "Ask Ross बंद करें",
+            "bn": "Ask Ross বন্ধ করুন",
+            "ta": "Ask Ross மூடவும்",
+            "te": "Ask Ross మూసివేయండి"
+        ],
+        "asking_about_scope": [
+            "en": "Asking about %@",
+            "hi": "%@ के बारे में पूछ रहे हैं",
+            "bn": "%@ সম্পর্কে জিজ্ঞাসা করছেন",
+            "ta": "%@ பற்றி கேட்கிறீர்கள்",
+            "te": "%@ గురించి అడుగుతున్నారు"
+        ],
+        "ask_attach_or_command_hint": [
+            "en": "Tap + to attach a file, or say \"add task\" or \"save date\".",
+            "hi": "file attach करने के लिए + tap करें, या \"add task\" या \"save date\" कहें।",
+            "bn": "file attach করতে + tap করুন, বা \"add task\" বা \"save date\" বলুন।",
+            "ta": "file attach செய்ய + tap செய்யவும், அல்லது \"add task\" அல்லது \"save date\" சொல்லவும்.",
+            "te": "file attach చేయడానికి + tap చేయండి, లేదా \"add task\" లేదా \"save date\" అని చెప్పండి."
+        ],
+        "ask_legal_search_clean_query_detail": [
+            "en": "Ross will use Legal Search with a cleaned query. Your case files stay on this device.",
+            "hi": "Ross cleaned query के साथ Legal Search use करेगा। आपकी case files इस device पर रहती हैं।",
+            "bn": "Ross cleaned query দিয়ে Legal Search ব্যবহার করবে। আপনার case files এই device-এই থাকবে।",
+            "ta": "Ross cleaned query உடன் Legal Search பயன்படுத்தும். உங்கள் case files இந்த device-இலேயே இருக்கும்.",
+            "te": "Ross cleaned query తో Legal Search ఉపయోగిస్తుంది. మీ case files ఈ device లోనే ఉంటాయి."
+        ],
+        "review_legal_search": [
+            "en": "Review Legal Search",
+            "hi": "Legal Search review करें",
+            "bn": "Legal Search review করুন",
+            "ta": "Legal Search review செய்யவும்",
+            "te": "Legal Search review చేయండి"
+        ],
+        "review_legal_search_detail": [
+            "en": "Ross will search using only the query below. Your case files, party names, and private details stay on this device.",
+            "hi": "Ross सिर्फ नीचे दी query से search करेगा। आपकी case files, party names और private details इस device पर रहती हैं।",
+            "bn": "Ross শুধু নিচের query দিয়ে search করবে। আপনার case files, party names, এবং private details এই device-এই থাকবে।",
+            "ta": "Ross கீழே உள்ள query-ஐ மட்டும் பயன்படுத்தி search செய்யும். உங்கள் case files, party names மற்றும் private details இந்த device-இலேயே இருக்கும்.",
+            "te": "Ross కింద ఉన్న query తో మాత్రమే search చేస్తుంది. మీ case files, party names మరియు private details ఈ device లోనే ఉంటాయి."
+        ],
+        "query_to_be_sent": [
+            "en": "Query to be sent",
+            "hi": "भेजी जाने वाली query",
+            "bn": "যে query পাঠানো হবে",
+            "ta": "அனுப்பப்படும் query",
+            "te": "పంపబడే query"
+        ],
+        "zero_private_case_details_sent": [
+            "en": "0 private case details sent",
+            "hi": "0 private case details भेजे गए",
+            "bn": "0 private case details পাঠানো হয়েছে",
+            "ta": "0 private case details அனுப்பப்பட்டன",
+            "te": "0 private case details పంపబడ్డాయి"
+        ],
+        "private_details_removed_zero_sent": [
+            "en": "%d private details removed · 0 sent",
+            "hi": "%d private details हटाए गए · 0 भेजे गए",
+            "bn": "%d private details সরানো হয়েছে · 0 পাঠানো হয়েছে",
+            "ta": "%d private details நீக்கப்பட்டன · 0 அனுப்பப்பட்டது",
+            "te": "%d private details తొలగించబడ్డాయి · 0 పంపబడ్డాయి"
+        ],
+        "searching_legal_sources_ellipsis": [
+            "en": "Searching legal sources...",
+            "hi": "legal sources search हो रहे हैं...",
+            "bn": "legal sources search হচ্ছে...",
+            "ta": "legal sources search ஆகின்றன...",
+            "te": "legal sources search అవుతున్నాయి..."
+        ],
+        "send": [
+            "en": "Send",
+            "hi": "भेजें",
+            "bn": "পাঠান",
+            "ta": "அனுப்பவும்",
+            "te": "పంపండి"
+        ],
+        "type_at_to_add_file": [
+            "en": "Type @ to add a file.",
+            "hi": "file जोड़ने के लिए @ type करें।",
+            "bn": "file যোগ করতে @ type করুন।",
+            "ta": "file சேர்க்க @ type செய்யவும்.",
+            "te": "file జోడించడానికి @ type చేయండి."
+        ],
+        "done": [
+            "en": "Done",
+            "hi": "हो गया",
+            "bn": "হয়ে গেছে",
+            "ta": "முடிந்தது",
+            "te": "పూర్తయింది"
+        ],
+        "all_work": [
+            "en": "All work",
+            "hi": "सारा काम",
+            "bn": "সব কাজ",
+            "ta": "அனைத்து வேலை",
+            "te": "అన్ని పని"
+        ],
+        "legal_search_on": [
+            "en": "Legal Search on",
+            "hi": "Legal Search on",
+            "bn": "Legal Search on",
+            "ta": "Legal Search on",
+            "te": "Legal Search on"
+        ],
+        "local_only": [
+            "en": "Local only",
+            "hi": "सिर्फ local",
+            "bn": "শুধু local",
+            "ta": "local மட்டும்",
+            "te": "local మాత్రమే"
+        ],
+        "legal_search_sanitized_query_detail": [
+            "en": "Legal Search only uses a sanitized legal query. Case files and document text stay on-device.",
+            "hi": "Legal Search सिर्फ sanitized legal query use करता है। Case files और document text on-device रहते हैं।",
+            "bn": "Legal Search শুধু sanitized legal query ব্যবহার করে। Case files এবং document text on-device থাকে।",
+            "ta": "Legal Search sanitized legal query மட்டும் பயன்படுத்தும். Case files மற்றும் document text on-device இருக்கும்.",
+            "te": "Legal Search sanitized legal query మాత్రమే ఉపయోగిస్తుంది. Case files మరియు document text on-device ఉంటాయి."
+        ],
+        "ask_tools_detail": [
+            "en": "Choose scope, add a file, or turn on Legal Search.",
+            "hi": "scope चुनें, file जोड़ें, या Legal Search on करें।",
+            "bn": "scope বেছে নিন, file যোগ করুন, বা Legal Search on করুন।",
+            "ta": "scope தேர்வுசெய்க, file சேர்க்கவும் அல்லது Legal Search on செய்யவும்.",
+            "te": "scope ఎంచుకోండి, file జోడించండి, లేదా Legal Search on చేయండి."
+        ],
+        "close_ask_ross_tools": [
+            "en": "Close Ask Ross tools",
+            "hi": "Ask Ross tools बंद करें",
+            "bn": "Ask Ross tools বন্ধ করুন",
+            "ta": "Ask Ross tools மூடவும்",
+            "te": "Ask Ross tools మూసివేయండి"
+        ],
+        "add_file": [
+            "en": "Add file",
+            "hi": "File जोड़ें",
+            "bn": "File যোগ করুন",
+            "ta": "File சேர்க்கவும்",
+            "te": "File జోడించండి"
+        ],
+        "add_file_shared_detail": [
+            "en": "Add a PDF or note to shared files.",
+            "hi": "shared files में PDF या note जोड़ें।",
+            "bn": "shared files-এ PDF বা note যোগ করুন।",
+            "ta": "shared files-இல் PDF அல்லது note சேர்க்கவும்.",
+            "te": "shared files కు PDF లేదా note జోడించండి."
+        ],
+        "add_file_matter_detail": [
+            "en": "Add a PDF or note to this matter.",
+            "hi": "इस matter में PDF या note जोड़ें।",
+            "bn": "এই matter-এ PDF বা note যোগ করুন।",
+            "ta": "இந்த matter-க்கு PDF அல்லது note சேர்க்கவும்.",
+            "te": "ఈ matter కు PDF లేదా note జోడించండి."
+        ],
+        "add_image": [
+            "en": "Add image",
+            "hi": "Image जोड़ें",
+            "bn": "Image যোগ করুন",
+            "ta": "Image சேர்க்கவும்",
+            "te": "Image జోడించండి"
+        ],
+        "add_image_shared_detail": [
+            "en": "Add a photo, scan, or screenshot to shared files.",
+            "hi": "shared files में photo, scan, या screenshot जोड़ें।",
+            "bn": "shared files-এ photo, scan, বা screenshot যোগ করুন।",
+            "ta": "shared files-இல் photo, scan அல்லது screenshot சேர்க்கவும்.",
+            "te": "shared files కు photo, scan, లేదా screenshot జోడించండి."
+        ],
+        "add_image_matter_detail": [
+            "en": "Add a photo, scan, or screenshot to this matter.",
+            "hi": "इस matter में photo, scan, या screenshot जोड़ें।",
+            "bn": "এই matter-এ photo, scan, বা screenshot যোগ করুন।",
+            "ta": "இந்த matter-க்கு photo, scan அல்லது screenshot சேர்க்கவும்.",
+            "te": "ఈ matter కు photo, scan, లేదా screenshot జోడించండి."
+        ],
+        "legal_search_on_detail": [
+            "en": "On. Ross only sends a sanitized legal query.",
+            "hi": "On. Ross सिर्फ sanitized legal query भेजता है।",
+            "bn": "On. Ross শুধু sanitized legal query পাঠায়।",
+            "ta": "On. Ross sanitized legal query மட்டும் அனுப்பும்.",
+            "te": "On. Ross sanitized legal query మాత్రమే పంపుతుంది."
+        ],
+        "legal_search_off_detail": [
+            "en": "Off. Ross stays fully local until you turn it on.",
+            "hi": "Off. On करने तक Ross पूरी तरह local रहता है।",
+            "bn": "Off. আপনি on না করা পর্যন্ত Ross পুরোপুরি local থাকে।",
+            "ta": "Off. நீங்கள் on செய்யும் வரை Ross முழுவதும் local-ஆக இருக்கும்.",
+            "te": "Off. మీరు on చేసే వరకు Ross పూర్తిగా local గా ఉంటుంది."
+        ],
+        "on": [
+            "en": "On",
+            "hi": "On",
+            "bn": "On",
+            "ta": "On",
+            "te": "On"
+        ],
+        "off": [
+            "en": "Off",
+            "hi": "Off",
+            "bn": "Off",
+            "ta": "Off",
+            "te": "Off"
+        ],
+        "ask_activity_log_detail": [
+            "en": "See what stayed local and what, if anything, left the device.",
+            "hi": "देखें क्या local रहा और क्या, अगर कुछ, device से बाहर गया।",
+            "bn": "দেখুন কী local ছিল এবং কিছু গেলে device থেকে কী বেরিয়েছে।",
+            "ta": "எது local-ஆக இருந்தது, ஏதாவது device-ஐ விட்டுச் சென்றதா என்பதைப் பார்க்கவும்.",
+            "te": "ఏది local గా ఉండింది, ఏదైనా device బయటకు వెళ్లిందా చూడండి."
+        ],
+        "this_space": [
+            "en": "This space",
+            "hi": "यह space",
+            "bn": "এই space",
+            "ta": "இந்த space",
+            "te": "ఈ space"
+        ],
+        "this_matter": [
+            "en": "This matter",
+            "hi": "यह matter",
+            "bn": "এই matter",
+            "ta": "இந்த matter",
+            "te": "ఈ matter"
+        ],
+        "ask_in": [
+            "en": "Ask in",
+            "hi": "इसमें पूछें",
+            "bn": "এখানে জিজ্ঞাসা করুন",
+            "ta": "இதில் கேளுங்கள்",
+            "te": "ఇందులో అడగండి"
+        ],
+        "use_uploaded_files": [
+            "en": "Use uploaded files",
+            "hi": "uploaded files use करें",
+            "bn": "uploaded files ব্যবহার করুন",
+            "ta": "uploaded files பயன்படுத்தவும்",
+            "te": "uploaded files ఉపయోగించండి"
+        ],
+        "shared_file": [
+            "en": "Shared file",
+            "hi": "Shared file",
+            "bn": "Shared file",
+            "ta": "Shared file",
+            "te": "Shared file"
+        ],
+        "ask_empty_files_shared_detail": [
+            "en": "Add a PDF, note, photo, or scan. Ross will read it locally before using it in Ask.",
+            "hi": "PDF, note, photo, या scan जोड़ें। Ask में use करने से पहले Ross इसे locally पढ़ेगा।",
+            "bn": "PDF, note, photo, বা scan যোগ করুন। Ask-এ ব্যবহারের আগে Ross এটি locally পড়বে।",
+            "ta": "PDF, note, photo அல்லது scan சேர்க்கவும். Ask-இல் பயன்படுத்துவதற்கு முன் Ross அதை locally படிக்கும்.",
+            "te": "PDF, note, photo, లేదా scan జోడించండి. Ask లో ఉపయోగించే ముందు Ross దాన్ని locally చదువుతుంది."
+        ],
+        "ask_empty_files_matter_detail": [
+            "en": "Add a PDF, note, photo, or scan to this matter. Ross will read it locally before using it in Ask.",
+            "hi": "इस matter में PDF, note, photo, या scan जोड़ें। Ask में use करने से पहले Ross इसे locally पढ़ेगा।",
+            "bn": "এই matter-এ PDF, note, photo, বা scan যোগ করুন। Ask-এ ব্যবহারের আগে Ross এটি locally পড়বে।",
+            "ta": "இந்த matter-க்கு PDF, note, photo அல்லது scan சேர்க்கவும். Ask-இல் பயன்படுத்துவதற்கு முன் Ross அதை locally படிக்கும்.",
+            "te": "ఈ matter కు PDF, note, photo, లేదా scan జోడించండి. Ask లో ఉపయోగించే ముందు Ross దాన్ని locally చదువుతుంది."
+        ],
+        "no_ready_files_yet": [
+            "en": "No ready files yet",
+            "hi": "अभी ready files नहीं",
+            "bn": "এখনও ready files নেই",
+            "ta": "இன்னும் ready files இல்லை",
+            "te": "ఇంకా ready files లేవు"
+        ],
         "ask_empty_title": [
             "en": "Ask Ross what's next",
             "hi": "Ross से आगे का काम पूछें",

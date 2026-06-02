@@ -92,6 +92,21 @@ func alphaAskSheetPlaceholder(languageCode: String = rossSelectedLanguageCode())
     rossLocalized("ask_sheet_placeholder", languageCode: languageCode)
 }
 
+func alphaAskingAboutScopeLabel(_ scopeLabel: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("asking_about_scope", languageCode: languageCode), scopeLabel)
+}
+
+func alphaPublicLawPrivacyCountLabel(_ removedCount: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    if removedCount == 0 {
+        return rossLocalized("zero_private_case_details_sent", languageCode: languageCode)
+    }
+    return String(format: rossLocalized("private_details_removed_zero_sent", languageCode: languageCode), removedCount)
+}
+
+func alphaRootAskEmptyFilesDetail(scopeIsShared: Bool, languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized(scopeIsShared ? "ask_empty_files_shared_detail" : "ask_empty_files_matter_detail", languageCode: languageCode)
+}
+
 struct AlphaRootAskDock: View {
     @Environment(\.colorScheme) private var colorScheme
     @Bindable var model: AlphaRossModel
@@ -516,7 +531,7 @@ struct AlphaRootAskDock: View {
                             )
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(canSend ? "Send Ask Ross question" : "Close Ask Ross")
+                    .accessibilityLabel(canSend ? rossLocalized("send_ask_ross_question") : rossLocalized("close_ask_ross"))
                 }
             }
             .contentShape(Rectangle())
@@ -534,7 +549,7 @@ struct AlphaRootAskDock: View {
             }
 
             if fixedDocumentIDs.isEmpty, let activeScopeCaseID {
-                Text("Asking about \(model.scopeLabel(for: activeScopeCaseID))")
+                Text(alphaAskingAboutScopeLabel(model.scopeLabel(for: activeScopeCaseID)))
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(dockSecondaryText)
             } else if let selectionSubtitle, fixedDocumentIDs.isEmpty {
@@ -542,13 +557,13 @@ struct AlphaRootAskDock: View {
                     .font(.caption2)
                     .foregroundStyle(dockSecondaryText)
             } else if fixedDocumentIDs.isEmpty {
-                Text("Tap \u{FF0B} to attach a file, or say \u{201C}add task\u{201D} or \u{201C}save date\u{201D}.")
+                Text(rossLocalized("ask_attach_or_command_hint"))
                     .font(.caption.weight(.medium))
                     .foregroundStyle(dockMutedText)
             }
 
             if model.askWebEnabled {
-                Text("Ross will use Legal Search with a cleaned query. Your case files stay on this device.")
+                Text(rossLocalized("ask_legal_search_clean_query_detail"))
                     .font(.caption.weight(.medium))
                     .foregroundStyle(dockSecondaryText)
                     .fixedSize(horizontal: false, vertical: true)
@@ -656,15 +671,15 @@ struct AlphaRootAskDock: View {
                     ScrollView {
                         RossGlassGroup(spacing: 16) {
                             VStack(alignment: .leading, spacing: 16) {
-                                Text("Review Legal Search")
+                                Text(rossLocalized("review_legal_search"))
                                     .font(.title3.weight(.semibold))
-                                Text("Ross will search using only the query below. Your case files, party names, and private details stay on this device.")
+                                Text(rossLocalized("review_legal_search_detail"))
                                     .font(.footnote)
                                     .foregroundStyle(Color.rossInk.opacity(0.72))
                                     .fixedSize(horizontal: false, vertical: true)
 
                                 VStack(alignment: .leading, spacing: 8) {
-                                    Text("Query to be sent")
+                                    Text(rossLocalized("query_to_be_sent"))
                                         .font(.subheadline.weight(.semibold))
                                     if editingPublicLawQuery {
                                         TextEditor(text: Binding(
@@ -686,7 +701,7 @@ struct AlphaRootAskDock: View {
                                     }
                                 }
 
-                                Text(preview.removed == ["No private case data detected"] ? "0 private case details sent" : "\(preview.removed.count) private details removed · 0 sent")
+                                Text(alphaPublicLawPrivacyCountLabel(preview.removed == ["No private case data detected"] ? 0 : preview.removed.count))
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(Color.rossInk.opacity(0.62))
                                     .padding(.horizontal, 10)
@@ -694,7 +709,7 @@ struct AlphaRootAskDock: View {
                                     .rossGlassSurface(cornerRadius: 999, strokeOpacity: 0.42)
 
                                 if model.publicLawSearchInFlight {
-                                    ProgressView("Searching legal sources…")
+                                    ProgressView(rossLocalized("searching_legal_sources_ellipsis"))
                                         .progressViewStyle(.circular)
                                         .tint(Color.rossAccent)
                                         .font(.footnote.weight(.medium))
@@ -706,14 +721,14 @@ struct AlphaRootAskDock: View {
                     .safeAreaInset(edge: .bottom, spacing: 0) {
                         RossGlassGroup(spacing: 10) {
                             HStack(spacing: 10) {
-                                Button("Cancel") {
+                                Button(rossLocalized("cancel")) {
                                     model.cancelPendingPublicLawSearch()
                                 }
                                 .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 16, expandsHorizontally: false)
 
                                 Spacer(minLength: 0)
 
-                                Button("Send") {
+                                Button(rossLocalized("send")) {
                                     Task { await model.confirmPendingPublicLawSearch() }
                                 }
                                 .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16, expandsHorizontally: false)
@@ -1301,11 +1316,11 @@ struct AlphaAskComposerSheet: View {
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .top, spacing: 12) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Ask Ross")
+                        Text(rossLocalized("ask_ross"))
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Color.rossInk)
 
-                        Text("Type @ to add a file.")
+                        Text(rossLocalized("type_at_to_add_file"))
                             .font(.caption)
                             .foregroundStyle(Color.rossInk.opacity(0.64))
                             .fixedSize(horizontal: false, vertical: true)
@@ -1313,7 +1328,7 @@ struct AlphaAskComposerSheet: View {
 
                     Spacer(minLength: 8)
 
-                    Button("Done") {
+                    Button(rossLocalized("done")) {
                         if composerFocused {
                             hideKeyboard()
                         } else {
@@ -1326,7 +1341,7 @@ struct AlphaAskComposerSheet: View {
                 HStack(spacing: 10) {
                     if fixedScopeCaseID == nil {
                         Menu {
-                            Button("All work") {
+                            Button(rossLocalized("all_work")) {
                                 model.askSelectedScopeCaseID = nil
                             }
                             ForEach(model.cases) { caseMatter in
@@ -1356,7 +1371,7 @@ struct AlphaAskComposerSheet: View {
                         model.askWebEnabled.toggle()
                     } label: {
                         AlphaAskScopePill(
-                            title: model.askWebEnabled ? "Legal Search on" : "Local only",
+                            title: model.askWebEnabled ? rossLocalized("legal_search_on") : rossLocalized("local_only"),
                             foregroundStyle: model.askWebEnabled ? Color.rossHighlight : Color.rossInk.opacity(0.78),
                             backgroundOpacity: 0.08,
                             statusSystemImage: "globe",
@@ -1429,7 +1444,7 @@ struct AlphaAskComposerSheet: View {
                 }
 
                 if model.askWebEnabled {
-            Text("Legal Search only uses a sanitized legal query. Case files and document text stay on-device.")
+                    Text(rossLocalized("legal_search_sanitized_query_detail"))
                         .font(.caption2)
                         .foregroundStyle(Color.rossInk.opacity(0.58))
                         .fixedSize(horizontal: false, vertical: true)
@@ -1439,7 +1454,7 @@ struct AlphaAskComposerSheet: View {
                     hideKeyboard()
                     onSend()
                 } label: {
-                    Text("Send")
+                    Text(rossLocalized("send"))
                 }
                 .buttonStyle(AlphaSetupPrimaryButtonStyle())
                 .disabled(!canSend)
@@ -1485,11 +1500,11 @@ struct AlphaRootAskToolsSheet: View {
                         VStack(alignment: .leading, spacing: 6) {
                             HStack(spacing: 10) {
                                 RossGlassIconView(.userMsg, variant: .accent, size: 22, fallbackSystemImage: "bubble.left.and.text.bubble.right.fill")
-                                Text("Ask Ross")
+                                Text(rossLocalized("ask_ross"))
                                     .font(.subheadline.weight(.semibold))
                                     .foregroundStyle(Color.rossInk)
                             }
-                            Text("Choose scope, add a file, or turn on Legal Search.")
+                            Text(rossLocalized("ask_tools_detail"))
                                 .font(.caption)
                                 .foregroundStyle(Color.rossInk.opacity(0.66))
                                 .fixedSize(horizontal: false, vertical: true)
@@ -1513,14 +1528,14 @@ struct AlphaRootAskToolsSheet: View {
                                 )
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("Close Ask Ross tools")
+                        .accessibilityLabel(rossLocalized("close_ask_ross_tools"))
                     }
 
                     VStack(spacing: 10) {
                         AlphaRootAskToolRow(
-                            title: "Add file",
-                            detail: activeScopeCaseID == nil ? "Add a PDF or note to shared files." : "Add a PDF or note to this matter.",
-                            accentLabel: "Open",
+                            title: rossLocalized("add_file"),
+                            detail: activeScopeCaseID == nil ? rossLocalized("add_file_shared_detail") : rossLocalized("add_file_matter_detail"),
+                            accentLabel: rossLocalized("open"),
                             icon: .fileUpload,
                             variant: .accent,
                             fallbackSystemImage: "doc.badge.plus"
@@ -1530,9 +1545,9 @@ struct AlphaRootAskToolsSheet: View {
                         }
 
                         AlphaRootAskToolRow(
-                            title: "Add image",
-                            detail: activeScopeCaseID == nil ? "Add a photo, scan, or screenshot to shared files." : "Add a photo, scan, or screenshot to this matter.",
-                            accentLabel: "Open",
+                            title: rossLocalized("add_image"),
+                            detail: activeScopeCaseID == nil ? rossLocalized("add_image_shared_detail") : rossLocalized("add_image_matter_detail"),
+                            accentLabel: rossLocalized("open"),
                             icon: .files,
                             variant: .neutral,
                             fallbackSystemImage: "photo.stack"
@@ -1544,9 +1559,9 @@ struct AlphaRootAskToolsSheet: View {
                         AlphaRootAskToolRow(
                             title: "Legal Search",
                             detail: model.askWebEnabled
-                                ? "On. Ross only sends a sanitized legal query."
-                                : "Off. Ross stays fully local until you turn it on.",
-                            accentLabel: model.askWebEnabled ? "On" : "Off",
+                                ? rossLocalized("legal_search_on_detail")
+                                : rossLocalized("legal_search_off_detail"),
+                            accentLabel: model.askWebEnabled ? rossLocalized("on") : rossLocalized("off"),
                             icon: .earth,
                             variant: model.askWebEnabled ? .highlight : .neutral,
                             fallbackSystemImage: model.askWebEnabled ? "globe.badge.chevron.backward" : "globe.slash"
@@ -1556,8 +1571,8 @@ struct AlphaRootAskToolsSheet: View {
 
                         AlphaRootAskToolRow(
                             title: "Activity Log",
-                            detail: "See what stayed local and what, if anything, left the device.",
-                            accentLabel: "Open",
+                            detail: rossLocalized("ask_activity_log_detail"),
+                            accentLabel: rossLocalized("open"),
                             icon: .gearKeyhole,
                             variant: .neutral,
                             fallbackSystemImage: "lock.shield"
@@ -1569,7 +1584,7 @@ struct AlphaRootAskToolsSheet: View {
 
                     if let fixedScopeCaseID {
                         VStack(alignment: .leading, spacing: 10) {
-                            Text(fixedScopeCaseID == alphaSharedWorkspaceID ? "This space" : "This matter")
+                            Text(fixedScopeCaseID == alphaSharedWorkspaceID ? rossLocalized("this_space") : rossLocalized("this_matter"))
                                 .font(.caption.weight(.bold))
                                 .tracking(1.2)
                                 .foregroundStyle(Color.rossInk.opacity(0.64))
@@ -1585,13 +1600,13 @@ struct AlphaRootAskToolsSheet: View {
                         }
                     } else {
                         VStack(alignment: .leading, spacing: 10) {
-                            Text("Ask in")
+                            Text(rossLocalized("ask_in"))
                                 .font(.caption.weight(.bold))
                                 .tracking(1.2)
                                 .foregroundStyle(Color.rossInk.opacity(0.64))
 
                             AlphaRootAskScopeRow(
-                                title: "All work",
+                                title: rossLocalized("all_work"),
                                 isSelected: model.askSelectedScopeCaseID == nil,
                                 icon: .files,
                                 variant: .neutral,
@@ -1618,7 +1633,7 @@ struct AlphaRootAskToolsSheet: View {
 
                     if fixedDocumentIDs.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
-                            Text("Use uploaded files")
+                            Text(rossLocalized("use_uploaded_files"))
                                 .font(.caption.weight(.bold))
                                 .tracking(1.2)
                                 .foregroundStyle(Color.rossInk.opacity(0.64))
@@ -1641,8 +1656,8 @@ struct AlphaRootAskToolsSheet: View {
                                 AlphaRootAskDocumentRow(
                                     title: document.title,
                                     detail: document.isShared
-                                        ? "Shared file"
-                                        : (activeScopeCaseID == nil ? document.caseTitle : "This matter"),
+                                        ? rossLocalized("shared_file")
+                                        : (activeScopeCaseID == nil ? document.caseTitle : rossLocalized("this_matter")),
                                     isSelected: model.selectedAskDocumentIDs(for: activeScopeCaseID).contains(document.id),
                                     icon: alphaDocumentGlassIcon(document.kind).0,
                                     variant: alphaDocumentGlassIcon(document.kind).1,
@@ -1666,9 +1681,7 @@ struct AlphaRootAskEmptyFilesCard: View {
     let onAddImage: () -> Void
 
     private var detail: String {
-        scopeIsShared
-            ? "Add a PDF, note, photo, or scan. Ross will read it locally before using it in Ask."
-            : "Add a PDF, note, photo, or scan to this matter. Ross will read it locally before using it in Ask."
+        alphaRootAskEmptyFilesDetail(scopeIsShared: scopeIsShared)
     }
 
     var body: some View {
@@ -1678,7 +1691,7 @@ struct AlphaRootAskEmptyFilesCard: View {
                     .frame(width: 32, height: 32)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("No ready files yet")
+                    Text(rossLocalized("no_ready_files_yet"))
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.rossInk)
                     Text(detail)
@@ -1693,14 +1706,14 @@ struct AlphaRootAskEmptyFilesCard: View {
                     Button {
                         onAddFile()
                     } label: {
-                        Label("Add file", systemImage: "doc.badge.plus")
+                        Label(rossLocalized("add_file"), systemImage: "doc.badge.plus")
                     }
                     .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 15)
 
                     Button {
                         onAddImage()
                     } label: {
-                        Label("Add image", systemImage: "photo")
+                        Label(rossLocalized("add_image"), systemImage: "photo")
                     }
                     .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 15)
                 }

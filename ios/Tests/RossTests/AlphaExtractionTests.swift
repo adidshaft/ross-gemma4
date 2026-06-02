@@ -970,6 +970,22 @@ final class AlphaExtractionTests: XCTestCase {
             "మళ్లీ sign in చేసే వరకు ఇది ఈ device నుండి local sign-in ను తొలగిస్తుంది."
         )
         XCTAssertEqual(
+            alphaAskingAboutScopeLabel("Rao v State", languageCode: "hi"),
+            "Rao v State के बारे में पूछ रहे हैं"
+        )
+        XCTAssertEqual(
+            alphaPublicLawPrivacyCountLabel(3, languageCode: "bn"),
+            "3 private details সরানো হয়েছে · 0 পাঠানো হয়েছে"
+        )
+        XCTAssertEqual(
+            rossLocalized("legal_search_sanitized_query_detail", languageCode: "ta"),
+            "Legal Search sanitized legal query மட்டும் பயன்படுத்தும். Case files மற்றும் document text on-device இருக்கும்."
+        )
+        XCTAssertEqual(
+            alphaRootAskEmptyFilesDetail(scopeIsShared: false, languageCode: "te-IN"),
+            "ఈ matter కు PDF, note, photo, లేదా scan జోడించండి. Ask లో ఉపయోగించే ముందు Ross దాన్ని locally చదువుతుంది."
+        )
+        XCTAssertEqual(
             rossLocalized("download_size", languageCode: "ta"),
             "பதிவிறக்க அளவு"
         )
