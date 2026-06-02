@@ -688,6 +688,13 @@ struct AlphaPrivateAIJobCard: View {
                 .foregroundStyle(Color.rossInk.opacity(0.60))
                 .fixedSize(horizontal: false, vertical: true)
 
+            RossPhaseStepIndicator(
+                phases: alphaAssistantSetupPhases,
+                currentPhase: alphaAssistantSetupPhaseIndex(for: job.state)
+            )
+            .padding(.vertical, 2)
+            .accessibilityLabel(alphaAssistantSetupPhaseAccessibilityLabel(for: job.state))
+
             if let failureReason = job.failureReason,
                job.state == .failed || job.state == .pausedError || job.state == .pausedNoStorage {
                 Text(failureReason)
@@ -889,6 +896,37 @@ func alphaDownloadEstimateLabel(_ job: AlphaModelDownloadJob) -> String? {
         return "Final check usually takes less than a minute."
     default:
         return nil
+    }
+}
+
+let alphaAssistantSetupPhases = ["Download", "Check", "Ready"]
+
+func alphaAssistantSetupPhaseIndex(for state: AlphaDownloadState) -> Int {
+    switch state {
+    case .queued, .downloading, .pausedWaitingForWifi, .pausedUser, .pausedNoStorage, .pausedError, .failed, .notStarted, .cancelled:
+        return 0
+    case .verifying:
+        return 1
+    case .installed:
+        return 2
+    }
+}
+
+func alphaAssistantSetupPhaseAccessibilityLabel(for state: AlphaDownloadState) -> String {
+    let phase = alphaAssistantSetupPhases[alphaAssistantSetupPhaseIndex(for: state)]
+    switch state {
+    case .pausedWaitingForWifi:
+        return "Assistant setup paused at \(phase). Waiting for Wi-Fi."
+    case .pausedNoStorage:
+        return "Assistant setup paused at \(phase). More device storage is needed."
+    case .pausedUser:
+        return "Assistant setup paused at \(phase)."
+    case .pausedError, .failed:
+        return "Assistant setup needs retry at \(phase)."
+    case .installed:
+        return "Assistant setup complete. Ready."
+    default:
+        return "Assistant setup step \(phase) of \(alphaAssistantSetupPhases.joined(separator: ", "))."
     }
 }
 

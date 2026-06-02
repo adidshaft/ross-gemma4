@@ -463,6 +463,22 @@ final class AlphaExtractionTests: XCTestCase {
         }
     }
 
+    func testAssistantSetupPhasesExplainDownloadCheckAndReady() {
+        XCTAssertEqual(alphaAssistantSetupPhases, ["Download", "Check", "Ready"])
+        XCTAssertEqual(alphaAssistantSetupPhaseIndex(for: .queued), 0)
+        XCTAssertEqual(alphaAssistantSetupPhaseIndex(for: .downloading), 0)
+        XCTAssertEqual(alphaAssistantSetupPhaseIndex(for: .pausedWaitingForWifi), 0)
+        XCTAssertEqual(alphaAssistantSetupPhaseIndex(for: .pausedNoStorage), 0)
+        XCTAssertEqual(alphaAssistantSetupPhaseIndex(for: .failed), 0)
+        XCTAssertEqual(alphaAssistantSetupPhaseIndex(for: .verifying), 1)
+        XCTAssertEqual(alphaAssistantSetupPhaseIndex(for: .installed), 2)
+
+        XCTAssertTrue(alphaAssistantSetupPhaseAccessibilityLabel(for: .pausedWaitingForWifi).contains("Waiting for Wi-Fi"))
+        XCTAssertTrue(alphaAssistantSetupPhaseAccessibilityLabel(for: .pausedNoStorage).contains("storage"))
+        XCTAssertTrue(alphaAssistantSetupPhaseAccessibilityLabel(for: .failed).contains("retry"))
+        XCTAssertTrue(alphaAssistantSetupPhaseAccessibilityLabel(for: .installed).contains("complete"))
+    }
+
     @MainActor
     func testAssistantChecksumMatchingAcceptsLocallyComputedChecksumWhenCatalogValueIsMissing() {
         let model = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
