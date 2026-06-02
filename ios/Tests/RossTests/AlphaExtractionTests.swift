@@ -1399,14 +1399,58 @@ final class AlphaExtractionTests: XCTestCase {
                 modelKind: "gguf"
             )
         )
-
-        let status = health?.userFacingStatus ?? ""
-        XCTAssertTrue(status.localizedCaseInsensitiveContains("private assistant"))
-        for term in ["Gemma", "Llama", "GGUF", "Q4", "runtime", "checksum", "artifact"] {
-            XCTAssertNil(
-                status.range(of: term, options: [.caseInsensitive]),
-                "\(term) leaked into downloaded assistant runtime health copy"
+        let missingFileHealth = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .llamaCppGguf,
+                modelPath: temporaryURL.deletingLastPathComponent().appendingPathComponent("missing.gguf").path,
+                modelChecksum: String(repeating: "d", count: 64),
+                modelKind: "gguf"
             )
+        )
+        let systemPack = AlphaInstalledModelPack(
+            packId: "apple-foundation-models-quick_start",
+            tier: .quickStart,
+            installPath: "system://apple-foundation-models",
+            checksumSha256: String(repeating: "e", count: 64),
+            artifactKind: "system_model",
+            runtimeMode: .appleFoundationModels,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+        let systemHealth = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: systemPack,
+            requestedTier: systemPack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .appleFoundationModels,
+                modelPath: nil,
+                modelChecksum: nil,
+                modelKind: nil
+            )
+        )
+
+        let statuses = [
+            health?.userFacingStatus,
+            missingFileHealth?.userFacingStatus,
+            systemHealth?.userFacingStatus
+        ].compactMap { $0 }
+        XCTAssertFalse(statuses.isEmpty)
+        for status in statuses {
+            XCTAssertTrue(
+                status.localizedCaseInsensitiveContains("private assistant") ||
+                    status.localizedCaseInsensitiveContains("assistant file"),
+                status
+            )
+            for term in ["Gemma", "Llama", "GGUF", "Q4", "runtime", "checksum", "artifact", "adapter"] {
+                XCTAssertNil(
+                    status.range(of: term, options: [.caseInsensitive]),
+                    "\(term) leaked into downloaded assistant runtime health copy: \(status)"
+                )
+            }
         }
     }
 

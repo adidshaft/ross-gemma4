@@ -519,18 +519,18 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
         do {
             let model = try resolvedModel()
             if model.isAvailable {
-                return (true, modelPath == nil ? "Private assistant on this device is available." : "Developer-provided local assistant adapter is available.", nil)
+                return (true, "Private assistant on this device is available.", nil)
             }
             switch model.availability {
             case .available:
                 return (true, "Private assistant on this device is available.", nil)
-            case .unavailable(let reason):
-                return (false, "The on-device private assistant is not available on this iPhone yet. \(String(describing: reason))", "unsupported_runtime")
+            case .unavailable:
+                return (false, "The on-device private assistant is not available on this iPhone yet.", "unsupported_runtime")
             @unknown default:
                 return (false, "The on-device private assistant availability is unknown.", "unsupported_runtime")
             }
         } catch {
-            return (false, "The configured local assistant adapter could not be loaded.", "runtime_dependency_unavailable")
+            return (false, "Ross could not open the private assistant on this iPhone.", "runtime_dependency_unavailable")
         }
     }
 
