@@ -105,6 +105,8 @@ public struct RossCardStyle: ViewModifier {
 
 public struct RossPrimaryButtonStyle: ButtonStyle {
     public func makeBody(configuration: Configuration) -> some View {
+        let shape = Capsule()
+
         configuration.label
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(.white)
@@ -112,30 +114,38 @@ public struct RossPrimaryButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 15)
             .background {
-                Capsule()
-                    .fill(Color.rossPillGradient)
-                    .overlay {
-                        // Specular top highlight
-                        Capsule()
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color.white.opacity(0.22), Color.clear],
-                                    startPoint: .top,
-                                    endPoint: .center
-                                )
-                            )
-                    }
+                shape.fill(Color.rossAccent.opacity(configuration.isPressed ? 0.72 : 0.84))
+            }
+            .rossNativeGlassSurface(
+                tint: Color.rossAccent,
+                shape: shape,
+                interactive: true,
+                fallbackFillOpacity: configuration.isPressed ? 0.72 : 0.88,
+                fallbackStrokeOpacity: configuration.isPressed ? 0.34 : 0.52
+            )
+            .overlay {
+                shape.fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(configuration.isPressed ? 0.14 : 0.24),
+                            Color.rossAccent.opacity(configuration.isPressed ? 0.08 : 0.16),
+                            Color.clear
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .allowsHitTesting(false)
             }
             .overlay {
-                Capsule()
-                    .strokeBorder(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.38), Color.white.opacity(0.06)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ),
-                        lineWidth: 1
-                    )
+                shape.strokeBorder(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.40), Color.white.opacity(0.08)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 1
+                )
             }
             .shadow(
                 color: Color.rossAccent.opacity(configuration.isPressed ? 0.12 : 0.28),
