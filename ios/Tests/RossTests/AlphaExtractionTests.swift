@@ -811,6 +811,14 @@ final class AlphaExtractionTests: XCTestCase {
             "notes, tasks மற்றும் matter answers தயாரிக்கும் போது Ross இந்த confirmed details பயன்படுத்தும்."
         )
         XCTAssertEqual(
+            rossLocalized("assistant_check_after_setup", languageCode: "hi"),
+            "setup के बाद Ross assistant check करेगा।"
+        )
+        XCTAssertEqual(
+            rossLocalized("ready_for_private_answers_on_iphone", languageCode: "bn"),
+            "এই iPhone-এ private answers-এর জন্য ready।"
+        )
+        XCTAssertEqual(
             rossLocalized("assistant_network_wifi_preferred", languageCode: "te-IN"),
             "Wi-Fi ప్రాధాన్యం"
         )

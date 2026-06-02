@@ -994,6 +994,69 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Ross இன்னும் local அல்லது network actions எதையும் log செய்யவில்லை.",
             "te": "Ross ఇంకా ఏ local లేదా network actions log చేయలేదు."
         ],
+        "assistant_check": [
+            "en": "Assistant check",
+            "hi": "Assistant check",
+            "bn": "Assistant check",
+            "ta": "Assistant check",
+            "te": "Assistant check"
+        ],
+        "assistant_check_after_setup": [
+            "en": "Ross will check the assistant after setup.",
+            "hi": "setup के बाद Ross assistant check करेगा।",
+            "bn": "setup-এর পরে Ross assistant check করবে।",
+            "ta": "setup பிறகு Ross assistant check செய்யும்.",
+            "te": "setup తర్వాత Ross assistant check చేస్తుంది."
+        ],
+        "ready_for_private_answers_on_iphone": [
+            "en": "Ready for private answers on this iPhone.",
+            "hi": "इस iPhone पर private answers के लिए ready।",
+            "bn": "এই iPhone-এ private answers-এর জন্য ready।",
+            "ta": "இந்த iPhone-இல் private answers-க்கு ready.",
+            "te": "ఈ iPhone లో private answers కోసం ready."
+        ],
+        "no_private_answer_recorded_yet": [
+            "en": "No private answer recorded yet",
+            "hi": "अभी कोई private answer recorded नहीं है",
+            "bn": "এখনও কোনো private answer recorded নেই",
+            "ta": "இன்னும் private answer recorded இல்லை",
+            "te": "ఇంకా private answer recorded లేదు"
+        ],
+        "started_but_did_not_finish": [
+            "en": "Started but did not finish",
+            "hi": "शुरू हुआ लेकिन finish नहीं हुआ",
+            "bn": "শুরু হয়েছে কিন্তু finish হয়নি",
+            "ta": "தொடங்கியது ஆனால் finish ஆகவில்லை",
+            "te": "ప్రారంభమైంది కానీ finish కాలేదు"
+        ],
+        "status": [
+            "en": "Status",
+            "hi": "Status",
+            "bn": "Status",
+            "ta": "Status",
+            "te": "Status"
+        ],
+        "local_file": [
+            "en": "Local file",
+            "hi": "Local file",
+            "bn": "Local file",
+            "ta": "Local file",
+            "te": "Local file"
+        ],
+        "last_private_answer": [
+            "en": "Last private answer",
+            "hi": "Last private answer",
+            "bn": "Last private answer",
+            "ta": "Last private answer",
+            "te": "Last private answer"
+        ],
+        "setup_resets": [
+            "en": "Setup resets",
+            "hi": "Setup resets",
+            "bn": "Setup resets",
+            "ta": "Setup resets",
+            "te": "Setup resets"
+        ],
         "completed": [
             "en": "Completed",
             "hi": "पूरा हुआ",

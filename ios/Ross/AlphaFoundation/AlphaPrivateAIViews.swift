@@ -284,40 +284,40 @@ struct AlphaPrivateAITechnicalDiagnosticsCard: View {
 
     private var assistantCheckStatus: String {
         guard let runtimeHealth = model.activeRuntimeHealth else {
-            return "Ross will check the assistant after setup."
+            return rossLocalized("assistant_check_after_setup")
         }
         if runtimeHealth.available {
-            return "Ready for private answers on this iPhone."
+            return rossLocalized("ready_for_private_answers_on_iphone")
         }
         return runtimeHealth.userFacingStatus
     }
 
     private var assistantLastUsedLabel: String {
         guard let lastInvocation = model.lastModelInvocation else {
-            return "No private answer recorded yet"
+            return rossLocalized("no_private_answer_recorded_yet")
         }
         if let completedAt = lastInvocation.completedAt {
             return completedAt.formatted(date: .abbreviated, time: .shortened)
         }
-        return "Started but did not finish"
+        return rossLocalized("started_but_did_not_finish")
     }
 
     var body: some View {
-        RossSectionCard(title: "Assistant check") {
+        RossSectionCard(title: rossLocalized("assistant_check")) {
             VStack(alignment: .leading, spacing: 12) {
-                AlphaSettingsValueRow(label: "Status", value: assistantCheckStatus)
+                AlphaSettingsValueRow(label: rossLocalized("status"), value: assistantCheckStatus)
                 Divider()
                 AlphaSettingsValueRow(
-                    label: "Local file",
+                    label: rossLocalized("local_file"),
                     value: alphaAssistantVerificationSummary(
                         runtimeHealth: model.activeRuntimeHealth,
                         activePack: model.activePack
                     )
                 )
                 Divider()
-                AlphaSettingsValueRow(label: "Last private answer", value: assistantLastUsedLabel)
+                AlphaSettingsValueRow(label: rossLocalized("last_private_answer"), value: assistantLastUsedLabel)
                 Divider()
-                AlphaSettingsValueRow(label: "Setup resets", value: "\(model.privateAISnapshot.resetCount)")
+                AlphaSettingsValueRow(label: rossLocalized("setup_resets"), value: "\(model.privateAISnapshot.resetCount)")
 
                 #if DEBUG
                 DisclosureGroup("Support details") {
