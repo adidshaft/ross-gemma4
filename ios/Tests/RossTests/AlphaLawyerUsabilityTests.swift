@@ -496,6 +496,40 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
     }
 
     @MainActor
+    func testMatterMemorySourcePackUsesSelectedLanguageLabels() {
+        let previousLanguageCode = rossSelectedLanguageCode()
+        rossSaveLanguageSelection(code: "hi")
+        defer { rossSaveLanguageSelection(code: previousLanguageCode) }
+
+        let caseID = UUID()
+        let nextHearing = Date(timeIntervalSince1970: 1_777_248_000)
+        var state = AlphaPersistedState.seed()
+        state.cases = [
+            AlphaCaseMatter(
+                id: caseID,
+                title: "Hindi source-pack matter",
+                forum: "District Court",
+                stage: .arguments,
+                nextHearing: nextHearing,
+                summary: "Matter summary for local assistant context.",
+                issueHighlights: ["Delay condonation"],
+                evidenceNotes: [],
+                draftTasks: [],
+                documents: [],
+                sourceRefs: []
+            )
+        ]
+
+        let model = AlphaRossModel(previewState: state)
+        let combinedText = model.askRuntimeMatterMemorySourcePack(scopeCaseID: caseID)
+            .map(\.text)
+            .joined(separator: "\n")
+
+        XCTAssertTrue(combinedText.contains("अगली hearing:"), combinedText)
+        XCTAssertFalse(combinedText.contains("Next hearing:"), combinedText)
+    }
+
+    @MainActor
     func testSelectedFileWaitingResultUsesPlainLanguage() {
         let previousLanguageCode = rossSelectedLanguageCode()
         rossSaveLanguageSelection(code: "hi")

@@ -5201,6 +5201,69 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "அடுத்த படிகள்",
             "te": "తదుపరి చర్యలు"
         ],
+        "ask_source_pack_matter": [
+            "en": "Matter",
+            "hi": "Matter",
+            "bn": "Matter",
+            "ta": "Matter",
+            "te": "Matter"
+        ],
+        "ask_source_pack_forum": [
+            "en": "Forum",
+            "hi": "Forum",
+            "bn": "Forum",
+            "ta": "Forum",
+            "te": "Forum"
+        ],
+        "ask_source_pack_stage": [
+            "en": "Stage",
+            "hi": "Stage",
+            "bn": "Stage",
+            "ta": "Stage",
+            "te": "Stage"
+        ],
+        "ask_source_pack_summary": [
+            "en": "Summary",
+            "hi": "Summary",
+            "bn": "Summary",
+            "ta": "Summary",
+            "te": "Summary"
+        ],
+        "ask_source_pack_next_hearing": [
+            "en": "Next hearing",
+            "hi": "अगली hearing",
+            "bn": "পরবর্তী hearing",
+            "ta": "அடுத்த hearing",
+            "te": "తదుపరి hearing"
+        ],
+        "ask_source_pack_issues": [
+            "en": "Issues",
+            "hi": "Issues",
+            "bn": "Issues",
+            "ta": "Issues",
+            "te": "Issues"
+        ],
+        "ask_source_pack_open_tasks": [
+            "en": "Open tasks",
+            "hi": "Open tasks",
+            "bn": "Open tasks",
+            "ta": "Open tasks",
+            "te": "Open tasks"
+        ],
+        "ask_source_pack_dates": [
+            "en": "Dates",
+            "hi": "Dates",
+            "bn": "Dates",
+            "ta": "Dates",
+            "te": "Dates"
+        ],
+        "ask_source_pack_date_on": [
+            "en": "%@ on %@",
+            "hi": "%@ on %@",
+            "bn": "%@ on %@",
+            "ta": "%@ on %@",
+            "te": "%@ on %@"
+        ],
         "ask_local_tasks_title": [
             "en": "Tasks from your files",
             "hi": "आपकी files से tasks",

@@ -1738,28 +1738,28 @@ extension AlphaRossModel {
 
         let matterBlocks = scopedCases.prefix(4).compactMap { caseMatter -> AlphaSourceTextBlock? in
             var lines: [String] = [
-                "Matter: \(caseMatter.title)",
-                "Forum: \(caseMatter.forum)",
-                "Stage: \(caseMatter.stage.title)",
-                "Summary: \(caseMatter.summary)"
+                "\(rossLocalized("ask_source_pack_matter")): \(caseMatter.title)",
+                "\(rossLocalized("ask_source_pack_forum")): \(caseMatter.forum)",
+                "\(rossLocalized("ask_source_pack_stage")): \(caseMatter.stage.title)",
+                "\(rossLocalized("ask_source_pack_summary")): \(caseMatter.summary)"
             ]
             if let nextHearing = caseMatter.nextHearing {
-                lines.append("Next hearing: \(nextHearing.formatted(date: .abbreviated, time: .omitted))")
+                lines.append("\(rossLocalized("ask_source_pack_next_hearing")): \(nextHearing.formatted(date: .abbreviated, time: .omitted))")
             }
             if !caseMatter.issueHighlights.isEmpty {
-                lines.append("Issues: \(caseMatter.issueHighlights.prefix(3).joined(separator: "; "))")
+                lines.append("\(rossLocalized("ask_source_pack_issues")): \(caseMatter.issueHighlights.prefix(3).joined(separator: "; "))")
             }
             let openTasks = tasks(for: caseMatter.id).filter { $0.status == .open }.prefix(4).map(\.title)
             if !openTasks.isEmpty {
-                lines.append("Open tasks: \(openTasks.joined(separator: "; "))")
+                lines.append("\(rossLocalized("ask_source_pack_open_tasks")): \(openTasks.joined(separator: "; "))")
             }
             let scheduledDates = caseMatter.dates
                 .filter { $0.status == .scheduled }
                 .sorted { $0.date < $1.date }
                 .prefix(3)
-                .map { "\($0.title) on \($0.date.formatted(date: .abbreviated, time: .omitted))" }
+                .map { String(format: rossLocalized("ask_source_pack_date_on"), $0.title, $0.date.formatted(date: .abbreviated, time: .omitted)) }
             if !scheduledDates.isEmpty {
-                lines.append("Dates: \(scheduledDates.joined(separator: "; "))")
+                lines.append("\(rossLocalized("ask_source_pack_dates")): \(scheduledDates.joined(separator: "; "))")
             }
 
             let text = lines.joined(separator: "\n")
