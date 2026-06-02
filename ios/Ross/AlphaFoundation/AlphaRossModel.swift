@@ -1460,7 +1460,7 @@ enum AlphaAssistantDownloadError: LocalizedError {
         case .rangeProbeInvalidContentRange:
             return "Ross could not safely continue the saved assistant download. Retry setup on Wi-Fi."
         case .insufficientStorage(let requiredGB, let availableGB):
-            return "This private assistant needs about \(requiredGB) GB free. This iPhone currently reports \(availableGB) GB free."
+            return "Assistant setup needs about \(requiredGB) GB free. This iPhone currently reports \(availableGB) GB free."
         case .missingDownloadedFile:
             return "Assistant setup is missing or incomplete. Open My assistant and use Repair setup."
         case .pausedByUser:

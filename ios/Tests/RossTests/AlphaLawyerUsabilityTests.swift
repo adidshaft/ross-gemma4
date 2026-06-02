@@ -1905,7 +1905,9 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.rangeProbeInvalidStatus(200)),
                 model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.rangeProbeInvalidLength(expected: 256, received: 128)),
                 model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.rangeProbeInvalidContentRange("bytes 0-10/*")),
-                model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.missingDownloadedFile)
+                model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.insufficientStorage(requiredGB: 12, availableGB: 3)),
+                model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.missingDownloadedFile),
+                model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.pausedByUser)
             ]
         }
 
