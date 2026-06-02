@@ -575,43 +575,43 @@ struct AlphaPrivateAIOfferCard: View {
 
     private var statusBadge: (String, Color)? {
         if isActive {
-            return ("Active", Color.rossSuccess)
+            return (alphaAssistantOfferBadge(.active), Color.rossSuccess)
         }
         if activeButRuntimeUnavailable {
-            return ("Needs attention", .orange)
+            return (alphaAssistantOfferBadge(.needsAttention), .orange)
         }
         if isInstalledButInactive {
-            return ("Ready", Color.rossSuccess)
+            return (alphaAssistantStateLabel(.installed), Color.rossSuccess)
         }
         if isSettingUp {
-            return ("Setting up", Color.rossAccent)
+            return (alphaAssistantOfferBadge(.settingUp), Color.rossAccent)
         }
         if canResume {
-            return ("Needs retry", .orange)
+            return (alphaAssistantStateLabel(.failed), .orange)
         }
         if offer.tier == model.recommendedOnDeviceTier() {
-            return ("Recommended", Color.rossAccent)
+            return (rossLocalized("recommended"), Color.rossAccent)
         }
         return nil
     }
 
     private var actionTitle: String {
         if isActive {
-            return "Using this option"
+            return alphaAssistantOfferAction(.using)
         }
         if activeButRuntimeUnavailable {
-            return "Repair setup"
+            return alphaAssistantOfferAction(.repair)
         }
         if isInstalledButInactive {
-            return "Use this option"
+            return alphaAssistantOfferAction(.use)
         }
         if isSettingUp {
-            return "Setting up"
+            return alphaAssistantOfferBadge(.settingUp)
         }
         if canResume {
-            return "Resume setup"
+            return alphaAssistantOfferAction(.resumeSetup)
         }
-        return "Set up this option"
+        return alphaAssistantOfferAction(.setUpOption)
     }
 
     private var actionDisabled: Bool {
@@ -877,11 +877,11 @@ struct AlphaPrivateAIJobCard: View {
                 RossGlassGroup(spacing: 10) {
                     HStack(spacing: 10) {
                         if canPause {
-                            Button("Pause") { model.pauseJob(job) }
+                            Button(alphaAssistantJobAction(.pause)) { model.pauseJob(job) }
                                 .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 16)
                         }
                         if canResume {
-                            Button(job.state == .failed ? "Retry" : "Resume") { model.resumeJob(job) }
+                            Button(alphaAssistantJobAction(job.state == .failed ? .retry : .resume)) { model.resumeJob(job) }
                                 .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
                         }
                     }
@@ -1036,6 +1036,72 @@ func alphaDownloadEstimateLabel(
 
 func alphaAssistantDownloadWifiAdvisory(languageCode: String = rossSelectedLanguageCode()) -> String {
     rossLocalized("assistant_download_wifi_advisory", languageCode: languageCode)
+}
+
+enum AlphaAssistantOfferBadgeKind {
+    case active
+    case needsAttention
+    case settingUp
+}
+
+func alphaAssistantOfferBadge(
+    _ kind: AlphaAssistantOfferBadgeKind,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
+    switch kind {
+    case .active:
+        return rossLocalized("assistant_badge_active", languageCode: languageCode)
+    case .needsAttention:
+        return rossLocalized("assistant_badge_needs_attention", languageCode: languageCode)
+    case .settingUp:
+        return rossLocalized("assistant_badge_setting_up", languageCode: languageCode)
+    }
+}
+
+enum AlphaAssistantOfferActionKind {
+    case using
+    case repair
+    case use
+    case resumeSetup
+    case setUpOption
+}
+
+func alphaAssistantOfferAction(
+    _ kind: AlphaAssistantOfferActionKind,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
+    switch kind {
+    case .using:
+        return rossLocalized("assistant_action_using", languageCode: languageCode)
+    case .repair:
+        return rossLocalized("assistant_action_repair", languageCode: languageCode)
+    case .use:
+        return rossLocalized("assistant_action_use", languageCode: languageCode)
+    case .resumeSetup:
+        return rossLocalized("assistant_action_resume_setup", languageCode: languageCode)
+    case .setUpOption:
+        return rossLocalized("assistant_action_set_up_option", languageCode: languageCode)
+    }
+}
+
+enum AlphaAssistantJobActionKind {
+    case pause
+    case retry
+    case resume
+}
+
+func alphaAssistantJobAction(
+    _ kind: AlphaAssistantJobActionKind,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
+    switch kind {
+    case .pause:
+        return rossLocalized("assistant_action_pause", languageCode: languageCode)
+    case .retry:
+        return rossLocalized("assistant_action_retry", languageCode: languageCode)
+    case .resume:
+        return rossLocalized("assistant_action_resume", languageCode: languageCode)
+    }
 }
 
 func alphaAssistantSetupPhases(languageCode: String = rossSelectedLanguageCode()) -> [String] {

@@ -560,6 +560,83 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "இப்போது எந்த அமைப்பும் இயங்கவில்லை.",
             "te": "ప్రస్తుతం ఎలాంటి సెటప్ నడవడం లేదు."
         ],
+        "assistant_badge_active": [
+            "en": "Active",
+            "hi": "सक्रिय",
+            "bn": "সক্রিয়",
+            "ta": "செயலில்",
+            "te": "సక్రియం"
+        ],
+        "assistant_badge_needs_attention": [
+            "en": "Needs attention",
+            "hi": "ध्यान चाहिए",
+            "bn": "নজর দরকার",
+            "ta": "கவனம் தேவை",
+            "te": "శ్రద్ధ అవసరం"
+        ],
+        "assistant_badge_setting_up": [
+            "en": "Setting up",
+            "hi": "सेटअप हो रहा है",
+            "bn": "সেটআপ চলছে",
+            "ta": "அமைக்கப்படுகிறது",
+            "te": "సెటప్ జరుగుతోంది"
+        ],
+        "assistant_action_using": [
+            "en": "Using this option",
+            "hi": "यह विकल्प उपयोग हो रहा है",
+            "bn": "এই বিকল্প ব্যবহার হচ্ছে",
+            "ta": "இந்த விருப்பம் பயன்படுத்தப்படுகிறது",
+            "te": "ఈ ఎంపిక ఉపయోగంలో ఉంది"
+        ],
+        "assistant_action_repair": [
+            "en": "Repair setup",
+            "hi": "सेटअप सुधारें",
+            "bn": "সেটআপ মেরামত করুন",
+            "ta": "அமைப்பைச் சரிசெய்க",
+            "te": "సెటప్‌ను సరిచేయండి"
+        ],
+        "assistant_action_use": [
+            "en": "Use this option",
+            "hi": "यह विकल्प उपयोग करें",
+            "bn": "এই বিকল্প ব্যবহার করুন",
+            "ta": "இந்த விருப்பத்தைப் பயன்படுத்தவும்",
+            "te": "ఈ ఎంపికను ఉపయోగించండి"
+        ],
+        "assistant_action_resume_setup": [
+            "en": "Resume setup",
+            "hi": "सेटअप फिर शुरू करें",
+            "bn": "সেটআপ আবার চালু করুন",
+            "ta": "அமைப்பைத் தொடருங்கள்",
+            "te": "సెటప్‌ను కొనసాగించండి"
+        ],
+        "assistant_action_set_up_option": [
+            "en": "Set up this option",
+            "hi": "यह विकल्प सेट करें",
+            "bn": "এই বিকল্প সেট আপ করুন",
+            "ta": "இந்த விருப்பத்தை அமைக்கவும்",
+            "te": "ఈ ఎంపికను సెటప్ చేయండి"
+        ],
+        "assistant_action_pause": [
+            "en": "Pause",
+            "hi": "रोकें",
+            "bn": "বিরতি",
+            "ta": "இடைநிறுத்து",
+            "te": "నిలిపివేయి"
+        ],
+        "assistant_action_retry": [
+            "en": "Retry",
+            "hi": "फिर कोशिश करें",
+            "bn": "আবার চেষ্টা করুন",
+            "ta": "மீண்டும் முயற்சி",
+            "te": "మళ్లీ ప్రయత్నించండి"
+        ],
+        "assistant_action_resume": [
+            "en": "Resume",
+            "hi": "फिर शुरू करें",
+            "bn": "চালু করুন",
+            "ta": "தொடரவும்",
+            "te": "కొనసాగించండి"
+        ],
         "translate_to": [
             "en": "Translate to %@",
             "hi": "%@ में अनुवाद करें",

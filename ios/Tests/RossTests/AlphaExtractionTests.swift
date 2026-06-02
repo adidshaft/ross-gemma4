@@ -983,6 +983,13 @@ final class AlphaExtractionTests: XCTestCase {
         )?.contains("अंतिम") == true)
         XCTAssertTrue(alphaAssistantDownloadWifiAdvisory(languageCode: "ta").contains("Wi-Fi"))
         XCTAssertTrue(alphaAssistantDownloadWifiAdvisory(languageCode: "te").contains("డౌన్‌లోడ్"))
+        XCTAssertEqual(alphaAssistantOfferBadge(.active, languageCode: "en"), "Active")
+        XCTAssertEqual(alphaAssistantOfferBadge(.settingUp, languageCode: "ta"), "அமைக்கப்படுகிறது")
+        XCTAssertEqual(alphaAssistantOfferAction(.setUpOption, languageCode: "en"), "Set up this option")
+        XCTAssertEqual(alphaAssistantOfferAction(.resumeSetup, languageCode: "te-IN"), "సెటప్‌ను కొనసాగించండి")
+        XCTAssertEqual(alphaAssistantJobAction(.pause, languageCode: "en"), "Pause")
+        XCTAssertEqual(alphaAssistantJobAction(.retry, languageCode: "ta"), "மீண்டும் முயற்சி")
+        XCTAssertEqual(alphaAssistantJobAction(.resume, languageCode: "te"), "కొనసాగించండి")
     }
 
     func testAssistantActivityPausedCopyPointsToAssistantSurface() {
