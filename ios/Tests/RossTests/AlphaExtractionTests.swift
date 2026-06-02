@@ -1262,6 +1262,22 @@ final class AlphaExtractionTests: XCTestCase {
             "Next date captured: 12/05/2026."
         )
         XCTAssertEqual(
+            alphaMatterLocalNoticeNextDate("12/05/2026", languageCode: "hi"),
+            "Case files इसी device पर रहती हैं। Next date मिली: 12/05/2026"
+        )
+        XCTAssertEqual(
+            alphaMatterDocumentsReadingSummary(documentCount: 2, readingCount: 1, languageCode: "bn"),
+            "Ross-এর কাছে এই matter-এ 2 documents আছে; 1 এখনও reading."
+        )
+        XCTAssertEqual(
+            alphaMatterReadyDocumentsLabel(2, languageCode: "ta"),
+            "2 use செய்ய ready."
+        )
+        XCTAssertEqual(
+            alphaMatterLatestFileLabel("Order.pdf", languageCode: "te-IN"),
+            "Latest file: Order.pdf."
+        )
+        XCTAssertEqual(
             alphaFindingsCountLabel(3, languageCode: "hi"),
             "3 findings"
         )

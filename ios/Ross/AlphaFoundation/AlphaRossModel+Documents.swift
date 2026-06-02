@@ -648,7 +648,7 @@ extension AlphaRossModel {
         }
 
         if let nextDate = verifiedFields.first(where: { $0.fieldType == .nextDate })?.value {
-            caseMatter.localNotice = "Case files stay on this device. Next date found: \(nextDate)"
+            caseMatter.localNotice = alphaMatterLocalNoticeNextDate(nextDate)
             if let parsedDate = alphaParsedDate(from: nextDate) {
                 if caseMatter.nextHearing == nil || Calendar.current.isDate(caseMatter.nextHearing ?? parsedDate, inSameDayAs: parsedDate) {
                     caseMatter.nextHearing = parsedDate
@@ -668,31 +668,31 @@ extension AlphaRossModel {
         let classifications = caseMatter.documents.compactMap { $0.classification?.type.title.lowercased() }
         let classificationText = classifications.isEmpty ? nil : classifications.joined(separator: ", ")
         if caseMatter.documents.isEmpty {
-            caseMatter.summary = "Ross is ready to build this matter once the first document is imported on this device."
+            caseMatter.summary = alphaMatterReadyForFirstDocumentLabel()
         } else {
             let readingCount = caseMatter.documents.filter { $0.processingState == .readingText || $0.processingState == .imported }.count
             let readyCount = caseMatter.documents.filter { $0.processingState == .ready }.count
             var summaryParts = [
                 readingCount > 0
-                    ? "Ross has \(alphaDocumentCountLabel(caseMatter.documents.count)) in this matter; \(readingCount) still reading."
-                    : "Ross has read \(alphaDocumentCountLabel(caseMatter.documents.count)) in this matter."
+                    ? alphaMatterDocumentsReadingSummary(documentCount: caseMatter.documents.count, readingCount: readingCount)
+                    : alphaMatterDocumentsReadSummary(documentCount: caseMatter.documents.count)
             ]
             if readyCount > 0 {
-                summaryParts.append("\(readyCount) ready to use.")
+                summaryParts.append(alphaMatterReadyDocumentsLabel(readyCount))
             }
             if let classificationText {
-                summaryParts.append("File types seen: \(classificationText).")
+                summaryParts.append(alphaMatterFileTypesSeenLabel(classificationText))
             }
             if let nextHearing = caseMatter.nextHearing {
-                summaryParts.append("Next date \(nextHearing.formatted(date: .abbreviated, time: .omitted)) is already captured.")
+                summaryParts.append(alphaMatterNextDateCapturedLabel(nextHearing))
             }
             if reviewItemCount > 0 {
                 summaryParts.append(alphaReviewItemsNeedAdvocateReviewLabel(reviewItemCount))
             } else if !allOpenTaskItems.isEmpty {
-                summaryParts.append("\(allOpenTaskItems.count) open task(s) are saved for this matter.")
+                summaryParts.append(alphaMatterOpenTasksSavedLabel(allOpenTaskItems.count))
             }
             if let latestDocumentTitle {
-                summaryParts.append("Latest file: \(latestDocumentTitle).")
+                summaryParts.append(alphaMatterLatestFileLabel(latestDocumentTitle))
             }
             caseMatter.summary = summaryParts.joined(separator: " ")
         }

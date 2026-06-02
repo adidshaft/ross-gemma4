@@ -620,6 +620,52 @@ func alphaNextDateCapturedLabel(_ nextDate: String, languageCode: String = rossS
     String(format: rossLocalized("document_review_next_date_captured", languageCode: languageCode), nextDate)
 }
 
+func alphaMatterLocalNoticeNextDate(_ nextDate: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("matter_memory_local_notice_next_date", languageCode: languageCode), nextDate)
+}
+
+func alphaMatterReadyForFirstDocumentLabel(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("matter_memory_ready_for_first_document", languageCode: languageCode)
+}
+
+func alphaMatterDocumentsReadingSummary(documentCount: Int, readingCount: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(
+        format: rossLocalized("matter_memory_documents_reading_summary", languageCode: languageCode),
+        alphaDocumentCountLabel(documentCount),
+        readingCount
+    )
+}
+
+func alphaMatterDocumentsReadSummary(documentCount: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(
+        format: rossLocalized("matter_memory_documents_read_summary", languageCode: languageCode),
+        alphaDocumentCountLabel(documentCount)
+    )
+}
+
+func alphaMatterReadyDocumentsLabel(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("matter_memory_ready_documents", languageCode: languageCode), count)
+}
+
+func alphaMatterFileTypesSeenLabel(_ fileTypes: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("matter_memory_file_types_seen", languageCode: languageCode), fileTypes)
+}
+
+func alphaMatterNextDateCapturedLabel(_ date: Date, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(
+        format: rossLocalized("matter_memory_next_date_captured", languageCode: languageCode),
+        date.formatted(date: .abbreviated, time: .omitted)
+    )
+}
+
+func alphaMatterOpenTasksSavedLabel(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("matter_memory_open_tasks_saved", languageCode: languageCode), count)
+}
+
+func alphaMatterLatestFileLabel(_ title: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("matter_memory_latest_file", languageCode: languageCode), title)
+}
+
 func alphaReviewItemsFromFilesLabel(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
     String(format: rossLocalized("review_items_from_files", languageCode: languageCode), alphaReviewItemCountLabel(count))
 }

@@ -4585,6 +4585,69 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Next date captured: %@.",
             "te": "Next date captured: %@."
         ],
+        "matter_memory_local_notice_next_date": [
+            "en": "Case files stay on this device. Next date found: %@",
+            "hi": "Case files इसी device पर रहती हैं। Next date मिली: %@",
+            "bn": "Case files এই device-এ থাকে। Next date পাওয়া গেছে: %@",
+            "ta": "Case files இந்த device-இல் இருக்கும். Next date கண்டது: %@",
+            "te": "Case files ఈ device లోనే ఉంటాయి. Next date కనుగొంది: %@"
+        ],
+        "matter_memory_ready_for_first_document": [
+            "en": "Ross is ready to build this matter once the first document is imported on this device.",
+            "hi": "इस device पर पहला document import होते ही Ross इस matter को build करने के लिए ready है.",
+            "bn": "এই device-এ প্রথম document import হলেই Ross এই matter build করতে ready.",
+            "ta": "இந்த device-இல் முதல் document import ஆனதும் Ross இந்த matter build செய்ய ready.",
+            "te": "ఈ device లో మొదటి document import అయిన వెంటనే Ross ఈ matter build చేయడానికి ready."
+        ],
+        "matter_memory_documents_reading_summary": [
+            "en": "Ross has %@ in this matter; %d still reading.",
+            "hi": "Ross के पास इस matter में %@ हैं; %d अभी reading में हैं.",
+            "bn": "Ross-এর কাছে এই matter-এ %@ আছে; %d এখনও reading.",
+            "ta": "இந்த matter-இல் Ross-க்கு %@ உள்ளது; %d இன்னும் reading.",
+            "te": "ఈ matter లో Ross కు %@ ఉన్నాయి; %d ఇంకా reading లో ఉన్నాయి."
+        ],
+        "matter_memory_documents_read_summary": [
+            "en": "Ross has read %@ in this matter.",
+            "hi": "Ross ने इस matter में %@ पढ़े हैं.",
+            "bn": "Ross এই matter-এ %@ পড়েছে.",
+            "ta": "Ross இந்த matter-இல் %@ வாசித்தது.",
+            "te": "Ross ఈ matter లో %@ చదివింది."
+        ],
+        "matter_memory_ready_documents": [
+            "en": "%d ready to use.",
+            "hi": "%d use के लिए ready.",
+            "bn": "%d use করার জন্য ready.",
+            "ta": "%d use செய்ய ready.",
+            "te": "%d use చేయడానికి ready."
+        ],
+        "matter_memory_file_types_seen": [
+            "en": "File types seen: %@.",
+            "hi": "File types देखे गए: %@.",
+            "bn": "File types দেখা গেছে: %@.",
+            "ta": "File types கண்டது: %@.",
+            "te": "File types కనుగొంది: %@."
+        ],
+        "matter_memory_next_date_captured": [
+            "en": "Next date %@ is already captured.",
+            "hi": "Next date %@ already captured है.",
+            "bn": "Next date %@ already captured.",
+            "ta": "Next date %@ already captured.",
+            "te": "Next date %@ already captured."
+        ],
+        "matter_memory_open_tasks_saved": [
+            "en": "%d open task(s) are saved for this matter.",
+            "hi": "इस matter के लिए %d open task(s) saved हैं.",
+            "bn": "এই matter-এর জন্য %d open task(s) saved আছে.",
+            "ta": "இந்த matter-க்கு %d open task(s) saved உள்ளது.",
+            "te": "ఈ matter కోసం %d open task(s) saved ఉన్నాయి."
+        ],
+        "matter_memory_latest_file": [
+            "en": "Latest file: %@.",
+            "hi": "Latest file: %@.",
+            "bn": "Latest file: %@.",
+            "ta": "Latest file: %@.",
+            "te": "Latest file: %@."
+        ],
         "no_matters_match_search": [
             "en": "No matters match this search.",
             "hi": "इस search से कोई मामला नहीं मिला।",
