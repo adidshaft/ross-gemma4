@@ -198,13 +198,12 @@ struct AlphaPrivateAISettingsScreen: View {
                                 Button("Update on Wi-Fi") {
                                     model.startAssistantModelUpdate(update, mobileAllowed: false)
                                 }
-                                .buttonStyle(.borderedProminent)
-                                .tint(Color.rossAccent)
+                                .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
 
                                 Button("Dismiss") {
                                     model.dismissAssistantModelUpdate(update)
                                 }
-                                .buttonStyle(.bordered)
+                                .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 16, expandsHorizontally: false)
                             }
                         }
                     }
@@ -1049,8 +1048,7 @@ private struct AlphaAssistantStorageFootprintRow: View {
                     Task { await refresh() }
                 }
                 .font(.caption.weight(.semibold))
-                .buttonStyle(.bordered)
-                .tint(Color.rossAccent)
+                .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 14, expandsHorizontally: false)
             }
 
             VStack(alignment: .leading, spacing: 3) {
