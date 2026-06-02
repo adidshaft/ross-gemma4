@@ -207,12 +207,13 @@ struct AlphaMatterEditorDateField: View {
                         strokeOpacity: 0.52
                     )
 
-                    Button("Clear date") {
-                        date = nil
+                    RossGlassGroup(spacing: 8) {
+                        Button("Clear date") {
+                            date = nil
+                        }
+                        .font(.footnote.weight(.semibold))
+                        .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 14, expandsHorizontally: false)
                     }
-                    .buttonStyle(.plain)
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Color.rossInk.opacity(0.72))
                 }
             }
         }
