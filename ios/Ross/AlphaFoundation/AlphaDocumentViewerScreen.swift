@@ -76,9 +76,9 @@ func alphaDocumentReadinessMessage(_ document: AlphaCaseDocument) -> String {
         }
     }
     if document.isAwaitingReadableText {
-        return "Ross is still reading this file. Ask will be available as soon as text is extracted."
+        return "Ross is still reading this file. Ask from this file as soon as readable text appears."
     }
-    return "Ross could not find readable text in this file yet. Review again, re-import a clearer file, or choose another file for Ask."
+    return "Ross could not find readable text in this file yet. Re-import a clearer PDF, image, or text file, then ask again."
 }
 
 struct AlphaDocumentListScreen: View {

@@ -2478,8 +2478,34 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             ]
         )
 
+        let readingDocument = AlphaCaseDocument(
+            title: "Still reading",
+            fileName: "still-reading.pdf",
+            kind: .pdf,
+            storedRelativePath: "docs/still-reading.pdf",
+            importedAt: .now,
+            pageCount: 1,
+            ocrStatus: .notStarted,
+            indexingStatus: .extracting,
+            pages: []
+        )
+
+        let unreadableDocument = AlphaCaseDocument(
+            title: "Unreadable scan",
+            fileName: "unreadable.jpg",
+            kind: .image,
+            storedRelativePath: "docs/unreadable.jpg",
+            importedAt: .now,
+            pageCount: 1,
+            ocrStatus: .failed,
+            indexingStatus: .failed,
+            pages: []
+        )
+
         XCTAssertTrue(alphaDocumentReadinessMessage(readyDocument).contains("Verified details are ready"))
         XCTAssertTrue(alphaDocumentReadinessMessage(failedReviewDocument).contains("full review did not finish"))
+        XCTAssertTrue(alphaDocumentReadinessMessage(readingDocument).contains("Ask from this file as soon as readable text appears"))
+        XCTAssertTrue(alphaDocumentReadinessMessage(unreadableDocument).contains("Re-import a clearer PDF, image, or text file"))
         XCTAssertFalse(alphaDocumentReadinessMessage(readyDocument).contains("still running"))
     }
 
