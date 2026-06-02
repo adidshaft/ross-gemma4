@@ -864,7 +864,9 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     func testAssistantSetupPhasesExplainDownloadCheckAndReady() {
-        XCTAssertEqual(alphaAssistantSetupPhases, ["Download", "Check", "Ready"])
+        XCTAssertEqual(alphaAssistantSetupPhases(languageCode: "en"), ["Download", "Check", "Ready"])
+        XCTAssertEqual(alphaAssistantSetupPhases(languageCode: "ta"), ["பதிவிறக்கம்", "சரிபார்ப்பு", "தயார்"])
+        XCTAssertEqual(alphaAssistantSetupPhases(languageCode: "te-IN"), ["డౌన్‌లోడ్", "తనిఖీ", "సిద్ధం"])
         XCTAssertEqual(alphaAssistantSetupPhaseIndex(for: .queued), 0)
         XCTAssertEqual(alphaAssistantSetupPhaseIndex(for: .downloading), 0)
         XCTAssertEqual(alphaAssistantSetupPhaseIndex(for: .pausedWaitingForWifi), 0)
@@ -877,6 +879,14 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(alphaAssistantSetupPhaseAccessibilityLabel(for: .pausedNoStorage).contains("storage"))
         XCTAssertTrue(alphaAssistantSetupPhaseAccessibilityLabel(for: .failed).contains("retry"))
         XCTAssertTrue(alphaAssistantSetupPhaseAccessibilityLabel(for: .installed).contains("complete"))
+        XCTAssertTrue(
+            alphaAssistantSetupPhaseAccessibilityLabel(for: .pausedWaitingForWifi, languageCode: "ta")
+                .contains("Wi-Fi")
+        )
+        XCTAssertTrue(
+            alphaAssistantSetupPhaseAccessibilityLabel(for: .failed, languageCode: "te-IN")
+                .contains("మళ్లీ ప్రయత్నించాలి")
+        )
 
         XCTAssertTrue(alphaAssistantSetupRecoveryHint(for: .failed)?.contains("Retry keeps your matters and files") == true)
         XCTAssertTrue(alphaAssistantSetupRecoveryHint(for: .pausedNoStorage)?.contains("Free storage") == true)

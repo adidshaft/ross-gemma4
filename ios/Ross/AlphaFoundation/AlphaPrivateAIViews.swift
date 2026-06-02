@@ -803,7 +803,7 @@ struct AlphaPrivateAIJobCard: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             RossPhaseStepIndicator(
-                phases: alphaAssistantSetupPhases,
+                phases: alphaAssistantSetupPhases(),
                 currentPhase: alphaAssistantSetupPhaseIndex(for: job.state)
             )
             .padding(.vertical, 2)
@@ -1026,7 +1026,13 @@ func alphaDownloadEstimateLabel(_ job: AlphaModelDownloadJob) -> String? {
     }
 }
 
-let alphaAssistantSetupPhases = ["Download", "Check", "Ready"]
+func alphaAssistantSetupPhases(languageCode: String = rossSelectedLanguageCode()) -> [String] {
+    [
+        rossLocalized("assistant_setup_phase_download", languageCode: languageCode),
+        rossLocalized("assistant_setup_phase_check", languageCode: languageCode),
+        rossLocalized("assistant_setup_phase_ready", languageCode: languageCode)
+    ]
+}
 
 func alphaAssistantSetupPhaseIndex(for state: AlphaDownloadState) -> Int {
     switch state {
@@ -1039,21 +1045,29 @@ func alphaAssistantSetupPhaseIndex(for state: AlphaDownloadState) -> Int {
     }
 }
 
-func alphaAssistantSetupPhaseAccessibilityLabel(for state: AlphaDownloadState) -> String {
-    let phase = alphaAssistantSetupPhases[alphaAssistantSetupPhaseIndex(for: state)]
+func alphaAssistantSetupPhaseAccessibilityLabel(
+    for state: AlphaDownloadState,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
+    let phases = alphaAssistantSetupPhases(languageCode: languageCode)
+    let phase = phases[alphaAssistantSetupPhaseIndex(for: state)]
     switch state {
     case .pausedWaitingForWifi:
-        return "Assistant setup paused at \(phase). Waiting for Wi-Fi."
+        return String(format: rossLocalized("assistant_setup_paused_wifi", languageCode: languageCode), phase)
     case .pausedNoStorage:
-        return "Assistant setup paused at \(phase). More device storage is needed."
+        return String(format: rossLocalized("assistant_setup_paused_storage", languageCode: languageCode), phase)
     case .pausedUser:
-        return "Assistant setup paused at \(phase)."
+        return String(format: rossLocalized("assistant_setup_paused", languageCode: languageCode), phase)
     case .pausedError, .failed:
-        return "Assistant setup needs retry at \(phase)."
+        return String(format: rossLocalized("assistant_setup_retry", languageCode: languageCode), phase)
     case .installed:
-        return "Assistant setup complete. Ready."
+        return rossLocalized("assistant_setup_complete", languageCode: languageCode)
     default:
-        return "Assistant setup step \(phase) of \(alphaAssistantSetupPhases.joined(separator: ", "))."
+        return String(
+            format: rossLocalized("assistant_setup_step", languageCode: languageCode),
+            phase,
+            phases.joined(separator: ", ")
+        )
     }
 }
 
