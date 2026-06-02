@@ -443,7 +443,12 @@ struct AlphaDocumentStatusLight: View {
         .foregroundStyle(Color.rossInk.opacity(0.72))
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(tint.opacity(0.13), in: Capsule())
+        .rossNativeGlassSurface(
+            tint: tint,
+            shape: Capsule(),
+            fallbackFillOpacity: 0.70,
+            fallbackStrokeOpacity: 0.38
+        )
     }
 }
 
@@ -511,7 +516,12 @@ struct AlphaTierGlyph: View {
 
         RossGlassIconView(glassIcon.0, variant: glassIcon.1, size: 22, fallbackSystemImage: glassIcon.2)
             .frame(width: 38, height: 38)
-            .background(tint.opacity(0.1), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+            .rossNativeGlassSurface(
+                tint: tint,
+                shape: RoundedRectangle(cornerRadius: 11, style: .continuous),
+                fallbackFillOpacity: 0.72,
+                fallbackStrokeOpacity: 0.40
+            )
     }
 }
 

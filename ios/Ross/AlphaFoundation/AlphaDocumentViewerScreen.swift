@@ -1053,11 +1053,12 @@ struct AlphaDocumentTypePill: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
-        .background(alphaDocumentTypeTint(type).opacity(0.12), in: Capsule())
-        .overlay {
-            Capsule()
-                .stroke(alphaDocumentTypeTint(type).opacity(0.32), lineWidth: 1)
-        }
+        .rossNativeGlassSurface(
+            tint: alphaDocumentTypeTint(type),
+            shape: Capsule(),
+            fallbackFillOpacity: 0.74,
+            fallbackStrokeOpacity: 0.42
+        )
         .accessibilityElement(children: .combine)
     }
 }
@@ -1079,7 +1080,12 @@ struct AlphaDocumentTitleSuggestionCard: View {
                         .font(.caption.weight(.bold))
                         .foregroundStyle(Color.rossAccent)
                         .frame(width: 28, height: 28)
-                        .background(Color.rossAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                        .rossNativeGlassSurface(
+                            tint: Color.rossAccent,
+                            shape: RoundedRectangle(cornerRadius: 9, style: .continuous),
+                            fallbackFillOpacity: 0.76,
+                            fallbackStrokeOpacity: 0.42
+                        )
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Ross suggests a clearer name")
