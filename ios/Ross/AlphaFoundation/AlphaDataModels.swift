@@ -2817,15 +2817,17 @@ extension AlphaPrivacyLedgerEntry {
         case "Private AI Pack queued", "Private AI Pack verified":
             "Set up private assistant"
         case "Public-law search reviewed by user", "Legal Search reviewed by user":
-            "Reviewed public-law search"
+            rossLocalized("privacy_ledger_public_law_reviewed_title")
         case "Public-law query sent":
-            "Used Legal Search"
+            rossLocalized("privacy_ledger_public_law_sent_title")
         case "Public-law search cancelled", "Legal Search cancelled":
-            "Cancelled public-law search"
+            rossLocalized("privacy_ledger_public_law_cancelled_title")
         case "Public-law search unavailable", "Legal Search unavailable":
-            "Legal Search needs attention"
+            rossLocalized("privacy_ledger_public_law_unavailable_title")
         case "Local export generated":
-            "Generated Notes & Drafts"
+            rossLocalized("privacy_ledger_local_export_generated_title")
+        case "Export generation failed":
+            rossLocalized("privacy_ledger_local_export_failed_title")
         case "Local case review run":
             "Reviewed case locally"
         case "Document imported locally":
@@ -2842,13 +2844,13 @@ extension AlphaPrivacyLedgerEntry {
         case "Model catalog checked":
             "Ross checked private assistant setup. No case files were read or sent."
         case "Public-law search reviewed by user", "Legal Search reviewed by user":
-            "Ross prepared the sanitized query locally. 0 private case details left the device."
+            rossLocalized("privacy_ledger_public_law_reviewed_detail")
         case "Public-law query sent":
-            "Sanitized query sent. 0 private case details sent; case files stayed on this device."
+            rossLocalized("privacy_ledger_public_law_sent_detail")
         case "Public-law search cancelled", "Legal Search cancelled":
-            "No public-law network request was made."
+            rossLocalized("privacy_ledger_public_law_cancelled_detail")
         case "Public-law search unavailable", "Legal Search unavailable":
-            "Ross could not complete the sanitized public-law search. Your case files stayed on this device."
+            rossLocalized("privacy_ledger_public_law_unavailable_detail")
         case "Private AI Pack verified":
             "Private assistant was prepared on this device."
         case "Assistant download verified":
@@ -2857,6 +2859,10 @@ extension AlphaPrivacyLedgerEntry {
             "Private assistant was checked and is ready on this device."
         case "Assistant download failed":
             "Ross could not finish assistant setup. Case files stayed on this device."
+        case "Local export generated":
+            rossLocalized("privacy_ledger_local_export_generated_detail")
+        case "Export generation failed":
+            rossLocalized("privacy_ledger_local_export_failed_detail")
         default:
             detail
         }

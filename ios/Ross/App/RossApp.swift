@@ -1162,6 +1162,90 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Ross இந்த document-இல் useful text இன்னும் படிக்க முடியவில்லை.",
             "te": "Ross ఈ document లో useful text ఇంకా చదవలేకపోయింది."
         ],
+        "privacy_ledger_public_law_reviewed_title": [
+            "en": "Reviewed public-law search",
+            "hi": "Public-law search review किया",
+            "bn": "Public-law search review করা হয়েছে",
+            "ta": "Public-law search review செய்யப்பட்டது",
+            "te": "Public-law search review చేయబడింది"
+        ],
+        "privacy_ledger_public_law_sent_title": [
+            "en": "Used Legal Search",
+            "hi": "Legal Search use किया",
+            "bn": "Legal Search ব্যবহার করা হয়েছে",
+            "ta": "Legal Search பயன்படுத்தப்பட்டது",
+            "te": "Legal Search ఉపయోగించబడింది"
+        ],
+        "privacy_ledger_public_law_cancelled_title": [
+            "en": "Cancelled public-law search",
+            "hi": "Public-law search cancel किया",
+            "bn": "Public-law search cancel করা হয়েছে",
+            "ta": "Public-law search cancel செய்யப்பட்டது",
+            "te": "Public-law search cancel చేయబడింది"
+        ],
+        "privacy_ledger_public_law_unavailable_title": [
+            "en": "Legal Search needs attention",
+            "hi": "Legal Search को ध्यान चाहिए",
+            "bn": "Legal Search attention দরকার",
+            "ta": "Legal Search கவனம் தேவை",
+            "te": "Legal Search కు దృష్టి అవసరం"
+        ],
+        "privacy_ledger_local_export_generated_title": [
+            "en": "Generated Notes & Drafts",
+            "hi": "Notes & Drafts बनाए",
+            "bn": "Notes & Drafts তৈরি হয়েছে",
+            "ta": "Notes & Drafts உருவாக்கப்பட்டது",
+            "te": "Notes & Drafts సృష్టించబడింది"
+        ],
+        "privacy_ledger_local_export_failed_title": [
+            "en": "Draft could not be saved",
+            "hi": "Draft save नहीं हो पाया",
+            "bn": "Draft save করা যায়নি",
+            "ta": "Draft save செய்ய முடியவில்லை",
+            "te": "Draft save కాలేదు"
+        ],
+        "privacy_ledger_public_law_reviewed_detail": [
+            "en": "Ross prepared the search locally. 0 private case details left the device.",
+            "hi": "Ross ने search locally तैयार किया। 0 private case details device से बाहर गईं.",
+            "bn": "Ross search locally প্রস্তুত করেছে। 0 private case details device ছাড়েনি.",
+            "ta": "Ross search-ஐ locally தயாரித்தது. 0 private case details device-ஐ விட்டு வெளியேறின.",
+            "te": "Ross search ను locally సిద్ధం చేసింది. 0 private case details device బయటకు వెళ్లలేదు."
+        ],
+        "privacy_ledger_public_law_sent_detail": [
+            "en": "Only the reviewed search was sent. Case files stayed on this device.",
+            "hi": "सिर्फ reviewed search भेजी गई। Case files इसी device पर रहीं.",
+            "bn": "শুধু reviewed search পাঠানো হয়েছে। Case files এই device-এ রয়ে গেছে.",
+            "ta": "Reviewed search மட்டும் அனுப்பப்பட்டது. Case files இந்த device-இல் இருந்தன.",
+            "te": "Reviewed search మాత్రమే పంపబడింది. Case files ఈ device పైనే ఉన్నాయి."
+        ],
+        "privacy_ledger_public_law_cancelled_detail": [
+            "en": "No public-law network request was made.",
+            "hi": "कोई public-law network request नहीं की गई.",
+            "bn": "কোনো public-law network request করা হয়নি.",
+            "ta": "Public-law network request எதுவும் செய்யப்படவில்லை.",
+            "te": "Public-law network request ఏదీ చేయబడలేదు."
+        ],
+        "privacy_ledger_public_law_unavailable_detail": [
+            "en": "Ross could not complete Legal Search. Case files stayed on this device.",
+            "hi": "Ross Legal Search complete नहीं कर पाया। Case files इसी device पर रहीं.",
+            "bn": "Ross Legal Search complete করতে পারেনি। Case files এই device-এ রয়ে গেছে.",
+            "ta": "Ross Legal Search complete செய்ய முடியவில்லை. Case files இந்த device-இல் இருந்தன.",
+            "te": "Ross Legal Search complete చేయలేకపోయింది. Case files ఈ device పైనే ఉన్నాయి."
+        ],
+        "privacy_ledger_local_export_generated_detail": [
+            "en": "Ross created the draft locally for advocate review.",
+            "hi": "Ross ने advocate review के लिए draft locally बनाया.",
+            "bn": "Ross advocate review-এর জন্য draft locally তৈরি করেছে.",
+            "ta": "Advocate review-க்காக Ross draft-ஐ locally உருவாக்கியது.",
+            "te": "Advocate review కోసం Ross draft ను locally సృష్టించింది."
+        ],
+        "privacy_ledger_local_export_failed_detail": [
+            "en": "Ross could not save the draft file. Case files stayed on this device.",
+            "hi": "Ross draft file save नहीं कर पाया। Case files इसी device पर रहीं.",
+            "bn": "Ross draft file save করতে পারেনি। Case files এই device-এ রয়ে গেছে.",
+            "ta": "Ross draft file-ஐ save செய்ய முடியவில்லை. Case files இந்த device-இல் இருந்தன.",
+            "te": "Ross draft file save చేయలేకపోయింది. Case files ఈ device పైనే ఉన్నాయి."
+        ],
         "ask_private_assistant_needs_repair": [
             "en": "Private assistant needs repair",
             "hi": "Private assistant repair चाहता है",

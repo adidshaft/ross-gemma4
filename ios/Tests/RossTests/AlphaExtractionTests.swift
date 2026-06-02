@@ -104,6 +104,43 @@ final class AlphaExtractionTests: XCTestCase {
         }
     }
 
+    func testPrivacyLedgerPublicLawAndExportCopyFollowsSelectedLanguage() {
+        rossSaveLanguageSelection(code: "ta")
+
+        let publicLawFailure = AlphaPrivacyLedgerEntry(
+            title: "Public-law search unavailable",
+            detail: "Could not use public-law search right now. Your files stayed on this device.",
+            purpose: .public_law_search,
+            payloadClass: .sanitized_public_query,
+            endpointLabel: "/public-law/search",
+            success: false
+        )
+        let exportFailure = AlphaPrivacyLedgerEntry(
+            title: "Export generation failed",
+            detail: "Ross could not write the local report file.",
+            purpose: .local_only,
+            payloadClass: .local_only,
+            endpointLabel: "device://export",
+            success: false
+        )
+        let exportSuccess = AlphaPrivacyLedgerEntry(
+            title: "Local export generated",
+            detail: "case_note was generated locally for advocate review.",
+            purpose: .local_only,
+            payloadClass: .local_only,
+            endpointLabel: "device://export",
+            success: true
+        )
+
+        XCTAssertEqual(publicLawFailure.lawyerTitle, "Legal Search கவனம் தேவை")
+        XCTAssertTrue(publicLawFailure.lawyerDetail.contains("Case files இந்த device-இல் இருந்தன"), publicLawFailure.lawyerDetail)
+        XCTAssertEqual(exportFailure.lawyerTitle, "Draft save செய்ய முடியவில்லை")
+        XCTAssertTrue(exportFailure.lawyerDetail.contains("draft file-ஐ save செய்ய முடியவில்லை"), exportFailure.lawyerDetail)
+        XCTAssertEqual(exportSuccess.lawyerTitle, "Notes & Drafts உருவாக்கப்பட்டது")
+        XCTAssertFalse(exportFailure.lawyerDetail.localizedCaseInsensitiveContains("local report"), exportFailure.lawyerDetail)
+        XCTAssertFalse(publicLawFailure.lawyerDetail.localizedCaseInsensitiveContains("sanitized"), publicLawFailure.lawyerDetail)
+    }
+
     func testMatterAskPayloadParserStripsThinkTagsAndSalvagesMalformedJSON() {
         let output = AlphaLocalModelOutput(
             rawText: """
