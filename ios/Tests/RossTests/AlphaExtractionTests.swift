@@ -501,6 +501,21 @@ final class AlphaExtractionTests: XCTestCase {
             alphaAskTagFileHint(languageCode: "te"),
             "అడగడానికి ముందు @తో ఫైళ్లను ట్యాగ్ చేయండి లేదా + నొక్కి జోడించండి."
         )
+        XCTAssertTrue(
+            alphaAskEmptyDetail(scopeLabel: nil, selectedDocumentCount: 0, languageCode: "en")
+                .contains("tag a file with @")
+        )
+        XCTAssertTrue(
+            alphaAskEmptyDetail(scopeLabel: "Rao v State", selectedDocumentCount: 0, languageCode: "ta")
+                .contains("Rao v State")
+        )
+        XCTAssertTrue(
+            alphaAskEmptyDetail(scopeLabel: nil, selectedDocumentCount: 2, languageCode: "bn")
+                .contains("ট্যাগ করা ফাইল")
+        )
+        XCTAssertEqual(rossLocalized("ask_workflow_tag_file", languageCode: "bn"), "ফাইল ট্যাগ করুন")
+        XCTAssertEqual(rossLocalized("ask_workflow_import", languageCode: "te"), "దిగుమతి")
+        XCTAssertEqual(rossLocalized("ask_workflow_ask", languageCode: "ta"), "கேளுங்கள்")
 
         let tamilDocumentSuggestions = alphaAskSuggestions(
             for: "Matter",

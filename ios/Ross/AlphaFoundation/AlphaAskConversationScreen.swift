@@ -145,12 +145,12 @@ struct AlphaAskConversationScreen: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 18) {
                         if conversation.isEmpty {
-                            Spacer(minLength: 120)
-                            Text("Ask Ross...")
-                                .font(.title3.weight(.semibold))
-                                .foregroundStyle(Color.rossInk.opacity(0.42))
-                                .frame(maxWidth: .infinity, alignment: .center)
-                            Spacer(minLength: 120)
+                            Spacer(minLength: 82)
+                            AlphaFullScreenAskEmptyState(
+                                scopeLabel: activeScopeCaseID == nil ? nil : scopeTitle,
+                                selectedDocumentCount: activeSelectedDocuments.count
+                            )
+                            Spacer(minLength: 82)
                         } else {
                             ForEach(conversation, id: \.stableIdentity) { result in
                                 AlphaFullScreenChatTurn(
@@ -304,6 +304,84 @@ struct AlphaFullScreenChatTopBar: View {
         )
         .padding(.horizontal, 8)
         .padding(.top, 4)
+    }
+}
+
+struct AlphaFullScreenAskEmptyState: View {
+    let scopeLabel: String?
+    let selectedDocumentCount: Int
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: selectedDocumentCount > 0 ? "doc.text.magnifyingglass" : "bubble.left.and.text.bubble.right.fill")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(Color.rossAccent)
+                    .frame(width: 40, height: 40)
+                    .rossNativeGlassSurface(
+                        tint: Color.rossAccent.opacity(0.22),
+                        shape: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                        interactive: false,
+                        fallbackFillOpacity: 0.82,
+                        fallbackStrokeOpacity: 0.46
+                    )
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(alphaAskEmptyTitle())
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(Color.rossInk)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text(alphaAskEmptyDetail(scopeLabel: scopeLabel, selectedDocumentCount: selectedDocumentCount))
+                        .font(.subheadline)
+                        .foregroundStyle(Color.rossInk.opacity(0.68))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            HStack(spacing: 8) {
+                AlphaAskEmptyWorkflowChip(systemImage: "at", title: rossLocalized("ask_workflow_tag_file"))
+                AlphaAskEmptyWorkflowChip(systemImage: "plus", title: rossLocalized("ask_workflow_import"))
+                AlphaAskEmptyWorkflowChip(systemImage: "arrow.up", title: rossLocalized("ask_workflow_ask"))
+            }
+        }
+        .frame(maxWidth: 560, alignment: .leading)
+        .padding(16)
+        .rossGlassSurface(
+            tint: Color.rossAccent.opacity(0.12),
+            cornerRadius: 22,
+            shadowOpacity: 0.08,
+            shadowRadius: 10,
+            shadowY: 4,
+            fillOpacity: 0.84,
+            strokeOpacity: 0.50
+        )
+        .frame(maxWidth: .infinity)
+    }
+}
+
+private struct AlphaAskEmptyWorkflowChip: View {
+    let systemImage: String
+    let title: String
+
+    var body: some View {
+        Label(title, systemImage: systemImage)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(Color.rossInk.opacity(0.72))
+            .lineLimit(1)
+            .minimumScaleFactor(0.82)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 8)
+            .rossGlassSurface(
+                tint: Color.rossHighlight,
+                cornerRadius: 13,
+                shadowOpacity: 0.035,
+                shadowRadius: 4,
+                shadowY: 1,
+                fillOpacity: 0.72,
+                strokeOpacity: 0.38
+            )
     }
 }
 
@@ -1405,6 +1483,27 @@ func alphaUsesHindiUi() -> Bool {
 
 func alphaAskEmptyTitle(languageCode: String = rossSelectedLanguageCode()) -> String {
     rossLocalized("ask_empty_title", languageCode: languageCode)
+}
+
+func alphaAskEmptyDetail(
+    scopeLabel: String?,
+    selectedDocumentCount: Int,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
+    if selectedDocumentCount > 0 {
+        return String(
+            format: rossLocalized("ask_empty_detail_selected_files", languageCode: languageCode),
+            selectedDocumentCount
+        )
+    }
+    if let scopeLabel = scopeLabel?.trimmingCharacters(in: .whitespacesAndNewlines),
+       !scopeLabel.isEmpty {
+        return String(
+            format: rossLocalized("ask_empty_detail_matter", languageCode: languageCode),
+            scopeLabel
+        )
+    }
+    return rossLocalized("ask_empty_detail_general", languageCode: languageCode)
 }
 
 func alphaAskConversationPlaceholder(languageCode: String = rossSelectedLanguageCode()) -> String {
