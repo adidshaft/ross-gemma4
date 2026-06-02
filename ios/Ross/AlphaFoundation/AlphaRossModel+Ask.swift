@@ -109,10 +109,10 @@ extension AlphaRossModel {
 
     func scopeLabel(for caseId: UUID?) -> String {
         if caseId == alphaSharedWorkspaceID {
-            return "General files"
+            return rossLocalized("general_files")
         }
         guard let caseId, let caseMatter = cases.first(where: { $0.id == caseId }) else {
-            return "All work"
+            return rossLocalized("all_work")
         }
         return caseMatter.title
     }
@@ -198,7 +198,7 @@ extension AlphaRossModel {
 
     func chatSessionTitle(_ session: AlphaChatSession) -> String {
         guard let question = session.turns.first?.question.trimmingCharacters(in: .whitespacesAndNewlines), !question.isEmpty else {
-            return "New chat"
+            return rossLocalized("ask_new_chat")
         }
         let compact = question.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
         return String(compact.prefix(44))
@@ -208,7 +208,7 @@ extension AlphaRossModel {
         if let latestTurn = session.turns.first {
             return latestTurn.askedAt.formatted(date: .abbreviated, time: .shortened)
         }
-        return "No messages yet"
+        return rossLocalized("ask_no_messages_yet")
     }
 
     func updateActiveChatContext(documentIDs: Set<UUID>, for scopeCaseID: UUID?) {

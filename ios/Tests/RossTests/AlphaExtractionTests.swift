@@ -1838,6 +1838,9 @@ final class AlphaExtractionTests: XCTestCase {
             alphaAskConversationPlaceholder(languageCode: "ta"),
             "Ross-ஐ கேளுங்கள்... கோப்பை குறிக்க @ தட்டச்சு செய்யவும்"
         )
+        XCTAssertEqual(rossLocalized("general_files", languageCode: "hi"), "सामान्य files")
+        XCTAssertEqual(rossLocalized("ask_new_chat", languageCode: "bn"), "নতুন chat")
+        XCTAssertEqual(rossLocalized("ask_no_messages_yet", languageCode: "te-IN"), "ఇంకా messages లేవు")
         XCTAssertEqual(
             alphaAskSharedFileSelectionLabel("Order", languageCode: "hi"),
             "Order · shared file"

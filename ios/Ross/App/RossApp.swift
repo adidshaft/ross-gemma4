@@ -6118,6 +6118,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "அனைத்து வேலை",
             "te": "అన్ని పని"
         ],
+        "general_files": [
+            "en": "General files",
+            "hi": "सामान्य files",
+            "bn": "সাধারণ files",
+            "ta": "பொது files",
+            "te": "సాధారణ files"
+        ],
+        "ask_new_chat": [
+            "en": "New chat",
+            "hi": "नई chat",
+            "bn": "নতুন chat",
+            "ta": "புதிய chat",
+            "te": "కొత్త chat"
+        ],
+        "ask_no_messages_yet": [
+            "en": "No messages yet",
+            "hi": "अभी messages नहीं हैं",
+            "bn": "এখনও messages নেই",
+            "ta": "இன்னும் messages இல்லை",
+            "te": "ఇంకా messages లేవు"
+        ],
         "ask_shared_file_selection": [
             "en": "%@ · shared file",
             "hi": "%@ · shared file",
