@@ -32,11 +32,7 @@ struct AlphaPDFPreview: View {
             if canUseNativePDF {
                 PDFRepresentedView(url: url, initialPage: initialPage)
                     .frame(minHeight: 360)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(Color.rossBorder.opacity(0.7), lineWidth: 1)
-                    }
+                    .rossGlassSurface(cornerRadius: 14, shadowOpacity: 0.08, shadowRadius: 8, shadowY: 3, fillOpacity: 0.8, strokeOpacity: 0.48)
             } else {
                 AlphaDocumentTextPreview(document: document, initialPage: initialPage)
             }
@@ -186,7 +182,7 @@ struct AlphaImagePreview: View {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFit()
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .rossGlassSurface(cornerRadius: 14, shadowOpacity: 0.08, shadowRadius: 8, shadowY: 3, fillOpacity: 0.8, strokeOpacity: 0.48)
             } else {
                 Text(rossLocalized("image_preview_unavailable"))
             }
@@ -195,7 +191,7 @@ struct AlphaImagePreview: View {
                 Image(nsImage: image)
                     .resizable()
                     .scaledToFit()
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .rossGlassSurface(cornerRadius: 14, shadowOpacity: 0.08, shadowRadius: 8, shadowY: 3, fillOpacity: 0.8, strokeOpacity: 0.48)
             } else {
                 Text(rossLocalized("image_preview_unavailable"))
             }
