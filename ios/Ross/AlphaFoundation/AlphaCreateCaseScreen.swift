@@ -554,13 +554,13 @@ func alphaAssistantStatusSnapshot(_ model: AlphaRossModel) -> AlphaAssistantStat
         case .pausedNoStorage:
             return AlphaAssistantStatusSnapshot(
                 title: "Ross assistant needs attention",
-                detail: "Free up space and try again.",
+                detail: alphaAssistantRecoveryDetail(for: job, fallback: "Free up space and try again."),
                 tint: .orange
             )
         case .pausedError, .failed, .cancelled:
             return AlphaAssistantStatusSnapshot(
                 title: "Ross assistant needs attention",
-                detail: "Setup could not finish. Open setup to retry.",
+                detail: alphaAssistantRecoveryDetail(for: job, fallback: "Setup could not finish. Open setup to retry."),
                 tint: .orange
             )
         default:
@@ -585,4 +585,27 @@ func alphaAssistantStatusSnapshot(_ model: AlphaRossModel) -> AlphaAssistantStat
         detail: "Ross can still organize matters, tasks, dates, and files. Legal answers need assistant setup.",
         tint: Color.rossAccent
     )
+}
+
+private func alphaAssistantRecoveryDetail(for job: AlphaModelDownloadJob, fallback: String) -> String {
+    guard let reason = job.failureReason?.trimmingCharacters(in: .whitespacesAndNewlines),
+          !reason.isEmpty else {
+        return fallback
+    }
+
+    let technicalMarkers = [
+        "nserror",
+        "nsurlerror",
+        "runtime",
+        "checksum",
+        "gguf",
+        "llama",
+        "gemma",
+        "artifact"
+    ]
+    let lowercased = reason.lowercased()
+    guard !technicalMarkers.contains(where: lowercased.contains) else {
+        return fallback
+    }
+    return reason
 }

@@ -422,6 +422,65 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    func testAssistantStatusShowsUsefulRecoveryReason() async {
+        let model = await MainActor.run {
+            AlphaRossModel(previewState: AlphaPersistedState.demoSeed())
+        }
+
+        await MainActor.run {
+            model.persisted.modelJobs = [
+                AlphaModelDownloadJob(
+                    sessionId: "needs-space",
+                    packId: "gemma-4-e2b-q4",
+                    tier: .quickStart,
+                    state: .pausedNoStorage,
+                    networkPolicy: .wifiOnly,
+                    bytesDownloaded: 0,
+                    totalBytes: 3_462_678_272,
+                    checksumSha256: "",
+                    artifactKind: "local_model_artifact",
+                    runtimeMode: .llamaCppGguf,
+                    developmentOnly: false,
+                    failureReason: "Free up 4 GB to finish assistant setup."
+                )
+            ]
+
+            let status = alphaAssistantStatusSnapshot(model)
+            XCTAssertEqual("Ross assistant needs attention", status.title)
+            XCTAssertEqual("Free up 4 GB to finish assistant setup.", status.detail)
+        }
+    }
+
+    func testAssistantStatusHidesTechnicalRecoveryReason() async {
+        let model = await MainActor.run {
+            AlphaRossModel(previewState: AlphaPersistedState.demoSeed())
+        }
+
+        await MainActor.run {
+            model.persisted.modelJobs = [
+                AlphaModelDownloadJob(
+                    sessionId: "technical-failure",
+                    packId: "gemma-4-e2b-q4",
+                    tier: .quickStart,
+                    state: .failed,
+                    networkPolicy: .wifiOnly,
+                    bytesDownloaded: 0,
+                    totalBytes: 3_462_678_272,
+                    checksumSha256: "",
+                    artifactKind: "local_model_artifact",
+                    runtimeMode: .llamaCppGguf,
+                    developmentOnly: false,
+                    failureReason: "NSURLErrorDomain -1"
+                )
+            ]
+
+            let status = alphaAssistantStatusSnapshot(model)
+            XCTAssertEqual("Ross assistant needs attention", status.title)
+            XCTAssertEqual("Setup could not finish. Open setup to retry.", status.detail)
+            XCTAssertFalse(status.detail.localizedCaseInsensitiveContains("NSURLErrorDomain"))
+        }
+    }
+
     func testPlainTextModelAnswerUsesNeutralLocalHeadline() async {
         let model = await MainActor.run {
             AlphaRossModel(previewState: AlphaPersistedState.demoSeed())
