@@ -1436,6 +1436,32 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    func testDockCommandResultsFollowSelectedAppLanguage() async throws {
+        let previousLanguageCode = rossSelectedLanguageCode()
+        rossSaveLanguageSelection(code: "hi")
+        defer { rossSaveLanguageSelection(code: previousLanguageCode) }
+
+        try await withRestoredStore { store in
+            try await store.replace(with: AlphaPersistedState.seed())
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+
+            await model.submitDockInput(
+                question: "review this document",
+                scopeCaseID: nil,
+                webEnabled: false
+            )
+
+            let latestResult = await MainActor.run { model.latestAskResult }
+            XCTAssertEqual("पहले document चुनें", latestResult?.answerTitle)
+            XCTAssertEqual("कोई बदलाव नहीं", latestResult?.statusNote)
+            XCTAssertTrue(latestResult?.answerSections.joined(separator: " ").contains("file tag करें") == true)
+        }
+    }
+
     func testDockQuestionStillFallsBackToStandardAskFlow() async throws {
         try await withRestoredStore { store in
             try await store.replace(with: AlphaPersistedState.seed())

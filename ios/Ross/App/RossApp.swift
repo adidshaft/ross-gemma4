@@ -3395,6 +3395,223 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "file attach செய்ய + tap செய்யவும், அல்லது \"add task\" அல்லது \"save date\" சொல்லவும்.",
             "te": "file attach చేయడానికి + tap చేయండి, లేదా \"add task\" లేదా \"save date\" అని చెప్పండి."
         ],
+        "ask_choose_matter_first": [
+            "en": "Choose a matter first",
+            "hi": "पहले matter चुनें",
+            "bn": "আগে matter বেছে নিন",
+            "ta": "முதலில் matter தேர்வுசெய்யவும்",
+            "te": "ముందుగా matter ఎంచుకోండి"
+        ],
+        "ask_pick_matter_before_draft": [
+            "en": "Pick a matter in the bar above before generating a %@ draft.",
+            "hi": "%@ draft बनाने से पहले ऊपर की bar में matter चुनें।",
+            "bn": "%@ draft তৈরি করার আগে ওপরের bar-এ matter বেছে নিন।",
+            "ta": "%@ draft உருவாக்குவதற்கு முன் மேலே உள்ள bar-ல் matter தேர்வுசெய்யவும்.",
+            "te": "%@ draft తయారు చేయడానికి ముందు పై bar లో matter ఎంచుకోండి."
+        ],
+        "ask_no_export_created_yet": [
+            "en": "Ross did not create an export yet.",
+            "hi": "Ross ने अभी export नहीं बनाया।",
+            "bn": "Ross এখনও export তৈরি করেনি।",
+            "ta": "Ross இன்னும் export உருவாக்கவில்லை.",
+            "te": "Ross ఇంకా export సృష్టించలేదు."
+        ],
+        "no_change_made": [
+            "en": "No change made",
+            "hi": "कोई बदलाव नहीं",
+            "bn": "কোনো পরিবর্তন হয়নি",
+            "ta": "மாற்றம் எதுவும் இல்லை",
+            "te": "ఏ మార్పు లేదు"
+        ],
+        "saved_locally": [
+            "en": "Saved locally",
+            "hi": "locally saved",
+            "bn": "locally saved",
+            "ta": "locally saved",
+            "te": "locally saved"
+        ],
+        "ask_draft_ready_title": [
+            "en": "%@ ready",
+            "hi": "%@ ready",
+            "bn": "%@ ready",
+            "ta": "%@ ready",
+            "te": "%@ ready"
+        ],
+        "ask_could_not_create_draft_title": [
+            "en": "Could not create %@",
+            "hi": "%@ नहीं बन सका",
+            "bn": "%@ তৈরি করা যায়নি",
+            "ta": "%@ உருவாக்க முடியவில்லை",
+            "te": "%@ సృష్టించలేకపోయింది"
+        ],
+        "ask_local_draft_created": [
+            "en": "Ross created a local %@ draft for advocate review.",
+            "hi": "Ross ने advocate review के लिए local %@ draft बनाया।",
+            "bn": "Ross advocate review-এর জন্য local %@ draft তৈরি করেছে।",
+            "ta": "advocate review-க்காக Ross local %@ draft உருவாக்கியது.",
+            "te": "advocate review కోసం Ross local %@ draft సృష్టించింది."
+        ],
+        "ask_open_notes_drafts_to_review_pdf": [
+            "en": "Open Notes & Drafts to review or share the PDF.",
+            "hi": "PDF review या share करने के लिए Notes & Drafts खोलें।",
+            "bn": "PDF review বা share করতে Notes & Drafts খুলুন।",
+            "ta": "PDF review அல்லது share செய்ய Notes & Drafts திறக்கவும்.",
+            "te": "PDF review లేదా share చేయడానికి Notes & Drafts తెరవండి."
+        ],
+        "ask_could_not_create_local_draft": [
+            "en": "Ross could not create the local draft right now.",
+            "hi": "Ross अभी local draft नहीं बना सका।",
+            "bn": "Ross এখন local draft তৈরি করতে পারেনি।",
+            "ta": "Ross இப்போது local draft உருவாக்க முடியவில்லை.",
+            "te": "Ross ప్రస్తుతం local draft సృష్టించలేకపోయింది."
+        ],
+        "ask_matter_files_stayed_on_device": [
+            "en": "Your matter files stayed safe on this device.",
+            "hi": "आपकी matter files इस device पर सुरक्षित रहीं।",
+            "bn": "আপনার matter files এই device-এ নিরাপদে রইল।",
+            "ta": "உங்கள் matter files இந்த device-ல் பாதுகாப்பாக இருந்தன.",
+            "te": "మీ matter files ఈ device లో సురక్షితంగా ఉన్నాయి."
+        ],
+        "draft_ready": [
+            "en": "Draft ready",
+            "hi": "Draft ready",
+            "bn": "Draft ready",
+            "ta": "Draft ready",
+            "te": "Draft ready"
+        ],
+        "draft_unavailable": [
+            "en": "Draft unavailable",
+            "hi": "Draft उपलब्ध नहीं",
+            "bn": "Draft পাওয়া যাচ্ছে না",
+            "ta": "Draft கிடைக்கவில்லை",
+            "te": "Draft అందుబాటులో లేదు"
+        ],
+        "ask_choose_document_first": [
+            "en": "Choose a document first",
+            "hi": "पहले document चुनें",
+            "bn": "আগে document বেছে নিন",
+            "ta": "முதலில் document தேர்வுசெய்யவும்",
+            "te": "ముందుగా document ఎంచుకోండి"
+        ],
+        "ask_tag_file_before_review_again": [
+            "en": "Tag a file in Ask Ross or open the document before asking Ross to review it again.",
+            "hi": "Ross से फिर review कराने से पहले Ask Ross में file tag करें या document खोलें।",
+            "bn": "Ross-কে আবার review করতে বলার আগে Ask Ross-এ file tag করুন বা document খুলুন।",
+            "ta": "Ross மீண்டும் review செய்யச் சொல்லும் முன் Ask Ross-ல் file tag செய்யவும் அல்லது document திறக்கவும்.",
+            "te": "Ross మళ్లీ review చేయడానికి ముందు Ask Ross లో file tag చేయండి లేదా document తెరవండి."
+        ],
+        "ask_tag_file_before_create_tasks": [
+            "en": "Tag a file in Ask Ross or open the latest document before asking Ross to create tasks from it.",
+            "hi": "उससे tasks बनाने को कहने से पहले Ask Ross में file tag करें या latest document खोलें।",
+            "bn": "সেখান থেকে tasks তৈরি করতে বলার আগে Ask Ross-এ file tag করুন বা latest document খুলুন।",
+            "ta": "அதில் இருந்து tasks உருவாக்கச் சொல்லும் முன் Ask Ross-ல் file tag செய்யவும் அல்லது latest document திறக்கவும்.",
+            "te": "దాని నుంచి tasks సృష్టించమని అడగడానికి ముందు Ask Ross లో file tag చేయండి లేదా latest document తెరవండి."
+        ],
+        "ross_changed_nothing": [
+            "en": "Ross did not change anything.",
+            "hi": "Ross ने कुछ नहीं बदला।",
+            "bn": "Ross কিছু বদলায়নি।",
+            "ta": "Ross எதையும் மாற்றவில்லை.",
+            "te": "Ross ఏదీ మార్చలేదు."
+        ],
+        "review_updated_title": [
+            "en": "Review updated.",
+            "hi": "Review updated.",
+            "bn": "Review updated.",
+            "ta": "Review updated.",
+            "te": "Review updated."
+        ],
+        "review_updated": [
+            "en": "Review updated",
+            "hi": "Review updated",
+            "bn": "Review updated",
+            "ta": "Review updated",
+            "te": "Review updated"
+        ],
+        "ask_reviewed_document_again": [
+            "en": "Ross reviewed %@ again on this device.",
+            "hi": "Ross ने %@ को इस device पर फिर review किया।",
+            "bn": "Ross এই device-এ %@ আবার review করেছে।",
+            "ta": "Ross இந்த device-ல் %@ மீண்டும் review செய்தது.",
+            "te": "Ross ఈ device లో %@ ను మళ్లీ review చేసింది."
+        ],
+        "ask_open_review_items_to_confirm": [
+            "en": "Open the review items to accept, edit, or ignore anything that still needs attention.",
+            "hi": "जो items अभी attention चाहते हैं, उन्हें accept, edit, या ignore करने के लिए review items खोलें।",
+            "bn": "যেগুলো এখনও attention চায়, সেগুলো accept, edit, বা ignore করতে review items খুলুন।",
+            "ta": "இன்னும் attention தேவைப்படுவதை accept, edit, அல்லது ignore செய்ய review items திறக்கவும்.",
+            "te": "ఇంకా attention అవసరమైన వాటిని accept, edit, లేదా ignore చేయడానికి review items తెరవండి."
+        ],
+        "ask_no_new_tasks_needed": [
+            "en": "No new tasks needed.",
+            "hi": "नए tasks की ज़रूरत नहीं।",
+            "bn": "নতুন tasks দরকার নেই।",
+            "ta": "புதிய tasks தேவையில்லை.",
+            "te": "కొత్త tasks అవసరం లేదు."
+        ],
+        "tasks_added_title": [
+            "en": "Tasks added.",
+            "hi": "Tasks added.",
+            "bn": "Tasks added.",
+            "ta": "Tasks added.",
+            "te": "Tasks added."
+        ],
+        "ask_follow_up_tasks_already_saved": [
+            "en": "The likely follow-up tasks were already saved for this matter.",
+            "hi": "संभावित follow-up tasks इस matter के लिए पहले से saved हैं।",
+            "bn": "সম্ভাব্য follow-up tasks এই matter-এর জন্য আগেই saved আছে।",
+            "ta": "சாத்தியமான follow-up tasks இந்த matter-க்கு ஏற்கனவே saved உள்ளன.",
+            "te": "సంభావ్య follow-up tasks ఈ matter కోసం ఇప్పటికే saved ఉన్నాయి."
+        ],
+        "ask_tasks_added_from_document": [
+            "en": "%d task(s) were added from %@.",
+            "hi": "%d task(s) %@ से added हुए।",
+            "bn": "%d task(s) %@ থেকে added হয়েছে।",
+            "ta": "%d task(s) %@ இலிருந்து added ஆனது.",
+            "te": "%d task(s) %@ నుండి added అయ్యాయి."
+        ],
+        "ask_open_tasks_to_adjust": [
+            "en": "Open Tasks to adjust dates or mark anything done.",
+            "hi": "dates adjust करने या कुछ done mark करने के लिए Tasks खोलें।",
+            "bn": "dates adjust করতে বা কিছু done mark করতে Tasks খুলুন।",
+            "ta": "dates adjust செய்ய அல்லது எதையும் done mark செய்ய Tasks திறக்கவும்.",
+            "te": "dates adjust చేయడానికి లేదా ఏదైనా done mark చేయడానికి Tasks తెరవండి."
+        ],
+        "ask_routine_prepared_title": [
+            "en": "%@ prepared",
+            "hi": "%@ prepared",
+            "bn": "%@ prepared",
+            "ta": "%@ prepared",
+            "te": "%@ prepared"
+        ],
+        "ask_public_law_preview_prepared": [
+            "en": "Ross prepared a sanitized public-law query preview. No web search has run.",
+            "hi": "Ross ने sanitized public-law query preview तैयार किया। अभी web search नहीं चला।",
+            "bn": "Ross sanitized public-law query preview তৈরি করেছে। এখনও web search চলেনি।",
+            "ta": "Ross sanitized public-law query preview தயாரித்தது. இன்னும் web search இயங்கவில்லை.",
+            "te": "Ross sanitized public-law query preview సిద్ధం చేసింది. ఇంకా web search జరగలేదు."
+        ],
+        "ask_local_matter_state_reviewed": [
+            "en": "Ross reviewed saved local matter state and updated prepared work.",
+            "hi": "Ross ने saved local matter state review की और prepared work update किया।",
+            "bn": "Ross saved local matter state review করে prepared work update করেছে।",
+            "ta": "Ross saved local matter state review செய்து prepared work update செய்தது.",
+            "te": "Ross saved local matter state review చేసి prepared work update చేసింది."
+        ],
+        "ask_no_items_need_attention": [
+            "en": "No items need advocate attention right now.",
+            "hi": "अभी कोई item advocate attention नहीं चाहता।",
+            "bn": "এখন কোনো item advocate attention চায় না।",
+            "ta": "இப்போது எந்த item-க்கும் advocate attention தேவையில்லை.",
+            "te": "ప్రస్తుతం ఏ item కు advocate attention అవసరం లేదు."
+        ],
+        "ask_prepared_items_need_attention": [
+            "en": "%d item(s) need advocate attention.",
+            "hi": "%d item(s) advocate attention चाहते हैं।",
+            "bn": "%d item(s) advocate attention চায়।",
+            "ta": "%d item(s)-க்கு advocate attention தேவை.",
+            "te": "%d item(s) కు advocate attention అవసరం."
+        ],
         "ask_legal_search_clean_query_detail": [
             "en": "Ross will use Legal Search with a cleaned query. Your case files stay on this device.",
             "hi": "Ross cleaned query के साथ Legal Search use करेगा। आपकी case files इस device पर रहती हैं।",

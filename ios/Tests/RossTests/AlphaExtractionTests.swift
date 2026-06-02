@@ -850,6 +850,18 @@ final class AlphaExtractionTests: XCTestCase {
             rossLocalized("open_review", languageCode: "te-IN"),
             "review తెరవండి"
         )
+        XCTAssertEqual(
+            rossLocalized("ask_choose_document_first", languageCode: "hi"),
+            "पहले document चुनें"
+        )
+        XCTAssertEqual(
+            alphaAskLocalDraftCreatedLabel("case note", languageCode: "bn"),
+            "Ross advocate review-এর জন্য local case note draft তৈরি করেছে।"
+        )
+        XCTAssertEqual(
+            alphaAskPreparedItemsNeedAttentionLabel(2, languageCode: "ta"),
+            "2 item(s)-க்கு advocate attention தேவை."
+        )
         XCTAssertTrue(
             alphaNextHearingLabel(Date(timeIntervalSince1970: 0), languageCode: "hi")
                 .contains("अगली hearing:")

@@ -613,15 +613,15 @@ extension AlphaRossModel {
                     scopeCaseID: nil,
                     scopeLabel: scopeLabel(for: nil),
                     selectedDocumentTitles: selectedDocumentTitles,
-                    answerTitle: "Choose a matter first",
+                    answerTitle: rossLocalized("ask_choose_matter_first"),
                     answerSections: [
-                        "Pick a matter in the bar above before generating a \(label.lowercased()) draft.",
-                        "Ross did not create an export yet."
+                        alphaAskPickMatterBeforeDraftLabel(label.lowercased()),
+                        rossLocalized("ask_no_export_created_yet")
                     ],
                     caseFileSources: [],
                     publicLawPreview: nil,
                     publicLawResults: [],
-                    statusNote: "No change made",
+                    statusNote: rossLocalized("no_change_made"),
                     needsReviewWarning: nil
                 )
                 break
@@ -634,20 +634,22 @@ extension AlphaRossModel {
                 scopeCaseID: scopeCaseID,
                 scopeLabel: scopeLabel(for: scopeCaseID),
                 selectedDocumentTitles: selectedDocumentTitles,
-                answerTitle: exportCreated ? "\(label) ready" : "Could not create \(label.lowercased())",
+                answerTitle: exportCreated
+                    ? alphaAskDraftReadyTitle(label)
+                    : alphaAskCouldNotCreateDraftTitle(label.lowercased()),
                 answerSections: exportCreated
                     ? [
-                        "Ross created a local \(label.lowercased()) draft for advocate review.",
-                        "Open Notes & Drafts to review or share the PDF."
+                        alphaAskLocalDraftCreatedLabel(label.lowercased()),
+                        rossLocalized("ask_open_notes_drafts_to_review_pdf")
                     ]
                     : [
-                        "Ross could not create the local draft right now.",
-                        "Your matter files stayed safe on this device."
+                        rossLocalized("ask_could_not_create_local_draft"),
+                        rossLocalized("ask_matter_files_stayed_on_device")
                     ],
                 caseFileSources: [],
                 publicLawPreview: nil,
                 publicLawResults: [],
-                statusNote: exportCreated ? "Draft ready" : "Draft unavailable",
+                statusNote: exportCreated ? rossLocalized("draft_ready") : rossLocalized("draft_unavailable"),
                 needsReviewWarning: nil
             )
 
@@ -659,15 +661,15 @@ extension AlphaRossModel {
                     scopeCaseID: scopeCaseID,
                     scopeLabel: scopeLabel(for: scopeCaseID),
                     selectedDocumentTitles: selectedDocumentTitles,
-                    answerTitle: "Choose a document first",
+                    answerTitle: rossLocalized("ask_choose_document_first"),
                     answerSections: [
-                        "Tag a file in Ask Ross or open the document before asking Ross to review it again.",
-                        "Ross did not change anything."
+                        rossLocalized("ask_tag_file_before_review_again"),
+                        rossLocalized("ross_changed_nothing")
                     ],
                     caseFileSources: [],
                     publicLawPreview: nil,
                     publicLawResults: [],
-                    statusNote: "No change made",
+                    statusNote: rossLocalized("no_change_made"),
                     needsReviewWarning: nil
                 )
                 break
@@ -680,15 +682,15 @@ extension AlphaRossModel {
                 scopeCaseID: target.caseMatter.id,
                 scopeLabel: scopeLabel(for: target.caseMatter.id),
                 selectedDocumentTitles: [target.document.title],
-                answerTitle: "Review updated.",
+                answerTitle: rossLocalized("review_updated_title"),
                 answerSections: [
-                    "Ross reviewed \(target.document.title) again on this device.",
-                    "Open the review items to accept, edit, or ignore anything that still needs attention."
+                    alphaAskReviewedDocumentAgainLabel(target.document.title),
+                    rossLocalized("ask_open_review_items_to_confirm")
                 ],
                 caseFileSources: [],
                 publicLawPreview: nil,
                 publicLawResults: [],
-                statusNote: "Review updated",
+                statusNote: rossLocalized("review_updated"),
                 needsReviewWarning: nil
             )
 
@@ -700,15 +702,15 @@ extension AlphaRossModel {
                     scopeCaseID: scopeCaseID,
                     scopeLabel: scopeLabel(for: scopeCaseID),
                     selectedDocumentTitles: selectedDocumentTitles,
-                    answerTitle: "Choose a document first",
+                    answerTitle: rossLocalized("ask_choose_document_first"),
                     answerSections: [
-                        "Tag a file in Ask Ross or open the latest document before asking Ross to create tasks from it.",
-                        "Ross did not change anything."
+                        rossLocalized("ask_tag_file_before_create_tasks"),
+                        rossLocalized("ross_changed_nothing")
                     ],
                     caseFileSources: [],
                     publicLawPreview: nil,
                     publicLawResults: [],
-                    statusNote: "No change made",
+                    statusNote: rossLocalized("no_change_made"),
                     needsReviewWarning: nil
                 )
                 break
@@ -721,17 +723,17 @@ extension AlphaRossModel {
                 scopeCaseID: target.caseMatter.id,
                 scopeLabel: scopeLabel(for: target.caseMatter.id),
                 selectedDocumentTitles: [target.document.title],
-                answerTitle: addedCount == 0 ? "No new tasks needed." : "Tasks added.",
+                answerTitle: addedCount == 0 ? rossLocalized("ask_no_new_tasks_needed") : rossLocalized("tasks_added_title"),
                 answerSections: [
                     addedCount == 0
-                        ? "The likely follow-up tasks were already saved for this matter."
-                        : "\(addedCount) task(s) were added from \(target.document.title).",
-                    "Open Tasks to adjust dates or mark anything done."
+                        ? rossLocalized("ask_follow_up_tasks_already_saved")
+                        : alphaAskTasksAddedFromDocumentLabel(addedCount, documentTitle: target.document.title),
+                    rossLocalized("ask_open_tasks_to_adjust")
                 ],
                 caseFileSources: [],
                 publicLawPreview: nil,
                 publicLawResults: [],
-                statusNote: addedCount == 0 ? "No change made" : "Saved locally",
+                statusNote: addedCount == 0 ? rossLocalized("no_change_made") : rossLocalized("saved_locally"),
                 needsReviewWarning: nil
             )
 
@@ -745,17 +747,17 @@ extension AlphaRossModel {
                 scopeCaseID: targetCaseID,
                 scopeLabel: scopeLabel(for: targetCaseID),
                 selectedDocumentTitles: selectedDocumentTitles,
-                answerTitle: kind == .publicLawPreview ? "Approval required" : "\(kind.title) prepared",
+                answerTitle: kind == .publicLawPreview ? rossLocalized("approval_required") : alphaAskRoutinePreparedTitle(kind.title),
                 answerSections: [
                     kind == .publicLawPreview
-                        ? "Ross prepared a sanitized public-law query preview. No web search has run."
-                        : "Ross reviewed saved local matter state and updated prepared work.",
-                    preparedCount == 0 ? "No items need advocate attention right now." : "\(preparedCount) item(s) need advocate attention."
+                        ? rossLocalized("ask_public_law_preview_prepared")
+                        : rossLocalized("ask_local_matter_state_reviewed"),
+                    preparedCount == 0 ? rossLocalized("ask_no_items_need_attention") : alphaAskPreparedItemsNeedAttentionLabel(preparedCount)
                 ],
                 caseFileSources: [],
                 publicLawPreview: kind == .publicLawPreview ? publicLawPreview : nil,
                 publicLawResults: [],
-                statusNote: kind == .publicLawPreview ? "Review required" : "Prepared locally",
+                statusNote: kind == .publicLawPreview ? rossLocalized("review_required") : rossLocalized("prepared_locally"),
                 needsReviewWarning: nil
             )
 
@@ -2274,6 +2276,42 @@ func alphaLocalAskSetupRequiredStatus(languageCode: String = rossSelectedLanguag
     case "te": "ప్రైవేట్ సహాయకుడి సెటప్ అవసరం"
     default: "Private assistant setup required"
     }
+}
+
+func alphaAskPickMatterBeforeDraftLabel(_ draftLabel: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("ask_pick_matter_before_draft", languageCode: languageCode), draftLabel)
+}
+
+func alphaAskDraftReadyTitle(_ draftLabel: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("ask_draft_ready_title", languageCode: languageCode), draftLabel)
+}
+
+func alphaAskCouldNotCreateDraftTitle(_ draftLabel: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("ask_could_not_create_draft_title", languageCode: languageCode), draftLabel)
+}
+
+func alphaAskLocalDraftCreatedLabel(_ draftLabel: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("ask_local_draft_created", languageCode: languageCode), draftLabel)
+}
+
+func alphaAskReviewedDocumentAgainLabel(_ title: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("ask_reviewed_document_again", languageCode: languageCode), title)
+}
+
+func alphaAskTasksAddedFromDocumentLabel(
+    _ count: Int,
+    documentTitle: String,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
+    String(format: rossLocalized("ask_tasks_added_from_document", languageCode: languageCode), count, documentTitle)
+}
+
+func alphaAskRoutinePreparedTitle(_ title: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("ask_routine_prepared_title", languageCode: languageCode), title)
+}
+
+func alphaAskPreparedItemsNeedAttentionLabel(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("ask_prepared_items_need_attention", languageCode: languageCode), count)
 }
 
 func alphaLocalAskSetupRequiredSafetyNote(languageCode: String = rossSelectedLanguageCode()) -> String {
