@@ -1452,10 +1452,11 @@ struct AlphaDocumentReviewStatusBanner: View {
 
             if isWorking {
                 if let progressValue {
-                    ProgressView(value: min(max(progressValue, 0), 1), total: 1)
-                        .progressViewStyle(.linear)
-                        .tint(tint)
-                        .frame(width: 72)
+                    AlphaGlassLinearProgressView(
+                        value: progressValue,
+                        tint: tint
+                    )
+                    .frame(width: 72)
                 } else {
                     ProgressView()
                         .controlSize(.small)
@@ -1475,6 +1476,39 @@ struct AlphaDocumentReviewStatusBanner: View {
             fillOpacity: 0.82,
             strokeOpacity: 0.46
         )
+    }
+}
+
+private struct AlphaGlassLinearProgressView: View {
+    let value: Double
+    let tint: Color
+
+    private var clampedValue: Double {
+        min(max(value, 0), 1)
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.clear)
+                    .rossNativeGlassSurface(
+                        tint: tint,
+                        shape: Capsule(),
+                        fallbackFillOpacity: 0.62,
+                        fallbackStrokeOpacity: 0.42
+                    )
+
+                Capsule()
+                    .fill(tint.opacity(0.82))
+                    .frame(width: max(proxy.size.width * clampedValue, 4))
+                    .padding(2)
+            }
+        }
+        .frame(height: 8)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(rossLocalized("document_review_progress_title"))
+        .accessibilityValue(clampedValue.formatted(.percent.precision(.fractionLength(0))))
     }
 }
 
