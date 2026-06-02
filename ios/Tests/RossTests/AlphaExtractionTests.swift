@@ -915,6 +915,10 @@ final class AlphaExtractionTests: XCTestCase {
             "முக்கிய தேதிகள்"
         )
         XCTAssertEqual(
+            alphaAskStreamingAnswerTitle(languageCode: "te-IN"),
+            "Ross సమాధానం సిద్ధం చేస్తోంది..."
+        )
+        XCTAssertEqual(
             rossLocalized("file_text_unavailable", languageCode: "bn"),
             "File text পাওয়া যাচ্ছে না"
         )

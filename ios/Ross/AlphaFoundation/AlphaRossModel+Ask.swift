@@ -1181,6 +1181,7 @@ extension AlphaRossModel {
         }
         Task {
             var streamedOutput: AlphaLocalModelOutput?
+            let streamingAnswerTitle = alphaAskStreamingAnswerTitle()
             if let stream = provider.runStreaming(input) {
                 var lastPartialUpdatedAt = Date.distantPast
                 for await partial in stream {
@@ -1206,14 +1207,14 @@ extension AlphaRossModel {
                             sessionID: chatSessionID,
                             turnID: chatTurnID
                         ) { turn in
-                            turn.answerTitle = "Ross is drafting..."
+                            turn.answerTitle = streamingAnswerTitle
                             turn.answerSections = displaySections
                             turn.sourceRefs = filteredSourceRefs
                             turn.statusNote = runningStatus
                             turn.modelInvocation = invocation
                         }
                         if var latest = self.latestAskResult, latest.chatTurnID == chatTurnID {
-                            latest.answerTitle = "Ross is drafting..."
+                            latest.answerTitle = streamingAnswerTitle
                             latest.answerSections = displaySections
                             latest.caseFileSources = filteredSourceRefs
                             latest.statusNote = runningStatus
@@ -2351,6 +2352,10 @@ func alphaPendingLocalModelStatus(_ label: String, languageCode: String = rossSe
 
 func alphaPendingLocalModelDetail(_ label: String, languageCode: String = rossSelectedLanguageCode()) -> String {
     String(format: rossLocalized("ask_pending_private_answer_detail", languageCode: languageCode), label)
+}
+
+func alphaAskStreamingAnswerTitle(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("ask_ross_answering_pending", languageCode: languageCode)
 }
 
 func alphaPendingLocalModelLabel(from statusNote: String?) -> String? {
