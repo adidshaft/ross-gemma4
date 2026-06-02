@@ -304,7 +304,17 @@ struct AlphaFullScreenChatTopBar: View {
         .padding(.horizontal, 12)
         .padding(.top, 4)
         .padding(.bottom, 8)
-        .background(Color.rossGroupedBackground.opacity(0.96))
+        .rossGlassSurface(
+            tint: Color.rossHighlight,
+            cornerRadius: 22,
+            shadowOpacity: 0.05,
+            shadowRadius: 7,
+            shadowY: 2,
+            fillOpacity: 0.78,
+            strokeOpacity: 0.42
+        )
+        .padding(.horizontal, 8)
+        .padding(.top, 4)
     }
 }
 
@@ -402,7 +412,13 @@ struct AlphaFullScreenChatComposer: View {
                         .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(liveCanSend ? Color.rossCardBackground : Color.rossInk.opacity(0.44))
                         .frame(width: 40, height: 40)
-                        .background(liveCanSend ? Color.rossAccent : Color.rossSecondaryGroupedBackground, in: Circle())
+                        .rossNativeGlassSurface(
+                            tint: liveCanSend ? Color.rossAccent : Color.rossInk.opacity(0.22),
+                            shape: Circle(),
+                            interactive: true,
+                            fallbackFillOpacity: liveCanSend ? 0.92 : 0.72,
+                            fallbackStrokeOpacity: liveCanSend ? 0.62 : 0.34
+                        )
                 }
                 .buttonStyle(.plain)
                 .disabled(!liveCanSend)
@@ -421,7 +437,17 @@ struct AlphaFullScreenChatComposer: View {
         .padding(.horizontal, 12)
         .padding(.top, 10)
         .padding(.bottom, 8)
-        .background(Color.rossGroupedBackground.opacity(0.98))
+        .rossGlassSurface(
+            tint: Color.rossHighlight,
+            cornerRadius: 24,
+            shadowOpacity: 0.08,
+            shadowRadius: 10,
+            shadowY: 4,
+            fillOpacity: 0.82,
+            strokeOpacity: 0.50
+        )
+        .padding(.horizontal, 8)
+        .padding(.bottom, 6)
     }
 }
 
