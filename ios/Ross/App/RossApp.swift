@@ -112,6 +112,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "உங்கள் வழக்குகள் இந்த சாதனத்தில் தனிப்பட்டதாக இருக்கும்.",
             "te": "మీ కేసులు ఈ పరికరంలోనే ప్రైవేట్‌గా ఉంటాయి."
         ],
+        "private_legal_work_splash": [
+            "en": "Private legal work, on this phone.",
+            "hi": "निजी कानूनी काम, इसी फ़ोन पर।",
+            "bn": "ব্যক্তিগত আইনি কাজ, এই ফোনেই।",
+            "ta": "தனிப்பட்ட சட்ட வேலை, இந்த தொலைபேசியில்.",
+            "te": "వ్యక్తిగత న్యాయ పని, ఈ ఫోన్‌లో."
+        ],
         "get_started": [
             "en": "Get Started",
             "hi": "शुरू करें",
@@ -146,6 +153,104 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "bn": "নমুনা মামলা বা খালি কর্মক্ষেত্র",
             "ta": "மாதிரி வழக்கு அல்லது காலியான பணியிடம்",
             "te": "నమూనా కేసు లేదా ఖాళీ వర్క్‌స్పేస్"
+        ],
+        "email_access": [
+            "en": "Email access",
+            "hi": "Email access",
+            "bn": "Email access",
+            "ta": "Email access",
+            "te": "Email access"
+        ],
+        "connecting_to_google": [
+            "en": "Connecting to Google",
+            "hi": "Google से connect हो रहा है",
+            "bn": "Google-এর সঙ্গে connect হচ্ছে",
+            "ta": "Google உடன் connect ஆகிறது",
+            "te": "Google కు connect అవుతోంది"
+        ],
+        "continue_with_google": [
+            "en": "Continue with Google",
+            "hi": "Google से जारी रखें",
+            "bn": "Google দিয়ে চালিয়ে যান",
+            "ta": "Google உடன் தொடரவும்",
+            "te": "Google తో కొనసాగండి"
+        ],
+        "connecting_to_apple": [
+            "en": "Connecting to Apple",
+            "hi": "Apple से connect हो रहा है",
+            "bn": "Apple-এর সঙ্গে connect হচ্ছে",
+            "ta": "Apple உடன் connect ஆகிறது",
+            "te": "Apple కు connect అవుతోంది"
+        ],
+        "continue_with_apple": [
+            "en": "Continue with Apple",
+            "hi": "Apple से जारी रखें",
+            "bn": "Apple দিয়ে চালিয়ে যান",
+            "ta": "Apple உடன் தொடரவும்",
+            "te": "Apple తో కొనసాగండి"
+        ],
+        "demo_data_sample_only": [
+            "en": "Demo data is sample only.",
+            "hi": "Demo data सिर्फ sample है।",
+            "bn": "Demo data শুধু sample.",
+            "ta": "Demo data sample மட்டும்.",
+            "te": "Demo data sample మాత్రమే."
+        ],
+        "unlocking_ross": [
+            "en": "Unlocking Ross",
+            "hi": "Ross unlock हो रहा है",
+            "bn": "Ross unlock হচ্ছে",
+            "ta": "Ross unlock ஆகிறது",
+            "te": "Ross unlock అవుతోంది"
+        ],
+        "workspace_locked": [
+            "en": "Workspace locked",
+            "hi": "Workspace locked है",
+            "bn": "Workspace locked",
+            "ta": "Workspace locked",
+            "te": "Workspace locked"
+        ],
+        "ross_is_locked": [
+            "en": "Ross is locked",
+            "hi": "Ross locked है",
+            "bn": "Ross locked",
+            "ta": "Ross locked",
+            "te": "Ross locked"
+        ],
+        "use_unlock_to_continue": [
+            "en": "Use %@ to continue.",
+            "hi": "जारी रखने के लिए %@ इस्तेमाल करें।",
+            "bn": "চালিয়ে যেতে %@ ব্যবহার করুন।",
+            "ta": "தொடர %@ பயன்படுத்தவும்.",
+            "te": "కొనసాగడానికి %@ ఉపయోగించండి."
+        ],
+        "sign_out": [
+            "en": "Sign out",
+            "hi": "Sign out",
+            "bn": "Sign out",
+            "ta": "Sign out",
+            "te": "Sign out"
+        ],
+        "sign_out_of_ross_question": [
+            "en": "Sign out of Ross?",
+            "hi": "Ross से sign out करें?",
+            "bn": "Ross থেকে sign out করবেন?",
+            "ta": "Ross-இலிருந்து sign out செய்யவா?",
+            "te": "Ross నుండి sign out చేయాలా?"
+        ],
+        "sign_out_destructive": [
+            "en": "Sign Out",
+            "hi": "Sign Out",
+            "bn": "Sign Out",
+            "ta": "Sign Out",
+            "te": "Sign Out"
+        ],
+        "sign_out_local_detail": [
+            "en": "This removes the local sign-in from this device until you sign in again.",
+            "hi": "दोबारा sign in करने तक यह इस device से local sign-in हटाता है।",
+            "bn": "আবার sign in না করা পর্যন্ত এটি এই device থেকে local sign-in সরিয়ে দেয়।",
+            "ta": "நீங்கள் மீண்டும் sign in செய்யும் வரை இது இந்த device-இலிருந்து local sign-in-ஐ நீக்கும்.",
+            "te": "మళ్లీ sign in చేసే వరకు ఇది ఈ device నుండి local sign-in ను తొలగిస్తుంది."
         ],
         "setup_assistant": [
             "en": "Set up assistant",
@@ -3371,11 +3476,11 @@ private struct RossWorkspacePrivacyShield: View {
                         .tint(Color.rossAccent)
                         .scaleEffect(1.02)
 
-                    Text("Unlocking Ross")
+                    Text(rossLocalized("unlocking_ross"))
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.rossInk)
                 } else {
-                    Text("Workspace locked")
+                    Text(rossLocalized("workspace_locked"))
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.rossInk)
                 }
@@ -3670,7 +3775,7 @@ private struct RossAuthSignInSheet: View {
                         if isEmailExpanded {
                             VStack(alignment: .leading, spacing: 8) {
                                 HStack {
-                                    Text("Email access")
+                                    Text(rossLocalized("email_access"))
                                         .font(.system(size: 14, weight: .semibold))
                                         .foregroundStyle(Color.rossInk)
 
@@ -3694,7 +3799,7 @@ private struct RossAuthSignInSheet: View {
                                             )
                                     }
                                     .buttonStyle(.plain)
-                                    .accessibilityLabel("Back")
+                                    .accessibilityLabel(rossLocalized("back"))
                                 }
 
                                 VStack(spacing: 8) {
@@ -3737,7 +3842,7 @@ private struct RossAuthSignInSheet: View {
                                     authController.startGoogleSignIn()
                                 } label: {
                                     RossAuthActionLabel(
-                                        title: authController.activeExternalProvider == .google ? "Connecting to Google" : "Continue with Google",
+                                        title: authController.activeExternalProvider == .google ? rossLocalized("connecting_to_google") : rossLocalized("continue_with_google"),
                                         tone: .secondary
                                     ) {
                                         RossGoogleMark(size: 17)
@@ -3751,7 +3856,7 @@ private struct RossAuthSignInSheet: View {
                                     authController.startAppleSignIn()
                                 } label: {
                                     RossAuthActionLabel(
-                                        title: authController.activeExternalProvider == .apple ? "Connecting to Apple" : "Continue with Apple",
+                                        title: authController.activeExternalProvider == .apple ? rossLocalized("connecting_to_apple") : rossLocalized("continue_with_apple"),
                                         tone: .secondary
                                     ) {
                                         Image(systemName: "applelogo")
@@ -3779,7 +3884,7 @@ private struct RossAuthSignInSheet: View {
                                 }
                                 .rossGlassButtonStyle(cornerRadius: 20)
 
-                                Text("Demo data is sample only.")
+                                Text(rossLocalized("demo_data_sample_only"))
                                     .font(.system(size: 11, weight: .medium))
                                     .foregroundStyle(Color.rossInk.opacity(0.7))
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -4024,13 +4129,13 @@ private struct RossQuickUnlockScreen: View {
                 RossAuthGlassPanel(cornerRadius: 20, padding: 18, forcedWidth: panelWidth) {
                     VStack(alignment: .center, spacing: 16) {
                         VStack(spacing: 6) {
-                            Text("Ross is locked")
+                            Text(rossLocalized("ross_is_locked"))
                                 .font(.system(size: 30, weight: .semibold))
                                 .foregroundStyle(Color.rossInk)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.82)
 
-                            Text("Use \(authController.quickUnlockSummary) to continue.")
+                            Text(rossUnlockContinueLabel(authController.quickUnlockSummary))
                                 .font(.subheadline.weight(.medium))
                                 .foregroundStyle(Color.rossInk.opacity(0.68))
                                 .multilineTextAlignment(.center)
@@ -4066,7 +4171,7 @@ private struct RossQuickUnlockScreen: View {
                         }
                         .rossPrimaryButtonStyle()
 
-                        Button("Sign out") {
+                        Button(rossLocalized("sign_out")) {
                             showingSignOutConfirmation = true
                         }
                         .buttonStyle(.plain)
@@ -4080,15 +4185,19 @@ private struct RossQuickUnlockScreen: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.horizontal, 16)
         }
-        .alert("Sign out of Ross?", isPresented: $showingSignOutConfirmation) {
-            Button("Sign Out", role: .destructive) {
+        .alert(rossLocalized("sign_out_of_ross_question"), isPresented: $showingSignOutConfirmation) {
+            Button(rossLocalized("sign_out_destructive"), role: .destructive) {
                 authController.signOut()
             }
-            Button("Cancel", role: .cancel) {}
+            Button(rossLocalized("cancel"), role: .cancel) {}
         } message: {
-            Text("This removes the local sign-in from this device until you sign in again.")
+            Text(rossLocalized("sign_out_local_detail"))
         }
     }
+}
+
+func rossUnlockContinueLabel(_ unlockSummary: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("use_unlock_to_continue", languageCode: languageCode), unlockSummary)
 }
 
 struct RossAuthHeroMark: View {

@@ -954,6 +954,22 @@ final class AlphaExtractionTests: XCTestCase {
             "matter, client లేదా case number తో search చేయండి"
         )
         XCTAssertEqual(
+            rossLocalized("private_legal_work_splash", languageCode: "hi"),
+            "निजी कानूनी काम, इसी फ़ोन पर।"
+        )
+        XCTAssertEqual(
+            rossLocalized("continue_with_google", languageCode: "bn"),
+            "Google দিয়ে চালিয়ে যান"
+        )
+        XCTAssertEqual(
+            rossUnlockContinueLabel("Face ID", languageCode: "ta"),
+            "தொடர Face ID பயன்படுத்தவும்."
+        )
+        XCTAssertEqual(
+            rossLocalized("sign_out_local_detail", languageCode: "te-IN"),
+            "మళ్లీ sign in చేసే వరకు ఇది ఈ device నుండి local sign-in ను తొలగిస్తుంది."
+        )
+        XCTAssertEqual(
             rossLocalized("download_size", languageCode: "ta"),
             "பதிவிறக்க அளவு"
         )

@@ -25,7 +25,7 @@ struct AlphaGlassPlusButton: View {
                 .rossGlassSurface(tint: Color.rossAccent.opacity(0.18), cornerRadius: 17, interactive: true, shadowOpacity: 0.06, shadowRadius: 6, shadowY: 2, strokeOpacity: 0.45)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Create matter")
+        .accessibilityLabel(rossLocalized("create_matter"))
     }
 }
 

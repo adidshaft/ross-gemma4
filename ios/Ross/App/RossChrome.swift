@@ -105,7 +105,7 @@ struct RossLaunchSplashView: View {
                     .font(.system(size: 28, weight: .semibold))
                     .foregroundStyle(Color.rossInk)
 
-                Text("Private legal work, on this phone.")
+                Text(rossLocalized("private_legal_work_splash"))
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(Color.rossInk.opacity(0.62))
             }
