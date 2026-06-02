@@ -739,13 +739,13 @@ extension AlphaRossModel {
         if nsError.domain == NSURLErrorDomain {
             switch nsError.code {
             case NSURLErrorUnknown:
-                return "The model download service interrupted setup before iOS could classify the error. Retry on Wi-Fi; Ross will use a foreground fallback if the background download fails again."
+                return "The assistant download service interrupted setup before iOS could classify the error. Retry on Wi-Fi; Ross will use a foreground fallback if the background download fails again."
             case NSURLErrorNotConnectedToInternet:
-                return "Ross could not reach the model download service. Check the connection and retry on Wi-Fi."
+                return "Ross could not reach the assistant download service. Check the connection and retry on Wi-Fi."
             case NSURLErrorCancelled:
-                return "The model download was interrupted before it could start. Retry setup; Ross will resume if resume data is available."
+                return "The assistant download was interrupted before it could start. Retry setup; Ross will resume if resume data is available."
             case NSURLErrorNetworkConnectionLost:
-                return "The model download connection was interrupted. Retry setup; Ross will resume if the server provided resume data."
+                return "The assistant download connection was interrupted. Retry setup; Ross will resume if the server provided resume data."
             default:
                 break
             }
@@ -965,7 +965,7 @@ extension AlphaRossModel {
             }
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
-                    title: "Assistant model download verified",
+                    title: "Assistant download verified",
                     detail: "Ross confirmed the provider file size and byte-range download support before starting. Case files stayed on this device.",
                     purpose: .model_download,
                     payloadClass: .no_case_data,
@@ -1032,7 +1032,7 @@ extension AlphaRossModel {
             }
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
-                    title: "Assistant model verified",
+                    title: "Assistant verified",
                     detail: "\(tier.title) finished downloading and passed checksum verification locally.",
                     purpose: .model_verification,
                     payloadClass: .no_case_data,
@@ -1055,7 +1055,7 @@ extension AlphaRossModel {
             }
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
-                    title: "Assistant model download failed",
+                    title: "Assistant download failed",
                     detail: assistantDownloadFailureMessage(error),
                     purpose: .model_download,
                     payloadClass: .no_case_data,

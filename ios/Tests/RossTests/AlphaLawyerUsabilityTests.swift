@@ -1601,6 +1601,26 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    func testAssistantDownloadFailureMessagesUseProductLanguage() async {
+        let messages = await MainActor.run {
+            let model = AlphaRossModel()
+            return [
+                model.assistantDownloadFailureMessage(NSError(domain: NSURLErrorDomain, code: NSURLErrorUnknown)),
+                model.assistantDownloadFailureMessage(NSError(domain: NSURLErrorDomain, code: NSURLErrorNotConnectedToInternet)),
+                model.assistantDownloadFailureMessage(NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled)),
+                model.assistantDownloadFailureMessage(NSError(domain: NSURLErrorDomain, code: NSURLErrorNetworkConnectionLost))
+            ]
+        }
+
+        XCTAssertFalse(messages.isEmpty)
+        for message in messages {
+            XCTAssertTrue(message.localizedCaseInsensitiveContains("assistant download"), message)
+            XCTAssertFalse(message.localizedCaseInsensitiveContains("model download"), message)
+            XCTAssertFalse(message.localizedCaseInsensitiveContains("runtime"), message)
+            XCTAssertFalse(message.localizedCaseInsensitiveContains("artifact"), message)
+        }
+    }
+
     func testInstalledPackActivationAndRemovalDeleteLocalArtifact() async throws {
         try await withRestoredStore { store in
             let basicPath = "model-packs/quick_start/lifecycle-basic.gguf"
