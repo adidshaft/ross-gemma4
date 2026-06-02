@@ -51,7 +51,7 @@ private func alphaQuarantineActiveAssistantAfterStartupFailure(_ state: inout Al
     state.modelJobs = state.modelJobs.map { job in
         var copy = job
         if copy.tier == activePack.tier, copy.state == .installed {
-            copy.failureReason = "Ross paused this assistant after the previous launch did not finish setup validation. Open My assistant to re-check it or delete the downloaded file."
+            copy.failureReason = "Ross paused this assistant after the previous launch did not finish setup validation. Open My assistant to re-check setup or use Repair setup."
             copy.updatedAt = .now
         }
         return copy
@@ -59,7 +59,7 @@ private func alphaQuarantineActiveAssistantAfterStartupFailure(_ state: inout Al
     state.ledgerEntries.insert(
         AlphaPrivacyLedgerEntry(
             title: "Assistant paused",
-            detail: "Ross kept the downloaded assistant file on this device, but stopped auto-selecting it after startup validation did not finish on the previous launch.",
+            detail: "Ross kept the assistant setup file on this device, but stopped auto-selecting it after startup validation did not finish on the previous launch. Open My assistant to re-check setup or use Repair setup.",
             purpose: .model_verification,
             payloadClass: .no_case_data,
             endpointLabel: "device://model-startup-recovery",
@@ -565,7 +565,7 @@ extension AlphaRossModel {
                 maxInputChars: nil,
                 estimatedContextTokens: nil,
                 lastErrorCategory: "runtime_validation_pending",
-                userFacingStatus: "Ross is checking the downloaded assistant file before enabling private answers.",
+                userFacingStatus: "Ross is checking assistant setup before enabling private answers.",
                 explicitOptInEnabled: true
             )
         } else {
@@ -1542,7 +1542,7 @@ extension AlphaRossModel {
                 normalized.ledgerEntries.insert(
                     AlphaPrivacyLedgerEntry(
                         title: "Assistant paused",
-                        detail: "Ross kept the downloaded assistant file on this device, but stopped auto-selecting it after startup validation did not finish on the previous launch.",
+                        detail: "Ross kept the assistant setup file on this device, but stopped auto-selecting it after startup validation did not finish on the previous launch. Open My assistant to re-check setup or use Repair setup.",
                         purpose: .model_verification,
                         payloadClass: .no_case_data,
                         endpointLabel: "device://model-startup-recovery",

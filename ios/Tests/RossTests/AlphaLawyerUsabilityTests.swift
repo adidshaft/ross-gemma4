@@ -1522,7 +1522,10 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertFalse(normalized.installedPacks.first?.isActive ?? true)
         XCTAssertTrue(normalized.ledgerEntries.contains { $0.title == "Assistant paused" })
         let pausedEntry = normalized.ledgerEntries.first { $0.title == "Assistant paused" }
-        XCTAssertTrue(pausedEntry?.detail.contains("downloaded assistant file") == true)
+        XCTAssertTrue(pausedEntry?.detail.contains("assistant setup file") == true)
+        XCTAssertTrue(pausedEntry?.detail.contains("My assistant") == true)
+        XCTAssertTrue(pausedEntry?.detail.contains("Repair setup") == true)
+        XCTAssertFalse(pausedEntry?.detail.localizedCaseInsensitiveContains("downloaded assistant file") == true)
         XCTAssertTrue(pausedEntry?.detail.contains("this device") == true)
         XCTAssertFalse(pausedEntry?.detail.localizedCaseInsensitiveContains("Settings") == true)
     }
