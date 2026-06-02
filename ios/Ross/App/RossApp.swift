@@ -161,6 +161,69 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Ross-ஐ பதிவிறக்கி அமைக்கவும்",
             "te": "Ross డౌన్‌లోడ్ చేసి సెటప్ చేయండి"
         ],
+        "private_legal_workbench": [
+            "en": "Your private legal workbench.",
+            "hi": "आपका निजी कानूनी कार्यक्षेत्र।",
+            "bn": "আপনার ব্যক্তিগত আইনি কর্মক্ষেত্র।",
+            "ta": "உங்கள் தனிப்பட்ட சட்ட பணிமனை.",
+            "te": "మీ ప్రైవేట్ న్యాయ వర్క్‌బెంచ్."
+        ],
+        "choose_private_assistant": [
+            "en": "Choose private assistant",
+            "hi": "निजी सहायक चुनें",
+            "bn": "ব্যক্তিগত সহকারী বেছে নিন",
+            "ta": "தனிப்பட்ட உதவியாளரைத் தேர்வுசெய்க",
+            "te": "ప్రైవేట్ సహాయకుడిని ఎంచుకోండి"
+        ],
+        "choose_your_private_assistant": [
+            "en": "Choose your private assistant",
+            "hi": "अपना निजी सहायक चुनें",
+            "bn": "আপনার ব্যক্তিগত সহকারী বেছে নিন",
+            "ta": "உங்கள் தனிப்பட்ட உதவியாளரைத் தேர்வுசெய்க",
+            "te": "మీ ప్రైవేట్ సహాయకుడిని ఎంచుకోండి"
+        ],
+        "assistant_picker_detail": [
+            "en": "Every option runs fully on this device. Larger assistants take longer to download and can handle deeper work.",
+            "hi": "हर विकल्प पूरी तरह इसी डिवाइस पर चलता है। बड़े सहायक डाउनलोड में अधिक समय लेते हैं और गहरे काम संभाल सकते हैं।",
+            "bn": "প্রতিটি বিকল্প সম্পূর্ণভাবে এই ডিভাইসে চলে। বড় সহকারী ডাউনলোড হতে বেশি সময় নেয় এবং গভীর কাজ সামলাতে পারে।",
+            "ta": "ஒவ்வொரு விருப்பமும் இந்த சாதனத்திலேயே முழுமையாக இயங்கும். பெரிய உதவியாளர்கள் பதிவிறக்க அதிக நேரம் எடுத்து ஆழமான பணிகளை கையாளலாம்.",
+            "te": "ప్రతి ఎంపిక పూర్తిగా ఈ పరికరంలోనే నడుస్తుంది. పెద్ద సహాయకులు డౌన్‌లోడ్‌కు ఎక్కువ సమయం తీసుకుని లోతైన పనిని నిర్వహించగలరు."
+        ],
+        "assistant_picker_later": [
+            "en": "You can change this later in Settings, then My assistant.",
+            "hi": "बाद में Settings में, फिर My assistant में इसे बदल सकते हैं।",
+            "bn": "পরে Settings-এ, তারপর My assistant-এ এটি বদলাতে পারবেন।",
+            "ta": "பின்னர் Settings-இல், அதன் பின் My assistant-இல் இதை மாற்றலாம்.",
+            "te": "తర్వాత Settings లో, ఆపై My assistant లో దీన్ని మార్చవచ్చు."
+        ],
+        "skip_for_now": [
+            "en": "Skip for now",
+            "hi": "अभी छोड़ें",
+            "bn": "এখন এড়িয়ে যান",
+            "ta": "இப்போது தவிர்க்கவும்",
+            "te": "ఇప్పటికి దాటవేయండి"
+        ],
+        "recommended": [
+            "en": "Recommended",
+            "hi": "सुझाया गया",
+            "bn": "প্রস্তাবিত",
+            "ta": "பரிந்துரைக்கப்பட்டது",
+            "te": "సిఫార్సు"
+        ],
+        "assistant": [
+            "en": "Assistant",
+            "hi": "सहायक",
+            "bn": "সহকারী",
+            "ta": "உதவியாளர்",
+            "te": "సహాయకుడు"
+        ],
+        "cancel": [
+            "en": "Cancel",
+            "hi": "रद्द करें",
+            "bn": "বাতিল",
+            "ta": "ரத்து செய்",
+            "te": "రద్దు"
+        ],
         "assistant_setup_phase_download": [
             "en": "Download",
             "hi": "डाउनलोड",

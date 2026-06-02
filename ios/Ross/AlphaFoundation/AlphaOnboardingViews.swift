@@ -164,7 +164,7 @@ struct AlphaOnboardingScreen: View {
                                 .font(.system(size: titleSize, weight: .bold, design: .serif))
                                 .foregroundStyle(Color.rossInk)
 
-                            Text("Your private legal workbench.")
+                            Text(rossLocalized("private_legal_workbench"))
                                 .font((compact ? Font.callout : Font.title3).weight(.medium))
                                 .foregroundStyle(Color.rossInk.opacity(0.70))
                                 .multilineTextAlignment(.center)
@@ -208,7 +208,7 @@ struct AlphaOnboardingScreen: View {
                         .buttonStyle(AlphaSetupPrimaryButtonStyle())
                         .frame(height: compact ? 50 : 54)
 
-                        Button("Skip for now") {
+                        Button(rossLocalized("skip_for_now")) {
                             model.skipPackSetup()
                         }
                         .font(.system(size: compact ? 12 : 13, weight: .medium))
@@ -253,7 +253,7 @@ struct AlphaOnboardingModelSelector: View {
     var body: some View {
         VStack(alignment: .leading, spacing: compact ? 6 : 8) {
             HStack {
-                Text("Choose private assistant")
+                Text(rossLocalized("choose_private_assistant"))
                     .font(.system(size: compact ? 13 : 15, weight: .bold))
                     .foregroundStyle(Color.rossInk)
                 Spacer(minLength: 0)
@@ -307,7 +307,7 @@ struct AlphaOnboardingModelChoiceRow: View {
                             .lineLimit(1)
 
                         if isRecommended {
-                            Text("Recommended")
+                            Text(rossLocalized("recommended"))
                                 .font(.system(size: compact ? 9 : 10, weight: .bold))
                                 .foregroundStyle(Color.rossAccent)
                                 .padding(.horizontal, 5)
@@ -591,12 +591,12 @@ struct AlphaModelPickerSheet: View {
                 RossGlassGroup(spacing: 14) {
                     VStack(spacing: 14) {
                         VStack(spacing: 6) {
-                            Text("Choose your private assistant")
+                            Text(rossLocalized("choose_your_private_assistant"))
                                 .font(.system(size: 22, weight: .bold, design: .serif))
                                 .foregroundStyle(Color.rossInk)
                                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                            Text("Every option runs fully on this device. Larger assistants take longer to download and can handle deeper work.")
+                            Text(rossLocalized("assistant_picker_detail"))
                                 .font(.subheadline)
                                 .foregroundStyle(Color.rossInk.opacity(0.60))
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -616,7 +616,7 @@ struct AlphaModelPickerSheet: View {
                             }
                         }
 
-                        Text("You can change this later in Settings, then My assistant.")
+                        Text(rossLocalized("assistant_picker_later"))
                             .font(.caption)
                             .foregroundStyle(Color.rossInk.opacity(0.44))
                             .multilineTextAlignment(.center)
@@ -625,12 +625,12 @@ struct AlphaModelPickerSheet: View {
                     .padding(20)
                 }
             }
-            .navigationTitle("Assistant")
+            .navigationTitle(rossLocalized("assistant"))
             .rossInlineNavigationTitle()
             .toolbar {
                 #if os(iOS)
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Cancel") { isPresented = false }
+                    Button(rossLocalized("cancel")) { isPresented = false }
                         .font(.system(size: 15, weight: .medium))
                         .foregroundStyle(Color.rossAccent)
                 }
@@ -681,7 +681,7 @@ struct AlphaModelPickerRow: View {
                                 .foregroundStyle(Color.rossInk)
 
                             if isRecommended {
-                                Text("Recommended")
+                                Text(rossLocalized("recommended"))
                                     .font(.caption2.weight(.bold))
                                     .foregroundStyle(Color.rossAccent)
                                     .padding(.horizontal, 6)
