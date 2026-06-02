@@ -56,6 +56,24 @@ func rossLanguageDisplayName(code: String) -> String {
     }
 }
 
+struct RossLanguageOption: Identifiable, Hashable {
+    let id: String  // language code
+    let nativeName: String
+    let englishName: String
+}
+
+let rossLanguageOptions: [RossLanguageOption] = [
+    RossLanguageOption(id: "en", nativeName: "English", englishName: "English"),
+    RossLanguageOption(id: "hi", nativeName: "हिन्दी", englishName: "Hindi"),
+    RossLanguageOption(id: "bn", nativeName: "বাংলা", englishName: "Bengali"),
+    RossLanguageOption(id: "ta", nativeName: "தமிழ்", englishName: "Tamil"),
+    RossLanguageOption(id: "te", nativeName: "తెలుగు", englishName: "Telugu")
+]
+
+func rossSupportedLanguageCodes() -> [String] {
+    rossLanguageOptions.map(\.id)
+}
+
 func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCode()) -> String {
     let normalizedCode = languageCode.split(separator: "-").first.map(String.init) ?? languageCode
     let table: [String: [String: String]] = [
@@ -1211,18 +1229,6 @@ private struct RossWorkspacePrivacyShield: View {
 }
 
 // MARK: - Language Selection Screen
-
-private struct RossLanguageOption: Identifiable {
-    let id: String  // language code
-    let nativeName: String
-    let englishName: String
-}
-
-private let rossLanguageOptions: [RossLanguageOption] = [
-    RossLanguageOption(id: "en", nativeName: "English", englishName: "English"),
-    RossLanguageOption(id: "hi", nativeName: "हिन्दी", englishName: "Hindi"),
-    RossLanguageOption(id: "bn", nativeName: "বাংলা", englishName: "Bengali"),
-]
 
 private struct RossLanguageSelectionScreen: View {
     @Bindable var authController: RossAuthController

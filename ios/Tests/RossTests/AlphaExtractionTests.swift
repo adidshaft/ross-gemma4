@@ -490,6 +490,24 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testSelectableAppLanguagesIncludeLocalizedAskLanguages() {
+        XCTAssertEqual(rossSupportedLanguageCodes(), ["en", "hi", "bn", "ta", "te"])
+
+        let labels = Dictionary(uniqueKeysWithValues: rossLanguageOptions.map { ($0.id, $0.nativeName) })
+        XCTAssertEqual(labels["ta"], "தமிழ்")
+        XCTAssertEqual(labels["te"], "తెలుగు")
+        XCTAssertEqual(rossLanguageDisplayName(code: "ta"), "Tamil")
+        XCTAssertEqual(rossLanguageDisplayName(code: "te"), "Telugu")
+        XCTAssertEqual(
+            rossLocalized("choose_language_title", languageCode: "ta"),
+            "உங்கள் விருப்ப மொழியைத் தேர்வுசெய்யவும்"
+        )
+        XCTAssertEqual(
+            rossLocalized("continue", languageCode: "te-IN"),
+            "కొనసాగించండి"
+        )
+    }
+
     func testAskEmptyStateSuggestionsFollowSelectedSupportedLanguage() {
         XCTAssertEqual(alphaAskEmptyTitle(languageCode: "ta"), "அடுத்து என்ன என்பதை Ross-ஐ கேளுங்கள்")
         XCTAssertEqual(alphaAskEmptyTitle(languageCode: "te-IN"), "తర్వాత ఏమిటో Ross‌ను అడగండి")

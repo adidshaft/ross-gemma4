@@ -21,11 +21,7 @@ struct AlphaSettingsScreen: View {
     @State private var languageExpanded = false
     @State private var appearanceExpanded = false
     @State private var storageExpanded = false
-    private let languageOptions: [(String, String)] = [
-        ("en", "English"),
-        ("hi", "Hindi"),
-        ("bn", "Bengali")
-    ]
+    private let languageOptions = rossLanguageOptions
 
     var body: some View {
         let storageSnapshot = alphaStorageSnapshot(model)
@@ -422,27 +418,33 @@ struct AlphaSettingsNavigationRow: View {
 }
 
 struct AlphaSettingsLanguageGrid: View {
-    let options: [(String, String)]
+    let options: [RossLanguageOption]
     @Binding var selectedCode: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(options.enumerated()), id: \.element.0) { index, option in
-                let code = option.0
-                let label = option.1
+            ForEach(Array(options.enumerated()), id: \.element.id) { index, option in
                 Button {
-                    selectedCode = code
+                    selectedCode = option.id
                 } label: {
                     HStack(spacing: 12) {
-                        Text(label)
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(Color.rossInk)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(option.nativeName)
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(Color.rossInk)
+
+                            if option.nativeName != option.englishName {
+                                Text(option.englishName)
+                                    .font(.caption2)
+                                    .foregroundStyle(Color.rossInk.opacity(0.62))
+                            }
+                        }
 
                         Spacer(minLength: 8)
 
-                        Image(systemName: selectedCode == code ? "checkmark.circle.fill" : "circle")
+                        Image(systemName: selectedCode == option.id ? "checkmark.circle.fill" : "circle")
                             .font(.system(size: 17, weight: .semibold))
-                            .foregroundStyle(selectedCode == code ? Color.rossAccent : Color.rossInk.opacity(0.18))
+                            .foregroundStyle(selectedCode == option.id ? Color.rossAccent : Color.rossInk.opacity(0.18))
                     }
                     .padding(.vertical, 10)
                 }
