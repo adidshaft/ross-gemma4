@@ -1022,6 +1022,62 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Basic, Standard, அல்லது Advanced தேர்வுசெய்ய Settings, பிறகு My assistant திறக்கவும்.",
             "te": "Basic, Standard, లేదా Advanced ఎంచుకోవడానికి Settings, తర్వాత My assistant తెరవండి."
         ],
+        "ask_private_assistant_not_ready": [
+            "en": "Private assistant not ready",
+            "hi": "निजी सहायक तैयार नहीं है",
+            "bn": "প্রাইভেট সহায়ক এখনও প্রস্তুত নয়",
+            "ta": "தனிப்பட்ட உதவியாளர் இன்னும் தயாராக இல்லை",
+            "te": "ప్రైవేట్ సహాయకుడు ఇంకా సిద్ధంగా లేదు"
+        ],
+        "ask_private_assistant_setup_required": [
+            "en": "Private assistant setup required",
+            "hi": "निजी सहायक सेटअप ज़रूरी है",
+            "bn": "প্রাইভেট সহায়ক সেটআপ প্রয়োজন",
+            "ta": "தனிப்பட்ட உதவியாளர் அமைப்பு தேவை",
+            "te": "ప్రైవేట్ సహాయకుడి సెటప్ అవసరం"
+        ],
+        "ask_private_assistant_setup_safety_note": [
+            "en": "Ross did not generate a legal answer because the private assistant is not ready.",
+            "hi": "Ross ने कानूनी उत्तर नहीं बनाया क्योंकि निजी सहायक अभी तैयार नहीं है.",
+            "bn": "প্রাইভেট সহায়ক প্রস্তুত না থাকায় Ross কোনও আইনি উত্তর তৈরি করেনি.",
+            "ta": "தனிப்பட்ட உதவியாளர் தயாராக இல்லாததால் Ross சட்டப் பதிலை உருவாக்கவில்லை.",
+            "te": "ప్రైవేట్ సహాయకుడు సిద్ధంగా లేకపోవడంతో Ross న్యాయ సమాధానం ఇవ్వలేదు."
+        ],
+        "ask_private_assistant_installed_but_blocked": [
+            "en": "Ross found assistant setup, but the private assistant is not opening yet. Run Repair setup from My assistant.",
+            "hi": "Ross को सेटअप मिला, पर निजी सहायक अभी खुल नहीं रहा है. My assistant में Repair setup चलाएँ.",
+            "bn": "Ross সেটআপ খুঁজে পেয়েছে, কিন্তু প্রাইভেট সহায়ক এখন খুলছে না. My assistant থেকে Repair setup চালান.",
+            "ta": "Ross அமைப்பைக் கண்டது, ஆனால் தனிப்பட்ட உதவியாளர் இப்போது திறக்கவில்லை. My assistant-ல் Repair setup இயக்கவும்.",
+            "te": "Ross సెటప్‌ను కనుగొంది, కానీ ప్రైవేట్ సహాయకుడు ఇప్పుడు తెరుచుకోవడం లేదు. My assistant‌లో Repair setup నడపండి."
+        ],
+        "ask_private_assistant_downloading_detail": [
+            "en": "Assistant setup is still downloading or checking the file. Ross will answer after the private assistant is ready.",
+            "hi": "सहायक अभी डाउनलोड या जाँच में है. तैयार होते ही Ross जवाब देगा.",
+            "bn": "সহায়ক এখনও ডাউনলোড বা পরীক্ষা হচ্ছে. প্রস্তুত হলেই Ross উত্তর দেবে.",
+            "ta": "உதவியாளர் இன்னும் பதிவிறக்கம் அல்லது சரிபார்ப்பில் உள்ளது. தயாரானதும் Ross பதிலளிக்கும்.",
+            "te": "సహాయకుడు ఇంకా డౌన్‌లోడ్ లేదా తనిఖీలో ఉంది. సిద్ధమైన వెంటనే Ross సమాధానం ఇస్తుంది."
+        ],
+        "ask_private_assistant_queued_detail": [
+            "en": "Assistant setup is queued. Keep Ross open on Wi-Fi or resume setup from My assistant.",
+            "hi": "सहायक सेटअप कतार में है. Ross को Wi-Fi पर खुला रखें या My assistant से फिर शुरू करें.",
+            "bn": "সহায়ক সেটআপ কিউতে আছে. Ross Wi-Fi-তে খোলা রাখুন বা My assistant থেকে আবার শুরু করুন.",
+            "ta": "உதவியாளர் அமைப்பு வரிசையில் உள்ளது. Wi-Fi-யில் Ross-ஐ திறந்தே வைத்திருங்கள் அல்லது My assistant-ல் மீண்டும் தொடங்கவும்.",
+            "te": "సహాయకుడి సెటప్ వరుసలో ఉంది. Ross‌ను Wi-Fiలో తెరిచి ఉంచండి లేదా My assistant నుంచి మళ్లీ ప్రారంభించండి."
+        ],
+        "ask_private_assistant_failed_detail": [
+            "en": "Assistant setup did not finish. Open My assistant to retry or repair setup.",
+            "hi": "सहायक सेटअप पूरा नहीं हुआ. My assistant खोलकर सेटअप फिर से शुरू या repair करें.",
+            "bn": "সহায়ক সেটআপ শেষ হয়নি. My assistant খুলে সেটআপ আবার শুরু বা repair করুন.",
+            "ta": "உதவியாளர் அமைப்பு முடியவில்லை. My assistant திறந்து அமைப்பை மீண்டும் தொடங்கவும் அல்லது repair செய்யவும்.",
+            "te": "సహాయకుడి సెటప్ పూర్తికాలేదు. My assistant తెరిచి సెటప్‌ను మళ్లీ ప్రారంభించండి లేదా repair చేయండి."
+        ],
+        "ask_private_assistant_not_started_detail": [
+            "en": "Open My assistant and set up a private assistant on this iPhone before asking legal questions.",
+            "hi": "कानूनी सवाल पूछने से पहले My assistant खोलकर इस iPhone पर निजी सहायक सेट करें.",
+            "bn": "আইনি প্রশ্ন করার আগে My assistant খুলে এই iPhone-এ প্রাইভেট সহায়ক সেট আপ করুন.",
+            "ta": "சட்டக் கேள்விகளை கேட்பதற்கு முன் My assistant திறந்து இந்த iPhone-ல் தனிப்பட்ட உதவியாளரை அமைக்கவும்.",
+            "te": "న్యాయ ప్రశ్నలు అడగడానికి ముందు My assistant తెరిచి ఈ iPhoneలో ప్రైవేట్ సహాయకుడిని సెటప్ చేయండి."
+        ],
         "ask_private_assistant_needs_repair": [
             "en": "Private assistant needs repair",
             "hi": "Private assistant repair चाहता है",
