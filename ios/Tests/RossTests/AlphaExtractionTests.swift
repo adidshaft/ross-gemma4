@@ -687,6 +687,24 @@ final class AlphaExtractionTests: XCTestCase {
             alphaLocalAskSetupRequiredDetail(for: .installed, languageCode: "en")
                 .contains("Repair setup")
         )
+        let tamilDownloading = alphaLocalAskSetupRequiredDetail(for: .downloading, languageCode: "ta-IN")
+        XCTAssertTrue(tamilDownloading.contains("பதிவிறக்கம்"))
+        XCTAssertTrue(tamilDownloading.contains("Ross"))
+        XCTAssertFalse(tamilDownloading.localizedCaseInsensitiveContains("download"))
+
+        let tamilFailed = alphaLocalAskSetupRequiredDetail(for: .failed, languageCode: "ta")
+        XCTAssertTrue(tamilFailed.contains("My assistant"))
+        XCTAssertTrue(tamilFailed.contains("மீண்டும் தொடங்கவும்"))
+
+        let teluguQueued = alphaLocalAskSetupRequiredDetail(for: .queued, languageCode: "te-IN")
+        XCTAssertTrue(teluguQueued.contains("Wi-Fi"))
+        XCTAssertTrue(teluguQueued.contains("మళ్లీ ప్రారంభించండి"))
+
+        let teluguNotStarted = alphaLocalAskSetupRequiredDetail(for: .notStarted, languageCode: "te")
+        XCTAssertTrue(teluguNotStarted.contains("My assistant"))
+        XCTAssertTrue(teluguNotStarted.contains("సెటప్ చేయండి"))
+        XCTAssertFalse(teluguNotStarted.localizedCaseInsensitiveContains("download"))
+
         XCTAssertTrue(
             alphaLocalAskSetupRequiredSafetyNote(languageCode: "ml")
                 .contains("private assistant")
