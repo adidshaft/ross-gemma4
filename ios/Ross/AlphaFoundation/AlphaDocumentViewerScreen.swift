@@ -1960,21 +1960,23 @@ struct AlphaFindingCard: View {
             )
 
             if isConflict {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 8) {
-                        Button("Keep matter value", action: onKeepMatterValue)
-                            .buttonStyle(AlphaReviewActionButtonStyle())
-                        Button("Use file value", action: onUseFileValue)
-                            .buttonStyle(AlphaReviewActionButtonStyle(tint: Color.rossAccent))
+                RossGlassGroup(spacing: 8) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 8) {
+                            Button("Keep matter value", action: onKeepMatterValue)
+                                .buttonStyle(AlphaReviewActionButtonStyle())
+                            Button("Use file value", action: onUseFileValue)
+                                .buttonStyle(AlphaReviewActionButtonStyle(tint: Color.rossAccent))
+                        }
+                        HStack(spacing: 8) {
+                            Button("Save as alternate reference", action: onSaveAlternate)
+                                .buttonStyle(AlphaReviewActionButtonStyle())
+                            Button("Ignore", role: .destructive, action: onIgnore)
+                                .buttonStyle(AlphaReviewActionButtonStyle(tint: .red))
+                        }
                     }
-                    HStack(spacing: 8) {
-                        Button("Save as alternate reference", action: onSaveAlternate)
-                            .buttonStyle(AlphaReviewActionButtonStyle())
-                        Button("Ignore", role: .destructive, action: onIgnore)
-                            .buttonStyle(AlphaReviewActionButtonStyle(tint: .red))
-                    }
+                    .font(.footnote.weight(.semibold))
                 }
-                .font(.footnote.weight(.semibold))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

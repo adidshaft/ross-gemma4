@@ -608,7 +608,10 @@ private func alphaAssistantRecoveryDetail(for job: AlphaModelDownloadJob, fallba
         "gguf",
         "llama",
         "gemma",
-        "artifact"
+        "artifact",
+        "model",
+        "provider",
+        "byte-range"
     ]
     let lowercased = reason.lowercased()
     guard !technicalMarkers.contains(where: lowercased.contains) else {

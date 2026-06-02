@@ -519,7 +519,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                     artifactKind: "local_model_artifact",
                     runtimeMode: .llamaCppGguf,
                     developmentOnly: false,
-                    failureReason: "NSURLErrorDomain -1"
+                    failureReason: "Model provider byte-range check failed."
                 )
             ]
 
@@ -527,6 +527,9 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertEqual("My assistant needs attention", status.title)
             XCTAssertEqual("Setup could not finish. Open My assistant to retry or repair setup.", status.detail)
             XCTAssertFalse(status.detail.localizedCaseInsensitiveContains("NSURLErrorDomain"))
+            XCTAssertFalse(status.detail.localizedCaseInsensitiveContains("model"))
+            XCTAssertFalse(status.detail.localizedCaseInsensitiveContains("provider"))
+            XCTAssertFalse(status.detail.localizedCaseInsensitiveContains("byte-range"))
         }
     }
 
