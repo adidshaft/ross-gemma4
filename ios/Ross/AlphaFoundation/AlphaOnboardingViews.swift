@@ -129,7 +129,7 @@ struct AlphaSetupPrimaryButtonStyle: ButtonStyle {
 
 struct AlphaOnboardingScreen: View {
     @Bindable var model: AlphaRossModel
-    @State private var didChooseModel = false
+    @State private var didChooseAssistantOption = false
 
     private var recommendedTier: AlphaCapabilityTier {
         // First-run setup must be the fastest reliable path. Larger packs remain
@@ -152,7 +152,7 @@ struct AlphaOnboardingScreen: View {
             let heroGap: CGFloat = compact ? 6 : 8
             let topPadding = max(proxy.safeAreaInsets.top + (compact ? 14 : 18), compact ? 72 : 82)
             let bottomPadding = max(proxy.safeAreaInsets.bottom + (compact ? 10 : 14), compact ? 22 : 28)
-            let displayedTier = didChooseModel ? model.selectedTier : recommendedTier
+            let displayedTier = didChooseAssistantOption ? model.selectedTier : recommendedTier
 
             ZStack {
                 AlphaSetupBackdrop()
@@ -185,7 +185,7 @@ struct AlphaOnboardingScreen: View {
                         compact: compact
                     ) { tier in
                         withAnimation(.snappy(duration: 0.18)) {
-                            didChooseModel = true
+                            didChooseAssistantOption = true
                             model.selectedTier = tier
                         }
                     }
@@ -198,7 +198,7 @@ struct AlphaOnboardingScreen: View {
 
                     VStack(spacing: compact ? 7 : 9) {
                         Button {
-                            if !didChooseModel {
+                            if !didChooseAssistantOption {
                                 model.selectedTier = recommendedTier
                             }
                             model.finishPackSetup()
@@ -230,12 +230,12 @@ struct AlphaOnboardingScreen: View {
             .clipped()
         }
         .onAppear {
-            if !didChooseModel {
+            if !didChooseAssistantOption {
                 model.selectedTier = recommendedTier
             }
         }
         .onChange(of: recommendedTier) { _, newValue in
-            if !didChooseModel {
+            if !didChooseAssistantOption {
                 model.selectedTier = newValue
             }
         }
@@ -256,7 +256,7 @@ struct AlphaOnboardingModelSelector: View {
     var body: some View {
         VStack(alignment: .leading, spacing: compact ? 6 : 8) {
             HStack {
-                Text("Choose assistant model")
+                Text("Choose private assistant")
                     .font(.system(size: compact ? 13 : 15, weight: .bold))
                     .foregroundStyle(Color.rossInk)
                 Spacer(minLength: 0)
@@ -384,7 +384,7 @@ struct AlphaOnboardingSetupNotes: View {
             )
             AlphaOnboardingSetupNoteRow(
                 icon: "wifi",
-                title: "Use Wi-Fi for model setup",
+                title: "Use Wi-Fi for assistant setup",
                 detail: "Large downloads can pause and resume if interrupted.",
                 compact: compact
             )
@@ -493,7 +493,7 @@ struct AlphaOnboardingDownloadCard: View {
                 AlphaOnboardingStatCell(label: "On fast Wi-Fi", value: etaLabel, icon: "wifi", compact: compact)
             }
 
-            // Model description
+            // Assistant option description
             Text(tier.summary)
                 .font(compact ? .caption2 : .caption)
                 .foregroundStyle(Color.rossInk.opacity(0.65))
@@ -572,7 +572,7 @@ struct AlphaOnboardingPrivacyPill: View {
     }
 }
 
-// MARK: - Model Picker Sheet
+// MARK: - Assistant Picker Sheet
 
 struct AlphaModelPickerSheet: View {
     @Bindable var model: AlphaRossModel
@@ -584,12 +584,12 @@ struct AlphaModelPickerSheet: View {
                 VStack(spacing: 14) {
                     // Context header
                     VStack(spacing: 6) {
-                        Text("Choose your model")
+                        Text("Choose your private assistant")
                             .font(.system(size: 22, weight: .bold, design: .serif))
                             .foregroundStyle(Color.rossInk)
                             .frame(maxWidth: .infinity, alignment: .leading)
 
-                        Text("All models run fully on this device. Bigger models are slower to download but smarter.")
+                        Text("Every option runs fully on this device. Larger assistants take longer to download and can handle deeper work.")
                             .font(.subheadline)
                             .foregroundStyle(Color.rossInk.opacity(0.60))
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -617,7 +617,7 @@ struct AlphaModelPickerSheet: View {
                 }
                 .padding(20)
             }
-            .navigationTitle("Models")
+            .navigationTitle("Assistant")
             .rossInlineNavigationTitle()
             .toolbar {
                 #if os(iOS)
