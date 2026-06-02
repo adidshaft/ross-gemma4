@@ -1232,22 +1232,15 @@ extension AlphaRossModel {
             let completedInvocation = AlphaModelInvocationStore.complete(invocation, output: output)
             await MainActor.run {
                 let requestedLanguage = self.alphaAnswerLanguage(for: question)
-                let modelPayload = self.matterAskPayload(
-                    from: output,
-                    baseResult: self.localModelAnswerBaseResult(from: baseResult)
+                let payload = self.displayableMatterAskPayload(
+                    output: output,
+                    baseResult: baseResult,
+                    question: question,
+                    scopeCaseID: scopeCaseID,
+                    sourcePack: sourcePack,
+                    providerRuntimeMode: provider.runtimeMode,
+                    requestedLanguage: requestedLanguage
                 )
-                let payload = modelPayload.flatMap {
-                    self.isUsefulMatterAskPayload($0) && self.alphaPayloadMatchesRequestedLanguage($0, requestedLanguage: requestedLanguage) ? $0 : nil
-                } ?? {
-                    guard provider.runtimeMode == .deterministicDev else { return nil }
-                    let fallback = self.developmentLocalAskPayload(
-                        question: question,
-                        scopeCaseID: scopeCaseID,
-                        baseResult: baseResult
-                    )
-                    guard self.alphaPayloadMatchesRequestedLanguage(fallback, requestedLanguage: requestedLanguage) else { return nil }
-                    return fallback
-                }()
                 guard let payload else {
                     if let runtimeFailure = self.askRuntimeFailurePresentation(for: output) {
                         self.updateStoredAskTurn(
@@ -1828,6 +1821,41 @@ extension AlphaRossModel {
         baseResult: AlphaAskResult
     ) -> AlphaMatterAskRuntimePayload? {
         AlphaMatterAskPayloadParser.parse(output: output, baseResult: baseResult)
+    }
+
+    func displayableMatterAskPayload(
+        output: AlphaLocalModelOutput,
+        baseResult: AlphaAskResult,
+        question: String,
+        scopeCaseID: UUID?,
+        sourcePack: [AlphaSourceTextBlock],
+        providerRuntimeMode: AlphaPackRuntimeMode,
+        requestedLanguage: AlphaMatterAskFallbackLanguage
+    ) -> AlphaMatterAskRuntimePayload? {
+        if let modelPayload = matterAskPayload(from: output, baseResult: localModelAnswerBaseResult(from: baseResult)),
+           isUsefulMatterAskPayload(modelPayload),
+           alphaPayloadMatchesRequestedLanguage(modelPayload, requestedLanguage: requestedLanguage) {
+            return modelPayload
+        }
+
+        if output.errorCategory == nil,
+           let fallback = sourceGroundedMatterAskFallback(question: question, sourcePack: sourcePack, baseResult: baseResult),
+           alphaPayloadMatchesRequestedLanguage(fallback, requestedLanguage: requestedLanguage) {
+            return fallback
+        }
+
+        if providerRuntimeMode == .deterministicDev {
+            let fallback = developmentLocalAskPayload(
+                question: question,
+                scopeCaseID: scopeCaseID,
+                baseResult: baseResult
+            )
+            if alphaPayloadMatchesRequestedLanguage(fallback, requestedLanguage: requestedLanguage) {
+                return fallback
+            }
+        }
+
+        return nil
     }
 
     func isUsefulMatterAskPayload(_ payload: AlphaMatterAskRuntimePayload) -> Bool {

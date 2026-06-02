@@ -709,6 +709,68 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertLessThanOrEqual(model.alphaLatinWordCount(in: text), 8)
     }
 
+    @MainActor
+    func testDisplayableMatterAskPayloadFallsBackToSourcesForMalformedNonErrorOutput() {
+        let model = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "03_Affidavit_Asha_Menon_Camera_Retention",
+            pageNumber: 1,
+            textSnippet: "CAM-D3 fourteen-day retention and video export queue failed twice."
+        )
+        let sourcePack = [
+            AlphaSourceTextBlock(
+                sourceRef: sourceRef,
+                text: "CAM-D3 had fourteen-day retention. The video export queue failed twice. The overlay timestamp lagged by eleven minutes.",
+                pageNumber: 1,
+                languageHint: "en",
+                ocrConfidence: 0.91
+            )
+        ]
+        let malformedOutput = AlphaLocalModelOutput(
+            rawText: "json{headline}",
+            parsedJson: nil,
+            schemaValid: false,
+            warnings: [],
+            sourceRefs: [sourceRef]
+        )
+        let errorOutput = AlphaLocalModelOutput(
+            rawText: "json{headline}",
+            parsedJson: nil,
+            schemaValid: false,
+            warnings: [AlphaLocalModelWarningCopy.assistantCouldNotFinish],
+            sourceRefs: [sourceRef],
+            errorCategory: "inference_failed"
+        )
+        let base = baseAskResult(answerTitle: "Private assistant could not answer")
+
+        let payload = model.displayableMatterAskPayload(
+            output: malformedOutput,
+            baseResult: base,
+            question: "इस हलफनामे के मुख्य बिंदु बताइए",
+            scopeCaseID: sourceRef.caseId,
+            sourcePack: sourcePack,
+            providerRuntimeMode: .llamaCppGguf,
+            requestedLanguage: .hindi
+        )
+        let errorPayload = model.displayableMatterAskPayload(
+            output: errorOutput,
+            baseResult: base,
+            question: "इस हलफनामे के मुख्य बिंदु बताइए",
+            scopeCaseID: sourceRef.caseId,
+            sourcePack: sourcePack,
+            providerRuntimeMode: .llamaCppGguf,
+            requestedLanguage: .hindi
+        )
+
+        let text = ([payload?.headline ?? ""] + (payload?.sections ?? [])).joined(separator: " ")
+        XCTAssertNotNil(payload)
+        XCTAssertNotEqual(payload?.headline, "Private assistant could not answer")
+        XCTAssertGreaterThanOrEqual(model.alphaIndicScriptRatio(in: text, script: .hindi), 0.55)
+        XCTAssertNil(errorPayload)
+    }
+
     func testMatterAskPayloadParserSalvagesJsonPrefixedLooseObject() {
         let output = AlphaLocalModelOutput(
             rawText: """
