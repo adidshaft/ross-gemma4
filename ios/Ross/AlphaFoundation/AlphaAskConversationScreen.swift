@@ -605,7 +605,7 @@ struct AlphaFullScreenChatTurn: View {
 
                     if !result.caseFileSources.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Sources")
+                            Text(rossLocalized("sources"))
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(Color.rossInk.opacity(0.56))
                             AlphaSourceRefChips(
@@ -624,7 +624,7 @@ struct AlphaFullScreenChatTurn: View {
                     Button {
                         alphaCopyAskResultToPasteboard(result)
                     } label: {
-                        Label("Copy answer", systemImage: "doc.on.doc")
+                        Label(rossLocalized("copy_answer"), systemImage: "doc.on.doc")
                     }
                 }
             }
@@ -662,9 +662,9 @@ struct AlphaPendingLocalModelCard: View {
     private var taggedFilesLine: String? {
         guard !result.selectedDocumentTitles.isEmpty else { return nil }
         if result.selectedDocumentTitles.count == 1, let title = result.selectedDocumentTitles.first {
-            return "Tagged file: \(title)"
+            return alphaTaggedFileLine(title)
         }
-        return "Tagged files: \(result.selectedDocumentTitles.joined(separator: ", "))"
+        return alphaTaggedFilesLine(result.selectedDocumentTitles)
     }
 
     var body: some View {
@@ -675,12 +675,12 @@ struct AlphaPendingLocalModelCard: View {
                     .tint(Color.rossAccent)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Ross is answering...")
+                    Text(rossLocalized("ross_answering"))
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.rossInk)
 
                     if let label = result.pendingLocalModelLabel {
-                        Text("\(label) is running on this iPhone")
+                        Text(alphaLocalModelRunningLabel(label))
                             .font(.caption.weight(.medium))
                             .foregroundStyle(Color.rossAccent)
                     }
@@ -689,7 +689,7 @@ struct AlphaPendingLocalModelCard: View {
                 Spacer(minLength: 0)
             }
 
-            Text("Ross is checking your local files and will replace this loading state with the final answer.")
+            Text(rossLocalized("ross_checking_local_files"))
                 .font(.footnote)
                 .lineSpacing(4)
                 .foregroundStyle(Color.rossInk.opacity(0.78))
@@ -757,13 +757,13 @@ struct AlphaThreadSidebarSheet: View {
                 }
             }
             .background(Color.rossGroupedBackground.ignoresSafeArea())
-            .navigationTitle("Threads")
+            .navigationTitle(rossLocalized("threads"))
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button(action: onNewThread) {
                         Image(systemName: "square.and.pencil")
                     }
-                    .accessibilityLabel("New thread")
+                    .accessibilityLabel(rossLocalized("new_thread"))
                     .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 14, expandsHorizontally: false)
                 }
             }
@@ -793,7 +793,7 @@ private struct AlphaThreadGroupCard: View {
                     .lineLimit(1)
 
                 if isActiveScope {
-                    Text("Current")
+                    Text(rossLocalized("current"))
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(Color.rossAccent)
                         .padding(.horizontal, 8)
@@ -805,7 +805,7 @@ private struct AlphaThreadGroupCard: View {
             }
 
             if sessions.isEmpty {
-                Text("No saved threads yet.")
+                Text(rossLocalized("no_saved_threads"))
                     .font(.footnote)
                     .foregroundStyle(Color.rossInk.opacity(0.62))
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -959,7 +959,7 @@ struct AlphaAskTurnCard: View {
                 HStack(spacing: 8) {
                     Image(systemName: "doc.text")
                         .font(.caption.weight(.semibold))
-                    Text("Matter update")
+                    Text(rossLocalized("matter_update"))
                         .font(.caption.weight(.semibold))
                         .tracking(0.2)
                 }
@@ -977,7 +977,7 @@ struct AlphaAskTurnCard: View {
                         },
                         menu: {
                             Button(action: onReport) {
-                                Label("Report answer", systemImage: "exclamationmark.bubble")
+                                Label(rossLocalized("report_answer"), systemImage: "exclamationmark.bubble")
                             }
                         }
                     )
@@ -1008,7 +1008,7 @@ struct AlphaAskTurnCard: View {
 
                     if !result.caseFileSources.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Sources")
+                            Text(rossLocalized("sources"))
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(Color.rossInk.opacity(0.56))
                             if result.caseFileSources.count > 2 {
@@ -1018,7 +1018,7 @@ struct AlphaAskTurnCard: View {
                                     }
                                 } label: {
                                     HStack(spacing: 8) {
-                                        Text(sourcesExpanded ? "Hide sources" : "Show \(result.caseFileSources.count) sources")
+                                        Text(sourcesExpanded ? rossLocalized("hide_sources") : alphaShowSourcesLabel(result.caseFileSources.count))
                                             .font(.footnote.weight(.semibold))
                                         Spacer(minLength: 8)
                                         Image(systemName: sourcesExpanded ? "chevron.up" : "chevron.down")
@@ -1217,7 +1217,7 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
                 Spacer(minLength: 8)
 
                 Button(action: onCopy) {
-                    Label("Copy", systemImage: "doc.on.doc")
+                    Label(rossLocalized("copy"), systemImage: "doc.on.doc")
                         .font(.caption.weight(.semibold))
                         .labelStyle(.titleAndIcon)
                         .foregroundStyle(Color.rossInk.opacity(0.72))
@@ -1226,7 +1226,7 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
                         .rossGlassSurface(cornerRadius: 999, interactive: true, shadowOpacity: 0.03, shadowRadius: 3, shadowY: 1, strokeOpacity: 0.42)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Copy answer")
+                .accessibilityLabel(rossLocalized("copy_answer"))
 
                 if showsMenu {
                     Menu {
@@ -1239,7 +1239,7 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
                             .rossGlassSurface(cornerRadius: 999, interactive: true, shadowOpacity: 0.03, shadowRadius: 3, shadowY: 1, strokeOpacity: 0.42)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("More answer actions")
+                    .accessibilityLabel(rossLocalized("more_answer_actions"))
                 }
             }
 
@@ -1523,6 +1523,22 @@ func alphaAskConversationPlaceholder(languageCode: String = rossSelectedLanguage
 
 func alphaAskTagFileHint(languageCode: String = rossSelectedLanguageCode()) -> String {
     rossLocalized("ask_tag_file_hint", languageCode: languageCode)
+}
+
+func alphaShowSourcesLabel(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("show_sources_count", languageCode: languageCode), count)
+}
+
+func alphaTaggedFileLine(_ title: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("tagged_file_line", languageCode: languageCode), title)
+}
+
+func alphaTaggedFilesLine(_ titles: [String], languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("tagged_files_line", languageCode: languageCode), titles.joined(separator: ", "))
+}
+
+func alphaLocalModelRunningLabel(_ label: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("local_model_running_on_phone", languageCode: languageCode), label)
 }
 
 func alphaAskSuggestions(

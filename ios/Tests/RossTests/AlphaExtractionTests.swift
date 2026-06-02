@@ -846,6 +846,26 @@ final class AlphaExtractionTests: XCTestCase {
             "Image preview उपलब्ध नहीं है।"
         )
         XCTAssertEqual(
+            rossLocalized("sources", languageCode: "ta"),
+            "மூலங்கள்"
+        )
+        XCTAssertEqual(
+            alphaShowSourcesLabel(3, languageCode: "bn"),
+            "3 সোর্স দেখান"
+        )
+        XCTAssertEqual(
+            alphaLocalModelRunningLabel("Standard", languageCode: "te-IN"),
+            "Standard ఈ iPhone లో నడుస్తోంది"
+        )
+        XCTAssertEqual(
+            alphaTaggedFilesLine(["Order", "Notice"], languageCode: "hi"),
+            "Tagged files: Order, Notice"
+        )
+        XCTAssertEqual(
+            rossLocalized("no_saved_threads", languageCode: "ta"),
+            "இன்னும் saved threads இல்லை."
+        )
+        XCTAssertEqual(
             rossLocalized("download_size", languageCode: "ta"),
             "பதிவிறக்க அளவு"
         )

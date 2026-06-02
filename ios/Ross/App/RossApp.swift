@@ -1484,6 +1484,125 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Image preview இல்லை.",
             "te": "Image preview అందుబాటులో లేదు."
         ],
+        "sources": [
+            "en": "Sources",
+            "hi": "स्रोत",
+            "bn": "সোর্স",
+            "ta": "மூலங்கள்",
+            "te": "మూలాలు"
+        ],
+        "copy": [
+            "en": "Copy",
+            "hi": "कॉपी",
+            "bn": "কপি",
+            "ta": "நகலெடு",
+            "te": "కాపీ"
+        ],
+        "copy_answer": [
+            "en": "Copy answer",
+            "hi": "उत्तर copy करें",
+            "bn": "উত্তর copy করুন",
+            "ta": "பதிலை copy செய்யவும்",
+            "te": "సమాధానాన్ని copy చేయండి"
+        ],
+        "more_answer_actions": [
+            "en": "More answer actions",
+            "hi": "उत्तर के और actions",
+            "bn": "উত্তরের আরও actions",
+            "ta": "பதிலுக்கான மேலும் actions",
+            "te": "సమాధానానికి మరిన్ని actions"
+        ],
+        "report_answer": [
+            "en": "Report answer",
+            "hi": "उत्तर report करें",
+            "bn": "উত্তর report করুন",
+            "ta": "பதிலை report செய்யவும்",
+            "te": "సమాధానాన్ని report చేయండి"
+        ],
+        "hide_sources": [
+            "en": "Hide sources",
+            "hi": "स्रोत छिपाएं",
+            "bn": "সোর্স লুকান",
+            "ta": "மூலங்களை மறைக்கவும்",
+            "te": "మూలాలను దాచండి"
+        ],
+        "show_sources_count": [
+            "en": "Show %d sources",
+            "hi": "%d स्रोत दिखाएं",
+            "bn": "%d সোর্স দেখান",
+            "ta": "%d மூலங்களை காண்பி",
+            "te": "%d మూలాలను చూపండి"
+        ],
+        "ross_answering": [
+            "en": "Ross is answering...",
+            "hi": "Ross जवाब दे रहा है...",
+            "bn": "Ross উত্তর দিচ্ছে...",
+            "ta": "Ross பதிலளிக்கிறது...",
+            "te": "Ross సమాధానం ఇస్తోంది..."
+        ],
+        "local_model_running_on_phone": [
+            "en": "%@ is running on this iPhone",
+            "hi": "%@ इस iPhone पर चल रहा है",
+            "bn": "%@ এই iPhone-এ চলছে",
+            "ta": "%@ இந்த iPhone-இல் இயங்குகிறது",
+            "te": "%@ ఈ iPhone లో నడుస్తోంది"
+        ],
+        "ross_checking_local_files": [
+            "en": "Ross is checking your local files and will replace this loading state with the final answer.",
+            "hi": "Ross आपकी local files जांच रहा है और final answer आने पर यह loading state बदल देगा।",
+            "bn": "Ross আপনার local files দেখছে এবং final answer এলে এই loading state বদলে দেবে।",
+            "ta": "Ross உங்கள் local files-ஐ சரிபார்க்கிறது; final answer வந்ததும் இந்த loading state மாறும்.",
+            "te": "Ross మీ local files ను తనిఖీ చేస్తోంది; final answer వచ్చినప్పుడు ఈ loading state మారుతుంది."
+        ],
+        "tagged_file_line": [
+            "en": "Tagged file: %@",
+            "hi": "Tagged file: %@",
+            "bn": "Tagged file: %@",
+            "ta": "Tagged file: %@",
+            "te": "Tagged file: %@"
+        ],
+        "tagged_files_line": [
+            "en": "Tagged files: %@",
+            "hi": "Tagged files: %@",
+            "bn": "Tagged files: %@",
+            "ta": "Tagged files: %@",
+            "te": "Tagged files: %@"
+        ],
+        "threads": [
+            "en": "Threads",
+            "hi": "Threads",
+            "bn": "Threads",
+            "ta": "Threads",
+            "te": "Threads"
+        ],
+        "new_thread": [
+            "en": "New thread",
+            "hi": "नई thread",
+            "bn": "নতুন thread",
+            "ta": "புதிய thread",
+            "te": "కొత్త thread"
+        ],
+        "current": [
+            "en": "Current",
+            "hi": "वर्तमान",
+            "bn": "বর্তমান",
+            "ta": "தற்போதைய",
+            "te": "ప్రస్తుత"
+        ],
+        "no_saved_threads": [
+            "en": "No saved threads yet.",
+            "hi": "अभी saved threads नहीं हैं।",
+            "bn": "এখনও saved threads নেই।",
+            "ta": "இன்னும் saved threads இல்லை.",
+            "te": "ఇంకా saved threads లేవు."
+        ],
+        "matter_update": [
+            "en": "Matter update",
+            "hi": "मामले का update",
+            "bn": "মামলার update",
+            "ta": "வழக்கு update",
+            "te": "కేసు update"
+        ],
         "translate_to": [
             "en": "Translate to %@",
             "hi": "%@ में अनुवाद करें",
