@@ -490,6 +490,38 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testAskEmptyStateSuggestionsFollowSelectedSupportedLanguage() {
+        XCTAssertEqual(alphaAskEmptyTitle(languageCode: "ta"), "அடுத்து என்ன என்பதை Ross-ஐ கேளுங்கள்")
+        XCTAssertEqual(alphaAskEmptyTitle(languageCode: "te-IN"), "తర్వాత ఏమిటో Ross‌ను అడగండి")
+
+        let tamilDocumentSuggestions = alphaAskSuggestions(
+            for: "Matter",
+            documentTitle: "Order",
+            languageCode: "ta"
+        )
+        XCTAssertEqual(tamilDocumentSuggestions.first, "இந்த ஆவணத்தை சுருக்கவும்")
+        XCTAssertTrue(tamilDocumentSuggestions.contains("எதை சரிபார்க்க வேண்டும்?"))
+
+        let teluguMatterSuggestions = alphaAskSuggestions(
+            for: "Matter",
+            languageCode: "te"
+        )
+        XCTAssertEqual(teluguMatterSuggestions.first, "విచారణ గమనికను సిద్ధం చేయండి")
+        XCTAssertTrue(teluguMatterSuggestions.contains("ధృవీకరించని విషయాలను చూపండి"))
+
+        let hindiGeneralSuggestions = alphaAskSuggestions(
+            for: nil,
+            languageCode: "hi"
+        )
+        XCTAssertEqual(hindiGeneralSuggestions.first, "आज मुझे किस पर ध्यान देना है?")
+
+        let unsupportedSuggestions = alphaAskSuggestions(
+            for: nil,
+            languageCode: "ml"
+        )
+        XCTAssertEqual(unsupportedSuggestions.first, "What needs my attention today?")
+    }
+
     func testAssistantSetupPhasesExplainDownloadCheckAndReady() {
         XCTAssertEqual(alphaAssistantSetupPhases, ["Download", "Check", "Ready"])
         XCTAssertEqual(alphaAssistantSetupPhaseIndex(for: .queued), 0)

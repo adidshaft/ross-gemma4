@@ -1339,59 +1339,114 @@ func alphaUsesHindiUi() -> Bool {
     rossSelectedLanguageCode().hasPrefix("hi")
 }
 
-func alphaAskEmptyTitle() -> String {
-    alphaUsesHindiUi() ? "Ross से आगे का काम पूछें" : "Ask Ross what's next"
+func alphaAskEmptyTitle(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("ask_empty_title", languageCode: languageCode)
 }
 
-func alphaAskSuggestions(for scopeLabel: String?, documentTitle: String? = nil) -> [String] {
-    if alphaUsesHindiUi() {
-        if let documentTitle, !documentTitle.isEmpty {
-            return [
+func alphaAskSuggestions(
+    for scopeLabel: String?,
+    documentTitle: String? = nil,
+    languageCode: String = rossSelectedLanguageCode()
+) -> [String] {
+    let hasDocument = documentTitle?.isEmpty == false
+    let hasScope = scopeLabel?.isEmpty == false
+    let kind: AlphaAskSuggestionKind = hasDocument ? .document : (hasScope ? .matter : .general)
+    return alphaLocalizedAskSuggestions(kind: kind, languageCode: languageCode)
+}
+
+private enum AlphaAskSuggestionKind {
+    case document
+    case matter
+    case general
+}
+
+private func alphaLocalizedAskSuggestions(kind: AlphaAskSuggestionKind, languageCode: String) -> [String] {
+    let normalizedCode = languageCode.split(separator: "-").first.map(String.init) ?? languageCode
+    let table: [String: [AlphaAskSuggestionKind: [String]]] = [
+        "en": [
+            .document: [
+                "Summarize this document",
+                "Extract court directions",
+                "Find dates and deadlines",
+                "What should I verify?",
+                "Create tasks from this document",
+            ],
+            .matter: [
+                "Prepare hearing note",
+                "List next dates and deadlines",
+                "Show unconfirmed facts",
+                "Summarize latest order",
+                "Create tasks from latest document"
+            ],
+            .general: [
+                "What needs my attention today?",
+                "Show upcoming hearing dates",
+                "Which items need confirmation?",
+                "Create a task"
+            ]
+        ],
+        "hi": [
+            .document: [
                 "इस दस्तावेज़ का सार बताओ",
                 "अदालत ने क्या निर्देश दिए?",
                 "इस दस्तावेज़ से कार्य बनाओ",
                 "क्या पुष्टि करनी है?"
-            ]
-        }
-        if let scopeLabel, !scopeLabel.isEmpty {
-            return [
+            ],
+            .matter: [
                 "इस मामले का सार बताओ",
                 "हियरिंग नोट तैयार करो",
                 "महत्वपूर्ण तारीखें बताओ",
                 "कौन से कार्य बनाने चाहिए?"
+            ],
+            .general: [
+                "आज मुझे किस पर ध्यान देना है?",
+                "कार्य जोड़ो",
+                "अगली तारीख सहेजो",
+                "केस नोट बनाओ"
             ]
-        }
-        return [
-            "आज मुझे किस पर ध्यान देना है?",
-            "कार्य जोड़ो",
-            "अगली तारीख सहेजो",
-            "केस नोट बनाओ"
+        ],
+        "ta": [
+            .document: [
+                "இந்த ஆவணத்தை சுருக்கவும்",
+                "நீதிமன்ற உத்தரவுகளை எடுக்கவும்",
+                "தேதிகள் மற்றும் காலக்கெடுகளை கண்டறியவும்",
+                "எதை சரிபார்க்க வேண்டும்?"
+            ],
+            .matter: [
+                "விசாரணை குறிப்பை தயாரிக்கவும்",
+                "அடுத்த தேதிகள் மற்றும் காலக்கெடுகளை பட்டியலிடவும்",
+                "உறுதிப்படுத்தாத விவரங்களை காட்டவும்",
+                "சமீபத்திய உத்தரவை சுருக்கவும்"
+            ],
+            .general: [
+                "இன்று என்ன கவனிக்க வேண்டும்?",
+                "வரவிருக்கும் விசாரணை தேதிகளை காட்டவும்",
+                "எந்த விவரங்களுக்கு உறுதி தேவை?",
+                "ஒரு பணியை உருவாக்கவும்"
+            ]
+        ],
+        "te": [
+            .document: [
+                "ఈ పత్రాన్ని సారాంశం చేయండి",
+                "కోర్టు ఆదేశాలను తీసుకోండి",
+                "తేదీలు మరియు గడువులను కనుగొనండి",
+                "నేను ఏమి ధృవీకరించాలి?"
+            ],
+            .matter: [
+                "విచారణ గమనికను సిద్ధం చేయండి",
+                "తదుపరి తేదీలు మరియు గడువులను జాబితా చేయండి",
+                "ధృవీకరించని విషయాలను చూపండి",
+                "తాజా ఆదేశాన్ని సారాంశం చేయండి"
+            ],
+            .general: [
+                "ఈ రోజు నేను దేనిపై దృష్టి పెట్టాలి?",
+                "రాబోయే విచారణ తేదీలను చూపండి",
+                "ఏ అంశాలకు ధృవీకరణ అవసరం?",
+                "ఒక పనిని సృష్టించండి"
+            ]
         ]
-    }
-    if let documentTitle, !documentTitle.isEmpty {
-        return [
-            "Summarize this document",
-            "Extract court directions",
-            "Find dates and deadlines",
-            "What should I verify?",
-            "Create tasks from this document",
-        ]
-    }
-    if let scopeLabel, !scopeLabel.isEmpty {
-        return [
-            "Prepare hearing note",
-            "List next dates and deadlines",
-            "Show unconfirmed facts",
-            "Summarize latest order",
-            "Create tasks from latest document"
-        ]
-    }
-    return [
-        "What needs my attention today?",
-        "Show upcoming hearing dates",
-        "Which items need confirmation?",
-        "Create a task"
     ]
+    return table[normalizedCode]?[kind] ?? table["en"]?[kind] ?? []
 }
 
 enum AlphaMatterTimelineEntry: Identifiable {

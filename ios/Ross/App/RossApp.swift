@@ -178,6 +178,12 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "hi": "Ross से इस मामले, टैग की गई फ़ाइल, या अगले ड्राफ्टिंग कदम के बारे में पूछें।",
             "ta": "இந்த வழக்கு, குறியிட்ட கோப்பு, அல்லது உங்கள் அடுத்த வரைவு படி பற்றி Ross-ஐ கேளுங்கள்.",
             "te": "ఈ కేసు, ట్యాగ్ చేసిన ఫైల్, లేదా మీ తదుపరి డ్రాఫ్టింగ్ అడుగు గురించి Ross‌ను అడగండి."
+        ],
+        "ask_empty_title": [
+            "en": "Ask Ross what's next",
+            "hi": "Ross से आगे का काम पूछें",
+            "ta": "அடுத்து என்ன என்பதை Ross-ஐ கேளுங்கள்",
+            "te": "తర్వాత ఏమిటో Ross‌ను అడగండి"
         ]
     ]
     return table[key]?[normalizedCode] ?? table[key]?["en"] ?? key
