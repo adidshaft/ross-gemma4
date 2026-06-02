@@ -4508,6 +4508,48 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "இந்த file-ஐ நம்புவதற்கு முன் %@ advocate confirmation தேவை.",
             "te": "ఈ file పై ఆధారపడే ముందు %@ advocate confirmation అవసరం."
         ],
+        "matter_memory_review_extracted_legal_issues": [
+            "en": "Review extracted legal issues and directions.",
+            "hi": "extracted legal issues और directions review करें.",
+            "bn": "extracted legal issues এবং directions review করুন.",
+            "ta": "extracted legal issues மற்றும் directions review செய்யவும்.",
+            "te": "extracted legal issues మరియు directions review చేయండి."
+        ],
+        "matter_memory_extraction_available": [
+            "en": "Extraction from your files is available for this matter.",
+            "hi": "इस matter के लिए आपकी files से extraction available है.",
+            "bn": "এই matter-এর জন্য আপনার files থেকে extraction available.",
+            "ta": "இந்த matter-க்கு உங்கள் files-இலிருந்து extraction available.",
+            "te": "ఈ matter కోసం మీ files నుండి extraction available."
+        ],
+        "matter_memory_review_uncertain_fields": [
+            "en": "Review uncertain extracted fields before relying on them.",
+            "hi": "इन पर भरोसा करने से पहले uncertain extracted fields review करें.",
+            "bn": "এগুলোর ওপর নির্ভর করার আগে uncertain extracted fields review করুন.",
+            "ta": "இவற்றை நம்புவதற்கு முன் uncertain extracted fields review செய்யவும்.",
+            "te": "వాటిపై ఆధారపడే ముందు uncertain extracted fields review చేయండి."
+        ],
+        "matter_memory_import_first_document": [
+            "en": "Import the first pleading, order, or note for this matter.",
+            "hi": "इस matter के लिए पहली pleading, order, या note import करें.",
+            "bn": "এই matter-এর জন্য প্রথম pleading, order, বা note import করুন.",
+            "ta": "இந்த matter-க்கு முதல் pleading, order, அல்லது note import செய்யவும்.",
+            "te": "ఈ matter కోసం మొదటి pleading, order, లేదా note import చేయండి."
+        ],
+        "matter_memory_open_source_chips": [
+            "en": "Open source chips before sharing or filing.",
+            "hi": "share या file करने से पहले source chips खोलें.",
+            "bn": "share বা file করার আগে source chips খুলুন.",
+            "ta": "share அல்லது file செய்வதற்கு முன் source chips திறக்கவும்.",
+            "te": "share లేదా file చేయడానికి ముందు source chips తెరవండి."
+        ],
+        "matter_memory_generate_local_draft": [
+            "en": "Generate a local chronology or order summary draft.",
+            "hi": "local chronology या order summary draft generate करें.",
+            "bn": "local chronology বা order summary draft generate করুন.",
+            "ta": "local chronology அல்லது order summary draft generate செய்யவும்.",
+            "te": "local chronology లేదా order summary draft generate చేయండి."
+        ],
         "no_matters_match_search": [
             "en": "No matters match this search.",
             "hi": "इस search से कोई मामला नहीं मिला।",

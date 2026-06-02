@@ -577,6 +577,30 @@ func alphaReviewItemsNeedConfirmationBeforeFileUseLabel(_ count: Int, languageCo
     String(format: rossLocalized("review_items_need_confirmation_before_file_use", languageCode: languageCode), alphaReviewItemCountLabel(count))
 }
 
+func alphaReviewExtractedLegalIssuesLabel(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("matter_memory_review_extracted_legal_issues", languageCode: languageCode)
+}
+
+func alphaExtractionAvailableForMatterLabel(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("matter_memory_extraction_available", languageCode: languageCode)
+}
+
+func alphaReviewUncertainExtractedFieldsLabel(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("matter_memory_review_uncertain_fields", languageCode: languageCode)
+}
+
+func alphaImportFirstMatterDocumentLabel(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("matter_memory_import_first_document", languageCode: languageCode)
+}
+
+func alphaOpenSourceChipsBeforeSharingLabel(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("matter_memory_open_source_chips", languageCode: languageCode)
+}
+
+func alphaGenerateLocalDraftLabel(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("matter_memory_generate_local_draft", languageCode: languageCode)
+}
+
 func alphaReviewItemsFromFilesLabel(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
     String(format: rossLocalized("review_items_from_files", languageCode: languageCode), alphaReviewItemCountLabel(count))
 }

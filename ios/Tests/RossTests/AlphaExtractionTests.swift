@@ -1230,6 +1230,22 @@ final class AlphaExtractionTests: XCTestCase {
             "এই file-এ নির্ভর করার আগে 3 review items advocate confirmation দরকার."
         )
         XCTAssertEqual(
+            alphaReviewExtractedLegalIssuesLabel(languageCode: "ta"),
+            "extracted legal issues மற்றும் directions review செய்யவும்."
+        )
+        XCTAssertEqual(
+            alphaExtractionAvailableForMatterLabel(languageCode: "hi"),
+            "इस matter के लिए आपकी files से extraction available है."
+        )
+        XCTAssertEqual(
+            alphaOpenSourceChipsBeforeSharingLabel(languageCode: "te-IN"),
+            "share లేదా file చేయడానికి ముందు source chips తెరవండి."
+        )
+        XCTAssertEqual(
+            alphaGenerateLocalDraftLabel(languageCode: "bn"),
+            "local chronology বা order summary draft generate করুন."
+        )
+        XCTAssertEqual(
             alphaFindingsCountLabel(3, languageCode: "hi"),
             "3 findings"
         )

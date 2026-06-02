@@ -712,7 +712,7 @@ extension AlphaRossModel {
                 fallbackHighlights.append(alphaResolveReviewItemsBeforeRelyingLabel(reviewItemCount))
             }
             caseMatter.issueHighlights = fallbackHighlights.isEmpty
-                ? ["Review extracted legal issues and directions."]
+                ? [alphaReviewExtractedLegalIssuesLabel()]
                 : Array(fallbackHighlights.prefix(4))
         } else {
             caseMatter.issueHighlights = Array(issueCandidates.prefix(4))
@@ -722,7 +722,7 @@ extension AlphaRossModel {
             .flatMap(\.extractionFindings)
             .filter { !$0.resolved }
             .map(\.message)
-        caseMatter.evidenceNotes = evidenceCandidates.isEmpty ? ["Extraction from your files is available for this matter."] : Array(evidenceCandidates.prefix(4))
+        caseMatter.evidenceNotes = evidenceCandidates.isEmpty ? [alphaExtractionAvailableForMatterLabel()] : Array(evidenceCandidates.prefix(4))
 
         var generatedTasks: [String] = []
         if let nextHearing = caseMatter.nextHearing {
@@ -738,14 +738,14 @@ extension AlphaRossModel {
         if reviewItemCount > 0 {
             generatedTasks.append(alphaResolveReviewItemsBeforeRelyingLabel(reviewItemCount))
         } else if !pendingFields.isEmpty {
-            generatedTasks.append("Review uncertain extracted fields before relying on them.")
+            generatedTasks.append(alphaReviewUncertainExtractedFieldsLabel())
         }
         if caseMatter.documents.isEmpty {
-            generatedTasks.append("Import the first pleading, order, or note for this matter.")
+            generatedTasks.append(alphaImportFirstMatterDocumentLabel())
         } else {
-            generatedTasks.append("Open source chips before sharing or filing.")
+            generatedTasks.append(alphaOpenSourceChipsBeforeSharingLabel())
         }
-        generatedTasks.append("Generate a local chronology or order summary draft.")
+        generatedTasks.append(alphaGenerateLocalDraftLabel())
         var uniqueTasks: [String] = []
         for task in generatedTasks where !uniqueTasks.contains(task) {
             uniqueTasks.append(task)
