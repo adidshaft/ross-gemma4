@@ -294,6 +294,14 @@ struct AlphaPrivateAITechnicalDiagnosticsCard: View {
             VStack(alignment: .leading, spacing: 12) {
                 AlphaSettingsValueRow(label: "Status", value: assistantCheckStatus)
                 Divider()
+                AlphaSettingsValueRow(
+                    label: "Local file",
+                    value: alphaAssistantVerificationSummary(
+                        runtimeHealth: model.activeRuntimeHealth,
+                        activePack: model.activePack
+                    )
+                )
+                Divider()
                 AlphaSettingsValueRow(label: "Last private answer", value: assistantLastUsedLabel)
                 Divider()
                 AlphaSettingsValueRow(label: "Setup resets", value: "\(model.privateAISnapshot.resetCount)")
@@ -307,6 +315,33 @@ struct AlphaPrivateAITechnicalDiagnosticsCard: View {
             }
         }
     }
+}
+
+func alphaAssistantVerificationSummary(
+    runtimeHealth: AlphaLocalRuntimeHealth?,
+    activePack: AlphaInstalledModelPack?
+) -> String {
+    guard let activePack else {
+        return "No assistant file is active yet."
+    }
+    if activePack.developmentOnly {
+        return alphaAllowsDevelopmentModelArtifacts()
+            ? "Test assistant file is active for this build."
+            : "Test assistant file is disabled for this build."
+    }
+    guard let runtimeHealth else {
+        return "Ross will verify the assistant file after setup."
+    }
+    if runtimeHealth.available && runtimeHealth.checksumVerified {
+        return "Downloaded file opened and verified on this iPhone."
+    }
+    if runtimeHealth.available {
+        return "Downloaded file opened on this iPhone."
+    }
+    if runtimeHealth.modelPathPresent {
+        return "Downloaded file needs repair before Ross can use it."
+    }
+    return "Assistant file is missing. Set up Ross assistant again."
 }
 
 #if DEBUG

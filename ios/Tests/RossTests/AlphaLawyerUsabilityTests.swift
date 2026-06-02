@@ -481,6 +481,67 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    func testAssistantVerificationSummaryUsesProductLanguage() {
+        let activePack = AlphaInstalledModelPack(
+            packId: "gemma-4-e2b-q4",
+            tier: .quickStart,
+            installPath: "model-packs/quick_start/google_gemma-4-E2B-it-Q4_K_M.gguf",
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+        let readyHealth = AlphaLocalRuntimeHealth(
+            runtimeMode: .llamaCppGguf,
+            available: true,
+            modelPathPresent: true,
+            modelPathLabel: "google_gemma-4-E2B-it-Q4_K_M.gguf",
+            checksumVerified: true,
+            supportedTasks: [.matterQuestionAnswer],
+            maxInputChars: 5000,
+            estimatedContextTokens: 2048,
+            lastErrorCategory: nil,
+            userFacingStatus: "Private assistant is ready on this iPhone.",
+            explicitOptInEnabled: true
+        )
+        let repairHealth = AlphaLocalRuntimeHealth(
+            runtimeMode: .llamaCppGguf,
+            available: false,
+            modelPathPresent: true,
+            modelPathLabel: "google_gemma-4-E2B-it-Q4_K_M.gguf",
+            checksumVerified: false,
+            supportedTasks: [],
+            maxInputChars: nil,
+            estimatedContextTokens: nil,
+            lastErrorCategory: "runtime_validation_failed",
+            userFacingStatus: "Ross could not open the downloaded assistant file.",
+            explicitOptInEnabled: true
+        )
+
+        let summaries = [
+            alphaAssistantVerificationSummary(runtimeHealth: nil, activePack: nil),
+            alphaAssistantVerificationSummary(runtimeHealth: nil, activePack: activePack),
+            alphaAssistantVerificationSummary(runtimeHealth: readyHealth, activePack: activePack),
+            alphaAssistantVerificationSummary(runtimeHealth: repairHealth, activePack: activePack)
+        ]
+
+        XCTAssertTrue(summaries[0].contains("No assistant file"))
+        XCTAssertTrue(summaries[1].contains("verify the assistant file"))
+        XCTAssertTrue(summaries[2].contains("opened and verified"))
+        XCTAssertTrue(summaries[3].contains("needs repair"))
+
+        for summary in summaries {
+            for forbidden in ["Gemma", "GGUF", "Q4", "runtime", "checksum", "artifact"] {
+                XCTAssertFalse(
+                    summary.localizedCaseInsensitiveContains(forbidden),
+                    "\(forbidden) leaked into assistant verification summary: \(summary)"
+                )
+            }
+        }
+    }
+
     func testPlainTextModelAnswerUsesNeutralLocalHeadline() async {
         let model = await MainActor.run {
             AlphaRossModel(previewState: AlphaPersistedState.demoSeed())
