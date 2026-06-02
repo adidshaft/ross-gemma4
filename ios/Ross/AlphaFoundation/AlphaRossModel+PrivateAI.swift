@@ -13,6 +13,8 @@ import UIKit
 import AppKit
 #endif
 
+let alphaAssistantExistingSetupRepairDetail = "Ross found an assistant setup file, but could not open it. Ross removed the bad file. Open My assistant and use Repair setup to start fresh."
+
 private extension String {
     func ifEmpty(_ fallback: String) -> String {
         isEmpty ? fallback : self
@@ -890,7 +892,7 @@ extension AlphaRossModel {
                 persisted.ledgerEntries.insert(
                         AlphaPrivacyLedgerEntry(
                             title: "Assistant file verification failed",
-                            detail: "Ross found the downloaded assistant file, but could not open it. Ross removed the bad file so Retry can download a fresh copy.",
+                            detail: alphaAssistantExistingSetupRepairDetail,
                             purpose: .model_verification,
                             payloadClass: .no_case_data,
                             endpointLabel: "device://model-verify",

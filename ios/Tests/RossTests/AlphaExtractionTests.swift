@@ -513,6 +513,13 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("downloaded assistant files"))
     }
 
+    func testExistingAssistantSetupRepairCopyPointsToMyAssistant() {
+        XCTAssertTrue(alphaAssistantExistingSetupRepairDetail.contains("My assistant"))
+        XCTAssertTrue(alphaAssistantExistingSetupRepairDetail.contains("Repair setup"))
+        XCTAssertFalse(alphaAssistantExistingSetupRepairDetail.localizedCaseInsensitiveContains("downloaded assistant file"))
+        XCTAssertFalse(alphaAssistantExistingSetupRepairDetail.localizedCaseInsensitiveContains("Retry can download"))
+    }
+
     @MainActor
     func testInstantModeSetupGuidancePointsToAssistantSurface() {
         let service = StubLocalRuntimeService(privacyLedger: PrivacyLedgerService())
