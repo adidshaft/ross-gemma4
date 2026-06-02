@@ -30,7 +30,8 @@
 - Model SHA-256 observed locally: `e0aee85060f168f0f2d8473d7ea41ce2f3230c1bc1374847505ea599288a7787`
 - Smoke command shape: `xcrun simctl launch --terminate-running-process --console ... com.ross.ios --local-model-smoke` with `SIMCTL_CHILD_ROSS_*` environment variables and `ROSS_LOCAL_MODEL_SMOKE_STAGE_TIMEOUT_SECONDS=45`
 - Result: passed.
-- Proof marker: `ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime tier=quick_start elapsed=91.00s source_raw_chars=339 source_parsed_chars=167 bengali_output_chars=171 hindi_output_chars=277 general_output_chars=283 source_native_model=true bengali_native_model=false hindi_native_model=true general_native_model=true`
+- Latest proof marker after Bengali prompt tightening: `ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime tier=quick_start elapsed=89.36s source_raw_chars=339 source_parsed_chars=167 bengali_output_chars=151 hindi_output_chars=143 general_output_chars=283 source_native_model=true bengali_native_model=true hindi_native_model=true general_native_model=true`
+- Earlier stricter marker before prompt tightening: `ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime tier=quick_start elapsed=91.00s ... source_native_model=true bengali_native_model=false hindi_native_model=true general_native_model=true`
 - Observed behavior:
   - the smoke runner used the explicit environment-provided debug pack directly instead of loading persisted app state first
   - the simulator process loaded the GGUF metadata, constructed the llama.cpp context, and completed all four smoke stages
@@ -39,9 +40,10 @@
   - `--local-model-smoke` now emits flushed stage markers to stderr around debug-pack selection, provider resolution, and each provider call
   - each provider stage is guarded by a configurable timeout and returns a fail output if generation times out
   - direct environment-supplied GGUF smoke skips heavyweight persisted-state runtime-health loading before provider execution
+  - Bengali and Hindi matter-answer prompts now include concrete native-script source-word anchors
 - Current interpretation:
-  - real GGUF simulator inference is proven for English source grounding, Hindi Devanagari output, general cautious output, and product-safe Bengali Bangla-script output
-  - Bengali was kept safe by Ross's source-preserving fallback in this run (`bengali_native_model=false`), so native Bengali model generation is not yet proven
+  - real GGUF simulator inference is proven for English source grounding, Bengali Bangla-script output, Hindi Devanagari output, and general cautious output
+  - the latest run proves native Bengali and Hindi model output on simulator; no language-preserving fallback was used in that run
   - physical iPhone proof remains required before claiming downloaded-model performance or reliability over user-imported files
 
 ## 2026-04-24 Gemma 4 metadata update

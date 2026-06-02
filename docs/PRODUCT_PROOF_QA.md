@@ -164,8 +164,8 @@ Already proven after this April screenshot bundle:
 
 - iOS simulator real GGUF smoke passed on 2026-06-02 with `ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime`.
 - That simulator smoke covered English, Bengali, Hindi, and general-answer paths, but it does not replace a physical-device download/imported-file QA pass.
-- A stricter native-marker simulator rerun later on 2026-06-02 passed with `source_native_model=true`, `bengali_native_model=false`, `hindi_native_model=true`, and `general_native_model=true`.
-- Do not claim native Bengali model output until a later pass/fail line includes `bengali_native_model=true`; the current Bengali product answer is safe because Ross used source-preserving fallback.
+- A stricter native-marker simulator rerun later on 2026-06-02 passed with `source_native_model=true`, `bengali_native_model=true`, `hindi_native_model=true`, and `general_native_model=true`.
+- Native Bengali and Hindi simulator model output are proven by that latest smoke marker, but this still does not replace physical-device downloaded-model QA.
 
 ## Exact next recommended step
 

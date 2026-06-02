@@ -1,9 +1,11 @@
+import llama
 import XCTest
 @testable import Ross
 
 final class AlphaExtractionTests: XCTestCase {
     override func tearDown() {
         rossSetBackendBaseURLOverride(nil)
+        rossSaveLanguageSelection(code: "en")
         super.tearDown()
     }
 
@@ -233,6 +235,40 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     @MainActor
+    func testBengaliSourceGroundedFallbackUsesBanglaText() {
+        let model = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "03_Affidavit_Asha_Menon_Camera_Retention",
+            pageNumber: 1,
+            textSnippet: "CAM-D3 fourteen-day retention and video export queue failed twice."
+        )
+        let sourcePack = [
+            AlphaSourceTextBlock(
+                sourceRef: sourceRef,
+                text: "CAM-D3 had fourteen-day retention. The video export queue failed twice. The overlay timestamp lagged by eleven minutes.",
+                pageNumber: 1,
+                languageHint: "en",
+                ocrConfidence: 0.91
+            )
+        ]
+
+        let payload = model.sourceGroundedMatterAskFallback(
+            question: "এই হলফনামার মূল পয়েন্ট বাংলায় বলুন",
+            sourcePack: sourcePack,
+            baseResult: baseAskResult()
+        )
+
+        let text = ([payload?.headline ?? ""] + (payload?.sections ?? [])).joined(separator: " ")
+        XCTAssertNotNil(payload)
+        XCTAssertGreaterThanOrEqual(model.alphaIndicScriptRatio(in: text, script: .bengali), 0.55)
+        XCTAssertLessThanOrEqual(model.alphaLatinWordCount(in: text), 8)
+        XCTAssertFalse(text.localizedCaseInsensitiveContains("rolling video"))
+        XCTAssertFalse(text.localizedCaseInsensitiveContains("export queue"))
+    }
+
+    @MainActor
     func testHindiGenericFallbackAvoidsCouldNotAnswerWhenSourcesExist() {
         let model = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
         let sourceRef = AlphaSourceRef(
@@ -374,6 +410,25 @@ final class AlphaExtractionTests: XCTestCase {
         }
     }
 
+    func testAnswerTuningCopyHidesTechnicalModelNames() {
+        let forbidden = [
+            "Gemma",
+            "sampler",
+            "llama",
+            "Q4",
+            "runtime",
+            "checksum",
+            "artifact"
+        ]
+
+        for term in forbidden {
+            XCTAssertNil(
+                alphaSamplerSettingsExplanation.range(of: term, options: [.caseInsensitive]),
+                "\(term) leaked into answer tuning copy"
+            )
+        }
+    }
+
     @MainActor
     func testAssistantChecksumMatchingAcceptsLocallyComputedChecksumWhenCatalogValueIsMissing() {
         let model = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
@@ -434,6 +489,38 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(result.languageProfile?.primaryLanguage, .mixed)
         XCTAssertTrue(result.languageProfile?.scriptsDetected.contains("latin") == true)
         XCTAssertTrue(result.languageProfile?.scriptsDetected.contains("devanagari") == true)
+    }
+
+    func testLocalExtractionDetectsBengaliLanguageProfile() async {
+        let store = AlphaRossStore()
+        let caseId = UUID()
+        let document = AlphaCaseDocument(
+            title: "Bengali Petition",
+            fileName: "bengali-petition.txt",
+            kind: .text,
+            storedRelativePath: "tests/bengali-petition.txt",
+            importedAt: .now,
+            pageCount: 1,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: nil,
+            dominantSourceSnippet: nil,
+            lastIndexedAt: .now,
+            pages: [
+                AlphaDocumentPage(pageNumber: 1, snippet: "পরবর্তী শুনানির তারিখ ১২/০৫/২০২৬\nবাদী বনাম বিবাদী")
+            ]
+        )
+
+        let result = await store.runLocalExtraction(
+            caseId: caseId,
+            document: document,
+            activePack: installedPack(.caseAssociate)
+        )
+
+        XCTAssertEqual(result.languageProfile?.primaryLanguage, .bengali)
+        XCTAssertEqual(result.languageProfile?.pageProfiles.first?.language, .bengali)
+        XCTAssertEqual(result.languageProfile?.pageProfiles.first?.script, .bengali)
+        XCTAssertTrue(result.languageProfile?.scriptsDetected.contains("bengali") == true)
     }
 
     func testBasicModeSkipsModelStyleIssueExtraction() async {
@@ -541,6 +628,241 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertFalse(result.extractedFields.isEmpty)
         XCTAssertTrue(result.extractedFields.contains { $0.value.contains("45/2026") })
+    }
+
+    func testUnsupportedDocumentImportFailsBeforeCopying() async throws {
+        let store = AlphaRossStore()
+        let sourceURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("\(UUID().uuidString)-unsupported.zip")
+        try Data("not a legal document".utf8).write(to: sourceURL)
+        defer { try? FileManager.default.removeItem(at: sourceURL) }
+
+        do {
+            _ = try await store.importDocument(from: sourceURL, into: UUID())
+            XCTFail("Expected unsupported file type")
+        } catch {
+            guard case AlphaDocumentImportError.unsupportedFileType(let ext) = error else {
+                return XCTFail("Expected unsupported file type, got \(error)")
+            }
+            XCTAssertEqual(ext, "zip")
+        }
+    }
+
+    func testImportedTextDocumentReceivesLanguageProfileImmediately() async throws {
+        let store = AlphaRossStore()
+        let sourceURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("\(UUID().uuidString)-bangla.txt")
+        try Data("কলকাতা হাইকোর্টে মামলার পরবর্তী তারিখ ১২/০৫/২০২৬।".utf8).write(to: sourceURL)
+        defer { try? FileManager.default.removeItem(at: sourceURL) }
+
+        let imported = try await store.importDocument(from: sourceURL, into: UUID())
+
+        XCTAssertEqual(imported.document.languageProfile?.documentId, imported.document.id)
+        XCTAssertEqual(imported.document.languageProfile?.primaryLanguage, .bengali)
+        XCTAssertTrue(imported.document.languageProfile?.scriptsDetected.contains("bengali") == true)
+    }
+
+    @MainActor
+    func testLegacyModelDownloadQueueFailsClosedWithoutPlaceholderTransfer() {
+        let settings = LocalSettingsStore()
+        let ledger = PrivacyLedgerService()
+        let service = BackgroundModelDownloadService(
+            settingsStore: settings,
+            privacyLedger: ledger,
+            startTransfersAutomatically: true
+        )
+        let pack = ModelPack(
+            tier: .caseAssociate,
+            downloadSize: "3.5 GB",
+            installedFootprint: "4.0 GB",
+            recommendedFor: "Document review",
+            technicalDetails: []
+        )
+
+        service.queueDownload(for: pack)
+
+        XCTAssertEqual(service.jobs.count, 1)
+        XCTAssertEqual(service.jobs.first?.phase, .failed)
+        XCTAssertEqual(service.jobs.first?.progress, 0)
+        XCTAssertTrue(service.jobs.first?.deliveryNote.contains("legacy background delivery path is disabled") == true)
+        XCTAssertEqual(ledger.entries.first?.title, "Legacy Private AI download blocked")
+    }
+
+    func testAssistantDownloadPreflightParsesProviderSizeAndChecksum() throws {
+        let response = try XCTUnwrap(HTTPURLResponse(
+            url: URL(string: "https://huggingface.co/model.gguf")!,
+            statusCode: 200,
+            httpVersion: nil,
+            headerFields: [
+                "Content-Length": "3020052224",
+                "Accept-Ranges": "bytes",
+                "X-Linked-ETag": "\"a7cfc9f9b305b54a4ba2a681ff8795f594eafbe8c2c9df25d2f030a64d97bda6\""
+            ]
+        ))
+
+        let preflight = try AlphaAssistantDownloadPreflight.parse(
+            response: response,
+            expectedBytes: 3_020_052_224
+        )
+
+        XCTAssertEqual(preflight.reportedBytes, 3_020_052_224)
+        XCTAssertTrue(preflight.acceptsRanges)
+        XCTAssertEqual(preflight.providerChecksumSha256, "a7cfc9f9b305b54a4ba2a681ff8795f594eafbe8c2c9df25d2f030a64d97bda6")
+        XCTAssertEqual(
+            try preflight.expectedChecksum(catalogChecksum: ""),
+            "a7cfc9f9b305b54a4ba2a681ff8795f594eafbe8c2c9df25d2f030a64d97bda6"
+        )
+    }
+
+    func testAssistantDownloadPreflightRejectsWrongArtifactSize() throws {
+        let response = try XCTUnwrap(HTTPURLResponse(
+            url: URL(string: "https://huggingface.co/model.gguf")!,
+            statusCode: 200,
+            httpVersion: nil,
+            headerFields: [
+                "Content-Length": "1024",
+                "Accept-Ranges": "bytes"
+            ]
+        ))
+
+        XCTAssertThrowsError(
+            try AlphaAssistantDownloadPreflight.parse(response: response, expectedBytes: 3_020_052_224)
+        ) { error in
+            guard case AlphaAssistantDownloadError.preflightSizeMismatch(let expected, let reported) = error else {
+                return XCTFail("Expected preflight size mismatch, got \(error)")
+            }
+            XCTAssertEqual(expected, 3_020_052_224)
+            XCTAssertEqual(reported, 1024)
+        }
+    }
+
+    func testAssistantDownloadPreflightAcceptsByteRangeTokenOnly() throws {
+        let validResponse = try XCTUnwrap(HTTPURLResponse(
+            url: URL(string: "https://huggingface.co/model.gguf")!,
+            statusCode: 200,
+            httpVersion: nil,
+            headerFields: [
+                "Content-Length": "3020052224",
+                "Accept-Ranges": "none, bytes"
+            ]
+        ))
+        let valid = try AlphaAssistantDownloadPreflight.parse(
+            response: validResponse,
+            expectedBytes: 3_020_052_224
+        )
+        XCTAssertTrue(valid.acceptsRanges)
+
+        let misleadingResponse = try XCTUnwrap(HTTPURLResponse(
+            url: URL(string: "https://huggingface.co/model.gguf")!,
+            statusCode: 200,
+            httpVersion: nil,
+            headerFields: [
+                "Content-Length": "3020052224",
+                "Accept-Ranges": "none, not-bytes"
+            ]
+        ))
+        XCTAssertThrowsError(
+            try AlphaAssistantDownloadPreflight.parse(
+                response: misleadingResponse,
+                expectedBytes: 3_020_052_224
+            )
+        ) { error in
+            guard case AlphaAssistantDownloadError.preflightNotResumable = error else {
+                return XCTFail("Expected non-resumable preflight, got \(error)")
+            }
+        }
+    }
+
+    func testAssistantDownloadPreflightRejectsProviderChecksumMismatchBeforeDownload() throws {
+        let providerChecksum = String(repeating: "a", count: 64)
+        let catalogChecksum = String(repeating: "b", count: 64)
+        let response = try XCTUnwrap(HTTPURLResponse(
+            url: URL(string: "https://huggingface.co/model.gguf")!,
+            statusCode: 200,
+            httpVersion: nil,
+            headerFields: [
+                "Content-Length": "3020052224",
+                "Accept-Ranges": "bytes",
+                "X-Xet-Hash": providerChecksum
+            ]
+        ))
+        let preflight = try AlphaAssistantDownloadPreflight.parse(
+            response: response,
+            expectedBytes: 3_020_052_224
+        )
+
+        XCTAssertThrowsError(
+            try preflight.expectedChecksum(catalogChecksum: catalogChecksum)
+        ) { error in
+            guard case AlphaAssistantDownloadError.preflightChecksumMismatch(let catalog, let provider) = error else {
+                return XCTFail("Expected checksum mismatch, got \(error)")
+            }
+            XCTAssertEqual(catalog, catalogChecksum)
+            XCTAssertEqual(provider, providerChecksum)
+        }
+    }
+
+    func testAssistantRangeProbeParsesValidPartialContent() throws {
+        let response = try XCTUnwrap(HTTPURLResponse(
+            url: URL(string: "https://huggingface.co/model.gguf")!,
+            statusCode: 206,
+            httpVersion: nil,
+            headerFields: [
+                "Content-Range": "bytes 3019986688-3020052223/3020052224"
+            ]
+        ))
+
+        let probe = try AlphaAssistantRangeProbe.parse(
+            response: response,
+            receivedBytes: 65_536,
+            expectedStart: 3_019_986_688,
+            expectedEnd: 3_020_052_223,
+            expectedTotal: 3_020_052_224
+        )
+
+        XCTAssertEqual(probe.startByte, 3_019_986_688)
+        XCTAssertEqual(probe.endByte, 3_020_052_223)
+        XCTAssertEqual(probe.totalBytes, 3_020_052_224)
+        XCTAssertEqual(probe.receivedBytes, 65_536)
+    }
+
+    func testAssistantRangeProbeRejectsFullBodyResponse() throws {
+        let response = try XCTUnwrap(HTTPURLResponse(
+            url: URL(string: "https://huggingface.co/model.gguf")!,
+            statusCode: 200,
+            httpVersion: nil,
+            headerFields: [
+                "Content-Length": "3020052224"
+            ]
+        ))
+
+        XCTAssertThrowsError(
+            try AlphaAssistantRangeProbe.parse(
+                response: response,
+                receivedBytes: 3_020_052_224,
+                expectedStart: 3_019_986_688,
+                expectedEnd: 3_020_052_223,
+                expectedTotal: 3_020_052_224
+            )
+        ) { error in
+            guard case AlphaAssistantDownloadError.rangeProbeInvalidStatus(let status) = error else {
+                return XCTFail("Expected invalid range status, got \(error)")
+            }
+            XCTAssertEqual(status, 200)
+        }
+    }
+
+    @MainActor
+    func testSavedLanguageFallbackAnswersInSupportedLanguage() {
+        rossSaveLanguageSelection(code: "bn")
+        let bengaliModel = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
+        XCTAssertEqual(bengaliModel.alphaAnswerLanguage(for: "What is the next hearing date?"), .bengali)
+
+        rossSaveLanguageSelection(code: "hi")
+        let hindiModel = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
+        XCTAssertEqual(hindiModel.alphaAnswerLanguage(for: "What is the next hearing date?"), .hindi)
+
+        rossSaveLanguageSelection(code: "en")
     }
 
     func testPipelinePlanChangesWithInstalledPack() {
@@ -720,12 +1042,22 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.lastErrorCategory, "runtime_dependency_unavailable")
     }
 
+    func testLlamaValidationRejectsMissingModelPath() {
+        XCTAssertThrowsError(try AlphaLlamaCppProvider.validateModelCanLoad(at: ""))
+    }
+
     func testDownloadedQ4RuntimeIsLinkedWhenModelPathExists() throws {
         let temporaryURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ross-runtime-smoke-\(UUID().uuidString)")
             .appendingPathExtension("gguf")
         try Data("runtime-link-smoke".utf8).write(to: temporaryURL)
         defer { try? FileManager.default.removeItem(at: temporaryURL) }
+        AlphaLlamaCppProvider.modelLoadValidator = { _ in }
+        defer {
+            AlphaLlamaCppProvider.modelLoadValidator = { path in
+                _ = try LlamaContext.create_context(path: path)
+            }
+        }
 
         let pack = installedPack(.quickStart, runtimeMode: .llamaCppGguf)
         let health = AlphaLocalModelRuntime.runtimeHealth(
@@ -932,5 +1264,188 @@ final class AlphaExtractionTests: XCTestCase {
         rossSetBackendBaseURLOverride("http://127.0.0.1:8787")
 
         XCTAssertEqual(rossBackendBaseURL().absoluteString, "http://127.0.0.1:8787")
+    }
+
+    func testLocalModelSmokeRequiresSourceGroundingFact() {
+        XCTAssertTrue(
+            RossLocalModelSmokeView.mentionsSmokeSourceFact(
+                #"{"headline":"Article 417","sections":["Article 417 requires the advocate to verify citations before filing."],"statusNote":"Source-bound."}"#
+            )
+        )
+        XCTAssertFalse(
+            RossLocalModelSmokeView.mentionsSmokeSourceFact(
+                #"{"headline":"Article 417","sections":["Article 417 may involve legal procedure."],"statusNote":"General answer."}"#
+            )
+        )
+        XCTAssertTrue(
+            RossLocalModelSmokeView.mentionsBengaliSmokeSourceFact(
+                #"{"headline":"ধারা ৪১৭","sections":["ধারা ৪১৭ অনুযায়ী দাখিলের আগে উদ্ধৃতি যাচাই করতে হবে।"],"statusNote":"উৎসভিত্তিক।"}"#
+            )
+        )
+        XCTAssertFalse(
+            RossLocalModelSmokeView.mentionsBengaliSmokeSourceFact(
+                #"{"headline":"Article 417","sections":["Article 417 may involve a legal filing."],"statusNote":"General answer."}"#
+            )
+        )
+        XCTAssertTrue(
+            RossLocalModelSmokeView.mentionsHindiSmokeSourceFact(
+                #"{"headline":"धारा ४१७","sections":["धारा ४१७ के अनुसार दाखिल करने से पहले उद्धरण सत्यापित करना होगा।"],"statusNote":"स्रोत-आधारित।"}"#
+            )
+        )
+        XCTAssertFalse(
+            RossLocalModelSmokeView.mentionsHindiSmokeSourceFact(
+                #"{"headline":"Article 417","sections":["Article 417 may involve a legal filing."],"statusNote":"General answer."}"#
+            )
+        )
+    }
+
+    func testLocalModelSmokeReportsLanguagePreservingFallback() {
+        let fallbackOutput = AlphaLocalModelOutput(
+            rawText: "উৎসভিত্তিক উত্তর",
+            parsedJson: nil,
+            schemaValid: true,
+            warnings: ["Language-preserving source fallback used."],
+            sourceRefs: []
+        )
+        let nativeOutput = AlphaLocalModelOutput(
+            rawText: "ধারা ৪১৭ অনুযায়ী উদ্ধৃতি যাচাই করতে হবে।",
+            parsedJson: nil,
+            schemaValid: true,
+            warnings: [],
+            sourceRefs: []
+        )
+
+        XCTAssertTrue(RossLocalModelSmokeView.usedLanguagePreservingFallback(fallbackOutput))
+        XCTAssertFalse(RossLocalModelSmokeView.usedLanguagePreservingFallback(nativeOutput))
+    }
+
+    func testLlamaProviderFallsBackToBanglaSourceWhenModelAnswersInEnglish() {
+        let documentId = UUID()
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: documentId,
+            documentTitle: "Bangla Local Smoke Source",
+            pageNumber: 1,
+            textSnippet: "ধারা ৪১৭ অনুযায়ী আইনজীবীকে দাখিলের আগে উদ্ধৃতি যাচাই করতে হবে।"
+        )
+        let input = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "বাংলা স্ক্রিপ্টে উত্তর দিন। ধারা ৪১৭ কী করতে বলে?",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: sourceRef,
+                    text: "বাংলা লোকাল স্মোক উৎস: ধারা ৪১৭ অনুযায়ী আইনজীবীকে দাখিলের আগে উদ্ধৃতি যাচাই করতে হবে। এটি স্বয়ংক্রিয় আইনি পরামর্শ অনুমোদন করে না।",
+                    pageNumber: 1,
+                    languageHint: "bn",
+                    ocrConfidence: 1
+                )
+            ],
+            expectedSchema: "",
+            maxOutputTokens: 96,
+            languageProfile: AlphaDocumentLanguageProfile(
+                documentId: documentId,
+                primaryLanguage: .bengali,
+                scriptsDetected: ["bengali"],
+                confidence: 0.98,
+                pageProfiles: [
+                    AlphaDocumentLanguageProfilePage(
+                        pageNumber: 1,
+                        language: .bengali,
+                        script: .bengali,
+                        confidence: 0.98
+                    )
+                ]
+            ),
+            documentClassification: nil,
+            extractionMode: .quickStart,
+            requireSourceRefs: true
+        )
+
+        let fallback = AlphaLlamaCppProvider.sourceLanguageFallbackIfNeeded(
+            for: input,
+            generatedText: "The legal professional must be given the opportunity to present evidence."
+        )
+
+        XCTAssertNotNil(fallback)
+        XCTAssertTrue(fallback?.contains("উৎসভিত্তিক উত্তর") == true)
+        XCTAssertTrue(fallback?.contains("ধারা ৪১৭") == true)
+        XCTAssertTrue(fallback?.contains("উদ্ধৃতি যাচাই") == true)
+        XCTAssertTrue(fallback?.contains("Bangla Local Smoke Source · p. 1") == true)
+    }
+
+    func testLlamaProviderKeepsBanglaModelAnswerWhenScriptMatches() {
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "Bangla Local Smoke Source",
+            pageNumber: 1,
+            textSnippet: "ধারা ৪১৭ অনুযায়ী আইনজীবীকে দাখিলের আগে উদ্ধৃতি যাচাই করতে হবে।"
+        )
+        let input = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "বাংলা স্ক্রিপ্টে উত্তর দিন। ধারা ৪১৭ কী করতে বলে?",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: sourceRef,
+                    text: "ধারা ৪১৭ অনুযায়ী আইনজীবীকে দাখিলের আগে উদ্ধৃতি যাচাই করতে হবে।",
+                    pageNumber: 1,
+                    languageHint: "bn",
+                    ocrConfidence: 1
+                )
+            ],
+            expectedSchema: "",
+            maxOutputTokens: 96,
+            languageProfile: nil,
+            documentClassification: nil,
+            extractionMode: .quickStart,
+            requireSourceRefs: true
+        )
+
+        XCTAssertNil(
+            AlphaLlamaCppProvider.sourceLanguageFallbackIfNeeded(
+                for: input,
+                generatedText: "ধারা ৪১৭ অনুযায়ী দাখিলের আগে উদ্ধৃতি যাচাই করতে হবে।"
+            )
+        )
+    }
+
+    func testLlamaProviderFallsBackToHindiSourceWhenModelAnswersInEnglish() {
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "Hindi Local Smoke Source",
+            pageNumber: 1,
+            textSnippet: "धारा ४१७ के अनुसार अधिवक्ता को दाखिल करने से पहले उद्धरण सत्यापित करना होगा।"
+        )
+        let input = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "देवनागरी हिंदी में उत्तर दें। धारा ४१७ क्या कहती है?",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: sourceRef,
+                    text: "हिंदी लोकल स्मोक स्रोत: धारा ४१७ के अनुसार अधिवक्ता को दाखिल करने से पहले उद्धरण सत्यापित करना होगा। यह स्वचालित कानूनी सलाह की अनुमति नहीं देता।",
+                    pageNumber: 1,
+                    languageHint: "hi",
+                    ocrConfidence: 1
+                )
+            ],
+            expectedSchema: "",
+            maxOutputTokens: 96,
+            languageProfile: nil,
+            documentClassification: nil,
+            extractionMode: .quickStart,
+            requireSourceRefs: true
+        )
+
+        let fallback = AlphaLlamaCppProvider.sourceLanguageFallbackIfNeeded(
+            for: input,
+            generatedText: "The advocate must verify citations before filing."
+        )
+
+        XCTAssertNotNil(fallback)
+        XCTAssertTrue(fallback?.contains("स्रोत-आधारित उत्तर") == true)
+        XCTAssertTrue(fallback?.contains("धारा ४१७") == true)
+        XCTAssertTrue(fallback?.contains("उद्धरण सत्यापित") == true)
+        XCTAssertTrue(fallback?.contains("Hindi Local Smoke Source · p. 1") == true)
     }
 }

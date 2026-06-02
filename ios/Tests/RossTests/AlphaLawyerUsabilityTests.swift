@@ -1,9 +1,28 @@
 import LocalAuthentication
+import llama
 import SwiftUI
 import XCTest
 @testable import Ross
 
 final class AlphaLawyerUsabilityTests: XCTestCase {
+    override func setUp() {
+        super.setUp()
+        AlphaLlamaCppProvider.modelLoadValidator = { _ in }
+    }
+
+    override func tearDown() {
+        AlphaLlamaCppProvider.modelLoadValidator = { path in
+            _ = try LlamaContext.create_context(path: path)
+        }
+        AlphaLlamaCppProvider.contextFactory = { path in
+            try LlamaContext.create_context(path: path)
+        }
+        LlamaContext.samplerFactory = { params in
+            llama_sampler_chain_init(params)
+        }
+        super.tearDown()
+    }
+
     func testLegacyChatTurnsDecodeIntoChatSessions() throws {
         let caseID = UUID()
         let turnID = UUID()
@@ -49,6 +68,54 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertEqual(decoded.chatSessions.first?.turns.count, 1)
         XCTAssertEqual(decoded.chatSessions.first?.turns.first?.id, turnID)
         XCTAssertEqual(decoded.chatSessions.first?.turns.first?.question, "What should I prepare?")
+    }
+
+    func testLlamaSamplerSetupFailureReturnsRuntimeErrorInsteadOfCrashing() async throws {
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-sampler-failure-\(UUID().uuidString).gguf")
+        try Data([0x52, 0x4f, 0x53, 0x53]).write(to: tempURL)
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        AlphaLlamaCppProvider.contextFactory = { _ in
+            throw LlamaError.couldNotInitializeSampler
+        }
+
+        let provider = AlphaLlamaCppProvider(
+            capabilityTier: .quickStart,
+            modelPathLabel: "Test GGUF",
+            modelPath: tempURL.path,
+            checksumVerified: true
+        )
+        let input = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "Summarise the selected file.",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: AlphaSourceRef(
+                        caseId: UUID(),
+                        documentId: UUID(),
+                        documentTitle: "Order",
+                        pageNumber: 1,
+                        textSnippet: "Court listed the matter next week."
+                    ),
+                    text: "Court listed the matter next week.",
+                    pageNumber: 1,
+                    languageHint: "en",
+                    ocrConfidence: 0.96
+                )
+            ],
+            expectedSchema: "plain_text",
+            maxOutputTokens: 64,
+            languageProfile: nil,
+            documentClassification: nil,
+            extractionMode: .quickStart
+        )
+
+        let output = await provider.run(input)
+
+        XCTAssertFalse(output.schemaValid)
+        XCTAssertEqual(output.errorCategory, "inference_failed")
+        XCTAssertTrue(output.warnings.joined(separator: " ").contains("Inference failed"))
     }
 
     func testTaskAdditionUpdatesLocalState() async throws {
@@ -159,15 +226,23 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             )
 
             XCTAssertEqual("Ross is answering...", pending.answerTitle)
-            XCTAssertEqual("Gemma 4 E2B Q2_K running locally", pending.statusNote)
+            XCTAssertEqual("Flash assistant is preparing a private answer", pending.statusNote)
             XCTAssertTrue(
-                pending.answerSections.joined(separator: " ").contains("replace this with the local answer")
+                pending.answerSections.joined(separator: " ").contains("replace this with the private answer")
             )
             XCTAssertTrue(
                 pending.answerSections.joined(separator: " ").contains("Tagged files: Demo affidavit, Demo order.")
             )
             XCTAssertEqual(["Demo affidavit", "Demo order"], pending.selectedDocumentTitles)
             XCTAssertEqual([], pending.caseFileSources)
+
+            let visibleCopy = ([pending.statusNote ?? ""] + pending.answerSections).joined(separator: " ")
+            for forbidden in ["Gemma", "Q2", "Q4", "GGUF", "runtime", "llama", "checksum", "artifact"] {
+                XCTAssertNil(
+                    visibleCopy.range(of: forbidden, options: [.caseInsensitive]),
+                    "\(forbidden) leaked into pending private-answer copy"
+                )
+            }
         }
     }
 
@@ -258,6 +333,30 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
 
             XCTAssertEqual("Ross answered locally", payload?.headline)
             XCTAssertTrue(payload?.sections.first?.contains("FMLS") == true)
+        }
+    }
+
+    func testAskRuntimeFailurePresentationExplainsRepairInsteadOfInvalidOutput() async {
+        let model = await MainActor.run {
+            AlphaRossModel(previewState: AlphaPersistedState.demoSeed())
+        }
+
+        await MainActor.run {
+            let presentation = model.askRuntimeFailurePresentation(
+                for: AlphaLocalModelOutput(
+                    rawText: "",
+                    parsedJson: nil,
+                    schemaValid: false,
+                    warnings: ["Inference failed: llama sampler chain failed to initialize"],
+                    sourceRefs: [],
+                    errorCategory: "inference_failed"
+                )
+            )
+
+            XCTAssertEqual("Private assistant hit a runtime error", presentation?.title)
+            XCTAssertEqual("Private assistant runtime error", presentation?.statusNote)
+            XCTAssertTrue(presentation?.sections.joined(separator: " ").contains("Repair setup") == true)
+            XCTAssertTrue(presentation?.needsReviewWarning?.contains("needs repair") == true)
         }
     }
 
@@ -1179,6 +1278,207 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertTrue(normalized.ledgerEntries.contains { $0.title == "Assistant model paused" })
     }
 
+    func testModelResumeDataPersistsLoadsAndRemovesAcrossStoreCalls() async throws {
+        try await withRestoredStore { store in
+            await store.removeAllModelArtifacts()
+            let jobID = UUID()
+            let resumeData = Data("partial model download resume blob".utf8)
+
+            let relativePath = try await store.saveModelResumeData(resumeData, for: jobID)
+            let loaded = try await store.loadModelResumeData(relativePath: relativePath)
+            await store.removeModelResumeData(relativePath: relativePath)
+            let removed = try await store.loadModelResumeData(relativePath: relativePath)
+
+            XCTAssertTrue(relativePath.hasSuffix("\(jobID.uuidString).resume"))
+            XCTAssertEqual(loaded, resumeData)
+            XCTAssertNil(removed)
+        }
+    }
+
+    func testModelResumeDataSweepKeepsOnlyReferencedPaths() async throws {
+        try await withRestoredStore { store in
+            await store.removeAllModelArtifacts()
+            let keptPath = try await store.saveModelResumeData(Data("keep".utf8), for: UUID())
+            let stalePath = try await store.saveModelResumeData(Data("stale".utf8), for: UUID())
+
+            await store.sweepModelResumeData(keeping: [keptPath])
+
+            let kept = try await store.loadModelResumeData(relativePath: keptPath)
+            let stale = try await store.loadModelResumeData(relativePath: stalePath)
+            XCTAssertEqual(kept, Data("keep".utf8))
+            XCTAssertNil(stale)
+        }
+    }
+
+    func testRemovingDownloadedPackArtifactAlsoRemovesManifest() async throws {
+        try await withRestoredStore { store in
+            await store.removeAllModelArtifacts()
+            let relativePath = "model-packs/quick_start/broken-local.gguf"
+            let artifactURL = alphaAbsoluteURL(for: relativePath)
+            let manifestURL = artifactURL.deletingPathExtension().appendingPathExtension("manifest.json")
+            try FileManager.default.createDirectory(
+                at: artifactURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try Data("bad local model".utf8).write(to: artifactURL)
+            try Data("bad manifest".utf8).write(to: manifestURL)
+
+            await store.removeDownloadedPackArtifact(relativePath: relativePath)
+
+            XCTAssertFalse(FileManager.default.fileExists(atPath: artifactURL.path()))
+            XCTAssertFalse(FileManager.default.fileExists(atPath: manifestURL.path()))
+        }
+    }
+
+    func testRemoveAllDownloadedModelFilesDeletesArtifactsResumeDataAndClearsStaleInstalledState() async throws {
+        try await withRestoredStore { store in
+            await store.removeAllModelArtifacts()
+            let artifact = alphaAssistantModelArtifact(for: .quickStart)
+            let artifactPath = "model-packs/quick_start/delete-all-local.gguf"
+            let artifactURL = alphaAbsoluteURL(for: artifactPath)
+            let manifestURL = artifactURL.deletingPathExtension().appendingPathExtension("manifest.json")
+            try FileManager.default.createDirectory(
+                at: artifactURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try Data("downloaded local assistant".utf8).write(to: artifactURL)
+            try Data("manifest".utf8).write(to: manifestURL)
+
+            let jobID = UUID()
+            let resumePath = try await store.saveModelResumeData(Data("resume data".utf8), for: jobID)
+            var state = AlphaPersistedState.seed()
+            state.installedPacks = [
+                AlphaInstalledModelPack(
+                    packId: artifact.packId,
+                    tier: .quickStart,
+                    installPath: artifactPath,
+                    checksumSha256: String(repeating: "a", count: 64),
+                    artifactKind: "local_model_artifact",
+                    runtimeMode: .llamaCppGguf,
+                    developmentOnly: false,
+                    checksumVerified: true,
+                    isActive: true
+                )
+            ]
+            state.modelJobs = [
+                AlphaModelDownloadJob(
+                    id: jobID,
+                    sessionId: "delete-all",
+                    packId: artifact.packId,
+                    tier: .quickStart,
+                    state: .pausedUser,
+                    networkPolicy: .wifiOnly,
+                    bytesDownloaded: 4096,
+                    totalBytes: artifact.sizeBytes,
+                    checksumSha256: String(repeating: "a", count: 64),
+                    artifactKind: "local_model_artifact",
+                    runtimeMode: .llamaCppGguf,
+                    developmentOnly: false,
+                    resumeDataRelativePath: resumePath
+                )
+            ]
+            state.settings.activeTier = .quickStart
+            state.modelUpdateCandidates = [
+                AlphaModelUpdateCandidate(
+                    tier: .quickStart,
+                    installedPackId: artifact.packId,
+                    availablePackId: "new-pack",
+                    availableSizeBytes: artifact.sizeBytes
+                )
+            ]
+            try await store.replace(with: state)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+            await MainActor.run {
+                model.removeAllDownloadedModelFiles()
+            }
+
+            let snapshot = await MainActor.run { model.persisted }
+            XCTAssertTrue(snapshot.installedPacks.isEmpty)
+            XCTAssertFalse(snapshot.modelJobs.contains { $0.tier == .quickStart })
+            XCTAssertNil(snapshot.settings.activeTier)
+            XCTAssertEqual(snapshot.modelUpdateCandidates ?? [], [])
+            XCTAssertEqual(snapshot.ledgerEntries.first?.title, "Assistant model files removed")
+
+            try await eventually(timeoutNanoseconds: 2_000_000_000) {
+                let resumeData = try? await store.loadModelResumeData(relativePath: resumePath)
+                return !FileManager.default.fileExists(atPath: artifactURL.path()) &&
+                    !FileManager.default.fileExists(atPath: manifestURL.path()) &&
+                    resumeData == nil
+            }
+        }
+    }
+
+    func testRecoveredDownloadedPackRequiresManifestOrActualChecksumMatch() async throws {
+        try await withRestoredStore { store in
+            await store.removeAllModelArtifacts()
+            let artifact = alphaAssistantModelArtifact(for: .quickStart)
+            let relativePath = "model-packs/quick_start/\(artifact.fileName)"
+            let artifactURL = alphaAbsoluteURL(for: relativePath)
+            let manifestURL = artifactURL.deletingPathExtension().appendingPathExtension("manifest.json")
+            try FileManager.default.createDirectory(
+                at: artifactURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try makeSparseFile(at: artifactURL, bytes: artifact.sizeBytes)
+            try? FileManager.default.removeItem(at: manifestURL)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+
+            let recovered = await MainActor.run {
+                model.recoveredInstalledPackFromDisk(tier: .quickStart)
+            }
+
+            XCTAssertNil(recovered)
+        }
+    }
+
+    func testResumeJobClearsStaleResumeDataAndRecordsRestart() async throws {
+        try await withRestoredStore { store in
+            await store.removeAllModelArtifacts()
+            let artifact = alphaAssistantModelArtifact(for: .quickStart)
+            let job = AlphaModelDownloadJob(
+                sessionId: "stale-resume",
+                packId: artifact.packId,
+                tier: .quickStart,
+                state: .pausedUser,
+                networkPolicy: .wifiOnly,
+                bytesDownloaded: 512,
+                totalBytes: artifact.sizeBytes,
+                checksumSha256: artifact.sha256,
+                artifactKind: "local_model_artifact",
+                runtimeMode: .llamaCppGguf,
+                developmentOnly: false,
+                resumeDataRelativePath: "model-resume-data/missing-\(UUID().uuidString).resume"
+            )
+            var state = AlphaPersistedState.empty()
+            state.modelJobs = [job]
+            try await store.replace(with: state)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+            await MainActor.run {
+                model.resumeJob(job)
+            }
+            try await Task.sleep(for: .milliseconds(350))
+
+            let snapshot = await MainActor.run { model.persisted }
+            XCTAssertNil(snapshot.modelJobs.first(where: { $0.id == job.id })?.resumeDataRelativePath)
+            XCTAssertTrue(snapshot.ledgerEntries.contains {
+                $0.title == "Assistant download resume restarted" &&
+                $0.purpose == .model_download &&
+                $0.payloadClass == .no_case_data
+            })
+        }
+    }
+
     func testInstalledPackActivationAndRemovalDeleteLocalArtifact() async throws {
         try await withRestoredStore { store in
             let basicPath = "model-packs/quick_start/lifecycle-basic.gguf"
@@ -1193,8 +1493,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 at: standardURL.deletingLastPathComponent(),
                 withIntermediateDirectories: true
             )
-            try Data("basic-real-artifact".utf8).write(to: basicURL)
-            try Data("standard-real-artifact".utf8).write(to: standardURL)
+            try makeSparseFile(at: basicURL, bytes: alphaAssistantModelArtifact(for: .quickStart).sizeBytes)
+            try makeSparseFile(at: standardURL, bytes: alphaAssistantModelArtifact(for: .caseAssociate).sizeBytes)
 
             let basicPack = AlphaInstalledModelPack(
                 packId: "gemma-4-e2b-q4",
@@ -1231,12 +1531,18 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 model.persisted = state
             }
 
+            let validatedPaths = SendableBox<[String]>([])
+            AlphaLlamaCppProvider.modelLoadValidator = { path in
+                validatedPaths.value.append(path)
+            }
+
             await MainActor.run {
                 model.activateInstalledPack(standardPack)
             }
             var snapshot = await MainActor.run { model.persisted }
             XCTAssertEqual(.caseAssociate, snapshot.settings.activeTier)
             XCTAssertTrue(snapshot.installedPacks.first { $0.id == standardPack.id }?.isActive == true)
+            XCTAssertTrue(validatedPaths.value.contains(standardURL.path()))
 
             await MainActor.run {
                 model.removeInstalledPack(standardPack)
@@ -1246,6 +1552,197 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertFalse(snapshot.installedPacks.contains { $0.id == standardPack.id })
             XCTAssertEqual(.quickStart, snapshot.settings.activeTier)
             XCTAssertTrue(snapshot.installedPacks.first { $0.id == basicPack.id }?.isActive == true)
+        }
+    }
+
+    func testInstalledPackActivationRejectsRuntimeInvalidArtifact() async throws {
+        try await withRestoredStore { store in
+            let activePath = "model-packs/quick_start/current.gguf"
+            let brokenPath = "model-packs/case_associate/broken.gguf"
+            let activeURL = alphaAbsoluteURL(for: activePath)
+            let brokenURL = alphaAbsoluteURL(for: brokenPath)
+            try FileManager.default.createDirectory(
+                at: activeURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try FileManager.default.createDirectory(
+                at: brokenURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try makeSparseFile(at: activeURL, bytes: alphaAssistantModelArtifact(for: .quickStart).sizeBytes)
+            try makeSparseFile(at: brokenURL, bytes: alphaAssistantModelArtifact(for: .caseAssociate).sizeBytes)
+
+            let activePack = AlphaInstalledModelPack(
+                packId: "gemma-4-e2b-q4",
+                tier: .quickStart,
+                installPath: activePath,
+                checksumSha256: String(repeating: "a", count: 64),
+                artifactKind: "local_model_artifact",
+                runtimeMode: .llamaCppGguf,
+                developmentOnly: false,
+                checksumVerified: true,
+                isActive: true
+            )
+            let brokenPack = AlphaInstalledModelPack(
+                packId: "gemma-4-e4b-q4",
+                tier: .caseAssociate,
+                installPath: brokenPath,
+                checksumSha256: String(repeating: "b", count: 64),
+                artifactKind: "local_model_artifact",
+                runtimeMode: .llamaCppGguf,
+                developmentOnly: false,
+                checksumVerified: true,
+                isActive: false
+            )
+            var state = AlphaPersistedState.seed()
+            state.installedPacks = [activePack, brokenPack]
+            state.settings.activeTier = .quickStart
+            state.modelJobs = [
+                AlphaModelDownloadJob(
+                    sessionId: "installed-broken",
+                    packId: brokenPack.packId,
+                    tier: brokenPack.tier,
+                    state: .installed,
+                    networkPolicy: .wifiOnly,
+                    bytesDownloaded: alphaAssistantModelArtifact(for: .caseAssociate).sizeBytes,
+                    totalBytes: alphaAssistantModelArtifact(for: .caseAssociate).sizeBytes,
+                    checksumSha256: brokenPack.checksumSha256,
+                    artifactKind: brokenPack.artifactKind,
+                    runtimeMode: brokenPack.runtimeMode,
+                    developmentOnly: false
+                )
+            ]
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+            await MainActor.run {
+                model.persisted = state
+            }
+            AlphaLlamaCppProvider.modelLoadValidator = { path in
+                if path == brokenURL.path() {
+                    throw NSError(
+                        domain: "RossLlamaCppValidationTest",
+                        code: 42,
+                        userInfo: [NSLocalizedDescriptionKey: "broken test model"]
+                    )
+                }
+            }
+
+            await MainActor.run {
+                model.activateInstalledPack(brokenPack)
+            }
+
+            let snapshot = await MainActor.run { model.persisted }
+            XCTAssertEqual(.quickStart, snapshot.settings.activeTier)
+            XCTAssertTrue(snapshot.installedPacks.first { $0.id == activePack.id }?.isActive == true)
+            XCTAssertFalse(snapshot.installedPacks.first { $0.id == brokenPack.id }?.isActive == true)
+            XCTAssertEqual(.failed, snapshot.modelJobs.first?.state)
+            XCTAssertTrue(snapshot.modelJobs.first?.failureReason?.contains("could not open") == true)
+            XCTAssertEqual("Assistant model activation failed", snapshot.ledgerEntries.first?.title)
+        }
+    }
+
+    func testRuntimeHealthRejectsExactSizePackWhenLlamaCannotOpenIt() async throws {
+        try await withRestoredStore { _ in
+            let brokenPath = "model-packs/quick_start/health-broken.gguf"
+            let brokenURL = alphaAbsoluteURL(for: brokenPath)
+            try FileManager.default.createDirectory(
+                at: brokenURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try makeSparseFile(at: brokenURL, bytes: alphaAssistantModelArtifact(for: .quickStart).sizeBytes)
+
+            let pack = AlphaInstalledModelPack(
+                packId: "gemma-4-e2b-q4",
+                tier: .quickStart,
+                installPath: brokenPath,
+                checksumSha256: "catalog-size:\(alphaAssistantModelArtifact(for: .quickStart).fileName):\(alphaAssistantModelArtifact(for: .quickStart).sizeBytes)",
+                artifactKind: "local_model_artifact",
+                runtimeMode: .llamaCppGguf,
+                developmentOnly: false,
+                checksumVerified: true,
+                isActive: true
+            )
+            AlphaLlamaCppProvider.modelLoadValidator = { path in
+                if path == brokenURL.path() {
+                    throw NSError(
+                        domain: "RossLlamaCppHealthTest",
+                        code: 7,
+                        userInfo: [NSLocalizedDescriptionKey: "cannot open sparse test model"]
+                    )
+                }
+            }
+
+            let health = AlphaLocalModelRuntime.runtimeHealth(
+                activePack: pack,
+                requestedTier: .quickStart
+            )
+
+            XCTAssertEqual(health?.available, false)
+            XCTAssertEqual(health?.lastErrorCategory, "runtime_validation_failed")
+            XCTAssertTrue(health?.userFacingStatus.localizedCaseInsensitiveContains("could not open") == true)
+        }
+    }
+
+    func testRepairAssistantPackRemovesBrokenArtifactAndRestartsSetup() async throws {
+        try await withRestoredStore { store in
+            let brokenPath = "model-packs/case_associate/broken-repair.gguf"
+            let brokenURL = alphaAbsoluteURL(for: brokenPath)
+            try FileManager.default.createDirectory(
+                at: brokenURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try Data("broken model artifact".utf8).write(to: brokenURL)
+
+            let brokenPack = AlphaInstalledModelPack(
+                packId: "gemma-4-e4b-q4",
+                tier: .caseAssociate,
+                installPath: brokenPath,
+                checksumSha256: String(repeating: "b", count: 64),
+                artifactKind: "local_model_artifact",
+                runtimeMode: .llamaCppGguf,
+                developmentOnly: false,
+                checksumVerified: true,
+                isActive: true
+            )
+            var state = AlphaPersistedState.seed()
+            state.installedPacks = [brokenPack]
+            state.settings.activeTier = .caseAssociate
+            state.modelJobs = [
+                AlphaModelDownloadJob(
+                    sessionId: "installed-broken-repair",
+                    packId: brokenPack.packId,
+                    tier: brokenPack.tier,
+                    state: .failed,
+                    networkPolicy: .wifiOnly,
+                    bytesDownloaded: 0,
+                    totalBytes: alphaAssistantModelArtifact(for: .caseAssociate).sizeBytes,
+                    checksumSha256: brokenPack.checksumSha256,
+                    artifactKind: brokenPack.artifactKind,
+                    runtimeMode: brokenPack.runtimeMode,
+                    developmentOnly: false,
+                    failureReason: "Could not open model"
+                )
+            ]
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+            await MainActor.run {
+                model.persisted = state
+            }
+
+            await model.repairAssistantPack(for: .caseAssociate, mobileAllowed: false)
+
+            let snapshot = await MainActor.run { model.persisted }
+            XCTAssertFalse(FileManager.default.fileExists(atPath: brokenURL.path()))
+            XCTAssertFalse(snapshot.installedPacks.contains { $0.id == brokenPack.id })
+            XCTAssertEqual(.installed, snapshot.modelJobs.first(where: { $0.tier == .caseAssociate })?.state)
+            XCTAssertEqual(.caseAssociate, snapshot.settings.activeTier)
+            XCTAssertEqual(.deterministicDev, snapshot.installedPacks.first(where: { $0.tier == .caseAssociate })?.runtimeMode)
         }
     }
 
@@ -1390,6 +1887,349 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertEqual(Set(activeSession.contextDocumentIDs), Set([importedDocument.id]))
             XCTAssertEqual(selectedDocumentIDs, Set([importedDocument.id]))
             XCTAssertEqual(selectedScopeCaseID, caseID)
+        }
+    }
+
+    func testImportedBanglaDocumentBecomesAskUsableWithLanguageHint() async throws {
+        try await withRestoredStore { store in
+            try await store.replace(with: AlphaPersistedState.seed())
+            let tempURL = try makeTemporaryTextFile(
+                name: "bangla-order.txt",
+                contents: "ধারা ৪১৭ অনুযায়ী আইনজীবীকে দাখিলের আগে উদ্ধৃতি যাচাই করতে হবে। পরবর্তী শুনানি ১০ জুন ২০২৬।"
+            )
+            defer { try? FileManager.default.removeItem(at: tempURL) }
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+
+            let maybeCaseID = await MainActor.run { model.cases.first?.id }
+            let caseID = try XCTUnwrap(maybeCaseID)
+            await model.importDocument(caseId: caseID, from: tempURL)
+
+            let importedDocument = try await MainActor.run {
+                try XCTUnwrap(
+                    model.persisted.cases
+                        .first(where: { $0.id == caseID })?
+                        .documents
+                        .first(where: { $0.title.hasSuffix("bangla-order") })
+                )
+            }
+            let sourcePack = await MainActor.run {
+                model.askRuntimeSourcePack(
+                    question: "বাংলা স্ক্রিপ্টে বলুন, ধারা ৪১৭ কী করতে বলে?",
+                    scopeCaseID: caseID,
+                    selectedDocuments: [
+                        AlphaAskDocumentOption(
+                            id: importedDocument.id,
+                            caseId: caseID,
+                            caseTitle: "Test matter",
+                            title: importedDocument.title,
+                            fileName: importedDocument.fileName,
+                            kind: importedDocument.kind,
+                            isShared: false
+                        )
+                    ]
+                )
+            }
+
+            XCTAssertTrue(importedDocument.hasAskUsableExtractedText)
+            XCTAssertEqual(importedDocument.languageProfile?.primaryLanguage, .bengali)
+            XCTAssertTrue(sourcePack.contains { block in
+                block.sourceRef.documentId == importedDocument.id &&
+                    block.languageHint == "bengali" &&
+                    block.text.contains("উদ্ধৃতি যাচাই")
+            })
+        }
+    }
+
+    func testImportedPDFBecomesAskUsableWithPageSource() async throws {
+        try await withRestoredStore { store in
+            try await store.replace(with: AlphaPersistedState.seed())
+            let maybeCaseID = try await store.load().cases.first?.id
+            let caseID = try XCTUnwrap(maybeCaseID)
+            let report = try await store.createPDFExport(
+                title: "Article 417 Filing Note",
+                kind: "Local Review",
+                caseId: caseID,
+                bodyLines: [
+                    "IN THE HIGH COURT OF DELHI",
+                    "CS No. 45/2026",
+                    "Article 417 requires the advocate to verify citations before filing.",
+                    "Next date: 12/05/2026"
+                ]
+            )
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+            await model.importDocument(caseId: caseID, from: alphaAbsoluteURL(for: report.relativePath))
+
+            let importedDocument = try await MainActor.run {
+                try XCTUnwrap(
+                    model.persisted.cases
+                        .first(where: { $0.id == caseID })?
+                        .documents
+                        .first(where: { $0.title.contains("article-417-filing-note") || $0.title.contains("Article 417 Filing Note") })
+                )
+            }
+            let sourcePack = await MainActor.run {
+                model.askRuntimeSourcePack(
+                    question: "What does Article 417 require?",
+                    scopeCaseID: caseID,
+                    selectedDocuments: [
+                        AlphaAskDocumentOption(
+                            id: importedDocument.id,
+                            caseId: caseID,
+                            caseTitle: "Test matter",
+                            title: importedDocument.title,
+                            fileName: importedDocument.fileName,
+                            kind: importedDocument.kind,
+                            isShared: false
+                        )
+                    ]
+                )
+            }
+
+            XCTAssertEqual(importedDocument.kind, .pdf)
+            XCTAssertTrue(importedDocument.hasAskUsableExtractedText)
+            XCTAssertTrue(sourcePack.contains { block in
+                block.sourceRef.documentId == importedDocument.id &&
+                    block.sourceRef.pageNumber == 1 &&
+                    block.text.contains("Article 417 requires the advocate to verify citations")
+            })
+        }
+    }
+
+    func testUnreadableImportedImageDoesNotBecomeAskSource() async throws {
+        try await withRestoredStore { store in
+            try await store.replace(with: AlphaPersistedState.seed())
+            let tempURL = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+                .appendingPathComponent("\(UUID().uuidString)-unreadable-evidence.png")
+            try Data("not a real image".utf8).write(to: tempURL)
+            defer { try? FileManager.default.removeItem(at: tempURL) }
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+
+            let maybeCaseID = await MainActor.run { model.cases.first?.id }
+            let caseID = try XCTUnwrap(maybeCaseID)
+            await model.importDocument(caseId: caseID, from: tempURL)
+
+            let importedDocument = try await MainActor.run {
+                try XCTUnwrap(
+                    model.persisted.cases
+                        .first(where: { $0.id == caseID })?
+                        .documents
+                        .first(where: { $0.fileName.hasSuffix("unreadable-evidence.png") })
+                )
+            }
+            let sourcePack = await MainActor.run {
+                model.askRuntimeSourcePack(
+                    question: "What does this image say?",
+                    scopeCaseID: caseID,
+                    selectedDocuments: [
+                        AlphaAskDocumentOption(
+                            id: importedDocument.id,
+                            caseId: caseID,
+                            caseTitle: "Test matter",
+                            title: importedDocument.title,
+                            fileName: importedDocument.fileName,
+                            kind: importedDocument.kind,
+                            isShared: false
+                        )
+                    ]
+                )
+            }
+
+            XCTAssertEqual(importedDocument.kind, .image)
+            XCTAssertFalse(importedDocument.hasAskUsableExtractedText)
+            XCTAssertTrue(sourcePack.isEmpty)
+        }
+    }
+
+    func testTaggedUnreadableFileDoesNotFallBackToMatterMemoryAnswer() async throws {
+        try await withRestoredStore { store in
+            try await store.replace(with: AlphaPersistedState.seed())
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+
+            let maybeCaseID = await MainActor.run { model.cases.first?.id }
+            let caseID = try XCTUnwrap(maybeCaseID)
+            let unreadableDocument = AlphaCaseDocument(
+                title: "Unreadable scan",
+                fileName: "unreadable-scan.pdf",
+                kind: .pdf,
+                storedRelativePath: "docs/unreadable-scan.pdf",
+                importedAt: .now,
+                pageCount: 1,
+                ocrStatus: .placeholder,
+                indexingStatus: .notStarted,
+                pages: []
+            )
+            await MainActor.run {
+                let testPack = AlphaInstalledModelPack(
+                    packId: "case-associate-test-pack",
+                    tier: .caseAssociate,
+                    installPath: "model-packs/case_associate/pack.dev",
+                    checksumSha256: String(repeating: "a", count: 64),
+                    artifactKind: "tiny_dev_artifact",
+                    runtimeMode: .deterministicDev,
+                    developmentOnly: true,
+                    isActive: true
+                )
+                model.privateAISnapshot.activePack = testPack
+                model.persisted.installedPacks = [testPack]
+                model.persisted.settings.activeTier = .caseAssociate
+                if let caseIndex = model.persisted.cases.firstIndex(where: { $0.id == caseID }) {
+                    model.persisted.cases[caseIndex].documents.append(unreadableDocument)
+                }
+                model.invalidateWorkspaceDerivedState()
+                model.setSelectedAskDocumentIDs([unreadableDocument.id], for: caseID)
+                model.submitAsk(question: "What does this selected file say?", scopeCaseID: caseID, webEnabled: false)
+            }
+
+            let latest = await MainActor.run { model.latestAskResult }
+            XCTAssertEqual(latest?.answerTitle, "Selected file has no readable text")
+            XCTAssertEqual(latest?.statusNote, "File text unavailable")
+            XCTAssertTrue(latest?.answerSections.joined(separator: " ").contains("could not find readable source text") == true)
+            XCTAssertTrue(latest?.caseFileSources.isEmpty == true)
+        }
+    }
+
+    func testTaggedFileWithActiveExtractionReportsStillReading() async throws {
+        try await withRestoredStore { store in
+            try await store.replace(with: AlphaPersistedState.seed())
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+
+            let maybeCaseID = await MainActor.run { model.cases.first?.id }
+            let caseID = try XCTUnwrap(maybeCaseID)
+            let documentID = UUID()
+            let readingDocument = AlphaCaseDocument(
+                id: documentID,
+                title: "Reading scan",
+                fileName: "reading-scan.pdf",
+                kind: .pdf,
+                storedRelativePath: "docs/reading-scan.pdf",
+                importedAt: .now,
+                pageCount: 1,
+                ocrStatus: .placeholder,
+                indexingStatus: .extracting,
+                pages: [],
+                extractionRuns: [
+                    AlphaExtractionRun(
+                        caseId: caseID,
+                        documentId: documentID,
+                        mode: .caseAssociate,
+                        status: .running,
+                        progressState: .acquiringText,
+                        startedAt: .now,
+                        pagesProcessed: 0,
+                        totalPages: 1,
+                        fieldsExtracted: 0,
+                        fieldsNeedingReview: 0,
+                        warnings: []
+                    )
+                ]
+            )
+            await MainActor.run {
+                let testPack = AlphaInstalledModelPack(
+                    packId: "case-associate-test-pack",
+                    tier: .caseAssociate,
+                    installPath: "model-packs/case_associate/pack.dev",
+                    checksumSha256: String(repeating: "a", count: 64),
+                    artifactKind: "tiny_dev_artifact",
+                    runtimeMode: .deterministicDev,
+                    developmentOnly: true,
+                    isActive: true
+                )
+                model.privateAISnapshot.activePack = testPack
+                model.persisted.installedPacks = [testPack]
+                model.persisted.settings.activeTier = .caseAssociate
+                if let caseIndex = model.persisted.cases.firstIndex(where: { $0.id == caseID }) {
+                    model.persisted.cases[caseIndex].documents.append(readingDocument)
+                }
+                model.invalidateWorkspaceDerivedState()
+                model.setSelectedAskDocumentIDs([readingDocument.id], for: caseID)
+                model.submitAsk(question: "What does this selected file say?", scopeCaseID: caseID, webEnabled: false)
+            }
+
+            let latest = await MainActor.run { model.latestAskResult }
+            XCTAssertEqual(latest?.answerTitle, "Selected file is still being read")
+            XCTAssertEqual(latest?.statusNote, "File text not ready")
+            XCTAssertTrue(latest?.answerSections.joined(separator: " ").contains("extracting readable text") == true)
+            XCTAssertTrue(latest?.caseFileSources.isEmpty == true)
+        }
+    }
+
+    func testPlaceholderPageSnippetIsNotAskUsableText() {
+        let document = AlphaCaseDocument(
+            title: "Scanned placeholder",
+            fileName: "scanned-placeholder.pdf",
+            kind: .pdf,
+            storedRelativePath: "docs/scanned-placeholder.pdf",
+            importedAt: .now,
+            pageCount: 1,
+            ocrStatus: .placeholder,
+            indexingStatus: .notStarted,
+            pages: [
+                AlphaDocumentPage(
+                    pageNumber: 1,
+                    snippet: "Imported page 1.",
+                    extractedText: nil,
+                    anchorText: nil,
+                    ocrStatus: .failed,
+                    indexingStatus: .failed
+                )
+            ]
+        )
+
+        XCTAssertFalse(document.hasAskUsableExtractedText)
+    }
+
+    func testQueuedIncomingDocumentsCreateMatterAndImportFiles() async throws {
+        try await withRestoredStore { store in
+            try await store.replace(with: AlphaPersistedState.seed())
+            let tempURL = try makeTemporaryTextFile(
+                name: "shared-order.txt",
+                contents: "Shared order dated 14/05/2026. Matter listed for evidence filing."
+            )
+            defer { try? FileManager.default.removeItem(at: tempURL) }
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+            await MainActor.run {
+                model.queueIncomingDocumentURL(tempURL)
+                model.createMatterForQueuedIncomingDocuments(title: "Incoming Shared Matter")
+            }
+
+            try await Task.sleep(nanoseconds: 250_000_000)
+
+            let createdMatter = await MainActor.run {
+                model.persisted.cases.first(where: { $0.title == "Incoming Shared Matter" })
+            }
+            let matter = try XCTUnwrap(createdMatter)
+            XCTAssertEqual(matter.documents.count, 1)
+            XCTAssertEqual(matter.documents.first?.kind, .text)
+            XCTAssertTrue(matter.documents.first?.extractedText?.contains("evidence filing") == true)
+
+            let selectedScopeCaseID = await MainActor.run { model.askSelectedScopeCaseID }
+            let selectedDocumentIDs = await MainActor.run { model.selectedAskDocumentIDs(for: matter.id) }
+            XCTAssertEqual(selectedScopeCaseID, matter.id)
+            XCTAssertEqual(selectedDocumentIDs, Set(matter.documents.map(\.id)))
         }
     }
 
@@ -1638,15 +2478,22 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         let store = AlphaRossStore()
         let originalState = try? await store.load()
 
+        func restoreOriginalState() async {
+            // AlphaRossModel persists through a short debounce. Let any save the
+            // test body already scheduled finish before restoring the shared
+            // plaintext test store, otherwise a delayed save can leak into the
+            // next test's setup.
+            try? await Task.sleep(for: .milliseconds(300))
+            if let originalState {
+                try? await store.replace(with: originalState)
+            }
+        }
+
         do {
             try await body(store)
-            if let originalState {
-                try? await store.replace(with: originalState)
-            }
+            await restoreOriginalState()
         } catch {
-            if let originalState {
-                try? await store.replace(with: originalState)
-            }
+            await restoreOriginalState()
             throw error
         }
     }
@@ -1656,6 +2503,31 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             .appendingPathComponent("\(UUID().uuidString)-\(name)")
         try contents.write(to: url, atomically: true, encoding: .utf8)
         return url
+    }
+
+    private func makeSparseFile(at url: URL, bytes: Int64) throws {
+        FileManager.default.createFile(atPath: url.path(), contents: nil)
+        let handle = try FileHandle(forWritingTo: url)
+        try handle.truncate(atOffset: UInt64(bytes))
+        try handle.close()
+    }
+
+    private func eventually(
+        timeoutNanoseconds: UInt64,
+        intervalNanoseconds: UInt64 = 50_000_000,
+        _ condition: () async -> Bool
+    ) async throws {
+        let deadline = Date().addingTimeInterval(Double(timeoutNanoseconds) / 1_000_000_000)
+        while true {
+            if await condition() {
+                return
+            }
+            if Date() >= deadline {
+                XCTFail("Condition was not met before timeout")
+                return
+            }
+            try await Task.sleep(nanoseconds: intervalNanoseconds)
+        }
     }
 
     private func assistantSetupRegressionTier(recommendedTier: AlphaCapabilityTier) -> AlphaCapabilityTier {

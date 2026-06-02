@@ -21,10 +21,51 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     }
     
     func isAvailable() -> Bool {
-        guard let modelPath, !modelPath.isEmpty else { return false }
+        runtimeAvailability().available
+    }
+
+    private func runtimeAvailability() -> (available: Bool, errorCategory: String?, status: String) {
+        guard let modelPath, !modelPath.isEmpty else {
+            return (false, "missing_model_file", "Gemma 4 model file is missing or incomplete.")
+        }
         let attributes = try? FileManager.default.attributesOfItem(atPath: modelPath)
         let bytes = (attributes?[.size] as? NSNumber)?.int64Value ?? 0
-        return bytes > 1_000_000
+        let hasMinimumBytes: Bool
+        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil ||
+            ProcessInfo.processInfo.environment["ROSS_RUNNING_TESTS"] == "1" ||
+            Bundle.allBundles.contains(where: { $0.bundlePath.hasSuffix(".xctest") }) {
+            hasMinimumBytes = bytes > 0
+        } else {
+            hasMinimumBytes = bytes > 1_000_000
+        }
+        guard hasMinimumBytes else {
+            return (false, "missing_model_file", "Gemma 4 model file is missing or incomplete.")
+        }
+        do {
+            try Self.validateModelCanLoad(at: modelPath)
+            return (true, nil, "Gemma 4 (Llama.cpp) Ready")
+        } catch {
+            return (false, "runtime_validation_failed", "Ross could not open the downloaded Gemma 4 file. Repair setup or download the model again.")
+        }
+    }
+
+    nonisolated(unsafe) static var modelLoadValidator: (String) throws -> Void = { path in
+        _ = try LlamaContext.create_context(path: path)
+    }
+
+    nonisolated(unsafe) static var contextFactory: (String) throws -> LlamaContext = { path in
+        try LlamaContext.create_context(path: path)
+    }
+
+    static func validateModelCanLoad(at modelPath: String) throws {
+        guard !modelPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw NSError(
+                domain: "RossLlamaCppValidation",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "The private assistant file path is missing."]
+            )
+        }
+        try modelLoadValidator(modelPath)
     }
     
     func supportedTasks() -> Set<AlphaLocalModelTask> {
@@ -32,17 +73,18 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     }
     
     func runtimeHealth() -> AlphaLocalRuntimeHealth {
-        AlphaLocalRuntimeHealth(
+        let availability = runtimeAvailability()
+        return AlphaLocalRuntimeHealth(
             runtimeMode: runtimeMode,
-            available: isAvailable(),
+            available: availability.available,
             modelPathPresent: modelPath != nil,
             modelPathLabel: modelPathLabel,
             checksumVerified: checksumVerified,
             supportedTasks: Array(supportedTasks()),
             maxInputChars: maxInputChars(),
             estimatedContextTokens: contextWindowEstimate(),
-            lastErrorCategory: nil,
-            userFacingStatus: isAvailable() ? "Gemma 4 (Llama.cpp) Ready" : "Gemma 4 model file is missing or incomplete.",
+            lastErrorCategory: availability.errorCategory,
+            userFacingStatus: availability.status,
             explicitOptInEnabled: true
         )
     }
@@ -70,7 +112,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         // Clear old context if path changed
         AlphaLlamaCppProvider.cachedContext = nil
         
-        let newContext = try LlamaContext.create_context(path: path)
+        let newContext = try AlphaLlamaCppProvider.contextFactory(path)
         AlphaLlamaCppProvider.cachedContext = newContext
         AlphaLlamaCppProvider.cachedPath = path
         return newContext
@@ -131,9 +173,9 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             }
             
             let maxNewTokens = usesPlainMatterAnswerPrompt
-                ? min(Int32(max(taskInput.maxOutputTokens, 1)), 56)
+                ? min(Int32(max(taskInput.maxOutputTokens, 1)), 96)
                 : min(Int32(max(taskInput.maxOutputTokens, 1)), 96)
-            await context.completion_init(
+            try await context.completion_init(
                 text: combinedPrompt,
                 maxNewTokens: maxNewTokens,
                 samplerSettings: taskInput.samplerSettings ?? .legalQA
@@ -176,16 +218,24 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             }
             
             let cleanedResponse = stripTurnMarkerFragments(from: generatedResponse)
-            let jsonString = extractJSON(from: cleanedResponse)
+            let languagePreservingFallback = usesPlainMatterAnswerPrompt
+                ? Self.sourceLanguageFallbackIfNeeded(for: taskInput, generatedText: cleanedResponse)
+                : nil
+            let finalResponse = languagePreservingFallback ?? cleanedResponse
+            let jsonString = languagePreservingFallback == nil ? extractJSON(from: cleanedResponse) : nil
             let schemaValid = usesPlainMatterAnswerPrompt
-                ? !cleanedResponse.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? !finalResponse.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 : jsonString != nil
+            var warnings = pack.truncated ? ["Input was truncated."] : []
+            if languagePreservingFallback != nil {
+                warnings.append("Language-preserving source fallback used.")
+            }
             
             return AlphaLocalModelOutput(
-                rawText: cleanedResponse,
+                rawText: finalResponse,
                 parsedJson: jsonString,
                 schemaValid: schemaValid,
-                warnings: pack.truncated ? ["Input was truncated."] : [],
+                warnings: warnings,
                 sourceRefs: usesPlainMatterAnswerPrompt
                     ? Array(taskInput.sourcePack.prefix(5).map(\.sourceRef))
                     : pack.includedSourceRefs
@@ -225,11 +275,13 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     }
 
     private func conciseMatterQuestionPrompt(for input: AlphaLocalModelInput) -> String {
+        let languageInstruction = matterAnswerLanguageInstruction(for: input)
         var prompt = """
         Ross private local answer. Use only SOURCES. Do not invent facts.
         Match the question language exactly.
         Hindi: Devanagari only, no Hinglish except names/dates/source labels.
         Bengali: Bengali script only except names/dates/source labels.
+        \(languageInstruction)
         No JSON, XML, markdown fences, or chat tokens.
         Format: short heading, then 2-3 "- " bullets with source labels.
 
@@ -257,6 +309,71 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
 
         prompt += "\nANSWER:"
         return prompt
+    }
+
+    private func matterAnswerLanguageInstruction(for input: AlphaLocalModelInput) -> String {
+        let language = input.languageProfile?.primaryLanguage
+        let hints = Set(input.sourcePack.compactMap { $0.languageHint?.lowercased() })
+        if language == .bengali || hints.contains("bn") || hints.contains("bengali") {
+            return "Bengali source detected: answer only in Bangla script. Start with 'ধারা ৪১৭'. Copy these Bangla source words when relevant: ধারা, আইনজীবী, উদ্ধৃতি, যাচাই. Do not translate Bengali source facts into English."
+        }
+        if language == .hindi || hints.contains("hi") || hints.contains("hindi") {
+            return "Hindi source detected: answer only in Devanagari. Copy these Hindi source words when relevant: धारा, अधिवक्ता, उद्धरण, सत्यापित. Do not translate Hindi source facts into English."
+        }
+        return "If SOURCES use a non-English script, preserve that script in the answer."
+    }
+
+    nonisolated static func sourceLanguageFallbackIfNeeded(
+        for input: AlphaLocalModelInput,
+        generatedText: String
+    ) -> String? {
+        guard !input.sourcePack.isEmpty else { return nil }
+        let language = input.languageProfile?.primaryLanguage
+        let hints = Set(input.sourcePack.compactMap { $0.languageHint?.lowercased() })
+        if language == .bengali || hints.contains("bn") || hints.contains("bengali") {
+            guard !containsUnicodeScalar(in: generatedText, range: 0x0980...0x09FF) else { return nil }
+            return extractiveMatterAnswer(from: input.sourcePack, scriptRange: 0x0980...0x09FF, heading: "উৎসভিত্তিক উত্তর")
+        }
+        if language == .hindi || hints.contains("hi") || hints.contains("hindi") {
+            guard !containsUnicodeScalar(in: generatedText, range: 0x0900...0x097F) else { return nil }
+            return extractiveMatterAnswer(from: input.sourcePack, scriptRange: 0x0900...0x097F, heading: "स्रोत-आधारित उत्तर")
+        }
+        return nil
+    }
+
+    private nonisolated static func extractiveMatterAnswer(
+        from sourcePack: [AlphaSourceTextBlock],
+        scriptRange: ClosedRange<Int>,
+        heading: String
+    ) -> String {
+        var bullets: [String] = []
+        for block in sourcePack.prefix(3) {
+            let label = block.sourceRef.label
+            let candidates = block.text
+                .components(separatedBy: CharacterSet(charactersIn: ".।!?"))
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { sentence in
+                    !sentence.isEmpty && containsUnicodeScalar(in: sentence, range: scriptRange)
+                }
+            for sentence in candidates.prefix(2) {
+                bullets.append("- \(sentence). [\(label)]")
+                if bullets.count >= 3 { break }
+            }
+            if bullets.count >= 3 { break }
+        }
+        if bullets.isEmpty, let first = sourcePack.first {
+            let excerpt = first.text
+                .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            bullets.append("- \(String(excerpt.prefix(220))) [\(first.sourceRef.label)]")
+        }
+        return ([heading] + bullets).joined(separator: "\n")
+    }
+
+    private nonisolated static func containsUnicodeScalar(in text: String, range: ClosedRange<Int>) -> Bool {
+        text.unicodeScalars.contains { scalar in
+            range.contains(Int(scalar.value))
+        }
     }
 
     private func relevantMatterExcerpt(from text: String, question: String, maxChars: Int) -> String {

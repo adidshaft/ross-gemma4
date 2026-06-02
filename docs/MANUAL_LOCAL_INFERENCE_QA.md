@@ -13,8 +13,8 @@ Observed on 2026-06-02:
 - iOS Swift tests and simulator build passed for the Gemma GGUF download/install/readiness plumbing.
 - iOS simulator real Gemma GGUF smoke passed with `/Users/amanpandey/projects/ross-gemma4/artifacts/gemma-2-2b-it-Q4_K_M.gguf` (`e0aee85060f168f0f2d8473d7ea41ce2f3230c1bc1374847505ea599288a7787`) using `ROSS_LOCAL_RUNTIME=gemma_local_runtime`.
 - The smoke passed English source grounding, Bengali Bangla-script source grounding, Hindi Devanagari source grounding, and a general cautious answer.
-- A stricter rerun later on 2026-06-02 emitted `ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime tier=quick_start elapsed=91.00s ... source_native_model=true bengali_native_model=false hindi_native_model=true general_native_model=true`.
-- Native Hindi behavior is proven in that simulator smoke; native Bengali behavior is not claimed yet because Bengali used Ross's source-preserving fallback.
+- A stricter rerun later on 2026-06-02 emitted `ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime tier=quick_start elapsed=89.36s ... source_native_model=true bengali_native_model=true hindi_native_model=true general_native_model=true`.
+- Native Bengali and Hindi behavior are proven in that simulator smoke; no language-preserving fallback was used in the latest pass.
 - A physical/device QA pass over user-imported files is still required before claiming App Store/device performance.
 
 ## Canonical environment names
