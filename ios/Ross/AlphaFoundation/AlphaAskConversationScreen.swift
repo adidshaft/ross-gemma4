@@ -13,17 +13,6 @@ import UIKit
 import AppKit
 #endif
 
-private extension View {
-    @ViewBuilder
-    func alphaThreadListStyle() -> some View {
-        #if os(macOS)
-        listStyle(.inset)
-        #else
-        listStyle(.insetGrouped)
-        #endif
-    }
-}
-
 struct AlphaAskConversationScreen: View {
     @Bindable var model: AlphaRossModel
     let fixedScopeCaseID: UUID?
@@ -666,33 +655,24 @@ struct AlphaThreadSidebarSheet: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                ForEach(scopedCases, id: \.title) { group in
-                    if !group.sessions.isEmpty || group.caseId == activeScopeCaseID {
-                        Section(group.title) {
-                            ForEach(group.sessions) { session in
-                                Button {
-                                    onSelectThread(session, group.caseId)
-                                } label: {
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        Text(model.chatSessionTitle(session))
-                                            .font(.subheadline.weight(.semibold))
-                                            .foregroundStyle(Color.rossInk)
-                                            .lineLimit(1)
-                                        Text(alphaRelativeThreadTime(session.updatedAt))
-                                            .font(.caption)
-                                            .foregroundStyle(Color.rossInk.opacity(0.54))
-                                    }
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.vertical, 4)
-                                }
-                                .buttonStyle(.plain)
-                            }
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 16) {
+                    ForEach(scopedCases, id: \.title) { group in
+                        if !group.sessions.isEmpty || group.caseId == activeScopeCaseID {
+                            AlphaThreadGroupCard(
+                                title: group.title,
+                                caseId: group.caseId,
+                                sessions: group.sessions,
+                                activeScopeCaseID: activeScopeCaseID,
+                                model: model,
+                                onSelectThread: onSelectThread
+                            )
                         }
                     }
                 }
+                .padding(18)
             }
-            .alphaThreadListStyle()
+            .background(Color.rossGroupedBackground.ignoresSafeArea())
             .navigationTitle("Threads")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
@@ -700,9 +680,93 @@ struct AlphaThreadSidebarSheet: View {
                         Image(systemName: "square.and.pencil")
                     }
                     .accessibilityLabel("New thread")
+                    .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 14, expandsHorizontally: false)
                 }
             }
         }
+    }
+}
+
+private struct AlphaThreadGroupCard: View {
+    let title: String
+    let caseId: UUID?
+    let sessions: [AlphaChatSession]
+    let activeScopeCaseID: UUID?
+    @Bindable var model: AlphaRossModel
+    let onSelectThread: (AlphaChatSession, UUID?) -> Void
+
+    private var isActiveScope: Bool {
+        caseId == activeScopeCaseID
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Text(title)
+                    .font(.caption.weight(.bold))
+                    .textCase(.uppercase)
+                    .foregroundStyle(Color.rossInk.opacity(0.64))
+                    .lineLimit(1)
+
+                if isActiveScope {
+                    Text("Current")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(Color.rossAccent)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .rossGlassSurface(tint: Color.rossAccent.opacity(0.16), cornerRadius: 999, strokeOpacity: 0.40)
+                }
+
+                Spacer(minLength: 0)
+            }
+
+            if sessions.isEmpty {
+                Text("No saved threads yet.")
+                    .font(.footnote)
+                    .foregroundStyle(Color.rossInk.opacity(0.62))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 8)
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(sessions) { session in
+                        Button {
+                            onSelectThread(session, caseId)
+                        } label: {
+                            HStack(spacing: 12) {
+                                RossGlassIconView(.userMsg, variant: .neutral, size: 18, fallbackSystemImage: "bubble.left.and.text.bubble.right.fill")
+
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(model.chatSessionTitle(session))
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(Color.rossInk)
+                                        .lineLimit(1)
+
+                                    Text(alphaRelativeThreadTime(session.updatedAt))
+                                        .font(.caption)
+                                        .foregroundStyle(Color.rossInk.opacity(0.54))
+                                }
+
+                                Spacer(minLength: 0)
+
+                                Image(systemName: "chevron.right")
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(Color.rossInk.opacity(0.36))
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(12)
+                            .rossGlassSurface(cornerRadius: 14, interactive: true, shadowOpacity: 0.05, shadowRadius: 5, shadowY: 2, strokeOpacity: 0.44)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .rossGlassSurface(
+            tint: isActiveScope ? Color.rossAccent.opacity(0.14) : Color.rossAccent.opacity(0.06),
+            cornerRadius: 18,
+            strokeOpacity: isActiveScope ? 0.66 : 0.50
+        )
     }
 }
 
