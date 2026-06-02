@@ -2702,6 +2702,153 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "locally தயாரானது",
             "te": "locally సిద్ధం"
         ],
+        "no_prepared_work_needs_review": [
+            "en": "No prepared work needs review",
+            "hi": "कोई prepared work review के लिए नहीं है",
+            "bn": "কোনো prepared work review দরকার নেই",
+            "ta": "review தேவைப்படும் prepared work இல்லை",
+            "te": "review అవసరమైన prepared work లేదు"
+        ],
+        "nothing_prepared_yet": [
+            "en": "Nothing prepared yet",
+            "hi": "अभी कुछ prepared नहीं है",
+            "bn": "এখনও কিছু prepared নয়",
+            "ta": "இன்னும் எதுவும் prepared இல்லை",
+            "te": "ఇంకా ఏదీ prepared కాలేదు"
+        ],
+        "nothing_prepared_yet_detail": [
+            "en": "Import matter files or ask Ross to prepare today. Ross will not invent work without local matter state.",
+            "hi": "matter files import करें या Ross से today prepare करने को कहें। local matter state के बिना Ross work invent नहीं करेगा।",
+            "bn": "matter files import করুন বা Ross-কে today prepare করতে বলুন। local matter state ছাড়া Ross work invent করবে না।",
+            "ta": "matter files import செய்யவும் அல்லது today prepare செய்ய Ross-ஐ கேளுங்கள். local matter state இல்லாமல் Ross work invent செய்யாது.",
+            "te": "matter files import చేయండి లేదా today prepare చేయమని Ross‌ను అడగండి. local matter state లేకుండా Ross work invent చేయదు."
+        ],
+        "prepared_work_headline_one": [
+            "en": "%d prepared item needs review",
+            "hi": "%d prepared item review चाहता है",
+            "bn": "%d prepared item review দরকার",
+            "ta": "%d prepared item review தேவை",
+            "te": "%d prepared item review అవసరం"
+        ],
+        "prepared_work_headline_many": [
+            "en": "%d prepared items need review",
+            "hi": "%d prepared items review चाहते हैं",
+            "bn": "%d prepared items review দরকার",
+            "ta": "%d prepared items review தேவை",
+            "te": "%d prepared items review అవసరం"
+        ],
+        "prepared_work_count_one": [
+            "en": "%d prepared item",
+            "hi": "%d prepared item",
+            "bn": "%d prepared item",
+            "ta": "%d prepared item",
+            "te": "%d prepared item"
+        ],
+        "prepared_work_count_many": [
+            "en": "%d prepared items",
+            "hi": "%d prepared items",
+            "bn": "%d prepared items",
+            "ta": "%d prepared items",
+            "te": "%d prepared items"
+        ],
+        "plain_item_count_one": [
+            "en": "%d item",
+            "hi": "%d item",
+            "bn": "%d item",
+            "ta": "%d item",
+            "te": "%d item"
+        ],
+        "plain_item_count_many": [
+            "en": "%d items",
+            "hi": "%d items",
+            "bn": "%d items",
+            "ta": "%d items",
+            "te": "%d items"
+        ],
+        "view_all_prepared_work": [
+            "en": "View all %@",
+            "hi": "सभी %@ देखें",
+            "bn": "সব %@ দেখুন",
+            "ta": "அனைத்து %@ பார்க்கவும்",
+            "te": "అన్ని %@ చూడండి"
+        ],
+        "upcoming_dates_and_urgent_tasks": [
+            "en": "Upcoming dates and urgent tasks",
+            "hi": "Upcoming dates और urgent tasks",
+            "bn": "Upcoming dates এবং urgent tasks",
+            "ta": "Upcoming dates மற்றும் urgent tasks",
+            "te": "Upcoming dates మరియు urgent tasks"
+        ],
+        "work": [
+            "en": "Work",
+            "hi": "Work",
+            "bn": "Work",
+            "ta": "Work",
+            "te": "Work"
+        ],
+        "prepared_work_inbox": [
+            "en": "Prepared work inbox",
+            "hi": "Prepared work inbox",
+            "bn": "Prepared work inbox",
+            "ta": "Prepared work inbox",
+            "te": "Prepared work inbox"
+        ],
+        "all": [
+            "en": "All",
+            "hi": "सभी",
+            "bn": "সব",
+            "ta": "அனைத்தும்",
+            "te": "అన్నీ"
+        ],
+        "no_prepared_work": [
+            "en": "No prepared work",
+            "hi": "कोई prepared work नहीं",
+            "bn": "কোনো prepared work নেই",
+            "ta": "prepared work இல்லை",
+            "te": "prepared work లేదు"
+        ],
+        "no_prepared_work_detail": [
+            "en": "Ross only shows prepared work generated from real saved matters, files, dates, tasks, drafts, public-law previews, and source refs.",
+            "hi": "Ross सिर्फ real saved matters, files, dates, tasks, drafts, public-law previews और source refs से generated prepared work दिखाता है।",
+            "bn": "Ross শুধু real saved matters, files, dates, tasks, drafts, public-law previews, এবং source refs থেকে generated prepared work দেখায়।",
+            "ta": "real saved matters, files, dates, tasks, drafts, public-law previews மற்றும் source refs-இலிருந்து generated prepared work மட்டும் Ross காட்டும்.",
+            "te": "real saved matters, files, dates, tasks, drafts, public-law previews, మరియు source refs నుండి generated prepared work మాత్రమే Ross చూపిస్తుంది."
+        ],
+        "works_locally_on_this_device": [
+            "en": "Works locally on this device",
+            "hi": "इस device पर locally काम करता है",
+            "bn": "এই device-এ locally কাজ করে",
+            "ta": "இந்த device-இல் locally இயங்கும்",
+            "te": "ఈ device లో locally పనిచేస్తుంది"
+        ],
+        "no_dates_or_urgent_tasks_today": [
+            "en": "No dates or urgent tasks saved for today.",
+            "hi": "आज के लिए कोई dates या urgent tasks saved नहीं हैं।",
+            "bn": "আজকের জন্য কোনো dates বা urgent tasks saved নেই।",
+            "ta": "இன்றுக்கான dates அல்லது urgent tasks saved இல்லை.",
+            "te": "ఈరోజుకు dates లేదా urgent tasks saved లేవు."
+        ],
+        "setting_up_ross": [
+            "en": "Setting up Ross",
+            "hi": "Ross setup हो रहा है",
+            "bn": "Ross setup হচ্ছে",
+            "ta": "Ross setup ஆகிறது",
+            "te": "Ross setup అవుతోంది"
+        ],
+        "assistant_setup_preparing_detail": [
+            "en": "%@ is being prepared on this iPhone. You can keep using Ross while setup continues.",
+            "hi": "%@ इस iPhone पर prepared हो रहा है। setup जारी रहने तक आप Ross use कर सकते हैं।",
+            "bn": "%@ এই iPhone-এ prepared হচ্ছে। setup চলাকালীন আপনি Ross use করতে পারেন।",
+            "ta": "%@ இந்த iPhone-இல் prepared ஆகிறது. setup தொடரும் போது Ross use செய்யலாம்.",
+            "te": "%@ ఈ iPhone లో prepared అవుతోంది. setup కొనసాగుతున్నప్పుడు Ross use చేయవచ్చు."
+        ],
+        "open_assistant_setup": [
+            "en": "Open assistant setup",
+            "hi": "assistant setup खोलें",
+            "bn": "assistant setup খুলুন",
+            "ta": "assistant setup திறக்கவும்",
+            "te": "assistant setup తెరవండి"
+        ],
         "refresh_matter_after_import_detail": [
             "en": "Ask Ross to refresh this matter after importing real files.",
             "hi": "real files import करने के बाद Ross से इस matter को refresh कराएं।",

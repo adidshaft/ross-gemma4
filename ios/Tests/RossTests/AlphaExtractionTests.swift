@@ -787,6 +787,22 @@ final class AlphaExtractionTests: XCTestCase {
             "Review தேவை"
         )
         XCTAssertEqual(
+            alphaPreparedWorkHeadline(2, languageCode: "hi"),
+            "2 prepared items review चाहते हैं"
+        )
+        XCTAssertEqual(
+            alphaViewAllPreparedWorkLabel(3, languageCode: "ta"),
+            "அனைத்து 3 prepared items பார்க்கவும்"
+        )
+        XCTAssertEqual(
+            alphaAssistantSetupPreparingLabel("Quick start", languageCode: "bn"),
+            "Quick start এই iPhone-এ prepared হচ্ছে। setup চলাকালীন আপনি Ross use করতে পারেন।"
+        )
+        XCTAssertEqual(
+            rossLocalized("works_locally_on_this_device", languageCode: "te-IN"),
+            "ఈ device లో locally పనిచేస్తుంది"
+        )
+        XCTAssertEqual(
             rossLocalized("assistant_network_wifi_preferred", languageCode: "te-IN"),
             "Wi-Fi ప్రాధాన్యం"
         )

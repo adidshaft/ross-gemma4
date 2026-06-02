@@ -148,7 +148,7 @@ struct AlphaTodayWorkbenchScreen: View {
                 LazyVStack(alignment: .leading, spacing: alphaSectionSpacing) {
                     RossHeroCard(
                     eyebrow: alphaGreeting(),
-                    title: work.isEmpty ? "No prepared work needs review" : alphaPreparedWorkHeadline(work.count),
+                    title: work.isEmpty ? rossLocalized("no_prepared_work_needs_review") : alphaPreparedWorkHeadline(work.count),
                     detail: nil,
                     showsMedia: false,
                     mediaHeight: 108,
@@ -162,7 +162,7 @@ struct AlphaTodayWorkbenchScreen: View {
                 }
 
                 if visibleWork.isEmpty {
-                    AlphaHonestEmptyCard(title: "Nothing prepared yet", detail: "Import matter files or ask Ross to prepare today. Ross will not invent work without local matter state.")
+                    AlphaHonestEmptyCard(title: rossLocalized("nothing_prepared_yet"), detail: rossLocalized("nothing_prepared_yet_detail"))
                 } else {
                     ForEach(visibleWork) { item in
                         AlphaPreparedWorkCard(model: model, item: item, prominent: visibleWork.first?.id == item.id)
@@ -175,7 +175,7 @@ struct AlphaTodayWorkbenchScreen: View {
                             model.persist(workspaceChanged: false)
                         } label: {
                             HStack(spacing: 10) {
-                                Text("View all \(alphaPreparedWorkCountLabel(work.count))")
+                                Text(alphaViewAllPreparedWorkLabel(work.count))
                                     .font(.subheadline.weight(.semibold))
                                 Spacer(minLength: 0)
                                 Image(systemName: "arrow.right")
@@ -199,7 +199,7 @@ struct AlphaTodayWorkbenchScreen: View {
                     }
                 }
 
-                AlphaTodayDatesCard(title: "Upcoming dates and urgent tasks", dates: todayDates + Array(upcomingDates.prefix(3)), tasks: Array(todayTasks.prefix(3)), model: model)
+                AlphaTodayDatesCard(title: rossLocalized("upcoming_dates_and_urgent_tasks"), dates: todayDates + Array(upcomingDates.prefix(3)), tasks: Array(todayTasks.prefix(3)), model: model)
                 }
                 .padding(alphaScreenPadding)
                 .padding(.bottom, 116)
@@ -283,10 +283,10 @@ struct AlphaPreparedWorkScreen: View {
             RossGlassGroup(spacing: 14) {
                 LazyVStack(alignment: .leading, spacing: 14) {
                     HStack {
-                    AlphaInlineHeader(eyebrow: "Work", title: "Prepared work inbox", detail: alphaPreparedWorkCountLabel(items.count))
+                    AlphaInlineHeader(eyebrow: rossLocalized("work"), title: rossLocalized("prepared_work_inbox"), detail: alphaPreparedWorkCountLabel(items.count))
                     Spacer(minLength: 0)
                     Menu {
-                        Button("All") { statusFilter = nil }
+                        Button(rossLocalized("all")) { statusFilter = nil }
                         ForEach(AlphaPreparedWorkStatus.allCases, id: \.rawValue) { status in
                             Button(status.title) { statusFilter = status }
                         }
@@ -309,7 +309,7 @@ struct AlphaPreparedWorkScreen: View {
                 }
 
                 if items.isEmpty {
-                    AlphaHonestEmptyCard(title: "No prepared work", detail: "Ross only shows prepared work generated from real saved matters, files, dates, tasks, drafts, public-law previews, and source refs.")
+                    AlphaHonestEmptyCard(title: rossLocalized("no_prepared_work"), detail: rossLocalized("no_prepared_work_detail"))
                 } else {
                     ForEach(grouped.keys.sorted(), id: \.self) { matterName in
                         VStack(alignment: .leading, spacing: 10) {
@@ -334,7 +334,7 @@ struct AlphaLocalPrivacyBadge: View {
         HStack(spacing: 8) {
             Image(systemName: "lock.shield")
                 .font(.system(size: 13, weight: .semibold))
-            Text("Works locally on this device")
+            Text(rossLocalized("works_locally_on_this_device"))
                 .font(.caption.weight(.semibold))
         }
         .foregroundStyle(Color.rossInk.opacity(0.76))
@@ -434,7 +434,7 @@ struct AlphaTodayDatesCard: View {
             VStack(alignment: .leading, spacing: 12) {
                 AlphaWorkspaceSectionLabel(title: title, detail: alphaPlainItemCountLabel(dates.count + tasks.count))
                 if dates.isEmpty && tasks.isEmpty {
-                    Text("No dates or urgent tasks saved for today.")
+                    Text(rossLocalized("no_dates_or_urgent_tasks_today"))
                         .font(.subheadline)
                         .foregroundStyle(Color.rossInk.opacity(0.66))
                 } else {
@@ -474,9 +474,9 @@ private struct AlphaAssistantSetupProgressCard: View {
     let job: AlphaModelDownloadJob
 
     var body: some View {
-        RossSectionCard(title: "Setting up Ross", subtitle: alphaAssistantStateLabel(job.state)) {
+        RossSectionCard(title: rossLocalized("setting_up_ross"), subtitle: alphaAssistantStateLabel(job.state)) {
             VStack(alignment: .leading, spacing: 12) {
-                Text("\(job.tier.title) is being prepared on this iPhone. You can keep using Ross while setup continues.")
+                Text(alphaAssistantSetupPreparingLabel(job.tier.title))
                     .font(.subheadline)
                     .foregroundStyle(Color.rossInk.opacity(0.72))
                     .fixedSize(horizontal: false, vertical: true)
@@ -489,7 +489,7 @@ private struct AlphaAssistantSetupProgressCard: View {
                         .foregroundStyle(Color.rossInk.opacity(0.62))
                 }
 
-                Button("Open assistant setup") {
+                Button(rossLocalized("open_assistant_setup")) {
                     alphaHaptic(.selection)
                     model.path.append(.privateAISettings)
                 }
@@ -521,16 +521,27 @@ private func alphaAssistantSetupProgressLabel(_ job: AlphaModelDownloadJob) -> S
     return "\(downloadedLabel) of \(totalLabel)"
 }
 
-private func alphaPreparedWorkHeadline(_ count: Int) -> String {
-    count == 1 ? "1 prepared item needs review" : "\(count) prepared items need review"
+func alphaPreparedWorkHeadline(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    let key = count == 1 ? "prepared_work_headline_one" : "prepared_work_headline_many"
+    return String(format: rossLocalized(key, languageCode: languageCode), count)
 }
 
-private func alphaPreparedWorkCountLabel(_ count: Int) -> String {
-    count == 1 ? "1 prepared item" : "\(count) prepared items"
+func alphaPreparedWorkCountLabel(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    let key = count == 1 ? "prepared_work_count_one" : "prepared_work_count_many"
+    return String(format: rossLocalized(key, languageCode: languageCode), count)
 }
 
-private func alphaPlainItemCountLabel(_ count: Int) -> String {
-    count == 1 ? "1 item" : "\(count) items"
+func alphaPlainItemCountLabel(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    let key = count == 1 ? "plain_item_count_one" : "plain_item_count_many"
+    return String(format: rossLocalized(key, languageCode: languageCode), count)
+}
+
+func alphaViewAllPreparedWorkLabel(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("view_all_prepared_work", languageCode: languageCode), alphaPreparedWorkCountLabel(count, languageCode: languageCode))
+}
+
+func alphaAssistantSetupPreparingLabel(_ tierTitle: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("assistant_setup_preparing_detail", languageCode: languageCode), tierTitle)
 }
 
 private func alphaPreparedBadgeColor(_ badge: AlphaPreparedWorkBadge) -> Color {
