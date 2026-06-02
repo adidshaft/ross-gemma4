@@ -2159,6 +2159,12 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         rossSaveLanguageSelection(code: "en")
         defer { rossSaveLanguageSelection(code: previousLanguageCode) }
 
+        struct TechnicalLocalizedDownloadError: LocalizedError {
+            var errorDescription: String? {
+                "Model provider checksum validation failed in RossAlphaPack runtime."
+            }
+        }
+
         let messages = await MainActor.run {
             let model = AlphaRossModel()
             return [
@@ -2178,7 +2184,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.rangeProbeInvalidContentRange("bytes 0-10/*")),
                 model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.insufficientStorage(requiredGB: 12, availableGB: 3)),
                 model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.missingDownloadedFile),
-                model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.pausedByUser)
+                model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.pausedByUser),
+                model.assistantDownloadFailureMessage(TechnicalLocalizedDownloadError())
             ]
         }
 

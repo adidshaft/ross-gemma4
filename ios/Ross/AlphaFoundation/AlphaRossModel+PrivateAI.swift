@@ -791,11 +791,6 @@ extension AlphaRossModel {
         if let message = alphaAssistantNetworkDownloadFailureMessage(nsError: nsError) {
             return message
         }
-        if let localized = error as? LocalizedError, let description = localized.errorDescription {
-            return description
-        }
-        let message = error.localizedDescription
-        let lowercasedMessage = message.lowercased()
         let technicalMarkers = [
             "nserror",
             "nsurlerrordomain",
@@ -806,6 +801,17 @@ extension AlphaRossModel {
             "error code",
             " error "
         ]
+        if let localized = error as? LocalizedError,
+           let description = localized.errorDescription,
+           !description.isEmpty,
+           description.localizedCaseInsensitiveContains("unknown error") == false {
+            let lowercasedDescription = description.lowercased()
+            if !technicalMarkers.contains(where: lowercasedDescription.contains) {
+                return description
+            }
+        }
+        let message = error.localizedDescription
+        let lowercasedMessage = message.lowercased()
         if !message.isEmpty,
            message.localizedCaseInsensitiveContains("unknown error") == false,
            !technicalMarkers.contains(where: lowercasedMessage.contains) {
