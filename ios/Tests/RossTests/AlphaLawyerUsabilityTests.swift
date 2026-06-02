@@ -369,6 +369,90 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
     }
 
     @MainActor
+    func testSelectedFileSourcePackIncludesConfirmedReviewDetails() {
+        let caseID = UUID()
+        let documentID = UUID()
+        let confirmedSource = AlphaSourceRef(
+            caseId: caseID,
+            documentId: documentID,
+            documentTitle: "Order sheet",
+            pageNumber: 4,
+            textSnippet: "Next hearing: 17 June 2026"
+        )
+        let confirmedField = AlphaExtractedLegalField(
+            caseId: caseID,
+            documentId: documentID,
+            fieldType: .nextDate,
+            label: "Next hearing",
+            value: "17 June 2026",
+            sourceRefs: [confirmedSource],
+            confidence: 0.94,
+            extractionMode: .basic,
+            extractionPass: .userCorrected,
+            needsReview: false,
+            userCorrected: true
+        )
+        let unconfirmedField = AlphaExtractedLegalField(
+            caseId: caseID,
+            documentId: documentID,
+            fieldType: .amount,
+            label: "Claim amount",
+            value: "Rs. 99,99,999",
+            sourceRefs: [confirmedSource],
+            confidence: 0.42,
+            extractionMode: .basic,
+            extractionPass: .llmExtract,
+            needsReview: true
+        )
+        var state = AlphaPersistedState.seed()
+        state.cases = [
+            AlphaCaseMatter(
+                id: caseID,
+                title: "Sparse reviewed matter",
+                forum: "District Court",
+                stage: .evidence,
+                summary: "Reviewed order with sparse text.",
+                issueHighlights: [],
+                evidenceNotes: [],
+                draftTasks: [],
+                documents: [
+                    AlphaCaseDocument(
+                        id: documentID,
+                        title: "Order sheet",
+                        fileName: "order.txt",
+                        kind: .text,
+                        storedRelativePath: "docs/order.txt",
+                        importedAt: .now,
+                        pageCount: 1,
+                        ocrStatus: .nativeText,
+                        indexingStatus: .indexed,
+                        extractedText: nil,
+                        pages: [],
+                        extractedFields: [unconfirmedField, confirmedField]
+                    )
+                ],
+                sourceRefs: [confirmedSource]
+            )
+        ]
+
+        let model = AlphaRossModel(previewState: state)
+        model.setSelectedAskDocumentIDs([documentID], for: caseID)
+
+        let sourcePack = model.askRuntimeSourcePack(
+            question: "What is the next hearing in the selected file?",
+            scopeCaseID: caseID,
+            selectedDocuments: model.selectedAskDocuments(for: caseID)
+        )
+        let combinedText = sourcePack.map(\.text).joined(separator: "\n")
+
+        XCTAssertTrue(combinedText.contains("Confirmed details from Order sheet"))
+        XCTAssertTrue(combinedText.contains("Next hearing: 17 June 2026"))
+        XCTAssertFalse(combinedText.contains("Rs. 99,99,999"))
+        let confirmedBlock = sourcePack.first { $0.text.contains("Confirmed details from Order sheet") }
+        XCTAssertEqual(confirmedBlock?.sourceRef.pageNumber, 4)
+    }
+
+    @MainActor
     func testSelectedFileWaitingResultUsesPlainLanguage() {
         let caseID = UUID()
         let documentID = UUID()

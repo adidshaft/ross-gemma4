@@ -1516,6 +1516,10 @@ extension AlphaRossModel {
         let matterBlocks = askRuntimeMatterMemorySourcePack(scopeCaseID: scopeCaseID)
         var documentBlocks: [AlphaSourceTextBlock] = []
         for (caseMatter, document) in candidateDocuments {
+            if let confirmedDetailsBlock = alphaConfirmedDocumentDetailsSourceBlock(caseMatter: caseMatter, document: document) {
+                documentBlocks.append(confirmedDetailsBlock)
+            }
+
             let pages = document.pages.isEmpty
                 ? [AlphaDocumentPage(pageNumber: 1, snippet: document.dominantSourceSnippet ?? alphaAskCompactSnippet(from: document.extractedText))]
                 : document.pages
@@ -1559,6 +1563,47 @@ extension AlphaRossModel {
             return []
         }
         return askRuntimeMatterMemorySourcePack(scopeCaseID: scopeCaseID)
+    }
+
+    func alphaConfirmedDocumentDetailsSourceBlock(
+        caseMatter: AlphaCaseMatter,
+        document: AlphaCaseDocument
+    ) -> AlphaSourceTextBlock? {
+        let confirmedFields = document.extractedFields
+            .filter { !$0.needsReview }
+            .sorted { lhs, rhs in
+                if lhs.fieldType.rawValue != rhs.fieldType.rawValue {
+                    return lhs.fieldType.rawValue < rhs.fieldType.rawValue
+                }
+                return lhs.updatedAt > rhs.updatedAt
+            }
+            .prefix(6)
+
+        guard !confirmedFields.isEmpty else { return nil }
+
+        let details = confirmedFields
+            .map { "\($0.label): \($0.value)" }
+            .joined(separator: "\n")
+        let text = "Confirmed details from \(document.title):\n\(details)"
+        let sourceRef = AlphaSourceRef(
+            caseId: caseMatter.id,
+            documentId: document.id,
+            documentTitle: document.title,
+            pageNumber: confirmedFields.first?.sourceRefs.first?.pageNumber ?? 1,
+            paragraphRange: "confirmed details",
+            textSnippet: alphaAskCompactSnippet(from: text),
+            ocrConfidence: nil
+        )
+        return AlphaSourceTextBlock(
+            sourceRef: sourceRef,
+            text: text,
+            pageNumber: sourceRef.pageNumber,
+            languageHint: alphaSourceLanguageHint(
+                profile: document.languageProfile,
+                pageNumber: sourceRef.pageNumber
+            ),
+            ocrConfidence: nil
+        )
     }
 
     func alphaRankedAskSourceBlocks(
