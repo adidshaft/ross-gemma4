@@ -1781,6 +1781,7 @@ struct AlphaClassificationReviewCard: View {
     var body: some View {
         let confidenceLabel = alphaConfidenceLabel(confidence: classification.confidence, needsReview: classification.needsReview)
         let confidenceSupport = alphaConfidenceSupportText(confidence: classification.confidence, needsReview: classification.needsReview)
+        let confidenceTint = alphaConfidenceTint(confidence: classification.confidence, needsReview: classification.needsReview)
 
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -1790,7 +1791,7 @@ struct AlphaClassificationReviewCard: View {
                 Spacer(minLength: 8)
                 AlphaConfidenceBadge(
                     label: confidenceLabel,
-                    tint: alphaConfidenceTint(confidenceLabel)
+                    tint: confidenceTint
                 )
             }
 
@@ -1801,7 +1802,7 @@ struct AlphaClassificationReviewCard: View {
 
             Text(confidenceSupport)
                 .font(.caption)
-                .foregroundStyle(alphaConfidenceTint(confidenceLabel))
+                .foregroundStyle(confidenceTint)
                 .fixedSize(horizontal: false, vertical: true)
 
             if let subtype = classification.subtype, !subtype.isEmpty {
@@ -1855,11 +1856,11 @@ struct AlphaClassificationReviewCard: View {
         .padding(.leading, 5)
         .background(alignment: .leading) {
             RoundedRectangle(cornerRadius: 999, style: .continuous)
-                .fill(alphaConfidenceTint(confidenceLabel).opacity(0.72))
+                .fill(confidenceTint.opacity(0.72))
                 .frame(width: alphaReviewAccentWidth)
                 .padding(.vertical, 12)
         }
-        .rossGlassSurface(tint: alphaConfidenceTint(confidenceLabel).opacity(0.10), cornerRadius: RossSurface.cornerRadius, strokeOpacity: 0.58)
+        .rossGlassSurface(tint: confidenceTint.opacity(0.10), cornerRadius: RossSurface.cornerRadius, strokeOpacity: 0.58)
     }
 }
 
@@ -1876,6 +1877,8 @@ struct AlphaExtractedFieldReviewCard: View {
 
     var body: some View {
         let confidenceSupport = alphaConfidenceSupportText(confidence: field.confidence, needsReview: field.needsReview)
+        let confidenceLabel = alphaConfidenceLabel(confidence: field.confidence, needsReview: field.needsReview)
+        let confidenceTint = alphaConfidenceTint(confidence: field.confidence, needsReview: field.needsReview)
 
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -1884,8 +1887,8 @@ struct AlphaExtractedFieldReviewCard: View {
                     .foregroundStyle(Color.rossInk.opacity(0.58))
                 Spacer(minLength: 8)
                 AlphaConfidenceBadge(
-                    label: field.confidenceLabel,
-                    tint: alphaConfidenceTint(field.confidenceLabel)
+                    label: confidenceLabel,
+                    tint: confidenceTint
                 )
             }
 
@@ -1904,7 +1907,7 @@ struct AlphaExtractedFieldReviewCard: View {
 
             Text(confidenceSupport)
                 .font(.caption)
-                .foregroundStyle(alphaConfidenceTint(field.confidenceLabel))
+                .foregroundStyle(confidenceTint)
                 .fixedSize(horizontal: false, vertical: true)
 
             AlphaSourceRefChips(
@@ -1949,11 +1952,11 @@ struct AlphaExtractedFieldReviewCard: View {
         .padding(.leading, 5)
         .background(alignment: .leading) {
             RoundedRectangle(cornerRadius: 999, style: .continuous)
-                .fill(alphaConfidenceTint(field.confidenceLabel).opacity(0.72))
+                .fill(confidenceTint.opacity(0.72))
                 .frame(width: alphaReviewAccentWidth)
                 .padding(.vertical, 12)
         }
-        .rossGlassSurface(tint: alphaConfidenceTint(field.confidenceLabel).opacity(0.10), cornerRadius: RossSurface.cornerRadius, strokeOpacity: 0.58)
+        .rossGlassSurface(tint: confidenceTint.opacity(0.10), cornerRadius: RossSurface.cornerRadius, strokeOpacity: 0.58)
         .onAppear {
             draftValue = field.value
         }

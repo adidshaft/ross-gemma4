@@ -1216,34 +1216,32 @@ func alphaIsImportantReviewField(_ type: AlphaExtractedLegalFieldType) -> Bool {
 
 func alphaConfidenceLabel(confidence: Double, needsReview: Bool) -> String {
     if needsReview {
-        return "Please confirm"
+        return rossLocalized("please_confirm")
     }
     if confidence < 0.84 {
-        return "Low confidence"
+        return rossLocalized("low_confidence")
     }
-    return "Verified"
+    return rossLocalized("verified")
 }
 
-func alphaConfidenceTint(_ label: String) -> Color {
-    switch label {
-    case "Verified":
-        return Color.rossSuccess
-    case "Low confidence":
-        return Color.rossAccent
-    default:
+func alphaConfidenceTint(confidence: Double, needsReview: Bool) -> Color {
+    if needsReview {
         return .orange
     }
+    if confidence < 0.84 {
+        return Color.rossAccent
+    }
+    return Color.rossSuccess
 }
 
 func alphaConfidenceSupportText(confidence: Double, needsReview: Bool) -> String {
-    switch alphaConfidenceLabel(confidence: confidence, needsReview: needsReview) {
-    case "Verified":
-        return "Verified from the file"
-    case "Low confidence":
-        return "Ross found this, but the wording should be double-checked"
-    default:
-        return "Needs your confirmation before you rely on it"
+    if needsReview {
+        return rossLocalized("confirmation_needed_before_rely")
     }
+    if confidence < 0.84 {
+        return rossLocalized("confidence_double_check")
+    }
+    return rossLocalized("verified_from_file")
 }
 
 func alphaFileSizeLabel(_ bytes: Int64) -> String {

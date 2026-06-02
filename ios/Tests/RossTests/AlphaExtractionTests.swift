@@ -1194,6 +1194,23 @@ final class AlphaExtractionTests: XCTestCase {
             rossLocalized("device_cache", languageCode: "bn"),
             "ডিভাইস ক্যাশ"
         )
+        rossSaveLanguageSelection(code: "hi")
+        XCTAssertEqual(
+            alphaConfidenceLabel(confidence: 0.92, needsReview: false),
+            "Verified"
+        )
+        XCTAssertEqual(
+            alphaConfidenceSupportText(confidence: 0.70, needsReview: false),
+            "Ross ने यह पाया है, लेकिन wording दोबारा check करें"
+        )
+        XCTAssertEqual(
+            alphaConfidenceLabel(confidence: 0.92, needsReview: true),
+            "कृपया confirm करें"
+        )
+        XCTAssertEqual(
+            alphaConfidenceSupportText(confidence: 0.92, needsReview: true),
+            "इस पर भरोसा करने से पहले आपका confirmation चाहिए"
+        )
         XCTAssertEqual(
             rossLocalized("notes_drafts_title", languageCode: "hi"),
             "नोट्स और ड्राफ्ट"

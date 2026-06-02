@@ -4620,6 +4620,48 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Review தேவை",
             "te": "Review అవసరం"
         ],
+        "please_confirm": [
+            "en": "Please confirm",
+            "hi": "कृपया confirm करें",
+            "bn": "অনুগ্রহ করে confirm করুন",
+            "ta": "தயவு செய்து confirm செய்யவும்",
+            "te": "దయచేసి confirm చేయండి"
+        ],
+        "low_confidence": [
+            "en": "Low confidence",
+            "hi": "कम confidence",
+            "bn": "কম confidence",
+            "ta": "குறைந்த confidence",
+            "te": "తక్కువ confidence"
+        ],
+        "verified": [
+            "en": "Verified",
+            "hi": "Verified",
+            "bn": "Verified",
+            "ta": "Verified",
+            "te": "Verified"
+        ],
+        "verified_from_file": [
+            "en": "Verified from the file",
+            "hi": "फ़ाइल से verified",
+            "bn": "ফাইল থেকে verified",
+            "ta": "கோப்பிலிருந்து verified",
+            "te": "ఫైల్ నుండి verified"
+        ],
+        "confidence_double_check": [
+            "en": "Ross found this, but the wording should be double-checked",
+            "hi": "Ross ने यह पाया है, लेकिन wording दोबारा check करें",
+            "bn": "Ross এটি পেয়েছে, তবে wording আবার check করুন",
+            "ta": "Ross இதைக் கண்டது, ஆனால் wording மீண்டும் check செய்யவும்",
+            "te": "Ross దీనిని కనుగొంది, కానీ wording మళ్లీ check చేయండి"
+        ],
+        "confirmation_needed_before_rely": [
+            "en": "Needs your confirmation before you rely on it",
+            "hi": "इस पर भरोसा करने से पहले आपका confirmation चाहिए",
+            "bn": "এটির উপর নির্ভর করার আগে আপনার confirmation দরকার",
+            "ta": "இதில் நம்பிக்கை வைக்கும் முன் உங்கள் confirmation தேவை",
+            "te": "దీనిపై ఆధారపడే ముందు మీ confirmation అవసరం"
+        ],
         "review_items_from_files": [
             "en": "%@ from your files.",
             "hi": "आपकी files से %@.",
