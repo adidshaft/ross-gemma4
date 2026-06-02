@@ -1050,6 +1050,34 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Ross அமைப்பைக் கண்டது, ஆனால் தனிப்பட்ட உதவியாளர் இப்போது திறக்கவில்லை. My assistant-ல் Repair setup இயக்கவும்.",
             "te": "Ross సెటప్‌ను కనుగొంది, కానీ ప్రైవేట్ సహాయకుడు ఇప్పుడు తెరుచుకోవడం లేదు. My assistant‌లో Repair setup నడపండి."
         ],
+        "assistant_existing_setup_repair_detail": [
+            "en": "Ross found an assistant setup file, but could not open it. Ross removed the bad file. Open My assistant and use Repair setup to start fresh.",
+            "hi": "Ross को assistant setup file मिली, लेकिन वह खुली नहीं। Ross ने खराब file हटा दी। Fresh start के लिए My assistant खोलकर Repair setup चलाएँ.",
+            "bn": "Ross assistant setup file খুঁজে পেয়েছে, কিন্তু খুলতে পারেনি। Ross খারাপ file সরিয়েছে। Fresh start করতে My assistant খুলে Repair setup ব্যবহার করুন.",
+            "ta": "Ross assistant setup file-ஐ கண்டது, ஆனால் திறக்க முடியவில்லை. Ross கெட்ட file-ஐ நீக்கியது. Fresh start செய்ய My assistant திறந்து Repair setup பயன்படுத்தவும்.",
+            "te": "Ross assistant setup file కనుగొంది, కానీ తెరవలేకపోయింది. Ross పాడైన file ను తొలగించింది. Fresh start కోసం My assistant తెరిచి Repair setup ఉపయోగించండి."
+        ],
+        "assistant_download_resume_missing_restart": [
+            "en": "Saved assistant setup progress was unavailable. Ross will restart the assistant download from the beginning.",
+            "hi": "Saved assistant setup progress उपलब्ध नहीं था। Ross assistant download शुरुआत से restart करेगा.",
+            "bn": "Saved assistant setup progress পাওয়া যায়নি। Ross assistant download শুরু থেকে restart করবে.",
+            "ta": "Saved assistant setup progress கிடைக்கவில்லை. Ross assistant download-ஐ தொடக்கம் முதல் restart செய்யும்.",
+            "te": "Saved assistant setup progress అందుబాటులో లేదు. Ross assistant download ను మొదటి నుండి restart చేస్తుంది."
+        ],
+        "assistant_download_resume_missing_restart_detail": [
+            "en": "Saved assistant setup progress was unavailable, so Ross restarted the assistant download from the beginning. No case files were read.",
+            "hi": "Saved assistant setup progress उपलब्ध नहीं था, इसलिए Ross ने assistant download शुरुआत से restart किया। कोई case files नहीं पढ़ी गईं.",
+            "bn": "Saved assistant setup progress পাওয়া যায়নি, তাই Ross assistant download শুরু থেকে restart করেছে। কোনো case files পড়া হয়নি.",
+            "ta": "Saved assistant setup progress கிடைக்கவில்லை, அதனால் Ross assistant download-ஐ தொடக்கம் முதல் restart செய்தது. Case files எதுவும் வாசிக்கப்படவில்லை.",
+            "te": "Saved assistant setup progress అందుబాటులో లేదు, కాబట్టి Ross assistant download ను మొదటి నుండి restart చేసింది. Case files ఏవీ చదవబడలేదు."
+        ],
+        "assistant_download_resume_stale_restart_detail": [
+            "en": "Saved assistant setup progress could not continue, so Ross restarted the assistant download from the beginning. No case files were read.",
+            "hi": "Saved assistant setup progress continue नहीं हो पाया, इसलिए Ross ने assistant download शुरुआत से restart किया। कोई case files नहीं पढ़ी गईं.",
+            "bn": "Saved assistant setup progress continue করা যায়নি, তাই Ross assistant download শুরু থেকে restart করেছে। কোনো case files পড়া হয়নি.",
+            "ta": "Saved assistant setup progress continue செய்ய முடியவில்லை, அதனால் Ross assistant download-ஐ தொடக்கம் முதல் restart செய்தது. Case files எதுவும் வாசிக்கப்படவில்லை.",
+            "te": "Saved assistant setup progress continue కాలేదు, కాబట్టి Ross assistant download ను మొదటి నుండి restart చేసింది. Case files ఏవీ చదవబడలేదు."
+        ],
         "ask_private_assistant_downloading_detail": [
             "en": "Assistant setup is still downloading or checking the file. Ross will answer after the private assistant is ready.",
             "hi": "सहायक अभी डाउनलोड या जाँच में है. तैयार होते ही Ross जवाब देगा.",

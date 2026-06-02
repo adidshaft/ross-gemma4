@@ -2052,6 +2052,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
     }
 
     func testResumeJobClearsStaleResumeDataAndRecordsRestart() async throws {
+        rossSaveLanguageSelection(code: "te")
         try await withRestoredStore { store in
             await store.removeAllModelArtifacts()
             let artifact = alphaAssistantModelArtifact(for: .quickStart)
@@ -2083,10 +2084,12 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             try await Task.sleep(for: .milliseconds(350))
 
             let snapshot = await MainActor.run { model.persisted }
-            XCTAssertNil(snapshot.modelJobs.first(where: { $0.id == job.id })?.resumeDataRelativePath)
+            let restartedJob = snapshot.modelJobs.first(where: { $0.id == job.id })
+            XCTAssertNil(restartedJob?.resumeDataRelativePath)
             XCTAssertTrue(snapshot.ledgerEntries.contains {
                 $0.title == "Assistant download resume restarted" &&
                 $0.detail.localizedCaseInsensitiveContains("assistant download") &&
+                $0.detail.contains("Case files ఏవీ చదవబడలేదు") &&
                 !$0.detail.localizedCaseInsensitiveContains("model download") &&
                 $0.purpose == .model_download &&
                 $0.payloadClass == .no_case_data
@@ -2328,6 +2331,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
     }
 
     func testInstalledPackActivationRejectsRuntimeInvalidArtifact() async throws {
+        rossSaveLanguageSelection(code: "hi")
         try await withRestoredStore { store in
             let activePath = "model-packs/quick_start/current.gguf"
             let brokenPath = "model-packs/case_associate/broken.gguf"
@@ -2411,7 +2415,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertTrue(snapshot.installedPacks.first { $0.id == activePack.id }?.isActive == true)
             XCTAssertFalse(snapshot.installedPacks.first { $0.id == brokenPack.id }?.isActive == true)
             XCTAssertEqual(.failed, snapshot.modelJobs.first?.state)
-            XCTAssertTrue(snapshot.modelJobs.first?.failureReason?.contains("could not open") == true)
+            XCTAssertTrue(snapshot.modelJobs.first?.failureReason?.contains("खोल नहीं पाया") == true)
             XCTAssertTrue(snapshot.modelJobs.first?.failureReason?.contains("My assistant") == true)
             XCTAssertTrue(snapshot.modelJobs.first?.failureReason?.contains("Repair setup") == true)
             XCTAssertFalse(snapshot.modelJobs.first?.failureReason?.localizedCaseInsensitiveContains("download") == true)

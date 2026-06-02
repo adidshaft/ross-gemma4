@@ -795,8 +795,10 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     func testExistingAssistantSetupRepairCopyPointsToMyAssistant() {
+        rossSaveLanguageSelection(code: "hi")
         XCTAssertTrue(alphaAssistantExistingSetupRepairDetail.contains("My assistant"))
         XCTAssertTrue(alphaAssistantExistingSetupRepairDetail.contains("Repair setup"))
+        XCTAssertTrue(alphaAssistantExistingSetupRepairDetail.contains("खराब file हटा दी"))
         XCTAssertFalse(alphaAssistantExistingSetupRepairDetail.localizedCaseInsensitiveContains("downloaded assistant file"))
         XCTAssertFalse(alphaAssistantExistingSetupRepairDetail.localizedCaseInsensitiveContains("Retry can download"))
     }

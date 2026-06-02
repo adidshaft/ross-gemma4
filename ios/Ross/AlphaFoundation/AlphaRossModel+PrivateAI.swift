@@ -13,7 +13,9 @@ import UIKit
 import AppKit
 #endif
 
-let alphaAssistantExistingSetupRepairDetail = "Ross found an assistant setup file, but could not open it. Ross removed the bad file. Open My assistant and use Repair setup to start fresh."
+var alphaAssistantExistingSetupRepairDetail: String {
+    rossLocalized("assistant_existing_setup_repair_detail")
+}
 
 private extension String {
     func ifEmpty(_ fallback: String) -> String {
@@ -111,13 +113,13 @@ extension AlphaRossModel {
         updateJob(jobID) {
             $0.resumeDataRelativePath = nil
             $0.bytesDownloaded = 0
-            $0.failureReason = "Saved resume data was unavailable. Ross will restart the assistant download from the beginning."
+            $0.failureReason = rossLocalized("assistant_download_resume_missing_restart")
             $0.updatedAt = .now
         }
         persisted.ledgerEntries.insert(
             AlphaPrivacyLedgerEntry(
                 title: "Assistant download resume restarted",
-                detail: "Saved resume data was unavailable, so Ross restarted the assistant download from the beginning. No case files were read.",
+                detail: rossLocalized("assistant_download_resume_missing_restart_detail"),
                 purpose: .model_download,
                 payloadClass: .no_case_data,
                 endpointLabel: "device://model-resume",
@@ -141,7 +143,7 @@ extension AlphaRossModel {
         persisted.ledgerEntries.insert(
             AlphaPrivacyLedgerEntry(
                 title: "Assistant download resume restarted",
-                detail: "Saved resume data could not continue, so Ross restarted the assistant download from the beginning. No case files were read.",
+                detail: rossLocalized("assistant_download_resume_stale_restart_detail"),
                 purpose: .model_download,
                 payloadClass: .no_case_data,
                 endpointLabel: "device://model-resume",
@@ -307,7 +309,7 @@ extension AlphaRossModel {
 
     func activateInstalledPack(_ pack: AlphaInstalledModelPack) {
         guard installedPackPassesRuntimeValidation(pack) else {
-            let message = "Ross could not open this assistant setup. Open My assistant and use Repair setup."
+            let message = rossLocalized("runtime_health_llama_needs_repair")
             persisted.modelJobs = persisted.modelJobs.map { job in
                 var copy = job
                 if job.tier == pack.tier, job.state == .installed {
