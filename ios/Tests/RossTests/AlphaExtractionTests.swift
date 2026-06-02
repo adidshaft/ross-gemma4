@@ -1179,6 +1179,22 @@ final class AlphaExtractionTests: XCTestCase {
                 .contains("Wi-Fi")
         )
         XCTAssertEqual(
+            rossLocalized("assistant_files", languageCode: "hi"),
+            "सहायक फ़ाइलें"
+        )
+        XCTAssertEqual(
+            rossLocalized("interrupted_downloads", languageCode: "ta"),
+            "நிறுத்தப்பட்ட பதிவிறக்கங்கள்"
+        )
+        XCTAssertEqual(
+            rossLocalized("resume_data", languageCode: "te-IN"),
+            "మళ్లీ మొదలుపెట్టే డేటా"
+        )
+        XCTAssertEqual(
+            rossLocalized("device_cache", languageCode: "bn"),
+            "ডিভাইস ক্যাশ"
+        )
+        XCTAssertEqual(
             rossLocalized("notes_drafts_title", languageCode: "hi"),
             "नोट्स और ड्राफ्ट"
         )

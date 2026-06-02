@@ -2221,45 +2221,45 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "assistant_files": [
             "en": "Assistant files",
-            "hi": "Assistant files",
-            "bn": "Assistant files",
-            "ta": "Assistant files",
-            "te": "Assistant files"
+            "hi": "सहायक फ़ाइलें",
+            "bn": "সহকারী ফাইল",
+            "ta": "உதவியாளர் கோப்புகள்",
+            "te": "సహాయక ఫైళ్లు"
         ],
         "cleaning": [
             "en": "Cleaning",
-            "hi": "Cleaning",
-            "bn": "Cleaning",
-            "ta": "Cleaning",
-            "te": "Cleaning"
+            "hi": "साफ़ हो रहा है",
+            "bn": "পরিষ্কার হচ্ছে",
+            "ta": "சுத்தம் செய்கிறது",
+            "te": "శుభ్రం చేస్తోంది"
         ],
         "reclaim": [
             "en": "Reclaim",
-            "hi": "Reclaim",
-            "bn": "Reclaim",
-            "ta": "Reclaim",
-            "te": "Reclaim"
+            "hi": "जगह वापस लें",
+            "bn": "জায়গা ফেরত নিন",
+            "ta": "இடத்தை மீட்கவும்",
+            "te": "స్థలాన్ని తిరిగి పొందండి"
         ],
         "interrupted_downloads": [
             "en": "Interrupted downloads",
-            "hi": "Interrupted downloads",
-            "bn": "Interrupted downloads",
-            "ta": "Interrupted downloads",
-            "te": "Interrupted downloads"
+            "hi": "रुके हुए डाउनलोड",
+            "bn": "থেমে যাওয়া ডাউনলোড",
+            "ta": "நிறுத்தப்பட்ட பதிவிறக்கங்கள்",
+            "te": "ఆగిపోయిన డౌన్‌లోడ్‌లు"
         ],
         "resume_data": [
             "en": "Resume data",
-            "hi": "Resume data",
-            "bn": "Resume data",
-            "ta": "Resume data",
-            "te": "Resume data"
+            "hi": "फिर शुरू करने का डेटा",
+            "bn": "আবার শুরু করার ডেটা",
+            "ta": "மீண்டும் தொடங்கும் தரவு",
+            "te": "మళ్లీ మొదలుపెట్టే డేటా"
         ],
         "device_cache": [
             "en": "Device cache",
-            "hi": "Device cache",
-            "bn": "Device cache",
-            "ta": "Device cache",
-            "te": "Device cache"
+            "hi": "डिवाइस कैश",
+            "bn": "ডিভাইস ক্যাশ",
+            "ta": "சாதன cache",
+            "te": "డివైస్ క్యాష్"
         ],
         "cleaning_interrupted_setup_files": [
             "en": "Cleaning interrupted setup files...",
