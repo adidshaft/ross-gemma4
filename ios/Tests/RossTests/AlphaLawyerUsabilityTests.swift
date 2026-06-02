@@ -1835,7 +1835,12 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 model.assistantDownloadFailureMessage(NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled)),
                 model.assistantDownloadFailureMessage(NSError(domain: NSURLErrorDomain, code: NSURLErrorNetworkConnectionLost)),
                 model.assistantDownloadFailureMessage(NSError(domain: NSURLErrorDomain, code: -123_456)),
-                model.assistantDownloadFailureMessage(NSError(domain: "RossAlphaPack", code: 99))
+                model.assistantDownloadFailureMessage(NSError(domain: "RossAlphaPack", code: 99)),
+                model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.preflightSizeMismatch(expected: 3_020_052_224, reported: 3_021_000_000)),
+                model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.preflightNotResumable),
+                model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.preflightChecksumMismatch(catalog: "abc", provider: "def")),
+                model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.rangeProbeInvalidStatus(200)),
+                model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.rangeProbeInvalidContentRange("bytes 0-10/*"))
             ]
         }
 
@@ -1847,6 +1852,10 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertFalse(message.localizedCaseInsensitiveContains("artifact"), message)
             XCTAssertFalse(message.localizedCaseInsensitiveContains("NSURLErrorDomain"), message)
             XCTAssertFalse(message.localizedCaseInsensitiveContains("RossAlphaPack"), message)
+            XCTAssertFalse(message.localizedCaseInsensitiveContains("provider"), message)
+            XCTAssertFalse(message.localizedCaseInsensitiveContains("catalog"), message)
+            XCTAssertFalse(message.localizedCaseInsensitiveContains("HTTP"), message)
+            XCTAssertFalse(message.localizedCaseInsensitiveContains("Content-Range"), message)
             XCTAssertFalse(message.localizedCaseInsensitiveContains("Error 99"), message)
         }
     }

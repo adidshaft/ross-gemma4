@@ -1442,23 +1442,23 @@ enum AlphaAssistantDownloadError: LocalizedError {
         case .invalidURL:
             return "The selected private assistant download link is invalid."
         case .httpStatus(let status):
-            return "The private assistant download returned HTTP \(status)."
+            return "The assistant download service returned status \(status). Try again on Wi-Fi."
         case .preflightMissingSize:
             return "Ross could not confirm the private assistant file size before downloading."
         case .preflightSizeMismatch(let expected, let reported):
             let expectedLabel = ByteCountFormatter.string(fromByteCount: expected, countStyle: .file)
             let reportedLabel = ByteCountFormatter.string(fromByteCount: reported, countStyle: .file)
-            return "The private assistant provider reported \(reportedLabel), but Ross expected \(expectedLabel). Setup stopped before downloading."
+            return "The assistant download listing changed from \(expectedLabel) to \(reportedLabel). Ross stopped setup before downloading."
         case .preflightNotResumable:
-            return "The private assistant provider did not advertise resumable downloads. Retry later on Wi-Fi."
+            return "The assistant download cannot be safely resumed right now. Retry later on Wi-Fi."
         case .preflightChecksumMismatch:
-            return "The private assistant provider checksum does not match the catalog. Setup stopped before downloading."
+            return "The assistant download listing changed before setup could start. Ross stopped setup before downloading."
         case .rangeProbeInvalidStatus(let status):
-            return "The private assistant provider did not serve a resumable byte range. HTTP \(status)."
+            return "The assistant download service could not resume from the saved position. Status \(status)."
         case .rangeProbeInvalidLength(let expected, let received):
-            return "The private assistant byte-range check returned \(received) bytes; Ross expected \(expected)."
+            return "The assistant download resume check returned \(received) bytes; Ross expected \(expected)."
         case .rangeProbeInvalidContentRange(let value):
-            return "The private assistant provider returned an unexpected Content-Range header: \(value)."
+            return "The assistant download resume check returned an unexpected position: \(value)."
         case .insufficientStorage(let requiredGB, let availableGB):
             return "This private assistant needs about \(requiredGB) GB free. This iPhone currently reports \(availableGB) GB free."
         case .missingDownloadedFile:
