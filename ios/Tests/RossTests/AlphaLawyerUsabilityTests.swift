@@ -1595,10 +1595,28 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertNil(snapshot.modelJobs.first(where: { $0.id == job.id })?.resumeDataRelativePath)
             XCTAssertTrue(snapshot.ledgerEntries.contains {
                 $0.title == "Assistant download resume restarted" &&
+                $0.detail.localizedCaseInsensitiveContains("assistant download") &&
+                !$0.detail.localizedCaseInsensitiveContains("model download") &&
                 $0.purpose == .model_download &&
                 $0.payloadClass == .no_case_data
             })
         }
+    }
+
+    func testLocalSmokeUnavailableReportUsesAssistantLanguage() async {
+        let model = await MainActor.run {
+            AlphaRossModel()
+        }
+
+        await MainActor.run {
+            model.runLocalInferenceSmoke()
+        }
+        try? await Task.sleep(for: .milliseconds(120))
+
+        let report = await MainActor.run { model.localInferenceSmokeReport }
+        XCTAssertEqual(report?.ran, false)
+        XCTAssertTrue(report?.message.localizedCaseInsensitiveContains("private assistant") == true)
+        XCTAssertFalse(report?.message.localizedCaseInsensitiveContains("real local inference") == true)
     }
 
     func testAssistantDownloadFailureMessagesUseProductLanguage() async {

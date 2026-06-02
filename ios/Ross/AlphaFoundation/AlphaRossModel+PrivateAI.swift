@@ -115,7 +115,7 @@ extension AlphaRossModel {
         persisted.ledgerEntries.insert(
             AlphaPrivacyLedgerEntry(
                 title: "Assistant download resume restarted",
-                detail: "Saved resume data was unavailable, so Ross restarted the model download from the beginning. No case files were read.",
+                detail: "Saved resume data was unavailable, so Ross restarted the assistant download from the beginning. No case files were read.",
                 purpose: .model_download,
                 payloadClass: .no_case_data,
                 endpointLabel: "device://model-resume",
