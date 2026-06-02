@@ -1186,12 +1186,14 @@ private struct AlphaAssistantStorageFootprintRow: View {
                         .foregroundStyle(Color.rossInk.opacity(0.66))
                 }
                 Spacer(minLength: 0)
-                Button("Reclaim") {
-                    model.reclaimAssistantStorageLeaks()
-                    Task { await refresh() }
+                RossGlassGroup(spacing: 8) {
+                    Button("Reclaim") {
+                        model.reclaimAssistantStorageLeaks()
+                        Task { await refresh() }
+                    }
+                    .font(.caption.weight(.semibold))
+                    .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 14, expandsHorizontally: false)
                 }
-                .font(.caption.weight(.semibold))
-                .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 14, expandsHorizontally: false)
             }
 
             VStack(alignment: .leading, spacing: 3) {
