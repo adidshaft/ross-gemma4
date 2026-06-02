@@ -2184,6 +2184,31 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    func testAssistantDownloadRestartsWhenSavedResumeDataCannotContinue() async {
+        let restartableErrors = await MainActor.run {
+            let model = AlphaRossModel()
+            return [
+                model.shouldRestartAssistantDownloadWithoutResumeData(NSError(domain: NSURLErrorDomain, code: NSURLErrorCannotDecodeRawData)),
+                model.shouldRestartAssistantDownloadWithoutResumeData(NSError(domain: NSURLErrorDomain, code: NSURLErrorCannotDecodeContentData)),
+                model.shouldRestartAssistantDownloadWithoutResumeData(NSError(domain: NSURLErrorDomain, code: NSURLErrorNetworkConnectionLost)),
+                model.shouldRestartAssistantDownloadWithoutResumeData(NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled))
+            ]
+        }
+
+        XCTAssertEqual(restartableErrors, [true, true, true, true])
+
+        let nonRestartableErrors = await MainActor.run {
+            let model = AlphaRossModel()
+            return [
+                model.shouldRestartAssistantDownloadWithoutResumeData(NSError(domain: NSURLErrorDomain, code: NSURLErrorNotConnectedToInternet)),
+                model.shouldRestartAssistantDownloadWithoutResumeData(NSError(domain: NSURLErrorDomain, code: NSURLErrorTimedOut)),
+                model.shouldRestartAssistantDownloadWithoutResumeData(NSError(domain: "RossAlphaPack", code: 2))
+            ]
+        }
+
+        XCTAssertEqual(nonRestartableErrors, [false, false, false])
+    }
+
     func testInstalledPackActivationAndRemovalDeleteLocalArtifact() async throws {
         try await withRestoredStore { store in
             let basicPath = "model-packs/quick_start/lifecycle-basic.gguf"

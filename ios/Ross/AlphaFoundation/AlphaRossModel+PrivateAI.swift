@@ -128,6 +128,43 @@ extension AlphaRossModel {
         persist()
     }
 
+    private func recordStaleResumeDataRestart(for jobID: UUID) async {
+        let existingPath = persisted.modelJobs.first(where: { $0.id == jobID })?.resumeDataRelativePath
+        await store.removeModelResumeData(relativePath: existingPath)
+        assistantDownloadTaskBoxes[jobID]?.resumeData = nil
+        updateJob(jobID) {
+            $0.resumeDataRelativePath = nil
+            $0.bytesDownloaded = 0
+            $0.failureReason = nil
+            $0.updatedAt = .now
+        }
+        persisted.ledgerEntries.insert(
+            AlphaPrivacyLedgerEntry(
+                title: "Assistant download resume restarted",
+                detail: "Saved resume data could not continue, so Ross restarted the assistant download from the beginning. No case files were read.",
+                purpose: .model_download,
+                payloadClass: .no_case_data,
+                endpointLabel: "device://model-resume",
+                success: false
+            ),
+            at: 0
+        )
+        persist()
+    }
+
+    func shouldRestartAssistantDownloadWithoutResumeData(_ error: NSError) -> Bool {
+        guard error.domain == NSURLErrorDomain else { return false }
+        switch error.code {
+        case NSURLErrorCannotDecodeRawData,
+             NSURLErrorCannotDecodeContentData,
+             NSURLErrorNetworkConnectionLost,
+             NSURLErrorCancelled:
+            return true
+        default:
+            return false
+        }
+    }
+
     func removeInstalledPack(_ pack: AlphaInstalledModelPack) {
         if !pack.installPath.hasPrefix("system://") {
             let fileURL = alphaAbsoluteURL(for: pack.installPath)
@@ -556,7 +593,17 @@ extension AlphaRossModel {
                     )
                 } catch {
                     let nsError = error as NSError
-                    if resumeData == nil, shouldRetryAssistantDownloadInForeground(nsError) {
+                    if resumeData != nil, shouldRestartAssistantDownloadWithoutResumeData(nsError) {
+                        await recordStaleResumeDataRestart(for: jobID)
+                        fileURL = try await AlphaBackgroundModelDownloadCenter.shared.download(
+                            request: request,
+                            jobID: jobID,
+                            resumeData: nil,
+                            allowsMobileData: allowsMobileData,
+                            destinationURL: destinationURL,
+                            progress: progress
+                        )
+                    } else if resumeData == nil, shouldRetryAssistantDownloadInForeground(nsError) {
                         fileURL = try await foregroundDownloadAssistantModelArtifact(
                             request: request,
                             jobID: jobID,
