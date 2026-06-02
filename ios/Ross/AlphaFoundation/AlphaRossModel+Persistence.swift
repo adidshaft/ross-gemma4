@@ -51,14 +51,14 @@ private func alphaQuarantineActiveAssistantAfterStartupFailure(_ state: inout Al
     state.modelJobs = state.modelJobs.map { job in
         var copy = job
         if copy.tier == activePack.tier, copy.state == .installed {
-            copy.failureReason = "Ross paused this assistant after the previous launch did not finish model validation. Re-verify or delete it from Settings."
+            copy.failureReason = "Ross paused this assistant after the previous launch did not finish setup validation. Re-verify or delete it from Settings."
             copy.updatedAt = .now
         }
         return copy
     }
     state.ledgerEntries.insert(
         AlphaPrivacyLedgerEntry(
-            title: "Assistant model paused",
+            title: "Assistant paused",
             detail: "Ross kept the downloaded assistant file on this device, but stopped auto-selecting it after startup validation did not finish on the previous launch.",
             purpose: .model_verification,
             payloadClass: .no_case_data,
@@ -352,7 +352,7 @@ private func alphaRecoverDownloadedAssistantArtifacts(from state: inout AlphaPer
     let recoveredTitles = recoveredPacks.map(\.tier.title).joined(separator: ", ")
     state.ledgerEntries.insert(
         AlphaPrivacyLedgerEntry(
-            title: "Assistant model restored",
+            title: "Assistant restored",
             detail: "Ross found and verified an existing private assistant file on this device: \(recoveredTitles).",
             purpose: .model_verification,
             payloadClass: .no_case_data,
@@ -1513,10 +1513,10 @@ extension AlphaRossModel {
                 pausedPack.isActive = false
                 normalized.installedPacks.insert(pausedPack, at: 0)
             }
-            if !normalized.ledgerEntries.contains(where: { $0.title == "Assistant model paused" }) {
+            if !normalized.ledgerEntries.contains(where: { $0.title == "Assistant paused" }) {
                 normalized.ledgerEntries.insert(
                     AlphaPrivacyLedgerEntry(
-                        title: "Assistant model paused",
+                        title: "Assistant paused",
                         detail: "Ross kept the downloaded assistant file on this device, but stopped auto-selecting it after startup validation did not finish on the previous launch.",
                         purpose: .model_verification,
                         payloadClass: .no_case_data,

@@ -140,7 +140,7 @@ extension AlphaRossModel {
         }
         persisted.ledgerEntries.insert(
             AlphaPrivacyLedgerEntry(
-                title: "Private AI Pack removed",
+                title: "Assistant removed",
                 detail: "\(pack.tier.title) was removed from local storage.",
                 purpose: .model_verification,
                 payloadClass: .no_case_data,
@@ -165,7 +165,7 @@ extension AlphaRossModel {
         persisted.modelUpdateCandidates = []
         persisted.ledgerEntries.insert(
             AlphaPrivacyLedgerEntry(
-                title: "Assistant model files removed",
+                title: "Assistant files removed",
                 detail: "Downloaded private assistant files and resume data were deleted from this device.",
                 purpose: .model_verification,
                 payloadClass: .no_case_data,
@@ -223,7 +223,7 @@ extension AlphaRossModel {
         if !candidates.isEmpty {
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
-                    title: "Assistant model update available",
+                    title: "Assistant update available",
                     detail: "Ross found a newer private assistant file listing. No case files were read or sent.",
                     purpose: .model_catalog,
                     payloadClass: .no_case_data,
@@ -279,7 +279,7 @@ extension AlphaRossModel {
             }
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
-                    title: "Assistant model activation failed",
+                    title: "Assistant activation failed",
                     detail: message,
                     purpose: .model_verification,
                     payloadClass: .no_case_data,
@@ -820,7 +820,7 @@ extension AlphaRossModel {
             persisted.lastModelCatalogRefresh = .now
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
-                    title: "Assistant model selected",
+                    title: "Assistant selected",
                     detail: "\(tier.title) was selected. Ross has not read any case files.",
                     purpose: .model_catalog,
                     payloadClass: .no_case_data,
@@ -923,7 +923,7 @@ extension AlphaRossModel {
             }
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
-                    title: "Assistant model verified",
+                    title: "Assistant verified",
                     detail: "\(tier.title) was already downloaded and passed checksum verification locally.",
                     purpose: .model_verification,
                     payloadClass: .no_case_data,

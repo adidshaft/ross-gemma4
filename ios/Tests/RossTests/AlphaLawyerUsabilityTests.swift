@@ -1397,7 +1397,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
 
         XCTAssertNil(normalized.settings.activeTier)
         XCTAssertFalse(normalized.installedPacks.first?.isActive ?? true)
-        XCTAssertTrue(normalized.ledgerEntries.contains { $0.title == "Assistant model paused" })
+        XCTAssertTrue(normalized.ledgerEntries.contains { $0.title == "Assistant paused" })
     }
 
     func testModelResumeDataPersistsLoadsAndRemovesAcrossStoreCalls() async throws {
@@ -1523,7 +1523,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertFalse(snapshot.modelJobs.contains { $0.tier == .quickStart })
             XCTAssertNil(snapshot.settings.activeTier)
             XCTAssertEqual(snapshot.modelUpdateCandidates ?? [], [])
-            XCTAssertEqual(snapshot.ledgerEntries.first?.title, "Assistant model files removed")
+            XCTAssertEqual(snapshot.ledgerEntries.first?.title, "Assistant files removed")
 
             try await eventually(timeoutNanoseconds: 2_000_000_000) {
                 let resumeData = try? await store.loadModelResumeData(relativePath: resumePath)
@@ -1782,7 +1782,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertFalse(snapshot.installedPacks.first { $0.id == brokenPack.id }?.isActive == true)
             XCTAssertEqual(.failed, snapshot.modelJobs.first?.state)
             XCTAssertTrue(snapshot.modelJobs.first?.failureReason?.contains("could not open") == true)
-            XCTAssertEqual("Assistant model activation failed", snapshot.ledgerEntries.first?.title)
+            XCTAssertEqual("Assistant activation failed", snapshot.ledgerEntries.first?.title)
         }
     }
 
