@@ -2098,6 +2098,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
     }
 
     func testLocalSmokeUnavailableReportUsesAssistantLanguage() async {
+        rossSaveLanguageSelection(code: "hi")
         let model = await MainActor.run {
             AlphaRossModel()
         }
@@ -2109,7 +2110,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
 
         let report = await MainActor.run { model.localInferenceSmokeReport }
         XCTAssertEqual(report?.ran, false)
-        XCTAssertTrue(report?.message.localizedCaseInsensitiveContains("private assistant") == true)
+        XCTAssertEqual(report?.message, "Private assistant अभी इस device पर unavailable है।")
         XCTAssertFalse(report?.message.localizedCaseInsensitiveContains("real local inference") == true)
     }
 

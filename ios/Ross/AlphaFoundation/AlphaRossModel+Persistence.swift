@@ -1172,7 +1172,7 @@ extension AlphaRossModel {
                     fieldsNeedingReview: 0,
                     unsupportedAccepted: 0,
                     exportRelativePath: nil,
-                    message: runtimeHealth?.userFacingStatus ?? "Private assistant answers are unavailable on this device right now."
+                    message: runtimeHealth?.userFacingStatus ?? alphaRuntimeHealthStatus(.privateAssistantUnavailable)
                 )
                 localInferenceSmokeRunning = false
                 return
