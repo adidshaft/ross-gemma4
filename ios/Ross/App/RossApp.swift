@@ -1197,6 +1197,41 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "மறைக்கப்பட்டது",
             "te": "దాచబడింది"
         ],
+        "ross_summary": [
+            "en": "Ross Summary",
+            "hi": "Ross Summary",
+            "bn": "Ross Summary",
+            "ta": "Ross Summary",
+            "te": "Ross Summary"
+        ],
+        "case_number": [
+            "en": "Case number",
+            "hi": "Case number",
+            "bn": "Case number",
+            "ta": "Case number",
+            "te": "Case number"
+        ],
+        "parties": [
+            "en": "Parties",
+            "hi": "Parties",
+            "bn": "Parties",
+            "ta": "Parties",
+            "te": "Parties"
+        ],
+        "next_hearing_deadline": [
+            "en": "Next hearing/deadline",
+            "hi": "Next hearing/deadline",
+            "bn": "Next hearing/deadline",
+            "ta": "Next hearing/deadline",
+            "te": "Next hearing/deadline"
+        ],
+        "needs_review_detail": [
+            "en": "Accept, edit, or dismiss facts before Ross relies on them.",
+            "hi": "Ross rely करे उससे पहले facts accept, edit, या dismiss करें।",
+            "bn": "Ross rely করার আগে facts accept, edit, বা dismiss করুন।",
+            "ta": "Ross rely செய்வதற்கு முன் facts accept, edit அல்லது dismiss செய்யவும்.",
+            "te": "Ross rely చేయడానికి ముందు facts accept, edit, లేదా dismiss చేయండి."
+        ],
         "assistant_device_cache": [
             "en": "Device cache",
             "hi": "डिवाइस cache",

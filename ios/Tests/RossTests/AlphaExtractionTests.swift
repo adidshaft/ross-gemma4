@@ -779,6 +779,14 @@ final class AlphaExtractionTests: XCTestCase {
             "sample matter, tasks, files, మరియు review items restore చేయండి."
         )
         XCTAssertEqual(
+            rossLocalized("needs_review_detail", languageCode: "hi"),
+            "Ross rely करे उससे पहले facts accept, edit, या dismiss करें।"
+        )
+        XCTAssertEqual(
+            rossLocalized("needs_review", languageCode: "ta"),
+            "Review தேவை"
+        )
+        XCTAssertEqual(
             rossLocalized("assistant_network_wifi_preferred", languageCode: "te-IN"),
             "Wi-Fi ప్రాధాన్యం"
         )

@@ -208,27 +208,27 @@ struct AlphaCaseWorkspaceScreen: View {
                             detail: caseMatter.stage.title
                         )
 
-                    RossSectionCard(title: "Ross Summary") {
+                    RossSectionCard(title: rossLocalized("ross_summary")) {
                         VStack(alignment: .leading, spacing: 12) {
                             Text(caseMatter.summary)
                                 .rossBody()
                                 .foregroundStyle(Color.rossInk.opacity(0.8))
                                 .fixedSize(horizontal: false, vertical: true)
                             if let caseNumber = caseMatter.caseNumber, !caseNumber.isEmpty {
-                                AlphaSettingsValueRow(label: "Case number", value: caseNumber)
+                                AlphaSettingsValueRow(label: rossLocalized("case_number"), value: caseNumber)
                             }
                             if let partiesSummary = caseMatter.partiesSummary, !partiesSummary.isEmpty {
-                                AlphaSettingsValueRow(label: "Parties", value: partiesSummary)
+                                AlphaSettingsValueRow(label: rossLocalized("parties"), value: partiesSummary)
                             }
                             if let nextHearing = caseMatter.nextHearing {
-                                AlphaSettingsValueRow(label: "Next hearing/deadline", value: nextHearing.formatted(date: .abbreviated, time: .omitted))
+                                AlphaSettingsValueRow(label: rossLocalized("next_hearing_deadline"), value: nextHearing.formatted(date: .abbreviated, time: .omitted))
                             }
                         }
                     }
 
                     if !reviewItems.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
-                            AlphaWorkspaceSectionLabel(title: "Needs Review", detail: "Accept, edit, or dismiss facts before Ross relies on them.")
+                            AlphaWorkspaceSectionLabel(title: rossLocalized("needs_review"), detail: rossLocalized("needs_review_detail"))
                             ForEach(reviewItems.prefix(4)) { item in
                                 AlphaReviewNudgeCard(
                                     item: item,
