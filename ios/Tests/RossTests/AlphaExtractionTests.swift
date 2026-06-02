@@ -1875,6 +1875,41 @@ final class AlphaExtractionTests: XCTestCase {
         }
     }
 
+    func testDocumentImportErrorsFollowSelectedLanguage() {
+        let previousLanguageCode = rossSelectedLanguageCode()
+        defer { rossSaveLanguageSelection(code: previousLanguageCode) }
+
+        rossSaveLanguageSelection(code: "hi")
+        XCTAssertEqual(
+            AlphaDocumentImportError.unsupportedFileType("zip").errorDescription,
+            ".zip files अभी supported नहीं हैं."
+        )
+        XCTAssertEqual(
+            AlphaDocumentImportError.unreadableFile.errorDescription,
+            "Ross selected file पढ़ नहीं पाया."
+        )
+
+        rossSaveLanguageSelection(code: "bn")
+        XCTAssertEqual(
+            AlphaDocumentImportError.unsupportedFileType("").errorDescription,
+            "Extension ছাড়া files এখনও supported নয়."
+        )
+        XCTAssertEqual(
+            AlphaDocumentImportError.unsupportedTextEncoding.errorDescription,
+            "এই text file এমন encoding ব্যবহার করছে যা Ross এখনও পড়তে পারে না."
+        )
+
+        rossSaveLanguageSelection(code: "te")
+        let tooLarge = AlphaDocumentImportError.fileTooLarge(9 * 1_024 * 1_024, limit: 8 * 1_024 * 1_024).errorDescription ?? ""
+        let noStorage = AlphaDocumentImportError.insufficientStorage(needed: 12 * 1_024 * 1_024, available: 3 * 1_024 * 1_024).errorDescription ?? ""
+        XCTAssertTrue(tooLarge.contains("current import limit"), tooLarge)
+        XCTAssertTrue(tooLarge.contains("9"), tooLarge)
+        XCTAssertTrue(tooLarge.contains("8"), tooLarge)
+        XCTAssertTrue(noStorage.contains("Ross కు సుమారు"), noStorage)
+        XCTAssertTrue(noStorage.contains("12"), noStorage)
+        XCTAssertTrue(noStorage.contains("3"), noStorage)
+    }
+
     func testUnreadableImageImportUsesPlainLanguageFallback() async throws {
         let store = AlphaRossStore()
         let sourceURL = FileManager.default.temporaryDirectory

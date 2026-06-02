@@ -1099,6 +1099,48 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Basic குறுகிய files-க்கு சிறந்தது. இந்த நீளமான document-ஐ private assistant மூலம் review செய்வதற்கு முன் Standard அல்லது Advanced தேர்வுசெய்க.",
             "te": "Basic చిన్న files కు మంచిది. ఈ పొడవైన document ను private assistant తో review చేయడానికి ముందు Standard లేదా Advanced ఎంచుకోండి."
         ],
+        "import_error_missing_extension": [
+            "en": "Files without an extension are not supported yet.",
+            "hi": "Extension के बिना files अभी supported नहीं हैं.",
+            "bn": "Extension ছাড়া files এখনও supported নয়.",
+            "ta": "Extension இல்லாத files இன்னும் supported இல்லை.",
+            "te": "Extension లేని files ఇంకా supported కాదు."
+        ],
+        "import_error_unsupported_extension": [
+            "en": ".%@ files are not supported yet.",
+            "hi": ".%@ files अभी supported नहीं हैं.",
+            "bn": ".%@ files এখনও supported নয়.",
+            "ta": ".%@ files இன்னும் supported இல்லை.",
+            "te": ".%@ files ఇంకా supported కాదు."
+        ],
+        "import_error_unreadable_file": [
+            "en": "Ross could not read the selected file.",
+            "hi": "Ross selected file पढ़ नहीं पाया.",
+            "bn": "Ross selected file পড়তে পারেনি.",
+            "ta": "Ross selected file-ஐ படிக்க முடியவில்லை.",
+            "te": "Ross selected file చదవలేకపోయింది."
+        ],
+        "import_error_file_too_large": [
+            "en": "This file is %@; the current import limit is %@.",
+            "hi": "यह file %@ है; current import limit %@ है.",
+            "bn": "এই file %@; current import limit %@.",
+            "ta": "இந்த file %@; current import limit %@.",
+            "te": "ఈ file %@; current import limit %@."
+        ],
+        "import_error_insufficient_storage": [
+            "en": "Ross needs about %@ free, but this device reports %@ available.",
+            "hi": "Ross को लगभग %@ free चाहिए, लेकिन इस device पर %@ available दिख रहा है.",
+            "bn": "Ross-এর প্রায় %@ free দরকার, কিন্তু এই device-এ %@ available দেখাচ্ছে.",
+            "ta": "Ross-க்கு சுமார் %@ free தேவை, ஆனால் இந்த device %@ available என காட்டுகிறது.",
+            "te": "Ross కు సుమారు %@ free కావాలి, కానీ ఈ device %@ available అని చూపిస్తోంది."
+        ],
+        "import_error_unsupported_text_encoding": [
+            "en": "This text file uses an encoding Ross cannot read yet.",
+            "hi": "यह text file ऐसी encoding use करती है जिसे Ross अभी पढ़ नहीं सकता.",
+            "bn": "এই text file এমন encoding ব্যবহার করছে যা Ross এখনও পড়তে পারে না.",
+            "ta": "இந்த text file Ross இன்னும் படிக்க முடியாத encoding பயன்படுத்துகிறது.",
+            "te": "ఈ text file Ross ఇంకా చదవలేని encoding ను ఉపయోగిస్తోంది."
+        ],
         "ask_private_assistant_needs_repair": [
             "en": "Private assistant needs repair",
             "hi": "Private assistant repair चाहता है",

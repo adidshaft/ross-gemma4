@@ -58,15 +58,25 @@ enum AlphaDocumentImportError: LocalizedError {
         formatter.countStyle = .file
         switch self {
         case .unsupportedFileType(let ext):
-            return ext.isEmpty ? "Files without an extension are not supported yet." : ".\(ext) files are not supported yet."
+            return ext.isEmpty
+                ? rossLocalized("import_error_missing_extension")
+                : String(format: rossLocalized("import_error_unsupported_extension"), ext)
         case .unreadableFile:
-            return "Ross could not read the selected file."
+            return rossLocalized("import_error_unreadable_file")
         case .fileTooLarge(let bytes, let limit):
-            return "This file is \(formatter.string(fromByteCount: bytes)); the current import limit is \(formatter.string(fromByteCount: limit))."
+            return String(
+                format: rossLocalized("import_error_file_too_large"),
+                formatter.string(fromByteCount: bytes),
+                formatter.string(fromByteCount: limit)
+            )
         case .insufficientStorage(let needed, let available):
-            return "Ross needs about \(formatter.string(fromByteCount: needed)) free, but this device reports \(formatter.string(fromByteCount: available)) available."
+            return String(
+                format: rossLocalized("import_error_insufficient_storage"),
+                formatter.string(fromByteCount: needed),
+                formatter.string(fromByteCount: available)
+            )
         case .unsupportedTextEncoding:
-            return "This text file uses an encoding Ross cannot read yet."
+            return rossLocalized("import_error_unsupported_text_encoding")
         }
     }
 }
