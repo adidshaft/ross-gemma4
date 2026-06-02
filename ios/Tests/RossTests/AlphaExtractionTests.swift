@@ -1624,6 +1624,58 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(languageFinding?.sourceRefs.first?.documentTitle, "Bilingual Order")
     }
 
+    func testFileReviewAssistantWarningsFollowSelectedLanguage() {
+        XCTAssertEqual(
+            alphaFileReviewAssistantSetupRequiredWarning(languageCode: "hi"),
+            "Ross इस document को private assistant से review करे उससे पहले private assistant setup ज़रूरी है."
+        )
+        XCTAssertEqual(
+            alphaFileReviewAssistantSetupRequiredShort(languageCode: "ta"),
+            "Private assistant setup தேவை."
+        )
+        XCTAssertEqual(
+            alphaFileReviewBasicTooLongWarning(languageCode: "te-IN"),
+            "Basic చిన్న files కు మంచిది. ఈ పొడవైన document ను private assistant తో review చేయడానికి ముందు Standard లేదా Advanced ఎంచుకోండి."
+        )
+    }
+
+    func testQuickStartLongFileReviewWarningUsesSelectedLanguage() async {
+        let previousLanguageCode = rossSelectedLanguageCode()
+        rossSaveLanguageSelection(code: "te")
+        defer { rossSaveLanguageSelection(code: previousLanguageCode) }
+
+        let store = AlphaRossStore()
+        let caseId = UUID()
+        let pages = (1...13).map { page in
+            AlphaDocumentPage(
+                pageNumber: page,
+                snippet: "Order page \(page). The respondent shall file a reply before the next hearing."
+            )
+        }
+        let document = AlphaCaseDocument(
+            title: "Long Order",
+            fileName: "long-order.pdf",
+            kind: .pdf,
+            storedRelativePath: "tests/long-order.pdf",
+            importedAt: .now,
+            pageCount: pages.count,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            pages: pages
+        )
+
+        let result = await store.runLocalExtraction(
+            caseId: caseId,
+            document: document,
+            activePack: installedPack(.quickStart)
+        )
+        let warningText = (result.extractionRun.warnings + result.findings.map(\.message)).joined(separator: "\n")
+
+        XCTAssertTrue(warningText.contains(alphaFileReviewBasicTooLongWarning(languageCode: "te")))
+        XCTAssertFalse(warningText.localizedCaseInsensitiveContains("Basic is best for shorter files"), warningText)
+        XCTAssertFalse(warningText.localizedCaseInsensitiveContains("longer document with your private assistant"), warningText)
+    }
+
     func testLocalExtractionDetectsBengaliLanguageProfile() async {
         let store = AlphaRossStore()
         let caseId = UUID()

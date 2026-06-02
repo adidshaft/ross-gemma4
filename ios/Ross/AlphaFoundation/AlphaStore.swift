@@ -71,6 +71,18 @@ enum AlphaDocumentImportError: LocalizedError {
     }
 }
 
+func alphaFileReviewAssistantSetupRequiredWarning(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("file_review_assistant_setup_required_warning", languageCode: languageCode)
+}
+
+func alphaFileReviewAssistantSetupRequiredShort(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("file_review_assistant_setup_required_short", languageCode: languageCode)
+}
+
+func alphaFileReviewBasicTooLongWarning(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("file_review_basic_too_long_warning", languageCode: languageCode)
+}
+
 private let alphaMaxPDFImportBytes: Int64 = 180 * 1_024 * 1_024
 private let alphaMaxImageImportBytes: Int64 = 80 * 1_024 * 1_024
 private let alphaMaxTextImportBytes: Int64 = 8 * 1_024 * 1_024
@@ -1252,7 +1264,7 @@ private struct AlphaLocalExtractionOrchestrator {
                 pages: pages,
                 pipelinePlan: pipelinePlan,
                 extractionRunID: extractionRunID,
-                warning: "Private assistant setup is required before Ross can review this document with your private assistant."
+                warning: alphaFileReviewAssistantSetupRequiredWarning()
             )
         }
         var modelInvocations: [AlphaLocalModelInvocation] = []
@@ -1386,7 +1398,7 @@ private struct AlphaLocalExtractionOrchestrator {
                     caseId: caseId,
                     documentId: document.id,
                     kind: .unsupportedLayout,
-                    message: "Basic is best for shorter files. Choose Standard or Advanced before Ross reviews this longer document with your private assistant.",
+                    message: alphaFileReviewBasicTooLongWarning(),
                     sourceRefs: cleanedPages.prefix(2).map { page in
                         AlphaSourceRef(
                             caseId: caseId,
@@ -1521,7 +1533,7 @@ private struct AlphaLocalExtractionOrchestrator {
                 fieldsExtracted: 0,
                 fieldsNeedingReview: 0,
                 warnings: [warning],
-                errorMessage: "Private assistant setup required."
+                errorMessage: alphaFileReviewAssistantSetupRequiredShort()
             ),
             findings: [finding],
             caseMemoryUpdates: [],

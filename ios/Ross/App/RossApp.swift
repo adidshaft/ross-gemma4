@@ -1078,6 +1078,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "சட்டக் கேள்விகளை கேட்பதற்கு முன் My assistant திறந்து இந்த iPhone-ல் தனிப்பட்ட உதவியாளரை அமைக்கவும்.",
             "te": "న్యాయ ప్రశ్నలు అడగడానికి ముందు My assistant తెరిచి ఈ iPhoneలో ప్రైవేట్ సహాయకుడిని సెటప్ చేయండి."
         ],
+        "file_review_assistant_setup_required_warning": [
+            "en": "Private assistant setup is required before Ross can review this document with your private assistant.",
+            "hi": "Ross इस document को private assistant से review करे उससे पहले private assistant setup ज़रूरी है.",
+            "bn": "Ross এই document private assistant দিয়ে review করার আগে private assistant setup প্রয়োজন.",
+            "ta": "Ross இந்த document-ஐ private assistant மூலம் review செய்வதற்கு முன் private assistant setup தேவை.",
+            "te": "Ross ఈ document ను private assistant తో review చేయడానికి ముందు private assistant setup అవసరం."
+        ],
+        "file_review_assistant_setup_required_short": [
+            "en": "Private assistant setup required.",
+            "hi": "Private assistant setup ज़रूरी है.",
+            "bn": "Private assistant setup প্রয়োজন.",
+            "ta": "Private assistant setup தேவை.",
+            "te": "Private assistant setup అవసరం."
+        ],
+        "file_review_basic_too_long_warning": [
+            "en": "Basic is best for shorter files. Choose Standard or Advanced before Ross reviews this longer document with your private assistant.",
+            "hi": "Basic छोटी files के लिए बेहतर है। इस लंबे document को private assistant से review करने से पहले Standard या Advanced चुनें.",
+            "bn": "Basic ছোট files-এর জন্য ভালো। এই দীর্ঘ document private assistant দিয়ে review করার আগে Standard বা Advanced বেছে নিন.",
+            "ta": "Basic குறுகிய files-க்கு சிறந்தது. இந்த நீளமான document-ஐ private assistant மூலம் review செய்வதற்கு முன் Standard அல்லது Advanced தேர்வுசெய்க.",
+            "te": "Basic చిన్న files కు మంచిది. ఈ పొడవైన document ను private assistant తో review చేయడానికి ముందు Standard లేదా Advanced ఎంచుకోండి."
+        ],
         "ask_private_assistant_needs_repair": [
             "en": "Private assistant needs repair",
             "hi": "Private assistant repair चाहता है",
