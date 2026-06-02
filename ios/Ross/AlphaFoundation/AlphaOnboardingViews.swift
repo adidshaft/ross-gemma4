@@ -91,33 +91,30 @@ struct AlphaSetupWordmarkRow: View {
 
 struct AlphaSetupPrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+
         configuration.label
             .font(.headline.weight(.semibold))
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
             .frame(minHeight: 52)
             .background {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.rossAccent.opacity(configuration.isPressed ? 0.82 : 0.94),
-                                Color.rossAccent.opacity(configuration.isPressed ? 0.7 : 0.84)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                shape.fill(Color.rossAccent.opacity(configuration.isPressed ? 0.74 : 0.86))
             }
-            .rossGlassSurface(
+            .rossNativeGlassSurface(
                 tint: Color.rossAccent,
-                cornerRadius: 16,
+                shape: shape,
                 interactive: true,
-                shadowOpacity: configuration.isPressed ? 0.2 : 0.28,
-                shadowRadius: configuration.isPressed ? 8 : 18,
-                shadowY: configuration.isPressed ? 4 : 10,
-                fillOpacity: configuration.isPressed ? 0.7 : 0.88,
-                strokeOpacity: 0.45
+                fallbackFillOpacity: configuration.isPressed ? 0.70 : 0.88,
+                fallbackStrokeOpacity: 0.48
+            )
+            .overlay {
+                shape.strokeBorder(Color.white.opacity(configuration.isPressed ? 0.18 : 0.32), lineWidth: 1)
+            }
+            .shadow(
+                color: Color.rossAccent.opacity(configuration.isPressed ? 0.12 : 0.24),
+                radius: configuration.isPressed ? 8 : 18,
+                y: configuration.isPressed ? 4 : 10
             )
             .scaleEffect(configuration.isPressed ? 0.988 : 1)
             .animation(.spring(response: 0.22, dampingFraction: 0.72), value: configuration.isPressed)
@@ -609,7 +606,7 @@ struct AlphaModelPickerSheet: View {
                             }
                         }
 
-                        Text("You can change this later in Settings → Ross assistant.")
+                        Text("You can change this later in Settings, then My assistant.")
                             .font(.caption)
                             .foregroundStyle(Color.rossInk.opacity(0.44))
                             .multilineTextAlignment(.center)
