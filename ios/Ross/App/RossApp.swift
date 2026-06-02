@@ -1806,6 +1806,237 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "நீக்கவும்",
             "te": "తొలగించండి"
         ],
+        "settings_privacy": [
+            "en": "Privacy",
+            "hi": "गोपनीयता",
+            "bn": "গোপনীয়তা",
+            "ta": "தனியுரிமை",
+            "te": "గోప్యత"
+        ],
+        "review_required": [
+            "en": "Review required",
+            "hi": "Review ज़रूरी",
+            "bn": "Review দরকার",
+            "ta": "Review தேவை",
+            "te": "Review అవసరం"
+        ],
+        "settings_privacy_detail": [
+            "en": "Ross shows the Legal Search wording first. Matter files stay on this iPhone.",
+            "hi": "Ross पहले Legal Search wording दिखाता है। मामले की फ़ाइलें इसी iPhone पर रहती हैं।",
+            "bn": "Ross আগে Legal Search wording দেখায়। মামলার ফাইল এই iPhone-এই থাকে।",
+            "ta": "Ross முதலில் Legal Search wording-ஐ காட்டுகிறது. வழக்கு கோப்புகள் இந்த iPhone-இலேயே இருக்கும்.",
+            "te": "Ross ముందుగా Legal Search wording చూపుతుంది. కేసు ఫైళ్లు ఈ iPhone లోనే ఉంటాయి."
+        ],
+        "activity_log": [
+            "en": "Activity Log",
+            "hi": "Activity Log",
+            "bn": "Activity Log",
+            "ta": "Activity Log",
+            "te": "Activity Log"
+        ],
+        "activity_log_detail": [
+            "en": "Local work and Legal Search, separated.",
+            "hi": "Local work और Legal Search अलग-अलग।",
+            "bn": "Local work এবং Legal Search আলাদা।",
+            "ta": "Local work மற்றும் Legal Search தனித்தனியாக.",
+            "te": "Local work మరియు Legal Search వేర్వేరుగా."
+        ],
+        "settings_appearance": [
+            "en": "Appearance",
+            "hi": "रूप",
+            "bn": "চেহারা",
+            "ta": "தோற்றம்",
+            "te": "రూపం"
+        ],
+        "theme": [
+            "en": "Theme",
+            "hi": "Theme",
+            "bn": "Theme",
+            "ta": "Theme",
+            "te": "Theme"
+        ],
+        "open_my_assistant": [
+            "en": "Open My assistant",
+            "hi": "My assistant खोलें",
+            "bn": "My assistant খুলুন",
+            "ta": "My assistant திறக்கவும்",
+            "te": "My assistant తెరవండి"
+        ],
+        "open_my_assistant_detail": [
+            "en": "Use this when answers are unavailable or setup is paused.",
+            "hi": "जब answers उपलब्ध न हों या setup रुका हो, तब इसका उपयोग करें।",
+            "bn": "answers না থাকলে বা setup থেমে থাকলে এটি ব্যবহার করুন।",
+            "ta": "answers கிடைக்காதபோது அல்லது setup இடைநிறுத்தப்பட்டபோது இதைப் பயன்படுத்தவும்.",
+            "te": "answers అందుబాటులో లేకపోతే లేదా setup నిలిచిపోయితే దీన్ని ఉపయోగించండి."
+        ],
+        "ross_routines": [
+            "en": "Ross Routines",
+            "hi": "Ross Routines",
+            "bn": "Ross Routines",
+            "ta": "Ross Routines",
+            "te": "Ross Routines"
+        ],
+        "ross_routines_detail": [
+            "en": "Routines run locally from saved matters, files, dates, tasks, drafts, and accepted corrections.",
+            "hi": "Routines saved matters, files, dates, tasks, drafts और accepted corrections से locally चलते हैं।",
+            "bn": "Routines saved matters, files, dates, tasks, drafts, এবং accepted corrections থেকে locally চলে।",
+            "ta": "Routines saved matters, files, dates, tasks, drafts மற்றும் accepted corrections-இல் இருந்து locally இயங்கும்.",
+            "te": "Routines saved matters, files, dates, tasks, drafts మరియు accepted corrections నుండి locally నడుస్తాయి."
+        ],
+        "morning_brief": [
+            "en": "Morning brief",
+            "hi": "Morning brief",
+            "bn": "Morning brief",
+            "ta": "Morning brief",
+            "te": "Morning brief"
+        ],
+        "morning_brief_detail": [
+            "en": "On app open, once per day.",
+            "hi": "App खुलने पर, दिन में एक बार।",
+            "bn": "App খুললে, দিনে একবার।",
+            "ta": "App திறக்கும் போது, ஒரு நாளில் ஒருமுறை.",
+            "te": "App తెరిచినప్పుడు, రోజుకు ఒకసారి."
+        ],
+        "after_document_import": [
+            "en": "After document import",
+            "hi": "Document import के बाद",
+            "bn": "Document import-এর পরে",
+            "ta": "Document import பிறகு",
+            "te": "Document import తర్వాత"
+        ],
+        "after_document_import_detail": [
+            "en": "Update case memory and review items after extraction.",
+            "hi": "Extraction के बाद case memory और review items update करें।",
+            "bn": "Extraction-এর পরে case memory এবং review items update করুন।",
+            "ta": "Extraction பிறகு case memory மற்றும் review items update செய்யவும்.",
+            "te": "Extraction తర్వాత case memory మరియు review items update చేయండి."
+        ],
+        "before_hearing": [
+            "en": "Before hearing",
+            "hi": "Hearing से पहले",
+            "bn": "Hearing-এর আগে",
+            "ta": "Hearing முன்",
+            "te": "Hearing ముందు"
+        ],
+        "before_hearing_detail": [
+            "en": "Prepare checklist, missing facts, and hearing note prompt.",
+            "hi": "Checklist, missing facts और hearing note prompt तैयार करें।",
+            "bn": "Checklist, missing facts, এবং hearing note prompt তৈরি করুন।",
+            "ta": "Checklist, missing facts மற்றும் hearing note prompt தயாரிக்கவும்.",
+            "te": "Checklist, missing facts మరియు hearing note prompt సిద్ధం చేయండి."
+        ],
+        "missing_facts_scan": [
+            "en": "Missing facts scan",
+            "hi": "Missing facts scan",
+            "bn": "Missing facts scan",
+            "ta": "Missing facts scan",
+            "te": "Missing facts scan"
+        ],
+        "missing_facts_scan_detail": [
+            "en": "Find gaps and weak support in source-backed matter memory.",
+            "hi": "Source-backed matter memory में gaps और weak support खोजें।",
+            "bn": "Source-backed matter memory-তে gaps এবং weak support খুঁজুন।",
+            "ta": "Source-backed matter memory-இல் gaps மற்றும் weak support கண்டறியவும்.",
+            "te": "Source-backed matter memory లో gaps మరియు weak support కనుగొనండి."
+        ],
+        "draft_refresh": [
+            "en": "Draft refresh",
+            "hi": "Draft refresh",
+            "bn": "Draft refresh",
+            "ta": "Draft refresh",
+            "te": "Draft refresh"
+        ],
+        "draft_refresh_detail": [
+            "en": "Refresh local drafts from latest files and corrections.",
+            "hi": "Latest files और corrections से local drafts refresh करें।",
+            "bn": "Latest files এবং corrections থেকে local drafts refresh করুন।",
+            "ta": "Latest files மற்றும் corrections-இல் இருந்து local drafts refresh செய்யவும்.",
+            "te": "Latest files మరియు corrections నుండి local drafts refresh చేయండి."
+        ],
+        "public_law_search": [
+            "en": "Public-law search",
+            "hi": "Public-law search",
+            "bn": "Public-law search",
+            "ta": "Public-law search",
+            "te": "Public-law search"
+        ],
+        "approval_required": [
+            "en": "Approval required",
+            "hi": "Approval ज़रूरी",
+            "bn": "Approval দরকার",
+            "ta": "Approval தேவை",
+            "te": "Approval అవసరం"
+        ],
+        "public_law_search_detail": [
+            "en": "Ross may prepare a sanitized query preview. It must not search the web until you approve it.",
+            "hi": "Ross sanitized query preview तैयार कर सकता है। आपकी approval से पहले यह web search नहीं करेगा।",
+            "bn": "Ross sanitized query preview তৈরি করতে পারে। আপনার approval-এর আগে এটি web search করবে না।",
+            "ta": "Ross sanitized query preview தயாரிக்கலாம். நீங்கள் approve செய்யும் வரை இது web search செய்யாது.",
+            "te": "Ross sanitized query preview సిద్ధం చేయవచ్చు. మీరు approve చేసే వరకు ఇది web search చేయదు."
+        ],
+        "storage": [
+            "en": "Storage",
+            "hi": "Storage",
+            "bn": "Storage",
+            "ta": "Storage",
+            "te": "Storage"
+        ],
+        "case_files": [
+            "en": "Case files",
+            "hi": "Case files",
+            "bn": "Case files",
+            "ta": "Case files",
+            "te": "Case files"
+        ],
+        "drafts": [
+            "en": "Drafts",
+            "hi": "Drafts",
+            "bn": "Drafts",
+            "ta": "Drafts",
+            "te": "Drafts"
+        ],
+        "stored_on_phone_unless_shared": [
+            "en": "Stored on this iPhone unless you share it.",
+            "hi": "जब तक आप share नहीं करते, यह इसी iPhone पर stored रहता है।",
+            "bn": "আপনি share না করলে এটি এই iPhone-এ stored থাকে।",
+            "ta": "நீங்கள் share செய்யாவிட்டால் இது இந்த iPhone-இல் stored இருக்கும்.",
+            "te": "మీరు share చేయనంత వరకు ఇది ఈ iPhone లో stored ఉంటుంది."
+        ],
+        "used_on_this_iphone": [
+            "en": "Used on this iPhone",
+            "hi": "इस iPhone पर used",
+            "bn": "এই iPhone-এ used",
+            "ta": "இந்த iPhone-இல் used",
+            "te": "ఈ iPhone లో used"
+        ],
+        "help": [
+            "en": "Help",
+            "hi": "मदद",
+            "bn": "সহায়তা",
+            "ta": "உதவி",
+            "te": "సహాయం"
+        ],
+        "start": [
+            "en": "Start",
+            "hi": "शुरू करें",
+            "bn": "শুরু করুন",
+            "ta": "தொடங்கு",
+            "te": "ప్రారంభం"
+        ],
+        "help_start_detail": [
+            "en": "Add a matter, import a file, then ask Ross.",
+            "hi": "मामला जोड़ें, फ़ाइल import करें, फिर Ross से पूछें।",
+            "bn": "মামলা যোগ করুন, ফাইল import করুন, তারপর Ross-কে জিজ্ঞাসা করুন।",
+            "ta": "வழக்கை சேர்த்து, கோப்பை import செய்து, பிறகு Ross-ஐ கேளுங்கள்.",
+            "te": "కేసు జోడించి, ఫైల్ import చేసి, తర్వాత Ross‌ను అడగండి."
+        ],
+        "help_sharing_detail": [
+            "en": "For sharing, open Notes & Drafts and use the system share sheet.",
+            "hi": "Sharing के लिए Notes & Drafts खोलें और system share sheet उपयोग करें।",
+            "bn": "Sharing-এর জন্য Notes & Drafts খুলে system share sheet ব্যবহার করুন।",
+            "ta": "Sharing-க்கு Notes & Drafts திறந்து system share sheet-ஐ பயன்படுத்தவும்.",
+            "te": "Sharing కోసం Notes & Drafts తెరిచి system share sheet ఉపయోగించండి."
+        ],
         "translate_to": [
             "en": "Translate to %@",
             "hi": "%@ में अनुवाद करें",

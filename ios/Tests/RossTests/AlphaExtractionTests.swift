@@ -902,6 +902,26 @@ final class AlphaExtractionTests: XCTestCase {
             "తొలగించండి"
         )
         XCTAssertEqual(
+            rossLocalized("settings_privacy", languageCode: "ta"),
+            "தனியுரிமை"
+        )
+        XCTAssertEqual(
+            rossLocalized("settings_privacy_detail", languageCode: "bn"),
+            "Ross আগে Legal Search wording দেখায়। মামলার ফাইল এই iPhone-এই থাকে।"
+        )
+        XCTAssertEqual(
+            rossLocalized("open_my_assistant_detail", languageCode: "hi"),
+            "जब answers उपलब्ध न हों या setup रुका हो, तब इसका उपयोग करें।"
+        )
+        XCTAssertEqual(
+            rossLocalized("public_law_search_detail", languageCode: "te-IN"),
+            "Ross sanitized query preview సిద్ధం చేయవచ్చు. మీరు approve చేసే వరకు ఇది web search చేయదు."
+        )
+        XCTAssertEqual(
+            rossLocalized("help_start_detail", languageCode: "ta"),
+            "வழக்கை சேர்த்து, கோப்பை import செய்து, பிறகு Ross-ஐ கேளுங்கள்."
+        )
+        XCTAssertEqual(
             rossLocalized("download_size", languageCode: "ta"),
             "பதிவிறக்க அளவு"
         )

@@ -127,19 +127,19 @@ struct AlphaSettingsScreen: View {
                     }
                 }
 
-                RossSectionCard(title: "Privacy") {
+                RossSectionCard(title: rossLocalized("settings_privacy")) {
                     VStack(alignment: .leading, spacing: 12) {
-                        AlphaSettingsValueRow(label: "Legal Search", value: "Review required")
+                        AlphaSettingsValueRow(label: "Legal Search", value: rossLocalized("review_required"))
                         Divider()
-                        Text("Ross shows the Legal Search wording first. Matter files stay on this iPhone.")
+                        Text(rossLocalized("settings_privacy_detail"))
                             .font(.footnote)
                             .foregroundStyle(Color.rossInk.opacity(0.7))
                             .fixedSize(horizontal: false, vertical: true)
                         Divider()
                         NavigationLink(value: AlphaRoute.privacyLedger) {
                             AlphaSettingsNavigationRow(
-                                title: "Activity Log",
-                                detail: "Local work and Legal Search, separated.",
+                                title: rossLocalized("activity_log"),
+                                detail: rossLocalized("activity_log_detail"),
                                 systemImage: "checklist"
                             )
                         }
@@ -147,7 +147,7 @@ struct AlphaSettingsScreen: View {
                     }
                 }
 
-                RossSectionCard(title: "Appearance") {
+                RossSectionCard(title: rossLocalized("settings_appearance")) {
                     DisclosureGroup(isExpanded: $appearanceExpanded) {
                         VStack(alignment: .leading, spacing: 0) {
                             ForEach(Array(AlphaAppearanceMode.allCases.enumerated()), id: \.element) { index, mode in
@@ -170,12 +170,12 @@ struct AlphaSettingsScreen: View {
                         }
                         .padding(.top, 10)
                     } label: {
-                        AlphaSettingsValueRow(label: "Theme", value: model.persisted.settings.appearanceMode.title)
+                        AlphaSettingsValueRow(label: rossLocalized("theme"), value: model.persisted.settings.appearanceMode.title)
                     }
                     .tint(Color.rossAccent)
                 }
 
-                RossSectionCard(title: "My assistant") {
+                RossSectionCard(title: rossLocalized("my_assistant")) {
                     VStack(alignment: .leading, spacing: 12) {
                         Text(alphaPrivateAIStatus(model))
                             .font(.headline)
@@ -188,8 +188,8 @@ struct AlphaSettingsScreen: View {
                         Divider()
                         NavigationLink(value: AlphaRoute.privateAISettings) {
                             AlphaSettingsNavigationRow(
-                                title: "Open My assistant",
-                                detail: "Use this when answers are unavailable or setup is paused.",
+                                title: rossLocalized("open_my_assistant"),
+                                detail: rossLocalized("open_my_assistant_detail"),
                                 systemImage: "gearshape.2"
                             )
                         }
@@ -197,71 +197,71 @@ struct AlphaSettingsScreen: View {
                     }
                 }
 
-                RossSectionCard(title: "Ross Routines") {
+                RossSectionCard(title: rossLocalized("ross_routines")) {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Routines run locally from saved matters, files, dates, tasks, drafts, and accepted corrections.")
+                        Text(rossLocalized("ross_routines_detail"))
                             .font(.footnote)
                             .foregroundStyle(Color.rossInk.opacity(0.7))
                             .fixedSize(horizontal: false, vertical: true)
                         Divider()
-                        AlphaRoutineToggleRow(title: "Morning brief", detail: "On app open, once per day.", isOn: Binding(
+                        AlphaRoutineToggleRow(title: rossLocalized("morning_brief"), detail: rossLocalized("morning_brief_detail"), isOn: Binding(
                             get: { model.routineSettings.morningBriefEnabled },
                             set: { value in model.updateRoutineSettings { $0.morningBriefEnabled = value } }
                         ))
                         Divider()
-                        AlphaRoutineToggleRow(title: "After document import", detail: "Update case memory and review items after extraction.", isOn: Binding(
+                        AlphaRoutineToggleRow(title: rossLocalized("after_document_import"), detail: rossLocalized("after_document_import_detail"), isOn: Binding(
                             get: { model.routineSettings.afterDocumentImportEnabled },
                             set: { value in model.updateRoutineSettings { $0.afterDocumentImportEnabled = value } }
                         ))
                         Divider()
-                        AlphaRoutineToggleRow(title: "Before hearing", detail: "Prepare checklist, missing facts, and hearing note prompt.", isOn: Binding(
+                        AlphaRoutineToggleRow(title: rossLocalized("before_hearing"), detail: rossLocalized("before_hearing_detail"), isOn: Binding(
                             get: { model.routineSettings.beforeHearingEnabled },
                             set: { value in model.updateRoutineSettings { $0.beforeHearingEnabled = value } }
                         ))
                         Divider()
-                        AlphaRoutineToggleRow(title: "Missing facts scan", detail: "Find gaps and weak support in source-backed matter memory.", isOn: Binding(
+                        AlphaRoutineToggleRow(title: rossLocalized("missing_facts_scan"), detail: rossLocalized("missing_facts_scan_detail"), isOn: Binding(
                             get: { model.routineSettings.missingFactsScanEnabled },
                             set: { value in model.updateRoutineSettings { $0.missingFactsScanEnabled = value } }
                         ))
                         Divider()
-                        AlphaRoutineToggleRow(title: "Draft refresh", detail: "Refresh local drafts from latest files and corrections.", isOn: Binding(
+                        AlphaRoutineToggleRow(title: rossLocalized("draft_refresh"), detail: rossLocalized("draft_refresh_detail"), isOn: Binding(
                             get: { model.routineSettings.draftRefreshEnabled },
                             set: { value in model.updateRoutineSettings { $0.draftRefreshEnabled = value } }
                         ))
                         Divider()
-                        AlphaSettingsValueRow(label: "Public-law search", value: "Approval required")
-                        Text("Ross may prepare a sanitized query preview. It must not search the web until you approve it.")
+                        AlphaSettingsValueRow(label: rossLocalized("public_law_search"), value: rossLocalized("approval_required"))
+                        Text(rossLocalized("public_law_search_detail"))
                             .font(.footnote)
                             .foregroundStyle(Color.rossInk.opacity(0.7))
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
 
-                RossSectionCard(title: "Storage") {
+                RossSectionCard(title: rossLocalized("storage")) {
                     DisclosureGroup(isExpanded: $storageExpanded) {
                         VStack(alignment: .leading, spacing: 12) {
-                            AlphaSettingsValueRow(label: "Case files", value: "\(storageSnapshot.documentCount) • \(alphaFileSizeLabel(storageSnapshot.documentBytes))")
+                            AlphaSettingsValueRow(label: rossLocalized("case_files"), value: "\(storageSnapshot.documentCount) • \(alphaFileSizeLabel(storageSnapshot.documentBytes))")
                             Divider()
-                            AlphaSettingsValueRow(label: "Drafts", value: "\(storageSnapshot.exportCount) • \(alphaFileSizeLabel(storageSnapshot.exportBytes))")
+                            AlphaSettingsValueRow(label: rossLocalized("drafts"), value: "\(storageSnapshot.exportCount) • \(alphaFileSizeLabel(storageSnapshot.exportBytes))")
                             Divider()
                             AlphaSettingsValueRow(label: alphaSettingsAssistantStorageLabel, value: alphaFileSizeLabel(storageSnapshot.assistantBytes))
                             Divider()
-                            Text("Stored on this iPhone unless you share it.")
+                            Text(rossLocalized("stored_on_phone_unless_shared"))
                                 .font(.footnote)
                                 .foregroundStyle(Color.rossInk.opacity(0.7))
                         }
                         .padding(.top, 10)
                     } label: {
-                        AlphaSettingsValueRow(label: "Used on this iPhone", value: alphaFileSizeLabel(storageSnapshot.totalBytes))
+                        AlphaSettingsValueRow(label: rossLocalized("used_on_this_iphone"), value: alphaFileSizeLabel(storageSnapshot.totalBytes))
                     }
                     .tint(Color.rossAccent)
                 }
 
-                RossSectionCard(title: "Help") {
+                RossSectionCard(title: rossLocalized("help")) {
                     VStack(alignment: .leading, spacing: 12) {
-                        AlphaSettingsValueRow(label: "Start", value: "Add a matter, import a file, then ask Ross.")
+                        AlphaSettingsValueRow(label: rossLocalized("start"), value: rossLocalized("help_start_detail"))
                         Divider()
-                        Text("For sharing, open Notes & Drafts and use the system share sheet.")
+                        Text(rossLocalized("help_sharing_detail"))
                             .font(.footnote)
                             .foregroundStyle(Color.rossInk.opacity(0.7))
                             .fixedSize(horizontal: false, vertical: true)
