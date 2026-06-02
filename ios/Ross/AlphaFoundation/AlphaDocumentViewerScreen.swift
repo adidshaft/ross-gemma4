@@ -1682,12 +1682,25 @@ struct AlphaReviewActionButtonStyle: ButtonStyle {
     var tint: Color = Color.rossInk
 
     func makeBody(configuration: Configuration) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
+
         configuration.label
             .font(.footnote.weight(.semibold))
             .foregroundStyle(tint)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .rossGlassSurface(tint: tint.opacity(0.12), cornerRadius: 14, interactive: true, shadowOpacity: configuration.isPressed ? 0.04 : 0.07, shadowRadius: configuration.isPressed ? 4 : 7, shadowY: configuration.isPressed ? 1 : 2, fillOpacity: configuration.isPressed ? 0.66 : 0.78, strokeOpacity: 0.52)
+            .rossNativeGlassSurface(
+                tint: tint,
+                shape: shape,
+                interactive: true,
+                fallbackFillOpacity: configuration.isPressed ? 0.62 : 0.76,
+                fallbackStrokeOpacity: 0.50
+            )
+            .shadow(
+                color: Color.rossShadow.opacity(configuration.isPressed ? 0.04 : 0.07),
+                radius: configuration.isPressed ? 4 : 7,
+                y: configuration.isPressed ? 1 : 2
+            )
     }
 }
 
@@ -1701,7 +1714,13 @@ struct AlphaReviewActionLabel: View {
             .foregroundStyle(tint)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .rossGlassSurface(tint: tint.opacity(0.10), cornerRadius: 14, shadowOpacity: 0.05, shadowRadius: 5, shadowY: 1, strokeOpacity: 0.50)
+            .rossNativeGlassSurface(
+                tint: tint,
+                shape: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                fallbackFillOpacity: 0.74,
+                fallbackStrokeOpacity: 0.50
+            )
+            .shadow(color: Color.rossShadow.opacity(0.05), radius: 5, y: 1)
     }
 }
 

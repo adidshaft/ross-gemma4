@@ -432,6 +432,8 @@ struct AlphaCompactNudgeButtonStyle: ButtonStyle {
     var tint: Color
 
     func makeBody(configuration: Configuration) -> some View {
+        let shape = Capsule()
+
         configuration.label
             .font(.caption.weight(.semibold))
             .foregroundStyle(tint)
@@ -439,13 +441,15 @@ struct AlphaCompactNudgeButtonStyle: ButtonStyle {
             .minimumScaleFactor(0.82)
             .frame(maxWidth: .infinity)
             .frame(height: 34)
-            .background(
-                tint.opacity(configuration.isPressed ? 0.22 : 0.10),
-                in: Capsule()
+            .rossNativeGlassSurface(
+                tint: tint,
+                shape: shape,
+                interactive: true,
+                fallbackFillOpacity: configuration.isPressed ? 0.58 : 0.70,
+                fallbackStrokeOpacity: configuration.isPressed ? 0.32 : 0.44
             )
             .overlay {
-                Capsule()
-                    .stroke(tint.opacity(configuration.isPressed ? 0.30 : 0.18), lineWidth: 1)
+                shape.stroke(tint.opacity(configuration.isPressed ? 0.32 : 0.20), lineWidth: 1)
             }
             .shadow(
                 color: tint.opacity(configuration.isPressed ? 0.08 : 0.12),
