@@ -1086,6 +1086,39 @@ final class AlphaExtractionTests: XCTestCase {
             rossLocalized("assistant_setup_note_senior_drafting", languageCode: "te-IN"),
             "Ross ఈ device లో పొడవైన local drafting sessions కోసం enough room కనుగొంది."
         )
+        let secondsJob = AlphaModelDownloadJob(
+            sessionId: "seconds",
+            packId: "flash",
+            tier: .flash,
+            state: .downloading,
+            networkPolicy: .wifiOnly,
+            bytesDownloaded: 60_000_000,
+            totalBytes: 120_000_000,
+            checksumSha256: "test"
+        )
+        let minutesJob = AlphaModelDownloadJob(
+            sessionId: "minutes",
+            packId: "quick-start",
+            tier: .quickStart,
+            state: .downloading,
+            networkPolicy: .wifiOnly,
+            bytesDownloaded: 1,
+            totalBytes: 1_800_000_000,
+            checksumSha256: "test"
+        )
+        let hoursJob = AlphaModelDownloadJob(
+            sessionId: "hours",
+            packId: "case-associate",
+            tier: .caseAssociate,
+            state: .downloading,
+            networkPolicy: .wifiOnly,
+            bytesDownloaded: 1,
+            totalBytes: 86_400_000_000,
+            checksumSha256: "test"
+        )
+        XCTAssertEqual(alphaDownloadPreciseEtaLabel(secondsJob, languageCode: "hi"), "लगभग 5 सेकंड बाकी")
+        XCTAssertEqual(alphaDownloadPreciseEtaLabel(minutesJob, languageCode: "bn"), "প্রায় 3 মিনিট বাকি")
+        XCTAssertEqual(alphaDownloadPreciseEtaLabel(hoursJob, languageCode: "ta"), "சுமார் 2 மணி நேரம் மீதம்")
         XCTAssertEqual(
             rossLocalized("privacy_ledger_empty", languageCode: "hi"),
             "Ross ने अभी तक कोई local या network actions log नहीं किए हैं।"

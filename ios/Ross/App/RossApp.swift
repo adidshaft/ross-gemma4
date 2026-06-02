@@ -637,6 +637,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "அமைப்பு நடக்கிறது. நல்ல Wi-Fi-இல் சுமார் %d நிமிடம் மீதம்.",
             "te": "సెటప్ జరుగుతోంది. మంచి Wi-Fi పై సుమారు %d నిమిషాలు మిగిలాయి."
         ],
+        "assistant_download_seconds_left": [
+            "en": "About %d sec left",
+            "hi": "लगभग %d सेकंड बाकी",
+            "bn": "প্রায় %d সেকেন্ড বাকি",
+            "ta": "சுமார் %d விநாடிகள் மீதம்",
+            "te": "సుమారు %d సెకన్లు మిగిలాయి"
+        ],
+        "assistant_download_precise_minutes_left": [
+            "en": "About %d min left",
+            "hi": "लगभग %d मिनट बाकी",
+            "bn": "প্রায় %d মিনিট বাকি",
+            "ta": "சுமார் %d நிமிடம் மீதம்",
+            "te": "సుమారు %d నిమిషాలు మిగిలాయి"
+        ],
+        "assistant_download_hours_left": [
+            "en": "About %d hr left",
+            "hi": "लगभग %d घंटे बाकी",
+            "bn": "প্রায় %d ঘণ্টা বাকি",
+            "ta": "சுமார் %d மணி நேரம் மீதம்",
+            "te": "సుమారు %d గంటలు మిగిలాయి"
+        ],
         "assistant_download_final_check": [
             "en": "Final check usually takes less than a minute.",
             "hi": "अंतिम जांच में आमतौर पर एक मिनट से कम लगता है।",

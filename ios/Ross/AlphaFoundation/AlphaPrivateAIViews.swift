@@ -754,17 +754,7 @@ struct AlphaPrivateAIJobCard: View {
     }
 
     private var etaLabel: String? {
-        guard job.state == .downloading, job.totalBytes > 0, job.progress > 0 else { return nil }
-        let remaining = max(0, 1 - job.progress)
-        let assumedBytesPerSec: Double = 12_000_000 // conservative 12 MB/s on Wi-Fi
-        let seconds = Double(job.totalBytes) * remaining / assumedBytesPerSec
-        if seconds < 90 {
-            return "About \(max(1, Int(seconds))) sec left"
-        } else if seconds < 3600 {
-            return "About \(Int(ceil(seconds / 60))) min left"
-        } else {
-            return "About \(Int(ceil(seconds / 3600))) hr left"
-        }
+        alphaDownloadPreciseEtaLabel(job)
     }
 
     var body: some View {
@@ -1027,6 +1017,32 @@ func alphaDownloadEstimateLabel(
         return rossLocalized("assistant_download_final_check", languageCode: languageCode)
     default:
         return nil
+    }
+}
+
+func alphaDownloadPreciseEtaLabel(
+    _ job: AlphaModelDownloadJob,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String? {
+    guard job.state == .downloading, job.totalBytes > 0, job.progress > 0 else { return nil }
+    let remaining = max(0, 1 - job.progress)
+    let assumedBytesPerSec: Double = 12_000_000 // Conservative 12 MB/s on Wi-Fi.
+    let seconds = Double(job.totalBytes) * remaining / assumedBytesPerSec
+    if seconds < 90 {
+        return String(
+            format: rossLocalized("assistant_download_seconds_left", languageCode: languageCode),
+            max(1, Int(seconds))
+        )
+    } else if seconds < 3600 {
+        return String(
+            format: rossLocalized("assistant_download_precise_minutes_left", languageCode: languageCode),
+            Int(ceil(seconds / 60))
+        )
+    } else {
+        return String(
+            format: rossLocalized("assistant_download_hours_left", languageCode: languageCode),
+            Int(ceil(seconds / 3600))
+        )
     }
 }
 
