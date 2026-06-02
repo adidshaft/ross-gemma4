@@ -1399,23 +1399,23 @@ struct AlphaDocumentReviewStatusBanner: View {
     private var title: String {
         switch state {
         case .readingText:
-            return "Reading"
+            return rossLocalized("document_status_reading")
         case .imported:
-            return "Imported"
+            return rossLocalized("document_status_imported")
         case .failed:
-            return "Failed"
+            return rossLocalized("document_status_failed")
         case .ready:
-            return needsReviewCount == 0 ? "Ready" : "Ready"
+            return rossLocalized("document_status_ready")
         case .needsConfirmation:
-            return "Confirm"
+            return rossLocalized("document_status_confirm")
         case .reviewingFindings:
             break
         }
         return needsReviewCount == 0
-            ? "Ready"
+            ? rossLocalized("document_status_ready")
             : needsReviewCount == 1
-            ? "1 finding"
-            : "\(needsReviewCount) findings"
+            ? rossLocalized("one_finding")
+            : alphaFindingsCountLabel(needsReviewCount)
     }
 
     private var tint: Color {
@@ -1443,7 +1443,7 @@ struct AlphaDocumentReviewStatusBanner: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(Color.rossInk.opacity(0.42))
 
-            Text(isWorking ? (progressLabel ?? "Working locally") : alphaReviewItemCountLabel(needsReviewCount))
+            Text(isWorking ? (progressLabel ?? rossLocalized("working_locally")) : alphaReviewItemCountLabel(needsReviewCount))
                 .font(.caption.weight(.medium))
                 .foregroundStyle(Color.rossInk.opacity(0.66))
                 .lineLimit(1)
@@ -1498,39 +1498,60 @@ func alphaExtractionProgressLabel(_ run: AlphaExtractionRun?) -> String? {
     let stage: String
     switch run.progressState {
     case .acquiringText:
-        stage = "Reading text"
+        stage = rossLocalized("extraction_stage_reading_text")
     case .detectingLanguage:
-        stage = "Checking language"
+        stage = rossLocalized("extraction_stage_checking_language")
     case .extractingFields:
-        stage = "Finding key details"
+        stage = rossLocalized("extraction_stage_finding_key_details")
     case .verifyingFields:
-        stage = "Checking sources"
+        stage = rossLocalized("extraction_stage_checking_sources")
     case .preparingReview:
-        stage = "Preparing review"
+        stage = rossLocalized("extraction_stage_preparing_review")
     case .complete:
-        stage = "Complete"
+        stage = rossLocalized("extraction_stage_complete")
     case .needsReview:
-        stage = "Please confirm"
+        stage = rossLocalized("extraction_stage_please_confirm")
     case .failed:
-        stage = "Needs attention"
+        stage = rossLocalized("extraction_stage_needs_attention")
     }
 
     guard run.totalPages > 0, run.pagesProcessed > 0 else { return stage }
-    return "\(stage) · \(min(run.pagesProcessed, run.totalPages)) of \(run.totalPages) pages"
+    return alphaExtractionPagesProgressLabel(
+        stage: stage,
+        processed: min(run.pagesProcessed, run.totalPages),
+        total: run.totalPages
+    )
+}
+
+func alphaFindingsCountLabel(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("findings_count", languageCode: languageCode), count)
+}
+
+func alphaExtractionPagesProgressLabel(
+    stage: String,
+    processed: Int,
+    total: Int,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
+    String(format: rossLocalized("extraction_pages_progress", languageCode: languageCode), stage, processed, total)
+}
+
+func alphaExtractionProgressDetail(_ label: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("document_review_progress_detail", languageCode: languageCode), label)
 }
 
 func alphaDocumentReviewBannerDetail(run: AlphaExtractionRun?, fallback: String) -> String {
     guard let run, alphaExtractionRunIsWorking(run) else { return fallback }
     if let label = alphaExtractionProgressLabel(run) {
-        return "\(label). Ross will update this file as soon as it finishes reading."
+        return alphaExtractionProgressDetail(label)
     }
-    return "Ross is reading the file and will show what it found as soon as it finishes."
+    return rossLocalized("document_review_reading_detail")
 }
 
 func alphaDocumentFallbackReviewDetail(document: AlphaCaseDocument, needsReviewCount: Int) -> String {
     switch document.processingState {
     case .imported, .readingText:
-        return "Ross is still reading this file. Do not rely on full-document facts until review finishes."
+        return rossLocalized("document_review_still_reading_warning")
     case .needsConfirmation, .reviewingFindings:
         return "Check the highlighted items below before relying on this document in a note or export."
     case .ready:
@@ -1538,7 +1559,7 @@ func alphaDocumentFallbackReviewDetail(document: AlphaCaseDocument, needsReviewC
             ? "Check the highlighted items below before relying on this document in a note or export."
             : "Verified details can be used in notes, tasks, and exports for this matter."
     case .failed:
-        return "Ross could not finish reading this file. Review the source manually before using it."
+        return rossLocalized("document_review_failed_warning")
     }
 }
 

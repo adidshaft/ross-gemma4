@@ -974,6 +974,18 @@ final class AlphaExtractionTests: XCTestCase {
             "গুরুত্বপূর্ণ"
         )
         XCTAssertEqual(
+            alphaFindingsCountLabel(3, languageCode: "hi"),
+            "3 findings"
+        )
+        XCTAssertEqual(
+            alphaExtractionPagesProgressLabel(stage: "Text வாசிக்கிறது", processed: 2, total: 5, languageCode: "ta"),
+            "Text வாசிக்கிறது · 2/5 pages"
+        )
+        XCTAssertEqual(
+            alphaExtractionProgressDetail("Text చదువుతోంది · 1/2 pages", languageCode: "te-IN"),
+            "Text చదువుతోంది · 1/2 pages. చదవడం పూర్తయ్యగానే Ross ఈ file ను update చేస్తుంది."
+        )
+        XCTAssertEqual(
             rossLocalized("check_sources", languageCode: "ta"),
             "மூலங்களைச் சரிபார்க்கவும்"
         )
@@ -2460,6 +2472,10 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(document.processingState, .readingText)
         XCTAssertEqual(document.lawyerStatusTitle, "Reading")
+        XCTAssertEqual(
+            alphaExtractionProgressLabel(document.extractionRuns.first),
+            rossLocalized("extraction_stage_reading_text")
+        )
     }
 
     func testFictionalClassificationBlocksAutomaticLegalFactSaving() {

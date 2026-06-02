@@ -1981,6 +1981,153 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Ross background-இல் structured details தயாரிக்கிறது.",
             "te": "Ross background లో structured details సిద్ధం చేస్తోంది."
         ],
+        "document_status_reading": [
+            "en": "Reading",
+            "hi": "Reading",
+            "bn": "Reading",
+            "ta": "Reading",
+            "te": "Reading"
+        ],
+        "document_status_imported": [
+            "en": "Imported",
+            "hi": "Imported",
+            "bn": "Imported",
+            "ta": "Imported",
+            "te": "Imported"
+        ],
+        "document_status_failed": [
+            "en": "Failed",
+            "hi": "Failed",
+            "bn": "Failed",
+            "ta": "Failed",
+            "te": "Failed"
+        ],
+        "document_status_ready": [
+            "en": "Ready",
+            "hi": "Ready",
+            "bn": "Ready",
+            "ta": "Ready",
+            "te": "Ready"
+        ],
+        "document_status_confirm": [
+            "en": "Confirm",
+            "hi": "Confirm",
+            "bn": "Confirm",
+            "ta": "Confirm",
+            "te": "Confirm"
+        ],
+        "one_finding": [
+            "en": "1 finding",
+            "hi": "1 finding",
+            "bn": "1 finding",
+            "ta": "1 finding",
+            "te": "1 finding"
+        ],
+        "findings_count": [
+            "en": "%d findings",
+            "hi": "%d findings",
+            "bn": "%d findings",
+            "ta": "%d findings",
+            "te": "%d findings"
+        ],
+        "working_locally": [
+            "en": "Working locally",
+            "hi": "locally काम कर रहा है",
+            "bn": "locally কাজ করছে",
+            "ta": "locally வேலை செய்கிறது",
+            "te": "locally పని చేస్తోంది"
+        ],
+        "extraction_stage_reading_text": [
+            "en": "Reading text",
+            "hi": "Text पढ़ रहा है",
+            "bn": "Text পড়ছে",
+            "ta": "Text வாசிக்கிறது",
+            "te": "Text చదువుతోంది"
+        ],
+        "extraction_stage_checking_language": [
+            "en": "Checking language",
+            "hi": "Language जांच रहा है",
+            "bn": "Language পরীক্ষা করছে",
+            "ta": "Language சரிபார்க்கிறது",
+            "te": "Language తనిఖీ చేస్తోంది"
+        ],
+        "extraction_stage_finding_key_details": [
+            "en": "Finding key details",
+            "hi": "Key details खोज रहा है",
+            "bn": "Key details খুঁজছে",
+            "ta": "Key details கண்டறிகிறது",
+            "te": "Key details కనుగొంటోంది"
+        ],
+        "extraction_stage_checking_sources": [
+            "en": "Checking sources",
+            "hi": "Sources जांच रहा है",
+            "bn": "Sources পরীক্ষা করছে",
+            "ta": "Sources சரிபார்க்கிறது",
+            "te": "Sources తనిఖీ చేస్తోంది"
+        ],
+        "extraction_stage_preparing_review": [
+            "en": "Preparing review",
+            "hi": "Review तैयार हो रहा है",
+            "bn": "Review প্রস্তুত হচ্ছে",
+            "ta": "Review தயாராகிறது",
+            "te": "Review సిద్ధమవుతోంది"
+        ],
+        "extraction_stage_complete": [
+            "en": "Complete",
+            "hi": "Complete",
+            "bn": "Complete",
+            "ta": "Complete",
+            "te": "Complete"
+        ],
+        "extraction_stage_please_confirm": [
+            "en": "Please confirm",
+            "hi": "Confirm करें",
+            "bn": "Confirm করুন",
+            "ta": "Confirm செய்யவும்",
+            "te": "Confirm చేయండి"
+        ],
+        "extraction_stage_needs_attention": [
+            "en": "Needs attention",
+            "hi": "Attention चाहिए",
+            "bn": "Attention দরকার",
+            "ta": "Attention தேவை",
+            "te": "Attention అవసరం"
+        ],
+        "extraction_pages_progress": [
+            "en": "%@ · %d of %d pages",
+            "hi": "%@ · %d/%d pages",
+            "bn": "%@ · %d/%d pages",
+            "ta": "%@ · %d/%d pages",
+            "te": "%@ · %d/%d pages"
+        ],
+        "document_review_progress_detail": [
+            "en": "%@. Ross will update this file as soon as it finishes reading.",
+            "hi": "%@। पढ़ना पूरा होते ही Ross इस file को update करेगा।",
+            "bn": "%@। পড়া শেষ হলেই Ross এই file update করবে।",
+            "ta": "%@. வாசித்து முடிந்தவுடன் Ross இந்த file-ஐ update செய்யும்.",
+            "te": "%@. చదవడం పూర్తయ్యగానే Ross ఈ file ను update చేస్తుంది."
+        ],
+        "document_review_reading_detail": [
+            "en": "Ross is reading the file and will show what it found as soon as it finishes.",
+            "hi": "Ross file पढ़ रहा है और finish होते ही findings दिखाएगा।",
+            "bn": "Ross file পড়ছে এবং শেষ হলেই findings দেখাবে।",
+            "ta": "Ross file வாசிக்கிறது; முடிந்தவுடன் கண்டதை காட்டும்.",
+            "te": "Ross file చదువుతోంది; పూర్తయ్యగానే కనుగొన్నదాన్ని చూపిస్తుంది."
+        ],
+        "document_review_still_reading_warning": [
+            "en": "Ross is still reading this file. Do not rely on full-document facts until review finishes.",
+            "hi": "Ross अभी यह file पढ़ रहा है। review पूरा होने तक full-document facts पर भरोसा न करें।",
+            "bn": "Ross এখনও এই file পড়ছে। review শেষ না হওয়া পর্যন্ত full-document facts-এ নির্ভর করবেন না।",
+            "ta": "Ross இன்னும் இந்த file வாசிக்கிறது. review முடியும் வரை full-document facts-ஐ நம்ப வேண்டாம்.",
+            "te": "Ross ఇంకా ఈ file చదువుతోంది. review పూర్తయ్యే వరకు full-document facts పై ఆధారపడవద్దు."
+        ],
+        "document_review_failed_warning": [
+            "en": "Ross could not finish reading this file. Review the source manually before using it.",
+            "hi": "Ross यह file पढ़ना पूरा नहीं कर सका। use करने से पहले source manually review करें।",
+            "bn": "Ross এই file পড়া শেষ করতে পারেনি। ব্যবহার করার আগে source manually review করুন।",
+            "ta": "Ross இந்த file வாசிப்பை முடிக்க முடியவில்லை. பயன்படுத்துவதற்கு முன் source-ஐ manually review செய்யவும்.",
+            "te": "Ross ఈ file చదవడం పూర్తి చేయలేకపోయింది. ఉపయోగించే ముందు source ను manually review చేయండి."
+        ],
         "document_language_mixed": [
             "en": "Mixed language",
             "hi": "मिश्रित भाषा",
