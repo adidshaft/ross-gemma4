@@ -56,6 +56,14 @@ final class AlphaExtractionTests: XCTestCase {
                 success: true
             ),
             AlphaPrivacyLedgerEntry(
+                title: "Assistant update available",
+                detail: "Ross found a newer assistant setup listing. No case files were read or sent.",
+                purpose: .model_catalog,
+                payloadClass: .no_case_data,
+                endpointLabel: "device://model-update-check",
+                success: true
+            ),
+            AlphaPrivacyLedgerEntry(
                 title: "Assistant download verified",
                 detail: "Ross checked the assistant setup download before starting. Case files stayed on this device.",
                 purpose: .model_download,
@@ -89,7 +97,10 @@ final class AlphaExtractionTests: XCTestCase {
             )
         ]
 
-        XCTAssertEqual(entries[0].lawyerTitle, "Checked private assistant setup")
+        XCTAssertEqual(entries[0].lawyerTitle, "Private assistant setup check किया")
+        XCTAssertEqual(entries[1].lawyerTitle, "Private assistant update available है")
+        XCTAssertTrue(entries[1].lawyerDetail.contains("newer private assistant setup listing मिली"), entries[1].lawyerDetail)
+        XCTAssertTrue(entries[1].lawyerDetail.contains("कोई case file पढ़ी या भेजी नहीं गई"), entries[1].lawyerDetail)
         for entry in entries {
             XCTAssertFalse(entry.detail.localizedCaseInsensitiveContains("provider"), entry.detail)
             XCTAssertFalse(entry.detail.localizedCaseInsensitiveContains("byte-range"), entry.detail)
@@ -104,10 +115,10 @@ final class AlphaExtractionTests: XCTestCase {
             XCTAssertFalse(entry.lawyerDetail.localizedCaseInsensitiveContains("downloaded assistant"), entry.lawyerDetail)
         }
 
-        XCTAssertTrue(entries[1].lawyerDetail.contains("assistant download शुरू करने से पहले check किया"), entries[1].lawyerDetail)
-        XCTAssertTrue(entries[2].lawyerDetail.contains("Private assistant check हो चुका है"), entries[2].lawyerDetail)
-        XCTAssertTrue(entries[3].lawyerDetail.contains("assistant setup finish नहीं कर पाया"), entries[3].lawyerDetail)
-        XCTAssertTrue(entries[3].lawyerDetail.contains("Case files इसी device पर रहीं"), entries[3].lawyerDetail)
+        XCTAssertTrue(entries[2].lawyerDetail.contains("assistant download शुरू करने से पहले check किया"), entries[2].lawyerDetail)
+        XCTAssertTrue(entries[3].lawyerDetail.contains("Private assistant check हो चुका है"), entries[3].lawyerDetail)
+        XCTAssertTrue(entries[4].lawyerDetail.contains("assistant setup finish नहीं कर पाया"), entries[4].lawyerDetail)
+        XCTAssertTrue(entries[4].lawyerDetail.contains("Case files इसी device पर रहीं"), entries[4].lawyerDetail)
     }
 
     func testPrivacyLedgerPublicLawAndExportCopyFollowsSelectedLanguage() {

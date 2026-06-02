@@ -2813,9 +2813,13 @@ extension AlphaPrivacyLedgerEntry {
     var lawyerTitle: String {
         switch title {
         case "Model catalog checked":
-            "Checked private assistant setup"
+            rossLocalized("privacy_ledger_assistant_catalog_checked_title")
+        case "Assistant update available":
+            rossLocalized("privacy_ledger_assistant_update_available_title")
         case "Private AI Pack queued", "Private AI Pack verified":
-            "Set up private assistant"
+            rossLocalized("privacy_ledger_private_assistant_setup_title")
+        case "Assistant download verified", "Assistant verified", "Assistant download failed", "Assistant restored":
+            rossLocalized("privacy_ledger_private_assistant_setup_title")
         case "Public-law search reviewed by user", "Legal Search reviewed by user":
             rossLocalized("privacy_ledger_public_law_reviewed_title")
         case "Public-law query sent":
@@ -2829,11 +2833,11 @@ extension AlphaPrivacyLedgerEntry {
         case "Export generation failed":
             rossLocalized("privacy_ledger_local_export_failed_title")
         case "Local case review run":
-            "Reviewed case locally"
+            rossLocalized("privacy_ledger_local_case_review_title")
         case "Document imported locally":
-            "Imported document"
+            rossLocalized("privacy_ledger_document_imported_title")
         case "Case created locally":
-            "Created case"
+            rossLocalized("privacy_ledger_case_created_title")
         default:
             title
         }
@@ -2842,7 +2846,9 @@ extension AlphaPrivacyLedgerEntry {
     var lawyerDetail: String {
         switch title {
         case "Model catalog checked":
-            "Ross checked private assistant setup. No case files were read or sent."
+            rossLocalized("privacy_ledger_assistant_catalog_checked_detail")
+        case "Assistant update available":
+            rossLocalized("privacy_ledger_assistant_update_available_detail")
         case "Public-law search reviewed by user", "Legal Search reviewed by user":
             rossLocalized("privacy_ledger_public_law_reviewed_detail")
         case "Public-law query sent":

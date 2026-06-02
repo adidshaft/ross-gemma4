@@ -1232,6 +1232,48 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Draft save செய்ய முடியவில்லை",
             "te": "Draft save కాలేదు"
         ],
+        "privacy_ledger_assistant_catalog_checked_title": [
+            "en": "Checked private assistant setup",
+            "hi": "Private assistant setup check किया",
+            "bn": "Private assistant setup check করা হয়েছে",
+            "ta": "Private assistant setup check செய்யப்பட்டது",
+            "te": "Private assistant setup check చేయబడింది"
+        ],
+        "privacy_ledger_assistant_update_available_title": [
+            "en": "Private assistant update available",
+            "hi": "Private assistant update available है",
+            "bn": "Private assistant update available",
+            "ta": "Private assistant update available",
+            "te": "Private assistant update available ఉంది"
+        ],
+        "privacy_ledger_private_assistant_setup_title": [
+            "en": "Set up private assistant",
+            "hi": "Private assistant setup किया",
+            "bn": "Private assistant setup করা হয়েছে",
+            "ta": "Private assistant setup செய்யப்பட்டது",
+            "te": "Private assistant setup చేయబడింది"
+        ],
+        "privacy_ledger_local_case_review_title": [
+            "en": "Reviewed case locally",
+            "hi": "Case locally review किया",
+            "bn": "Case locally review করা হয়েছে",
+            "ta": "Case locally review செய்யப்பட்டது",
+            "te": "Case locally review చేయబడింది"
+        ],
+        "privacy_ledger_document_imported_title": [
+            "en": "Imported document",
+            "hi": "Document import किया",
+            "bn": "Document import করা হয়েছে",
+            "ta": "Document import செய்யப்பட்டது",
+            "te": "Document import చేయబడింది"
+        ],
+        "privacy_ledger_case_created_title": [
+            "en": "Created case",
+            "hi": "Case बनाया",
+            "bn": "Case তৈরি হয়েছে",
+            "ta": "Case உருவாக்கப்பட்டது",
+            "te": "Case సృష్టించబడింది"
+        ],
         "privacy_ledger_public_law_reviewed_detail": [
             "en": "Ross prepared the search locally. 0 private case details left the device.",
             "hi": "Ross ने search locally तैयार किया। 0 private case details device से बाहर गईं.",
@@ -1273,6 +1315,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "bn": "Ross draft file save করতে পারেনি। Case files এই device-এ রয়ে গেছে.",
             "ta": "Ross draft file-ஐ save செய்ய முடியவில்லை. Case files இந்த device-இல் இருந்தன.",
             "te": "Ross draft file save చేయలేకపోయింది. Case files ఈ device పైనే ఉన్నాయి."
+        ],
+        "privacy_ledger_assistant_catalog_checked_detail": [
+            "en": "Ross checked private assistant setup. No case files were read or sent.",
+            "hi": "Ross ने private assistant setup check किया। कोई case file पढ़ी या भेजी नहीं गई.",
+            "bn": "Ross private assistant setup check করেছে। কোনো case file পড়া বা পাঠানো হয়নি.",
+            "ta": "Ross private assistant setup check செய்தது. Case file எதையும் படிக்கவோ அனுப்பவோ இல்லை.",
+            "te": "Ross private assistant setup check చేసింది. Case file ఏదీ చదవలేదు లేదా పంపలేదు."
+        ],
+        "privacy_ledger_assistant_update_available_detail": [
+            "en": "Ross found a newer private assistant setup listing. No case files were read or sent.",
+            "hi": "Ross को newer private assistant setup listing मिली। कोई case file पढ़ी या भेजी नहीं गई.",
+            "bn": "Ross newer private assistant setup listing পেয়েছে। কোনো case file পড়া বা পাঠানো হয়নি.",
+            "ta": "Ross newer private assistant setup listing கண்டது. Case file எதையும் படிக்கவோ அனுப்பவோ இல்லை.",
+            "te": "Ross newer private assistant setup listing కనుగొంది. Case file ఏదీ చదవలేదు లేదా పంపలేదు."
         ],
         "privacy_ledger_private_assistant_prepared_detail": [
             "en": "Private assistant was prepared on this device.",
