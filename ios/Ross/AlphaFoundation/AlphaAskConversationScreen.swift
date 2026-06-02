@@ -1128,8 +1128,6 @@ struct AlphaAskTurnCard: View {
 struct AlphaAskToolbarButton: View {
     let systemImage: String
     var tint: Color = Color.rossInk
-    var fillColor: Color = Color.rossGlassFill
-    var strokeColor: Color = Color.rossGlassStroke.opacity(0.7)
     var accessibilityLabel: String
     let action: () -> Void
 
@@ -1139,11 +1137,13 @@ struct AlphaAskToolbarButton: View {
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(tint)
                 .frame(width: 40, height: 40)
-                .background(fillColor, in: Circle())
-                .overlay {
-                    Circle()
-                        .stroke(strokeColor, lineWidth: 1)
-                }
+                .rossNativeGlassSurface(
+                    tint: tint.opacity(0.64),
+                    shape: Circle(),
+                    interactive: true,
+                    fallbackFillOpacity: 0.74,
+                    fallbackStrokeOpacity: 0.48
+                )
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityLabel)
