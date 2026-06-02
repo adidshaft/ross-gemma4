@@ -1246,6 +1246,55 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Ross draft file-ஐ save செய்ய முடியவில்லை. Case files இந்த device-இல் இருந்தன.",
             "te": "Ross draft file save చేయలేకపోయింది. Case files ఈ device పైనే ఉన్నాయి."
         ],
+        "ask_privacy_label_review_pending": [
+            "en": "On-device · review pending",
+            "hi": "Device पर · review बाकी",
+            "bn": "Device-এ · review বাকি",
+            "ta": "Device-இல் · review மீதம்",
+            "te": "Device పై · review మిగిలింది"
+        ],
+        "ask_privacy_label_legal_search": [
+            "en": "On-device + Legal Search",
+            "hi": "Device पर + Legal Search",
+            "bn": "Device-এ + Legal Search",
+            "ta": "Device-இல் + Legal Search",
+            "te": "Device పై + Legal Search"
+        ],
+        "ask_privacy_label_on_device_only": [
+            "en": "On-device only",
+            "hi": "सिर्फ device पर",
+            "bn": "শুধু device-এ",
+            "ta": "Device-இல் மட்டும்",
+            "te": "Device పైనే"
+        ],
+        "ask_privacy_receipt_review_pending": [
+            "en": "Your files stay on this device. A Legal Search query is awaiting your review. Nothing has been sent yet.",
+            "hi": "आपकी files इसी device पर रहती हैं। Legal Search query आपके review का इंतज़ार कर रही है। अभी कुछ नहीं भेजा गया.",
+            "bn": "আপনার files এই device-এ থাকে। Legal Search query আপনার review-এর অপেক্ষায় আছে। এখনও কিছু পাঠানো হয়নি.",
+            "ta": "உங்கள் files இந்த device-இல் இருக்கும். Legal Search query உங்கள் review-க்காக காத்திருக்கிறது. இன்னும் எதுவும் அனுப்பப்படவில்லை.",
+            "te": "మీ files ఈ device పైనే ఉంటాయి. Legal Search query మీ review కోసం వేచి ఉంది. ఇంకా ఏదీ పంపబడలేదు."
+        ],
+        "ask_privacy_receipt_files_and_legal_search": [
+            "en": "Ross used your local files and Legal Search results. Case details were removed before searching.",
+            "hi": "Ross ने आपकी local files और Legal Search results use किए। Search से पहले case details हटाई गईं.",
+            "bn": "Ross আপনার local files এবং Legal Search results ব্যবহার করেছে। Search-এর আগে case details সরানো হয়েছে.",
+            "ta": "Ross உங்கள் local files மற்றும் Legal Search results பயன்படுத்தியது. Search செய்யும் முன் case details அகற்றப்பட்டன.",
+            "te": "Ross మీ local files మరియు Legal Search results ఉపయోగించింది. Search ముందు case details తీసివేయబడ్డాయి."
+        ],
+        "ask_privacy_receipt_legal_search": [
+            "en": "Ross used Legal Search after you approved. Your case files stayed on this device.",
+            "hi": "आपके approve करने के बाद Ross ने Legal Search use किया। आपकी case files इसी device पर रहीं.",
+            "bn": "আপনি approve করার পরে Ross Legal Search ব্যবহার করেছে। আপনার case files এই device-এ রয়ে গেছে.",
+            "ta": "நீங்கள் approve செய்த பிறகு Ross Legal Search பயன்படுத்தியது. உங்கள் case files இந்த device-இல் இருந்தன.",
+            "te": "మీరు approve చేసిన తర్వాత Ross Legal Search ఉపయోగించింది. మీ case files ఈ device పైనే ఉన్నాయి."
+        ],
+        "ask_privacy_receipt_on_device_only": [
+            "en": "Answered using only your files on this device. Nothing was sent online.",
+            "hi": "सिर्फ इस device पर मौजूद आपकी files से जवाब दिया गया। Online कुछ नहीं भेजा गया.",
+            "bn": "শুধু এই device-এ থাকা আপনার files ব্যবহার করে উত্তর দেওয়া হয়েছে। Online কিছু পাঠানো হয়নি.",
+            "ta": "இந்த device-இல் உள்ள உங்கள் files மட்டும் பயன்படுத்தி பதிலளிக்கப்பட்டது. Online எதுவும் அனுப்பப்படவில்லை.",
+            "te": "ఈ device లో ఉన్న మీ files మాత్రమే ఉపయోగించి సమాధానం ఇచ్చింది. Online ఏదీ పంపబడలేదు."
+        ],
         "ask_private_assistant_needs_repair": [
             "en": "Private assistant needs repair",
             "hi": "Private assistant repair चाहता है",

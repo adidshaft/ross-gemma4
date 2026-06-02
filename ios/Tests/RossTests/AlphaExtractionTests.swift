@@ -141,6 +141,75 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertFalse(publicLawFailure.lawyerDetail.localizedCaseInsensitiveContains("sanitized"), publicLawFailure.lawyerDetail)
     }
 
+    func testAskPrivacyReceiptsFollowSelectedLanguage() {
+        rossSaveLanguageSelection(code: "ta")
+        let preview = AlphaPublicLawPreview(
+            query: "delay condonation",
+            removed: ["client name"],
+            confirmationNote: "Review before sending."
+        )
+        let result = AlphaPublicLawResult(
+            title: "Delay condonation",
+            citation: "2025 SCC OnLine",
+            snippet: "Court guidance",
+            sourceName: "Legal Search"
+        )
+        let source = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "Order.pdf",
+            pageNumber: 1,
+            textSnippet: "Next date"
+        )
+
+        let pending = AlphaAskResult(
+            kind: .userAsk,
+            question: "Search law",
+            scopeLabel: "Matter",
+            selectedDocumentTitles: [],
+            answerTitle: "Review Legal Search",
+            answerSections: [],
+            caseFileSources: [],
+            publicLawPreview: preview,
+            publicLawResults: [],
+            statusNote: nil,
+            needsReviewWarning: nil
+        )
+        let withFilesAndSearch = AlphaAskResult(
+            kind: .userAsk,
+            question: "Answer with files and law",
+            scopeLabel: "Matter",
+            selectedDocumentTitles: ["Order.pdf"],
+            answerTitle: "Answered",
+            answerSections: [],
+            caseFileSources: [source],
+            publicLawPreview: preview,
+            publicLawResults: [result],
+            statusNote: nil,
+            needsReviewWarning: nil
+        )
+        let localOnly = AlphaAskResult(
+            kind: .userAsk,
+            question: "Answer from files",
+            scopeLabel: "Matter",
+            selectedDocumentTitles: ["Order.pdf"],
+            answerTitle: "Answered",
+            answerSections: [],
+            caseFileSources: [source],
+            publicLawPreview: nil,
+            publicLawResults: [],
+            statusNote: nil,
+            needsReviewWarning: nil
+        )
+
+        XCTAssertEqual(alphaCompactPrivacyLabel(pending), "Device-இல் · review மீதம்")
+        XCTAssertTrue(pending.privacyReceipt.contains("Legal Search query உங்கள் review-க்காக காத்திருக்கிறது"), pending.privacyReceipt)
+        XCTAssertEqual(alphaCompactPrivacyLabel(withFilesAndSearch), "Device-இல் + Legal Search")
+        XCTAssertTrue(withFilesAndSearch.privacyReceipt.contains("case details அகற்றப்பட்டன"), withFilesAndSearch.privacyReceipt)
+        XCTAssertEqual(alphaCompactPrivacyLabel(localOnly), "Device-இல் மட்டும்")
+        XCTAssertTrue(localOnly.privacyReceipt.contains("Online எதுவும் அனுப்பப்படவில்லை"), localOnly.privacyReceipt)
+    }
+
     func testMatterAskPayloadParserStripsThinkTagsAndSalvagesMalformedJSON() {
         let output = AlphaLocalModelOutput(
             rawText: """

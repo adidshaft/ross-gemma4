@@ -1354,12 +1354,12 @@ struct AlphaAnswerSectionItem: Identifiable {
 
 func alphaCompactPrivacyLabel(_ result: AlphaAskResult) -> String {
     if result.publicLawPreview != nil, result.publicLawResults.isEmpty {
-        return "On-device · review pending"
+        return rossLocalized("ask_privacy_label_review_pending")
     }
     if result.publicLawPreview != nil || !result.publicLawResults.isEmpty {
-        return "On-device + Legal Search"
+        return rossLocalized("ask_privacy_label_legal_search")
     }
-    return "On-device only"
+    return rossLocalized("ask_privacy_label_on_device_only")
 }
 
 // Compile these regex patterns once instead of once per SwiftUI body re-eval.
@@ -1453,15 +1453,15 @@ extension AlphaAskResult {
 
     var privacyReceipt: String {
         if publicLawPreview != nil, publicLawResults.isEmpty {
-            return "Your files stay on this device. A public-law query is awaiting your review — nothing has been sent yet."
+            return rossLocalized("ask_privacy_receipt_review_pending")
         }
         if publicLawPreview != nil, !publicLawResults.isEmpty, !caseFileSources.isEmpty {
-            return "Ross used your local files and public-law results. Case details were removed before searching."
+            return rossLocalized("ask_privacy_receipt_files_and_legal_search")
         }
         if publicLawPreview != nil || !publicLawResults.isEmpty {
-            return "Ross used Legal Search after you approved. Your case files stayed on this device."
+            return rossLocalized("ask_privacy_receipt_legal_search")
         }
-        return "Answered using only your files on this device. Nothing was sent online."
+        return rossLocalized("ask_privacy_receipt_on_device_only")
     }
 
     var isPendingLocalModelResponse: Bool {
