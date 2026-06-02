@@ -1502,4 +1502,58 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(ranked.first?.sourceRef.documentId, documentID)
     }
+
+    @MainActor
+    func testHindiSelectedDocumentSummaryQuestionKeepsTaggedFileSource() {
+        let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
+        let documentID = UUID()
+        let block = AlphaSourceTextBlock(
+            sourceRef: AlphaSourceRef(
+                caseId: UUID(),
+                documentId: documentID,
+                documentTitle: "Hindi affidavit",
+                pageNumber: 1,
+                textSnippet: "कर्मचारी ने छुट्टी के लिए आवेदन किया।"
+            ),
+            text: "कर्मचारी ने छुट्टी के लिए आवेदन किया और नियोक्ता ने जवाब नहीं दिया।",
+            pageNumber: 1,
+            languageHint: "hi",
+            ocrConfidence: 0.94
+        )
+
+        let ranked = model.alphaRankedAskSourceBlocks(
+            [block],
+            question: "इस दस्तावेज़ का सारांश दें",
+            selectedDocumentIDs: [documentID]
+        )
+
+        XCTAssertEqual(ranked.first?.sourceRef.documentId, documentID)
+    }
+
+    @MainActor
+    func testBanglaSelectedDocumentSummaryQuestionKeepsTaggedFileSource() {
+        let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
+        let documentID = UUID()
+        let block = AlphaSourceTextBlock(
+            sourceRef: AlphaSourceRef(
+                caseId: UUID(),
+                documentId: documentID,
+                documentTitle: "Bangla affidavit",
+                pageNumber: 1,
+                textSnippet: "কর্মী ছুটির জন্য আবেদন করেছিলেন।"
+            ),
+            text: "কর্মী ছুটির জন্য আবেদন করেছিলেন এবং নিয়োগকর্তা উত্তর দেননি।",
+            pageNumber: 1,
+            languageHint: "bn",
+            ocrConfidence: 0.94
+        )
+
+        let ranked = model.alphaRankedAskSourceBlocks(
+            [block],
+            question: "এই ফাইলটি সারাংশ করুন",
+            selectedDocumentIDs: [documentID]
+        )
+
+        XCTAssertEqual(ranked.first?.sourceRef.documentId, documentID)
+    }
 }

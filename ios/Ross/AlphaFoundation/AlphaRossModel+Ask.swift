@@ -1637,6 +1637,12 @@ extension AlphaRossModel {
             "selected document",
             "summarize",
             "summarise",
+            "सारांश",
+            "संक्षेप",
+            "ফাইলটি সারাংশ",
+            "নথিটি সারাংশ",
+            "সারাংশ",
+            "সংক্ষেপ",
             "what does this",
             "what does the file",
             "what does the document"
