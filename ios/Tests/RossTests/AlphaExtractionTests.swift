@@ -1839,6 +1839,18 @@ final class AlphaExtractionTests: XCTestCase {
             "Ross-ஐ கேளுங்கள்... கோப்பை குறிக்க @ தட்டச்சு செய்யவும்"
         )
         XCTAssertEqual(
+            alphaAskSharedFileSelectionLabel("Order", languageCode: "hi"),
+            "Order · shared file"
+        )
+        XCTAssertEqual(
+            alphaAskFilesSelectedLabel(3, languageCode: "ta"),
+            "3 files தேர்ந்தெடுக்கப்பட்டன"
+        )
+        XCTAssertEqual(
+            alphaAskFilesSelectedWithSharedLabel(selectedCount: 4, sharedCount: 2, languageCode: "bn"),
+            "4 files বাছা হয়েছে · 2 shared"
+        )
+        XCTAssertEqual(
             alphaAskTagFileHint(languageCode: "te"),
             "అడగడానికి ముందు @తో ఫైళ్లను ట్యాగ్ చేయండి లేదా + నొక్కి జోడించండి."
         )

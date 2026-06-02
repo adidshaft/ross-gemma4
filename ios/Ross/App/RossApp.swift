@@ -6118,6 +6118,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "அனைத்து வேலை",
             "te": "అన్ని పని"
         ],
+        "ask_shared_file_selection": [
+            "en": "%@ · shared file",
+            "hi": "%@ · shared file",
+            "bn": "%@ · shared file",
+            "ta": "%@ · shared file",
+            "te": "%@ · shared file"
+        ],
+        "ask_files_selected": [
+            "en": "%d files selected",
+            "hi": "%d files चुनी गईं",
+            "bn": "%d files বাছা হয়েছে",
+            "ta": "%d files தேர்ந்தெடுக்கப்பட்டன",
+            "te": "%d files ఎంచుకోబడ్డాయి"
+        ],
+        "ask_files_selected_with_shared": [
+            "en": "%d files selected · %d shared",
+            "hi": "%d files चुनी गईं · %d shared",
+            "bn": "%d files বাছা হয়েছে · %d shared",
+            "ta": "%d files தேர்ந்தெடுக்கப்பட்டன · %d shared",
+            "te": "%d files ఎంచుకోబడ్డాయి · %d shared"
+        ],
         "legal_search_on": [
             "en": "Legal Search on",
             "hi": "Legal Search on",

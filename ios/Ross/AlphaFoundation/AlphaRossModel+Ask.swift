@@ -80,7 +80,7 @@ extension AlphaRossModel {
         guard !selected.isEmpty else { return nil }
         if selected.count == 1, let first = selected.first {
             if first.isShared {
-                return "\(first.title) · shared file"
+                return alphaAskSharedFileSelectionLabel(first.title)
             }
             if scopeCaseID == nil {
                 return "\(first.title) · \(first.caseTitle)"
@@ -89,9 +89,9 @@ extension AlphaRossModel {
         }
         let sharedCount = selected.filter(\.isShared).count
         if sharedCount > 0 {
-            return "\(selected.count) files selected · \(sharedCount) shared"
+            return alphaAskFilesSelectedWithSharedLabel(selectedCount: selected.count, sharedCount: sharedCount)
         }
-        return "\(selected.count) files selected"
+        return alphaAskFilesSelectedLabel(selected.count)
     }
 
     func openAsk(scopeCaseID: UUID? = nil, documentID: UUID? = nil) {
@@ -2362,6 +2362,26 @@ func alphaAskDateSavedLabel(
         format: rossLocalized("ask_date_saved_for", languageCode: languageCode),
         title,
         date.formatted(date: .abbreviated, time: .omitted)
+    )
+}
+
+func alphaAskSharedFileSelectionLabel(_ title: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("ask_shared_file_selection", languageCode: languageCode), title)
+}
+
+func alphaAskFilesSelectedLabel(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("ask_files_selected", languageCode: languageCode), count)
+}
+
+func alphaAskFilesSelectedWithSharedLabel(
+    selectedCount: Int,
+    sharedCount: Int,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
+    String(
+        format: rossLocalized("ask_files_selected_with_shared", languageCode: languageCode),
+        selectedCount,
+        sharedCount
     )
 }
 

@@ -212,9 +212,9 @@ struct AlphaRootAskDock: View {
         let selected = activeSelectedDocuments
         guard !selected.isEmpty else { return nil }
         if selected.count == 1, let first = selected.first {
-            return first.isShared ? "\(first.title) · shared file" : first.title
+            return first.isShared ? alphaAskSharedFileSelectionLabel(first.title) : first.title
         }
-        return "\(selected.count) files selected"
+        return alphaAskFilesSelectedLabel(selected.count)
     }
 
     private var activeDockActivity: (title: String, detail: String, status: String, progress: Double?)? {
