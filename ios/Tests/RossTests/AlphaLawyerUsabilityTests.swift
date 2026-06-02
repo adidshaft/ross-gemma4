@@ -2417,6 +2417,72 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertFalse(document.hasAskUsableExtractedText)
     }
 
+    func testDocumentReadinessMessageReflectsReviewStateWhenAskIsUsable() {
+        let readyDocument = AlphaCaseDocument(
+            title: "Ready order",
+            fileName: "ready-order.txt",
+            kind: .text,
+            storedRelativePath: "docs/ready-order.txt",
+            importedAt: .now,
+            pageCount: 1,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            pages: [
+                AlphaDocumentPage(pageNumber: 1, snippet: "Order text", extractedText: "Order dated 14 May 2026.")
+            ],
+            extractionRuns: [
+                AlphaExtractionRun(
+                    caseId: UUID(),
+                    documentId: UUID(),
+                    mode: .caseAssociate,
+                    status: .complete,
+                    progressState: .complete,
+                    startedAt: .now,
+                    completedAt: .now,
+                    pagesProcessed: 1,
+                    totalPages: 1,
+                    fieldsExtracted: 1,
+                    fieldsNeedingReview: 0,
+                    warnings: []
+                )
+            ]
+        )
+
+        let failedReviewDocument = AlphaCaseDocument(
+            title: "Readable but failed review",
+            fileName: "failed-review.txt",
+            kind: .text,
+            storedRelativePath: "docs/failed-review.txt",
+            importedAt: .now,
+            pageCount: 1,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            pages: [
+                AlphaDocumentPage(pageNumber: 1, snippet: "Order text", extractedText: "Order dated 14 May 2026.")
+            ],
+            extractionRuns: [
+                AlphaExtractionRun(
+                    caseId: UUID(),
+                    documentId: UUID(),
+                    mode: .caseAssociate,
+                    status: .failed,
+                    progressState: .failed,
+                    startedAt: .now,
+                    completedAt: .now,
+                    pagesProcessed: 1,
+                    totalPages: 1,
+                    fieldsExtracted: 0,
+                    fieldsNeedingReview: 0,
+                    warnings: ["Review failed"]
+                )
+            ]
+        )
+
+        XCTAssertTrue(alphaDocumentReadinessMessage(readyDocument).contains("Verified details are ready"))
+        XCTAssertTrue(alphaDocumentReadinessMessage(failedReviewDocument).contains("full review did not finish"))
+        XCTAssertFalse(alphaDocumentReadinessMessage(readyDocument).contains("still running"))
+    }
+
     func testQueuedIncomingDocumentsCreateMatterAndImportFiles() async throws {
         try await withRestoredStore { store in
             try await store.replace(with: AlphaPersistedState.seed())

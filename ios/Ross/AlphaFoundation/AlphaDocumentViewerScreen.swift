@@ -62,9 +62,18 @@ private func alphaDocumentNeedsTranslation(_ document: AlphaCaseDocument, select
     return profile.primaryLanguage != selectedLanguage
 }
 
-private func alphaDocumentReadinessMessage(_ document: AlphaCaseDocument) -> String {
+func alphaDocumentReadinessMessage(_ document: AlphaCaseDocument) -> String {
     if document.hasAskUsableExtractedText {
-        return "Ross can answer from extracted text now. Deeper review is still running in the background."
+        switch document.processingState {
+        case .imported, .readingText:
+            return "Ross can answer from extracted text now. Deeper review is still running in the background."
+        case .needsConfirmation, .reviewingFindings:
+            return "Ross can answer from extracted text now. Review the highlighted findings before relying on this file in notes or exports."
+        case .ready:
+            return "Ross can answer from extracted text now. Verified details are ready for notes, tasks, and exports."
+        case .failed:
+            return "Ross can answer from extracted text now, but full review did not finish. Check the source before relying on this file."
+        }
     }
     if document.isAwaitingReadableText {
         return "Ross is still reading this file. Ask will be available as soon as text is extracted."
