@@ -2128,7 +2128,7 @@ func alphaLocalAskSetupRequiredDetail(
         case .queued:
             return "सहायक सेटअप कतार में है. Ross को Wi-Fi पर खुला रखें या My assistant से फिर शुरू करें."
         case .failed:
-            return "सहायक सेटअप पूरा नहीं हुआ. My assistant खोलकर डाउनलोड फिर से शुरू करें."
+            return "सहायक सेटअप पूरा नहीं हुआ. My assistant खोलकर सेटअप फिर से शुरू या repair करें."
         case .notStarted:
             return "कानूनी सवाल पूछने से पहले My assistant खोलकर इस iPhone पर निजी सहायक सेट करें."
         }
@@ -2141,7 +2141,7 @@ func alphaLocalAskSetupRequiredDetail(
         case .queued:
             return "সহায়ক সেটআপ কিউতে আছে. Ross Wi-Fi-তে খোলা রাখুন বা My assistant থেকে আবার শুরু করুন."
         case .failed:
-            return "সহায়ক সেটআপ শেষ হয়নি. My assistant খুলে ডাউনলোড আবার চেষ্টা করুন."
+            return "সহায়ক সেটআপ শেষ হয়নি. My assistant খুলে সেটআপ আবার শুরু বা repair করুন."
         case .notStarted:
             return "আইনি প্রশ্ন করার আগে My assistant খুলে এই iPhone-এ প্রাইভেট সহায়ক সেট আপ করুন."
         }
@@ -2154,7 +2154,7 @@ func alphaLocalAskSetupRequiredDetail(
         case .queued:
             return "உதவியாளர் அமைப்பு வரிசையில் உள்ளது. Wi-Fi-யில் Ross-ஐ திறந்தே வைத்திருங்கள் அல்லது My assistant-ல் மீண்டும் தொடங்கவும்."
         case .failed:
-            return "உதவியாளர் அமைப்பு முடியவில்லை. My assistant திறந்து பதிவிறக்கத்தை மீண்டும் முயலுங்கள்."
+            return "உதவியாளர் அமைப்பு முடியவில்லை. My assistant திறந்து அமைப்பை மீண்டும் தொடங்கவும் அல்லது repair செய்யவும்."
         case .notStarted:
             return "சட்டக் கேள்விகளை கேட்பதற்கு முன் My assistant திறந்து இந்த iPhone-ல் தனிப்பட்ட உதவியாளரை அமைக்கவும்."
         }
@@ -2167,7 +2167,7 @@ func alphaLocalAskSetupRequiredDetail(
         case .queued:
             return "సహాయకుడి సెటప్ వరుసలో ఉంది. Ross‌ను Wi-Fiలో తెరిచి ఉంచండి లేదా My assistant నుంచి మళ్లీ ప్రారంభించండి."
         case .failed:
-            return "సహాయకుడి సెటప్ పూర్తికాలేదు. My assistant తెరిచి డౌన్‌లోడ్‌ను మళ్లీ ప్రయత్నించండి."
+            return "సహాయకుడి సెటప్ పూర్తికాలేదు. My assistant తెరిచి సెటప్‌ను మళ్లీ ప్రారంభించండి లేదా repair చేయండి."
         case .notStarted:
             return "న్యాయ ప్రశ్నలు అడగడానికి ముందు My assistant తెరిచి ఈ iPhoneలో ప్రైవేట్ సహాయకుడిని సెటప్ చేయండి."
         }
@@ -2180,7 +2180,7 @@ func alphaLocalAskSetupRequiredDetail(
         case .queued:
             return "Assistant setup is queued. Keep Ross open on Wi-Fi or resume setup from My assistant."
         case .failed:
-            return "Assistant setup did not finish. Open My assistant to retry the download."
+            return "Assistant setup did not finish. Open My assistant to retry or repair setup."
         case .notStarted:
             return "Open My assistant and set up a private assistant on this iPhone before asking legal questions."
         }

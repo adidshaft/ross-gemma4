@@ -648,6 +648,13 @@ final class AlphaExtractionTests: XCTestCase {
                 .contains("My assistant")
         )
         XCTAssertTrue(
+            alphaLocalAskSetupRequiredDetail(for: .failed, languageCode: "bn")
+                .contains("repair")
+        )
+        let englishFailureDetail = alphaLocalAskSetupRequiredDetail(for: .failed, languageCode: "en")
+        XCTAssertTrue(englishFailureDetail.contains("retry or repair setup"))
+        XCTAssertFalse(englishFailureDetail.localizedCaseInsensitiveContains("download"))
+        XCTAssertTrue(
             alphaLocalAskSetupRequiredDetail(for: .downloading, languageCode: "hi")
                 .contains("तैयार")
         )
