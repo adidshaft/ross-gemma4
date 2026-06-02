@@ -332,29 +332,30 @@ struct AlphaPrivateAITechnicalDiagnosticsCard: View {
 
 func alphaAssistantVerificationSummary(
     runtimeHealth: AlphaLocalRuntimeHealth?,
-    activePack: AlphaInstalledModelPack?
+    activePack: AlphaInstalledModelPack?,
+    languageCode: String = rossSelectedLanguageCode()
 ) -> String {
     guard let activePack else {
-        return "No assistant setup is active yet."
+        return rossLocalized("assistant_verification_no_setup", languageCode: languageCode)
     }
     if activePack.developmentOnly {
         return alphaAllowsDevelopmentModelArtifacts()
-            ? "Test assistant setup is active for this build."
-            : "Test assistant setup is disabled for this build."
+            ? rossLocalized("assistant_verification_test_active", languageCode: languageCode)
+            : rossLocalized("assistant_verification_test_disabled", languageCode: languageCode)
     }
     guard let runtimeHealth else {
-        return "Ross will verify assistant setup after setup finishes."
+        return rossLocalized("assistant_verification_pending", languageCode: languageCode)
     }
     if runtimeHealth.available && runtimeHealth.checksumVerified {
-        return "Assistant setup opened and verified on this iPhone."
+        return rossLocalized("assistant_verification_ready", languageCode: languageCode)
     }
     if runtimeHealth.available {
-        return "Assistant setup opened on this iPhone."
+        return rossLocalized("assistant_verification_opened", languageCode: languageCode)
     }
     if runtimeHealth.modelPathPresent {
-        return "Assistant setup needs Repair setup before Ross can use it."
+        return rossLocalized("assistant_verification_needs_repair", languageCode: languageCode)
     }
-    return "Assistant setup is missing. Open My assistant and set up again."
+    return rossLocalized("assistant_verification_missing", languageCode: languageCode)
 }
 
 #if DEBUG
@@ -677,7 +678,7 @@ struct AlphaPrivateAIOfferCard: View {
                     .fixedSize(horizontal: false, vertical: true)
 
                 AlphaPrivateAIRecoveryHintRow(
-                    text: "Repair setup removes the broken assistant setup and starts a fresh local check."
+                    text: rossLocalized("assistant_repair_setup_removes_broken")
                 )
             }
 

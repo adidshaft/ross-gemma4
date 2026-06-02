@@ -1267,6 +1267,69 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "setup பிறகு Ross assistant check செய்யும்.",
             "te": "setup తర్వాత Ross assistant check చేస్తుంది."
         ],
+        "assistant_verification_no_setup": [
+            "en": "No assistant setup is active yet.",
+            "hi": "अभी कोई assistant setup active नहीं है।",
+            "bn": "এখনও কোনো assistant setup active নেই।",
+            "ta": "இன்னும் assistant setup active இல்லை.",
+            "te": "ఇంకా assistant setup active లేదు."
+        ],
+        "assistant_verification_test_active": [
+            "en": "Test assistant setup is active for this build.",
+            "hi": "इस build के लिए test assistant setup active है।",
+            "bn": "এই build-এর জন্য test assistant setup active আছে।",
+            "ta": "இந்த build-க்கு test assistant setup active உள்ளது.",
+            "te": "ఈ build కోసం test assistant setup active ఉంది."
+        ],
+        "assistant_verification_test_disabled": [
+            "en": "Test assistant setup is disabled for this build.",
+            "hi": "इस build के लिए test assistant setup disabled है।",
+            "bn": "এই build-এর জন্য test assistant setup disabled আছে।",
+            "ta": "இந்த build-க்கு test assistant setup disabled உள்ளது.",
+            "te": "ఈ build కోసం test assistant setup disabled ఉంది."
+        ],
+        "assistant_verification_pending": [
+            "en": "Ross will verify assistant setup after setup finishes.",
+            "hi": "setup पूरा होने के बाद Ross assistant setup verify करेगा।",
+            "bn": "setup শেষ হলে Ross assistant setup verify করবে।",
+            "ta": "setup முடிந்த பிறகு Ross assistant setup verify செய்யும்.",
+            "te": "setup పూర్తయ్యాక Ross assistant setup verify చేస్తుంది."
+        ],
+        "assistant_verification_ready": [
+            "en": "Assistant setup opened and verified on this iPhone.",
+            "hi": "Assistant setup इस iPhone पर खुला और verify हुआ।",
+            "bn": "Assistant setup এই iPhone-এ খুলেছে এবং verify হয়েছে।",
+            "ta": "Assistant setup இந்த iPhone-இல் திறந்து verify செய்யப்பட்டது.",
+            "te": "Assistant setup ఈ iPhone లో తెరుచుకుని verify అయ్యింది."
+        ],
+        "assistant_verification_opened": [
+            "en": "Assistant setup opened on this iPhone.",
+            "hi": "Assistant setup इस iPhone पर खुला।",
+            "bn": "Assistant setup এই iPhone-এ খুলেছে।",
+            "ta": "Assistant setup இந்த iPhone-இல் திறந்தது.",
+            "te": "Assistant setup ఈ iPhone లో తెరుచుకుంది."
+        ],
+        "assistant_verification_needs_repair": [
+            "en": "Assistant setup needs Repair setup before Ross can use it.",
+            "hi": "Ross इसे use करे उससे पहले Assistant setup को Repair setup चाहिए।",
+            "bn": "Ross এটি ব্যবহার করার আগে Assistant setup-এ Repair setup দরকার।",
+            "ta": "Ross பயன்படுத்துவதற்கு முன் Assistant setup-க்கு Repair setup தேவை.",
+            "te": "Ross దీన్ని ఉపయోగించే ముందు Assistant setup కు Repair setup కావాలి."
+        ],
+        "assistant_verification_missing": [
+            "en": "Assistant setup is missing. Open My assistant and set up again.",
+            "hi": "Assistant setup missing है। My assistant खोलकर फिर setup करें।",
+            "bn": "Assistant setup missing। My assistant খুলে আবার setup করুন।",
+            "ta": "Assistant setup missing. My assistant திறந்து மீண்டும் setup செய்யவும்.",
+            "te": "Assistant setup missing. My assistant తెరిచి మళ్లీ setup చేయండి."
+        ],
+        "assistant_repair_setup_removes_broken": [
+            "en": "Repair setup removes the broken assistant setup and starts a fresh local check.",
+            "hi": "Repair setup टूटे assistant setup को हटाकर नया local check शुरू करता है।",
+            "bn": "Repair setup ভাঙা assistant setup সরিয়ে নতুন local check শুরু করে।",
+            "ta": "Repair setup உடைந்த assistant setup-ஐ நீக்கி புதிய local check தொடங்கும்.",
+            "te": "Repair setup పాడైన assistant setup ను తొలగించి కొత్త local check ప్రారంభిస్తుంది."
+        ],
         "ready_for_private_answers_on_iphone": [
             "en": "Ready for private answers on this iPhone.",
             "hi": "इस iPhone पर private answers के लिए ready।",

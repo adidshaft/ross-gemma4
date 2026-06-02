@@ -687,7 +687,18 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertTrue(summaries[2].contains("Assistant setup opened and verified"))
         XCTAssertTrue(summaries[3].contains("Repair setup"))
 
-        for summary in summaries {
+        let hindiSummaries = [
+            alphaAssistantVerificationSummary(runtimeHealth: nil, activePack: nil, languageCode: "hi"),
+            alphaAssistantVerificationSummary(runtimeHealth: nil, activePack: activePack, languageCode: "hi"),
+            alphaAssistantVerificationSummary(runtimeHealth: readyHealth, activePack: activePack, languageCode: "hi"),
+            alphaAssistantVerificationSummary(runtimeHealth: repairHealth, activePack: activePack, languageCode: "hi")
+        ]
+        XCTAssertTrue(hindiSummaries[0].contains("active नहीं"))
+        XCTAssertTrue(hindiSummaries[1].contains("verify करेगा"))
+        XCTAssertTrue(hindiSummaries[2].contains("verify हुआ"))
+        XCTAssertTrue(hindiSummaries[3].contains("Repair setup"))
+
+        for summary in summaries + hindiSummaries {
             for forbidden in ["Gemma", "GGUF", "Q4", "runtime", "checksum", "artifact"] {
                 XCTAssertFalse(
                     summary.localizedCaseInsensitiveContains(forbidden),
