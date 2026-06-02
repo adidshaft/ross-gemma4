@@ -683,21 +683,12 @@ struct AlphaModelPickerRow: View {
                             }
                         }
 
-                        HStack(spacing: 10) {
-                            Label(tier.downloadSizeLabel, systemImage: "arrow.down.circle")
-                                .font(.caption.weight(.medium))
-                                .foregroundStyle(Color.rossInk.opacity(0.55))
-
-                            Label(etaLabel, systemImage: "wifi")
-                                .font(.caption.weight(.medium))
-                                .foregroundStyle(Color.rossInk.opacity(0.55))
-
-                            Label(model.freeDiskSpaceLabel, systemImage: "internaldrive")
-                                .font(.caption.weight(.medium))
-                                .foregroundStyle(Color.rossInk.opacity(0.55))
-                        }
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
+                        AlphaAssistantSetupMetaLabels(
+                            sizeLabel: tier.downloadSizeLabel,
+                            etaLabel: etaLabel,
+                            freeSpaceLabel: model.freeDiskSpaceLabel,
+                            font: .caption.weight(.medium)
+                        )
                     }
 
                     Spacer(minLength: 0)
@@ -725,5 +716,40 @@ struct AlphaModelPickerRow: View {
             )
         }
         .buttonStyle(.plain)
+    }
+}
+
+struct AlphaAssistantSetupMetaLabels: View {
+    let sizeLabel: String
+    var etaLabel: String?
+    let freeSpaceLabel: String
+    var font: Font = .caption.weight(.medium)
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 10) {
+                metaLabel(sizeLabel, systemImage: "arrow.down.circle")
+                if let etaLabel {
+                    metaLabel(etaLabel, systemImage: "wifi")
+                }
+                metaLabel(freeSpaceLabel, systemImage: "internaldrive")
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                metaLabel(sizeLabel, systemImage: "arrow.down.circle")
+                if let etaLabel {
+                    metaLabel(etaLabel, systemImage: "wifi")
+                }
+                metaLabel(freeSpaceLabel, systemImage: "internaldrive")
+            }
+        }
+        .font(font)
+        .foregroundStyle(Color.rossInk.opacity(0.55))
+        .lineLimit(1)
+        .minimumScaleFactor(0.86)
+    }
+
+    private func metaLabel(_ text: String, systemImage: String) -> some View {
+        Label(text, systemImage: systemImage)
     }
 }

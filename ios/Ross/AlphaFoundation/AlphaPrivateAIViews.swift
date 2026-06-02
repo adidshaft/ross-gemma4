@@ -638,12 +638,11 @@ struct AlphaPrivateAIOfferCard: View {
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
 
-                HStack(spacing: 12) {
-                    Label(offer.tier.downloadSizeLabel, systemImage: "arrow.down.circle")
-                    Label(model.freeDiskSpaceLabel, systemImage: "internaldrive")
-                }
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(Color.rossInk.opacity(0.55))
+                AlphaAssistantSetupMetaLabels(
+                    sizeLabel: offer.tier.downloadSizeLabel,
+                    freeSpaceLabel: model.freeDiskSpaceLabel,
+                    font: .caption2.weight(.medium)
+                )
                 .padding(.top, 2)
             }
 
