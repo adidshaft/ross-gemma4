@@ -827,6 +827,18 @@ final class AlphaExtractionTests: XCTestCase {
             "Private assistant ప్రస్తుతం ఈ device లో unavailable."
         )
         XCTAssertEqual(
+            rossLocalized("settings_advanced", languageCode: "ta"),
+            "மேம்பட்டது"
+        )
+        XCTAssertEqual(
+            rossLocalized("settings_current_server", languageCode: "hi"),
+            "मौजूदा server"
+        )
+        XCTAssertTrue(
+            rossLocalized("settings_test_server_detail", languageCode: "bn")
+                .contains("10.0.2.2")
+        )
+        XCTAssertEqual(
             rossLocalized("ready_for_private_answers_on_iphone", languageCode: "bn"),
             "এই iPhone-এ private answers-এর জন্য ready।"
         )

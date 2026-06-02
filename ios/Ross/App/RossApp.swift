@@ -1729,6 +1729,48 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Advanced tuning",
             "te": "Advanced tuning"
         ],
+        "settings_advanced": [
+            "en": "Advanced",
+            "hi": "उन्नत",
+            "bn": "উন্নত",
+            "ta": "மேம்பட்டது",
+            "te": "అధునాతనం"
+        ],
+        "settings_support_details": [
+            "en": "Support details",
+            "hi": "Support विवरण",
+            "bn": "Support details",
+            "ta": "Support விவரங்கள்",
+            "te": "Support వివరాలు"
+        ],
+        "settings_current_server": [
+            "en": "Current server",
+            "hi": "मौजूदा server",
+            "bn": "বর্তমান server",
+            "ta": "தற்போதைய server",
+            "te": "ప్రస్తుత server"
+        ],
+        "settings_test_server_detail": [
+            "en": "For internal testing only. iPhone Simulator usually uses 127.0.0.1, Android emulator uses 10.0.2.2, and a physical device needs your Mac's LAN IP.",
+            "hi": "केवल internal testing के लिए। iPhone Simulator आमतौर पर 127.0.0.1 use करता है, Android emulator 10.0.2.2 use करता है, और physical device को आपके Mac का LAN IP चाहिए।",
+            "bn": "শুধু internal testing-এর জন্য। iPhone Simulator সাধারণত 127.0.0.1 ব্যবহার করে, Android emulator 10.0.2.2 ব্যবহার করে, এবং physical device-এ আপনার Mac-এর LAN IP দরকার।",
+            "ta": "Internal testing-க்கு மட்டும். iPhone Simulator பொதுவாக 127.0.0.1 பயன்படுத்தும், Android emulator 10.0.2.2 பயன்படுத்தும், physical device-க்கு உங்கள் Mac LAN IP தேவை.",
+            "te": "Internal testing కోసం మాత్రమే. iPhone Simulator సాధారణంగా 127.0.0.1 ఉపయోగిస్తుంది, Android emulator 10.0.2.2 ఉపయోగిస్తుంది, physical device కు మీ Mac LAN IP కావాలి."
+        ],
+        "settings_save_test_server": [
+            "en": "Save test server",
+            "hi": "Test server save करें",
+            "bn": "Test server save করুন",
+            "ta": "Test server save செய்யவும்",
+            "te": "Test server save చేయండి"
+        ],
+        "settings_use_default_address": [
+            "en": "Use default address",
+            "hi": "Default address use करें",
+            "bn": "Default address use করুন",
+            "ta": "Default address use செய்யவும்",
+            "te": "Default address use చేయండి"
+        ],
         "shown": [
             "en": "Shown",
             "hi": "दिखाया गया",

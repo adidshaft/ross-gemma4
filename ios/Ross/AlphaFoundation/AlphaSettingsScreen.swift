@@ -269,12 +269,12 @@ struct AlphaSettingsScreen: View {
                 }
 
                 #if DEBUG
-                RossSectionCard(title: "Advanced") {
-                    DisclosureGroup("Support details") {
+                RossSectionCard(title: rossLocalized("settings_advanced")) {
+                    DisclosureGroup(rossLocalized("settings_support_details")) {
                         VStack(alignment: .leading, spacing: 12) {
                             AlphaSettingsValueRow(label: alphaSettingsAssistantStorageSupportLabel, value: alphaFileSizeLabel(storageSnapshot.assistantBytes))
                             Divider()
-                            AlphaSettingsValueRow(label: "Current server", value: rossBackendBaseURL().absoluteString)
+                            AlphaSettingsValueRow(label: rossLocalized("settings_current_server"), value: rossBackendBaseURL().absoluteString)
 
                             TextField("http://127.0.0.1:8080", text: $backendAddressDraft)
                                 .autocorrectionDisabled(true)
@@ -291,21 +291,21 @@ struct AlphaSettingsScreen: View {
                                     strokeOpacity: 0.46
                                 )
 
-                            Text("For internal testing only. iPhone Simulator usually uses 127.0.0.1, Android emulator uses 10.0.2.2, and a physical device needs your Mac's LAN IP.")
+                            Text(rossLocalized("settings_test_server_detail"))
                                 .font(.caption2)
                                 .foregroundStyle(Color.rossInk.opacity(0.7))
                                 .fixedSize(horizontal: false, vertical: true)
 
                             RossGlassGroup(spacing: 10) {
                                 HStack(spacing: 10) {
-                                    Button("Save test server") {
+                                    Button(rossLocalized("settings_save_test_server")) {
                                         let normalized = backendAddressDraft.trimmingCharacters(in: .whitespacesAndNewlines)
                                         backendAddressDraft = normalized
                                         rossSetBackendBaseURLOverride(normalized)
                                     }
                                     .rossGlassButtonStyle(tint: Color.rossAccent)
 
-                                    Button("Use default address") {
+                                    Button(rossLocalized("settings_use_default_address")) {
                                         backendAddressDraft = ""
                                         rossSetBackendBaseURLOverride(nil)
                                     }
