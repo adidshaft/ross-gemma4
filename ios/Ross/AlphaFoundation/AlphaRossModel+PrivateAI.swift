@@ -739,19 +739,8 @@ extension AlphaRossModel {
 
     func assistantDownloadFailureMessage(_ error: any Error) -> String {
         let nsError = error as NSError
-        if nsError.domain == NSURLErrorDomain {
-            switch nsError.code {
-            case NSURLErrorUnknown:
-                return "The assistant download service interrupted setup before iOS could classify the error. Retry on Wi-Fi; Ross will use a foreground fallback if the background download fails again."
-            case NSURLErrorNotConnectedToInternet:
-                return "Ross could not reach the assistant download service. Check the connection and retry on Wi-Fi."
-            case NSURLErrorCancelled:
-                return "The assistant download was interrupted before it could start. Retry setup; Ross will resume if resume data is available."
-            case NSURLErrorNetworkConnectionLost:
-                return "The assistant download connection was interrupted. Retry setup; Ross will resume if the server provided resume data."
-            default:
-                break
-            }
+        if let message = alphaAssistantNetworkDownloadFailureMessage(nsError: nsError) {
+            return message
         }
         if let localized = error as? LocalizedError, let description = localized.errorDescription {
             return description
@@ -776,7 +765,7 @@ extension AlphaRossModel {
 
         switch (nsError.domain, nsError.code) {
         default:
-            return "The assistant download could not finish verification. Retry on Wi-Fi, or open My assistant and start setup again."
+            return rossLocalized("assistant_download_error_verification_failed")
         }
     }
 

@@ -623,6 +623,125 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Wi-Fi-இல் தொடருங்கள் — இடைநிறுத்தப்பட்டால் பதிவிறக்கம் தானாகத் தொடரும்.",
             "te": "Wi-Fi పై ఉండండి — అంతరాయం కలిగితే డౌన్‌లోడ్ స్వయంగా కొనసాగుతుంది."
         ],
+        "assistant_download_error_invalid_url": [
+            "en": "The selected private assistant download link is invalid.",
+            "hi": "चुना गया private assistant download link सही नहीं है।",
+            "bn": "নির্বাচিত private assistant download link ঠিক নয়।",
+            "ta": "தேர்ந்தெடுத்த private assistant download link சரியாக இல்லை.",
+            "te": "ఎంచుకున్న private assistant download link సరైనది కాదు."
+        ],
+        "assistant_download_error_http_status": [
+            "en": "The assistant download service returned status %d. Try again on Wi-Fi.",
+            "hi": "Assistant download service ने status %d लौटाया। Wi-Fi पर फिर कोशिश करें।",
+            "bn": "Assistant download service status %d ফিরিয়েছে। Wi-Fi-এ আবার চেষ্টা করুন।",
+            "ta": "Assistant download service status %d கொடுத்தது. Wi-Fi-இல் மீண்டும் முயற்சிக்கவும்.",
+            "te": "Assistant download service status %d ఇచ్చింది. Wi-Fi పై మళ్లీ ప్రయత్నించండి."
+        ],
+        "assistant_download_error_missing_size": [
+            "en": "Ross could not confirm the assistant setup size before downloading.",
+            "hi": "डाउनलोड से पहले Ross assistant setup size confirm नहीं कर पाया।",
+            "bn": "ডাউনলোডের আগে Ross assistant setup size নিশ্চিত করতে পারেনি।",
+            "ta": "பதிவிறக்கும் முன் Ross assistant setup size உறுதிசெய்ய முடியவில்லை.",
+            "te": "డౌన్‌లోడ్‌కు ముందు Ross assistant setup size నిర్ధారించలేకపోయింది."
+        ],
+        "assistant_download_error_size_changed": [
+            "en": "The assistant download listing changed from %@ to %@. Ross stopped setup before downloading.",
+            "hi": "Assistant download listing %@ से %@ हो गई। Ross ने डाउनलोड से पहले setup रोक दिया।",
+            "bn": "Assistant download listing %@ থেকে %@ হয়েছে। Ross ডাউনলোডের আগে setup থামিয়েছে।",
+            "ta": "Assistant download listing %@ இலிருந்து %@ ஆக மாறியது. பதிவிறக்கும் முன் Ross setup-ஐ நிறுத்தியது.",
+            "te": "Assistant download listing %@ నుండి %@ కు మారింది. డౌన్‌లోడ్‌కు ముందు Ross setup ఆపింది."
+        ],
+        "assistant_download_error_not_resumable": [
+            "en": "The assistant download cannot be safely resumed right now. Retry later on Wi-Fi.",
+            "hi": "Assistant download अभी सुरक्षित रूप से resume नहीं हो सकता। बाद में Wi-Fi पर retry करें।",
+            "bn": "Assistant download এখন নিরাপদে resume করা যাচ্ছে না। পরে Wi-Fi-এ retry করুন।",
+            "ta": "Assistant download இப்போது பாதுகாப்பாக resume செய்ய முடியாது. பிறகு Wi-Fi-இல் retry செய்யவும்.",
+            "te": "Assistant download ఇప్పుడు సురక్షితంగా resume కాలేదు. తర్వాత Wi-Fi పై retry చేయండి."
+        ],
+        "assistant_download_error_listing_changed": [
+            "en": "The assistant download listing changed before setup could start. Ross stopped setup before downloading.",
+            "hi": "Setup शुरू होने से पहले assistant download listing बदल गई। Ross ने डाउनलोड से पहले setup रोक दिया।",
+            "bn": "Setup শুরু হওয়ার আগে assistant download listing বদলে গেছে। Ross ডাউনলোডের আগে setup থামিয়েছে।",
+            "ta": "Setup தொடங்குவதற்கு முன் assistant download listing மாறியது. பதிவிறக்கும் முன் Ross setup-ஐ நிறுத்தியது.",
+            "te": "Setup ప్రారంభానికి ముందు assistant download listing మారింది. డౌన్‌లోడ్‌కు ముందు Ross setup ఆపింది."
+        ],
+        "assistant_download_error_resume_service": [
+            "en": "The assistant download service could not safely continue from the saved progress. Retry setup on Wi-Fi.",
+            "hi": "Assistant download service saved progress से सुरक्षित रूप से continue नहीं कर पाई। Wi-Fi पर setup retry करें।",
+            "bn": "Assistant download service saved progress থেকে নিরাপদে continue করতে পারেনি। Wi-Fi-এ setup retry করুন।",
+            "ta": "Assistant download service saved progress-இலிருந்து பாதுகாப்பாக continue செய்ய முடியவில்லை. Wi-Fi-இல் setup retry செய்யவும்.",
+            "te": "Assistant download service saved progress నుండి సురక్షితంగా continue కాలేదు. Wi-Fi పై setup retry చేయండి."
+        ],
+        "assistant_download_error_resume_progress": [
+            "en": "Ross could not safely confirm the saved assistant download progress. Retry setup on Wi-Fi.",
+            "hi": "Ross saved assistant download progress सुरक्षित रूप से confirm नहीं कर पाया। Wi-Fi पर setup retry करें।",
+            "bn": "Ross saved assistant download progress নিরাপদে confirm করতে পারেনি। Wi-Fi-এ setup retry করুন।",
+            "ta": "Saved assistant download progress-ஐ Ross பாதுகாப்பாக confirm செய்ய முடியவில்லை. Wi-Fi-இல் setup retry செய்யவும்.",
+            "te": "Saved assistant download progress ను Ross సురక్షితంగా confirm చేయలేకపోయింది. Wi-Fi పై setup retry చేయండి."
+        ],
+        "assistant_download_error_resume_continue": [
+            "en": "Ross could not safely continue the saved assistant download. Retry setup on Wi-Fi.",
+            "hi": "Ross saved assistant download सुरक्षित रूप से continue नहीं कर पाया। Wi-Fi पर setup retry करें।",
+            "bn": "Ross saved assistant download নিরাপদে continue করতে পারেনি। Wi-Fi-এ setup retry করুন।",
+            "ta": "Saved assistant download-ஐ Ross பாதுகாப்பாக continue செய்ய முடியவில்லை. Wi-Fi-இல் setup retry செய்யவும்.",
+            "te": "Saved assistant download ను Ross సురక్షితంగా continue చేయలేకపోయింది. Wi-Fi పై setup retry చేయండి."
+        ],
+        "assistant_download_error_storage": [
+            "en": "Assistant setup needs about %d GB free. This iPhone currently reports %d GB free.",
+            "hi": "Assistant setup के लिए लगभग %d GB खाली जगह चाहिए। यह iPhone अभी %d GB खाली दिखा रहा है।",
+            "bn": "Assistant setup-এর জন্য প্রায় %d GB খালি জায়গা দরকার। এই iPhone এখন %d GB খালি দেখাচ্ছে।",
+            "ta": "Assistant setup-க்கு சுமார் %d GB காலி இடம் தேவை. இந்த iPhone இப்போது %d GB காலி இடம் காட்டுகிறது.",
+            "te": "Assistant setup కు సుమారు %d GB ఖాళీ స్థలం కావాలి. ఈ iPhone ప్రస్తుతం %d GB ఖాళీగా ఉందని చూపుతోంది."
+        ],
+        "assistant_download_error_missing_file": [
+            "en": "Assistant setup is missing or incomplete. Open My assistant and use Repair setup.",
+            "hi": "Assistant setup missing या incomplete है। My assistant खोलकर Repair setup चलाएँ।",
+            "bn": "Assistant setup missing বা incomplete। My assistant খুলে Repair setup ব্যবহার করুন।",
+            "ta": "Assistant setup missing அல்லது incomplete. My assistant திறந்து Repair setup பயன்படுத்தவும்.",
+            "te": "Assistant setup missing లేదా incomplete. My assistant తెరిచి Repair setup ఉపయోగించండి."
+        ],
+        "assistant_download_error_paused": [
+            "en": "Assistant setup is paused.",
+            "hi": "Assistant setup paused है।",
+            "bn": "Assistant setup paused আছে।",
+            "ta": "Assistant setup paused நிலையில் உள்ளது.",
+            "te": "Assistant setup paused అయ్యింది."
+        ],
+        "assistant_download_error_unknown_network": [
+            "en": "The assistant download service interrupted setup before iOS could classify the error. Retry on Wi-Fi; Ross will use a foreground fallback if the background download fails again.",
+            "hi": "iOS error classify करे उससे पहले assistant download service ने setup रोक दिया। Wi-Fi पर retry करें; background download फिर fail हुआ तो Ross foreground fallback use करेगा।",
+            "bn": "iOS error classify করার আগে assistant download service setup থামিয়েছে। Wi-Fi-এ retry করুন; background download আবার fail হলে Ross foreground fallback ব্যবহার করবে।",
+            "ta": "iOS error-ஐ classify செய்வதற்கு முன் assistant download service setup-ஐ நிறுத்தியது. Wi-Fi-இல் retry செய்யவும்; background download மீண்டும் fail ஆனால் Ross foreground fallback பயன்படுத்தும்.",
+            "te": "iOS error classify చేసే ముందు assistant download service setup ఆపింది. Wi-Fi పై retry చేయండి; background download మళ్లీ fail అయితే Ross foreground fallback ఉపయోగిస్తుంది."
+        ],
+        "assistant_download_error_offline": [
+            "en": "Ross could not reach the assistant download service. Check the connection and retry on Wi-Fi.",
+            "hi": "Ross assistant download service तक नहीं पहुँच पाया। connection जांचें और Wi-Fi पर retry करें।",
+            "bn": "Ross assistant download service-এ পৌঁছাতে পারেনি। connection দেখে Wi-Fi-এ retry করুন।",
+            "ta": "Ross assistant download service-ஐ அடைய முடியவில்லை. connection சரிபார்த்து Wi-Fi-இல் retry செய்யவும்.",
+            "te": "Ross assistant download service ను చేరలేకపోయింది. connection చూసి Wi-Fi పై retry చేయండి."
+        ],
+        "assistant_download_error_cancelled": [
+            "en": "The assistant download was interrupted before it could start. Retry setup; Ross will resume if resume data is available.",
+            "hi": "Assistant download शुरू होने से पहले interrupted हुआ। setup retry करें; resume data उपलब्ध हुआ तो Ross resume करेगा।",
+            "bn": "Assistant download শুরু হওয়ার আগে interrupted হয়েছে। setup retry করুন; resume data থাকলে Ross resume করবে।",
+            "ta": "Assistant download தொடங்குவதற்கு முன் interrupted ஆனது. setup retry செய்யவும்; resume data இருந்தால் Ross resume செய்யும்.",
+            "te": "Assistant download ప్రారంభానికి ముందు interrupted అయ్యింది. setup retry చేయండి; resume data ఉంటే Ross resume చేస్తుంది."
+        ],
+        "assistant_download_error_connection_lost": [
+            "en": "The assistant download connection was interrupted. Retry setup; Ross will resume if the server provided resume data.",
+            "hi": "Assistant download connection interrupted हुआ। setup retry करें; server ने resume data दिया हो तो Ross resume करेगा।",
+            "bn": "Assistant download connection interrupted হয়েছে। setup retry করুন; server resume data দিলে Ross resume করবে।",
+            "ta": "Assistant download connection interrupted ஆனது. setup retry செய்யவும்; server resume data கொடுத்திருந்தால் Ross resume செய்யும்.",
+            "te": "Assistant download connection interrupted అయ్యింది. setup retry చేయండి; server resume data ఇచ్చినట్లయితే Ross resume చేస్తుంది."
+        ],
+        "assistant_download_error_verification_failed": [
+            "en": "The assistant download could not finish verification. Retry on Wi-Fi, or open My assistant and start setup again.",
+            "hi": "Assistant download verification पूरी नहीं कर पाया। Wi-Fi पर retry करें या My assistant खोलकर setup फिर शुरू करें।",
+            "bn": "Assistant download verification শেষ করতে পারেনি। Wi-Fi-এ retry করুন বা My assistant খুলে setup আবার শুরু করুন।",
+            "ta": "Assistant download verification முடிக்க முடியவில்லை. Wi-Fi-இல் retry செய்யவும் அல்லது My assistant திறந்து setup மீண்டும் தொடங்கவும்.",
+            "te": "Assistant download verification పూర్తి కాలేదు. Wi-Fi పై retry చేయండి లేదా My assistant తెరిచి setup మళ్లీ ప్రారంభించండి."
+        ],
         "assistant_setup_retry_hint": [
             "en": "Retry keeps your matters and files, then starts assistant setup again.",
             "hi": "Retry आपके मामले और फ़ाइलें सुरक्षित रखता है, फिर सहायक सेटअप फिर शुरू करता है।",

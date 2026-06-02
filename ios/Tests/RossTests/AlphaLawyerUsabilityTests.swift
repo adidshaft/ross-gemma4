@@ -2085,6 +2085,10 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
     }
 
     func testAssistantDownloadFailureMessagesUseProductLanguage() async {
+        let previousLanguageCode = rossSelectedLanguageCode()
+        rossSaveLanguageSelection(code: "en")
+        defer { rossSaveLanguageSelection(code: previousLanguageCode) }
+
         let messages = await MainActor.run {
             let model = AlphaRossModel()
             return [
@@ -2130,6 +2134,27 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertFalse(message.localizedCaseInsensitiveContains("Error 99"), message)
             XCTAssertFalse(message.localizedCaseInsensitiveContains("downloaded assistant file"), message)
             XCTAssertFalse(message.localizedCaseInsensitiveContains("private assistant file"), message)
+        }
+
+        let hindiMessages = await MainActor.run {
+            rossSaveLanguageSelection(code: "hi")
+            let model = AlphaRossModel()
+            return [
+                model.assistantDownloadFailureMessage(NSError(domain: NSURLErrorDomain, code: NSURLErrorNotConnectedToInternet)),
+                model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.preflightMissingSize),
+                model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.insufficientStorage(requiredGB: 12, availableGB: 3)),
+                model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.missingDownloadedFile)
+            ]
+        }
+
+        XCTAssertTrue(hindiMessages[0].contains("नहीं पहुँच"))
+        XCTAssertTrue(hindiMessages[1].contains("confirm नहीं"))
+        XCTAssertTrue(hindiMessages[2].contains("12 GB"))
+        XCTAssertTrue(hindiMessages[3].contains("Repair setup"))
+        for message in hindiMessages {
+            XCTAssertFalse(message.localizedCaseInsensitiveContains("NSURLErrorDomain"), message)
+            XCTAssertFalse(message.localizedCaseInsensitiveContains("checksum"), message)
+            XCTAssertFalse(message.localizedCaseInsensitiveContains("artifact"), message)
         }
     }
 

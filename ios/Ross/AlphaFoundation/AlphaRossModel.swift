@@ -1438,34 +1438,64 @@ enum AlphaAssistantDownloadError: LocalizedError {
     case pausedByUser
 
     var errorDescription: String? {
-        switch self {
-        case .invalidURL:
-            return "The selected private assistant download link is invalid."
-        case .httpStatus(let status):
-            return "The assistant download service returned status \(status). Try again on Wi-Fi."
-        case .preflightMissingSize:
-            return "Ross could not confirm the assistant setup size before downloading."
-        case .preflightSizeMismatch(let expected, let reported):
-            let expectedLabel = ByteCountFormatter.string(fromByteCount: expected, countStyle: .file)
-            let reportedLabel = ByteCountFormatter.string(fromByteCount: reported, countStyle: .file)
-            return "The assistant download listing changed from \(expectedLabel) to \(reportedLabel). Ross stopped setup before downloading."
-        case .preflightNotResumable:
-            return "The assistant download cannot be safely resumed right now. Retry later on Wi-Fi."
-        case .preflightChecksumMismatch:
-            return "The assistant download listing changed before setup could start. Ross stopped setup before downloading."
-        case .rangeProbeInvalidStatus:
-            return "The assistant download service could not safely continue from the saved progress. Retry setup on Wi-Fi."
-        case .rangeProbeInvalidLength:
-            return "Ross could not safely confirm the saved assistant download progress. Retry setup on Wi-Fi."
-        case .rangeProbeInvalidContentRange:
-            return "Ross could not safely continue the saved assistant download. Retry setup on Wi-Fi."
-        case .insufficientStorage(let requiredGB, let availableGB):
-            return "Assistant setup needs about \(requiredGB) GB free. This iPhone currently reports \(availableGB) GB free."
-        case .missingDownloadedFile:
-            return "Assistant setup is missing or incomplete. Open My assistant and use Repair setup."
-        case .pausedByUser:
-            return "Assistant setup is paused."
-        }
+        alphaAssistantDownloadErrorMessage(self)
+    }
+}
+
+func alphaAssistantDownloadErrorMessage(
+    _ error: AlphaAssistantDownloadError,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
+    switch error {
+    case .invalidURL:
+        return rossLocalized("assistant_download_error_invalid_url", languageCode: languageCode)
+    case .httpStatus(let status):
+        return String(format: rossLocalized("assistant_download_error_http_status", languageCode: languageCode), status)
+    case .preflightMissingSize:
+        return rossLocalized("assistant_download_error_missing_size", languageCode: languageCode)
+    case .preflightSizeMismatch(let expected, let reported):
+        let expectedLabel = ByteCountFormatter.string(fromByteCount: expected, countStyle: .file)
+        let reportedLabel = ByteCountFormatter.string(fromByteCount: reported, countStyle: .file)
+        return String(
+            format: rossLocalized("assistant_download_error_size_changed", languageCode: languageCode),
+            expectedLabel,
+            reportedLabel
+        )
+    case .preflightNotResumable:
+        return rossLocalized("assistant_download_error_not_resumable", languageCode: languageCode)
+    case .preflightChecksumMismatch:
+        return rossLocalized("assistant_download_error_listing_changed", languageCode: languageCode)
+    case .rangeProbeInvalidStatus:
+        return rossLocalized("assistant_download_error_resume_service", languageCode: languageCode)
+    case .rangeProbeInvalidLength:
+        return rossLocalized("assistant_download_error_resume_progress", languageCode: languageCode)
+    case .rangeProbeInvalidContentRange:
+        return rossLocalized("assistant_download_error_resume_continue", languageCode: languageCode)
+    case .insufficientStorage(let requiredGB, let availableGB):
+        return String(format: rossLocalized("assistant_download_error_storage", languageCode: languageCode), requiredGB, availableGB)
+    case .missingDownloadedFile:
+        return rossLocalized("assistant_download_error_missing_file", languageCode: languageCode)
+    case .pausedByUser:
+        return rossLocalized("assistant_download_error_paused", languageCode: languageCode)
+    }
+}
+
+func alphaAssistantNetworkDownloadFailureMessage(
+    nsError: NSError,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String? {
+    guard nsError.domain == NSURLErrorDomain else { return nil }
+    switch nsError.code {
+    case NSURLErrorUnknown:
+        return rossLocalized("assistant_download_error_unknown_network", languageCode: languageCode)
+    case NSURLErrorNotConnectedToInternet:
+        return rossLocalized("assistant_download_error_offline", languageCode: languageCode)
+    case NSURLErrorCancelled:
+        return rossLocalized("assistant_download_error_cancelled", languageCode: languageCode)
+    case NSURLErrorNetworkConnectionLost:
+        return rossLocalized("assistant_download_error_connection_lost", languageCode: languageCode)
+    default:
+        return nil
     }
 }
 
