@@ -2927,6 +2927,10 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
     }
 
     func testTaggedUnreadableFileDoesNotFallBackToMatterMemoryAnswer() async throws {
+        let previousLanguageCode = rossSelectedLanguageCode()
+        rossSaveLanguageSelection(code: "hi")
+        defer { rossSaveLanguageSelection(code: previousLanguageCode) }
+
         try await withRestoredStore { store in
             try await store.replace(with: AlphaPersistedState.seed())
 
@@ -2971,9 +2975,12 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             }
 
             let latest = await MainActor.run { model.latestAskResult }
-            XCTAssertEqual(latest?.answerTitle, "Selected file has no readable text")
-            XCTAssertEqual(latest?.statusNote, "File text unavailable")
-            XCTAssertTrue(latest?.answerSections.joined(separator: " ").contains("could not find readable source text") == true)
+            XCTAssertEqual(latest?.answerTitle, "Selected file में readable text नहीं है")
+            XCTAssertEqual(latest?.statusNote, "File text उपलब्ध नहीं")
+            let answerText = try XCTUnwrap(latest?.answerSections.joined(separator: " "))
+            XCTAssertTrue(answerText.contains("Ross को tagged file में readable source text नहीं मिला।"), answerText)
+            XCTAssertTrue(answerText.contains("file फिर import करें"), answerText)
+            XCTAssertFalse(answerText.contains("could not find readable source text"), answerText)
             XCTAssertTrue(latest?.caseFileSources.isEmpty == true)
         }
     }
