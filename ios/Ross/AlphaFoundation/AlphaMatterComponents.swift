@@ -517,23 +517,55 @@ struct AlphaTierGlyph: View {
 
 struct AlphaMatterStarterCard: View {
     @Bindable var model: AlphaRossModel
+    @FocusState private var matterNameFocused: Bool
+
+    private var matterNameIsEmpty: Bool {
+        model.caseDraftTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
 
     var body: some View {
         RossSectionCard(title: "Start with your first matter", subtitle: "Name it now. Ross can extract the details from the first file.") {
-            VStack(spacing: 12) {
-                TextField("Matter name", text: $model.caseDraftTitle)
-                    .textFieldStyle(.plain)
-                    .font(.body.weight(.medium))
-                    .foregroundStyle(Color.rossInk)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 14)
-                    .rossGlassSurface(cornerRadius: 16, interactive: true, shadowOpacity: 0.07, shadowRadius: 7, shadowY: 3, fillOpacity: 0.8, strokeOpacity: 0.48)
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Matter name")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.rossInk.opacity(0.64))
 
-                Button("Save matter and open") {
-                    model.createCase()
+                    TextField("Client or case name", text: $model.caseDraftTitle)
+                        .textFieldStyle(.plain)
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(Color.rossInk)
+                        .focused($matterNameFocused)
+                        .padding(.horizontal, 14)
+                        .frame(minHeight: 52)
+                        .rossGlassSurface(
+                            tint: matterNameFocused ? Color.rossAccent : Color.rossHighlight,
+                            cornerRadius: 18,
+                            interactive: true,
+                            shadowOpacity: matterNameFocused ? 0.10 : 0.06,
+                            shadowRadius: matterNameFocused ? 10 : 6,
+                            shadowY: matterNameFocused ? 4 : 2,
+                            fillOpacity: 0.84,
+                            strokeOpacity: 0.52
+                        )
+                        .accessibilityLabel("Matter name")
+                        .submitLabel(.done)
                 }
-                .rossPrimaryButtonStyle()
-                .disabled(model.caseDraftTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                Text("After this, import the first PDF, image, or text file. Ross keeps it on this iPhone and prepares the review locally.")
+                    .font(.footnote)
+                    .foregroundStyle(Color.rossInk.opacity(0.68))
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Button {
+                    matterNameFocused = false
+                    model.createCase()
+                } label: {
+                    Label("Create matter workspace", systemImage: "folder.badge.plus")
+                        .frame(maxWidth: .infinity)
+                }
+                .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 18)
+                .disabled(matterNameIsEmpty)
             }
         }
     }
