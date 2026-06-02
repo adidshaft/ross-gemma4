@@ -1446,7 +1446,9 @@ extension AlphaRossModel {
                     selectedDocuments.count == 1
                         ? "Ross is still reading \(waitingList). Ask again after extraction finishes."
                         : "Ross is still reading \(waitingList). Ask again after extraction finishes for the tagged files.",
-                    "Ross will wait until the selected files are ready instead of guessing from text that is not ready yet."
+                    selectedDocuments.count == 1
+                        ? "Ross will wait until this file is ready instead of guessing from text that is not ready yet."
+                        : "Ross will wait until the selected files are ready instead of guessing from text that is not ready yet."
                 ],
                 caseFileSources: [],
                 publicLawPreview: nil,

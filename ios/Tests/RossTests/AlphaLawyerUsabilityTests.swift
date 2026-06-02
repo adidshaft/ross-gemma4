@@ -412,7 +412,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
 
         XCTAssertEqual(result.answerTitle, "Ross is still reading this file")
         XCTAssertEqual(result.statusNote, "Reading")
-        XCTAssertTrue(answerText.contains("selected files are ready"))
+        XCTAssertTrue(answerText.contains("this file is ready"))
+        XCTAssertFalse(answerText.contains("selected files are ready"), answerText)
         XCTAssertFalse(answerText.localizedCaseInsensitiveContains("placeholder"), answerText)
         XCTAssertFalse(answerText.localizedCaseInsensitiveContains("incomplete text"), answerText)
     }
