@@ -87,7 +87,7 @@ struct StubLocalRuntimeService: LocalRuntimeServicing {
                 detail: "Ross can organize case files now, but answering case questions needs assistant setup.",
                 isAvailable: false,
                 isBlocking: true,
-                guidance: "Choose an assistant in Settings to answer questions from your case files."
+                guidance: "Open My assistant, finish setup on this iPhone, then ask Ross from your case files."
             )
         }
 

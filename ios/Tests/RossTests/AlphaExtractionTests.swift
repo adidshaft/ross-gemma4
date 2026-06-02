@@ -463,6 +463,29 @@ final class AlphaExtractionTests: XCTestCase {
         }
     }
 
+    @MainActor
+    func testInstantModeSetupGuidancePointsToAssistantSurface() {
+        let service = StubLocalRuntimeService(privacyLedger: PrivacyLedgerService())
+        let assessment = service.instantModeAssessment(
+            deviceCapability: .placeholder,
+            activePack: nil,
+            settings: .defaults
+        )
+
+        XCTAssertEqual(assessment.title, "Set up your private assistant")
+        XCTAssertTrue(assessment.isBlocking)
+        XCTAssertTrue(assessment.guidance.contains("My assistant"))
+        XCTAssertTrue(assessment.guidance.contains("this iPhone"))
+        XCTAssertFalse(assessment.guidance.localizedCaseInsensitiveContains("Settings"))
+
+        for term in ["Gemma", "Llama", "GGUF", "runtime", "model", "checksum", "artifact"] {
+            XCTAssertFalse(
+                assessment.guidance.localizedCaseInsensitiveContains(term),
+                "\(term) leaked into assistant setup guidance"
+            )
+        }
+    }
+
     func testAskDockPlaceholdersFollowSelectedSupportedLanguage() {
         XCTAssertEqual(
             alphaAskPlaceholder(fixedDocumentCount: 1, hasActiveMatterScope: true, languageCode: "hi"),
