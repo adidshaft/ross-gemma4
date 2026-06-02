@@ -183,12 +183,13 @@ extension AlphaRossModel {
         }
     }
 
-    func reclaimAssistantStorageLeaks() {
+    func reclaimAssistantStorageLeaks() async -> Int64 {
         let keptResumePaths = Set(persisted.modelJobs.compactMap(\.resumeDataRelativePath))
-        Task {
-            await store.sweepTemporaryAssistantDownloads()
-            await store.sweepModelResumeData(keeping: keptResumePaths)
-        }
+        let before = await store.assistantStorageBreakdown().totalBytes
+        await store.sweepTemporaryAssistantDownloads()
+        await store.sweepModelResumeData(keeping: keptResumePaths)
+        let after = await store.assistantStorageBreakdown().totalBytes
+        return max(0, before - after)
     }
 
     func checkForAssistantModelUpdates(force: Bool = false) {

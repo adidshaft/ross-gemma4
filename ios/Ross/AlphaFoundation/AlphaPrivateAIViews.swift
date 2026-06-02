@@ -1170,6 +1170,8 @@ private struct AlphaAssistantStorageFootprintRow: View {
         pendingDownloadBytes: 0,
         deviceCacheBytes: 0
     )
+    @State private var isReclaiming = false
+    @State private var reclaimStatus: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -1187,12 +1189,12 @@ private struct AlphaAssistantStorageFootprintRow: View {
                 }
                 Spacer(minLength: 0)
                 RossGlassGroup(spacing: 8) {
-                    Button("Reclaim") {
-                        model.reclaimAssistantStorageLeaks()
-                        Task { await refresh() }
+                    Button(isReclaiming ? "Cleaning" : "Reclaim") {
+                        Task { await reclaimStorage() }
                     }
                     .font(.caption.weight(.semibold))
                     .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 14, expandsHorizontally: false)
+                    .disabled(isReclaiming)
                 }
             }
 
@@ -1201,6 +1203,13 @@ private struct AlphaAssistantStorageFootprintRow: View {
                 storageDetail("Interrupted downloads", bytes: breakdown.pendingDownloadBytes)
                 storageDetail("Resume data", bytes: breakdown.resumeBytes)
                 storageDetail("Device cache", bytes: breakdown.deviceCacheBytes)
+            }
+
+            if let reclaimStatus {
+                Text(reclaimStatus)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(Color.rossInk.opacity(0.58))
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .task { await refresh() }
@@ -1218,6 +1227,18 @@ private struct AlphaAssistantStorageFootprintRow: View {
 
     private func refresh() async {
         breakdown = await model.store.assistantStorageBreakdown()
+    }
+
+    private func reclaimStorage() async {
+        guard !isReclaiming else { return }
+        isReclaiming = true
+        reclaimStatus = "Cleaning interrupted setup files..."
+        let reclaimedBytes = await model.reclaimAssistantStorageLeaks()
+        await refresh()
+        reclaimStatus = reclaimedBytes > 0
+            ? "Reclaimed \(alphaFileSizeLabel(reclaimedBytes))."
+            : "No extra assistant setup files found."
+        isReclaiming = false
     }
 }
 
