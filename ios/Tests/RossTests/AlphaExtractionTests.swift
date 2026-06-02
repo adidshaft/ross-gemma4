@@ -1246,6 +1246,22 @@ final class AlphaExtractionTests: XCTestCase {
             "local chronology বা order summary draft generate করুন."
         )
         XCTAssertEqual(
+            alphaDocumentReadyForMatterChatLabel(languageCode: "hi"),
+            "यह file matter chat में use करने के लिए ready है."
+        )
+        XCTAssertEqual(
+            alphaDocumentReviewUpdatedTitle("Order", languageCode: "bn"),
+            "Order-এর review updated"
+        )
+        XCTAssertEqual(
+            alphaMatterChatUpdatedStatus(needsReview: true, languageCode: "ta"),
+            "Matter chat updated · review தேவை"
+        )
+        XCTAssertEqual(
+            alphaNextDateCapturedLabel("12/05/2026", languageCode: "te-IN"),
+            "Next date captured: 12/05/2026."
+        )
+        XCTAssertEqual(
             alphaFindingsCountLabel(3, languageCode: "hi"),
             "3 findings"
         )

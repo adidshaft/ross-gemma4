@@ -601,6 +601,25 @@ func alphaGenerateLocalDraftLabel(languageCode: String = rossSelectedLanguageCod
     rossLocalized("matter_memory_generate_local_draft", languageCode: languageCode)
 }
 
+func alphaDocumentReadyForMatterChatLabel(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("document_review_ready_for_matter_chat", languageCode: languageCode)
+}
+
+func alphaDocumentReviewUpdatedTitle(_ title: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("document_review_updated_for_title", languageCode: languageCode), title)
+}
+
+func alphaMatterChatUpdatedStatus(needsReview: Bool, languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized(
+        needsReview ? "matter_chat_updated_needs_review" : "matter_chat_updated_ready",
+        languageCode: languageCode
+    )
+}
+
+func alphaNextDateCapturedLabel(_ nextDate: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("document_review_next_date_captured", languageCode: languageCode), nextDate)
+}
+
 func alphaReviewItemsFromFilesLabel(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
     String(format: rossLocalized("review_items_from_files", languageCode: languageCode), alphaReviewItemCountLabel(count))
 }

@@ -4550,6 +4550,41 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "local chronology அல்லது order summary draft generate செய்யவும்.",
             "te": "local chronology లేదా order summary draft generate చేయండి."
         ],
+        "document_review_ready_for_matter_chat": [
+            "en": "This file is ready to use in the matter chat.",
+            "hi": "यह file matter chat में use करने के लिए ready है.",
+            "bn": "এই file matter chat-এ use করার জন্য ready.",
+            "ta": "இந்த file matter chat-இல் use செய்ய ready.",
+            "te": "ఈ file matter chat లో use చేయడానికి ready."
+        ],
+        "document_review_updated_for_title": [
+            "en": "Review updated for %@",
+            "hi": "%@ के लिए review updated",
+            "bn": "%@-এর review updated",
+            "ta": "%@ review updated",
+            "te": "%@ review updated"
+        ],
+        "matter_chat_updated_ready": [
+            "en": "Matter chat updated · ready to use",
+            "hi": "Matter chat updated · use के लिए ready",
+            "bn": "Matter chat updated · use করার জন্য ready",
+            "ta": "Matter chat updated · use செய்ய ready",
+            "te": "Matter chat updated · use చేయడానికి ready"
+        ],
+        "matter_chat_updated_needs_review": [
+            "en": "Matter chat updated · needs review",
+            "hi": "Matter chat updated · review चाहिए",
+            "bn": "Matter chat updated · review দরকার",
+            "ta": "Matter chat updated · review தேவை",
+            "te": "Matter chat updated · review అవసరం"
+        ],
+        "document_review_next_date_captured": [
+            "en": "Next date captured: %@.",
+            "hi": "Next date captured: %@.",
+            "bn": "Next date captured: %@.",
+            "ta": "Next date captured: %@.",
+            "te": "Next date captured: %@."
+        ],
         "no_matters_match_search": [
             "en": "No matters match this search.",
             "hi": "इस search से कोई मामला नहीं मिला।",

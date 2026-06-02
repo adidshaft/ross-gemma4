@@ -82,7 +82,7 @@ extension AlphaRossModel {
         let nextDateValue = result.extractedFields.first(where: { $0.fieldType == .nextDate && (!$0.needsReview || $0.userCorrected) })?.value
         let reviewItemCount = document.extractedFields.filter(\.needsReview).count + findings.filter { !$0.resolved }.count
         let reviewSummary = reviewItemCount == 0
-            ? "This file is ready to use in the matter chat."
+            ? alphaDocumentReadyForMatterChatLabel()
             : alphaReviewItemsNeedConfirmationBeforeFileUseLabel(reviewItemCount)
         let classificationSummary = result.classification.map {
             $0.type.blocksAutomaticLegalFactSaving
@@ -91,7 +91,7 @@ extension AlphaRossModel {
         } ?? "Ross finished re-reading \(document.title)."
         var threadSections = [classificationSummary, reviewSummary]
         if let nextDateValue {
-            threadSections.insert("Next date captured: \(nextDateValue).", at: 1)
+            threadSections.insert(alphaNextDateCapturedLabel(nextDateValue), at: 1)
         }
         let threadSourceRefs = Array(
             (
@@ -101,12 +101,12 @@ extension AlphaRossModel {
         )
         appendMatterThreadUpdate(
             caseId: caseId == alphaSharedWorkspaceID ? nil : caseId,
-            title: "Review updated for \(document.title)",
+            title: alphaDocumentReviewUpdatedTitle(document.title),
             sections: threadSections,
             sourceRefs: threadSourceRefs,
             selectedDocumentIDs: [document.id],
             selectedDocumentTitles: [document.title],
-            statusNote: reviewItemCount == 0 ? "Matter chat updated · ready to use" : "Matter chat updated · needs review",
+            statusNote: alphaMatterChatUpdatedStatus(needsReview: reviewItemCount > 0),
             needsReviewWarning: reviewItemCount == 0 ? nil : alphaReviewItemsNeedAdvocateReviewLabel(reviewItemCount)
         )
         if routineSettings.afterDocumentImportEnabled {
