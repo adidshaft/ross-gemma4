@@ -41,15 +41,15 @@ final class BackgroundModelDownloadService: NSObject, ModelDownloadManaging, URL
             plannedSize: pack.downloadSize,
             phase: .failed,
             progress: 0,
-            deliveryNote: "This legacy background delivery path is disabled. Use Ross Private AI setup to install verified local model artifacts.",
+            deliveryNote: "This download path is retired. Open My assistant to finish setup with the current private assistant installer.",
             isBackgroundEligible: true
         )
 
         jobs.insert(job, at: 0)
 
         privacyLedger.recordNetwork(
-            title: "Legacy Private AI download blocked",
-            detail: "Ross blocked an obsolete placeholder model-delivery path before any transfer started.",
+            title: "Old assistant download blocked",
+            detail: "Ross stopped an outdated assistant setup path before any transfer started.",
             boundary: .modelDelivery,
             dataClass: .noCaseData,
             direction: .outbound

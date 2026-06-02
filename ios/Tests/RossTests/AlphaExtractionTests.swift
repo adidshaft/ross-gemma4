@@ -969,8 +969,8 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(service.jobs.count, 1)
         XCTAssertEqual(service.jobs.first?.phase, .failed)
         XCTAssertEqual(service.jobs.first?.progress, 0)
-        XCTAssertTrue(service.jobs.first?.deliveryNote.contains("legacy background delivery path is disabled") == true)
-        XCTAssertEqual(ledger.entries.first?.title, "Legacy Private AI download blocked")
+        XCTAssertTrue(service.jobs.first?.deliveryNote.contains("Open My assistant") == true)
+        XCTAssertEqual(ledger.entries.first?.title, "Old assistant download blocked")
     }
 
     func testAssistantDownloadPreflightParsesProviderSizeAndChecksum() throws {
