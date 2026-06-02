@@ -128,22 +128,24 @@ struct AlphaDocumentTextPreview: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                if sortedPages.isEmpty {
-                    AlphaDocumentPreviewPage(
-                        pageNumber: max(initialPage, 1),
-                        text: fallbackText
-                    )
-                } else {
-                    ForEach(sortedPages.prefix(3), id: \.pageNumber) { page in
+            RossGlassGroup(spacing: 12) {
+                VStack(alignment: .leading, spacing: 12) {
+                    if sortedPages.isEmpty {
                         AlphaDocumentPreviewPage(
-                            pageNumber: page.pageNumber,
-                            text: previewText(for: page)
+                            pageNumber: max(initialPage, 1),
+                            text: fallbackText
                         )
+                    } else {
+                        ForEach(sortedPages.prefix(3), id: \.pageNumber) { page in
+                            AlphaDocumentPreviewPage(
+                                pageNumber: page.pageNumber,
+                                text: previewText(for: page)
+                            )
+                        }
                     }
                 }
+                .padding(12)
             }
-            .padding(12)
         }
         .frame(minHeight: 320, maxHeight: 420)
         .rossGlassSurface(cornerRadius: 14, shadowOpacity: 0.08, shadowRadius: 8, shadowY: 3, fillOpacity: 0.8, strokeOpacity: 0.48)
