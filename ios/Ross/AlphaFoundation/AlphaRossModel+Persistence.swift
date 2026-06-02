@@ -1223,13 +1223,13 @@ extension AlphaRossModel {
             let export: AlphaExportedReport?
             do {
                 export = try await store.createPDFExport(
-                    title: "Local inference smoke",
+                    title: "Private assistant sample file check",
                     kind: "case_note",
                     caseId: nil,
                     bodyLines: [
                         "Draft — please review",
-                        "Synthetic local inference smoke run",
-                        "Assistant: Ready on this device",
+                        "Sample file check completed on this iPhone",
+                        "Private assistant: Ready on this device",
                         "Fields found: \(result.extractedFields.count)",
                         "Fields verified: \(result.extractedFields.filter { !$0.needsReview || $0.userCorrected }.count)",
                         "Fields needing review: \(result.extractedFields.filter { $0.needsReview && !$0.userCorrected }.count)"
@@ -1253,7 +1253,7 @@ extension AlphaRossModel {
                 fieldsNeedingReview: result.extractedFields.filter { $0.needsReview && !$0.userCorrected }.count,
                 unsupportedAccepted: 0,
                 exportRelativePath: export?.relativePath,
-                message: "Local inference smoke completed without logging prompt or source text."
+                message: "Private assistant sample file check completed without logging prompt or source text."
             )
             localInferenceSmokeRunning = false
         }
