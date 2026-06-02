@@ -360,6 +360,74 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     @MainActor
+    func testTamilSourceGroundedFallbackUsesTamilText() {
+        let model = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "03_Affidavit_Asha_Menon_Camera_Retention",
+            pageNumber: 1,
+            textSnippet: "CAM-D3 fourteen-day retention and video export queue failed twice."
+        )
+        let sourcePack = [
+            AlphaSourceTextBlock(
+                sourceRef: sourceRef,
+                text: "CAM-D3 had fourteen-day retention. The video export queue failed twice. The overlay timestamp lagged by eleven minutes.",
+                pageNumber: 1,
+                languageHint: "en",
+                ocrConfidence: 0.91
+            )
+        ]
+
+        let payload = model.sourceGroundedMatterAskFallback(
+            question: "இந்த சத்தியப்பிரமாணத்தின் முக்கிய புள்ளிகளை தமிழில் சொல்லுங்கள்",
+            sourcePack: sourcePack,
+            baseResult: baseAskResult()
+        )
+
+        let text = ([payload?.headline ?? ""] + (payload?.sections ?? [])).joined(separator: " ")
+        XCTAssertNotNil(payload)
+        XCTAssertGreaterThanOrEqual(model.alphaIndicScriptRatio(in: text, script: .tamil), 0.55)
+        XCTAssertLessThanOrEqual(model.alphaLatinWordCount(in: text), 8)
+        XCTAssertFalse(text.localizedCaseInsensitiveContains("rolling video"))
+        XCTAssertFalse(text.localizedCaseInsensitiveContains("export queue"))
+    }
+
+    @MainActor
+    func testTeluguSourceGroundedFallbackUsesTeluguText() {
+        let model = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "03_Affidavit_Asha_Menon_Camera_Retention",
+            pageNumber: 1,
+            textSnippet: "CAM-D3 fourteen-day retention and video export queue failed twice."
+        )
+        let sourcePack = [
+            AlphaSourceTextBlock(
+                sourceRef: sourceRef,
+                text: "CAM-D3 had fourteen-day retention. The video export queue failed twice. The overlay timestamp lagged by eleven minutes.",
+                pageNumber: 1,
+                languageHint: "en",
+                ocrConfidence: 0.91
+            )
+        ]
+
+        let payload = model.sourceGroundedMatterAskFallback(
+            question: "ఈ అఫిడవిట్ ముఖ్య అంశాలను తెలుగులో చెప్పండి",
+            sourcePack: sourcePack,
+            baseResult: baseAskResult()
+        )
+
+        let text = ([payload?.headline ?? ""] + (payload?.sections ?? [])).joined(separator: " ")
+        XCTAssertNotNil(payload)
+        XCTAssertGreaterThanOrEqual(model.alphaIndicScriptRatio(in: text, script: .telugu), 0.55)
+        XCTAssertLessThanOrEqual(model.alphaLatinWordCount(in: text), 8)
+        XCTAssertFalse(text.localizedCaseInsensitiveContains("rolling video"))
+        XCTAssertFalse(text.localizedCaseInsensitiveContains("export queue"))
+    }
+
+    @MainActor
     func testHindiGenericFallbackAvoidsCouldNotAnswerWhenSourcesExist() {
         let model = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
         let sourceRef = AlphaSourceRef(

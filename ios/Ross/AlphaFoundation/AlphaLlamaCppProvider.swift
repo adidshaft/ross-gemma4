@@ -281,6 +281,8 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         Match the question language exactly.
         Hindi: Devanagari only, no Hinglish except names/dates/source labels.
         Bengali: Bengali script only except names/dates/source labels.
+        Tamil: Tamil script only except names/dates/source labels.
+        Telugu: Telugu script only except names/dates/source labels.
         \(languageInstruction)
         No JSON, XML, markdown fences, or chat tokens.
         Format: short heading, then 2-3 "- " bullets with source labels.
