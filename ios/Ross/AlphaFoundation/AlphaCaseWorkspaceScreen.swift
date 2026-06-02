@@ -186,12 +186,13 @@ struct AlphaCaseWorkspaceScreen: View {
                     .sorted { $0.createdAt > $1.createdAt }
                 let draftCount = matterExports.count
 
-                LazyVStack(alignment: .leading, spacing: 16) {
-                    AlphaInlineHeader(
-                        eyebrow: caseMatter.forum,
-                        title: caseMatter.title,
-                        detail: caseMatter.stage.title
-                    )
+                RossGlassGroup(spacing: 16) {
+                    LazyVStack(alignment: .leading, spacing: 16) {
+                        AlphaInlineHeader(
+                            eyebrow: caseMatter.forum,
+                            title: caseMatter.title,
+                            detail: caseMatter.stage.title
+                        )
 
                     RossSectionCard(title: "Ross Summary") {
                         VStack(alignment: .leading, spacing: 12) {
@@ -344,9 +345,10 @@ struct AlphaCaseWorkspaceScreen: View {
                             }
                         }
                     }
+                    }
+                    .padding(alphaScreenPadding)
+                    .padding(.bottom, 24)
                 }
-                .padding(alphaScreenPadding)
-                .padding(.bottom, 24)
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
