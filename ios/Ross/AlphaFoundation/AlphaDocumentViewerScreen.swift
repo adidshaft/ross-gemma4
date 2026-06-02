@@ -859,9 +859,18 @@ struct AlphaAcceptedReviewSummaryCard: View {
     let classification: AlphaLegalDocumentClassification?
     let fields: [AlphaExtractedLegalField]
 
+    private var acceptedCount: Int {
+        fields.count + (classification?.needsReview == false ? 1 : 0)
+    }
+
     var body: some View {
         DisclosureGroup {
             VStack(alignment: .leading, spacing: 10) {
+                Text("Ross will use these confirmed details when preparing notes, tasks, and matter answers.")
+                    .font(.footnote)
+                    .foregroundStyle(Color.rossInk.opacity(0.66))
+                    .fixedSize(horizontal: false, vertical: true)
+
                 if let classification, !classification.needsReview {
                     AlphaDocumentTypePill(
                         type: classification.type,
@@ -891,11 +900,17 @@ struct AlphaAcceptedReviewSummaryCard: View {
             HStack(spacing: 8) {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(Color.rossSuccess)
-                Text("Accepted details")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.rossInk)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Confirmed for Ross")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.rossInk)
+                    Text("Details already approved for this matter")
+                        .font(.caption)
+                        .foregroundStyle(Color.rossInk.opacity(0.58))
+                }
+                .font(.subheadline.weight(.semibold))
                 Spacer()
-                Text("\(fields.count + (classification?.needsReview == false ? 1 : 0))")
+                Text("\(acceptedCount)")
                     .font(.caption.weight(.bold))
                     .foregroundStyle(Color.rossSuccess)
             }
@@ -977,7 +992,7 @@ struct AlphaDocumentInspectCard: View {
     let onOpenSourceRef: (AlphaSourceRef) -> Void
 
     var body: some View {
-        RossSectionCard(title: "Inspect", subtitle: "Sources and extracted text.") {
+        RossSectionCard(title: "Check sources", subtitle: "Open the evidence Ross used, or inspect extracted text.") {
             VStack(alignment: .leading, spacing: 12) {
                 DisclosureGroup(isExpanded: $sourceDetailsExpanded) {
                     VStack(alignment: .leading, spacing: 10) {
@@ -1010,9 +1025,14 @@ struct AlphaDocumentInspectCard: View {
                     .padding(.top, 8)
                 } label: {
                     HStack {
-                        Text(sourceDetailsExpanded ? "Hide sources" : "Sources")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Color.rossInk)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(sourceDetailsExpanded ? "Hide source links" : "Source links")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Color.rossInk)
+                            Text("Jump to the page or snippet behind a detail")
+                                .font(.caption)
+                                .foregroundStyle(Color.rossInk.opacity(0.58))
+                        }
                         Spacer(minLength: 8)
                         Text(sourceRefs.isEmpty ? "0" : "\(sourceRefs.count)")
                             .font(.caption.weight(.bold))
@@ -1020,10 +1040,10 @@ struct AlphaDocumentInspectCard: View {
                     }
                 }
                 .tint(Color.rossAccent)
+                .padding(12)
+                .rossGlassSurface(cornerRadius: 16, interactive: true, shadowOpacity: 0.04, shadowRadius: 4, shadowY: 1, strokeOpacity: 0.44)
 
-                Divider()
-
-                DisclosureGroup(rawTextExpanded ? "Hide raw text" : "Raw text", isExpanded: $rawTextExpanded) {
+                DisclosureGroup(isExpanded: $rawTextExpanded) {
                     ScrollView {
                         Text(extractedText ?? "No extracted text is available for this page yet.")
                             .font(.footnote)
@@ -1032,10 +1052,28 @@ struct AlphaDocumentInspectCard: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .frame(maxHeight: 220)
-                    .padding(.top, 8)
+                    .padding(12)
+                    .rossGlassSurface(cornerRadius: 14, strokeOpacity: 0.42)
+                    .padding(.top, 10)
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(rawTextExpanded ? "Hide extracted text" : "Extracted text")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Color.rossInk)
+                            Text("Use this when a scan or OCR result needs manual checking")
+                                .font(.caption)
+                                .foregroundStyle(Color.rossInk.opacity(0.58))
+                        }
+                        Spacer(minLength: 8)
+                        Image(systemName: "text.viewfinder")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.rossAccent)
+                    }
                 }
-                .font(.subheadline.weight(.semibold))
                 .tint(Color.rossAccent)
+                .padding(12)
+                .rossGlassSurface(cornerRadius: 16, interactive: true, shadowOpacity: 0.04, shadowRadius: 4, shadowY: 1, strokeOpacity: 0.44)
             }
         }
     }
