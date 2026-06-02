@@ -13,6 +13,9 @@ import UIKit
 import AppKit
 #endif
 
+let alphaSettingsAssistantStorageLabel = "Assistant setup"
+let alphaSettingsAssistantStorageSupportLabel = "Assistant setup files"
+
 struct AlphaSettingsScreen: View {
     @Bindable var model: AlphaRossModel
     let authController: RossAuthController?
@@ -241,7 +244,7 @@ struct AlphaSettingsScreen: View {
                             Divider()
                             AlphaSettingsValueRow(label: "Drafts", value: "\(storageSnapshot.exportCount) • \(alphaFileSizeLabel(storageSnapshot.exportBytes))")
                             Divider()
-                            AlphaSettingsValueRow(label: "Assistant files", value: alphaFileSizeLabel(storageSnapshot.assistantBytes))
+                            AlphaSettingsValueRow(label: alphaSettingsAssistantStorageLabel, value: alphaFileSizeLabel(storageSnapshot.assistantBytes))
                             Divider()
                             Text("Stored on this iPhone unless you share it.")
                                 .font(.footnote)
@@ -269,7 +272,7 @@ struct AlphaSettingsScreen: View {
                 RossSectionCard(title: "Advanced") {
                     DisclosureGroup("Support details") {
                         VStack(alignment: .leading, spacing: 12) {
-                            AlphaSettingsValueRow(label: "Assistant files", value: alphaFileSizeLabel(storageSnapshot.assistantBytes))
+                            AlphaSettingsValueRow(label: alphaSettingsAssistantStorageSupportLabel, value: alphaFileSizeLabel(storageSnapshot.assistantBytes))
                             Divider()
                             AlphaSettingsValueRow(label: "Current server", value: rossBackendBaseURL().absoluteString)
 
