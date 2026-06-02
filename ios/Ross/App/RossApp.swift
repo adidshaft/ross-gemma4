@@ -882,6 +882,83 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Ask Ross திறக்கவும்",
             "te": "Ask Ross తెరవండి"
         ],
+        "tab_today": [
+            "en": "Today",
+            "hi": "आज",
+            "bn": "আজ",
+            "ta": "இன்று",
+            "te": "ఈ రోజు"
+        ],
+        "tab_matters": [
+            "en": "Matters",
+            "hi": "मामले",
+            "bn": "মামলা",
+            "ta": "வழக்குகள்",
+            "te": "కేసులు"
+        ],
+        "tab_files": [
+            "en": "Files",
+            "hi": "फ़ाइलें",
+            "bn": "ফাইল",
+            "ta": "கோப்புகள்",
+            "te": "ఫైళ్లు"
+        ],
+        "tab_work": [
+            "en": "Work",
+            "hi": "काम",
+            "bn": "কাজ",
+            "ta": "வேலை",
+            "te": "పని"
+        ],
+        "tab_settings": [
+            "en": "Settings",
+            "hi": "सेटिंग्स",
+            "bn": "সেটিংস",
+            "ta": "அமைப்புகள்",
+            "te": "సెట్టింగ్‌లు"
+        ],
+        "appearance_auto": [
+            "en": "Auto (Default)",
+            "hi": "ऑटो (Default)",
+            "bn": "অটো (Default)",
+            "ta": "தானாக (Default)",
+            "te": "ఆటో (Default)"
+        ],
+        "appearance_dark": [
+            "en": "Dark",
+            "hi": "डार्क",
+            "bn": "ডার্ক",
+            "ta": "இருண்ட",
+            "te": "డార్క్"
+        ],
+        "appearance_light": [
+            "en": "Light",
+            "hi": "लाइट",
+            "bn": "লাইট",
+            "ta": "ஒளி",
+            "te": "లైట్"
+        ],
+        "appearance_auto_detail": [
+            "en": "Follow this phone",
+            "hi": "इस फ़ोन का पालन करें",
+            "bn": "এই ফোন অনুসরণ করুন",
+            "ta": "இந்த தொலைபேசியைப் பின்பற்றவும்",
+            "te": "ఈ ఫోన్‌ను అనుసరించండి"
+        ],
+        "appearance_dark_detail": [
+            "en": "Always use dark",
+            "hi": "हमेशा डार्क उपयोग करें",
+            "bn": "সবসময় ডার্ক ব্যবহার করুন",
+            "ta": "எப்போதும் இருண்ட தோற்றம் பயன்படுத்தவும்",
+            "te": "ఎల్లప్పుడూ డార్క్ ఉపయోగించండి"
+        ],
+        "appearance_light_detail": [
+            "en": "Always use light",
+            "hi": "हमेशा लाइट उपयोग करें",
+            "bn": "সবসময় লাইট ব্যবহার করুন",
+            "ta": "எப்போதும் ஒளி தோற்றம் பயன்படுத்தவும்",
+            "te": "ఎల్లప్పుడూ లైట్ ఉపయోగించండి"
+        ],
         "translate_to": [
             "en": "Translate to %@",
             "hi": "%@ में अनुवाद करें",

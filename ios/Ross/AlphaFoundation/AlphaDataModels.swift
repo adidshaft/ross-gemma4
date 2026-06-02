@@ -41,15 +41,15 @@ enum AlphaAppTab: String, Codable, Hashable, CaseIterable, Sendable {
     var title: String {
         switch self {
         case .today, .home:
-            "Today"
+            rossLocalized("tab_today")
         case .matters:
-            "Matters"
+            rossLocalized("tab_matters")
         case .files:
-            "Files"
+            rossLocalized("tab_files")
         case .work:
-            "Work"
+            rossLocalized("tab_work")
         case .settings:
-            "Settings"
+            rossLocalized("tab_settings")
         }
     }
 
@@ -79,22 +79,22 @@ enum AlphaAppearanceMode: String, Codable, CaseIterable, Identifiable, Hashable,
     var title: String {
         switch self {
         case .auto:
-            "Auto (Default)"
+            rossLocalized("appearance_auto")
         case .dark:
-            "Dark"
+            rossLocalized("appearance_dark")
         case .light:
-            "Light"
+            rossLocalized("appearance_light")
         }
     }
 
     var detail: String {
         switch self {
         case .auto:
-            "Follow this phone"
+            rossLocalized("appearance_auto_detail")
         case .dark:
-            "Always use dark"
+            rossLocalized("appearance_dark_detail")
         case .light:
-            "Always use light"
+            rossLocalized("appearance_light_detail")
         }
     }
 }

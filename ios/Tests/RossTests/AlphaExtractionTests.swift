@@ -766,6 +766,16 @@ final class AlphaExtractionTests: XCTestCase {
             rossLocalized("notes_drafts_metadata_saved_file", languageCode: "bn"),
             "সংরক্ষিত ফাইল"
         )
+        let previousLanguageCode = rossSelectedLanguageCode()
+        defer { rossSaveLanguageSelection(code: previousLanguageCode) }
+        rossSaveLanguageSelection(code: "ta")
+        XCTAssertEqual(AlphaAppTab.today.title, "இன்று")
+        XCTAssertEqual(AlphaAppTab.settings.title, "அமைப்புகள்")
+        XCTAssertEqual(AlphaAppearanceMode.auto.detail, "இந்த தொலைபேசியைப் பின்பற்றவும்")
+        rossSaveLanguageSelection(code: "bn")
+        XCTAssertEqual(AlphaAppTab.files.title, "ফাইল")
+        rossSaveLanguageSelection(code: "te-IN")
+        XCTAssertEqual(AlphaAppearanceMode.dark.title, "డార్క్")
         XCTAssertEqual(
             rossLocalized("download_size", languageCode: "ta"),
             "பதிவிறக்க அளவு"
