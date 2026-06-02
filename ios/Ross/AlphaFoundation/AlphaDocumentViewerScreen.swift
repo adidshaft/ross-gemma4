@@ -2190,8 +2190,12 @@ struct AlphaConfidenceBadge: View {
             .foregroundStyle(tint)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(tint.opacity(0.12))
-            .clipShape(Capsule())
+            .rossNativeGlassSurface(
+                tint: tint.opacity(0.16),
+                shape: Capsule(),
+                fallbackFillOpacity: 0.72,
+                fallbackStrokeOpacity: 0.46
+            )
     }
 }
 
