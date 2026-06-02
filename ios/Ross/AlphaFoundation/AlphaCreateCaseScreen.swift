@@ -112,17 +112,8 @@ struct AlphaMatterEditorField: View {
                     shadowRadius: isFocused ? 10 : 6,
                     shadowY: isFocused ? 4 : 2,
                     fillOpacity: 0.84,
-                    strokeOpacity: validationMessage == nil ? 0.52 : 0.68
+                    strokeOpacity: validationMessage == nil ? (isFocused ? 0.72 : 0.56) : 0.74
                 )
-                .overlay {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(
-                            validationMessage == nil
-                                ? (isFocused ? Color.rossAccent.opacity(0.28) : Color.rossGlassStroke.opacity(0.72))
-                                : Color.orange.opacity(0.7),
-                            lineWidth: 1
-                        )
-                }
 
             if let validationMessage {
                 Text(validationMessage)
