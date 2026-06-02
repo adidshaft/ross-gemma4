@@ -891,6 +891,18 @@ final class AlphaExtractionTests: XCTestCase {
             "Selected file ఇంకా చదువుతోంది"
         )
         XCTAssertEqual(
+            alphaAskStillReadingTitle(isSingleDocument: false, languageCode: "bn"),
+            "Ross এখনও এই files পড়ছে"
+        )
+        XCTAssertEqual(
+            alphaAskStillReadingDetail("Order, Notice", isSingleDocument: false, languageCode: "ta"),
+            "Ross இன்னும் Order, Notice படிக்கிறது. tagged files extraction முடிந்த பிறகு மீண்டும் கேளுங்கள்."
+        )
+        XCTAssertEqual(
+            alphaAskWaitForReadableTextDetail(isSingleDocument: true, languageCode: "te-IN"),
+            "Text ready కాదు; అందుకే Ross guess చేయకుండా ఈ file ready అయ్యే వరకు వేచి ఉంటుంది."
+        )
+        XCTAssertEqual(
             rossLocalized("file_text_unavailable", languageCode: "bn"),
             "File text পাওয়া যাচ্ছে না"
         )

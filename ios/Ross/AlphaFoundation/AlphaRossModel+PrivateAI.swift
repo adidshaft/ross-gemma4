@@ -1418,6 +1418,7 @@ extension AlphaRossModel {
         if !selectedDocuments.isEmpty && selectedDocumentsAwaitingExtraction.count == selectedDocuments.count {
             let titles = selectedDocumentsAwaitingExtraction.prefix(3).map(\.title)
             let waitingList = titles.joined(separator: ", ")
+            let isSingleDocument = selectedDocuments.count == 1
             return AlphaAskResult(
                 chatSessionID: nil,
                 chatTurnID: nil,
@@ -1426,19 +1427,15 @@ extension AlphaRossModel {
                 scopeCaseID: scopeCaseID,
                 scopeLabel: scopeLabel(for: scopeCaseID),
                 selectedDocumentTitles: selectedDocuments.map(\.title),
-                answerTitle: selectedDocuments.count == 1 ? "Ross is still reading this file" : "Ross is still reading these files",
+                answerTitle: alphaAskStillReadingTitle(isSingleDocument: isSingleDocument),
                 answerSections: [
-                    selectedDocuments.count == 1
-                        ? "Ross is still reading \(waitingList). Ask again after extraction finishes."
-                        : "Ross is still reading \(waitingList). Ask again after extraction finishes for the tagged files.",
-                    selectedDocuments.count == 1
-                        ? "Ross will wait until this file is ready instead of guessing from text that is not ready yet."
-                        : "Ross will wait until the selected files are ready instead of guessing from text that is not ready yet."
+                    alphaAskStillReadingDetail(waitingList, isSingleDocument: isSingleDocument),
+                    alphaAskWaitForReadableTextDetail(isSingleDocument: isSingleDocument)
                 ],
                 caseFileSources: [],
                 publicLawPreview: nil,
                 publicLawResults: [],
-                statusNote: "Reading",
+                statusNote: rossLocalized("reading"),
                 needsReviewWarning: nil
             )
         }
@@ -1454,15 +1451,15 @@ extension AlphaRossModel {
                 scopeCaseID: scopeCaseID,
                 scopeLabel: scopeLabel(for: scopeCaseID),
                 selectedDocumentTitles: [target.document.title],
-                answerTitle: "Ross is still reading this file",
+                answerTitle: alphaAskStillReadingTitle(isSingleDocument: true),
                 answerSections: [
-                    "Ross is still reading \(target.document.title). You can ask about extracted pages after it finishes reading.",
-                    "No public-law search was used."
+                    alphaAskStillReadingDocumentSummaryDetail(target.document.title),
+                    rossLocalized("no_public_law_search_used")
                 ],
                 caseFileSources: [],
                 publicLawPreview: nil,
                 publicLawResults: [],
-                statusNote: "Reading",
+                statusNote: rossLocalized("reading"),
                 needsReviewWarning: nil
             )
         }
@@ -1591,4 +1588,45 @@ extension AlphaRossModel {
         guard let index = persisted.modelJobs.firstIndex(where: { $0.id == jobID }) else { return }
         transform(&persisted.modelJobs[index])
     }
+}
+
+func alphaAskStillReadingTitle(
+    isSingleDocument: Bool,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
+    rossLocalized(
+        isSingleDocument ? "ask_still_reading_file_title" : "ask_still_reading_files_title",
+        languageCode: languageCode
+    )
+}
+
+func alphaAskStillReadingDetail(
+    _ waitingList: String,
+    isSingleDocument: Bool,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
+    String(
+        format: rossLocalized(
+            isSingleDocument ? "ask_still_reading_file_detail" : "ask_still_reading_files_detail",
+            languageCode: languageCode
+        ),
+        waitingList
+    )
+}
+
+func alphaAskWaitForReadableTextDetail(
+    isSingleDocument: Bool,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
+    rossLocalized(
+        isSingleDocument ? "ask_wait_file_ready_detail" : "ask_wait_files_ready_detail",
+        languageCode: languageCode
+    )
+}
+
+func alphaAskStillReadingDocumentSummaryDetail(
+    _ title: String,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
+    String(format: rossLocalized("ask_still_reading_summary_detail", languageCode: languageCode), title)
 }

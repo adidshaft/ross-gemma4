@@ -472,6 +472,10 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
 
     @MainActor
     func testSelectedFileWaitingResultUsesPlainLanguage() {
+        let previousLanguageCode = rossSelectedLanguageCode()
+        rossSaveLanguageSelection(code: "hi")
+        defer { rossSaveLanguageSelection(code: previousLanguageCode) }
+
         let caseID = UUID()
         let documentID = UUID()
         var state = AlphaPersistedState.seed()
@@ -512,9 +516,10 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         )
         let answerText = result.answerSections.joined(separator: " ")
 
-        XCTAssertEqual(result.answerTitle, "Ross is still reading this file")
-        XCTAssertEqual(result.statusNote, "Reading")
-        XCTAssertTrue(answerText.contains("this file is ready"))
+        XCTAssertEqual(result.answerTitle, "Ross अभी यह file पढ़ रहा है")
+        XCTAssertEqual(result.statusNote, rossLocalized("reading", languageCode: "hi"))
+        XCTAssertTrue(answerText.contains("Reading scan"))
+        XCTAssertTrue(answerText.contains("ready होने"))
         XCTAssertFalse(answerText.contains("selected files are ready"), answerText)
         XCTAssertFalse(answerText.localizedCaseInsensitiveContains("placeholder"), answerText)
         XCTAssertFalse(answerText.localizedCaseInsensitiveContains("incomplete text"), answerText)

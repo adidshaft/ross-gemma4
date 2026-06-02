@@ -4424,6 +4424,55 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Selected file இன்னும் படிக்கப்படுகிறது",
             "te": "Selected file ఇంకా చదువుతోంది"
         ],
+        "ask_still_reading_file_title": [
+            "en": "Ross is still reading this file",
+            "hi": "Ross अभी यह file पढ़ रहा है",
+            "bn": "Ross এখনও এই file পড়ছে",
+            "ta": "Ross இன்னும் இந்த file படிக்கிறது",
+            "te": "Ross ఇంకా ఈ file చదువుతోంది"
+        ],
+        "ask_still_reading_files_title": [
+            "en": "Ross is still reading these files",
+            "hi": "Ross अभी ये files पढ़ रहा है",
+            "bn": "Ross এখনও এই files পড়ছে",
+            "ta": "Ross இன்னும் இந்த files படிக்கிறது",
+            "te": "Ross ఇంకా ఈ files చదువుతోంది"
+        ],
+        "ask_still_reading_file_detail": [
+            "en": "Ross is still reading %@. Ask again after extraction finishes.",
+            "hi": "Ross अभी %@ पढ़ रहा है। extraction finish होने के बाद फिर पूछें।",
+            "bn": "Ross এখনও %@ পড়ছে। extraction শেষ হলে আবার জিজ্ঞাসা করুন।",
+            "ta": "Ross இன்னும் %@ படிக்கிறது. extraction முடிந்த பிறகு மீண்டும் கேளுங்கள்.",
+            "te": "Ross ఇంకా %@ చదువుతోంది. extraction పూర్తయ్యాక మళ్లీ అడగండి."
+        ],
+        "ask_still_reading_files_detail": [
+            "en": "Ross is still reading %@. Ask again after extraction finishes for the tagged files.",
+            "hi": "Ross अभी %@ पढ़ रहा है। tagged files की extraction finish होने के बाद फिर पूछें।",
+            "bn": "Ross এখনও %@ পড়ছে। tagged files-এর extraction শেষ হলে আবার জিজ্ঞাসা করুন।",
+            "ta": "Ross இன்னும் %@ படிக்கிறது. tagged files extraction முடிந்த பிறகு மீண்டும் கேளுங்கள்.",
+            "te": "Ross ఇంకా %@ చదువుతోంది. tagged files extraction పూర్తయ్యాక మళ్లీ అడగండి."
+        ],
+        "ask_wait_file_ready_detail": [
+            "en": "Ross will wait until this file is ready instead of guessing from text that is not ready yet.",
+            "hi": "Text ready नहीं है, इसलिए Ross guess करने के बजाय इस file के ready होने का इंतज़ार करेगा।",
+            "bn": "Text ready নয়, তাই Ross guess না করে এই file ready হওয়ার অপেক্ষা করবে।",
+            "ta": "Text ready இல்லை; அதனால் Ross guess செய்யாமல் இந்த file ready ஆகும் வரை காத்திருக்கும்.",
+            "te": "Text ready కాదు; అందుకే Ross guess చేయకుండా ఈ file ready అయ్యే వరకు వేచి ఉంటుంది."
+        ],
+        "ask_wait_files_ready_detail": [
+            "en": "Ross will wait until the selected files are ready instead of guessing from text that is not ready yet.",
+            "hi": "Text ready नहीं है, इसलिए Ross guess करने के बजाय selected files के ready होने का इंतज़ार करेगा।",
+            "bn": "Text ready নয়, তাই Ross guess না করে selected files ready হওয়ার অপেক্ষা করবে।",
+            "ta": "Text ready இல்லை; அதனால் Ross guess செய்யாமல் selected files ready ஆகும் வரை காத்திருக்கும்.",
+            "te": "Text ready కాదు; అందుకే Ross guess చేయకుండా selected files ready అయ్యే వరకు వేచి ఉంటుంది."
+        ],
+        "ask_still_reading_summary_detail": [
+            "en": "Ross is still reading %@. You can ask about extracted pages after it finishes reading.",
+            "hi": "Ross अभी %@ पढ़ रहा है। पढ़ना finish होने के बाद extracted pages के बारे में पूछ सकते हैं।",
+            "bn": "Ross এখনও %@ পড়ছে। পড়া শেষ হলে extracted pages সম্পর্কে জিজ্ঞাসা করতে পারেন।",
+            "ta": "Ross இன்னும் %@ படிக்கிறது. வாசிப்பு முடிந்த பிறகு extracted pages பற்றி கேட்கலாம்.",
+            "te": "Ross ఇంకా %@ చదువుతోంది. చదవడం పూర్తయ్యాక extracted pages గురించి అడగవచ్చు."
+        ],
         "ross_extracting_tagged_file_text": [
             "en": "Ross is still extracting readable text from the tagged file.",
             "hi": "Ross tagged file से readable text अभी extract कर रहा है।",
