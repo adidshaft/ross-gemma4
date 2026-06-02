@@ -379,23 +379,22 @@ struct AlphaPreparedWorkCard: View {
                         alphaHaptic(.selection)
                         alphaHandlePreparedPrimaryAction(item, model: model)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Color.rossAccent)
+                    .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 14)
 
                     Button("Accept") {
                         model.setPreparedWorkStatus(item.id, status: .accepted)
                     }
-                    .buttonStyle(.bordered)
+                    .rossGlassButtonStyle(tint: Color.rossSuccess, cornerRadius: 14, expandsHorizontally: false)
 
                     Button("Edit") {
                         alphaHandlePreparedEdit(item, model: model)
                     }
-                    .buttonStyle(.bordered)
+                    .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 14, expandsHorizontally: false)
 
                     Button("Dismiss") {
                         model.setPreparedWorkStatus(item.id, status: .dismissed)
                     }
-                    .buttonStyle(.bordered)
+                    .rossGlassButtonStyle(tint: Color.rossInk.opacity(0.42), cornerRadius: 14, expandsHorizontally: false)
                 }
                 .font(.caption.weight(.semibold))
             }
@@ -473,8 +472,7 @@ private struct AlphaAssistantSetupProgressCard: View {
                     alphaHaptic(.selection)
                     model.path.append(.privateAISettings)
                 }
-                .buttonStyle(.bordered)
-                .tint(Color.rossAccent)
+                .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
             }
         }
     }
