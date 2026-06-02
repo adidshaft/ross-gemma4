@@ -1267,6 +1267,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Private assistant available இல்லை",
             "te": "Private assistant available లేదు"
         ],
+        "privacy_ledger_assistant_removed_title": [
+            "en": "Removed private assistant setup",
+            "hi": "Private assistant setup हटाया",
+            "bn": "Private assistant setup সরানো হয়েছে",
+            "ta": "Private assistant setup அகற்றப்பட்டது",
+            "te": "Private assistant setup తొలగించబడింది"
+        ],
+        "privacy_ledger_assistant_repair_needed_title": [
+            "en": "Private assistant needs repair",
+            "hi": "Private assistant को repair चाहिए",
+            "bn": "Private assistant repair দরকার",
+            "ta": "Private assistant repair தேவை",
+            "te": "Private assistant repair కావాలి"
+        ],
+        "privacy_ledger_assistant_selected_title": [
+            "en": "Private assistant selected",
+            "hi": "Private assistant चुना गया",
+            "bn": "Private assistant বেছে নেওয়া হয়েছে",
+            "ta": "Private assistant தேர்ந்தெடுக்கப்பட்டது",
+            "te": "Private assistant ఎంచుకోబడింది"
+        ],
         "privacy_ledger_local_case_review_title": [
             "en": "Reviewed case locally",
             "hi": "Case locally review किया",
@@ -1385,6 +1406,48 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "bn": "Ross assistant setup finish করতে পারেনি। Case files এই device-এ রয়ে গেছে.",
             "ta": "Ross assistant setup finish செய்ய முடியவில்லை. Case files இந்த device-இல் இருந்தன.",
             "te": "Ross assistant setup finish చేయలేకపోయింది. Case files ఈ device పైనే ఉన్నాయి."
+        ],
+        "privacy_ledger_assistant_removed_detail": [
+            "en": "Ross removed that private assistant setup from this device. Case files stayed on this device.",
+            "hi": "Ross ने वह private assistant setup इस device से हटाया। Case files इसी device पर रहीं.",
+            "bn": "Ross সেই private assistant setup এই device থেকে সরিয়েছে। Case files এই device-এ রয়ে গেছে.",
+            "ta": "Ross அந்த private assistant setup-ஐ இந்த device-இலிருந்து அகற்றியது. Case files இந்த device-இல் இருந்தன.",
+            "te": "Ross ఆ private assistant setup ను ఈ device నుండి తొలగించింది. Case files ఈ device పైనే ఉన్నాయి."
+        ],
+        "privacy_ledger_assistant_setup_removed_detail": [
+            "en": "Ross removed assistant setup files and resume data from this device. Case files stayed on this device.",
+            "hi": "Ross ने assistant setup files और resume data इस device से हटाया। Case files इसी device पर रहीं.",
+            "bn": "Ross assistant setup files এবং resume data এই device থেকে সরিয়েছে। Case files এই device-এ রয়ে গেছে.",
+            "ta": "Ross assistant setup files மற்றும் resume data-ஐ இந்த device-இலிருந்து அகற்றியது. Case files இந்த device-இல் இருந்தன.",
+            "te": "Ross assistant setup files మరియు resume data ను ఈ device నుండి తొలగించింది. Case files ఈ device పైనే ఉన్నాయి."
+        ],
+        "privacy_ledger_assistant_repair_needed_detail": [
+            "en": "Ross could not open the private assistant setup. Open My assistant and use Repair setup.",
+            "hi": "Ross private assistant setup open नहीं कर पाया। My assistant खोलें और Repair setup use करें.",
+            "bn": "Ross private assistant setup open করতে পারেনি। My assistant খুলে Repair setup use করুন.",
+            "ta": "Ross private assistant setup open செய்ய முடியவில்லை. My assistant திறந்து Repair setup use செய்யவும்.",
+            "te": "Ross private assistant setup open చేయలేకపోయింది. My assistant తెరిచి Repair setup use చేయండి."
+        ],
+        "privacy_ledger_private_assistant_enabled_detail": [
+            "en": "Ross turned on the private assistant supplied by this iPhone. Case files stayed on this device.",
+            "hi": "Ross ने इस iPhone वाला private assistant चालू किया। Case files इसी device पर रहीं.",
+            "bn": "Ross এই iPhone-এর private assistant চালু করেছে। Case files এই device-এ রয়ে গেছে.",
+            "ta": "Ross இந்த iPhone வழங்கும் private assistant-ஐ இயக்கியது. Case files இந்த device-இல் இருந்தன.",
+            "te": "Ross ఈ iPhone ఇచ్చిన private assistant ను ఆన్ చేసింది. Case files ఈ device పైనే ఉన్నాయి."
+        ],
+        "privacy_ledger_test_assistant_installed_detail": [
+            "en": "Ross installed a test-only private assistant setup for automated checks. Case files stayed on this device.",
+            "hi": "Ross ने automated checks के लिए test-only private assistant setup install किया। Case files इसी device पर रहीं.",
+            "bn": "Ross automated checks-এর জন্য test-only private assistant setup install করেছে। Case files এই device-এ রয়ে গেছে.",
+            "ta": "Automated checks-க்காக Ross test-only private assistant setup install செய்தது. Case files இந்த device-இல் இருந்தன.",
+            "te": "Automated checks కోసం Ross test-only private assistant setup install చేసింది. Case files ఈ device పైనే ఉన్నాయి."
+        ],
+        "privacy_ledger_assistant_selected_detail": [
+            "en": "Ross selected this private assistant setup. No case files were read or sent.",
+            "hi": "Ross ने यह private assistant setup चुना। कोई case file पढ़ी या भेजी नहीं गई.",
+            "bn": "Ross এই private assistant setup বেছে নিয়েছে। কোনো case file পড়া বা পাঠানো হয়নি.",
+            "ta": "Ross இந்த private assistant setup-ஐ தேர்ந்தெடுத்தது. Case file எதையும் படிக்கவோ அனுப்பவோ இல்லை.",
+            "te": "Ross ఈ private assistant setup ను ఎంచుకుంది. Case file ఏదీ చదవలేదు లేదా పంపలేదు."
         ],
         "ask_privacy_label_review_pending": [
             "en": "On-device · review pending",

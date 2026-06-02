@@ -2824,6 +2824,12 @@ extension AlphaPrivacyLedgerEntry {
             rossLocalized("privacy_ledger_private_assistant_setup_title")
         case "Assistant download verified", "Assistant verified", "Assistant download failed", "Assistant restored":
             rossLocalized("privacy_ledger_private_assistant_setup_title")
+        case "Assistant removed", "Assistant setup removed":
+            rossLocalized("privacy_ledger_assistant_removed_title")
+        case "Assistant activation failed", "Assistant file verification failed":
+            rossLocalized("privacy_ledger_assistant_repair_needed_title")
+        case "Private assistant enabled", "Test assistant installed", "Assistant selected":
+            rossLocalized("privacy_ledger_assistant_selected_title")
         case "Public-law search reviewed by user", "Legal Search reviewed by user":
             rossLocalized("privacy_ledger_public_law_reviewed_title")
         case "Public-law query sent":
@@ -2873,6 +2879,18 @@ extension AlphaPrivacyLedgerEntry {
             rossLocalized("privacy_ledger_assistant_ready_detail")
         case "Assistant download failed":
             rossLocalized("privacy_ledger_assistant_download_failed_detail")
+        case "Assistant removed":
+            rossLocalized("privacy_ledger_assistant_removed_detail")
+        case "Assistant setup removed":
+            rossLocalized("privacy_ledger_assistant_setup_removed_detail")
+        case "Assistant activation failed", "Assistant file verification failed":
+            rossLocalized("privacy_ledger_assistant_repair_needed_detail")
+        case "Private assistant enabled":
+            rossLocalized("privacy_ledger_private_assistant_enabled_detail")
+        case "Test assistant installed":
+            rossLocalized("privacy_ledger_test_assistant_installed_detail")
+        case "Assistant selected":
+            rossLocalized("privacy_ledger_assistant_selected_detail")
         case "Local export generated":
             rossLocalized("privacy_ledger_local_export_generated_detail")
         case "Export generation failed":

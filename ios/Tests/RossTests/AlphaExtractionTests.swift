@@ -110,6 +110,38 @@ final class AlphaExtractionTests: XCTestCase {
                 payloadClass: .no_case_data,
                 endpointLabel: "device://model-verify",
                 success: true
+            ),
+            AlphaPrivacyLedgerEntry(
+                title: "Assistant setup removed",
+                detail: "Downloaded private assistant files and resume data were deleted from this device.",
+                purpose: .model_verification,
+                payloadClass: .no_case_data,
+                endpointLabel: "device://model-remove",
+                success: true
+            ),
+            AlphaPrivacyLedgerEntry(
+                title: "Assistant file verification failed",
+                detail: "Ross could not open the downloaded assistant setup.",
+                purpose: .model_verification,
+                payloadClass: .no_case_data,
+                endpointLabel: "device://model-verify",
+                success: false
+            ),
+            AlphaPrivacyLedgerEntry(
+                title: "Private assistant enabled",
+                detail: "Ross turned on the on-device assistant supplied by this iPhone. Case files stayed on this device.",
+                purpose: .model_verification,
+                payloadClass: .no_case_data,
+                endpointLabel: "device://private-assistant",
+                success: true
+            ),
+            AlphaPrivacyLedgerEntry(
+                title: "Assistant selected",
+                detail: "Full assistant was selected. Ross has not read any case files.",
+                purpose: .model_catalog,
+                payloadClass: .no_case_data,
+                endpointLabel: "model-provider://private-assistant",
+                success: true
             )
         ]
 
@@ -139,6 +171,13 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(entries[5].lawyerDetail.contains("Private assistant check हो चुका है"), entries[5].lawyerDetail)
         XCTAssertTrue(entries[6].lawyerDetail.contains("assistant setup finish नहीं कर पाया"), entries[6].lawyerDetail)
         XCTAssertTrue(entries[6].lawyerDetail.contains("Case files इसी device पर रहीं"), entries[6].lawyerDetail)
+        XCTAssertEqual(entries[8].lawyerTitle, "Private assistant setup हटाया")
+        XCTAssertTrue(entries[8].lawyerDetail.contains("assistant setup files और resume data"), entries[8].lawyerDetail)
+        XCTAssertEqual(entries[9].lawyerTitle, "Private assistant को repair चाहिए")
+        XCTAssertTrue(entries[9].lawyerDetail.contains("Repair setup use करें"), entries[9].lawyerDetail)
+        XCTAssertEqual(entries[10].lawyerTitle, "Private assistant चुना गया")
+        XCTAssertTrue(entries[10].lawyerDetail.contains("इस iPhone वाला private assistant चालू किया"), entries[10].lawyerDetail)
+        XCTAssertTrue(entries[11].lawyerDetail.contains("कोई case file पढ़ी या भेजी नहीं गई"), entries[11].lawyerDetail)
     }
 
     func testPrivacyLedgerPublicLawAndExportCopyFollowsSelectedLanguage() {
