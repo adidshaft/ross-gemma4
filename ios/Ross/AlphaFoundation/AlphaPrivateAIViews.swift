@@ -233,94 +233,134 @@ struct AlphaPrivateAISettingsScreen: View {
 struct AlphaPrivateAITechnicalDiagnosticsCard: View {
     @Bindable var model: AlphaRossModel
 
+    private var assistantCheckStatus: String {
+        guard let runtimeHealth = model.activeRuntimeHealth else {
+            return "Ross will check the assistant after setup."
+        }
+        if runtimeHealth.available {
+            return "Ready for private answers on this iPhone."
+        }
+        return runtimeHealth.userFacingStatus
+    }
+
+    private var assistantLastUsedLabel: String {
+        guard let lastInvocation = model.lastModelInvocation else {
+            return "No private answer recorded yet"
+        }
+        if let completedAt = lastInvocation.completedAt {
+            return completedAt.formatted(date: .abbreviated, time: .shortened)
+        }
+        return "Started but did not finish"
+    }
+
     var body: some View {
-        RossSectionCard(title: "Advanced") {
-            DisclosureGroup("Technical diagnostics") {
-                VStack(alignment: .leading, spacing: 10) {
-                    if !model.privateAISnapshot.installedPacks.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
-                            ForEach(model.privateAISnapshot.installedPacks) { pack in
-                                AlphaPrivateAIInstalledPackCard(model: model, pack: pack)
-                            }
-                        }
-                        Divider()
-                    }
+        RossSectionCard(title: "Assistant check") {
+            VStack(alignment: .leading, spacing: 12) {
+                AlphaSettingsValueRow(label: "Status", value: assistantCheckStatus)
+                Divider()
+                AlphaSettingsValueRow(label: "Last private answer", value: assistantLastUsedLabel)
+                Divider()
+                AlphaSettingsValueRow(label: "Setup resets", value: "\(model.privateAISnapshot.resetCount)")
 
-                    if let runtimeHealth = model.activeRuntimeHealth {
-                        let lastInvocation = model.lastModelInvocation
-                        let lastPreview = model.persisted.publicLawPreview
-                        let resetCount = model.privateAISnapshot.resetCount
-
-                        AlphaSettingsValueRow(label: "Runtime mode", value: runtimeHealth.runtimeMode.rawValue)
-                        AlphaSettingsValueRow(label: "Artifact kind", value: model.activePack?.artifactKind ?? "Missing")
-                        AlphaSettingsValueRow(label: "Checksum verified", value: runtimeHealth.checksumVerified ? "Yes" : "No")
-                        AlphaSettingsValueRow(label: "Runtime available", value: runtimeHealth.available ? "Yes" : "No")
-                        AlphaSettingsValueRow(label: "Model path", value: runtimeHealth.modelPathPresent ? "Configured" : "Missing")
-
-                        if let activePack = model.activePack {
-                            let artifact = alphaAssistantModelArtifact(for: activePack.tier)
-                            AlphaSettingsValueRow(label: "Technical model", value: artifact.displayName)
-                            AlphaSettingsValueRow(label: "Repository", value: artifact.repository)
-                            AlphaSettingsValueRow(label: "File", value: artifact.fileName)
-                            AlphaSettingsValueRow(label: "Quantization", value: artifact.quantization)
-                            AlphaSettingsValueRow(label: "Checksum", value: artifact.sha256)
-                        }
-
-                        if let modelPathLabel = runtimeHealth.modelPathLabel {
-                            AlphaSettingsValueRow(label: "Model file", value: modelPathLabel)
-                        }
-                        if let lastErrorCategory = runtimeHealth.lastErrorCategory {
-                            AlphaSettingsValueRow(label: "Last error", value: lastErrorCategory)
-                        }
-                        if let lastInvocationRuntimeMode = model.lastModelInvocationRuntimeMode {
-                            AlphaSettingsValueRow(label: "Last runtime", value: lastInvocationRuntimeMode)
-                        }
-                        if let lastInvocation {
-                            AlphaSettingsValueRow(label: "Last task", value: lastInvocation.task.rawValue)
-                            AlphaSettingsValueRow(label: "Last status", value: lastInvocation.status.rawValue)
-                            AlphaSettingsValueRow(label: "Prompt hash", value: lastInvocation.promptHash)
-                            AlphaSettingsValueRow(label: "Input hash", value: lastInvocation.inputHash)
-                            if let outputHash = lastInvocation.outputHash {
-                                AlphaSettingsValueRow(label: "Output hash", value: outputHash)
-                            }
-                            if let estimatedInputTokens = lastInvocation.estimatedInputTokens {
-                                AlphaSettingsValueRow(label: "Estimated input tokens", value: "\(estimatedInputTokens)")
-                            }
-                            if let estimatedOutputTokens = lastInvocation.estimatedOutputTokens {
-                                AlphaSettingsValueRow(label: "Estimated output tokens", value: "\(estimatedOutputTokens)")
-                            }
-                            if let durationMs = lastInvocation.durationMs {
-                                let tokenTotal = (lastInvocation.estimatedInputTokens ?? 0) + (lastInvocation.estimatedOutputTokens ?? 0)
-                                let tokensPerSecond = durationMs > 0 ? Double(tokenTotal) / (Double(durationMs) / 1_000) : 0
-                                AlphaSettingsValueRow(label: "Last duration", value: "\(durationMs) ms")
-                                AlphaSettingsValueRow(label: "Approx speed", value: String(format: "%.1f tok/s", tokensPerSecond))
-                            }
-                        } else {
-                            AlphaSettingsValueRow(label: "Last local inference", value: "No model invocation recorded yet")
-                        }
-                        if let lastPreview {
-                            AlphaSettingsValueRow(label: "Last public-law query", value: lastPreview.query)
-                            AlphaSettingsValueRow(label: "Sanitizer removals", value: "\(lastPreview.removed.count)")
-                        } else {
-                            AlphaSettingsValueRow(label: "Last public-law query", value: "None")
-                        }
-                        AlphaSettingsValueRow(label: "Workspace resets", value: "\(resetCount)")
-                    } else {
-                        AlphaSettingsValueRow(label: "Runtime", value: "Not checked yet")
-                    }
-
-                    Button(model.localInferenceSmokeRunning ? "Running local inference smoke..." : "Run local inference smoke") {
-                        model.runLocalInferenceSmoke()
-                    }
-                    .rossGlassButtonStyle(tint: Color.rossAccent)
-                    .disabled(model.localInferenceSmokeRunning)
+                #if DEBUG
+                DisclosureGroup("Internal diagnostics") {
+                    AlphaPrivateAIInternalDiagnostics(model: model)
                 }
-                .padding(.top, 12)
+                .tint(Color.rossAccent)
+                #endif
             }
-            .tint(Color.rossAccent)
         }
     }
 }
+
+#if DEBUG
+private struct AlphaPrivateAIInternalDiagnostics: View {
+    @Bindable var model: AlphaRossModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if !model.privateAISnapshot.installedPacks.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(model.privateAISnapshot.installedPacks) { pack in
+                        AlphaPrivateAIInstalledPackCard(model: model, pack: pack)
+                    }
+                }
+                Divider()
+            }
+
+            if let runtimeHealth = model.activeRuntimeHealth {
+                let lastInvocation = model.lastModelInvocation
+                let lastPreview = model.persisted.publicLawPreview
+                let resetCount = model.privateAISnapshot.resetCount
+
+                AlphaSettingsValueRow(label: "Runtime mode", value: runtimeHealth.runtimeMode.rawValue)
+                AlphaSettingsValueRow(label: "Artifact kind", value: model.activePack?.artifactKind ?? "Missing")
+                AlphaSettingsValueRow(label: "Checksum verified", value: runtimeHealth.checksumVerified ? "Yes" : "No")
+                AlphaSettingsValueRow(label: "Runtime available", value: runtimeHealth.available ? "Yes" : "No")
+                AlphaSettingsValueRow(label: "Model path", value: runtimeHealth.modelPathPresent ? "Configured" : "Missing")
+
+                if let activePack = model.activePack {
+                    let artifact = alphaAssistantModelArtifact(for: activePack.tier)
+                    AlphaSettingsValueRow(label: "Technical model", value: artifact.displayName)
+                    AlphaSettingsValueRow(label: "Repository", value: artifact.repository)
+                    AlphaSettingsValueRow(label: "File", value: artifact.fileName)
+                    AlphaSettingsValueRow(label: "Quantization", value: artifact.quantization)
+                    AlphaSettingsValueRow(label: "Checksum", value: artifact.sha256)
+                }
+
+                if let modelPathLabel = runtimeHealth.modelPathLabel {
+                    AlphaSettingsValueRow(label: "Model file", value: modelPathLabel)
+                }
+                if let lastErrorCategory = runtimeHealth.lastErrorCategory {
+                    AlphaSettingsValueRow(label: "Last error", value: lastErrorCategory)
+                }
+                if let lastInvocationRuntimeMode = model.lastModelInvocationRuntimeMode {
+                    AlphaSettingsValueRow(label: "Last runtime", value: lastInvocationRuntimeMode)
+                }
+                if let lastInvocation {
+                    AlphaSettingsValueRow(label: "Last task", value: lastInvocation.task.rawValue)
+                    AlphaSettingsValueRow(label: "Last status", value: lastInvocation.status.rawValue)
+                    AlphaSettingsValueRow(label: "Prompt hash", value: lastInvocation.promptHash)
+                    AlphaSettingsValueRow(label: "Input hash", value: lastInvocation.inputHash)
+                    if let outputHash = lastInvocation.outputHash {
+                        AlphaSettingsValueRow(label: "Output hash", value: outputHash)
+                    }
+                    if let estimatedInputTokens = lastInvocation.estimatedInputTokens {
+                        AlphaSettingsValueRow(label: "Estimated input tokens", value: "\(estimatedInputTokens)")
+                    }
+                    if let estimatedOutputTokens = lastInvocation.estimatedOutputTokens {
+                        AlphaSettingsValueRow(label: "Estimated output tokens", value: "\(estimatedOutputTokens)")
+                    }
+                    if let durationMs = lastInvocation.durationMs {
+                        let tokenTotal = (lastInvocation.estimatedInputTokens ?? 0) + (lastInvocation.estimatedOutputTokens ?? 0)
+                        let tokensPerSecond = durationMs > 0 ? Double(tokenTotal) / (Double(durationMs) / 1_000) : 0
+                        AlphaSettingsValueRow(label: "Last duration", value: "\(durationMs) ms")
+                        AlphaSettingsValueRow(label: "Approx speed", value: String(format: "%.1f tok/s", tokensPerSecond))
+                    }
+                } else {
+                    AlphaSettingsValueRow(label: "Last local inference", value: "No model invocation recorded yet")
+                }
+                if let lastPreview {
+                    AlphaSettingsValueRow(label: "Last public-law query", value: lastPreview.query)
+                    AlphaSettingsValueRow(label: "Sanitizer removals", value: "\(lastPreview.removed.count)")
+                } else {
+                    AlphaSettingsValueRow(label: "Last public-law query", value: "None")
+                }
+                AlphaSettingsValueRow(label: "Workspace resets", value: "\(resetCount)")
+            } else {
+                AlphaSettingsValueRow(label: "Runtime", value: "Not checked yet")
+            }
+
+            Button(model.localInferenceSmokeRunning ? "Running local inference smoke..." : "Run local inference smoke") {
+                model.runLocalInferenceSmoke()
+            }
+            .rossGlassButtonStyle(tint: Color.rossAccent)
+            .disabled(model.localInferenceSmokeRunning)
+        }
+        .padding(.top, 12)
+    }
+}
+#endif
 
 struct AlphaPrivacyLedgerScreen: View {
     @Bindable var model: AlphaRossModel
@@ -472,7 +512,7 @@ struct AlphaPrivateAIOfferCard: View {
             return "Using this option"
         }
         if activeButRuntimeUnavailable {
-            return "Needs attention"
+            return "Repair setup"
         }
         if isInstalledButInactive {
             return "Use this option"
@@ -487,7 +527,7 @@ struct AlphaPrivateAIOfferCard: View {
     }
 
     private var actionDisabled: Bool {
-        isActive || activeButRuntimeUnavailable || isSettingUp
+        isActive || isSettingUp
     }
 
     var body: some View {
@@ -539,7 +579,12 @@ struct AlphaPrivateAIOfferCard: View {
 
             Button(actionTitle) {
                 Task {
-                    if let installedPack {
+                    if activeButRuntimeUnavailable {
+                        await model.repairAssistantPack(
+                            for: offer.tier,
+                            mobileAllowed: model.persisted.settings.allowMobileDataForLargePacks || offer.tier == .quickStart
+                        )
+                    } else if let installedPack {
                         model.activateInstalledPack(installedPack)
                     } else if let latestJob, canResume {
                         model.resumeJob(latestJob)
@@ -555,16 +600,15 @@ struct AlphaPrivateAIOfferCard: View {
             .disabled(actionDisabled)
         }
         .padding(10)
-        .background(Color.rossGlassSubtleFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(
-                    isActive
-                        ? Color.rossAccent.opacity(0.24)
-                        : Color.rossGlassStroke.opacity(0.7),
-                    lineWidth: 1
-                )
-        }
+        .rossGlassSurface(
+            tint: isActive ? Color.rossAccent : Color.rossInk.opacity(0.42),
+            cornerRadius: 16,
+            shadowOpacity: isActive ? 0.12 : 0.07,
+            shadowRadius: isActive ? 10 : 7,
+            shadowY: isActive ? 4 : 3,
+            fillOpacity: 0.82,
+            strokeOpacity: isActive ? 0.58 : 0.42
+        )
     }
 }
 
@@ -721,12 +765,7 @@ struct AlphaPrivateAIJobCard: View {
             }
         }
         .padding(16)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.rossGlassStroke.opacity(0.72), lineWidth: 1)
-        }
-        .shadow(color: Color.rossShadow.opacity(0.10), radius: 12, y: 4)
+        .rossGlassSurface(cornerRadius: 18, interactive: true, strokeOpacity: 0.68)
     }
 }
 
@@ -792,11 +831,15 @@ struct AlphaPrivateAIInstalledPackCard: View {
             }
         }
         .padding(14)
-        .background(Color.rossGlassSubtleFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.rossGlassStroke.opacity(0.72), lineWidth: 1)
-        }
+        .rossGlassSurface(
+            tint: isReady ? Color.rossSuccess : Color.orange,
+            cornerRadius: 18,
+            shadowOpacity: 0.08,
+            shadowRadius: 8,
+            shadowY: 3,
+            fillOpacity: 0.82,
+            strokeOpacity: 0.48
+        )
     }
 }
 
@@ -987,6 +1030,8 @@ private struct AlphaAssistantStorageFootprintRow: View {
     }
 }
 
+let alphaSamplerSettingsExplanation = "Tune how boldly the private assistant writes. The recommended defaults keep answers grounded and concise."
+
 private struct AlphaSamplerSettingsCard: View {
     @Bindable var model: AlphaRossModel
 
@@ -994,7 +1039,7 @@ private struct AlphaSamplerSettingsCard: View {
         let settings = model.persisted.settings.llamaSamplerSettings
         RossSectionCard(title: "Answer tuning") {
             VStack(alignment: .leading, spacing: 14) {
-                Text("Tune the local Gemma sampler. Legal QA defaults keep answers grounded and less rambly.")
+                Text(alphaSamplerSettingsExplanation)
                     .font(.footnote)
                     .foregroundStyle(Color.rossInk.opacity(0.66))
 

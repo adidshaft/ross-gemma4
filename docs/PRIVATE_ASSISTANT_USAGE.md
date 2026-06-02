@@ -90,11 +90,17 @@ Public-law search remains separate: only a confirmed sanitized public-law query 
 
 ## Current Proof Status
 
-Automated tests cover deterministic fallback, catalog metadata, tier labels, and copy-boundary checks.
+Automated tests cover deterministic fallback, catalog metadata, tier labels, copy-boundary checks, downloaded-pack validation, unreadable-file handling, and Bengali/Hindi source-grounded local answers.
+
+Observed on 2026-06-02:
+
+- iOS simulator real GGUF smoke passed with `ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime`.
+- The smoke used `/Users/amanpandey/projects/ross-gemma4/artifacts/gemma-2-2b-it-Q4_K_M.gguf` and passed English, Bengali, Hindi, and general-answer checks.
+- Swift tests passed for imported Bangla text becoming Ask-usable with a Bengali language hint.
 
 Still not proven:
 
 - real Q4 inference on Android
-- real Q4 inference on iOS
+- physical iPhone download/resume/verify/activate and imported-file QA over a multi-GB GGUF
 - separate embedding model download/install
-- production large-model delivery
+- production large-model delivery under real network/storage interruption

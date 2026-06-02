@@ -14,14 +14,15 @@ warn() {
     echo "⚠️  WARN: $1"
 }
 
-# 1. Verify exactly three active model ids
+# 1. Verify active iOS model ids
 ACTIVE_MODELS=$(grep -oE 'packId: "gemma-4-[a-z0-9A-Z-]+"' ios/Ross/AlphaFoundation/AlphaRossModel.swift | sort | uniq)
 COUNT=$(echo "$ACTIVE_MODELS" | wc -l | tr -d ' ')
 
-if [ "$COUNT" -ne 3 ]; then
-    fail "Found $COUNT active models. Expected exactly 3."
+if [ "$COUNT" -ne 4 ]; then
+    fail "Found $COUNT active iOS models. Expected exactly 4 including the Flash first-run tier."
 fi
 
+if ! echo "$ACTIVE_MODELS" | grep -q "gemma-4-e2b-q2"; then fail "Missing gemma-4-e2b-q2"; fi
 if ! echo "$ACTIVE_MODELS" | grep -q "gemma-4-e2b-q4"; then fail "Missing gemma-4-e2b-q4"; fi
 if ! echo "$ACTIVE_MODELS" | grep -q "gemma-4-e4b-q4"; then fail "Missing gemma-4-e4b-q4"; fi
 if ! echo "$ACTIVE_MODELS" | grep -q "gemma-4-26b-a4b-q4"; then fail "Missing gemma-4-26b-a4b-q4"; fi

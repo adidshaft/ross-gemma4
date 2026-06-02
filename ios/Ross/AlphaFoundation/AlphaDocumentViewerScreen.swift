@@ -33,6 +33,7 @@ private func alphaDocumentLanguage(forAppLanguageCode code: String) -> AlphaDocu
     switch code.split(separator: "-").first.map(String.init) ?? code {
     case "en": .english
     case "hi": .hindi
+    case "bn": .bengali
     case "ta": .tamil
     case "te": .telugu
     default: nil
@@ -43,6 +44,7 @@ private func alphaDocumentLanguageDisplayName(_ language: AlphaDocumentLanguage)
     switch language {
     case .english: rossLanguageDisplayName(code: "en")
     case .hindi: rossLanguageDisplayName(code: "hi")
+    case .bengali: rossLanguageDisplayName(code: "bn")
     case .tamil: rossLanguageDisplayName(code: "ta")
     case .telugu: rossLanguageDisplayName(code: "te")
     case .mixed: "Mixed language"
@@ -58,6 +60,16 @@ private func alphaDocumentNeedsTranslation(_ document: AlphaCaseDocument, select
         return !profile.scriptsDetected.isEmpty
     }
     return profile.primaryLanguage != selectedLanguage
+}
+
+private func alphaDocumentReadinessMessage(_ document: AlphaCaseDocument) -> String {
+    if document.hasAskUsableExtractedText {
+        return "Ross can answer from extracted text now. Deeper review is still running in the background."
+    }
+    if document.isAwaitingReadableText {
+        return "Ross is still reading this file. Ask will be available as soon as text is extracted."
+    }
+    return "Ross could not find readable text in this file yet. Review again, re-import a clearer file, or choose another file for Ask."
 }
 
 struct AlphaDocumentListScreen: View {
@@ -483,7 +495,7 @@ struct AlphaDocumentViewerScreen: View {
                                     }
                                     .tint(Color.rossAccent)
                                     .padding(12)
-                                    .background(Color.rossGlassSubtleFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                    .rossGlassSurface(cornerRadius: 16, strokeOpacity: 0.52)
                                 }
 
                                 if let upgrade = model.extractionUpgradeMessage(for: document) {
@@ -495,7 +507,7 @@ struct AlphaDocumentViewerScreen: View {
                                         Button("Run better extraction") {
                                             model.path.append(.privateAISettings)
                                         }
-                                        .buttonStyle(.bordered)
+                                        .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
                                     }
                                 }
                             }
@@ -569,11 +581,7 @@ struct AlphaDocumentViewerScreen: View {
                         .font(.system(size: 13, weight: .bold))
                         .foregroundStyle(Color.rossInk)
                         .frame(width: 32, height: 32)
-                        .background(Color.rossGlassFill, in: Circle())
-                        .overlay {
-                            Circle()
-                                .stroke(Color.rossGlassStroke.opacity(0.78), lineWidth: 1)
-                        }
+                        .rossGlassSurface(cornerRadius: 16, interactive: true, shadowOpacity: 0.05, shadowRadius: 5, shadowY: 2, strokeOpacity: 0.48)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Back")
@@ -588,11 +596,7 @@ struct AlphaDocumentViewerScreen: View {
                             .font(.system(size: 13, weight: .bold))
                             .foregroundStyle(Color.rossInk)
                             .frame(width: 32, height: 32)
-                            .background(Color.rossGlassFill, in: Circle())
-                            .overlay {
-                                Circle()
-                                    .stroke(Color.rossGlassStroke.opacity(0.78), lineWidth: 1)
-                            }
+                            .rossGlassSurface(cornerRadius: 16, interactive: true, shadowOpacity: 0.05, shadowRadius: 5, shadowY: 2, strokeOpacity: 0.48)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Ask Ross about this document")
@@ -604,11 +608,7 @@ struct AlphaDocumentViewerScreen: View {
                             .font(.system(size: 13, weight: .bold))
                             .foregroundStyle(Color.rossInk)
                             .frame(width: 32, height: 32)
-                            .background(Color.rossGlassFill, in: Circle())
-                            .overlay {
-                                Circle()
-                                    .stroke(Color.rossGlassStroke.opacity(0.78), lineWidth: 1)
-                            }
+                            .rossGlassSurface(cornerRadius: 16, interactive: true, shadowOpacity: 0.05, shadowRadius: 5, shadowY: 2, strokeOpacity: 0.48)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Review document again")
@@ -618,14 +618,20 @@ struct AlphaDocumentViewerScreen: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 10) {
                 if let document, document.processingState == .readingText || document.processingState == .imported {
-                    Text(document.hasAskUsableExtractedText
-                        ? "Ross can answer from extracted text now. Deeper review is still running in the background."
-                        : "Ross is still reading this file. Ask will be available as soon as text is extracted.")
+                    Text(alphaDocumentReadinessMessage(document))
                         .font(.caption.weight(.medium))
                         .foregroundStyle(Color.rossInk.opacity(0.72))
                         .padding(12)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.rossCardBackground.opacity(0.96), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .rossGlassSurface(
+                            tint: document.hasAskUsableExtractedText ? Color.rossSuccess : Color.rossAccent,
+                            cornerRadius: 16,
+                            shadowOpacity: 0.08,
+                            shadowRadius: 8,
+                            shadowY: 3,
+                            fillOpacity: 0.84,
+                            strokeOpacity: 0.48
+                        )
                 }
             }
             .padding(.horizontal, 12)
@@ -665,11 +671,15 @@ struct AlphaDocumentReviewWorkbenchCard<Content: View>: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .background(Color.rossCardBackground, in: RoundedRectangle(cornerRadius: RossSurface.cornerRadius, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: RossSurface.cornerRadius, style: .continuous)
-                .stroke(Color.rossBorder.opacity(0.82), lineWidth: 1)
-        }
+        .rossGlassSurface(
+            tint: Color.rossHighlight,
+            cornerRadius: RossSurface.cornerRadius,
+            shadowOpacity: 0.08,
+            shadowRadius: 9,
+            shadowY: 4,
+            fillOpacity: 0.84,
+            strokeOpacity: 0.50
+        )
     }
 }
 
@@ -787,7 +797,7 @@ struct AlphaDocumentTitleSuggestionCard: View {
                         .textFieldStyle(.plain)
                         .font(.subheadline.weight(.semibold))
                         .padding(10)
-                        .background(Color.rossSecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .rossGlassSurface(cornerRadius: 12, interactive: true, shadowOpacity: 0.04, shadowRadius: 4, shadowY: 1, strokeOpacity: 0.48)
                 } else {
                     Text(suggestedTitle)
                         .font(.headline)
@@ -883,11 +893,7 @@ struct AlphaAcceptedReviewSummaryCard: View {
         }
         .tint(Color.rossSuccess)
         .padding(12)
-        .background(Color.rossSuccess.opacity(0.08), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.rossSuccess.opacity(0.22), lineWidth: 1)
-        }
+        .rossGlassSurface(tint: Color.rossSuccess.opacity(0.14), cornerRadius: 16, strokeOpacity: 0.48)
     }
 }
 
@@ -903,11 +909,7 @@ struct AlphaDocumentAdvocateNoteCard: View {
             VStack(alignment: .leading, spacing: 12) {
                 ZStack(alignment: .topLeading) {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(Color.rossSecondaryGroupedBackground)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .stroke(Color.rossBorder.opacity(0.82), lineWidth: 1)
-                        }
+                        .fill(Color.clear)
 
                     if note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         Text("Write your manual note for this document.")
@@ -926,6 +928,7 @@ struct AlphaDocumentAdvocateNoteCard: View {
                         .padding(.vertical, 8)
                 }
                 .frame(minHeight: 112)
+                .rossGlassSurface(cornerRadius: 18, interactive: true, shadowOpacity: 0.05, shadowRadius: 5, shadowY: 2, strokeOpacity: 0.50)
 
                 HStack(spacing: 8) {
                     Button("Save note") {
@@ -940,7 +943,7 @@ struct AlphaDocumentAdvocateNoteCard: View {
                     } label: {
                         Label("Ask", systemImage: "bubble.left.and.text.bubble.right")
                     }
-                    .buttonStyle(.bordered)
+                    .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
 
                     Button {
                         onReviewAgain()
@@ -948,7 +951,7 @@ struct AlphaDocumentAdvocateNoteCard: View {
                         Label("Review", systemImage: "arrow.clockwise")
                             .font(.footnote.weight(.semibold))
                     }
-                    .buttonStyle(.bordered)
+                    .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
                     .accessibilityLabel("Review document again")
                 }
             }
@@ -990,7 +993,7 @@ struct AlphaDocumentInspectCard: View {
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(12)
-                                .background(Color.rossSecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .rossGlassSurface(cornerRadius: 14, interactive: true, shadowOpacity: 0.04, shadowRadius: 4, shadowY: 1, strokeOpacity: 0.46)
                             }
                             .buttonStyle(.plain)
                         }
@@ -1107,11 +1110,15 @@ struct AlphaDocumentReviewStatusBanner: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
-        .background(Color.rossCardBackground, in: RoundedRectangle(cornerRadius: RossSurface.cornerRadius, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: RossSurface.cornerRadius, style: .continuous)
-                .stroke(tint.opacity(0.26), lineWidth: 1)
-        }
+        .rossGlassSurface(
+            tint: tint,
+            cornerRadius: RossSurface.cornerRadius,
+            shadowOpacity: 0.07,
+            shadowRadius: 7,
+            shadowY: 3,
+            fillOpacity: 0.82,
+            strokeOpacity: 0.46
+        )
     }
 }
 
@@ -1342,14 +1349,7 @@ struct AlphaReviewActionButtonStyle: ButtonStyle {
             .foregroundStyle(tint)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(
-                Color.rossSecondaryGroupedBackground.opacity(configuration.isPressed ? 0.72 : 1),
-                in: Capsule()
-            )
-            .overlay {
-                Capsule()
-                    .stroke(Color.rossBorder.opacity(0.84), lineWidth: 1)
-            }
+            .rossGlassSurface(tint: tint.opacity(0.12), cornerRadius: 14, interactive: true, shadowOpacity: configuration.isPressed ? 0.04 : 0.07, shadowRadius: configuration.isPressed ? 4 : 7, shadowY: configuration.isPressed ? 1 : 2, fillOpacity: configuration.isPressed ? 0.66 : 0.78, strokeOpacity: 0.52)
     }
 }
 
@@ -1363,11 +1363,7 @@ struct AlphaReviewActionLabel: View {
             .foregroundStyle(tint)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(Color.rossSecondaryGroupedBackground, in: Capsule())
-            .overlay {
-                Capsule()
-                    .stroke(Color.rossBorder.opacity(0.84), lineWidth: 1)
-            }
+            .rossGlassSurface(tint: tint.opacity(0.10), cornerRadius: 14, shadowOpacity: 0.05, shadowRadius: 5, shadowY: 1, strokeOpacity: 0.50)
     }
 }
 
@@ -1459,11 +1455,7 @@ struct AlphaClassificationReviewCard: View {
                 .frame(width: alphaReviewAccentWidth)
                 .padding(.vertical, 12)
         }
-        .background(Color.rossGlassSubtleFill, in: RoundedRectangle(cornerRadius: RossSurface.cornerRadius, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: RossSurface.cornerRadius, style: .continuous)
-                .stroke(Color.rossBorder.opacity(0.85), lineWidth: 1)
-        }
+        .rossGlassSurface(tint: alphaConfidenceTint(confidenceLabel).opacity(0.10), cornerRadius: RossSurface.cornerRadius, strokeOpacity: 0.58)
     }
 }
 
@@ -1497,7 +1489,7 @@ struct AlphaExtractedFieldReviewCard: View {
                 TextField("Edit \(field.label.lowercased())", text: $draftValue)
                     .textFieldStyle(.plain)
                     .padding(10)
-                    .background(Color.rossSecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .rossGlassSurface(cornerRadius: 10, interactive: true, shadowOpacity: 0.04, shadowRadius: 4, shadowY: 1, strokeOpacity: 0.44)
             } else {
                 Text(field.value)
                     .font(.headline)
@@ -1555,11 +1547,7 @@ struct AlphaExtractedFieldReviewCard: View {
                 .frame(width: alphaReviewAccentWidth)
                 .padding(.vertical, 12)
         }
-        .background(Color.rossGlassSubtleFill, in: RoundedRectangle(cornerRadius: RossSurface.cornerRadius, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: RossSurface.cornerRadius, style: .continuous)
-                .stroke(Color.rossBorder.opacity(0.85), lineWidth: 1)
-        }
+        .rossGlassSurface(tint: alphaConfidenceTint(field.confidenceLabel).opacity(0.10), cornerRadius: RossSurface.cornerRadius, strokeOpacity: 0.58)
         .onAppear {
             draftValue = field.value
         }
@@ -1629,16 +1617,20 @@ struct AlphaFindingCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
         .padding(.leading, 5)
+        .rossGlassSurface(
+            tint: finding.severity == .critical ? Color.red : Color.orange,
+            cornerRadius: RossSurface.cornerRadius,
+            shadowOpacity: 0.08,
+            shadowRadius: 8,
+            shadowY: 3,
+            fillOpacity: 0.84,
+            strokeOpacity: 0.48
+        )
         .background(alignment: .leading) {
             RoundedRectangle(cornerRadius: 999, style: .continuous)
                 .fill((finding.severity == .critical ? Color.red : Color.orange).opacity(0.72))
                 .frame(width: alphaReviewAccentWidth)
                 .padding(.vertical, 12)
-        }
-        .background(Color.rossCardBackground, in: RoundedRectangle(cornerRadius: RossSurface.cornerRadius, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: RossSurface.cornerRadius, style: .continuous)
-                .stroke(Color.rossBorder, lineWidth: 1)
         }
     }
 }
@@ -1668,11 +1660,7 @@ struct AlphaRossTokenChip: View {
         }
         .padding(.horizontal, 10)
         .frame(height: 30)
-        .background(Color.rossSecondaryGroupedBackground, in: Capsule())
-        .overlay {
-            Capsule()
-                .stroke(Color.rossBorder.opacity(0.9), lineWidth: 1)
-        }
+        .rossGlassSurface(cornerRadius: 15, shadowOpacity: 0.04, shadowRadius: 4, shadowY: 1, strokeOpacity: 0.48)
     }
 }
 
@@ -1680,6 +1668,10 @@ struct AlphaSourceRefChips: View {
     let sourceRefs: [AlphaSourceRef]
     let contextDocumentTitle: String?
     let onOpenSourceRef: (AlphaSourceRef) -> Void
+
+    private var visibleSourceRefs: [AlphaSourceRef] {
+        Array(sourceRefs.prefix(5))
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -1693,25 +1685,40 @@ struct AlphaSourceRefChips: View {
                         .foregroundStyle(Color.rossInk.opacity(0.65))
                 }
             } else {
-                ScrollView(.horizontal, showsIndicators: false) {
+                ViewThatFits(in: .horizontal) {
                     HStack(spacing: 8) {
-                        ForEach(Array(sourceRefs.prefix(5).enumerated()), id: \.offset) { _, sourceRef in
-                            Button {
-                                onOpenSourceRef(sourceRef)
-                            } label: {
-                                AlphaRossTokenChip(
-                                    title: alphaSourceRefDisplayLabel(sourceRef, contextDocumentTitle: contextDocumentTitle),
-                                    detail: nil,
-                                    systemImage: "doc.text"
-                                )
-                            }
-                            .buttonStyle(.plain)
+                        ForEach(Array(visibleSourceRefs.enumerated()), id: \.offset) { _, sourceRef in
+                            sourceRefButton(sourceRef)
+                        }
+                    }
+
+                    LazyVGrid(
+                        columns: [GridItem(.adaptive(minimum: 116), spacing: 8, alignment: .leading)],
+                        alignment: .leading,
+                        spacing: 8
+                    ) {
+                        ForEach(Array(visibleSourceRefs.enumerated()), id: \.offset) { _, sourceRef in
+                            sourceRefButton(sourceRef)
                         }
                     }
                 }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func sourceRefButton(_ sourceRef: AlphaSourceRef) -> some View {
+        Button {
+            onOpenSourceRef(sourceRef)
+        } label: {
+            AlphaRossTokenChip(
+                title: alphaSourceRefDisplayLabel(sourceRef, contextDocumentTitle: contextDocumentTitle),
+                detail: nil,
+                systemImage: "doc.text"
+            )
+        }
+        .buttonStyle(.plain)
     }
 }
 

@@ -43,8 +43,13 @@ struct AlphaTabShell: View {
                 .padding(.bottom, 6)
                 .background {
                     Rectangle()
-                        .fill(Color.rossGroupedBackground.opacity(0.36))
-                        .background(.ultraThinMaterial)
+                        .fill(Color.clear)
+                        .rossNativeGlassSurface(
+                            tint: Color.rossAccent.opacity(0.08),
+                            shape: Rectangle(),
+                            fallbackFillOpacity: 0.36,
+                            fallbackStrokeOpacity: 0.14
+                        )
                         .ignoresSafeArea(edges: .top)
                 }
             }
@@ -67,8 +72,13 @@ struct AlphaTabShell: View {
                 }
                 .background {
                     Rectangle()
-                        .fill(Color.rossGroupedBackground.opacity(0.78))
-                        .background(.ultraThinMaterial)
+                        .fill(Color.clear)
+                        .rossNativeGlassSurface(
+                            tint: Color.rossAccent.opacity(0.08),
+                            shape: Rectangle(),
+                            fallbackFillOpacity: 0.78,
+                            fallbackStrokeOpacity: 0.16
+                        )
                         .ignoresSafeArea(edges: .bottom)
                 }
             }
@@ -106,11 +116,15 @@ struct AlphaWorkbenchTabBar: View {
             }
         }
         .padding(4)
-        .background(Color.rossCardBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.rossBorder.opacity(0.9), lineWidth: 1)
-        }
+        .rossGlassSurface(
+            tint: Color.rossAccent,
+            cornerRadius: 14,
+            shadowOpacity: 0.10,
+            shadowRadius: 10,
+            shadowY: 4,
+            fillOpacity: 0.78,
+            strokeOpacity: 0.48
+        )
     }
 }
 
@@ -163,11 +177,16 @@ struct AlphaTodayWorkbenchScreen: View {
                             .foregroundStyle(Color.rossInk)
                             .padding(.horizontal, 16)
                             .frame(height: 48)
-                            .background(Color.rossCardBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                    .stroke(Color.rossBorder, lineWidth: 1)
-                            }
+                            .rossGlassSurface(
+                                tint: Color.rossAccent,
+                                cornerRadius: 18,
+                                interactive: true,
+                                shadowOpacity: 0.08,
+                                shadowRadius: 8,
+                                shadowY: 3,
+                                fillOpacity: 0.82,
+                                strokeOpacity: 0.48
+                            )
                         }
                         .buttonStyle(.plain)
                     }
@@ -263,7 +282,16 @@ struct AlphaPreparedWorkScreen: View {
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(Color.rossInk)
                             .frame(width: 34, height: 34)
-                            .background(Color.rossCardBackground, in: Circle())
+                            .rossGlassSurface(
+                                tint: Color.rossAccent,
+                                cornerRadius: 17,
+                                interactive: true,
+                                shadowOpacity: 0.07,
+                                shadowRadius: 7,
+                                shadowY: 3,
+                                fillOpacity: 0.80,
+                                strokeOpacity: 0.46
+                            )
                     }
                 }
 
@@ -298,8 +326,15 @@ struct AlphaLocalPrivacyBadge: View {
         .foregroundStyle(Color.rossInk.opacity(0.76))
         .padding(.horizontal, 12)
         .frame(height: 32)
-        .background(Color.rossCardBackground, in: Capsule())
-        .overlay { Capsule().stroke(Color.rossBorder, lineWidth: 1) }
+        .rossGlassSurface(
+            tint: Color.rossAccent,
+            cornerRadius: 16,
+            shadowOpacity: 0.06,
+            shadowRadius: 6,
+            shadowY: 2,
+            fillOpacity: 0.80,
+            strokeOpacity: 0.46
+        )
     }
 }
 
@@ -532,7 +567,12 @@ struct AlphaRootTopRail: View {
                     .scaledToFit()
                     .frame(width: 24, height: 24)
                     .padding(4)
-                    .background(Color.rossGlassFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .rossNativeGlassSurface(
+                        tint: Color.rossAccent,
+                        shape: RoundedRectangle(cornerRadius: 10, style: .continuous),
+                        fallbackFillOpacity: 0.82,
+                        fallbackStrokeOpacity: 0.48
+                    )
 
                 Text("Ross")
                     .font(.headline.weight(.semibold))
@@ -579,11 +619,16 @@ struct AlphaTopRailIconButton: View {
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(Color.rossInk)
                 .frame(width: 34, height: 34)
-                .background(.ultraThinMaterial, in: Circle())
-                .overlay {
-                    Circle()
-                        .stroke(Color.rossBorder.opacity(0.9), lineWidth: 1)
-                }
+                .rossGlassSurface(
+                    tint: Color.rossAccent,
+                    cornerRadius: 17,
+                    interactive: true,
+                    shadowOpacity: 0.07,
+                    shadowRadius: 7,
+                    shadowY: 3,
+                    fillOpacity: 0.80,
+                    strokeOpacity: 0.46
+                )
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityLabel)

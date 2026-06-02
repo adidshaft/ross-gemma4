@@ -100,10 +100,17 @@ struct AlphaMatterEditorField: View {
                 .focused($isFocused)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 16)
-                .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(Color.rossGlassSubtleFill)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .rossGlassSurface(
+                    tint: validationMessage == nil
+                        ? (isFocused ? Color.rossAccent : Color.rossHighlight)
+                        : Color.orange,
+                    cornerRadius: 18,
+                    interactive: true,
+                    shadowOpacity: isFocused ? 0.10 : 0.06,
+                    shadowRadius: isFocused ? 10 : 6,
+                    shadowY: isFocused ? 4 : 2,
+                    fillOpacity: 0.84,
+                    strokeOpacity: validationMessage == nil ? 0.52 : 0.68
                 )
                 .overlay {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -163,15 +170,16 @@ struct AlphaMatterEditorDateField: View {
                     }
                     .padding(.horizontal, 14)
                     .padding(.vertical, 16)
-                    .background(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(Color.rossGlassSubtleFill)
-                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .rossGlassSurface(
+                        tint: Color.rossAccent,
+                        cornerRadius: 18,
+                        interactive: true,
+                        shadowOpacity: 0.07,
+                        shadowRadius: 7,
+                        shadowY: 3,
+                        fillOpacity: 0.84,
+                        strokeOpacity: 0.52
                     )
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(Color.rossGlassStroke.opacity(0.72), lineWidth: 1)
-                    }
                 }
                 .buttonStyle(.plain)
             } else {
@@ -186,15 +194,16 @@ struct AlphaMatterEditorDateField: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 16)
-                    .background(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(Color.rossGlassSubtleFill)
-                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .rossGlassSurface(
+                        tint: Color.rossAccent,
+                        cornerRadius: 18,
+                        interactive: true,
+                        shadowOpacity: 0.07,
+                        shadowRadius: 7,
+                        shadowY: 3,
+                        fillOpacity: 0.84,
+                        strokeOpacity: 0.52
                     )
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(Color.rossGlassStroke.opacity(0.72), lineWidth: 1)
-                    }
 
                     Button("Clear date") {
                         date = nil
@@ -220,10 +229,6 @@ struct AlphaMatterEditorMultilineField: View {
                 .foregroundStyle(Color.rossInk.opacity(0.7))
 
             ZStack(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color.rossGlassSubtleFill)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-
                 TextEditor(text: $text)
                     .scrollContentBackground(.hidden)
                     .frame(minHeight: 110)
@@ -239,10 +244,16 @@ struct AlphaMatterEditorMultilineField: View {
                         .allowsHitTesting(false)
                 }
             }
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(Color.rossGlassStroke.opacity(0.72), lineWidth: 1)
-            }
+            .rossGlassSurface(
+                tint: Color.rossHighlight,
+                cornerRadius: 18,
+                interactive: true,
+                shadowOpacity: 0.06,
+                shadowRadius: 7,
+                shadowY: 3,
+                fillOpacity: 0.84,
+                strokeOpacity: 0.52
+            )
         }
     }
 }
@@ -288,12 +299,16 @@ struct AlphaCaseSummaryCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(Color.rossCardBackground)
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.rossBorder, lineWidth: 0.8)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .rossGlassSurface(
+            tint: caseMatter.nextHearing == nil ? Color.rossAccent : Color.rossHighlight,
+            cornerRadius: 16,
+            interactive: true,
+            shadowOpacity: 0.08,
+            shadowRadius: 8,
+            shadowY: 3,
+            fillOpacity: 0.82,
+            strokeOpacity: 0.48
+        )
     }
 }
 
@@ -333,12 +348,16 @@ struct AlphaCaseSummaryLine: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .background(Color.rossCardBackground)
-        .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.rossBorder, lineWidth: 0.8)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .rossGlassSurface(
+            tint: Color.rossAccent,
+            cornerRadius: 14,
+            interactive: true,
+            shadowOpacity: 0.07,
+            shadowRadius: 7,
+            shadowY: 3,
+            fillOpacity: 0.80,
+            strokeOpacity: 0.44
+        )
     }
 }
 
@@ -375,12 +394,16 @@ struct AlphaCaseFolderCard: View {
         }
         .frame(maxWidth: .infinity, minHeight: 144, alignment: .topLeading)
         .padding(11)
-        .background(Color.rossCardBackground)
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(tint.opacity(0.08), lineWidth: 0.9)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .rossGlassSurface(
+            tint: tint,
+            cornerRadius: 18,
+            interactive: true,
+            shadowOpacity: 0.08,
+            shadowRadius: 8,
+            shadowY: 3,
+            fillOpacity: 0.82,
+            strokeOpacity: 0.42
+        )
     }
 }
 
@@ -480,12 +503,16 @@ struct AlphaDocumentRow: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(Color.rossCardBackground)
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.rossBorder, lineWidth: 0.8)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .rossGlassSurface(
+            tint: Color.rossHighlight,
+            cornerRadius: 16,
+            interactive: true,
+            shadowOpacity: 0.08,
+            shadowRadius: 8,
+            shadowY: 3,
+            fillOpacity: 0.82,
+            strokeOpacity: 0.48
+        )
     }
 }
 
@@ -496,6 +523,14 @@ func alphaPrivateAIStatus(_ model: AlphaRossModel) -> String {
 
 @MainActor
 func alphaAssistantStatusSnapshot(_ model: AlphaRossModel) -> AlphaAssistantStatusSnapshot {
+    if model.privateAISnapshot.activeRuntimeHealth?.available == true {
+        return AlphaAssistantStatusSnapshot(
+            title: "Ross assistant is ready",
+            detail: "Ross can help read files, draft notes, and answer from local matter files on this device.",
+            tint: Color.rossSuccess
+        )
+    }
+
     if let job = alphaActiveSetupJob(model) {
         switch job.state {
         case .downloading, .queued, .verifying:
@@ -538,15 +573,6 @@ func alphaAssistantStatusSnapshot(_ model: AlphaRossModel) -> AlphaAssistantStat
     }
 
     if model.activePack != nil {
-        let runtimeHealth = model.activeRuntimeHealth
-        if runtimeHealth?.available == true {
-            return AlphaAssistantStatusSnapshot(
-                title: "Ross assistant is ready",
-                detail: "Ross can help read files, draft notes, and answer from local matter files on this device.",
-                tint: Color.rossSuccess
-            )
-        }
-
         return AlphaAssistantStatusSnapshot(
             title: "Ross assistant needs attention",
             detail: "Ross needs to check setup before answering legal questions.",

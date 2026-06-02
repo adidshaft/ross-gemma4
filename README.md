@@ -57,7 +57,7 @@ Ask in Hindi or Bengali and Ross keeps the answer in that language while still g
 
 ## Gemma 4 Capability Packs
 
-ROSS-Gemma4 utilizes real, quantized Gemma 4 GGUF models directly on-device. We leverage open, publicly accessible weights provided by the community (via HuggingFace's `bartowski` repository) using the `Q4_K_M` 4-bit quantization to balance high-quality reasoning with memory constraints.
+ROSS-Gemma4 is wired for real, quantized Gemma 4 GGUF models on-device. The current repo has catalog entries and download plumbing for community GGUF artifacts hosted on Hugging Face (`bartowski/google_gemma-4-*`). A simulator smoke run has proven the llama.cpp GGUF path with a local developer artifact; the full physical iPhone download, resume, verify, activate, and imported-file QA pass is still pending.
 
 There are four Gemma 4 capability packs available for download inside the app:
 
@@ -77,7 +77,7 @@ Gemma 4's official model card states that the family maintains multilingual supp
 | Gemma 4 official coverage | 35+ out-of-the-box languages; pre-trained on 140+ languages. | [Gemma 4 model card](https://ai.google.dev/gemma/docs/core/model_card_4) |
 | India scheduled languages | 22 constitutionally scheduled languages: Assamese, Bengali, Bodo, Dogri, Gujarati, Hindi, Kannada, Kashmiri, Konkani, Maithili, Malayalam, Manipuri, Marathi, Nepali, Oriya/Odia, Punjabi, Sanskrit, Santhali, Sindhi, Tamil, Telugu, Urdu. | [Government of India, Ministry of Education](https://www.education.gov.in/en/constitutional-provision-1) |
 | India language data | Census mother-tongue tables, including the national C-16 language rows. | [Census of India C-16 mother tongue table](https://censusindia.gov.in/nada/index.php/catalog/10191) |
-| Ross verified app flows | English, Hindi, and Bengali prompts tested in the simulator with local Gemma answers and source pills. | `docs/images/gemma_hindi_answer.png`, `docs/images/gemma_bengali_answer.png` |
+| Ross verified app flows | English, Hindi, and Bengali prompts tested in a simulator GGUF smoke with source grounding. Physical iPhone imported-file proof is still pending. | `docs/REAL_MODEL_QA_RESULTS.md` |
 
 ---
 
@@ -116,15 +116,15 @@ graph LR
 
 ## iOS Runtime Status & Inference
 
-The iOS project integrates directly with a functioning `llama.cpp` wrapper (`AlphaLlamaCppEngine`). It successfully executes real on-device inference using Metal acceleration. The fatal errors regarding C-pointer nil unwrapping have been resolved, and models allocate correctly.
+The iOS project integrates with a `llama.cpp` wrapper (`AlphaLlamaCppEngine`) for GGUF inference. The current verified run is a June 2, 2026 simulator smoke using a local GGUF developer artifact. Physical iPhone proof with a downloaded configured pack, storage pressure, and imported user files has not been completed yet.
 
 ## Model Artifact Status
 
-Model downloads are mapped to real, functioning Gemma 4 GGUF URLs hosted on HuggingFace (`bartowski/google_gemma-4-*`). The app handles background downloading natively, calculates real-time ETA, and dynamically loads the weights into the local inference engine.
+Model downloads are mapped to Gemma 4 GGUF URLs hosted on Hugging Face (`bartowski/google_gemma-4-*`). The app includes foreground download, resume-data, size/checksum, activation, repair, and cleanup plumbing. The end-to-end physical-device download proof is still required before treating the packs as release-ready.
 
 ## Model Download and Verification
 
-Once real artifacts are provided, model artifacts are downloaded securely through verified channels. To guarantee integrity and prevent supply chain attacks, ROSS-Gemma4 conducts SHA-256 checksum verification before authorizing the model for inference. Downloads support resuming if interrupted by network loss.
+When an artifact is installed, ROSS-Gemma4 verifies the provider size and available checksum information before authorizing the model for inference. Downloads support resume/restart handling, but interruption and repair behavior still need to be recorded on a physical iPhone with a full multi-GB pack.
 
 ---
 

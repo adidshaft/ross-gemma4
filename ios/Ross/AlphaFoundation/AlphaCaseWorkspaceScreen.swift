@@ -480,11 +480,13 @@ struct AlphaMatterAttentionCard: View {
                         .foregroundStyle(Color.rossInk)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 7)
-                        .background(Color.rossSecondaryGroupedBackground, in: Capsule())
-                        .overlay {
-                            Capsule()
-                                .stroke(Color.rossBorder.opacity(0.85), lineWidth: 1)
-                        }
+                        .rossNativeGlassSurface(
+                            tint: Color.rossAccent,
+                            shape: Capsule(),
+                            interactive: true,
+                            fallbackFillOpacity: 0.82,
+                            fallbackStrokeOpacity: 0.48
+                        )
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity, alignment: .trailing)
@@ -499,11 +501,16 @@ struct AlphaMatterAttentionCard: View {
                 .frame(width: 2)
                 .padding(.vertical, 10)
         }
-        .background(Color.rossCardBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.rossBorder.opacity(0.86), lineWidth: 1)
-        }
+        .rossGlassSurface(
+            tint: tint,
+            cornerRadius: 16,
+            interactive: true,
+            shadowOpacity: 0.08,
+            shadowRadius: 8,
+            shadowY: 3,
+            fillOpacity: 0.82,
+            strokeOpacity: 0.46
+        )
     }
 }
 

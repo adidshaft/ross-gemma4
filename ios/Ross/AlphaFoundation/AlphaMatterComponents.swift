@@ -22,11 +22,7 @@ struct AlphaGlassPlusButton: View {
                 .font(.system(size: 15, weight: .bold))
                 .foregroundStyle(Color.rossAccent)
                 .frame(width: 34, height: 34)
-                .background(.ultraThinMaterial, in: Circle())
-                .overlay {
-                    Circle()
-                        .stroke(Color.rossAccent.opacity(0.18), lineWidth: 1)
-                }
+                .rossGlassSurface(tint: Color.rossAccent.opacity(0.18), cornerRadius: 17, interactive: true, shadowOpacity: 0.06, shadowRadius: 6, shadowY: 2, strokeOpacity: 0.45)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Create matter")
@@ -148,11 +144,7 @@ struct AlphaFolderArtwork: View {
                     .foregroundStyle(tint.opacity(0.94))
                     .padding(.horizontal, 7)
                     .padding(.vertical, 4)
-                    .background(.ultraThinMaterial, in: Capsule())
-                    .overlay {
-                        Capsule()
-                            .stroke(Color.white.opacity(0.3), lineWidth: 0.7)
-                    }
+                    .rossGlassSurface(tint: tint.opacity(0.16), cornerRadius: 10, shadowOpacity: 0.04, shadowRadius: 4, shadowY: 1, strokeOpacity: 0.40)
                     .padding(.top, 2)
                     .padding(.trailing, 2)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
@@ -164,11 +156,7 @@ struct AlphaFolderArtwork: View {
                     .foregroundStyle(tint.opacity(0.92))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(.ultraThinMaterial, in: Capsule())
-                    .overlay {
-                        Capsule()
-                            .stroke(Color.white.opacity(0.45), lineWidth: 0.7)
-                    }
+                    .rossGlassSurface(tint: tint.opacity(0.16), cornerRadius: 10, shadowOpacity: 0.04, shadowRadius: 4, shadowY: 1, strokeOpacity: 0.44)
                     .padding(.leading, 2)
                     .padding(.bottom, 2)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
@@ -194,11 +182,7 @@ struct AlphaDocumentLayoutMenu: View {
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(Color.rossInk)
                 .frame(width: 34, height: 34)
-                .background(.ultraThinMaterial, in: Circle())
-                .overlay {
-                    Circle()
-                        .stroke(Color.rossBorder, lineWidth: 0.8)
-                }
+                .rossGlassSurface(cornerRadius: 17, interactive: true, shadowOpacity: 0.06, shadowRadius: 6, shadowY: 2, strokeOpacity: 0.46)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Choose document view")
@@ -318,12 +302,7 @@ struct AlphaDocumentFolderTile: View {
         }
         .frame(maxWidth: .infinity, minHeight: 168, alignment: .topLeading)
         .padding(11)
-        .background(Color.rossCardBackground)
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(tint.opacity(0.08), lineWidth: 0.9)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .rossGlassSurface(tint: tint.opacity(0.16), cornerRadius: 18, strokeOpacity: 0.5)
     }
 }
 
@@ -428,12 +407,7 @@ struct AlphaExpandableDocumentRow: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(Color.rossCardBackground)
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.rossBorder, lineWidth: 0.8)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .rossGlassSurface(cornerRadius: 18, strokeOpacity: 0.62)
         .animation(.snappy(duration: 0.24), value: isExpanded)
     }
 }
@@ -553,11 +527,7 @@ struct AlphaMatterStarterCard: View {
                     .foregroundStyle(Color.rossInk)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 14)
-                    .background(Color.rossGlassSubtleFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(Color.rossGlassStroke.opacity(0.72), lineWidth: 1)
-                    }
+                    .rossGlassSurface(cornerRadius: 16, interactive: true, shadowOpacity: 0.07, shadowRadius: 7, shadowY: 3, fillOpacity: 0.8, strokeOpacity: 0.48)
 
                 Button("Save matter and open") {
                     model.createCase()
@@ -630,30 +600,7 @@ struct AlphaAssistantActivityStrip: View {
             }
         }
         .padding(14)
-        .background {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(colorScheme == .dark ? Color.white.opacity(0.045) : Color.white.opacity(0.2))
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    tint.opacity(colorScheme == .dark ? 0.1 : 0.08),
-                                    Color.clear
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                }
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(tint.opacity(colorScheme == .dark ? 0.22 : 0.16), lineWidth: 1)
-        }
-        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.16 : 0.08), radius: 12, y: 6)
+        .rossGlassSurface(tint: tint.opacity(colorScheme == .dark ? 0.18 : 0.14), cornerRadius: 18, strokeOpacity: 0.58)
     }
 }
 

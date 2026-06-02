@@ -3,6 +3,7 @@ import llama
 
 enum LlamaError: Error {
     case couldNotInitializeContext
+    case couldNotInitializeSampler
 }
 
 func llama_batch_clear(_ batch: inout llama_batch) {
@@ -44,13 +45,13 @@ actor LlamaContext {
     var n_decode: Int32 = 0
     private var hasDecodableLogits = false
 
-    init(model: OpaquePointer, context: OpaquePointer) {
+    init(model: OpaquePointer, context: OpaquePointer, sampling: UnsafeMutablePointer<llama_sampler>) {
         self.model = model
         self.context = context
         self.tokens_list = []
         self.batch = llama_batch_init(512, 0, 1)
         self.temporary_invalid_cchars = []
-        self.sampling = Self.makeSampler(settings: currentSamplerSettings)
+        self.sampling = sampling
         vocab = llama_model_get_vocab(model)
     }
 
@@ -110,10 +111,18 @@ actor LlamaContext {
         let context = llama_init_from_model(model, ctx_params)
         guard let context else {
             print("Could not load context!")
+            llama_model_free(model)
             throw LlamaError.couldNotInitializeContext
         }
 
-        return LlamaContext(model: model, context: context)
+        do {
+            let sampler = try Self.makeSampler(settings: AlphaLlamaSamplerSettings.legalQA)
+            return LlamaContext(model: model, context: context, sampling: sampler)
+        } catch {
+            llama_free(context)
+            llama_model_free(model)
+            throw error
+        }
     }
 
     func model_info() -> String {
@@ -123,27 +132,26 @@ actor LlamaContext {
             result.deallocate()
         }
 
-        // TODO: this is probably very stupid way to get the string from C
-
         let nChars = llama_model_desc(model, result, 256)
-        let bufferPointer = UnsafeBufferPointer(start: result, count: Int(nChars))
-
-        var SwiftString = ""
-        for char in bufferPointer {
-            SwiftString.append(Character(UnicodeScalar(UInt8(char))))
+        if nChars > 0 {
+            result[min(Int(nChars), 255)] = 0
         }
-
-        return SwiftString
+        return String(cString: result)
     }
 
     func get_n_tokens() -> Int32 {
         return batch.n_tokens;
     }
 
-    private static func makeSampler(settings: AlphaLlamaSamplerSettings) -> UnsafeMutablePointer<llama_sampler> {
+    nonisolated(unsafe) static var samplerFactory: (llama_sampler_chain_params) -> UnsafeMutablePointer<llama_sampler>? = { params in
+        llama_sampler_chain_init(params)
+    }
+
+    private static func makeSampler(settings: AlphaLlamaSamplerSettings) throws -> UnsafeMutablePointer<llama_sampler> {
         let sparams = llama_sampler_chain_default_params()
-        guard let sampler = llama_sampler_chain_init(sparams) else {
-            fatalError("llama sampler chain failed to initialize")
+        guard let sampler = samplerFactory(sparams) else {
+            print("llama sampler chain failed to initialize")
+            throw LlamaError.couldNotInitializeSampler
         }
         let topK = Int32(max(1, min(settings.topK, 200)))
         let topP = Float(max(0.05, min(settings.topP, 1.0)))
@@ -161,16 +169,17 @@ actor LlamaContext {
         text: String,
         maxNewTokens requestedMaxNewTokens: Int32? = nil,
         samplerSettings requestedSamplerSettings: AlphaLlamaSamplerSettings? = nil
-    ) {
+    ) throws {
         if let requestedMaxNewTokens {
             maxNewTokens = max(16, min(384, requestedMaxNewTokens))
         } else {
             maxNewTokens = defaultMaxNewTokens
         }
         if let requestedSamplerSettings, requestedSamplerSettings != currentSamplerSettings {
+            let replacementSampler = try Self.makeSampler(settings: requestedSamplerSettings)
             llama_sampler_free(sampling)
             currentSamplerSettings = requestedSamplerSettings
-            sampling = Self.makeSampler(settings: requestedSamplerSettings)
+            sampling = replacementSampler
         }
         print("attempting local completion: prompt_chars=\(text.count), max_new_tokens=\(maxNewTokens)")
 

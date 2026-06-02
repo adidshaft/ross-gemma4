@@ -712,6 +712,7 @@ enum AlphaExtractionMode: String, Codable, Hashable, Sendable {
 enum AlphaDocumentLanguage: String, Codable, Hashable, Sendable {
     case english
     case hindi
+    case bengali
     case tamil
     case telugu
     case mixed
@@ -721,6 +722,7 @@ enum AlphaDocumentLanguage: String, Codable, Hashable, Sendable {
 enum AlphaDocumentScript: String, Codable, Hashable, Sendable {
     case latin
     case devanagari
+    case bengali
     case tamil
     case telugu
     case mixed
@@ -2702,11 +2704,21 @@ private extension AlphaPersistedState {
 extension AlphaCaseDocument {
     var hasAskUsableExtractedText: Bool {
         extractedText?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ||
+            dominantSourceSnippet?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ||
             pages.contains {
-                ($0.extractedText ?? $0.snippet ?? "")
+                ($0.extractedText ?? $0.anchorText ?? "")
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                     .isEmpty == false
             }
+    }
+
+    var hasActiveTextExtraction: Bool {
+        extractionRuns.contains { $0.status == .queued || $0.status == .running } ||
+            effectiveIndexingStatus == .extracting
+    }
+
+    var isAwaitingReadableText: Bool {
+        !hasAskUsableExtractedText && hasActiveTextExtraction
     }
 
     var effectiveIndexingStatus: AlphaIndexingStatus {
@@ -2741,11 +2753,12 @@ extension AlphaCaseDocument {
             return .failed
         }
 
-        if latestRun?.status == .queued || latestRun?.status == .running || effectiveIndexingStatus == .extracting {
+        if hasActiveTextExtraction {
             return .readingText
         }
 
         let hasExtractedContent = extractedText?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ||
+            dominantSourceSnippet?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ||
             pages.contains { ($0.extractedText ?? $0.snippet ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false }
         if !hasExtractedContent && effectiveIndexingStatus == .notStarted {
             return .imported

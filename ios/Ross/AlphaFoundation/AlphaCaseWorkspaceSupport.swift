@@ -53,11 +53,7 @@ struct AlphaActiveMatterChatCard: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
-                .background(Color.rossGlassFill.opacity(0.84), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(Color.rossGlassStroke.opacity(0.8), lineWidth: 1)
-                }
+                .rossGlassSurface(cornerRadius: 14, shadowOpacity: 0.06, shadowRadius: 6, shadowY: 2, fillOpacity: 0.82, strokeOpacity: 0.52)
             } else {
                 Text("No matter chat yet. Ross will start one when you import a file, review a document, or ask the first question here.")
                     .font(.footnote)
@@ -71,12 +67,7 @@ struct AlphaActiveMatterChatCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .background(Color.rossGlassSubtleFill.opacity(0.94))
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.rossGlassStroke.opacity(0.82), lineWidth: 1)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .rossGlassSurface(cornerRadius: 18, shadowOpacity: 0.08, shadowRadius: 8, shadowY: 3, fillOpacity: 0.84, strokeOpacity: 0.56)
     }
 }
 
@@ -112,11 +103,13 @@ struct AlphaCompactRowActionButton: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(tint)
                 .frame(width: 30, height: 30)
-                .background(Color.rossGlassFill, in: Circle())
-                .overlay {
-                    Circle()
-                        .stroke(Color.rossGlassStroke.opacity(0.65), lineWidth: 1)
-                }
+                .rossNativeGlassSurface(
+                    tint: tint,
+                    shape: Circle(),
+                    interactive: true,
+                    fallbackFillOpacity: 0.84,
+                    fallbackStrokeOpacity: 0.48
+                )
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityLabel)
@@ -155,11 +148,15 @@ struct AlphaMatterCommandHintCard: View {
             }
         }
         .padding(14)
-        .background(Color.rossCardBackground.opacity(0.94), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.rossBorder.opacity(0.9), lineWidth: 1)
-        }
+        .rossGlassSurface(
+            tint: Color.rossAccent,
+            cornerRadius: 18,
+            shadowOpacity: 0.08,
+            shadowRadius: 8,
+            shadowY: 3,
+            fillOpacity: 0.84,
+            strokeOpacity: 0.48
+        )
     }
 }
 
@@ -193,11 +190,16 @@ struct AlphaDraftPreviewRow: View {
                 .foregroundStyle(Color.rossInk.opacity(0.32))
         }
         .padding(12)
-        .background(Color.rossCardBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.rossBorder.opacity(0.8), lineWidth: 1)
-        }
+        .rossGlassSurface(
+            tint: Color.rossHighlight,
+            cornerRadius: 16,
+            interactive: true,
+            shadowOpacity: 0.08,
+            shadowRadius: 8,
+            shadowY: 3,
+            fillOpacity: 0.82,
+            strokeOpacity: 0.46
+        )
     }
 }
 
@@ -218,11 +220,16 @@ struct AlphaCompactDraftActionButton: View {
             .frame(maxWidth: .infinity, minHeight: 40)
             .foregroundStyle(Color.rossInk)
             .padding(.horizontal, 12)
-            .background(Color.rossGlassFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.rossGlassStroke.opacity(0.7), lineWidth: 1)
-            }
+            .rossGlassSurface(
+                tint: Color.rossAccent,
+                cornerRadius: 14,
+                interactive: true,
+                shadowOpacity: 0.06,
+                shadowRadius: 6,
+                shadowY: 2,
+                fillOpacity: 0.82,
+                strokeOpacity: 0.52
+            )
         }
         .buttonStyle(.plain)
     }
@@ -301,11 +308,15 @@ struct AlphaTaskRow: View {
             }
         }
         .padding(14)
-        .background(Color.rossCardBackground.opacity(0.92), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.rossBorder.opacity(0.9), lineWidth: 1)
-        }
+        .rossGlassSurface(
+            tint: task.status == .done ? Color.rossSuccess : Color.rossAccent,
+            cornerRadius: 18,
+            shadowOpacity: 0.08,
+            shadowRadius: 8,
+            shadowY: 3,
+            fillOpacity: 0.82,
+            strokeOpacity: 0.46
+        )
     }
 }
 
@@ -355,11 +366,7 @@ struct AlphaReviewRow: View {
                     .foregroundStyle(Color.rossInk.opacity(0.35))
             }
             .padding(12)
-            .background(Color.rossSecondaryGroupedBackground.opacity(0.72), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(Color.rossBorder.opacity(0.82), lineWidth: 1)
-            }
+            .rossGlassSurface(tint: Color.orange, cornerRadius: 16, interactive: true, shadowOpacity: 0.07, shadowRadius: 7, shadowY: 3, fillOpacity: 0.78, strokeOpacity: 0.48)
         }
         .buttonStyle(.plain)
     }
@@ -417,11 +424,7 @@ struct AlphaReviewNudgeCard: View {
             .labelStyle(.titleAndIcon)
         }
         .padding(12)
-        .background(Color.rossSecondaryGroupedBackground.opacity(0.76), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.rossBorder.opacity(0.82), lineWidth: 1)
-        }
+        .rossGlassSurface(tint: Color.orange, cornerRadius: 16, shadowOpacity: 0.08, shadowRadius: 8, shadowY: 3, fillOpacity: 0.8, strokeOpacity: 0.5)
     }
 }
 
@@ -503,10 +506,14 @@ struct AlphaMatterDateRow: View {
             }
         }
         .padding(14)
-        .background(Color.rossCardBackground.opacity(0.92), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.rossBorder.opacity(0.9), lineWidth: 1)
-        }
+        .rossGlassSurface(
+            tint: matterDate.kind == .hearing ? Color.rossAccent : Color.rossHighlight,
+            cornerRadius: 18,
+            shadowOpacity: 0.08,
+            shadowRadius: 8,
+            shadowY: 3,
+            fillOpacity: 0.82,
+            strokeOpacity: 0.46
+        )
     }
 }

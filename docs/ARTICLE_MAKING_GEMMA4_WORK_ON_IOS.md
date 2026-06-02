@@ -32,6 +32,9 @@ The final product needed to satisfy a stricter bar:
 
 ## Final iOS Runtime Shape
 
+> 🖼️ **Image prompt (app screenshot style)**
+> A clean iOS 17 app screenshot on iPhone 15 Pro showing "Ross" assistant setup screen. Dark background (#1A1A1E). Top: "Set up your private assistant" title in white. Below: three cards — "Flash (Recommended)", "Case Associate", "Senior Drafting" — each with a subtitle and a storage size badge. The Flash card has a blue highlight border and a "Downloading… 42%" progress bar. Status bar shows strong signal, Wi-Fi, and battery. SF Pro font throughout.
+
 ```mermaid
 flowchart TD
     Setup[Assistant setup] --> Pack[Installed model pack]
@@ -440,6 +443,146 @@ The concrete Android remediation did five things:
 
 This is now documented in `docs/REMEDIATION_PLAN.md`, and the app includes a developer-only diagnostics panel under technical diagnostics for validating the five fixes on-device.
 
+## Problem 11: Swift Exclusive-Access Violation Crashed the First Query
+
+This one only showed up on physical devices, not the simulator. After a fresh install, tapping "Ask Ross" for the very first time would crash with a Swift runtime exclusivity violation. The stack trace pointed to `updateStoredAskTurn` inside `AlphaRossModel+Ask.swift`.
+
+The root cause is subtle and worth understanding because it applies to any `@Observable` class that has nested mutable state.
+
+### What happened
+
+Swift enforces a rule: you cannot read and write the same memory location at the same time. When a function takes an `inout` parameter, Swift locks the entire object for the duration of that call.
+
+```swift
+// Simplified version of the pattern that crashed
+persisted.cases[caseIdx].turns[turnIdx] = updateStoredAskTurn(&turn) { updatingTurn in
+    // ⚠️ "persisted" is locked for inout write here
+    let isRelevant = sourceRefPointsToDocument(ref, persisted.cases) // ← reads persisted
+    let status = activeLocalModelRunningStatus                        // ← reads persisted
+}
+```
+
+The mutation closure held an `inout` reference into `persisted.cases[n].turns[m]`. While holding that lock, the closure called helper functions that also read `persisted.cases` to check source references and model status. Swift caught the conflict at runtime and crashed.
+
+> 🖼️ **Image prompt (handwritten notes style)**
+> A hand-drawn sketch on light cream grid paper with blue pen. Title: "Swift inout exclusive access". Two boxes: "persisted" (big box) containing "cases → turns → turn[N]". An arrow from "updateStoredAskTurn" pointing INTO turn[N] labeled "inout lock". Below that, a second arrow from "sourceRefPointsToDocument()" also pointing at "persisted.cases" labeled "READ — BLOCKED ❌". At the bottom: "Fix: precompute reads BEFORE entering closure". Loose underlines, casual arrow style, a small lightning bolt near the conflict.
+
+### The fix
+
+Precompute everything that reads `persisted` before entering the mutation closure. The reads happen outside the lock; the closure only writes.
+
+```swift
+// Precompute all reads BEFORE the inout closure
+let filteredSourceRefs = persisted.cases
+    .flatMap(\.documents)
+    .filter { sourceRefPointsToDocument(ref, [$0]) }
+let runningStatus = activeLocalModelRunningStatus
+
+// Now safe: closure only writes, never reads persisted
+persisted.cases[caseIdx].turns[turnIdx] = updateStoredAskTurn(&turn) { updatingTurn in
+    updatingTurn.sourceRefs = filteredSourceRefs   // write only
+    updatingTurn.status = runningStatus            // write only
+}
+```
+
+This fix was applied to the streaming path, the initial status write, and every other callsite that updated a turn while reading persisted state. The crash disappeared on physical devices.
+
+---
+
+## Problem 12: Regex Recompilation on Every Streaming Token
+
+After fixing the crash, the next problem was visible: the answer streaming was noticeably laggy on a real device even though Gemma 4 was producing tokens at a reasonable pace. The app felt like it was struggling to keep up with the model.
+
+### What happened
+
+SwiftUI re-evaluates `body` whenever observed state changes. During token streaming, `body` re-evaluates on every single token arrival. Inside `AlphaAskConversationScreen`, the formatted answer view had a computed property that called `replacingOccurrences(of:options:.regularExpression)` five times per line per render to strip and transform markdown-like patterns.
+
+```swift
+// Before: five inline regex operations per line, per body render
+var lines: [String] {
+    rawText.components(separatedBy: "\n").map { line in
+        var l = line
+        l = l.replacingOccurrences(of: #"^\s*#{1,6}\s*"#, with: "", options: .regularExpression)
+        l = l.replacingOccurrences(of: #"^\s*\*{1,2}(.+?)\*{1,2}"#, with: "$1", options: .regularExpression)
+        l = l.replacingOccurrences(of: #"^\s*[-*]\s+"#, with: "• ", options: .regularExpression)
+        l = l.replacingOccurrences(of: #"\*\*(.+?)\*\*"#, with: "$1", options: .regularExpression)
+        l = l.replacingOccurrences(of: #"`(.+?)`"#, with: "$1", options: .regularExpression)
+        return l
+    }
+}
+```
+
+At 8 tokens/second with a 50-line answer, that is 8 × 50 × 5 = 2,000 `NSRegularExpression` compile-and-destroy cycles every second. `NSRegularExpression` compilation is not cheap. The main thread was spending more time on pattern compilation than on anything else during streaming.
+
+> 🖼️ **Image prompt (handwritten notes style)**
+> Hand-drawn on white lined paper with dark ink. Title: "Per-token regex recompilation". A timeline drawn as a horizontal arrow. Along the top: "token 1 → token 2 → token 3 → ...". Below each token: a box labeled "compile ×5, match ×5, destroy ×5" with small skull emoji. Under the arrow: "8 tokens/sec × 50 lines × 5 patterns = 2,000 compiles/sec 💀". Next section below a dividing line, title "Fix". Same timeline but the boxes now just say "match ×5 (compiled once, reused)". Arrow pointing to a box on the left labeled "static let regex = NSRegularExpression(...)". Casual underlines and emphasis circles around key numbers.
+
+### The fix
+
+Compile each pattern once at file load time as a static constant. Reuse the compiled `NSRegularExpression` for every render.
+
+```swift
+// After: compiled once per app session, reused on every token
+private let alphaHeadingRegex    = try! NSRegularExpression(pattern: #"^\s*#{1,6}\s*"#)
+private let alphaBoldRegex       = try! NSRegularExpression(pattern: #"\*\*(.+?)\*\*"#)
+private let alphaBulletRegex     = try! NSRegularExpression(pattern: #"^\s*[-*]\s+"#)
+private let alphaInlineCodeRegex = try! NSRegularExpression(pattern: #"`(.+?)`"#)
+private let alphaEmphasisRegex   = try! NSRegularExpression(pattern: #"^\s*\*{1,2}(.+?)\*{1,2}"#)
+
+private func alphaApplyRegex(_ regex: NSRegularExpression, replacement: String, to str: String) -> String {
+    let range = NSRange(str.startIndex..., in: str)
+    return regex.stringByReplacingMatches(in: str, range: range, withTemplate: replacement)
+}
+```
+
+The streaming frame rate became smooth immediately. The model's token output pace was now the actual bottleneck — which is exactly what it should be.
+
+---
+
+## Problem 13: O(N·M·K) Hot Path on Every Ask Submit
+
+A subtler performance issue only became obvious after the regex fix revealed the next bottleneck. Submitting a question to Ask Ross felt slow to respond — there was a noticeable pause before the loading state appeared.
+
+### What happened
+
+Inside the Ask submit path, the code needed to check whether each document in the source pack was actually present in the current matter. The implementation used `flatMap` over all cases and all documents:
+
+```swift
+// Before: O(cases × documents × sourceRefs) on every submit
+let validRefs = sourceRefs.filter { ref in
+    persisted.cases
+        .flatMap(\.documents)          // ← O(cases × docs) per call
+        .contains(where: { doc in      // ← O(docs) scan per ref
+            doc.localFile == ref.path  // ← string compare
+        })
+}
+```
+
+With 10 cases × 20 documents × 30 source refs in a realistic matter bundle, that is 6,000 string comparisons happening synchronously on the main actor before the loading state even appears.
+
+> 🖼️ **Image prompt (handwritten notes style)**
+> Loose hand-drawn diagram on graph paper with pencil shading. Title: "O(N·M·K) vs early-exit loop". Left side labeled "Before": three nested boxes labeled "for each ref (K=30)", "flatMap cases (N=10)", "contains docs (M=20)". Big arrow pointing right labeled "6,000 comparisons". Right side labeled "After": same three boxes but the inner box has a lightning bolt and "break on first match". Below: "worst case same, average case → much faster". A smiley face next to "After". Some small numbers written in margins.
+
+### The fix
+
+Replace `flatMap.contains` with a direct early-exit nested loop that stops as soon as it finds the document:
+
+```swift
+// After: early-exit nested loop, average case dramatically faster
+let validRefs = sourceRefs.filter { ref in
+    for alphaCase in persisted.cases {
+        for doc in alphaCase.documents {
+            if doc.localFile == ref.path { return true }
+        }
+    }
+    return false
+}
+```
+
+In typical use the answer is found in the first case (the active matter), so the loop exits after scanning that case's documents only. The "pause before loading" disappeared.
+
+---
+
 ## Implementation Checklist
 
 For another team implementing Gemma 4 on iOS, this is the checklist I would use:
@@ -464,22 +607,31 @@ For another team implementing Gemma 4 on iOS, this is the checklist I would use:
 13. **Sweep orphaned files on app launch**: temp directory, sibling model packs, stale resume data.
 14. **Prune sibling files after install** to prevent multi-version accumulation on re-download.
 
+**Swift Concurrency & State**
+15. **Never read `persisted` inside an `inout` mutation closure.** Precompute all reads before entering `updateStoredAskTurn` or any equivalent closure to avoid Swift exclusive-access violations. Physical-device crashes that don't reproduce in the simulator are a strong signal of this pattern.
+16. **Debounce `@Observable` state writes that fan out to expensive recomputation.** A 300ms rolling window prevents actor queue accumulation during rapid mutations (e.g., every streaming token writing to persisted state).
+17. **Cache regex patterns as static file-level constants.** Never compile `NSRegularExpression` inline during a SwiftUI `body` render or any path that runs per token during streaming.
+18. **Avoid `flatMap.contains` over nested collections in hot paths.** Replace with an early-exit nested loop. The `flatMap` forces a full materialization of the intermediate array before the scan begins.
+
 **Output & Validation**
-15. Avoid fake BOS strings; let the tokenizer handle special tokens.
-16. Strip generated chat-template fragments from output (fallback to inference-time stops).
-17. Treat raw model output as untrusted.
-18. Add a parser, a quality gate, and a source-grounded fallback.
-19. Test multilingual prompts with script checks, not just semantic checks.
+19. Avoid fake BOS strings; let the tokenizer handle special tokens.
+20. Strip generated chat-template fragments from output (fallback to inference-time stops).
+21. Treat raw model output as untrusted.
+22. Add a parser, a quality gate, and a source-grounded fallback.
+23. Test multilingual prompts with script checks, not just semantic checks.
 
 **UX & Product**
-20. Show a loading state that proves the real local runtime is running (e.g., "Gemma 4 E2B Q2_K is running on this iPhone").
-21. Test the actual simulator or device path, not only mocks.
-22. Make first-run setup choose the smallest reliable real pack.
-23. Ensure the surface that starts inference also displays the completed answer.
-24. Avoid duplicate loading UI for the same model turn.
+24. Show a loading state that proves the real local runtime is running (e.g., "Gemma 4 E2B Q2_K is running on this iPhone").
+25. Test the actual simulator or device path, not only mocks.
+26. Make first-run setup choose the smallest reliable real pack.
+27. Ensure the surface that starts inference also displays the completed answer.
+28. Avoid duplicate loading UI for the same model turn.
 
 ## The Main Lesson
 
 The hard part of local Gemma 4 on iOS is not only inference. The hard part is productizing inference.
 
 You need a model lifecycle, runtime contract, prompt discipline, parser, validation layer, source-grounded fallback, language policy, and honest UI. Once all of those pieces are in place, Gemma 4 can work as a real on-device assistant instead of a fragile demo.
+
+> 🖼️ **Image prompt (handwritten notes style)**
+> Dense hand-written notes page with a black rollerball pen on white paper. Title at top: "Making Gemma 4 Production-Ready on iOS". Below: a two-column checklist. Left column labeled "Just making it run" with items: "GGUF loaded ✓", "llama.cpp builds ✓", "token output ✓". Right column labeled "Actually production-ready" with items: "Startup < 500ms ✓", "No SHA-256 on launch ✓", "No exclusive-access crash ✓", "Regex cached, not per-token ✓", "Stop sequences enforced ✓", "Source-grounded fallback ✓", "Hindi/Bengali validated ✓", "Storage doesn't leak ✓". A large underline under "Actually production-ready". At the bottom a single sentence: "The gap between these two columns is the real engineering work." Slightly messy, authentic handwriting style.

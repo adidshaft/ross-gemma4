@@ -26,8 +26,13 @@ struct AlphaTopSafeAreaGlass: View {
 
     var body: some View {
         Rectangle()
-            .fill(Color.rossGroupedBackground.opacity(0.34))
-            .background(.ultraThinMaterial)
+            .fill(Color.clear)
+            .rossNativeGlassSurface(
+                tint: Color.rossAccent.opacity(0.08),
+                shape: Rectangle(),
+                fallbackFillOpacity: 0.34,
+                fallbackStrokeOpacity: 0.14
+            )
             .frame(height: max(height, 0))
             .ignoresSafeArea(edges: .top)
             .allowsHitTesting(false)
@@ -50,7 +55,12 @@ struct AlphaSetupWordmarkRow: View {
                 .scaledToFit()
                 .frame(width: 24, height: 24)
                 .padding(4)
-                .background(Color.rossGlassFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .rossNativeGlassSurface(
+                    tint: Color.rossAccent,
+                    shape: RoundedRectangle(cornerRadius: 10, style: .continuous),
+                    fallbackFillOpacity: 0.82,
+                    fallbackStrokeOpacity: 0.48
+                )
                 .shadow(color: Color.rossShadow.opacity(0.45), radius: 10, y: 4)
 
             Text(title.uppercased())
@@ -66,11 +76,12 @@ struct AlphaSetupWordmarkRow: View {
                     .foregroundStyle(Color.rossInk.opacity(0.68))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(Color.rossGlassFill, in: Capsule())
-                    .overlay {
-                        Capsule()
-                            .stroke(Color.rossGlassStroke.opacity(0.84), lineWidth: 1)
-                    }
+                    .rossNativeGlassSurface(
+                        tint: Color.rossAccent,
+                        shape: Capsule(),
+                        fallbackFillOpacity: 0.82,
+                        fallbackStrokeOpacity: 0.48
+                    )
             }
         }
     }
@@ -243,8 +254,6 @@ struct AlphaOnboardingModelSelector: View {
     let onSelect: (AlphaCapabilityTier) -> Void
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: compact ? 16 : 18, style: .continuous)
-
         VStack(alignment: .leading, spacing: compact ? 6 : 8) {
             HStack {
                 Text("Choose assistant model")
@@ -268,15 +277,7 @@ struct AlphaOnboardingModelSelector: View {
             }
         }
         .padding(compact ? 9 : 11)
-        .background {
-            ZStack {
-                shape.fill(.ultraThinMaterial)
-                shape.fill(Color.rossCardBackground.opacity(0.78))
-            }
-        }
-        .overlay {
-            shape.stroke(Color.rossGlassStroke.opacity(0.62), lineWidth: 1)
-        }
+        .rossGlassSurface(cornerRadius: compact ? 16 : 18, strokeOpacity: 0.62)
     }
 }
 
@@ -330,14 +331,16 @@ struct AlphaOnboardingModelChoiceRow: View {
             }
             .padding(.horizontal, compact ? 9 : 10)
             .padding(.vertical, compact ? 6 : 8)
-            .background(
-                isSelected ? Color.rossAccent.opacity(0.10) : Color.rossGlassSubtleFill,
-                in: RoundedRectangle(cornerRadius: compact ? 11 : 12, style: .continuous)
+            .rossGlassSurface(
+                tint: isSelected ? Color.rossAccent.opacity(0.22) : Color.rossAccent.opacity(0.08),
+                cornerRadius: compact ? 11 : 12,
+                interactive: true,
+                shadowOpacity: isSelected ? 0.12 : 0.06,
+                shadowRadius: isSelected ? 10 : 6,
+                shadowY: isSelected ? 4 : 2,
+                fillOpacity: isSelected ? 0.82 : 0.68,
+                strokeOpacity: isSelected ? 0.62 : 0.42
             )
-            .overlay {
-                RoundedRectangle(cornerRadius: compact ? 11 : 12, style: .continuous)
-                    .stroke(isSelected ? Color.rossAccent.opacity(0.40) : Color.rossGlassStroke.opacity(0.46), lineWidth: 1)
-            }
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
@@ -420,18 +423,13 @@ struct AlphaOnboardingSetupNoteRow: View {
         }
         .padding(.horizontal, compact ? 10 : 12)
         .padding(.vertical, compact ? 7 : 8)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.rossGlassStroke.opacity(0.50), lineWidth: 1)
-        }
+        .rossGlassSurface(cornerRadius: 12, shadowOpacity: 0.05, shadowRadius: 6, shadowY: 2, strokeOpacity: 0.50)
     }
 }
 
 // MARK: - Download Info Card
 
 struct AlphaOnboardingDownloadCard: View {
-    @Environment(\.colorScheme) private var colorScheme
     let tier: AlphaCapabilityTier
     var compact = false
 
@@ -454,8 +452,6 @@ struct AlphaOnboardingDownloadCard: View {
     }
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: compact ? 16 : 20, style: .continuous)
-
         VStack(alignment: .leading, spacing: compact ? 9 : 14) {
             // Header
             HStack(spacing: compact ? 9 : 12) {
@@ -463,11 +459,7 @@ struct AlphaOnboardingDownloadCard: View {
                     .font(.system(size: compact ? 14 : 17, weight: .semibold))
                     .foregroundStyle(Color.rossAccent)
                     .frame(width: compact ? 32 : 40, height: compact ? 32 : 40)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: compact ? 10 : 12, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: compact ? 10 : 12, style: .continuous)
-                            .stroke(Color.rossAccent.opacity(0.22), lineWidth: 1)
-                    }
+                    .rossGlassSurface(tint: Color.rossAccent.opacity(0.16), cornerRadius: compact ? 10 : 12, shadowOpacity: 0.05, shadowRadius: 5, shadowY: 1, strokeOpacity: 0.45)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(tier.setupTitle)
@@ -525,26 +517,7 @@ struct AlphaOnboardingDownloadCard: View {
             }
         }
         .padding(compact ? 13 : 18)
-        .background {
-            ZStack {
-                shape.fill(.ultraThinMaterial)
-                shape.fill(Color.rossCardBackground.opacity(colorScheme == .dark ? 0.72 : 0.88))
-            }
-        }
-        .overlay {
-            shape.strokeBorder(
-                LinearGradient(
-                    colors: [
-                        Color.white.opacity(colorScheme == .dark ? 0.16 : 0.88),
-                        Color.rossBorder.opacity(0.42)
-                    ],
-                    startPoint: .top, endPoint: .bottom
-                ),
-                lineWidth: 1
-            )
-        }
-        .clipShape(shape)
-        .shadow(color: Color.rossShadow.opacity(0.12), radius: 16, y: 6)
+        .rossGlassSurface(cornerRadius: compact ? 16 : 20, shadowOpacity: 0.12, shadowRadius: 16, shadowY: 6, strokeOpacity: 0.62)
     }
 }
 
@@ -595,11 +568,7 @@ struct AlphaOnboardingPrivacyPill: View {
         }
         .padding(.horizontal, compact ? 12 : 16)
         .padding(.vertical, compact ? 8 : 11)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: compact ? 12 : 14, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: compact ? 12 : 14, style: .continuous)
-                .stroke(Color.rossGlassStroke.opacity(0.58), lineWidth: 1)
-        }
+        .rossGlassSurface(cornerRadius: compact ? 12 : 14, shadowOpacity: 0.06, shadowRadius: 7, shadowY: 2, strokeOpacity: 0.58)
     }
 }
 
@@ -608,7 +577,6 @@ struct AlphaOnboardingPrivacyPill: View {
 struct AlphaModelPickerSheet: View {
     @Bindable var model: AlphaRossModel
     @Binding var isPresented: Bool
-    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         NavigationStack {
@@ -665,7 +633,6 @@ struct AlphaModelPickerSheet: View {
 }
 
 struct AlphaModelPickerRow: View {
-    @Environment(\.colorScheme) private var colorScheme
     @Bindable var model: AlphaRossModel
     let tier: AlphaCapabilityTier
     let isRecommended: Bool
@@ -690,8 +657,6 @@ struct AlphaModelPickerRow: View {
     }
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
-
         Button(action: onSelect) {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 12) {
@@ -699,11 +664,7 @@ struct AlphaModelPickerRow: View {
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.rossAccent)
                         .frame(width: 36, height: 36)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .stroke(Color.rossAccent.opacity(0.18), lineWidth: 1)
-                        }
+                        .rossGlassSurface(tint: Color.rossAccent.opacity(0.16), cornerRadius: 10, shadowOpacity: 0.05, shadowRadius: 5, shadowY: 1, strokeOpacity: 0.42)
 
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 6) {
@@ -752,25 +713,15 @@ struct AlphaModelPickerRow: View {
                     .lineSpacing(2.5)
             }
             .padding(16)
-            .background {
-                ZStack {
-                    shape.fill(.ultraThinMaterial)
-                    shape.fill(Color.rossCardBackground.opacity(colorScheme == .dark ? 0.72 : 0.88))
-                    if isRecommended {
-                        shape.fill(Color.rossAccent.opacity(colorScheme == .dark ? 0.05 : 0.03))
-                    }
-                }
-            }
-            .overlay {
-                shape.strokeBorder(
-                    isRecommended
-                        ? LinearGradient(colors: [Color.rossAccent.opacity(0.35), Color.rossAccent.opacity(0.12)], startPoint: .top, endPoint: .bottom)
-                        : LinearGradient(colors: [Color.white.opacity(colorScheme == .dark ? 0.14 : 0.72), Color.rossBorder.opacity(0.40)], startPoint: .top, endPoint: .bottom),
-                    lineWidth: 1
-                )
-            }
-            .clipShape(shape)
-            .shadow(color: Color.rossShadow.opacity(0.10), radius: 12, y: 4)
+            .rossGlassSurface(
+                tint: isRecommended ? Color.rossAccent.opacity(0.18) : Color.rossAccent.opacity(0.08),
+                cornerRadius: 18,
+                interactive: true,
+                shadowOpacity: 0.10,
+                shadowRadius: 12,
+                shadowY: 4,
+                strokeOpacity: isRecommended ? 0.72 : 0.54
+            )
         }
         .buttonStyle(.plain)
     }

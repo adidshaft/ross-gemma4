@@ -351,11 +351,16 @@ struct AlphaFullScreenChatComposer: View {
                         .font(.system(size: 17, weight: .bold))
                         .foregroundStyle(Color.rossInk.opacity(0.72))
                         .frame(width: 40, height: 40)
-                        .background(Color.rossCardBackground, in: Circle())
-                        .overlay {
-                            Circle()
-                                .stroke(Color.rossBorder.opacity(0.74), lineWidth: 1)
-                        }
+                        .rossGlassSurface(
+                            tint: Color.rossAccent,
+                            cornerRadius: 20,
+                            interactive: true,
+                            shadowOpacity: 0.08,
+                            shadowRadius: 7,
+                            shadowY: 3,
+                            fillOpacity: 0.80,
+                            strokeOpacity: 0.48
+                        )
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Add files or images")
@@ -381,11 +386,16 @@ struct AlphaFullScreenChatComposer: View {
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 11)
-                .background(Color.rossCardBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(Color.rossBorder.opacity(0.74), lineWidth: 1)
-                }
+                .rossGlassSurface(
+                    tint: Color.rossHighlight,
+                    cornerRadius: 18,
+                    interactive: true,
+                    shadowOpacity: 0.07,
+                    shadowRadius: 8,
+                    shadowY: 3,
+                    fillOpacity: 0.84,
+                    strokeOpacity: 0.50
+                )
 
                 Button(action: onSend) {
                     Image(systemName: "arrow.up")
@@ -457,11 +467,15 @@ struct AlphaFullScreenChatTurn: View {
                             .fixedSize(horizontal: false, vertical: true)
                             .padding(.horizontal, 13)
                             .padding(.vertical, 10)
-                            .background(Color.rossCardBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                    .stroke(Color.rossBorder.opacity(0.64), lineWidth: 1)
-                            }
+                            .rossGlassSurface(
+                                tint: Color.rossAccent,
+                                cornerRadius: 18,
+                                shadowOpacity: 0.06,
+                                shadowRadius: 7,
+                                shadowY: 3,
+                                fillOpacity: 0.82,
+                                strokeOpacity: 0.46
+                            )
                     }
                 }
             }
@@ -508,11 +522,7 @@ struct AlphaFullScreenChatTurn: View {
                 }
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.rossGlassFill, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(Color.rossGlassStroke.opacity(0.86), lineWidth: 1)
-                }
+                .rossGlassSurface(cornerRadius: 20, strokeOpacity: 0.56)
                 .contextMenu {
                     Button {
                         alphaCopyAskResultToPasteboard(result)
@@ -608,11 +618,7 @@ struct AlphaPendingLocalModelCard: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.rossGlassFill, in: RoundedRectangle(cornerRadius: style.cornerRadius, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: style.cornerRadius, style: .continuous)
-                .stroke(Color.rossGlassStroke.opacity(0.86), lineWidth: 1)
-        }
+        .rossGlassSurface(cornerRadius: style.cornerRadius, strokeOpacity: 0.56)
     }
 }
 
@@ -714,13 +720,16 @@ struct AlphaAskEmptyState: View {
                             .minimumScaleFactor(0.88)
                             .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
                             .padding(.horizontal, 13)
-                            .background(Color.rossGlassSubtleFill)
-                            .background(.ultraThinMaterial)
-                            .clipShape(RoundedRectangle(cornerRadius: RossSurface.cornerRadius, style: .continuous))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: RossSurface.cornerRadius, style: .continuous)
-                                    .stroke(Color.rossBorder.opacity(0.7), lineWidth: 1)
-                            }
+                            .rossGlassSurface(
+                                tint: Color.rossAccent,
+                                cornerRadius: RossSurface.cornerRadius,
+                                interactive: true,
+                                shadowOpacity: 0.07,
+                                shadowRadius: 7,
+                                shadowY: 3,
+                                fillOpacity: 0.82,
+                                strokeOpacity: 0.48
+                            )
                     }
                     .buttonStyle(.plain)
                 }
@@ -762,12 +771,15 @@ struct AlphaAskTurnCard: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 13)
                         .padding(.vertical, 9)
-                        .background(Color.rossCardBackground.opacity(0.92))
-                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .stroke(Color.rossBorder.opacity(0.6), lineWidth: 1)
-                        }
+                        .rossGlassSurface(
+                            tint: Color.rossAccent,
+                            cornerRadius: 18,
+                            shadowOpacity: 0.06,
+                            shadowRadius: 7,
+                            shadowY: 3,
+                            fillOpacity: 0.82,
+                            strokeOpacity: 0.46
+                        )
                 }
             } else {
                 HStack(spacing: 8) {
@@ -872,7 +884,7 @@ struct AlphaAskTurnCard: View {
                                 .foregroundStyle(Color.rossInk.opacity(0.82))
                         }
                         .padding(12)
-                        .background(Color.rossSecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .rossGlassSurface(cornerRadius: 18, strokeOpacity: 0.48)
                     }
 
                     if !result.publicLawResults.isEmpty {
@@ -883,7 +895,7 @@ struct AlphaAskTurnCard: View {
                             }
                         }
                         .padding(12)
-                        .background(Color.rossSecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .rossGlassSurface(cornerRadius: 18, strokeOpacity: 0.48)
                     }
 
                     if result.publicLawPreview != nil || !result.publicLawResults.isEmpty || result.needsReviewWarning != nil {
@@ -910,7 +922,7 @@ struct AlphaAskTurnCard: View {
                         .foregroundStyle(Color.rossInk.opacity(0.52))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 7)
-                        .background(Color.rossSecondaryGroupedBackground, in: Capsule())
+                        .rossGlassSurface(cornerRadius: 999, interactive: true, shadowOpacity: 0.03, shadowRadius: 3, shadowY: 1, strokeOpacity: 0.44)
                     }
                     .buttonStyle(.plain)
 
@@ -923,15 +935,15 @@ struct AlphaAskTurnCard: View {
                     }
                 }
                 .padding(14)
-                .background {
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .fill(Color.rossGlassFill)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-                }
-                .overlay {
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .stroke(Color.rossGlassStroke, lineWidth: 1)
-                }
+                .rossGlassSurface(
+                    tint: Color.rossHighlight,
+                    cornerRadius: 22,
+                    shadowOpacity: 0.09,
+                    shadowRadius: 10,
+                    shadowY: 4,
+                    fillOpacity: 0.84,
+                    strokeOpacity: 0.50
+                )
 
                 Spacer(minLength: 40)
             }
@@ -1037,7 +1049,7 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
                         .foregroundStyle(Color.rossInk.opacity(0.72))
                         .padding(.horizontal, 9)
                         .padding(.vertical, 6)
-                        .background(Color.rossSecondaryGroupedBackground.opacity(0.9), in: Capsule())
+                        .rossGlassSurface(cornerRadius: 999, interactive: true, shadowOpacity: 0.03, shadowRadius: 3, shadowY: 1, strokeOpacity: 0.42)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Copy answer")
@@ -1050,7 +1062,7 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
                             .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(Color.rossInk.opacity(0.48))
                             .frame(width: 28, height: 28)
-                            .background(Color.rossSecondaryGroupedBackground.opacity(0.72), in: Circle())
+                            .rossGlassSurface(cornerRadius: 999, interactive: true, shadowOpacity: 0.03, shadowRadius: 3, shadowY: 1, strokeOpacity: 0.42)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("More answer actions")
@@ -1120,8 +1132,7 @@ struct AlphaPublicLawResultCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(Color.rossGlassSubtleFill)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .rossGlassSurface(cornerRadius: 16, shadowOpacity: 0.07, shadowRadius: 7, shadowY: 3, fillOpacity: 0.78, strokeOpacity: 0.44)
     }
 }
 

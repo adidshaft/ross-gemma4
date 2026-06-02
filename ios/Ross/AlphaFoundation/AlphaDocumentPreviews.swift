@@ -146,11 +146,7 @@ struct AlphaDocumentTextPreview: View {
             .padding(12)
         }
         .frame(minHeight: 320, maxHeight: 420)
-        .background(Color.rossSecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.rossBorder.opacity(0.7), lineWidth: 1)
-        }
+        .rossGlassSurface(cornerRadius: 14, shadowOpacity: 0.08, shadowRadius: 8, shadowY: 3, fillOpacity: 0.8, strokeOpacity: 0.48)
     }
 }
 
@@ -173,7 +169,7 @@ struct AlphaDocumentPreviewPage: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .background(Color.rossCardBackground.opacity(0.86), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .rossGlassSurface(cornerRadius: 12, strokeOpacity: 0.48)
     }
 }
 

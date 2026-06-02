@@ -36,38 +36,24 @@ final class BackgroundModelDownloadService: NSObject, ModelDownloadManaging, URL
     func queueDownload(for pack: ModelPack) {
         jobs.removeAll { $0.packTier == pack.tier && $0.phase != .completed }
 
-        let note: String
-        if startTransfersAutomatically && settingsStore.settings.backgroundModelDownloadsEnabled {
-            note = "Download is eligible for resumable background transfer."
-        } else {
-            note = "Download plan is staged and ready for resumable background transfer when enabled."
-        }
-
         let job = ModelDownloadJob(
             packTier: pack.tier,
             plannedSize: pack.downloadSize,
-            phase: .queued,
+            phase: .failed,
             progress: 0,
-            deliveryNote: note,
+            deliveryNote: "This legacy background delivery path is disabled. Use Ross Private AI setup to install verified local model artifacts.",
             isBackgroundEligible: true
         )
 
         jobs.insert(job, at: 0)
-        sourceURLByJobID[job.id] = Self.placeholderURL(for: pack)
 
         privacyLedger.recordNetwork(
-            title: "Private AI Pack staged",
-            detail: "A background-download-friendly plan was prepared without sending case materials.",
+            title: "Legacy Private AI download blocked",
+            detail: "Ross blocked an obsolete placeholder model-delivery path before any transfer started.",
             boundary: .modelDelivery,
             dataClass: .noCaseData,
             direction: .outbound
         )
-
-        guard startTransfersAutomatically, settingsStore.settings.backgroundModelDownloadsEnabled else {
-            return
-        }
-
-        startDownload(for: job.id)
     }
 
     func pause(jobID: UUID) {
@@ -152,10 +138,6 @@ final class BackgroundModelDownloadService: NSObject, ModelDownloadManaging, URL
         }
 
         transform(&jobs[index])
-    }
-
-    private static func placeholderURL(for pack: ModelPack) -> URL {
-        URL(string: "https://example.com/model-download/\(pack.tier.rawValue).pkg")!
     }
 
     nonisolated func urlSession(

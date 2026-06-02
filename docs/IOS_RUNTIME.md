@@ -1,40 +1,40 @@
 # iOS Gemma 4 Runtime
 
-## 1. Current runtime status
-The app currently builds and runs using the `Gemma4DemoRuntime` abstraction. Real local inference is marked as `PENDING` until a verified runtime and GGUF artifacts are integrated.
+## Current Status
 
-## 2. Why the dead Swift package was removed
-The previous dependency (`swift-gemma-runtime` by `pgorzelany`) was returning a 404 (Not Found) during Xcode package resolution, which completely blocked the iOS build. We have removed it and replaced it with a clean local abstraction.
+Ross no longer uses the old `Gemma4DemoRuntime`-only path described in earlier notes. The iOS app now has three runtime lanes:
 
-## 3. Runtime abstraction
-The app interacts with local models via the `Gemma4Runtime` protocol. It provides standard methods for loading the model, sending `Gemma4InferenceRequest`, and receiving `Gemma4InferenceResponse`.
+| Lane | Code path | Status |
+| --- | --- | --- |
+| Deterministic development runtime | `AlphaLocalModelRuntime` deterministic provider | Used by tests and local CI-style validation. It must not be claimed as real model execution. |
+| GGUF llama.cpp runtime | `AlphaLlamaCppEngine` and `AlphaLlamaCppProvider` | Simulator smoke passed on June 2, 2026 with a local GGUF developer artifact. |
+| Apple on-device assistant path | `apple_foundation_models` pack mode | Available only when the OS/device supports it and explicit runtime checks pass. |
 
-## 4. Demo mode behavior
-If `DEMO_MODE=true` (or when the real runtime is unavailable), the app falls back to `Gemma4DemoRuntime`. This provides deterministic, simulated outputs for walkthroughs and ensures the app does not pretend that placeholder artifacts are real. It is visually labeled with "Demo Mode — model response simulated for walkthrough" in the UI.
+## Verified Evidence
 
-## 5. Real local inference path
-To enable real local inference, `REAL_LOCAL_GEMMA4=true` must be set, and a true local inference package must be integrated that conforms to `Gemma4Runtime`. `Gemma4UnavailableRuntime` will safely block execution with an error message until it is set up.
+- Swift package tests cover registry parsing, artifact validation, download-state recovery, Ask routing, imported text/PDF/image behavior, and multilingual source-preserving fallback.
+- `docs/REAL_MODEL_QA_RESULTS.md` records the June 2, 2026 simulator GGUF smoke:
+  - runtime: `gemma_local_runtime`
+  - tier: `quick_start`
+  - artifact: `/Users/amanpandey/projects/ross-gemma4/artifacts/gemma-2-2b-it-Q4_K_M.gguf`
+  - SHA-256: `e0aee85060f168f0f2d8473d7ea41ce2f3230c1bc1374847505ea599288a7787`
+- The smoke harness now reports native-model markers such as `bengali_native_model` and `hindi_native_model` so QA can distinguish direct multilingual model output from Ross's source-preserving fallback.
 
-## 6. GGUF/Q4 artifact requirement
-The real local inference path requires 4-bit quantized `Q4_K_M` (or similar) GGUF artifacts for the Gemma 4 variants. Placeholders must be replaced with verified URLs and SHA256 checksums before production.
+## Still Not Proven
 
-## 7. Candidate runtime options
-- **llama.cpp Swift package**: The standard path for running GGUFs on iOS.
-- **MLX Swift**: An alternative from Apple, though it may require a non-GGUF format.
+Do not claim release-ready physical iPhone inference until these are recorded:
 
-## 8. Build instructions
-The iOS project currently resolves and builds successfully with the local abstraction.
+1. A configured multi-GB GGUF is downloaded through the app on a physical iPhone.
+2. Resume/restart, provider size or checksum handling, validation, activation, repair, and deletion are observed on-device.
+3. Imported PDF, image, and text files from Files/iCloud/Downloads are used in Ask Ross with source-grounded English, Hindi, and Bengali questions.
+4. Device performance, storage use, privacy ledger entries, logs, and fallback behavior are recorded in `docs/REAL_MODEL_QA_RESULTS.md`.
+
+## Build Notes
+
+For local Swift verification:
+
 ```bash
-swift package resolve --package-path ios
-swift build --package-path ios
+swift test --package-path ios
 ```
 
-## 9. Known limitations
-The real local inference is currently unavailable due to the missing GGUF files and Swift runtime.
-
-## 10. Next verification checklist
-- [ ] Research and download valid `Q4_K_M` GGUFs for all 3 tiers.
-- [ ] Generate size and SHA256 hashes using `scripts/model-artifact-checksum.sh`.
-- [ ] Integrate a verified `llama.cpp` Swift package.
-- [ ] Write the `Gemma4LlamaCppRuntime` conforming to the abstraction.
-- [ ] Set `releaseReady=true` in the model registries.
+For app integration, build and launch through Xcode or XcodeBuildMCP using the shared `Ross` scheme. Simulator success is useful evidence for compilation and integration, but it does not replace physical-device proof for model downloads, storage pressure, or hardware runtime behavior.

@@ -123,11 +123,7 @@ struct AlphaFeedScreen: View {
                             }
                             .padding(.horizontal, 14)
                             .padding(.vertical, 12)
-                            .background(Color.rossCardBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .stroke(Color.rossBorder, lineWidth: 1)
-                            }
+                            .rossGlassSurface(cornerRadius: 14, interactive: true, strokeOpacity: 0.58)
                         }
                         .buttonStyle(.plain)
                         .padding(.top, 4)
@@ -188,7 +184,13 @@ struct AlphaFeedScreen: View {
                                 .foregroundStyle(Color.rossInk)
                                 .padding(.horizontal, 12)
                                 .frame(height: 34)
-                                .background(Color.rossSecondaryGroupedBackground, in: Capsule())
+                                .rossNativeGlassSurface(
+                                    tint: Color.rossAccent,
+                                    shape: Capsule(),
+                                    interactive: true,
+                                    fallbackFillOpacity: 0.82,
+                                    fallbackStrokeOpacity: 0.48
+                                )
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel("Sort matters")
@@ -204,11 +206,7 @@ struct AlphaFeedScreen: View {
                                     .font(.system(size: 14, weight: .semibold))
                                     .foregroundStyle(Color.rossInk)
                                     .frame(width: 34, height: 34)
-                                    .background(.ultraThinMaterial, in: Circle())
-                                    .overlay {
-                                        Circle()
-                                            .stroke(Color.rossBorder, lineWidth: 0.8)
-                                    }
+                                    .rossGlassSurface(cornerRadius: 17, interactive: true, shadowOpacity: 0.06, shadowRadius: 6, shadowY: 2, strokeOpacity: 0.46)
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel("Choose matter view")
@@ -424,18 +422,13 @@ struct AlphaMatterSearchField: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 3)
         .frame(minHeight: 50)
-        .background(
-            colorScheme == .dark ? Color.rossCardBackground.opacity(0.96) : Color.white.opacity(0.82),
-            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.rossBorder.opacity(0.9), lineWidth: 1)
-        }
-        .shadow(
-            color: colorScheme == .dark ? Color.clear : Color.rossShadow.opacity(0.06),
-            radius: 10,
-            y: 3
+        .rossGlassSurface(
+            cornerRadius: 16,
+            shadowOpacity: colorScheme == .dark ? 0 : 0.06,
+            shadowRadius: 10,
+            shadowY: 3,
+            fillOpacity: colorScheme == .dark ? 0.90 : 0.78,
+            strokeOpacity: 0.58
         )
     }
 }

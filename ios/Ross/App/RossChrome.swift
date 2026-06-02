@@ -314,7 +314,14 @@ struct RossHeroCard<Content: View>: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             ZStack {
-                shape.fill(.ultraThinMaterial)
+                shape.fill(Color.clear)
+                    .rossNativeGlassSurface(
+                        tint: Color.rossHeroTop.opacity(0.28),
+                        shape: shape,
+                        interactive: false,
+                        fallbackFillOpacity: 0.28,
+                        fallbackStrokeOpacity: 0.30
+                    )
                 LinearGradient(
                     colors: [
                         Color.rossHeroTop,
@@ -364,26 +371,21 @@ struct RossInfoPill: View {
     private let cornerRadius: CGFloat = RossSurface.cornerRadius
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-
         HStack(alignment: .top, spacing: 13) {
             Image(systemName: systemImage)
                 .symbolRenderingMode(.hierarchical)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Color.rossHighlight)
                 .frame(width: 30, height: 30)
-                .background {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: RossSurface.iconRadius, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                        RoundedRectangle(cornerRadius: RossSurface.iconRadius, style: .continuous)
-                            .fill(Color.rossHighlight.opacity(colorScheme == .dark ? 0.18 : 0.10))
-                    }
-                }
-                .overlay {
-                    RoundedRectangle(cornerRadius: RossSurface.iconRadius, style: .continuous)
-                        .stroke(Color.rossHighlight.opacity(0.22), lineWidth: 1)
-                }
+                .rossGlassSurface(
+                    tint: Color.rossHighlight.opacity(colorScheme == .dark ? 0.24 : 0.16),
+                    cornerRadius: RossSurface.iconRadius,
+                    shadowOpacity: 0.04,
+                    shadowRadius: 4,
+                    shadowY: 1,
+                    fillOpacity: 0.66,
+                    strokeOpacity: 0.34
+                )
                 .padding(.top, 1)
 
             Text(title)
@@ -398,44 +400,15 @@ struct RossInfoPill: View {
         .frame(minHeight: 60, alignment: .topLeading)
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .background {
-            ZStack {
-                shape.fill(.ultraThinMaterial)
-                shape.fill(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(colorScheme == .dark ? 0.10 : 0.70),
-                            Color.rossGlassSubtleFill.opacity(colorScheme == .dark ? 0.72 : 0.50)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                // Specular top sheen
-                shape.fill(
-                    LinearGradient(
-                        colors: [Color.white.opacity(colorScheme == .dark ? 0.07 : 0.28), Color.clear],
-                        startPoint: .top,
-                        endPoint: .center
-                    )
-                )
-            }
-        }
-        .overlay {
-            shape.strokeBorder(
-                LinearGradient(
-                    colors: [
-                        Color.white.opacity(colorScheme == .dark ? 0.22 : 0.80),
-                        Color.rossGlassStroke.opacity(colorScheme == .dark ? 0.12 : 0.36)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                ),
-                lineWidth: 1
-            )
-        }
-        .clipShape(shape)
-        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.18 : 0.12), radius: 12, y: 5)
+        .rossGlassSurface(
+            tint: Color.rossHighlight.opacity(0.10),
+            cornerRadius: cornerRadius,
+            shadowOpacity: colorScheme == .dark ? 0.18 : 0.12,
+            shadowRadius: 12,
+            shadowY: 5,
+            fillOpacity: 0.72,
+            strokeOpacity: 0.50
+        )
     }
 }
 
@@ -459,12 +432,15 @@ struct RossMetricTile: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(tint.opacity(0.05))
-        .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(tint.opacity(0.12), lineWidth: 1)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .rossGlassSurface(
+            tint: tint.opacity(0.12),
+            cornerRadius: 14,
+            shadowOpacity: 0.04,
+            shadowRadius: 4,
+            shadowY: 1,
+            fillOpacity: 0.62,
+            strokeOpacity: 0.36
+        )
     }
 }
 
@@ -476,9 +452,6 @@ struct RossActionTile: View {
     let action: () -> Void
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: RossSurface.cornerRadius, style: .continuous)
-        let iconShape = RoundedRectangle(cornerRadius: RossSurface.iconRadius, style: .continuous)
-
         Button(action: action) {
             HStack(alignment: .center, spacing: 16) {
                 Image(systemName: systemImage)
@@ -486,27 +459,15 @@ struct RossActionTile: View {
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(tint)
                     .frame(width: 50, height: 50)
-                    .background {
-                        ZStack {
-                            iconShape.fill(.ultraThinMaterial)
-                            iconShape.fill(tint.opacity(0.12))
-                            // Specular top sheen on icon cell
-                            iconShape.fill(
-                                LinearGradient(
-                                    colors: [Color.white.opacity(0.28), Color.clear],
-                                    startPoint: .top, endPoint: .center
-                                )
-                            )
-                        }
-                    }
-                    .overlay {
-                        iconShape.stroke(
-                            LinearGradient(
-                                colors: [Color.white.opacity(0.50), tint.opacity(0.20)],
-                                startPoint: .top, endPoint: .bottom
-                            ), lineWidth: 1
-                        )
-                    }
+                    .rossGlassSurface(
+                        tint: tint.opacity(0.16),
+                        cornerRadius: RossSurface.iconRadius,
+                        shadowOpacity: 0.05,
+                        shadowRadius: 5,
+                        shadowY: 1,
+                        fillOpacity: 0.70,
+                        strokeOpacity: 0.38
+                    )
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
@@ -528,22 +489,16 @@ struct RossActionTile: View {
                     .foregroundStyle(Color.rossInk.opacity(0.26))
             }
             .padding(18)
-            .background {
-                ZStack {
-                    shape.fill(.ultraThinMaterial)
-                    shape.fill(Color.rossCardBackground.opacity(0.84))
-                }
-            }
-            .overlay {
-                shape.strokeBorder(
-                    LinearGradient(
-                        colors: [Color.white.opacity(0.60), Color.rossBorder.opacity(0.50)],
-                        startPoint: .top, endPoint: .bottom
-                    ), lineWidth: 1
-                )
-            }
-            .clipShape(shape)
-            .shadow(color: Color.rossShadow.opacity(0.12), radius: 12, y: 4)
+            .rossGlassSurface(
+                tint: tint.opacity(0.14),
+                cornerRadius: RossSurface.cornerRadius,
+                interactive: true,
+                shadowOpacity: 0.10,
+                shadowRadius: 10,
+                shadowY: 4,
+                fillOpacity: 0.78,
+                strokeOpacity: 0.52
+            )
         }
         .buttonStyle(.plain)
     }

@@ -366,11 +366,11 @@ extension AlphaRossModel {
 
     func activeLocalModelDisplayLabel() -> String {
         guard let activePack else { return "Private assistant" }
-        return alphaAssistantModelArtifact(for: activePack.tier).displayName
+        return "\(activePack.tier.title) assistant"
     }
 
     func activeLocalModelRunningStatus() -> String {
-        "\(activeLocalModelDisplayLabel()) running locally"
+        "\(activeLocalModelDisplayLabel()) is preparing a private answer"
     }
 
     func buildPendingLocalModelAskResult(
@@ -398,7 +398,7 @@ extension AlphaRossModel {
             selectedDocumentTitles: baseResult.selectedDocumentTitles,
             answerTitle: "Ross is answering...",
             answerSections: [
-                "\(activeLocalModelDisplayLabel()) is running on this iPhone. Ross will replace this with the local answer as soon as it finishes.",
+                "\(activeLocalModelDisplayLabel()) is working on this iPhone. Ross will replace this with the private answer as soon as it finishes.",
                 taggedFilesSection
             ].compactMap { $0 },
             caseFileSources: [],
@@ -1072,26 +1072,56 @@ extension AlphaRossModel {
         let blockedByPendingExtraction: Bool = {
             for caseMatter in persisted.cases {
                 for document in caseMatter.documents where selectedDocumentIDs.contains(document.id) {
-                    if (document.processingState == .readingText || document.processingState == .imported)
-                        && !document.hasAskUsableExtractedText {
+                    if document.isAwaitingReadableText {
                         return true
                     }
                 }
             }
             return false
         }()
-        if blockedByPendingExtraction { return }
-        let sourcePack = shouldUseMatterSourcesForAsk(
+        if blockedByPendingExtraction {
+            completeAskRuntimeWithoutAnswer(
+                scopeCaseID: scopeCaseID,
+                sessionID: storedResult.chatSessionID,
+                turnID: storedResult.chatTurnID,
+                title: "Selected file is still being read",
+                sections: [
+                    "Ross is still extracting readable text from the tagged file.",
+                    "Ask again after the file shows as ready, or choose a different readable file."
+                ],
+                statusNote: "File text not ready",
+                needsReviewWarning: "Tagged file not ready for private assistant."
+            )
+            return
+        }
+        let expectsMatterSources = shouldUseMatterSourcesForAsk(
             question: question,
             scopeCaseID: scopeCaseID,
             selectedDocuments: selectedDocuments
         )
+        let sourcePack = expectsMatterSources
             ? askRuntimeSourcePack(
                 question: question,
                 scopeCaseID: scopeCaseID,
                 selectedDocuments: selectedDocuments
             )
             : []
+        let hasDocumentSource = sourcePack.contains { $0.sourceRef.effectiveSourceCategory == .documentSource }
+        if !selectedDocuments.isEmpty && !hasDocumentSource {
+            completeAskRuntimeWithoutAnswer(
+                scopeCaseID: scopeCaseID,
+                sessionID: storedResult.chatSessionID,
+                turnID: storedResult.chatTurnID,
+                title: "Selected file has no readable text",
+                sections: [
+                    "Ross could not find readable source text in the tagged file.",
+                    "Re-import the file, wait for text extraction to finish, or choose another file before asking the private assistant."
+                ],
+                statusNote: "File text unavailable",
+                needsReviewWarning: "Tagged file has no readable source text."
+            )
+            return
+        }
 
         let input = AlphaLocalModelInput(
             task: .matterQuestionAnswer,
@@ -1223,6 +1253,27 @@ extension AlphaRossModel {
                     return fallback
                 }()
                 guard let payload else {
+                    if let runtimeFailure = self.askRuntimeFailurePresentation(for: output) {
+                        self.updateStoredAskTurn(
+                            scopeCaseID: scopeCaseID,
+                            sessionID: chatSessionID,
+                            turnID: chatTurnID
+                        ) { turn in
+                            turn.answerTitle = runtimeFailure.title
+                            turn.answerSections = runtimeFailure.sections
+                            turn.statusNote = runtimeFailure.statusNote
+                            turn.needsReviewWarning = runtimeFailure.needsReviewWarning
+                            turn.modelInvocation = completedInvocation
+                        }
+                        if var latest = self.latestAskResult, latest.chatTurnID == chatTurnID {
+                            latest.answerTitle = runtimeFailure.title
+                            latest.answerSections = runtimeFailure.sections
+                            latest.statusNote = runtimeFailure.statusNote
+                            latest.needsReviewWarning = runtimeFailure.needsReviewWarning
+                            self.latestAskResult = latest
+                        }
+                        return
+                    }
                     self.updateStoredAskTurn(
                         scopeCaseID: scopeCaseID,
                         sessionID: chatSessionID,
@@ -1276,6 +1327,53 @@ extension AlphaRossModel {
                     self.latestAskResult = latest
                 }
             }
+        }
+    }
+
+    func askRuntimeFailurePresentation(for output: AlphaLocalModelOutput) -> (title: String, sections: [String], statusNote: String, needsReviewWarning: String?)? {
+        guard let errorCategory = output.errorCategory, !errorCategory.isEmpty else { return nil }
+        let warning = output.warnings.first?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let detail = warning?.isEmpty == false
+            ? warning!
+            : "The local model runtime reported \(errorCategory.replacingOccurrences(of: "_", with: " "))."
+        return (
+            title: "Private assistant hit a runtime error",
+            sections: [
+                detail,
+                "Open Private AI setup and use Repair setup. Ross did not generate a substitute answer from case memory."
+            ],
+            statusNote: "Private assistant runtime error",
+            needsReviewWarning: "Private assistant needs repair before it can answer from files."
+        )
+    }
+
+    func completeAskRuntimeWithoutAnswer(
+        scopeCaseID: UUID?,
+        sessionID: UUID?,
+        turnID: UUID?,
+        title: String,
+        sections: [String],
+        statusNote: String,
+        needsReviewWarning: String?
+    ) {
+        updateStoredAskTurn(
+            scopeCaseID: scopeCaseID,
+            sessionID: sessionID,
+            turnID: turnID
+        ) { turn in
+            turn.answerTitle = title
+            turn.answerSections = sections
+            turn.sourceRefs = []
+            turn.statusNote = statusNote
+            turn.needsReviewWarning = needsReviewWarning
+        }
+        if var latest = latestAskResult, latest.chatTurnID == turnID {
+            latest.answerTitle = title
+            latest.answerSections = sections
+            latest.caseFileSources = []
+            latest.statusNote = statusNote
+            latest.needsReviewWarning = needsReviewWarning
+            latestAskResult = latest
         }
     }
 
@@ -1431,7 +1529,7 @@ extension AlphaRossModel {
                 : document.pages
 
             for page in pages {
-                let text = page.extractedText ?? page.snippet ?? document.dominantSourceSnippet ?? document.extractedText ?? "Imported source reference."
+                let text = page.extractedText ?? page.anchorText ?? document.dominantSourceSnippet ?? document.extractedText ?? ""
                 let cleanedText = text.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
                 guard !cleanedText.isEmpty else { continue }
                 let sourceRef = AlphaSourceRef(
@@ -1461,6 +1559,9 @@ extension AlphaRossModel {
         )
         if !rankedDocumentBlocks.isEmpty {
             return Array((matterBlocks + rankedDocumentBlocks).prefix(8))
+        }
+        if !selectedIDs.isEmpty {
+            return []
         }
         return askRuntimeMatterMemorySourcePack(scopeCaseID: scopeCaseID)
     }
@@ -1679,15 +1780,15 @@ extension AlphaRossModel {
             sections = facts.prefix(3).map { fact in
                 switch fact {
                 case .retention:
-                    return "CAM-D3 সাধারণত rolling video চৌদ্দ দিন রাখত, যদি না clips manually export করা হয়. সূত্র: 03_Affidavit_Asha_Menon_Camera_Retention · p. 1."
+                    return "CAM-D3-এ সাধারণ ভিডিও সংরক্ষণের মেয়াদ ছিল চৌদ্দ দিন, আলাদা করে অংশ রপ্তানি না করা হলে. সূত্র: আশা মেনন হলফনামা, পৃষ্ঠা ১."
                 case .exportFailure:
-                    return "Menon still frames export করেছিলেন কারণ তাঁর shift-এ video export queue দুবার failed হয়েছিল; কারণ bandwidth, permissions, storage বা অন্য technical issue হতে পারে. সূত্র: 03_Affidavit_Asha_Menon_Camera_Retention · p. 1."
+                    return "মেনন স্থিরচিত্র রপ্তানি করেছিলেন, কারণ তাঁর পালায় ভিডিও রপ্তানির সারি দুবার ব্যর্থ হয়েছিল; কারণ সংযোগ, অনুমতি, সংরক্ষণ বা অন্য প্রযুক্তিগত সমস্যা হতে পারে. সূত্র: আশা মেনন হলফনামা, পৃষ্ঠা ১."
                 case .timestamp:
-                    return "CAM-D3 overlay timestamp facility network time থেকে প্রায় এগারো মিনিট পিছিয়ে ছিল, তাই still-frame times actual time-এর সঙ্গে মিলিয়ে পড়তে হবে. সূত্র: 03_Affidavit_Asha_Menon_Camera_Retention · p. 1."
+                    return "CAM-D3-এ দেখা সময়টি সুবিধার নেটওয়ার্ক সময়ের চেয়ে প্রায় এগারো মিনিট পিছিয়ে ছিল, তাই স্থিরচিত্রের সময় প্রকৃত সময়ের সঙ্গে মিলিয়ে পড়তে হবে. সূত্র: আশা মেনন হলফনামা, পৃষ্ঠা ১."
                 case .nativeVideoUnavailable:
-                    return "October 30, 2025-এ relevant native video user interface-এ আর available ছিল না, তাই preservation ও overwrite issue advocate review-এর জন্য গুরুত্বপূর্ণ. সূত্র: 03_Affidavit_Asha_Menon_Camera_Retention · p. 1."
+                    return "৩০ অক্টোবর ২০২৫-এ সংশ্লিষ্ট মূল ভিডিও ব্যবহারকারী পটলে আর ছিল না, তাই সংরক্ষণ ও স্বয়ংক্রিয় অধিলেখনের প্রশ্ন অধিবক্তা পর্যালোচনার জন্য গুরুত্বপূর্ণ. সূত্র: আশা মেনন হলফনামা, পৃষ্ঠা ১."
                 case .accessLog:
-                    return "Access log manual deletion বা trimming দেখায় না, কিন্তু automated overwrites deletion হিসেবে record করে না. সূত্র: 03_Affidavit_Asha_Menon_Camera_Retention · p. 2."
+                    return "প্রবেশ-নথি হাতে মুছে ফেলা বা কাটাছেঁড়া দেখায় না, কিন্তু স্বয়ংক্রিয় অধিলেখনকে মুছে ফেলা হিসেবে নথিবদ্ধও করে না. সূত্র: আশা মেনন হলফনামা, পৃষ্ঠা ২."
                 }
             }
         case .english:
@@ -1801,17 +1902,25 @@ extension AlphaRossModel {
         let normalized = question
             .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
             .lowercased()
+        if question.unicodeScalars.contains(where: { (0x0980...0x09FF).contains(Int($0.value)) }) {
+            return .bengali
+        }
+        if question.unicodeScalars.contains(where: { (0x0900...0x097F).contains(Int($0.value)) }) {
+            return .hindi
+        }
         if alphaQuestionRequestsBengali(normalized) {
             return .bengali
         }
         if alphaQuestionRequestsHindi(normalized) {
             return .hindi
         }
-        if question.unicodeScalars.contains(where: { (0x0980...0x09FF).contains(Int($0.value)) }) {
-            return .bengali
-        }
-        if question.unicodeScalars.contains(where: { (0x0900...0x097F).contains(Int($0.value)) }) {
+        switch rossSelectedLanguageCode() {
+        case "hi":
             return .hindi
+        case "bn":
+            return .bengali
+        default:
+            break
         }
         return .english
     }
@@ -1873,8 +1982,9 @@ extension AlphaRossModel {
             return alphaIndicScriptCharacterCount(in: text, script: .hindi) >= 8 ||
                 (alphaIndicScriptRatio(in: text, script: .hindi) >= 0.35 && alphaLatinWordCount(in: text) <= 18)
         case .bengali:
-            return alphaIndicScriptCharacterCount(in: text, script: .bengali) >= 8 ||
-                (alphaIndicScriptRatio(in: text, script: .bengali) >= 0.30 && alphaLatinWordCount(in: text) <= 20)
+            return alphaIndicScriptCharacterCount(in: text, script: .bengali) >= 8 &&
+                alphaIndicScriptRatio(in: text, script: .bengali) >= 0.55 &&
+                alphaLatinWordCount(in: text) <= 8
         }
     }
 

@@ -16,6 +16,9 @@ The architecture has three important rules:
 
 ## High-Level Architecture
 
+> 🖼️ **Image prompt (handwritten notes style)**
+> Loose sketch on grid paper with a dark blue pen. Title: "Ross — Gemma 4 in the loop". Three horizontal swim lanes, each clearly labeled. Top lane "Advocate": boxes labeled "Import docs", "Ask question", "Review answer". Middle lane "Ross iOS": boxes "Source pack builder", "Prompt constructor", "Output validator", "Source pills". Bottom lane "On-device only": a rounded grey box spanning full width labeled "llama.cpp + Gemma 4 GGUF" with a padlock icon. Vertical dashed arrows connecting lanes at each step. A bold dashed border around the bottom lane labeled "Private — never leaves device". Informal hand-lettering, some arrows slightly curved.
+
 ```mermaid
 flowchart TD
     User[Advocate] --> App[Ross iOS app]
@@ -110,6 +113,12 @@ sequenceDiagram
     M->>UI: Replace loading card with answer
     UI-->>U: Answer, copy button, source pills
 ```
+
+> 🖼️ **Image prompt (app screenshot style)**
+> iOS 17 iPhone 15 Pro dark-mode screenshot. The screen shows Ross's "Ask Ross" chat interface inside a matter called "CAM vs. Horizon Media". At the top: a file tag chip reading "📄 Order_12May.pdf". A typed question in a chat bubble: "What are the key directions from the latest order?". Below, a loading card with a pulsing blue dot: "Ross is answering… Gemma 4 E2B Q2_K is running on this iPhone. Checking your local files." Background is near-black (#111). Message bubbles use white text on dark. SF Pro font. Status bar at top. A subtle bottom safe-area with a text input field.
+
+> 🖼️ **Image prompt (app screenshot style)**
+> Same iPhone 15 Pro screenshot, same matter, but the loading card has been replaced with a completed answer. A short bold headline: "Key directions — Order dated 12 May". Below: 3–4 bullet points with concise legal directions text. Underneath the answer: a row of horizontally scrollable grey pill chips labeled "Order_12May.pdf p.3", "Order_12May.pdf p.7", "CAM_Bundle.pdf p.12". A blue "Copy" button in the top-right of the answer card. Design consistent with previous screenshot — dark background, white text, SF Pro.
 
 This flow deliberately separates user-visible chat from model execution. The app first creates a pending turn, then upgrades that turn when the local model result returns. That gives the user a responsive UI even when local inference takes a few seconds.
 
@@ -250,6 +259,9 @@ The validation layer is what turns a local model demo into a product feature. A 
 
 ## Multilingual Behavior
 
+> 🖼️ **Image prompt (app screenshot style)**
+> Side-by-side comparison image (two phone mockups on a light grey background). Left phone: Ross Ask Ross screen with a question typed in Hindi (Devanagari script): "इस आदेश की मुख्य दिशाएं क्या हैं?" and a completed answer card fully in Devanagari Hindi with bullet points. A source pill row below: "Order_12May.pdf p.3". Right phone: same layout but question in Bengali script: "এই আদেশের মূল নির্দেশনাগুলি কী?" with Bengali answer text. Both phones show dark-mode Ross interface. Caption below the phones: "Local Gemma 4 answering in the advocate's language — no cloud connection."
+
 Ross detects the user's requested language from the prompt script:
 
 - Devanagari script means Hindi answer.
@@ -264,6 +276,30 @@ This logic lives in:
 - `alphaPayloadMatchesRequestedLanguage(...)`
 - `alphaIndicScriptRatio(...)`
 - `alphaLatinWordCount(...)`
+
+## Reliability Engineering
+
+Running a 3 GB model on a mobile device and producing a clean answer in a legal workflow requires more than getting llama.cpp to compile. These were the hardest reliability problems in making the product shippable:
+
+### Swift exclusive-access safety
+
+The `@Observable` state model in SwiftUI uses `inout` semantics for mutation closures. Any closure that holds an `inout` reference to a path inside `persisted` (e.g., `persisted.cases[n].turns[m]`) locks the entire `persisted` tree for the duration of the closure. If the closure calls helpers that also read `persisted`, Swift's runtime exclusivity checker crashes the app.
+
+The fix: precompute all reads outside mutation closures. Source-ref lookups, model running status, and any other persisted reads happen before the closure opens. The closure only writes.
+
+This crash only appeared on physical devices, not the simulator, because the simulator's memory layout is more permissive. If your `@Observable` iOS app crashes in inference on device but passes the simulator, check for inout/read conflicts.
+
+### Streaming render performance
+
+SwiftUI re-renders every observed state change. During streaming, that means `body` re-evaluates on every token arrival. Any expensive operation inside a computed property or `body` becomes a per-token cost.
+
+In Ross, five regex patterns for markdown-like stripping were being compiled inline on every body render. At 8 tokens/second × 50 lines × 5 patterns, the main thread was doing ~2,000 `NSRegularExpression` compile-and-destroy cycles per second during streaming. The fix is one line: declare each pattern as a `private let` static constant at file scope and reuse the compiled object.
+
+### State invalidation and debouncing
+
+Every call to `persist()` that reassigned the entire `persisted` struct caused a complete SwiftUI diff over the whole app. During streaming, `persist()` was called on every turn mutation, which cascaded into full view tree re-evaluation.
+
+Two fixes together: debounce `persist()` to 250ms (so 10 tokens in a burst produce one write, not ten), and debounce the downstream snapshot rebuild to 300ms. The UI stays responsive and the disk writes batch cleanly.
 
 ## UI Integration
 
@@ -339,3 +375,11 @@ The remediation moved those checks into explicit product boundaries:
 That matters because a private legal assistant must be honest about what it used. If Ross cannot find a relevant local source, the correct answer is: "I don't have a source on this device for this question." Gemma 4 is powerful, but the product wrapper decides when it is allowed to speak from files.
 
 That is the core lesson from Ross: local LLMs become useful when they are embedded into a careful product system, not when they are treated as a standalone chatbot.
+
+---
+
+> 🖼️ **Image prompt (app screenshot style)**
+> iPhone 15 Pro screenshot of the "Privacy Ledger" screen in the Ross app. Dark background. Title at top: "Privacy Ledger". A timeline of recent events in a list. Each row has an icon, a label, and a status badge. Examples: 🔒 "Ask Ross — CAM matter" → badge "Local only". 🔒 "Document import — Order_12May.pdf" → badge "Local only". 🌐 "Public law search — sanitized query" → badge "Network — approved by you" with a small checkmark. A section header: "What stayed local" with a green lock icon. A second section: "What crossed the network" with a blue globe icon. At the bottom a note: "Your case files never left this device." Clean iOS list style with subtle dividers.
+
+> 🖼️ **Image prompt (handwritten notes style)**
+> A summary page of notes on slightly yellowed lined paper, written with a fine black ballpoint. Title: "What makes Gemma 4 useful in a legal product (not just a demo)". A simple two-column table drawn by hand. Left column header "Just a demo", right column header "Product". Rows: "Model runs → answers grounded in sources", "Output is text → output is validated payload", "Works in English → works in Hindi/Bengali", "Downloads once → storage doesn't leak on retry", "Runs fast → stays responsive while streaming", "Shows answer → shows answer with citations". At the bottom, circled: "The column on the right is 90% of the work." Casual but legible handwriting, a few cross-outs, emphasis double-underlines on key words.

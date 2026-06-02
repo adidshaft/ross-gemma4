@@ -437,19 +437,38 @@ enum AlphaMatterAskPayloadParser {
             .replacingOccurrences(of: #"(^|\s)[\*•]\s+"#, with: "\n- ", options: .regularExpression)
             .replacingOccurrences(of: #"(?m)^\s*-\s+"#, with: "\n- ", options: .regularExpression)
 
-        let rawFragments = bulletSeparated
-            .components(separatedBy: .newlines)
-            .flatMap { line -> [String] in
-                let cleanedLine = cleanPlainTextFragment(line)
-                guard !cleanedLine.isEmpty else { return [] }
-                if cleanedLine.contains(" - ") {
-                    return cleanedLine
-                        .components(separatedBy: " - ")
-                        .map(cleanPlainTextFragment)
+        let blockFragments: [String]
+        if bulletSeparated.contains("\n- ") {
+            blockFragments = bulletSeparated
+                .components(separatedBy: "\n- ")
+                .map { block in
+                    block
+                        .components(separatedBy: .newlines)
+                        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
                         .filter { !$0.isEmpty }
+                        .joined(separator: " ")
                 }
-                return [cleanedLine]
-            }
+                .map(cleanPlainTextFragment)
+                .filter { !$0.isEmpty }
+        } else {
+            blockFragments = []
+        }
+
+        let rawFragments = blockFragments.isEmpty
+            ? bulletSeparated
+                .components(separatedBy: .newlines)
+                .flatMap { line -> [String] in
+                    let cleanedLine = cleanPlainTextFragment(line)
+                    guard !cleanedLine.isEmpty else { return [] }
+                    if cleanedLine.contains(" - ") {
+                        return cleanedLine
+                            .components(separatedBy: " - ")
+                            .map(cleanPlainTextFragment)
+                            .filter { !$0.isEmpty }
+                    }
+                    return [cleanedLine]
+                }
+            : blockFragments
 
         return rawFragments
             .map { preserveHeadline ? $0 : cleanPlainTextHeadline($0) }
@@ -1407,6 +1426,13 @@ final class AlphaBackgroundModelDownloadCenter: NSObject, URLSessionDownloadDele
 enum AlphaAssistantDownloadError: LocalizedError {
     case invalidURL
     case httpStatus(Int)
+    case preflightMissingSize
+    case preflightSizeMismatch(expected: Int64, reported: Int64)
+    case preflightNotResumable
+    case preflightChecksumMismatch(catalog: String, provider: String)
+    case rangeProbeInvalidStatus(Int)
+    case rangeProbeInvalidLength(expected: Int64, received: Int64)
+    case rangeProbeInvalidContentRange(String)
     case insufficientStorage(requiredGB: Int, availableGB: Int)
     case missingDownloadedFile
     case pausedByUser
@@ -1417,6 +1443,22 @@ enum AlphaAssistantDownloadError: LocalizedError {
             return "The selected private assistant download link is invalid."
         case .httpStatus(let status):
             return "The private assistant download returned HTTP \(status)."
+        case .preflightMissingSize:
+            return "Ross could not confirm the private assistant file size before downloading."
+        case .preflightSizeMismatch(let expected, let reported):
+            let expectedLabel = ByteCountFormatter.string(fromByteCount: expected, countStyle: .file)
+            let reportedLabel = ByteCountFormatter.string(fromByteCount: reported, countStyle: .file)
+            return "The private assistant provider reported \(reportedLabel), but Ross expected \(expectedLabel). Setup stopped before downloading."
+        case .preflightNotResumable:
+            return "The private assistant provider did not advertise resumable downloads. Retry later on Wi-Fi."
+        case .preflightChecksumMismatch:
+            return "The private assistant provider checksum does not match the catalog. Setup stopped before downloading."
+        case .rangeProbeInvalidStatus(let status):
+            return "The private assistant provider did not serve a resumable byte range. HTTP \(status)."
+        case .rangeProbeInvalidLength(let expected, let received):
+            return "The private assistant byte-range check returned \(received) bytes; Ross expected \(expected)."
+        case .rangeProbeInvalidContentRange(let value):
+            return "The private assistant provider returned an unexpected Content-Range header: \(value)."
         case .insufficientStorage(let requiredGB, let availableGB):
             return "This private assistant needs about \(requiredGB) GB free. This iPhone currently reports \(availableGB) GB free."
         case .missingDownloadedFile:
@@ -1424,6 +1466,130 @@ enum AlphaAssistantDownloadError: LocalizedError {
         case .pausedByUser:
             return "Assistant setup is paused."
         }
+    }
+}
+
+struct AlphaAssistantRangeProbe: Hashable, Sendable {
+    let startByte: Int64
+    let endByte: Int64
+    let totalBytes: Int64
+    let receivedBytes: Int64
+
+    static func parse(response: HTTPURLResponse, receivedBytes: Int64, expectedStart: Int64, expectedEnd: Int64, expectedTotal: Int64) throws -> AlphaAssistantRangeProbe {
+        guard response.statusCode == 206 else {
+            throw AlphaAssistantDownloadError.rangeProbeInvalidStatus(response.statusCode)
+        }
+        let expectedBytes = expectedEnd - expectedStart + 1
+        guard receivedBytes == expectedBytes else {
+            throw AlphaAssistantDownloadError.rangeProbeInvalidLength(expected: expectedBytes, received: receivedBytes)
+        }
+        let headers = alphaHTTPHeaders(from: response)
+        guard let value = headers["content-range"] else {
+            throw AlphaAssistantDownloadError.rangeProbeInvalidContentRange("missing")
+        }
+        let parsed = try parseContentRange(value)
+        guard parsed.start == expectedStart,
+              parsed.end == expectedEnd,
+              expectedTotal <= 0 || parsed.total == expectedTotal else {
+            throw AlphaAssistantDownloadError.rangeProbeInvalidContentRange(value)
+        }
+        return AlphaAssistantRangeProbe(
+            startByte: parsed.start,
+            endByte: parsed.end,
+            totalBytes: parsed.total,
+            receivedBytes: receivedBytes
+        )
+    }
+
+    private static func parseContentRange(_ value: String) throws -> (start: Int64, end: Int64, total: Int64) {
+        let pattern = #"^bytes\s+(\d+)-(\d+)/(\d+)$"#
+        let regex = try NSRegularExpression(pattern: pattern, options: [.caseInsensitive])
+        let range = NSRange(value.startIndex..<value.endIndex, in: value)
+        guard let match = regex.firstMatch(in: value, range: range),
+              let startRange = Range(match.range(at: 1), in: value),
+              let endRange = Range(match.range(at: 2), in: value),
+              let totalRange = Range(match.range(at: 3), in: value),
+              let start = Int64(value[startRange]),
+              let end = Int64(value[endRange]),
+              let total = Int64(value[totalRange]) else {
+            throw AlphaAssistantDownloadError.rangeProbeInvalidContentRange(value)
+        }
+        return (start, end, total)
+    }
+}
+
+struct AlphaAssistantDownloadPreflight: Hashable, Sendable {
+    let reportedBytes: Int64
+    let acceptsRanges: Bool
+    let providerChecksumSha256: String?
+
+    var effectiveChecksumSha256: String? {
+        providerChecksumSha256
+    }
+
+    func expectedChecksum(catalogChecksum: String) throws -> String {
+        let catalog = catalogChecksum.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let provider = providerChecksumSha256?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if !catalog.isEmpty, let provider, !provider.isEmpty, catalog != provider {
+            throw AlphaAssistantDownloadError.preflightChecksumMismatch(catalog: catalog, provider: provider)
+        }
+        if !catalog.isEmpty {
+            return catalog
+        }
+        return provider ?? ""
+    }
+
+    static func parse(response: HTTPURLResponse, expectedBytes: Int64) throws -> AlphaAssistantDownloadPreflight {
+        guard (200...299).contains(response.statusCode) else {
+            throw AlphaAssistantDownloadError.httpStatus(response.statusCode)
+        }
+        let headers = alphaHTTPHeaders(from: response)
+        let reportedBytes = headers["x-linked-size"].flatMap(Int64.init)
+            ?? headers["content-length"].flatMap(Int64.init)
+        guard let reportedBytes, reportedBytes > 0 else {
+            throw AlphaAssistantDownloadError.preflightMissingSize
+        }
+        guard expectedBytes <= 0 || reportedBytes == expectedBytes else {
+            throw AlphaAssistantDownloadError.preflightSizeMismatch(expected: expectedBytes, reported: reportedBytes)
+        }
+
+        let acceptRanges = alphaAcceptsByteRanges(headers["accept-ranges"])
+        guard acceptRanges else {
+            throw AlphaAssistantDownloadError.preflightNotResumable
+        }
+
+        let checksum = [headers["x-linked-etag"], headers["etag"], headers["x-xet-hash"]]
+            .compactMap { $0?.trimmingCharacters(in: CharacterSet(charactersIn: "\"")) }
+            .first(where: alphaLooksLikeSHA256Hex)
+
+        return AlphaAssistantDownloadPreflight(
+            reportedBytes: reportedBytes,
+            acceptsRanges: acceptRanges,
+            providerChecksumSha256: checksum?.lowercased()
+        )
+    }
+}
+
+private func alphaHTTPHeaders(from response: HTTPURLResponse) -> [String: String] {
+    response.allHeaderFields.reduce(into: [String: String]()) { headers, item in
+        guard let key = item.key as? String else { return }
+        headers[key.lowercased()] = String(describing: item.value)
+    }
+}
+
+private func alphaAcceptsByteRanges(_ value: String?) -> Bool {
+    guard let value else { return false }
+    return value
+        .split(separator: ",")
+        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+        .contains("bytes")
+}
+
+private func alphaLooksLikeSHA256Hex(_ value: String) -> Bool {
+    guard value.count == 64 else { return false }
+    return value.unicodeScalars.allSatisfy { scalar in
+        ("0"..."9").contains(Character(scalar)) ||
+            ("a"..."f").contains(Character(String(scalar).lowercased()))
     }
 }
 

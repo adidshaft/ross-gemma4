@@ -470,15 +470,16 @@ struct AlphaRootAskDock: View {
                 .padding(.leading, 7)
                 .padding(.trailing, 13)
                 .padding(.vertical, 5)
-                .background {
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(colorScheme == .dark ? Color.black.opacity(0.34) : Color.white.opacity(0.82))
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                }
-                .overlay {
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(colorScheme == .dark ? Color.white.opacity(0.18) : Color.rossBorder.opacity(0.68), lineWidth: 1)
-                }
+                .rossGlassSurface(
+                    tint: Color.rossHighlight,
+                    cornerRadius: 20,
+                    interactive: true,
+                    shadowOpacity: colorScheme == .dark ? 0.16 : 0.08,
+                    shadowRadius: 8,
+                    shadowY: 3,
+                    fillOpacity: colorScheme == .dark ? 0.76 : 0.86,
+                    strokeOpacity: 0.52
+                )
 
                 Button {
                     if canSend {
@@ -660,7 +661,7 @@ struct AlphaRootAskDock: View {
                                     .font(.callout.weight(.medium))
                                     .frame(minHeight: 96)
                                     .padding(8)
-                                    .background(Color.rossSecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                    .rossGlassSurface(cornerRadius: 12, interactive: true, shadowOpacity: 0.04, shadowRadius: 4, shadowY: 1, strokeOpacity: 0.48)
                                 } else {
                                     Text(preview.query)
                                         .font(.callout.weight(.semibold))
@@ -668,7 +669,7 @@ struct AlphaRootAskDock: View {
                                         .fixedSize(horizontal: false, vertical: true)
                                         .padding(12)
                                         .frame(maxWidth: .infinity, alignment: .leading)
-                                        .background(Color.rossSecondaryGroupedBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                        .rossGlassSurface(cornerRadius: 12, strokeOpacity: 0.48)
                                 }
                             }
 
@@ -677,7 +678,7 @@ struct AlphaRootAskDock: View {
                                 .foregroundStyle(Color.rossInk.opacity(0.62))
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 7)
-                                .background(Color.rossSecondaryGroupedBackground.opacity(0.72), in: Capsule())
+                                .rossGlassSurface(cornerRadius: 999, strokeOpacity: 0.42)
 
                             if model.publicLawSearchInFlight {
                                 ProgressView("Searching legal sources…")
@@ -812,11 +813,7 @@ struct AlphaDockActivityPill: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 9)
-        .background(colorScheme == .dark ? Color.black.opacity(0.22) : Color.white.opacity(0.56), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(colorScheme == .dark ? Color.white.opacity(0.11) : Color.rossBorder.opacity(0.52), lineWidth: 1)
-        }
+        .rossGlassSurface(cornerRadius: 16, shadowOpacity: 0.08, shadowRadius: 8, shadowY: 3, fillOpacity: 0.78, strokeOpacity: 0.44)
         .accessibilityElement(children: .combine)
     }
 }
@@ -846,12 +843,13 @@ struct AlphaDockActivityBar: View {
         }
         .padding(.horizontal, 12)
         .frame(height: 38)
-        .background(colorScheme == .dark ? Color.rossGlassFill.opacity(0.9) : Color.white.opacity(0.86), in: Capsule())
-        .overlay {
-            Capsule()
-                .stroke(colorScheme == .dark ? Color.white.opacity(0.13) : Color.rossBorder.opacity(0.58), lineWidth: 1)
-        }
-        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.14 : 0.08), radius: 12, y: 5)
+        .rossNativeGlassSurface(
+            tint: Color.rossAccent,
+            shape: Capsule(),
+            fallbackFillOpacity: 0.82,
+            fallbackStrokeOpacity: 0.48
+        )
+        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.14 : 0.08), radius: 10, y: 4)
         .accessibilityElement(children: .combine)
     }
 }
@@ -945,12 +943,15 @@ struct AlphaInlineAskResponseCard: View {
             }
         }
         .padding(14)
-        .background(Color.rossCardBackground.opacity(0.96), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.rossBorder.opacity(0.3), lineWidth: 1)
-        }
-        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
+        .rossGlassSurface(
+            tint: Color.rossHighlight,
+            cornerRadius: 18,
+            shadowOpacity: 0.09,
+            shadowRadius: 10,
+            shadowY: 4,
+            fillOpacity: 0.84,
+            strokeOpacity: 0.48
+        )
         .gesture(
             DragGesture(minimumDistance: 20, coordinateSpace: .local)
                 .onEnded { value in
@@ -990,7 +991,13 @@ struct AlphaAskScopePill: View {
         .foregroundStyle(foregroundStyle)
         .padding(.horizontal, AlphaAskPillMetrics.horizontalPadding)
         .frame(height: AlphaAskPillMetrics.height)
-        .background(Color.white.opacity(backgroundOpacity), in: Capsule())
+        .rossNativeGlassSurface(
+            tint: Color.rossAccent,
+            shape: Capsule(),
+            interactive: showsChevron,
+            fallbackFillOpacity: backgroundOpacity,
+            fallbackStrokeOpacity: 0.38
+        )
     }
 }
 
@@ -1365,13 +1372,6 @@ struct AlphaAskComposerSheet: View {
                 }
 
                 ZStack(alignment: .topLeading) {
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(Color.rossCardBackground.opacity(0.86))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                                .stroke(Color.rossBorder.opacity(0.85), lineWidth: 1)
-                        }
-
                     if draftText.isEmpty {
                         Text("Ask Ross about this matter, a tagged file, or your next drafting step.")
                             .font(.footnote)
@@ -1389,6 +1389,16 @@ struct AlphaAskComposerSheet: View {
                         .padding(.horizontal, 14)
                         .padding(.vertical, 12)
                 }
+                .rossGlassSurface(
+                    tint: Color.rossHighlight,
+                    cornerRadius: 24,
+                    interactive: true,
+                    shadowOpacity: 0.08,
+                    shadowRadius: 8,
+                    shadowY: 3,
+                    fillOpacity: 0.84,
+                    strokeOpacity: 0.50
+                )
                 .frame(
                     maxWidth: .infinity,
                     minHeight: min(max(proxy.size.height * 0.34, 220), 320),
@@ -1480,7 +1490,13 @@ struct AlphaRootAskToolsSheet: View {
                             .font(.system(size: 13, weight: .bold))
                             .foregroundStyle(Color.rossInk.opacity(0.72))
                             .frame(width: 30, height: 30)
-                            .background(Color.rossGlassFill, in: Circle())
+                            .rossNativeGlassSurface(
+                                tint: Color.rossInk.opacity(0.7),
+                                shape: Circle(),
+                                interactive: true,
+                                fallbackFillOpacity: 0.82,
+                                fallbackStrokeOpacity: 0.44
+                            )
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Close Ask Ross tools")
@@ -1656,12 +1672,16 @@ struct AlphaRootAskDocumentRow: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
-            .background(Color.rossCardBackground)
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(isSelected ? Color.rossAccent.opacity(0.36) : Color.rossBorder, lineWidth: 1)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .rossGlassSurface(
+                tint: isSelected ? Color.rossAccent : Color.rossHighlight,
+                cornerRadius: 18,
+                interactive: true,
+                shadowOpacity: isSelected ? 0.10 : 0.07,
+                shadowRadius: isSelected ? 9 : 7,
+                shadowY: 3,
+                fillOpacity: 0.82,
+                strokeOpacity: isSelected ? 0.56 : 0.46
+            )
         }
         .buttonStyle(.plain)
     }
@@ -1703,12 +1723,16 @@ struct AlphaRootAskToolRow: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
-            .background(Color.rossCardBackground)
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(Color.rossBorder, lineWidth: 1)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .rossGlassSurface(
+                tint: Color.rossAccent,
+                cornerRadius: 18,
+                interactive: true,
+                shadowOpacity: 0.08,
+                shadowRadius: 8,
+                shadowY: 3,
+                fillOpacity: 0.82,
+                strokeOpacity: 0.48
+            )
         }
         .buttonStyle(.plain)
     }
@@ -1741,12 +1765,16 @@ struct AlphaRootAskScopeRow: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
-            .background(isSelected ? Color.rossAccent.opacity(0.08) : Color.rossCardBackground)
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(isSelected ? Color.rossAccent.opacity(0.22) : Color.rossBorder, lineWidth: 1)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .rossGlassSurface(
+                tint: isSelected ? Color.rossAccent.opacity(0.18) : Color.rossAccent.opacity(0.08),
+                cornerRadius: 18,
+                interactive: true,
+                shadowOpacity: isSelected ? 0.08 : 0.04,
+                shadowRadius: isSelected ? 8 : 5,
+                shadowY: isSelected ? 2 : 1,
+                fillOpacity: isSelected ? 0.80 : 0.72,
+                strokeOpacity: isSelected ? 0.62 : 0.48
+            )
         }
         .buttonStyle(.plain)
     }

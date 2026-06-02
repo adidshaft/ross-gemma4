@@ -1,25 +1,33 @@
 # Model Downloads & Validation
 
-To operate in full production mode, ROSS-Gemma4 requires secure, offline inference artifacts for three active Gemma 4 capability packs.
+To operate in full production mode, ROSS-Gemma4 requires secure, offline inference artifacts for the active Gemma 4 capability packs.
 
 ## Active Capability Tiers
-1. **Quick Associate**: `gemma-4-e2b-q4` (upstream: `google/gemma-4-E2B-it`)
-2. **Case Associate**: `gemma-4-e4b-q4` (upstream: `google/gemma-4-E4B-it`)
-3. **Senior Drafting Support**: `gemma-4-26b-a4b-q4` (upstream: `google/gemma-4-26B-A4B-it`)
+1. **Flash**: `gemma-4-e2b-q2` (`bartowski/google_gemma-4-E2B-it-GGUF`, Q2_K)
+2. **Quick Start**: `gemma-4-e2b-q4` (`bartowski/google_gemma-4-E2B-it-GGUF`, Q4_K_M)
+3. **Case Associate**: `gemma-4-e4b-q4` (`bartowski/google_gemma-4-E4B-it-GGUF`, Q4_K_M)
+4. **Senior Drafting Support**: `gemma-4-26b-a4b-q4` (`bartowski/google_gemma-4-26B-A4B-it-GGUF`, Q4_K_M)
 
 ## Desired Format
-The desired artifact format for mobile/local inference is `GGUF` at `Q4_K_M` (4-bit quantization).
+The desired artifact format for mobile/local inference is `GGUF`. First-run Flash uses `Q2_K`; the stronger tiers use `Q4_K_M`.
 
 ## Download & Verification Process
-Currently, the model registry uses placeholder URLs (`__REPLACE_WITH_VERIFIED_DIRECT_URL__`) and placeholder checksums (`__REPLACE_WITH_VERIFIED_SHA256__`).
+The iOS registry now uses direct Hugging Face GGUF URLs. Catalog SHA-256 values may be empty when the upstream provider exposes the digest during preflight; Ross stores that provider checksum after HEAD/range validation and validates the GGUF can open before activating it.
 
-To enable real model downloads:
-1. Locate or produce the verified GGUF files for the active tiers.
-2. Calculate the exact file size (bytes) and SHA-256 hash using `./scripts/model-artifact-checksum.sh <path-to.gguf>`.
-3. Update the Swift registry (`ios/Ross/AlphaFoundation/AlphaRossModel.swift`) and the JSON registry (`shared/constants/privateAssistantModelRegistry.json`).
-4. Set `verified: true` and `releaseReady: true`.
+Current proof:
+
+1. `--local-model-smoke` ran real simulator GGUF inference on 2026-06-02.
+2. The smoke passed English source grounding, Bengali Bangla-script grounding, Hindi Devanagari grounding, and a general cautious answer.
+3. Swift tests cover preflight parsing, range probes, checksum/provider digest handling, startup recovery, repair, and artifact removal.
+
+Still required before claiming physical-device production readiness:
+
+1. Download a full configured GGUF on a physical iPhone.
+2. Exercise pause/resume, checksum/provider digest handling, runtime validation, repair, and re-download.
+3. Ask from imported PDF/image/text files in English, Hindi, and Bengali.
+4. Record performance, storage, privacy, and fallback status.
 
 **Important**: 
 - Never fabricate real URLs or checksums.
-- `releaseReady` must remain `false` while placeholders are present.
-- A real, iOS-compatible local runtime must be integrated alongside these artifacts (see `IOS_RUNTIME.md`).
+- Keep model files out of the repository.
+- Treat simulator proof separately from physical-device performance proof.

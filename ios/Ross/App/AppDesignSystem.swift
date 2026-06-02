@@ -44,7 +44,7 @@ public enum RossCorner {
     public static let lg: CGFloat = 26
 }
 
-// MARK: - Card Style (iOS 26: deeper material, specular top edge, lens lift)
+// MARK: - Card Style
 
 public struct RossCardStyle: ViewModifier {
     @Environment(\.colorScheme) private var colorScheme
@@ -54,91 +54,12 @@ public struct RossCardStyle: ViewModifier {
 
         content
             .padding(18)
-            .background {
-                if colorScheme == .dark {
-                    ZStack {
-                        shape.fill(.ultraThinMaterial)
-
-                        // Tinted glass body
-                        shape.fill(
-                            LinearGradient(
-                                colors: [
-                                    Color.white.opacity(0.06),
-                                    Color.rossGlassSubtleFill.opacity(0.88),
-                                    Color.rossGlassFill.opacity(0.72)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-
-                        // Lens specular sheen
-                        shape.fill(
-                            LinearGradient(
-                                colors: [
-                                    Color.white.opacity(0.07),
-                                    Color.clear,
-                                    Color.white.opacity(0.015)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        ).blendMode(.screen)
-                    }
-                } else {
-                    ZStack {
-                        shape.fill(.ultraThinMaterial)
-                        shape.fill(Color.white.opacity(0.72))
-                        shape.fill(
-                            LinearGradient(
-                                colors: [Color.white.opacity(0.60), Color.clear],
-                                startPoint: .top,
-                                endPoint: .center
-                            )
-                        )
-                    }
-                }
-            }
-            .overlay {
-                // Primary lens edge — bright specular on top, darker base
-                shape.strokeBorder(
-                    colorScheme == .dark
-                        ? LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.22),
-                                Color.white.opacity(0.06),
-                                Color.black.opacity(0.12)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                        : LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.92),
-                                Color.rossBorder.opacity(0.55)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ),
-                    lineWidth: colorScheme == .dark ? 1 : 0.75
-                )
-            }
-            // Top specular highlight only
-            .overlay(alignment: .top) {
-                if colorScheme == .dark {
-                    shape
-                        .stroke(
-                            LinearGradient(
-                                colors: [Color.white.opacity(0.14), Color.clear],
-                                startPoint: .top,
-                                endPoint: .center
-                            ),
-                            lineWidth: 1
-                        )
-                        .padding(.horizontal, 0.5)
-                }
-            }
-            .clipShape(shape)
+            .rossNativeGlassSurface(
+                tint: colorScheme == .dark ? Color.rossHighlight : Color.white,
+                shape: shape,
+                fallbackFillOpacity: colorScheme == .dark ? 0.72 : 0.86,
+                fallbackStrokeOpacity: colorScheme == .dark ? 0.30 : 0.58
+            )
             .shadow(
                 color: colorScheme == .dark
                     ? Color.black.opacity(0.28)
@@ -147,7 +68,6 @@ public struct RossCardStyle: ViewModifier {
                 x: 0,
                 y: colorScheme == .dark ? 10 : 7
             )
-            // Outer ambient glow (iOS 26 "lift")
             .shadow(
                 color: colorScheme == .dark
                     ? Color.rossBackdropGlow.opacity(0.08)
@@ -159,7 +79,7 @@ public struct RossCardStyle: ViewModifier {
     }
 }
 
-// MARK: - Primary Button Style (iOS 26: pill-shaped, gradient fill, specular top)
+// MARK: - Primary Button Style
 
 public struct RossPrimaryButtonStyle: ButtonStyle {
     public func makeBody(configuration: Configuration) -> some View {
@@ -206,7 +126,7 @@ public struct RossPrimaryButtonStyle: ButtonStyle {
     }
 }
 
-// MARK: - Glass Button Style (iOS 26: real lens surface, refractive edges)
+// MARK: - Glass Button Style
 
 public struct RossGlassButtonStyle: ButtonStyle {
     public var tint: Color
@@ -264,41 +184,85 @@ private struct RossGlassSurfaceModifier: ViewModifier {
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
 
-        // Native iOS 26 glassEffect is visually beautiful, but it currently causes
-        // AttributeGraph churn on the assistant setup screen. Keep the glass look
-        // with stable material/gradient layers until the renderer is safe here.
         content
-            .background {
-                ZStack {
-                    shape.fill(.ultraThinMaterial)
+            .rossNativeGlassSurface(
+                tint: tint,
+                shape: shape,
+                interactive: interactive,
+                fallbackFillOpacity: fillOpacity,
+                fallbackStrokeOpacity: strokeOpacity
+            )
+            .shadow(color: Color.rossShadow.opacity(shadowOpacity), radius: shadowRadius, y: shadowY)
+    }
+}
+
+private struct RossNativeGlassSurfaceModifier<S: InsettableShape>: ViewModifier {
+    @Environment(\.colorScheme) private var colorScheme
+
+    let tint: Color
+    let shape: S
+    let interactive: Bool
+    let fallbackFillOpacity: Double
+    let fallbackStrokeOpacity: Double
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            content
+                .background {
                     shape.fill(
-                        LinearGradient(
-                            colors: [
-                                Color.rossGlassFill.opacity(fillOpacity),
-                                tint.opacity(colorScheme == .dark ? 0.08 : 0.05),
-                                Color.rossGlassSubtleFill.opacity(fillOpacity * 0.82)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+                        Color.rossGlassFill.opacity(
+                            colorScheme == .dark
+                                ? max(fallbackFillOpacity * 0.48, 0.30)
+                                : max(fallbackFillOpacity * 0.58, 0.46)
                         )
                     )
                 }
-            }
-            .overlay {
-                shape.strokeBorder(
-                    LinearGradient(
-                        colors: [
-                            Color.rossGlassStroke.opacity(strokeOpacity),
-                            tint.opacity(strokeOpacity * 0.28)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
+                .glassEffect(
+                    (interactive ? Glass.regular.interactive() : Glass.regular)
+                        .tint(tint.opacity(colorScheme == .dark ? 0.28 : 0.20)),
+                    in: shape
                 )
-            }
-            .clipShape(shape)
-            .shadow(color: Color.rossShadow.opacity(shadowOpacity), radius: shadowRadius, y: shadowY)
+                .overlay {
+                    shape.strokeBorder(
+                        Color.rossGlassStroke.opacity(colorScheme == .dark ? 0.26 : 0.62),
+                        lineWidth: 1
+                    )
+                }
+                .clipShape(shape)
+        } else {
+            content
+                .background {
+                    ZStack {
+                        shape.fill(.ultraThinMaterial)
+                        shape.fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.rossGlassFill.opacity(fallbackFillOpacity),
+                                    tint.opacity(colorScheme == .dark ? 0.08 : 0.05),
+                                    Color.rossGlassSubtleFill.opacity(fallbackFillOpacity * 0.82)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                    }
+                }
+                .overlay {
+                    shape.strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                Color.rossGlassStroke.opacity(fallbackStrokeOpacity),
+                                tint.opacity(fallbackStrokeOpacity * 0.28)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+                }
+                .clipShape(shape)
+        }
     }
 }
 
@@ -375,6 +339,24 @@ public extension View {
                 shadowY: shadowY,
                 fillOpacity: fillOpacity,
                 strokeOpacity: strokeOpacity
+            )
+        )
+    }
+
+    func rossNativeGlassSurface<S: InsettableShape>(
+        tint: Color,
+        shape: S,
+        interactive: Bool = false,
+        fallbackFillOpacity: Double,
+        fallbackStrokeOpacity: Double
+    ) -> some View {
+        modifier(
+            RossNativeGlassSurfaceModifier(
+                tint: tint,
+                shape: shape,
+                interactive: interactive,
+                fallbackFillOpacity: fallbackFillOpacity,
+                fallbackStrokeOpacity: fallbackStrokeOpacity
             )
         )
     }
@@ -699,7 +681,13 @@ public struct RossSuccessBanner: View {
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 11)
-            .background(.ultraThinMaterial, in: Capsule())
+            .rossNativeGlassSurface(
+                tint: Color.white.opacity(0.10),
+                shape: Capsule(),
+                interactive: false,
+                fallbackFillOpacity: 0.34,
+                fallbackStrokeOpacity: 0.52
+            )
             .overlay {
                 Capsule()
                     .strokeBorder(

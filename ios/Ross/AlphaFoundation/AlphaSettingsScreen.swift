@@ -24,11 +24,6 @@ struct AlphaSettingsScreen: View {
     private let languageOptions: [(String, String)] = [
         ("en", "English"),
         ("hi", "Hindi"),
-        ("ta", "Tamil"),
-        ("te", "Telugu"),
-        ("kn", "Kannada"),
-        ("ml", "Malayalam"),
-        ("mr", "Marathi"),
         ("bn", "Bengali")
     ]
 
@@ -457,6 +452,6 @@ struct AlphaSettingsLanguageGrid: View {
             }
         }
         .padding(.horizontal, 12)
-        .background(Color.rossGlassSubtleFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .rossGlassSurface(cornerRadius: 16, interactive: true, shadowOpacity: 0.07, shadowRadius: 7, shadowY: 3, fillOpacity: 0.8, strokeOpacity: 0.46)
     }
 }

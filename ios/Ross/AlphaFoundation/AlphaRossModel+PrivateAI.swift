@@ -86,10 +86,16 @@ extension AlphaRossModel {
             job.state == .failed else { return }
         assistantDownloadTaskBoxes[job.id]?.pausedByUser = false
         Task {
-            if let resumeData = try? await store.loadModelResumeData(relativePath: job.resumeDataRelativePath) {
-                let taskBox = assistantDownloadTaskBoxes[job.id] ?? AlphaAssistantDownloadTaskBox()
-                taskBox.resumeData = resumeData
-                assistantDownloadTaskBoxes[job.id] = taskBox
+            do {
+                if let resumeData = try await store.loadModelResumeData(relativePath: job.resumeDataRelativePath) {
+                    let taskBox = assistantDownloadTaskBoxes[job.id] ?? AlphaAssistantDownloadTaskBox()
+                    taskBox.resumeData = resumeData
+                    assistantDownloadTaskBoxes[job.id] = taskBox
+                } else if job.resumeDataRelativePath != nil {
+                    recordMissingResumeData(for: job.id)
+                }
+            } catch {
+                recordMissingResumeData(for: job.id)
             }
             await startPackDownload(
                 for: job.tier,
@@ -97,6 +103,27 @@ extension AlphaRossModel {
                 existingJobID: job.id
             )
         }
+    }
+
+    private func recordMissingResumeData(for jobID: UUID) {
+        updateJob(jobID) {
+            $0.resumeDataRelativePath = nil
+            $0.bytesDownloaded = 0
+            $0.failureReason = "Saved resume data was unavailable. Ross will restart the assistant download from the beginning."
+            $0.updatedAt = .now
+        }
+        persisted.ledgerEntries.insert(
+            AlphaPrivacyLedgerEntry(
+                title: "Assistant download resume restarted",
+                detail: "Saved resume data was unavailable, so Ross restarted the model download from the beginning. No case files were read.",
+                purpose: .model_download,
+                payloadClass: .no_case_data,
+                endpointLabel: "device://model-resume",
+                success: false
+            ),
+            at: 0
+        )
+        persist()
     }
 
     func removeInstalledPack(_ pack: AlphaInstalledModelPack) {
@@ -226,7 +253,44 @@ extension AlphaRossModel {
         }
     }
 
+    func repairAssistantPack(for tier: AlphaCapabilityTier, mobileAllowed: Bool = false) async {
+        if let pack = persisted.installedPacks.first(where: { $0.tier == tier }) {
+            removeInstalledPack(pack)
+        }
+        persisted.modelJobs.removeAll { job in
+            job.tier == tier && (job.state == .installed || job.state == .failed || job.state == .cancelled)
+        }
+        persisted.settings.activeTier = persisted.installedPacks.first(where: \.isActive)?.tier
+        persist(workspaceChanged: true)
+        await startPackDownload(for: tier, mobileAllowed: mobileAllowed)
+    }
+
     func activateInstalledPack(_ pack: AlphaInstalledModelPack) {
+        guard installedPackPassesRuntimeValidation(pack) else {
+            let message = "Ross could not open this downloaded assistant file. Delete it and download the model again."
+            persisted.modelJobs = persisted.modelJobs.map { job in
+                var copy = job
+                if job.tier == pack.tier, job.state == .installed {
+                    copy.state = .failed
+                    copy.failureReason = message
+                    copy.updatedAt = .now
+                }
+                return copy
+            }
+            persisted.ledgerEntries.insert(
+                AlphaPrivacyLedgerEntry(
+                    title: "Assistant model activation failed",
+                    detail: message,
+                    purpose: .model_verification,
+                    payloadClass: .no_case_data,
+                    endpointLabel: "device://model-verify",
+                    success: false
+                ),
+                at: 0
+            )
+            persist()
+            return
+        }
         persisted.installedPacks = persisted.installedPacks.map {
             var copy = $0
             copy.isActive = copy.id == pack.id
@@ -242,6 +306,21 @@ extension AlphaRossModel {
         }
         persisted.settings.activeTier = pack.tier
         persist()
+    }
+
+    func installedPackPassesRuntimeValidation(_ pack: AlphaInstalledModelPack) -> Bool {
+        guard pack.runtimeMode == .llamaCppGguf, !pack.developmentOnly else {
+            return true
+        }
+        guard installedModelPackFileIsUsable(pack) else {
+            return false
+        }
+        do {
+            try AlphaLlamaCppProvider.validateModelCanLoad(at: alphaAbsoluteURL(for: pack.installPath).path)
+            return true
+        } catch {
+            return false
+        }
     }
 
     func prepareSystemAssistantPack(for tier: AlphaCapabilityTier, jobID: UUID) -> Bool {
@@ -380,8 +459,8 @@ extension AlphaRossModel {
                 $0.updatedAt = .now
                 $0.completedAt = .now
             }
-                persisted.ledgerEntries.insert(
-                    AlphaPrivacyLedgerEntry(
+            persisted.ledgerEntries.insert(
+                AlphaPrivacyLedgerEntry(
                     title: "Test assistant installed",
                     detail: "A tiny test-only assistant file was installed for automated tests. Device setup uses private assistant files.",
                     purpose: .model_verification,
@@ -510,6 +589,65 @@ extension AlphaRossModel {
             taskBox.task?.cancel()
             _ = alphaSweepTemporaryAssistantDownloads()
         }
+    }
+
+    func preflightAssistantModelArtifact(_ artifact: AlphaAssistantModelArtifact, jobID: UUID) async throws -> AlphaAssistantDownloadPreflight {
+        guard let url = artifact.downloadURL else {
+            throw AlphaAssistantDownloadError.invalidURL
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "HEAD"
+        request.timeoutInterval = 45
+        request.setValue("Ross-iOS/0.1 model-downloader", forHTTPHeaderField: "User-Agent")
+        request.setValue("application/octet-stream", forHTTPHeaderField: "Accept")
+        request.setValue("identity", forHTTPHeaderField: "Accept-Encoding")
+
+        updateJob(jobID) {
+            $0.failureReason = nil
+            $0.updatedAt = .now
+        }
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw AlphaAssistantDownloadError.invalidURL
+        }
+        let preflight = try AlphaAssistantDownloadPreflight.parse(response: http, expectedBytes: artifact.sizeBytes)
+        updateJob(jobID) {
+            $0.totalBytes = preflight.reportedBytes
+            if let checksum = artifact.sha256.isEmpty ? preflight.effectiveChecksumSha256 : artifact.sha256 {
+                $0.checksumSha256 = checksum
+            }
+            $0.updatedAt = .now
+        }
+        return preflight
+    }
+
+    func probeAssistantModelRange(_ artifact: AlphaAssistantModelArtifact, preflight: AlphaAssistantDownloadPreflight) async throws -> AlphaAssistantRangeProbe {
+        guard let url = artifact.downloadURL else {
+            throw AlphaAssistantDownloadError.invalidURL
+        }
+        let probeLength = min(Int64(64 * 1024), preflight.reportedBytes)
+        let startByte = max(0, preflight.reportedBytes - probeLength)
+        let endByte = max(startByte, preflight.reportedBytes - 1)
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 60
+        request.setValue("Ross-iOS/0.1 model-downloader", forHTTPHeaderField: "User-Agent")
+        request.setValue("application/octet-stream", forHTTPHeaderField: "Accept")
+        request.setValue("identity", forHTTPHeaderField: "Accept-Encoding")
+        request.setValue("bytes=\(startByte)-\(endByte)", forHTTPHeaderField: "Range")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw AlphaAssistantDownloadError.invalidURL
+        }
+        return try AlphaAssistantRangeProbe.parse(
+            response: http,
+            receivedBytes: Int64(data.count),
+            expectedStart: startByte,
+            expectedEnd: endByte,
+            expectedTotal: preflight.reportedBytes
+        )
     }
 
     func shouldRetryAssistantDownloadInForeground(_ error: NSError) -> Bool {
@@ -725,6 +863,32 @@ extension AlphaRossModel {
         persist()
 
         if let existingArtifact = await verifiedExistingAssistantArtifact(for: tier, artifact: artifact) {
+            do {
+                try AlphaLlamaCppProvider.validateModelCanLoad(at: alphaAbsoluteURL(for: existingArtifact.relativePath).path)
+            } catch {
+                await store.removeDownloadedPackArtifact(relativePath: existingArtifact.relativePath)
+                updateJob(job.id) {
+                    $0.state = .failed
+                    $0.bytesDownloaded = existingArtifact.bytes
+                    $0.totalBytes = existingArtifact.bytes
+                    $0.checksumSha256 = existingArtifact.checksum
+                    $0.failureReason = assistantDownloadFailureMessage(error)
+                    $0.updatedAt = .now
+                }
+                persisted.ledgerEntries.insert(
+                        AlphaPrivacyLedgerEntry(
+                            title: "Assistant model verification failed",
+                            detail: "Ross found the downloaded assistant file, but the local runtime could not open it. Ross removed the bad file so Retry can download a fresh copy.",
+                            purpose: .model_verification,
+                            payloadClass: .no_case_data,
+                            endpointLabel: "device://model-verify",
+                        success: false
+                    ),
+                    at: 0
+                )
+                persist()
+                return
+            }
             let installed = AlphaInstalledModelPack(
                 packId: artifact.packId,
                 tier: tier,
@@ -788,15 +952,21 @@ extension AlphaRossModel {
         }
 
         do {
+            let preflight = try await preflightAssistantModelArtifact(artifact, jobID: job.id)
+            let expectedChecksum = try preflight.expectedChecksum(catalogChecksum: artifact.sha256)
+            _ = try await probeAssistantModelRange(artifact, preflight: preflight)
+
             updateJob(job.id) {
                 $0.state = .downloading
                 $0.failureReason = nil
+                $0.totalBytes = preflight.reportedBytes
+                $0.checksumSha256 = expectedChecksum
                 $0.updatedAt = .now
             }
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
-                    title: "Assistant model download started",
-                    detail: "Ross started downloading the selected private assistant. Case files stayed on this device.",
+                    title: "Assistant model download verified",
+                    detail: "Ross confirmed the provider file size and byte-range download support before starting. Case files stayed on this device.",
                     purpose: .model_download,
                     payloadClass: .no_case_data,
                     endpointLabel: "model-provider://private-assistant-download",
@@ -820,13 +990,14 @@ extension AlphaRossModel {
             }
             persist()
 
-                let installedArtifact = try await store.installDownloadedPackArtifact(
-                    for: tier,
-                    fileName: artifact.fileName,
-                    downloadedFileURL: downloadedFileURL,
-                    expectedChecksum: artifact.sha256,
-                    expectedBytes: artifact.sizeBytes
-                )
+            let installedArtifact = try await store.installDownloadedPackArtifact(
+                for: tier,
+                fileName: artifact.fileName,
+                downloadedFileURL: downloadedFileURL,
+                expectedChecksum: expectedChecksum,
+                expectedBytes: preflight.reportedBytes
+            )
+            try AlphaLlamaCppProvider.validateModelCanLoad(at: alphaAbsoluteURL(for: installedArtifact.relativePath).path)
             let installed = AlphaInstalledModelPack(
                 packId: artifact.packId,
                 tier: tier,

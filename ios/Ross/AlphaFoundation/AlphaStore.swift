@@ -45,6 +45,36 @@ struct AlphaImportedDocument {
     let storedFileURL: URL
 }
 
+enum AlphaDocumentImportError: LocalizedError {
+    case unsupportedFileType(String)
+    case unreadableFile
+    case fileTooLarge(Int64, limit: Int64)
+    case insufficientStorage(needed: Int64, available: Int64)
+    case unsupportedTextEncoding
+
+    var errorDescription: String? {
+        let formatter = ByteCountFormatter()
+        formatter.allowedUnits = [.useGB, .useMB, .useKB]
+        formatter.countStyle = .file
+        switch self {
+        case .unsupportedFileType(let ext):
+            return ext.isEmpty ? "Files without an extension are not supported yet." : ".\(ext) files are not supported yet."
+        case .unreadableFile:
+            return "Ross could not read the selected file."
+        case .fileTooLarge(let bytes, let limit):
+            return "This file is \(formatter.string(fromByteCount: bytes)); the current import limit is \(formatter.string(fromByteCount: limit))."
+        case .insufficientStorage(let needed, let available):
+            return "Ross needs about \(formatter.string(fromByteCount: needed)) free, but this device reports \(formatter.string(fromByteCount: available)) available."
+        case .unsupportedTextEncoding:
+            return "This text file uses an encoding Ross cannot read yet."
+        }
+    }
+}
+
+private let alphaMaxPDFImportBytes: Int64 = 180 * 1_024 * 1_024
+private let alphaMaxImageImportBytes: Int64 = 80 * 1_024 * 1_024
+private let alphaMaxTextImportBytes: Int64 = 8 * 1_024 * 1_024
+
 @discardableResult
 func alphaSweepTemporaryAssistantDownloadsAtLaunch(fileManager: FileManager = .default) -> Int64 {
     alphaSweepTemporaryAssistantDownloads(fileManager: fileManager)
@@ -194,7 +224,7 @@ actor AlphaRossStore {
         case "txt", "md":
             kind = .text
         default:
-            kind = .unknown
+            throw AlphaDocumentImportError.unsupportedFileType(ext)
         }
 
         let documentFolder = documentsURL.appendingPathComponent(caseId.uuidString, isDirectory: true)
@@ -214,6 +244,7 @@ actor AlphaRossStore {
             }
         }
 
+        try preflightImport(sourceURL: sourceURL, kind: kind)
         try fileManager.copyItem(at: sourceURL, to: destinationURL)
 
         let title = sourceURL.deletingPathExtension().lastPathComponent
@@ -222,8 +253,11 @@ actor AlphaRossStore {
         let pages = extraction.pages.isEmpty
             ? [AlphaDocumentPage(pageNumber: 1, snippet: "Imported source reference.")]
             : extraction.pages
+        let documentID = UUID()
+        let languageProfile = alphaDetectLanguageProfile(documentID: documentID, pages: pages)
 
         let document = AlphaCaseDocument(
+            id: documentID,
             title: title,
             fileName: sourceURL.lastPathComponent,
             kind: kind,
@@ -235,7 +269,8 @@ actor AlphaRossStore {
             extractedText: extraction.extractedText,
             dominantSourceSnippet: extraction.dominantSourceSnippet,
             lastIndexedAt: extraction.extractedText == nil ? nil : .now,
-            pages: pages
+            pages: pages,
+            languageProfile: languageProfile
         )
 
         return AlphaImportedDocument(document: document, storedFileURL: destinationURL)
@@ -377,6 +412,13 @@ actor AlphaRossStore {
         try? fileManager.createDirectory(at: modelPacksURL, withIntermediateDirectories: true)
         try? fileManager.createDirectory(at: modelResumeURL, withIntermediateDirectories: true)
         sweepTemporaryAssistantDownloads()
+    }
+
+    func removeDownloadedPackArtifact(relativePath: String?) {
+        guard let relativePath, !relativePath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        let artifactURL = alphaAbsoluteURL(for: relativePath)
+        try? fileManager.removeItem(at: artifactURL)
+        try? fileManager.removeItem(at: artifactURL.deletingPathExtension().appendingPathExtension("manifest.json"))
     }
 
     @discardableResult
@@ -604,7 +646,7 @@ actor AlphaRossStore {
         case .image:
             return extractImageContent(from: url)
         case .text:
-            let text = try String(contentsOf: url).trimmingCharacters(in: .whitespacesAndNewlines)
+            let text = try readImportedText(from: url).trimmingCharacters(in: .whitespacesAndNewlines)
             let snippet = compactSnippet(from: text)
             return AlphaDocumentExtraction(
                 pages: [
@@ -632,6 +674,54 @@ actor AlphaRossStore {
                 indexingStatus: .notStarted
             )
         }
+    }
+
+    private func preflightImport(sourceURL: URL, kind: AlphaDocumentKind) throws {
+        let values = try sourceURL.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey])
+        guard values.isRegularFile != false else {
+            throw AlphaDocumentImportError.unreadableFile
+        }
+        let fileSize = Int64(values.fileSize ?? 0)
+        guard fileSize > 0 else {
+            throw AlphaDocumentImportError.unreadableFile
+        }
+        let limit: Int64 = switch kind {
+        case .pdf:
+            alphaMaxPDFImportBytes
+        case .image:
+            alphaMaxImageImportBytes
+        case .text:
+            alphaMaxTextImportBytes
+        case .unknown:
+            0
+        }
+        if limit > 0, fileSize > limit {
+            throw AlphaDocumentImportError.fileTooLarge(fileSize, limit: limit)
+        }
+        let available = availableImportantStorageBytes()
+        let needed = max(fileSize * 2, fileSize + 75 * 1_024 * 1_024)
+        if available > 0, available < needed {
+            throw AlphaDocumentImportError.insufficientStorage(needed: needed, available: available)
+        }
+    }
+
+    private func availableImportantStorageBytes() -> Int64 {
+        let values = try? documentsURL.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
+        return values?.volumeAvailableCapacityForImportantUsage ?? 0
+    }
+
+    private func readImportedText(from url: URL) throws -> String {
+        let data = try Data(contentsOf: url, options: [.mappedIfSafe])
+        if let utf8 = String(data: data, encoding: .utf8) {
+            return utf8
+        }
+        if let utf16 = String(data: data, encoding: .utf16) {
+            return utf16
+        }
+        if let latin1 = String(data: data, encoding: .isoLatin1) {
+            return latin1
+        }
+        throw AlphaDocumentImportError.unsupportedTextEncoding
     }
 
     #if canImport(PDFKit)
@@ -821,7 +911,7 @@ actor AlphaRossStore {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = true
-        let preferredLanguages = ["en-IN", "hi-IN", "ta-IN", "te-IN"]
+        let preferredLanguages = ["en-IN", "hi-IN", "bn-IN", "ta-IN", "te-IN"]
         let supportedLanguages = (try? request.supportedRecognitionLanguages()) ?? preferredLanguages
         request.recognitionLanguages = preferredLanguages.filter { supportedLanguages.contains($0) }
         if request.recognitionLanguages.isEmpty {
@@ -960,6 +1050,115 @@ private func compactExtractedText(_ value: String?) -> String? {
 private func compactSnippet(from value: String?) -> String? {
     guard let text = compactExtractedText(value) else { return nil }
     return String(text.prefix(180))
+}
+
+private struct AlphaScriptCounts {
+    var latin = 0
+    var devanagari = 0
+    var bengali = 0
+    var tamil = 0
+    var telugu = 0
+    var other = 0
+}
+
+private func alphaScriptCounts(in value: String) -> AlphaScriptCounts {
+    var counts = AlphaScriptCounts()
+    for scalar in value.unicodeScalars {
+        switch scalar.value {
+        case 0x41 ... 0x5A, 0x61 ... 0x7A:
+            counts.latin += 1
+        case 0x0900 ... 0x097F, 0xA8E0 ... 0xA8FF:
+            counts.devanagari += 1
+        case 0x0980 ... 0x09FF:
+            counts.bengali += 1
+        case 0x0B80 ... 0x0BFF:
+            counts.tamil += 1
+        case 0x0C00 ... 0x0C7F:
+            counts.telugu += 1
+        default:
+            if CharacterSet.letters.contains(scalar) {
+                counts.other += 1
+            }
+        }
+    }
+    return counts
+}
+
+private func alphaDetectLanguageProfile(documentID: UUID, pages: [AlphaDocumentPage]) -> AlphaDocumentLanguageProfile {
+    let pageProfiles = pages.map { page -> AlphaDocumentLanguageProfilePage in
+        let counts = alphaScriptCounts(in: page.extractedText ?? page.anchorText ?? "")
+        let total = counts.latin + counts.devanagari + counts.bengali + counts.tamil + counts.telugu + counts.other
+        if total == 0 {
+            return AlphaDocumentLanguageProfilePage(pageNumber: page.pageNumber, language: .unknown, script: .unknown, confidence: 0)
+        }
+        let dominant = [
+            (count: counts.devanagari, language: AlphaDocumentLanguage.hindi, script: AlphaDocumentScript.devanagari),
+            (count: counts.bengali, language: AlphaDocumentLanguage.bengali, script: AlphaDocumentScript.bengali),
+            (count: counts.tamil, language: AlphaDocumentLanguage.tamil, script: AlphaDocumentScript.tamil),
+            (count: counts.telugu, language: AlphaDocumentLanguage.telugu, script: AlphaDocumentScript.telugu),
+            (count: counts.latin, language: AlphaDocumentLanguage.english, script: AlphaDocumentScript.latin)
+        ].max { $0.count < $1.count }
+        let detectedScripts = [
+            counts.latin > 0,
+            counts.devanagari > 0,
+            counts.bengali > 0,
+            counts.tamil > 0,
+            counts.telugu > 0
+        ].filter { $0 }.count
+        if let dominant, dominant.count > 0, Double(dominant.count) / Double(total) >= 0.70 {
+            return AlphaDocumentLanguageProfilePage(pageNumber: page.pageNumber, language: dominant.language, script: dominant.script, confidence: 0.84)
+        }
+        if detectedScripts > 1 {
+            return AlphaDocumentLanguageProfilePage(pageNumber: page.pageNumber, language: .mixed, script: .mixed, confidence: 0.64)
+        }
+        if counts.devanagari > 0 {
+            return AlphaDocumentLanguageProfilePage(pageNumber: page.pageNumber, language: .hindi, script: .devanagari, confidence: 0.88)
+        }
+        if counts.bengali > 0 {
+            return AlphaDocumentLanguageProfilePage(pageNumber: page.pageNumber, language: .bengali, script: .bengali, confidence: 0.88)
+        }
+        if counts.tamil > 0 {
+            return AlphaDocumentLanguageProfilePage(pageNumber: page.pageNumber, language: .tamil, script: .tamil, confidence: 0.88)
+        }
+        if counts.telugu > 0 {
+            return AlphaDocumentLanguageProfilePage(pageNumber: page.pageNumber, language: .telugu, script: .telugu, confidence: 0.88)
+        }
+        if counts.latin > 0 {
+            return AlphaDocumentLanguageProfilePage(pageNumber: page.pageNumber, language: .english, script: .latin, confidence: 0.88)
+        }
+        return AlphaDocumentLanguageProfilePage(pageNumber: page.pageNumber, language: .unknown, script: .other, confidence: 0.42)
+    }
+    let hasLatin = pageProfiles.contains { $0.script == .latin || $0.script == .mixed }
+    let hasDevanagari = pageProfiles.contains { $0.script == .devanagari || $0.script == .mixed }
+    let hasBengali = pageProfiles.contains { $0.script == .bengali || $0.script == .mixed }
+    let hasTamil = pageProfiles.contains { $0.script == .tamil || $0.script == .mixed }
+    let hasTelugu = pageProfiles.contains { $0.script == .telugu || $0.script == .mixed }
+    let primary: AlphaDocumentLanguage = {
+        let languageCount = [hasLatin, hasDevanagari, hasBengali, hasTamil, hasTelugu].filter { $0 }.count
+        if languageCount > 1 { return .mixed }
+        if hasDevanagari { return .hindi }
+        if hasBengali { return .bengali }
+        if hasTamil { return .tamil }
+        if hasTelugu { return .telugu }
+        if hasLatin { return .english }
+        return .unknown
+    }()
+    let scripts = [
+        hasLatin ? "latin" : nil,
+        hasDevanagari ? "devanagari" : nil,
+        hasBengali ? "bengali" : nil,
+        hasTamil ? "tamil" : nil,
+        hasTelugu ? "telugu" : nil,
+        (!hasLatin && !hasDevanagari && !hasBengali && !hasTamil && !hasTelugu) ? "other" : nil
+    ].compactMap { $0 }
+
+    return AlphaDocumentLanguageProfile(
+        documentId: documentID,
+        primaryLanguage: primary,
+        scriptsDetected: scripts,
+        confidence: pageProfiles.isEmpty ? 0 : pageProfiles.map(\.confidence).reduce(0, +) / Double(pageProfiles.count),
+        pageProfiles: pageProfiles
+    )
 }
 
 struct AlphaReviewQueue: Hashable, Sendable {
@@ -2139,73 +2338,7 @@ private struct AlphaLocalExtractionOrchestrator {
     }
 
     private func detectLanguageProfile(documentID: UUID, pages: [AlphaDocumentPage]) -> AlphaDocumentLanguageProfile {
-        let pageProfiles = pages.map { page -> AlphaDocumentLanguageProfilePage in
-            let counts = scriptCounts(in: page.extractedText ?? page.snippet ?? "")
-            let total = counts.latin + counts.devanagari + counts.tamil + counts.telugu + counts.other
-            if total == 0 {
-                return AlphaDocumentLanguageProfilePage(pageNumber: page.pageNumber, language: .unknown, script: .unknown, confidence: 0)
-            }
-            let detectedScripts = [
-                counts.latin > 0,
-                counts.devanagari > 0,
-                counts.tamil > 0,
-                counts.telugu > 0
-            ].filter { $0 }.count
-            if detectedScripts > 1 {
-                return AlphaDocumentLanguageProfilePage(pageNumber: page.pageNumber, language: .mixed, script: .mixed, confidence: 0.64)
-            }
-            if counts.devanagari > 0 {
-                return AlphaDocumentLanguageProfilePage(pageNumber: page.pageNumber, language: .hindi, script: .devanagari, confidence: 0.88)
-            }
-            if counts.tamil > 0 {
-                return AlphaDocumentLanguageProfilePage(pageNumber: page.pageNumber, language: .tamil, script: .tamil, confidence: 0.88)
-            }
-            if counts.telugu > 0 {
-                return AlphaDocumentLanguageProfilePage(pageNumber: page.pageNumber, language: .telugu, script: .telugu, confidence: 0.88)
-            }
-            if counts.latin > 0 {
-                return AlphaDocumentLanguageProfilePage(pageNumber: page.pageNumber, language: .english, script: .latin, confidence: 0.88)
-            }
-            return AlphaDocumentLanguageProfilePage(pageNumber: page.pageNumber, language: .unknown, script: .other, confidence: 0.42)
-        }
-        let hasLatin = pageProfiles.contains { $0.script == .latin || $0.script == .mixed }
-        let hasDevanagari = pageProfiles.contains { $0.script == .devanagari || $0.script == .mixed }
-        let hasTamil = pageProfiles.contains { $0.script == .tamil || $0.script == .mixed }
-        let hasTelugu = pageProfiles.contains { $0.script == .telugu || $0.script == .mixed }
-        let primary: AlphaDocumentLanguage = {
-            let languageCount = [hasLatin, hasDevanagari, hasTamil, hasTelugu].filter { $0 }.count
-            if languageCount > 1 {
-                return .mixed
-            }
-            if hasDevanagari {
-                return .hindi
-            }
-            if hasTamil {
-                return .tamil
-            }
-            if hasTelugu {
-                return .telugu
-            }
-            if hasLatin {
-                return .english
-            }
-            return .unknown
-        }()
-        let scripts = [
-            hasLatin ? "latin" : nil,
-            hasDevanagari ? "devanagari" : nil,
-            hasTamil ? "tamil" : nil,
-            hasTelugu ? "telugu" : nil,
-            (!hasLatin && !hasDevanagari && !hasTamil && !hasTelugu) ? "other" : nil
-        ].compactMap { $0 }
-
-        return AlphaDocumentLanguageProfile(
-            documentId: documentID,
-            primaryLanguage: primary,
-            scriptsDetected: scripts,
-            confidence: pageProfiles.isEmpty ? 0 : pageProfiles.map(\.confidence).reduce(0, +) / Double(pageProfiles.count),
-            pageProfiles: pageProfiles
-        )
+        alphaDetectLanguageProfile(documentID: documentID, pages: pages)
     }
 
     private func classify(
@@ -2473,39 +2606,10 @@ private struct AlphaLocalExtractionOrchestrator {
 }
 
 private extension AlphaLocalExtractionOrchestrator {
-    struct ScriptCounts {
-        var latin = 0
-        var devanagari = 0
-        var tamil = 0
-        var telugu = 0
-        var other = 0
-    }
-
     struct DateMatch {
         var original: String
         var normalized: String
         var isNextDate: Bool
-    }
-
-    func scriptCounts(in value: String) -> ScriptCounts {
-        var counts = ScriptCounts()
-        for scalar in value.unicodeScalars {
-            switch scalar.value {
-            case 0x41 ... 0x5A, 0x61 ... 0x7A:
-                counts.latin += 1
-            case 0x0900 ... 0x097F, 0xA8E0 ... 0xA8FF:
-                counts.devanagari += 1
-            case 0x0B80 ... 0x0BFF:
-                counts.tamil += 1
-            case 0x0C00 ... 0x0C7F:
-                counts.telugu += 1
-            default:
-                if CharacterSet.letters.contains(scalar) {
-                    counts.other += 1
-                }
-            }
-        }
-        return counts
     }
 
     func appendField(

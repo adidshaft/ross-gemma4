@@ -159,7 +159,7 @@ private struct AlphaIncomingDocumentsSheet: View {
                                 .foregroundStyle(Color.rossInk)
                                 .padding(10)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(Color.rossGlassFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                .rossGlassSurface(cornerRadius: 12, shadowOpacity: 0.05, shadowRadius: 5, shadowY: 2, fillOpacity: 0.78, strokeOpacity: 0.42)
                         }
                     }
 
@@ -173,25 +173,7 @@ private struct AlphaIncomingDocumentsSheet: View {
                                     model.importQueuedIncomingDocuments(to: matter.id)
                                     dismiss()
                                 } label: {
-                                    HStack(spacing: 10) {
-                                        Image(systemName: "folder")
-                                            .foregroundStyle(Color.rossAccent)
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(matter.title)
-                                                .font(.subheadline.weight(.semibold))
-                                                .foregroundStyle(Color.rossInk)
-                                            Text(matter.forum)
-                                                .font(.caption)
-                                                .foregroundStyle(Color.rossInk.opacity(0.58))
-                                                .lineLimit(1)
-                                        }
-                                        Spacer()
-                                        Image(systemName: "chevron.right")
-                                            .font(.caption.weight(.semibold))
-                                            .foregroundStyle(Color.rossInk.opacity(0.38))
-                                    }
-                                    .padding(12)
-                                    .background(Color.rossCardBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                    AlphaIncomingMatterRow(matter: matter)
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -235,6 +217,41 @@ private struct AlphaIncomingDocumentsSheet: View {
                 }
             }
         }
+    }
+}
+
+private struct AlphaIncomingMatterRow: View {
+    let matter: AlphaCaseMatter
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "folder")
+                .foregroundStyle(Color.rossAccent)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(matter.title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.rossInk)
+                Text(matter.forum)
+                    .font(.caption)
+                    .foregroundStyle(Color.rossInk.opacity(0.58))
+                    .lineLimit(1)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.rossInk.opacity(0.38))
+        }
+        .padding(12)
+        .rossGlassSurface(
+            tint: Color.rossAccent,
+            cornerRadius: 14,
+            interactive: true,
+            shadowOpacity: 0.08,
+            shadowRadius: 8,
+            shadowY: 3,
+            fillOpacity: 0.76,
+            strokeOpacity: 0.44
+        )
     }
 }
 
