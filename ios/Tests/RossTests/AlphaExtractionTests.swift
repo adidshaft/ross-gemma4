@@ -777,6 +777,22 @@ final class AlphaExtractionTests: XCTestCase {
         rossSaveLanguageSelection(code: "te-IN")
         XCTAssertEqual(AlphaAppearanceMode.dark.title, "డార్క్")
         XCTAssertEqual(
+            rossLocalized("documents_title", languageCode: "ta"),
+            "ஆவணங்கள்"
+        )
+        XCTAssertEqual(
+            rossLocalized("import_document", languageCode: "bn"),
+            "নথি import করুন"
+        )
+        XCTAssertEqual(
+            alphaFilesInMatterLabel(2, languageCode: "te-IN"),
+            "ఈ కేసులో 2 files"
+        )
+        XCTAssertTrue(
+            rossLocalized("file_room_import_first_real_file_detail", languageCode: "hi")
+                .contains("locally")
+        )
+        XCTAssertEqual(
             rossLocalized("download_size", languageCode: "ta"),
             "பதிவிறக்க அளவு"
         )

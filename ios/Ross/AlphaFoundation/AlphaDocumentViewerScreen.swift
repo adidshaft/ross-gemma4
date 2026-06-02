@@ -185,14 +185,14 @@ struct AlphaDocumentListScreen: View {
             RossGlassGroup(spacing: alphaSectionSpacing) {
                 VStack(alignment: .leading, spacing: alphaSectionSpacing) {
                 AlphaInlineHeader(
-                    eyebrow: caseMatter?.forum ?? "Documents",
-                    title: caseMatter?.title ?? "Documents",
-                    detail: "\(alphaFileCountLabel(caseMatter?.documents.count ?? 0)) in this matter"
+                    eyebrow: caseMatter?.forum ?? rossLocalized("documents_title"),
+                    title: caseMatter?.title ?? rossLocalized("documents_title"),
+                    detail: alphaFilesInMatterLabel(caseMatter?.documents.count ?? 0)
                 )
 
                 RossSectionCard {
                     HStack {
-                        Text("\(alphaFileCountLabel(caseMatter?.documents.count ?? 0)) stored for this matter")
+                        Text(alphaFilesStoredForMatterLabel(caseMatter?.documents.count ?? 0))
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(Color.rossInk.opacity(0.7))
 
@@ -204,13 +204,13 @@ struct AlphaDocumentListScreen: View {
 
                 if let caseMatter, caseMatter.documents.isEmpty {
                     AlphaEmptyFileRoomCard(
-                        title: "Import the first file",
-                        detail: "Add an order, pleading, notice, image, or note. Ross reads it on this iPhone and makes it available for review and Ask.",
-                        actionTitle: "Import document",
+                        title: rossLocalized("file_room_import_first_file"),
+                        detail: rossLocalized("file_room_import_first_file_detail"),
+                        actionTitle: rossLocalized("import_document"),
                         onImport: { showingImporter = true }
                     )
                 } else {
-                    Button("Import document") {
+                    Button(rossLocalized("import_document")) {
                         showingImporter = true
                     }
                     .rossPrimaryButtonStyle()
@@ -249,11 +249,11 @@ struct AlphaDocumentListScreen: View {
                 Task { await model.importDocuments(caseId: caseId, from: urls) }
             }
         }
-        .navigationTitle("Documents")
+        .navigationTitle(rossLocalized("documents_title"))
         .rossInlineNavigationTitle()
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                AlphaAskToolbarButton(systemImage: "bubble.right", accessibilityLabel: "Open Ask Ross") {
+                AlphaAskToolbarButton(systemImage: "bubble.right", accessibilityLabel: rossLocalized("open_ask_ross")) {
                     model.openAsk(scopeCaseID: caseId)
                 }
             }

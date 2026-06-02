@@ -959,6 +959,76 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "எப்போதும் ஒளி தோற்றம் பயன்படுத்தவும்",
             "te": "ఎల్లప్పుడూ లైట్ ఉపయోగించండి"
         ],
+        "documents_title": [
+            "en": "Documents",
+            "hi": "दस्तावेज़",
+            "bn": "নথি",
+            "ta": "ஆவணங்கள்",
+            "te": "పత్రాలు"
+        ],
+        "file_room_title": [
+            "en": "File Room",
+            "hi": "फ़ाइल रूम",
+            "bn": "ফাইল রুম",
+            "ta": "கோப்பு அறை",
+            "te": "ఫైల్ రూమ్"
+        ],
+        "files_in_matter": [
+            "en": "%@ in this matter",
+            "hi": "इस मामले में %@",
+            "bn": "এই মামলায় %@",
+            "ta": "இந்த வழக்கில் %@",
+            "te": "ఈ కేసులో %@"
+        ],
+        "files_stored_for_matter": [
+            "en": "%@ stored for this matter",
+            "hi": "इस मामले के लिए %@ सहेजी गईं",
+            "bn": "এই মামলার জন্য %@ সংরক্ষিত",
+            "ta": "இந்த வழக்கிற்காக %@ சேமிக்கப்பட்டுள்ளது",
+            "te": "ఈ కేసు కోసం %@ నిల్వ చేయబడ్డాయి"
+        ],
+        "files_on_matter": [
+            "en": "%@ on this matter",
+            "hi": "इस मामले पर %@",
+            "bn": "এই মামলায় %@",
+            "ta": "இந்த வழக்கில் %@",
+            "te": "ఈ కేసులో %@"
+        ],
+        "file_room_import_first_file": [
+            "en": "Import the first file",
+            "hi": "पहली फ़ाइल import करें",
+            "bn": "প্রথম ফাইল import করুন",
+            "ta": "முதல் கோப்பை import செய்யவும்",
+            "te": "మొదటి ఫైల్‌ను import చేయండి"
+        ],
+        "file_room_import_first_file_detail": [
+            "en": "Add an order, pleading, notice, image, or note. Ross reads it on this iPhone and makes it available for review and Ask.",
+            "hi": "आदेश, pleading, notice, image या note जोड़ें। Ross इसे इसी iPhone पर पढ़ता है और review व Ask के लिए उपलब्ध करता है।",
+            "bn": "order, pleading, notice, image বা note যোগ করুন। Ross এটি এই iPhone-এ পড়ে এবং review ও Ask-এর জন্য প্রস্তুত করে।",
+            "ta": "order, pleading, notice, image அல்லது note சேர்க்கவும். Ross இதை இந்த iPhone-இல் வாசித்து review மற்றும் Ask-க்கு கிடைக்கச் செய்கிறது.",
+            "te": "order, pleading, notice, image లేదా note జోడించండి. Ross దీన్ని ఈ iPhone లో చదివి review మరియు Ask కోసం అందుబాటులో ఉంచుతుంది."
+        ],
+        "file_room_import_first_real_file": [
+            "en": "Import the first real file",
+            "hi": "पहली असली फ़ाइल import करें",
+            "bn": "প্রথম আসল ফাইল import করুন",
+            "ta": "முதல் உண்மையான கோப்பை import செய்யவும்",
+            "te": "మొదటి నిజమైన ఫైల్‌ను import చేయండి"
+        ],
+        "file_room_import_first_real_file_detail": [
+            "en": "Add a PDF, image, or text note. Ross will read it locally, prepare review items, and make it available for Ask.",
+            "hi": "PDF, image या text note जोड़ें। Ross इसे locally पढ़ेगा, review items तैयार करेगा, और Ask के लिए उपलब्ध करेगा।",
+            "bn": "PDF, image বা text note যোগ করুন। Ross এটি locally পড়বে, review items তৈরি করবে, এবং Ask-এর জন্য প্রস্তুত করবে।",
+            "ta": "PDF, image அல்லது text note சேர்க்கவும். Ross அதை locally வாசித்து, review items தயாரித்து, Ask-க்கு கிடைக்கச் செய்யும்.",
+            "te": "PDF, image లేదా text note జోడించండి. Ross దాన్ని locally చదివి, review items సిద్ధం చేసి, Ask కోసం అందుబాటులో ఉంచుతుంది."
+        ],
+        "import_document": [
+            "en": "Import document",
+            "hi": "दस्तावेज़ import करें",
+            "bn": "নথি import করুন",
+            "ta": "ஆவணத்தை import செய்யவும்",
+            "te": "పత్రాన్ని import చేయండి"
+        ],
         "translate_to": [
             "en": "Translate to %@",
             "hi": "%@ में अनुवाद करें",

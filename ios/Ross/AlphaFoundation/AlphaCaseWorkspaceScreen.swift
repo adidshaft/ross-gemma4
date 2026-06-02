@@ -313,13 +313,13 @@ struct AlphaCaseWorkspaceScreen: View {
                     }
 
                     AlphaDisclosureCard(
-                        title: "File Room",
+                        title: rossLocalized("file_room_title"),
                         badge: "\(caseMatter.documents.count)",
                         isExpanded: $filesExpanded
                     ) {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack(spacing: 10) {
-                                Text("\(alphaFileCountLabel(caseMatter.documents.count)) on this matter")
+                                Text(alphaFilesOnMatterLabel(caseMatter.documents.count))
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(Color.rossInk.opacity(0.7))
                                 Spacer(minLength: 0)
@@ -327,9 +327,9 @@ struct AlphaCaseWorkspaceScreen: View {
                             }
                             if caseMatter.documents.isEmpty {
                                 AlphaEmptyFileRoomCard(
-                                    title: "Import the first real file",
-                                    detail: "Add a PDF, image, or text note. Ross will read it locally, prepare review items, and make it available for Ask.",
-                                    actionTitle: "Import document",
+                                    title: rossLocalized("file_room_import_first_real_file"),
+                                    detail: rossLocalized("file_room_import_first_real_file_detail"),
+                                    actionTitle: rossLocalized("import_document"),
                                     onImport: { showingImporter = true }
                                 )
                             } else {
@@ -345,7 +345,7 @@ struct AlphaCaseWorkspaceScreen: View {
                                 )
                             }
                             if !caseMatter.documents.isEmpty {
-                                Button("Import document") {
+                                Button(rossLocalized("import_document")) {
                                     showingImporter = true
                                 }
                                 .rossPrimaryButtonStyle()

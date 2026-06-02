@@ -537,6 +537,18 @@ func alphaFileCountLabel(_ count: Int) -> String {
     count == 1 ? "1 file" : "\(count) files"
 }
 
+func alphaFilesInMatterLabel(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("files_in_matter", languageCode: languageCode), alphaFileCountLabel(count))
+}
+
+func alphaFilesStoredForMatterLabel(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("files_stored_for_matter", languageCode: languageCode), alphaFileCountLabel(count))
+}
+
+func alphaFilesOnMatterLabel(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("files_on_matter", languageCode: languageCode), alphaFileCountLabel(count))
+}
+
 func alphaDocumentCountLabel(_ count: Int) -> String {
     count == 1 ? "1 document" : "\(count) documents"
 }
