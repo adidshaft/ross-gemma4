@@ -4676,6 +4676,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "%@ இன்னும் advocate review தேவை.",
             "te": "%@ ఇంకా advocate review అవసరం."
         ],
+        "attention_under_control": [
+            "en": "Today is under control",
+            "hi": "आज सब under control है",
+            "bn": "আজ সব under control",
+            "ta": "இன்று எல்லாம் under control",
+            "te": "ఈ రోజు అన్నీ under control"
+        ],
+        "attention_one_item": [
+            "en": "1 item needs attention",
+            "hi": "1 item को attention चाहिए",
+            "bn": "1 item attention দরকার",
+            "ta": "1 item attention தேவை",
+            "te": "1 item కు attention అవసరం"
+        ],
+        "attention_many_items": [
+            "en": "%d items need attention",
+            "hi": "%d items को attention चाहिए",
+            "bn": "%d items attention দরকার",
+            "ta": "%d items attention தேவை",
+            "te": "%d items కు attention అవసరం"
+        ],
         "review_items_resolve_before_relying": [
             "en": "Resolve %@ before relying on extracted details.",
             "hi": "extracted details पर भरोसा करने से पहले %@ resolve करें.",

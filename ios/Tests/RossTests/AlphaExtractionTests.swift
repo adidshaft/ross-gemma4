@@ -1211,6 +1211,9 @@ final class AlphaExtractionTests: XCTestCase {
             alphaConfidenceSupportText(confidence: 0.92, needsReview: true),
             "इस पर भरोसा करने से पहले आपका confirmation चाहिए"
         )
+        XCTAssertEqual(alphaAttentionHeadline(0), "आज सब under control है")
+        XCTAssertEqual(alphaAttentionHeadline(1), "1 item को attention चाहिए")
+        XCTAssertEqual(alphaAttentionHeadline(4), "4 items को attention चाहिए")
         XCTAssertEqual(
             rossLocalized("export_draft_review", languageCode: "hi"),
             "Draft - कृपया review करें"

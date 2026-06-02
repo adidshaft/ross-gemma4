@@ -1202,11 +1202,11 @@ func alphaFieldSortRank(_ type: AlphaExtractedLegalFieldType) -> Int {
 func alphaAttentionHeadline(_ count: Int) -> String {
     switch count {
     case 0:
-        return "Today is under control"
+        return rossLocalized("attention_under_control")
     case 1:
-        return "1 item needs attention"
+        return rossLocalized("attention_one_item")
     default:
-        return "\(count) items need attention"
+        return String(format: rossLocalized("attention_many_items"), count)
     }
 }
 
