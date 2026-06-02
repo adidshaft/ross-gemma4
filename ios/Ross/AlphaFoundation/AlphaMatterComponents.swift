@@ -185,7 +185,7 @@ struct AlphaDocumentLayoutMenu: View {
                 .rossGlassSurface(cornerRadius: 17, interactive: true, shadowOpacity: 0.06, shadowRadius: 6, shadowY: 2, strokeOpacity: 0.46)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Choose document view")
+        .accessibilityLabel(rossLocalized("choose_document_view"))
     }
 }
 
@@ -215,30 +215,30 @@ struct AlphaDocumentCollectionView: View {
                     }
                     .buttonStyle(.plain)
                     .contextMenu {
-                        Button("Open document") {
+                        Button(rossLocalized("open_document")) {
                             onOpen(document.id)
                         }
 
                         if let onOpenChat {
-                            Button("Continue in chat") {
+                            Button(rossLocalized("continue_in_chat")) {
                                 onOpenChat(document.id)
                             }
                         }
 
                         if let onStartReviewChat {
-                            Button("Start review chat") {
+                            Button(rossLocalized("start_review_chat")) {
                                 onStartReviewChat(document.id)
                             }
                         }
 
                         if index > 0 {
-                            Button("Move earlier") {
+                            Button(rossLocalized("move_earlier")) {
                                 onMoveDocument(document.id, -1)
                             }
                         }
 
                         if index < documents.count - 1 {
-                            Button("Move later") {
+                            Button(rossLocalized("move_later")) {
                                 onMoveDocument(document.id, 1)
                             }
                         }
@@ -360,7 +360,7 @@ struct AlphaExpandableDocumentRow: View {
 
             if isExpanded {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Imported \(alphaDocumentImportedLabel(document))")
+                    Text(alphaImportedDocumentLabel(document))
                         .font(.caption)
                         .foregroundStyle(Color.rossInk.opacity(0.58))
 
@@ -374,13 +374,13 @@ struct AlphaExpandableDocumentRow: View {
 
                     RossGlassGroup(spacing: 8) {
                         HStack(spacing: 8) {
-                            Button("Open", action: onOpen)
+                            Button(rossLocalized("open"), action: onOpen)
                                 .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 14)
 
-                            Button("Chat", action: onOpenChat)
+                            Button(rossLocalized("chat"), action: onOpenChat)
                                 .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 14, expandsHorizontally: false)
 
-                            Button("New review chat", action: onStartReviewChat)
+                            Button(rossLocalized("new_review_chat"), action: onStartReviewChat)
                                 .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 14, expandsHorizontally: false)
 
                             if canMoveEarlier {
@@ -390,7 +390,7 @@ struct AlphaExpandableDocumentRow: View {
                                     Image(systemName: "arrow.up")
                                 }
                                 .rossGlassButtonStyle(tint: Color.rossInk.opacity(0.42), cornerRadius: 14, expandsHorizontally: false)
-                                .accessibilityLabel("Move document earlier")
+                                .accessibilityLabel(rossLocalized("move_document_earlier"))
                             }
 
                             if canMoveLater {
@@ -400,7 +400,7 @@ struct AlphaExpandableDocumentRow: View {
                                     Image(systemName: "arrow.down")
                                 }
                                 .rossGlassButtonStyle(tint: Color.rossInk.opacity(0.42), cornerRadius: 14, expandsHorizontally: false)
-                                .accessibilityLabel("Move document later")
+                                .accessibilityLabel(rossLocalized("move_document_later"))
                             }
                         }
                     }
@@ -466,10 +466,10 @@ struct AlphaMatterContextMenu: View {
             renameTarget = caseMatter
             renameDraft = caseMatter.title
         } label: {
-            Label("Rename matter", systemImage: "pencil")
+            Label(rossLocalized("rename_matter"), systemImage: "pencil")
         }
 
-        Menu("Folder color") {
+        Menu(rossLocalized("folder_color")) {
             ForEach(AlphaMatterTint.allCases) { tint in
                 Button {
                     model.setFolderTint(tint, for: caseMatter.id)
@@ -485,13 +485,13 @@ struct AlphaMatterContextMenu: View {
         Button {
             model.archiveCase(caseMatter.id)
         } label: {
-            Label("Archive matter", systemImage: "archivebox")
+            Label(rossLocalized("archive_matter"), systemImage: "archivebox")
         }
 
         Button(role: .destructive) {
             deleteTarget = caseMatter
         } label: {
-            Label("Delete matter", systemImage: "trash")
+            Label(rossLocalized("delete_matter"), systemImage: "trash")
         }
     }
 }
@@ -536,14 +536,14 @@ struct AlphaMatterStarterCard: View {
     }
 
     var body: some View {
-        RossSectionCard(title: "Start with your first matter", subtitle: "Name it now. Ross can extract the details from the first file.") {
+        RossSectionCard(title: rossLocalized("start_first_matter"), subtitle: rossLocalized("start_first_matter_detail")) {
             VStack(alignment: .leading, spacing: 12) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Matter name")
+                    Text(rossLocalized("matter_name"))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Color.rossInk.opacity(0.64))
 
-                    TextField("Client or case name", text: $model.caseDraftTitle)
+                    TextField(rossLocalized("client_or_case_name"), text: $model.caseDraftTitle)
                         .textFieldStyle(.plain)
                         .font(.body.weight(.medium))
                         .foregroundStyle(Color.rossInk)
@@ -560,11 +560,11 @@ struct AlphaMatterStarterCard: View {
                             fillOpacity: 0.84,
                             strokeOpacity: 0.52
                         )
-                        .accessibilityLabel("Matter name")
+                        .accessibilityLabel(rossLocalized("matter_name"))
                         .submitLabel(.done)
                 }
 
-                Text("After this, import the first PDF, image, or text file. Ross keeps it on this iPhone and prepares the review locally.")
+                Text(rossLocalized("after_first_matter_import_detail"))
                     .font(.footnote)
                     .foregroundStyle(Color.rossInk.opacity(0.68))
                     .fixedSize(horizontal: false, vertical: true)
@@ -573,7 +573,7 @@ struct AlphaMatterStarterCard: View {
                     matterNameFocused = false
                     model.createCase()
                 } label: {
-                    Label("Create matter workspace", systemImage: "folder.badge.plus")
+                    Label(rossLocalized("create_matter_workspace"), systemImage: "folder.badge.plus")
                         .frame(maxWidth: .infinity)
                 }
                 .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 18)
@@ -581,6 +581,10 @@ struct AlphaMatterStarterCard: View {
             }
         }
     }
+}
+
+func alphaImportedDocumentLabel(_ document: AlphaCaseDocument, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("imported_document_label", languageCode: languageCode), alphaDocumentImportedLabel(document))
 }
 
 struct AlphaAssistantActivityStrip: View {

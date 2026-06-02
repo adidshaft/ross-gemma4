@@ -922,6 +922,22 @@ final class AlphaExtractionTests: XCTestCase {
             "வழக்கை சேர்த்து, கோப்பை import செய்து, பிறகு Ross-ஐ கேளுங்கள்."
         )
         XCTAssertEqual(
+            rossLocalized("open_document", languageCode: "bn"),
+            "নথি খুলুন"
+        )
+        XCTAssertEqual(
+            rossLocalized("move_document_later", languageCode: "te-IN"),
+            "పత్రాన్ని తర్వాతకు తరలించండి"
+        )
+        XCTAssertEqual(
+            rossLocalized("start_first_matter", languageCode: "hi"),
+            "अपने पहले मामले से शुरू करें"
+        )
+        XCTAssertEqual(
+            rossLocalized("after_first_matter_import_detail", languageCode: "ta"),
+            "இதற்குப் பிறகு முதல் PDF, image அல்லது text file-ஐ import செய்யவும். Ross அதை இந்த iPhone-இல் வைத்து review-ஐ locally தயாரிக்கும்."
+        )
+        XCTAssertEqual(
             rossLocalized("download_size", languageCode: "ta"),
             "பதிவிறக்க அளவு"
         )

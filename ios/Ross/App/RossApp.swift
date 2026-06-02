@@ -2037,6 +2037,153 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Sharing-க்கு Notes & Drafts திறந்து system share sheet-ஐ பயன்படுத்தவும்.",
             "te": "Sharing కోసం Notes & Drafts తెరిచి system share sheet ఉపయోగించండి."
         ],
+        "choose_document_view": [
+            "en": "Choose document view",
+            "hi": "Document view चुनें",
+            "bn": "Document view বেছে নিন",
+            "ta": "Document view தேர்வுசெய்க",
+            "te": "Document view ఎంచుకోండి"
+        ],
+        "open_document": [
+            "en": "Open document",
+            "hi": "दस्तावेज़ खोलें",
+            "bn": "নথি খুলুন",
+            "ta": "ஆவணத்தை திறக்கவும்",
+            "te": "పత్రాన్ని తెరవండి"
+        ],
+        "continue_in_chat": [
+            "en": "Continue in chat",
+            "hi": "chat में जारी रखें",
+            "bn": "chat-এ চালিয়ে যান",
+            "ta": "chat-இல் தொடரவும்",
+            "te": "chat లో కొనసాగించండి"
+        ],
+        "start_review_chat": [
+            "en": "Start review chat",
+            "hi": "review chat शुरू करें",
+            "bn": "review chat শুরু করুন",
+            "ta": "review chat தொடங்கவும்",
+            "te": "review chat ప్రారంభించండి"
+        ],
+        "move_earlier": [
+            "en": "Move earlier",
+            "hi": "पहले ले जाएं",
+            "bn": "আগে সরান",
+            "ta": "முன்னே நகர்த்தவும்",
+            "te": "ముందుకు తరలించండి"
+        ],
+        "move_later": [
+            "en": "Move later",
+            "hi": "बाद में ले जाएं",
+            "bn": "পরে সরান",
+            "ta": "பின்னே நகர்த்தவும்",
+            "te": "తర్వాతకు తరలించండి"
+        ],
+        "open": [
+            "en": "Open",
+            "hi": "खोलें",
+            "bn": "খুলুন",
+            "ta": "திறக்கவும்",
+            "te": "తెరవండి"
+        ],
+        "chat": [
+            "en": "Chat",
+            "hi": "Chat",
+            "bn": "Chat",
+            "ta": "Chat",
+            "te": "Chat"
+        ],
+        "new_review_chat": [
+            "en": "New review chat",
+            "hi": "नई review chat",
+            "bn": "নতুন review chat",
+            "ta": "புதிய review chat",
+            "te": "కొత్త review chat"
+        ],
+        "move_document_earlier": [
+            "en": "Move document earlier",
+            "hi": "दस्तावेज़ पहले ले जाएं",
+            "bn": "নথি আগে সরান",
+            "ta": "ஆவணத்தை முன்னே நகர்த்தவும்",
+            "te": "పత్రాన్ని ముందుకు తరలించండి"
+        ],
+        "move_document_later": [
+            "en": "Move document later",
+            "hi": "दस्तावेज़ बाद में ले जाएं",
+            "bn": "নথি পরে সরান",
+            "ta": "ஆவணத்தை பின்னே நகர்த்தவும்",
+            "te": "పత్రాన్ని తర్వాతకు తరలించండి"
+        ],
+        "imported_document_label": [
+            "en": "Imported %@",
+            "hi": "Imported %@",
+            "bn": "Imported %@",
+            "ta": "Imported %@",
+            "te": "Imported %@"
+        ],
+        "rename_matter": [
+            "en": "Rename matter",
+            "hi": "मामले का नाम बदलें",
+            "bn": "মামলার নাম বদলান",
+            "ta": "வழக்கின் பெயரை மாற்றவும்",
+            "te": "కేసు పేరు మార్చండి"
+        ],
+        "folder_color": [
+            "en": "Folder color",
+            "hi": "Folder color",
+            "bn": "Folder color",
+            "ta": "Folder color",
+            "te": "Folder color"
+        ],
+        "archive_matter": [
+            "en": "Archive matter",
+            "hi": "मामला archive करें",
+            "bn": "মামলা archive করুন",
+            "ta": "வழக்கை archive செய்யவும்",
+            "te": "కేసును archive చేయండి"
+        ],
+        "delete_matter": [
+            "en": "Delete matter",
+            "hi": "मामला delete करें",
+            "bn": "মামলা delete করুন",
+            "ta": "வழக்கை delete செய்யவும்",
+            "te": "కేసును delete చేయండి"
+        ],
+        "start_first_matter": [
+            "en": "Start with your first matter",
+            "hi": "अपने पहले मामले से शुरू करें",
+            "bn": "আপনার প্রথম মামলা দিয়ে শুরু করুন",
+            "ta": "உங்கள் முதல் வழக்குடன் தொடங்குங்கள்",
+            "te": "మీ మొదటి కేసుతో ప్రారంభించండి"
+        ],
+        "start_first_matter_detail": [
+            "en": "Name it now. Ross can extract the details from the first file.",
+            "hi": "अभी नाम दें। Ross पहली फ़ाइल से details निकाल सकता है।",
+            "bn": "এখন নাম দিন। Ross প্রথম ফাইল থেকে details বের করতে পারে।",
+            "ta": "இப்போது பெயரிடுங்கள். Ross முதல் கோப்பிலிருந்து details எடுக்க முடியும்.",
+            "te": "ఇప్పుడు పేరు పెట్టండి. Ross మొదటి ఫైల్ నుండి details తీసుకోగలదు."
+        ],
+        "client_or_case_name": [
+            "en": "Client or case name",
+            "hi": "Client या case name",
+            "bn": "Client বা case name",
+            "ta": "Client அல்லது case name",
+            "te": "Client లేదా case name"
+        ],
+        "after_first_matter_import_detail": [
+            "en": "After this, import the first PDF, image, or text file. Ross keeps it on this iPhone and prepares the review locally.",
+            "hi": "इसके बाद पहली PDF, image या text file import करें। Ross इसे इसी iPhone पर रखता है और review locally तैयार करता है।",
+            "bn": "এর পরে প্রথম PDF, image, বা text file import করুন। Ross এটি এই iPhone-এ রাখে এবং review locally প্রস্তুত করে।",
+            "ta": "இதற்குப் பிறகு முதல் PDF, image அல்லது text file-ஐ import செய்யவும். Ross அதை இந்த iPhone-இல் வைத்து review-ஐ locally தயாரிக்கும்.",
+            "te": "దీని తర్వాత మొదటి PDF, image లేదా text file ను import చేయండి. Ross దాన్ని ఈ iPhone లో ఉంచి review ను locally సిద్ధం చేస్తుంది."
+        ],
+        "create_matter_workspace": [
+            "en": "Create matter workspace",
+            "hi": "matter workspace बनाएं",
+            "bn": "matter workspace তৈরি করুন",
+            "ta": "matter workspace உருவாக்கவும்",
+            "te": "matter workspace సృష్టించండి"
+        ],
         "translate_to": [
             "en": "Translate to %@",
             "hi": "%@ में अनुवाद करें",
