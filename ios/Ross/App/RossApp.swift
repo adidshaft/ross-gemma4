@@ -2282,6 +2282,104 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Drafts",
             "te": "Drafts"
         ],
+        "notes": [
+            "en": "Notes",
+            "hi": "Notes",
+            "bn": "Notes",
+            "ta": "Notes",
+            "te": "Notes"
+        ],
+        "snooze_by_one_day": [
+            "en": "Snooze by 1 day",
+            "hi": "1 दिन snooze करें",
+            "bn": "1 দিন snooze করুন",
+            "ta": "1 நாள் snooze செய்யவும்",
+            "te": "1 రోజు snooze చేయండి"
+        ],
+        "delete_task": [
+            "en": "Delete task",
+            "hi": "task delete करें",
+            "bn": "task delete করুন",
+            "ta": "task delete செய்யவும்",
+            "te": "task delete చేయండి"
+        ],
+        "prepared_locally": [
+            "en": "Prepared locally",
+            "hi": "locally तैयार",
+            "bn": "locally প্রস্তুত",
+            "ta": "locally தயாரானது",
+            "te": "locally సిద్ధం"
+        ],
+        "refresh_matter_after_import_detail": [
+            "en": "Ask Ross to refresh this matter after importing real files.",
+            "hi": "real files import करने के बाद Ross से इस matter को refresh कराएं।",
+            "bn": "real files import করার পরে Ross-কে এই matter refresh করতে বলুন।",
+            "ta": "real files import செய்த பிறகு இந்த matter-ஐ refresh செய்ய Ross-ஐ கேளுங்கள்.",
+            "te": "real files import చేసిన తర్వాత ఈ matter ను refresh చేయమని Ross‌ను అడగండి."
+        ],
+        "refresh_matter": [
+            "en": "Refresh matter",
+            "hi": "matter refresh करें",
+            "bn": "matter refresh করুন",
+            "ta": "matter refresh செய்யவும்",
+            "te": "matter refresh చేయండి"
+        ],
+        "no_drafts_generated_yet": [
+            "en": "No drafts generated yet.",
+            "hi": "अभी drafts generated नहीं हैं।",
+            "bn": "এখনও drafts generated হয়নি।",
+            "ta": "இன்னும் drafts generated ஆகவில்லை.",
+            "te": "ఇంకా drafts generated కాలేదు."
+        ],
+        "ask_prepare_local_draft_detail": [
+            "en": "Ask Ross to prepare a chronology, case note, or order summary from local matter state.",
+            "hi": "local matter state से chronology, case note, या order summary तैयार करने के लिए Ross से पूछें।",
+            "bn": "local matter state থেকে chronology, case note, বা order summary তৈরি করতে Ross-কে জিজ্ঞাসা করুন।",
+            "ta": "local matter state-இலிருந்து chronology, case note அல்லது order summary தயாரிக்க Ross-ஐ கேளுங்கள்.",
+            "te": "local matter state నుండి chronology, case note, లేదా order summary సిద్ధం చేయమని Ross‌ను అడగండి."
+        ],
+        "ask_about_this_matter": [
+            "en": "Ask about this matter",
+            "hi": "इस matter के बारे में पूछें",
+            "bn": "এই matter সম্পর্কে জিজ্ঞাসা করুন",
+            "ta": "இந்த matter பற்றி கேளுங்கள்",
+            "te": "ఈ matter గురించి అడగండి"
+        ],
+        "open_drafts": [
+            "en": "Open drafts",
+            "hi": "drafts खोलें",
+            "bn": "drafts খুলুন",
+            "ta": "drafts திறக்கவும்",
+            "te": "drafts తెరవండి"
+        ],
+        "open_review": [
+            "en": "Open review",
+            "hi": "review खोलें",
+            "bn": "review খুলুন",
+            "ta": "review திறக்கவும்",
+            "te": "review తెరవండి"
+        ],
+        "latest_summary": [
+            "en": "Latest summary",
+            "hi": "Latest summary",
+            "bn": "Latest summary",
+            "ta": "Latest summary",
+            "te": "Latest summary"
+        ],
+        "next_hearing_date": [
+            "en": "Next hearing: %@",
+            "hi": "अगली hearing: %@",
+            "bn": "পরবর্তী hearing: %@",
+            "ta": "அடுத்த hearing: %@",
+            "te": "తదుపరి hearing: %@"
+        ],
+        "important": [
+            "en": "Important",
+            "hi": "ज़रूरी",
+            "bn": "গুরুত্বপূর্ণ",
+            "ta": "முக்கியம்",
+            "te": "ముఖ్యం"
+        ],
         "stored_on_phone_unless_shared": [
             "en": "Stored on this iPhone unless you share it.",
             "hi": "जब तक आप share नहीं करते, यह इसी iPhone पर stored रहता है।",

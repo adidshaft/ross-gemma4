@@ -37,11 +37,11 @@ struct AlphaMatterTimelineRow: View {
             )
             .contextMenu {
                 if task.status == .open {
-                    Button("Snooze by 1 day") {
+                    Button(rossLocalized("snooze_by_one_day")) {
                         onSnoozeTask(task)
                     }
                 }
-                Button("Delete task", role: .destructive) {
+                Button(rossLocalized("delete_task"), role: .destructive) {
                     onDeleteTask(task)
                 }
             }
@@ -58,9 +58,9 @@ enum AlphaMatterWorkspaceSection: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .documents:
-            "Documents"
+            rossLocalized("documents_title")
         case .notes:
-            "Notes"
+            rossLocalized("notes")
         }
     }
 
@@ -72,6 +72,13 @@ enum AlphaMatterWorkspaceSection: String, CaseIterable, Identifiable {
             "note.text"
         }
     }
+}
+
+func alphaNextHearingLabel(_ date: Date, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(
+        format: rossLocalized("next_hearing_date", languageCode: languageCode),
+        date.formatted(date: .abbreviated, time: .omitted)
+    )
 }
 
 struct AlphaMatterSectionPicker: View {
@@ -248,7 +255,7 @@ struct AlphaCaseWorkspaceScreen: View {
                     ) {
                         VStack(alignment: .leading, spacing: 12) {
                             ForEach(caseMatter.draftTasks, id: \.self) { task in
-                                AlphaSummaryRow(title: task, detail: "Prepared locally")
+                                AlphaSummaryRow(title: task, detail: rossLocalized("prepared_locally"))
                             }
                             ForEach(timelineEntries) { entry in
                                 AlphaMatterTimelineRow(
@@ -265,9 +272,9 @@ struct AlphaCaseWorkspaceScreen: View {
                             }
                             if caseMatter.draftTasks.isEmpty && timelineEntries.isEmpty {
                                 AlphaMatterCommandHintCard(
-                                    detail: "Ask Ross to refresh this matter after importing real files.",
+                                    detail: rossLocalized("refresh_matter_after_import_detail"),
                                     actionSystemImage: "arrow.clockwise",
-                                    actionLabel: "Refresh matter",
+                                    actionLabel: rossLocalized("refresh_matter"),
                                     actionDisabled: model.refreshingCaseOverviewIDs.contains(caseId),
                                     action: { Task { await model.refreshCaseOverview(caseId: caseId) } }
                                 )
@@ -276,13 +283,13 @@ struct AlphaCaseWorkspaceScreen: View {
                     }
 
                     AlphaDisclosureCard(
-                        title: "Drafts",
+                        title: rossLocalized("drafts"),
                         badge: draftCount == 0 ? nil : "\(draftCount)",
                         isExpanded: $draftsExpanded
                     ) {
                         VStack(alignment: .leading, spacing: 12) {
                             if matterExports.isEmpty {
-                                Text("No drafts generated yet.")
+                                Text(rossLocalized("no_drafts_generated_yet"))
                                     .font(.subheadline)
                                     .foregroundStyle(Color.rossInk.opacity(0.66))
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -297,9 +304,9 @@ struct AlphaCaseWorkspaceScreen: View {
                                 }
                             }
                             AlphaMatterCommandHintCard(
-                                detail: "Ask Ross to prepare a chronology, case note, or order summary from local matter state.",
+                                detail: rossLocalized("ask_prepare_local_draft_detail"),
                                 actionSystemImage: "bubble.right",
-                                actionLabel: matterExports.isEmpty ? "Ask about this matter" : "Open drafts",
+                                actionLabel: matterExports.isEmpty ? rossLocalized("ask_about_this_matter") : rossLocalized("open_drafts"),
                                 actionDisabled: false,
                                 action: {
                                     if matterExports.isEmpty {
@@ -487,7 +494,7 @@ struct AlphaMatterAttentionCard: View {
                 Button {
                     onOpenReview()
                 } label: {
-                    Text("Open review")
+                    Text(rossLocalized("open_review"))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Color.rossInk)
                         .padding(.horizontal, 12)
@@ -537,10 +544,10 @@ struct AlphaMatterOverviewSummaryCard: View {
     }
 
     var body: some View {
-        RossSectionCard(title: "Latest summary") {
+        RossSectionCard(title: rossLocalized("latest_summary")) {
             VStack(alignment: .leading, spacing: 12) {
                 if let nextHearing = caseMatter.nextHearing {
-                    Text("Next hearing: \(nextHearing.formatted(date: .abbreviated, time: .omitted))")
+                    Text(alphaNextHearingLabel(nextHearing))
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.rossInk)
                 }
@@ -555,7 +562,7 @@ struct AlphaMatterOverviewSummaryCard: View {
                     Divider()
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Important")
+                        Text(rossLocalized("important"))
                             .font(.caption.weight(.bold))
                             .textCase(.uppercase)
                             .foregroundStyle(Color.rossInk.opacity(0.52))

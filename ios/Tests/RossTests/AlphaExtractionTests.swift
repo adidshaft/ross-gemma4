@@ -766,6 +766,18 @@ final class AlphaExtractionTests: XCTestCase {
             rossLocalized("notes_drafts_metadata_saved_file", languageCode: "bn"),
             "সংরক্ষিত ফাইল"
         )
+        XCTAssertEqual(
+            rossLocalized("refresh_matter", languageCode: "ta"),
+            "matter refresh செய்யவும்"
+        )
+        XCTAssertEqual(
+            rossLocalized("open_review", languageCode: "te-IN"),
+            "review తెరవండి"
+        )
+        XCTAssertTrue(
+            alphaNextHearingLabel(Date(timeIntervalSince1970: 0), languageCode: "hi")
+                .contains("अगली hearing:")
+        )
         let previousLanguageCode = rossSelectedLanguageCode()
         defer { rossSaveLanguageSelection(code: previousLanguageCode) }
         rossSaveLanguageSelection(code: "ta")
