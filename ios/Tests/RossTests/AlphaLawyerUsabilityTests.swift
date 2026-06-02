@@ -246,6 +246,128 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    @MainActor
+    func testHindiSelectedFileSummaryBuildsDocumentAskResult() {
+        let caseID = UUID()
+        let documentID = UUID()
+        let sourceRef = AlphaSourceRef(
+            caseId: caseID,
+            documentId: documentID,
+            documentTitle: "Hindi leave application",
+            pageNumber: 1,
+            textSnippet: "कर्मचारी ने छुट्टी के लिए आवेदन किया।"
+        )
+        var state = AlphaPersistedState.seed()
+        state.cases = [
+            AlphaCaseMatter(
+                id: caseID,
+                title: "Hindi matter",
+                forum: "Labour Court",
+                stage: .pleadings,
+                summary: "Hindi document imported.",
+                issueHighlights: [],
+                evidenceNotes: [],
+                draftTasks: [],
+                documents: [
+                    AlphaCaseDocument(
+                        id: documentID,
+                        title: "Hindi leave application",
+                        fileName: "leave.txt",
+                        kind: .text,
+                        storedRelativePath: "docs/leave.txt",
+                        importedAt: .now,
+                        pageCount: 1,
+                        ocrStatus: .nativeText,
+                        indexingStatus: .indexed,
+                        extractedText: "कर्मचारी ने छुट्टी के लिए आवेदन किया और नियोक्ता ने जवाब नहीं दिया।",
+                        pages: [
+                            AlphaDocumentPage(
+                                pageNumber: 1,
+                                snippet: "कर्मचारी ने छुट्टी के लिए आवेदन किया।",
+                                extractedText: "कर्मचारी ने छुट्टी के लिए आवेदन किया और नियोक्ता ने जवाब नहीं दिया।"
+                            )
+                        ]
+                    )
+                ],
+                sourceRefs: [sourceRef]
+            )
+        ]
+
+        let model = AlphaRossModel(previewState: state)
+        model.setSelectedAskDocumentIDs([documentID], for: caseID)
+
+        let result = model.buildLocalAskResult(
+            question: "इस दस्तावेज़ का सारांश दें",
+            scopeCaseID: caseID
+        )
+
+        XCTAssertEqual(result.answerTitle, "Document summary")
+        XCTAssertEqual(result.selectedDocumentTitles, ["Hindi leave application"])
+        XCTAssertTrue(result.answerSections.joined(separator: " ").contains("कर्मचारी ने छुट्टी"))
+        XCTAssertEqual(result.statusNote, "Answered from selected files")
+    }
+
+    @MainActor
+    func testBanglaSelectedFileSummaryBuildsDocumentAskResult() {
+        let caseID = UUID()
+        let documentID = UUID()
+        let sourceRef = AlphaSourceRef(
+            caseId: caseID,
+            documentId: documentID,
+            documentTitle: "Bangla leave application",
+            pageNumber: 1,
+            textSnippet: "কর্মী ছুটির জন্য আবেদন করেছিলেন।"
+        )
+        var state = AlphaPersistedState.seed()
+        state.cases = [
+            AlphaCaseMatter(
+                id: caseID,
+                title: "Bangla matter",
+                forum: "Labour Court",
+                stage: .pleadings,
+                summary: "Bangla document imported.",
+                issueHighlights: [],
+                evidenceNotes: [],
+                draftTasks: [],
+                documents: [
+                    AlphaCaseDocument(
+                        id: documentID,
+                        title: "Bangla leave application",
+                        fileName: "leave.txt",
+                        kind: .text,
+                        storedRelativePath: "docs/leave.txt",
+                        importedAt: .now,
+                        pageCount: 1,
+                        ocrStatus: .nativeText,
+                        indexingStatus: .indexed,
+                        extractedText: "কর্মী ছুটির জন্য আবেদন করেছিলেন এবং নিয়োগকর্তা উত্তর দেননি।",
+                        pages: [
+                            AlphaDocumentPage(
+                                pageNumber: 1,
+                                snippet: "কর্মী ছুটির জন্য আবেদন করেছিলেন।",
+                                extractedText: "কর্মী ছুটির জন্য আবেদন করেছিলেন এবং নিয়োগকর্তা উত্তর দেননি।"
+                            )
+                        ]
+                    )
+                ],
+                sourceRefs: [sourceRef]
+            )
+        ]
+
+        let model = AlphaRossModel(previewState: state)
+        model.setSelectedAskDocumentIDs([documentID], for: caseID)
+
+        let result = model.buildLocalAskResult(
+            question: "এই ফাইলটি সারাংশ করুন",
+            scopeCaseID: caseID
+        )
+
+        XCTAssertEqual(result.answerTitle, "Document summary")
+        XCTAssertEqual(result.selectedDocumentTitles, ["Bangla leave application"])
+        XCTAssertTrue(result.answerSections.joined(separator: " ").contains("কর্মী ছুটির"))
+        XCTAssertEqual(result.statusNote, "Answered from selected files")
+    }
+
     func testReadyAssistantStatusWinsOverFailedInactiveDownload() async {
         let model = await MainActor.run {
             AlphaRossModel(previewState: AlphaPersistedState.demoSeed())

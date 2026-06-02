@@ -1373,7 +1373,8 @@ extension AlphaRossModel {
             lowered.contains("what is this file about") ||
             lowered.contains("what did the latest order say") ||
             lowered.contains("latest order") ||
-            lowered.contains("current document")
+            lowered.contains("current document") ||
+            alphaAskQuestionTargetsSelectedDocument(question)
         let asksForImportantDates = lowered.contains("important dates") || lowered.contains("list important dates") || lowered.contains("list dates")
         let asksForNextActions = lowered.contains("what should i do next") || lowered.contains("next actions") || lowered.contains("suggest next action") || lowered.contains("what tasks should i create") || lowered.contains("needs my attention today")
         let asksAboutAssistantSetup = lowered.contains("private assistant") ||
