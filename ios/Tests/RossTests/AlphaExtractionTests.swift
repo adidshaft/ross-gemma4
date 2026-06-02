@@ -698,6 +698,18 @@ final class AlphaExtractionTests: XCTestCase {
             "உங்கள் விருப்ப மொழியைத் தேர்வுசெய்யவும்"
         )
         XCTAssertEqual(
+            rossLocalized("choose_language_title", languageCode: "bn"),
+            "আপনার পছন্দের ভাষা বেছে নিন"
+        )
+        XCTAssertEqual(
+            rossLocalized("download_setup_ross", languageCode: "bn"),
+            "Ross ডাউনলোড করে সেট আপ করুন"
+        )
+        XCTAssertEqual(
+            rossLocalized("ask_sheet_placeholder", languageCode: "bn"),
+            "এই মামলা, ট্যাগ করা ফাইল, বা আপনার পরবর্তী খসড়া ধাপ সম্পর্কে Ross-কে জিজ্ঞাসা করুন।"
+        )
+        XCTAssertEqual(
             rossLocalized("continue", languageCode: "te-IN"),
             "కొనసాగించండి"
         )
