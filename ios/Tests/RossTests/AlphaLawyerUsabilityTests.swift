@@ -266,6 +266,10 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
 
     @MainActor
     func testHindiSelectedFileSummaryBuildsDocumentAskResult() {
+        let previousLanguageCode = rossSelectedLanguageCode()
+        rossSaveLanguageSelection(code: "hi")
+        defer { rossSaveLanguageSelection(code: previousLanguageCode) }
+
         let caseID = UUID()
         let documentID = UUID()
         let sourceRef = AlphaSourceRef(
@@ -274,6 +278,18 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             documentTitle: "Hindi leave application",
             pageNumber: 1,
             textSnippet: "कर्मचारी ने छुट्टी के लिए आवेदन किया।"
+        )
+        let nextDateField = AlphaExtractedLegalField(
+            caseId: caseID,
+            documentId: documentID,
+            fieldType: .nextDate,
+            label: "Next date",
+            value: "12 March 2026",
+            sourceRefs: [sourceRef],
+            confidence: 0.91,
+            extractionMode: .basic,
+            extractionPass: .regex,
+            needsReview: false
         )
         var state = AlphaPersistedState.seed()
         state.cases = [
@@ -304,7 +320,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                                 snippet: "कर्मचारी ने छुट्टी के लिए आवेदन किया।",
                                 extractedText: "कर्मचारी ने छुट्टी के लिए आवेदन किया और नियोक्ता ने जवाब नहीं दिया।"
                             )
-                        ]
+                        ],
+                        extractedFields: [nextDateField]
                     )
                 ],
                 sourceRefs: [sourceRef]
@@ -323,6 +340,14 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertEqual(result.selectedDocumentTitles, ["Hindi leave application"])
         XCTAssertTrue(result.answerSections.joined(separator: " ").contains("कर्मचारी ने छुट्टी"))
         XCTAssertEqual(result.statusNote, "selected files से जवाब")
+
+        let englishTriggerResult = model.buildLocalAskResult(
+            question: "summarize this document",
+            scopeCaseID: caseID
+        )
+        let englishTriggerText = englishTriggerResult.answerSections.joined(separator: " ")
+        XCTAssertTrue(englishTriggerText.contains("Next date मिली: 12 March 2026."), englishTriggerText)
+        XCTAssertFalse(englishTriggerText.contains("Next date found: 12 March 2026."), englishTriggerText)
     }
 
     @MainActor

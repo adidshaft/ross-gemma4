@@ -1227,6 +1227,14 @@ final class AlphaExtractionTests: XCTestCase {
             "কোনো case selected নেই."
         )
         XCTAssertEqual(
+            String(format: rossLocalized("ask_local_next_date_found", languageCode: "hi"), "12 March 2026"),
+            "Next date मिली: 12 March 2026."
+        )
+        XCTAssertEqual(
+            String(format: rossLocalized("ask_local_next_actions", languageCode: "te"), "File reply"),
+            "Next actions: File reply."
+        )
+        XCTAssertEqual(
             rossLocalized("notes_drafts_title", languageCode: "hi"),
             "नोट्स और ड्राफ्ट"
         )

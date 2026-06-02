@@ -4816,6 +4816,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Case files இந்த device-இல் இருக்கும். Next date கண்டது: %@",
             "te": "Case files ఈ device లోనే ఉంటాయి. Next date కనుగొంది: %@"
         ],
+        "ask_local_next_actions": [
+            "en": "Next actions: %@.",
+            "hi": "Next actions: %@.",
+            "bn": "Next actions: %@.",
+            "ta": "Next actions: %@.",
+            "te": "Next actions: %@."
+        ],
+        "ask_local_next_date_found": [
+            "en": "Next date found: %@.",
+            "hi": "Next date मिली: %@.",
+            "bn": "Next date পাওয়া গেছে: %@.",
+            "ta": "Next date கண்டது: %@.",
+            "te": "Next date కనుగొంది: %@."
+        ],
         "matter_memory_ready_for_first_document": [
             "en": "Ross is ready to build this matter once the first document is imported on this device.",
             "hi": "इस device पर पहला document import होते ही Ross इस matter को build करने के लिए ready है.",

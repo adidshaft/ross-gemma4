@@ -1546,7 +1546,8 @@ extension AlphaRossModel {
                 sections.append("Next hearing: \(nextHearing.formatted(date: .abbreviated, time: .omitted)).")
             }
             if !scopedPrimaryCase.draftTasks.isEmpty {
-                sections.append("Next actions: \(scopedPrimaryCase.draftTasks.prefix(2).joined(separator: "; ")).")
+                let actions = scopedPrimaryCase.draftTasks.prefix(2).joined(separator: "; ")
+                sections.append(String(format: rossLocalized("ask_local_next_actions"), actions))
             }
         }
         if asksForDocumentSummary, let target = selectedDocumentTarget {
@@ -1556,7 +1557,7 @@ extension AlphaRossModel {
                 .map(\.value)
             sections.append("\(target.document.title) is available in this matter.")
             if let nextDate = visibleFields.first(where: { $0.fieldType == .nextDate })?.value {
-                sections.append("Next date found: \(nextDate).")
+                sections.append(String(format: rossLocalized("ask_local_next_date_found"), nextDate))
             }
             if let direction = directionValues.first {
                 sections.append(direction)
