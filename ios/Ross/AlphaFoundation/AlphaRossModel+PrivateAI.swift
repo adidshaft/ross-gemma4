@@ -856,6 +856,7 @@ extension AlphaRossModel {
             $0.totalBytes = artifact.sizeBytes
             if !isResumingPartialDownload {
                 $0.bytesDownloaded = 0
+                $0.resumeDataRelativePath = nil
             }
             $0.checksumSha256 = artifact.sha256
             $0.artifactKind = "local_model_artifact"

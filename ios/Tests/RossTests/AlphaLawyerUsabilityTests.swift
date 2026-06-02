@@ -1614,6 +1614,48 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    func testRetryAssistantSetupClearsStaleResumeProgressBeforeRestart() async throws {
+        rossSetBackendBaseURLOverride("http://127.0.0.1:9")
+        defer { rossSetBackendBaseURLOverride(nil) }
+
+        try await withRestoredStore { store in
+            let artifact = alphaAssistantModelArtifact(for: .caseAssociate)
+            let job = AlphaModelDownloadJob(
+                sessionId: "retry-stale-resume",
+                packId: artifact.packId,
+                tier: .caseAssociate,
+                state: .pausedUser,
+                networkPolicy: .wifiOnly,
+                bytesDownloaded: 99_000_000,
+                totalBytes: artifact.sizeBytes,
+                checksumSha256: artifact.sha256,
+                artifactKind: "local_model_artifact",
+                runtimeMode: .llamaCppGguf,
+                developmentOnly: false,
+                failureReason: "Previous retry could not continue.",
+                resumeDataRelativePath: "model-resume-data/missing-\(UUID().uuidString).resume"
+            )
+            var state = AlphaPersistedState.seed()
+            state.installedPacks = []
+            state.modelJobs = [job]
+            state.settings.activeTier = nil
+            try await store.replace(with: state)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+            await model.startPackDownload(for: .caseAssociate, mobileAllowed: false, existingJobID: job.id)
+
+            let snapshot = await MainActor.run { model.persisted }
+            let restartedJob = snapshot.modelJobs.first { $0.id == job.id }
+            XCTAssertNil(restartedJob?.resumeDataRelativePath)
+            XCTAssertNil(restartedJob?.failureReason)
+            XCTAssertEqual(restartedJob?.state, .installed)
+            XCTAssertEqual(restartedJob?.bytesDownloaded, restartedJob?.totalBytes)
+        }
+    }
+
     func testLaunchRecoveryPausesActiveDownloadedModelAfterUnfinishedValidation() async throws {
         let startupValidationKey = "ross.private_ai.startup_validation_started_at"
         let model = await MainActor.run {
