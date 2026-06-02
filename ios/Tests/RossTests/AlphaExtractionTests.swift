@@ -2658,6 +2658,37 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(model.alphaAnswerLanguageInstruction(for: "Reply in Telugu language").contains("Telugu only"))
     }
 
+    @MainActor
+    func testAskRuntimeInstructionUsesSelectedLanguageLabels() {
+        let previousLanguageCode = rossSelectedLanguageCode()
+        rossSaveLanguageSelection(code: "hi")
+        defer { rossSaveLanguageSelection(code: previousLanguageCode) }
+
+        let model = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
+        let documentID = UUID()
+        let caseID = UUID()
+        let instruction = model.askRuntimeInstruction(
+            question: "इस file से next date बताएं",
+            scopeCaseID: nil,
+            selectedDocuments: [
+                AlphaAskDocumentOption(
+                    id: documentID,
+                    caseId: caseID,
+                    caseTitle: "Hindi matter",
+                    title: "Order sheet",
+                    fileName: "order.pdf",
+                    kind: .pdf,
+                    isShared: false
+                )
+            ],
+            hasLocalSources: true
+        )
+
+        XCTAssertTrue(instruction.contains("प्रश्न: इस file से next date बताएं"), instruction)
+        XCTAssertTrue(instruction.contains("Tagged files: Order sheet"), instruction)
+        XCTAssertFalse(instruction.contains("Question: इस file से next date बताएं"), instruction)
+    }
+
     func testPipelinePlanChangesWithInstalledPack() {
         XCTAssertEqual(AlphaExtractionPipelinePlanner.plan(for: nil).mode, .basic)
         XCTAssertEqual(AlphaExtractionPipelinePlanner.plan(for: installedPack(.quickStart)).mode, .quickStart)

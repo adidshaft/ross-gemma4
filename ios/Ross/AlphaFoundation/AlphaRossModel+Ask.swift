@@ -1381,6 +1381,8 @@ extension AlphaRossModel {
         selectedDocuments: [AlphaAskDocumentOption],
         hasLocalSources: Bool
     ) -> String {
+        let questionLabel = rossLocalized("ask_instruction_question")
+        let scopeLabelText = rossLocalized("ask_instruction_scope")
         var instruction: String
         if hasLocalSources {
             instruction = """
@@ -1389,8 +1391,8 @@ extension AlphaRossModel {
             Return plain text only.
             First line: a short heading without the word "Heading".
             Then write 2 to 4 lines that each begin with "- ".
-            Question: \(question)
-            Scope: \(scopeLabel(for: scopeCaseID))
+            \(questionLabel): \(question)
+            \(scopeLabelText): \(scopeLabel(for: scopeCaseID))
             """
         } else {
             instruction = """
@@ -1400,13 +1402,13 @@ extension AlphaRossModel {
             Return plain text only.
             First line: a short heading without the word "Heading".
             Then write 2 to 4 lines that each begin with "- ".
-            Question: \(question)
-            Scope: \(scopeLabel(for: scopeCaseID))
+            \(questionLabel): \(question)
+            \(scopeLabelText): \(scopeLabel(for: scopeCaseID))
             """
         }
 
         if !selectedDocuments.isEmpty {
-            instruction += "\nTagged files: \(selectedDocuments.map(\.title).joined(separator: ", "))"
+            instruction += "\n\(rossLocalized("ask_instruction_tagged_files")): \(selectedDocuments.map(\.title).joined(separator: ", "))"
         }
 
         instruction += "\n\(alphaAnswerLanguageInstruction(for: question))"

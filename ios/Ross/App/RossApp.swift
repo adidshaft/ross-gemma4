@@ -5271,6 +5271,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "%@-இலிருந்து confirmed details",
             "te": "%@ నుండి confirmed details"
         ],
+        "ask_instruction_question": [
+            "en": "Question",
+            "hi": "प्रश्न",
+            "bn": "প্রশ্ন",
+            "ta": "கேள்வி",
+            "te": "ప్రశ్న"
+        ],
+        "ask_instruction_scope": [
+            "en": "Scope",
+            "hi": "Scope",
+            "bn": "Scope",
+            "ta": "Scope",
+            "te": "Scope"
+        ],
+        "ask_instruction_tagged_files": [
+            "en": "Tagged files",
+            "hi": "Tagged files",
+            "bn": "Tagged files",
+            "ta": "Tagged files",
+            "te": "Tagged files"
+        ],
         "ask_local_tasks_title": [
             "en": "Tasks from your files",
             "hi": "आपकी files से tasks",
