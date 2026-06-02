@@ -565,6 +565,18 @@ func alphaReviewItemCountLabel(_ count: Int) -> String {
     count == 1 ? "1 review item" : "\(count) review items"
 }
 
+func alphaReviewItemsNeedAdvocateReviewLabel(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("review_items_need_advocate_review", languageCode: languageCode), alphaReviewItemCountLabel(count))
+}
+
+func alphaResolveReviewItemsBeforeRelyingLabel(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("review_items_resolve_before_relying", languageCode: languageCode), alphaReviewItemCountLabel(count))
+}
+
+func alphaReviewItemsNeedConfirmationBeforeFileUseLabel(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("review_items_need_confirmation_before_file_use", languageCode: languageCode), alphaReviewItemCountLabel(count))
+}
+
 func alphaReviewItemsFromFilesLabel(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
     String(format: rossLocalized("review_items_from_files", languageCode: languageCode), alphaReviewItemCountLabel(count))
 }

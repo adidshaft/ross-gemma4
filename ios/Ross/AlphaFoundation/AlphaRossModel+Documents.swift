@@ -687,7 +687,7 @@ extension AlphaRossModel {
                 summaryParts.append("Next date \(nextHearing.formatted(date: .abbreviated, time: .omitted)) is already captured.")
             }
             if reviewItemCount > 0 {
-                summaryParts.append("\(alphaReviewItemCountLabel(reviewItemCount)) still need advocate review.")
+                summaryParts.append(alphaReviewItemsNeedAdvocateReviewLabel(reviewItemCount))
             } else if !allOpenTaskItems.isEmpty {
                 summaryParts.append("\(allOpenTaskItems.count) open task(s) are saved for this matter.")
             }
@@ -709,7 +709,7 @@ extension AlphaRossModel {
                 fallbackHighlights.append(nextOpenTask.title)
             }
             if reviewItemCount > 0 {
-                fallbackHighlights.append("Resolve \(alphaReviewItemCountLabel(reviewItemCount)) before relying on extracted details.")
+                fallbackHighlights.append(alphaResolveReviewItemsBeforeRelyingLabel(reviewItemCount))
             }
             caseMatter.issueHighlights = fallbackHighlights.isEmpty
                 ? ["Review extracted legal issues and directions."]
@@ -736,7 +736,7 @@ extension AlphaRossModel {
             }
         }
         if reviewItemCount > 0 {
-            generatedTasks.append("Resolve \(alphaReviewItemCountLabel(reviewItemCount)) before relying on extracted details.")
+            generatedTasks.append(alphaResolveReviewItemsBeforeRelyingLabel(reviewItemCount))
         } else if !pendingFields.isEmpty {
             generatedTasks.append("Review uncertain extracted fields before relying on them.")
         }

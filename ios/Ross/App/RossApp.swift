@@ -4487,6 +4487,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "உங்கள் files-இலிருந்து %@.",
             "te": "మీ files నుండి %@."
         ],
+        "review_items_need_advocate_review": [
+            "en": "%@ still need advocate review.",
+            "hi": "%@ अभी advocate review चाहते हैं.",
+            "bn": "%@ এখনও advocate review দরকার.",
+            "ta": "%@ இன்னும் advocate review தேவை.",
+            "te": "%@ ఇంకా advocate review అవసరం."
+        ],
+        "review_items_resolve_before_relying": [
+            "en": "Resolve %@ before relying on extracted details.",
+            "hi": "extracted details पर भरोसा करने से पहले %@ resolve करें.",
+            "bn": "extracted details-এ নির্ভর করার আগে %@ resolve করুন.",
+            "ta": "extracted details-ஐ நம்புவதற்கு முன் %@ resolve செய்யவும்.",
+            "te": "extracted details పై ఆధారపడే ముందు %@ resolve చేయండి."
+        ],
+        "review_items_need_confirmation_before_file_use": [
+            "en": "%@ still need advocate confirmation before relying on this file.",
+            "hi": "इस file पर भरोसा करने से पहले %@ advocate confirmation चाहते हैं.",
+            "bn": "এই file-এ নির্ভর করার আগে %@ advocate confirmation দরকার.",
+            "ta": "இந்த file-ஐ நம்புவதற்கு முன் %@ advocate confirmation தேவை.",
+            "te": "ఈ file పై ఆధారపడే ముందు %@ advocate confirmation అవసరం."
+        ],
         "no_matters_match_search": [
             "en": "No matters match this search.",
             "hi": "इस search से कोई मामला नहीं मिला।",

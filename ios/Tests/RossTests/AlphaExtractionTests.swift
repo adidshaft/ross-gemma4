@@ -1218,6 +1218,18 @@ final class AlphaExtractionTests: XCTestCase {
             "Ross key details கண்டது."
         )
         XCTAssertEqual(
+            alphaReviewItemsNeedAdvocateReviewLabel(2, languageCode: "te-IN"),
+            "2 review items ఇంకా advocate review అవసరం."
+        )
+        XCTAssertEqual(
+            alphaResolveReviewItemsBeforeRelyingLabel(1, languageCode: "hi"),
+            "extracted details पर भरोसा करने से पहले 1 review item resolve करें."
+        )
+        XCTAssertEqual(
+            alphaReviewItemsNeedConfirmationBeforeFileUseLabel(3, languageCode: "bn"),
+            "এই file-এ নির্ভর করার আগে 3 review items advocate confirmation দরকার."
+        )
+        XCTAssertEqual(
             alphaFindingsCountLabel(3, languageCode: "hi"),
             "3 findings"
         )

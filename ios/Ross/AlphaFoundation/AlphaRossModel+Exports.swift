@@ -83,7 +83,7 @@ extension AlphaRossModel {
         let reviewItemCount = document.extractedFields.filter(\.needsReview).count + findings.filter { !$0.resolved }.count
         let reviewSummary = reviewItemCount == 0
             ? "This file is ready to use in the matter chat."
-            : "\(alphaReviewItemCountLabel(reviewItemCount)) still need advocate confirmation before relying on this file."
+            : alphaReviewItemsNeedConfirmationBeforeFileUseLabel(reviewItemCount)
         let classificationSummary = result.classification.map {
             $0.type.blocksAutomaticLegalFactSaving
                 ? "Ross classified \(document.title) as \($0.type.title.lowercased()) and paused legal fact saving."
@@ -107,7 +107,7 @@ extension AlphaRossModel {
             selectedDocumentIDs: [document.id],
             selectedDocumentTitles: [document.title],
             statusNote: reviewItemCount == 0 ? "Matter chat updated · ready to use" : "Matter chat updated · needs review",
-            needsReviewWarning: reviewItemCount == 0 ? nil : "\(alphaReviewItemCountLabel(reviewItemCount)) still need advocate review."
+            needsReviewWarning: reviewItemCount == 0 ? nil : alphaReviewItemsNeedAdvocateReviewLabel(reviewItemCount)
         )
         if routineSettings.afterDocumentImportEnabled {
             rebuildPreparedWork(reason: .afterDocumentImport, caseId: caseId, persistAfter: false)
