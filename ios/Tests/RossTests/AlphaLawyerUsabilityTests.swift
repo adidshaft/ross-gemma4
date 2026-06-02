@@ -1658,7 +1658,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
-    func testRecoveredDownloadedPackRequiresManifestOrActualChecksumMatch() async throws {
+    func testRecoveredDownloadedPackRequiresPinnedCatalogChecksumMatch() async throws {
         try await withRestoredStore { store in
             await store.removeAllModelArtifacts()
             let artifact = alphaAssistantModelArtifact(for: .quickStart)
@@ -1695,14 +1695,11 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             )
             try encoder.encode(manifest).write(to: manifestURL, options: .atomic)
 
-            let recoveredWithLocalChecksum = await MainActor.run {
+            let recoveredWithBlankManifestChecksum = await MainActor.run {
                 model.recoveredInstalledPackFromDisk(tier: .quickStart)
             }
 
-            XCTAssertNotNil(recoveredWithLocalChecksum)
-            XCTAssertEqual(recoveredWithLocalChecksum?.checksumSha256.count, 64)
-            XCTAssertFalse(recoveredWithLocalChecksum?.checksumSha256.hasPrefix("catalog-size:") == true)
-            XCTAssertTrue(recoveredWithLocalChecksum?.checksumVerified == true)
+            XCTAssertNil(recoveredWithBlankManifestChecksum)
 
             await store.removeAllModelArtifacts()
         }
@@ -1746,11 +1743,11 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 checksumVerified: true,
                 isActive: true
             )
-            let shaPack = AlphaInstalledModelPack(
+            let catalogChecksumPack = AlphaInstalledModelPack(
                 packId: artifact.packId,
                 tier: .quickStart,
                 installPath: relativePath,
-                checksumSha256: String(repeating: "a", count: 64),
+                checksumSha256: artifact.sha256,
                 artifactKind: "local_model_artifact",
                 runtimeMode: .llamaCppGguf,
                 developmentOnly: false,
@@ -1760,11 +1757,11 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
 
             let sizeOnlyUsable = await MainActor.run { model.installedModelPackFileIsUsable(sizeOnlyPack) }
             let arbitraryTokenUsable = await MainActor.run { model.installedModelPackFileIsUsable(arbitraryTokenPack) }
-            let shaUsable = await MainActor.run { model.installedModelPackFileIsUsable(shaPack) }
+            let catalogChecksumUsable = await MainActor.run { model.installedModelPackFileIsUsable(catalogChecksumPack) }
 
             XCTAssertFalse(sizeOnlyUsable)
             XCTAssertFalse(arbitraryTokenUsable)
-            XCTAssertTrue(shaUsable)
+            XCTAssertTrue(catalogChecksumUsable)
 
             await store.removeAllModelArtifacts()
         }

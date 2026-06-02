@@ -951,6 +951,17 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testReleaseReadyAssistantArtifactsPinDownloadMetadata() throws {
+        for artifact in alphaAssistantModelArtifacts.values where artifact.releaseReady {
+            XCTAssertNotNil(artifact.downloadURL, "Missing download URL for \(artifact.tier.rawValue)")
+            XCTAssertGreaterThan(artifact.sizeBytes, 0, "Missing size for \(artifact.tier.rawValue)")
+            XCTAssertTrue(
+                artifact.sha256.range(of: #"^[a-fA-F0-9]{64}$"#, options: .regularExpression) != nil,
+                "Missing pinned checksum for \(artifact.tier.rawValue)"
+            )
+        }
+    }
+
     func testAssistantDownloadPreflightRejectsWrongArtifactSize() throws {
         let response = try XCTUnwrap(HTTPURLResponse(
             url: URL(string: "https://huggingface.co/model.gguf")!,
