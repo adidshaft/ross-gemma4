@@ -219,10 +219,41 @@ struct AlphaPrivateAISettingsScreen: View {
                         Button(role: .destructive) {
                             model.removeAllDownloadedModelFiles()
                         } label: {
-                            AlphaSettingsNavigationRow(
-                                title: alphaPrivateAIDeleteDownloadsTitle,
-                                detail: alphaPrivateAIDeleteDownloadsDetail,
-                                systemImage: "trash"
+                            HStack(alignment: .center, spacing: 12) {
+                                Image(systemName: "trash")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(Color.rossHighlight)
+                                    .frame(width: 30, height: 30)
+                                    .rossNativeGlassSurface(
+                                        tint: Color.rossHighlight.opacity(0.24),
+                                        shape: RoundedRectangle(cornerRadius: 10, style: .continuous),
+                                        interactive: true,
+                                        fallbackFillOpacity: 0.84,
+                                        fallbackStrokeOpacity: 0.48
+                                    )
+
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(alphaPrivateAIDeleteDownloadsTitle)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(Color.rossHighlight)
+                                    Text(alphaPrivateAIDeleteDownloadsDetail)
+                                        .font(.caption)
+                                        .foregroundStyle(Color.rossInk.opacity(0.68))
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+
+                                Spacer(minLength: 0)
+                            }
+                            .padding(12)
+                            .rossGlassSurface(
+                                tint: Color.rossHighlight.opacity(0.16),
+                                cornerRadius: 16,
+                                interactive: true,
+                                shadowOpacity: 0.05,
+                                shadowRadius: 5,
+                                shadowY: 2,
+                                fillOpacity: 0.78,
+                                strokeOpacity: 0.46
                             )
                         }
                         .buttonStyle(.plain)
