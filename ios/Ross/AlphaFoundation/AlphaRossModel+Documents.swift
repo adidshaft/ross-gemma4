@@ -211,14 +211,14 @@ extension AlphaRossModel {
         }
         if mode == .quickStart,
            document.languageProfile?.primaryLanguage == .mixed || document.extractionFindings.contains(where: { $0.kind == .lowConfidenceOcr || $0.kind == .languageUncertain }) {
-            return "This scan has mixed language or low OCR confidence. Advanced may improve review."
+            return "This scan has mixed language or unclear text. Advanced may improve review."
         }
         if mode == .quickStart {
             return "Better extraction is available with Standard."
         }
         if mode == .caseAssociate,
            document.extractionFindings.contains(where: { $0.kind == .lowConfidenceOcr || $0.kind == .languageUncertain }) {
-            return "This scan has mixed language or low OCR confidence. Advanced may improve review."
+            return "This scan has mixed language or unclear text. Advanced may improve review."
         }
         return nil
     }

@@ -1358,7 +1358,7 @@ struct AlphaDocumentInspectCard: View {
                             Text(rawTextExpanded ? "Hide extracted text" : "Extracted text")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(Color.rossInk)
-                            Text("Use this when a scan or OCR result needs manual checking")
+                            Text("Use this when scan text needs manual checking")
                                 .font(.caption)
                                 .foregroundStyle(Color.rossInk.opacity(0.58))
                         }

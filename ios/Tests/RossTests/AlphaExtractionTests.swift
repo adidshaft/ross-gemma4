@@ -871,6 +871,48 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(advanced.extractedFields.contains { $0.fieldType == AlphaExtractedLegalFieldType.issue })
     }
 
+    @MainActor
+    func testExtractionUpgradeMessageUsesPlainScanLanguage() {
+        let caseId = UUID()
+        let documentId = UUID()
+        var document = AlphaCaseDocument(
+            id: documentId,
+            title: "Scanned Order",
+            fileName: "scanned-order.pdf",
+            kind: .pdf,
+            storedRelativePath: "tests/scanned-order.pdf",
+            importedAt: .now,
+            pageCount: 1,
+            ocrStatus: .ocrComplete,
+            indexingStatus: .indexed,
+            extractedText: "Scanned order text",
+            dominantSourceSnippet: nil,
+            lastIndexedAt: .now,
+            pages: [
+                AlphaDocumentPage(pageNumber: 1, snippet: "Scanned order text", ocrConfidence: 0.42)
+            ]
+        )
+        document.extractionFindings = [
+            AlphaExtractionFinding(
+                caseId: caseId,
+                documentId: documentId,
+                kind: .lowConfidenceOcr,
+                message: "Low confidence scan",
+                sourceRefs: [],
+                severity: .warning
+            )
+        ]
+
+        let activePack = installedPack(.caseAssociate)
+        let model = AlphaRossModel(previewState: .empty())
+        model.privateAISnapshot.activePack = activePack
+        model.privateAISnapshot.installedPacks = [activePack]
+        let message = model.extractionUpgradeMessage(for: document)
+
+        XCTAssertEqual(message, "This scan has mixed language or unclear text. Advanced may improve review.")
+        XCTAssertFalse(message?.localizedCaseInsensitiveContains("OCR") == true, message ?? "")
+    }
+
     func testExtractedFieldsAlwaysRetainSourceRefs() async {
         let store = AlphaRossStore()
         let caseId = UUID()
