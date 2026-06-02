@@ -703,19 +703,28 @@ struct AlphaRootAskDock: View {
                             Button("Cancel") {
                                 model.cancelPendingPublicLawSearch()
                             }
-                            .buttonStyle(.bordered)
+                            .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 16, expandsHorizontally: false)
 
                             Spacer(minLength: 0)
 
                             Button("Send") {
                                 Task { await model.confirmPendingPublicLawSearch() }
                             }
-                            .buttonStyle(.borderedProminent)
+                            .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16, expandsHorizontally: false)
                             .disabled(model.publicLawSearchInFlight || (model.publicLawPreview?.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true))
                         }
+                        .padding(12)
+                        .rossGlassSurface(
+                            tint: Color.rossHighlight,
+                            cornerRadius: 24,
+                            shadowOpacity: 0.08,
+                            shadowRadius: 10,
+                            shadowY: 4,
+                            fillOpacity: 0.82,
+                            strokeOpacity: 0.52
+                        )
                     }
                     .padding(alphaScreenPadding)
-                    .background(Color.rossGroupedBackground.opacity(0.94))
                 }
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.hidden)
