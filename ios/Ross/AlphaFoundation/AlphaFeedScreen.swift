@@ -72,8 +72,9 @@ struct AlphaFeedScreen: View {
         let hasVisibleMatters = !sortedCases.isEmpty
 
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: alphaSectionSpacing) {
-                RossHeroCard(
+            RossGlassGroup(spacing: alphaSectionSpacing) {
+                LazyVStack(alignment: .leading, spacing: alphaSectionSpacing) {
+                    RossHeroCard(
                     eyebrow: alphaGreeting(),
                     title: alphaAttentionHeadline(attentionCount),
                     detail: !hasAnyMatters
@@ -350,9 +351,10 @@ struct AlphaFeedScreen: View {
                     }
                 }
 
+                }
+                .padding(alphaScreenPadding)
+                .padding(.bottom, 24)
             }
-            .padding(alphaScreenPadding)
-            .padding(.bottom, 24)
         }
         .rossHideNavigationBarIfSupported()
         .alert("Rename matter", isPresented: Binding(

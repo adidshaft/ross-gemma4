@@ -35,8 +35,9 @@ struct AlphaCreateCaseScreen: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: alphaSectionSpacing) {
-                VStack(alignment: .leading, spacing: 8) {
+            RossGlassGroup(spacing: alphaSectionSpacing) {
+                VStack(alignment: .leading, spacing: alphaSectionSpacing) {
+                    VStack(alignment: .leading, spacing: 8) {
                     Text("Create a matter")
                         .font(.rossSerifTitle())
                         .foregroundStyle(Color.rossInk)
@@ -70,8 +71,9 @@ struct AlphaCreateCaseScreen: View {
                 }
                 .rossPrimaryButtonStyle()
 
+                }
+                .padding(alphaScreenPadding)
             }
-            .padding(alphaScreenPadding)
         }
         .navigationTitle("Create Matter")
         .rossInlineNavigationTitle()
