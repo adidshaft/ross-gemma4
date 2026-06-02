@@ -1270,7 +1270,12 @@ struct AlphaTagChip: View {
             .foregroundStyle(tint)
             .padding(.horizontal, 8)
             .padding(.vertical, 5)
-            .background(tint.opacity(0.12), in: Capsule())
+            .rossNativeGlassSurface(
+                tint: tint,
+                shape: Capsule(),
+                fallbackFillOpacity: 0.70,
+                fallbackStrokeOpacity: 0.38
+            )
     }
 }
 

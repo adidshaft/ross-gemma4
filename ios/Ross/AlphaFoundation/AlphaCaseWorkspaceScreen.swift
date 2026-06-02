@@ -136,17 +136,24 @@ struct AlphaMatterSectionChip: View {
                     .font(.caption2.weight(.bold))
                     .padding(.horizontal, 6)
                     .padding(.vertical, 3)
-                    .background((isSelected ? Color.rossGroupedBackground : Color.rossGlassSubtleFill).opacity(0.7), in: Capsule())
+                    .rossNativeGlassSurface(
+                        tint: isSelected ? Color.rossGroupedBackground : Color.rossAccent,
+                        shape: Capsule(),
+                        fallbackFillOpacity: isSelected ? 0.32 : 0.66,
+                        fallbackStrokeOpacity: 0.34
+                    )
             }
         }
         .foregroundStyle(isSelected ? Color.rossGroupedBackground : Color.rossInk.opacity(0.74))
         .padding(.horizontal, 11)
         .frame(height: 34)
-        .background(isSelected ? Color.rossAccent : Color.rossGlassSubtleFill, in: Capsule())
-        .overlay {
-            Capsule()
-                .stroke(isSelected ? Color.rossAccent.opacity(0.45) : Color.rossBorder.opacity(0.82), lineWidth: 1)
-        }
+        .rossNativeGlassSurface(
+            tint: isSelected ? Color.rossAccent : Color.rossInk.opacity(0.24),
+            shape: Capsule(),
+            interactive: true,
+            fallbackFillOpacity: isSelected ? 0.82 : 0.68,
+            fallbackStrokeOpacity: isSelected ? 0.48 : 0.40
+        )
     }
 }
 

@@ -105,10 +105,15 @@ struct AlphaFeedScreen: View {
                                     .font(.system(size: 15, weight: .semibold))
                                     .foregroundStyle(Color.rossAccent)
                                     .frame(width: 32, height: 32)
-                                    .background(Color.rossAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                    .rossNativeGlassSurface(
+                                        tint: Color.rossAccent,
+                                        shape: RoundedRectangle(cornerRadius: 10, style: .continuous),
+                                        fallbackFillOpacity: 0.74,
+                                        fallbackStrokeOpacity: 0.42
+                                    )
                                     
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("Set up Ross assistant")
+                                    Text("Set up My assistant")
                                         .font(.subheadline.weight(.semibold))
                                         .foregroundStyle(Color.rossInk)
                                     Text("Required for local AI tasks")
