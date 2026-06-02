@@ -2418,7 +2418,11 @@ func alphaLocalAskSetupRequiredDetail(
     return rossLocalized(key, languageCode: languageCode)
 }
 
-func alphaAskRuntimeRepairDetail(warning: String?, errorCategory: String) -> String {
+func alphaAskRuntimeRepairDetail(
+    warning: String?,
+    errorCategory: String,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
     let cleanedWarning = warning?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     let internalTerms = [
         "llama",
@@ -2440,5 +2444,5 @@ func alphaAskRuntimeRepairDetail(warning: String?, errorCategory: String) -> Str
        !internalTerms.contains(where: { cleanedWarning.range(of: $0, options: [.caseInsensitive]) != nil }) {
         return cleanedWarning
     }
-    return "The private assistant could not open this assistant setup for this answer. Open My assistant and use Repair setup."
+    return rossLocalized("ask_private_assistant_answer_repair_detail", languageCode: languageCode)
 }

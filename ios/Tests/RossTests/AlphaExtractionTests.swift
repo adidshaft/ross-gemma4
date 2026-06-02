@@ -1546,15 +1546,13 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     func testAskRuntimeRepairDetailHidesInternalEngineWarnings() {
+        rossSaveLanguageSelection(code: "hi")
         let detail = alphaAskRuntimeRepairDetail(
             warning: "Inference failed: llama sampler chain failed to initialize",
             errorCategory: "inference_failed"
         )
 
-        XCTAssertEqual(
-            detail,
-            "The private assistant could not open this assistant setup for this answer. Open My assistant and use Repair setup."
-        )
+        XCTAssertTrue(detail.contains("Private assistant इस answer के लिए assistant setup खोल नहीं सका"), detail)
         for forbidden in ["llama", "sampler", "inference", "runtime", "GGUF", "Gemma"] {
             XCTAssertNil(detail.range(of: forbidden, options: [.caseInsensitive]))
         }
@@ -1565,9 +1563,10 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(
             alphaAskRuntimeRepairDetail(
                 warning: "The downloaded assistant file is incomplete.",
-                errorCategory: "model_load_failed"
+                errorCategory: "model_load_failed",
+                languageCode: "ta"
             ),
-            "The private assistant could not open this assistant setup for this answer. Open My assistant and use Repair setup."
+            "இந்த answer-க்காக private assistant assistant setup-ஐ திறக்க முடியவில்லை. My assistant திறந்து Repair setup பயன்படுத்தவும்."
         )
     }
 

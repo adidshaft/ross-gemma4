@@ -1337,6 +1337,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "My assistant திறந்து Repair setup பயன்படுத்தவும். Ross case memory-யில் இருந்து substitute answer உருவாக்கவில்லை.",
             "te": "My assistant తెరిచి Repair setup ఉపయోగించండి. Ross case memory నుండి substitute answer సృష్టించలేదు."
         ],
+        "ask_private_assistant_answer_repair_detail": [
+            "en": "The private assistant could not open this assistant setup for this answer. Open My assistant and use Repair setup.",
+            "hi": "Private assistant इस answer के लिए assistant setup खोल नहीं सका। My assistant खोलकर Repair setup चलाएँ.",
+            "bn": "Private assistant এই answer-এর জন্য assistant setup খুলতে পারেনি। My assistant খুলে Repair setup ব্যবহার করুন.",
+            "ta": "இந்த answer-க்காக private assistant assistant setup-ஐ திறக்க முடியவில்லை. My assistant திறந்து Repair setup பயன்படுத்தவும்.",
+            "te": "ఈ answer కోసం private assistant assistant setup తెరవలేకపోయింది. My assistant తెరిచి Repair setup ఉపయోగించండి."
+        ],
         "ask_private_assistant_repair_warning": [
             "en": "Private assistant needs repair before it can answer from files.",
             "hi": "files से answer देने से पहले Private assistant repair चाहता है।",
