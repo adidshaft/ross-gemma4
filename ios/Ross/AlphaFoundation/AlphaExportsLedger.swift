@@ -34,8 +34,9 @@ struct AlphaExportsScreen: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: alphaSectionSpacing) {
-                AlphaInlineHeader(
+            RossGlassGroup(spacing: alphaSectionSpacing) {
+                VStack(alignment: .leading, spacing: alphaSectionSpacing) {
+                    AlphaInlineHeader(
                     eyebrow: nil,
                     title: "Notes & Drafts",
                     detail: "Generate local notes and drafts for advocate review."
@@ -100,8 +101,9 @@ struct AlphaExportsScreen: View {
                         }
                     }
                 }
+                }
+                .padding(alphaScreenPadding)
             }
-            .padding(alphaScreenPadding)
         }
         .navigationTitle("Notes & Drafts")
         .rossInlineNavigationTitle()

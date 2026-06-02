@@ -138,8 +138,9 @@ struct AlphaTodayWorkbenchScreen: View {
         let todayTasks = model.todayTasks()
         let upcomingDates = model.upcomingDateRows()
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: alphaSectionSpacing) {
-                RossHeroCard(
+            RossGlassGroup(spacing: alphaSectionSpacing) {
+                LazyVStack(alignment: .leading, spacing: alphaSectionSpacing) {
+                    RossHeroCard(
                     eyebrow: alphaGreeting(),
                     title: work.isEmpty ? "No prepared work needs review" : alphaPreparedWorkHeadline(work.count),
                     detail: nil,
@@ -193,9 +194,10 @@ struct AlphaTodayWorkbenchScreen: View {
                 }
 
                 AlphaTodayDatesCard(title: "Upcoming dates and urgent tasks", dates: todayDates + Array(upcomingDates.prefix(3)), tasks: Array(todayTasks.prefix(3)), model: model)
+                }
+                .padding(alphaScreenPadding)
+                .padding(.bottom, 116)
             }
-            .padding(alphaScreenPadding)
-            .padding(.bottom, 116)
         }
         .rossHideNavigationBarIfSupported()
     }
@@ -207,8 +209,9 @@ struct AlphaMattersWorkbenchScreen: View {
     var body: some View {
         let matters = model.cases.filter { $0.id != alphaSharedWorkspaceID }
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 14) {
-                AlphaInlineHeader(eyebrow: "Matters", title: "Matter workspaces", detail: "\(matters.count) active")
+            RossGlassGroup(spacing: 14) {
+                LazyVStack(alignment: .leading, spacing: 14) {
+                    AlphaInlineHeader(eyebrow: "Matters", title: "Matter workspaces", detail: "\(matters.count) active")
                 if matters.isEmpty {
                     AlphaMatterStarterCard(model: model)
                 } else {
@@ -222,9 +225,10 @@ struct AlphaMattersWorkbenchScreen: View {
                         .buttonStyle(.plain)
                     }
                 }
+                }
+                .padding(alphaScreenPadding)
+                .padding(.bottom, 116)
             }
-            .padding(alphaScreenPadding)
-            .padding(.bottom, 116)
         }
         .rossHideNavigationBarIfSupported()
     }
@@ -236,8 +240,9 @@ struct AlphaFilesWorkbenchScreen: View {
     var body: some View {
         let documents = model.recentDocumentItems()
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 14) {
-                AlphaInlineHeader(eyebrow: "Files", title: "Local file room", detail: "\(documents.count) file(s) across matters")
+            RossGlassGroup(spacing: 14) {
+                LazyVStack(alignment: .leading, spacing: 14) {
+                    AlphaInlineHeader(eyebrow: "Files", title: "Local file room", detail: "\(documents.count) file(s) across matters")
                 if documents.isEmpty {
                     AlphaHonestEmptyCard(title: "No files imported", detail: "Files you import stay inspectable here after local extraction.")
                 } else {
@@ -251,9 +256,10 @@ struct AlphaFilesWorkbenchScreen: View {
                         .buttonStyle(.plain)
                     }
                 }
+                }
+                .padding(alphaScreenPadding)
+                .padding(.bottom, 116)
             }
-            .padding(alphaScreenPadding)
-            .padding(.bottom, 116)
         }
         .rossHideNavigationBarIfSupported()
     }
@@ -268,8 +274,9 @@ struct AlphaPreparedWorkScreen: View {
             .filter { statusFilter == nil || $0.status == statusFilter }
         let grouped = Dictionary(grouping: items, by: { $0.matterName })
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 14) {
-                HStack {
+            RossGlassGroup(spacing: 14) {
+                LazyVStack(alignment: .leading, spacing: 14) {
+                    HStack {
                     AlphaInlineHeader(eyebrow: "Work", title: "Prepared work inbox", detail: alphaPreparedWorkCountLabel(items.count))
                     Spacer(minLength: 0)
                     Menu {
@@ -307,9 +314,10 @@ struct AlphaPreparedWorkScreen: View {
                         }
                     }
                 }
+                }
+                .padding(alphaScreenPadding)
+                .padding(.bottom, 116)
             }
-            .padding(alphaScreenPadding)
-            .padding(.bottom, 116)
         }
         .rossHideNavigationBarIfSupported()
     }

@@ -143,8 +143,9 @@ struct AlphaAskConversationScreen: View {
 
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 18) {
-                        if conversation.isEmpty {
+                    RossGlassGroup(spacing: 18) {
+                        LazyVStack(alignment: .leading, spacing: 18) {
+                            if conversation.isEmpty {
                             Spacer(minLength: 82)
                             AlphaFullScreenAskEmptyState(
                                 scopeLabel: activeScopeCaseID == nil ? nil : scopeTitle,
@@ -162,10 +163,11 @@ struct AlphaAskConversationScreen: View {
                                 .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
                             }
                         }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 18)
+                        .animation(.snappy(duration: 0.3), value: conversation.count)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 18)
-                    .animation(.snappy(duration: 0.3), value: conversation.count)
                 }
                 .alphaDismissesKeyboardOnScroll()
                 .onAppear {
