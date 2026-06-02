@@ -750,45 +750,100 @@ struct AlphaDocumentTranslationCard: View {
     let onSetupAssistant: () -> Void
 
     var body: some View {
-        RossSectionCard {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top, spacing: 10) {
-                    Image(systemName: "translate")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(Color.rossAccent)
-                        .frame(width: 30, height: 30)
-                        .background(Color.rossAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Document language: \(documentLanguage)")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Color.rossInk)
-
-                        Text(isAssistantReady ? rossLocalized("translation_ready") : rossLocalized("translation_needs_assistant"))
-                            .font(.caption)
-                            .foregroundStyle(Color.rossInk.opacity(0.66))
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-
-                    Spacer(minLength: 0)
-                }
-
-                Button {
-                    isAssistantReady ? onTranslate() : onSetupAssistant()
-                } label: {
-                    Label(
-                        isAssistantReady
-                            ? String(format: rossLocalized("translate_to"), targetLanguage)
-                            : rossLocalized("setup_assistant"),
-                        systemImage: isAssistantReady ? "sparkles" : "arrow.down.circle"
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "translate")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(Color.rossAccent)
+                    .frame(width: 34, height: 34)
+                    .rossNativeGlassSurface(
+                        tint: Color.rossAccent.opacity(0.24),
+                        shape: RoundedRectangle(cornerRadius: 11, style: .continuous),
+                        interactive: false,
+                        fallbackFillOpacity: 0.84,
+                        fallbackStrokeOpacity: 0.48
                     )
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.78)
-                    .frame(maxWidth: .infinity)
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Translate this file")
+                        .font(.headline)
+                        .foregroundStyle(Color.rossInk)
+
+                    Text(isAssistantReady ? rossLocalized("translation_ready") : rossLocalized("translation_needs_assistant"))
+                        .font(.subheadline)
+                        .foregroundStyle(Color.rossInk.opacity(0.68))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .buttonStyle(AlphaReviewActionButtonStyle(tint: Color.rossAccent))
+
+                Spacer(minLength: 0)
             }
+
+            HStack(spacing: 8) {
+                AlphaTranslationLanguageChip(label: "From", value: documentLanguage, systemImage: "doc.text.magnifyingglass")
+                AlphaTranslationLanguageChip(label: "To", value: targetLanguage, systemImage: "text.bubble")
+            }
+
+            Button {
+                isAssistantReady ? onTranslate() : onSetupAssistant()
+            } label: {
+                Label(
+                    isAssistantReady
+                        ? String(format: rossLocalized("translate_to"), targetLanguage)
+                        : rossLocalized("setup_assistant"),
+                    systemImage: isAssistantReady ? "sparkles" : "arrow.down.circle"
+                )
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
+                .frame(maxWidth: .infinity)
+            }
+            .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
         }
+        .padding(14)
+        .rossGlassSurface(
+            tint: Color.rossAccent.opacity(0.14),
+            cornerRadius: 18,
+            shadowOpacity: 0.08,
+            shadowRadius: 8,
+            shadowY: 3,
+            fillOpacity: 0.82,
+            strokeOpacity: 0.50
+        )
+    }
+}
+
+private struct AlphaTranslationLanguageChip: View {
+    let label: String
+    let value: String
+    let systemImage: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: systemImage)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Color.rossAccent)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(Color.rossInk.opacity(0.54))
+                Text(value)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.rossInk)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        .padding(.horizontal, 10)
+        .rossGlassSurface(
+            tint: Color.rossAccent.opacity(0.10),
+            cornerRadius: 14,
+            shadowOpacity: 0.04,
+            shadowRadius: 4,
+            shadowY: 1,
+            fillOpacity: 0.74,
+            strokeOpacity: 0.44
+        )
     }
 }
 
