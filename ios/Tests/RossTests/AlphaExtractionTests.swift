@@ -792,6 +792,38 @@ final class AlphaExtractionTests: XCTestCase {
             rossLocalized("file_room_import_first_real_file_detail", languageCode: "hi")
                 .contains("locally")
         )
+        let readyDocument = AlphaCaseDocument(
+            title: "Order",
+            fileName: "order.pdf",
+            kind: .pdf,
+            storedRelativePath: "tests/order.pdf",
+            importedAt: .now,
+            pageCount: 1,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: "Next hearing 7 May 2026.",
+            lastIndexedAt: .now,
+            pages: [AlphaDocumentPage(pageNumber: 1, snippet: "Next hearing 7 May 2026.")],
+            languageProfile: AlphaDocumentLanguageProfile(
+                documentId: UUID(),
+                primaryLanguage: .telugu,
+                scriptsDetected: ["Telugu"],
+                confidence: 0.91,
+                pageProfiles: []
+            )
+        )
+        XCTAssertEqual(
+            alphaDocumentReadinessMessage(readyDocument, languageCode: "ta"),
+            "Ross இப்போது extracted text-இல் இருந்து பதிலளிக்க முடியும். verified details notes, tasks மற்றும் exports-க்கு தயாராக உள்ளன."
+        )
+        let readinessItems = alphaDocumentReadinessItems(readyDocument, languageCode: "te-IN")
+        XCTAssertEqual(readinessItems[0].title, "Ask సిద్ధంగా ఉంది")
+        XCTAssertEqual(readinessItems[1].title, "Review పూర్తయింది")
+        XCTAssertTrue(readinessItems[2].detail.contains("Telugu"))
+        XCTAssertEqual(
+            rossLocalized("document_review_important", languageCode: "bn"),
+            "গুরুত্বপূর্ণ"
+        )
         XCTAssertEqual(
             rossLocalized("download_size", languageCode: "ta"),
             "பதிவிறக்க அளவு"

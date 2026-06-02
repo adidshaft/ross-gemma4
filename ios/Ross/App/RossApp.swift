@@ -1029,6 +1029,286 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "ஆவணத்தை import செய்யவும்",
             "te": "పత్రాన్ని import చేయండి"
         ],
+        "document_title": [
+            "en": "Document",
+            "hi": "दस्तावेज़",
+            "bn": "নথি",
+            "ta": "ஆவணம்",
+            "te": "పత్రం"
+        ],
+        "back": [
+            "en": "Back",
+            "hi": "वापस",
+            "bn": "ফিরে যান",
+            "ta": "பின் செல்லவும்",
+            "te": "వెనక్కి"
+        ],
+        "ask_ross_about_document": [
+            "en": "Ask Ross about this document",
+            "hi": "इस दस्तावेज़ के बारे में Ross से पूछें",
+            "bn": "এই নথি সম্পর্কে Ross-কে জিজ্ঞাসা করুন",
+            "ta": "இந்த ஆவணம் பற்றி Ross-ஐ கேளுங்கள்",
+            "te": "ఈ పత్రం గురించి Ross‌ను అడగండి"
+        ],
+        "review_document_again": [
+            "en": "Review document again",
+            "hi": "दस्तावेज़ फिर review करें",
+            "bn": "নথি আবার review করুন",
+            "ta": "ஆவணத்தை மீண்டும் review செய்யவும்",
+            "te": "పత్రాన్ని మళ్లీ review చేయండి"
+        ],
+        "document_review_what_ross_found": [
+            "en": "What Ross found",
+            "hi": "Ross ने क्या पाया",
+            "bn": "Ross যা পেয়েছে",
+            "ta": "Ross கண்டது",
+            "te": "Ross కనుగొన్నది"
+        ],
+        "document_review_important": [
+            "en": "Important",
+            "hi": "ज़रूरी",
+            "bn": "গুরুত্বপূর্ণ",
+            "ta": "முக்கியம்",
+            "te": "ముఖ్యం"
+        ],
+        "document_review_important_detail": [
+            "en": "Check details that can change dates, parties, filing position, or what happens next.",
+            "hi": "तारीख़, पक्षकार, filing position या आगे क्या होगा बदल सकने वाली details जांचें।",
+            "bn": "তারিখ, পক্ষ, filing position, বা এরপর কী হবে বদলাতে পারে এমন details যাচাই করুন।",
+            "ta": "தேதிகள், தரப்புகள், filing position அல்லது அடுத்து நடப்பதை மாற்றக்கூடிய details-ஐ சரிபார்க்கவும்.",
+            "te": "తేదీలు, పక్షాలు, filing position లేదా తర్వాత జరిగేదాన్ని మార్చగల details ను తనిఖీ చేయండి."
+        ],
+        "document_review_helpful_details": [
+            "en": "Helpful details you can accept, edit, or ignore after the essentials are clear.",
+            "hi": "ज़रूरी बातें साफ़ होने के बाद accept, edit या ignore कर सकने वाली helpful details.",
+            "bn": "মূল বিষয় পরিষ্কার হলে accept, edit বা ignore করা যায় এমন helpful details.",
+            "ta": "முக்கியவை தெளிவான பிறகு accept, edit அல்லது ignore செய்யக்கூடிய helpful details.",
+            "te": "ముఖ్యమైనవి స్పష్టమైన తర్వాత accept, edit లేదా ignore చేయగల helpful details."
+        ],
+        "document_review_other_details": [
+            "en": "Other details",
+            "hi": "अन्य details",
+            "bn": "অন্যান্য details",
+            "ta": "மற்ற details",
+            "te": "ఇతర details"
+        ],
+        "document_run_better_extraction": [
+            "en": "Run better extraction",
+            "hi": "बेहतर extraction चलाएं",
+            "bn": "ভাল extraction চালান",
+            "ta": "சிறந்த extraction இயக்கவும்",
+            "te": "మెరుగైన extraction నడపండి"
+        ],
+        "file_readiness": [
+            "en": "File readiness",
+            "hi": "फ़ाइल readiness",
+            "bn": "ফাইল readiness",
+            "ta": "கோப்பு readiness",
+            "te": "ఫైల్ readiness"
+        ],
+        "ask_ready": [
+            "en": "Ask ready",
+            "hi": "Ask तैयार",
+            "bn": "Ask প্রস্তুত",
+            "ta": "Ask தயாராக உள்ளது",
+            "te": "Ask సిద్ధం"
+        ],
+        "preparing": [
+            "en": "Preparing",
+            "hi": "तैयार हो रहा है",
+            "bn": "প্রস্তুত হচ্ছে",
+            "ta": "தயாராகிறது",
+            "te": "సిద్ధమవుతోంది"
+        ],
+        "translate_this_file": [
+            "en": "Translate this file",
+            "hi": "इस फ़ाइल का अनुवाद करें",
+            "bn": "এই ফাইল অনুবাদ করুন",
+            "ta": "இந்த கோப்பை மொழிபெயர்க்கவும்",
+            "te": "ఈ ఫైల్‌ను అనువదించండి"
+        ],
+        "document_readiness_ask_review_running": [
+            "en": "Ross can answer from extracted text now. Deeper review is still running in the background.",
+            "hi": "Ross अब extracted text से जवाब दे सकता है। deeper review अभी background में चल रहा है।",
+            "bn": "Ross এখন extracted text থেকে উত্তর দিতে পারে। deeper review এখনও background-এ চলছে।",
+            "ta": "Ross இப்போது extracted text-இல் இருந்து பதிலளிக்க முடியும். deeper review இன்னும் background-இல் நடக்கிறது.",
+            "te": "Ross ఇప్పుడు extracted text నుండి సమాధానం ఇవ్వగలదు. deeper review ఇంకా background లో నడుస్తోంది."
+        ],
+        "document_readiness_ask_review_findings": [
+            "en": "Ross can answer from extracted text now. Review the highlighted findings before relying on this file in notes or exports.",
+            "hi": "Ross अब extracted text से जवाब दे सकता है। notes या exports में इस फ़ाइल पर भरोसा करने से पहले highlighted findings review करें।",
+            "bn": "Ross এখন extracted text থেকে উত্তর দিতে পারে। notes বা exports-এ এই ফাইলের ওপর নির্ভর করার আগে highlighted findings review করুন।",
+            "ta": "Ross இப்போது extracted text-இல் இருந்து பதிலளிக்க முடியும். notes அல்லது exports-இல் இந்த கோப்பை நம்புவதற்கு முன் highlighted findings-ஐ review செய்யவும்.",
+            "te": "Ross ఇప్పుడు extracted text నుండి సమాధానం ఇవ్వగలదు. notes లేదా exports లో ఈ ఫైల్‌పై ఆధారపడే ముందు highlighted findings ను review చేయండి."
+        ],
+        "document_readiness_ask_verified": [
+            "en": "Ross can answer from extracted text now. Verified details are ready for notes, tasks, and exports.",
+            "hi": "Ross अब extracted text से जवाब दे सकता है। verified details notes, tasks और exports के लिए तैयार हैं।",
+            "bn": "Ross এখন extracted text থেকে উত্তর দিতে পারে। verified details notes, tasks, এবং exports-এর জন্য প্রস্তুত।",
+            "ta": "Ross இப்போது extracted text-இல் இருந்து பதிலளிக்க முடியும். verified details notes, tasks மற்றும் exports-க்கு தயாராக உள்ளன.",
+            "te": "Ross ఇప్పుడు extracted text నుండి సమాధానం ఇవ్వగలదు. verified details notes, tasks మరియు exports కోసం సిద్ధంగా ఉన్నాయి."
+        ],
+        "document_readiness_ask_review_failed": [
+            "en": "Ross can answer from extracted text now, but full review did not finish. Check the source before relying on this file.",
+            "hi": "Ross अब extracted text से जवाब दे सकता है, लेकिन full review पूरा नहीं हुआ। इस फ़ाइल पर भरोसा करने से पहले source जांचें।",
+            "bn": "Ross এখন extracted text থেকে উত্তর দিতে পারে, কিন্তু full review শেষ হয়নি। এই ফাইলের ওপর নির্ভর করার আগে source দেখুন।",
+            "ta": "Ross இப்போது extracted text-இல் இருந்து பதிலளிக்க முடியும், ஆனால் full review முடிக்கப்படவில்லை. இந்த கோப்பை நம்புவதற்கு முன் source-ஐ சரிபார்க்கவும்.",
+            "te": "Ross ఇప్పుడు extracted text నుండి సమాధానం ఇవ్వగలదు, కానీ full review పూర్తికాలేదు. ఈ ఫైల్‌పై ఆధారపడే ముందు source తనిఖీ చేయండి."
+        ],
+        "document_readiness_still_reading": [
+            "en": "Ross is still reading this file. Ask from this file as soon as readable text appears.",
+            "hi": "Ross अभी यह फ़ाइल पढ़ रहा है। readable text आते ही इस फ़ाइल से Ask उपलब्ध होगा।",
+            "bn": "Ross এখনও এই ফাইল পড়ছে। readable text দেখা দিলেই এই ফাইল থেকে Ask করা যাবে।",
+            "ta": "Ross இன்னும் இந்த கோப்பை வாசிக்கிறது. readable text கிடைத்தவுடன் இந்த கோப்பிலிருந்து Ask செய்யலாம்.",
+            "te": "Ross ఇంకా ఈ ఫైల్‌ను చదువుతోంది. readable text కనిపించగానే ఈ ఫైల్ నుండి Ask చేయవచ్చు."
+        ],
+        "document_readiness_needs_clearer_text": [
+            "en": "Ross could not find readable text in this file yet. Re-import a clearer PDF, image, or text file, then ask again.",
+            "hi": "Ross को अभी इस फ़ाइल में readable text नहीं मिला। साफ़ PDF, image या text file फिर import करें, फिर पूछें।",
+            "bn": "Ross এখনও এই ফাইলে readable text পায়নি। আরও পরিষ্কার PDF, image, বা text file আবার import করুন, তারপর জিজ্ঞাসা করুন।",
+            "ta": "Ross இன்னும் இந்த கோப்பில் readable text காணவில்லை. தெளிவான PDF, image அல்லது text file-ஐ மீண்டும் import செய்து, பிறகு கேளுங்கள்.",
+            "te": "Ross ఇంకా ఈ ఫైల్‌లో readable text కనుగొనలేదు. మరింత స్పష్టమైన PDF, image లేదా text file ను మళ్లీ import చేసి, తర్వాత అడగండి."
+        ],
+        "document_readiness_ask_ready_title": [
+            "en": "Ask is ready",
+            "hi": "Ask तैयार है",
+            "bn": "Ask প্রস্তুত",
+            "ta": "Ask தயாராக உள்ளது",
+            "te": "Ask సిద్ధంగా ఉంది"
+        ],
+        "document_readiness_ask_ready_detail": [
+            "en": "Ross can answer from this file and cite its pages.",
+            "hi": "Ross इस फ़ाइल से जवाब दे सकता है और इसके pages cite कर सकता है।",
+            "bn": "Ross এই ফাইল থেকে উত্তর দিতে এবং এর pages cite করতে পারে।",
+            "ta": "Ross இந்த கோப்பிலிருந்து பதிலளித்து அதன் pages-ஐ cite செய்ய முடியும்.",
+            "te": "Ross ఈ ఫైల్ నుండి సమాధానం ఇచ్చి దాని pages ను cite చేయగలదు."
+        ],
+        "document_readiness_still_reading_title": [
+            "en": "Still reading",
+            "hi": "अभी पढ़ रहा है",
+            "bn": "এখনও পড়ছে",
+            "ta": "இன்னும் வாசிக்கிறது",
+            "te": "ఇంకా చదువుతోంది"
+        ],
+        "document_readiness_still_reading_detail": [
+            "en": "Ask from this file will unlock as soon as readable text appears.",
+            "hi": "readable text आते ही इस फ़ाइल से Ask unlock होगा।",
+            "bn": "readable text দেখা দিলেই এই ফাইল থেকে Ask unlock হবে।",
+            "ta": "readable text கிடைத்தவுடன் இந்த கோப்பிலிருந்து Ask unlock ஆகும்.",
+            "te": "readable text కనిపించగానే ఈ ఫైల్ నుండి Ask unlock అవుతుంది."
+        ],
+        "document_readiness_needs_clearer_title": [
+            "en": "Needs clearer text",
+            "hi": "साफ़ text चाहिए",
+            "bn": "আরও পরিষ্কার text দরকার",
+            "ta": "தெளிவான text தேவை",
+            "te": "మరింత స్పష్టమైన text అవసరం"
+        ],
+        "document_readiness_needs_clearer_detail": [
+            "en": "Re-import a clearer PDF, image, or text file before asking from it.",
+            "hi": "इससे पूछने से पहले साफ़ PDF, image या text file फिर import करें।",
+            "bn": "এটি থেকে জিজ্ঞাসা করার আগে আরও পরিষ্কার PDF, image, বা text file আবার import করুন।",
+            "ta": "இதிலிருந்து கேட்கும் முன் தெளிவான PDF, image அல்லது text file-ஐ மீண்டும் import செய்யவும்.",
+            "te": "దీనినుంచి అడగే ముందు మరింత స్పష్టమైన PDF, image లేదా text file ను మళ్లీ import చేయండి."
+        ],
+        "document_readiness_review_complete_title": [
+            "en": "Review complete",
+            "hi": "Review पूरा",
+            "bn": "Review শেষ",
+            "ta": "Review முடிந்தது",
+            "te": "Review పూర్తయింది"
+        ],
+        "document_readiness_review_complete_detail": [
+            "en": "Verified details are ready for notes, tasks, and exports.",
+            "hi": "verified details notes, tasks और exports के लिए तैयार हैं।",
+            "bn": "verified details notes, tasks, এবং exports-এর জন্য প্রস্তুত।",
+            "ta": "verified details notes, tasks மற்றும் exports-க்கு தயாராக உள்ளன.",
+            "te": "verified details notes, tasks మరియు exports కోసం సిద్ధంగా ఉన్నాయి."
+        ],
+        "document_readiness_review_attention_title": [
+            "en": "Review needs attention",
+            "hi": "Review पर ध्यान चाहिए",
+            "bn": "Review-তে নজর দরকার",
+            "ta": "Review கவனம் தேவை",
+            "te": "Review కు శ్రద్ధ అవసరం"
+        ],
+        "document_readiness_review_attention_detail": [
+            "en": "Readable text is available, but the deeper review did not finish.",
+            "hi": "readable text उपलब्ध है, लेकिन deeper review पूरा नहीं हुआ।",
+            "bn": "readable text আছে, কিন্তু deeper review শেষ হয়নি।",
+            "ta": "readable text கிடைக்கிறது, ஆனால் deeper review முடிக்கப்படவில்லை.",
+            "te": "readable text అందుబాటులో ఉంది, కానీ deeper review పూర్తికాలేదు."
+        ],
+        "document_readiness_check_details_title": [
+            "en": "Check highlighted details",
+            "hi": "highlighted details जांचें",
+            "bn": "highlighted details দেখুন",
+            "ta": "highlighted details சரிபார்க்கவும்",
+            "te": "highlighted details తనిఖీ చేయండి"
+        ],
+        "document_readiness_check_details_detail": [
+            "en": "Confirm findings before relying on this file in notes or exports.",
+            "hi": "notes या exports में इस फ़ाइल पर भरोसा करने से पहले findings confirm करें।",
+            "bn": "notes বা exports-এ এই ফাইলের ওপর নির্ভর করার আগে findings confirm করুন।",
+            "ta": "notes அல்லது exports-இல் இந்த கோப்பை நம்புவதற்கு முன் findings-ஐ confirm செய்யவும்.",
+            "te": "notes లేదా exports లో ఈ ఫైల్‌పై ఆధారపడే ముందు findings ను confirm చేయండి."
+        ],
+        "document_readiness_review_progress_title": [
+            "en": "Review in progress",
+            "hi": "Review चल रहा है",
+            "bn": "Review চলছে",
+            "ta": "Review நடைபெறுகிறது",
+            "te": "Review కొనసాగుతోంది"
+        ],
+        "document_readiness_review_progress_detail": [
+            "en": "Ross is preparing structured details in the background.",
+            "hi": "Ross background में structured details तैयार कर रहा है।",
+            "bn": "Ross background-এ structured details তৈরি করছে।",
+            "ta": "Ross background-இல் structured details தயாரிக்கிறது.",
+            "te": "Ross background లో structured details సిద్ధం చేస్తోంది."
+        ],
+        "document_language_mixed": [
+            "en": "Mixed language",
+            "hi": "मिश्रित भाषा",
+            "bn": "মিশ্র ভাষা",
+            "ta": "கலப்பு மொழி",
+            "te": "మిశ్రమ భాష"
+        ],
+        "document_language_unknown": [
+            "en": "Unknown",
+            "hi": "अज्ञात",
+            "bn": "অজানা",
+            "ta": "தெரியாதது",
+            "te": "తెలియదు"
+        ],
+        "document_script_detected": [
+            "en": "script detected",
+            "hi": "script detected",
+            "bn": "script detected",
+            "ta": "script detected",
+            "te": "script detected"
+        ],
+        "document_language_detected_detail": [
+            "en": "Language detected from this file: %@.",
+            "hi": "इस फ़ाइल से detected language: %@.",
+            "bn": "এই ফাইল থেকে detected language: %@.",
+            "ta": "இந்த கோப்பில் detected language: %@.",
+            "te": "ఈ ఫైల్ నుండి detected language: %@."
+        ],
+        "document_language_pending_title": [
+            "en": "Language pending",
+            "hi": "भाषा pending",
+            "bn": "ভাষা pending",
+            "ta": "மொழி pending",
+            "te": "భాష pending"
+        ],
+        "document_language_pending_detail": [
+            "en": "Ross will detect language after readable text is available.",
+            "hi": "readable text उपलब्ध होने के बाद Ross भाषा detect करेगा।",
+            "bn": "readable text পাওয়া গেলে Ross ভাষা detect করবে।",
+            "ta": "readable text கிடைத்த பிறகு Ross மொழியை detect செய்யும்.",
+            "te": "readable text అందుబాటులోకి వచ్చిన తర్వాత Ross భాషను detect చేస్తుంది."
+        ],
         "translate_to": [
             "en": "Translate to %@",
             "hi": "%@ में अनुवाद करें",

@@ -47,8 +47,8 @@ private func alphaDocumentLanguageDisplayName(_ language: AlphaDocumentLanguage)
     case .bengali: rossLanguageDisplayName(code: "bn")
     case .tamil: rossLanguageDisplayName(code: "ta")
     case .telugu: rossLanguageDisplayName(code: "te")
-    case .mixed: "Mixed language"
-    case .unknown: "Unknown"
+    case .mixed: rossLocalized("document_language_mixed")
+    case .unknown: rossLocalized("document_language_unknown")
     }
 }
 
@@ -62,23 +62,26 @@ private func alphaDocumentNeedsTranslation(_ document: AlphaCaseDocument, select
     return profile.primaryLanguage != selectedLanguage
 }
 
-func alphaDocumentReadinessMessage(_ document: AlphaCaseDocument) -> String {
+func alphaDocumentReadinessMessage(
+    _ document: AlphaCaseDocument,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
     if document.hasAskUsableExtractedText {
         switch document.processingState {
         case .imported, .readingText:
-            return "Ross can answer from extracted text now. Deeper review is still running in the background."
+            return rossLocalized("document_readiness_ask_review_running", languageCode: languageCode)
         case .needsConfirmation, .reviewingFindings:
-            return "Ross can answer from extracted text now. Review the highlighted findings before relying on this file in notes or exports."
+            return rossLocalized("document_readiness_ask_review_findings", languageCode: languageCode)
         case .ready:
-            return "Ross can answer from extracted text now. Verified details are ready for notes, tasks, and exports."
+            return rossLocalized("document_readiness_ask_verified", languageCode: languageCode)
         case .failed:
-            return "Ross can answer from extracted text now, but full review did not finish. Check the source before relying on this file."
+            return rossLocalized("document_readiness_ask_review_failed", languageCode: languageCode)
         }
     }
     if document.isAwaitingReadableText {
-        return "Ross is still reading this file. Ask from this file as soon as readable text appears."
+        return rossLocalized("document_readiness_still_reading", languageCode: languageCode)
     }
-    return "Ross could not find readable text in this file yet. Re-import a clearer PDF, image, or text file, then ask again."
+    return rossLocalized("document_readiness_needs_clearer_text", languageCode: languageCode)
 }
 
 struct AlphaDocumentReadinessItem {
@@ -88,26 +91,29 @@ struct AlphaDocumentReadinessItem {
     let tint: Color
 }
 
-func alphaDocumentReadinessItems(_ document: AlphaCaseDocument) -> [AlphaDocumentReadinessItem] {
+func alphaDocumentReadinessItems(
+    _ document: AlphaCaseDocument,
+    languageCode: String = rossSelectedLanguageCode()
+) -> [AlphaDocumentReadinessItem] {
     let askItem: AlphaDocumentReadinessItem
     if document.hasAskUsableExtractedText {
         askItem = AlphaDocumentReadinessItem(
-            title: "Ask is ready",
-            detail: "Ross can answer from this file and cite its pages.",
+            title: rossLocalized("document_readiness_ask_ready_title", languageCode: languageCode),
+            detail: rossLocalized("document_readiness_ask_ready_detail", languageCode: languageCode),
             systemImage: "bubble.right.fill",
             tint: Color.rossSuccess
         )
     } else if document.isAwaitingReadableText {
         askItem = AlphaDocumentReadinessItem(
-            title: "Still reading",
-            detail: "Ask from this file will unlock as soon as readable text appears.",
+            title: rossLocalized("document_readiness_still_reading_title", languageCode: languageCode),
+            detail: rossLocalized("document_readiness_still_reading_detail", languageCode: languageCode),
             systemImage: "text.viewfinder",
             tint: Color.rossAccent
         )
     } else {
         askItem = AlphaDocumentReadinessItem(
-            title: "Needs clearer text",
-            detail: "Re-import a clearer PDF, image, or text file before asking from it.",
+            title: rossLocalized("document_readiness_needs_clearer_title", languageCode: languageCode),
+            detail: rossLocalized("document_readiness_needs_clearer_detail", languageCode: languageCode),
             systemImage: "exclamationmark.triangle.fill",
             tint: .orange
         )
@@ -117,29 +123,29 @@ func alphaDocumentReadinessItems(_ document: AlphaCaseDocument) -> [AlphaDocumen
     switch document.processingState {
     case .ready:
         reviewItem = AlphaDocumentReadinessItem(
-            title: "Review complete",
-            detail: "Verified details are ready for notes, tasks, and exports.",
+            title: rossLocalized("document_readiness_review_complete_title", languageCode: languageCode),
+            detail: rossLocalized("document_readiness_review_complete_detail", languageCode: languageCode),
             systemImage: "checkmark.seal.fill",
             tint: Color.rossSuccess
         )
     case .failed:
         reviewItem = AlphaDocumentReadinessItem(
-            title: "Review needs attention",
-            detail: "Readable text is available, but the deeper review did not finish.",
+            title: rossLocalized("document_readiness_review_attention_title", languageCode: languageCode),
+            detail: rossLocalized("document_readiness_review_attention_detail", languageCode: languageCode),
             systemImage: "arrow.clockwise.circle.fill",
             tint: .orange
         )
     case .needsConfirmation, .reviewingFindings:
         reviewItem = AlphaDocumentReadinessItem(
-            title: "Check highlighted details",
-            detail: "Confirm findings before relying on this file in notes or exports.",
+            title: rossLocalized("document_readiness_check_details_title", languageCode: languageCode),
+            detail: rossLocalized("document_readiness_check_details_detail", languageCode: languageCode),
             systemImage: "checklist.checked",
             tint: .orange
         )
     case .imported, .readingText:
         reviewItem = AlphaDocumentReadinessItem(
-            title: "Review in progress",
-            detail: "Ross is preparing structured details in the background.",
+            title: rossLocalized("document_readiness_review_progress_title", languageCode: languageCode),
+            detail: rossLocalized("document_readiness_review_progress_detail", languageCode: languageCode),
             systemImage: "hourglass",
             tint: Color.rossAccent
         )
@@ -149,18 +155,18 @@ func alphaDocumentReadinessItems(_ document: AlphaCaseDocument) -> [AlphaDocumen
     if let profile = document.languageProfile {
         let languageName = alphaDocumentLanguageDisplayName(profile.primaryLanguage)
         let scriptLabel = profile.scriptsDetected.isEmpty
-            ? "script detected"
+            ? rossLocalized("document_script_detected", languageCode: languageCode)
             : profile.scriptsDetected.sorted().joined(separator: ", ")
         languageItem = AlphaDocumentReadinessItem(
             title: languageName,
-            detail: "Language detected from this file: \(scriptLabel).",
+            detail: String(format: rossLocalized("document_language_detected_detail", languageCode: languageCode), scriptLabel),
             systemImage: "character.book.closed.fill",
             tint: profile.primaryLanguage == .mixed ? .orange : Color.rossAccent
         )
     } else {
         languageItem = AlphaDocumentReadinessItem(
-            title: "Language pending",
-            detail: "Ross will detect language after readable text is available.",
+            title: rossLocalized("document_language_pending_title", languageCode: languageCode),
+            detail: rossLocalized("document_language_pending_detail", languageCode: languageCode),
             systemImage: "character.book.closed.fill",
             tint: Color.rossInk.opacity(0.52)
         )
@@ -520,7 +526,7 @@ struct AlphaDocumentViewerScreen: View {
                     }
 
                     if let reviewSummaryText {
-                        AlphaDocumentReviewWorkbenchCard(title: "What Ross found", subtitle: reviewSummaryText) {
+                        AlphaDocumentReviewWorkbenchCard(title: rossLocalized("document_review_what_ross_found"), subtitle: reviewSummaryText) {
                             VStack(alignment: .leading, spacing: 14) {
                                 if document.classification?.needsReview == true || !importantReviewFields.isEmpty || !reviewFindings.isEmpty {
                                     VStack(alignment: .leading, spacing: 10) {
@@ -530,11 +536,11 @@ struct AlphaDocumentViewerScreen: View {
                                                 .frame(width: alphaReviewAccentWidth)
 
                                             VStack(alignment: .leading, spacing: 3) {
-                                                Text("Important")
+                                                Text(rossLocalized("document_review_important"))
                                                     .font(.caption.weight(.bold))
                                                     .textCase(.uppercase)
                                                     .foregroundStyle(Color.rossInk.opacity(0.62))
-                                                Text("Check details that can change dates, parties, filing position, or what happens next.")
+                                                Text(rossLocalized("document_review_important_detail"))
                                                     .font(.caption)
                                                     .foregroundStyle(Color.rossInk.opacity(0.65))
                                                     .fixedSize(horizontal: false, vertical: true)
@@ -612,7 +618,7 @@ struct AlphaDocumentViewerScreen: View {
                                 if !detailReviewFields.isEmpty {
                                     DisclosureGroup(isExpanded: $otherDetailsExpanded) {
                                         VStack(alignment: .leading, spacing: 12) {
-                                            Text("Helpful details you can accept, edit, or ignore after the essentials are clear.")
+                                            Text(rossLocalized("document_review_helpful_details"))
                                                 .font(.footnote)
                                                 .foregroundStyle(Color.rossInk.opacity(0.65))
 
@@ -636,7 +642,7 @@ struct AlphaDocumentViewerScreen: View {
                                         .padding(.top, 10)
                                     } label: {
                                         HStack {
-                                            Text("Other details")
+                                            Text(rossLocalized("document_review_other_details"))
                                                 .font(.headline)
                                                 .foregroundStyle(Color.rossInk)
                                             Spacer()
@@ -656,7 +662,7 @@ struct AlphaDocumentViewerScreen: View {
                                             .font(.footnote.weight(.semibold))
                                             .foregroundStyle(Color.rossAccent)
 
-                                        Button("Run better extraction") {
+                                        Button(rossLocalized("document_run_better_extraction")) {
                                             model.path.append(.privateAISettings)
                                         }
                                         .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
@@ -724,7 +730,7 @@ struct AlphaDocumentViewerScreen: View {
                     }
                 }
         )
-        .navigationTitle(document?.title ?? "Document")
+        .navigationTitle(document?.title ?? rossLocalized("document_title"))
         .navigationBarBackButtonHidden(true)
         .rossInlineNavigationTitle()
         .toolbar {
@@ -737,7 +743,7 @@ struct AlphaDocumentViewerScreen: View {
                         .rossGlassSurface(cornerRadius: 16, interactive: true, shadowOpacity: 0.05, shadowRadius: 5, shadowY: 2, strokeOpacity: 0.48)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Back")
+                .accessibilityLabel(rossLocalized("back"))
             }
 
             ToolbarItem(placement: alphaNavigationBarTrailingPlacement) {
@@ -752,7 +758,7 @@ struct AlphaDocumentViewerScreen: View {
                             .rossGlassSurface(cornerRadius: 16, interactive: true, shadowOpacity: 0.05, shadowRadius: 5, shadowY: 2, strokeOpacity: 0.48)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Ask Ross about this document")
+                    .accessibilityLabel(rossLocalized("ask_ross_about_document"))
 
                     Button {
                         Task { await model.rerunReview(caseId: caseId, documentId: documentId) }
@@ -764,7 +770,7 @@ struct AlphaDocumentViewerScreen: View {
                             .rossGlassSurface(cornerRadius: 16, interactive: true, shadowOpacity: 0.05, shadowRadius: 5, shadowY: 2, strokeOpacity: 0.48)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Review document again")
+                    .accessibilityLabel(rossLocalized("review_document_again"))
                 }
             }
         }
@@ -800,13 +806,13 @@ struct AlphaDocumentReadinessCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text("File readiness")
+                Text(rossLocalized("file_readiness"))
                     .font(.headline)
                     .foregroundStyle(Color.rossInk)
 
                 Spacer(minLength: 8)
 
-                Text(document.hasAskUsableExtractedText ? "Ask ready" : "Preparing")
+                Text(document.hasAskUsableExtractedText ? rossLocalized("ask_ready") : rossLocalized("preparing"))
                     .font(.caption2.weight(.bold))
                     .foregroundStyle(document.hasAskUsableExtractedText ? Color.rossSuccess : Color.rossAccent)
                     .padding(.horizontal, 8)
@@ -951,7 +957,7 @@ struct AlphaDocumentTranslationCard: View {
                     )
 
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("Translate this file")
+                    Text(rossLocalized("translate_this_file"))
                         .font(.headline)
                         .foregroundStyle(Color.rossInk)
 
