@@ -815,6 +815,18 @@ final class AlphaExtractionTests: XCTestCase {
             "setup के बाद Ross assistant check करेगा।"
         )
         XCTAssertEqual(
+            alphaRuntimeHealthStatus(.llamaNeedsRepair, languageCode: "hi"),
+            "Ross यह assistant setup खोल नहीं पाया। My assistant खोलकर Repair setup चलाएँ।"
+        )
+        XCTAssertEqual(
+            alphaRuntimeHealthStatus(.foundationCouldNotOpen, languageCode: "ta"),
+            "Ross இந்த iPhone-இல் private assistant திறக்க முடியவில்லை."
+        )
+        XCTAssertEqual(
+            alphaRuntimeHealthStatus(.privateAssistantUnavailable, languageCode: "te-IN"),
+            "Private assistant ప్రస్తుతం ఈ device లో unavailable."
+        )
+        XCTAssertEqual(
             rossLocalized("ready_for_private_answers_on_iphone", languageCode: "bn"),
             "এই iPhone-এ private answers-এর জন্য ready।"
         )
@@ -2285,8 +2297,13 @@ final class AlphaExtractionTests: XCTestCase {
             missingFileHealth?.userFacingStatus,
             systemHealth?.userFacingStatus
         ].compactMap { $0 }
+        let localizedStatuses = [
+            alphaRuntimeHealthStatus(.llamaReady, languageCode: "hi"),
+            alphaRuntimeHealthStatus(.llamaMissingSetup, languageCode: "bn"),
+            alphaRuntimeHealthStatus(.foundationUnavailable, languageCode: "ta")
+        ]
         XCTAssertFalse(statuses.isEmpty)
-        for status in statuses {
+        for status in statuses + localizedStatuses {
             XCTAssertTrue(
                 status.localizedCaseInsensitiveContains("private assistant") ||
                     status.localizedCaseInsensitiveContains("assistant file") ||

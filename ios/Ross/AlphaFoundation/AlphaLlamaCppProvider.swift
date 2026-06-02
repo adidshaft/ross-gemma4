@@ -26,7 +26,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
 
     private func runtimeAvailability() -> (available: Bool, errorCategory: String?, status: String) {
         guard let modelPath, !modelPath.isEmpty else {
-            return (false, "missing_model_file", "Assistant setup is missing or incomplete. Open My assistant to set up again.")
+            return (false, "missing_model_file", alphaRuntimeHealthStatus(.llamaMissingSetup))
         }
         let attributes = try? FileManager.default.attributesOfItem(atPath: modelPath)
         let bytes = (attributes?[.size] as? NSNumber)?.int64Value ?? 0
@@ -39,13 +39,13 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             hasMinimumBytes = bytes > 1_000_000
         }
         guard hasMinimumBytes else {
-            return (false, "missing_model_file", "Assistant setup is missing or incomplete. Open My assistant to set up again.")
+            return (false, "missing_model_file", alphaRuntimeHealthStatus(.llamaMissingSetup))
         }
         do {
             try Self.validateModelCanLoad(at: modelPath)
-            return (true, nil, "Private assistant is ready on this iPhone.")
+            return (true, nil, alphaRuntimeHealthStatus(.llamaReady))
         } catch {
-            return (false, "runtime_validation_failed", "Ross could not open this assistant setup. Open My assistant and use Repair setup.")
+            return (false, "runtime_validation_failed", alphaRuntimeHealthStatus(.llamaNeedsRepair))
         }
     }
 

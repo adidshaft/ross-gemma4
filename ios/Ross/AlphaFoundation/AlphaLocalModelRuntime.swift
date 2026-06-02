@@ -116,6 +116,23 @@ struct AlphaLocalRuntimeHealth: Codable, Hashable, Sendable {
     var explicitOptInEnabled: Bool = false
 }
 
+func alphaRuntimeHealthStatus(_ key: AlphaRuntimeHealthStatusKey, languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized(key.rawValue, languageCode: languageCode)
+}
+
+enum AlphaRuntimeHealthStatusKey: String {
+    case deterministicDev = "runtime_health_deterministic_dev"
+    case llamaMissingSetup = "runtime_health_llama_missing_setup"
+    case llamaReady = "runtime_health_llama_ready"
+    case llamaNeedsRepair = "runtime_health_llama_needs_repair"
+    case foundationAvailable = "runtime_health_foundation_available"
+    case foundationUnavailable = "runtime_health_foundation_unavailable"
+    case foundationUnknown = "runtime_health_foundation_unknown"
+    case foundationCouldNotOpen = "runtime_health_foundation_could_not_open"
+    case devArtifactsDisabled = "runtime_health_dev_artifacts_disabled"
+    case privateAssistantUnavailable = "runtime_health_private_assistant_unavailable"
+}
+
 struct AlphaLocalModelResourceEstimate: Codable, Hashable, Sendable {
     var inputChars: Int
     var estimatedTokens: Int?
@@ -297,7 +314,7 @@ struct DeterministicDevLocalModelProvider: AlphaLocalModelProvider {
             maxInputChars: maxInputChars(),
             estimatedContextTokens: contextWindowEstimate(),
             lastErrorCategory: nil,
-            userFacingStatus: "Deterministic development runtime active."
+            userFacingStatus: alphaRuntimeHealthStatus(.deterministicDev)
         )
     }
 
@@ -532,18 +549,18 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
         do {
             let model = try resolvedModel()
             if model.isAvailable {
-                return (true, "Private assistant on this device is available.", nil)
+                return (true, alphaRuntimeHealthStatus(.foundationAvailable), nil)
             }
             switch model.availability {
             case .available:
-                return (true, "Private assistant on this device is available.", nil)
+                return (true, alphaRuntimeHealthStatus(.foundationAvailable), nil)
             case .unavailable:
-                return (false, "The on-device private assistant is not available on this iPhone yet.", "unsupported_runtime")
+                return (false, alphaRuntimeHealthStatus(.foundationUnavailable), "unsupported_runtime")
             @unknown default:
-                return (false, "The on-device private assistant availability is unknown.", "unsupported_runtime")
+                return (false, alphaRuntimeHealthStatus(.foundationUnknown), "unsupported_runtime")
             }
         } catch {
-            return (false, "Ross could not open the private assistant on this iPhone.", "runtime_dependency_unavailable")
+            return (false, alphaRuntimeHealthStatus(.foundationCouldNotOpen), "runtime_dependency_unavailable")
         }
     }
 
@@ -774,7 +791,7 @@ enum AlphaLocalModelRuntime {
                     maxInputChars: nil,
                     estimatedContextTokens: nil,
                     lastErrorCategory: "development_artifact_blocked",
-                    userFacingStatus: "Development-only assistant artifacts are disabled for this build.",
+                    userFacingStatus: alphaRuntimeHealthStatus(.devArtifactsDisabled),
                     explicitOptInEnabled: runtimeEnvironment.enableRealInference
                 )
             }
@@ -792,7 +809,7 @@ enum AlphaLocalModelRuntime {
                 maxInputChars: nil,
                 estimatedContextTokens: nil,
                 lastErrorCategory: "unsupported_runtime",
-                userFacingStatus: "Private assistant is unavailable on this device right now.",
+                userFacingStatus: alphaRuntimeHealthStatus(.privateAssistantUnavailable),
                 explicitOptInEnabled: runtimeEnvironment.enableRealInference
             )
         default:

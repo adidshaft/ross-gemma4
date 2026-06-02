@@ -1421,6 +1421,76 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Repair setup உடைந்த assistant setup-ஐ நீக்கி புதிய local check தொடங்கும்.",
             "te": "Repair setup పాడైన assistant setup ను తొలగించి కొత్త local check ప్రారంభిస్తుంది."
         ],
+        "runtime_health_deterministic_dev": [
+            "en": "Development assistant is active for this build.",
+            "hi": "इस build के लिए development assistant active है।",
+            "bn": "এই build-এর জন্য development assistant active আছে।",
+            "ta": "இந்த build-க்கு development assistant active உள்ளது.",
+            "te": "ఈ build కోసం development assistant active ఉంది."
+        ],
+        "runtime_health_llama_missing_setup": [
+            "en": "Assistant setup is missing or incomplete. Open My assistant to set up again.",
+            "hi": "Assistant setup missing या incomplete है। My assistant खोलकर फिर setup करें।",
+            "bn": "Assistant setup missing বা incomplete। My assistant খুলে আবার setup করুন।",
+            "ta": "Assistant setup missing அல்லது incomplete. My assistant திறந்து மீண்டும் setup செய்யவும்.",
+            "te": "Assistant setup missing లేదా incomplete. My assistant తెరిచి మళ్లీ setup చేయండి."
+        ],
+        "runtime_health_llama_ready": [
+            "en": "Private assistant is ready on this iPhone.",
+            "hi": "Private assistant इस iPhone पर ready है।",
+            "bn": "Private assistant এই iPhone-এ ready।",
+            "ta": "Private assistant இந்த iPhone-இல் ready.",
+            "te": "Private assistant ఈ iPhone లో ready."
+        ],
+        "runtime_health_llama_needs_repair": [
+            "en": "Ross could not open this assistant setup. Open My assistant and use Repair setup.",
+            "hi": "Ross यह assistant setup खोल नहीं पाया। My assistant खोलकर Repair setup चलाएँ।",
+            "bn": "Ross এই assistant setup খুলতে পারেনি। My assistant খুলে Repair setup ব্যবহার করুন।",
+            "ta": "Ross இந்த assistant setup-ஐ திறக்க முடியவில்லை. My assistant திறந்து Repair setup பயன்படுத்தவும்.",
+            "te": "Ross ఈ assistant setup తెరవలేకపోయింది. My assistant తెరిచి Repair setup ఉపయోగించండి."
+        ],
+        "runtime_health_foundation_available": [
+            "en": "Private assistant on this device is available.",
+            "hi": "इस device पर private assistant available है।",
+            "bn": "এই device-এ private assistant available।",
+            "ta": "இந்த device-இல் private assistant available.",
+            "te": "ఈ device లో private assistant available."
+        ],
+        "runtime_health_foundation_unavailable": [
+            "en": "The on-device private assistant is not available on this iPhone yet.",
+            "hi": "On-device private assistant अभी इस iPhone पर available नहीं है।",
+            "bn": "On-device private assistant এখনও এই iPhone-এ available নয়।",
+            "ta": "On-device private assistant இன்னும் இந்த iPhone-இல் available இல்லை.",
+            "te": "On-device private assistant ఇంకా ఈ iPhone లో available లేదు."
+        ],
+        "runtime_health_foundation_unknown": [
+            "en": "The on-device private assistant availability is unknown.",
+            "hi": "On-device private assistant availability अभी unknown है।",
+            "bn": "On-device private assistant availability এখন unknown।",
+            "ta": "On-device private assistant availability இப்போது unknown.",
+            "te": "On-device private assistant availability ప్రస్తుతం unknown."
+        ],
+        "runtime_health_foundation_could_not_open": [
+            "en": "Ross could not open the private assistant on this iPhone.",
+            "hi": "Ross इस iPhone पर private assistant खोल नहीं पाया।",
+            "bn": "Ross এই iPhone-এ private assistant খুলতে পারেনি।",
+            "ta": "Ross இந்த iPhone-இல் private assistant திறக்க முடியவில்லை.",
+            "te": "Ross ఈ iPhone లో private assistant తెరవలేకపోయింది."
+        ],
+        "runtime_health_dev_artifacts_disabled": [
+            "en": "Development-only assistant setup is disabled for this build.",
+            "hi": "इस build के लिए development-only assistant setup disabled है।",
+            "bn": "এই build-এর জন্য development-only assistant setup disabled।",
+            "ta": "இந்த build-க்கு development-only assistant setup disabled உள்ளது.",
+            "te": "ఈ build కోసం development-only assistant setup disabled ఉంది."
+        ],
+        "runtime_health_private_assistant_unavailable": [
+            "en": "Private assistant is unavailable on this device right now.",
+            "hi": "Private assistant अभी इस device पर unavailable है।",
+            "bn": "Private assistant এখন এই device-এ unavailable।",
+            "ta": "Private assistant இப்போது இந்த device-இல் unavailable.",
+            "te": "Private assistant ప్రస్తుతం ఈ device లో unavailable."
+        ],
         "ready_for_private_answers_on_iphone": [
             "en": "Ready for private answers on this iPhone.",
             "hi": "इस iPhone पर private answers के लिए ready।",
