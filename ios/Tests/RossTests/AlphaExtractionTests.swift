@@ -64,7 +64,7 @@ final class AlphaExtractionTests: XCTestCase {
             ),
             AlphaPrivacyLedgerEntry(
                 title: "Assistant verified",
-                detail: "Quick start finished downloading and passed checksum verification locally.",
+                detail: "Quick start finished downloading and passed local verification.",
                 purpose: .model_verification,
                 payloadClass: .no_case_data,
                 endpointLabel: "device://model-verify",

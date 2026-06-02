@@ -939,7 +939,7 @@ extension AlphaRossModel {
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
                     title: "Assistant verified",
-                    detail: "\(tier.title) was already downloaded and passed checksum verification locally.",
+                    detail: "\(tier.title) was already downloaded and passed local verification.",
                     purpose: .model_verification,
                     payloadClass: .no_case_data,
                     endpointLabel: "device://model-verify",
@@ -1048,7 +1048,7 @@ extension AlphaRossModel {
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
                     title: "Assistant verified",
-                    detail: "\(tier.title) finished downloading and passed checksum verification locally.",
+                    detail: "\(tier.title) finished downloading and passed local verification.",
                     purpose: .model_verification,
                     payloadClass: .no_case_data,
                     endpointLabel: "device://model-verify",
