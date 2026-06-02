@@ -1274,6 +1274,34 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Ross draft file-ஐ save செய்ய முடியவில்லை. Case files இந்த device-இல் இருந்தன.",
             "te": "Ross draft file save చేయలేకపోయింది. Case files ఈ device పైనే ఉన్నాయి."
         ],
+        "privacy_ledger_private_assistant_prepared_detail": [
+            "en": "Private assistant was prepared on this device.",
+            "hi": "Private assistant इसी device पर तैयार हुआ.",
+            "bn": "Private assistant এই device-এ প্রস্তুত হয়েছে.",
+            "ta": "Private assistant இந்த device-இல் தயாரானது.",
+            "te": "Private assistant ఈ device పై సిద్ధమైంది."
+        ],
+        "privacy_ledger_assistant_download_checked_detail": [
+            "en": "Ross checked the assistant download before starting. Case files stayed on this device.",
+            "hi": "Ross ने assistant download शुरू करने से पहले check किया। Case files इसी device पर रहीं.",
+            "bn": "Ross assistant download শুরু করার আগে check করেছে। Case files এই device-এ রয়ে গেছে.",
+            "ta": "Assistant download தொடங்குவதற்கு முன் Ross check செய்தது. Case files இந்த device-இல் இருந்தன.",
+            "te": "Assistant download ప్రారంభానికి ముందు Ross check చేసింది. Case files ఈ device పైనే ఉన్నాయి."
+        ],
+        "privacy_ledger_assistant_ready_detail": [
+            "en": "Private assistant was checked and is ready on this device.",
+            "hi": "Private assistant check हो चुका है और इसी device पर ready है.",
+            "bn": "Private assistant check হয়েছে এবং এই device-এ ready.",
+            "ta": "Private assistant check செய்யப்பட்டது; இந்த device-இல் ready.",
+            "te": "Private assistant check చేయబడింది మరియు ఈ device పై ready గా ఉంది."
+        ],
+        "privacy_ledger_assistant_download_failed_detail": [
+            "en": "Ross could not finish assistant setup. Case files stayed on this device.",
+            "hi": "Ross assistant setup finish नहीं कर पाया। Case files इसी device पर रहीं.",
+            "bn": "Ross assistant setup finish করতে পারেনি। Case files এই device-এ রয়ে গেছে.",
+            "ta": "Ross assistant setup finish செய்ய முடியவில்லை. Case files இந்த device-இல் இருந்தன.",
+            "te": "Ross assistant setup finish చేయలేకపోయింది. Case files ఈ device పైనే ఉన్నాయి."
+        ],
         "ask_privacy_label_review_pending": [
             "en": "On-device · review pending",
             "hi": "Device पर · review बाकी",

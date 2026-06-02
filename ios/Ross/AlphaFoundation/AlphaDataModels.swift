@@ -2852,13 +2852,13 @@ extension AlphaPrivacyLedgerEntry {
         case "Public-law search unavailable", "Legal Search unavailable":
             rossLocalized("privacy_ledger_public_law_unavailable_detail")
         case "Private AI Pack verified":
-            "Private assistant was prepared on this device."
+            rossLocalized("privacy_ledger_private_assistant_prepared_detail")
         case "Assistant download verified":
-            "Ross checked the assistant download before starting. Case files stayed on this device."
+            rossLocalized("privacy_ledger_assistant_download_checked_detail")
         case "Assistant verified":
-            "Private assistant was checked and is ready on this device."
+            rossLocalized("privacy_ledger_assistant_ready_detail")
         case "Assistant download failed":
-            "Ross could not finish assistant setup. Case files stayed on this device."
+            rossLocalized("privacy_ledger_assistant_download_failed_detail")
         case "Local export generated":
             rossLocalized("privacy_ledger_local_export_generated_detail")
         case "Export generation failed":

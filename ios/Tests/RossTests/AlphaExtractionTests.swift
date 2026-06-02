@@ -45,6 +45,7 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     func testPrivacyLedgerAssistantSetupCopyUsesProductLanguage() {
+        rossSaveLanguageSelection(code: "hi")
         let entries = [
             AlphaPrivacyLedgerEntry(
                 title: "Model catalog checked",
@@ -102,6 +103,11 @@ final class AlphaExtractionTests: XCTestCase {
             XCTAssertFalse(entry.lawyerDetail.localizedCaseInsensitiveContains("assistant file"), entry.lawyerDetail)
             XCTAssertFalse(entry.lawyerDetail.localizedCaseInsensitiveContains("downloaded assistant"), entry.lawyerDetail)
         }
+
+        XCTAssertTrue(entries[1].lawyerDetail.contains("assistant download शुरू करने से पहले check किया"), entries[1].lawyerDetail)
+        XCTAssertTrue(entries[2].lawyerDetail.contains("Private assistant check हो चुका है"), entries[2].lawyerDetail)
+        XCTAssertTrue(entries[3].lawyerDetail.contains("assistant setup finish नहीं कर पाया"), entries[3].lawyerDetail)
+        XCTAssertTrue(entries[3].lawyerDetail.contains("Case files इसी device पर रहीं"), entries[3].lawyerDetail)
     }
 
     func testPrivacyLedgerPublicLawAndExportCopyFollowsSelectedLanguage() {
