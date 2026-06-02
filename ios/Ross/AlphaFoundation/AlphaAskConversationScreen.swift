@@ -1465,18 +1465,15 @@ extension AlphaAskResult {
     }
 
     var isPendingLocalModelResponse: Bool {
-        answerTitle == "Ross is answering..."
-            && (statusNote?.hasSuffix("running locally") ?? false)
+        (answerTitle == "Ross is answering..." || rossSupportedLanguageCodes().contains { answerTitle == rossLocalized("ask_ross_answering_pending", languageCode: $0) })
+            && alphaPendingLocalModelLabel(from: statusNote) != nil
             && publicLawPreview == nil
             && publicLawResults.isEmpty
     }
 
     var pendingLocalModelLabel: String? {
-        guard isPendingLocalModelResponse,
-              let statusNote,
-              let range = statusNote.range(of: " running locally") else { return nil }
-        let label = String(statusNote[..<range.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
-        return label.isEmpty ? nil : label
+        guard isPendingLocalModelResponse else { return nil }
+        return alphaPendingLocalModelLabel(from: statusNote)
     }
 
     func answerSectionItems(limit: Int? = nil) -> [AlphaAnswerSectionItem] {

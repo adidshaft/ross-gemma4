@@ -878,6 +878,14 @@ final class AlphaExtractionTests: XCTestCase {
             rossLocalized("ask_task_text_stayed_on_device", languageCode: "te-IN"),
             "ఏ case file లేదా task text ఈ device ను వదిలి వెళ్లలేదు."
         )
+        XCTAssertEqual(
+            alphaPendingLocalModelStatus("Standard assistant", languageCode: "hi"),
+            "Standard assistant private answer तैयार कर रहा है"
+        )
+        XCTAssertEqual(
+            alphaPendingLocalModelLabel(from: "Standard assistant private answer तैयार कर रहा है"),
+            "Standard assistant"
+        )
         XCTAssertTrue(
             alphaNextHearingLabel(Date(timeIntervalSince1970: 0), languageCode: "hi")
                 .contains("अगली hearing:")

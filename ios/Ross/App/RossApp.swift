@@ -3493,6 +3493,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "எந்த case file அல்லது task text இந்த device-ஐ விட்டு செல்லவில்லை.",
             "te": "ఏ case file లేదా task text ఈ device ను వదిలి వెళ్లలేదు."
         ],
+        "ask_ross_answering_pending": [
+            "en": "Ross is answering...",
+            "hi": "Ross जवाब तैयार कर रहा है...",
+            "bn": "Ross উত্তর তৈরি করছে...",
+            "ta": "Ross பதில் தயாரிக்கிறது...",
+            "te": "Ross సమాధానం సిద్ధం చేస్తోంది..."
+        ],
+        "ask_pending_private_answer_status": [
+            "en": "%@ is preparing a private answer",
+            "hi": "%@ private answer तैयार कर रहा है",
+            "bn": "%@ private answer তৈরি করছে",
+            "ta": "%@ private answer தயாரிக்கிறது",
+            "te": "%@ private answer సిద్ధం చేస్తోంది"
+        ],
+        "ask_pending_private_answer_detail": [
+            "en": "%@ is working on this iPhone. Ross will replace this with the private answer as soon as it finishes.",
+            "hi": "%@ इस iPhone पर काम कर रहा है। finish होते ही Ross इसे private answer से replace करेगा।",
+            "bn": "%@ এই iPhone-এ কাজ করছে। শেষ হলেই Ross এটিকে private answer দিয়ে replace করবে।",
+            "ta": "%@ இந்த iPhone-ல் வேலை செய்கிறது. முடிந்ததும் Ross இதை private answer-ஆக replace செய்யும்.",
+            "te": "%@ ఈ iPhone లో పని చేస్తోంది. పూర్తయ్యగానే Ross దీన్ని private answer తో replace చేస్తుంది."
+        ],
         "ask_pick_matter_before_date": [
             "en": "Pick a matter in the bar above before saving a hearing date, deadline, or reminder.",
             "hi": "hearing date, deadline, या reminder save करने से पहले ऊपर की bar में matter चुनें।",

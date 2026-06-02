@@ -370,7 +370,7 @@ extension AlphaRossModel {
     }
 
     func activeLocalModelRunningStatus() -> String {
-        "\(activeLocalModelDisplayLabel()) is preparing a private answer"
+        alphaPendingLocalModelStatus(activeLocalModelDisplayLabel())
     }
 
     func buildPendingLocalModelAskResult(
@@ -381,9 +381,9 @@ extension AlphaRossModel {
         let taggedFiles = baseResult.selectedDocumentTitles
         let taggedFilesSection: String?
         if taggedFiles.count == 1, let title = taggedFiles.first {
-            taggedFilesSection = "Tagged file: \(title)."
+            taggedFilesSection = alphaTaggedFileLine(title)
         } else if !taggedFiles.isEmpty {
-            taggedFilesSection = "Tagged files: \(taggedFiles.joined(separator: ", "))."
+            taggedFilesSection = alphaTaggedFilesLine(taggedFiles)
         } else {
             taggedFilesSection = nil
         }
@@ -396,9 +396,9 @@ extension AlphaRossModel {
             scopeCaseID: scopeCaseID,
             scopeLabel: scopeLabel(for: scopeCaseID),
             selectedDocumentTitles: baseResult.selectedDocumentTitles,
-            answerTitle: "Ross is answering...",
+            answerTitle: rossLocalized("ask_ross_answering_pending"),
             answerSections: [
-                "\(activeLocalModelDisplayLabel()) is working on this iPhone. Ross will replace this with the private answer as soon as it finishes.",
+                alphaPendingLocalModelDetail(activeLocalModelDisplayLabel()),
                 taggedFilesSection
             ].compactMap { $0 },
             caseFileSources: [],
@@ -2303,6 +2303,30 @@ func alphaAskDateSavedLabel(
         title,
         date.formatted(date: .abbreviated, time: .omitted)
     )
+}
+
+func alphaPendingLocalModelStatus(_ label: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("ask_pending_private_answer_status", languageCode: languageCode), label)
+}
+
+func alphaPendingLocalModelDetail(_ label: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("ask_pending_private_answer_detail", languageCode: languageCode), label)
+}
+
+func alphaPendingLocalModelLabel(from statusNote: String?) -> String? {
+    guard let statusNote = statusNote?.trimmingCharacters(in: .whitespacesAndNewlines),
+          !statusNote.isEmpty else { return nil }
+    let suffixes = rossSupportedLanguageCodes()
+        .map { alphaPendingLocalModelStatus("", languageCode: $0).trimmingCharacters(in: .whitespacesAndNewlines) }
+        + ["running locally"]
+
+    for suffix in suffixes where !suffix.isEmpty {
+        if statusNote.hasSuffix(suffix) {
+            let label = String(statusNote.dropLast(suffix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+            return label.isEmpty ? nil : label
+        }
+    }
+    return nil
 }
 
 func alphaAskDraftReadyTitle(_ draftLabel: String, languageCode: String = rossSelectedLanguageCode()) -> String {

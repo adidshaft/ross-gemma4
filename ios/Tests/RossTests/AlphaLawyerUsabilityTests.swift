@@ -227,11 +227,13 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
 
             XCTAssertEqual("Ross is answering...", pending.answerTitle)
             XCTAssertEqual("Flash assistant is preparing a private answer", pending.statusNote)
+            XCTAssertTrue(pending.isPendingLocalModelResponse)
+            XCTAssertEqual("Flash assistant", pending.pendingLocalModelLabel)
             XCTAssertTrue(
                 pending.answerSections.joined(separator: " ").contains("replace this with the private answer")
             )
             XCTAssertTrue(
-                pending.answerSections.joined(separator: " ").contains("Tagged files: Demo affidavit, Demo order.")
+                pending.answerSections.joined(separator: " ").contains("Tagged files: Demo affidavit, Demo order")
             )
             XCTAssertEqual(["Demo affidavit", "Demo order"], pending.selectedDocumentTitles)
             XCTAssertEqual([], pending.caseFileSources)
@@ -243,6 +245,21 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                     "\(forbidden) leaked into pending private-answer copy"
                 )
             }
+
+            let previousLanguageCode = rossSelectedLanguageCode()
+            rossSaveLanguageSelection(code: "hi")
+            defer { rossSaveLanguageSelection(code: previousLanguageCode) }
+
+            let localizedPending = model.buildPendingLocalModelAskResult(
+                question: "Give me summaries from selected files.",
+                scopeCaseID: nil,
+                baseResult: baseResult
+            )
+
+            XCTAssertEqual("Ross जवाब तैयार कर रहा है...", localizedPending.answerTitle)
+            XCTAssertEqual("Flash assistant private answer तैयार कर रहा है", localizedPending.statusNote)
+            XCTAssertTrue(localizedPending.isPendingLocalModelResponse)
+            XCTAssertEqual("Flash assistant", localizedPending.pendingLocalModelLabel)
         }
     }
 
