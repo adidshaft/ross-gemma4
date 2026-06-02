@@ -113,17 +113,18 @@ struct AlphaDocumentListScreen: View {
                     }
                 }
 
-                Button("Import document") {
-                    showingImporter = true
-                }
-                .rossPrimaryButtonStyle()
-
                 if let caseMatter, caseMatter.documents.isEmpty {
-                    RossSectionCard {
-                        Text("Import the first order, pleading, notice, or note for this matter.")
-                            .font(.subheadline)
-                            .foregroundStyle(Color.rossInk.opacity(0.7))
+                    AlphaEmptyFileRoomCard(
+                        title: "Import the first file",
+                        detail: "Add an order, pleading, notice, image, or note. Ross reads it on this iPhone and makes it available for review and Ask.",
+                        actionTitle: "Import document",
+                        onImport: { showingImporter = true }
+                    )
+                } else {
+                    Button("Import document") {
+                        showingImporter = true
                     }
+                    .rossPrimaryButtonStyle()
                 }
 
                 if let documents = caseMatter?.documents, !documents.isEmpty {
@@ -167,6 +168,55 @@ struct AlphaDocumentListScreen: View {
                 }
             }
         }
+    }
+}
+
+struct AlphaEmptyFileRoomCard: View {
+    let title: String
+    let detail: String
+    let actionTitle: String
+    let onImport: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "doc.badge.plus")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Color.rossAccent)
+                    .frame(width: 36, height: 36)
+                    .rossNativeGlassSurface(
+                        tint: Color.rossAccent.opacity(0.24),
+                        shape: RoundedRectangle(cornerRadius: 12, style: .continuous),
+                        interactive: false,
+                        fallbackFillOpacity: 0.84,
+                        fallbackStrokeOpacity: 0.48
+                    )
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(title)
+                        .font(.headline)
+                        .foregroundStyle(Color.rossInk)
+                    Text(detail)
+                        .font(.subheadline)
+                        .foregroundStyle(Color.rossInk.opacity(0.68))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            Button(actionTitle, action: onImport)
+                .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
+        }
+        .padding(14)
+        .rossGlassSurface(
+            tint: Color.rossAccent.opacity(0.14),
+            cornerRadius: 18,
+            interactive: true,
+            shadowOpacity: 0.07,
+            shadowRadius: 7,
+            shadowY: 3,
+            fillOpacity: 0.80,
+            strokeOpacity: 0.50
+        )
     }
 }
 

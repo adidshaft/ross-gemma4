@@ -318,11 +318,12 @@ struct AlphaCaseWorkspaceScreen: View {
                                 AlphaDocumentLayoutMenu(layoutMode: $documentLayoutMode)
                             }
                             if caseMatter.documents.isEmpty {
-                                RossSectionCard {
-                                    Text("Import the first real file for this matter.")
-                                        .font(.subheadline)
-                                        .foregroundStyle(Color.rossInk.opacity(0.7))
-                                }
+                                AlphaEmptyFileRoomCard(
+                                    title: "Import the first real file",
+                                    detail: "Add a PDF, image, or text note. Ross will read it locally, prepare review items, and make it available for Ask.",
+                                    actionTitle: "Import document",
+                                    onImport: { showingImporter = true }
+                                )
                             } else {
                                 AlphaDocumentCollectionView(
                                     documents: caseMatter.documents,
@@ -335,10 +336,12 @@ struct AlphaCaseWorkspaceScreen: View {
                                     onStartReviewChat: { documentId in model.openDocumentInChat(caseId: caseId, documentId: documentId, startNewThread: true) }
                                 )
                             }
-                            Button("Import document") {
-                                showingImporter = true
+                            if !caseMatter.documents.isEmpty {
+                                Button("Import document") {
+                                    showingImporter = true
+                                }
+                                .rossPrimaryButtonStyle()
                             }
-                            .rossPrimaryButtonStyle()
                         }
                     }
                 }
