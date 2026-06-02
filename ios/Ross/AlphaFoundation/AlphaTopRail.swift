@@ -577,50 +577,52 @@ struct AlphaRootTopRail: View {
     let onCreateMatter: () -> Void
 
     var body: some View {
-        HStack(spacing: 10) {
-            HStack(spacing: 8) {
-                Image("RossLogo")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 24, height: 24)
-                    .padding(4)
-                    .rossNativeGlassSurface(
-                        tint: Color.rossAccent,
-                        shape: RoundedRectangle(cornerRadius: 10, style: .continuous),
-                        fallbackFillOpacity: 0.82,
-                        fallbackStrokeOpacity: 0.48
-                    )
+        RossGlassGroup(spacing: 10) {
+            HStack(spacing: 10) {
+                HStack(spacing: 8) {
+                    Image("RossLogo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 24, height: 24)
+                        .padding(4)
+                        .rossNativeGlassSurface(
+                            tint: Color.rossAccent,
+                            shape: RoundedRectangle(cornerRadius: 10, style: .continuous),
+                            fallbackFillOpacity: 0.82,
+                            fallbackStrokeOpacity: 0.48
+                        )
 
-                Text("Ross")
-                    .font(.headline.weight(.semibold))
-                    .foregroundStyle(Color.rossInk)
-            }
-
-            Spacer(minLength: 0)
-
-            AlphaTopRailIconButton(
-                systemImage: "square.and.pencil",
-                accessibilityLabel: "Compose chat",
-                action: {
-                    alphaHaptic(.selection)
-                    onCompose()
+                    Text("Ross")
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(Color.rossInk)
                 }
-            )
 
-            AlphaGlassPlusButton {
-                alphaHaptic(.selection)
-                onCreateMatter()
-            }
+                Spacer(minLength: 0)
 
-            AlphaTopRailIconButton(
-                systemImage: "slider.horizontal.3",
-                accessibilityLabel: "Settings",
-                action: {
+                AlphaTopRailIconButton(
+                    systemImage: "square.and.pencil",
+                    accessibilityLabel: "Compose chat",
+                    action: {
+                        alphaHaptic(.selection)
+                        onCompose()
+                    }
+                )
+
+                AlphaGlassPlusButton {
                     alphaHaptic(.selection)
-                    model.persisted.selectedTab = .settings
-                    model.persist()
+                    onCreateMatter()
                 }
-            )
+
+                AlphaTopRailIconButton(
+                    systemImage: "slider.horizontal.3",
+                    accessibilityLabel: "Settings",
+                    action: {
+                        alphaHaptic(.selection)
+                        model.persisted.selectedTab = .settings
+                        model.persist()
+                    }
+                )
+            }
         }
     }
 }
