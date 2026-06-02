@@ -66,6 +66,36 @@ public struct RossGlassGroup<Content: View>: View {
     }
 }
 
+// MARK: - App Backdrop
+
+public struct RossAppBackdropModifier: ViewModifier {
+    @Environment(\.colorScheme) private var colorScheme
+
+    public func body(content: Content) -> some View {
+        content
+            .background {
+                ZStack {
+                    Color.rossGroupedBackground
+
+                    LinearGradient(
+                        colors: [
+                            Color.rossHeroTop.opacity(colorScheme == .dark ? 0.64 : 0.78),
+                            Color.rossGroupedBackground,
+                            Color.rossHeroBottom.opacity(colorScheme == .dark ? 0.70 : 0.82)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+
+                    Rectangle()
+                        .fill(.ultraThinMaterial)
+                        .opacity(colorScheme == .dark ? 0.10 : 0.18)
+                }
+                .ignoresSafeArea()
+            }
+    }
+}
+
 // MARK: - Card Style
 
 public struct RossCardStyle: ViewModifier {
@@ -391,6 +421,10 @@ public extension View {
                 fallbackStrokeOpacity: fallbackStrokeOpacity
             )
         )
+    }
+
+    func rossAppBackdrop() -> some View {
+        modifier(RossAppBackdropModifier())
     }
 
     func rossSecondaryButtonStyle() -> some View {

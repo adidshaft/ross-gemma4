@@ -197,7 +197,7 @@ struct AlphaAskConversationScreen: View {
                 onSend: send
             )
         }
-        .background(Color.rossGroupedBackground.ignoresSafeArea())
+        .rossAppBackdrop()
         .navigationBarBackButtonHidden(true)
         .onAppear {
             if selectedScopeCaseID == nil {
@@ -756,7 +756,7 @@ struct AlphaThreadSidebarSheet: View {
                     .padding(18)
                 }
             }
-            .background(Color.rossGroupedBackground.ignoresSafeArea())
+            .rossAppBackdrop()
             .navigationTitle(rossLocalized("threads"))
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {

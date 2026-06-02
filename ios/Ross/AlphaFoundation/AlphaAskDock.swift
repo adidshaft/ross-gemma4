@@ -1469,7 +1469,7 @@ struct AlphaAskComposerSheet: View {
             .padding(.top, 16)
             .padding(.bottom, max(proxy.safeAreaInsets.bottom, 24))
         }
-        .background(Color.rossGroupedBackground.ignoresSafeArea())
+        .rossAppBackdrop()
         .alphaDismissesKeyboardOnScroll()
     }
 }

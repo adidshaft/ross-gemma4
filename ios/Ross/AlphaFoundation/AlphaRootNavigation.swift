@@ -37,7 +37,7 @@ struct AlphaRossRootView: View {
                         AlphaTabShell(model: model, authController: authController)
                     }
                 }
-                .background(Color.rossGroupedBackground.ignoresSafeArea())
+                .rossAppBackdrop()
                 .navigationDestination(for: AlphaRoute.self) { route in
                     switch route {
                     case .createCase:
@@ -199,7 +199,7 @@ private struct AlphaIncomingDocumentsSheet: View {
                     .padding(alphaScreenPadding)
                 }
             }
-            .background(Color.rossGroupedBackground.ignoresSafeArea())
+            .rossAppBackdrop()
             .navigationTitle(rossLocalized("shared_files"))
             .rossInlineNavigationTitle()
             .toolbar {
