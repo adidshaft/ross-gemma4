@@ -396,18 +396,22 @@ public extension View {
 
 public struct RossSecondaryButtonStyle: ButtonStyle {
     public func makeBody(configuration: Configuration) -> some View {
+        let shape = RoundedRectangle(cornerRadius: RossCorner.sm, style: .continuous)
+
         configuration.label
             .font(.subheadline.weight(.medium))
             .foregroundStyle(Color.rossAccent)
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            .background(
-                Color.rossAccent.opacity(configuration.isPressed ? 0.14 : 0.08),
-                in: RoundedRectangle(cornerRadius: RossCorner.sm, style: .continuous)
+            .rossNativeGlassSurface(
+                tint: Color.rossAccent,
+                shape: shape,
+                interactive: true,
+                fallbackFillOpacity: configuration.isPressed ? 0.58 : 0.72,
+                fallbackStrokeOpacity: configuration.isPressed ? 0.32 : 0.46
             )
             .overlay {
-                RoundedRectangle(cornerRadius: RossCorner.sm, style: .continuous)
-                    .stroke(Color.rossAccent.opacity(configuration.isPressed ? 0.26 : 0.16), lineWidth: 1)
+                shape.strokeBorder(Color.rossAccent.opacity(configuration.isPressed ? 0.30 : 0.18), lineWidth: 1)
             }
             .scaleEffect(configuration.isPressed ? 0.975 : 1)
             .animation(.spring(response: 0.2, dampingFraction: 0.7), value: configuration.isPressed)
@@ -418,18 +422,22 @@ public struct RossSecondaryButtonStyle: ButtonStyle {
 
 public struct RossDestructiveButtonStyle: ButtonStyle {
     public func makeBody(configuration: Configuration) -> some View {
+        let shape = RoundedRectangle(cornerRadius: RossCorner.md, style: .continuous)
+
         configuration.label
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(.red)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
-            .background(
-                RoundedRectangle(cornerRadius: RossCorner.md, style: .continuous)
-                    .fill(Color.red.opacity(configuration.isPressed ? 0.18 : 0.09))
+            .rossNativeGlassSurface(
+                tint: Color.red,
+                shape: shape,
+                interactive: true,
+                fallbackFillOpacity: configuration.isPressed ? 0.62 : 0.76,
+                fallbackStrokeOpacity: configuration.isPressed ? 0.34 : 0.48
             )
             .overlay {
-                RoundedRectangle(cornerRadius: RossCorner.md, style: .continuous)
-                    .stroke(Color.red.opacity(0.24), lineWidth: 1)
+                shape.strokeBorder(Color.red.opacity(configuration.isPressed ? 0.34 : 0.24), lineWidth: 1)
             }
             .scaleEffect(configuration.isPressed ? 0.985 : 1)
             .animation(.spring(response: 0.2, dampingFraction: 0.7), value: configuration.isPressed)
@@ -449,16 +457,21 @@ public struct RossIconActionButtonStyle: ButtonStyle {
     }
 
     public func makeBody(configuration: Configuration) -> some View {
+        let shape = Circle()
+
         configuration.label
             .font(.system(size: size * 0.46, weight: .semibold))
             .foregroundStyle(tint)
             .frame(width: size, height: size)
-            .background(
-                tint.opacity(configuration.isPressed ? 0.24 : 0.13),
-                in: Circle()
+            .rossNativeGlassSurface(
+                tint: tint,
+                shape: shape,
+                interactive: true,
+                fallbackFillOpacity: configuration.isPressed ? 0.56 : 0.68,
+                fallbackStrokeOpacity: configuration.isPressed ? 0.34 : 0.44
             )
             .overlay {
-                Circle().stroke(tint.opacity(0.22), lineWidth: 1)
+                shape.stroke(tint.opacity(configuration.isPressed ? 0.30 : 0.22), lineWidth: 1)
             }
             .scaleEffect(configuration.isPressed ? 0.90 : 1)
             .animation(.spring(response: 0.18, dampingFraction: 0.60), value: configuration.isPressed)
