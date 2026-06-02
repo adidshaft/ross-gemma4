@@ -1394,12 +1394,7 @@ extension AlphaRossModel {
             alphaAskQuestionTargetsSelectedDocument(question)
         let asksForImportantDates = lowered.contains("important dates") || lowered.contains("list important dates") || lowered.contains("list dates")
         let asksForNextActions = lowered.contains("what should i do next") || lowered.contains("next actions") || lowered.contains("suggest next action") || lowered.contains("what tasks should i create") || lowered.contains("needs my attention today")
-        let asksAboutAssistantSetup = lowered.contains("private assistant") ||
-            lowered.contains("assistant setup") ||
-            lowered.contains("setting up") ||
-            lowered.contains("setup assistant") ||
-            lowered.contains("before setup") ||
-            lowered.contains("without setup")
+        let asksAboutAssistantSetup = alphaAskQuestionTargetsAssistantSetup(question)
         if asksAboutAssistantSetup {
             return AlphaAskResult(
                 chatSessionID: nil,
@@ -1409,16 +1404,16 @@ extension AlphaRossModel {
                 scopeCaseID: scopeCaseID,
                 scopeLabel: scopeLabel(for: scopeCaseID),
                 selectedDocumentTitles: [],
-                answerTitle: "Private assistant setup",
+                answerTitle: rossLocalized("ask_assistant_setup_title"),
                 answerSections: [
-                    "Before setup, Ross can still organize matters, tasks, dates, and files on this device.",
-                    "After setup, the private assistant adds stronger document review, summaries, chronologies, and answers from your files.",
-                    "Open Settings, then My assistant, to choose Basic, Standard, or Advanced."
+                    rossLocalized("ask_assistant_setup_before_detail"),
+                    rossLocalized("ask_assistant_setup_after_detail"),
+                    rossLocalized("ask_assistant_setup_open_settings_detail")
                 ],
                 caseFileSources: [],
                 publicLawPreview: nil,
                 publicLawResults: [],
-                statusNote: "Private assistant",
+                statusNote: rossLocalized("private_assistant"),
                 needsReviewWarning: nil
             )
         }

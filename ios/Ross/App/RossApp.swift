@@ -826,6 +826,41 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "My assistant",
             "te": "My assistant"
         ],
+        "private_assistant": [
+            "en": "Private assistant",
+            "hi": "Private assistant",
+            "bn": "Private assistant",
+            "ta": "Private assistant",
+            "te": "Private assistant"
+        ],
+        "ask_assistant_setup_title": [
+            "en": "Private assistant setup",
+            "hi": "Private assistant setup",
+            "bn": "Private assistant setup",
+            "ta": "Private assistant setup",
+            "te": "Private assistant setup"
+        ],
+        "ask_assistant_setup_before_detail": [
+            "en": "Before setup, Ross can still organize matters, tasks, dates, and files on this device.",
+            "hi": "setup से पहले भी Ross इस device पर matters, tasks, dates, और files organize कर सकता है।",
+            "bn": "setup-এর আগেও Ross এই device-এ matters, tasks, dates, এবং files organize করতে পারে।",
+            "ta": "setup முன்பும் Ross இந்த device-ல் matters, tasks, dates, மற்றும் files organize செய்ய முடியும்.",
+            "te": "setup కు ముందు కూడా Ross ఈ device లో matters, tasks, dates, మరియు files organize చేయగలదు."
+        ],
+        "ask_assistant_setup_after_detail": [
+            "en": "After setup, the private assistant adds stronger document review, summaries, chronologies, and answers from your files.",
+            "hi": "setup के बाद private assistant आपके files से stronger document review, summaries, chronologies, और answers जोड़ता है।",
+            "bn": "setup-এর পরে private assistant আপনার files থেকে stronger document review, summaries, chronologies, এবং answers যোগ করে।",
+            "ta": "setup பிறகு private assistant உங்கள் files-இல் இருந்து stronger document review, summaries, chronologies, மற்றும் answers சேர்க்கும்.",
+            "te": "setup తర్వాత private assistant మీ files నుండి stronger document review, summaries, chronologies, మరియు answers ఇస్తుంది."
+        ],
+        "ask_assistant_setup_open_settings_detail": [
+            "en": "Open Settings, then My assistant, to choose Basic, Standard, or Advanced.",
+            "hi": "Basic, Standard, या Advanced चुनने के लिए Settings, फिर My assistant खोलें।",
+            "bn": "Basic, Standard, বা Advanced বেছে নিতে Settings, তারপর My assistant খুলুন।",
+            "ta": "Basic, Standard, அல்லது Advanced தேர்வுசெய்ய Settings, பிறகு My assistant திறக்கவும்.",
+            "te": "Basic, Standard, లేదా Advanced ఎంచుకోవడానికి Settings, తర్వాత My assistant తెరవండి."
+        ],
         "assistant_local_answers_need_setup": [
             "en": "Local answers need setup on this iPhone.",
             "hi": "स्थानीय उत्तरों के लिए इस iPhone पर सेटअप चाहिए।",

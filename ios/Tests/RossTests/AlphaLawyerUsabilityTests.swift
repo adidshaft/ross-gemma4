@@ -181,6 +181,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertEqual("Private assistant setup", result?.answerTitle)
             XCTAssertEqual("Private assistant", result?.statusNote)
             XCTAssertTrue(result?.answerSections.joined(separator: " ").contains("organize matters") == true)
+            XCTAssertTrue(alphaAskQuestionTargetsAssistantSetup(result?.question ?? ""))
             XCTAssertEqual([], result?.selectedDocumentTitles)
             XCTAssertEqual([], result?.caseFileSources)
         }

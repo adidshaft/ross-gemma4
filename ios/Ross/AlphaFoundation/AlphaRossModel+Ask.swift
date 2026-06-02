@@ -284,10 +284,11 @@ extension AlphaRossModel {
 
         let hasRealLocalAsk = canRunRealLocalAsk(question: cleaned, scopeCaseID: scopeCaseID)
         let localResult = buildLocalAskResult(question: cleaned, scopeCaseID: scopeCaseID)
+        let asksAboutAssistantSetup = alphaAskQuestionTargetsAssistantSetup(cleaned)
         let initialResult: AlphaAskResult
         if hasRealLocalAsk {
             initialResult = buildPendingLocalModelAskResult(question: cleaned, scopeCaseID: scopeCaseID, baseResult: localResult)
-        } else if localResult.answerTitle == "Private assistant setup" {
+        } else if asksAboutAssistantSetup {
             initialResult = localResult
         } else {
             initialResult = buildLocalModelRequiredAskResult(question: cleaned, scopeCaseID: scopeCaseID)
@@ -2266,6 +2267,16 @@ func alphaLocalAskSetupRequiredTitle(languageCode: String = rossSelectedLanguage
     case "te": "ప్రైవేట్ సహాయకుడు ఇంకా సిద్ధంగా లేదు"
     default: "Private assistant not ready"
     }
+}
+
+func alphaAskQuestionTargetsAssistantSetup(_ question: String) -> Bool {
+    let lowered = question.lowercased()
+    return lowered.contains("private assistant") ||
+        lowered.contains("assistant setup") ||
+        lowered.contains("setting up") ||
+        lowered.contains("setup assistant") ||
+        lowered.contains("before setup") ||
+        lowered.contains("without setup")
 }
 
 func alphaLocalAskSetupRequiredStatus(languageCode: String = rossSelectedLanguageCode()) -> String {

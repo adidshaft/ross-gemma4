@@ -886,6 +886,11 @@ final class AlphaExtractionTests: XCTestCase {
             alphaPendingLocalModelLabel(from: "Standard assistant private answer तैयार कर रहा है"),
             "Standard assistant"
         )
+        XCTAssertTrue(alphaAskQuestionTargetsAssistantSetup("What can I do before setting up the private assistant?"))
+        XCTAssertEqual(
+            rossLocalized("ask_assistant_setup_before_detail", languageCode: "ta"),
+            "setup முன்பும் Ross இந்த device-ல் matters, tasks, dates, மற்றும் files organize செய்ய முடியும்."
+        )
         XCTAssertTrue(
             alphaNextHearingLabel(Date(timeIntervalSince1970: 0), languageCode: "hi")
                 .contains("अगली hearing:")
