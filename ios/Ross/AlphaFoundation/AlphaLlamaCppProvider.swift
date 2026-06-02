@@ -320,6 +320,12 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         if language == .hindi || hints.contains("hi") || hints.contains("hindi") {
             return "Hindi source detected: answer only in Devanagari. Copy these Hindi source words when relevant: धारा, अधिवक्ता, उद्धरण, सत्यापित. Do not translate Hindi source facts into English."
         }
+        if language == .tamil || hints.contains("ta") || hints.contains("tamil") {
+            return "Tamil source detected: answer only in Tamil script. Copy these Tamil source words when relevant: பிரிவு, வழக்கறிஞர், மேற்கோள், சரிபார்க்க. Do not translate Tamil source facts into English."
+        }
+        if language == .telugu || hints.contains("te") || hints.contains("telugu") {
+            return "Telugu source detected: answer only in Telugu script. Copy these Telugu source words when relevant: సెక్షన్, న్యాయవాది, ఉదాహరణ, ధృవీకరించు. Do not translate Telugu source facts into English."
+        }
         return "If SOURCES use a non-English script, preserve that script in the answer."
     }
 
@@ -337,6 +343,14 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         if language == .hindi || hints.contains("hi") || hints.contains("hindi") {
             guard !containsUnicodeScalar(in: generatedText, range: 0x0900...0x097F) else { return nil }
             return extractiveMatterAnswer(from: input.sourcePack, scriptRange: 0x0900...0x097F, heading: "स्रोत-आधारित उत्तर")
+        }
+        if language == .tamil || hints.contains("ta") || hints.contains("tamil") {
+            guard !containsUnicodeScalar(in: generatedText, range: 0x0B80...0x0BFF) else { return nil }
+            return extractiveMatterAnswer(from: input.sourcePack, scriptRange: 0x0B80...0x0BFF, heading: "மூலத்தின் அடிப்படையிலான பதில்")
+        }
+        if language == .telugu || hints.contains("te") || hints.contains("telugu") {
+            guard !containsUnicodeScalar(in: generatedText, range: 0x0C00...0x0C7F) else { return nil }
+            return extractiveMatterAnswer(from: input.sourcePack, scriptRange: 0x0C00...0x0C7F, heading: "మూలాల ఆధారిత సమాధానం")
         }
         return nil
     }

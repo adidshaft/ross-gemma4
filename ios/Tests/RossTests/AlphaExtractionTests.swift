@@ -1933,6 +1933,130 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(fallback?.contains("Hindi Local Smoke Source · p. 1") == true)
     }
 
+    func testLlamaProviderFallsBackToTamilSourceWhenModelAnswersInEnglish() {
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "Tamil Local Smoke Source",
+            pageNumber: 1,
+            textSnippet: "பிரிவு 417 படி வழக்கறிஞர் தாக்கல் செய்வதற்கு முன் மேற்கோளை சரிபார்க்க வேண்டும்."
+        )
+        let input = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "தமிழில் பதில் அளிக்கவும். பிரிவு 417 என்ன சொல்கிறது?",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: sourceRef,
+                    text: "தமிழ் உள்ளூர் சோதனை மூலம்: பிரிவு 417 படி வழக்கறிஞர் தாக்கல் செய்வதற்கு முன் மேற்கோளை சரிபார்க்க வேண்டும். இது தானியங்கி சட்ட ஆலோசனையை அனுமதிக்காது.",
+                    pageNumber: 1,
+                    languageHint: "ta",
+                    ocrConfidence: 1
+                )
+            ],
+            expectedSchema: "",
+            maxOutputTokens: 96,
+            languageProfile: nil,
+            documentClassification: nil,
+            extractionMode: .quickStart,
+            requireSourceRefs: true
+        )
+
+        let fallback = AlphaLlamaCppProvider.sourceLanguageFallbackIfNeeded(
+            for: input,
+            generatedText: "The advocate must verify citations before filing."
+        )
+
+        XCTAssertNotNil(fallback)
+        XCTAssertTrue(fallback?.contains("மூலத்தின் அடிப்படையிலான பதில்") == true)
+        XCTAssertTrue(fallback?.contains("பிரிவு 417") == true)
+        XCTAssertTrue(fallback?.contains("மேற்கோளை சரிபார்க்க") == true)
+        XCTAssertTrue(fallback?.contains("Tamil Local Smoke Source · p. 1") == true)
+    }
+
+    func testLlamaProviderFallsBackToTeluguSourceWhenModelAnswersInEnglish() {
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "Telugu Local Smoke Source",
+            pageNumber: 1,
+            textSnippet: "సెక్షన్ 417 ప్రకారం న్యాయవాది దాఖలు చేసే ముందు ఉదాహరణను ధృవీకరించాలి."
+        )
+        let input = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "తెలుగులో సమాధానం ఇవ్వండి. సెక్షన్ 417 ఏమి చెబుతుంది?",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: sourceRef,
+                    text: "తెలుగు స్థానిక పరీక్ష మూలం: సెక్షన్ 417 ప్రకారం న్యాయవాది దాఖలు చేసే ముందు ఉదాహరణను ధృవీకరించాలి. ఇది ఆటోమేటిక్ న్యాయ సలహాను అనుమతించదు.",
+                    pageNumber: 1,
+                    languageHint: "te",
+                    ocrConfidence: 1
+                )
+            ],
+            expectedSchema: "",
+            maxOutputTokens: 96,
+            languageProfile: nil,
+            documentClassification: nil,
+            extractionMode: .quickStart,
+            requireSourceRefs: true
+        )
+
+        let fallback = AlphaLlamaCppProvider.sourceLanguageFallbackIfNeeded(
+            for: input,
+            generatedText: "The advocate must verify citations before filing."
+        )
+
+        XCTAssertNotNil(fallback)
+        XCTAssertTrue(fallback?.contains("మూలాల ఆధారిత సమాధానం") == true)
+        XCTAssertTrue(fallback?.contains("సెక్షన్ 417") == true)
+        XCTAssertTrue(fallback?.contains("ధృవీకరించాలి") == true)
+        XCTAssertTrue(fallback?.contains("Telugu Local Smoke Source · p. 1") == true)
+    }
+
+    func testLlamaProviderKeepsTamilAndTeluguModelAnswersWhenScriptMatches() {
+        let tamilInput = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "தமிழில் பதில் அளிக்கவும்.",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: AlphaSourceRef(caseId: UUID(), documentId: UUID(), documentTitle: "Tamil source", pageNumber: 1, textSnippet: "பிரிவு 417"),
+                    text: "பிரிவு 417 படி மேற்கோளை சரிபார்க்க வேண்டும்.",
+                    pageNumber: 1,
+                    languageHint: "ta",
+                    ocrConfidence: 1
+                )
+            ],
+            expectedSchema: "",
+            maxOutputTokens: 96,
+            languageProfile: nil,
+            documentClassification: nil,
+            extractionMode: .quickStart,
+            requireSourceRefs: true
+        )
+        let teluguInput = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "తెలుగులో సమాధానం ఇవ్వండి.",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: AlphaSourceRef(caseId: UUID(), documentId: UUID(), documentTitle: "Telugu source", pageNumber: 1, textSnippet: "సెక్షన్ 417"),
+                    text: "సెక్షన్ 417 ప్రకారం ఉదాహరణను ధృవీకరించాలి.",
+                    pageNumber: 1,
+                    languageHint: "te",
+                    ocrConfidence: 1
+                )
+            ],
+            expectedSchema: "",
+            maxOutputTokens: 96,
+            languageProfile: nil,
+            documentClassification: nil,
+            extractionMode: .quickStart,
+            requireSourceRefs: true
+        )
+
+        XCTAssertNil(AlphaLlamaCppProvider.sourceLanguageFallbackIfNeeded(for: tamilInput, generatedText: "பிரிவு 417 படி மேற்கோளை சரிபார்க்க வேண்டும்."))
+        XCTAssertNil(AlphaLlamaCppProvider.sourceLanguageFallbackIfNeeded(for: teluguInput, generatedText: "సెక్షన్ 417 ప్రకారం ఉదాహరణను ధృవీకరించాలి."))
+    }
+
     @MainActor
     func testSelectedIrrelevantDocumentIsNotUsedAsAskSource() {
         let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
