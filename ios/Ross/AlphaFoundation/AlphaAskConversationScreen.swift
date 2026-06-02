@@ -257,7 +257,7 @@ struct AlphaFullScreenChatTopBar: View {
                     .frame(width: 36, height: 36)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Back")
+            .accessibilityLabel(rossLocalized("back"))
 
             Spacer(minLength: 0)
 
@@ -279,7 +279,7 @@ struct AlphaFullScreenChatTopBar: View {
                 .frame(maxWidth: 220)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Choose chat scope")
+            .accessibilityLabel(rossLocalized("choose_chat_scope"))
 
             Spacer(minLength: 0)
 
@@ -290,7 +290,7 @@ struct AlphaFullScreenChatTopBar: View {
                     .frame(width: 36, height: 36)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Threads")
+            .accessibilityLabel(rossLocalized("threads"))
         }
         .padding(.horizontal, 12)
         .padding(.top, 4)
@@ -443,7 +443,7 @@ struct AlphaFullScreenChatComposer: View {
                             )
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Add files or images")
+                    .accessibilityLabel(rossLocalized("add_files_or_images"))
 
                     VStack(alignment: .leading, spacing: 4) {
                         TextField(alphaAskConversationPlaceholder(), text: $text, axis: .vertical)
@@ -492,7 +492,7 @@ struct AlphaFullScreenChatComposer: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(!liveCanSend)
-                    .accessibilityLabel("Send")
+                    .accessibilityLabel(rossLocalized("send"))
                 }
             }
 
@@ -909,7 +909,7 @@ struct AlphaAskEmptyState: View {
                 }
             }
 
-            Text("Responses are a starting point — always verify with your own judgement.")
+            Text(rossLocalized("answers_starting_point_warning"))
                 .font(.caption)
                 .foregroundStyle(Color.rossInk.opacity(0.42))
                 .multilineTextAlignment(.center)
@@ -1323,7 +1323,7 @@ struct AlphaPublicLawWarningsView: View {
         if includePublicLawWarnings || needsReviewWarning != nil {
             VStack(alignment: .leading, spacing: 4) {
                 if includePublicLawWarnings {
-                    Text("Legal Search results — verify citations before use.")
+                    Text(rossLocalized("legal_search_verify_citations_warning"))
                         .italic()
                 }
 

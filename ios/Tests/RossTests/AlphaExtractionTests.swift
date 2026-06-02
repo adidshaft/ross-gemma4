@@ -894,6 +894,18 @@ final class AlphaExtractionTests: XCTestCase {
             "இன்னும் saved threads இல்லை."
         )
         XCTAssertEqual(
+            rossLocalized("choose_chat_scope", languageCode: "te-IN"),
+            "chat scope ఎంచుకోండి"
+        )
+        XCTAssertEqual(
+            rossLocalized("add_files_or_images", languageCode: "bn"),
+            "files বা images যোগ করুন"
+        )
+        XCTAssertTrue(
+            rossLocalized("legal_search_verify_citations_warning", languageCode: "hi")
+                .contains("citations verify")
+        )
+        XCTAssertEqual(
             alphaSharedFilesCountLabel(2, languageCode: "te-IN"),
             "2 షేర్ చేసిన ఫైళ్లు"
         )

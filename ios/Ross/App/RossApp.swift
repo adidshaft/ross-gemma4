@@ -1862,6 +1862,34 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Threads",
             "te": "Threads"
         ],
+        "choose_chat_scope": [
+            "en": "Choose chat scope",
+            "hi": "chat scope चुनें",
+            "bn": "chat scope বেছে নিন",
+            "ta": "chat scope தேர்வுசெய்க",
+            "te": "chat scope ఎంచుకోండి"
+        ],
+        "add_files_or_images": [
+            "en": "Add files or images",
+            "hi": "files या images जोड़ें",
+            "bn": "files বা images যোগ করুন",
+            "ta": "files அல்லது images சேர்க்கவும்",
+            "te": "files లేదా images జోడించండి"
+        ],
+        "answers_starting_point_warning": [
+            "en": "Responses are a starting point. Always verify with your own judgement.",
+            "hi": "Responses starting point हैं। हमेशा अपने judgement से verify करें।",
+            "bn": "Responses starting point. সবসময় নিজের judgement দিয়ে verify করুন।",
+            "ta": "Responses starting point ஆகும். எப்போதும் உங்கள் judgement மூலம் verify செய்யவும்.",
+            "te": "Responses starting point మాత్రమే. ఎల్లప్పుడూ మీ judgement తో verify చేయండి."
+        ],
+        "legal_search_verify_citations_warning": [
+            "en": "Legal Search results. Verify citations before use.",
+            "hi": "Legal Search results. use करने से पहले citations verify करें।",
+            "bn": "Legal Search results. ব্যবহারের আগে citations verify করুন।",
+            "ta": "Legal Search results. பயன்படுத்துவதற்கு முன் citations verify செய்யவும்.",
+            "te": "Legal Search results. ఉపయోగించే ముందు citations verify చేయండి."
+        ],
         "new_thread": [
             "en": "New thread",
             "hi": "नई thread",
