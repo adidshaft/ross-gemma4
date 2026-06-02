@@ -545,6 +545,56 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(unsupportedSuggestions.first, "What needs my attention today?")
     }
 
+    func testAskSetupRequiredCopyFollowsSelectedSupportedLanguage() {
+        XCTAssertEqual(
+            alphaLocalAskSetupRequiredTitle(languageCode: "ta"),
+            "தனிப்பட்ட உதவியாளர் இன்னும் தயாராக இல்லை"
+        )
+        XCTAssertEqual(
+            alphaLocalAskSetupRequiredStatus(languageCode: "te-IN"),
+            "ప్రైవేట్ సహాయకుడి సెటప్ అవసరం"
+        )
+        XCTAssertTrue(
+            alphaLocalAskSetupRequiredDetail(for: .failed, languageCode: "bn")
+                .contains("My assistant")
+        )
+        XCTAssertTrue(
+            alphaLocalAskSetupRequiredDetail(for: .downloading, languageCode: "hi")
+                .contains("तैयार")
+        )
+        XCTAssertTrue(
+            alphaLocalAskSetupRequiredDetail(for: .installed, languageCode: "en")
+                .contains("Repair setup")
+        )
+        XCTAssertTrue(
+            alphaLocalAskSetupRequiredSafetyNote(languageCode: "ml")
+                .contains("private assistant")
+        )
+    }
+
+    func testAskRuntimeRepairDetailHidesInternalEngineWarnings() {
+        let detail = alphaAskRuntimeRepairDetail(
+            warning: "Inference failed: llama sampler chain failed to initialize",
+            errorCategory: "inference_failed"
+        )
+
+        XCTAssertEqual(
+            detail,
+            "The private assistant could not open the downloaded assistant file for this answer."
+        )
+        for forbidden in ["llama", "sampler", "inference", "runtime", "GGUF", "Gemma"] {
+            XCTAssertNil(detail.range(of: forbidden, options: [.caseInsensitive]))
+        }
+
+        XCTAssertEqual(
+            alphaAskRuntimeRepairDetail(
+                warning: "The downloaded assistant file is incomplete.",
+                errorCategory: "model_load_failed"
+            ),
+            "The downloaded assistant file is incomplete."
+        )
+    }
+
     func testAssistantSetupPhasesExplainDownloadCheckAndReady() {
         XCTAssertEqual(alphaAssistantSetupPhases, ["Download", "Check", "Ready"])
         XCTAssertEqual(alphaAssistantSetupPhaseIndex(for: .queued), 0)

@@ -414,19 +414,11 @@ extension AlphaRossModel {
         scopeCaseID: UUID?
     ) -> AlphaAskResult {
         let decision = assistantRuntimeDecision(selectedTier: persisted.settings.activeTier ?? selectedTier)
-        let statusDetail: String
-        switch decision.installState {
-        case .installed:
-            statusDetail = "Ross found assistant setup state, but the private assistant is not available yet. Reopen assistant setup to repair it."
-        case .downloading:
-            statusDetail = "Assistant setup is still downloading or verifying. Ross will answer after the private assistant is ready."
-        case .queued:
-            statusDetail = "Assistant setup is queued. Keep Ross open on Wi-Fi or resume setup from My assistant."
-        case .failed:
-            statusDetail = "Assistant setup failed. Open My assistant to retry the assistant download."
-        case .notStarted:
-            statusDetail = "Open My assistant and set up a private assistant on this iPhone before asking legal questions."
-        }
+        let languageCode = rossSelectedLanguageCode()
+        let statusDetail = alphaLocalAskSetupRequiredDetail(
+            for: decision.installState,
+            languageCode: languageCode
+        )
 
         return AlphaAskResult(
             chatSessionID: nil,
@@ -436,16 +428,16 @@ extension AlphaRossModel {
             scopeCaseID: scopeCaseID,
             scopeLabel: scopeLabel(for: scopeCaseID),
             selectedDocumentTitles: selectedAskDocuments(for: scopeCaseID).map(\.title),
-            answerTitle: "Private assistant not ready",
+            answerTitle: alphaLocalAskSetupRequiredTitle(languageCode: languageCode),
             answerSections: [
                 statusDetail,
-                "Ross did not generate a legal answer because the private assistant is not ready."
+                alphaLocalAskSetupRequiredSafetyNote(languageCode: languageCode)
             ],
             caseFileSources: [],
             publicLawPreview: nil,
             publicLawResults: [],
-            statusNote: "Private assistant setup required",
-            needsReviewWarning: "Private assistant setup required."
+            statusNote: alphaLocalAskSetupRequiredStatus(languageCode: languageCode),
+            needsReviewWarning: alphaLocalAskSetupRequiredStatus(languageCode: languageCode) + "."
         )
     }
 
@@ -1332,10 +1324,10 @@ extension AlphaRossModel {
 
     func askRuntimeFailurePresentation(for output: AlphaLocalModelOutput) -> (title: String, sections: [String], statusNote: String, needsReviewWarning: String?)? {
         guard let errorCategory = output.errorCategory, !errorCategory.isEmpty else { return nil }
-        let warning = output.warnings.first?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let detail = warning?.isEmpty == false
-            ? warning!
-            : "The private assistant reported \(errorCategory.replacingOccurrences(of: "_", with: " "))."
+        let detail = alphaAskRuntimeRepairDetail(
+            warning: output.warnings.first,
+            errorCategory: errorCategory
+        )
         return (
             title: "Private assistant needs repair",
             sections: [
@@ -2090,4 +2082,128 @@ extension AlphaRossModel {
         let caseMatter = scopeCaseID.flatMap { id in persisted.cases.first { $0.id == id } }
         return sanitizePublicLawPreview(rawQuery: question, caseMatter: caseMatter)
     }
+}
+
+func alphaLocalAskSetupRequiredTitle(languageCode: String = rossSelectedLanguageCode()) -> String {
+    switch languageCode.split(separator: "-").first.map(String.init) ?? languageCode {
+    case "hi": "निजी सहायक तैयार नहीं है"
+    case "bn": "প্রাইভেট সহায়ক এখনও প্রস্তুত নয়"
+    case "ta": "தனிப்பட்ட உதவியாளர் இன்னும் தயாராக இல்லை"
+    case "te": "ప్రైవేట్ సహాయకుడు ఇంకా సిద్ధంగా లేదు"
+    default: "Private assistant not ready"
+    }
+}
+
+func alphaLocalAskSetupRequiredStatus(languageCode: String = rossSelectedLanguageCode()) -> String {
+    switch languageCode.split(separator: "-").first.map(String.init) ?? languageCode {
+    case "hi": "निजी सहायक सेटअप ज़रूरी है"
+    case "bn": "প্রাইভেট সহায়ক সেটআপ প্রয়োজন"
+    case "ta": "தனிப்பட்ட உதவியாளர் அமைப்பு தேவை"
+    case "te": "ప్రైవేట్ సహాయకుడి సెటప్ అవసరం"
+    default: "Private assistant setup required"
+    }
+}
+
+func alphaLocalAskSetupRequiredSafetyNote(languageCode: String = rossSelectedLanguageCode()) -> String {
+    switch languageCode.split(separator: "-").first.map(String.init) ?? languageCode {
+    case "hi": "Ross ने कानूनी उत्तर नहीं बनाया क्योंकि निजी सहायक अभी तैयार नहीं है."
+    case "bn": "প্রাইভেট সহায়ক প্রস্তুত না থাকায় Ross কোনও আইনি উত্তর তৈরি করেনি."
+    case "ta": "தனிப்பட்ட உதவியாளர் தயாராக இல்லாததால் Ross சட்டப் பதிலை உருவாக்கவில்லை."
+    case "te": "ప్రైవేట్ సహాయకుడు సిద్ధంగా లేకపోవడంతో Ross న్యాయ సమాధానం ఇవ్వలేదు."
+    default: "Ross did not generate a legal answer because the private assistant is not ready."
+    }
+}
+
+func alphaLocalAskSetupRequiredDetail(
+    for installState: AlphaAssistantInstallState,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
+    switch languageCode.split(separator: "-").first.map(String.init) ?? languageCode {
+    case "hi":
+        switch installState {
+        case .installed:
+            return "Ross को सेटअप मिला, पर निजी सहायक अभी खुल नहीं रहा है. My assistant में Repair setup चलाएँ."
+        case .downloading:
+            return "सहायक अभी डाउनलोड या जाँच में है. तैयार होते ही Ross जवाब देगा."
+        case .queued:
+            return "सहायक सेटअप कतार में है. Ross को Wi-Fi पर खुला रखें या My assistant से फिर शुरू करें."
+        case .failed:
+            return "सहायक सेटअप पूरा नहीं हुआ. My assistant खोलकर डाउनलोड फिर से शुरू करें."
+        case .notStarted:
+            return "कानूनी सवाल पूछने से पहले My assistant खोलकर इस iPhone पर निजी सहायक सेट करें."
+        }
+    case "bn":
+        switch installState {
+        case .installed:
+            return "Ross সেটআপ খুঁজে পেয়েছে, কিন্তু প্রাইভেট সহায়ক এখন খুলছে না. My assistant থেকে Repair setup চালান."
+        case .downloading:
+            return "সহায়ক এখনও ডাউনলোড বা পরীক্ষা হচ্ছে. প্রস্তুত হলেই Ross উত্তর দেবে."
+        case .queued:
+            return "সহায়ক সেটআপ কিউতে আছে. Ross Wi-Fi-তে খোলা রাখুন বা My assistant থেকে আবার শুরু করুন."
+        case .failed:
+            return "সহায়ক সেটআপ শেষ হয়নি. My assistant খুলে ডাউনলোড আবার চেষ্টা করুন."
+        case .notStarted:
+            return "আইনি প্রশ্ন করার আগে My assistant খুলে এই iPhone-এ প্রাইভেট সহায়ক সেট আপ করুন."
+        }
+    case "ta":
+        switch installState {
+        case .installed:
+            return "Ross அமைப்பைக் கண்டது, ஆனால் தனிப்பட்ட உதவியாளர் இப்போது திறக்கவில்லை. My assistant-ல் Repair setup இயக்கவும்."
+        case .downloading:
+            return "உதவியாளர் இன்னும் பதிவிறக்கம் அல்லது சரிபார்ப்பில் உள்ளது. தயாரானதும் Ross பதிலளிக்கும்."
+        case .queued:
+            return "உதவியாளர் அமைப்பு வரிசையில் உள்ளது. Wi-Fi-யில் Ross-ஐ திறந்தே வைத்திருங்கள் அல்லது My assistant-ல் மீண்டும் தொடங்கவும்."
+        case .failed:
+            return "உதவியாளர் அமைப்பு முடியவில்லை. My assistant திறந்து பதிவிறக்கத்தை மீண்டும் முயலுங்கள்."
+        case .notStarted:
+            return "சட்டக் கேள்விகளை கேட்பதற்கு முன் My assistant திறந்து இந்த iPhone-ல் தனிப்பட்ட உதவியாளரை அமைக்கவும்."
+        }
+    case "te":
+        switch installState {
+        case .installed:
+            return "Ross సెటప్‌ను కనుగొంది, కానీ ప్రైవేట్ సహాయకుడు ఇప్పుడు తెరుచుకోవడం లేదు. My assistant‌లో Repair setup నడపండి."
+        case .downloading:
+            return "సహాయకుడు ఇంకా డౌన్‌లోడ్ లేదా తనిఖీలో ఉంది. సిద్ధమైన వెంటనే Ross సమాధానం ఇస్తుంది."
+        case .queued:
+            return "సహాయకుడి సెటప్ వరుసలో ఉంది. Ross‌ను Wi-Fiలో తెరిచి ఉంచండి లేదా My assistant నుంచి మళ్లీ ప్రారంభించండి."
+        case .failed:
+            return "సహాయకుడి సెటప్ పూర్తికాలేదు. My assistant తెరిచి డౌన్‌లోడ్‌ను మళ్లీ ప్రయత్నించండి."
+        case .notStarted:
+            return "న్యాయ ప్రశ్నలు అడగడానికి ముందు My assistant తెరిచి ఈ iPhoneలో ప్రైవేట్ సహాయకుడిని సెటప్ చేయండి."
+        }
+    default:
+        switch installState {
+        case .installed:
+            return "Ross found assistant setup, but the private assistant is not opening yet. Run Repair setup from My assistant."
+        case .downloading:
+            return "Assistant setup is still downloading or checking the file. Ross will answer after the private assistant is ready."
+        case .queued:
+            return "Assistant setup is queued. Keep Ross open on Wi-Fi or resume setup from My assistant."
+        case .failed:
+            return "Assistant setup did not finish. Open My assistant to retry the download."
+        case .notStarted:
+            return "Open My assistant and set up a private assistant on this iPhone before asking legal questions."
+        }
+    }
+}
+
+func alphaAskRuntimeRepairDetail(warning: String?, errorCategory: String) -> String {
+    let cleanedWarning = warning?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    let internalTerms = [
+        "llama",
+        "sampler",
+        "runtime",
+        "inference",
+        "gguf",
+        "gemma",
+        "schema",
+        "json",
+        "category",
+        "_"
+    ]
+    if !cleanedWarning.isEmpty,
+       !internalTerms.contains(where: { cleanedWarning.range(of: $0, options: [.caseInsensitive]) != nil }) {
+        return cleanedWarning
+    }
+    return "The private assistant could not open the downloaded assistant file for this answer."
 }
