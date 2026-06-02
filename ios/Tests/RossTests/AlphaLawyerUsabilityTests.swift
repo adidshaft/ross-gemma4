@@ -1902,6 +1902,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.preflightNotResumable),
                 model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.preflightChecksumMismatch(catalog: "abc", provider: "def")),
                 model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.rangeProbeInvalidStatus(200)),
+                model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.rangeProbeInvalidLength(expected: 256, received: 128)),
                 model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.rangeProbeInvalidContentRange("bytes 0-10/*")),
                 model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.missingDownloadedFile)
             ]
@@ -1924,6 +1925,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertFalse(message.localizedCaseInsensitiveContains("catalog"), message)
             XCTAssertFalse(message.localizedCaseInsensitiveContains("HTTP"), message)
             XCTAssertFalse(message.localizedCaseInsensitiveContains("Content-Range"), message)
+            XCTAssertFalse(message.localizedCaseInsensitiveContains("bytes"), message)
+            XCTAssertFalse(message.localizedCaseInsensitiveContains("saved position"), message)
             XCTAssertFalse(message.localizedCaseInsensitiveContains("Error 99"), message)
             XCTAssertFalse(message.localizedCaseInsensitiveContains("downloaded assistant file"), message)
             XCTAssertFalse(message.localizedCaseInsensitiveContains("private assistant file"), message)

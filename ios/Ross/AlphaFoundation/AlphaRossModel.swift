@@ -1453,12 +1453,12 @@ enum AlphaAssistantDownloadError: LocalizedError {
             return "The assistant download cannot be safely resumed right now. Retry later on Wi-Fi."
         case .preflightChecksumMismatch:
             return "The assistant download listing changed before setup could start. Ross stopped setup before downloading."
-        case .rangeProbeInvalidStatus(let status):
-            return "The assistant download service could not resume from the saved position. Status \(status)."
-        case .rangeProbeInvalidLength(let expected, let received):
-            return "The assistant download resume check returned \(received) bytes; Ross expected \(expected)."
-        case .rangeProbeInvalidContentRange(let value):
-            return "The assistant download resume check returned an unexpected position: \(value)."
+        case .rangeProbeInvalidStatus:
+            return "The assistant download service could not safely continue from the saved progress. Retry setup on Wi-Fi."
+        case .rangeProbeInvalidLength:
+            return "Ross could not safely confirm the saved assistant download progress. Retry setup on Wi-Fi."
+        case .rangeProbeInvalidContentRange:
+            return "Ross could not safely continue the saved assistant download. Retry setup on Wi-Fi."
         case .insufficientStorage(let requiredGB, let availableGB):
             return "This private assistant needs about \(requiredGB) GB free. This iPhone currently reports \(availableGB) GB free."
         case .missingDownloadedFile:
