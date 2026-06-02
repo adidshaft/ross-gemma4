@@ -191,6 +191,88 @@ struct RossLocalModelSmokeView: View {
             extractionMode: .fromInstalledPack(activePack),
             requireSourceRefs: true
         )
+        let tamilDocumentId = UUID()
+        let tamilSourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: tamilDocumentId,
+            documentTitle: "Tamil Local Smoke Source",
+            pageNumber: 1,
+            textSnippet: "பிரிவு 417 படி வழக்கறிஞர் தாக்கலுக்கு முன் மேற்கோளை சரிபார்க்க வேண்டும்."
+        )
+        let tamilLanguageProfile = AlphaDocumentLanguageProfile(
+            documentId: tamilDocumentId,
+            primaryLanguage: .tamil,
+            scriptsDetected: ["tamil"],
+            confidence: 0.98,
+            pageProfiles: [
+                AlphaDocumentLanguageProfilePage(
+                    pageNumber: 1,
+                    language: .tamil,
+                    script: .tamil,
+                    confidence: 0.98
+                )
+            ]
+        )
+        let tamilSourceBoundInput = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "தமிழ் எழுத்தில் பதிலளிக்கவும். கொடுக்கப்பட்ட மூலத்தின் படி பிரிவு 417 என்ன செய்ய சொல்கிறது? JSON திருப்புங்கள்: headline, sections, statusNote.",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: tamilSourceRef,
+                    text: "தமிழ் உள்ளூர் சோதனை மூலம்: பிரிவு 417 படி வழக்கறிஞர் தாக்கலுக்கு முன் மேற்கோளை சரிபார்க்க வேண்டும். இது தானியங்கி சட்ட ஆலோசனையை அனுமதிக்காது.",
+                    pageNumber: 1,
+                    languageHint: "ta",
+                    ocrConfidence: 1
+                )
+            ],
+            expectedSchema: #"{"headline":"short Tamil string","sections":["one concise Tamil string"],"statusNote":"short Tamil string"}"#,
+            maxOutputTokens: 192,
+            languageProfile: tamilLanguageProfile,
+            documentClassification: nil,
+            extractionMode: .fromInstalledPack(activePack),
+            requireSourceRefs: true
+        )
+        let teluguDocumentId = UUID()
+        let teluguSourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: teluguDocumentId,
+            documentTitle: "Telugu Local Smoke Source",
+            pageNumber: 1,
+            textSnippet: "సెక్షన్ 417 ప్రకారం న్యాయవాది దాఖలు చేసే ముందు ఉదాహరణను ధృవీకరించాలి."
+        )
+        let teluguLanguageProfile = AlphaDocumentLanguageProfile(
+            documentId: teluguDocumentId,
+            primaryLanguage: .telugu,
+            scriptsDetected: ["telugu"],
+            confidence: 0.98,
+            pageProfiles: [
+                AlphaDocumentLanguageProfilePage(
+                    pageNumber: 1,
+                    language: .telugu,
+                    script: .telugu,
+                    confidence: 0.98
+                )
+            ]
+        )
+        let teluguSourceBoundInput = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "తెలుగు లిపిలో సమాధానం ఇవ్వండి. ఇచ్చిన మూలం ప్రకారం సెక్షన్ 417 ఏమి చేయమంటుంది? JSON ఇవ్వండి: headline, sections, statusNote.",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: teluguSourceRef,
+                    text: "తెలుగు స్థానిక స్మోక్ మూలం: సెక్షన్ 417 ప్రకారం న్యాయవాది దాఖలు చేసే ముందు ఉదాహరణను ధృవీకరించాలి. ఇది ఆటోమేటిక్ న్యాయ సలహాను అనుమతించదు.",
+                    pageNumber: 1,
+                    languageHint: "te",
+                    ocrConfidence: 1
+                )
+            ],
+            expectedSchema: #"{"headline":"short Telugu string","sections":["one concise Telugu string"],"statusNote":"short Telugu string"}"#,
+            maxOutputTokens: 192,
+            languageProfile: teluguLanguageProfile,
+            documentClassification: nil,
+            extractionMode: .fromInstalledPack(activePack),
+            requireSourceRefs: true
+        )
         let generalInput = AlphaLocalModelInput(
             task: .matterQuestionAnswer,
             instruction: "No matter document is supplied. Answer cautiously: what should an advocate know when someone asks 'What is Article 417?' Return JSON with headline, sections, and statusNote.",
@@ -226,6 +308,20 @@ struct RossLocalModelSmokeView: View {
             stage: "hindi",
             timeoutSeconds: perStageTimeoutSeconds
         )
+        RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE tamil timeout=\(Int(perStageTimeoutSeconds))s")
+        let tamilOutput = await RossLocalModelSmokeView.runProviderStage(
+            provider: provider,
+            input: tamilSourceBoundInput,
+            stage: "tamil",
+            timeoutSeconds: perStageTimeoutSeconds
+        )
+        RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE telugu timeout=\(Int(perStageTimeoutSeconds))s")
+        let teluguOutput = await RossLocalModelSmokeView.runProviderStage(
+            provider: provider,
+            input: teluguSourceBoundInput,
+            stage: "telugu",
+            timeoutSeconds: perStageTimeoutSeconds
+        )
         RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE general timeout=\(Int(perStageTimeoutSeconds))s")
         let generalOutput = await RossLocalModelSmokeView.runProviderStage(
             provider: provider,
@@ -238,21 +334,31 @@ struct RossLocalModelSmokeView: View {
         let sourceParsedLength = sourceBoundOutput.parsedJson?.count ?? 0
         let bengaliOutputLength = (bengaliOutput.parsedJson ?? bengaliOutput.rawText).count
         let hindiOutputLength = (hindiOutput.parsedJson ?? hindiOutput.rawText).count
+        let tamilOutputLength = (tamilOutput.parsedJson ?? tamilOutput.rawText).count
+        let teluguOutputLength = (teluguOutput.parsedJson ?? teluguOutput.rawText).count
         let generalOutputLength = (generalOutput.parsedJson ?? generalOutput.rawText).count
         let sourceBoundText = sourceBoundOutput.parsedJson ?? sourceBoundOutput.rawText
         let bengaliText = bengaliOutput.parsedJson ?? bengaliOutput.rawText
         let hindiText = hindiOutput.parsedJson ?? hindiOutput.rawText
+        let tamilText = tamilOutput.parsedJson ?? tamilOutput.rawText
+        let teluguText = teluguOutput.parsedJson ?? teluguOutput.rawText
         let generalText = generalOutput.parsedJson ?? generalOutput.rawText
         let sourceUsedFileFact = RossLocalModelSmokeView.mentionsSmokeSourceFact(sourceBoundText)
         let bengaliUsedFileFact = RossLocalModelSmokeView.mentionsBengaliSmokeSourceFact(bengaliText)
         let hindiUsedFileFact = RossLocalModelSmokeView.mentionsHindiSmokeSourceFact(hindiText)
+        let tamilUsedFileFact = RossLocalModelSmokeView.mentionsTamilSmokeSourceFact(tamilText)
+        let teluguUsedFileFact = RossLocalModelSmokeView.mentionsTeluguSmokeSourceFact(teluguText)
         let sourceUsedLanguageFallback = RossLocalModelSmokeView.usedLanguagePreservingFallback(sourceBoundOutput)
         let bengaliUsedLanguageFallback = RossLocalModelSmokeView.usedLanguagePreservingFallback(bengaliOutput)
         let hindiUsedLanguageFallback = RossLocalModelSmokeView.usedLanguagePreservingFallback(hindiOutput)
+        let tamilUsedLanguageFallback = RossLocalModelSmokeView.usedLanguagePreservingFallback(tamilOutput)
+        let teluguUsedLanguageFallback = RossLocalModelSmokeView.usedLanguagePreservingFallback(teluguOutput)
         let generalUsedLanguageFallback = RossLocalModelSmokeView.usedLanguagePreservingFallback(generalOutput)
         let sourceNativeModel = !sourceUsedLanguageFallback
         let bengaliNativeModel = !bengaliUsedLanguageFallback
         let hindiNativeModel = !hindiUsedLanguageFallback
+        let tamilNativeModel = !tamilUsedLanguageFallback
+        let teluguNativeModel = !teluguUsedLanguageFallback
         let generalNativeModel = !generalUsedLanguageFallback
 
         if sourceBoundOutput.schemaValid,
@@ -261,19 +367,27 @@ struct RossLocalModelSmokeView: View {
            bengaliOutput.errorCategory == nil,
            hindiOutput.schemaValid,
            hindiOutput.errorCategory == nil,
+           tamilOutput.schemaValid,
+           tamilOutput.errorCategory == nil,
+           teluguOutput.schemaValid,
+           teluguOutput.errorCategory == nil,
            generalOutput.schemaValid,
            generalOutput.errorCategory == nil,
            sourceUsedFileFact,
            bengaliUsedFileFact,
-           hindiUsedFileFact {
+           hindiUsedFileFact,
+           tamilUsedFileFact,
+           teluguUsedFileFact {
             status = "Local model smoke passed."
-            RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_PASS runtime=\(provider.runtimeMode.rawValue) tier=\(activePack.tier.rawValue) elapsed=\(String(format: "%.2f", elapsed))s source_raw_chars=\(sourceRawLength) source_parsed_chars=\(sourceParsedLength) bengali_output_chars=\(bengaliOutputLength) hindi_output_chars=\(hindiOutputLength) general_output_chars=\(generalOutputLength) source_native_model=\(sourceNativeModel) bengali_native_model=\(bengaliNativeModel) hindi_native_model=\(hindiNativeModel) general_native_model=\(generalNativeModel)")
+            RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_PASS runtime=\(provider.runtimeMode.rawValue) tier=\(activePack.tier.rawValue) elapsed=\(String(format: "%.2f", elapsed))s source_raw_chars=\(sourceRawLength) source_parsed_chars=\(sourceParsedLength) bengali_output_chars=\(bengaliOutputLength) hindi_output_chars=\(hindiOutputLength) tamil_output_chars=\(tamilOutputLength) telugu_output_chars=\(teluguOutputLength) general_output_chars=\(generalOutputLength) source_native_model=\(sourceNativeModel) bengali_native_model=\(bengaliNativeModel) hindi_native_model=\(hindiNativeModel) tamil_native_model=\(tamilNativeModel) telugu_native_model=\(teluguNativeModel) general_native_model=\(generalNativeModel)")
         } else {
             status = "Local model smoke failed."
-            RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(provider.runtimeMode.rawValue) tier=\(activePack.tier.rawValue) elapsed=\(String(format: "%.2f", elapsed))s source_error=\(sourceBoundOutput.errorCategory ?? "nil") bengali_error=\(bengaliOutput.errorCategory ?? "nil") hindi_error=\(hindiOutput.errorCategory ?? "nil") general_error=\(generalOutput.errorCategory ?? "nil") source_grounded=\(sourceUsedFileFact) bengali_grounded=\(bengaliUsedFileFact) hindi_grounded=\(hindiUsedFileFact) source_native_model=\(sourceNativeModel) bengali_native_model=\(bengaliNativeModel) hindi_native_model=\(hindiNativeModel) general_native_model=\(generalNativeModel) source_warning_count=\(sourceBoundOutput.warnings.count) bengali_warning_count=\(bengaliOutput.warnings.count) hindi_warning_count=\(hindiOutput.warnings.count) general_warning_count=\(generalOutput.warnings.count) source_raw_chars=\(sourceRawLength) bengali_output_chars=\(bengaliOutputLength) hindi_output_chars=\(hindiOutputLength) general_output_chars=\(generalOutputLength)")
+            RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(provider.runtimeMode.rawValue) tier=\(activePack.tier.rawValue) elapsed=\(String(format: "%.2f", elapsed))s source_error=\(sourceBoundOutput.errorCategory ?? "nil") bengali_error=\(bengaliOutput.errorCategory ?? "nil") hindi_error=\(hindiOutput.errorCategory ?? "nil") tamil_error=\(tamilOutput.errorCategory ?? "nil") telugu_error=\(teluguOutput.errorCategory ?? "nil") general_error=\(generalOutput.errorCategory ?? "nil") source_grounded=\(sourceUsedFileFact) bengali_grounded=\(bengaliUsedFileFact) hindi_grounded=\(hindiUsedFileFact) tamil_grounded=\(tamilUsedFileFact) telugu_grounded=\(teluguUsedFileFact) source_native_model=\(sourceNativeModel) bengali_native_model=\(bengaliNativeModel) hindi_native_model=\(hindiNativeModel) tamil_native_model=\(tamilNativeModel) telugu_native_model=\(teluguNativeModel) general_native_model=\(generalNativeModel) source_warning_count=\(sourceBoundOutput.warnings.count) bengali_warning_count=\(bengaliOutput.warnings.count) hindi_warning_count=\(hindiOutput.warnings.count) tamil_warning_count=\(tamilOutput.warnings.count) telugu_warning_count=\(teluguOutput.warnings.count) general_warning_count=\(generalOutput.warnings.count) source_raw_chars=\(sourceRawLength) bengali_output_chars=\(bengaliOutputLength) hindi_output_chars=\(hindiOutputLength) tamil_output_chars=\(tamilOutputLength) telugu_output_chars=\(teluguOutputLength) general_output_chars=\(generalOutputLength)")
             RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_OUTPUT source=\(RossLocalModelSmokeView.compactLogExcerpt(sourceBoundText))")
             RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_OUTPUT bengali=\(RossLocalModelSmokeView.compactLogExcerpt(bengaliText))")
             RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_OUTPUT hindi=\(RossLocalModelSmokeView.compactLogExcerpt(hindiText))")
+            RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_OUTPUT tamil=\(RossLocalModelSmokeView.compactLogExcerpt(tamilText))")
+            RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_OUTPUT telugu=\(RossLocalModelSmokeView.compactLogExcerpt(teluguText))")
             RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_OUTPUT general=\(RossLocalModelSmokeView.compactLogExcerpt(generalText))")
         }
     }
@@ -371,6 +485,26 @@ struct RossLocalModelSmokeView: View {
             && (text.contains("४१७") || text.contains("417"))
             && text.contains("उद्धरण")
             && (text.contains("सत्यापित") || text.contains("जांच"))
+    }
+
+    nonisolated static func mentionsTamilSmokeSourceFact(_ text: String) -> Bool {
+        let hasTamilScript = text.unicodeScalars.contains { scalar in
+            (0x0B80...0x0BFF).contains(Int(scalar.value))
+        }
+        return hasTamilScript
+            && text.contains("417")
+            && text.contains("மேற்கோ")
+            && text.contains("சரிபா")
+    }
+
+    nonisolated static func mentionsTeluguSmokeSourceFact(_ text: String) -> Bool {
+        let hasTeluguScript = text.unicodeScalars.contains { scalar in
+            (0x0C00...0x0C7F).contains(Int(scalar.value))
+        }
+        return hasTeluguScript
+            && text.contains("417")
+            && text.contains("ఉదాహరణ")
+            && text.contains("ధృవీక")
     }
 
     private func debugLocalModelSmokePack() -> AlphaInstalledModelPack? {

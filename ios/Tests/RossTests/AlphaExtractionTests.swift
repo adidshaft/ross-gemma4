@@ -1945,6 +1945,26 @@ final class AlphaExtractionTests: XCTestCase {
                 #"{"headline":"Article 417","sections":["Article 417 may involve a legal filing."],"statusNote":"General answer."}"#
             )
         )
+        XCTAssertTrue(
+            RossLocalModelSmokeView.mentionsTamilSmokeSourceFact(
+                #"{"headline":"பிரிவு 417","sections":["பிரிவு 417 படி தாக்கலுக்கு முன் மேற்கோளை சரிபார்க்க வேண்டும்."],"statusNote":"மூலத்தின் அடிப்படையில்."}"#
+            )
+        )
+        XCTAssertFalse(
+            RossLocalModelSmokeView.mentionsTamilSmokeSourceFact(
+                #"{"headline":"Article 417","sections":["Article 417 may involve a legal filing."],"statusNote":"General answer."}"#
+            )
+        )
+        XCTAssertTrue(
+            RossLocalModelSmokeView.mentionsTeluguSmokeSourceFact(
+                #"{"headline":"సెక్షన్ 417","sections":["సెక్షన్ 417 ప్రకారం దాఖలు చేసే ముందు ఉదాహరణను ధృవీకరించాలి."],"statusNote":"మూలాల ఆధారంగా."}"#
+            )
+        )
+        XCTAssertFalse(
+            RossLocalModelSmokeView.mentionsTeluguSmokeSourceFact(
+                #"{"headline":"Article 417","sections":["Article 417 may involve a legal filing."],"statusNote":"General answer."}"#
+            )
+        )
     }
 
     func testLocalModelSmokeReportsLanguagePreservingFallback() {
