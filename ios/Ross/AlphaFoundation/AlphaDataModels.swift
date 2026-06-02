@@ -654,29 +654,30 @@ struct AlphaSourceRef: Identifiable, Codable, Hashable, Sendable {
 
     var label: String {
         let title = documentTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        let noLinkedSource = rossLocalized("no_linked_source_short")
         if title.localizedCaseInsensitiveContains("Matter memory") {
-            return "Matter details · no linked source"
+            return "\(rossLocalized("matter_details")) · \(noLinkedSource)"
         }
         switch effectiveSourceCategory {
         case .documentSource:
-            guard !title.isEmpty else { return "Document source · no linked source" }
-            return pageNumber > 0 ? "\(title) · p. \(pageNumber)" : "\(title) · no linked source"
+            guard !title.isEmpty else { return "\(rossLocalized("document_source")) · \(noLinkedSource)" }
+            return pageNumber > 0 ? "\(title) · p. \(pageNumber)" : "\(title) · \(noLinkedSource)"
         case .matterDetail:
             let field = paragraphRange?.trimmingCharacters(in: .whitespacesAndNewlines)
-            return "Matter details · \((field?.isEmpty == false ? field : "no linked source") ?? "no linked source")"
+            return "\(rossLocalized("matter_details")) · \((field?.isEmpty == false ? field : noLinkedSource) ?? noLinkedSource)"
         case .rossSuggestion:
-            return "Suggested by Ross · not confirmed"
+            return "\(rossLocalized("suggested_by_ross")) · \(rossLocalized("not_confirmed"))"
         case .userConfirmedFact:
             let confirmedAt = paragraphRange?.trimmingCharacters(in: .whitespacesAndNewlines)
-            return "Confirmed by advocate · \((confirmedAt?.isEmpty == false ? confirmedAt : "no linked source") ?? "no linked source")"
+            return "\(rossLocalized("confirmed_by_advocate")) · \((confirmedAt?.isEmpty == false ? confirmedAt : noLinkedSource) ?? noLinkedSource)"
         case .publicLawSource:
-            return "Legal Search · \(!title.isEmpty ? title : "no linked source")"
+            return "Legal Search · \(!title.isEmpty ? title : noLinkedSource)"
         }
     }
 
     var detail: String {
         let snippet = textSnippet?.trimmingCharacters(in: .whitespacesAndNewlines)
-        return snippet?.isEmpty == false ? snippet! : "No source text linked yet."
+        return snippet?.isEmpty == false ? snippet! : rossLocalized("no_linked_source_yet")
     }
 }
 

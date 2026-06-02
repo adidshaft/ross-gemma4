@@ -3009,6 +3009,10 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     func testSourceRefLabelsAvoidMatterMemoryAsLegalCitation() {
+        let previousLanguageCode = rossSelectedLanguageCode()
+        rossSaveLanguageSelection(code: "en")
+        defer { rossSaveLanguageSelection(code: previousLanguageCode) }
+
         let caseID = UUID()
         let documentID = UUID()
         let matterMemory = AlphaSourceRef(
@@ -3036,6 +3040,12 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(alphaSourceRefDisplayLabel(documentSource, contextDocumentTitle: "Latest order"), "This file")
         XCTAssertEqual(alphaSourceRefDetailLabel(documentSource), "Page 2")
         XCTAssertEqual(alphaSourceRefDetailLabel(matterMemory), "Matter details")
+        XCTAssertEqual(missingDocumentTitle.detail, "No linked source yet")
+
+        rossSaveLanguageSelection(code: "hi")
+        XCTAssertEqual(matterMemory.label, "मामले की details · linked source नहीं")
+        XCTAssertEqual(missingDocumentTitle.label, "Document source · linked source नहीं")
+        XCTAssertEqual(missingDocumentTitle.detail, "अभी linked source नहीं")
     }
 
     func testDocumentProcessingStateBlocksReadingAsReady() {

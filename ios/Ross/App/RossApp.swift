@@ -3346,6 +3346,41 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "இன்னும் linked source இல்லை",
             "te": "ఇంకా linked source లేదు"
         ],
+        "no_linked_source_short": [
+            "en": "no linked source",
+            "hi": "linked source नहीं",
+            "bn": "linked source নেই",
+            "ta": "linked source இல்லை",
+            "te": "linked source లేదు"
+        ],
+        "document_source": [
+            "en": "Document source",
+            "hi": "Document source",
+            "bn": "Document source",
+            "ta": "Document source",
+            "te": "Document source"
+        ],
+        "suggested_by_ross": [
+            "en": "Suggested by Ross",
+            "hi": "Ross ने suggest किया",
+            "bn": "Ross suggest করেছে",
+            "ta": "Ross பரிந்துரைத்தது",
+            "te": "Ross సూచించింది"
+        ],
+        "not_confirmed": [
+            "en": "not confirmed",
+            "hi": "confirmed नहीं",
+            "bn": "confirmed নয়",
+            "ta": "confirmed இல்லை",
+            "te": "confirmed కాదు"
+        ],
+        "confirmed_by_advocate": [
+            "en": "Confirmed by advocate",
+            "hi": "Advocate ने confirm किया",
+            "bn": "Advocate confirm করেছেন",
+            "ta": "Advocate உறுதிப்படுத்தினார்",
+            "te": "Advocate నిర్ధారించారు"
+        ],
         "this_file": [
             "en": "This file",
             "hi": "यह फ़ाइल",
