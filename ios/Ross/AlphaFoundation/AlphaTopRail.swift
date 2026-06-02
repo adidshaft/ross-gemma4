@@ -393,29 +393,31 @@ struct AlphaPreparedWorkCard: View {
                     }
                 }
 
-                HStack(spacing: 8) {
-                    Button(item.primaryAction) {
-                        alphaHaptic(.selection)
-                        alphaHandlePreparedPrimaryAction(item, model: model)
-                    }
-                    .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 14)
+                RossGlassGroup(spacing: 8) {
+                    HStack(spacing: 8) {
+                        Button(item.primaryAction) {
+                            alphaHaptic(.selection)
+                            alphaHandlePreparedPrimaryAction(item, model: model)
+                        }
+                        .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 14)
 
-                    Button("Accept") {
-                        model.setPreparedWorkStatus(item.id, status: .accepted)
-                    }
-                    .rossGlassButtonStyle(tint: Color.rossSuccess, cornerRadius: 14, expandsHorizontally: false)
+                        Button("Accept") {
+                            model.setPreparedWorkStatus(item.id, status: .accepted)
+                        }
+                        .rossGlassButtonStyle(tint: Color.rossSuccess, cornerRadius: 14, expandsHorizontally: false)
 
-                    Button("Edit") {
-                        alphaHandlePreparedEdit(item, model: model)
-                    }
-                    .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 14, expandsHorizontally: false)
+                        Button("Edit") {
+                            alphaHandlePreparedEdit(item, model: model)
+                        }
+                        .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 14, expandsHorizontally: false)
 
-                    Button("Dismiss") {
-                        model.setPreparedWorkStatus(item.id, status: .dismissed)
+                        Button("Dismiss") {
+                            model.setPreparedWorkStatus(item.id, status: .dismissed)
+                        }
+                        .rossGlassButtonStyle(tint: Color.rossInk.opacity(0.42), cornerRadius: 14, expandsHorizontally: false)
                     }
-                    .rossGlassButtonStyle(tint: Color.rossInk.opacity(0.42), cornerRadius: 14, expandsHorizontally: false)
+                    .font(.caption.weight(.semibold))
                 }
-                .font(.caption.weight(.semibold))
             }
         }
     }
