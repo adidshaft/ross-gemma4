@@ -509,6 +509,8 @@ final class AlphaExtractionTests: XCTestCase {
                 "\(term) leaked into private assistant settings copy"
             )
         }
+        XCTAssertTrue(normalSettingsCopy.contains("assistant setup files"))
+        XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("downloaded assistant files"))
     }
 
     @MainActor

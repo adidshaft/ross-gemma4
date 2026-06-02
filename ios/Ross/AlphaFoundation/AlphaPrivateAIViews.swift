@@ -16,8 +16,8 @@ import AppKit
 let alphaPrivateAIBackgroundDownloadsDetail = "Keep assistant downloads eligible to continue when Ross is backgrounded."
 let alphaPrivateAIUpdateDetail = "Ross will download it with the same resumable Wi-Fi-first rules. Existing assistant files stay until the new file verifies."
 let alphaPrivateAIStorageTitle = "Assistant storage"
-let alphaPrivateAIStorageDetail = "App updates keep downloaded assistant files in Ross storage. A full uninstall removes the app container; iOS does not let Ross ask a question during uninstall."
-let alphaPrivateAIDeleteDownloadsTitle = "Delete downloaded assistant files"
+let alphaPrivateAIStorageDetail = "App updates keep assistant setup files in Ross storage. A full uninstall removes the app container; iOS does not let Ross ask a question during uninstall."
+let alphaPrivateAIDeleteDownloadsTitle = "Delete assistant setup files"
 let alphaPrivateAIDeleteDownloadsDetail = "Keeps matters and drafts, removes local assistant files and resume data."
 let alphaPrivateAIUpdateChecksTitle = "Check for assistant updates"
 let alphaPrivateAIUpdateChecksDetail = "Ross checks assistant listings and asks before replacing a downloaded assistant."
@@ -335,13 +335,13 @@ func alphaAssistantVerificationSummary(
         return "Ross will verify the assistant file after setup."
     }
     if runtimeHealth.available && runtimeHealth.checksumVerified {
-        return "Downloaded file opened and verified on this iPhone."
+        return "Assistant setup opened and verified on this iPhone."
     }
     if runtimeHealth.available {
-        return "Downloaded file opened on this iPhone."
+        return "Assistant setup opened on this iPhone."
     }
     if runtimeHealth.modelPathPresent {
-        return "Downloaded file needs repair before Ross can use it."
+        return "Assistant setup needs Repair setup before Ross can use it."
     }
     return "Assistant file is missing. Open My assistant and set up again."
 }

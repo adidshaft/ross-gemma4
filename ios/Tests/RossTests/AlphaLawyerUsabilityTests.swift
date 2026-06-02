@@ -529,8 +529,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
 
         XCTAssertTrue(summaries[0].contains("No assistant file"))
         XCTAssertTrue(summaries[1].contains("verify the assistant file"))
-        XCTAssertTrue(summaries[2].contains("opened and verified"))
-        XCTAssertTrue(summaries[3].contains("needs repair"))
+        XCTAssertTrue(summaries[2].contains("Assistant setup opened and verified"))
+        XCTAssertTrue(summaries[3].contains("Repair setup"))
 
         for summary in summaries {
             for forbidden in ["Gemma", "GGUF", "Q4", "runtime", "checksum", "artifact"] {
@@ -539,6 +539,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                     "\(forbidden) leaked into assistant verification summary: \(summary)"
                 )
             }
+            XCTAssertFalse(summary.localizedCaseInsensitiveContains("downloaded file"), summary)
         }
     }
 
