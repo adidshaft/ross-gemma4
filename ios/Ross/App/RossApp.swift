@@ -1596,6 +1596,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Status",
             "te": "Status"
         ],
+        "yes": [
+            "en": "Yes",
+            "hi": "हाँ",
+            "bn": "হ্যাঁ",
+            "ta": "ஆம்",
+            "te": "అవును"
+        ],
+        "no": [
+            "en": "No",
+            "hi": "नहीं",
+            "bn": "না",
+            "ta": "இல்லை",
+            "te": "లేదు"
+        ],
         "local_file": [
             "en": "Local file",
             "hi": "Local file",
@@ -1616,6 +1630,76 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "bn": "Setup resets",
             "ta": "Setup resets",
             "te": "Setup resets"
+        ],
+        "assistant_can_answer": [
+            "en": "Can answer",
+            "hi": "Answer दे सकता है",
+            "bn": "Answer দিতে পারে",
+            "ta": "Answer செய்ய முடியும்",
+            "te": "Answer ఇవ్వగలదు"
+        ],
+        "setup_file_present": [
+            "en": "Setup file present",
+            "hi": "Setup file मौजूद है",
+            "bn": "Setup file আছে",
+            "ta": "Setup file உள்ளது",
+            "te": "Setup file ఉంది"
+        ],
+        "last_answer_check": [
+            "en": "Last answer check",
+            "hi": "Last answer check",
+            "bn": "Last answer check",
+            "ta": "Last answer check",
+            "te": "Last answer check"
+        ],
+        "last_check_result": [
+            "en": "Last check result",
+            "hi": "Last check result",
+            "bn": "Last check result",
+            "ta": "Last check result",
+            "te": "Last check result"
+        ],
+        "approx_time": [
+            "en": "Approx time",
+            "hi": "Approx time",
+            "bn": "Approx time",
+            "ta": "Approx time",
+            "te": "Approx time"
+        ],
+        "public_law_check": [
+            "en": "Public-law check",
+            "hi": "Public-law check",
+            "bn": "Public-law check",
+            "ta": "Public-law check",
+            "te": "Public-law check"
+        ],
+        "none_yet": [
+            "en": "None yet",
+            "hi": "अभी नहीं",
+            "bn": "এখনও নেই",
+            "ta": "இன்னும் இல்லை",
+            "te": "ఇంకా లేదు"
+        ],
+        "workspace_refreshes": [
+            "en": "Workspace refreshes",
+            "hi": "Workspace refreshes",
+            "bn": "Workspace refreshes",
+            "ta": "Workspace refreshes",
+            "te": "Workspace refreshes"
+        ],
+        "check_private_assistant_with_sample_file": [
+            "en": "Check private assistant with a sample file",
+            "hi": "Sample file से private assistant check करें",
+            "bn": "Sample file দিয়ে private assistant check করুন",
+            "ta": "Sample file கொண்டு private assistant check செய்யவும்",
+            "te": "Sample file తో private assistant check చేయండి"
+        ],
+        "checking_private_assistant_sample_file": [
+            "en": "Checking private assistant with a sample file...",
+            "hi": "Sample file से private assistant check हो रहा है...",
+            "bn": "Sample file দিয়ে private assistant check হচ্ছে...",
+            "ta": "Sample file கொண்டு private assistant check செய்கிறது...",
+            "te": "Sample file తో private assistant check చేస్తోంది..."
         ],
         "completed": [
             "en": "Completed",

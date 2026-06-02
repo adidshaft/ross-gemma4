@@ -621,7 +621,16 @@ final class AlphaExtractionTests: XCTestCase {
             alphaPrivateAIUpdateChecksDetail,
             alphaPrivateAIVerifiedStorageLabel,
             alphaSettingsAssistantStorageLabel,
-            alphaSettingsAssistantStorageSupportLabel
+            alphaSettingsAssistantStorageSupportLabel,
+            rossLocalized("settings_support_details"),
+            rossLocalized("assistant_can_answer"),
+            rossLocalized("setup_file_present"),
+            rossLocalized("last_answer_check"),
+            rossLocalized("last_check_result"),
+            rossLocalized("public_law_check"),
+            rossLocalized("workspace_refreshes"),
+            rossLocalized("check_private_assistant_with_sample_file"),
+            rossLocalized("checking_private_assistant_sample_file")
         ].joined(separator: "\n")
 
         let forbidden = [

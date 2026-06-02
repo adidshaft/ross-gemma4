@@ -320,7 +320,7 @@ struct AlphaPrivateAITechnicalDiagnosticsCard: View {
                 AlphaSettingsValueRow(label: rossLocalized("setup_resets"), value: "\(model.privateAISnapshot.resetCount)")
 
                 #if DEBUG
-                DisclosureGroup("Support details") {
+                DisclosureGroup(rossLocalized("settings_support_details")) {
                     AlphaPrivateAIInternalDiagnostics(model: model)
                 }
                 .tint(Color.rossAccent)
@@ -362,6 +362,16 @@ func alphaAssistantVerificationSummary(
 private struct AlphaPrivateAIInternalDiagnostics: View {
     @Bindable var model: AlphaRossModel
 
+    private var assistantLastUsedLabel: String {
+        guard let lastInvocation = model.lastModelInvocation else {
+            return rossLocalized("no_private_answer_recorded_yet")
+        }
+        if let completedAt = lastInvocation.completedAt {
+            return completedAt.formatted(date: .abbreviated, time: .shortened)
+        }
+        return rossLocalized("started_but_did_not_finish")
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             if !model.privateAISnapshot.installedPacks.isEmpty {
@@ -378,65 +388,30 @@ private struct AlphaPrivateAIInternalDiagnostics: View {
                 let lastPreview = model.persisted.publicLawPreview
                 let resetCount = model.privateAISnapshot.resetCount
 
-                AlphaSettingsValueRow(label: "Runtime mode", value: runtimeHealth.runtimeMode.rawValue)
-                AlphaSettingsValueRow(label: "Artifact kind", value: model.activePack?.artifactKind ?? "Missing")
-                AlphaSettingsValueRow(label: "Checksum verified", value: runtimeHealth.checksumVerified ? "Yes" : "No")
-                AlphaSettingsValueRow(label: "Runtime available", value: runtimeHealth.available ? "Yes" : "No")
-                AlphaSettingsValueRow(label: "Model path", value: runtimeHealth.modelPathPresent ? "Configured" : "Missing")
+                AlphaSettingsValueRow(label: rossLocalized("status"), value: runtimeHealth.userFacingStatus)
+                AlphaSettingsValueRow(label: rossLocalized("assistant_can_answer"), value: runtimeHealth.available ? rossLocalized("yes") : rossLocalized("no"))
+                AlphaSettingsValueRow(label: rossLocalized("setup_file_present"), value: runtimeHealth.modelPathPresent ? rossLocalized("yes") : rossLocalized("no"))
 
-                if let activePack = model.activePack {
-                    let artifact = alphaAssistantModelArtifact(for: activePack.tier)
-                    AlphaSettingsValueRow(label: "Technical model", value: artifact.displayName)
-                    AlphaSettingsValueRow(label: "Repository", value: artifact.repository)
-                    AlphaSettingsValueRow(label: "File", value: artifact.fileName)
-                    AlphaSettingsValueRow(label: "Quantization", value: artifact.quantization)
-                    AlphaSettingsValueRow(label: "Checksum", value: artifact.sha256)
-                }
-
-                if let modelPathLabel = runtimeHealth.modelPathLabel {
-                    AlphaSettingsValueRow(label: "Model file", value: modelPathLabel)
-                }
-                if let lastErrorCategory = runtimeHealth.lastErrorCategory {
-                    AlphaSettingsValueRow(label: "Last error", value: lastErrorCategory)
-                }
-                if let lastInvocationRuntimeMode = model.lastModelInvocationRuntimeMode {
-                    AlphaSettingsValueRow(label: "Last runtime", value: lastInvocationRuntimeMode)
-                }
                 if let lastInvocation {
-                    AlphaSettingsValueRow(label: "Last task", value: lastInvocation.task.rawValue)
-                    AlphaSettingsValueRow(label: "Last status", value: lastInvocation.status.rawValue)
-                    AlphaSettingsValueRow(label: "Prompt hash", value: lastInvocation.promptHash)
-                    AlphaSettingsValueRow(label: "Input hash", value: lastInvocation.inputHash)
-                    if let outputHash = lastInvocation.outputHash {
-                        AlphaSettingsValueRow(label: "Output hash", value: outputHash)
-                    }
-                    if let estimatedInputTokens = lastInvocation.estimatedInputTokens {
-                        AlphaSettingsValueRow(label: "Estimated input tokens", value: "\(estimatedInputTokens)")
-                    }
-                    if let estimatedOutputTokens = lastInvocation.estimatedOutputTokens {
-                        AlphaSettingsValueRow(label: "Estimated output tokens", value: "\(estimatedOutputTokens)")
-                    }
+                    AlphaSettingsValueRow(label: rossLocalized("last_answer_check"), value: assistantLastUsedLabel)
+                    AlphaSettingsValueRow(label: rossLocalized("last_check_result"), value: lastInvocation.status == .complete ? rossLocalized("completed") : rossLocalized("started_but_did_not_finish"))
                     if let durationMs = lastInvocation.durationMs {
-                        let tokenTotal = (lastInvocation.estimatedInputTokens ?? 0) + (lastInvocation.estimatedOutputTokens ?? 0)
-                        let tokensPerSecond = durationMs > 0 ? Double(tokenTotal) / (Double(durationMs) / 1_000) : 0
-                        AlphaSettingsValueRow(label: "Last duration", value: "\(durationMs) ms")
-                        AlphaSettingsValueRow(label: "Approx speed", value: String(format: "%.1f tok/s", tokensPerSecond))
+                        AlphaSettingsValueRow(label: rossLocalized("approx_time"), value: alphaAssistantDurationLabel(milliseconds: durationMs))
                     }
                 } else {
-                    AlphaSettingsValueRow(label: "Last local inference", value: "No model invocation recorded yet")
+                    AlphaSettingsValueRow(label: rossLocalized("last_answer_check"), value: rossLocalized("no_private_answer_recorded_yet"))
                 }
                 if let lastPreview {
-                    AlphaSettingsValueRow(label: "Last public-law query", value: lastPreview.query)
-                    AlphaSettingsValueRow(label: "Sanitizer removals", value: "\(lastPreview.removed.count)")
+                    AlphaSettingsValueRow(label: rossLocalized("public_law_check"), value: lastPreview.query)
                 } else {
-                    AlphaSettingsValueRow(label: "Last public-law query", value: "None")
+                    AlphaSettingsValueRow(label: rossLocalized("public_law_check"), value: rossLocalized("none_yet"))
                 }
-                AlphaSettingsValueRow(label: "Workspace resets", value: "\(resetCount)")
+                AlphaSettingsValueRow(label: rossLocalized("workspace_refreshes"), value: "\(resetCount)")
             } else {
-                AlphaSettingsValueRow(label: "Runtime", value: "Not checked yet")
+                AlphaSettingsValueRow(label: rossLocalized("status"), value: rossLocalized("assistant_check_after_setup"))
             }
 
-            Button(model.localInferenceSmokeRunning ? "Running local inference smoke..." : "Run local inference smoke") {
+            Button(model.localInferenceSmokeRunning ? rossLocalized("checking_private_assistant_sample_file") : rossLocalized("check_private_assistant_with_sample_file")) {
                 model.runLocalInferenceSmoke()
             }
             .rossGlassButtonStyle(tint: Color.rossAccent)
@@ -446,6 +421,14 @@ private struct AlphaPrivateAIInternalDiagnostics: View {
     }
 }
 #endif
+
+func alphaAssistantDurationLabel(milliseconds: Int) -> String {
+    let seconds = max(0.1, Double(milliseconds) / 1_000)
+    if seconds < 10 {
+        return String(format: "%.1f s", seconds)
+    }
+    return "\(Int(seconds.rounded())) s"
+}
 
 struct AlphaPrivacyLedgerScreen: View {
     @Bindable var model: AlphaRossModel
