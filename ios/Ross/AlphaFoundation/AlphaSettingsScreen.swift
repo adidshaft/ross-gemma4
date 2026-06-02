@@ -262,7 +262,7 @@ struct AlphaSettingsScreen: View {
 
                 #if DEBUG
                 RossSectionCard(title: "Advanced") {
-                    DisclosureGroup("Technical diagnostics") {
+                    DisclosureGroup("Support details") {
                         VStack(alignment: .leading, spacing: 12) {
                             AlphaSettingsValueRow(label: "Assistant files", value: alphaFileSizeLabel(storageSnapshot.assistantBytes))
                             Divider()

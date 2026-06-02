@@ -309,7 +309,7 @@ struct AlphaPrivateAITechnicalDiagnosticsCard: View {
                 AlphaSettingsValueRow(label: "Setup resets", value: "\(model.privateAISnapshot.resetCount)")
 
                 #if DEBUG
-                DisclosureGroup("Internal diagnostics") {
+                DisclosureGroup("Support details") {
                     AlphaPrivateAIInternalDiagnostics(model: model)
                 }
                 .tint(Color.rossAccent)
