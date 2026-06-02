@@ -26,7 +26,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
 
     private func runtimeAvailability() -> (available: Bool, errorCategory: String?, status: String) {
         guard let modelPath, !modelPath.isEmpty else {
-            return (false, "missing_model_file", "The downloaded assistant file is missing or incomplete.")
+            return (false, "missing_model_file", "Assistant setup is missing or incomplete. Open My assistant to set up again.")
         }
         let attributes = try? FileManager.default.attributesOfItem(atPath: modelPath)
         let bytes = (attributes?[.size] as? NSNumber)?.int64Value ?? 0
@@ -39,7 +39,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             hasMinimumBytes = bytes > 1_000_000
         }
         guard hasMinimumBytes else {
-            return (false, "missing_model_file", "The downloaded assistant file is missing or incomplete.")
+            return (false, "missing_model_file", "Assistant setup is missing or incomplete. Open My assistant to set up again.")
         }
         do {
             try Self.validateModelCanLoad(at: modelPath)

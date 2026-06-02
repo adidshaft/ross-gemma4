@@ -1487,9 +1487,11 @@ final class AlphaExtractionTests: XCTestCase {
         for status in statuses {
             XCTAssertTrue(
                 status.localizedCaseInsensitiveContains("private assistant") ||
-                    status.localizedCaseInsensitiveContains("assistant file"),
+                    status.localizedCaseInsensitiveContains("assistant file") ||
+                    status.localizedCaseInsensitiveContains("assistant setup"),
                 status
             )
+            XCTAssertFalse(status.localizedCaseInsensitiveContains("downloaded assistant file"), status)
             for term in ["Gemma", "Llama", "GGUF", "Q4", "runtime", "checksum", "artifact", "adapter"] {
                 XCTAssertNil(
                     status.range(of: term, options: [.caseInsensitive]),
