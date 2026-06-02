@@ -1550,11 +1550,13 @@ private struct RossAuthSignInSheet: View {
                                             .font(.system(size: 13, weight: .bold))
                                             .foregroundStyle(Color.rossInk.opacity(0.72))
                                             .frame(width: 30, height: 30)
-                                            .background(Color.white.opacity(0.1), in: Circle())
-                                            .overlay {
-                                                Circle()
-                                                    .stroke(Color.white.opacity(0.16), lineWidth: 1)
-                                            }
+                                            .rossNativeGlassSurface(
+                                                tint: Color.rossInk.opacity(0.14),
+                                                shape: Circle(),
+                                                interactive: true,
+                                                fallbackFillOpacity: 0.72,
+                                                fallbackStrokeOpacity: 0.18
+                                            )
                                     }
                                     .buttonStyle(.plain)
                                     .accessibilityLabel("Back")
@@ -1860,11 +1862,13 @@ private struct RossGoogleMark: View {
                 )
             )
             .frame(width: size, height: size)
-            .background(Color.white.opacity(0.92), in: Circle())
-            .overlay {
-                Circle()
-                    .stroke(Color.rossGlassStroke.opacity(0.72), lineWidth: 1)
-            }
+            .rossNativeGlassSurface(
+                tint: Color.white.opacity(0.20),
+                shape: Circle(),
+                interactive: false,
+                fallbackFillOpacity: 0.88,
+                fallbackStrokeOpacity: 0.56
+            )
     }
 }
 
