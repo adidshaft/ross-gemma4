@@ -1459,6 +1459,17 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertEqual("पहले document चुनें", latestResult?.answerTitle)
             XCTAssertEqual("कोई बदलाव नहीं", latestResult?.statusNote)
             XCTAssertTrue(latestResult?.answerSections.joined(separator: " ").contains("file tag करें") == true)
+
+            await model.submitDockInput(
+                question: "add task Prepare translated chronology",
+                scopeCaseID: nil,
+                webEnabled: false
+            )
+
+            let taskResult = await MainActor.run { model.latestAskResult }
+            XCTAssertEqual("Task added.", taskResult?.answerTitle)
+            XCTAssertEqual("locally saved", taskResult?.statusNote)
+            XCTAssertTrue(taskResult?.answerSections.joined(separator: " ").contains("इस device पर added हुआ") == true)
         }
     }
 

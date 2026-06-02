@@ -870,6 +870,14 @@ final class AlphaExtractionTests: XCTestCase {
             rossLocalized("file_text_unavailable", languageCode: "bn"),
             "File text পাওয়া যাচ্ছে না"
         )
+        XCTAssertEqual(
+            alphaAskTaskAddedOnDeviceLabel("Prepare chronology", languageCode: "hi"),
+            "Prepare chronology इस device पर added हुआ।"
+        )
+        XCTAssertEqual(
+            rossLocalized("ask_task_text_stayed_on_device", languageCode: "te-IN"),
+            "ఏ case file లేదా task text ఈ device ను వదిలి వెళ్లలేదు."
+        )
         XCTAssertTrue(
             alphaNextHearingLabel(Date(timeIntervalSince1970: 0), languageCode: "hi")
                 .contains("अगली hearing:")

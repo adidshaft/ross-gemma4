@@ -3430,6 +3430,97 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "locally saved",
             "te": "locally saved"
         ],
+        "task_added_title": [
+            "en": "Task added.",
+            "hi": "Task added.",
+            "bn": "Task added.",
+            "ta": "Task added.",
+            "te": "Task added."
+        ],
+        "ask_task_due_on": [
+            "en": "Due %@.",
+            "hi": "Due %@.",
+            "bn": "Due %@.",
+            "ta": "Due %@.",
+            "te": "Due %@."
+        ],
+        "ask_open_task_list_any_time": [
+            "en": "Open the task list any time to mark it done or snooze it.",
+            "hi": "इसे done mark या snooze करने के लिए task list कभी भी खोलें।",
+            "bn": "done mark বা snooze করতে task list যে কোনো সময় খুলুন।",
+            "ta": "done mark அல்லது snooze செய்ய task list எப்போது வேண்டுமானாலும் திறக்கவும்.",
+            "te": "done mark లేదా snooze చేయడానికి task list ఎప్పుడైనా తెరవండి."
+        ],
+        "ask_task_added_on_device": [
+            "en": "%@ was added on this device.",
+            "hi": "%@ इस device पर added हुआ।",
+            "bn": "%@ এই device-এ added হয়েছে।",
+            "ta": "%@ இந்த device-ல் added ஆனது.",
+            "te": "%@ ఈ device లో added అయ్యింది."
+        ],
+        "task_marked_done_title": [
+            "en": "Task marked done.",
+            "hi": "Task done mark हुआ।",
+            "bn": "Task done mark হয়েছে।",
+            "ta": "Task done mark ஆனது.",
+            "te": "Task done mark అయ్యింది."
+        ],
+        "task_not_found_title": [
+            "en": "Task not found.",
+            "hi": "Task नहीं मिला।",
+            "bn": "Task পাওয়া যায়নি।",
+            "ta": "Task கிடைக்கவில்லை.",
+            "te": "Task కనబడలేదు."
+        ],
+        "ask_matching_task_updated": [
+            "en": "Ross updated the matching task on this device.",
+            "hi": "Ross ने matching task इस device पर update किया।",
+            "bn": "Ross matching task এই device-এ update করেছে।",
+            "ta": "Ross matching task-ஐ இந்த device-ல் update செய்தது.",
+            "te": "Ross matching task ను ఈ device లో update చేసింది."
+        ],
+        "ask_no_open_matching_task": [
+            "en": "Ross could not find an open matching task in this scope.",
+            "hi": "Ross को इस scope में open matching task नहीं मिला।",
+            "bn": "Ross এই scope-এ open matching task খুঁজে পায়নি।",
+            "ta": "Ross இந்த scope-ல் open matching task கண்டுபிடிக்கவில்லை.",
+            "te": "Ross ఈ scope లో open matching task కనుగొనలేదు."
+        ],
+        "ask_task_text_stayed_on_device": [
+            "en": "No case files or task text left this device.",
+            "hi": "कोई case file या task text इस device से बाहर नहीं गया।",
+            "bn": "কোনো case file বা task text এই device ছাড়েনি।",
+            "ta": "எந்த case file அல்லது task text இந்த device-ஐ விட்டு செல்லவில்லை.",
+            "te": "ఏ case file లేదా task text ఈ device ను వదిలి వెళ్లలేదు."
+        ],
+        "ask_pick_matter_before_date": [
+            "en": "Pick a matter in the bar above before saving a hearing date, deadline, or reminder.",
+            "hi": "hearing date, deadline, या reminder save करने से पहले ऊपर की bar में matter चुनें।",
+            "bn": "hearing date, deadline, বা reminder save করার আগে ওপরের bar-এ matter বেছে নিন।",
+            "ta": "hearing date, deadline, அல்லது reminder save செய்யும் முன் மேலே உள்ள bar-ல் matter தேர்வுசெய்யவும்.",
+            "te": "hearing date, deadline, లేదా reminder save చేయడానికి ముందు పై bar లో matter ఎంచుకోండి."
+        ],
+        "date_saved_title": [
+            "en": "Date saved.",
+            "hi": "Date saved.",
+            "bn": "Date saved.",
+            "ta": "Date saved.",
+            "te": "Date saved."
+        ],
+        "ask_date_saved_for": [
+            "en": "%@ is saved for %@.",
+            "hi": "%@ %@ के लिए saved है।",
+            "bn": "%@ %@-এর জন্য saved হয়েছে।",
+            "ta": "%@ %@-க்கு saved ஆனது.",
+            "te": "%@ %@ కోసం saved అయ్యింది."
+        ],
+        "ask_date_manage_from_timeline": [
+            "en": "You can mark it done or cancel it from the matter timeline.",
+            "hi": "इसे matter timeline से done mark या cancel कर सकते हैं।",
+            "bn": "matter timeline থেকে এটি done mark বা cancel করতে পারেন।",
+            "ta": "matter timeline-இலிருந்து இதை done mark அல்லது cancel செய்யலாம்.",
+            "te": "matter timeline నుండి దీనిని done mark లేదా cancel చేయవచ్చు."
+        ],
         "ask_draft_ready_title": [
             "en": "%@ ready",
             "hi": "%@ ready",

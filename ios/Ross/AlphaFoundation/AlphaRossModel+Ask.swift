@@ -524,23 +524,23 @@ extension AlphaRossModel {
         case let .addTask(title, dueDate):
             addTask(title: title, caseId: scopeCaseID, dueDate: dueDate)
             let dueSection = dueDate.map {
-                "Due \($0.formatted(date: .abbreviated, time: .omitted))."
-            } ?? "Open the task list any time to mark it done or snooze it."
+                alphaAskTaskDueLabel($0)
+            } ?? rossLocalized("ask_open_task_list_any_time")
             result = AlphaAskResult(
                 kind: .matterUpdate,
                 question: rawInput,
                 scopeCaseID: scopeCaseID,
                 scopeLabel: scopeLabel(for: scopeCaseID),
                 selectedDocumentTitles: selectedDocumentTitles,
-                answerTitle: "Task added.",
+                answerTitle: rossLocalized("task_added_title"),
                 answerSections: [
-                    "\(title) was added on this device.",
+                    alphaAskTaskAddedOnDeviceLabel(title),
                     dueSection
                 ],
                 caseFileSources: [],
                 publicLawPreview: nil,
                 publicLawResults: [],
-                statusNote: "Saved locally",
+                statusNote: rossLocalized("saved_locally"),
                 needsReviewWarning: nil
             )
 
@@ -552,15 +552,15 @@ extension AlphaRossModel {
                 scopeCaseID: scopeCaseID,
                 scopeLabel: scopeLabel(for: scopeCaseID),
                 selectedDocumentTitles: selectedDocumentTitles,
-                answerTitle: changed ? "Task marked done." : "Task not found.",
+                answerTitle: changed ? rossLocalized("task_marked_done_title") : rossLocalized("task_not_found_title"),
                 answerSections: [
-                    changed ? "Ross updated the matching task on this device." : "Ross could not find an open matching task in this scope.",
-                    "No case files or task text left this device."
+                    changed ? rossLocalized("ask_matching_task_updated") : rossLocalized("ask_no_open_matching_task"),
+                    rossLocalized("ask_task_text_stayed_on_device")
                 ],
                 caseFileSources: [],
                 publicLawPreview: nil,
                 publicLawResults: [],
-                statusNote: changed ? "Saved locally" : "No change made",
+                statusNote: changed ? rossLocalized("saved_locally") : rossLocalized("no_change_made"),
                 needsReviewWarning: nil
             )
 
@@ -572,15 +572,15 @@ extension AlphaRossModel {
                     scopeCaseID: nil,
                     scopeLabel: scopeLabel(for: nil),
                     selectedDocumentTitles: selectedDocumentTitles,
-                    answerTitle: "Choose a matter first",
+                    answerTitle: rossLocalized("ask_choose_matter_first"),
                     answerSections: [
-                        "Pick a matter in the bar above before saving a hearing date, deadline, or reminder.",
-                        "Ross did not change anything."
+                        rossLocalized("ask_pick_matter_before_date"),
+                        rossLocalized("ross_changed_nothing")
                     ],
                     caseFileSources: [],
                     publicLawPreview: nil,
                     publicLawResults: [],
-                    statusNote: "No change made",
+                    statusNote: rossLocalized("no_change_made"),
                     needsReviewWarning: nil
                 )
                 break
@@ -593,15 +593,15 @@ extension AlphaRossModel {
                 scopeCaseID: scopeCaseID,
                 scopeLabel: scopeLabel(for: scopeCaseID),
                 selectedDocumentTitles: selectedDocumentTitles,
-                answerTitle: "Date saved.",
+                answerTitle: rossLocalized("date_saved_title"),
                 answerSections: [
-                    "\(title) is saved for \(date.formatted(date: .abbreviated, time: .omitted)).",
-                    "You can mark it done or cancel it from the matter timeline."
+                    alphaAskDateSavedLabel(title: title, date: date),
+                    rossLocalized("ask_date_manage_from_timeline")
                 ],
                 caseFileSources: [],
                 publicLawPreview: nil,
                 publicLawResults: [],
-                statusNote: "Saved locally",
+                statusNote: rossLocalized("saved_locally"),
                 needsReviewWarning: nil
             )
 
@@ -771,12 +771,12 @@ extension AlphaRossModel {
                 answerTitle: title,
                 answerSections: [
                     detail,
-                    "Ross did not change anything."
+                    rossLocalized("ross_changed_nothing")
                 ],
                 caseFileSources: [],
                 publicLawPreview: nil,
                 publicLawResults: [],
-                statusNote: "No change made",
+                statusNote: rossLocalized("no_change_made"),
                 needsReviewWarning: nil
             )
         }
@@ -2280,6 +2280,29 @@ func alphaLocalAskSetupRequiredStatus(languageCode: String = rossSelectedLanguag
 
 func alphaAskPickMatterBeforeDraftLabel(_ draftLabel: String, languageCode: String = rossSelectedLanguageCode()) -> String {
     String(format: rossLocalized("ask_pick_matter_before_draft", languageCode: languageCode), draftLabel)
+}
+
+func alphaAskTaskDueLabel(_ date: Date, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(
+        format: rossLocalized("ask_task_due_on", languageCode: languageCode),
+        date.formatted(date: .abbreviated, time: .omitted)
+    )
+}
+
+func alphaAskTaskAddedOnDeviceLabel(_ title: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("ask_task_added_on_device", languageCode: languageCode), title)
+}
+
+func alphaAskDateSavedLabel(
+    title: String,
+    date: Date,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
+    String(
+        format: rossLocalized("ask_date_saved_for", languageCode: languageCode),
+        title,
+        date.formatted(date: .abbreviated, time: .omitted)
+    )
 }
 
 func alphaAskDraftReadyTitle(_ draftLabel: String, languageCode: String = rossSelectedLanguageCode()) -> String {
