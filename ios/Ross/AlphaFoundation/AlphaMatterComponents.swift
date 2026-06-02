@@ -374,13 +374,13 @@ struct AlphaExpandableDocumentRow: View {
 
                     HStack(spacing: 8) {
                         Button("Open", action: onOpen)
-                            .buttonStyle(.borderedProminent)
+                            .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 14)
 
                         Button("Chat", action: onOpenChat)
-                            .buttonStyle(.bordered)
+                            .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 14, expandsHorizontally: false)
 
                         Button("New review chat", action: onStartReviewChat)
-                            .buttonStyle(.bordered)
+                            .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 14, expandsHorizontally: false)
 
                         if canMoveEarlier {
                             Button {
@@ -388,7 +388,7 @@ struct AlphaExpandableDocumentRow: View {
                             } label: {
                                 Image(systemName: "arrow.up")
                             }
-                            .buttonStyle(.bordered)
+                            .rossGlassButtonStyle(tint: Color.rossInk.opacity(0.42), cornerRadius: 14, expandsHorizontally: false)
                             .accessibilityLabel("Move document earlier")
                         }
 
@@ -398,7 +398,7 @@ struct AlphaExpandableDocumentRow: View {
                             } label: {
                                 Image(systemName: "arrow.down")
                             }
-                            .buttonStyle(.bordered)
+                            .rossGlassButtonStyle(tint: Color.rossInk.opacity(0.42), cornerRadius: 14, expandsHorizontally: false)
                             .accessibilityLabel("Move document later")
                         }
                     }
