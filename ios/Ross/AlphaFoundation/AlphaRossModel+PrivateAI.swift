@@ -754,13 +754,25 @@ extension AlphaRossModel {
             return description
         }
         let message = error.localizedDescription
-        if !message.isEmpty, message.localizedCaseInsensitiveContains("unknown error") == false {
+        let lowercasedMessage = message.lowercased()
+        let technicalMarkers = [
+            "nserror",
+            "nsurlerrordomain",
+            "nscocoaerrordomain",
+            "rossalphapack",
+            "error domain",
+            "error code",
+            " error "
+        ]
+        if !message.isEmpty,
+           message.localizedCaseInsensitiveContains("unknown error") == false,
+           !technicalMarkers.contains(where: lowercasedMessage.contains) {
             return message
         }
 
         switch (nsError.domain, nsError.code) {
         default:
-            return "Ross could not download and verify the selected private assistant. Error \(nsError.domain) \(nsError.code)."
+            return "The assistant download could not finish verification. Retry on Wi-Fi, or open My assistant and start setup again."
         }
     }
 

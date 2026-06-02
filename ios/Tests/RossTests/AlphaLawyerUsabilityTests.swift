@@ -1833,7 +1833,9 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 model.assistantDownloadFailureMessage(NSError(domain: NSURLErrorDomain, code: NSURLErrorUnknown)),
                 model.assistantDownloadFailureMessage(NSError(domain: NSURLErrorDomain, code: NSURLErrorNotConnectedToInternet)),
                 model.assistantDownloadFailureMessage(NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled)),
-                model.assistantDownloadFailureMessage(NSError(domain: NSURLErrorDomain, code: NSURLErrorNetworkConnectionLost))
+                model.assistantDownloadFailureMessage(NSError(domain: NSURLErrorDomain, code: NSURLErrorNetworkConnectionLost)),
+                model.assistantDownloadFailureMessage(NSError(domain: NSURLErrorDomain, code: -123_456)),
+                model.assistantDownloadFailureMessage(NSError(domain: "RossAlphaPack", code: 99))
             ]
         }
 
@@ -1843,6 +1845,9 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertFalse(message.localizedCaseInsensitiveContains("model download"), message)
             XCTAssertFalse(message.localizedCaseInsensitiveContains("runtime"), message)
             XCTAssertFalse(message.localizedCaseInsensitiveContains("artifact"), message)
+            XCTAssertFalse(message.localizedCaseInsensitiveContains("NSURLErrorDomain"), message)
+            XCTAssertFalse(message.localizedCaseInsensitiveContains("RossAlphaPack"), message)
+            XCTAssertFalse(message.localizedCaseInsensitiveContains("Error 99"), message)
         }
     }
 
