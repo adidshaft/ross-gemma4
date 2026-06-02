@@ -2041,6 +2041,60 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(ranked.first?.sourceRef.documentId, documentID)
     }
 
+    @MainActor
+    func testTamilSelectedDocumentSummaryQuestionKeepsTaggedFileSource() {
+        let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
+        let documentID = UUID()
+        let block = AlphaSourceTextBlock(
+            sourceRef: AlphaSourceRef(
+                caseId: UUID(),
+                documentId: documentID,
+                documentTitle: "Tamil affidavit",
+                pageNumber: 1,
+                textSnippet: "ஊழியர் விடுப்பிற்காக விண்ணப்பித்தார்."
+            ),
+            text: "ஊழியர் விடுப்பிற்காக விண்ணப்பித்தார் மற்றும் பதில் வரவில்லை.",
+            pageNumber: 1,
+            languageHint: "ta",
+            ocrConfidence: 0.94
+        )
+
+        let ranked = model.alphaRankedAskSourceBlocks(
+            [block],
+            question: "இந்த ஆவணத்தின் சுருக்கம் கூறுங்கள்",
+            selectedDocumentIDs: [documentID]
+        )
+
+        XCTAssertEqual(ranked.first?.sourceRef.documentId, documentID)
+    }
+
+    @MainActor
+    func testTeluguSelectedDocumentSummaryQuestionKeepsTaggedFileSource() {
+        let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
+        let documentID = UUID()
+        let block = AlphaSourceTextBlock(
+            sourceRef: AlphaSourceRef(
+                caseId: UUID(),
+                documentId: documentID,
+                documentTitle: "Telugu affidavit",
+                pageNumber: 1,
+                textSnippet: "ఉద్యోగి సెలవు కోసం దరఖాస్తు చేశాడు."
+            ),
+            text: "ఉద్యోగి సెలవు కోసం దరఖాస్తు చేశాడు మరియు యజమాని సమాధానం ఇవ్వలేదు.",
+            pageNumber: 1,
+            languageHint: "te",
+            ocrConfidence: 0.94
+        )
+
+        let ranked = model.alphaRankedAskSourceBlocks(
+            [block],
+            question: "ఈ పత్రం సారాంశం చెప్పండి",
+            selectedDocumentIDs: [documentID]
+        )
+
+        XCTAssertEqual(ranked.first?.sourceRef.documentId, documentID)
+    }
+
     func testSourceLanguageHintFallsBackToDocumentProfile() {
         let profile = AlphaDocumentLanguageProfile(
             documentId: UUID(),
