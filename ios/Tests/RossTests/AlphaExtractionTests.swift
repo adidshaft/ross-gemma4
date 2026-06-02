@@ -871,7 +871,7 @@ final class AlphaExtractionTests: XCTestCase {
                 warning: "The downloaded assistant file is incomplete.",
                 errorCategory: "model_load_failed"
             ),
-            "The downloaded assistant file is incomplete."
+            "The private assistant could not open this assistant setup for this answer. Open My assistant and use Repair setup."
         )
     }
 

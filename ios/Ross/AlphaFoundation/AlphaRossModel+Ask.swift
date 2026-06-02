@@ -2326,6 +2326,10 @@ func alphaAskRuntimeRepairDetail(warning: String?, errorCategory: String) -> Str
         "schema",
         "json",
         "category",
+        "downloaded assistant",
+        "model",
+        "artifact",
+        "checksum",
         "_"
     ]
     if !cleanedWarning.isEmpty,
