@@ -2357,6 +2357,33 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     @MainActor
+    func testTamilSelectedDocumentFactQuestionKeepsTaggedFileSource() {
+        let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
+        let documentID = UUID()
+        let block = AlphaSourceTextBlock(
+            sourceRef: AlphaSourceRef(
+                caseId: UUID(),
+                documentId: documentID,
+                documentTitle: "Tamil affidavit",
+                pageNumber: 1,
+                textSnippet: "பிரிவு 417 கீழ் மேற்கோள் சரிபார்ப்பு தேவை."
+            ),
+            text: "பிரிவு 417 கீழ் வழக்கறிஞர் தாக்கலுக்கு முன் மேற்கோள் சரிபார்ப்பு செய்ய வேண்டும்.",
+            pageNumber: 1,
+            languageHint: "ta",
+            ocrConfidence: 0.94
+        )
+
+        let ranked = model.alphaRankedAskSourceBlocks(
+            [block],
+            question: "பிரிவு 417 என்ன செய்ய வேண்டும்?",
+            selectedDocumentIDs: [documentID]
+        )
+
+        XCTAssertEqual(ranked.first?.sourceRef.documentId, documentID)
+    }
+
+    @MainActor
     func testTeluguSelectedDocumentSummaryQuestionKeepsTaggedFileSource() {
         let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
         let documentID = UUID()
@@ -2377,6 +2404,33 @@ final class AlphaExtractionTests: XCTestCase {
         let ranked = model.alphaRankedAskSourceBlocks(
             [block],
             question: "ఈ పత్రం సారాంశం చెప్పండి",
+            selectedDocumentIDs: [documentID]
+        )
+
+        XCTAssertEqual(ranked.first?.sourceRef.documentId, documentID)
+    }
+
+    @MainActor
+    func testTeluguSelectedDocumentFactQuestionKeepsTaggedFileSource() {
+        let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
+        let documentID = UUID()
+        let block = AlphaSourceTextBlock(
+            sourceRef: AlphaSourceRef(
+                caseId: UUID(),
+                documentId: documentID,
+                documentTitle: "Telugu affidavit",
+                pageNumber: 1,
+                textSnippet: "సెక్షన్ 417 కింద ఉదాహరణ ధృవీకరణ అవసరం."
+            ),
+            text: "సెక్షన్ 417 కింద న్యాయవాది దాఖలు చేసే ముందు ఉదాహరణను ధృవీకరించాలి.",
+            pageNumber: 1,
+            languageHint: "te",
+            ocrConfidence: 0.94
+        )
+
+        let ranked = model.alphaRankedAskSourceBlocks(
+            [block],
+            question: "సెక్షన్ 417 ఏమి చేయాలి?",
             selectedDocumentIDs: [documentID]
         )
 

@@ -1609,7 +1609,11 @@ extension AlphaRossModel {
     func alphaAskSearchTerms(from question: String) -> [String] {
         let normalized = question
             .lowercased()
-            .replacingOccurrences(of: #"[^a-z0-9\-\u{0900}-\u{097F}\u{0980}-\u{09FF}]+"#, with: " ", options: .regularExpression)
+            .replacingOccurrences(
+                of: #"[^a-z0-9\-\u{0900}-\u{097F}\u{0980}-\u{09FF}\u{0B80}-\u{0BFF}\u{0C00}-\u{0C7F}]+"#,
+                with: " ",
+                options: .regularExpression
+            )
         let stopWords: Set<String> = [
             "the", "and", "with", "from", "this", "that", "what", "which",
             "summarize", "summarise", "source", "sources", "citation", "citations",
