@@ -953,11 +953,21 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             let results = await MainActor.run { model.publicLawResults }
             let latestPreview = await MainActor.run { model.latestAskResult?.publicLawPreview }
             let latestResult = await MainActor.run { model.latestAskResult }
+            let storedTurn = await MainActor.run {
+                model.persisted.cases
+                    .first(where: { $0.id == alphaSharedWorkspaceID })?
+                    .chatSessions
+                    .flatMap(\.turns)
+                    .last
+            }
             XCTAssertNil(preview)
             XCTAssertNil(latestPreview)
             XCTAssertNil(latestResult)
             XCTAssertTrue(results.isEmpty)
             XCTAssertEqual(0, publicLawCalls.value)
+            XCTAssertEqual(rossLocalized("legal_search_canceled_title"), storedTurn?.answerTitle)
+            XCTAssertEqual(rossLocalized("legal_search_canceled_detail"), storedTurn?.answerSections.first)
+            XCTAssertEqual(rossLocalized("canceled"), storedTurn?.statusNote)
         }
     }
 

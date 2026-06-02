@@ -801,9 +801,9 @@ extension AlphaRossModel {
         ) { turn in
             turn.publicLawPreview = nil
             turn.publicLawResults = []
-            turn.answerTitle = "Legal Search canceled"
-            turn.answerSections = ["No Legal Search was run. Ask again when you want Ross to use Legal Search."]
-            turn.statusNote = "Canceled"
+            turn.answerTitle = rossLocalized("legal_search_canceled_title")
+            turn.answerSections = [rossLocalized("legal_search_canceled_detail")]
+            turn.statusNote = rossLocalized("canceled")
         }
         if hadPendingPreview {
             persisted.ledgerEntries.insert(

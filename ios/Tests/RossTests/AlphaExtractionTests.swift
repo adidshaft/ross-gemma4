@@ -907,6 +907,10 @@ final class AlphaExtractionTests: XCTestCase {
             alphaPrivateAssistantRunningWithPublicLawStatus(languageCode: "ta"),
             "Private assistant locally இயங்குகிறது · public-law results ready"
         )
+        XCTAssertEqual(
+            rossLocalized("legal_search_canceled_detail", languageCode: "te-IN"),
+            "Legal Search నడవలేదు. Ross Legal Search ఉపయోగించాలని ఉన్నప్పుడు మళ్లీ అడగండి."
+        )
         XCTAssertTrue(
             alphaNextHearingLabel(Date(timeIntervalSince1970: 0), languageCode: "hi")
                 .contains("अगली hearing:")

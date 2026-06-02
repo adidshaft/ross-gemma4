@@ -511,6 +511,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "ரத்து செய்",
             "te": "రద్దు"
         ],
+        "canceled": [
+            "en": "Canceled",
+            "hi": "Canceled",
+            "bn": "Canceled",
+            "ta": "Canceled",
+            "te": "Canceled"
+        ],
+        "legal_search_canceled_title": [
+            "en": "Legal Search canceled",
+            "hi": "Legal Search canceled",
+            "bn": "Legal Search canceled",
+            "ta": "Legal Search canceled",
+            "te": "Legal Search canceled"
+        ],
+        "legal_search_canceled_detail": [
+            "en": "No Legal Search was run. Ask again when you want Ross to use Legal Search.",
+            "hi": "Legal Search नहीं चला। जब Ross से Legal Search use कराना हो, फिर पूछें।",
+            "bn": "Legal Search চালানো হয়নি। Ross-কে Legal Search ব্যবহার করতে চাইলে আবার জিজ্ঞাসা করুন।",
+            "ta": "Legal Search இயங்கவில்லை. Ross Legal Search பயன்படுத்த வேண்டும் என்றால் மீண்டும் கேளுங்கள்.",
+            "te": "Legal Search నడవలేదు. Ross Legal Search ఉపయోగించాలని ఉన్నప్పుడు మళ్లీ అడగండి."
+        ],
         "assistant_setup_phase_download": [
             "en": "Download",
             "hi": "डाउनलोड",
