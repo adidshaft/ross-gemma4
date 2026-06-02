@@ -2716,6 +2716,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "மற்ற details",
             "te": "ఇతర details"
         ],
+        "document_review_queue_summary_needs_review": [
+            "en": "Ross found key details. Please review the uncertain ones.",
+            "hi": "Ross ने key details ढूंढीं। uncertain details review करें।",
+            "bn": "Ross key details খুঁজে পেয়েছে। uncertain details review করুন।",
+            "ta": "Ross key details கண்டது. uncertain details review செய்யவும்.",
+            "te": "Ross key details కనుగొంది. uncertain details review చేయండి."
+        ],
+        "document_review_queue_summary_ready": [
+            "en": "Ross found key details.",
+            "hi": "Ross ने key details ढूंढीं।",
+            "bn": "Ross key details খুঁজে পেয়েছে।",
+            "ta": "Ross key details கண்டது.",
+            "te": "Ross key details కనుగొంది."
+        ],
         "document_run_better_extraction": [
             "en": "Run better extraction",
             "hi": "बेहतर extraction चलाएं",

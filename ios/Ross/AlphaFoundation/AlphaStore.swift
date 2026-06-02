@@ -93,6 +93,13 @@ func alphaFileReviewBasicTooLongWarning(languageCode: String = rossSelectedLangu
     rossLocalized("file_review_basic_too_long_warning", languageCode: languageCode)
 }
 
+func alphaDocumentReviewQueueSummary(hasReviewWork: Bool, languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized(
+        hasReviewWork ? "document_review_queue_summary_needs_review" : "document_review_queue_summary_ready",
+        languageCode: languageCode
+    )
+}
+
 private func alphaPDFReadableTextFallback() -> String {
     rossLocalized("import_fallback_pdf_unreadable_text")
 }
@@ -1450,9 +1457,9 @@ private struct AlphaLocalExtractionOrchestrator {
         let reviewQueue = AlphaReviewQueue(
             fieldIDs: verification.fields.filter(\.needsReview).map(\.id),
             findingIDs: findings.filter { !$0.resolved }.map(\.id),
-            summary: verification.fields.contains(where: \.needsReview) || findings.contains(where: { !$0.resolved })
-                ? "Ross found key details. Please review the uncertain ones."
-                : "Ross found key details."
+            summary: alphaDocumentReviewQueueSummary(
+                hasReviewWork: verification.fields.contains(where: \.needsReview) || findings.contains(where: { !$0.resolved })
+            )
         )
         let warnings = findings.map(\.message)
         let hasReadableText = cleanedPages.contains {

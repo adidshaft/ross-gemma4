@@ -1210,6 +1210,14 @@ final class AlphaExtractionTests: XCTestCase {
             "গুরুত্বপূর্ণ"
         )
         XCTAssertEqual(
+            alphaDocumentReviewQueueSummary(hasReviewWork: true, languageCode: "hi"),
+            "Ross ने key details ढूंढीं। uncertain details review करें।"
+        )
+        XCTAssertEqual(
+            alphaDocumentReviewQueueSummary(hasReviewWork: false, languageCode: "ta"),
+            "Ross key details கண்டது."
+        )
+        XCTAssertEqual(
             alphaFindingsCountLabel(3, languageCode: "hi"),
             "3 findings"
         )
