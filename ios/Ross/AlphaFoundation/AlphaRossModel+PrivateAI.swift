@@ -167,8 +167,8 @@ extension AlphaRossModel {
         persisted.modelUpdateCandidates = []
         persisted.ledgerEntries.insert(
             AlphaPrivacyLedgerEntry(
-                title: "Assistant files removed",
-                detail: "Downloaded private assistant files and resume data were deleted from this device.",
+                title: "Assistant setup removed",
+                detail: "Assistant setup files and resume data were deleted from this device.",
                 purpose: .model_verification,
                 payloadClass: .no_case_data,
                 endpointLabel: "device://model-remove",
@@ -226,7 +226,7 @@ extension AlphaRossModel {
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
                     title: "Assistant update available",
-                    detail: "Ross found a newer private assistant file listing. No case files were read or sent.",
+                    detail: "Ross found a newer assistant setup listing. No case files were read or sent.",
                     purpose: .model_catalog,
                     payloadClass: .no_case_data,
                     endpointLabel: "device://model-update-check",
@@ -464,7 +464,7 @@ extension AlphaRossModel {
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
                     title: "Test assistant installed",
-                    detail: "A tiny test-only assistant file was installed for automated tests. Device setup uses private assistant files.",
+                    detail: "A tiny test-only assistant setup was installed for automated tests. Device setup uses private assistant setup files.",
                     purpose: .model_verification,
                     payloadClass: .no_case_data,
                     endpointLabel: "device://private-assistant-test",

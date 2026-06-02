@@ -1444,7 +1444,7 @@ enum AlphaAssistantDownloadError: LocalizedError {
         case .httpStatus(let status):
             return "The assistant download service returned status \(status). Try again on Wi-Fi."
         case .preflightMissingSize:
-            return "Ross could not confirm the private assistant file size before downloading."
+            return "Ross could not confirm the assistant setup size before downloading."
         case .preflightSizeMismatch(let expected, let reported):
             let expectedLabel = ByteCountFormatter.string(fromByteCount: expected, countStyle: .file)
             let reportedLabel = ByteCountFormatter.string(fromByteCount: reported, countStyle: .file)

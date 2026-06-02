@@ -1703,7 +1703,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertFalse(snapshot.modelJobs.contains { $0.tier == .quickStart })
             XCTAssertNil(snapshot.settings.activeTier)
             XCTAssertEqual(snapshot.modelUpdateCandidates ?? [], [])
-            XCTAssertEqual(snapshot.ledgerEntries.first?.title, "Assistant files removed")
+            XCTAssertEqual(snapshot.ledgerEntries.first?.title, "Assistant setup removed")
+            XCTAssertFalse(snapshot.ledgerEntries.first?.detail.localizedCaseInsensitiveContains("downloaded private assistant files") == true)
 
             try await eventually(timeoutNanoseconds: 2_000_000_000) {
                 let resumeData = try? await store.loadModelResumeData(relativePath: resumePath)
@@ -1892,6 +1893,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 model.assistantDownloadFailureMessage(NSError(domain: NSURLErrorDomain, code: NSURLErrorNetworkConnectionLost)),
                 model.assistantDownloadFailureMessage(NSError(domain: NSURLErrorDomain, code: -123_456)),
                 model.assistantDownloadFailureMessage(NSError(domain: "RossAlphaPack", code: 99)),
+                model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.preflightMissingSize),
                 model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.preflightSizeMismatch(expected: 3_020_052_224, reported: 3_021_000_000)),
                 model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.preflightNotResumable),
                 model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.preflightChecksumMismatch(catalog: "abc", provider: "def")),
@@ -1919,6 +1921,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertFalse(message.localizedCaseInsensitiveContains("Content-Range"), message)
             XCTAssertFalse(message.localizedCaseInsensitiveContains("Error 99"), message)
             XCTAssertFalse(message.localizedCaseInsensitiveContains("downloaded assistant file"), message)
+            XCTAssertFalse(message.localizedCaseInsensitiveContains("private assistant file"), message)
         }
     }
 

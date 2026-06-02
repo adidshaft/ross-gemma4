@@ -342,7 +342,7 @@ actor AlphaRossStore {
                 domain: "RossAlphaPack",
                 code: 3,
                 userInfo: [
-                    NSLocalizedDescriptionKey: "The private assistant file did not finish downloading. Expected \(ByteCountFormatter.string(fromByteCount: expectedBytes, countStyle: .file)), got \(ByteCountFormatter.string(fromByteCount: verified.bytes, countStyle: .file))."
+                    NSLocalizedDescriptionKey: "Assistant setup did not finish downloading. Expected \(ByteCountFormatter.string(fromByteCount: expectedBytes, countStyle: .file)), got \(ByteCountFormatter.string(fromByteCount: verified.bytes, countStyle: .file))."
                 ]
             )
         }
