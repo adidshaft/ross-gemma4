@@ -544,6 +544,11 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(alphaAssistantSetupPhaseAccessibilityLabel(for: .pausedNoStorage).contains("storage"))
         XCTAssertTrue(alphaAssistantSetupPhaseAccessibilityLabel(for: .failed).contains("retry"))
         XCTAssertTrue(alphaAssistantSetupPhaseAccessibilityLabel(for: .installed).contains("complete"))
+
+        XCTAssertTrue(alphaAssistantSetupRecoveryHint(for: .failed)?.contains("Retry keeps your matters and files") == true)
+        XCTAssertTrue(alphaAssistantSetupRecoveryHint(for: .pausedNoStorage)?.contains("Free storage") == true)
+        XCTAssertTrue(alphaAssistantSetupRecoveryHint(for: .pausedWaitingForWifi)?.contains("Wi-Fi") == true)
+        XCTAssertNil(alphaAssistantSetupRecoveryHint(for: .installed))
     }
 
     @MainActor

@@ -616,12 +616,20 @@ struct AlphaPrivateAIOfferCard: View {
                     .foregroundStyle(.orange)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
+
+                if let recoveryHint = alphaAssistantSetupRecoveryHint(for: latestJob.state) {
+                    AlphaPrivateAIRecoveryHintRow(text: recoveryHint)
+                }
             } else if activeButRuntimeUnavailable, let runtimeStatus = model.activeRuntimeHealth?.userFacingStatus {
                 Text(runtimeStatus)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.orange)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
+
+                AlphaPrivateAIRecoveryHintRow(
+                    text: "Repair setup removes the broken assistant file and starts a fresh local check."
+                )
             }
 
             Button(actionTitle) {
@@ -655,6 +663,35 @@ struct AlphaPrivateAIOfferCard: View {
             shadowY: isActive ? 4 : 3,
             fillOpacity: 0.82,
             strokeOpacity: isActive ? 0.58 : 0.42
+        )
+    }
+}
+
+struct AlphaPrivateAIRecoveryHintRow: View {
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "arrow.triangle.2.circlepath")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(Color.rossAccent)
+                .padding(.top, 1)
+
+            Text(text)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(Color.rossInk.opacity(0.66))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .rossGlassSurface(
+            tint: Color.rossAccent.opacity(0.10),
+            cornerRadius: 14,
+            shadowOpacity: 0.04,
+            shadowRadius: 4,
+            shadowY: 1,
+            fillOpacity: 0.74,
+            strokeOpacity: 0.44
         )
     }
 }
@@ -738,6 +775,10 @@ struct AlphaPrivateAIJobCard: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.orange)
                     .fixedSize(horizontal: false, vertical: true)
+
+                if let recoveryHint = alphaAssistantSetupRecoveryHint(for: job.state) {
+                    AlphaPrivateAIRecoveryHintRow(text: recoveryHint)
+                }
             }
 
             // Progress
@@ -964,6 +1005,21 @@ func alphaAssistantSetupPhaseAccessibilityLabel(for state: AlphaDownloadState) -
         return "Assistant setup complete. Ready."
     default:
         return "Assistant setup step \(phase) of \(alphaAssistantSetupPhases.joined(separator: ", "))."
+    }
+}
+
+func alphaAssistantSetupRecoveryHint(for state: AlphaDownloadState) -> String? {
+    switch state {
+    case .failed, .pausedError:
+        return "Retry keeps your matters and files, then starts assistant setup again."
+    case .pausedNoStorage:
+        return "Free storage on this iPhone, then resume setup from here."
+    case .pausedUser:
+        return "Resume setup when you are ready; your existing progress stays on this iPhone."
+    case .pausedWaitingForWifi:
+        return "Reconnect to Wi-Fi, then resume setup from here."
+    case .queued, .downloading, .verifying, .installed, .notStarted, .cancelled:
+        return nil
     }
 }
 
