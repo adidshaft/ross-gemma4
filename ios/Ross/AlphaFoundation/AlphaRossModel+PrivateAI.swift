@@ -377,7 +377,7 @@ extension AlphaRossModel {
 
             updateJob(jobID) {
                 $0.state = .failed
-                $0.failureReason = "The on-device private assistant is not available on this iPhone yet. A real local model is required for legal answers."
+                $0.failureReason = "The on-device private assistant is not available on this iPhone yet."
                 $0.updatedAt = .now
             }
             persisted.ledgerEntries.insert(
@@ -877,8 +877,8 @@ extension AlphaRossModel {
                 }
                 persisted.ledgerEntries.insert(
                         AlphaPrivacyLedgerEntry(
-                            title: "Assistant model verification failed",
-                            detail: "Ross found the downloaded assistant file, but the local runtime could not open it. Ross removed the bad file so Retry can download a fresh copy.",
+                            title: "Assistant file verification failed",
+                            detail: "Ross found the downloaded assistant file, but could not open it. Ross removed the bad file so Retry can download a fresh copy.",
                             purpose: .model_verification,
                             payloadClass: .no_case_data,
                             endpointLabel: "device://model-verify",

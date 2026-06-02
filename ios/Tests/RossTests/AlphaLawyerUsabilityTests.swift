@@ -475,8 +475,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 )
             )
 
-            XCTAssertEqual("Private assistant hit a runtime error", presentation?.title)
-            XCTAssertEqual("Private assistant runtime error", presentation?.statusNote)
+            XCTAssertEqual("Private assistant needs repair", presentation?.title)
+            XCTAssertEqual("Private assistant needs repair", presentation?.statusNote)
             XCTAssertTrue(presentation?.sections.joined(separator: " ").contains("Repair setup") == true)
             XCTAssertTrue(presentation?.needsReviewWarning?.contains("needs repair") == true)
         }
@@ -895,7 +895,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertEqual("Private assistant not ready", answerTitle)
             XCTAssertEqual([
                 "Choose and download a private assistant before asking legal questions.",
-                "Ross did not generate a legal answer because a real local model is required."
+                "Ross did not generate a legal answer because the private assistant is not ready."
             ], answerSections)
         }
     }

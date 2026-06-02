@@ -190,7 +190,7 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
         case .flash:
             "Ultra-fast short document Q&A."
         case .quickStart:
-            "Fast intake, smaller devices, and short document Q&A after the model is installed."
+            "Fast intake, smaller devices, and short document Q&A after the assistant is installed."
         case .caseAssociate:
             "Most advocates who need document review, next dates, chronologies, notes, and answers from your files on-device."
         case .seniorDraftingSupport:

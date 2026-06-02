@@ -417,13 +417,13 @@ extension AlphaRossModel {
         let statusDetail: String
         switch decision.installState {
         case .installed:
-            statusDetail = "Ross found assistant setup state, but the real local runtime is not available yet. Reopen assistant setup to repair it."
+            statusDetail = "Ross found assistant setup state, but the private assistant is not available yet. Reopen assistant setup to repair it."
         case .downloading:
-            statusDetail = "Assistant setup is still downloading or verifying. Ross will answer after the model is ready."
+            statusDetail = "Assistant setup is still downloading or verifying. Ross will answer after the private assistant is ready."
         case .queued:
             statusDetail = "Assistant setup is queued. Keep Ross open on Wi-Fi or resume setup from My assistant."
         case .failed:
-            statusDetail = "Assistant setup failed. Open My assistant to retry the model download."
+            statusDetail = "Assistant setup failed. Open My assistant to retry the assistant download."
         case .notStarted:
             statusDetail = "Choose and download a private assistant before asking legal questions."
         }
@@ -439,13 +439,13 @@ extension AlphaRossModel {
             answerTitle: "Private assistant not ready",
             answerSections: [
                 statusDetail,
-                "Ross did not generate a legal answer because a real local model is required."
+                "Ross did not generate a legal answer because the private assistant is not ready."
             ],
             caseFileSources: [],
             publicLawPreview: nil,
             publicLawResults: [],
             statusNote: "Private assistant setup required",
-            needsReviewWarning: "Real local model required."
+            needsReviewWarning: "Private assistant setup required."
         )
     }
 
@@ -1281,19 +1281,19 @@ extension AlphaRossModel {
                     ) { turn in
                         turn.answerTitle = "Private assistant could not answer"
                         turn.answerSections = [
-                            "The local model ran, but did not return a usable response for this question.",
-                            "Ross did not generate a substitute answer because a real local model result is required."
+                            "The private assistant ran, but did not return a usable response for this question.",
+                            "Ross did not generate a substitute answer because a private assistant result is required."
                         ]
-                        turn.statusNote = "Private assistant output invalid"
+                        turn.statusNote = "Private assistant answer unavailable"
                         turn.modelInvocation = completedInvocation
                     }
                     if var latest = self.latestAskResult, latest.chatTurnID == chatTurnID {
                         latest.answerTitle = "Private assistant could not answer"
                         latest.answerSections = [
-                            "The local model ran, but did not return a usable response for this question.",
-                            "Ross did not generate a substitute answer because a real local model result is required."
+                            "The private assistant ran, but did not return a usable response for this question.",
+                            "Ross did not generate a substitute answer because a private assistant result is required."
                         ]
-                        latest.statusNote = "Private assistant output invalid"
+                        latest.statusNote = "Private assistant answer unavailable"
                         self.latestAskResult = latest
                     }
                     return
@@ -1335,14 +1335,14 @@ extension AlphaRossModel {
         let warning = output.warnings.first?.trimmingCharacters(in: .whitespacesAndNewlines)
         let detail = warning?.isEmpty == false
             ? warning!
-            : "The local model runtime reported \(errorCategory.replacingOccurrences(of: "_", with: " "))."
+            : "The private assistant reported \(errorCategory.replacingOccurrences(of: "_", with: " "))."
         return (
-            title: "Private assistant hit a runtime error",
+            title: "Private assistant needs repair",
             sections: [
                 detail,
                 "Open Private AI setup and use Repair setup. Ross did not generate a substitute answer from case memory."
             ],
-            statusNote: "Private assistant runtime error",
+            statusNote: "Private assistant needs repair",
             needsReviewWarning: "Private assistant needs repair before it can answer from files."
         )
     }

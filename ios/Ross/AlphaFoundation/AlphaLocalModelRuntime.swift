@@ -355,7 +355,7 @@ struct AlphaUnavailableRealLocalModelProvider: AlphaRealLocalModelProvider {
             schemaValid: false,
             warnings: [
                 statusMessage,
-                "No legal answer was generated because a real local runtime is required.",
+                "No legal answer was generated because the private assistant is not ready.",
                 pack.truncated ? "The prompt pack was truncated before the runtime failed." : "The prompt pack stayed local and was not sent to a cloud model."
             ],
             sourceRefs: pack.includedSourceRefs.isEmpty ? taskInput.sourcePack.map(\.sourceRef) : pack.includedSourceRefs,
@@ -630,7 +630,7 @@ enum AlphaLocalModelRuntime {
             runtimeMode: runtimeMode,
             modelPathLabel: modelPathLabel,
             checksumVerified: checksumVerified,
-            statusMessage: "Private assistant support is not ready on this build. A real local runtime is required for legal answers.",
+            statusMessage: "Private assistant support is not ready on this build.",
             plannedTasks: plannedTasks,
             errorCategory: "unsupported_runtime",
             explicitOptInEnabled: explicitOptInEnabled
@@ -676,7 +676,7 @@ enum AlphaLocalModelRuntime {
                     runtimeMode: .mediapipeLlm,
                     modelPathLabel: modelPathLabel,
                     checksumVerified: checksumVerified,
-                statusMessage: "Private assistant support is not available on this iOS build. A real local runtime is required for legal answers.",
+                statusMessage: "Private assistant support is not available on this iOS build.",
                 plannedTasks: [.documentClassification, .legalFieldExtraction, .legalFieldVerification, .caseMemorySynthesis, .chronologyGeneration, .orderSummary],
                 errorCategory: "unsupported_runtime",
                 explicitOptInEnabled: debug.enableRealInference
