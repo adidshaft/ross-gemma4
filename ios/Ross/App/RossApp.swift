@@ -1253,6 +1253,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Private assistant setup செய்யப்பட்டது",
             "te": "Private assistant setup చేయబడింది"
         ],
+        "privacy_ledger_private_assistant_download_queued_title": [
+            "en": "Private assistant setup queued",
+            "hi": "Private assistant setup queue हुआ",
+            "bn": "Private assistant setup queue হয়েছে",
+            "ta": "Private assistant setup queue செய்யப்பட்டது",
+            "te": "Private assistant setup queue చేయబడింది"
+        ],
+        "privacy_ledger_private_assistant_unavailable_title": [
+            "en": "Private assistant unavailable",
+            "hi": "Private assistant available नहीं",
+            "bn": "Private assistant available নয়",
+            "ta": "Private assistant available இல்லை",
+            "te": "Private assistant available లేదు"
+        ],
         "privacy_ledger_local_case_review_title": [
             "en": "Reviewed case locally",
             "hi": "Case locally review किया",
@@ -1329,6 +1343,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "bn": "Ross newer private assistant setup listing পেয়েছে। কোনো case file পড়া বা পাঠানো হয়নি.",
             "ta": "Ross newer private assistant setup listing கண்டது. Case file எதையும் படிக்கவோ அனுப்பவோ இல்லை.",
             "te": "Ross newer private assistant setup listing కనుగొంది. Case file ఏదీ చదవలేదు లేదా పంపలేదు."
+        ],
+        "privacy_ledger_private_assistant_download_queued_detail": [
+            "en": "Ross will prepare a private assistant on this device. No case files were read or sent.",
+            "hi": "Ross इस device पर private assistant prepare करेगा। कोई case file पढ़ी या भेजी नहीं गई.",
+            "bn": "Ross এই device-এ private assistant prepare করবে। কোনো case file পড়া বা পাঠানো হয়নি.",
+            "ta": "Ross இந்த device-இல் private assistant prepare செய்யும். Case file எதையும் படிக்கவோ அனுப்பவோ இல்லை.",
+            "te": "Ross ఈ device లో private assistant prepare చేస్తుంది. Case file ఏదీ చదవలేదు లేదా పంపలేదు."
+        ],
+        "privacy_ledger_private_assistant_unavailable_detail": [
+            "en": "Ross checked this iPhone's private assistant. No case files were read or sent.",
+            "hi": "Ross ने इस iPhone का private assistant check किया। कोई case file पढ़ी या भेजी नहीं गई.",
+            "bn": "Ross এই iPhone-এর private assistant check করেছে। কোনো case file পড়া বা পাঠানো হয়নি.",
+            "ta": "Ross இந்த iPhone-இன் private assistant check செய்தது. Case file எதையும் படிக்கவோ அனுப்பவோ இல்லை.",
+            "te": "Ross ఈ iPhone private assistant check చేసింది. Case file ఏదీ చదవలేదు లేదా పంపలేదు."
         ],
         "privacy_ledger_private_assistant_prepared_detail": [
             "en": "Private assistant was prepared on this device.",

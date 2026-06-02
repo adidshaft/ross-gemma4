@@ -2816,6 +2816,10 @@ extension AlphaPrivacyLedgerEntry {
             rossLocalized("privacy_ledger_assistant_catalog_checked_title")
         case "Assistant update available":
             rossLocalized("privacy_ledger_assistant_update_available_title")
+        case "Private assistant download queued":
+            rossLocalized("privacy_ledger_private_assistant_download_queued_title")
+        case "Private assistant setup unavailable":
+            rossLocalized("privacy_ledger_private_assistant_unavailable_title")
         case "Private AI Pack queued", "Private AI Pack verified":
             rossLocalized("privacy_ledger_private_assistant_setup_title")
         case "Assistant download verified", "Assistant verified", "Assistant download failed", "Assistant restored":
@@ -2849,6 +2853,10 @@ extension AlphaPrivacyLedgerEntry {
             rossLocalized("privacy_ledger_assistant_catalog_checked_detail")
         case "Assistant update available":
             rossLocalized("privacy_ledger_assistant_update_available_detail")
+        case "Private assistant download queued":
+            rossLocalized("privacy_ledger_private_assistant_download_queued_detail")
+        case "Private assistant setup unavailable":
+            rossLocalized("privacy_ledger_private_assistant_unavailable_detail")
         case "Public-law search reviewed by user", "Legal Search reviewed by user":
             rossLocalized("privacy_ledger_public_law_reviewed_detail")
         case "Public-law query sent":

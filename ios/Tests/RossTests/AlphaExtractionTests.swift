@@ -64,6 +64,22 @@ final class AlphaExtractionTests: XCTestCase {
                 success: true
             ),
             AlphaPrivacyLedgerEntry(
+                title: "Private assistant download queued",
+                detail: "The system assistant was unavailable, so Ross will prepare a private on-device assistant without reading case files.",
+                purpose: .model_catalog,
+                payloadClass: .no_case_data,
+                endpointLabel: "device://private-assistant",
+                success: true
+            ),
+            AlphaPrivacyLedgerEntry(
+                title: "Private assistant setup unavailable",
+                detail: "Ross checked this iPhone's on-device assistant and did not send case files.",
+                purpose: .model_verification,
+                payloadClass: .no_case_data,
+                endpointLabel: "device://private-assistant",
+                success: false
+            ),
+            AlphaPrivacyLedgerEntry(
                 title: "Assistant download verified",
                 detail: "Ross checked the assistant setup download before starting. Case files stayed on this device.",
                 purpose: .model_download,
@@ -101,6 +117,10 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(entries[1].lawyerTitle, "Private assistant update available है")
         XCTAssertTrue(entries[1].lawyerDetail.contains("newer private assistant setup listing मिली"), entries[1].lawyerDetail)
         XCTAssertTrue(entries[1].lawyerDetail.contains("कोई case file पढ़ी या भेजी नहीं गई"), entries[1].lawyerDetail)
+        XCTAssertEqual(entries[2].lawyerTitle, "Private assistant setup queue हुआ")
+        XCTAssertTrue(entries[2].lawyerDetail.contains("private assistant prepare करेगा"), entries[2].lawyerDetail)
+        XCTAssertEqual(entries[3].lawyerTitle, "Private assistant available नहीं")
+        XCTAssertTrue(entries[3].lawyerDetail.contains("इस iPhone का private assistant check किया"), entries[3].lawyerDetail)
         for entry in entries {
             XCTAssertFalse(entry.detail.localizedCaseInsensitiveContains("provider"), entry.detail)
             XCTAssertFalse(entry.detail.localizedCaseInsensitiveContains("byte-range"), entry.detail)
@@ -115,10 +135,10 @@ final class AlphaExtractionTests: XCTestCase {
             XCTAssertFalse(entry.lawyerDetail.localizedCaseInsensitiveContains("downloaded assistant"), entry.lawyerDetail)
         }
 
-        XCTAssertTrue(entries[2].lawyerDetail.contains("assistant download शुरू करने से पहले check किया"), entries[2].lawyerDetail)
-        XCTAssertTrue(entries[3].lawyerDetail.contains("Private assistant check हो चुका है"), entries[3].lawyerDetail)
-        XCTAssertTrue(entries[4].lawyerDetail.contains("assistant setup finish नहीं कर पाया"), entries[4].lawyerDetail)
-        XCTAssertTrue(entries[4].lawyerDetail.contains("Case files इसी device पर रहीं"), entries[4].lawyerDetail)
+        XCTAssertTrue(entries[4].lawyerDetail.contains("assistant download शुरू करने से पहले check किया"), entries[4].lawyerDetail)
+        XCTAssertTrue(entries[5].lawyerDetail.contains("Private assistant check हो चुका है"), entries[5].lawyerDetail)
+        XCTAssertTrue(entries[6].lawyerDetail.contains("assistant setup finish नहीं कर पाया"), entries[6].lawyerDetail)
+        XCTAssertTrue(entries[6].lawyerDetail.contains("Case files इसी device पर रहीं"), entries[6].lawyerDetail)
     }
 
     func testPrivacyLedgerPublicLawAndExportCopyFollowsSelectedLanguage() {
@@ -2613,6 +2633,11 @@ final class AlphaExtractionTests: XCTestCase {
             alphaRuntimeHealthStatus(.llamaMissingSetup, languageCode: "bn"),
             alphaRuntimeHealthStatus(.foundationUnavailable, languageCode: "ta")
         ]
+        XCTAssertTrue(
+            alphaRuntimeHealthStatus(.foundationUnavailable, languageCode: "hi")
+                .contains("available नहीं"),
+            alphaRuntimeHealthStatus(.foundationUnavailable, languageCode: "hi")
+        )
         XCTAssertFalse(statuses.isEmpty)
         for status in statuses + localizedStatuses {
             XCTAssertTrue(

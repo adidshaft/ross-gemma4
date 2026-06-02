@@ -419,7 +419,7 @@ extension AlphaRossModel {
 
             updateJob(jobID) {
                 $0.state = .failed
-                $0.failureReason = "The on-device private assistant is not available on this iPhone yet."
+                $0.failureReason = rossLocalized("runtime_health_foundation_unavailable")
                 $0.updatedAt = .now
             }
             persisted.ledgerEntries.insert(
