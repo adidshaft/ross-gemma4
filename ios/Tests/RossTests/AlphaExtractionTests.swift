@@ -718,6 +718,14 @@ final class AlphaExtractionTests: XCTestCase {
             "सुझाया गया"
         )
         XCTAssertEqual(
+            rossLocalized("download_size", languageCode: "ta"),
+            "பதிவிறக்க அளவு"
+        )
+        XCTAssertTrue(
+            rossLocalized("wifi_setup_advisory", languageCode: "te-IN")
+                .contains("డౌన్‌లోడ్")
+        )
+        XCTAssertEqual(
             rossLocalized("ask_sheet_placeholder", languageCode: "bn"),
             "এই মামলা, ট্যাগ করা ফাইল, বা আপনার পরবর্তী খসড়া ধাপ সম্পর্কে Ross-কে জিজ্ঞাসা করুন।"
         )

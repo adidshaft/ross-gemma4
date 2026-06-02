@@ -470,7 +470,7 @@ struct AlphaOnboardingDownloadCard: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.72)
 
-                    Text("Recommended for your device")
+                    Text(rossLocalized("recommended_for_device"))
                         .font(compact ? .caption2 : .caption)
                         .foregroundStyle(Color.rossAccent.opacity(0.80))
                         .lineLimit(1)
@@ -478,7 +478,7 @@ struct AlphaOnboardingDownloadCard: View {
 
                 Spacer(minLength: 0)
 
-                Text("Recommended")
+                Text(rossLocalized("recommended"))
                     .font(.system(size: compact ? 10 : 11, weight: .bold))
                     .foregroundStyle(Color.rossAccent)
                     .padding(.horizontal, compact ? 7 : 8)
@@ -495,9 +495,9 @@ struct AlphaOnboardingDownloadCard: View {
                 .opacity(0.45)
 
             HStack(spacing: 0) {
-                AlphaOnboardingStatCell(label: "Download size", value: tier.downloadSizeLabel, icon: "arrow.down.circle.fill", compact: compact)
+                AlphaOnboardingStatCell(label: rossLocalized("download_size"), value: tier.downloadSizeLabel, icon: "arrow.down.circle.fill", compact: compact)
                 Divider().frame(height: compact ? 28 : 36).opacity(0.38)
-                AlphaOnboardingStatCell(label: "On fast Wi-Fi", value: etaLabel, icon: "wifi", compact: compact)
+                AlphaOnboardingStatCell(label: rossLocalized("on_fast_wifi"), value: etaLabel, icon: "wifi", compact: compact)
             }
 
             // Assistant option description
@@ -515,7 +515,7 @@ struct AlphaOnboardingDownloadCard: View {
                     .font(.system(size: compact ? 10 : 11, weight: .semibold))
                     .foregroundStyle(Color.rossInk.opacity(0.44))
 
-                Text("Connect to Wi-Fi for the fastest setup. The download resumes automatically if interrupted.")
+                Text(rossLocalized("wifi_setup_advisory"))
                     .font(.system(size: compact ? 10 : 11, weight: .medium))
                     .foregroundStyle(Color.rossInk.opacity(0.50))
                     .lineLimit(compact ? 2 : 3)

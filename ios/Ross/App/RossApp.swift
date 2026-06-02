@@ -210,6 +210,34 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "பரிந்துரைக்கப்பட்டது",
             "te": "సిఫార్సు"
         ],
+        "recommended_for_device": [
+            "en": "Recommended for your device",
+            "hi": "आपके डिवाइस के लिए सुझाया गया",
+            "bn": "আপনার ডিভাইসের জন্য প্রস্তাবিত",
+            "ta": "உங்கள் சாதனத்துக்கு பரிந்துரைக்கப்பட்டது",
+            "te": "మీ పరికరానికి సిఫార్సు"
+        ],
+        "download_size": [
+            "en": "Download size",
+            "hi": "डाउनलोड आकार",
+            "bn": "ডাউনলোড আকার",
+            "ta": "பதிவிறக்க அளவு",
+            "te": "డౌన్‌లోడ్ పరిమాణం"
+        ],
+        "on_fast_wifi": [
+            "en": "On fast Wi-Fi",
+            "hi": "तेज Wi-Fi पर",
+            "bn": "দ্রুত Wi-Fi-এ",
+            "ta": "வேகமான Wi-Fi-இல்",
+            "te": "వేగమైన Wi-Fi పై"
+        ],
+        "wifi_setup_advisory": [
+            "en": "Connect to Wi-Fi for the fastest setup. The download resumes automatically if interrupted.",
+            "hi": "सबसे तेज़ सेटअप के लिए Wi-Fi से जुड़ें। बीच में रुकने पर डाउनलोड अपने-आप फिर शुरू होगा।",
+            "bn": "সবচেয়ে দ্রুত সেটআপের জন্য Wi-Fi-এ যুক্ত থাকুন। বাধা পড়লে ডাউনলোড নিজে থেকেই আবার শুরু হবে।",
+            "ta": "வேகமான அமைப்புக்கு Wi-Fi-இல் இணையுங்கள். இடைநிறுத்தப்பட்டால் பதிவிறக்கம் தானாகத் தொடரும்.",
+            "te": "వేగమైన సెటప్ కోసం Wi-Fi కు కనెక్ట్ అవ్వండి. మధ్యలో ఆగితే డౌన్‌లోడ్ స్వయంగా కొనసాగుతుంది."
+        ],
         "assistant": [
             "en": "Assistant",
             "hi": "सहायक",
