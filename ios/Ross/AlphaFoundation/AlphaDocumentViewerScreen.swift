@@ -182,7 +182,8 @@ struct AlphaDocumentListScreen: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: alphaSectionSpacing) {
+            RossGlassGroup(spacing: alphaSectionSpacing) {
+                VStack(alignment: .leading, spacing: alphaSectionSpacing) {
                 AlphaInlineHeader(
                     eyebrow: caseMatter?.forum ?? "Documents",
                     title: caseMatter?.title ?? "Documents",
@@ -234,6 +235,7 @@ struct AlphaDocumentListScreen: View {
                             model.openDocumentInChat(caseId: caseId, documentId: documentId, startNewThread: true)
                         }
                     )
+                }
                 }
             }
             .padding(alphaScreenPadding)
@@ -437,7 +439,8 @@ struct AlphaDocumentViewerScreen: View {
     var body: some View {
         ScrollView {
             if let document {
-                VStack(alignment: .leading, spacing: 16) {
+                RossGlassGroup(spacing: 16) {
+                    VStack(alignment: .leading, spacing: 16) {
                     AlphaInlineHeader(
                         eyebrow: document.kind.title,
                         title: document.title,
@@ -695,9 +698,10 @@ struct AlphaDocumentViewerScreen: View {
                             Task { await model.rerunReview(caseId: caseId, documentId: documentId) }
                         }
                     )
+                    }
+                    .padding(.horizontal, alphaDocumentScreenHorizontalPadding)
+                    .padding(.vertical, alphaScreenPadding)
                 }
-                .padding(.horizontal, alphaDocumentScreenHorizontalPadding)
-                .padding(.vertical, alphaScreenPadding)
             }
         }
         .onAppear {

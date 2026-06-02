@@ -734,21 +734,23 @@ struct AlphaThreadSidebarSheet: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 16) {
-                    ForEach(scopedCases, id: \.title) { group in
-                        if !group.sessions.isEmpty || group.caseId == activeScopeCaseID {
-                            AlphaThreadGroupCard(
-                                title: group.title,
-                                caseId: group.caseId,
-                                sessions: group.sessions,
-                                activeScopeCaseID: activeScopeCaseID,
-                                model: model,
-                                onSelectThread: onSelectThread
-                            )
+                RossGlassGroup(spacing: 16) {
+                    LazyVStack(alignment: .leading, spacing: 16) {
+                        ForEach(scopedCases, id: \.title) { group in
+                            if !group.sessions.isEmpty || group.caseId == activeScopeCaseID {
+                                AlphaThreadGroupCard(
+                                    title: group.title,
+                                    caseId: group.caseId,
+                                    sessions: group.sessions,
+                                    activeScopeCaseID: activeScopeCaseID,
+                                    model: model,
+                                    onSelectThread: onSelectThread
+                                )
+                            }
                         }
                     }
+                    .padding(18)
                 }
-                .padding(18)
             }
             .background(Color.rossGroupedBackground.ignoresSafeArea())
             .navigationTitle("Threads")
