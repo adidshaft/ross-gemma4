@@ -1236,14 +1236,14 @@ struct AlphaDocumentAdvocateNoteCard: View {
     @FocusState private var noteFocused: Bool
 
     var body: some View {
-        RossSectionCard(title: "Advocate note") {
+        RossSectionCard(title: rossLocalized("advocate_note")) {
             VStack(alignment: .leading, spacing: 12) {
                 ZStack(alignment: .topLeading) {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .fill(Color.clear)
 
                     if note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Text("Write your manual note for this document.")
+                        Text(rossLocalized("advocate_note_placeholder"))
                             .font(.footnote)
                             .foregroundStyle(Color.rossInk.opacity(0.42))
                             .padding(.horizontal, 14)
@@ -1263,7 +1263,7 @@ struct AlphaDocumentAdvocateNoteCard: View {
 
                 RossGlassGroup(spacing: 8) {
                     HStack(spacing: 8) {
-                        Button("Save note") {
+                        Button(rossLocalized("save_note")) {
                             noteFocused = false
                             onSave()
                         }
@@ -1273,18 +1273,18 @@ struct AlphaDocumentAdvocateNoteCard: View {
                             noteFocused = false
                             onAskRoss()
                         } label: {
-                            Label("Ask", systemImage: "bubble.left.and.text.bubble.right")
+                            Label(rossLocalized("ask"), systemImage: "bubble.left.and.text.bubble.right")
                         }
                         .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
 
                         Button {
                             onReviewAgain()
                         } label: {
-                            Label("Review", systemImage: "arrow.clockwise")
+                            Label(rossLocalized("review"), systemImage: "arrow.clockwise")
                                 .font(.footnote.weight(.semibold))
                         }
                         .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
-                        .accessibilityLabel("Review document again")
+                        .accessibilityLabel(rossLocalized("review_document_again"))
                     }
                 }
             }
@@ -1301,12 +1301,12 @@ struct AlphaDocumentInspectCard: View {
     let onOpenSourceRef: (AlphaSourceRef) -> Void
 
     var body: some View {
-        RossSectionCard(title: "Check sources", subtitle: "Open the evidence Ross used, or inspect extracted text.") {
+        RossSectionCard(title: rossLocalized("check_sources"), subtitle: rossLocalized("check_sources_detail")) {
             VStack(alignment: .leading, spacing: 12) {
                 DisclosureGroup(isExpanded: $sourceDetailsExpanded) {
                     VStack(alignment: .leading, spacing: 10) {
                         if sourceRefs.isEmpty {
-                            Text("No source previews available for this page.")
+                            Text(rossLocalized("no_source_previews"))
                                 .font(.footnote)
                                 .foregroundStyle(Color.rossInk.opacity(0.65))
                         }
@@ -1335,10 +1335,10 @@ struct AlphaDocumentInspectCard: View {
                 } label: {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(sourceDetailsExpanded ? "Hide source links" : "Source links")
+                            Text(sourceDetailsExpanded ? rossLocalized("hide_source_links") : rossLocalized("source_links"))
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(Color.rossInk)
-                            Text("Jump to the page or snippet behind a detail")
+                            Text(rossLocalized("source_links_detail"))
                                 .font(.caption)
                                 .foregroundStyle(Color.rossInk.opacity(0.58))
                         }
@@ -1354,7 +1354,7 @@ struct AlphaDocumentInspectCard: View {
 
                 DisclosureGroup(isExpanded: $rawTextExpanded) {
                     ScrollView {
-                        Text(extractedText ?? "No extracted text is available for this page yet.")
+                        Text(extractedText ?? rossLocalized("no_extracted_text"))
                             .font(.footnote)
                             .foregroundStyle(Color.rossInk.opacity(0.76))
                             .fixedSize(horizontal: false, vertical: true)
@@ -1367,10 +1367,10 @@ struct AlphaDocumentInspectCard: View {
                 } label: {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(rawTextExpanded ? "Hide extracted text" : "Extracted text")
+                            Text(rawTextExpanded ? rossLocalized("hide_extracted_text") : rossLocalized("extracted_text"))
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(Color.rossInk)
-                            Text("Use this when scan text needs manual checking")
+                            Text(rossLocalized("extracted_text_detail"))
                                 .font(.caption)
                                 .foregroundStyle(Color.rossInk.opacity(0.58))
                         }
@@ -2059,7 +2059,7 @@ struct AlphaSourceRefChips: View {
                     Image(systemName: "doc.text")
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(Color.rossInk.opacity(0.42))
-                    Text("No linked source yet")
+                    Text(rossLocalized("no_linked_source_yet"))
                         .font(.caption.weight(.medium))
                         .foregroundStyle(Color.rossInk.opacity(0.65))
                 }
@@ -2109,19 +2109,19 @@ func alphaSourceRefDisplayLabel(_ sourceRef: AlphaSourceRef, contextDocumentTitl
 
     if sourceRef.effectiveSourceCategory == .documentSource {
         if sourceRef.documentTitle.trimmingCharacters(in: .whitespacesAndNewlines) == context {
-            return "This file"
+            return rossLocalized("this_file")
         }
         return label
     }
 
     if label == context {
-        return "This file"
+        return rossLocalized("this_file")
     }
 
     for prefix in ["\(context) ", "\(context): ", "\(context) · "] {
         if label.hasPrefix(prefix) {
             let shortened = String(label.dropFirst(prefix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
-            return shortened.isEmpty ? "This file" : shortened
+            return shortened.isEmpty ? rossLocalized("this_file") : shortened
         }
     }
 
@@ -2130,19 +2130,19 @@ func alphaSourceRefDisplayLabel(_ sourceRef: AlphaSourceRef, contextDocumentTitl
 
 func alphaSourceRefDetailLabel(_ sourceRef: AlphaSourceRef) -> String? {
     if sourceRef.documentTitle.localizedCaseInsensitiveContains("Matter memory") {
-        return "Matter details"
+        return rossLocalized("matter_details")
     }
 
     switch sourceRef.effectiveSourceCategory {
     case .documentSource:
-        return sourceRef.pageNumber > 0 ? "Page \(sourceRef.pageNumber)" : "No linked page"
+        return sourceRef.pageNumber > 0 ? alphaPageLabel(sourceRef.pageNumber) : rossLocalized("no_linked_page")
     case .matterDetail:
         let field = sourceRef.paragraphRange?.trimmingCharacters(in: .whitespacesAndNewlines)
-        return field?.isEmpty == false ? field : "Matter details"
+        return field?.isEmpty == false ? field : rossLocalized("matter_details")
     case .rossSuggestion:
-        return "Suggestion"
+        return rossLocalized("suggestion")
     case .userConfirmedFact:
-        return "Confirmed"
+        return rossLocalized("confirmed")
     case .publicLawSource:
         return "Legal Search"
     }

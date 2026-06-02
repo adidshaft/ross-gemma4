@@ -825,6 +825,27 @@ final class AlphaExtractionTests: XCTestCase {
             "গুরুত্বপূর্ণ"
         )
         XCTAssertEqual(
+            rossLocalized("check_sources", languageCode: "ta"),
+            "மூலங்களைச் சரிபார்க்கவும்"
+        )
+        XCTAssertEqual(
+            rossLocalized("advocate_note_placeholder", languageCode: "te-IN"),
+            "ఈ పత్రం కోసం మీ manual note రాయండి."
+        )
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "Order",
+            pageNumber: 3
+        )
+        XCTAssertEqual(alphaSourceRefDisplayLabel(sourceRef, contextDocumentTitle: "Order"), "ఈ ఫైల్")
+        XCTAssertEqual(alphaSourceRefDetailLabel(sourceRef), "Page 3")
+        XCTAssertEqual(alphaPageLabel(4, languageCode: "bn"), "Page 4")
+        XCTAssertEqual(
+            rossLocalized("image_preview_unavailable", languageCode: "hi"),
+            "Image preview उपलब्ध नहीं है।"
+        )
+        XCTAssertEqual(
             rossLocalized("download_size", languageCode: "ta"),
             "பதிவிறக்க அளவு"
         )

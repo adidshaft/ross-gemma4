@@ -1309,6 +1309,181 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "readable text கிடைத்த பிறகு Ross மொழியை detect செய்யும்.",
             "te": "readable text అందుబాటులోకి వచ్చిన తర్వాత Ross భాషను detect చేస్తుంది."
         ],
+        "advocate_note": [
+            "en": "Advocate note",
+            "hi": "अधिवक्ता नोट",
+            "bn": "আইনজীবীর নোট",
+            "ta": "வழக்கறிஞர் குறிப்பு",
+            "te": "న్యాయవాది గమనిక"
+        ],
+        "advocate_note_placeholder": [
+            "en": "Write your manual note for this document.",
+            "hi": "इस दस्तावेज़ के लिए अपना manual note लिखें।",
+            "bn": "এই নথির জন্য আপনার manual note লিখুন।",
+            "ta": "இந்த ஆவணத்திற்கான உங்கள் manual note-ஐ எழுதுங்கள்.",
+            "te": "ఈ పత్రం కోసం మీ manual note రాయండి."
+        ],
+        "save_note": [
+            "en": "Save note",
+            "hi": "नोट save करें",
+            "bn": "নোট save করুন",
+            "ta": "குறிப்பை save செய்யவும்",
+            "te": "గమనికను save చేయండి"
+        ],
+        "ask": [
+            "en": "Ask",
+            "hi": "पूछें",
+            "bn": "জিজ্ঞাসা করুন",
+            "ta": "கேள்",
+            "te": "అడగండి"
+        ],
+        "review": [
+            "en": "Review",
+            "hi": "Review",
+            "bn": "Review",
+            "ta": "Review",
+            "te": "Review"
+        ],
+        "check_sources": [
+            "en": "Check sources",
+            "hi": "स्रोत जांचें",
+            "bn": "সোর্স দেখুন",
+            "ta": "மூலங்களைச் சரிபார்க்கவும்",
+            "te": "మూలాలను తనిఖీ చేయండి"
+        ],
+        "check_sources_detail": [
+            "en": "Open the evidence Ross used, or inspect extracted text.",
+            "hi": "Ross ने जो evidence उपयोग किया उसे खोलें, या extracted text जांचें।",
+            "bn": "Ross যে evidence ব্যবহার করেছে তা খুলুন, অথবা extracted text দেখুন।",
+            "ta": "Ross பயன்படுத்திய evidence-ஐ திறக்கவும், அல்லது extracted text-ஐ பரிசோதிக்கவும்.",
+            "te": "Ross ఉపయోగించిన evidence తెరవండి, లేదా extracted text పరిశీలించండి."
+        ],
+        "no_source_previews": [
+            "en": "No source previews available for this page.",
+            "hi": "इस page के लिए source previews उपलब्ध नहीं हैं।",
+            "bn": "এই page-এর জন্য source previews নেই।",
+            "ta": "இந்த page-க்கு source previews இல்லை.",
+            "te": "ఈ page కోసం source previews లేవు."
+        ],
+        "source_links": [
+            "en": "Source links",
+            "hi": "Source links",
+            "bn": "Source links",
+            "ta": "Source links",
+            "te": "Source links"
+        ],
+        "hide_source_links": [
+            "en": "Hide source links",
+            "hi": "source links छिपाएं",
+            "bn": "source links লুকান",
+            "ta": "source links மறைக்கவும்",
+            "te": "source links దాచండి"
+        ],
+        "source_links_detail": [
+            "en": "Jump to the page or snippet behind a detail",
+            "hi": "किसी detail के पीछे वाले page या snippet पर जाएं",
+            "bn": "কোনো detail-এর পেছনের page বা snippet-এ যান",
+            "ta": "ஒரு detail-க்கு பின்னுள்ள page அல்லது snippet-க்கு செல்லவும்",
+            "te": "ఒక detail వెనుక ఉన్న page లేదా snippet కు వెళ్లండి"
+        ],
+        "extracted_text": [
+            "en": "Extracted text",
+            "hi": "Extracted text",
+            "bn": "Extracted text",
+            "ta": "Extracted text",
+            "te": "Extracted text"
+        ],
+        "hide_extracted_text": [
+            "en": "Hide extracted text",
+            "hi": "extracted text छिपाएं",
+            "bn": "extracted text লুকান",
+            "ta": "extracted text மறைக்கவும்",
+            "te": "extracted text దాచండి"
+        ],
+        "extracted_text_detail": [
+            "en": "Use this when scan text needs manual checking",
+            "hi": "जब scan text को manual checking चाहिए, तब इसका उपयोग करें",
+            "bn": "scan text manual checking চাইলে এটি ব্যবহার করুন",
+            "ta": "scan text-க்கு manual checking தேவைப்படும் போது இதைப் பயன்படுத்தவும்",
+            "te": "scan text కు manual checking అవసరమైనప్పుడు దీన్ని ఉపయోగించండి"
+        ],
+        "no_extracted_text": [
+            "en": "No extracted text is available for this page yet.",
+            "hi": "इस page के लिए अभी extracted text उपलब्ध नहीं है।",
+            "bn": "এই page-এর জন্য এখনও extracted text নেই।",
+            "ta": "இந்த page-க்கு இன்னும் extracted text இல்லை.",
+            "te": "ఈ page కోసం ఇంకా extracted text అందుబాటులో లేదు."
+        ],
+        "no_linked_source_yet": [
+            "en": "No linked source yet",
+            "hi": "अभी linked source नहीं",
+            "bn": "এখনও linked source নেই",
+            "ta": "இன்னும் linked source இல்லை",
+            "te": "ఇంకా linked source లేదు"
+        ],
+        "this_file": [
+            "en": "This file",
+            "hi": "यह फ़ाइल",
+            "bn": "এই ফাইল",
+            "ta": "இந்த கோப்பு",
+            "te": "ఈ ఫైల్"
+        ],
+        "matter_details": [
+            "en": "Matter details",
+            "hi": "मामले की details",
+            "bn": "মামলার details",
+            "ta": "வழக்கின் details",
+            "te": "కేసు details"
+        ],
+        "no_linked_page": [
+            "en": "No linked page",
+            "hi": "linked page नहीं",
+            "bn": "linked page নেই",
+            "ta": "linked page இல்லை",
+            "te": "linked page లేదు"
+        ],
+        "suggestion": [
+            "en": "Suggestion",
+            "hi": "सुझाव",
+            "bn": "পরামর্শ",
+            "ta": "பரிந்துரை",
+            "te": "సూచన"
+        ],
+        "confirmed": [
+            "en": "Confirmed",
+            "hi": "पुष्टि हुई",
+            "bn": "নিশ্চিত",
+            "ta": "உறுதிப்படுத்தப்பட்டது",
+            "te": "నిర్ధారించబడింది"
+        ],
+        "preview": [
+            "en": "Preview",
+            "hi": "Preview",
+            "bn": "Preview",
+            "ta": "Preview",
+            "te": "Preview"
+        ],
+        "page_number": [
+            "en": "Page %d",
+            "hi": "Page %d",
+            "bn": "Page %d",
+            "ta": "Page %d",
+            "te": "Page %d"
+        ],
+        "no_readable_preview": [
+            "en": "No readable preview is available yet.",
+            "hi": "अभी readable preview उपलब्ध नहीं है।",
+            "bn": "এখনও readable preview নেই।",
+            "ta": "இன்னும் readable preview இல்லை.",
+            "te": "ఇంకా readable preview అందుబాటులో లేదు."
+        ],
+        "image_preview_unavailable": [
+            "en": "Image preview unavailable.",
+            "hi": "Image preview उपलब्ध नहीं है।",
+            "bn": "Image preview নেই।",
+            "ta": "Image preview இல்லை.",
+            "te": "Image preview అందుబాటులో లేదు."
+        ],
         "translate_to": [
             "en": "Translate to %@",
             "hi": "%@ में अनुवाद करें",

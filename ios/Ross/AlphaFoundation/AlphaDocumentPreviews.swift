@@ -28,7 +28,7 @@ struct AlphaPDFPreview: View {
     }
 
     var body: some View {
-        RossSectionCard(title: "Preview", subtitle: "Page \(max(initialPage, 1))") {
+        RossSectionCard(title: rossLocalized("preview"), subtitle: alphaPageLabel(max(initialPage, 1))) {
             if canUseNativePDF {
                 PDFRepresentedView(url: url, initialPage: initialPage)
                     .frame(minHeight: 360)
@@ -114,7 +114,7 @@ struct AlphaDocumentTextPreview: View {
     private var fallbackText: String {
         document.extractedText?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
             ?? document.dominantSourceSnippet?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
-            ?? "No readable preview is available yet."
+            ?? rossLocalized("no_readable_preview")
     }
 
     private func previewText(for page: AlphaDocumentPage) -> String {
@@ -158,7 +158,7 @@ struct AlphaDocumentPreviewPage: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Page \(pageNumber)")
+            Text(alphaPageLabel(pageNumber))
                 .font(.caption.weight(.bold))
                 .textCase(.uppercase)
                 .foregroundStyle(Color.rossInk.opacity(0.52))
@@ -179,7 +179,7 @@ struct AlphaImagePreview: View {
     let relativePath: String
 
     var body: some View {
-        RossSectionCard(title: "Preview") {
+        RossSectionCard(title: rossLocalized("preview")) {
             let url = alphaAbsoluteURL(for: relativePath)
             #if canImport(UIKit)
             if let image = UIImage(contentsOfFile: url.path()) {
@@ -188,7 +188,7 @@ struct AlphaImagePreview: View {
                     .scaledToFit()
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             } else {
-                Text("Image preview unavailable.")
+                Text(rossLocalized("image_preview_unavailable"))
             }
             #elseif canImport(AppKit)
             if let image = NSImage(contentsOf: url) {
@@ -197,10 +197,10 @@ struct AlphaImagePreview: View {
                     .scaledToFit()
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             } else {
-                Text("Image preview unavailable.")
+                Text(rossLocalized("image_preview_unavailable"))
             }
             #else
-            Text("Image preview unavailable.")
+            Text(rossLocalized("image_preview_unavailable"))
             #endif
         }
     }
