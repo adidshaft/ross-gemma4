@@ -861,6 +861,62 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Basic, Standard, அல்லது Advanced தேர்வுசெய்ய Settings, பிறகு My assistant திறக்கவும்.",
             "te": "Basic, Standard, లేదా Advanced ఎంచుకోవడానికి Settings, తర్వాత My assistant తెరవండి."
         ],
+        "ask_private_assistant_needs_repair": [
+            "en": "Private assistant needs repair",
+            "hi": "Private assistant repair चाहता है",
+            "bn": "Private assistant repair দরকার",
+            "ta": "Private assistant repair தேவை",
+            "te": "Private assistant repair అవసరం"
+        ],
+        "ask_private_assistant_repair_detail": [
+            "en": "Open My assistant and use Repair setup. Ross did not generate a substitute answer from case memory.",
+            "hi": "My assistant खोलकर Repair setup use करें। Ross ने case memory से substitute answer नहीं बनाया।",
+            "bn": "My assistant খুলে Repair setup ব্যবহার করুন। Ross case memory থেকে substitute answer তৈরি করেনি।",
+            "ta": "My assistant திறந்து Repair setup பயன்படுத்தவும். Ross case memory-யில் இருந்து substitute answer உருவாக்கவில்லை.",
+            "te": "My assistant తెరిచి Repair setup ఉపయోగించండి. Ross case memory నుండి substitute answer సృష్టించలేదు."
+        ],
+        "ask_private_assistant_repair_warning": [
+            "en": "Private assistant needs repair before it can answer from files.",
+            "hi": "files से answer देने से पहले Private assistant repair चाहता है।",
+            "bn": "files থেকে answer দেওয়ার আগে Private assistant repair দরকার।",
+            "ta": "files-இல் இருந்து answer செய்யும் முன் Private assistant repair தேவை.",
+            "te": "files నుండి answer ఇవ్వడానికి ముందు Private assistant repair అవసరం."
+        ],
+        "ask_private_assistant_could_not_answer": [
+            "en": "Private assistant could not answer",
+            "hi": "Private assistant answer नहीं दे सका",
+            "bn": "Private assistant answer দিতে পারেনি",
+            "ta": "Private assistant answer செய்ய முடியவில்லை",
+            "te": "Private assistant answer ఇవ్వలేకపోయింది"
+        ],
+        "ask_private_assistant_unusable_response_detail": [
+            "en": "The private assistant ran, but did not return a usable response for this question.",
+            "hi": "private assistant चला, लेकिन इस question के लिए usable response नहीं लौटा।",
+            "bn": "private assistant চলেছে, কিন্তু এই question-এর জন্য usable response ফেরায়নি।",
+            "ta": "private assistant இயங்கியது, ஆனால் இந்த question-க்கு usable response தரவில்லை.",
+            "te": "private assistant నడిచింది, కానీ ఈ question కోసం usable response ఇవ్వలేదు."
+        ],
+        "ask_private_assistant_no_substitute_detail": [
+            "en": "Ross did not generate a substitute answer because a private assistant result is required.",
+            "hi": "private assistant result ज़रूरी होने के कारण Ross ने substitute answer नहीं बनाया।",
+            "bn": "private assistant result দরকার হওয়ায় Ross substitute answer তৈরি করেনি।",
+            "ta": "private assistant result தேவை என்பதால் Ross substitute answer உருவாக்கவில்லை.",
+            "te": "private assistant result అవసరం కాబట్టి Ross substitute answer సృష్టించలేదు."
+        ],
+        "ask_private_assistant_answer_unavailable": [
+            "en": "Private assistant answer unavailable",
+            "hi": "Private assistant answer उपलब्ध नहीं",
+            "bn": "Private assistant answer পাওয়া যাচ্ছে না",
+            "ta": "Private assistant answer கிடைக்கவில்லை",
+            "te": "Private assistant answer అందుబాటులో లేదు"
+        ],
+        "ask_private_assistant_answer_unavailable_warning": [
+            "en": "Private assistant answer unavailable. Ross did not guess from case memory.",
+            "hi": "Private assistant answer उपलब्ध नहीं। Ross ने case memory से guess नहीं किया।",
+            "bn": "Private assistant answer পাওয়া যাচ্ছে না। Ross case memory থেকে guess করেনি।",
+            "ta": "Private assistant answer கிடைக்கவில்லை. Ross case memory-யிலிருந்து guess செய்யவில்லை.",
+            "te": "Private assistant answer అందుబాటులో లేదు. Ross case memory నుండి guess చేయలేదు."
+        ],
         "assistant_local_answers_need_setup": [
             "en": "Local answers need setup on this iPhone.",
             "hi": "स्थानीय उत्तरों के लिए इस iPhone पर सेटअप चाहिए।",

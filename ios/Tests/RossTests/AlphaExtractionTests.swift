@@ -891,6 +891,14 @@ final class AlphaExtractionTests: XCTestCase {
             rossLocalized("ask_assistant_setup_before_detail", languageCode: "ta"),
             "setup முன்பும் Ross இந்த device-ல் matters, tasks, dates, மற்றும் files organize செய்ய முடியும்."
         )
+        XCTAssertEqual(
+            rossLocalized("ask_private_assistant_needs_repair", languageCode: "hi"),
+            "Private assistant repair चाहता है"
+        )
+        XCTAssertEqual(
+            rossLocalized("ask_private_assistant_answer_unavailable", languageCode: "bn"),
+            "Private assistant answer পাওয়া যাচ্ছে না"
+        )
         XCTAssertTrue(
             alphaNextHearingLabel(Date(timeIntervalSince1970: 0), languageCode: "hi")
                 .contains("अगली hearing:")

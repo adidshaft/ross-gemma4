@@ -1269,26 +1269,23 @@ extension AlphaRossModel {
                         }
                         return
                     }
+                    let unavailablePresentation = self.askRuntimeUnavailablePresentation()
                     self.updateStoredAskTurn(
                         scopeCaseID: scopeCaseID,
                         sessionID: chatSessionID,
                         turnID: chatTurnID
                     ) { turn in
-                        turn.answerTitle = "Private assistant could not answer"
-                        turn.answerSections = [
-                            "The private assistant ran, but did not return a usable response for this question.",
-                            "Ross did not generate a substitute answer because a private assistant result is required."
-                        ]
-                        turn.statusNote = "Private assistant answer unavailable"
+                        turn.answerTitle = unavailablePresentation.title
+                        turn.answerSections = unavailablePresentation.sections
+                        turn.statusNote = unavailablePresentation.statusNote
+                        turn.needsReviewWarning = unavailablePresentation.needsReviewWarning
                         turn.modelInvocation = completedInvocation
                     }
                     if var latest = self.latestAskResult, latest.chatTurnID == chatTurnID {
-                        latest.answerTitle = "Private assistant could not answer"
-                        latest.answerSections = [
-                            "The private assistant ran, but did not return a usable response for this question.",
-                            "Ross did not generate a substitute answer because a private assistant result is required."
-                        ]
-                        latest.statusNote = "Private assistant answer unavailable"
+                        latest.answerTitle = unavailablePresentation.title
+                        latest.answerSections = unavailablePresentation.sections
+                        latest.statusNote = unavailablePresentation.statusNote
+                        latest.needsReviewWarning = unavailablePresentation.needsReviewWarning
                         self.latestAskResult = latest
                     }
                     return
@@ -1332,13 +1329,25 @@ extension AlphaRossModel {
             errorCategory: errorCategory
         )
         return (
-            title: "Private assistant needs repair",
+            title: rossLocalized("ask_private_assistant_needs_repair"),
             sections: [
                 detail,
-                "Open My assistant and use Repair setup. Ross did not generate a substitute answer from case memory."
+                rossLocalized("ask_private_assistant_repair_detail")
             ],
-            statusNote: "Private assistant needs repair",
-            needsReviewWarning: "Private assistant needs repair before it can answer from files."
+            statusNote: rossLocalized("ask_private_assistant_needs_repair"),
+            needsReviewWarning: rossLocalized("ask_private_assistant_repair_warning")
+        )
+    }
+
+    func askRuntimeUnavailablePresentation() -> (title: String, sections: [String], statusNote: String, needsReviewWarning: String?) {
+        (
+            title: rossLocalized("ask_private_assistant_could_not_answer"),
+            sections: [
+                rossLocalized("ask_private_assistant_unusable_response_detail"),
+                rossLocalized("ask_private_assistant_no_substitute_detail")
+            ],
+            statusNote: rossLocalized("ask_private_assistant_answer_unavailable"),
+            needsReviewWarning: rossLocalized("ask_private_assistant_answer_unavailable_warning")
         )
     }
 

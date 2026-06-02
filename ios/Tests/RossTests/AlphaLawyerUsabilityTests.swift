@@ -758,6 +758,12 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertTrue(presentation?.sections.joined(separator: " ").contains("My assistant") == true)
             XCTAssertFalse(presentation?.sections.joined(separator: " ").contains("Private AI") == true)
             XCTAssertTrue(presentation?.needsReviewWarning?.contains("needs repair") == true)
+
+            let unavailable = model.askRuntimeUnavailablePresentation()
+            XCTAssertEqual("Private assistant could not answer", unavailable.title)
+            XCTAssertEqual("Private assistant answer unavailable", unavailable.statusNote)
+            XCTAssertTrue(unavailable.sections.joined(separator: " ").contains("did not return a usable response"))
+            XCTAssertTrue(unavailable.needsReviewWarning?.contains("did not guess") == true)
         }
     }
 
