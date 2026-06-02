@@ -210,6 +210,36 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(localOnly.privacyReceipt.contains("Online எதுவும் அனுப்பப்படவில்லை"), localOnly.privacyReceipt)
     }
 
+    func testDocumentReviewFallbackCopyFollowsSelectedLanguage() {
+        rossSaveLanguageSelection(code: "bn")
+        let document = AlphaCaseDocument(
+            title: "Order",
+            fileName: "order.txt",
+            kind: .text,
+            storedRelativePath: "documents/order.txt",
+            importedAt: .now,
+            pageCount: 1,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: "Next date 12 May 2026.",
+            dominantSourceSnippet: "Next date 12 May 2026.",
+            pages: [
+                AlphaDocumentPage(
+                    pageNumber: 1,
+                    snippet: "Next date 12 May 2026.",
+                    extractedText: "Next date 12 May 2026."
+                )
+            ]
+        )
+
+        let needsReview = alphaDocumentFallbackReviewDetail(document: document, needsReviewCount: 1)
+        let ready = alphaDocumentFallbackReviewDetail(document: document, needsReviewCount: 0)
+
+        XCTAssertTrue(needsReview.contains("highlighted items check করুন"), needsReview)
+        XCTAssertTrue(ready.contains("notes, tasks, এবং exports-এ use করা যেতে পারে"), ready)
+        XCTAssertFalse(needsReview.localizedCaseInsensitiveContains("relying on this document"), needsReview)
+    }
+
     func testMatterAskPayloadParserStripsThinkTagsAndSalvagesMalformedJSON() {
         let output = AlphaLocalModelOutput(
             rawText: """

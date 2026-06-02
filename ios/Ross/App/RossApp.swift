@@ -2884,6 +2884,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Ross இன்னும் இந்த file வாசிக்கிறது. review முடியும் வரை full-document facts-ஐ நம்ப வேண்டாம்.",
             "te": "Ross ఇంకా ఈ file చదువుతోంది. review పూర్తయ్యే వరకు full-document facts పై ఆధారపడవద్దు."
         ],
+        "document_review_check_findings_warning": [
+            "en": "Check the highlighted items before relying on this file in a note or export.",
+            "hi": "Note या export में इस file पर भरोसा करने से पहले highlighted items check करें।",
+            "bn": "Note বা export-এ এই file-এ নির্ভর করার আগে highlighted items check করুন।",
+            "ta": "Note அல்லது export-இல் இந்த file-ஐ நம்புவதற்கு முன் highlighted items check செய்யவும்.",
+            "te": "Note లేదా export లో ఈ file పై ఆధారపడే ముందు highlighted items check చేయండి."
+        ],
+        "document_review_verified_ready_warning": [
+            "en": "Verified details can be used in notes, tasks, and exports for this matter.",
+            "hi": "Verified details इस matter के notes, tasks और exports में use हो सकते हैं।",
+            "bn": "Verified details এই matter-এর notes, tasks, এবং exports-এ use করা যেতে পারে।",
+            "ta": "Verified details இந்த matter-இன் notes, tasks மற்றும் exports-இல் use செய்யலாம்.",
+            "te": "Verified details ఈ matter యొక్క notes, tasks మరియు exports లో use చేయవచ్చు."
+        ],
         "document_review_failed_warning": [
             "en": "Ross could not finish reading this file. Review the source manually before using it.",
             "hi": "Ross यह file पढ़ना पूरा नहीं कर सका। use करने से पहले source manually review करें।",

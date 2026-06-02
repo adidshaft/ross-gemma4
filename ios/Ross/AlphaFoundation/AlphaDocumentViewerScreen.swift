@@ -1553,11 +1553,11 @@ func alphaDocumentFallbackReviewDetail(document: AlphaCaseDocument, needsReviewC
     case .imported, .readingText:
         return rossLocalized("document_review_still_reading_warning")
     case .needsConfirmation, .reviewingFindings:
-        return "Check the highlighted items below before relying on this document in a note or export."
+        return rossLocalized("document_review_check_findings_warning")
     case .ready:
         return needsReviewCount > 0
-            ? "Check the highlighted items below before relying on this document in a note or export."
-            : "Verified details can be used in notes, tasks, and exports for this matter."
+            ? rossLocalized("document_review_check_findings_warning")
+            : rossLocalized("document_review_verified_ready_warning")
     case .failed:
         return rossLocalized("document_review_failed_warning")
     }
