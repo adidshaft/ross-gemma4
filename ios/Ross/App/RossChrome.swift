@@ -130,41 +130,43 @@ struct RossSectionCard<Content: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if title != nil || subtitle != nil {
-                VStack(alignment: .leading, spacing: 8) {
-                    if let title {
-                        Text(title)
-                            .font(.rossSerifHeadline())
-                            .foregroundStyle(Color.rossInk)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+        RossGlassGroup(spacing: 12) {
+            VStack(alignment: .leading, spacing: 12) {
+                if title != nil || subtitle != nil {
+                    VStack(alignment: .leading, spacing: 8) {
+                        if let title {
+                            Text(title)
+                                .font(.rossSerifHeadline())
+                                .foregroundStyle(Color.rossInk)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
 
-                    if let subtitle {
-                        Text(subtitle)
-                            .font(.footnote)
-                            .foregroundStyle(Color.rossInk.opacity(0.66))
-                            .lineSpacing(3.5)
-                            .fixedSize(horizontal: false, vertical: true)
+                        if let subtitle {
+                            Text(subtitle)
+                                .font(.footnote)
+                                .foregroundStyle(Color.rossInk.opacity(0.66))
+                                .lineSpacing(3.5)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
+                    .padding(.horizontal, 16)
                 }
-                .padding(.horizontal, 16)
-            }
 
-            content
-                .padding(.horizontal, 16)
+                content
+                    .padding(.horizontal, 16)
+            }
+            .padding(.vertical, 16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .rossGlassSurface(
+                tint: colorScheme == .dark ? Color.rossHighlight : Color.white,
+                cornerRadius: RossSurface.cornerRadius,
+                shadowOpacity: colorScheme == .dark ? 0.16 : 0.07,
+                shadowRadius: 16,
+                shadowY: 7,
+                fillOpacity: colorScheme == .dark ? 0.68 : 0.82,
+                strokeOpacity: colorScheme == .dark ? 0.24 : 0.56
+            )
         }
-        .padding(.vertical, 16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .rossGlassSurface(
-            tint: colorScheme == .dark ? Color.rossHighlight : Color.white,
-            cornerRadius: RossSurface.cornerRadius,
-            shadowOpacity: colorScheme == .dark ? 0.18 : 0.08,
-            shadowRadius: 14,
-            shadowY: 6,
-            fillOpacity: colorScheme == .dark ? 0.74 : 0.9,
-            strokeOpacity: colorScheme == .dark ? 0.26 : 0.68
-        )
     }
 }
 

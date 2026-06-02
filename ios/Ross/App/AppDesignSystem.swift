@@ -275,21 +275,35 @@ private struct RossNativeGlassSurfaceModifier<S: InsettableShape>: ViewModifier 
                     shape.fill(
                         Color.rossGlassFill.opacity(
                             colorScheme == .dark
-                                ? max(fallbackFillOpacity * 0.48, 0.30)
-                                : max(fallbackFillOpacity * 0.58, 0.46)
+                                ? max(fallbackFillOpacity * 0.34, 0.22)
+                                : max(fallbackFillOpacity * 0.38, 0.30)
                         )
                     )
                 }
                 .glassEffect(
                     (interactive ? Glass.regular.interactive() : Glass.regular)
-                        .tint(tint.opacity(colorScheme == .dark ? 0.28 : 0.20)),
+                        .tint(tint.opacity(colorScheme == .dark ? 0.20 : 0.14)),
                     in: shape
                 )
                 .overlay {
                     shape.strokeBorder(
-                        Color.rossGlassStroke.opacity(colorScheme == .dark ? 0.26 : 0.62),
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(colorScheme == .dark ? 0.16 : 0.54),
+                                tint.opacity(colorScheme == .dark ? 0.14 : 0.18),
+                                Color.rossGlassStroke.opacity(colorScheme == .dark ? 0.18 : 0.38)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
                         lineWidth: 1
                     )
+                }
+                .overlay(alignment: .topLeading) {
+                    shape
+                        .strokeBorder(Color.white.opacity(colorScheme == .dark ? 0.10 : 0.28), lineWidth: 0.6)
+                        .blendMode(.screen)
+                        .allowsHitTesting(false)
                 }
                 .clipShape(shape)
         } else {
