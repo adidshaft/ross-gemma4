@@ -107,6 +107,10 @@ func alphaRootAskEmptyFilesDetail(scopeIsShared: Bool, languageCode: String = ro
     rossLocalized(scopeIsShared ? "ask_empty_files_shared_detail" : "ask_empty_files_matter_detail", languageCode: languageCode)
 }
 
+func alphaRemoveAskSelectionLabel(_ title: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("remove_ask_selection", languageCode: languageCode), title)
+}
+
 struct AlphaRootAskDock: View {
     @Environment(\.colorScheme) private var colorScheme
     @Bindable var model: AlphaRossModel
@@ -267,9 +271,9 @@ struct AlphaRootAskDock: View {
 
     private var publicLawModeTitle: String {
         if model.publicLawSearchStatus == .reviewing && model.publicLawPreview != nil {
-            return "Review required"
+            return rossLocalized("review_required")
         }
-        return model.askWebEnabled ? "Legal Search on" : "Local only"
+        return model.askWebEnabled ? rossLocalized("legal_search_on") : rossLocalized("local_only")
     }
 
     private var composerPlaceholder: String {
@@ -374,7 +378,7 @@ struct AlphaRootAskDock: View {
             HStack(spacing: 8) {
                 if fixedScopeCaseID == nil {
                     Menu {
-                        Button("All work") {
+                        Button(rossLocalized("all_work")) {
                             model.askSelectedScopeCaseID = nil
                         }
                         ForEach(model.cases) { caseMatter in
@@ -398,7 +402,7 @@ struct AlphaRootAskDock: View {
                         statusSystemImage: "lock.fill",
                         showsChevron: false
                     )
-                    .accessibilityHint("Ask Ross is scoped to this matter.")
+                    .accessibilityHint(rossLocalized("ask_scoped_to_this_matter"))
                 }
 
                 Button {
@@ -454,7 +458,7 @@ struct AlphaRootAskDock: View {
                                 )
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("Add to Ask Ross")
+                        .accessibilityLabel(rossLocalized("add_to_ask_ross"))
 
                         ZStack(alignment: .leading) {
                             if draftText.isEmpty {
@@ -488,7 +492,7 @@ struct AlphaRootAskDock: View {
                                     .foregroundStyle(dockMutedText)
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel("Clear Ask Ross text")
+                            .accessibilityLabel(rossLocalized("clear_ask_ross_text"))
                         }
                     }
                     .padding(.leading, 7)
@@ -960,7 +964,7 @@ struct AlphaInlineAskResponseCard: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Dismiss")
+                    .accessibilityLabel(rossLocalized("dismiss"))
                 }
 
                 ForEach(result.answerSectionItems(limit: 2)) { section in
@@ -981,7 +985,7 @@ struct AlphaInlineAskResponseCard: View {
 
                 HStack {
                     Spacer()
-                    Button("View full answer", action: onOpenConversation)
+                    Button(rossLocalized("view_full_answer"), action: onOpenConversation)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Color.rossAccent)
                 }
@@ -1115,7 +1119,7 @@ struct AlphaAskSelectionChip: View {
                         .foregroundStyle(tone == .dock ? dockDetail : Color.rossInk.opacity(0.32))
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Remove \(title)")
+                .accessibilityLabel(alphaRemoveAskSelectionLabel(title))
             }
         }
         .font(.caption.weight(.semibold))

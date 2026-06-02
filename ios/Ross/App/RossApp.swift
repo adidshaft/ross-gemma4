@@ -2737,6 +2737,41 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "இன்னும் ready files இல்லை",
             "te": "ఇంకా ready files లేవు"
         ],
+        "ask_scoped_to_this_matter": [
+            "en": "Ask Ross is scoped to this matter.",
+            "hi": "Ask Ross इसी matter तक scoped है।",
+            "bn": "Ask Ross এই matter-এ scoped.",
+            "ta": "Ask Ross இந்த matter-க்கு scoped ஆக உள்ளது.",
+            "te": "Ask Ross ఈ matter కు scoped గా ఉంది."
+        ],
+        "add_to_ask_ross": [
+            "en": "Add to Ask Ross",
+            "hi": "Ask Ross में जोड़ें",
+            "bn": "Ask Ross-এ যোগ করুন",
+            "ta": "Ask Ross-இல் சேர்க்கவும்",
+            "te": "Ask Ross కు జోడించండి"
+        ],
+        "clear_ask_ross_text": [
+            "en": "Clear Ask Ross text",
+            "hi": "Ask Ross text साफ़ करें",
+            "bn": "Ask Ross text পরিষ্কার করুন",
+            "ta": "Ask Ross text அழிக்கவும்",
+            "te": "Ask Ross text క్లియర్ చేయండి"
+        ],
+        "view_full_answer": [
+            "en": "View full answer",
+            "hi": "पूरा answer देखें",
+            "bn": "পুরো answer দেখুন",
+            "ta": "முழு answer பார்க்கவும்",
+            "te": "పూర్తి answer చూడండి"
+        ],
+        "remove_ask_selection": [
+            "en": "Remove %@",
+            "hi": "%@ हटाएं",
+            "bn": "%@ সরান",
+            "ta": "%@ நீக்கவும்",
+            "te": "%@ తొలగించండి"
+        ],
         "ask_empty_title": [
             "en": "Ask Ross what's next",
             "hi": "Ross से आगे का काम पूछें",

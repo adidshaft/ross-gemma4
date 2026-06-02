@@ -986,6 +986,14 @@ final class AlphaExtractionTests: XCTestCase {
             "ఈ matter కు PDF, note, photo, లేదా scan జోడించండి. Ask లో ఉపయోగించే ముందు Ross దాన్ని locally చదువుతుంది."
         )
         XCTAssertEqual(
+            rossLocalized("add_to_ask_ross", languageCode: "ta"),
+            "Ask Ross-இல் சேர்க்கவும்"
+        )
+        XCTAssertEqual(
+            alphaRemoveAskSelectionLabel("Order", languageCode: "bn"),
+            "Order সরান"
+        )
+        XCTAssertEqual(
             rossLocalized("download_size", languageCode: "ta"),
             "பதிவிறக்க அளவு"
         )
