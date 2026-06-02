@@ -1262,6 +1262,28 @@ final class AlphaExtractionTests: XCTestCase {
             "Next date captured: 12/05/2026."
         )
         XCTAssertEqual(
+            alphaDocumentClassifiedSummary(
+                documentTitle: "Order",
+                typeTitle: "order",
+                legalFactSavingPaused: false,
+                languageCode: "hi"
+            ),
+            "Ross ने Order को order classify किया."
+        )
+        XCTAssertEqual(
+            alphaDocumentClassifiedSummary(
+                documentTitle: "Notice",
+                typeTitle: "non-legal",
+                legalFactSavingPaused: true,
+                languageCode: "ta"
+            ),
+            "Ross Notice-ஐ non-legal ஆக classify செய்து legal fact saving pause செய்தது."
+        )
+        XCTAssertEqual(
+            alphaDocumentFinishedRereadingSummary("Order", languageCode: "bn"),
+            "Ross Order re-reading finish করেছে."
+        )
+        XCTAssertEqual(
             alphaMatterLocalNoticeNextDate("12/05/2026", languageCode: "hi"),
             "Case files इसी device पर रहती हैं। Next date मिली: 12/05/2026"
         )

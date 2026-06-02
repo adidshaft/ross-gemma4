@@ -620,6 +620,26 @@ func alphaNextDateCapturedLabel(_ nextDate: String, languageCode: String = rossS
     String(format: rossLocalized("document_review_next_date_captured", languageCode: languageCode), nextDate)
 }
 
+func alphaDocumentClassifiedSummary(
+    documentTitle: String,
+    typeTitle: String,
+    legalFactSavingPaused: Bool,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
+    String(
+        format: rossLocalized(
+            legalFactSavingPaused ? "document_review_classified_paused" : "document_review_classified",
+            languageCode: languageCode
+        ),
+        documentTitle,
+        typeTitle
+    )
+}
+
+func alphaDocumentFinishedRereadingSummary(_ title: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("document_review_finished_rereading", languageCode: languageCode), title)
+}
+
 func alphaMatterLocalNoticeNextDate(_ nextDate: String, languageCode: String = rossSelectedLanguageCode()) -> String {
     String(format: rossLocalized("matter_memory_local_notice_next_date", languageCode: languageCode), nextDate)
 }

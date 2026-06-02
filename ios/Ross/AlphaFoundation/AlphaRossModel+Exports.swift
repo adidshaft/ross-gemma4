@@ -85,10 +85,12 @@ extension AlphaRossModel {
             ? alphaDocumentReadyForMatterChatLabel()
             : alphaReviewItemsNeedConfirmationBeforeFileUseLabel(reviewItemCount)
         let classificationSummary = result.classification.map {
-            $0.type.blocksAutomaticLegalFactSaving
-                ? "Ross classified \(document.title) as \($0.type.title.lowercased()) and paused legal fact saving."
-                : "Ross classified \(document.title) as \($0.type.title.lowercased())."
-        } ?? "Ross finished re-reading \(document.title)."
+            alphaDocumentClassifiedSummary(
+                documentTitle: document.title,
+                typeTitle: $0.type.title.lowercased(),
+                legalFactSavingPaused: $0.type.blocksAutomaticLegalFactSaving
+            )
+        } ?? alphaDocumentFinishedRereadingSummary(document.title)
         var threadSections = [classificationSummary, reviewSummary]
         if let nextDateValue {
             threadSections.insert(alphaNextDateCapturedLabel(nextDateValue), at: 1)

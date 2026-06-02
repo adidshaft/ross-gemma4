@@ -4585,6 +4585,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Next date captured: %@.",
             "te": "Next date captured: %@."
         ],
+        "document_review_classified": [
+            "en": "Ross classified %@ as %@.",
+            "hi": "Ross ने %@ को %@ classify किया.",
+            "bn": "Ross %@-কে %@ classify করেছে.",
+            "ta": "Ross %@-ஐ %@ ஆக classify செய்தது.",
+            "te": "Ross %@ ను %@ గా classify చేసింది."
+        ],
+        "document_review_classified_paused": [
+            "en": "Ross classified %@ as %@ and paused legal fact saving.",
+            "hi": "Ross ने %@ को %@ classify किया और legal fact saving pause की.",
+            "bn": "Ross %@-কে %@ classify করেছে এবং legal fact saving pause করেছে.",
+            "ta": "Ross %@-ஐ %@ ஆக classify செய்து legal fact saving pause செய்தது.",
+            "te": "Ross %@ ను %@ గా classify చేసి legal fact saving pause చేసింది."
+        ],
+        "document_review_finished_rereading": [
+            "en": "Ross finished re-reading %@.",
+            "hi": "Ross ने %@ को फिर से पढ़ना finish किया.",
+            "bn": "Ross %@ re-reading finish করেছে.",
+            "ta": "Ross %@ re-reading finish செய்தது.",
+            "te": "Ross %@ re-reading finish చేసింది."
+        ],
         "matter_memory_local_notice_next_date": [
             "en": "Case files stay on this device. Next date found: %@",
             "hi": "Case files इसी device पर रहती हैं। Next date मिली: %@",
