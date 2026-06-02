@@ -803,6 +803,14 @@ final class AlphaExtractionTests: XCTestCase {
             "ఈ device లో locally పనిచేస్తుంది"
         )
         XCTAssertEqual(
+            rossLocalized("confirmed_for_ross", languageCode: "hi"),
+            "Ross के लिए confirmed"
+        )
+        XCTAssertEqual(
+            rossLocalized("confirmed_details_usage_detail", languageCode: "ta"),
+            "notes, tasks மற்றும் matter answers தயாரிக்கும் போது Ross இந்த confirmed details பயன்படுத்தும்."
+        )
+        XCTAssertEqual(
             rossLocalized("assistant_network_wifi_preferred", languageCode: "te-IN"),
             "Wi-Fi ప్రాధాన్యం"
         )

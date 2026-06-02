@@ -2086,6 +2086,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Preview",
             "te": "Preview"
         ],
+        "confirmed_details_usage_detail": [
+            "en": "Ross will use these confirmed details when preparing notes, tasks, and matter answers.",
+            "hi": "notes, tasks और matter answers तैयार करते समय Ross ये confirmed details use करेगा।",
+            "bn": "notes, tasks, এবং matter answers তৈরি করার সময় Ross এই confirmed details ব্যবহার করবে।",
+            "ta": "notes, tasks மற்றும் matter answers தயாரிக்கும் போது Ross இந்த confirmed details பயன்படுத்தும்.",
+            "te": "notes, tasks, మరియు matter answers సిద్ధం చేసే సమయంలో Ross ఈ confirmed details ఉపయోగిస్తుంది."
+        ],
+        "confirmed_for_ross": [
+            "en": "Confirmed for Ross",
+            "hi": "Ross के लिए confirmed",
+            "bn": "Ross-এর জন্য confirmed",
+            "ta": "Ross-க்கு confirmed",
+            "te": "Ross కోసం confirmed"
+        ],
+        "details_already_approved_for_matter": [
+            "en": "Details already approved for this matter",
+            "hi": "इस matter के लिए details already approved हैं",
+            "bn": "এই matter-এর জন্য details already approved",
+            "ta": "இந்த matter-க்கு details already approved",
+            "te": "ఈ matter కోసం details already approved"
+        ],
         "page_number": [
             "en": "Page %d",
             "hi": "Page %d",

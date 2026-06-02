@@ -1173,7 +1173,7 @@ struct AlphaAcceptedReviewSummaryCard: View {
     var body: some View {
         DisclosureGroup {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Ross will use these confirmed details when preparing notes, tasks, and matter answers.")
+                Text(rossLocalized("confirmed_details_usage_detail"))
                     .font(.footnote)
                     .foregroundStyle(Color.rossInk.opacity(0.66))
                     .fixedSize(horizontal: false, vertical: true)
@@ -1208,10 +1208,10 @@ struct AlphaAcceptedReviewSummaryCard: View {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(Color.rossSuccess)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Confirmed for Ross")
+                    Text(rossLocalized("confirmed_for_ross"))
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.rossInk)
-                    Text("Details already approved for this matter")
+                    Text(rossLocalized("details_already_approved_for_matter"))
                         .font(.caption)
                         .foregroundStyle(Color.rossInk.opacity(0.58))
                 }
@@ -1698,7 +1698,7 @@ func AlphaDocumentPreview(document: AlphaCaseDocument, initialPage: Int) -> AnyV
     }
 
     return AnyView(
-        RossSectionCard(title: "Preview") {
+        RossSectionCard(title: rossLocalized("preview")) {
             AlphaDocumentTextPreview(document: document, initialPage: initialPage)
         }
     )
