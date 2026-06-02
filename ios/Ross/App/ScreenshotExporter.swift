@@ -464,7 +464,8 @@ struct RossLocalModelSmokeView: View {
 
     nonisolated static func usedLanguagePreservingFallback(_ output: AlphaLocalModelOutput) -> Bool {
         output.warnings.contains { warning in
-            warning.localizedCaseInsensitiveContains("Language-preserving source fallback used")
+            warning.localizedCaseInsensitiveContains(AlphaLocalModelWarningCopy.sourceLanguageFallback) ||
+                warning.localizedCaseInsensitiveContains("Language-preserving source fallback used")
         }
     }
 

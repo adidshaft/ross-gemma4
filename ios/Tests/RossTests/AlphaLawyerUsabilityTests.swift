@@ -115,7 +115,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
 
         XCTAssertFalse(output.schemaValid)
         XCTAssertEqual(output.errorCategory, "inference_failed")
-        XCTAssertTrue(output.warnings.joined(separator: " ").contains("Inference failed"))
+        XCTAssertEqual(output.warnings, [AlphaLocalModelWarningCopy.assistantCouldNotFinish])
     }
 
     func testTaskAdditionUpdatesLocalState() async throws {

@@ -2890,7 +2890,7 @@ final class AlphaExtractionTests: XCTestCase {
             rawText: "উৎসভিত্তিক উত্তর",
             parsedJson: nil,
             schemaValid: true,
-            warnings: ["Language-preserving source fallback used."],
+            warnings: [AlphaLocalModelWarningCopy.sourceLanguageFallback],
             sourceRefs: []
         )
         let nativeOutput = AlphaLocalModelOutput(

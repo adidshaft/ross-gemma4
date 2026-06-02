@@ -145,7 +145,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                 rawText: "",
                 parsedJson: nil,
                 schemaValid: false,
-                warnings: ["Model path is invalid or missing."],
+                warnings: [AlphaLocalModelWarningCopy.assistantSetupMissing],
                 sourceRefs: [],
                 errorCategory: "model_path_missing"
             )
@@ -204,7 +204,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                             rawText: cleanedPartial,
                             parsedJson: nil,
                             schemaValid: false,
-                            warnings: pack.truncated ? ["Input was truncated."] : [],
+                            warnings: pack.truncated ? [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts] : [],
                             sourceRefs: usesPlainMatterAnswerPrompt
                                 ? Array(taskInput.sourcePack.prefix(5).map(\.sourceRef))
                                 : pack.includedSourceRefs
@@ -226,9 +226,9 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             let schemaValid = usesPlainMatterAnswerPrompt
                 ? !finalResponse.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 : jsonString != nil
-            var warnings = pack.truncated ? ["Input was truncated."] : []
+            var warnings = pack.truncated ? [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts] : []
             if languagePreservingFallback != nil {
-                warnings.append("Language-preserving source fallback used.")
+                warnings.append(AlphaLocalModelWarningCopy.sourceLanguageFallback)
             }
             
             return AlphaLocalModelOutput(
@@ -245,7 +245,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                 rawText: "",
                 parsedJson: nil,
                 schemaValid: false,
-                warnings: ["Inference failed: \(error.localizedDescription)"],
+                warnings: [AlphaLocalModelWarningCopy.assistantCouldNotFinish],
                 sourceRefs: [],
                 errorCategory: "inference_failed"
             )

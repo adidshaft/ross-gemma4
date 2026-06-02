@@ -94,6 +94,13 @@ struct AlphaLocalModelOutput: Codable, Hashable, Sendable {
     var errorCategory: String? = nil
 }
 
+enum AlphaLocalModelWarningCopy {
+    static let assistantSetupMissing = "Private assistant setup is missing or incomplete. Open My assistant and use Repair setup."
+    static let inputFocusedOnRelevantParts = "The file was long, so Ross focused on the most relevant parts."
+    static let sourceLanguageFallback = "Ross answered from the source text because the private assistant did not keep the requested language."
+    static let assistantCouldNotFinish = "The private assistant could not finish this request. Ross kept the request on this device."
+}
+
 struct AlphaModelPromptPolicy: Codable, Hashable, Sendable {
     var storeRawPrompt: Bool = false
     var storeRawSourceText: Bool = false
@@ -495,7 +502,7 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
                 rawText: raw,
                 parsedJson: extractJSONCandidate(from: raw),
                 schemaValid: extractJSONCandidate(from: raw) != nil,
-                warnings: promptPack.truncated ? ["The document was long, so Ross focused on the most relevant parts."] : [],
+                warnings: promptPack.truncated ? [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts] : [],
                 sourceRefs: promptPack.includedSourceRefs,
                 errorCategory: extractJSONCandidate(from: raw) == nil ? "invalid_model_output" : nil
             )
@@ -504,7 +511,7 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
                 rawText: "",
                 parsedJson: nil,
                 schemaValid: false,
-                warnings: ["The on-device private assistant could not finish this request and Ross kept the request local."],
+                warnings: [AlphaLocalModelWarningCopy.assistantCouldNotFinish],
                 sourceRefs: promptPack.includedSourceRefs,
                 errorCategory: "unknown_runtime_error"
             )
