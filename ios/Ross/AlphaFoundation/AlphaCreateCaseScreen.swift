@@ -562,7 +562,7 @@ func alphaAssistantStatusSnapshot(_ model: AlphaRossModel) -> AlphaAssistantStat
         case .pausedError, .failed, .cancelled:
             return AlphaAssistantStatusSnapshot(
                 title: "Ross assistant needs attention",
-                detail: alphaAssistantRecoveryDetail(for: job, fallback: "Setup could not finish. Open setup to retry."),
+                detail: alphaAssistantRecoveryDetail(for: job, fallback: "Setup could not finish. Open My assistant to retry or repair setup."),
                 tint: .orange
             )
         default:

@@ -706,12 +706,18 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     func testAssistantActivityPausedCopyPointsToAssistantSurface() {
-        let detail = alphaAssistantActivityDetail(for: .pausedUser)
+        let pausedDetail = alphaAssistantActivityDetail(for: .pausedUser)
 
-        XCTAssertTrue(detail.contains("My assistant"))
-        XCTAssertTrue(detail.contains("this iPhone"))
-        XCTAssertFalse(detail.localizedCaseInsensitiveContains("device setup"))
-        XCTAssertFalse(detail.localizedCaseInsensitiveContains("Settings"))
+        XCTAssertTrue(pausedDetail.contains("My assistant"))
+        XCTAssertTrue(pausedDetail.contains("this iPhone"))
+        XCTAssertFalse(pausedDetail.localizedCaseInsensitiveContains("device setup"))
+        XCTAssertFalse(pausedDetail.localizedCaseInsensitiveContains("Settings"))
+
+        let failedDetail = alphaAssistantActivityDetail(for: .failed)
+        XCTAssertTrue(failedDetail.contains("My assistant"))
+        XCTAssertTrue(failedDetail.contains("matters and files"))
+        XCTAssertFalse(failedDetail.localizedCaseInsensitiveContains("model"))
+        XCTAssertFalse(failedDetail.localizedCaseInsensitiveContains("runtime"))
     }
 
     @MainActor

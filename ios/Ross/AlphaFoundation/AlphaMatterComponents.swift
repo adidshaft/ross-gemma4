@@ -779,7 +779,7 @@ func alphaAssistantActivityDetail(for state: AlphaDownloadState) -> String {
     case .pausedNoStorage:
         "Ross needs more free space before the assistant can finish setting up."
     case .pausedError, .failed:
-        "Ross could not start the private assistant. Please retry when the issue is fixed."
+        "Assistant setup could not finish. Open My assistant to retry or repair setup; your matters and files stay on this iPhone."
     case .notStarted, .installed, .cancelled:
         "No setup is running right now."
     }
