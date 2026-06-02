@@ -757,6 +757,21 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(teluguMatterSuggestions.first, "విచారణ గమనికను సిద్ధం చేయండి")
         XCTAssertTrue(teluguMatterSuggestions.contains("ధృవీకరించని విషయాలను చూపండి"))
 
+        let bengaliDocumentSuggestions = alphaAskSuggestions(
+            for: "Matter",
+            documentTitle: "Order",
+            languageCode: "bn"
+        )
+        XCTAssertEqual(bengaliDocumentSuggestions.first, "এই নথির সারাংশ দিন")
+        XCTAssertTrue(bengaliDocumentSuggestions.contains("কী যাচাই করতে হবে?"))
+
+        let bengaliGeneralSuggestions = alphaAskSuggestions(
+            for: nil,
+            languageCode: "bn"
+        )
+        XCTAssertEqual(bengaliGeneralSuggestions.first, "আজ কোন কাজে নজর দেব?")
+        XCTAssertTrue(bengaliGeneralSuggestions.contains("একটি কাজ তৈরি করুন"))
+
         let hindiGeneralSuggestions = alphaAskSuggestions(
             for: nil,
             languageCode: "hi"
