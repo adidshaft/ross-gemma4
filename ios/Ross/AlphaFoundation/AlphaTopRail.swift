@@ -516,9 +516,7 @@ private func alphaActiveAssistantSetupJob(from jobs: [AlphaModelDownloadJob]) ->
 private func alphaAssistantSetupProgressLabel(_ job: AlphaModelDownloadJob) -> String {
     guard job.totalBytes > 0 else { return alphaAssistantStateLabel(job.state) }
     let downloaded = max(0, job.bytesDownloaded)
-    let downloadedLabel = ByteCountFormatter.string(fromByteCount: downloaded, countStyle: .file)
-    let totalLabel = ByteCountFormatter.string(fromByteCount: job.totalBytes, countStyle: .file)
-    return "\(downloadedLabel) of \(totalLabel)"
+    return alphaDownloadBytesProgressLabel(downloadedBytes: downloaded, totalBytes: job.totalBytes)
 }
 
 func alphaPreparedWorkHeadline(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {

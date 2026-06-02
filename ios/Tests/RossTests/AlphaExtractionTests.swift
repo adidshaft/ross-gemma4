@@ -1120,6 +1120,10 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(alphaDownloadPreciseEtaLabel(minutesJob, languageCode: "bn"), "প্রায় 3 মিনিট বাকি")
         XCTAssertEqual(alphaDownloadPreciseEtaLabel(hoursJob, languageCode: "ta"), "சுமார் 2 மணி நேரம் மீதம்")
         XCTAssertEqual(
+            alphaDownloadBytesProgressLabel(downloadedBytes: 12_000_000, totalBytes: 48_000_000, languageCode: "hi"),
+            "\(alphaFileSizeLabel(12_000_000)) / \(alphaFileSizeLabel(48_000_000))"
+        )
+        XCTAssertEqual(
             rossLocalized("privacy_ledger_empty", languageCode: "hi"),
             "Ross ने अभी तक कोई local या network actions log नहीं किए हैं।"
         )

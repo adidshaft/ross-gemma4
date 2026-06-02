@@ -748,9 +748,7 @@ struct AlphaPrivateAIJobCard: View {
     private var downloadedBytesLabel: String? {
         guard job.totalBytes > 0, job.progress > 0 else { return nil }
         let downloaded = Int64(Double(job.totalBytes) * job.progress)
-        let dl = ByteCountFormatter.string(fromByteCount: downloaded, countStyle: .file)
-        let tot = ByteCountFormatter.string(fromByteCount: job.totalBytes, countStyle: .file)
-        return "\(dl) of \(tot)"
+        return alphaDownloadBytesProgressLabel(downloadedBytes: downloaded, totalBytes: job.totalBytes)
     }
 
     private var etaLabel: String? {
@@ -1265,6 +1263,20 @@ func alphaConfidenceSupportText(confidence: Double, needsReview: Bool) -> String
 
 func alphaFileSizeLabel(_ bytes: Int64) -> String {
     ByteCountFormatter.string(fromByteCount: max(0, bytes), countStyle: .file)
+}
+
+func alphaDownloadBytesProgressLabel(
+    downloadedBytes: Int64,
+    totalBytes: Int64,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
+    let downloadedLabel = alphaFileSizeLabel(downloadedBytes)
+    let totalLabel = alphaFileSizeLabel(totalBytes)
+    return String(
+        format: rossLocalized("assistant_download_bytes_progress", languageCode: languageCode),
+        downloadedLabel,
+        totalLabel
+    )
 }
 
 private struct AlphaAssistantStorageFootprintRow: View {

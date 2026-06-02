@@ -658,6 +658,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "சுமார் %d மணி நேரம் மீதம்",
             "te": "సుమారు %d గంటలు మిగిలాయి"
         ],
+        "assistant_download_bytes_progress": [
+            "en": "%@ of %@",
+            "hi": "%@ / %@",
+            "bn": "%@ / %@",
+            "ta": "%@ / %@",
+            "te": "%@ / %@"
+        ],
         "assistant_download_final_check": [
             "en": "Final check usually takes less than a minute.",
             "hi": "अंतिम जांच में आमतौर पर एक मिनट से कम लगता है।",
