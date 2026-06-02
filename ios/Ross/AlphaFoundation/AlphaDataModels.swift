@@ -2840,6 +2840,12 @@ extension AlphaPrivacyLedgerEntry {
             "Ross could not complete the sanitized public-law search. Your case files stayed on this device."
         case "Private AI Pack verified":
             "Private assistant was prepared on this device."
+        case "Assistant download verified":
+            "Ross checked the assistant download before starting. Case files stayed on this device."
+        case "Assistant verified":
+            "Private assistant was checked and is ready on this device."
+        case "Assistant download failed":
+            "Ross could not finish assistant setup. Case files stayed on this device."
         default:
             detail
         }

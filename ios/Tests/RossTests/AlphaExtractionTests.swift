@@ -45,20 +45,51 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     func testPrivacyLedgerAssistantSetupCopyUsesProductLanguage() {
-        let entry = AlphaPrivacyLedgerEntry(
-            title: "Model catalog checked",
-            detail: "Catalog metadata was reviewed without case files attached.",
-            purpose: .model_catalog,
-            payloadClass: .no_case_data,
-            endpointLabel: "/model-catalog",
-            success: true
-        )
+        let entries = [
+            AlphaPrivacyLedgerEntry(
+                title: "Model catalog checked",
+                detail: "Catalog metadata was reviewed without case files attached.",
+                purpose: .model_catalog,
+                payloadClass: .no_case_data,
+                endpointLabel: "/model-catalog",
+                success: true
+            ),
+            AlphaPrivacyLedgerEntry(
+                title: "Assistant download verified",
+                detail: "Ross confirmed the provider file size and byte-range download support before starting. Case files stayed on this device.",
+                purpose: .model_download,
+                payloadClass: .no_case_data,
+                endpointLabel: "model-provider://private-assistant-download",
+                success: true
+            ),
+            AlphaPrivacyLedgerEntry(
+                title: "Assistant verified",
+                detail: "Quick start finished downloading and passed checksum verification locally.",
+                purpose: .model_verification,
+                payloadClass: .no_case_data,
+                endpointLabel: "device://model-verify",
+                success: true
+            ),
+            AlphaPrivacyLedgerEntry(
+                title: "Assistant download failed",
+                detail: "The assistant download service returned HTTP 503.",
+                purpose: .model_download,
+                payloadClass: .no_case_data,
+                endpointLabel: "model-provider://private-assistant-download",
+                success: false
+            )
+        ]
 
-        XCTAssertEqual(entry.lawyerTitle, "Checked private assistant setup")
-        XCTAssertTrue(entry.lawyerDetail.localizedCaseInsensitiveContains("private assistant"))
-        XCTAssertFalse(entry.lawyerDetail.localizedCaseInsensitiveContains("catalog"))
-        XCTAssertFalse(entry.lawyerDetail.localizedCaseInsensitiveContains("model"))
-        XCTAssertFalse(entry.lawyerDetail.localizedCaseInsensitiveContains("provider"))
+        XCTAssertEqual(entries[0].lawyerTitle, "Checked private assistant setup")
+        for entry in entries {
+            XCTAssertTrue(entry.lawyerDetail.localizedCaseInsensitiveContains("assistant"), entry.lawyerDetail)
+            XCTAssertFalse(entry.lawyerDetail.localizedCaseInsensitiveContains("catalog"), entry.lawyerDetail)
+            XCTAssertFalse(entry.lawyerDetail.localizedCaseInsensitiveContains("model"), entry.lawyerDetail)
+            XCTAssertFalse(entry.lawyerDetail.localizedCaseInsensitiveContains("provider"), entry.lawyerDetail)
+            XCTAssertFalse(entry.lawyerDetail.localizedCaseInsensitiveContains("byte-range"), entry.lawyerDetail)
+            XCTAssertFalse(entry.lawyerDetail.localizedCaseInsensitiveContains("checksum"), entry.lawyerDetail)
+            XCTAssertFalse(entry.lawyerDetail.localizedCaseInsensitiveContains("HTTP"), entry.lawyerDetail)
+        }
     }
 
     func testMatterAskPayloadParserStripsThinkTagsAndSalvagesMalformedJSON() {
