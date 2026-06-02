@@ -894,7 +894,7 @@ struct AlphaPrivateAIJobCard: View {
                     Image(systemName: "wifi")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(Color.rossInk.opacity(0.36))
-                    Text("Stay on Wi-Fi — the download resumes automatically if interrupted.")
+                    Text(alphaAssistantDownloadWifiAdvisory())
                         .font(.caption2)
                         .foregroundStyle(Color.rossInk.opacity(0.44))
                         .fixedSize(horizontal: false, vertical: true)
@@ -1001,10 +1001,15 @@ struct AlphaPrivateAIInlineBadge: View {
     }
 }
 
-func alphaDownloadEstimateLabel(_ job: AlphaModelDownloadJob) -> String? {
+func alphaDownloadEstimateLabel(
+    _ job: AlphaModelDownloadJob,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String? {
     switch job.state {
     case .downloading:
-        guard job.totalBytes > 0 else { return "Ross will update the estimate once the download starts moving." }
+        guard job.totalBytes > 0 else {
+            return rossLocalized("assistant_download_waiting_estimate", languageCode: languageCode)
+        }
         let remainingFraction = max(0, min(1, 1 - job.progress))
         let baselineMinutes: Double
         switch job.tier {
@@ -1018,12 +1023,19 @@ func alphaDownloadEstimateLabel(_ job: AlphaModelDownloadJob) -> String? {
             baselineMinutes = 7
         }
         let remainingMinutes = max(1, Int(ceil(baselineMinutes * remainingFraction)))
-        return "Setting up. About \(remainingMinutes) min left on good Wi-Fi."
+        return String(
+            format: rossLocalized("assistant_download_minutes_left", languageCode: languageCode),
+            remainingMinutes
+        )
     case .verifying:
-        return "Final check usually takes less than a minute."
+        return rossLocalized("assistant_download_final_check", languageCode: languageCode)
     default:
         return nil
     }
+}
+
+func alphaAssistantDownloadWifiAdvisory(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("assistant_download_wifi_advisory", languageCode: languageCode)
 }
 
 func alphaAssistantSetupPhases(languageCode: String = rossSelectedLanguageCode()) -> [String] {
@@ -1071,16 +1083,19 @@ func alphaAssistantSetupPhaseAccessibilityLabel(
     }
 }
 
-func alphaAssistantSetupRecoveryHint(for state: AlphaDownloadState) -> String? {
+func alphaAssistantSetupRecoveryHint(
+    for state: AlphaDownloadState,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String? {
     switch state {
     case .failed, .pausedError:
-        return "Retry keeps your matters and files, then starts assistant setup again."
+        return rossLocalized("assistant_setup_retry_hint", languageCode: languageCode)
     case .pausedNoStorage:
-        return "Free storage on this iPhone, then resume setup from here."
+        return rossLocalized("assistant_setup_storage_hint", languageCode: languageCode)
     case .pausedUser:
-        return "Resume setup when you are ready; your existing progress stays on this iPhone."
+        return rossLocalized("assistant_setup_resume_hint", languageCode: languageCode)
     case .pausedWaitingForWifi:
-        return "Reconnect to Wi-Fi, then resume setup from here."
+        return rossLocalized("assistant_setup_wifi_hint", languageCode: languageCode)
     case .queued, .downloading, .verifying, .installed, .notStarted, .cancelled:
         return nil
     }

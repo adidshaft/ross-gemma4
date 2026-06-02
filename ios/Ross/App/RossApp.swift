@@ -392,6 +392,62 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "உதவியாளர் அமைப்பு நிலை %@, %@ இல்.",
             "te": "సహాయకుడి సెటప్ దశ %@, %@ లో."
         ],
+        "assistant_download_waiting_estimate": [
+            "en": "Ross will update the estimate once the download starts moving.",
+            "hi": "डाउनलोड आगे बढ़ते ही Ross अनुमान अपडेट करेगा।",
+            "bn": "ডাউনলোড এগোতে শুরু করলে Ross অনুমান আপডেট করবে।",
+            "ta": "பதிவிறக்கம் நகரத் தொடங்கியவுடன் Ross மதிப்பீட்டை புதுப்பிக்கும்.",
+            "te": "డౌన్‌లోడ్ కదలడం ప్రారంభమైన వెంటనే Ross అంచనాను నవీకరిస్తుంది."
+        ],
+        "assistant_download_minutes_left": [
+            "en": "Setting up. About %d min left on good Wi-Fi.",
+            "hi": "सेटअप हो रहा है। अच्छे Wi-Fi पर लगभग %d मिनट बाकी।",
+            "bn": "সেটআপ চলছে। ভালো Wi-Fi-এ প্রায় %d মিনিট বাকি।",
+            "ta": "அமைப்பு நடக்கிறது. நல்ல Wi-Fi-இல் சுமார் %d நிமிடம் மீதம்.",
+            "te": "సెటప్ జరుగుతోంది. మంచి Wi-Fi పై సుమారు %d నిమిషాలు మిగిలాయి."
+        ],
+        "assistant_download_final_check": [
+            "en": "Final check usually takes less than a minute.",
+            "hi": "अंतिम जांच में आमतौर पर एक मिनट से कम लगता है।",
+            "bn": "শেষ পরীক্ষা সাধারণত এক মিনিটের কম সময় নেয়।",
+            "ta": "இறுதி சரிபார்ப்பு பொதுவாக ஒரு நிமிடத்திற்குக் குறைவாகும்.",
+            "te": "చివరి తనిఖీ సాధారణంగా ఒక నిమిషం కన్నా తక్కువ సమయం పడుతుంది."
+        ],
+        "assistant_download_wifi_advisory": [
+            "en": "Stay on Wi-Fi — the download resumes automatically if interrupted.",
+            "hi": "Wi-Fi पर रहें — रुकावट होने पर डाउनलोड अपने-आप फिर शुरू होगा।",
+            "bn": "Wi-Fi-এ থাকুন — বাধা পড়লে ডাউনলোড নিজে থেকেই আবার শুরু হবে।",
+            "ta": "Wi-Fi-இல் தொடருங்கள் — இடைநிறுத்தப்பட்டால் பதிவிறக்கம் தானாகத் தொடரும்.",
+            "te": "Wi-Fi పై ఉండండి — అంతరాయం కలిగితే డౌన్‌లోడ్ స్వయంగా కొనసాగుతుంది."
+        ],
+        "assistant_setup_retry_hint": [
+            "en": "Retry keeps your matters and files, then starts assistant setup again.",
+            "hi": "Retry आपके मामले और फ़ाइलें सुरक्षित रखता है, फिर सहायक सेटअप फिर शुरू करता है।",
+            "bn": "Retry আপনার মামলা ও ফাইল রেখে সহকারী সেটআপ আবার শুরু করে।",
+            "ta": "Retry உங்கள் வழக்குகள் மற்றும் கோப்புகளை வைத்தே உதவியாளர் அமைப்பை மீண்டும் தொடங்கும்.",
+            "te": "Retry మీ కేసులు, ఫైళ్లను అలాగే ఉంచి సహాయకుడి సెటప్‌ను మళ్లీ ప్రారంభిస్తుంది."
+        ],
+        "assistant_setup_storage_hint": [
+            "en": "Free storage on this iPhone, then resume setup from here.",
+            "hi": "इस iPhone पर स्टोरेज खाली करें, फिर यहीं से सेटअप फिर शुरू करें।",
+            "bn": "এই iPhone-এ স্টোরেজ খালি করুন, তারপর এখান থেকেই সেটআপ চালু করুন।",
+            "ta": "இந்த iPhone-இல் சேமிப்பிடத்தை காலி செய்து, இங்கிருந்து அமைப்பைத் தொடருங்கள்.",
+            "te": "ఈ iPhone లో నిల్వను ఖాళీ చేసి, ఇక్కడి నుంచే సెటప్‌ను కొనసాగించండి."
+        ],
+        "assistant_setup_resume_hint": [
+            "en": "Resume setup when you are ready; your existing progress stays on this iPhone.",
+            "hi": "तैयार होने पर सेटअप फिर शुरू करें; आपकी मौजूदा प्रगति इसी iPhone पर रहती है।",
+            "bn": "প্রস্তুত হলে সেটআপ আবার শুরু করুন; আপনার অগ্রগতি এই iPhone-এ থাকে।",
+            "ta": "தயாரானபோது அமைப்பைத் தொடருங்கள்; இதுவரையிலான முன்னேற்றம் இந்த iPhone-இல் இருக்கும்.",
+            "te": "మీరు సిద్ధమైనప్పుడు సెటప్‌ను కొనసాగించండి; ఉన్న పురోగతి ఈ iPhone లోనే ఉంటుంది."
+        ],
+        "assistant_setup_wifi_hint": [
+            "en": "Reconnect to Wi-Fi, then resume setup from here.",
+            "hi": "Wi-Fi से फिर जुड़ें, फिर यहीं से सेटअप फिर शुरू करें।",
+            "bn": "Wi-Fi-এ আবার যুক্ত হয়ে এখান থেকেই সেটআপ চালু করুন।",
+            "ta": "Wi-Fi-இல் மீண்டும் இணைந்து, இங்கிருந்து அமைப்பைத் தொடருங்கள்.",
+            "te": "Wi-Fi కు మళ్లీ కనెక్ట్ అయి, ఇక్కడి నుంచే సెటప్‌ను కొనసాగించండి."
+        ],
         "translate_to": [
             "en": "Translate to %@",
             "hi": "%@ में अनुवाद करें",

@@ -940,7 +940,49 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(alphaAssistantSetupRecoveryHint(for: .failed)?.contains("Retry keeps your matters and files") == true)
         XCTAssertTrue(alphaAssistantSetupRecoveryHint(for: .pausedNoStorage)?.contains("Free storage") == true)
         XCTAssertTrue(alphaAssistantSetupRecoveryHint(for: .pausedWaitingForWifi)?.contains("Wi-Fi") == true)
+        XCTAssertTrue(alphaAssistantSetupRecoveryHint(for: .failed, languageCode: "ta")?.contains("Retry") == true)
+        XCTAssertTrue(alphaAssistantSetupRecoveryHint(for: .pausedNoStorage, languageCode: "te-IN")?.contains("నిల్వ") == true)
         XCTAssertNil(alphaAssistantSetupRecoveryHint(for: .installed))
+
+        let activeJob = AlphaModelDownloadJob(
+            sessionId: "active-localized-estimate",
+            packId: "case-associate",
+            tier: .caseAssociate,
+            state: .downloading,
+            networkPolicy: .wifiOnly,
+            bytesDownloaded: 1_350_000_000,
+            totalBytes: 5_400_000_000,
+            checksumSha256: ""
+        )
+        XCTAssertTrue(alphaDownloadEstimateLabel(activeJob, languageCode: "ta")?.contains("நிமிடம்") == true)
+        XCTAssertTrue(alphaDownloadEstimateLabel(activeJob, languageCode: "te-IN")?.contains("నిమిషాలు") == true)
+
+        let pendingJob = AlphaModelDownloadJob(
+            sessionId: "pending-localized-estimate",
+            packId: "quick-start",
+            tier: .quickStart,
+            state: .downloading,
+            networkPolicy: .wifiOnly,
+            bytesDownloaded: 0,
+            totalBytes: 0,
+            checksumSha256: ""
+        )
+        XCTAssertTrue(alphaDownloadEstimateLabel(pendingJob, languageCode: "bn")?.contains("ডাউনলোড") == true)
+        XCTAssertTrue(alphaDownloadEstimateLabel(
+            AlphaModelDownloadJob(
+                sessionId: "checking-localized-estimate",
+                packId: "quick-start",
+                tier: .quickStart,
+                state: .verifying,
+                networkPolicy: .wifiOnly,
+                bytesDownloaded: 1,
+                totalBytes: 1,
+                checksumSha256: ""
+            ),
+            languageCode: "hi"
+        )?.contains("अंतिम") == true)
+        XCTAssertTrue(alphaAssistantDownloadWifiAdvisory(languageCode: "ta").contains("Wi-Fi"))
+        XCTAssertTrue(alphaAssistantDownloadWifiAdvisory(languageCode: "te").contains("డౌన్‌లోడ్"))
     }
 
     func testAssistantActivityPausedCopyPointsToAssistantSurface() {
