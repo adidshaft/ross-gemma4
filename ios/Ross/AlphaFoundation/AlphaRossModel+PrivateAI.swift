@@ -1161,6 +1161,8 @@ extension AlphaRossModel {
         let unresolvedFindings = documents.flatMap(\.extractionFindings).filter { !$0.resolved }
         let refs = caseMatter.sourceRefs.prefix(8).map { "- \($0.label): \($0.detail)" }
         let documentLines = documents.map { "- \($0.title) (\($0.pageCount) pages, \($0.ocrStatus.title))" }
+        let missingSourceLabel = rossLocalized("no_linked_source_yet")
+        let missingSourceLine = "- \(missingSourceLabel)"
 
         func uniqueValues(for type: AlphaExtractedLegalFieldType, in fields: [AlphaExtractedLegalField]) -> [String] {
             Array(Set(fields.filter { $0.fieldType == type }.map(\.value))).sorted()
@@ -1170,7 +1172,7 @@ extension AlphaRossModel {
             fields
                 .filter { $0.fieldType == type }
                 .map { field in
-                    let sourceLabel = field.sourceRefs.first?.label ?? "Source pending"
+                    let sourceLabel = field.sourceRefs.first?.label ?? missingSourceLabel
                     return "- \(field.value) (\(sourceLabel))"
                 }
         }
@@ -1180,7 +1182,7 @@ extension AlphaRossModel {
             let chronologyLines = verifiedFields
                 .filter { $0.fieldType == .date || $0.fieldType == .nextDate }
                 .sorted { ($0.normalizedValue ?? $0.value) < ($1.normalizedValue ?? $1.value) }
-                .map { "- \($0.label): \($0.value) (\($0.sourceRefs.first?.label ?? "Source pending"))" }
+                .map { "- \($0.label): \($0.value) (\($0.sourceRefs.first?.label ?? missingSourceLabel))" }
             let warningLines = unresolvedFindings.map { "- \($0.message)" }
             return [
                 title,
@@ -1194,7 +1196,7 @@ extension AlphaRossModel {
             ] + (warningLines.isEmpty ? ["- No unresolved warnings."] : warningLines) + [
                 "",
                 "Source references",
-            ] + (refs.isEmpty ? ["- No source references available yet."] : refs) + [
+            ] + (refs.isEmpty ? [missingSourceLine] : refs) + [
                 "",
                 "Generated locally for advocate review. Verify all citations."
             ]
@@ -1226,7 +1228,7 @@ extension AlphaRossModel {
             ] + (pendingLines.isEmpty ? ["- No pending review fields."] : pendingLines) + [
                 "",
                 "Source references",
-            ] + (refs.isEmpty ? ["- No source references available yet."] : refs) + [
+            ] + (refs.isEmpty ? [missingSourceLine] : refs) + [
                 "",
                 "Generated locally for advocate review. Verify all citations."
             ]
@@ -1259,7 +1261,7 @@ extension AlphaRossModel {
             ] + (pendingLines.isEmpty ? ["- No pending review flags for order details."] : pendingLines) + [
                 "",
                 "Source references",
-            ] + (refs.isEmpty ? ["- No source references available yet."] : refs) + [
+            ] + (refs.isEmpty ? [missingSourceLine] : refs) + [
                 "",
                 "Generated locally for advocate review. Verify all citations."
             ]
@@ -1303,7 +1305,7 @@ extension AlphaRossModel {
             ] + (notes.isEmpty ? ["- No tasks yet."] : notes) + [
                 "",
                 "Source references",
-            ] + (refs.isEmpty ? ["- No source references available yet."] : refs) + [
+            ] + (refs.isEmpty ? [missingSourceLine] : refs) + [
                 "",
                 "Generated locally for advocate review. Verify all citations."
             ]

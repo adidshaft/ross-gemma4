@@ -1428,6 +1428,65 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    @MainActor
+    func testExportDraftMissingSourceFallbackFollowsSelectedLanguage() {
+        let previousLanguageCode = rossSelectedLanguageCode()
+        rossSaveLanguageSelection(code: "hi")
+        defer { rossSaveLanguageSelection(code: previousLanguageCode) }
+
+        let caseID = UUID()
+        let documentID = UUID()
+        let field = AlphaExtractedLegalField(
+            caseId: caseID,
+            documentId: documentID,
+            fieldType: .date,
+            label: "Hearing date",
+            value: "12 March 2026",
+            sourceRefs: [],
+            confidence: 0.81,
+            extractionMode: .basic,
+            extractionPass: .regex,
+            needsReview: false
+        )
+        let matter = AlphaCaseMatter(
+            id: caseID,
+            title: "Hindi export matter",
+            forum: "District Court",
+            stage: .reserved,
+            summary: "Summary",
+            issueHighlights: [],
+            evidenceNotes: [],
+            draftTasks: [],
+            documents: [
+                AlphaCaseDocument(
+                    id: documentID,
+                    title: "Order",
+                    fileName: "order.pdf",
+                    kind: .pdf,
+                    storedRelativePath: "order.pdf",
+                    importedAt: .now,
+                    pageCount: 1,
+                    ocrStatus: .nativeText,
+                    indexingStatus: .indexed,
+                    pages: [
+                        AlphaDocumentPage(pageNumber: 1, snippet: "Order lists the next hearing date.")
+                    ],
+                    extractedFields: [field]
+                )
+            ],
+            sourceRefs: []
+        )
+        var state = AlphaPersistedState.empty()
+        state.cases = [matter]
+        let model = AlphaRossModel(previewState: state)
+
+        let exportText = model.exportBodyLines(kind: "chronology_report", caseMatter: matter).joined(separator: "\n")
+
+        XCTAssertTrue(exportText.contains("- अभी linked source नहीं"), exportText)
+        XCTAssertFalse(exportText.contains("No source references available yet."), exportText)
+        XCTAssertFalse(exportText.contains("Source pending"), exportText)
+    }
+
     func testDockCommandCreatesTasksFromSelectedDocument() async throws {
         try await withRestoredStore { store in
             let state = AlphaPersistedState.demoSeed()
