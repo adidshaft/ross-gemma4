@@ -1080,65 +1080,79 @@ let alphaSamplerSettingsExplanation = "Tune how boldly the private assistant wri
 
 private struct AlphaSamplerSettingsCard: View {
     @Bindable var model: AlphaRossModel
+    @State private var advancedTuningExpanded = false
 
     var body: some View {
         let settings = model.persisted.settings.llamaSamplerSettings
-        RossSectionCard(title: "Answer tuning") {
-            VStack(alignment: .leading, spacing: 14) {
-                Text(alphaSamplerSettingsExplanation)
+        RossSectionCard(title: "Answer style") {
+            VStack(alignment: .leading, spacing: 12) {
+                AlphaSettingsValueRow(label: "Current style", value: "Grounded legal answers")
+
+                Text("Ross uses conservative defaults for legal Q&A so answers stay concise and tied to your files.")
                     .font(.footnote)
-                    .foregroundStyle(Color.rossInk.opacity(0.66))
+                    .foregroundStyle(Color.rossInk.opacity(0.68))
+                    .fixedSize(horizontal: false, vertical: true)
 
-                samplerSlider(
-                    title: "Temperature",
-                    value: settings.temperature,
-                    range: 0.0...1.0,
-                    step: 0.05
-                ) { newValue in
-                    model.updateSettings { $0.llamaSamplerSettings.temperature = newValue }
-                }
+                DisclosureGroup(isExpanded: $advancedTuningExpanded) {
+                    VStack(alignment: .leading, spacing: 14) {
+                        Text(alphaSamplerSettingsExplanation)
+                            .font(.footnote)
+                            .foregroundStyle(Color.rossInk.opacity(0.66))
 
-                samplerSlider(
-                    title: "Top P",
-                    value: settings.topP,
-                    range: 0.5...1.0,
-                    step: 0.05
-                ) { newValue in
-                    model.updateSettings { $0.llamaSamplerSettings.topP = newValue }
-                }
-
-                samplerSlider(
-                    title: "Repeat penalty",
-                    value: settings.repeatPenalty,
-                    range: 1.0...1.4,
-                    step: 0.05
-                ) { newValue in
-                    model.updateSettings { $0.llamaSamplerSettings.repeatPenalty = newValue }
-                }
-
-                HStack(spacing: 10) {
-                    Text("Top K")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(Color.rossInk)
-                    Spacer(minLength: 8)
-                    Stepper("\(settings.topK)", value: Binding(
-                        get: { model.persisted.settings.llamaSamplerSettings.topK },
-                        set: { value in
-                            model.updateSettings { $0.llamaSamplerSettings.topK = max(1, min(value, 200)) }
+                        samplerSlider(
+                            title: "Creativity",
+                            value: settings.temperature,
+                            range: 0.0...1.0,
+                            step: 0.05
+                        ) { newValue in
+                            model.updateSettings { $0.llamaSamplerSettings.temperature = newValue }
                         }
-                    ), in: 1...200, step: 5)
-                    .labelsHidden()
-                    Text("\(settings.topK)")
-                        .font(.footnote.monospacedDigit())
-                        .foregroundStyle(Color.rossInk.opacity(0.7))
-                }
 
-                Button("Restore legal QA defaults") {
-                    model.updateSettings { $0.llamaSamplerSettings = .legalQA }
+                        samplerSlider(
+                            title: "Focus",
+                            value: settings.topP,
+                            range: 0.5...1.0,
+                            step: 0.05
+                        ) { newValue in
+                            model.updateSettings { $0.llamaSamplerSettings.topP = newValue }
+                        }
+
+                        samplerSlider(
+                            title: "Repetition control",
+                            value: settings.repeatPenalty,
+                            range: 1.0...1.4,
+                            step: 0.05
+                        ) { newValue in
+                            model.updateSettings { $0.llamaSamplerSettings.repeatPenalty = newValue }
+                        }
+
+                        HStack(spacing: 10) {
+                            Text("Candidate limit")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(Color.rossInk)
+                            Spacer(minLength: 8)
+                            Stepper("\(settings.topK)", value: Binding(
+                                get: { model.persisted.settings.llamaSamplerSettings.topK },
+                                set: { value in
+                                    model.updateSettings { $0.llamaSamplerSettings.topK = max(1, min(value, 200)) }
+                                }
+                            ), in: 1...200, step: 5)
+                            .labelsHidden()
+                            Text("\(settings.topK)")
+                                .font(.footnote.monospacedDigit())
+                                .foregroundStyle(Color.rossInk.opacity(0.7))
+                        }
+
+                        Button("Restore recommended style") {
+                            model.updateSettings { $0.llamaSamplerSettings = .legalQA }
+                        }
+                        .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 14)
+                    }
+                    .padding(.top, 12)
+                } label: {
+                    AlphaSettingsValueRow(label: "Advanced tuning", value: advancedTuningExpanded ? "Shown" : "Hidden")
                 }
-                .buttonStyle(.plain)
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(Color.rossAccent)
+                .tint(Color.rossAccent)
             }
         }
     }
