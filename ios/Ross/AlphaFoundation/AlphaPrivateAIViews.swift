@@ -191,16 +191,18 @@ struct AlphaPrivateAISettingsScreen: View {
                                 .font(.caption)
                                 .foregroundStyle(Color.rossInk.opacity(0.68))
                                 .fixedSize(horizontal: false, vertical: true)
-                            HStack(spacing: 8) {
-                                Button("Update on Wi-Fi") {
-                                    model.startAssistantModelUpdate(update, mobileAllowed: false)
-                                }
-                                .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
+                            RossGlassGroup(spacing: 8) {
+                                HStack(spacing: 8) {
+                                    Button("Update on Wi-Fi") {
+                                        model.startAssistantModelUpdate(update, mobileAllowed: false)
+                                    }
+                                    .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
 
-                                Button("Dismiss") {
-                                    model.dismissAssistantModelUpdate(update)
+                                    Button("Dismiss") {
+                                        model.dismissAssistantModelUpdate(update)
+                                    }
+                                    .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 16, expandsHorizontally: false)
                                 }
-                                .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 16, expandsHorizontally: false)
                             }
                         }
                     }
@@ -872,14 +874,16 @@ struct AlphaPrivateAIJobCard: View {
 
             // Actions
             if canPause || canResume {
-                HStack(spacing: 10) {
-                    if canPause {
-                        Button("Pause") { model.pauseJob(job) }
-                            .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 16)
-                    }
-                    if canResume {
-                        Button(job.state == .failed ? "Retry" : "Resume") { model.resumeJob(job) }
-                            .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
+                RossGlassGroup(spacing: 10) {
+                    HStack(spacing: 10) {
+                        if canPause {
+                            Button("Pause") { model.pauseJob(job) }
+                                .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 16)
+                        }
+                        if canResume {
+                            Button(job.state == .failed ? "Retry" : "Resume") { model.resumeJob(job) }
+                                .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
+                        }
                     }
                 }
             }
@@ -950,17 +954,19 @@ struct AlphaPrivateAIInstalledPackCard: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            HStack(spacing: 10) {
-                Button("Use this option") {
-                    model.activateInstalledPack(pack)
-                }
-                .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
-                .disabled(!canActivate)
+            RossGlassGroup(spacing: 10) {
+                HStack(spacing: 10) {
+                    Button("Use this option") {
+                        model.activateInstalledPack(pack)
+                    }
+                    .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
+                    .disabled(!canActivate)
 
-                Button("Remove", role: .destructive) {
-                    model.removeInstalledPack(pack)
+                    Button("Remove", role: .destructive) {
+                        model.removeInstalledPack(pack)
+                    }
+                    .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 16)
                 }
-                .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 16)
             }
         }
         .padding(14)

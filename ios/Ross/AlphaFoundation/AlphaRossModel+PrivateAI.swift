@@ -981,7 +981,7 @@ extension AlphaRossModel {
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
                     title: "Assistant download verified",
-                    detail: "Ross confirmed the provider file size and byte-range download support before starting. Case files stayed on this device.",
+                    detail: "Ross checked the assistant setup download before starting. Case files stayed on this device.",
                     purpose: .model_download,
                     payloadClass: .no_case_data,
                     endpointLabel: "model-provider://private-assistant-download",

@@ -56,7 +56,7 @@ final class AlphaExtractionTests: XCTestCase {
             ),
             AlphaPrivacyLedgerEntry(
                 title: "Assistant download verified",
-                detail: "Ross confirmed the provider file size and byte-range download support before starting. Case files stayed on this device.",
+                detail: "Ross checked the assistant setup download before starting. Case files stayed on this device.",
                 purpose: .model_download,
                 payloadClass: .no_case_data,
                 endpointLabel: "model-provider://private-assistant-download",
@@ -90,6 +90,8 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(entries[0].lawyerTitle, "Checked private assistant setup")
         for entry in entries {
+            XCTAssertFalse(entry.detail.localizedCaseInsensitiveContains("provider"), entry.detail)
+            XCTAssertFalse(entry.detail.localizedCaseInsensitiveContains("byte-range"), entry.detail)
             XCTAssertTrue(entry.lawyerDetail.localizedCaseInsensitiveContains("assistant"), entry.lawyerDetail)
             XCTAssertFalse(entry.lawyerDetail.localizedCaseInsensitiveContains("catalog"), entry.lawyerDetail)
             XCTAssertFalse(entry.lawyerDetail.localizedCaseInsensitiveContains("model"), entry.lawyerDetail)
