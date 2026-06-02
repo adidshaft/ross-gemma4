@@ -1893,6 +1893,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 model.assistantDownloadFailureMessage(NSError(domain: NSURLErrorDomain, code: NSURLErrorNetworkConnectionLost)),
                 model.assistantDownloadFailureMessage(NSError(domain: NSURLErrorDomain, code: -123_456)),
                 model.assistantDownloadFailureMessage(NSError(domain: "RossAlphaPack", code: 99)),
+                model.assistantDownloadFailureMessage(NSError(domain: "RossAlphaPack", code: 2, userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."])),
                 model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.preflightMissingSize),
                 model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.preflightSizeMismatch(expected: 3_020_052_224, reported: 3_021_000_000)),
                 model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.preflightNotResumable),
@@ -1913,6 +1914,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertFalse(message.localizedCaseInsensitiveContains("model download"), message)
             XCTAssertFalse(message.localizedCaseInsensitiveContains("runtime"), message)
             XCTAssertFalse(message.localizedCaseInsensitiveContains("artifact"), message)
+            XCTAssertFalse(message.localizedCaseInsensitiveContains("checksum"), message)
             XCTAssertFalse(message.localizedCaseInsensitiveContains("NSURLErrorDomain"), message)
             XCTAssertFalse(message.localizedCaseInsensitiveContains("RossAlphaPack"), message)
             XCTAssertFalse(message.localizedCaseInsensitiveContains("provider"), message)

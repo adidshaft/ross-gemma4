@@ -762,6 +762,7 @@ extension AlphaRossModel {
             "nsurlerrordomain",
             "nscocoaerrordomain",
             "rossalphapack",
+            "checksum",
             "error domain",
             "error code",
             " error "
