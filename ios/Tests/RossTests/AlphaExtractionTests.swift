@@ -725,6 +725,14 @@ final class AlphaExtractionTests: XCTestCase {
             rossLocalized("wifi_setup_advisory", languageCode: "te-IN")
                 .contains("డౌన్‌లోడ్")
         )
+        XCTAssertTrue(
+            rossLocalized("setup_note_local_detail", languageCode: "bn")
+                .contains("ফাইল")
+        )
+        XCTAssertEqual(
+            AlphaCapabilityTier.caseAssociate.setupOneLine(languageCode: "ta"),
+            "தினசரி வழக்குகள், சுருக்கங்கள், தேதிகள், மூல ஆதாரமுள்ள Ask."
+        )
         XCTAssertEqual(
             rossLocalized("ask_sheet_placeholder", languageCode: "bn"),
             "এই মামলা, ট্যাগ করা ফাইল, বা আপনার পরবর্তী খসড়া ধাপ সম্পর্কে Ross-কে জিজ্ঞাসা করুন।"

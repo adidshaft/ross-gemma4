@@ -349,7 +349,7 @@ struct AlphaOnboardingModelChoiceRow: View {
     }
 }
 
-private extension AlphaCapabilityTier {
+extension AlphaCapabilityTier {
     var setupSymbolName: String {
         switch self {
         case .flash: "paperplane.fill"
@@ -360,15 +360,19 @@ private extension AlphaCapabilityTier {
     }
 
     var setupOneLine: String {
+        setupOneLine(languageCode: rossSelectedLanguageCode())
+    }
+
+    func setupOneLine(languageCode: String) -> String {
         switch self {
         case .flash:
-            "Fastest setup for quick questions and simple checklists."
+            rossLocalized("tier_flash_summary", languageCode: languageCode)
         case .quickStart:
-            "Short orders, notices, and lighter document review."
+            rossLocalized("tier_quick_start_summary", languageCode: languageCode)
         case .caseAssociate:
-            "Everyday matters, summaries, dates, and source-backed Ask."
+            rossLocalized("tier_case_associate_summary", languageCode: languageCode)
         case .seniorDraftingSupport:
-            "Long bundles, deeper review, hearing prep, and drafting."
+            rossLocalized("tier_senior_drafting_summary", languageCode: languageCode)
         }
     }
 }
@@ -380,14 +384,14 @@ struct AlphaOnboardingSetupNotes: View {
         VStack(spacing: compact ? 6 : 7) {
             AlphaOnboardingSetupNoteRow(
                 icon: "lock.fill",
-                title: "Works locally on this device",
-                detail: "Matter files and assistant work stay on this phone.",
+                title: rossLocalized("setup_note_local_title"),
+                detail: rossLocalized("setup_note_local_detail"),
                 compact: compact
             )
             AlphaOnboardingSetupNoteRow(
                 icon: "wifi",
-                title: "Use Wi-Fi for assistant setup",
-                detail: "Large downloads can pause and resume if interrupted.",
+                title: rossLocalized("setup_note_wifi_title"),
+                detail: rossLocalized("setup_note_wifi_detail"),
                 compact: compact
             )
         }
