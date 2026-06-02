@@ -440,8 +440,9 @@ struct AlphaPrivacyLedgerScreen: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: alphaSectionSpacing) {
-                RossSectionCard(title: "Privacy summary") {
+            RossGlassGroup(spacing: alphaSectionSpacing) {
+                VStack(alignment: .leading, spacing: alphaSectionSpacing) {
+                    RossSectionCard(title: "Privacy summary") {
                     Text("In the last 30 days, 0 case details left this phone. Legal Search only used sanitized legal queries.")
                         .font(.subheadline)
                         .foregroundStyle(Color.rossInk.opacity(0.72))
@@ -471,8 +472,9 @@ struct AlphaPrivacyLedgerScreen: View {
                         }
                     }
                 }
+                }
+                .padding(alphaScreenPadding)
             }
-            .padding(alphaScreenPadding)
         }
         .navigationTitle("Activity Log")
         .rossInlineNavigationTitle()
