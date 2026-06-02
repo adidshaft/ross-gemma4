@@ -1482,7 +1482,11 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
 
         let exportText = model.exportBodyLines(kind: "chronology_report", caseMatter: matter).joined(separator: "\n")
 
+        XCTAssertTrue(exportText.contains("Draft - कृपया review करें"), exportText)
+        XCTAssertTrue(exportText.contains("Advocate review के लिए locally generated."), exportText)
         XCTAssertTrue(exportText.contains("- अभी linked source नहीं"), exportText)
+        XCTAssertFalse(exportText.contains("Draft — please review"), exportText)
+        XCTAssertFalse(exportText.contains("Generated locally for advocate review."), exportText)
         XCTAssertFalse(exportText.contains("No source references available yet."), exportText)
         XCTAssertFalse(exportText.contains("Source pending"), exportText)
     }

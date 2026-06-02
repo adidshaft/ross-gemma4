@@ -1212,6 +1212,18 @@ final class AlphaExtractionTests: XCTestCase {
             "इस पर भरोसा करने से पहले आपका confirmation चाहिए"
         )
         XCTAssertEqual(
+            rossLocalized("export_draft_review", languageCode: "hi"),
+            "Draft - कृपया review करें"
+        )
+        XCTAssertEqual(
+            rossLocalized("export_generated_locally_verify", languageCode: "ta"),
+            "Advocate review-க்காக locally generated. எல்லா citations-ஐ verify செய்யவும்."
+        )
+        XCTAssertEqual(
+            rossLocalized("export_no_case_selected", languageCode: "bn"),
+            "কোনো case selected নেই."
+        )
+        XCTAssertEqual(
             rossLocalized("notes_drafts_title", languageCode: "hi"),
             "नोट्स और ड्राफ्ट"
         )

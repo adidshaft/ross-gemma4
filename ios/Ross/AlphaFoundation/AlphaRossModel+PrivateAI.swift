@@ -1135,15 +1135,18 @@ extension AlphaRossModel {
     func exportBodyLines(kind: String, caseMatter: AlphaCaseMatter?) -> [String] {
         let title = caseMatter?.title ?? "Ross"
         let generatedDate = Date().formatted(date: .abbreviated, time: .shortened)
+        let generatedLine = String(format: rossLocalized("export_generated"), generatedDate)
+        let draftReviewLine = rossLocalized("export_draft_review")
+        let localReviewFooter = rossLocalized("export_generated_locally_verify")
         guard let caseMatter else {
             return [
                 title,
-                "Generated: \(generatedDate)",
-                "Draft — please review",
+                generatedLine,
+                draftReviewLine,
                 "",
-                "No case selected.",
+                rossLocalized("export_no_case_selected"),
                 "",
-                "Generated locally for advocate review. Verify all citations."
+                localReviewFooter
             ]
         }
 
@@ -1186,8 +1189,8 @@ extension AlphaRossModel {
             let warningLines = unresolvedFindings.map { "- \($0.message)" }
             return [
                 title,
-                "Generated: \(generatedDate)",
-                "Draft — please review",
+                generatedLine,
+                draftReviewLine,
                 "",
                 "Chronology candidates",
             ] + (chronologyLines.isEmpty ? ["- No verified chronology candidates found yet."] : chronologyLines) + [
@@ -1198,7 +1201,7 @@ extension AlphaRossModel {
                 "Source references",
             ] + (refs.isEmpty ? [missingSourceLine] : refs) + [
                 "",
-                "Generated locally for advocate review. Verify all citations."
+                localReviewFooter
             ]
 
         case "case_note":
@@ -1210,8 +1213,8 @@ extension AlphaRossModel {
 
             return [
                 title,
-                "Generated: \(generatedDate)",
-                "Draft — please review",
+                generatedLine,
+                draftReviewLine,
                 "",
                 "Court / case metadata",
                 "Court: \(court)",
@@ -1230,7 +1233,7 @@ extension AlphaRossModel {
                 "Source references",
             ] + (refs.isEmpty ? [missingSourceLine] : refs) + [
                 "",
-                "Generated locally for advocate review. Verify all citations."
+                localReviewFooter
             ]
 
         case "order_summary":
@@ -1245,8 +1248,8 @@ extension AlphaRossModel {
 
             return [
                 title,
-                "Generated: \(generatedDate)",
-                "Draft — please review",
+                generatedLine,
+                draftReviewLine,
                 "",
                 "Operative directions",
             ] + (directions.isEmpty ? ["- No verified operative directions found yet."] : directions) + [
@@ -1263,7 +1266,7 @@ extension AlphaRossModel {
                 "Source references",
             ] + (refs.isEmpty ? [missingSourceLine] : refs) + [
                 "",
-                "Generated locally for advocate review. Verify all citations."
+                localReviewFooter
             ]
 
         case "chat_transcript":
@@ -1283,20 +1286,20 @@ extension AlphaRossModel {
 
             return [
                 title,
-                "Generated: \(generatedDate)",
-                "Draft — please review",
+                generatedLine,
+                draftReviewLine,
                 "",
                 "Ross thread transcript",
             ] + (transcriptLines.isEmpty ? ["No chat turns are saved for this matter yet.", ""] : transcriptLines) + [
-                "Generated locally for advocate review. Verify all citations."
+                localReviewFooter
             ]
 
         default:
             let notes = caseMatter.draftTasks.map { "- \($0)" }
             return [
                 title,
-                "Generated: \(generatedDate)",
-                "Draft — please review",
+                generatedLine,
+                draftReviewLine,
                 "",
                 "Summary",
                 caseMatter.summary,
@@ -1307,7 +1310,7 @@ extension AlphaRossModel {
                 "Source references",
             ] + (refs.isEmpty ? [missingSourceLine] : refs) + [
                 "",
-                "Generated locally for advocate review. Verify all citations."
+                localReviewFooter
             ]
         }
     }

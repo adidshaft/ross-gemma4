@@ -5292,6 +5292,34 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Draft ready",
             "te": "Draft ready"
         ],
+        "export_generated": [
+            "en": "Generated: %@",
+            "hi": "Generated: %@",
+            "bn": "Generated: %@",
+            "ta": "Generated: %@",
+            "te": "Generated: %@"
+        ],
+        "export_draft_review": [
+            "en": "Draft - please review",
+            "hi": "Draft - कृपया review करें",
+            "bn": "Draft - অনুগ্রহ করে review করুন",
+            "ta": "Draft - தயவு செய்து review செய்யவும்",
+            "te": "Draft - దయచేసి review చేయండి"
+        ],
+        "export_no_case_selected": [
+            "en": "No case selected.",
+            "hi": "कोई case selected नहीं है.",
+            "bn": "কোনো case selected নেই.",
+            "ta": "Case selected இல்லை.",
+            "te": "Case selected కాలేదు."
+        ],
+        "export_generated_locally_verify": [
+            "en": "Generated locally for advocate review. Verify all citations.",
+            "hi": "Advocate review के लिए locally generated. सभी citations verify करें.",
+            "bn": "Advocate review-এর জন্য locally generated. সব citations verify করুন.",
+            "ta": "Advocate review-க்காக locally generated. எல்லா citations-ஐ verify செய்யவும்.",
+            "te": "Advocate review కోసం locally generated. అన్ని citations verify చేయండి."
+        ],
         "draft_unavailable": [
             "en": "Draft unavailable",
             "hi": "Draft उपलब्ध नहीं",
