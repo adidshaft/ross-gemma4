@@ -93,6 +93,18 @@ func alphaFileReviewBasicTooLongWarning(languageCode: String = rossSelectedLangu
     rossLocalized("file_review_basic_too_long_warning", languageCode: languageCode)
 }
 
+private func alphaPDFReadableTextFallback() -> String {
+    rossLocalized("import_fallback_pdf_unreadable_text")
+}
+
+private func alphaImageReadableTextFallback() -> String {
+    rossLocalized("import_fallback_image_unreadable_text")
+}
+
+private func alphaDocumentUnreadableExtractionError() -> String {
+    rossLocalized("extraction_error_unreadable_document")
+}
+
 private let alphaMaxPDFImportBytes: Int64 = 180 * 1_024 * 1_024
 private let alphaMaxImageImportBytes: Int64 = 80 * 1_024 * 1_024
 private let alphaMaxTextImportBytes: Int64 = 8 * 1_024 * 1_024
@@ -658,7 +670,7 @@ actor AlphaRossStore {
             return extractPDFContent(from: url)
             #else
             return AlphaDocumentExtraction(
-                pages: [AlphaDocumentPage(pageNumber: 1, snippet: "PDF imported locally. Ross could not read selectable text from this file yet.")],
+                pages: [AlphaDocumentPage(pageNumber: 1, snippet: alphaPDFReadableTextFallback())],
                 extractedText: nil,
                 dominantSourceSnippet: nil,
                 ocrStatus: .placeholder,
@@ -750,7 +762,7 @@ actor AlphaRossStore {
     private func extractPDFContent(from url: URL) -> AlphaDocumentExtraction {
         guard let pdf = PDFDocument(url: url) else {
             return AlphaDocumentExtraction(
-                pages: [AlphaDocumentPage(pageNumber: 1, snippet: "PDF imported locally. Ross could not read text from this file.")],
+                pages: [AlphaDocumentPage(pageNumber: 1, snippet: alphaPDFReadableTextFallback())],
                 extractedText: nil,
                 dominantSourceSnippet: nil,
                 ocrStatus: .placeholder,
@@ -849,7 +861,7 @@ actor AlphaRossStore {
             )
         } catch {
             return AlphaDocumentExtraction(
-                pages: [AlphaDocumentPage(pageNumber: 1, snippet: "Image imported locally. Ross could not read text from this image yet.")],
+                pages: [AlphaDocumentPage(pageNumber: 1, snippet: alphaImageReadableTextFallback())],
                 extractedText: nil,
                 dominantSourceSnippet: nil,
                 ocrStatus: .placeholder,
@@ -858,7 +870,7 @@ actor AlphaRossStore {
         }
         #else
         return AlphaDocumentExtraction(
-            pages: [AlphaDocumentPage(pageNumber: 1, snippet: "Image imported locally. Ross could not read text from this image yet.")],
+            pages: [AlphaDocumentPage(pageNumber: 1, snippet: alphaImageReadableTextFallback())],
             extractedText: nil,
             dominantSourceSnippet: nil,
             ocrStatus: .placeholder,
@@ -1489,7 +1501,7 @@ private struct AlphaLocalExtractionOrchestrator {
                 fieldsExtracted: verification.fields.count,
                 fieldsNeedingReview: verification.fields.filter(\.needsReview).count,
                 warnings: warnings,
-                errorMessage: verification.fields.isEmpty && !hasReadableText ? "Ross could not read useful text in this document yet." : nil
+                errorMessage: verification.fields.isEmpty && !hasReadableText ? alphaDocumentUnreadableExtractionError() : nil
             ),
             findings: findings,
             caseMemoryUpdates: caseMemory,

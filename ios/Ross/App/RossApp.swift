@@ -1141,6 +1141,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "இந்த text file Ross இன்னும் படிக்க முடியாத encoding பயன்படுத்துகிறது.",
             "te": "ఈ text file Ross ఇంకా చదవలేని encoding ను ఉపయోగిస్తోంది."
         ],
+        "import_fallback_pdf_unreadable_text": [
+            "en": "PDF imported locally. Ross could not read text from this file yet.",
+            "hi": "PDF locally import हो गया। Ross इस file से text अभी पढ़ नहीं पाया.",
+            "bn": "PDF locally import হয়েছে। Ross এই file থেকে text এখনও পড়তে পারেনি.",
+            "ta": "PDF locally import செய்யப்பட்டது. Ross இந்த file-இலிருந்து text இன்னும் படிக்க முடியவில்லை.",
+            "te": "PDF locally import అయ్యింది. Ross ఈ file నుండి text ఇంకా చదవలేకపోయింది."
+        ],
+        "import_fallback_image_unreadable_text": [
+            "en": "Image imported locally. Ross could not read text from this image yet.",
+            "hi": "Image locally import हो गई। Ross इस image से text अभी पढ़ नहीं पाया.",
+            "bn": "Image locally import হয়েছে। Ross এই image থেকে text এখনও পড়তে পারেনি.",
+            "ta": "Image locally import செய்யப்பட்டது. Ross இந்த image-இலிருந்து text இன்னும் படிக்க முடியவில்லை.",
+            "te": "Image locally import అయ్యింది. Ross ఈ image నుండి text ఇంకా చదవలేకపోయింది."
+        ],
+        "extraction_error_unreadable_document": [
+            "en": "Ross could not read useful text in this document yet.",
+            "hi": "Ross इस document में useful text अभी पढ़ नहीं पाया.",
+            "bn": "Ross এই document-এ useful text এখনও পড়তে পারেনি.",
+            "ta": "Ross இந்த document-இல் useful text இன்னும் படிக்க முடியவில்லை.",
+            "te": "Ross ఈ document లో useful text ఇంకా చదవలేకపోయింది."
+        ],
         "ask_private_assistant_needs_repair": [
             "en": "Private assistant needs repair",
             "hi": "Private assistant repair चाहता है",

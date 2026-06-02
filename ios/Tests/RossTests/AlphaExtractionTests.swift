@@ -1911,6 +1911,7 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     func testUnreadableImageImportUsesPlainLanguageFallback() async throws {
+        rossSaveLanguageSelection(code: "hi")
         let store = AlphaRossStore()
         let sourceURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("\(UUID().uuidString)-unreadable.png")
@@ -1921,8 +1922,8 @@ final class AlphaExtractionTests: XCTestCase {
         let fallbackText = imported.document.pages.compactMap(\.snippet).joined(separator: " ")
 
         XCTAssertEqual(imported.document.kind, .image)
-        XCTAssertTrue(fallbackText.localizedCaseInsensitiveContains("Image imported locally"), fallbackText)
-        XCTAssertTrue(fallbackText.localizedCaseInsensitiveContains("could not read text"), fallbackText)
+        XCTAssertTrue(fallbackText.localizedCaseInsensitiveContains("Image locally import हो गई"), fallbackText)
+        XCTAssertTrue(fallbackText.localizedCaseInsensitiveContains("text अभी पढ़ नहीं पाया"), fallbackText)
         XCTAssertFalse(fallbackText.localizedCaseInsensitiveContains("OCR"), fallbackText)
         XCTAssertFalse(fallbackText.localizedCaseInsensitiveContains("build"), fallbackText)
         XCTAssertNil(imported.document.extractedText)
