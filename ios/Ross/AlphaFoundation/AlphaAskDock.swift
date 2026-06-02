@@ -1686,20 +1686,22 @@ struct AlphaRootAskEmptyFilesCard: View {
                 }
             }
 
-            HStack(spacing: 8) {
-                Button {
-                    onAddFile()
-                } label: {
-                    Label("Add file", systemImage: "doc.badge.plus")
-                }
-                .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 15)
+            RossGlassGroup(spacing: 8) {
+                HStack(spacing: 8) {
+                    Button {
+                        onAddFile()
+                    } label: {
+                        Label("Add file", systemImage: "doc.badge.plus")
+                    }
+                    .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 15)
 
-                Button {
-                    onAddImage()
-                } label: {
-                    Label("Add image", systemImage: "photo")
+                    Button {
+                        onAddImage()
+                    } label: {
+                        Label("Add image", systemImage: "photo")
+                    }
+                    .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 15)
                 }
-                .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 15)
             }
         }
         .padding(14)

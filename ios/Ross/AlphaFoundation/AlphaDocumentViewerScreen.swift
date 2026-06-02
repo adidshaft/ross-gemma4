@@ -1255,29 +1255,31 @@ struct AlphaDocumentAdvocateNoteCard: View {
                 .frame(minHeight: 112)
                 .rossGlassSurface(cornerRadius: 18, interactive: true, shadowOpacity: 0.05, shadowRadius: 5, shadowY: 2, strokeOpacity: 0.50)
 
-                HStack(spacing: 8) {
-                    Button("Save note") {
-                        noteFocused = false
-                        onSave()
-                    }
-                    .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
+                RossGlassGroup(spacing: 8) {
+                    HStack(spacing: 8) {
+                        Button("Save note") {
+                            noteFocused = false
+                            onSave()
+                        }
+                        .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
 
-                    Button {
-                        noteFocused = false
-                        onAskRoss()
-                    } label: {
-                        Label("Ask", systemImage: "bubble.left.and.text.bubble.right")
-                    }
-                    .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
+                        Button {
+                            noteFocused = false
+                            onAskRoss()
+                        } label: {
+                            Label("Ask", systemImage: "bubble.left.and.text.bubble.right")
+                        }
+                        .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
 
-                    Button {
-                        onReviewAgain()
-                    } label: {
-                        Label("Review", systemImage: "arrow.clockwise")
-                            .font(.footnote.weight(.semibold))
+                        Button {
+                            onReviewAgain()
+                        } label: {
+                            Label("Review", systemImage: "arrow.clockwise")
+                                .font(.footnote.weight(.semibold))
+                        }
+                        .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
+                        .accessibilityLabel("Review document again")
                     }
-                    .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
-                    .accessibilityLabel("Review document again")
                 }
             }
         }

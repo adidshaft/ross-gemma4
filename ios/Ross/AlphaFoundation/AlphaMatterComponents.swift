@@ -372,34 +372,36 @@ struct AlphaExpandableDocumentRow: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
 
-                    HStack(spacing: 8) {
-                        Button("Open", action: onOpen)
-                            .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 14)
+                    RossGlassGroup(spacing: 8) {
+                        HStack(spacing: 8) {
+                            Button("Open", action: onOpen)
+                                .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 14)
 
-                        Button("Chat", action: onOpenChat)
-                            .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 14, expandsHorizontally: false)
+                            Button("Chat", action: onOpenChat)
+                                .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 14, expandsHorizontally: false)
 
-                        Button("New review chat", action: onStartReviewChat)
-                            .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 14, expandsHorizontally: false)
+                            Button("New review chat", action: onStartReviewChat)
+                                .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 14, expandsHorizontally: false)
 
-                        if canMoveEarlier {
-                            Button {
-                                onMoveEarlier()
-                            } label: {
-                                Image(systemName: "arrow.up")
+                            if canMoveEarlier {
+                                Button {
+                                    onMoveEarlier()
+                                } label: {
+                                    Image(systemName: "arrow.up")
+                                }
+                                .rossGlassButtonStyle(tint: Color.rossInk.opacity(0.42), cornerRadius: 14, expandsHorizontally: false)
+                                .accessibilityLabel("Move document earlier")
                             }
-                            .rossGlassButtonStyle(tint: Color.rossInk.opacity(0.42), cornerRadius: 14, expandsHorizontally: false)
-                            .accessibilityLabel("Move document earlier")
-                        }
 
-                        if canMoveLater {
-                            Button {
-                                onMoveLater()
-                            } label: {
-                                Image(systemName: "arrow.down")
+                            if canMoveLater {
+                                Button {
+                                    onMoveLater()
+                                } label: {
+                                    Image(systemName: "arrow.down")
+                                }
+                                .rossGlassButtonStyle(tint: Color.rossInk.opacity(0.42), cornerRadius: 14, expandsHorizontally: false)
+                                .accessibilityLabel("Move document later")
                             }
-                            .rossGlassButtonStyle(tint: Color.rossInk.opacity(0.42), cornerRadius: 14, expandsHorizontally: false)
-                            .accessibilityLabel("Move document later")
                         }
                     }
                 }

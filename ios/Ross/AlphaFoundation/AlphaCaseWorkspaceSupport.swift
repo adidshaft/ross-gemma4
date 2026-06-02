@@ -405,23 +405,25 @@ struct AlphaReviewNudgeCard: View {
                 }
             }
 
-            HStack(spacing: 8) {
-                Button(action: onAccept) {
-                    Label("Correct", systemImage: "checkmark")
-                }
-                .buttonStyle(AlphaCompactNudgeButtonStyle(tint: Color.rossSuccess))
+            RossGlassGroup(spacing: 8) {
+                HStack(spacing: 8) {
+                    Button(action: onAccept) {
+                        Label("Correct", systemImage: "checkmark")
+                    }
+                    .buttonStyle(AlphaCompactNudgeButtonStyle(tint: Color.rossSuccess))
 
-                Button(action: onEdit) {
-                    Label("Edit", systemImage: "pencil")
-                }
-                .buttonStyle(AlphaCompactNudgeButtonStyle(tint: Color.rossAccent))
+                    Button(action: onEdit) {
+                        Label("Edit", systemImage: "pencil")
+                    }
+                    .buttonStyle(AlphaCompactNudgeButtonStyle(tint: Color.rossAccent))
 
-                Button(action: onDismiss) {
-                    Label("Dismiss", systemImage: "xmark")
+                    Button(action: onDismiss) {
+                        Label("Dismiss", systemImage: "xmark")
+                    }
+                    .buttonStyle(AlphaCompactNudgeButtonStyle(tint: Color.rossInk.opacity(0.68)))
                 }
-                .buttonStyle(AlphaCompactNudgeButtonStyle(tint: Color.rossInk.opacity(0.68)))
+                .labelStyle(.titleAndIcon)
             }
-            .labelStyle(.titleAndIcon)
         }
         .padding(12)
         .rossGlassSurface(tint: Color.orange, cornerRadius: 16, shadowOpacity: 0.08, shadowRadius: 8, shadowY: 3, fillOpacity: 0.8, strokeOpacity: 0.5)
@@ -493,19 +495,21 @@ struct AlphaMatterDateRow: View {
                     .background(Color.rossAccent.opacity(0.12))
                     .clipShape(Capsule())
 
-                HStack(spacing: 8) {
-                    AlphaCompactRowActionButton(
-                        systemImage: "checkmark",
-                        accessibilityLabel: "Mark date done",
-                        tint: Color.rossSuccess,
-                        action: onMarkDone
-                    )
-                    AlphaCompactRowActionButton(
-                        systemImage: "xmark",
-                        accessibilityLabel: "Cancel date",
-                        tint: Color.orange,
-                        action: onCancel
-                    )
+                RossGlassGroup(spacing: 8) {
+                    HStack(spacing: 8) {
+                        AlphaCompactRowActionButton(
+                            systemImage: "checkmark",
+                            accessibilityLabel: "Mark date done",
+                            tint: Color.rossSuccess,
+                            action: onMarkDone
+                        )
+                        AlphaCompactRowActionButton(
+                            systemImage: "xmark",
+                            accessibilityLabel: "Cancel date",
+                            tint: Color.orange,
+                            action: onCancel
+                        )
+                    }
                 }
             }
         }
