@@ -2730,6 +2730,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Ross key details கண்டது.",
             "te": "Ross key details కనుగొంది."
         ],
+        "document_review_summary_counts": [
+            "en": "Fields found: %d · Verified: %d · Please confirm: %d",
+            "hi": "Fields मिले: %d · Verified: %d · Confirm करें: %d",
+            "bn": "Fields পাওয়া গেছে: %d · Verified: %d · Confirm করুন: %d",
+            "ta": "Fields கண்டது: %d · Verified: %d · Confirm செய்யவும்: %d",
+            "te": "Fields కనుగొంది: %d · Verified: %d · Confirm చేయండి: %d"
+        ],
+        "document_review_upgrade_standard": [
+            "en": "Better extraction is available with Standard.",
+            "hi": "Standard के साथ better extraction available है.",
+            "bn": "Standard দিয়ে better extraction available.",
+            "ta": "Standard-இல் better extraction available.",
+            "te": "Standard తో better extraction available."
+        ],
+        "document_review_upgrade_advanced_scan": [
+            "en": "This scan has mixed language or unclear text. Advanced may improve review.",
+            "hi": "इस scan में mixed language या unclear text है। Advanced review बेहतर कर सकता है.",
+            "bn": "এই scan-এ mixed language বা unclear text আছে। Advanced review উন্নত করতে পারে.",
+            "ta": "இந்த scan-இல் mixed language அல்லது unclear text உள்ளது. Advanced review-ஐ மேம்படுத்தலாம்.",
+            "te": "ఈ scan లో mixed language లేదా unclear text ఉంది. Advanced review ను మెరుగుపరచవచ్చు."
+        ],
         "document_run_better_extraction": [
             "en": "Run better extraction",
             "hi": "बेहतर extraction चलाएं",

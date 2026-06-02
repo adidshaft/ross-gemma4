@@ -19,6 +19,28 @@ private extension String {
     }
 }
 
+func alphaDocumentReviewSummaryLabel(
+    fieldsFound: Int,
+    verified: Int,
+    pending: Int,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
+    String(
+        format: rossLocalized("document_review_summary_counts", languageCode: languageCode),
+        fieldsFound,
+        verified,
+        pending
+    )
+}
+
+func alphaBetterExtractionStandardMessage(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("document_review_upgrade_standard", languageCode: languageCode)
+}
+
+func alphaBetterExtractionAdvancedMessage(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("document_review_upgrade_advanced_scan", languageCode: languageCode)
+}
+
 extension AlphaRossModel {
 
     func rerunReview(caseId: UUID, documentId: UUID) async {
@@ -198,27 +220,27 @@ extension AlphaRossModel {
         case (true, true, _):
             return nil
         case (_, _, true):
-            return "Fields found: \(visibleFields.count) • Verified: \(verifiedCount) • Please confirm: \(pendingCount)"
+            return alphaDocumentReviewSummaryLabel(fieldsFound: visibleFields.count, verified: verifiedCount, pending: pendingCount)
         default:
-            return "Fields found: \(visibleFields.count) • Verified: \(verifiedCount) • Please confirm: 0"
+            return alphaDocumentReviewSummaryLabel(fieldsFound: visibleFields.count, verified: verifiedCount, pending: 0)
         }
     }
 
     func extractionUpgradeMessage(for document: AlphaCaseDocument) -> String? {
         let mode = activeExtractionMode
         if mode == .basic {
-            return "Better extraction is available with Standard."
+            return alphaBetterExtractionStandardMessage()
         }
         if mode == .quickStart,
            document.languageProfile?.primaryLanguage == .mixed || document.extractionFindings.contains(where: { $0.kind == .lowConfidenceOcr || $0.kind == .languageUncertain }) {
-            return "This scan has mixed language or unclear text. Advanced may improve review."
+            return alphaBetterExtractionAdvancedMessage()
         }
         if mode == .quickStart {
-            return "Better extraction is available with Standard."
+            return alphaBetterExtractionStandardMessage()
         }
         if mode == .caseAssociate,
            document.extractionFindings.contains(where: { $0.kind == .lowConfidenceOcr || $0.kind == .languageUncertain }) {
-            return "This scan has mixed language or unclear text. Advanced may improve review."
+            return alphaBetterExtractionAdvancedMessage()
         }
         return nil
     }

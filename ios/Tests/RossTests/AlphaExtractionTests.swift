@@ -1962,10 +1962,19 @@ final class AlphaExtractionTests: XCTestCase {
         let model = AlphaRossModel(previewState: .empty())
         model.privateAISnapshot.activePack = activePack
         model.privateAISnapshot.installedPacks = [activePack]
+        rossSaveLanguageSelection(code: "hi")
         let message = model.extractionUpgradeMessage(for: document)
 
-        XCTAssertEqual(message, "This scan has mixed language or unclear text. Advanced may improve review.")
+        XCTAssertEqual(message, "इस scan में mixed language या unclear text है। Advanced review बेहतर कर सकता है.")
         XCTAssertFalse(message?.localizedCaseInsensitiveContains("OCR") == true, message ?? "")
+        XCTAssertEqual(
+            alphaDocumentReviewSummaryLabel(fieldsFound: 4, verified: 2, pending: 1, languageCode: "ta"),
+            "Fields கண்டது: 4 · Verified: 2 · Confirm செய்யவும்: 1"
+        )
+        XCTAssertEqual(
+            alphaBetterExtractionStandardMessage(languageCode: "bn"),
+            "Standard দিয়ে better extraction available."
+        )
     }
 
     func testExtractedFieldsAlwaysRetainSourceRefs() async {
