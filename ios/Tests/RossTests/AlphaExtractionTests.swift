@@ -429,6 +429,37 @@ final class AlphaExtractionTests: XCTestCase {
         }
     }
 
+    func testPrivateAssistantSettingsCopyUsesProductLanguage() {
+        let normalSettingsCopy = [
+            alphaPrivateAIBackgroundDownloadsDetail,
+            alphaPrivateAIUpdateDetail,
+            alphaPrivateAIStorageTitle,
+            alphaPrivateAIStorageDetail,
+            alphaPrivateAIDeleteDownloadsTitle,
+            alphaPrivateAIDeleteDownloadsDetail
+        ].joined(separator: "\n")
+
+        let forbidden = [
+            "Gemma",
+            "Q2",
+            "Q4",
+            "GGUF",
+            "quant",
+            "repository",
+            "runtime",
+            "checksum",
+            "artifact",
+            "model"
+        ]
+
+        for term in forbidden {
+            XCTAssertNil(
+                normalSettingsCopy.range(of: term, options: [.caseInsensitive]),
+                "\(term) leaked into private assistant settings copy"
+            )
+        }
+    }
+
     @MainActor
     func testAssistantChecksumMatchingAcceptsLocallyComputedChecksumWhenCatalogValueIsMissing() {
         let model = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })

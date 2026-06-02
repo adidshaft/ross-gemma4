@@ -13,6 +13,13 @@ import UIKit
 import AppKit
 #endif
 
+let alphaPrivateAIBackgroundDownloadsDetail = "Keep assistant downloads eligible to continue when Ross is backgrounded."
+let alphaPrivateAIUpdateDetail = "Ross will download it with the same resumable Wi-Fi-first rules. Existing assistant files stay until the new file verifies."
+let alphaPrivateAIStorageTitle = "Assistant storage"
+let alphaPrivateAIStorageDetail = "App updates keep downloaded assistant files in Ross storage. A full uninstall removes the app container; iOS does not let Ross ask a question during uninstall."
+let alphaPrivateAIDeleteDownloadsTitle = "Delete downloaded assistant files"
+let alphaPrivateAIDeleteDownloadsDetail = "Keeps matters and drafts, removes local assistant files and resume data."
+
 struct AlphaPrivateAISettingsScreen: View {
     @Bindable var model: AlphaRossModel
     @State private var downloadPreferencesExpanded = false
@@ -151,7 +158,7 @@ struct AlphaPrivateAISettingsScreen: View {
                             Divider()
                             AlphaSettingsToggleRow(
                                 title: "Background downloads",
-                                detail: "Keep model downloads eligible to continue when Ross is backgrounded.",
+                                detail: alphaPrivateAIBackgroundDownloadsDetail,
                                 isOn: backgroundWorkBinding
                             )
                             Divider()
@@ -180,7 +187,7 @@ struct AlphaPrivateAISettingsScreen: View {
                             Text("\(update.tier.title) has a newer assistant file available.")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(Color.rossInk)
-                            Text("Ross will download it with the same resumable Wi-Fi-first rules. Existing model files stay until the new file verifies.")
+                            Text(alphaPrivateAIUpdateDetail)
                                 .font(.caption)
                                 .foregroundStyle(Color.rossInk.opacity(0.68))
                                 .fixedSize(horizontal: false, vertical: true)
@@ -200,10 +207,10 @@ struct AlphaPrivateAISettingsScreen: View {
                     }
                 }
 
-                RossSectionCard(title: "Model storage") {
+                RossSectionCard(title: alphaPrivateAIStorageTitle) {
                     VStack(alignment: .leading, spacing: 12) {
                         AlphaAssistantStorageFootprintRow(model: model)
-                        Text("App updates keep downloaded models in Ross storage. A full uninstall removes the app container; iOS does not let Ross ask a question during uninstall.")
+                        Text(alphaPrivateAIStorageDetail)
                             .font(.caption)
                             .foregroundStyle(Color.rossInk.opacity(0.68))
                             .fixedSize(horizontal: false, vertical: true)
@@ -211,8 +218,8 @@ struct AlphaPrivateAISettingsScreen: View {
                             model.removeAllDownloadedModelFiles()
                         } label: {
                             AlphaSettingsNavigationRow(
-                                title: "Delete downloaded model files",
-                                detail: "Keeps matters and drafts, removes local assistant files and resume data.",
+                                title: alphaPrivateAIDeleteDownloadsTitle,
+                                detail: alphaPrivateAIDeleteDownloadsDetail,
                                 systemImage: "trash"
                             )
                         }
