@@ -1673,6 +1673,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "matters மற்றும் drafts வைத்துக்கொண்டு local assistant setup files மற்றும் resume data நீக்கும்.",
             "te": "matters మరియు drafts ను ఉంచి local assistant setup files మరియు resume data ను తొలగిస్తుంది."
         ],
+        "assistant_verified_storage_label": [
+            "en": "Verified assistant setup",
+            "hi": "Verified assistant setup",
+            "bn": "Verified assistant setup",
+            "ta": "Verified assistant setup",
+            "te": "Verified assistant setup"
+        ],
         "privacy_summary": [
             "en": "Privacy summary",
             "hi": "Privacy summary",

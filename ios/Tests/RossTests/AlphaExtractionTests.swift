@@ -783,6 +783,10 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     func testPrivateAssistantSettingsCopyUsesProductLanguage() {
+        let previousLanguageCode = rossSelectedLanguageCode()
+        defer { rossSaveLanguageSelection(code: previousLanguageCode) }
+        rossSaveLanguageSelection(code: "hi")
+
         let normalSettingsCopy = [
             alphaPrivateAIBackgroundDownloadsDetail,
             alphaPrivateAIUpdateDetail,
@@ -826,6 +830,9 @@ final class AlphaExtractionTests: XCTestCase {
             )
         }
         XCTAssertTrue(normalSettingsCopy.contains("assistant setup files"))
+        XCTAssertTrue(normalSettingsCopy.contains("assistant setup files delete करें"))
+        XCTAssertTrue(normalSettingsCopy.contains("Ross assistant listings जांचता है"))
+        XCTAssertEqual(alphaPrivateAIVerifiedStorageLabel, "Verified assistant setup")
         XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("downloaded assistant files"))
         XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("downloaded assistant"))
         XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("assistant files"))

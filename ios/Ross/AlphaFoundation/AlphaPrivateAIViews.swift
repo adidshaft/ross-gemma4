@@ -13,15 +13,15 @@ import UIKit
 import AppKit
 #endif
 
-let alphaPrivateAIBackgroundDownloadsDetail = "Keep assistant downloads eligible to continue when Ross is backgrounded."
-let alphaPrivateAIUpdateDetail = "Ross will download it with the same resumable Wi-Fi-first rules. Existing assistant setup stays until the new setup verifies."
-let alphaPrivateAIStorageTitle = "Assistant storage"
-let alphaPrivateAIStorageDetail = "App updates keep assistant setup files in Ross storage. A full uninstall removes the app container; iOS does not let Ross ask a question during uninstall."
-let alphaPrivateAIDeleteDownloadsTitle = "Delete assistant setup files"
-let alphaPrivateAIDeleteDownloadsDetail = "Keeps matters and drafts, removes local assistant setup files and resume data."
-let alphaPrivateAIUpdateChecksTitle = "Check for assistant updates"
-let alphaPrivateAIUpdateChecksDetail = "Ross checks assistant listings and asks before replacing assistant setup."
-let alphaPrivateAIVerifiedStorageLabel = "Verified assistant setup"
+var alphaPrivateAIBackgroundDownloadsDetail: String { rossLocalized("assistant_background_downloads_detail") }
+var alphaPrivateAIUpdateDetail: String { rossLocalized("assistant_update_detail") }
+var alphaPrivateAIStorageTitle: String { rossLocalized("assistant_storage_title") }
+var alphaPrivateAIStorageDetail: String { rossLocalized("assistant_storage_detail") }
+var alphaPrivateAIDeleteDownloadsTitle: String { rossLocalized("assistant_delete_setup_files_title") }
+var alphaPrivateAIDeleteDownloadsDetail: String { rossLocalized("assistant_delete_setup_files_detail") }
+var alphaPrivateAIUpdateChecksTitle: String { rossLocalized("assistant_update_checks_title") }
+var alphaPrivateAIUpdateChecksDetail: String { rossLocalized("assistant_update_checks_detail") }
+var alphaPrivateAIVerifiedStorageLabel: String { rossLocalized("assistant_verified_storage_label") }
 
 func alphaAssistantUpdateAvailableLabel(_ tierTitle: String, languageCode: String = rossSelectedLanguageCode()) -> String {
     String(format: rossLocalized("assistant_update_available", languageCode: languageCode), tierTitle)
