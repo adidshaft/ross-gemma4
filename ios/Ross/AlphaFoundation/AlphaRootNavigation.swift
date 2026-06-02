@@ -143,59 +143,61 @@ private struct AlphaIncomingDocumentsSheet: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    RossHeroCard(
-                        eyebrow: "\(incomingFileNames.count) shared file\(incomingFileNames.count == 1 ? "" : "s")",
-                        title: "Add files to a matter",
-                        detail: "Ross copies the files into private storage before reading them.",
-                        showsMedia: false,
-                        mediaHeight: 96,
-                        logoSize: 54
-                    ) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            ForEach(incomingFileNames, id: \.self) { fileName in
-                                AlphaIncomingFileRow(fileName: fileName)
-                            }
-                        }
-                    }
-
-                    if !matterOptions.isEmpty {
-                        RossSectionCard(title: "Import into an existing matter") {
-                            VStack(alignment: .leading, spacing: 10) {
-                                ForEach(matterOptions) { matter in
-                                    Button {
-                                        alphaHaptic(.light)
-                                        model.importQueuedIncomingDocuments(to: matter.id)
-                                        dismiss()
-                                    } label: {
-                                        AlphaIncomingMatterRow(matter: matter)
-                                    }
-                                    .buttonStyle(.plain)
+                RossGlassGroup(spacing: 18) {
+                    VStack(alignment: .leading, spacing: 18) {
+                        RossHeroCard(
+                            eyebrow: "\(incomingFileNames.count) shared file\(incomingFileNames.count == 1 ? "" : "s")",
+                            title: "Add files to a matter",
+                            detail: "Ross copies the files into private storage before reading them.",
+                            showsMedia: false,
+                            mediaHeight: 96,
+                            logoSize: 54
+                        ) {
+                            VStack(alignment: .leading, spacing: 8) {
+                                ForEach(incomingFileNames, id: \.self) { fileName in
+                                    AlphaIncomingFileRow(fileName: fileName)
                                 }
                             }
                         }
-                    }
 
-                    RossSectionCard(title: "Create a new matter") {
-                        VStack(alignment: .leading, spacing: 14) {
-                            AlphaIncomingMatterTitleField(
-                                placeholder: defaultMatterTitle,
-                                text: $newMatterTitle
-                            )
-
-                            Button {
-                                alphaHaptic(.light)
-                                model.createMatterForQueuedIncomingDocuments(title: resolvedNewMatterTitle)
-                                dismiss()
-                            } label: {
-                                Label("Create matter and import files", systemImage: "plus.circle.fill")
+                        if !matterOptions.isEmpty {
+                            RossSectionCard(title: "Import into an existing matter") {
+                                VStack(alignment: .leading, spacing: 10) {
+                                    ForEach(matterOptions) { matter in
+                                        Button {
+                                            alphaHaptic(.light)
+                                            model.importQueuedIncomingDocuments(to: matter.id)
+                                            dismiss()
+                                        } label: {
+                                            AlphaIncomingMatterRow(matter: matter)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
                             }
-                            .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 18)
-                            .accessibilityHint("Creates a matter named \(resolvedNewMatterTitle) and imports the shared files.")
+                        }
+
+                        RossSectionCard(title: "Create a new matter") {
+                            VStack(alignment: .leading, spacing: 14) {
+                                AlphaIncomingMatterTitleField(
+                                    placeholder: defaultMatterTitle,
+                                    text: $newMatterTitle
+                                )
+
+                                Button {
+                                    alphaHaptic(.light)
+                                    model.createMatterForQueuedIncomingDocuments(title: resolvedNewMatterTitle)
+                                    dismiss()
+                                } label: {
+                                    Label("Create matter and import files", systemImage: "plus.circle.fill")
+                                }
+                                .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 18)
+                                .accessibilityHint("Creates a matter named \(resolvedNewMatterTitle) and imports the shared files.")
+                            }
                         }
                     }
+                    .padding(alphaScreenPadding)
                 }
-                .padding(alphaScreenPadding)
             }
             .background(Color.rossGroupedBackground.ignoresSafeArea())
             .navigationTitle("Shared files")

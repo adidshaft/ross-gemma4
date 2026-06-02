@@ -651,52 +651,54 @@ struct AlphaRootAskDock: View {
             if let preview = model.publicLawPreview {
                 NavigationStack {
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 16) {
-                            Text("Review Legal Search")
-                                .font(.title3.weight(.semibold))
-                            Text("Ross will search using only the query below. Your case files, party names, and private details stay on this device.")
-                                .font(.footnote)
-                                .foregroundStyle(Color.rossInk.opacity(0.72))
-                                .fixedSize(horizontal: false, vertical: true)
+                        RossGlassGroup(spacing: 16) {
+                            VStack(alignment: .leading, spacing: 16) {
+                                Text("Review Legal Search")
+                                    .font(.title3.weight(.semibold))
+                                Text("Ross will search using only the query below. Your case files, party names, and private details stay on this device.")
+                                    .font(.footnote)
+                                    .foregroundStyle(Color.rossInk.opacity(0.72))
+                                    .fixedSize(horizontal: false, vertical: true)
 
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Query to be sent")
-                                    .font(.subheadline.weight(.semibold))
-                                if editingPublicLawQuery {
-                                    TextEditor(text: Binding(
-                                        get: { model.publicLawPreview?.query ?? "" },
-                                        set: { model.updatePendingPublicLawQuery($0) }
-                                    ))
-                                    .font(.callout.weight(.medium))
-                                    .frame(minHeight: 96)
-                                    .padding(8)
-                                    .rossGlassSurface(cornerRadius: 12, interactive: true, shadowOpacity: 0.04, shadowRadius: 4, shadowY: 1, strokeOpacity: 0.48)
-                                } else {
-                                    Text(preview.query)
-                                        .font(.callout.weight(.semibold))
-                                        .foregroundStyle(Color.rossInk)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                        .padding(12)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .rossGlassSurface(cornerRadius: 12, strokeOpacity: 0.48)
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Query to be sent")
+                                        .font(.subheadline.weight(.semibold))
+                                    if editingPublicLawQuery {
+                                        TextEditor(text: Binding(
+                                            get: { model.publicLawPreview?.query ?? "" },
+                                            set: { model.updatePendingPublicLawQuery($0) }
+                                        ))
+                                        .font(.callout.weight(.medium))
+                                        .frame(minHeight: 96)
+                                        .padding(8)
+                                        .rossGlassSurface(cornerRadius: 12, interactive: true, shadowOpacity: 0.04, shadowRadius: 4, shadowY: 1, strokeOpacity: 0.48)
+                                    } else {
+                                        Text(preview.query)
+                                            .font(.callout.weight(.semibold))
+                                            .foregroundStyle(Color.rossInk)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                            .padding(12)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .rossGlassSurface(cornerRadius: 12, strokeOpacity: 0.48)
+                                    }
+                                }
+
+                                Text(preview.removed == ["No private case data detected"] ? "0 private case details sent" : "\(preview.removed.count) private details removed · 0 sent")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(Color.rossInk.opacity(0.62))
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 7)
+                                    .rossGlassSurface(cornerRadius: 999, strokeOpacity: 0.42)
+
+                                if model.publicLawSearchInFlight {
+                                    ProgressView("Searching legal sources…")
+                                        .progressViewStyle(.circular)
+                                        .tint(Color.rossAccent)
+                                        .font(.footnote.weight(.medium))
                                 }
                             }
-
-                            Text(preview.removed == ["No private case data detected"] ? "0 private case details sent" : "\(preview.removed.count) private details removed · 0 sent")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(Color.rossInk.opacity(0.62))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 7)
-                                .rossGlassSurface(cornerRadius: 999, strokeOpacity: 0.42)
-
-                            if model.publicLawSearchInFlight {
-                                ProgressView("Searching legal sources…")
-                                    .progressViewStyle(.circular)
-                                    .tint(Color.rossAccent)
-                                    .font(.footnote.weight(.medium))
-                            }
+                            .padding(alphaScreenPadding)
                         }
-                        .padding(alphaScreenPadding)
                     }
                     .safeAreaInset(edge: .bottom, spacing: 0) {
                         HStack(spacing: 10) {
@@ -1478,181 +1480,183 @@ struct AlphaRootAskToolsSheet: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                Capsule()
-                    .fill(Color.rossBorder.opacity(0.9))
-                    .frame(width: 42, height: 5)
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 8)
+            RossGlassGroup(spacing: 18) {
+                VStack(alignment: .leading, spacing: 18) {
+                    Capsule()
+                        .fill(Color.rossBorder.opacity(0.9))
+                        .frame(width: 42, height: 5)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 8)
 
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(spacing: 10) {
-                            RossGlassIconView(.userMsg, variant: .accent, size: 22, fallbackSystemImage: "bubble.left.and.text.bubble.right.fill")
-                            Text("Ask Ross")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(Color.rossInk)
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(spacing: 10) {
+                                RossGlassIconView(.userMsg, variant: .accent, size: 22, fallbackSystemImage: "bubble.left.and.text.bubble.right.fill")
+                                Text("Ask Ross")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(Color.rossInk)
+                            }
+                            Text("Choose scope, add a file, or turn on Legal Search.")
+                                .font(.caption)
+                                .foregroundStyle(Color.rossInk.opacity(0.66))
+                                .fixedSize(horizontal: false, vertical: true)
                         }
-                        Text("Choose scope, add a file, or turn on Legal Search.")
-                            .font(.caption)
-                            .foregroundStyle(Color.rossInk.opacity(0.66))
-                            .fixedSize(horizontal: false, vertical: true)
+
+                        Spacer(minLength: 12)
+
+                        Button {
+                            dismiss()
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(Color.rossInk.opacity(0.72))
+                                .frame(width: 30, height: 30)
+                                .rossNativeGlassSurface(
+                                    tint: Color.rossInk.opacity(0.7),
+                                    shape: Circle(),
+                                    interactive: true,
+                                    fallbackFillOpacity: 0.82,
+                                    fallbackStrokeOpacity: 0.44
+                                )
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Close Ask Ross tools")
                     }
 
-                    Spacer(minLength: 12)
+                    VStack(spacing: 10) {
+                        AlphaRootAskToolRow(
+                            title: "Add file",
+                            detail: activeScopeCaseID == nil ? "Add a PDF or note to shared files." : "Add a PDF or note to this matter.",
+                            accentLabel: "Open",
+                            icon: .fileUpload,
+                            variant: .accent,
+                            fallbackSystemImage: "doc.badge.plus"
+                        ) {
+                            dismiss()
+                            onAddFile()
+                        }
 
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(Color.rossInk.opacity(0.72))
-                            .frame(width: 30, height: 30)
-                            .rossNativeGlassSurface(
-                                tint: Color.rossInk.opacity(0.7),
-                                shape: Circle(),
-                                interactive: true,
-                                fallbackFillOpacity: 0.82,
-                                fallbackStrokeOpacity: 0.44
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Close Ask Ross tools")
-                }
-
-                VStack(spacing: 10) {
-                    AlphaRootAskToolRow(
-                        title: "Add file",
-                        detail: activeScopeCaseID == nil ? "Add a PDF or note to shared files." : "Add a PDF or note to this matter.",
-                        accentLabel: "Open",
-                        icon: .fileUpload,
-                        variant: .accent,
-                        fallbackSystemImage: "doc.badge.plus"
-                    ) {
-                        dismiss()
-                        onAddFile()
-                    }
-
-                    AlphaRootAskToolRow(
-                        title: "Add image",
-                        detail: activeScopeCaseID == nil ? "Add a photo, scan, or screenshot to shared files." : "Add a photo, scan, or screenshot to this matter.",
-                        accentLabel: "Open",
-                        icon: .files,
-                        variant: .neutral,
-                        fallbackSystemImage: "photo.stack"
-                    ) {
-                        dismiss()
-                        onAddImage()
-                    }
-
-                    AlphaRootAskToolRow(
-                        title: "Legal Search",
-                        detail: model.askWebEnabled
-                            ? "On. Ross only sends a sanitized legal query."
-                            : "Off. Ross stays fully local until you turn it on.",
-                        accentLabel: model.askWebEnabled ? "On" : "Off",
-                        icon: .earth,
-                        variant: model.askWebEnabled ? .highlight : .neutral,
-                        fallbackSystemImage: model.askWebEnabled ? "globe.badge.chevron.backward" : "globe.slash"
-                    ) {
-                        model.askWebEnabled.toggle()
-                    }
-
-                    AlphaRootAskToolRow(
-                        title: "Activity Log",
-                        detail: "See what stayed local and what, if anything, left the device.",
-                        accentLabel: "Open",
-                        icon: .gearKeyhole,
-                        variant: .neutral,
-                        fallbackSystemImage: "lock.shield"
-                    ) {
-                        dismiss()
-                        model.path.append(.privacyLedger)
-                    }
-                }
-
-                if let fixedScopeCaseID {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(fixedScopeCaseID == alphaSharedWorkspaceID ? "This space" : "This matter")
-                            .font(.caption.weight(.bold))
-                            .tracking(1.2)
-                            .foregroundStyle(Color.rossInk.opacity(0.64))
-
-                        AlphaRootAskScopeRow(
-                            title: model.scopeLabel(for: fixedScopeCaseID),
-                            isSelected: true,
-                            icon: .folder,
-                            variant: .neutral,
-                            fallbackSystemImage: "folder.fill",
-                            action: { }
-                        )
-                    }
-                } else {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Ask in")
-                            .font(.caption.weight(.bold))
-                            .tracking(1.2)
-                            .foregroundStyle(Color.rossInk.opacity(0.64))
-
-                        AlphaRootAskScopeRow(
-                            title: "All work",
-                            isSelected: model.askSelectedScopeCaseID == nil,
+                        AlphaRootAskToolRow(
+                            title: "Add image",
+                            detail: activeScopeCaseID == nil ? "Add a photo, scan, or screenshot to shared files." : "Add a photo, scan, or screenshot to this matter.",
+                            accentLabel: "Open",
                             icon: .files,
                             variant: .neutral,
-                            fallbackSystemImage: "square.stack.3d.up.fill"
+                            fallbackSystemImage: "photo.stack"
                         ) {
-                            model.askSelectedScopeCaseID = nil
                             dismiss()
+                            onAddImage()
                         }
 
-                        ForEach(model.cases) { caseMatter in
+                        AlphaRootAskToolRow(
+                            title: "Legal Search",
+                            detail: model.askWebEnabled
+                                ? "On. Ross only sends a sanitized legal query."
+                                : "Off. Ross stays fully local until you turn it on.",
+                            accentLabel: model.askWebEnabled ? "On" : "Off",
+                            icon: .earth,
+                            variant: model.askWebEnabled ? .highlight : .neutral,
+                            fallbackSystemImage: model.askWebEnabled ? "globe.badge.chevron.backward" : "globe.slash"
+                        ) {
+                            model.askWebEnabled.toggle()
+                        }
+
+                        AlphaRootAskToolRow(
+                            title: "Activity Log",
+                            detail: "See what stayed local and what, if anything, left the device.",
+                            accentLabel: "Open",
+                            icon: .gearKeyhole,
+                            variant: .neutral,
+                            fallbackSystemImage: "lock.shield"
+                        ) {
+                            dismiss()
+                            model.path.append(.privacyLedger)
+                        }
+                    }
+
+                    if let fixedScopeCaseID {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text(fixedScopeCaseID == alphaSharedWorkspaceID ? "This space" : "This matter")
+                                .font(.caption.weight(.bold))
+                                .tracking(1.2)
+                                .foregroundStyle(Color.rossInk.opacity(0.64))
+
                             AlphaRootAskScopeRow(
-                                title: caseMatter.title,
-                                isSelected: model.askSelectedScopeCaseID == caseMatter.id,
+                                title: model.scopeLabel(for: fixedScopeCaseID),
+                                isSelected: true,
                                 icon: .folder,
                                 variant: .neutral,
-                                fallbackSystemImage: "folder.fill"
+                                fallbackSystemImage: "folder.fill",
+                                action: { }
+                            )
+                        }
+                    } else {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Ask in")
+                                .font(.caption.weight(.bold))
+                                .tracking(1.2)
+                                .foregroundStyle(Color.rossInk.opacity(0.64))
+
+                            AlphaRootAskScopeRow(
+                                title: "All work",
+                                isSelected: model.askSelectedScopeCaseID == nil,
+                                icon: .files,
+                                variant: .neutral,
+                                fallbackSystemImage: "square.stack.3d.up.fill"
                             ) {
-                                model.askSelectedScopeCaseID = caseMatter.id
+                                model.askSelectedScopeCaseID = nil
                                 dismiss()
+                            }
+
+                            ForEach(model.cases) { caseMatter in
+                                AlphaRootAskScopeRow(
+                                    title: caseMatter.title,
+                                    isSelected: model.askSelectedScopeCaseID == caseMatter.id,
+                                    icon: .folder,
+                                    variant: .neutral,
+                                    fallbackSystemImage: "folder.fill"
+                                ) {
+                                    model.askSelectedScopeCaseID = caseMatter.id
+                                    dismiss()
+                                }
                             }
                         }
                     }
-                }
 
-                if fixedDocumentIDs.isEmpty {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Use uploaded files")
-                            .font(.caption.weight(.bold))
-                            .tracking(1.2)
-                            .foregroundStyle(Color.rossInk.opacity(0.64))
+                    if fixedDocumentIDs.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Use uploaded files")
+                                .font(.caption.weight(.bold))
+                                .tracking(1.2)
+                                .foregroundStyle(Color.rossInk.opacity(0.64))
 
-                        if availableDocuments.isEmpty {
-                            AlphaRootAskEmptyFilesCard(
-                                scopeIsShared: activeScopeCaseID == nil || activeScopeCaseID == alphaSharedWorkspaceID,
-                                onAddFile: {
-                                    dismiss()
-                                    onAddFile()
-                                },
-                                onAddImage: {
-                                    dismiss()
-                                    onAddImage()
+                            if availableDocuments.isEmpty {
+                                AlphaRootAskEmptyFilesCard(
+                                    scopeIsShared: activeScopeCaseID == nil || activeScopeCaseID == alphaSharedWorkspaceID,
+                                    onAddFile: {
+                                        dismiss()
+                                        onAddFile()
+                                    },
+                                    onAddImage: {
+                                        dismiss()
+                                        onAddImage()
+                                    }
+                                )
+                            }
+
+                            ForEach(availableDocuments) { document in
+                                AlphaRootAskDocumentRow(
+                                    title: document.title,
+                                    detail: document.isShared
+                                        ? "Shared file"
+                                        : (activeScopeCaseID == nil ? document.caseTitle : "This matter"),
+                                    isSelected: model.selectedAskDocumentIDs(for: activeScopeCaseID).contains(document.id),
+                                    icon: alphaDocumentGlassIcon(document.kind).0,
+                                    variant: alphaDocumentGlassIcon(document.kind).1,
+                                    fallbackSystemImage: alphaDocumentGlassIcon(document.kind).2
+                                ) {
+                                    model.toggleAskDocumentSelection(document.id, for: activeScopeCaseID)
                                 }
-                            )
-                        }
-
-                        ForEach(availableDocuments) { document in
-                            AlphaRootAskDocumentRow(
-                                title: document.title,
-                                detail: document.isShared
-                                    ? "Shared file"
-                                    : (activeScopeCaseID == nil ? document.caseTitle : "This matter"),
-                                isSelected: model.selectedAskDocumentIDs(for: activeScopeCaseID).contains(document.id),
-                                icon: alphaDocumentGlassIcon(document.kind).0,
-                                variant: alphaDocumentGlassIcon(document.kind).1,
-                                fallbackSystemImage: alphaDocumentGlassIcon(document.kind).2
-                            ) {
-                                model.toggleAskDocumentSelection(document.id, for: activeScopeCaseID)
                             }
                         }
                     }

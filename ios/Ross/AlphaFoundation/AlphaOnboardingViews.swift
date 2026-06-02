@@ -581,41 +581,42 @@ struct AlphaModelPickerSheet: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 14) {
-                    // Context header
-                    VStack(spacing: 6) {
-                        Text("Choose your private assistant")
-                            .font(.system(size: 22, weight: .bold, design: .serif))
-                            .foregroundStyle(Color.rossInk)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                RossGlassGroup(spacing: 14) {
+                    VStack(spacing: 14) {
+                        VStack(spacing: 6) {
+                            Text("Choose your private assistant")
+                                .font(.system(size: 22, weight: .bold, design: .serif))
+                                .foregroundStyle(Color.rossInk)
+                                .frame(maxWidth: .infinity, alignment: .leading)
 
-                        Text("Every option runs fully on this device. Larger assistants take longer to download and can handle deeper work.")
-                            .font(.subheadline)
-                            .foregroundStyle(Color.rossInk.opacity(0.60))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .padding(.horizontal, 4)
-
-                    ForEach(AlphaCapabilityTier.allCases, id: \.self) { tier in
-                        AlphaModelPickerRow(
-                            model: model,
-                            tier: tier,
-                            isRecommended: tier == model.recommendedOnDeviceTier()
-                        ) {
-                            model.selectedTier = tier
-                            model.finishPackSetup()
-                            isPresented = false
+                            Text("Every option runs fully on this device. Larger assistants take longer to download and can handle deeper work.")
+                                .font(.subheadline)
+                                .foregroundStyle(Color.rossInk.opacity(0.60))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
-                    }
+                        .padding(.horizontal, 4)
 
-                    Text("You can change this later in Settings → Ross assistant.")
-                        .font(.caption)
-                        .foregroundStyle(Color.rossInk.opacity(0.44))
-                        .multilineTextAlignment(.center)
-                        .padding(.top, 4)
+                        ForEach(AlphaCapabilityTier.allCases, id: \.self) { tier in
+                            AlphaModelPickerRow(
+                                model: model,
+                                tier: tier,
+                                isRecommended: tier == model.recommendedOnDeviceTier()
+                            ) {
+                                model.selectedTier = tier
+                                model.finishPackSetup()
+                                isPresented = false
+                            }
+                        }
+
+                        Text("You can change this later in Settings → Ross assistant.")
+                            .font(.caption)
+                            .foregroundStyle(Color.rossInk.opacity(0.44))
+                            .multilineTextAlignment(.center)
+                            .padding(.top, 4)
+                    }
+                    .padding(20)
                 }
-                .padding(20)
             }
             .navigationTitle("Assistant")
             .rossInlineNavigationTitle()
