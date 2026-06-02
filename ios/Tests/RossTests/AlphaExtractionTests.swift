@@ -988,6 +988,9 @@ final class AlphaExtractionTests: XCTestCase {
     func testAssistantActivityPausedCopyPointsToAssistantSurface() {
         let pausedDetail = alphaAssistantActivityDetail(for: .pausedUser)
 
+        XCTAssertEqual(alphaAssistantStateLabel(.downloading), "Preparing")
+        XCTAssertEqual(alphaAssistantStateLabel(.verifying), "Checking")
+        XCTAssertEqual(alphaAssistantStateLabel(.pausedNoStorage), "Needs space")
         XCTAssertTrue(pausedDetail.contains("My assistant"))
         XCTAssertTrue(pausedDetail.contains("this iPhone"))
         XCTAssertFalse(pausedDetail.localizedCaseInsensitiveContains("device setup"))
@@ -998,6 +1001,15 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(failedDetail.contains("matters and files"))
         XCTAssertFalse(failedDetail.localizedCaseInsensitiveContains("model"))
         XCTAssertFalse(failedDetail.localizedCaseInsensitiveContains("runtime"))
+
+        XCTAssertEqual(alphaAssistantStateLabel(.pausedWaitingForWifi, languageCode: "ta"), "Wi-Fi காத்திருக்கிறது")
+        XCTAssertEqual(alphaAssistantStateLabel(.failed, languageCode: "te-IN"), "మళ్లీ ప్రయత్నించాలి")
+        XCTAssertTrue(alphaAssistantActivityDetail(for: .downloading, languageCode: "ta").contains("Ross"))
+        XCTAssertTrue(alphaAssistantActivityDetail(for: .pausedNoStorage, languageCode: "te").contains("ఖాళీ స్థలం"))
+        let teluguFailedDetail = alphaAssistantActivityDetail(for: .failed, languageCode: "te")
+        XCTAssertTrue(teluguFailedDetail.contains("My assistant"))
+        XCTAssertFalse(teluguFailedDetail.localizedCaseInsensitiveContains("runtime"))
+        XCTAssertFalse(teluguFailedDetail.localizedCaseInsensitiveContains("model"))
     }
 
     @MainActor

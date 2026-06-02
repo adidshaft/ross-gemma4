@@ -778,45 +778,51 @@ func alphaActiveSetupJob(_ model: AlphaRossModel) -> AlphaModelDownloadJob? {
     }
 }
 
-func alphaAssistantActivityDetail(for state: AlphaDownloadState) -> String {
+func alphaAssistantActivityDetail(
+    for state: AlphaDownloadState,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
     switch state {
     case .queued, .downloading:
-        "Ross is preparing the private assistant. You can keep using the app."
+        rossLocalized("assistant_activity_preparing", languageCode: languageCode)
     case .verifying:
-        "Ross is checking that the on-device assistant is ready before turning it on."
+        rossLocalized("assistant_activity_checking", languageCode: languageCode)
     case .pausedWaitingForWifi:
-        "Ross is waiting for Wi-Fi before continuing the assistant setup."
+        rossLocalized("assistant_activity_waiting_wifi", languageCode: languageCode)
     case .pausedUser:
-        "The assistant setup is paused. Open My assistant to resume it from this iPhone."
+        rossLocalized("assistant_activity_paused", languageCode: languageCode)
     case .pausedNoStorage:
-        "Ross needs more free space before the assistant can finish setting up."
+        rossLocalized("assistant_activity_storage", languageCode: languageCode)
     case .pausedError, .failed:
-        "Assistant setup could not finish. Open My assistant to retry or repair setup; your matters and files stay on this iPhone."
+        rossLocalized("assistant_activity_retry", languageCode: languageCode)
     case .notStarted, .installed, .cancelled:
-        "No setup is running right now."
+        rossLocalized("assistant_activity_idle", languageCode: languageCode)
     }
 }
 
-func alphaAssistantStateLabel(_ state: AlphaDownloadState) -> String {
+func alphaAssistantStateLabel(
+    _ state: AlphaDownloadState,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
     switch state {
     case .queued, .downloading:
-        "Preparing"
+        rossLocalized("assistant_state_preparing", languageCode: languageCode)
     case .verifying:
-        "Checking"
+        rossLocalized("assistant_state_checking", languageCode: languageCode)
     case .pausedWaitingForWifi:
-        "Waiting for Wi-Fi"
+        rossLocalized("assistant_state_waiting_wifi", languageCode: languageCode)
     case .pausedUser:
-        "Paused"
+        rossLocalized("assistant_state_paused", languageCode: languageCode)
     case .pausedNoStorage:
-        "Needs space"
+        rossLocalized("assistant_state_needs_space", languageCode: languageCode)
     case .pausedError, .failed:
-        "Needs retry"
+        rossLocalized("assistant_state_needs_retry", languageCode: languageCode)
     case .installed:
-        "Ready"
+        rossLocalized("assistant_state_ready", languageCode: languageCode)
     case .cancelled:
-        "Cancelled"
+        rossLocalized("assistant_state_cancelled", languageCode: languageCode)
     case .notStarted:
-        "Not started"
+        rossLocalized("assistant_state_not_started", languageCode: languageCode)
     }
 }
 

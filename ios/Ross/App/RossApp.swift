@@ -448,6 +448,118 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Wi-Fi-இல் மீண்டும் இணைந்து, இங்கிருந்து அமைப்பைத் தொடருங்கள்.",
             "te": "Wi-Fi కు మళ్లీ కనెక్ట్ అయి, ఇక్కడి నుంచే సెటప్‌ను కొనసాగించండి."
         ],
+        "assistant_state_preparing": [
+            "en": "Preparing",
+            "hi": "तैयार हो रहा है",
+            "bn": "প্রস্তুত হচ্ছে",
+            "ta": "தயாராகிறது",
+            "te": "సిద్ధమవుతోంది"
+        ],
+        "assistant_state_checking": [
+            "en": "Checking",
+            "hi": "जांच हो रही है",
+            "bn": "পরীক্ষা চলছে",
+            "ta": "சரிபார்க்கிறது",
+            "te": "తనిఖీ జరుగుతోంది"
+        ],
+        "assistant_state_waiting_wifi": [
+            "en": "Waiting for Wi-Fi",
+            "hi": "Wi-Fi की प्रतीक्षा",
+            "bn": "Wi-Fi-এর অপেক্ষা",
+            "ta": "Wi-Fi காத்திருக்கிறது",
+            "te": "Wi-Fi కోసం వేచి ఉంది"
+        ],
+        "assistant_state_paused": [
+            "en": "Paused",
+            "hi": "रुका हुआ",
+            "bn": "থেমে আছে",
+            "ta": "இடைநிறுத்தப்பட்டது",
+            "te": "నిలిపివేయబడింది"
+        ],
+        "assistant_state_needs_space": [
+            "en": "Needs space",
+            "hi": "जगह चाहिए",
+            "bn": "জায়গা দরকার",
+            "ta": "இடம் தேவை",
+            "te": "స్థలం కావాలి"
+        ],
+        "assistant_state_needs_retry": [
+            "en": "Needs retry",
+            "hi": "फिर कोशिश चाहिए",
+            "bn": "আবার চেষ্টা দরকার",
+            "ta": "மீண்டும் முயற்சி தேவை",
+            "te": "మళ్లీ ప్రయత్నించాలి"
+        ],
+        "assistant_state_ready": [
+            "en": "Ready",
+            "hi": "तैयार",
+            "bn": "প্রস্তুত",
+            "ta": "தயார்",
+            "te": "సిద్ధం"
+        ],
+        "assistant_state_cancelled": [
+            "en": "Cancelled",
+            "hi": "रद्द हुआ",
+            "bn": "বাতিল হয়েছে",
+            "ta": "ரத்து செய்யப்பட்டது",
+            "te": "రద్దయింది"
+        ],
+        "assistant_state_not_started": [
+            "en": "Not started",
+            "hi": "शुरू नहीं हुआ",
+            "bn": "শুরু হয়নি",
+            "ta": "தொடங்கவில்லை",
+            "te": "ప్రారంభం కాలేదు"
+        ],
+        "assistant_activity_preparing": [
+            "en": "Ross is preparing the private assistant. You can keep using the app.",
+            "hi": "Ross निजी सहायक तैयार कर रहा है। आप ऐप का उपयोग जारी रख सकते हैं।",
+            "bn": "Ross ব্যক্তিগত সহকারী প্রস্তুত করছে। আপনি অ্যাপ ব্যবহার চালিয়ে যেতে পারেন।",
+            "ta": "Ross தனிப்பட்ட உதவியாளரை தயாராக்குகிறது. நீங்கள் பயன்பாட்டை தொடர்ந்து பயன்படுத்தலாம்.",
+            "te": "Ross ప్రైవేట్ సహాయకుడిని సిద్ధం చేస్తోంది. మీరు యాప్‌ను కొనసాగించవచ్చు."
+        ],
+        "assistant_activity_checking": [
+            "en": "Ross is checking that the on-device assistant is ready before turning it on.",
+            "hi": "चालू करने से पहले Ross जांच रहा है कि ऑन-डिवाइस सहायक तैयार है।",
+            "bn": "চালু করার আগে Ross দেখছে ডিভাইসের সহকারী প্রস্তুত কি না।",
+            "ta": "இயக்குவதற்கு முன் சாதனத்திலுள்ள உதவியாளர் தயாரா என்பதை Ross சரிபார்க்கிறது.",
+            "te": "ఆన్ చేయడానికి ముందు పరికరంలోని సహాయకుడు సిద్ధంగా ఉన్నాడో Ross తనిఖీ చేస్తోంది."
+        ],
+        "assistant_activity_waiting_wifi": [
+            "en": "Ross is waiting for Wi-Fi before continuing the assistant setup.",
+            "hi": "सहायक सेटअप जारी रखने से पहले Ross Wi-Fi की प्रतीक्षा कर रहा है।",
+            "bn": "সহকারী সেটআপ চালিয়ে যাওয়ার আগে Ross Wi-Fi-এর অপেক্ষা করছে।",
+            "ta": "உதவியாளர் அமைப்பைத் தொடர்வதற்கு முன் Ross Wi-Fi காத்திருக்கிறது.",
+            "te": "సహాయకుడి సెటప్ కొనసాగించే ముందు Ross Wi-Fi కోసం వేచి ఉంది."
+        ],
+        "assistant_activity_paused": [
+            "en": "The assistant setup is paused. Open My assistant to resume it from this iPhone.",
+            "hi": "सहायक सेटअप रुका है। इस iPhone से फिर शुरू करने के लिए My assistant खोलें।",
+            "bn": "সহকারী সেটআপ থেমে আছে। এই iPhone থেকে চালু করতে My assistant খুলুন।",
+            "ta": "உதவியாளர் அமைப்பு இடைநிறுத்தப்பட்டுள்ளது. இந்த iPhone-இல் இருந்து தொடர My assistant திறக்கவும்.",
+            "te": "సహాయకుడి సెటప్ నిలిచింది. ఈ iPhone నుండి కొనసాగించడానికి My assistant తెరవండి."
+        ],
+        "assistant_activity_storage": [
+            "en": "Ross needs more free space before the assistant can finish setting up.",
+            "hi": "सहायक सेटअप पूरा करने से पहले Ross को और खाली जगह चाहिए।",
+            "bn": "সহকারী সেটআপ শেষ করার আগে Ross-এর আরও খালি জায়গা দরকার।",
+            "ta": "உதவியாளர் அமைப்பு முடிவதற்கு முன் Ross-க்கு கூடுதல் காலி இடம் தேவை.",
+            "te": "సహాయకుడి సెటప్ పూర్తయ్యే ముందు Ross కు మరింత ఖాళీ స్థలం అవసరం."
+        ],
+        "assistant_activity_retry": [
+            "en": "Assistant setup could not finish. Open My assistant to retry or repair setup; your matters and files stay on this iPhone.",
+            "hi": "सहायक सेटअप पूरा नहीं हो सका। Retry या Repair setup के लिए My assistant खोलें; आपके मामले और फ़ाइलें इसी iPhone पर रहती हैं।",
+            "bn": "সহকারী সেটআপ শেষ হয়নি। Retry বা Repair setup করতে My assistant খুলুন; আপনার মামলা ও ফাইল এই iPhone-এ থাকে।",
+            "ta": "உதவியாளர் அமைப்பு முடிக்க முடியவில்லை. மீண்டும் முயற்சிக்க அல்லது Repair setup செய்ய My assistant திறக்கவும்; உங்கள் வழக்குகள் மற்றும் கோப்புகள் இந்த iPhone-இல் இருக்கும்.",
+            "te": "సహాయకుడి సెటప్ పూర్తికాలేదు. Retry లేదా Repair setup కోసం My assistant తెరవండి; మీ కేసులు, ఫైళ్లు ఈ iPhone లోనే ఉంటాయి."
+        ],
+        "assistant_activity_idle": [
+            "en": "No setup is running right now.",
+            "hi": "अभी कोई सेटअप नहीं चल रहा है।",
+            "bn": "এখন কোনো সেটআপ চলছে না।",
+            "ta": "இப்போது எந்த அமைப்பும் இயங்கவில்லை.",
+            "te": "ప్రస్తుతం ఎలాంటి సెటప్ నడవడం లేదు."
+        ],
         "translate_to": [
             "en": "Translate to %@",
             "hi": "%@ में अनुवाद करें",
