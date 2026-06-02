@@ -598,6 +598,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertEqual("Private assistant needs repair", presentation?.title)
             XCTAssertEqual("Private assistant needs repair", presentation?.statusNote)
             XCTAssertTrue(presentation?.sections.joined(separator: " ").contains("Repair setup") == true)
+            XCTAssertTrue(presentation?.sections.joined(separator: " ").contains("My assistant") == true)
+            XCTAssertFalse(presentation?.sections.joined(separator: " ").contains("Private AI") == true)
             XCTAssertTrue(presentation?.needsReviewWarning?.contains("needs repair") == true)
         }
     }

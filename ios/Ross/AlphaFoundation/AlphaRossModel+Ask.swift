@@ -1332,7 +1332,7 @@ extension AlphaRossModel {
             title: "Private assistant needs repair",
             sections: [
                 detail,
-                "Open Private AI setup and use Repair setup. Ross did not generate a substitute answer from case memory."
+                "Open My assistant and use Repair setup. Ross did not generate a substitute answer from case memory."
             ],
             statusNote: "Private assistant needs repair",
             needsReviewWarning: "Private assistant needs repair before it can answer from files."
