@@ -1616,6 +1616,92 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             }
 
             XCTAssertNil(recovered)
+
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let manifest = AlphaModelArtifactManifest(
+                packId: artifact.packId,
+                tier: .quickStart,
+                fileName: artifact.fileName,
+                relativePath: relativePath,
+                checksumSha256: "",
+                bytes: artifact.sizeBytes,
+                verifiedAt: .now
+            )
+            try encoder.encode(manifest).write(to: manifestURL, options: .atomic)
+
+            let recoveredWithLocalChecksum = await MainActor.run {
+                model.recoveredInstalledPackFromDisk(tier: .quickStart)
+            }
+
+            XCTAssertNotNil(recoveredWithLocalChecksum)
+            XCTAssertEqual(recoveredWithLocalChecksum?.checksumSha256.count, 64)
+            XCTAssertFalse(recoveredWithLocalChecksum?.checksumSha256.hasPrefix("catalog-size:") == true)
+            XCTAssertTrue(recoveredWithLocalChecksum?.checksumVerified == true)
+
+            await store.removeAllModelArtifacts()
+        }
+    }
+
+    func testInstalledPackUsabilityRejectsSizeOnlyAssistantVerification() async throws {
+        try await withRestoredStore { store in
+            await store.removeAllModelArtifacts()
+            let artifact = alphaAssistantModelArtifact(for: .quickStart)
+            let relativePath = "model-packs/quick_start/\(artifact.fileName)"
+            let artifactURL = alphaAbsoluteURL(for: relativePath)
+            try FileManager.default.createDirectory(
+                at: artifactURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try makeSparseFile(at: artifactURL, bytes: artifact.sizeBytes)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+
+            let sizeOnlyPack = AlphaInstalledModelPack(
+                packId: artifact.packId,
+                tier: .quickStart,
+                installPath: relativePath,
+                checksumSha256: "catalog-size:\(artifact.fileName):\(artifact.sizeBytes)",
+                artifactKind: "local_model_artifact",
+                runtimeMode: .llamaCppGguf,
+                developmentOnly: false,
+                checksumVerified: true,
+                isActive: true
+            )
+            let arbitraryTokenPack = AlphaInstalledModelPack(
+                packId: artifact.packId,
+                tier: .quickStart,
+                installPath: relativePath,
+                checksumSha256: "downloaded-local-assistant",
+                artifactKind: "local_model_artifact",
+                runtimeMode: .llamaCppGguf,
+                developmentOnly: false,
+                checksumVerified: true,
+                isActive: true
+            )
+            let shaPack = AlphaInstalledModelPack(
+                packId: artifact.packId,
+                tier: .quickStart,
+                installPath: relativePath,
+                checksumSha256: String(repeating: "a", count: 64),
+                artifactKind: "local_model_artifact",
+                runtimeMode: .llamaCppGguf,
+                developmentOnly: false,
+                checksumVerified: true,
+                isActive: true
+            )
+
+            let sizeOnlyUsable = await MainActor.run { model.installedModelPackFileIsUsable(sizeOnlyPack) }
+            let arbitraryTokenUsable = await MainActor.run { model.installedModelPackFileIsUsable(arbitraryTokenPack) }
+            let shaUsable = await MainActor.run { model.installedModelPackFileIsUsable(shaPack) }
+
+            XCTAssertFalse(sizeOnlyUsable)
+            XCTAssertFalse(arbitraryTokenUsable)
+            XCTAssertTrue(shaUsable)
+
+            await store.removeAllModelArtifacts()
         }
     }
 

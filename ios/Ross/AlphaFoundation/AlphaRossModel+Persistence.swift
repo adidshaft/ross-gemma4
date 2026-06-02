@@ -228,6 +228,15 @@ private func alphaModelSizeVerificationToken(fileName: String, bytes: Int64) -> 
     "catalog-size:\(fileName):\(bytes)"
 }
 
+private func alphaModelLooksLikeSHA256(_ value: String?) -> Bool {
+    guard let value else { return false }
+    let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard trimmed.count == 64 else { return false }
+    return trimmed.allSatisfy { character in
+        character.isNumber || ("a"..."f").contains(character.lowercased())
+    }
+}
+
 private func alphaModelArtifactManifest(forFileAt fileURL: URL) -> AlphaModelArtifactManifest? {
     let manifestURL = fileURL.deletingPathExtension().appendingPathExtension("manifest.json")
     guard let data = try? Data(contentsOf: manifestURL) else { return nil }
@@ -250,8 +259,7 @@ private func alphaInstalledModelPackFileIsUsable(_ pack: AlphaInstalledModelPack
     let artifact = alphaAssistantModelArtifact(for: pack.tier)
     guard alphaModelFileByteCount(at: fileURL) == artifact.sizeBytes else { return false }
     guard !artifact.sha256.isEmpty else {
-        return pack.checksumSha256 == alphaModelSizeVerificationToken(fileName: artifact.fileName, bytes: artifact.sizeBytes)
-            || !pack.checksumSha256.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        return alphaModelLooksLikeSHA256(pack.checksumSha256)
     }
     return alphaModelAssistantChecksumMatches(expected: artifact.sha256, actual: pack.checksumSha256)
 }
@@ -268,14 +276,26 @@ private func alphaRecoveredInstalledPackFromDisk(tier: AlphaCapabilityTier) -> A
         return nil
     }
     guard !artifact.sha256.isEmpty else {
-        guard let manifest else { return nil }
+        guard manifest != nil else { return nil }
+        let checksum: String
+        if alphaModelLooksLikeSHA256(recoveredChecksum) {
+            checksum = recoveredChecksum!
+        } else if let verifiedChecksum = alphaModelSHA256Hex(forFileAt: fileURL),
+                  alphaModelLooksLikeSHA256(verifiedChecksum) {
+            checksum = verifiedChecksum
+        } else {
+            return nil
+        }
+        do {
+            try AlphaLlamaCppProvider.validateModelCanLoad(at: fileURL.path())
+        } catch {
+            return nil
+        }
         return AlphaInstalledModelPack(
             packId: artifact.packId,
             tier: tier,
             installPath: relativePath,
-            checksumSha256: recoveredChecksum?.isEmpty == false
-                ? recoveredChecksum!
-                : alphaModelSizeVerificationToken(fileName: manifest.fileName, bytes: manifest.bytes),
+            checksumSha256: checksum,
             artifactKind: "local_model_artifact",
             runtimeMode: .llamaCppGguf,
             developmentOnly: false,
@@ -293,6 +313,11 @@ private func alphaRecoveredInstalledPackFromDisk(tier: AlphaCapabilityTier) -> A
               alphaModelAssistantChecksumMatches(expected: artifact.sha256, actual: verifiedChecksum) {
         checksum = verifiedChecksum
     } else {
+        return nil
+    }
+    do {
+        try AlphaLlamaCppProvider.validateModelCanLoad(at: fileURL.path())
+    } catch {
         return nil
     }
     return AlphaInstalledModelPack(
