@@ -463,6 +463,33 @@ final class AlphaExtractionTests: XCTestCase {
         }
     }
 
+    func testAskDockPlaceholdersFollowSelectedSupportedLanguage() {
+        XCTAssertEqual(
+            alphaAskPlaceholder(fixedDocumentCount: 1, hasActiveMatterScope: true, languageCode: "hi"),
+            "Ross से इस फ़ाइल के बारे में पूछें…"
+        )
+        XCTAssertEqual(
+            alphaAskPlaceholder(fixedDocumentCount: 0, hasActiveMatterScope: true, languageCode: "ta"),
+            "இந்த வழக்கைப் பற்றி Ross-ஐ கேளுங்கள்…"
+        )
+        XCTAssertEqual(
+            alphaAskPlaceholder(fixedDocumentCount: 0, hasActiveMatterScope: false, languageCode: "te-IN"),
+            "ఈ రోజు, ఒక కేసు, లేదా ఒక ఫైల్ గురించి Ross‌ను అడగండి…"
+        )
+        XCTAssertEqual(
+            alphaAskCollapsedTitle(fixedDocumentCount: 0, hasActiveMatterScope: false, languageCode: "ta"),
+            "Ross-ஐ கேளுங்கள்…"
+        )
+        XCTAssertEqual(
+            alphaAskSheetPlaceholder(languageCode: "te"),
+            "ఈ కేసు, ట్యాగ్ చేసిన ఫైల్, లేదా మీ తదుపరి డ్రాఫ్టింగ్ అడుగు గురించి Ross‌ను అడగండి."
+        )
+        XCTAssertEqual(
+            alphaAskPlaceholder(fixedDocumentCount: 0, hasActiveMatterScope: false, languageCode: "ml"),
+            "Ask Ross about today, a matter, or a file…"
+        )
+    }
+
     func testAssistantSetupPhasesExplainDownloadCheckAndReady() {
         XCTAssertEqual(alphaAssistantSetupPhases, ["Download", "Check", "Ready"])
         XCTAssertEqual(alphaAssistantSetupPhaseIndex(for: .queued), 0)

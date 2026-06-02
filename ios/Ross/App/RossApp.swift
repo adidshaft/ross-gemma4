@@ -148,6 +148,36 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "hi": "स्थानीय अनुवाद के लिए निजी सहायक सेट करें।",
             "ta": "உள்ளூரில் மொழிபெயர்க்க தனிப்பட்ட உதவியாளரை அமைக்கவும்.",
             "te": "స్థానికంగా అనువదించడానికి ప్రైవేట్ సహాయకుడిని సెటప్ చేయండి."
+        ],
+        "ask_placeholder_file": [
+            "en": "Ask Ross about this file…",
+            "hi": "Ross से इस फ़ाइल के बारे में पूछें…",
+            "ta": "இந்த கோப்பைப் பற்றி Ross-ஐ கேளுங்கள்…",
+            "te": "ఈ ఫైల్ గురించి Ross‌ను అడగండి…"
+        ],
+        "ask_placeholder_matter": [
+            "en": "Ask Ross about this matter…",
+            "hi": "Ross से इस मामले के बारे में पूछें…",
+            "ta": "இந்த வழக்கைப் பற்றி Ross-ஐ கேளுங்கள்…",
+            "te": "ఈ కేసు గురించి Ross‌ను అడగండి…"
+        ],
+        "ask_placeholder_general": [
+            "en": "Ask Ross about today, a matter, or a file…",
+            "hi": "Ross से आज, किसी मामले, या किसी फ़ाइल के बारे में पूछें…",
+            "ta": "இன்று, ஒரு வழக்கு, அல்லது ஒரு கோப்பு பற்றி Ross-ஐ கேளுங்கள்…",
+            "te": "ఈ రోజు, ఒక కేసు, లేదా ఒక ఫైల్ గురించి Ross‌ను అడగండి…"
+        ],
+        "ask_collapsed_general": [
+            "en": "Ask Ross…",
+            "hi": "Ross से पूछें…",
+            "ta": "Ross-ஐ கேளுங்கள்…",
+            "te": "Ross‌ను అడగండి…"
+        ],
+        "ask_sheet_placeholder": [
+            "en": "Ask Ross about this matter, a tagged file, or your next drafting step.",
+            "hi": "Ross से इस मामले, टैग की गई फ़ाइल, या अगले ड्राफ्टिंग कदम के बारे में पूछें।",
+            "ta": "இந்த வழக்கு, குறியிட்ட கோப்பு, அல்லது உங்கள் அடுத்த வரைவு படி பற்றி Ross-ஐ கேளுங்கள்.",
+            "te": "ఈ కేసు, ట్యాగ్ చేసిన ఫైల్, లేదా మీ తదుపరి డ్రాఫ్టింగ్ అడుగు గురించి Ross‌ను అడగండి."
         ]
     ]
     return table[key]?[normalizedCode] ?? table[key]?["en"] ?? key

@@ -59,6 +59,39 @@ func alphaAskMentionSuggestions(
     return Array(matchingDocuments.prefix(limit))
 }
 
+func alphaAskPlaceholder(
+    fixedDocumentCount: Int,
+    hasActiveMatterScope: Bool,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
+    if fixedDocumentCount == 1 {
+        return rossLocalized("ask_placeholder_file", languageCode: languageCode)
+    }
+    if hasActiveMatterScope {
+        return rossLocalized("ask_placeholder_matter", languageCode: languageCode)
+    }
+    return rossLocalized("ask_placeholder_general", languageCode: languageCode)
+}
+
+func alphaAskCollapsedTitle(
+    fixedDocumentCount: Int,
+    hasActiveMatterScope: Bool,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
+    if fixedDocumentCount == 1 || hasActiveMatterScope {
+        return alphaAskPlaceholder(
+            fixedDocumentCount: fixedDocumentCount,
+            hasActiveMatterScope: hasActiveMatterScope,
+            languageCode: languageCode
+        )
+    }
+    return rossLocalized("ask_collapsed_general", languageCode: languageCode)
+}
+
+func alphaAskSheetPlaceholder(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("ask_sheet_placeholder", languageCode: languageCode)
+}
+
 struct AlphaRootAskDock: View {
     @Environment(\.colorScheme) private var colorScheme
     @Bindable var model: AlphaRossModel
@@ -225,41 +258,17 @@ struct AlphaRootAskDock: View {
     }
 
     private var composerPlaceholder: String {
-        if alphaUsesHindiUi() {
-            if fixedDocumentIDs.count == 1 {
-                return "Ross से इस फ़ाइल के बारे में पूछें…"
-            }
-            if activeScopeCaseID != nil {
-                return "Ross से इस मामले के बारे में पूछें…"
-            }
-            return "Ross से आज, किसी मामले, या किसी फ़ाइल के बारे में पूछें…"
-        }
-        if fixedDocumentIDs.count == 1 {
-            return "Ask Ross about this file…"
-        }
-        if activeScopeCaseID != nil {
-            return "Ask Ross about this matter…"
-        }
-        return "Ask Ross about today, a matter, or a file…"
+        alphaAskPlaceholder(
+            fixedDocumentCount: fixedDocumentIDs.count,
+            hasActiveMatterScope: activeScopeCaseID != nil
+        )
     }
 
     private var collapsedDockTitle: String {
-        if alphaUsesHindiUi() {
-            if fixedDocumentIDs.count == 1 {
-                return "Ross से इस फ़ाइल के बारे में पूछें…"
-            }
-            if activeScopeCaseID != nil {
-                return "Ross से इस मामले के बारे में पूछें…"
-            }
-            return "Ross से पूछें…"
-        }
-        if fixedDocumentIDs.count == 1 {
-            return "Ask Ross about this file…"
-        }
-        if activeScopeCaseID != nil {
-            return "Ask Ross about this matter…"
-        }
-        return "Ask Ross…"
+        alphaAskCollapsedTitle(
+            fixedDocumentCount: fixedDocumentIDs.count,
+            hasActiveMatterScope: activeScopeCaseID != nil
+        )
     }
 
     private var showsCollapsedDock: Bool {
@@ -1373,7 +1382,7 @@ struct AlphaAskComposerSheet: View {
 
                 ZStack(alignment: .topLeading) {
                     if draftText.isEmpty {
-                        Text("Ask Ross about this matter, a tagged file, or your next drafting step.")
+                        Text(alphaAskSheetPlaceholder())
                             .font(.footnote)
                             .foregroundStyle(Color.rossInk.opacity(0.34))
                             .padding(.horizontal, 18)
