@@ -600,6 +600,10 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             let status = alphaAssistantStatusSnapshot(model)
             XCTAssertEqual("My assistant needs attention", status.title)
             XCTAssertEqual("Free up 4 GB to finish assistant setup.", status.detail)
+
+            let localizedStatus = alphaAssistantStatusSnapshot(model, languageCode: "hi")
+            XCTAssertTrue(localizedStatus.title.contains("attention"))
+            XCTAssertEqual("Free up 4 GB to finish assistant setup.", localizedStatus.detail)
         }
     }
 
@@ -633,6 +637,12 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertFalse(status.detail.localizedCaseInsensitiveContains("model"))
             XCTAssertFalse(status.detail.localizedCaseInsensitiveContains("provider"))
             XCTAssertFalse(status.detail.localizedCaseInsensitiveContains("byte-range"))
+
+            let localizedStatus = alphaAssistantStatusSnapshot(model, languageCode: "ta")
+            XCTAssertTrue(localizedStatus.title.contains("attention"))
+            XCTAssertTrue(localizedStatus.detail.contains("Repair setup"))
+            XCTAssertFalse(localizedStatus.detail.localizedCaseInsensitiveContains("model"))
+            XCTAssertFalse(localizedStatus.detail.localizedCaseInsensitiveContains("provider"))
         }
     }
 

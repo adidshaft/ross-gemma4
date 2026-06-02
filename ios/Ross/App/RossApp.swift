@@ -1267,6 +1267,97 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "setup பிறகு Ross assistant check செய்யும்.",
             "te": "setup తర్వాత Ross assistant check చేస్తుంది."
         ],
+        "assistant_status_ready_title": [
+            "en": "My assistant is ready",
+            "hi": "My assistant ready है",
+            "bn": "My assistant ready",
+            "ta": "My assistant ready",
+            "te": "My assistant ready"
+        ],
+        "assistant_status_ready_detail": [
+            "en": "Ross can help read files, draft notes, and answer from local matter files on this device.",
+            "hi": "Ross इस device पर local matter files से files पढ़ने, notes draft करने, और answers देने में help कर सकता है।",
+            "bn": "Ross এই device-এ local matter files থেকে files পড়তে, notes draft করতে, এবং answers দিতে help করতে পারে।",
+            "ta": "Ross இந்த device-இல் local matter files-இருந்து files படிக்க, notes draft செய்ய, answers தர help செய்யும்.",
+            "te": "Ross ఈ device లో local matter files నుండి files చదవడానికి, notes draft చేయడానికి, answers ఇవ్వడానికి help చేస్తుంది."
+        ],
+        "assistant_status_setting_up_title": [
+            "en": "My assistant is setting up",
+            "hi": "My assistant setup हो रहा है",
+            "bn": "My assistant setup হচ্ছে",
+            "ta": "My assistant setup ஆகிறது",
+            "te": "My assistant setup అవుతోంది"
+        ],
+        "assistant_status_setting_up_detail": [
+            "en": "You can keep working while Ross finishes setup on this device.",
+            "hi": "Ross इस device पर setup finish करते समय आप काम जारी रख सकते हैं।",
+            "bn": "Ross এই device-এ setup শেষ করার সময় আপনি কাজ চালিয়ে যেতে পারেন।",
+            "ta": "Ross இந்த device-இல் setup முடிக்கும் போது நீங்கள் வேலை தொடரலாம்.",
+            "te": "Ross ఈ device లో setup పూర్తి చేసే సమయంలో మీరు పని కొనసాగించవచ్చు."
+        ],
+        "assistant_status_waiting_wifi_detail": [
+            "en": "Ross will continue setup when Wi-Fi is available.",
+            "hi": "Wi-Fi उपलब्ध होने पर Ross setup continue करेगा।",
+            "bn": "Wi-Fi available হলে Ross setup continue করবে।",
+            "ta": "Wi-Fi கிடைக்கும் போது Ross setup continue செய்யும்.",
+            "te": "Wi-Fi అందుబాటులో ఉన్నప్పుడు Ross setup continue చేస్తుంది."
+        ],
+        "assistant_status_needs_attention_title": [
+            "en": "My assistant needs attention",
+            "hi": "My assistant को attention चाहिए",
+            "bn": "My assistant attention চায়",
+            "ta": "My assistant-க்கு attention தேவை",
+            "te": "My assistant కు attention కావాలి"
+        ],
+        "assistant_status_paused_detail": [
+            "en": "Setup is paused. You can continue working and resume whenever you are ready.",
+            "hi": "Setup paused है। आप काम जारी रख सकते हैं और ready होने पर resume कर सकते हैं।",
+            "bn": "Setup paused। আপনি কাজ চালিয়ে যেতে পারেন এবং ready হলে resume করতে পারেন।",
+            "ta": "Setup paused. நீங்கள் வேலை தொடரலாம்; ready ஆனபோது resume செய்யலாம்.",
+            "te": "Setup paused. మీరు పని కొనసాగించవచ్చు; ready అయినప్పుడు resume చేయవచ్చు."
+        ],
+        "assistant_status_storage_detail": [
+            "en": "Free up space and try again.",
+            "hi": "Space खाली करें और फिर कोशिश करें।",
+            "bn": "Space খালি করে আবার চেষ্টা করুন।",
+            "ta": "Space காலி செய்து மீண்டும் முயற்சிக்கவும்.",
+            "te": "Space ఖాళీ చేసి మళ్లీ ప్రయత్నించండి."
+        ],
+        "assistant_status_retry_detail": [
+            "en": "Setup could not finish. Open My assistant to retry or repair setup.",
+            "hi": "Setup finish नहीं हो पाया। retry या Repair setup के लिए My assistant खोलें।",
+            "bn": "Setup finish হয়নি। retry বা Repair setup করতে My assistant খুলুন।",
+            "ta": "Setup finish ஆகவில்லை. retry அல்லது Repair setup செய்ய My assistant திறக்கவும்.",
+            "te": "Setup finish కాలేదు. retry లేదా Repair setup కోసం My assistant తెరవండి."
+        ],
+        "assistant_status_preparing_detail": [
+            "en": "Ross is still preparing on this device.",
+            "hi": "Ross अभी भी इस device पर prepare कर रहा है।",
+            "bn": "Ross এখনও এই device-এ prepare করছে।",
+            "ta": "Ross இன்னும் இந்த device-இல் prepare செய்கிறது.",
+            "te": "Ross ఇంకా ఈ device లో prepare చేస్తోంది."
+        ],
+        "assistant_status_needs_check_detail": [
+            "en": "Ross needs to check setup before answering legal questions.",
+            "hi": "Legal questions का answer देने से पहले Ross को setup check करना होगा।",
+            "bn": "Legal questions-এর answer দেওয়ার আগে Ross-কে setup check করতে হবে।",
+            "ta": "Legal questions-க்கு answer தருவதற்கு முன் Ross setup check செய்ய வேண்டும்.",
+            "te": "Legal questions కు answer ఇవ్వడానికి ముందు Ross setup check చేయాలి."
+        ],
+        "assistant_status_not_set_up_title": [
+            "en": "My assistant is not set up",
+            "hi": "My assistant setup नहीं है",
+            "bn": "My assistant setup করা নেই",
+            "ta": "My assistant setup செய்யப்படவில்லை",
+            "te": "My assistant setup కాలేదు"
+        ],
+        "assistant_status_not_set_up_detail": [
+            "en": "Ross can still organize matters, tasks, dates, and files. Legal answers need assistant setup.",
+            "hi": "Ross फिर भी matters, tasks, dates, और files organize कर सकता है। Legal answers के लिए assistant setup चाहिए।",
+            "bn": "Ross এখনও matters, tasks, dates, এবং files organize করতে পারে। Legal answers-এর জন্য assistant setup দরকার।",
+            "ta": "Ross இன்னும் matters, tasks, dates மற்றும் files organize செய்ய முடியும். Legal answers-க்கு assistant setup தேவை.",
+            "te": "Ross ఇంకా matters, tasks, dates, files organize చేయగలదు. Legal answers కు assistant setup కావాలి."
+        ],
         "assistant_verification_no_setup": [
             "en": "No assistant setup is active yet.",
             "hi": "अभी कोई assistant setup active नहीं है।",

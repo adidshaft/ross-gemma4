@@ -534,11 +534,14 @@ func alphaPrivateAIStatus(_ model: AlphaRossModel) -> String {
 }
 
 @MainActor
-func alphaAssistantStatusSnapshot(_ model: AlphaRossModel) -> AlphaAssistantStatusSnapshot {
+func alphaAssistantStatusSnapshot(
+    _ model: AlphaRossModel,
+    languageCode: String = rossSelectedLanguageCode()
+) -> AlphaAssistantStatusSnapshot {
     if model.privateAISnapshot.activeRuntimeHealth?.available == true {
         return AlphaAssistantStatusSnapshot(
-            title: "My assistant is ready",
-            detail: "Ross can help read files, draft notes, and answer from local matter files on this device.",
+            title: rossLocalized("assistant_status_ready_title", languageCode: languageCode),
+            detail: rossLocalized("assistant_status_ready_detail", languageCode: languageCode),
             tint: Color.rossSuccess
         )
     }
@@ -547,38 +550,44 @@ func alphaAssistantStatusSnapshot(_ model: AlphaRossModel) -> AlphaAssistantStat
         switch job.state {
         case .downloading, .queued, .verifying:
             return AlphaAssistantStatusSnapshot(
-                title: "My assistant is setting up",
-                detail: "You can keep working while Ross finishes setup on this device.",
+                title: rossLocalized("assistant_status_setting_up_title", languageCode: languageCode),
+                detail: rossLocalized("assistant_status_setting_up_detail", languageCode: languageCode),
                 tint: Color.rossAccent
             )
         case .pausedWaitingForWifi:
             return AlphaAssistantStatusSnapshot(
-                title: "Waiting for Wi-Fi",
-                detail: "Ross will continue setup when Wi-Fi is available.",
+                title: alphaAssistantStateLabel(.pausedWaitingForWifi, languageCode: languageCode),
+                detail: rossLocalized("assistant_status_waiting_wifi_detail", languageCode: languageCode),
                 tint: Color.rossHighlight
             )
         case .pausedUser:
             return AlphaAssistantStatusSnapshot(
-                title: "My assistant needs attention",
-                detail: "Setup is paused. You can continue working and resume whenever you are ready.",
+                title: rossLocalized("assistant_status_needs_attention_title", languageCode: languageCode),
+                detail: rossLocalized("assistant_status_paused_detail", languageCode: languageCode),
                 tint: .orange
             )
         case .pausedNoStorage:
             return AlphaAssistantStatusSnapshot(
-                title: "My assistant needs attention",
-                detail: alphaAssistantRecoveryDetail(for: job, fallback: "Free up space and try again."),
+                title: rossLocalized("assistant_status_needs_attention_title", languageCode: languageCode),
+                detail: alphaAssistantRecoveryDetail(
+                    for: job,
+                    fallback: rossLocalized("assistant_status_storage_detail", languageCode: languageCode)
+                ),
                 tint: .orange
             )
         case .pausedError, .failed, .cancelled:
             return AlphaAssistantStatusSnapshot(
-                title: "My assistant needs attention",
-                detail: alphaAssistantRecoveryDetail(for: job, fallback: "Setup could not finish. Open My assistant to retry or repair setup."),
+                title: rossLocalized("assistant_status_needs_attention_title", languageCode: languageCode),
+                detail: alphaAssistantRecoveryDetail(
+                    for: job,
+                    fallback: rossLocalized("assistant_status_retry_detail", languageCode: languageCode)
+                ),
                 tint: .orange
             )
         default:
             return AlphaAssistantStatusSnapshot(
-                title: "My assistant is setting up",
-                detail: "Ross is still preparing on this device.",
+                title: rossLocalized("assistant_status_setting_up_title", languageCode: languageCode),
+                detail: rossLocalized("assistant_status_preparing_detail", languageCode: languageCode),
                 tint: Color.rossAccent
             )
         }
@@ -586,15 +595,15 @@ func alphaAssistantStatusSnapshot(_ model: AlphaRossModel) -> AlphaAssistantStat
 
     if model.activePack != nil {
         return AlphaAssistantStatusSnapshot(
-            title: "My assistant needs attention",
-            detail: "Ross needs to check setup before answering legal questions.",
+            title: rossLocalized("assistant_status_needs_attention_title", languageCode: languageCode),
+            detail: rossLocalized("assistant_status_needs_check_detail", languageCode: languageCode),
             tint: .orange
         )
     }
 
     return AlphaAssistantStatusSnapshot(
-        title: "My assistant is not set up",
-        detail: "Ross can still organize matters, tasks, dates, and files. Legal answers need assistant setup.",
+        title: rossLocalized("assistant_status_not_set_up_title", languageCode: languageCode),
+        detail: rossLocalized("assistant_status_not_set_up_detail", languageCode: languageCode),
         tint: Color.rossAccent
     )
 }
