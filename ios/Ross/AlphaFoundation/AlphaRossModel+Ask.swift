@@ -1078,13 +1078,13 @@ extension AlphaRossModel {
                 scopeCaseID: scopeCaseID,
                 sessionID: storedResult.chatSessionID,
                 turnID: storedResult.chatTurnID,
-                title: "Selected file is still being read",
+                title: rossLocalized("selected_file_still_being_read"),
                 sections: [
-                    "Ross is still extracting readable text from the tagged file.",
-                    "Ask again after the file shows as ready, or choose a different readable file."
+                    rossLocalized("ross_extracting_tagged_file_text"),
+                    rossLocalized("ask_after_file_ready_or_choose_different")
                 ],
-                statusNote: "File text not ready",
-                needsReviewWarning: "Tagged file not ready for private assistant."
+                statusNote: rossLocalized("file_text_not_ready"),
+                needsReviewWarning: rossLocalized("tagged_file_not_ready_for_assistant")
             )
             return
         }
@@ -1106,13 +1106,13 @@ extension AlphaRossModel {
                 scopeCaseID: scopeCaseID,
                 sessionID: storedResult.chatSessionID,
                 turnID: storedResult.chatTurnID,
-                title: "Selected file has no readable text",
+                title: rossLocalized("selected_file_no_readable_text"),
                 sections: [
-                    "Ross could not find readable source text in the tagged file.",
-                    "Re-import the file, wait for text extraction to finish, or choose another file before asking the private assistant."
+                    rossLocalized("ross_could_not_find_tagged_file_text"),
+                    rossLocalized("reimport_wait_or_choose_another_file")
                 ],
-                statusNote: "File text unavailable",
-                needsReviewWarning: "Tagged file has no readable source text."
+                statusNote: rossLocalized("file_text_unavailable"),
+                needsReviewWarning: rossLocalized("tagged_file_no_readable_source_text")
             )
             return
         }

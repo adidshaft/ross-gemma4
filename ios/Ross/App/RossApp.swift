@@ -3612,6 +3612,76 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "%d item(s)-க்கு advocate attention தேவை.",
             "te": "%d item(s) కు advocate attention అవసరం."
         ],
+        "selected_file_still_being_read": [
+            "en": "Selected file is still being read",
+            "hi": "Selected file अभी पढ़ी जा रही है",
+            "bn": "Selected file এখনও পড়া হচ্ছে",
+            "ta": "Selected file இன்னும் படிக்கப்படுகிறது",
+            "te": "Selected file ఇంకా చదువుతోంది"
+        ],
+        "ross_extracting_tagged_file_text": [
+            "en": "Ross is still extracting readable text from the tagged file.",
+            "hi": "Ross tagged file से readable text अभी extract कर रहा है।",
+            "bn": "Ross tagged file থেকে readable text এখনও extract করছে।",
+            "ta": "Ross tagged file-இலிருந்து readable text இன்னும் extract செய்கிறது.",
+            "te": "Ross tagged file నుండి readable text ఇంకా extract చేస్తోంది."
+        ],
+        "ask_after_file_ready_or_choose_different": [
+            "en": "Ask again after the file shows as ready, or choose a different readable file.",
+            "hi": "file ready दिखने के बाद फिर पूछें, या कोई दूसरी readable file चुनें।",
+            "bn": "file ready দেখানোর পরে আবার জিজ্ঞাসা করুন, বা অন্য readable file বেছে নিন।",
+            "ta": "file ready என காட்டிய பிறகு மீண்டும் கேளுங்கள், அல்லது வேறு readable file தேர்வுசெய்யவும்.",
+            "te": "file ready గా కనిపించిన తర్వాత మళ్లీ అడగండి, లేదా వేరే readable file ఎంచుకోండి."
+        ],
+        "file_text_not_ready": [
+            "en": "File text not ready",
+            "hi": "File text ready नहीं",
+            "bn": "File text ready নয়",
+            "ta": "File text ready இல்லை",
+            "te": "File text ready కాదు"
+        ],
+        "tagged_file_not_ready_for_assistant": [
+            "en": "Tagged file not ready for private assistant.",
+            "hi": "Tagged file private assistant के लिए ready नहीं है।",
+            "bn": "Tagged file private assistant-এর জন্য ready নয়।",
+            "ta": "Tagged file private assistant-க்கு ready இல்லை.",
+            "te": "Tagged file private assistant కోసం ready కాదు."
+        ],
+        "selected_file_no_readable_text": [
+            "en": "Selected file has no readable text",
+            "hi": "Selected file में readable text नहीं है",
+            "bn": "Selected file-এ readable text নেই",
+            "ta": "Selected file-ல் readable text இல்லை",
+            "te": "Selected file లో readable text లేదు"
+        ],
+        "ross_could_not_find_tagged_file_text": [
+            "en": "Ross could not find readable source text in the tagged file.",
+            "hi": "Ross को tagged file में readable source text नहीं मिला।",
+            "bn": "Ross tagged file-এ readable source text খুঁজে পায়নি।",
+            "ta": "Ross tagged file-ல் readable source text கண்டுபிடிக்கவில்லை.",
+            "te": "Ross tagged file లో readable source text కనుగొనలేదు."
+        ],
+        "reimport_wait_or_choose_another_file": [
+            "en": "Re-import the file, wait for text extraction to finish, or choose another file before asking the private assistant.",
+            "hi": "private assistant से पूछने से पहले file फिर import करें, text extraction finish होने दें, या दूसरी file चुनें।",
+            "bn": "private assistant-কে জিজ্ঞাসা করার আগে file আবার import করুন, text extraction শেষ হতে দিন, বা অন্য file বেছে নিন।",
+            "ta": "private assistant-ஐ கேட்பதற்கு முன் file-ஐ மீண்டும் import செய்யவும், text extraction முடியும் வரை காத்திருக்கவும், அல்லது வேறு file தேர்வுசெய்யவும்.",
+            "te": "private assistant ను అడగడానికి ముందు file ను మళ్లీ import చేయండి, text extraction పూర్తయ్యే వరకు వేచి ఉండండి, లేదా వేరే file ఎంచుకోండి."
+        ],
+        "file_text_unavailable": [
+            "en": "File text unavailable",
+            "hi": "File text उपलब्ध नहीं",
+            "bn": "File text পাওয়া যাচ্ছে না",
+            "ta": "File text கிடைக்கவில்லை",
+            "te": "File text అందుబాటులో లేదు"
+        ],
+        "tagged_file_no_readable_source_text": [
+            "en": "Tagged file has no readable source text.",
+            "hi": "Tagged file में readable source text नहीं है।",
+            "bn": "Tagged file-এ readable source text নেই।",
+            "ta": "Tagged file-ல் readable source text இல்லை.",
+            "te": "Tagged file లో readable source text లేదు."
+        ],
         "ask_legal_search_clean_query_detail": [
             "en": "Ross will use Legal Search with a cleaned query. Your case files stay on this device.",
             "hi": "Ross cleaned query के साथ Legal Search use करेगा। आपकी case files इस device पर रहती हैं।",

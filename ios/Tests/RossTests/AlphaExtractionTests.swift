@@ -862,6 +862,14 @@ final class AlphaExtractionTests: XCTestCase {
             alphaAskPreparedItemsNeedAttentionLabel(2, languageCode: "ta"),
             "2 item(s)-க்கு advocate attention தேவை."
         )
+        XCTAssertEqual(
+            rossLocalized("selected_file_still_being_read", languageCode: "te-IN"),
+            "Selected file ఇంకా చదువుతోంది"
+        )
+        XCTAssertEqual(
+            rossLocalized("file_text_unavailable", languageCode: "bn"),
+            "File text পাওয়া যাচ্ছে না"
+        )
         XCTAssertTrue(
             alphaNextHearingLabel(Date(timeIntervalSince1970: 0), languageCode: "hi")
                 .contains("अगली hearing:")
