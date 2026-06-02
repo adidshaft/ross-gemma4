@@ -30,7 +30,8 @@ struct AlphaSettingsScreen: View {
     var body: some View {
         let storageSnapshot = alphaStorageSnapshot(model)
         ScrollView {
-            VStack(alignment: .leading, spacing: alphaSectionSpacing) {
+            RossGlassGroup(spacing: alphaSectionSpacing) {
+                VStack(alignment: .leading, spacing: alphaSectionSpacing) {
                 if let activeJob = alphaActiveSetupJob(model) {
                     NavigationLink(value: AlphaRoute.privateAISettings) {
                         AlphaAssistantActivityStrip(
@@ -308,6 +309,7 @@ struct AlphaSettingsScreen: View {
                     .tint(Color.rossAccent)
                 }
                 #endif
+                }
             }
             .padding(alphaScreenPadding)
             .padding(.top, 56)

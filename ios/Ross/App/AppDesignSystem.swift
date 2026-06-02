@@ -44,6 +44,28 @@ public enum RossCorner {
     public static let lg: CGFloat = 26
 }
 
+// MARK: - Native Glass Grouping
+
+public struct RossGlassGroup<Content: View>: View {
+    private let spacing: CGFloat
+    private let content: Content
+
+    public init(spacing: CGFloat = RossSpacing.lg, @ViewBuilder content: () -> Content) {
+        self.spacing = spacing
+        self.content = content()
+    }
+
+    public var body: some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            GlassEffectContainer(spacing: spacing) {
+                content
+            }
+        } else {
+            content
+        }
+    }
+}
+
 // MARK: - Card Style
 
 public struct RossCardStyle: ViewModifier {
