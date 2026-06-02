@@ -173,38 +173,8 @@ struct AlphaRootAskDock: View {
         colorScheme == .dark ? Color.white.opacity(0.52) : Color.rossInk.opacity(0.48)
     }
 
-    private var dockBadgeFill: Color {
-        colorScheme == .dark ? Color.white.opacity(0.11) : Color.white.opacity(0.94)
-    }
-
-    private var dockGradient: [Color] {
-        if colorScheme == .dark {
-            return [
-                Color.white.opacity(0.045),
-                Color.rossGlassFill.opacity(0.82)
-            ]
-        }
-
-        return [
-            Color.white.opacity(0.98),
-            Color.rossSecondaryGroupedBackground.opacity(0.94)
-        ]
-    }
-
-    private var dockStroke: Color {
-        colorScheme == .dark ? Color.white.opacity(0.12) : Color.white.opacity(0.76)
-    }
-
-    private var dockShadow: Color {
-        colorScheme == .dark ? Color.black.opacity(0.10) : Color.rossShadow.opacity(0.08)
-    }
-
     private var dockBackdropTint: Color {
         colorScheme == .dark ? Color.rossBackdropGlow.opacity(0.12) : Color.white.opacity(0.62)
-    }
-
-    private var dockLiftHighlight: Color {
-        colorScheme == .dark ? Color.white.opacity(0.04) : Color.white.opacity(0.42)
     }
 
     private var mentionSuggestions: [AlphaAskDocumentOption] {
@@ -575,16 +545,6 @@ struct AlphaRootAskDock: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: dockGradient,
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-        }
         .rossGlassSurface(
             tint: dockBackdropTint,
             cornerRadius: 22,
@@ -784,10 +744,6 @@ struct AlphaCollapsedAskDockPill: View {
 
     private var dockBackdropTint: Color {
         colorScheme == .dark ? Color.rossBackdropGlow.opacity(0.12) : Color.white.opacity(0.62)
-    }
-
-    private var dockLiftHighlight: Color {
-        colorScheme == .dark ? Color.white.opacity(0.04) : Color.white.opacity(0.42)
     }
 
     var body: some View {
