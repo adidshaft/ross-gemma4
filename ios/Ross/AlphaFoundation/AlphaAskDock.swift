@@ -418,103 +418,106 @@ struct AlphaRootAskDock: View {
                 }
             }
 
-            HStack(spacing: 8) {
-                HStack(spacing: 9) {
-                    Button {
-                        dockComposerFocused = false
-                        showingTools = true
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.callout.weight(.bold))
-                            .imageScale(.small)
-                            .foregroundStyle(dockPrimaryText.opacity(0.82))
-                            .frame(width: 36, height: 36)
-                            .background(
-                                colorScheme == .dark ? Color.black.opacity(0.32) : Color.white.opacity(0.78),
-                                in: Circle()
-                            )
-                            .overlay {
-                                Circle()
-                                    .stroke(colorScheme == .dark ? Color.white.opacity(0.18) : Color.rossBorder.opacity(0.58), lineWidth: 1)
-                            }
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Add to Ask Ross")
-
-                    ZStack(alignment: .leading) {
-                        if draftText.isEmpty {
-                            Text(composerPlaceholder)
-                                .font(.body)
-                                .foregroundStyle(dockPrimaryText.opacity(0.42))
-                                .lineLimit(1)
-                        }
-
-                        TextField("", text: draftBinding, axis: .vertical)
-                            .id(composerResetToken)
-                            .lineLimit(1...2)
-                            .textFieldStyle(.plain)
-                            .font(.body)
-                            .foregroundStyle(dockPrimaryText)
-                            .focused($dockComposerFocused)
-                            .submitLabel(.send)
-                            .onSubmit {
-                                if canSend {
-                                    send()
-                                }
-                            }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                    if !draftText.isEmpty {
-                        Button(action: clearDraft) {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.body.weight(.semibold))
-                                .imageScale(.medium)
-                                .foregroundStyle(dockMutedText)
+            RossGlassGroup(spacing: 8) {
+                HStack(spacing: 8) {
+                    HStack(spacing: 9) {
+                        Button {
+                            dockComposerFocused = false
+                            showingTools = true
+                        } label: {
+                            Image(systemName: "plus")
+                                .font(.callout.weight(.bold))
+                                .imageScale(.small)
+                                .foregroundStyle(dockPrimaryText.opacity(0.82))
+                                .frame(width: 36, height: 36)
+                                .rossNativeGlassSurface(
+                                    tint: Color.rossHighlight,
+                                    shape: Circle(),
+                                    interactive: true,
+                                    fallbackFillOpacity: colorScheme == .dark ? 0.58 : 0.78,
+                                    fallbackStrokeOpacity: 0.52
+                                )
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("Clear Ask Ross text")
-                    }
-                }
-                .padding(.leading, 7)
-                .padding(.trailing, 13)
-                .padding(.vertical, 5)
-                .rossGlassSurface(
-                    tint: Color.rossHighlight,
-                    cornerRadius: 20,
-                    interactive: true,
-                    shadowOpacity: colorScheme == .dark ? 0.16 : 0.08,
-                    shadowRadius: 8,
-                    shadowY: 3,
-                    fillOpacity: colorScheme == .dark ? 0.76 : 0.86,
-                    strokeOpacity: 0.52
-                )
+                        .accessibilityLabel("Add to Ask Ross")
 
-                Button {
-                    if canSend {
-                        send()
-                    } else {
-                        cancelDockEditing()
-                    }
-                } label: {
-                    Image(systemName: canSend ? "arrow.up" : "xmark")
-                        .font((canSend ? Font.body : Font.callout).weight(.bold))
-                        .imageScale(.small)
-                        .foregroundStyle(canSend ? (colorScheme == .dark ? Color.rossGroupedBackground : Color.rossCardBackground) : dockPrimaryText.opacity(0.82))
-                        .frame(width: 36, height: 36)
-                        .background(
-                            canSend
-                                ? Color.rossAccent
-                                : (colorScheme == .dark ? Color.black.opacity(0.32) : Color.white.opacity(0.78)),
-                            in: Circle()
-                        )
-                        .overlay {
-                            Circle()
-                                .stroke(colorScheme == .dark ? Color.white.opacity(0.18) : Color.rossBorder.opacity(0.58), lineWidth: canSend ? 0 : 1)
+                        ZStack(alignment: .leading) {
+                            if draftText.isEmpty {
+                                Text(composerPlaceholder)
+                                    .font(.body)
+                                    .foregroundStyle(dockPrimaryText.opacity(0.42))
+                                    .lineLimit(1)
+                            }
+
+                            TextField("", text: draftBinding, axis: .vertical)
+                                .id(composerResetToken)
+                                .lineLimit(1...2)
+                                .textFieldStyle(.plain)
+                                .font(.body)
+                                .foregroundStyle(dockPrimaryText)
+                                .focused($dockComposerFocused)
+                                .submitLabel(.send)
+                                .onSubmit {
+                                    if canSend {
+                                        send()
+                                    }
+                                }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        if !draftText.isEmpty {
+                            Button(action: clearDraft) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.body.weight(.semibold))
+                                    .imageScale(.medium)
+                                    .foregroundStyle(dockMutedText)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Clear Ask Ross text")
+                        }
+                    }
+                    .padding(.leading, 7)
+                    .padding(.trailing, 13)
+                    .padding(.vertical, 5)
+                    .rossGlassSurface(
+                        tint: Color.rossHighlight,
+                        cornerRadius: 20,
+                        interactive: true,
+                        shadowOpacity: colorScheme == .dark ? 0.16 : 0.08,
+                        shadowRadius: 8,
+                        shadowY: 3,
+                        fillOpacity: colorScheme == .dark ? 0.76 : 0.86,
+                        strokeOpacity: 0.52
+                    )
+
+                    Button {
+                        if canSend {
+                            send()
+                        } else {
+                            cancelDockEditing()
+                        }
+                    } label: {
+                        Image(systemName: canSend ? "arrow.up" : "xmark")
+                            .font((canSend ? Font.body : Font.callout).weight(.bold))
+                            .imageScale(.small)
+                            .foregroundStyle(canSend ? (colorScheme == .dark ? Color.rossGroupedBackground : Color.rossCardBackground) : dockPrimaryText.opacity(0.82))
+                            .frame(width: 36, height: 36)
+                            .background {
+                                if canSend {
+                                    Circle().fill(Color.rossAccent.opacity(0.92))
+                                }
+                            }
+                            .rossNativeGlassSurface(
+                                tint: canSend ? Color.rossAccent : Color.rossHighlight,
+                                shape: Circle(),
+                                interactive: true,
+                                fallbackFillOpacity: canSend ? 0.88 : (colorScheme == .dark ? 0.58 : 0.78),
+                                fallbackStrokeOpacity: canSend ? 0.24 : 0.52
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(canSend ? "Send Ask Ross question" : "Close Ask Ross")
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(canSend ? "Send Ask Ross question" : "Close Ask Ross")
             }
             .contentShape(Rectangle())
             .onTapGesture {
@@ -1062,9 +1065,6 @@ struct AlphaAskSelectionChip: View {
     var body: some View {
         let dockForeground = colorScheme == .dark ? Color.white.opacity(0.76) : Color.rossInk.opacity(0.82)
         let dockDetail = colorScheme == .dark ? Color.white.opacity(0.46) : Color.rossInk.opacity(0.46)
-        let dockBackground = colorScheme == .dark ? Color.black.opacity(0.18) : Color.white.opacity(0.6)
-        let dockStroke = colorScheme == .dark ? Color.white.opacity(0.08) : Color.rossGlassStroke.opacity(0.9)
-
         HStack(spacing: 8) {
             Group {
                 if isShared {
@@ -1105,17 +1105,15 @@ struct AlphaAskSelectionChip: View {
         .foregroundStyle(tone == .dock ? dockForeground : Color.rossInk.opacity(0.82))
         .padding(.horizontal, AlphaAskPillMetrics.horizontalPadding)
         .frame(height: AlphaAskPillMetrics.height)
-        .background(
-            tone == .dock ? dockBackground : Color.rossGlassSubtleFill,
-            in: RoundedRectangle(cornerRadius: AlphaAskPillMetrics.cornerRadius, style: .continuous)
+        .rossGlassSurface(
+            tint: tone == .dock ? Color.rossHighlight : Color.rossAccent.opacity(0.10),
+            cornerRadius: AlphaAskPillMetrics.cornerRadius,
+            shadowOpacity: tone == .dock ? 0.04 : 0.03,
+            shadowRadius: 4,
+            shadowY: 1,
+            fillOpacity: tone == .dock ? 0.68 : 0.78,
+            strokeOpacity: tone == .dock ? 0.48 : 0.56
         )
-        .overlay {
-            RoundedRectangle(cornerRadius: AlphaAskPillMetrics.cornerRadius, style: .continuous)
-                .stroke(
-                    tone == .dock ? dockStroke : Color.rossGlassStroke.opacity(0.82),
-                    lineWidth: 1
-                )
-        }
     }
 }
 
@@ -1164,43 +1162,31 @@ struct AlphaAskMentionSuggestionsCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            ForEach(documents) { document in
-                Button {
-                    onSelect(document)
-                } label: {
-                    AlphaAskMentionSuggestionRow(
-                        document: document,
-                        scopeCaseID: scopeCaseID,
-                        tone: tone
-                    )
+        RossGlassGroup(spacing: 6) {
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(documents) { document in
+                    Button {
+                        onSelect(document)
+                    } label: {
+                        AlphaAskMentionSuggestionRow(
+                            document: document,
+                            scopeCaseID: scopeCaseID,
+                            tone: tone
+                        )
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         }
         .padding(8)
-        .background(
-            tone == .dock
-                ? (colorScheme == .dark ? Color.black.opacity(0.22) : Color.white.opacity(0.68))
-                : Color.rossGlassSubtleFill,
-            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(
-                    tone == .dock
-                        ? (colorScheme == .dark ? Color.white.opacity(0.08) : Color.rossGlassStroke.opacity(0.9))
-                        : Color.rossGlassStroke.opacity(0.82),
-                    lineWidth: 1
-                )
-        }
-        .shadow(
-            color: tone == .dock
-                ? (colorScheme == .dark ? Color.black.opacity(0.12) : Color.rossShadow.opacity(0.12))
-                : Color.rossShadow.opacity(0.14),
-            radius: 10,
-            x: 0,
-            y: 4
+        .rossGlassSurface(
+            tint: tone == .dock ? Color.rossHighlight : Color.rossAccent.opacity(0.10),
+            cornerRadius: 16,
+            shadowOpacity: tone == .dock ? 0.10 : 0.12,
+            shadowRadius: 10,
+            shadowY: 4,
+            fillOpacity: tone == .dock ? 0.74 : 0.82,
+            strokeOpacity: tone == .dock ? 0.52 : 0.58
         )
     }
 }
