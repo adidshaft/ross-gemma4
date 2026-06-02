@@ -1537,7 +1537,10 @@ extension AlphaRossModel {
                         sourceRef: sourceRef,
                         text: cleanedText,
                         pageNumber: page.pageNumber,
-                        languageHint: document.languageProfile?.pageProfiles.first(where: { $0.pageNumber == page.pageNumber })?.language.rawValue,
+                        languageHint: alphaSourceLanguageHint(
+                            profile: document.languageProfile,
+                            pageNumber: page.pageNumber
+                        ),
                         ocrConfidence: page.ocrConfidence
                     )
                 )

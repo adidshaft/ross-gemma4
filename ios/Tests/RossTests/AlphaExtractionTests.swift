@@ -2038,4 +2038,37 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(ranked.first?.sourceRef.documentId, documentID)
     }
+
+    func testSourceLanguageHintFallsBackToDocumentProfile() {
+        let profile = AlphaDocumentLanguageProfile(
+            documentId: UUID(),
+            primaryLanguage: .bengali,
+            scriptsDetected: ["bengali"],
+            confidence: 0.91,
+            pageProfiles: []
+        )
+
+        XCTAssertEqual(alphaSourceLanguageHint(profile: profile, pageNumber: 1), "bengali")
+    }
+
+    func testSourceLanguageHintPrefersPageProfile() {
+        let profile = AlphaDocumentLanguageProfile(
+            documentId: UUID(),
+            primaryLanguage: .mixed,
+            scriptsDetected: ["bengali", "devanagari"],
+            confidence: 0.72,
+            pageProfiles: [
+                AlphaDocumentLanguageProfilePage(
+                    pageNumber: 2,
+                    language: .hindi,
+                    script: .devanagari,
+                    confidence: 0.88
+                )
+            ]
+        )
+
+        XCTAssertEqual(alphaSourceLanguageHint(profile: profile, pageNumber: 2), "hindi")
+        XCTAssertEqual(alphaSourceLanguageHint(profile: profile, pageNumber: 1), "mixed")
+    }
+
 }

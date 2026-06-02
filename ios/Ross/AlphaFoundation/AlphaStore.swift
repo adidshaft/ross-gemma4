@@ -2215,7 +2215,10 @@ private struct AlphaLocalExtractionOrchestrator {
                 ),
                 text: page.extractedText ?? page.snippet ?? "Imported source reference.",
                 pageNumber: page.pageNumber,
-                languageHint: languageProfile?.pageProfiles.first(where: { $0.pageNumber == page.pageNumber })?.language.rawValue,
+                languageHint: alphaSourceLanguageHint(
+                    profile: languageProfile,
+                    pageNumber: page.pageNumber
+                ),
                 ocrConfidence: page.ocrConfidence
             )
         }

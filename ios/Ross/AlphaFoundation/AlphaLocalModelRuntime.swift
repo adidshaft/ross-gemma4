@@ -37,6 +37,19 @@ struct AlphaSourceTextBlock: Codable, Hashable, Sendable {
     var ocrConfidence: Double?
 }
 
+func alphaSourceLanguageHint(
+    profile: AlphaDocumentLanguageProfile?,
+    pageNumber: Int
+) -> String? {
+    guard let profile else { return nil }
+    if let pageLanguage = profile.pageProfiles.first(where: { $0.pageNumber == pageNumber })?.language,
+       pageLanguage != .unknown {
+        return pageLanguage.rawValue
+    }
+    guard profile.primaryLanguage != .unknown else { return nil }
+    return profile.primaryLanguage.rawValue
+}
+
 struct AlphaLocalModelInput: Codable, Hashable, Sendable {
     var task: AlphaLocalModelTask
     var instruction: String
