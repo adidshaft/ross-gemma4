@@ -425,7 +425,7 @@ extension AlphaRossModel {
         case .failed:
             statusDetail = "Assistant setup failed. Open My assistant to retry the assistant download."
         case .notStarted:
-            statusDetail = "Choose and download a private assistant before asking legal questions."
+            statusDetail = "Open My assistant and set up a private assistant on this iPhone before asking legal questions."
         }
 
         return AlphaAskResult(

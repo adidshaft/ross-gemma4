@@ -953,7 +953,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             let answerSections = await MainActor.run { model.latestAskResult?.answerSections }
             XCTAssertEqual("Private assistant not ready", answerTitle)
             XCTAssertEqual([
-                "Choose and download a private assistant before asking legal questions.",
+                "Open My assistant and set up a private assistant on this iPhone before asking legal questions.",
                 "Ross did not generate a legal answer because the private assistant is not ready."
             ], answerSections)
         }
