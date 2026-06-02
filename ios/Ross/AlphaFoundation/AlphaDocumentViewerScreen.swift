@@ -964,9 +964,11 @@ struct AlphaDocumentTranslationCard: View {
                 Spacer(minLength: 0)
             }
 
-            HStack(spacing: 8) {
-                AlphaTranslationLanguageChip(label: "From", value: documentLanguage, systemImage: "doc.text.magnifyingglass")
-                AlphaTranslationLanguageChip(label: "To", value: targetLanguage, systemImage: "text.bubble")
+            RossGlassGroup(spacing: 8) {
+                HStack(spacing: 8) {
+                    AlphaTranslationLanguageChip(label: "From", value: documentLanguage, systemImage: "doc.text.magnifyingglass")
+                    AlphaTranslationLanguageChip(label: "To", value: targetLanguage, systemImage: "text.bubble")
+                }
             }
 
             Button {
@@ -1111,31 +1113,33 @@ struct AlphaDocumentTitleSuggestionCard: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                HStack(spacing: 8) {
-                    if isEditing {
-                        Button("Save") {
-                            onSaveEdit(draftTitle)
-                            isEditing = false
-                        }
-                        .buttonStyle(AlphaReviewActionButtonStyle(tint: Color.rossAccent))
-
-                        Button("Cancel") {
-                            draftTitle = suggestedTitle
-                            isEditing = false
-                        }
-                        .buttonStyle(AlphaReviewActionButtonStyle())
-                    } else {
-                        Button("Accept", action: onAccept)
+                RossGlassGroup(spacing: 8) {
+                    HStack(spacing: 8) {
+                        if isEditing {
+                            Button("Save") {
+                                onSaveEdit(draftTitle)
+                                isEditing = false
+                            }
                             .buttonStyle(AlphaReviewActionButtonStyle(tint: Color.rossAccent))
 
-                        Button("Edit") {
-                            draftTitle = suggestedTitle
-                            isEditing = true
-                        }
-                        .buttonStyle(AlphaReviewActionButtonStyle())
-
-                        Button("Keep \(originalFileName)", action: onKeepOriginal)
+                            Button("Cancel") {
+                                draftTitle = suggestedTitle
+                                isEditing = false
+                            }
                             .buttonStyle(AlphaReviewActionButtonStyle())
+                        } else {
+                            Button("Accept", action: onAccept)
+                                .buttonStyle(AlphaReviewActionButtonStyle(tint: Color.rossAccent))
+
+                            Button("Edit") {
+                                draftTitle = suggestedTitle
+                                isEditing = true
+                            }
+                            .buttonStyle(AlphaReviewActionButtonStyle())
+
+                            Button("Keep \(originalFileName)", action: onKeepOriginal)
+                                .buttonStyle(AlphaReviewActionButtonStyle())
+                        }
                     }
                 }
             }
@@ -1872,34 +1876,36 @@ struct AlphaExtractedFieldReviewCard: View {
                 onOpenSourceRef: onOpenSourceRef
             )
 
-            HStack(spacing: 10) {
-                if isEditing {
-                    Button("Save") {
-                        onSaveEdit(draftValue)
-                        isEditing = false
-                    }
-                    .buttonStyle(AlphaReviewActionButtonStyle(tint: Color.rossAccent))
+            RossGlassGroup(spacing: 10) {
+                HStack(spacing: 10) {
+                    if isEditing {
+                        Button("Save") {
+                            onSaveEdit(draftValue)
+                            isEditing = false
+                        }
+                        .buttonStyle(AlphaReviewActionButtonStyle(tint: Color.rossAccent))
 
-                    Button("Cancel") {
-                        draftValue = field.value
-                        isEditing = false
-                    }
-                    .buttonStyle(AlphaReviewActionButtonStyle())
-                } else {
-                    Button("Accept", action: onAccept)
+                        Button("Cancel") {
+                            draftValue = field.value
+                            isEditing = false
+                        }
+                        .buttonStyle(AlphaReviewActionButtonStyle())
+                    } else {
+                        Button("Accept", action: onAccept)
+                            .buttonStyle(AlphaReviewActionButtonStyle())
+
+                        Button("Edit") {
+                            draftValue = field.value
+                            isEditing = true
+                        }
                         .buttonStyle(AlphaReviewActionButtonStyle())
 
-                    Button("Edit") {
-                        draftValue = field.value
-                        isEditing = true
+                        Button("Ignore", role: .destructive, action: onIgnore)
+                            .buttonStyle(AlphaReviewActionButtonStyle(tint: .red))
                     }
-                    .buttonStyle(AlphaReviewActionButtonStyle())
-
-                    Button("Ignore", role: .destructive, action: onIgnore)
-                        .buttonStyle(AlphaReviewActionButtonStyle(tint: .red))
                 }
+                .font(.footnote.weight(.semibold))
             }
-            .font(.footnote.weight(.semibold))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
