@@ -1276,10 +1276,10 @@ extension AlphaRossModel {
                 .sorted { $0.askedAt < $1.askedAt }
 
             let transcriptLines = turns.flatMap { turn -> [String] in
-                var lines = ["Q: \(turn.question)"]
-                lines.append(contentsOf: turn.answerSections.map { "A: \($0)" })
+                var lines = [String(format: rossLocalized("export_chat_question"), turn.question)]
+                lines.append(contentsOf: turn.answerSections.map { String(format: rossLocalized("export_chat_answer"), $0) })
                 if !turn.sourceRefs.isEmpty {
-                    lines.append("Sources: \(turn.sourceRefs.map(\.label).joined(separator: " | "))")
+                    lines.append(String(format: rossLocalized("export_chat_sources"), turn.sourceRefs.map(\.label).joined(separator: " | ")))
                 }
                 lines.append("")
                 return lines
@@ -1543,7 +1543,7 @@ extension AlphaRossModel {
         if asksForMatterSummary, let scopedPrimaryCase {
             sections.append(scopedPrimaryCase.summary)
             if let nextHearing = scopedPrimaryCase.nextHearing {
-                sections.append("Next hearing: \(nextHearing.formatted(date: .abbreviated, time: .omitted)).")
+                sections.append(String(format: rossLocalized("ask_local_next_hearing"), nextHearing.formatted(date: .abbreviated, time: .omitted)))
             }
             if !scopedPrimaryCase.draftTasks.isEmpty {
                 let actions = scopedPrimaryCase.draftTasks.prefix(2).joined(separator: "; ")
@@ -1555,7 +1555,7 @@ extension AlphaRossModel {
             let directionValues = visibleFields
                 .filter { [.orderDirection, .issue, .relief].contains($0.fieldType) }
                 .map(\.value)
-            sections.append("\(target.document.title) is available in this matter.")
+            sections.append(String(format: rossLocalized("ask_local_document_available"), target.document.title))
             if let nextDate = visibleFields.first(where: { $0.fieldType == .nextDate })?.value {
                 sections.append(String(format: rossLocalized("ask_local_next_date_found"), nextDate))
             }

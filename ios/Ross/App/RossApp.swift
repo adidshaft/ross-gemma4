@@ -4823,12 +4823,26 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Next actions: %@.",
             "te": "Next actions: %@."
         ],
+        "ask_local_next_hearing": [
+            "en": "Next hearing: %@.",
+            "hi": "अगली hearing: %@.",
+            "bn": "পরবর্তী hearing: %@.",
+            "ta": "அடுத்த hearing: %@.",
+            "te": "తదుపరి hearing: %@."
+        ],
         "ask_local_next_date_found": [
             "en": "Next date found: %@.",
             "hi": "Next date मिली: %@.",
             "bn": "Next date পাওয়া গেছে: %@.",
             "ta": "Next date கண்டது: %@.",
             "te": "Next date కనుగొంది: %@."
+        ],
+        "ask_local_document_available": [
+            "en": "%@ is available in this matter.",
+            "hi": "%@ इस matter में available है.",
+            "bn": "%@ এই matter-এ available আছে.",
+            "ta": "%@ இந்த matter-இல் available உள்ளது.",
+            "te": "%@ ఈ matter లో available ఉంది."
         ],
         "matter_memory_ready_for_first_document": [
             "en": "Ross is ready to build this matter once the first document is imported on this device.",
@@ -5620,6 +5634,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "bn": "এই matter-এর জন্য এখনও কোনো chat turns saved নেই.",
             "ta": "இந்த matter-க்கு இன்னும் chat turns saved இல்லை.",
             "te": "ఈ matter కోసం ఇంకా chat turns saved లేవు."
+        ],
+        "export_chat_question": [
+            "en": "Question: %@",
+            "hi": "सवाल: %@",
+            "bn": "প্রশ্ন: %@",
+            "ta": "கேள்வி: %@",
+            "te": "ప్రశ్న: %@"
+        ],
+        "export_chat_answer": [
+            "en": "Answer: %@",
+            "hi": "जवाब: %@",
+            "bn": "উত্তর: %@",
+            "ta": "பதில்: %@",
+            "te": "సమాధానం: %@"
+        ],
+        "export_chat_sources": [
+            "en": "Sources: %@",
+            "hi": "स्रोत: %@",
+            "bn": "সূত্র: %@",
+            "ta": "ஆதாரங்கள்: %@",
+            "te": "ఆధారాలు: %@"
         ],
         "export_summary": [
             "en": "Summary",

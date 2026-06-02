@@ -1235,8 +1235,28 @@ final class AlphaExtractionTests: XCTestCase {
             "Next actions: File reply."
         )
         XCTAssertEqual(
+            String(format: rossLocalized("ask_local_next_hearing", languageCode: "hi"), "12 Mar 2026"),
+            "अगली hearing: 12 Mar 2026."
+        )
+        XCTAssertEqual(
+            String(format: rossLocalized("ask_local_document_available", languageCode: "bn"), "Order"),
+            "Order এই matter-এ available আছে."
+        )
+        XCTAssertEqual(
             rossLocalized("ask_source_pack_next_hearing", languageCode: "hi"),
             "अगली hearing"
+        )
+        XCTAssertEqual(
+            String(format: rossLocalized("export_chat_question", languageCode: "ta"), "Next date?"),
+            "கேள்வி: Next date?"
+        )
+        XCTAssertEqual(
+            String(format: rossLocalized("export_chat_answer", languageCode: "te"), "Listed next week."),
+            "సమాధానం: Listed next week."
+        )
+        XCTAssertEqual(
+            String(format: rossLocalized("export_chat_sources", languageCode: "hi"), "Order p. 1"),
+            "स्रोत: Order p. 1"
         )
         XCTAssertEqual(
             String(format: rossLocalized("ask_source_pack_confirmed_details_from", languageCode: "hi"), "Order"),

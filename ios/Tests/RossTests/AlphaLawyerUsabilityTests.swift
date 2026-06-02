@@ -1500,6 +1500,13 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
 
         let caseID = UUID()
         let documentID = UUID()
+        let sourceRef = AlphaSourceRef(
+            caseId: caseID,
+            documentId: documentID,
+            documentTitle: "Order",
+            pageNumber: 1,
+            textSnippet: "Order lists the next hearing date."
+        )
         let field = AlphaExtractedLegalField(
             caseId: caseID,
             documentId: documentID,
@@ -1538,7 +1545,20 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                     extractedFields: [field]
                 )
             ],
-            sourceRefs: []
+            sourceRefs: [],
+            chatSessions: [
+                AlphaChatSession(
+                    turns: [
+                        AlphaChatTurn(
+                            askedAt: Date(timeIntervalSince1970: 1_713_700_000),
+                            question: "What is the next date?",
+                            answerTitle: "Answered from your files",
+                            answerSections: ["The matter is listed on 12 March 2026."],
+                            sourceRefs: [sourceRef]
+                        )
+                    ]
+                )
+            ]
         )
         var state = AlphaPersistedState.empty()
         state.cases = [matter]
@@ -1560,6 +1580,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         let emptyChronologyText = model.exportBodyLines(kind: "chronology_report", caseMatter: emptyMatter).joined(separator: "\n")
         let caseNoteText = model.exportBodyLines(kind: "case_note", caseMatter: matter).joined(separator: "\n")
         let emptyCaseNoteText = model.exportBodyLines(kind: "case_note", caseMatter: emptyMatter).joined(separator: "\n")
+        let chatTranscriptText = model.exportBodyLines(kind: "chat_transcript", caseMatter: matter).joined(separator: "\n")
 
         XCTAssertTrue(exportText.contains("Draft - कृपया review करें"), exportText)
         XCTAssertTrue(exportText.contains("Advocate review के लिए locally generated."), exportText)
@@ -1568,12 +1589,18 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertTrue(caseNoteText.contains("Court: नहीं मिला"), caseNoteText)
         XCTAssertTrue(caseNoteText.contains("- कोई pending review fields नहीं."), caseNoteText)
         XCTAssertTrue(emptyCaseNoteText.contains("- अभी imported documents नहीं हैं."), emptyCaseNoteText)
+        XCTAssertTrue(chatTranscriptText.contains("सवाल: What is the next date?"), chatTranscriptText)
+        XCTAssertTrue(chatTranscriptText.contains("जवाब: The matter is listed on 12 March 2026."), chatTranscriptText)
+        XCTAssertTrue(chatTranscriptText.contains("स्रोत: Order · p. 1"), chatTranscriptText)
         XCTAssertFalse(exportText.contains("Draft — please review"), exportText)
         XCTAssertFalse(exportText.contains("Generated locally for advocate review."), exportText)
         XCTAssertFalse(exportText.contains("No source references available yet."), exportText)
         XCTAssertFalse(exportText.contains("Source pending"), exportText)
         XCTAssertFalse(caseNoteText.contains("Not found"), caseNoteText)
         XCTAssertFalse(emptyCaseNoteText.contains("No imported documents yet."), emptyCaseNoteText)
+        XCTAssertFalse(chatTranscriptText.contains("Q: What is the next date?"), chatTranscriptText)
+        XCTAssertFalse(chatTranscriptText.contains("A: The matter is listed on 12 March 2026."), chatTranscriptText)
+        XCTAssertFalse(chatTranscriptText.contains("Sources: Order · p. 1"), chatTranscriptText)
     }
 
     func testDockCommandCreatesTasksFromSelectedDocument() async throws {
