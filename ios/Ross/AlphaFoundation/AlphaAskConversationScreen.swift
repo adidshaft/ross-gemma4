@@ -376,7 +376,7 @@ struct AlphaFullScreenChatComposer: View {
                 .accessibilityLabel("Add files or images")
 
                 VStack(alignment: .leading, spacing: 4) {
-                    TextField("Ask Ross... Type @ to tag a file", text: $text, axis: .vertical)
+                    TextField(alphaAskConversationPlaceholder(), text: $text, axis: .vertical)
                         .id(resetToken)
                         .lineLimit(1...5)
                         .textFieldStyle(.plain)
@@ -389,7 +389,7 @@ struct AlphaFullScreenChatComposer: View {
                         }
 
                     if selectedDocuments.isEmpty {
-                        Text("Tag files with @ or tap + to attach them before asking.")
+                        Text(alphaAskTagFileHint())
                             .font(.caption2.weight(.medium))
                             .foregroundStyle(Color.rossInk.opacity(0.46))
                     }
@@ -1341,6 +1341,14 @@ func alphaUsesHindiUi() -> Bool {
 
 func alphaAskEmptyTitle(languageCode: String = rossSelectedLanguageCode()) -> String {
     rossLocalized("ask_empty_title", languageCode: languageCode)
+}
+
+func alphaAskConversationPlaceholder(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("ask_conversation_placeholder", languageCode: languageCode)
+}
+
+func alphaAskTagFileHint(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("ask_tag_file_hint", languageCode: languageCode)
 }
 
 func alphaAskSuggestions(

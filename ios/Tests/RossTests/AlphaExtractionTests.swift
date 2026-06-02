@@ -493,6 +493,14 @@ final class AlphaExtractionTests: XCTestCase {
     func testAskEmptyStateSuggestionsFollowSelectedSupportedLanguage() {
         XCTAssertEqual(alphaAskEmptyTitle(languageCode: "ta"), "அடுத்து என்ன என்பதை Ross-ஐ கேளுங்கள்")
         XCTAssertEqual(alphaAskEmptyTitle(languageCode: "te-IN"), "తర్వాత ఏమిటో Ross‌ను అడగండి")
+        XCTAssertEqual(
+            alphaAskConversationPlaceholder(languageCode: "ta"),
+            "Ross-ஐ கேளுங்கள்... கோப்பை குறிக்க @ தட்டச்சு செய்யவும்"
+        )
+        XCTAssertEqual(
+            alphaAskTagFileHint(languageCode: "te"),
+            "అడగడానికి ముందు @తో ఫైళ్లను ట్యాగ్ చేయండి లేదా + నొక్కి జోడించండి."
+        )
 
         let tamilDocumentSuggestions = alphaAskSuggestions(
             for: "Matter",

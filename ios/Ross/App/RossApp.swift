@@ -184,6 +184,18 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "hi": "Ross से आगे का काम पूछें",
             "ta": "அடுத்து என்ன என்பதை Ross-ஐ கேளுங்கள்",
             "te": "తర్వాత ఏమిటో Ross‌ను అడగండి"
+        ],
+        "ask_conversation_placeholder": [
+            "en": "Ask Ross... Type @ to tag a file",
+            "hi": "Ross से पूछें... फ़ाइल टैग करने के लिए @ लिखें",
+            "ta": "Ross-ஐ கேளுங்கள்... கோப்பை குறிக்க @ தட்டச்சு செய்யவும்",
+            "te": "Ross‌ను అడగండి... ఫైల్‌ను ట్యాగ్ చేయడానికి @ టైప్ చేయండి"
+        ],
+        "ask_tag_file_hint": [
+            "en": "Tag files with @ or tap + to attach them before asking.",
+            "hi": "पूछने से पहले @ से फ़ाइल टैग करें या + टैप करके जोड़ें।",
+            "ta": "கேட்பதற்கு முன் @ மூலம் கோப்புகளை குறிக்கவும் அல்லது + தட்டி இணைக்கவும்.",
+            "te": "అడగడానికి ముందు @తో ఫైళ్లను ట్యాగ్ చేయండి లేదా + నొక్కి జోడించండి."
         ]
     ]
     return table[key]?[normalizedCode] ?? table[key]?["en"] ?? key
