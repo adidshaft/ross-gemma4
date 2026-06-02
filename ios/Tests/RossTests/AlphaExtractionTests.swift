@@ -1501,6 +1501,26 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(teluguFailedDetail.contains("My assistant"))
         XCTAssertFalse(teluguFailedDetail.localizedCaseInsensitiveContains("runtime"))
         XCTAssertFalse(teluguFailedDetail.localizedCaseInsensitiveContains("model"))
+
+        let preparingJob = AlphaModelDownloadJob(
+            sessionId: "activity-title-preparing",
+            packId: "quick-start",
+            tier: .quickStart,
+            state: .downloading,
+            networkPolicy: .wifiOnly,
+            bytesDownloaded: 0,
+            totalBytes: 0,
+            checksumSha256: ""
+        )
+        var pausedJob = preparingJob
+        pausedJob.state = .pausedUser
+        var failedJob = preparingJob
+        failedJob.state = .failed
+
+        XCTAssertEqual(alphaAssistantActivityTitle(for: preparingJob), "Small is preparing")
+        XCTAssertEqual(alphaAssistantActivityTitle(for: preparingJob, languageCode: "hi"), "Small तैयार हो रहा है")
+        XCTAssertEqual(alphaAssistantActivityTitle(for: pausedJob, languageCode: "ta"), "Small setup paused உள்ளது")
+        XCTAssertEqual(alphaAssistantActivityTitle(for: failedJob, languageCode: "te"), "Private assistant కు retry కావాలి")
     }
 
     @MainActor

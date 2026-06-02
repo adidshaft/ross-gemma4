@@ -882,6 +882,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "இப்போது எந்த அமைப்பும் இயங்கவில்லை.",
             "te": "ప్రస్తుతం ఎలాంటి సెటప్ నడవడం లేదు."
         ],
+        "assistant_activity_title_preparing": [
+            "en": "%@ is preparing",
+            "hi": "%@ तैयार हो रहा है",
+            "bn": "%@ প্রস্তুত হচ্ছে",
+            "ta": "%@ தயாராகிறது",
+            "te": "%@ సిద్ధమవుతోంది"
+        ],
+        "assistant_activity_title_paused": [
+            "en": "%@ setup is paused",
+            "hi": "%@ setup paused है",
+            "bn": "%@ setup paused আছে",
+            "ta": "%@ setup paused உள்ளது",
+            "te": "%@ setup paused అయింది"
+        ],
+        "assistant_activity_title_retry": [
+            "en": "Private assistant needs a retry",
+            "hi": "Private assistant को retry चाहिए",
+            "bn": "Private assistant retry চায়",
+            "ta": "Private assistant-க்கு retry தேவை",
+            "te": "Private assistant కు retry కావాలి"
+        ],
         "assistant_badge_active": [
             "en": "Active",
             "hi": "सक्रिय",

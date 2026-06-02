@@ -830,14 +830,17 @@ func alphaAssistantStateLabel(
     }
 }
 
-func alphaAssistantActivityTitle(for job: AlphaModelDownloadJob) -> String {
+func alphaAssistantActivityTitle(
+    for job: AlphaModelDownloadJob,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
     switch job.state {
     case .pausedError, .failed:
-        "Private assistant needs a retry"
+        rossLocalized("assistant_activity_title_retry", languageCode: languageCode)
     case .pausedWaitingForWifi, .pausedUser, .pausedNoStorage:
-        "\(job.tier.title) setup is paused"
+        String(format: rossLocalized("assistant_activity_title_paused", languageCode: languageCode), job.tier.title)
     default:
-        "\(job.tier.title) is preparing"
+        String(format: rossLocalized("assistant_activity_title_preparing", languageCode: languageCode), job.tier.title)
     }
 }
 
