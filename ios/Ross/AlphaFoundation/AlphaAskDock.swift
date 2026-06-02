@@ -1411,7 +1411,7 @@ struct AlphaAskComposerSheet: View {
                 } label: {
                     Text(rossLocalized("send"))
                 }
-                .buttonStyle(AlphaSetupPrimaryButtonStyle())
+                .buttonStyle(RossPrimaryButtonStyle())
                 .disabled(!canSend)
                 .opacity(canSend ? 1 : 0.42)
             }

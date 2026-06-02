@@ -87,41 +87,6 @@ struct AlphaSetupWordmarkRow: View {
     }
 }
 
-// MARK: - Primary Button Style
-
-struct AlphaSetupPrimaryButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
-
-        configuration.label
-            .font(.headline.weight(.semibold))
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .frame(minHeight: 52)
-            .background {
-                shape.fill(Color.rossAccent.opacity(configuration.isPressed ? 0.74 : 0.86))
-            }
-            .rossNativeGlassSurface(
-                tint: Color.rossAccent,
-                shape: shape,
-                interactive: true,
-                fallbackFillOpacity: configuration.isPressed ? 0.70 : 0.88,
-                fallbackStrokeOpacity: 0.48
-            )
-            .overlay {
-                shape.strokeBorder(Color.white.opacity(configuration.isPressed ? 0.18 : 0.32), lineWidth: 1)
-            }
-            .shadow(
-                color: Color.rossAccent.opacity(configuration.isPressed ? 0.12 : 0.24),
-                radius: configuration.isPressed ? 8 : 18,
-                y: configuration.isPressed ? 4 : 10
-            )
-            .scaleEffect(configuration.isPressed ? 0.988 : 1)
-            .animation(.spring(response: 0.22, dampingFraction: 0.72), value: configuration.isPressed)
-            .sensoryFeedback(.impact(weight: .medium), trigger: configuration.isPressed)
-    }
-}
-
 // MARK: - Onboarding Screen
 
 struct AlphaOnboardingScreen: View {
@@ -205,7 +170,7 @@ struct AlphaOnboardingScreen: View {
                                 .minimumScaleFactor(0.72)
                                 .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(AlphaSetupPrimaryButtonStyle())
+                        .buttonStyle(RossPrimaryButtonStyle())
                         .frame(height: compact ? 50 : 54)
 
                         Button(rossLocalized("skip_for_now")) {
