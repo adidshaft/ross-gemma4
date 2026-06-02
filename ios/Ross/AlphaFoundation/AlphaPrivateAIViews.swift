@@ -14,14 +14,14 @@ import AppKit
 #endif
 
 let alphaPrivateAIBackgroundDownloadsDetail = "Keep assistant downloads eligible to continue when Ross is backgrounded."
-let alphaPrivateAIUpdateDetail = "Ross will download it with the same resumable Wi-Fi-first rules. Existing assistant files stay until the new file verifies."
+let alphaPrivateAIUpdateDetail = "Ross will download it with the same resumable Wi-Fi-first rules. Existing assistant setup stays until the new setup verifies."
 let alphaPrivateAIStorageTitle = "Assistant storage"
 let alphaPrivateAIStorageDetail = "App updates keep assistant setup files in Ross storage. A full uninstall removes the app container; iOS does not let Ross ask a question during uninstall."
 let alphaPrivateAIDeleteDownloadsTitle = "Delete assistant setup files"
-let alphaPrivateAIDeleteDownloadsDetail = "Keeps matters and drafts, removes local assistant files and resume data."
+let alphaPrivateAIDeleteDownloadsDetail = "Keeps matters and drafts, removes local assistant setup files and resume data."
 let alphaPrivateAIUpdateChecksTitle = "Check for assistant updates"
-let alphaPrivateAIUpdateChecksDetail = "Ross checks assistant listings and asks before replacing a downloaded assistant."
-let alphaPrivateAIVerifiedStorageLabel = "Verified assistant files"
+let alphaPrivateAIUpdateChecksDetail = "Ross checks assistant listings and asks before replacing assistant setup."
+let alphaPrivateAIVerifiedStorageLabel = "Verified assistant setup"
 
 struct AlphaPrivateAISettingsScreen: View {
     @Bindable var model: AlphaRossModel
@@ -150,7 +150,7 @@ struct AlphaPrivateAISettingsScreen: View {
                         VStack(alignment: .leading, spacing: 10) {
                             AlphaSettingsToggleRow(
                                 title: "Use Wi-Fi for larger downloads",
-                                detail: "Ross waits for Wi-Fi before downloading larger private assistant files.",
+                                detail: "Ross waits for Wi-Fi before downloading larger assistant setup files.",
                                 isOn: wifiOnlyDownloadsBinding
                             )
                             AlphaSettingsToggleRow(
@@ -184,7 +184,7 @@ struct AlphaPrivateAISettingsScreen: View {
                 if let update = (model.persisted.modelUpdateCandidates ?? []).first(where: { $0.dismissedAt == nil }) {
                     RossSectionCard(title: "Assistant update") {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("\(update.tier.title) has a newer assistant file available.")
+                            Text("\(update.tier.title) has a newer assistant setup available.")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(Color.rossInk)
                             Text(alphaPrivateAIUpdateDetail)
@@ -324,15 +324,15 @@ func alphaAssistantVerificationSummary(
     activePack: AlphaInstalledModelPack?
 ) -> String {
     guard let activePack else {
-        return "No assistant file is active yet."
+        return "No assistant setup is active yet."
     }
     if activePack.developmentOnly {
         return alphaAllowsDevelopmentModelArtifacts()
-            ? "Test assistant file is active for this build."
-            : "Test assistant file is disabled for this build."
+            ? "Test assistant setup is active for this build."
+            : "Test assistant setup is disabled for this build."
     }
     guard let runtimeHealth else {
-        return "Ross will verify the assistant file after setup."
+        return "Ross will verify assistant setup after setup finishes."
     }
     if runtimeHealth.available && runtimeHealth.checksumVerified {
         return "Assistant setup opened and verified on this iPhone."
@@ -343,7 +343,7 @@ func alphaAssistantVerificationSummary(
     if runtimeHealth.modelPathPresent {
         return "Assistant setup needs Repair setup before Ross can use it."
     }
-    return "Assistant file is missing. Open My assistant and set up again."
+    return "Assistant setup is missing. Open My assistant and set up again."
 }
 
 #if DEBUG
@@ -666,7 +666,7 @@ struct AlphaPrivateAIOfferCard: View {
                     .fixedSize(horizontal: false, vertical: true)
 
                 AlphaPrivateAIRecoveryHintRow(
-                    text: "Repair setup removes the broken assistant file and starts a fresh local check."
+                    text: "Repair setup removes the broken assistant setup and starts a fresh local check."
                 )
             }
 

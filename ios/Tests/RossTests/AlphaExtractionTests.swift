@@ -511,6 +511,8 @@ final class AlphaExtractionTests: XCTestCase {
         }
         XCTAssertTrue(normalSettingsCopy.contains("assistant setup files"))
         XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("downloaded assistant files"))
+        XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("downloaded assistant"))
+        XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("assistant files"))
     }
 
     func testExistingAssistantSetupRepairCopyPointsToMyAssistant() {

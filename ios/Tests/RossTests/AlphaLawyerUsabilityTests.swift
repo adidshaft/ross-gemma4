@@ -527,8 +527,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             alphaAssistantVerificationSummary(runtimeHealth: repairHealth, activePack: activePack)
         ]
 
-        XCTAssertTrue(summaries[0].contains("No assistant file"))
-        XCTAssertTrue(summaries[1].contains("verify the assistant file"))
+        XCTAssertTrue(summaries[0].contains("No assistant setup"))
+        XCTAssertTrue(summaries[1].contains("verify assistant setup"))
         XCTAssertTrue(summaries[2].contains("Assistant setup opened and verified"))
         XCTAssertTrue(summaries[3].contains("Repair setup"))
 
@@ -540,6 +540,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 )
             }
             XCTAssertFalse(summary.localizedCaseInsensitiveContains("downloaded file"), summary)
+            XCTAssertFalse(summary.localizedCaseInsensitiveContains("assistant file"), summary)
         }
     }
 
