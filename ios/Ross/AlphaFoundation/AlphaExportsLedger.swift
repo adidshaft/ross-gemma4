@@ -84,15 +84,19 @@ struct AlphaExportsScreen: View {
 
                 ForEach(visibleReports) { report in
                     RossSectionCard(title: report.title, subtitle: report.kind.replacingOccurrences(of: "_", with: " ").capitalized) {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text(report.relativePath)
-                                .font(.footnote)
-                                .foregroundStyle(Color.rossInk.opacity(0.7))
+                        VStack(alignment: .leading, spacing: 12) {
+                            AlphaExportReviewMetadata(report: report)
+
+                            Text("Review this draft before sending or filing. Sharing uses the iOS share sheet and keeps the saved draft on this device.")
+                                .font(.caption)
+                                .foregroundStyle(Color.rossInk.opacity(0.68))
+                                .fixedSize(horizontal: false, vertical: true)
 
                             ShareLink(item: model.exportURL(for: report)) {
-                                Label("Send to client (WhatsApp or Share)", systemImage: "square.and.arrow.up")
+                                Label("Review or share draft", systemImage: "square.and.arrow.up")
+                                    .frame(maxWidth: .infinity)
                             }
-                            .font(.subheadline.weight(.semibold))
+                            .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
                         }
                     }
                 }
@@ -112,5 +116,38 @@ struct AlphaExportsScreen: View {
                 }
             }
         }
+    }
+}
+
+private struct AlphaExportReviewMetadata: View {
+    let report: AlphaExportedReport
+
+    private var createdLabel: String {
+        report.createdAt.formatted(date: .abbreviated, time: .shortened)
+    }
+
+    private var kindLabel: String {
+        report.kind.replacingOccurrences(of: "_", with: " ").capitalized
+    }
+
+    private var fileName: String {
+        URL(fileURLWithPath: report.relativePath).lastPathComponent
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            AlphaSettingsValueRow(label: "Draft type", value: kindLabel)
+            AlphaSettingsValueRow(label: "Created", value: createdLabel)
+            AlphaSettingsValueRow(label: "Saved file", value: fileName)
+        }
+        .padding(12)
+        .rossGlassSurface(
+            tint: Color.rossHighlight.opacity(0.12),
+            cornerRadius: 16,
+            shadowOpacity: 0.05,
+            shadowRadius: 5,
+            shadowY: 2,
+            strokeOpacity: 0.46
+        )
     }
 }
