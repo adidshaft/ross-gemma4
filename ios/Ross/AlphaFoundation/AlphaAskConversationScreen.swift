@@ -424,74 +424,76 @@ struct AlphaFullScreenChatComposer: View {
                 }
             }
 
-            HStack(spacing: 10) {
-                Button(action: onShowTools) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundStyle(Color.rossInk.opacity(0.72))
-                        .frame(width: 40, height: 40)
-                        .rossGlassSurface(
-                            tint: Color.rossAccent,
-                            cornerRadius: 20,
-                            interactive: true,
-                            shadowOpacity: 0.08,
-                            shadowRadius: 7,
-                            shadowY: 3,
-                            fillOpacity: 0.80,
-                            strokeOpacity: 0.48
-                        )
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Add files or images")
-
-                VStack(alignment: .leading, spacing: 4) {
-                    TextField(alphaAskConversationPlaceholder(), text: $text, axis: .vertical)
-                        .id(resetToken)
-                        .lineLimit(1...5)
-                        .textFieldStyle(.plain)
-                        .font(.body)
-                        .foregroundStyle(Color.rossInk)
-                        .focused(focused)
-                        .submitLabel(.send)
-                        .onSubmit {
-                            if liveCanSend { onSend() }
-                        }
-
-                    if selectedDocuments.isEmpty {
-                        Text(alphaAskTagFileHint())
-                            .font(.caption2.weight(.medium))
-                            .foregroundStyle(Color.rossInk.opacity(0.46))
+            RossGlassGroup(spacing: 10) {
+                HStack(spacing: 10) {
+                    Button(action: onShowTools) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 17, weight: .bold))
+                            .foregroundStyle(Color.rossInk.opacity(0.72))
+                            .frame(width: 40, height: 40)
+                            .rossGlassSurface(
+                                tint: Color.rossAccent,
+                                cornerRadius: 20,
+                                interactive: true,
+                                shadowOpacity: 0.08,
+                                shadowRadius: 7,
+                                shadowY: 3,
+                                fillOpacity: 0.80,
+                                strokeOpacity: 0.48
+                            )
                     }
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 11)
-                .rossGlassSurface(
-                    tint: Color.rossHighlight,
-                    cornerRadius: 18,
-                    interactive: true,
-                    shadowOpacity: 0.07,
-                    shadowRadius: 8,
-                    shadowY: 3,
-                    fillOpacity: 0.84,
-                    strokeOpacity: 0.50
-                )
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Add files or images")
 
-                Button(action: onSend) {
-                    Image(systemName: "arrow.up")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(liveCanSend ? Color.rossCardBackground : Color.rossInk.opacity(0.44))
-                        .frame(width: 40, height: 40)
-                        .rossNativeGlassSurface(
-                            tint: liveCanSend ? Color.rossAccent : Color.rossInk.opacity(0.22),
-                            shape: Circle(),
-                            interactive: true,
-                            fallbackFillOpacity: liveCanSend ? 0.92 : 0.72,
-                            fallbackStrokeOpacity: liveCanSend ? 0.62 : 0.34
-                        )
+                    VStack(alignment: .leading, spacing: 4) {
+                        TextField(alphaAskConversationPlaceholder(), text: $text, axis: .vertical)
+                            .id(resetToken)
+                            .lineLimit(1...5)
+                            .textFieldStyle(.plain)
+                            .font(.body)
+                            .foregroundStyle(Color.rossInk)
+                            .focused(focused)
+                            .submitLabel(.send)
+                            .onSubmit {
+                                if liveCanSend { onSend() }
+                            }
+
+                        if selectedDocuments.isEmpty {
+                            Text(alphaAskTagFileHint())
+                                .font(.caption2.weight(.medium))
+                                .foregroundStyle(Color.rossInk.opacity(0.46))
+                        }
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 11)
+                    .rossGlassSurface(
+                        tint: Color.rossHighlight,
+                        cornerRadius: 18,
+                        interactive: true,
+                        shadowOpacity: 0.07,
+                        shadowRadius: 8,
+                        shadowY: 3,
+                        fillOpacity: 0.84,
+                        strokeOpacity: 0.50
+                    )
+
+                    Button(action: onSend) {
+                        Image(systemName: "arrow.up")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(liveCanSend ? Color.rossCardBackground : Color.rossInk.opacity(0.44))
+                            .frame(width: 40, height: 40)
+                            .rossNativeGlassSurface(
+                                tint: liveCanSend ? Color.rossAccent : Color.rossInk.opacity(0.22),
+                                shape: Circle(),
+                                interactive: true,
+                                fallbackFillOpacity: liveCanSend ? 0.92 : 0.72,
+                                fallbackStrokeOpacity: liveCanSend ? 0.62 : 0.34
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!liveCanSend)
+                    .accessibilityLabel("Send")
                 }
-                .buttonStyle(.plain)
-                .disabled(!liveCanSend)
-                .accessibilityLabel("Send")
             }
 
             if !mentionSuggestions.isEmpty {

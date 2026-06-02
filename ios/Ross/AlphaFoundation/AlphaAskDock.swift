@@ -704,19 +704,21 @@ struct AlphaRootAskDock: View {
                         }
                     }
                     .safeAreaInset(edge: .bottom, spacing: 0) {
-                        HStack(spacing: 10) {
-                            Button("Cancel") {
-                                model.cancelPendingPublicLawSearch()
-                            }
-                            .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 16, expandsHorizontally: false)
+                        RossGlassGroup(spacing: 10) {
+                            HStack(spacing: 10) {
+                                Button("Cancel") {
+                                    model.cancelPendingPublicLawSearch()
+                                }
+                                .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 16, expandsHorizontally: false)
 
-                            Spacer(minLength: 0)
+                                Spacer(minLength: 0)
 
-                            Button("Send") {
-                                Task { await model.confirmPendingPublicLawSearch() }
+                                Button("Send") {
+                                    Task { await model.confirmPendingPublicLawSearch() }
+                                }
+                                .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16, expandsHorizontally: false)
+                                .disabled(model.publicLawSearchInFlight || (model.publicLawPreview?.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true))
                             }
-                            .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16, expandsHorizontally: false)
-                            .disabled(model.publicLawSearchInFlight || (model.publicLawPreview?.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true))
                         }
                         .padding(12)
                         .rossGlassSurface(
