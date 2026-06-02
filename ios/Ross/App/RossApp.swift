@@ -826,6 +826,76 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Ross background-இல் இருந்தாலும் உதவியாளர் பதிவிறக்கங்கள் தொடர அனுமதிக்கவும்.",
             "te": "Ross background లో ఉన్నప్పుడు కూడా సహాయక డౌన్‌లోడ్‌లు కొనసాగేందుకు అనుమతించండి."
         ],
+        "assistant_update_checks_title": [
+            "en": "Check for assistant updates",
+            "hi": "assistant updates जांचें",
+            "bn": "assistant updates দেখুন",
+            "ta": "assistant updates சரிபார்க்கவும்",
+            "te": "assistant updates తనిఖీ చేయండి"
+        ],
+        "assistant_update_checks_detail": [
+            "en": "Ross checks assistant listings and asks before replacing assistant setup.",
+            "hi": "Ross assistant listings जांचता है और setup बदलने से पहले पूछता है।",
+            "bn": "Ross assistant listings দেখে এবং setup বদলানোর আগে জিজ্ঞাসা করে।",
+            "ta": "Ross assistant listings சரிபார்த்து setup மாற்றுவதற்கு முன் கேட்கும்.",
+            "te": "Ross assistant listings తనిఖీ చేసి setup మార్చే ముందు అడుగుతుంది."
+        ],
+        "assistant_update_title": [
+            "en": "Assistant update",
+            "hi": "Assistant update",
+            "bn": "Assistant update",
+            "ta": "Assistant update",
+            "te": "Assistant update"
+        ],
+        "assistant_update_available": [
+            "en": "%@ has a newer assistant setup available.",
+            "hi": "%@ के लिए नया assistant setup उपलब्ध है।",
+            "bn": "%@-এর জন্য নতুন assistant setup উপলব্ধ।",
+            "ta": "%@-க்கு புதிய assistant setup உள்ளது.",
+            "te": "%@ కోసం కొత్త assistant setup అందుబాటులో ఉంది."
+        ],
+        "assistant_update_detail": [
+            "en": "Ross will download it with the same resumable Wi-Fi-first rules. Existing assistant setup stays until the new setup verifies.",
+            "hi": "Ross इसे उन्हीं resumable Wi-Fi-first rules से तैयार करेगा। नया setup verify होने तक मौजूदा assistant setup रहेगा।",
+            "bn": "Ross একই resumable Wi-Fi-first rules দিয়ে এটি প্রস্তুত করবে। নতুন setup verify না হওয়া পর্যন্ত বর্তমান assistant setup থাকবে।",
+            "ta": "Ross அதையே resumable Wi-Fi-first rules உடன் தயாரிக்கும். புதிய setup verify ஆகும் வரை தற்போதைய assistant setup இருக்கும்.",
+            "te": "Ross అదే resumable Wi-Fi-first rules తో దాన్ని సిద్ధం చేస్తుంది. కొత్త setup verify అయ్యే వరకు ప్రస్తుత assistant setup అలాగే ఉంటుంది."
+        ],
+        "assistant_update_on_wifi": [
+            "en": "Update on Wi-Fi",
+            "hi": "Wi-Fi पर update करें",
+            "bn": "Wi-Fi-তে update করুন",
+            "ta": "Wi-Fi-இல் update செய்யவும்",
+            "te": "Wi-Fi లో update చేయండి"
+        ],
+        "assistant_storage_title": [
+            "en": "Assistant storage",
+            "hi": "Assistant storage",
+            "bn": "Assistant storage",
+            "ta": "Assistant storage",
+            "te": "Assistant storage"
+        ],
+        "assistant_storage_detail": [
+            "en": "App updates keep assistant setup files in Ross storage. A full uninstall removes the app container; iOS does not let Ross ask a question during uninstall.",
+            "hi": "App updates assistant setup files को Ross storage में रखते हैं। Full uninstall app container हटाता है; uninstall के दौरान iOS Ross को question पूछने नहीं देता।",
+            "bn": "App updates assistant setup files Ross storage-এ রাখে। Full uninstall app container সরায়; uninstall-এর সময় iOS Ross-কে question জিজ্ঞাসা করতে দেয় না।",
+            "ta": "App updates assistant setup files-ஐ Ross storage-இல் வைத்திருக்கும். Full uninstall app container-ஐ நீக்கும்; uninstall நடக்கும் போது iOS Ross-ஐ question கேட்க அனுமதிக்காது.",
+            "te": "App updates assistant setup files ను Ross storage లో ఉంచుతాయి. Full uninstall app container ను తొలగిస్తుంది; uninstall సమయంలో iOS Ross ను question అడగనివ్వదు."
+        ],
+        "assistant_delete_setup_files_title": [
+            "en": "Delete assistant setup files",
+            "hi": "assistant setup files delete करें",
+            "bn": "assistant setup files delete করুন",
+            "ta": "assistant setup files delete செய்யவும்",
+            "te": "assistant setup files delete చేయండి"
+        ],
+        "assistant_delete_setup_files_detail": [
+            "en": "Keeps matters and drafts, removes local assistant setup files and resume data.",
+            "hi": "matters और drafts रखता है, local assistant setup files और resume data हटाता है।",
+            "bn": "matters এবং drafts রেখে local assistant setup files ও resume data সরায়।",
+            "ta": "matters மற்றும் drafts வைத்துக்கொண்டு local assistant setup files மற்றும் resume data நீக்கும்.",
+            "te": "matters మరియు drafts ను ఉంచి local assistant setup files మరియు resume data ను తొలగిస్తుంది."
+        ],
         "assistant_device_cache": [
             "en": "Device cache",
             "hi": "डिवाइस cache",

@@ -23,6 +23,10 @@ let alphaPrivateAIUpdateChecksTitle = "Check for assistant updates"
 let alphaPrivateAIUpdateChecksDetail = "Ross checks assistant listings and asks before replacing assistant setup."
 let alphaPrivateAIVerifiedStorageLabel = "Verified assistant setup"
 
+func alphaAssistantUpdateAvailableLabel(_ tierTitle: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("assistant_update_available", languageCode: languageCode), tierTitle)
+}
+
 struct AlphaPrivateAISettingsScreen: View {
     @Bindable var model: AlphaRossModel
     @State private var downloadPreferencesExpanded = false
@@ -164,8 +168,8 @@ struct AlphaPrivateAISettingsScreen: View {
                                 isOn: backgroundWorkBinding
                             )
                             AlphaSettingsToggleRow(
-                                title: alphaPrivateAIUpdateChecksTitle,
-                                detail: alphaPrivateAIUpdateChecksDetail,
+                                title: rossLocalized("assistant_update_checks_title"),
+                                detail: rossLocalized("assistant_update_checks_detail"),
                                 isOn: autoUpdatesBinding
                             )
                             AlphaSettingsToggleRow(
@@ -187,23 +191,23 @@ struct AlphaPrivateAISettingsScreen: View {
                 }
 
                 if let update = (model.persisted.modelUpdateCandidates ?? []).first(where: { $0.dismissedAt == nil }) {
-                    RossSectionCard(title: "Assistant update") {
+                    RossSectionCard(title: rossLocalized("assistant_update_title")) {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("\(update.tier.title) has a newer assistant setup available.")
+                            Text(alphaAssistantUpdateAvailableLabel(update.tier.title))
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(Color.rossInk)
-                            Text(alphaPrivateAIUpdateDetail)
+                            Text(rossLocalized("assistant_update_detail"))
                                 .font(.caption)
                                 .foregroundStyle(Color.rossInk.opacity(0.68))
                                 .fixedSize(horizontal: false, vertical: true)
                             RossGlassGroup(spacing: 8) {
                                 HStack(spacing: 8) {
-                                    Button("Update on Wi-Fi") {
+                                    Button(rossLocalized("assistant_update_on_wifi")) {
                                         model.startAssistantModelUpdate(update, mobileAllowed: false)
                                     }
                                     .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
 
-                                    Button("Dismiss") {
+                                    Button(rossLocalized("dismiss")) {
                                         model.dismissAssistantModelUpdate(update)
                                     }
                                     .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 16, expandsHorizontally: false)
@@ -213,10 +217,10 @@ struct AlphaPrivateAISettingsScreen: View {
                     }
                 }
 
-                RossSectionCard(title: alphaPrivateAIStorageTitle) {
+                RossSectionCard(title: rossLocalized("assistant_storage_title")) {
                     VStack(alignment: .leading, spacing: 12) {
                         AlphaAssistantStorageFootprintRow(model: model)
-                        Text(alphaPrivateAIStorageDetail)
+                        Text(rossLocalized("assistant_storage_detail"))
                             .font(.caption)
                             .foregroundStyle(Color.rossInk.opacity(0.68))
                             .fixedSize(horizontal: false, vertical: true)
@@ -237,10 +241,10 @@ struct AlphaPrivateAISettingsScreen: View {
                                     )
 
                                 VStack(alignment: .leading, spacing: 3) {
-                                    Text(alphaPrivateAIDeleteDownloadsTitle)
+                                    Text(rossLocalized("assistant_delete_setup_files_title"))
                                         .font(.subheadline.weight(.semibold))
                                         .foregroundStyle(Color.rossHighlight)
-                                    Text(alphaPrivateAIDeleteDownloadsDetail)
+                                    Text(rossLocalized("assistant_delete_setup_files_detail"))
                                         .font(.caption)
                                         .foregroundStyle(Color.rossInk.opacity(0.68))
                                         .fixedSize(horizontal: false, vertical: true)

@@ -994,6 +994,14 @@ final class AlphaExtractionTests: XCTestCase {
             "Order সরান"
         )
         XCTAssertEqual(
+            alphaAssistantUpdateAvailableLabel("Standard", languageCode: "ta"),
+            "Standard-க்கு புதிய assistant setup உள்ளது."
+        )
+        XCTAssertEqual(
+            rossLocalized("assistant_delete_setup_files_detail", languageCode: "te-IN"),
+            "matters మరియు drafts ను ఉంచి local assistant setup files మరియు resume data ను తొలగిస్తుంది."
+        )
+        XCTAssertEqual(
             rossLocalized("download_size", languageCode: "ta"),
             "பதிவிறக்க அளவு"
         )
