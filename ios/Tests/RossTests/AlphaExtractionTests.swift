@@ -3128,6 +3128,56 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertFalse(RossLocalModelSmokeView.usedLanguagePreservingFallback(nativeOutput))
     }
 
+    func testLocalModelSmokeRequiresSourceRefsForFileBackedStages() {
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "Order.pdf",
+            pageNumber: 2,
+            textSnippet: "The filing date is 7 May 2026."
+        )
+        let sourceInput = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "Answer from the supplied file source.",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: sourceRef,
+                    text: "The filing date is 7 May 2026.",
+                    pageNumber: 2,
+                    languageHint: "en",
+                    ocrConfidence: 0.99
+                )
+            ],
+            expectedSchema: #"{"headline":"short string"}"#,
+            maxOutputTokens: 96,
+            languageProfile: nil,
+            documentClassification: nil,
+            extractionMode: .basic,
+            requireSourceRefs: true
+        )
+        let groundedOutput = AlphaLocalModelOutput(
+            rawText: #"{"headline":"Filing date found"}"#,
+            parsedJson: #"{"headline":"Filing date found"}"#,
+            schemaValid: true,
+            warnings: [],
+            sourceRefs: [sourceRef]
+        )
+        let droppedRefsOutput = AlphaLocalModelOutput(
+            rawText: #"{"headline":"Filing date found"}"#,
+            parsedJson: #"{"headline":"Filing date found"}"#,
+            schemaValid: true,
+            warnings: [],
+            sourceRefs: []
+        )
+        var generalInput = sourceInput
+        generalInput.sourcePack = []
+        generalInput.requireSourceRefs = false
+
+        XCTAssertTrue(RossLocalModelSmokeView.outputKeepsSourceRefs(groundedOutput, for: sourceInput))
+        XCTAssertFalse(RossLocalModelSmokeView.outputKeepsSourceRefs(droppedRefsOutput, for: sourceInput))
+        XCTAssertTrue(RossLocalModelSmokeView.outputKeepsSourceRefs(droppedRefsOutput, for: generalInput))
+    }
+
     func testLlamaProviderFallsBackToBanglaSourceWhenModelAnswersInEnglish() {
         let documentId = UUID()
         let sourceRef = AlphaSourceRef(
