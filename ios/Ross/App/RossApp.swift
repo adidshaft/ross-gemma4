@@ -917,6 +917,34 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Private assistant answer கிடைக்கவில்லை. Ross case memory-யிலிருந்து guess செய்யவில்லை.",
             "te": "Private assistant answer అందుబాటులో లేదు. Ross case memory నుండి guess చేయలేదు."
         ],
+        "public_law_results_status": [
+            "en": "Public-law results",
+            "hi": "Public-law results",
+            "bn": "Public-law results",
+            "ta": "Public-law results",
+            "te": "Public-law results"
+        ],
+        "private_assistant_running_public_law_ready_status": [
+            "en": "Private assistant running locally · public-law results ready",
+            "hi": "Private assistant locally चल रहा है · public-law results ready",
+            "bn": "Private assistant locally চলছে · public-law results ready",
+            "ta": "Private assistant locally இயங்குகிறது · public-law results ready",
+            "te": "Private assistant locally నడుస్తోంది · public-law results ready"
+        ],
+        "private_assistant_public_law_results_status": [
+            "en": "Private assistant + public-law results",
+            "hi": "Private assistant + public-law results",
+            "bn": "Private assistant + public-law results",
+            "ta": "Private assistant + public-law results",
+            "te": "Private assistant + public-law results"
+        ],
+        "public_law_results_unavailable_status": [
+            "en": "Public-law results are unavailable right now.",
+            "hi": "Public-law results अभी उपलब्ध नहीं हैं।",
+            "bn": "Public-law results এখন পাওয়া যাচ্ছে না।",
+            "ta": "Public-law results இப்போது கிடைக்கவில்லை.",
+            "te": "Public-law results ప్రస్తుతం అందుబాటులో లేవు."
+        ],
         "assistant_local_answers_need_setup": [
             "en": "Local answers need setup on this iPhone.",
             "hi": "स्थानीय उत्तरों के लिए इस iPhone पर सेटअप चाहिए।",

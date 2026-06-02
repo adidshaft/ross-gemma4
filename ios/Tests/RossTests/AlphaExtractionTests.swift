@@ -899,6 +899,14 @@ final class AlphaExtractionTests: XCTestCase {
             rossLocalized("ask_private_assistant_answer_unavailable", languageCode: "bn"),
             "Private assistant answer পাওয়া যাচ্ছে না"
         )
+        XCTAssertEqual(
+            alphaPublicLawUnavailableStatus(languageCode: "hi"),
+            "Public-law results अभी उपलब्ध नहीं हैं।"
+        )
+        XCTAssertEqual(
+            alphaPrivateAssistantRunningWithPublicLawStatus(languageCode: "ta"),
+            "Private assistant locally இயங்குகிறது · public-law results ready"
+        )
         XCTAssertTrue(
             alphaNextHearingLabel(Date(timeIntervalSince1970: 0), languageCode: "hi")
                 .contains("अगली hearing:")

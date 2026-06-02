@@ -52,10 +52,10 @@ extension AlphaRossModel {
                     .status
             }()
             latestAskResult?.statusNote = latestInvocationStatus == nil
-                ? "Public-law results"
+                ? alphaPublicLawResultsStatus()
                 : (latestInvocationStatus == .running
-                    ? "Private assistant running locally · public-law results ready"
-                    : "Private assistant + public-law results")
+                    ? alphaPrivateAssistantRunningWithPublicLawStatus()
+                    : alphaPrivateAssistantWithPublicLawStatus())
             updateStoredAskTurn(
                 scopeCaseID: pendingPublicLawScopeCaseID,
                 sessionID: pendingPublicLawSessionID,
@@ -64,10 +64,10 @@ extension AlphaRossModel {
                 turn.publicLawPreview = preview
                 turn.publicLawResults = results
                 turn.statusNote = turn.modelInvocation == nil
-                    ? "Public-law results"
+                    ? alphaPublicLawResultsStatus()
                     : (turn.modelInvocation?.status == .running
-                        ? "Private assistant running locally · public-law results ready"
-                        : "Private assistant + public-law results")
+                        ? alphaPrivateAssistantRunningWithPublicLawStatus()
+                        : alphaPrivateAssistantWithPublicLawStatus())
             }
             publicLawResults = results
             persisted.publicLawCache.insert(
@@ -93,7 +93,7 @@ extension AlphaRossModel {
         } catch {
             latestAskResult?.publicLawPreview = preview
             latestAskResult?.publicLawResults = []
-            latestAskResult?.statusNote = "Public-law results are unavailable right now."
+            latestAskResult?.statusNote = alphaPublicLawUnavailableStatus()
             updateStoredAskTurn(
                 scopeCaseID: pendingPublicLawScopeCaseID,
                 sessionID: pendingPublicLawSessionID,
@@ -101,7 +101,7 @@ extension AlphaRossModel {
             ) { turn in
                 turn.publicLawPreview = preview
                 turn.publicLawResults = []
-                turn.statusNote = "Public-law results are unavailable right now."
+                turn.statusNote = alphaPublicLawUnavailableStatus()
             }
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(

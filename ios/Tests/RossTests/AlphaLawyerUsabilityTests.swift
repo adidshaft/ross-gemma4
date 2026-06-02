@@ -913,7 +913,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             let preview = await MainActor.run { model.publicLawPreview }
             let statusBeforeConfirm = await MainActor.run { model.latestAskResult?.statusNote }
             XCTAssertNotNil(preview)
-            XCTAssertEqual("Review required", statusBeforeConfirm)
+            XCTAssertEqual(alphaPublicLawReviewRequiredStatus(languageCode: "en"), statusBeforeConfirm)
             XCTAssertEqual(0, publicLawCalls.value)
 
             await model.confirmPendingPublicLawSearch()
@@ -923,7 +923,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             let ledgerTitles = await MainActor.run { model.persisted.ledgerEntries.map(\.title) }
             XCTAssertEqual(1, publicLawCalls.value)
             XCTAssertEqual(1, resultCount)
-            XCTAssertEqual("Public-law results", statusAfterConfirm)
+            XCTAssertEqual(alphaPublicLawResultsStatus(languageCode: "en"), statusAfterConfirm)
             XCTAssertTrue(ledgerTitles.contains("Public-law search reviewed by user"))
             XCTAssertTrue(ledgerTitles.contains("Public-law query sent"))
         }

@@ -312,7 +312,7 @@ extension AlphaRossModel {
             publicLawResults = []
             publicLawSearchStatus = .reviewing
             latestAskResult?.publicLawPreview = preview
-            latestAskResult?.statusNote = "Review required"
+            latestAskResult?.statusNote = alphaPublicLawReviewRequiredStatus()
             updateStoredAskTurn(
                 scopeCaseID: scopeCaseID,
                 sessionID: storedResult.chatSessionID,
@@ -320,7 +320,7 @@ extension AlphaRossModel {
             ) { turn in
                 turn.publicLawPreview = preview
                 turn.publicLawResults = []
-                turn.statusNote = "Review required"
+                turn.statusNote = alphaPublicLawReviewRequiredStatus()
             }
         } else {
             pendingPublicLawQuestion = nil
@@ -1301,10 +1301,10 @@ extension AlphaRossModel {
                     turn.answerSections = payload.sections
                     turn.sourceRefs = sourceRefs
                     turn.statusNote = turn.publicLawPreview != nil && turn.publicLawResults.isEmpty
-                        ? "Review required"
+                        ? alphaPublicLawReviewRequiredStatus()
                         : (turn.publicLawResults.isEmpty
-                            ? (payload.statusNote ?? "Private assistant")
-                            : "Private assistant + public-law results")
+                            ? (payload.statusNote ?? rossLocalized("private_assistant"))
+                            : alphaPrivateAssistantWithPublicLawStatus())
                     turn.modelInvocation = completedInvocation
                 }
                 if var latest = self.latestAskResult, latest.chatTurnID == chatTurnID {
@@ -1312,10 +1312,10 @@ extension AlphaRossModel {
                     latest.answerSections = payload.sections
                     latest.caseFileSources = sourceRefs
                     latest.statusNote = latest.publicLawPreview != nil && latest.publicLawResults.isEmpty
-                        ? "Review required"
+                        ? alphaPublicLawReviewRequiredStatus()
                         : (latest.publicLawResults.isEmpty == false
-                            ? "Private assistant + public-law results"
-                            : (payload.statusNote ?? "Private assistant"))
+                            ? alphaPrivateAssistantWithPublicLawStatus()
+                            : (payload.statusNote ?? rossLocalized("private_assistant")))
                     self.latestAskResult = latest
                 }
             }
@@ -2286,6 +2286,26 @@ func alphaAskQuestionTargetsAssistantSetup(_ question: String) -> Bool {
         lowered.contains("setup assistant") ||
         lowered.contains("before setup") ||
         lowered.contains("without setup")
+}
+
+func alphaPublicLawReviewRequiredStatus(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("review_required", languageCode: languageCode)
+}
+
+func alphaPublicLawResultsStatus(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("public_law_results_status", languageCode: languageCode)
+}
+
+func alphaPrivateAssistantRunningWithPublicLawStatus(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("private_assistant_running_public_law_ready_status", languageCode: languageCode)
+}
+
+func alphaPrivateAssistantWithPublicLawStatus(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("private_assistant_public_law_results_status", languageCode: languageCode)
+}
+
+func alphaPublicLawUnavailableStatus(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("public_law_results_unavailable_status", languageCode: languageCode)
 }
 
 func alphaLocalAskSetupRequiredStatus(languageCode: String = rossSelectedLanguageCode()) -> String {
