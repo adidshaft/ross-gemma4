@@ -26,7 +26,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
 
     private func runtimeAvailability() -> (available: Bool, errorCategory: String?, status: String) {
         guard let modelPath, !modelPath.isEmpty else {
-            return (false, "missing_model_file", "Gemma 4 model file is missing or incomplete.")
+            return (false, "missing_model_file", "The downloaded assistant file is missing or incomplete.")
         }
         let attributes = try? FileManager.default.attributesOfItem(atPath: modelPath)
         let bytes = (attributes?[.size] as? NSNumber)?.int64Value ?? 0
@@ -39,13 +39,13 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             hasMinimumBytes = bytes > 1_000_000
         }
         guard hasMinimumBytes else {
-            return (false, "missing_model_file", "Gemma 4 model file is missing or incomplete.")
+            return (false, "missing_model_file", "The downloaded assistant file is missing or incomplete.")
         }
         do {
             try Self.validateModelCanLoad(at: modelPath)
-            return (true, nil, "Gemma 4 (Llama.cpp) Ready")
+            return (true, nil, "Private assistant is ready on this iPhone.")
         } catch {
-            return (false, "runtime_validation_failed", "Ross could not open the downloaded Gemma 4 file. Repair setup or download the model again.")
+            return (false, "runtime_validation_failed", "Ross could not open the downloaded assistant file. Repair setup or download the assistant again.")
         }
     }
 

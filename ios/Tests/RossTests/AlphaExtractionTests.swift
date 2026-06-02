@@ -1112,6 +1112,42 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNotEqual(health?.lastErrorCategory, "runtime_dependency_unavailable")
     }
 
+    func testDownloadedAssistantRuntimeHealthCopyHidesTechnicalModelNames() throws {
+        let temporaryURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-runtime-copy-\(UUID().uuidString)")
+            .appendingPathExtension("gguf")
+        try Data("runtime-copy-smoke".utf8).write(to: temporaryURL)
+        defer { try? FileManager.default.removeItem(at: temporaryURL) }
+        AlphaLlamaCppProvider.modelLoadValidator = { _ in }
+        defer {
+            AlphaLlamaCppProvider.modelLoadValidator = { path in
+                _ = try LlamaContext.create_context(path: path)
+            }
+        }
+
+        let pack = installedPack(.quickStart, runtimeMode: .llamaCppGguf)
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .llamaCppGguf,
+                modelPath: temporaryURL.path,
+                modelChecksum: String(repeating: "c", count: 64),
+                modelKind: "gguf"
+            )
+        )
+
+        let status = health?.userFacingStatus ?? ""
+        XCTAssertTrue(status.localizedCaseInsensitiveContains("private assistant"))
+        for term in ["Gemma", "Llama", "GGUF", "Q4", "runtime", "checksum", "artifact"] {
+            XCTAssertNil(
+                status.range(of: term, options: [.caseInsensitive]),
+                "\(term) leaked into downloaded assistant runtime health copy"
+            )
+        }
+    }
+
     func testSystemPrivateAssistantPackUsesDeviceModelWithoutDownloadedPath() {
         let pack = AlphaInstalledModelPack(
             packId: "apple-foundation-models-case_associate",

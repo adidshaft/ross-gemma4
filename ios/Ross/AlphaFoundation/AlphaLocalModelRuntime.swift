@@ -779,7 +779,7 @@ enum AlphaLocalModelRuntime {
                 maxInputChars: nil,
                 estimatedContextTokens: nil,
                 lastErrorCategory: "unsupported_runtime",
-                userFacingStatus: "Private assistant runtime unavailable.",
+                userFacingStatus: "Private assistant is unavailable on this device right now.",
                 explicitOptInEnabled: runtimeEnvironment.enableRealInference
             )
         default:

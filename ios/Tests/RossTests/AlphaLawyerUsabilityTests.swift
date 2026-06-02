@@ -397,7 +397,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 maxInputChars: 5000,
                 estimatedContextTokens: 2048,
                 lastErrorCategory: nil,
-                userFacingStatus: "Gemma 4 (Llama.cpp) Ready",
+                userFacingStatus: "Private assistant is ready on this iPhone.",
                 explicitOptInEnabled: true
             )
             model.persisted.modelJobs = [

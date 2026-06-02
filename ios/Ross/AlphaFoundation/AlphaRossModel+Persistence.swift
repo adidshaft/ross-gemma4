@@ -540,7 +540,7 @@ extension AlphaRossModel {
                 maxInputChars: nil,
                 estimatedContextTokens: nil,
                 lastErrorCategory: "runtime_validation_pending",
-                userFacingStatus: "Ross is checking the downloaded Gemma 4 file before enabling private answers.",
+                userFacingStatus: "Ross is checking the downloaded assistant file before enabling private answers.",
                 explicitOptInEnabled: true
             )
         } else {
