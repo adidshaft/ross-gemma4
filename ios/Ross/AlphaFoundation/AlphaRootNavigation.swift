@@ -135,67 +135,64 @@ private struct AlphaIncomingDocumentsSheet: View {
         } ?? "New matter"
     }
 
+    private var resolvedNewMatterTitle: String {
+        let trimmed = newMatterTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? defaultMatterTitle : trimmed
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Add shared files to Ross")
-                            .font(.title3.weight(.semibold))
-                            .foregroundStyle(Color.rossInk)
-                        Text("Choose an existing matter, or create a new one before Ross copies the files into private storage.")
-                            .font(.footnote)
-                            .foregroundStyle(Color.rossInk.opacity(0.68))
-                    }
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("\(incomingFileNames.count) file\(incomingFileNames.count == 1 ? "" : "s") ready")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(Color.rossInk.opacity(0.58))
-                        ForEach(incomingFileNames, id: \.self) { fileName in
-                            Label(fileName, systemImage: "doc")
-                                .font(.subheadline.weight(.medium))
-                                .lineLimit(1)
-                                .foregroundStyle(Color.rossInk)
-                                .padding(10)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .rossGlassSurface(cornerRadius: 12, shadowOpacity: 0.05, shadowRadius: 5, shadowY: 2, fillOpacity: 0.78, strokeOpacity: 0.42)
-                        }
-                    }
-
-                    if !matterOptions.isEmpty {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("Existing matters")
-                                .font(.caption.weight(.bold))
-                                .foregroundStyle(Color.rossInk.opacity(0.58))
-                            ForEach(matterOptions) { matter in
-                                Button {
-                                    model.importQueuedIncomingDocuments(to: matter.id)
-                                    dismiss()
-                                } label: {
-                                    AlphaIncomingMatterRow(matter: matter)
-                                }
-                                .buttonStyle(.plain)
+                    RossHeroCard(
+                        eyebrow: "\(incomingFileNames.count) shared file\(incomingFileNames.count == 1 ? "" : "s")",
+                        title: "Add files to a matter",
+                        detail: "Ross copies the files into private storage before reading them.",
+                        showsMedia: false,
+                        mediaHeight: 96,
+                        logoSize: 54
+                    ) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(incomingFileNames, id: \.self) { fileName in
+                                AlphaIncomingFileRow(fileName: fileName)
                             }
                         }
                     }
 
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Create a new matter")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(Color.rossInk.opacity(0.58))
-                        TextField(defaultMatterTitle, text: $newMatterTitle)
-                            .textFieldStyle(.roundedBorder)
-                        Button {
-                            model.createMatterForQueuedIncomingDocuments(
-                                title: newMatterTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? defaultMatterTitle : newMatterTitle
-                            )
-                            dismiss()
-                        } label: {
-                            Label("Create matter and import", systemImage: "plus.circle.fill")
-                                .frame(maxWidth: .infinity)
+                    if !matterOptions.isEmpty {
+                        RossSectionCard(title: "Import into an existing matter") {
+                            VStack(alignment: .leading, spacing: 10) {
+                                ForEach(matterOptions) { matter in
+                                    Button {
+                                        alphaHaptic(.light)
+                                        model.importQueuedIncomingDocuments(to: matter.id)
+                                        dismiss()
+                                    } label: {
+                                        AlphaIncomingMatterRow(matter: matter)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
                         }
-                        .rossPrimaryButtonStyle()
+                    }
+
+                    RossSectionCard(title: "Create a new matter") {
+                        VStack(alignment: .leading, spacing: 14) {
+                            AlphaIncomingMatterTitleField(
+                                placeholder: defaultMatterTitle,
+                                text: $newMatterTitle
+                            )
+
+                            Button {
+                                alphaHaptic(.light)
+                                model.createMatterForQueuedIncomingDocuments(title: resolvedNewMatterTitle)
+                                dismiss()
+                            } label: {
+                                Label("Create matter and import files", systemImage: "plus.circle.fill")
+                            }
+                            .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 18)
+                            .accessibilityHint("Creates a matter named \(resolvedNewMatterTitle) and imports the shared files.")
+                        }
                     }
                 }
                 .padding(alphaScreenPadding)
@@ -216,6 +213,79 @@ private struct AlphaIncomingDocumentsSheet: View {
                     newMatterTitle = defaultMatterTitle
                 }
             }
+        }
+    }
+}
+
+private struct AlphaIncomingFileRow: View {
+    let fileName: String
+
+    var body: some View {
+        HStack(spacing: 10) {
+            RossGlassIconView(.file, variant: .accent, size: 22, fallbackSystemImage: "doc")
+            Text(fileName)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Color.rossInk)
+                .lineLimit(1)
+                .truncationMode(.middle)
+            Spacer(minLength: 0)
+            Image(systemName: "lock.fill")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.rossInk.opacity(0.42))
+        }
+        .padding(.horizontal, 12)
+        .frame(height: 46)
+        .rossGlassSurface(
+            tint: Color.rossHighlight,
+            cornerRadius: 14,
+            shadowOpacity: 0.05,
+            shadowRadius: 5,
+            shadowY: 2,
+            fillOpacity: 0.78,
+            strokeOpacity: 0.42
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(fileName), ready to import into private storage")
+    }
+}
+
+private struct AlphaIncomingMatterTitleField: View {
+    let placeholder: String
+    @Binding var text: String
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Matter name")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.rossInk.opacity(0.64))
+
+            TextField(placeholder, text: $text)
+                .textFieldStyle(.plain)
+                .font(.body.weight(.medium))
+                .foregroundStyle(Color.rossInk)
+                .focused($isFocused)
+                .padding(.horizontal, 14)
+                .frame(minHeight: 52)
+                .rossGlassSurface(
+                    tint: isFocused ? Color.rossAccent : Color.rossHighlight,
+                    cornerRadius: 18,
+                    interactive: true,
+                    shadowOpacity: isFocused ? 0.10 : 0.06,
+                    shadowRadius: isFocused ? 10 : 6,
+                    shadowY: isFocused ? 4 : 2,
+                    fillOpacity: 0.84,
+                    strokeOpacity: 0.52
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(
+                            isFocused ? Color.rossAccent.opacity(0.28) : Color.rossGlassStroke.opacity(0.72),
+                            lineWidth: 1
+                        )
+                }
+                .accessibilityLabel("Matter name")
+                .submitLabel(.done)
         }
     }
 }
