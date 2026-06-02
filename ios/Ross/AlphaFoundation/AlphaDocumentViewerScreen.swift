@@ -1866,7 +1866,7 @@ struct AlphaSourceRefChips: View {
         } label: {
             AlphaRossTokenChip(
                 title: alphaSourceRefDisplayLabel(sourceRef, contextDocumentTitle: contextDocumentTitle),
-                detail: nil,
+                detail: alphaSourceRefDetailLabel(sourceRef),
                 systemImage: "doc.text"
             )
         }
@@ -1882,7 +1882,7 @@ func alphaSourceRefDisplayLabel(_ sourceRef: AlphaSourceRef, contextDocumentTitl
 
     if sourceRef.effectiveSourceCategory == .documentSource {
         if sourceRef.documentTitle.trimmingCharacters(in: .whitespacesAndNewlines) == context {
-            return sourceRef.pageNumber > 0 ? "This file · p. \(sourceRef.pageNumber)" : "This file · no linked source"
+            return "This file"
         }
         return label
     }
@@ -1899,6 +1899,26 @@ func alphaSourceRefDisplayLabel(_ sourceRef: AlphaSourceRef, contextDocumentTitl
     }
 
     return label
+}
+
+func alphaSourceRefDetailLabel(_ sourceRef: AlphaSourceRef) -> String? {
+    if sourceRef.documentTitle.localizedCaseInsensitiveContains("Matter memory") {
+        return "Matter details"
+    }
+
+    switch sourceRef.effectiveSourceCategory {
+    case .documentSource:
+        return sourceRef.pageNumber > 0 ? "Page \(sourceRef.pageNumber)" : "No linked page"
+    case .matterDetail:
+        let field = sourceRef.paragraphRange?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return field?.isEmpty == false ? field : "Matter details"
+    case .rossSuggestion:
+        return "Suggestion"
+    case .userConfirmedFact:
+        return "Confirmed"
+    case .publicLawSource:
+        return "Legal Search"
+    }
 }
 
 struct AlphaConfidenceBadge: View {

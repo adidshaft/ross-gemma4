@@ -1365,6 +1365,9 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(matterMemory.label, "Matter details · no linked source")
         XCTAssertEqual(documentSource.label, "Latest order · p. 2")
         XCTAssertEqual(missingDocumentTitle.label, "Document source · no linked source")
+        XCTAssertEqual(alphaSourceRefDisplayLabel(documentSource, contextDocumentTitle: "Latest order"), "This file")
+        XCTAssertEqual(alphaSourceRefDetailLabel(documentSource), "Page 2")
+        XCTAssertEqual(alphaSourceRefDetailLabel(matterMemory), "Matter details")
     }
 
     func testDocumentProcessingStateBlocksReadingAsReady() {
