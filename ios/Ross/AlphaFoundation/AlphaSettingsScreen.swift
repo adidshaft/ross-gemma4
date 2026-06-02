@@ -46,9 +46,9 @@ struct AlphaSettingsScreen: View {
                 }
 
                 if let authController, let session = authController.session {
-                    RossSectionCard(title: "Account") {
+                    RossSectionCard(title: rossLocalized("account")) {
                         VStack(alignment: .leading, spacing: 12) {
-                            AlphaSettingsValueRow(label: "Signed in as", value: session.displayLabel)
+                            AlphaSettingsValueRow(label: rossLocalized("signed_in_as"), value: session.displayLabel)
                             Divider()
                             DisclosureGroup(isExpanded: $languageExpanded) {
                                 AlphaSettingsLanguageGrid(
@@ -60,13 +60,13 @@ struct AlphaSettingsScreen: View {
                                     rossSaveLanguageSelection(code: newValue)
                                 }
                             } label: {
-                                AlphaSettingsValueRow(label: "Language", value: rossLanguageDisplayName(code: selectedLanguageCode))
+                                AlphaSettingsValueRow(label: rossLocalized("language"), value: rossLanguageDisplayName(code: selectedLanguageCode))
                             }
                             .tint(Color.rossAccent)
                             Divider()
                             if authController.canUseQuickUnlock {
                                 Toggle(
-                                    "Use device unlock",
+                                    rossLocalized("use_device_unlock"),
                                     isOn: Binding(
                                         get: { authController.quickUnlockEnabled },
                                         set: { authController.setQuickUnlockEnabled($0) }
@@ -76,13 +76,13 @@ struct AlphaSettingsScreen: View {
 
                                 Text(
                                     authController.quickUnlockEnabled
-                                        ? "Ross asks for device unlock when you come back."
-                                        : "Turn this on to reopen Ross with Face ID, Touch ID, or device passcode.",
+                                        ? rossLocalized("device_unlock_enabled_detail")
+                                        : rossLocalized("device_unlock_disabled_detail"),
                                     )
                                     .font(.system(size: 13, weight: .regular))
                                     .foregroundStyle(Color.rossInk.opacity(0.78))
                             } else {
-                                AlphaSettingsValueRow(label: "Unlock", value: "Quick unlock is not available on this device.")
+                                AlphaSettingsValueRow(label: rossLocalized("unlock"), value: rossLocalized("quick_unlock_unavailable_detail"))
                             }
                             Divider()
                             if session.subject.hasPrefix("local_demo_") {
@@ -90,14 +90,14 @@ struct AlphaSettingsScreen: View {
                                     model.resetDemoWorkspace(for: session.subject)
                                 } label: {
                                     AlphaSettingsNavigationRow(
-                                        title: "Reset demo data",
-                                        detail: "Restore the sample matter, tasks, files, and review items.",
+                                        title: rossLocalized("reset_demo_data"),
+                                        detail: rossLocalized("reset_demo_data_detail"),
                                         systemImage: "arrow.counterclockwise"
                                     )
                                 }
                                 .buttonStyle(.plain)
 
-                                Text("Demo matter uses sample data only.")
+                                Text(rossLocalized("demo_matter_sample_data_only"))
                                     .font(.footnote)
                                     .foregroundStyle(Color.rossInk.opacity(0.7))
                                 Divider()
@@ -115,7 +115,7 @@ struct AlphaSettingsScreen: View {
                                             fallbackStrokeOpacity: 0.38
                                         )
 
-                                    Text("Sign Out")
+                                    Text(rossLocalized("sign_out_destructive"))
                                         .font(.footnote.weight(.semibold))
                                         .foregroundStyle(Color.rossInk)
 
@@ -129,7 +129,7 @@ struct AlphaSettingsScreen: View {
 
                 RossSectionCard(title: rossLocalized("settings_privacy")) {
                     VStack(alignment: .leading, spacing: 12) {
-                        AlphaSettingsValueRow(label: "Legal Search", value: rossLocalized("review_required"))
+                        AlphaSettingsValueRow(label: rossLocalized("legal_search"), value: rossLocalized("review_required"))
                         Divider()
                         Text(rossLocalized("settings_privacy_detail"))
                             .font(.footnote)

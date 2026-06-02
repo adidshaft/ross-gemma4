@@ -231,6 +231,83 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Sign out",
             "te": "Sign out"
         ],
+        "account": [
+            "en": "Account",
+            "hi": "Account",
+            "bn": "Account",
+            "ta": "Account",
+            "te": "Account"
+        ],
+        "signed_in_as": [
+            "en": "Signed in as",
+            "hi": "Signed in as",
+            "bn": "Signed in as",
+            "ta": "Signed in as",
+            "te": "Signed in as"
+        ],
+        "language": [
+            "en": "Language",
+            "hi": "भाषा",
+            "bn": "ভাষা",
+            "ta": "மொழி",
+            "te": "భాష"
+        ],
+        "use_device_unlock": [
+            "en": "Use device unlock",
+            "hi": "device unlock use करें",
+            "bn": "device unlock use করুন",
+            "ta": "device unlock use செய்யவும்",
+            "te": "device unlock use చేయండి"
+        ],
+        "device_unlock_enabled_detail": [
+            "en": "Ross asks for device unlock when you come back.",
+            "hi": "आप वापस आते हैं तो Ross device unlock मांगता है।",
+            "bn": "আপনি ফিরে এলে Ross device unlock চায়।",
+            "ta": "நீங்கள் திரும்பி வரும்போது Ross device unlock கேட்கும்.",
+            "te": "మీరు తిరిగి వచ్చినప్పుడు Ross device unlock అడుగుతుంది."
+        ],
+        "device_unlock_disabled_detail": [
+            "en": "Turn this on to reopen Ross with Face ID, Touch ID, or device passcode.",
+            "hi": "Face ID, Touch ID, या device passcode से Ross reopen करने के लिए इसे on करें।",
+            "bn": "Face ID, Touch ID, বা device passcode দিয়ে Ross reopen করতে এটি on করুন।",
+            "ta": "Face ID, Touch ID அல்லது device passcode மூலம் Ross reopen செய்ய இதை on செய்யவும்.",
+            "te": "Face ID, Touch ID, లేదా device passcode తో Ross reopen చేయడానికి దీన్ని on చేయండి."
+        ],
+        "unlock": [
+            "en": "Unlock",
+            "hi": "Unlock",
+            "bn": "Unlock",
+            "ta": "Unlock",
+            "te": "Unlock"
+        ],
+        "quick_unlock_unavailable_detail": [
+            "en": "Quick unlock is not available on this device.",
+            "hi": "Quick unlock इस device पर available नहीं है।",
+            "bn": "Quick unlock এই device-এ available নয়।",
+            "ta": "Quick unlock இந்த device-இல் available இல்லை.",
+            "te": "Quick unlock ఈ device లో available కాదు."
+        ],
+        "reset_demo_data": [
+            "en": "Reset demo data",
+            "hi": "demo data reset करें",
+            "bn": "demo data reset করুন",
+            "ta": "demo data reset செய்யவும்",
+            "te": "demo data reset చేయండి"
+        ],
+        "reset_demo_data_detail": [
+            "en": "Restore the sample matter, tasks, files, and review items.",
+            "hi": "sample matter, tasks, files, और review items restore करें।",
+            "bn": "sample matter, tasks, files, এবং review items restore করুন।",
+            "ta": "sample matter, tasks, files மற்றும் review items restore செய்யவும்.",
+            "te": "sample matter, tasks, files, మరియు review items restore చేయండి."
+        ],
+        "demo_matter_sample_data_only": [
+            "en": "Demo matter uses sample data only.",
+            "hi": "Demo matter सिर्फ sample data use करता है।",
+            "bn": "Demo matter শুধু sample data ব্যবহার করে।",
+            "ta": "Demo matter sample data மட்டும் பயன்படுத்தும்.",
+            "te": "Demo matter sample data మాత్రమే ఉపయోగిస్తుంది."
+        ],
         "sign_out_of_ross_question": [
             "en": "Sign out of Ross?",
             "hi": "Ross से sign out करें?",

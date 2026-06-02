@@ -771,6 +771,14 @@ final class AlphaExtractionTests: XCTestCase {
             "உங்கள் case files-இலிருந்து தனி. cleaned search query அடிப்படையில்."
         )
         XCTAssertEqual(
+            rossLocalized("device_unlock_disabled_detail", languageCode: "bn"),
+            "Face ID, Touch ID, বা device passcode দিয়ে Ross reopen করতে এটি on করুন।"
+        )
+        XCTAssertEqual(
+            rossLocalized("reset_demo_data_detail", languageCode: "te-IN"),
+            "sample matter, tasks, files, మరియు review items restore చేయండి."
+        )
+        XCTAssertEqual(
             rossLocalized("assistant_network_wifi_preferred", languageCode: "te-IN"),
             "Wi-Fi ప్రాధాన్యం"
         )
