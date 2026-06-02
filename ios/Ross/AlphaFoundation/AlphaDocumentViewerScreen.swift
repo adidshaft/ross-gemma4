@@ -1727,7 +1727,7 @@ struct AlphaSourceRefChips: View {
                     Image(systemName: "doc.text")
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(Color.rossInk.opacity(0.42))
-                    Text("source not available")
+                    Text("No linked source yet")
                         .font(.caption.weight(.medium))
                         .foregroundStyle(Color.rossInk.opacity(0.65))
                 }
@@ -1777,7 +1777,7 @@ func alphaSourceRefDisplayLabel(_ sourceRef: AlphaSourceRef, contextDocumentTitl
 
     if sourceRef.effectiveSourceCategory == .documentSource {
         if sourceRef.documentTitle.trimmingCharacters(in: .whitespacesAndNewlines) == context {
-            return sourceRef.pageNumber > 0 ? "This file · p. \(sourceRef.pageNumber)" : "This file · source not available"
+            return sourceRef.pageNumber > 0 ? "This file · p. \(sourceRef.pageNumber)" : "This file · no linked source"
         }
         return label
     }

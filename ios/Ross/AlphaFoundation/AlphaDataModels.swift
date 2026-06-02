@@ -644,28 +644,28 @@ struct AlphaSourceRef: Identifiable, Codable, Hashable, Sendable {
     var label: String {
         let title = documentTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         if title.localizedCaseInsensitiveContains("Matter memory") {
-            return "Matter details · source not available"
+            return "Matter details · no linked source"
         }
         switch effectiveSourceCategory {
         case .documentSource:
-            guard !title.isEmpty else { return "Document source · source not available" }
-            return pageNumber > 0 ? "\(title) · p. \(pageNumber)" : "\(title) · source not available"
+            guard !title.isEmpty else { return "Document source · no linked source" }
+            return pageNumber > 0 ? "\(title) · p. \(pageNumber)" : "\(title) · no linked source"
         case .matterDetail:
             let field = paragraphRange?.trimmingCharacters(in: .whitespacesAndNewlines)
-            return "Matter details · \((field?.isEmpty == false ? field : "source not available") ?? "source not available")"
+            return "Matter details · \((field?.isEmpty == false ? field : "no linked source") ?? "no linked source")"
         case .rossSuggestion:
             return "Suggested by Ross · not confirmed"
         case .userConfirmedFact:
             let confirmedAt = paragraphRange?.trimmingCharacters(in: .whitespacesAndNewlines)
-            return "Confirmed by advocate · \((confirmedAt?.isEmpty == false ? confirmedAt : "source not available") ?? "source not available")"
+            return "Confirmed by advocate · \((confirmedAt?.isEmpty == false ? confirmedAt : "no linked source") ?? "no linked source")"
         case .publicLawSource:
-            return "Legal Search · \(!title.isEmpty ? title : "source not available")"
+            return "Legal Search · \(!title.isEmpty ? title : "no linked source")"
         }
     }
 
     var detail: String {
         let snippet = textSnippet?.trimmingCharacters(in: .whitespacesAndNewlines)
-        return snippet?.isEmpty == false ? snippet! : "source not available"
+        return snippet?.isEmpty == false ? snippet! : "No source text linked yet."
     }
 }
 

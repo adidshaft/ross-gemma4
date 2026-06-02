@@ -455,7 +455,7 @@ extension AlphaRossModel {
         else { return }
 
         let finding = caseMatter.documents[documentIndex].extractionFindings[findingIndex]
-        let alternate = finding.fileValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "source not available"
+        let alternate = finding.fileValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "no linked source"
         let existingNotes = caseMatter.notes?.trimmingCharacters(in: .whitespacesAndNewlines)
         let noteLine = "Alternate reference from \(caseMatter.documents[documentIndex].title): \(alternate)."
         caseMatter.notes = [existingNotes, noteLine].compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: "\n")
