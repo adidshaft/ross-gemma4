@@ -57,13 +57,13 @@ Ask in Hindi or Bengali and Ross keeps the answer in that language while still g
 
 ## Gemma 4 Capability Packs
 
-ROSS-Gemma4 is wired for real, quantized Gemma 4 GGUF models on-device. The current repo has catalog entries and download plumbing for community GGUF artifacts hosted on Hugging Face (`bartowski/google_gemma-4-*`). A simulator smoke run has proven the llama.cpp GGUF path with a local developer artifact; the full physical iPhone download, resume, verify, activate, and imported-file QA pass is still pending.
+ROSS-Gemma4 is wired for real, quantized Gemma 4 GGUF models on-device. The current repo has catalog entries and download plumbing for community GGUF artifacts hosted on Hugging Face (`bartowski/google_gemma-4-*`). A simulator smoke run has proven the llama.cpp GGUF path with a local developer artifact, and live Hugging Face probes on June 2, 2026 confirmed that all configured assistant files resolve, advertise the pinned SHA-256 values through linked ETags, and accept one-byte range downloads. The full physical iPhone download, resume, verify, activate, and imported-file QA pass is still pending.
 
 There are four Gemma 4 capability packs available for download inside the app:
 
 | Tier | Pack | Base Model | Quantization | Size | Use Case | Target Device |
 | --- | --- | --- | --- | --- | --- | --- |
-| **Flash Setup** | `gemma-4-e2b-q2` | Gemma 4 E2B | `Q2_K` | ~1.6 GB | Ultra-fast flash setup, immediate short answers, basic review. | Ultra-Constrained Phones |
+| **Flash Setup** | `gemma-4-e2b-q2` | Gemma 4 E2B | `Q2_K` | ~3.0 GB | Ultra-fast flash setup, immediate short answers, basic review. | Ultra-Constrained Phones |
 | **Quick Associate** | `gemma-4-e2b-q4` | Gemma 4 E2B | `Q4_K_M` | ~3.5 GB | Instant setup, intake, short summaries, simple checklists. | Constrained Phones |
 | **Case Associate** | `gemma-4-e4b-q4` | Gemma 4 E4B | `Q4_K_M` | ~5.4 GB | Chronology building, issue extraction, missing-fact analysis. | Modern Phones/Tablets |
 | **Senior Drafting Support**| `gemma-4-26b-a4b-q4` | Gemma 4 26B-A4B (MoE) | `Q4_K_M` | ~17.0 GB | Advanced drafting, clinic workstation mode, complex cross-referencing. | High-End Local Workstations |
@@ -120,7 +120,7 @@ The iOS project integrates with a `llama.cpp` wrapper (`AlphaLlamaCppEngine`) fo
 
 ## Model Artifact Status
 
-Model downloads are mapped to Gemma 4 GGUF URLs hosted on Hugging Face (`bartowski/google_gemma-4-*`). The app includes foreground download, resume-data, size/checksum, activation, repair, and cleanup plumbing. The end-to-end physical-device download proof is still required before treating the packs as release-ready.
+Model downloads are mapped to Gemma 4 GGUF URLs hosted on Hugging Face (`bartowski/google_gemma-4-*`). The app includes foreground download, resume-data, size/checksum, activation, repair, and cleanup plumbing. Live URL/range probes on June 2, 2026 verified the configured remote files without downloading the multi-GB bodies. The end-to-end physical-device download proof is still required before treating the packs as release-ready.
 
 ## Model Download and Verification
 

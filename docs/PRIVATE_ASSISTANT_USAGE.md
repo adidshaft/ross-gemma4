@@ -96,6 +96,7 @@ Observed on 2026-06-02:
 
 - iOS simulator real GGUF smoke passed with `ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime`.
 - The smoke used `/Users/amanpandey/projects/ross-gemma4/artifacts/gemma-2-2b-it-Q4_K_M.gguf` and passed English, Bengali, Hindi, and general-answer checks.
+- Live Hugging Face probes confirmed all configured assistant URLs resolve, linked ETags match pinned SHA-256 values, and one-byte range GETs return `206 Partial Content`.
 - Swift tests passed for imported Bangla text becoming Ask-usable with a Bengali language hint.
 
 Still not proven:

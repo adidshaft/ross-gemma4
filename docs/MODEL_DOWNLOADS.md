@@ -18,7 +18,8 @@ Current proof:
 
 1. `--local-model-smoke` ran real simulator GGUF inference on 2026-06-02.
 2. The smoke passed English source grounding, Bengali Bangla-script grounding, Hindi Devanagari grounding, and a general cautious answer.
-3. Swift tests cover preflight parsing, range probes, checksum/provider digest handling, startup recovery, repair, and artifact removal.
+3. Live Hugging Face probes on 2026-06-02 confirmed all four configured assistant URLs resolve, expose linked ETags matching the pinned SHA-256 values, advertise range support, and return `206 Partial Content` for one-byte range GETs.
+4. Swift tests cover preflight parsing, range probes, checksum/provider digest handling, startup recovery, repair, and artifact removal.
 
 Still required before claiming physical-device production readiness:
 

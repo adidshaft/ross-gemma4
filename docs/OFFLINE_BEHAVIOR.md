@@ -79,7 +79,7 @@ Expected plain-language degraded states include:
 
 Normal screens should not expose backend or runtime jargon in these states.
 
-Normal screens should also avoid technical model names. Use `Quick Start`, `Case Associate`, `Senior Drafting Support`, `Private assistant`, and plain setup states. Gemma 4/Q4/runtime/checksum details belong only under `Settings -> Advanced -> Technical diagnostics`.
+Normal screens should also avoid technical model names. Use `Quick Start`, `Case Associate`, `Senior Drafting Support`, `Private assistant`, and plain setup states. Gemma 4/Q4/runtime/checksum details belong only under `Settings -> Advanced -> Support details` in debug builds or dedicated QA logs.
 
 ## Real-runtime note
 

@@ -1,6 +1,6 @@
 # Model Registry
 
-Ross shows advocate-friendly assistant levels in normal UI. Technical model names stay under `Settings -> Advanced -> Technical diagnostics`.
+Ross shows advocate-friendly assistant levels in normal UI. Technical model names stay under `Settings -> Advanced -> Support details` in debug builds or dedicated QA logs.
 
 ## Canonical Files
 
@@ -32,15 +32,20 @@ Gemma/Gemma 3n generative paths are optional future or experimental paths, not R
 - available with no Private AI Pack installed
 - uses local acquisition, OCR where available, heuristics, and deterministic extraction
 
+### Flash
+
+- download: about 3.0 GB
+- role: fastest setup, immediate short answers, basic review
+
 ### Quick Start
 
-- download: about 430 MB
+- download: about 3.5 GB
 - role: command routing, simple Ask Ross actions, short summaries, basic local matter Q&A
 
 ### Case Associate
 
 - recommended
-- download: about 1.1-1.3 GB
+- download: about 5.4 GB
 - role: document review, next-date extraction, order directions, matter summaries, hearing notes, chronology, source-backed Ask Ross answers
 
 ### Senior Drafting Support
