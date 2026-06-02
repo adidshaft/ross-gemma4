@@ -45,7 +45,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             try Self.validateModelCanLoad(at: modelPath)
             return (true, nil, "Private assistant is ready on this iPhone.")
         } catch {
-            return (false, "runtime_validation_failed", "Ross could not open the downloaded assistant file. Repair setup or download the assistant again.")
+            return (false, "runtime_validation_failed", "Ross could not open this assistant setup. Open My assistant and use Repair setup.")
         }
     }
 

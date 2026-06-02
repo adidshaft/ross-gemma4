@@ -2205,5 +2205,5 @@ func alphaAskRuntimeRepairDetail(warning: String?, errorCategory: String) -> Str
        !internalTerms.contains(where: { cleanedWarning.range(of: $0, options: [.caseInsensitive]) != nil }) {
         return cleanedWarning
     }
-    return "The private assistant could not open the downloaded assistant file for this answer."
+    return "The private assistant could not open this assistant setup for this answer. Open My assistant and use Repair setup."
 }

@@ -2025,6 +2025,9 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertFalse(snapshot.installedPacks.first { $0.id == brokenPack.id }?.isActive == true)
             XCTAssertEqual(.failed, snapshot.modelJobs.first?.state)
             XCTAssertTrue(snapshot.modelJobs.first?.failureReason?.contains("could not open") == true)
+            XCTAssertTrue(snapshot.modelJobs.first?.failureReason?.contains("My assistant") == true)
+            XCTAssertTrue(snapshot.modelJobs.first?.failureReason?.contains("Repair setup") == true)
+            XCTAssertFalse(snapshot.modelJobs.first?.failureReason?.localizedCaseInsensitiveContains("download") == true)
             XCTAssertEqual("Assistant activation failed", snapshot.ledgerEntries.first?.title)
         }
     }
@@ -2068,6 +2071,9 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertEqual(health?.available, false)
             XCTAssertEqual(health?.lastErrorCategory, "runtime_validation_failed")
             XCTAssertTrue(health?.userFacingStatus.localizedCaseInsensitiveContains("could not open") == true)
+            XCTAssertTrue(health?.userFacingStatus.contains("My assistant") == true)
+            XCTAssertTrue(health?.userFacingStatus.contains("Repair setup") == true)
+            XCTAssertFalse(health?.userFacingStatus.localizedCaseInsensitiveContains("download") == true)
         }
     }
 

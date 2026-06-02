@@ -267,7 +267,7 @@ extension AlphaRossModel {
 
     func activateInstalledPack(_ pack: AlphaInstalledModelPack) {
         guard installedPackPassesRuntimeValidation(pack) else {
-            let message = "Ross could not open this downloaded assistant file. Delete it and download the assistant again."
+            let message = "Ross could not open this assistant setup. Open My assistant and use Repair setup."
             persisted.modelJobs = persisted.modelJobs.map { job in
                 var copy = job
                 if job.tier == pack.tier, job.state == .installed {

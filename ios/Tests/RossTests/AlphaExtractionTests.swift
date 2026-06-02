@@ -676,11 +676,14 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(
             detail,
-            "The private assistant could not open the downloaded assistant file for this answer."
+            "The private assistant could not open this assistant setup for this answer. Open My assistant and use Repair setup."
         )
         for forbidden in ["llama", "sampler", "inference", "runtime", "GGUF", "Gemma"] {
             XCTAssertNil(detail.range(of: forbidden, options: [.caseInsensitive]))
         }
+        XCTAssertTrue(detail.contains("My assistant"))
+        XCTAssertTrue(detail.contains("Repair setup"))
+        XCTAssertFalse(detail.localizedCaseInsensitiveContains("download"))
 
         XCTAssertEqual(
             alphaAskRuntimeRepairDetail(
