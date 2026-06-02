@@ -297,7 +297,12 @@ struct AlphaCaseSummaryCard: View {
                 .foregroundStyle(Color.rossAccent)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
-                .background(Color.rossAccent.opacity(0.1), in: Capsule())
+                .rossNativeGlassSurface(
+                    tint: Color.rossAccent,
+                    shape: Capsule(),
+                    fallbackFillOpacity: 0.70,
+                    fallbackStrokeOpacity: 0.38
+                )
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)

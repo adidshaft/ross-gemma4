@@ -312,7 +312,12 @@ struct AlphaOnboardingModelChoiceRow: View {
                                 .foregroundStyle(Color.rossAccent)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 2)
-                                .background(Color.rossAccent.opacity(0.11), in: Capsule())
+                                .rossNativeGlassSurface(
+                                    tint: Color.rossAccent,
+                                    shape: Capsule(),
+                                    fallbackFillOpacity: 0.68,
+                                    fallbackStrokeOpacity: 0.36
+                                )
                         }
                     }
 
@@ -478,7 +483,12 @@ struct AlphaOnboardingDownloadCard: View {
                     .foregroundStyle(Color.rossAccent)
                     .padding(.horizontal, compact ? 7 : 8)
                     .padding(.vertical, compact ? 3 : 4)
-                    .background(Color.rossAccent.opacity(0.10), in: Capsule())
+                    .rossNativeGlassSurface(
+                        tint: Color.rossAccent,
+                        shape: Capsule(),
+                        fallbackFillOpacity: 0.68,
+                        fallbackStrokeOpacity: 0.36
+                    )
             }
 
             Divider()
@@ -676,7 +686,12 @@ struct AlphaModelPickerRow: View {
                                     .foregroundStyle(Color.rossAccent)
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 3)
-                                    .background(Color.rossAccent.opacity(0.10), in: Capsule())
+                                    .rossNativeGlassSurface(
+                                        tint: Color.rossAccent,
+                                        shape: Capsule(),
+                                        fallbackFillOpacity: 0.68,
+                                        fallbackStrokeOpacity: 0.36
+                                    )
                             }
                         }
 

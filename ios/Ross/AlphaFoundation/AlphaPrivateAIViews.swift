@@ -986,7 +986,12 @@ struct AlphaPrivateAIInlineBadge: View {
             .foregroundStyle(tint)
             .padding(.horizontal, 7)
             .padding(.vertical, 4)
-            .background(tint.opacity(0.1), in: Capsule())
+            .rossNativeGlassSurface(
+                tint: tint,
+                shape: Capsule(),
+                fallbackFillOpacity: 0.68,
+                fallbackStrokeOpacity: 0.36
+            )
     }
 }
 

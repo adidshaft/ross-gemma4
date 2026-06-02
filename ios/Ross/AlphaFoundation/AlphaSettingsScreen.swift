@@ -105,7 +105,12 @@ struct AlphaSettingsScreen: View {
                                         .font(.system(size: 14, weight: .semibold))
                                         .foregroundStyle(.red)
                                         .frame(width: 30, height: 30)
-                                        .background(Color.red.opacity(0.1), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                                        .rossNativeGlassSurface(
+                                            tint: .red,
+                                            shape: RoundedRectangle(cornerRadius: 9, style: .continuous),
+                                            fallbackFillOpacity: 0.70,
+                                            fallbackStrokeOpacity: 0.38
+                                        )
 
                                     Text("Sign Out")
                                         .font(.footnote.weight(.semibold))
@@ -394,7 +399,12 @@ struct AlphaSettingsNavigationRow: View {
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(Color.rossAccent)
                 .frame(width: 30, height: 30)
-                .background(Color.rossAccent.opacity(0.1), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .rossNativeGlassSurface(
+                    tint: Color.rossAccent,
+                    shape: RoundedRectangle(cornerRadius: 9, style: .continuous),
+                    fallbackFillOpacity: 0.70,
+                    fallbackStrokeOpacity: 0.38
+                )
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
