@@ -378,7 +378,7 @@ private func alphaRecoverDownloadedAssistantArtifacts(from state: inout AlphaPer
     state.ledgerEntries.insert(
         AlphaPrivacyLedgerEntry(
             title: "Assistant restored",
-            detail: "Ross found and verified an existing private assistant file on this device: \(recoveredTitles).",
+            detail: "Ross found and verified existing assistant setup on this device: \(recoveredTitles).",
             purpose: .model_verification,
             payloadClass: .no_case_data,
             endpointLabel: "device://model-verify",

@@ -77,6 +77,14 @@ final class AlphaExtractionTests: XCTestCase {
                 payloadClass: .no_case_data,
                 endpointLabel: "model-provider://private-assistant-download",
                 success: false
+            ),
+            AlphaPrivacyLedgerEntry(
+                title: "Assistant restored",
+                detail: "Ross found and verified existing assistant setup on this device: Basic.",
+                purpose: .model_verification,
+                payloadClass: .no_case_data,
+                endpointLabel: "device://model-verify",
+                success: true
             )
         ]
 
@@ -89,6 +97,8 @@ final class AlphaExtractionTests: XCTestCase {
             XCTAssertFalse(entry.lawyerDetail.localizedCaseInsensitiveContains("byte-range"), entry.lawyerDetail)
             XCTAssertFalse(entry.lawyerDetail.localizedCaseInsensitiveContains("checksum"), entry.lawyerDetail)
             XCTAssertFalse(entry.lawyerDetail.localizedCaseInsensitiveContains("HTTP"), entry.lawyerDetail)
+            XCTAssertFalse(entry.lawyerDetail.localizedCaseInsensitiveContains("assistant file"), entry.lawyerDetail)
+            XCTAssertFalse(entry.lawyerDetail.localizedCaseInsensitiveContains("downloaded assistant"), entry.lawyerDetail)
         }
     }
 
