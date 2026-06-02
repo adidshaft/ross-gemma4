@@ -1393,13 +1393,13 @@ extension AlphaRossModel {
     var recommendedAssistantSetupNote: String {
         switch recommendedOnDeviceTier() {
         case .flash:
-            return "This will be the fastest to download and set up."
+            return rossLocalized("assistant_setup_note_flash")
         case .quickStart:
-            return "Setup stays smaller and mobile-friendly for this device."
+            return rossLocalized("assistant_setup_note_quick_start")
         case .caseAssociate:
-            return "This is the best default for most day-to-day legal work on phone."
+            return rossLocalized("assistant_setup_note_case_associate")
         case .seniorDraftingSupport:
-            return "Ross found enough room on this device for longer local drafting sessions."
+            return rossLocalized("assistant_setup_note_senior_drafting")
         }
     }
 

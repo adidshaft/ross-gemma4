@@ -1071,6 +1071,22 @@ final class AlphaExtractionTests: XCTestCase {
             "இந்த iPhone-இல் அமைக்கவும்"
         )
         XCTAssertEqual(
+            rossLocalized("assistant_setup_note_flash", languageCode: "hi"),
+            "यह डाउनलोड और setup के लिए सबसे तेज़ रहेगा."
+        )
+        XCTAssertEqual(
+            rossLocalized("assistant_setup_note_quick_start", languageCode: "bn"),
+            "এই device-এর জন্য setup ছোট এবং mobile-friendly থাকবে."
+        )
+        XCTAssertEqual(
+            rossLocalized("assistant_setup_note_case_associate", languageCode: "ta"),
+            "Phone-இல் பெரும்பாலான day-to-day legal work-க்கு இது best default."
+        )
+        XCTAssertEqual(
+            rossLocalized("assistant_setup_note_senior_drafting", languageCode: "te-IN"),
+            "Ross ఈ device లో పొడవైన local drafting sessions కోసం enough room కనుగొంది."
+        )
+        XCTAssertEqual(
             rossLocalized("privacy_ledger_empty", languageCode: "hi"),
             "Ross ने अभी तक कोई local या network actions log नहीं किए हैं।"
         )

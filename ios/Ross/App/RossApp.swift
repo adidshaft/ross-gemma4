@@ -448,6 +448,34 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "பெரிய பதிவிறக்கங்கள் இடைநிறுத்தப்பட்டால் மீண்டும் தொடரலாம்.",
             "te": "పెద్ద డౌన్‌లోడ్‌లు ఆగి, అంతరాయం కలిగితే మళ్లీ కొనసాగవచ్చు."
         ],
+        "assistant_setup_note_flash": [
+            "en": "This will be the fastest to download and set up.",
+            "hi": "यह डाउनलोड और setup के लिए सबसे तेज़ रहेगा.",
+            "bn": "এটি download এবং setup করতে সবচেয়ে দ্রুত হবে.",
+            "ta": "இது download மற்றும் setup செய்ய மிக வேகமாக இருக்கும்.",
+            "te": "ఇది download మరియు setup కు అత్యంత వేగంగా ఉంటుంది."
+        ],
+        "assistant_setup_note_quick_start": [
+            "en": "Setup stays smaller and mobile-friendly for this device.",
+            "hi": "इस device के लिए setup छोटा और mobile-friendly रहेगा.",
+            "bn": "এই device-এর জন্য setup ছোট এবং mobile-friendly থাকবে.",
+            "ta": "இந்த device-க்கு setup சிறியதும் mobile-friendly-ஆகவும் இருக்கும்.",
+            "te": "ఈ device కోసం setup చిన్నగా, mobile-friendly గా ఉంటుంది."
+        ],
+        "assistant_setup_note_case_associate": [
+            "en": "This is the best default for most day-to-day legal work on phone.",
+            "hi": "Phone पर ज़्यादातर रोज़मर्रा legal work के लिए यह best default है.",
+            "bn": "Phone-এ বেশিরভাগ day-to-day legal work-এর জন্য এটি best default.",
+            "ta": "Phone-இல் பெரும்பாலான day-to-day legal work-க்கு இது best default.",
+            "te": "Phone లో ఎక్కువ day-to-day legal work కు ఇది best default."
+        ],
+        "assistant_setup_note_senior_drafting": [
+            "en": "Ross found enough room on this device for longer local drafting sessions.",
+            "hi": "Ross को इस device पर लंबे local drafting sessions के लिए enough room मिला.",
+            "bn": "Ross এই device-এ দীর্ঘ local drafting sessions-এর জন্য enough room পেয়েছে.",
+            "ta": "Ross இந்த device-இல் நீண்ட local drafting sessions-க்கு enough room கண்டது.",
+            "te": "Ross ఈ device లో పొడవైన local drafting sessions కోసం enough room కనుగొంది."
+        ],
         "tier_flash_summary": [
             "en": "Fastest setup for quick questions and simple checklists.",
             "hi": "त्वरित प्रश्नों और सरल चेकलिस्ट के लिए सबसे तेज़ सेटअप।",
