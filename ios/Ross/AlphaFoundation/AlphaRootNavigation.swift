@@ -132,7 +132,7 @@ private struct AlphaIncomingDocumentsSheet: View {
             $0.deletingPathExtension().lastPathComponent
                 .replacingOccurrences(of: "_", with: " ")
                 .replacingOccurrences(of: "-", with: " ")
-        } ?? "New matter"
+        } ?? rossLocalized("new_matter")
     }
 
     private var resolvedNewMatterTitle: String {
@@ -146,9 +146,9 @@ private struct AlphaIncomingDocumentsSheet: View {
                 RossGlassGroup(spacing: 18) {
                     VStack(alignment: .leading, spacing: 18) {
                         RossHeroCard(
-                            eyebrow: "\(incomingFileNames.count) shared file\(incomingFileNames.count == 1 ? "" : "s")",
-                            title: "Add files to a matter",
-                            detail: "Ross copies the files into private storage before reading them.",
+                            eyebrow: alphaSharedFilesCountLabel(incomingFileNames.count),
+                            title: rossLocalized("shared_files_add_to_matter"),
+                            detail: rossLocalized("shared_files_private_storage_detail"),
                             showsMedia: false,
                             mediaHeight: 96,
                             logoSize: 54
@@ -161,7 +161,7 @@ private struct AlphaIncomingDocumentsSheet: View {
                         }
 
                         if !matterOptions.isEmpty {
-                            RossSectionCard(title: "Import into an existing matter") {
+                            RossSectionCard(title: rossLocalized("import_existing_matter")) {
                                 VStack(alignment: .leading, spacing: 10) {
                                     ForEach(matterOptions) { matter in
                                         Button {
@@ -177,7 +177,7 @@ private struct AlphaIncomingDocumentsSheet: View {
                             }
                         }
 
-                        RossSectionCard(title: "Create a new matter") {
+                        RossSectionCard(title: rossLocalized("create_new_matter")) {
                             VStack(alignment: .leading, spacing: 14) {
                                 AlphaIncomingMatterTitleField(
                                     placeholder: defaultMatterTitle,
@@ -189,10 +189,10 @@ private struct AlphaIncomingDocumentsSheet: View {
                                     model.createMatterForQueuedIncomingDocuments(title: resolvedNewMatterTitle)
                                     dismiss()
                                 } label: {
-                                    Label("Create matter and import files", systemImage: "plus.circle.fill")
+                                    Label(rossLocalized("create_matter_import_files"), systemImage: "plus.circle.fill")
                                 }
                                 .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 18)
-                                .accessibilityHint("Creates a matter named \(resolvedNewMatterTitle) and imports the shared files.")
+                                .accessibilityHint(alphaCreateMatterImportHint(resolvedNewMatterTitle))
                             }
                         }
                     }
@@ -200,11 +200,11 @@ private struct AlphaIncomingDocumentsSheet: View {
                 }
             }
             .background(Color.rossGroupedBackground.ignoresSafeArea())
-            .navigationTitle("Shared files")
+            .navigationTitle(rossLocalized("shared_files"))
             .rossInlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button(rossLocalized("cancel")) {
                         model.clearIncomingDocumentQueue()
                         dismiss()
                     }
@@ -247,7 +247,7 @@ private struct AlphaIncomingFileRow: View {
             strokeOpacity: 0.42
         )
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(fileName), ready to import into private storage")
+        .accessibilityLabel(alphaIncomingFileReadyLabel(fileName))
     }
 }
 
@@ -258,7 +258,7 @@ private struct AlphaIncomingMatterTitleField: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Matter name")
+            Text(rossLocalized("matter_name"))
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(Color.rossInk.opacity(0.64))
 
@@ -286,10 +286,22 @@ private struct AlphaIncomingMatterTitleField: View {
                             lineWidth: 1
                         )
                 }
-                .accessibilityLabel("Matter name")
+                .accessibilityLabel(rossLocalized("matter_name"))
                 .submitLabel(.done)
         }
     }
+}
+
+func alphaSharedFilesCountLabel(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("shared_files_count", languageCode: languageCode), count)
+}
+
+func alphaIncomingFileReadyLabel(_ fileName: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("incoming_file_ready", languageCode: languageCode), fileName)
+}
+
+func alphaCreateMatterImportHint(_ title: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("create_matter_import_hint", languageCode: languageCode), title)
 }
 
 private struct AlphaIncomingMatterRow: View {

@@ -1603,6 +1603,118 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "வழக்கு update",
             "te": "కేసు update"
         ],
+        "new_matter": [
+            "en": "New matter",
+            "hi": "नया मामला",
+            "bn": "নতুন মামলা",
+            "ta": "புதிய வழக்கு",
+            "te": "కొత్త కేసు"
+        ],
+        "shared_files_count": [
+            "en": "%d shared files",
+            "hi": "%d साझा फ़ाइलें",
+            "bn": "%d shared files",
+            "ta": "%d பகிரப்பட்ட கோப்புகள்",
+            "te": "%d షేర్ చేసిన ఫైళ్లు"
+        ],
+        "shared_files_add_to_matter": [
+            "en": "Add files to a matter",
+            "hi": "फ़ाइलें किसी मामले में जोड़ें",
+            "bn": "ফাইল একটি মামলায় যোগ করুন",
+            "ta": "கோப்புகளை ஒரு வழக்கில் சேர்க்கவும்",
+            "te": "ఫైళ్లను ఒక కేసుకు జోడించండి"
+        ],
+        "shared_files_private_storage_detail": [
+            "en": "Ross copies the files into private storage before reading them.",
+            "hi": "Ross फ़ाइलें पढ़ने से पहले उन्हें private storage में copy करता है।",
+            "bn": "Ross ফাইল পড়ার আগে private storage-এ copy করে।",
+            "ta": "Ross கோப்புகளை வாசிப்பதற்கு முன் private storage-க்கு copy செய்கிறது.",
+            "te": "Ross ఫైళ్లను చదవడానికి ముందు private storage లోకి copy చేస్తుంది."
+        ],
+        "import_existing_matter": [
+            "en": "Import into an existing matter",
+            "hi": "मौजूदा मामले में import करें",
+            "bn": "বিদ্যমান মামলায় import করুন",
+            "ta": "ஏற்கனவே உள்ள வழக்கில் import செய்யவும்",
+            "te": "ఉన్న కేసులోకి import చేయండి"
+        ],
+        "create_new_matter": [
+            "en": "Create a new matter",
+            "hi": "नया मामला बनाएं",
+            "bn": "নতুন মামলা তৈরি করুন",
+            "ta": "புதிய வழக்கை உருவாக்கவும்",
+            "te": "కొత్త కేసు సృష్టించండి"
+        ],
+        "create_matter_import_files": [
+            "en": "Create matter and import files",
+            "hi": "मामला बनाएं और फ़ाइलें import करें",
+            "bn": "মামলা তৈরি করে ফাইল import করুন",
+            "ta": "வழக்கை உருவாக்கி கோப்புகளை import செய்யவும்",
+            "te": "కేసు సృష్టించి ఫైళ్లను import చేయండి"
+        ],
+        "create_matter_import_hint": [
+            "en": "Creates a matter named %@ and imports the shared files.",
+            "hi": "%@ नाम का मामला बनाता है और shared files import करता है।",
+            "bn": "%@ নামে মামলা তৈরি করে shared files import করে।",
+            "ta": "%@ என்ற பெயரில் வழக்கை உருவாக்கி shared files-ஐ import செய்கிறது.",
+            "te": "%@ పేరుతో కేసు సృష్టించి shared files ను import చేస్తుంది."
+        ],
+        "shared_files": [
+            "en": "Shared files",
+            "hi": "साझा फ़ाइलें",
+            "bn": "shared files",
+            "ta": "பகிரப்பட்ட கோப்புகள்",
+            "te": "షేర్ చేసిన ఫైళ్లు"
+        ],
+        "incoming_file_ready": [
+            "en": "%@, ready to import into private storage",
+            "hi": "%@, private storage में import के लिए तैयार",
+            "bn": "%@, private storage-এ import করার জন্য প্রস্তুত",
+            "ta": "%@, private storage-க்கு import செய்ய தயாராக உள்ளது",
+            "te": "%@, private storage లోకి import చేయడానికి సిద్ధంగా ఉంది"
+        ],
+        "matter_name": [
+            "en": "Matter name",
+            "hi": "मामले का नाम",
+            "bn": "মামলার নাম",
+            "ta": "வழக்கின் பெயர்",
+            "te": "కేసు పేరు"
+        ],
+        "create_matter_title": [
+            "en": "Create a matter",
+            "hi": "मामला बनाएं",
+            "bn": "মামলা তৈরি করুন",
+            "ta": "வழக்கை உருவாக்கவும்",
+            "te": "కేసు సృష్టించండి"
+        ],
+        "create_matter_detail": [
+            "en": "Start with the name. Ross can extract the court, parties, and next date after you import a file.",
+            "hi": "नाम से शुरू करें। फ़ाइल import करने के बाद Ross court, parties और next date निकाल सकता है।",
+            "bn": "নাম দিয়ে শুরু করুন। ফাইল import করার পরে Ross court, parties, এবং next date বের করতে পারে।",
+            "ta": "பெயருடன் தொடங்குங்கள். கோப்பை import செய்த பிறகு Ross court, parties மற்றும் next date-ஐ எடுக்க முடியும்.",
+            "te": "పేరుతో ప్రారంభించండి. ఫైల్ import చేసిన తర్వాత Ross court, parties మరియు next date ను తీసుకోగలదు."
+        ],
+        "enter_matter_name": [
+            "en": "Enter matter name",
+            "hi": "मामले का नाम दर्ज करें",
+            "bn": "মামলার নাম লিখুন",
+            "ta": "வழக்கின் பெயரை உள்ளிடவும்",
+            "te": "కేసు పేరు నమోదు చేయండి"
+        ],
+        "required": [
+            "en": "Required",
+            "hi": "ज़रूरी",
+            "bn": "প্রয়োজনীয়",
+            "ta": "தேவை",
+            "te": "అవసరం"
+        ],
+        "create_matter": [
+            "en": "Create matter",
+            "hi": "मामला बनाएं",
+            "bn": "মামলা তৈরি করুন",
+            "ta": "வழக்கை உருவாக்கவும்",
+            "te": "కేసు సృష్టించండి"
+        ],
         "translate_to": [
             "en": "Translate to %@",
             "hi": "%@ में अनुवाद करें",

@@ -866,6 +866,26 @@ final class AlphaExtractionTests: XCTestCase {
             "இன்னும் saved threads இல்லை."
         )
         XCTAssertEqual(
+            alphaSharedFilesCountLabel(2, languageCode: "te-IN"),
+            "2 షేర్ చేసిన ఫైళ్లు"
+        )
+        XCTAssertEqual(
+            alphaIncomingFileReadyLabel("order.pdf", languageCode: "ta"),
+            "order.pdf, private storage-க்கு import செய்ய தயாராக உள்ளது"
+        )
+        XCTAssertEqual(
+            alphaCreateMatterImportHint("Order matter", languageCode: "bn"),
+            "Order matter নামে মামলা তৈরি করে shared files import করে।"
+        )
+        XCTAssertEqual(
+            rossLocalized("create_matter_title", languageCode: "hi"),
+            "मामला बनाएं"
+        )
+        XCTAssertEqual(
+            rossLocalized("enter_matter_name", languageCode: "te-IN"),
+            "కేసు పేరు నమోదు చేయండి"
+        )
+        XCTAssertEqual(
             rossLocalized("download_size", languageCode: "ta"),
             "பதிவிறக்க அளவு"
         )

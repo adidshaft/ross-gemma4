@@ -38,29 +38,29 @@ struct AlphaCreateCaseScreen: View {
             RossGlassGroup(spacing: alphaSectionSpacing) {
                 VStack(alignment: .leading, spacing: alphaSectionSpacing) {
                     VStack(alignment: .leading, spacing: 8) {
-                    Text("Create a matter")
+                    Text(rossLocalized("create_matter_title"))
                         .font(.rossSerifTitle())
                         .foregroundStyle(Color.rossInk)
 
-                    Text("Start with the name. Ross can extract the court, parties, and next date after you import a file.")
+                    Text(rossLocalized("create_matter_detail"))
                         .font(.system(size: 15, weight: .regular))
                         .foregroundStyle(Color.rossInk.opacity(0.72))
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                RossSectionCard(title: "Matter details") {
+                RossSectionCard(title: rossLocalized("matter_details")) {
                     VStack(alignment: .leading, spacing: 18) {
                         AlphaMatterEditorField(
-                            title: "Matter name",
-                            placeholder: "Enter matter name",
+                            title: rossLocalized("matter_name"),
+                            placeholder: rossLocalized("enter_matter_name"),
                             text: $model.caseDraftTitle,
-                            validationMessage: didAttemptCreate && !canCreate ? "Required" : nil,
+                            validationMessage: didAttemptCreate && !canCreate ? rossLocalized("required") : nil,
                             autoFocus: true
                         )
                     }
                 }
 
-                Button("Create matter") {
+                Button(rossLocalized("create_matter")) {
                     if canCreate {
                         alphaHaptic(.light)
                         model.createCase()
@@ -75,7 +75,7 @@ struct AlphaCreateCaseScreen: View {
                 .padding(alphaScreenPadding)
             }
         }
-        .navigationTitle("Create Matter")
+        .navigationTitle(rossLocalized("create_matter_title"))
         .rossInlineNavigationTitle()
     }
 }
