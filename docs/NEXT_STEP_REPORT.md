@@ -7,7 +7,7 @@
 ## What Changed
 
 - added canonical Gemma 4-first model registry metadata
-- mapped Quick Start, Case Associate, and Senior Drafting Support to Gemma 4 Q4 tiers
+- mapped Flash, Quick Start, Case Associate, and Senior Drafting Support to Gemma 4 tiers
 - added separate Matter Search retrieval model metadata
 - added backend `ROSS_MODEL_CATALOG_MODE=dev | production_metadata`
 - kept deterministic tiny artifacts as the default backend catalog mode
@@ -17,9 +17,10 @@
 
 ## Model Mapping
 
-- Quick Start -> Gemma 4 E2B Q4, about 430 MB
-- Case Associate -> Gemma 4 E4B Q4, about 1.1-1.3 GB
-- Senior Drafting Support -> Gemma 4 26B-A4B Q4, about 2.5 GB
+- Flash -> Gemma 4 E2B Q2, about 3.0 GB
+- Quick Start -> Gemma 4 E2B Q4, about 3.5 GB
+- Case Associate -> Gemma 4 E4B Q4, about 5.4 GB
+- Senior Drafting Support -> Gemma 4 26B-A4B Q4, about 17.0 GB
 - Matter Search -> EmbeddingGemma 300M preferred, Gemma 4-Embedding 0.6B Q4 fallback
 
 ## Current Truth

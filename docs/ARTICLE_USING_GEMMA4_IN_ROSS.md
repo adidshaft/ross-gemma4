@@ -50,7 +50,7 @@ Ross exposes assistant tiers in user-friendly language. Internally, those tiers 
 | Standard | Everyday matters | Source-grounded answers, chronology help, issue extraction |
 | Full | Long bundles and drafting | Heavier drafting and multi-document review on capable hardware |
 
-The user does not need to learn GGUF, quantization, llama.cpp, checksums, or context windows. The UI says what each tier is good for. Technical diagnostics can still reveal the runtime details for developers and QA.
+The user does not need to learn GGUF, quantization, llama.cpp, checksums, or context windows. The UI says what each tier is good for. Support details can still reveal runtime details in debug builds or dedicated QA logs.
 
 One detail matters for real installs: Ross defaults first-run setup to Flash. The app still shows the larger packs, but a new user should land on the fastest reliable path first. Earlier builds selected a heavier pack from device/simulator capability heuristics, which could make onboarding look broken before the user ever reached a working assistant. The final flow treats Flash as the safe first-run baseline and lets advanced users opt into larger packs later.
 

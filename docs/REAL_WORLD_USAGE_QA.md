@@ -106,7 +106,7 @@ Expected:
 Expected:
 
 - top-level sections are lawyer-facing
-- Advanced and Technical diagnostics remain separate
+- Advanced and Support details remain separate
 
 ## Current proof status on April 23, 2026
 

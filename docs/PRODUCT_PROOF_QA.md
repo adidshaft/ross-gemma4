@@ -55,7 +55,7 @@ Freshly not proven on iOS in this pass:
 - create task/date directly from a review item
 - export generation and export opening
 - Privacy Ledger opening
-- Settings -> Advanced -> Technical diagnostics in the latest pass
+- Settings -> Advanced -> Support details in the latest pass
 - public-law preview -> confirm -> results after the latest citation/layout fixes
 
 ### Android emulator

@@ -116,7 +116,7 @@ Ross keeps these user-facing promises:
 - `Private assistant is ready`
 - `Using basic local review`
 
-Normal UI should use assistant levels such as `Quick Start`, `Case Associate`, and `Senior Drafting Support`. It should not show Gemma 4, Q4, quantization, runtime, repository, checksum, or artifact names outside `Settings -> Advanced -> Technical diagnostics`.
+Normal UI should use assistant levels such as `Quick Start`, `Case Associate`, and `Senior Drafting Support`. It should not show Gemma 4, Q4, quantization, runtime, repository, checksum, or artifact names outside `Settings -> Advanced -> Support details` in debug builds or dedicated QA logs.
 
 ## Private AI Pack Strategy
 

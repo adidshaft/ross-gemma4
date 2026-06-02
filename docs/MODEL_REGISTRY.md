@@ -50,7 +50,7 @@ Gemma/Gemma 3n generative paths are optional future or experimental paths, not R
 
 ### Senior Drafting Support
 
-- download: about 2.5 GB
+- download: about 17.0 GB
 - role: advanced drafting, deeper review, longer matter reasoning, chronology refinement, issue extraction, hearing preparation
 
 ## Runtime And Artifact Values

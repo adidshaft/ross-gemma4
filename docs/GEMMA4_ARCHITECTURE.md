@@ -2,7 +2,7 @@
 
 Ross uses a Gemma 4-first local generative stack for Private AI Pack tiers and a separate embedding model for local retrieval.
 
-Normal product UI shows assistant levels, not model names. Technical names, repository names, runtime modes, checksums, and artifact details belong only under `Settings -> Advanced -> Technical diagnostics`.
+Normal product UI shows assistant levels, not model names. Technical names, repository names, runtime modes, checksums, and artifact details belong only under `Settings -> Advanced -> Support details` in debug builds or dedicated QA logs.
 
 ## Why Gemma 4 Q4
 
@@ -15,9 +15,10 @@ Normal product UI shows assistant levels, not model names. Technical names, repo
 
 | User tier | Technical model | Repo | Runtime | Download |
 | --- | --- | --- | --- | --- |
-| Quick Start | Gemma 4 E2B Q4 | `google/gemma-4-E2B-it` | `gemma_local_runtime` | about 430 MB |
-| Case Associate | Gemma 4 E4B Q4 | `google/gemma-4-E4B-it` | `gemma_local_runtime` | about 1.1-1.3 GB |
-| Senior Drafting Support | Gemma 4 26B-A4B Q4 | `google/gemma-4-26B-A4B-it` | `gemma_local_runtime` | about 2.5 GB |
+| Flash | Gemma 4 E2B Q2 | `bartowski/google_gemma-4-E2B-it-GGUF` | `gemma_local_runtime` | about 3.0 GB |
+| Quick Start | Gemma 4 E2B Q4 | `bartowski/google_gemma-4-E2B-it-GGUF` | `gemma_local_runtime` | about 3.5 GB |
+| Case Associate | Gemma 4 E4B Q4 | `bartowski/google_gemma-4-E4B-it-GGUF` | `gemma_local_runtime` | about 5.4 GB |
+| Senior Drafting Support | Gemma 4 26B-A4B Q4 | `bartowski/google_gemma-4-26B-A4B-it-GGUF` | `gemma_local_runtime` | about 17.0 GB |
 
 Case Associate alternate repo: `google/gemma-4-E4B-it`.
 
@@ -49,19 +50,19 @@ Quick Start:
 
 - minimum: 4-6 GB RAM phone
 - recommended: 6-8 GB RAM
-- download: about 430 MB
+- download: about 3.5 GB
 
 Case Associate:
 
 - minimum: 6-8 GB RAM
 - recommended: 8-12 GB RAM
-- download: about 1.1-1.3 GB
+- download: about 5.4 GB
 
 Senior Drafting Support:
 
 - minimum: 8-12 GB RAM
 - recommended: 12-16 GB RAM
-- download: about 2.5 GB
+- download: about 17.0 GB
 
 Embedding model:
 
@@ -80,7 +81,7 @@ Embedding model:
 - Production backend serving for real Q4 files.
 - Automatic install and lifecycle management for the separate Matter Search embedding model.
 - Android native Q4 inference.
-- iOS Q4 inference unless a compatible runtime bridge is linked and tested.
+- full physical-iPhone download/resume/verify/activate and imported-file QA with a configured multi-GB pack.
 - Hardware proof of the full Gemma 4 stack on target devices.
 
 No model files are committed, bundled, or downloaded into the repository.

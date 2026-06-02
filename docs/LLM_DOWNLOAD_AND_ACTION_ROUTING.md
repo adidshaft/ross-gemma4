@@ -19,9 +19,10 @@ Production metadata mode:
 
 ## Tier Mapping
 
-- Quick Start -> Gemma 4 E2B Q4, `gemma_local_runtime`, about 430 MB
-- Case Associate -> Gemma 4 E4B Q4, `gemma_local_runtime`, about 1.1-1.3 GB
-- Senior Drafting Support -> Gemma 4 26B-A4B Q4, `gemma_local_runtime`, about 2.5 GB
+- Flash -> Gemma 4 E2B Q2, `gemma_local_runtime`, about 3.0 GB
+- Quick Start -> Gemma 4 E2B Q4, `gemma_local_runtime`, about 3.5 GB
+- Case Associate -> Gemma 4 E4B Q4, `gemma_local_runtime`, about 5.4 GB
+- Senior Drafting Support -> Gemma 4 26B-A4B Q4, `gemma_local_runtime`, about 17.0 GB
 
 Normal users see only the tier names and plain-language setup states.
 

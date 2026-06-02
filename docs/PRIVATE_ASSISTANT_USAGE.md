@@ -42,18 +42,18 @@ When the private assistant is ready:
 
 Quick Start:
 
-- about 430 MB
+- about 3.5 GB
 - starts quickly with basic local review and simple Ask Ross actions
 
 Case Associate:
 
 - recommended
-- about 1.1-1.3 GB
+- about 5.4 GB
 - best default for document review, chronologies, hearing notes, and source-backed answers
 
 Senior Drafting Support:
 
-- about 2.5 GB
+- about 17.0 GB
 - best for deeper review, longer matter reasoning, and drafting support
 
 Matter Search:
@@ -64,7 +64,7 @@ Matter Search:
 
 ## Technical Details Boundary
 
-These belong only under `Settings -> Advanced -> Technical diagnostics`:
+These belong only under `Settings -> Advanced -> Support details` in debug builds or dedicated QA logs:
 
 - technical model names
 - repository names
