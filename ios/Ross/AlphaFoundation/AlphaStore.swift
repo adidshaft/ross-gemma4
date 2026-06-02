@@ -636,7 +636,7 @@ actor AlphaRossStore {
             return extractPDFContent(from: url)
             #else
             return AlphaDocumentExtraction(
-                pages: [AlphaDocumentPage(pageNumber: 1, snippet: "PDF imported locally. Native text extraction is unavailable in this build.")],
+                pages: [AlphaDocumentPage(pageNumber: 1, snippet: "PDF imported locally. Ross could not read selectable text from this file yet.")],
                 extractedText: nil,
                 dominantSourceSnippet: nil,
                 ocrStatus: .placeholder,
@@ -728,7 +728,7 @@ actor AlphaRossStore {
     private func extractPDFContent(from url: URL) -> AlphaDocumentExtraction {
         guard let pdf = PDFDocument(url: url) else {
             return AlphaDocumentExtraction(
-                pages: [AlphaDocumentPage(pageNumber: 1, snippet: "PDF imported locally. Text extraction is unavailable for this file.")],
+                pages: [AlphaDocumentPage(pageNumber: 1, snippet: "PDF imported locally. Ross could not read text from this file.")],
                 extractedText: nil,
                 dominantSourceSnippet: nil,
                 ocrStatus: .placeholder,
@@ -827,7 +827,7 @@ actor AlphaRossStore {
             )
         } catch {
             return AlphaDocumentExtraction(
-                pages: [AlphaDocumentPage(pageNumber: 1, snippet: "Imported image page. OCR could not run locally.")],
+                pages: [AlphaDocumentPage(pageNumber: 1, snippet: "Image imported locally. Ross could not read text from this image yet.")],
                 extractedText: nil,
                 dominantSourceSnippet: nil,
                 ocrStatus: .placeholder,
@@ -836,7 +836,7 @@ actor AlphaRossStore {
         }
         #else
         return AlphaDocumentExtraction(
-            pages: [AlphaDocumentPage(pageNumber: 1, snippet: "Imported image page. OCR is unavailable in this build.")],
+            pages: [AlphaDocumentPage(pageNumber: 1, snippet: "Image imported locally. Ross could not read text from this image yet.")],
             extractedText: nil,
             dominantSourceSnippet: nil,
             ocrStatus: .placeholder,
