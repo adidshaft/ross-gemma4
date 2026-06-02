@@ -1110,11 +1110,11 @@ struct AlphaAskSuggestionBadge: View {
             )
             .padding(.horizontal, 8)
             .padding(.vertical, 5)
-            .background(
-                tone == .dock
-                    ? (colorScheme == .dark ? Color.white.opacity(0.08) : Color.rossAccent.opacity(0.08))
-                    : Color.rossAccent.opacity(0.08),
-                in: Capsule()
+            .rossNativeGlassSurface(
+                tint: tone == .dock ? Color.rossHighlight : Color.rossAccent,
+                shape: Capsule(),
+                fallbackFillOpacity: tone == .dock ? 0.56 : 0.64,
+                fallbackStrokeOpacity: 0.36
             )
     }
 }
@@ -1178,14 +1178,15 @@ struct AlphaAskMentionSuggestionRow: View {
         let icon = alphaDocumentGlassIcon(document.kind)
         let dockPrimary = colorScheme == .dark ? Color.white.opacity(0.88) : Color.rossInk.opacity(0.9)
         let dockSecondary = colorScheme == .dark ? Color.white.opacity(0.52) : Color.rossInk.opacity(0.56)
-        let dockBackground = colorScheme == .dark ? Color.white.opacity(0.05) : Color.white.opacity(0.54)
 
         HStack(spacing: 10) {
             RossGlassIconView(icon.0, variant: icon.1, size: 16, fallbackSystemImage: icon.2)
                 .frame(width: 26, height: 26)
-                .background(
-                    tone == .dock ? dockBackground : Color.rossGlassFill,
-                    in: RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .rossNativeGlassSurface(
+                    tint: tone == .dock ? Color.rossHighlight : Color.rossAccent,
+                    shape: RoundedRectangle(cornerRadius: 9, style: .continuous),
+                    fallbackFillOpacity: tone == .dock ? 0.54 : 0.66,
+                    fallbackStrokeOpacity: tone == .dock ? 0.34 : 0.42
                 )
 
             VStack(alignment: .leading, spacing: 3) {
@@ -1206,19 +1207,13 @@ struct AlphaAskMentionSuggestionRow: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(
-            tone == .dock ? dockBackground : Color.rossGlassFill,
-            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+        .rossNativeGlassSurface(
+            tint: tone == .dock ? Color.rossHighlight : Color.rossAccent.opacity(0.18),
+            shape: RoundedRectangle(cornerRadius: 14, style: .continuous),
+            interactive: true,
+            fallbackFillOpacity: tone == .dock ? 0.70 : 0.78,
+            fallbackStrokeOpacity: tone == .dock ? 0.46 : 0.54
         )
-        .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(
-                    tone == .dock
-                        ? (colorScheme == .dark ? Color.white.opacity(0.06) : Color.rossGlassStroke.opacity(0.86))
-                        : Color.rossGlassStroke.opacity(0.82),
-                    lineWidth: 1
-                )
-        }
     }
 }
 
