@@ -453,41 +453,41 @@ struct AlphaPrivacyLedgerScreen: View {
         ScrollView {
             RossGlassGroup(spacing: alphaSectionSpacing) {
                 VStack(alignment: .leading, spacing: alphaSectionSpacing) {
-                    RossSectionCard(title: "Privacy summary") {
-                    Text("In the last 30 days, 0 case details left this phone. Legal Search only used sanitized legal queries.")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.rossInk.opacity(0.72))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                if model.persisted.ledgerEntries.isEmpty {
-                    RossSectionCard {
-                        Text("Ross has not logged any local or network actions yet.")
+                    RossSectionCard(title: rossLocalized("privacy_summary")) {
+                        Text(rossLocalized("privacy_summary_detail"))
                             .font(.subheadline)
-                            .foregroundStyle(Color.rossInk.opacity(0.7))
+                            .foregroundStyle(Color.rossInk.opacity(0.72))
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                } else {
-                    ForEach(model.persisted.ledgerEntries) { entry in
-                        RossSectionCard(title: entry.lawyerTitle, subtitle: entry.lawyerDetail) {
-                            HStack(alignment: .center, spacing: 12) {
-                                Text(entry.lawyerPurposeLabel)
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(Color.rossInk.opacity(0.68))
 
-                                Spacer(minLength: 8)
+                    if model.persisted.ledgerEntries.isEmpty {
+                        RossSectionCard {
+                            Text(rossLocalized("privacy_ledger_empty"))
+                                .font(.subheadline)
+                                .foregroundStyle(Color.rossInk.opacity(0.7))
+                        }
+                    } else {
+                        ForEach(model.persisted.ledgerEntries) { entry in
+                            RossSectionCard(title: entry.lawyerTitle, subtitle: entry.lawyerDetail) {
+                                HStack(alignment: .center, spacing: 12) {
+                                    Text(entry.lawyerPurposeLabel)
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(Color.rossInk.opacity(0.68))
 
-                                Text(entry.success ? "Completed" : "Needs attention")
-                                    .font(.caption.weight(.bold))
-                                    .foregroundStyle(entry.success ? Color.rossSuccess : .orange)
+                                    Spacer(minLength: 8)
+
+                                    Text(entry.success ? rossLocalized("completed") : rossLocalized("needs_attention"))
+                                        .font(.caption.weight(.bold))
+                                        .foregroundStyle(entry.success ? Color.rossSuccess : .orange)
+                                }
                             }
                         }
                     }
                 }
-                }
                 .padding(alphaScreenPadding)
             }
         }
-        .navigationTitle("Activity Log")
+        .navigationTitle(rossLocalized("activity_log"))
         .rossInlineNavigationTitle()
     }
 }
@@ -946,14 +946,14 @@ struct AlphaPrivateAIInstalledPackCard: View {
                         .font(.headline)
                         .foregroundStyle(Color.rossInk)
 
-                    Text(isReady ? "My assistant is ready" : "My assistant needs attention")
+                    Text(isReady ? rossLocalized("my_assistant_ready") : rossLocalized("my_assistant_needs_attention"))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(isReady ? Color.rossSuccess : Color.orange)
                 }
 
                 Spacer(minLength: 8)
 
-                AlphaPrivateAIInlineBadge(title: isReady ? "Ready" : "Needs attention", tint: isReady ? Color.rossSuccess : Color.orange)
+                AlphaPrivateAIInlineBadge(title: isReady ? rossLocalized("ready") : rossLocalized("needs_attention"), tint: isReady ? Color.rossSuccess : Color.orange)
             }
 
             if runtimeUnavailable, let runtimeStatus = model.activeRuntimeHealth?.userFacingStatus {
@@ -965,13 +965,13 @@ struct AlphaPrivateAIInstalledPackCard: View {
 
             RossGlassGroup(spacing: 10) {
                 HStack(spacing: 10) {
-                    Button("Use this option") {
+                    Button(rossLocalized("use_this_option")) {
                         model.activateInstalledPack(pack)
                     }
                     .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
                     .disabled(!canActivate)
 
-                    Button("Remove", role: .destructive) {
+                    Button(rossLocalized("remove"), role: .destructive) {
                         model.removeInstalledPack(pack)
                     }
                     .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 16)
@@ -1284,7 +1284,7 @@ private struct AlphaAssistantStorageFootprintRow: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color.rossAccent)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Assistant files")
+                    Text(rossLocalized("assistant_files"))
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.rossInk)
                     Text(alphaFileSizeLabel(breakdown.totalBytes))
@@ -1293,7 +1293,7 @@ private struct AlphaAssistantStorageFootprintRow: View {
                 }
                 Spacer(minLength: 0)
                 RossGlassGroup(spacing: 8) {
-                    Button(isReclaiming ? "Cleaning" : "Reclaim") {
+                    Button(isReclaiming ? rossLocalized("cleaning") : rossLocalized("reclaim")) {
                         Task { await reclaimStorage() }
                     }
                     .font(.caption.weight(.semibold))
@@ -1304,9 +1304,9 @@ private struct AlphaAssistantStorageFootprintRow: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 storageDetail(alphaPrivateAIVerifiedStorageLabel, bytes: breakdown.modelPackBytes)
-                storageDetail("Interrupted downloads", bytes: breakdown.pendingDownloadBytes)
-                storageDetail("Resume data", bytes: breakdown.resumeBytes)
-                storageDetail("Device cache", bytes: breakdown.deviceCacheBytes)
+                storageDetail(rossLocalized("interrupted_downloads"), bytes: breakdown.pendingDownloadBytes)
+                storageDetail(rossLocalized("resume_data"), bytes: breakdown.resumeBytes)
+                storageDetail(rossLocalized("device_cache"), bytes: breakdown.deviceCacheBytes)
             }
 
             if let reclaimStatus {
@@ -1336,17 +1336,23 @@ private struct AlphaAssistantStorageFootprintRow: View {
     private func reclaimStorage() async {
         guard !isReclaiming else { return }
         isReclaiming = true
-        reclaimStatus = "Cleaning interrupted setup files..."
+        reclaimStatus = rossLocalized("cleaning_interrupted_setup_files")
         let reclaimedBytes = await model.reclaimAssistantStorageLeaks()
         await refresh()
         reclaimStatus = reclaimedBytes > 0
-            ? "Reclaimed \(alphaFileSizeLabel(reclaimedBytes))."
-            : "No extra assistant setup files found."
+            ? alphaReclaimedAssistantStorageLabel(alphaFileSizeLabel(reclaimedBytes))
+            : rossLocalized("no_extra_assistant_setup_files")
         isReclaiming = false
     }
 }
 
-let alphaSamplerSettingsExplanation = "Tune how boldly the private assistant writes. The recommended defaults keep answers grounded and concise."
+func alphaSamplerSettingsExplanation(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("answer_style_tuning_detail", languageCode: languageCode)
+}
+
+func alphaReclaimedAssistantStorageLabel(_ sizeLabel: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("reclaimed_assistant_storage", languageCode: languageCode), sizeLabel)
+}
 
 private struct AlphaSamplerSettingsCard: View {
     @Bindable var model: AlphaRossModel
@@ -1354,23 +1360,23 @@ private struct AlphaSamplerSettingsCard: View {
 
     var body: some View {
         let settings = model.persisted.settings.llamaSamplerSettings
-        RossSectionCard(title: "Answer style") {
+        RossSectionCard(title: rossLocalized("answer_style")) {
             VStack(alignment: .leading, spacing: 12) {
-                AlphaSettingsValueRow(label: "Current style", value: "Grounded legal answers")
+                AlphaSettingsValueRow(label: rossLocalized("current_style"), value: rossLocalized("grounded_legal_answers"))
 
-                Text("Ross uses conservative defaults for legal Q&A so answers stay concise and tied to your files.")
+                Text(rossLocalized("answer_style_detail"))
                     .font(.footnote)
                     .foregroundStyle(Color.rossInk.opacity(0.68))
                     .fixedSize(horizontal: false, vertical: true)
 
                 DisclosureGroup(isExpanded: $advancedTuningExpanded) {
                     VStack(alignment: .leading, spacing: 14) {
-                        Text(alphaSamplerSettingsExplanation)
+                        Text(alphaSamplerSettingsExplanation())
                             .font(.footnote)
                             .foregroundStyle(Color.rossInk.opacity(0.66))
 
                         samplerSlider(
-                            title: "Creativity",
+                            title: rossLocalized("creativity"),
                             value: settings.temperature,
                             range: 0.0...1.0,
                             step: 0.05
@@ -1379,7 +1385,7 @@ private struct AlphaSamplerSettingsCard: View {
                         }
 
                         samplerSlider(
-                            title: "Focus",
+                            title: rossLocalized("focus"),
                             value: settings.topP,
                             range: 0.5...1.0,
                             step: 0.05
@@ -1388,7 +1394,7 @@ private struct AlphaSamplerSettingsCard: View {
                         }
 
                         samplerSlider(
-                            title: "Repetition control",
+                            title: rossLocalized("repetition_control"),
                             value: settings.repeatPenalty,
                             range: 1.0...1.4,
                             step: 0.05
@@ -1397,7 +1403,7 @@ private struct AlphaSamplerSettingsCard: View {
                         }
 
                         HStack(spacing: 10) {
-                            Text("Candidate limit")
+                            Text(rossLocalized("candidate_limit"))
                                 .font(.footnote.weight(.semibold))
                                 .foregroundStyle(Color.rossInk)
                             Spacer(minLength: 8)
@@ -1413,14 +1419,14 @@ private struct AlphaSamplerSettingsCard: View {
                                 .foregroundStyle(Color.rossInk.opacity(0.7))
                         }
 
-                        Button("Restore recommended style") {
+                        Button(rossLocalized("restore_recommended_style")) {
                             model.updateSettings { $0.llamaSamplerSettings = .legalQA }
                         }
                         .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 14)
                     }
                     .padding(.top, 12)
                 } label: {
-                    AlphaSettingsValueRow(label: "Advanced tuning", value: advancedTuningExpanded ? "Shown" : "Hidden")
+                    AlphaSettingsValueRow(label: rossLocalized("advanced_tuning"), value: advancedTuningExpanded ? rossLocalized("shown") : rossLocalized("hidden"))
                 }
                 .tint(Color.rossAccent)
             }

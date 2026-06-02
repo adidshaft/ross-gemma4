@@ -896,6 +896,230 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "matters மற்றும் drafts வைத்துக்கொண்டு local assistant setup files மற்றும் resume data நீக்கும்.",
             "te": "matters మరియు drafts ను ఉంచి local assistant setup files మరియు resume data ను తొలగిస్తుంది."
         ],
+        "privacy_summary": [
+            "en": "Privacy summary",
+            "hi": "Privacy summary",
+            "bn": "Privacy summary",
+            "ta": "Privacy summary",
+            "te": "Privacy summary"
+        ],
+        "privacy_summary_detail": [
+            "en": "In the last 30 days, 0 case details left this phone. Legal Search only used sanitized legal queries.",
+            "hi": "पिछले 30 दिनों में 0 case details इस phone से बाहर गए। Legal Search ने केवल sanitized legal queries use कीं।",
+            "bn": "গত 30 দিনে 0 case details এই phone ছেড়েছে। Legal Search শুধু sanitized legal queries ব্যবহার করেছে।",
+            "ta": "கடைசி 30 நாட்களில் 0 case details இந்த phone-ஐ விட்டுச் சென்றன. Legal Search sanitized legal queries மட்டும் பயன்படுத்தியது.",
+            "te": "గత 30 రోజుల్లో 0 case details ఈ phone బయటకు వెళ్లాయి. Legal Search sanitized legal queries మాత్రమే ఉపయోగించింది."
+        ],
+        "privacy_ledger_empty": [
+            "en": "Ross has not logged any local or network actions yet.",
+            "hi": "Ross ने अभी तक कोई local या network actions log नहीं किए हैं।",
+            "bn": "Ross এখনও কোনো local বা network actions log করেনি।",
+            "ta": "Ross இன்னும் local அல்லது network actions எதையும் log செய்யவில்லை.",
+            "te": "Ross ఇంకా ఏ local లేదా network actions log చేయలేదు."
+        ],
+        "completed": [
+            "en": "Completed",
+            "hi": "पूरा हुआ",
+            "bn": "সম্পন্ন",
+            "ta": "முடிந்தது",
+            "te": "పూర్తయింది"
+        ],
+        "needs_attention": [
+            "en": "Needs attention",
+            "hi": "ध्यान चाहिए",
+            "bn": "মনোযোগ দরকার",
+            "ta": "கவனம் தேவை",
+            "te": "శ్రద్ధ అవసరం"
+        ],
+        "my_assistant_ready": [
+            "en": "My assistant is ready",
+            "hi": "My assistant तैयार है",
+            "bn": "My assistant প্রস্তুত",
+            "ta": "My assistant தயாராக உள்ளது",
+            "te": "My assistant సిద్ధంగా ఉంది"
+        ],
+        "my_assistant_needs_attention": [
+            "en": "My assistant needs attention",
+            "hi": "My assistant को attention चाहिए",
+            "bn": "My assistant-এর attention দরকার",
+            "ta": "My assistant-க்கு attention தேவை",
+            "te": "My assistant కు attention అవసరం"
+        ],
+        "ready": [
+            "en": "Ready",
+            "hi": "तैयार",
+            "bn": "প্রস্তুত",
+            "ta": "தயார்",
+            "te": "సిద్ధం"
+        ],
+        "use_this_option": [
+            "en": "Use this option",
+            "hi": "यह option use करें",
+            "bn": "এই option use করুন",
+            "ta": "இந்த option use செய்யவும்",
+            "te": "ఈ option use చేయండి"
+        ],
+        "remove": [
+            "en": "Remove",
+            "hi": "हटाएं",
+            "bn": "সরান",
+            "ta": "நீக்கவும்",
+            "te": "తొలగించండి"
+        ],
+        "assistant_files": [
+            "en": "Assistant files",
+            "hi": "Assistant files",
+            "bn": "Assistant files",
+            "ta": "Assistant files",
+            "te": "Assistant files"
+        ],
+        "cleaning": [
+            "en": "Cleaning",
+            "hi": "Cleaning",
+            "bn": "Cleaning",
+            "ta": "Cleaning",
+            "te": "Cleaning"
+        ],
+        "reclaim": [
+            "en": "Reclaim",
+            "hi": "Reclaim",
+            "bn": "Reclaim",
+            "ta": "Reclaim",
+            "te": "Reclaim"
+        ],
+        "interrupted_downloads": [
+            "en": "Interrupted downloads",
+            "hi": "Interrupted downloads",
+            "bn": "Interrupted downloads",
+            "ta": "Interrupted downloads",
+            "te": "Interrupted downloads"
+        ],
+        "resume_data": [
+            "en": "Resume data",
+            "hi": "Resume data",
+            "bn": "Resume data",
+            "ta": "Resume data",
+            "te": "Resume data"
+        ],
+        "device_cache": [
+            "en": "Device cache",
+            "hi": "Device cache",
+            "bn": "Device cache",
+            "ta": "Device cache",
+            "te": "Device cache"
+        ],
+        "cleaning_interrupted_setup_files": [
+            "en": "Cleaning interrupted setup files...",
+            "hi": "interrupted setup files clean हो रहे हैं...",
+            "bn": "interrupted setup files clean হচ্ছে...",
+            "ta": "interrupted setup files clean ஆகின்றன...",
+            "te": "interrupted setup files clean అవుతున్నాయి..."
+        ],
+        "reclaimed_assistant_storage": [
+            "en": "Reclaimed %@.",
+            "hi": "%@ reclaim हुआ।",
+            "bn": "%@ reclaim হয়েছে।",
+            "ta": "%@ reclaim செய்யப்பட்டது.",
+            "te": "%@ reclaim అయింది."
+        ],
+        "no_extra_assistant_setup_files": [
+            "en": "No extra assistant setup files found.",
+            "hi": "extra assistant setup files नहीं मिले।",
+            "bn": "extra assistant setup files পাওয়া যায়নি।",
+            "ta": "extra assistant setup files இல்லை.",
+            "te": "extra assistant setup files కనబడలేదు."
+        ],
+        "answer_style": [
+            "en": "Answer style",
+            "hi": "Answer style",
+            "bn": "Answer style",
+            "ta": "Answer style",
+            "te": "Answer style"
+        ],
+        "current_style": [
+            "en": "Current style",
+            "hi": "Current style",
+            "bn": "Current style",
+            "ta": "Current style",
+            "te": "Current style"
+        ],
+        "grounded_legal_answers": [
+            "en": "Grounded legal answers",
+            "hi": "Grounded legal answers",
+            "bn": "Grounded legal answers",
+            "ta": "Grounded legal answers",
+            "te": "Grounded legal answers"
+        ],
+        "answer_style_detail": [
+            "en": "Ross uses conservative defaults for legal Q&A so answers stay concise and tied to your files.",
+            "hi": "legal Q&A में answers concise और आपकी files से tied रहें, इसलिए Ross conservative defaults use करता है।",
+            "bn": "legal Q&A-তে answers concise এবং আপনার files-এর সঙ্গে tied রাখতে Ross conservative defaults ব্যবহার করে।",
+            "ta": "legal Q&A-யில் answers concise ஆகவும் உங்கள் files-க்கு tied ஆகவும் இருக்க Ross conservative defaults பயன்படுத்துகிறது.",
+            "te": "legal Q&A లో answers concise గా మరియు మీ files కు tied గా ఉండేందుకు Ross conservative defaults ఉపయోగిస్తుంది."
+        ],
+        "answer_style_tuning_detail": [
+            "en": "Tune how boldly the private assistant writes. The recommended defaults keep answers grounded and concise.",
+            "hi": "private assistant कितना bold लिखे, यह tune करें। recommended defaults answers को grounded और concise रखते हैं।",
+            "bn": "private assistant কতটা bold লিখবে তা tune করুন। recommended defaults answers grounded এবং concise রাখে।",
+            "ta": "private assistant எவ்வளவு bold ஆக எழுதும் என்பதை tune செய்யவும். recommended defaults answers grounded மற்றும் concise ஆக வைத்திருக்கும்.",
+            "te": "private assistant ఎంత bold గా రాయాలో tune చేయండి. recommended defaults answers ను grounded మరియు concise గా ఉంచుతాయి."
+        ],
+        "creativity": [
+            "en": "Creativity",
+            "hi": "Creativity",
+            "bn": "Creativity",
+            "ta": "Creativity",
+            "te": "Creativity"
+        ],
+        "focus": [
+            "en": "Focus",
+            "hi": "Focus",
+            "bn": "Focus",
+            "ta": "Focus",
+            "te": "Focus"
+        ],
+        "repetition_control": [
+            "en": "Repetition control",
+            "hi": "Repetition control",
+            "bn": "Repetition control",
+            "ta": "Repetition control",
+            "te": "Repetition control"
+        ],
+        "candidate_limit": [
+            "en": "Candidate limit",
+            "hi": "Candidate limit",
+            "bn": "Candidate limit",
+            "ta": "Candidate limit",
+            "te": "Candidate limit"
+        ],
+        "restore_recommended_style": [
+            "en": "Restore recommended style",
+            "hi": "recommended style restore करें",
+            "bn": "recommended style restore করুন",
+            "ta": "recommended style restore செய்யவும்",
+            "te": "recommended style restore చేయండి"
+        ],
+        "advanced_tuning": [
+            "en": "Advanced tuning",
+            "hi": "Advanced tuning",
+            "bn": "Advanced tuning",
+            "ta": "Advanced tuning",
+            "te": "Advanced tuning"
+        ],
+        "shown": [
+            "en": "Shown",
+            "hi": "दिखाया गया",
+            "bn": "দেখানো",
+            "ta": "காட்டப்பட்டது",
+            "te": "చూపబడింది"
+        ],
+        "hidden": [
+            "en": "Hidden",
+            "hi": "छिपा हुआ",
+            "bn": "লুকানো",
+            "ta": "மறைக்கப்பட்டது",
+            "te": "దాచబడింది"
+        ],
         "assistant_device_cache": [
             "en": "Device cache",
             "hi": "डिवाइस cache",

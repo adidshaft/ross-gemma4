@@ -603,7 +603,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         for term in forbidden {
             XCTAssertNil(
-                alphaSamplerSettingsExplanation.range(of: term, options: [.caseInsensitive]),
+                alphaSamplerSettingsExplanation().range(of: term, options: [.caseInsensitive]),
                 "\(term) leaked into answer tuning copy"
             )
         }
@@ -741,6 +741,26 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(
             rossLocalized("assistant_setup_on_phone", languageCode: "ta"),
             "இந்த iPhone-இல் அமைக்கவும்"
+        )
+        XCTAssertEqual(
+            rossLocalized("privacy_ledger_empty", languageCode: "hi"),
+            "Ross ने अभी तक कोई local या network actions log नहीं किए हैं।"
+        )
+        XCTAssertEqual(
+            alphaReclaimedAssistantStorageLabel("12 MB", languageCode: "ta"),
+            "12 MB reclaim செய்யப்பட்டது."
+        )
+        XCTAssertEqual(
+            rossLocalized("answer_style_detail", languageCode: "bn"),
+            "legal Q&A-তে answers concise এবং আপনার files-এর সঙ্গে tied রাখতে Ross conservative defaults ব্যবহার করে।"
+        )
+        XCTAssertEqual(
+            alphaSamplerSettingsExplanation(languageCode: "hi"),
+            "private assistant कितना bold लिखे, यह tune करें। recommended defaults answers को grounded और concise रखते हैं।"
+        )
+        XCTAssertEqual(
+            rossLocalized("restore_recommended_style", languageCode: "te-IN"),
+            "recommended style restore చేయండి"
         )
         XCTAssertEqual(
             rossLocalized("assistant_network_wifi_preferred", languageCode: "te-IN"),
