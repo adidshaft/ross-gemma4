@@ -164,7 +164,7 @@ struct AlphaMatterEditorDateField: View {
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(Color.rossAccent)
 
-                        Text("Add next hearing date")
+                        Text(rossLocalized("add_next_hearing_date"))
                             .font(.body.weight(.medium))
                             .foregroundStyle(Color.rossInk)
 
@@ -208,7 +208,7 @@ struct AlphaMatterEditorDateField: View {
                     )
 
                     RossGlassGroup(spacing: 8) {
-                        Button("Clear date") {
+                        Button(rossLocalized("clear_date")) {
                             date = nil
                         }
                         .font(.footnote.weight(.semibold))
@@ -271,6 +271,10 @@ func alphaGreeting() -> String {
     "Today"
 }
 
+func alphaOpenTaskCountLabel(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized(count == 1 ? "one_open_task" : "open_tasks_count", languageCode: languageCode), count)
+}
+
 struct AlphaCaseSummaryCard: View {
     @Bindable var model: AlphaRossModel
     let caseMatter: AlphaCaseMatter
@@ -293,7 +297,7 @@ struct AlphaCaseSummaryCard: View {
 
             Spacer(minLength: 10)
 
-            Text("\(model.openTaskCount(for: caseMatter.id)) open")
+            Text(alphaOpenTaskCountLabel(model.openTaskCount(for: caseMatter.id)))
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Color.rossAccent)
                 .padding(.horizontal, 10)
@@ -334,7 +338,7 @@ struct AlphaCaseSummaryLine: View {
                     .foregroundStyle(Color.rossInk)
                     .lineLimit(1)
 
-                Text("\(caseMatter.forum) · \(caseMatter.documents.count) files")
+                Text("\(caseMatter.forum) · \(alphaFileCountLabel(caseMatter.documents.count))")
                     .font(.caption)
                     .foregroundStyle(Color.rossInk.opacity(0.62))
                     .lineLimit(1)
@@ -344,7 +348,7 @@ struct AlphaCaseSummaryLine: View {
 
             Text(
                 caseMatter.nextHearing?.formatted(date: .abbreviated, time: .omitted)
-                    ?? "\(model.openTaskCount(for: caseMatter.id)) open"
+                    ?? alphaOpenTaskCountLabel(model.openTaskCount(for: caseMatter.id))
             )
             .font(.caption.weight(.semibold))
             .foregroundStyle(caseMatter.nextHearing == nil ? Color.rossInk.opacity(0.55) : Color.rossAccent)
@@ -394,7 +398,7 @@ struct AlphaCaseFolderCard: View {
 
             Text(
                 caseMatter.nextHearing?.formatted(date: .abbreviated, time: .omitted)
-                    ?? "\(model.openTaskCount(for: caseMatter.id)) open task(s)"
+                    ?? alphaOpenTaskCountLabel(model.openTaskCount(for: caseMatter.id))
             )
             .font(.caption)
             .foregroundStyle(tint.opacity(0.9))

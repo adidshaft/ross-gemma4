@@ -914,6 +914,14 @@ final class AlphaExtractionTests: XCTestCase {
             "కేసు పేరు నమోదు చేయండి"
         )
         XCTAssertEqual(
+            rossLocalized("add_next_hearing_date", languageCode: "ta"),
+            "அடுத்த hearing date சேர்க்கவும்"
+        )
+        XCTAssertEqual(
+            alphaOpenTaskCountLabel(2, languageCode: "bn"),
+            "2 open"
+        )
+        XCTAssertEqual(
             rossLocalized("matter_chat", languageCode: "ta"),
             "வழக்கு chat"
         )

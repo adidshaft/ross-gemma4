@@ -2002,6 +2002,34 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "வழக்கை உருவாக்கவும்",
             "te": "కేసు సృష్టించండి"
         ],
+        "add_next_hearing_date": [
+            "en": "Add next hearing date",
+            "hi": "अगली hearing date जोड़ें",
+            "bn": "পরবর্তী hearing date যোগ করুন",
+            "ta": "அடுத்த hearing date சேர்க்கவும்",
+            "te": "తదుపరి hearing date జోడించండి"
+        ],
+        "clear_date": [
+            "en": "Clear date",
+            "hi": "date साफ़ करें",
+            "bn": "date পরিষ্কার করুন",
+            "ta": "date அழிக்கவும்",
+            "te": "date క్లియర్ చేయండి"
+        ],
+        "one_open_task": [
+            "en": "%d open",
+            "hi": "%d open",
+            "bn": "%d open",
+            "ta": "%d open",
+            "te": "%d open"
+        ],
+        "open_tasks_count": [
+            "en": "%d open",
+            "hi": "%d open",
+            "bn": "%d open",
+            "ta": "%d open",
+            "te": "%d open"
+        ],
         "matter_chat": [
             "en": "Matter chat",
             "hi": "मामला chat",
