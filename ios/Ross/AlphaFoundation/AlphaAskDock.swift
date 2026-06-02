@@ -1628,9 +1628,17 @@ struct AlphaRootAskToolsSheet: View {
                             .foregroundStyle(Color.rossInk.opacity(0.64))
 
                         if availableDocuments.isEmpty {
-                            Text("No files are ready here yet.")
-                                .font(.subheadline)
-                                .foregroundStyle(Color.rossInk.opacity(0.62))
+                            AlphaRootAskEmptyFilesCard(
+                                scopeIsShared: activeScopeCaseID == nil || activeScopeCaseID == alphaSharedWorkspaceID,
+                                onAddFile: {
+                                    dismiss()
+                                    onAddFile()
+                                },
+                                onAddImage: {
+                                    dismiss()
+                                    onAddImage()
+                                }
+                            )
                         }
 
                         ForEach(availableDocuments) { document in
@@ -1652,6 +1660,63 @@ struct AlphaRootAskToolsSheet: View {
             }
             .padding(20)
         }
+    }
+}
+
+struct AlphaRootAskEmptyFilesCard: View {
+    let scopeIsShared: Bool
+    let onAddFile: () -> Void
+    let onAddImage: () -> Void
+
+    private var detail: String {
+        scopeIsShared
+            ? "Add a PDF, note, photo, or scan. Ross will read it locally before using it in Ask."
+            : "Add a PDF, note, photo, or scan to this matter. Ross will read it locally before using it in Ask."
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                RossGlassIconView(.fileUpload, variant: .accent, size: 28, fallbackSystemImage: "doc.badge.plus")
+                    .frame(width: 32, height: 32)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("No ready files yet")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.rossInk)
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundStyle(Color.rossInk.opacity(0.66))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            HStack(spacing: 8) {
+                Button {
+                    onAddFile()
+                } label: {
+                    Label("Add file", systemImage: "doc.badge.plus")
+                }
+                .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 15)
+
+                Button {
+                    onAddImage()
+                } label: {
+                    Label("Add image", systemImage: "photo")
+                }
+                .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 15)
+            }
+        }
+        .padding(14)
+        .rossGlassSurface(
+            tint: Color.rossAccent.opacity(0.14),
+            cornerRadius: 18,
+            shadowOpacity: 0.07,
+            shadowRadius: 7,
+            shadowY: 3,
+            fillOpacity: 0.80,
+            strokeOpacity: 0.48
+        )
     }
 }
 
