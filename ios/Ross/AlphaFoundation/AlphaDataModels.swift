@@ -212,15 +212,26 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
     }
 
     var setupWarning: String {
+        setupWarning(languageCode: rossSelectedLanguageCode())
+    }
+
+    func setupWarning(languageCode: String) -> String {
         switch self {
-        case .flash:
-            "Download about 3.0 GB before you begin. Wi-Fi is still the safest option."
-        case .quickStart:
-            "Download about 3.5 GB before you begin. Wi-Fi is still the safest option."
+        case .flash, .quickStart:
+            String(
+                format: rossLocalized("setup_warning_wifi", languageCode: languageCode),
+                downloadSizeLabel
+            )
         case .caseAssociate:
-            "Download about 5.4 GB before you begin. Keep this phone on Wi-Fi and make sure there is enough free space."
+            String(
+                format: rossLocalized("setup_warning_storage", languageCode: languageCode),
+                downloadSizeLabel
+            )
         case .seniorDraftingSupport:
-            "Download about 17.0 GB before you begin. Use strong Wi-Fi and check that this phone has plenty of free space."
+            String(
+                format: rossLocalized("setup_warning_large", languageCode: languageCode),
+                downloadSizeLabel
+            )
         }
     }
 
