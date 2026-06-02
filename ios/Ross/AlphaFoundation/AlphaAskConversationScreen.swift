@@ -262,7 +262,7 @@ struct AlphaFullScreenChatTopBar: View {
             Spacer(minLength: 0)
 
             Menu {
-                Button("Ross") { onSelectScope(nil) }
+                Button(rossLocalized("ross_scope_all")) { onSelectScope(nil) }
                 ForEach(cases) { caseMatter in
                     Button(caseMatter.title) { onSelectScope(caseMatter.id) }
                 }
@@ -732,7 +732,7 @@ struct AlphaThreadSidebarSheet: View {
             .map { caseMatter in
                 (title: caseMatter.title, caseId: Optional(caseMatter.id), sessions: model.chatSessions(forScope: caseMatter.id))
             }
-        return [(title: "Ross (General)", caseId: nil, sessions: general)] + matterGroups
+        return [(title: rossLocalized("ross_general_scope"), caseId: nil, sessions: general)] + matterGroups
     }
 
     var body: some View {
@@ -1050,8 +1050,8 @@ struct AlphaAskTurnCard: View {
                     if let preview = result.publicLawPreview {
                         VStack(alignment: .leading, spacing: 8) {
                             AlphaSectionLabel(
-                                title: "What Ross searched",
-                                detail: result.publicLawResults.isEmpty ? "Awaiting your review. No web search used yet." : "Ross removed case details before searching."
+                                title: rossLocalized("what_ross_searched"),
+                                detail: result.publicLawResults.isEmpty ? rossLocalized("awaiting_review_no_web_search") : rossLocalized("ross_removed_case_details_before_searching")
                             )
                             Text(preview.query)
                                 .font(.footnote.weight(.medium))
@@ -1063,7 +1063,7 @@ struct AlphaAskTurnCard: View {
 
                     if !result.publicLawResults.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
-                            AlphaSectionLabel(title: "From Legal Search", detail: "Separate from your case files. Based on a cleaned search query.")
+                            AlphaSectionLabel(title: rossLocalized("from_legal_search"), detail: rossLocalized("from_legal_search_detail"))
                             ForEach(result.publicLawResults) { publicResult in
                                 AlphaPublicLawResultCard(result: publicResult)
                             }
@@ -1287,7 +1287,7 @@ struct AlphaPublicLawResultCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 8) {
-                AlphaTagChip(title: "Legal Search")
+                AlphaTagChip(title: rossLocalized("legal_search"))
                 Spacer(minLength: 8)
                 Text(result.sourceName)
                     .font(.caption.weight(.semibold))

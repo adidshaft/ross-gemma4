@@ -1561,7 +1561,7 @@ struct AlphaRootAskToolsSheet: View {
                         }
 
                         AlphaRootAskToolRow(
-                            title: "Legal Search",
+                            title: rossLocalized("legal_search"),
                             detail: model.askWebEnabled
                                 ? rossLocalized("legal_search_on_detail")
                                 : rossLocalized("legal_search_off_detail"),
@@ -1574,7 +1574,7 @@ struct AlphaRootAskToolsSheet: View {
                         }
 
                         AlphaRootAskToolRow(
-                            title: "Activity Log",
+                            title: rossLocalized("activity_log"),
                             detail: rossLocalized("ask_activity_log_detail"),
                             accentLabel: rossLocalized("open"),
                             icon: .gearKeyhole,

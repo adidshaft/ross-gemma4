@@ -3059,6 +3059,62 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Ross cleaned query உடன் Legal Search பயன்படுத்தும். உங்கள் case files இந்த device-இலேயே இருக்கும்.",
             "te": "Ross cleaned query తో Legal Search ఉపయోగిస్తుంది. మీ case files ఈ device లోనే ఉంటాయి."
         ],
+        "legal_search": [
+            "en": "Legal Search",
+            "hi": "Legal Search",
+            "bn": "Legal Search",
+            "ta": "Legal Search",
+            "te": "Legal Search"
+        ],
+        "what_ross_searched": [
+            "en": "What Ross searched",
+            "hi": "Ross ने क्या search किया",
+            "bn": "Ross কী search করেছে",
+            "ta": "Ross search செய்தது",
+            "te": "Ross search చేసినది"
+        ],
+        "awaiting_review_no_web_search": [
+            "en": "Awaiting your review. No web search used yet.",
+            "hi": "आपके review का इंतज़ार है। अभी web search use नहीं हुआ।",
+            "bn": "আপনার review-এর অপেক্ষায়। এখনও web search ব্যবহার হয়নি।",
+            "ta": "உங்கள் review காத்திருக்கிறது. இன்னும் web search பயன்படுத்தப்படவில்லை.",
+            "te": "మీ review కోసం వేచి ఉంది. ఇంకా web search ఉపయోగించలేదు."
+        ],
+        "ross_removed_case_details_before_searching": [
+            "en": "Ross removed case details before searching.",
+            "hi": "search करने से पहले Ross ने case details हटा दिए।",
+            "bn": "search করার আগে Ross case details সরিয়েছে।",
+            "ta": "search செய்வதற்கு முன் Ross case details நீக்கியது.",
+            "te": "search చేయడానికి ముందు Ross case details తొలగించింది."
+        ],
+        "from_legal_search": [
+            "en": "From Legal Search",
+            "hi": "Legal Search से",
+            "bn": "Legal Search থেকে",
+            "ta": "Legal Search-இலிருந்து",
+            "te": "Legal Search నుండి"
+        ],
+        "from_legal_search_detail": [
+            "en": "Separate from your case files. Based on a cleaned search query.",
+            "hi": "आपकी case files से अलग। cleaned search query पर based।",
+            "bn": "আপনার case files থেকে আলাদা। cleaned search query-এর ভিত্তিতে।",
+            "ta": "உங்கள் case files-இலிருந்து தனி. cleaned search query அடிப்படையில்.",
+            "te": "మీ case files నుండి వేరు. cleaned search query ఆధారంగా."
+        ],
+        "ross_scope_all": [
+            "en": "Ross",
+            "hi": "Ross",
+            "bn": "Ross",
+            "ta": "Ross",
+            "te": "Ross"
+        ],
+        "ross_general_scope": [
+            "en": "Ross (General)",
+            "hi": "Ross (General)",
+            "bn": "Ross (General)",
+            "ta": "Ross (General)",
+            "te": "Ross (General)"
+        ],
         "review_legal_search": [
             "en": "Review Legal Search",
             "hi": "Legal Search review करें",

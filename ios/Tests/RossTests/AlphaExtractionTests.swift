@@ -763,6 +763,14 @@ final class AlphaExtractionTests: XCTestCase {
             "recommended style restore చేయండి"
         )
         XCTAssertEqual(
+            rossLocalized("what_ross_searched", languageCode: "hi"),
+            "Ross ने क्या search किया"
+        )
+        XCTAssertEqual(
+            rossLocalized("from_legal_search_detail", languageCode: "ta"),
+            "உங்கள் case files-இலிருந்து தனி. cleaned search query அடிப்படையில்."
+        )
+        XCTAssertEqual(
             rossLocalized("assistant_network_wifi_preferred", languageCode: "te-IN"),
             "Wi-Fi ప్రాధాన్యం"
         )
