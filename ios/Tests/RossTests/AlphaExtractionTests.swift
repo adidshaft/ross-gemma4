@@ -44,6 +44,23 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testPrivacyLedgerAssistantSetupCopyUsesProductLanguage() {
+        let entry = AlphaPrivacyLedgerEntry(
+            title: "Model catalog checked",
+            detail: "Catalog metadata was reviewed without case files attached.",
+            purpose: .model_catalog,
+            payloadClass: .no_case_data,
+            endpointLabel: "/model-catalog",
+            success: true
+        )
+
+        XCTAssertEqual(entry.lawyerTitle, "Checked private assistant setup")
+        XCTAssertTrue(entry.lawyerDetail.localizedCaseInsensitiveContains("private assistant"))
+        XCTAssertFalse(entry.lawyerDetail.localizedCaseInsensitiveContains("catalog"))
+        XCTAssertFalse(entry.lawyerDetail.localizedCaseInsensitiveContains("model"))
+        XCTAssertFalse(entry.lawyerDetail.localizedCaseInsensitiveContains("provider"))
+    }
+
     func testMatterAskPayloadParserStripsThinkTagsAndSalvagesMalformedJSON() {
         let output = AlphaLocalModelOutput(
             rawText: """

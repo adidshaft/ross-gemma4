@@ -2828,6 +2828,8 @@ extension AlphaPrivacyLedgerEntry {
 
     var lawyerDetail: String {
         switch title {
+        case "Model catalog checked":
+            "Ross checked private assistant setup. No case files were read or sent."
         case "Public-law search reviewed by user", "Legal Search reviewed by user":
             "Ross prepared the sanitized query locally. 0 private case details left the device."
         case "Public-law query sent":
