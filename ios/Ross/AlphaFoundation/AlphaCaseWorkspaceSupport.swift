@@ -452,9 +452,6 @@ struct AlphaCompactNudgeButtonStyle: ButtonStyle {
                 fallbackFillOpacity: configuration.isPressed ? 0.58 : 0.70,
                 fallbackStrokeOpacity: configuration.isPressed ? 0.32 : 0.44
             )
-            .overlay {
-                shape.stroke(tint.opacity(configuration.isPressed ? 0.32 : 0.20), lineWidth: 1)
-            }
             .shadow(
                 color: tint.opacity(configuration.isPressed ? 0.08 : 0.12),
                 radius: configuration.isPressed ? 2 : 6,
