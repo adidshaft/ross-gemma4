@@ -2507,6 +2507,43 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertTrue(alphaDocumentReadinessMessage(readingDocument).contains("Ask from this file as soon as readable text appears"))
         XCTAssertTrue(alphaDocumentReadinessMessage(unreadableDocument).contains("Re-import a clearer PDF, image, or text file"))
         XCTAssertFalse(alphaDocumentReadinessMessage(readyDocument).contains("still running"))
+
+        let readyItems = alphaDocumentReadinessItems(readyDocument)
+        XCTAssertEqual(readyItems.map(\.title), ["Ask is ready", "Review complete", "Language pending"])
+        XCTAssertTrue(readyItems[0].detail.contains("cite its pages"))
+        XCTAssertTrue(readyItems[1].detail.contains("notes, tasks, and exports"))
+
+        let failedItems = alphaDocumentReadinessItems(failedReviewDocument)
+        XCTAssertEqual(failedItems[0].title, "Ask is ready")
+        XCTAssertEqual(failedItems[1].title, "Review needs attention")
+        XCTAssertTrue(failedItems[1].detail.contains("deeper review did not finish"))
+
+        let readingItems = alphaDocumentReadinessItems(readingDocument)
+        XCTAssertEqual(readingItems[0].title, "Still reading")
+        XCTAssertTrue(readingItems[0].detail.contains("readable text appears"))
+
+        let unreadableItems = alphaDocumentReadinessItems(unreadableDocument)
+        XCTAssertEqual(unreadableItems[0].title, "Needs clearer text")
+        XCTAssertTrue(unreadableItems[0].detail.contains("Re-import a clearer PDF"))
+
+        var bengaliDocument = readyDocument
+        bengaliDocument.languageProfile = AlphaDocumentLanguageProfile(
+            documentId: bengaliDocument.id,
+            primaryLanguage: .bengali,
+            scriptsDetected: ["bengali"],
+            confidence: 0.97,
+            pageProfiles: [
+                AlphaDocumentLanguageProfilePage(
+                    pageNumber: 1,
+                    language: .bengali,
+                    script: .bengali,
+                    confidence: 0.97
+                )
+            ]
+        )
+        let bengaliItems = alphaDocumentReadinessItems(bengaliDocument)
+        XCTAssertEqual(bengaliItems[2].title, "Bengali")
+        XCTAssertTrue(bengaliItems[2].detail.contains("bengali"))
     }
 
     func testQueuedIncomingDocumentsCreateMatterAndImportFiles() async throws {

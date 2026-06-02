@@ -81,6 +81,94 @@ func alphaDocumentReadinessMessage(_ document: AlphaCaseDocument) -> String {
     return "Ross could not find readable text in this file yet. Re-import a clearer PDF, image, or text file, then ask again."
 }
 
+struct AlphaDocumentReadinessItem {
+    let title: String
+    let detail: String
+    let systemImage: String
+    let tint: Color
+}
+
+func alphaDocumentReadinessItems(_ document: AlphaCaseDocument) -> [AlphaDocumentReadinessItem] {
+    let askItem: AlphaDocumentReadinessItem
+    if document.hasAskUsableExtractedText {
+        askItem = AlphaDocumentReadinessItem(
+            title: "Ask is ready",
+            detail: "Ross can answer from this file and cite its pages.",
+            systemImage: "bubble.right.fill",
+            tint: Color.rossSuccess
+        )
+    } else if document.isAwaitingReadableText {
+        askItem = AlphaDocumentReadinessItem(
+            title: "Still reading",
+            detail: "Ask from this file will unlock as soon as readable text appears.",
+            systemImage: "text.viewfinder",
+            tint: Color.rossAccent
+        )
+    } else {
+        askItem = AlphaDocumentReadinessItem(
+            title: "Needs clearer text",
+            detail: "Re-import a clearer PDF, image, or text file before asking from it.",
+            systemImage: "exclamationmark.triangle.fill",
+            tint: .orange
+        )
+    }
+
+    let reviewItem: AlphaDocumentReadinessItem
+    switch document.processingState {
+    case .ready:
+        reviewItem = AlphaDocumentReadinessItem(
+            title: "Review complete",
+            detail: "Verified details are ready for notes, tasks, and exports.",
+            systemImage: "checkmark.seal.fill",
+            tint: Color.rossSuccess
+        )
+    case .failed:
+        reviewItem = AlphaDocumentReadinessItem(
+            title: "Review needs attention",
+            detail: "Readable text is available, but the deeper review did not finish.",
+            systemImage: "arrow.clockwise.circle.fill",
+            tint: .orange
+        )
+    case .needsConfirmation, .reviewingFindings:
+        reviewItem = AlphaDocumentReadinessItem(
+            title: "Check highlighted details",
+            detail: "Confirm findings before relying on this file in notes or exports.",
+            systemImage: "checklist.checked",
+            tint: .orange
+        )
+    case .imported, .readingText:
+        reviewItem = AlphaDocumentReadinessItem(
+            title: "Review in progress",
+            detail: "Ross is preparing structured details in the background.",
+            systemImage: "hourglass",
+            tint: Color.rossAccent
+        )
+    }
+
+    let languageItem: AlphaDocumentReadinessItem
+    if let profile = document.languageProfile {
+        let languageName = alphaDocumentLanguageDisplayName(profile.primaryLanguage)
+        let scriptLabel = profile.scriptsDetected.isEmpty
+            ? "script detected"
+            : profile.scriptsDetected.sorted().joined(separator: ", ")
+        languageItem = AlphaDocumentReadinessItem(
+            title: languageName,
+            detail: "Language detected from this file: \(scriptLabel).",
+            systemImage: "character.book.closed.fill",
+            tint: profile.primaryLanguage == .mixed ? .orange : Color.rossAccent
+        )
+    } else {
+        languageItem = AlphaDocumentReadinessItem(
+            title: "Language pending",
+            detail: "Ross will detect language after readable text is available.",
+            systemImage: "character.book.closed.fill",
+            tint: Color.rossInk.opacity(0.52)
+        )
+    }
+
+    return [askItem, reviewItem, languageItem]
+}
+
 struct AlphaDocumentListScreen: View {
     @Bindable var model: AlphaRossModel
     let caseId: UUID
@@ -377,6 +465,8 @@ struct AlphaDocumentViewerScreen: View {
                         progressLabel: alphaExtractionProgressLabel(activeExtractionRun),
                         progressValue: alphaExtractionProgressValue(activeExtractionRun)
                     )
+
+                    AlphaDocumentReadinessCard(document: document)
 
                     if alphaDocumentNeedsTranslation(document, selectedLanguageCode: rossSelectedLanguageCode()) {
                         AlphaDocumentTranslationCard(
@@ -697,6 +787,98 @@ struct AlphaDocumentViewerScreen: View {
             .padding(.top, 8)
             .padding(.bottom, 6)
         }
+    }
+}
+
+struct AlphaDocumentReadinessCard: View {
+    let document: AlphaCaseDocument
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("File readiness")
+                    .font(.headline)
+                    .foregroundStyle(Color.rossInk)
+
+                Spacer(minLength: 8)
+
+                Text(document.hasAskUsableExtractedText ? "Ask ready" : "Preparing")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(document.hasAskUsableExtractedText ? Color.rossSuccess : Color.rossAccent)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .rossGlassSurface(
+                        tint: document.hasAskUsableExtractedText ? Color.rossSuccess.opacity(0.18) : Color.rossAccent.opacity(0.14),
+                        cornerRadius: 11,
+                        shadowOpacity: 0.03,
+                        shadowRadius: 3,
+                        shadowY: 1,
+                        fillOpacity: 0.70,
+                        strokeOpacity: 0.38
+                    )
+            }
+
+            VStack(spacing: 8) {
+                let items = alphaDocumentReadinessItems(document)
+                ForEach(items.indices, id: \.self) { index in
+                    AlphaDocumentReadinessRow(item: items[index])
+                }
+            }
+        }
+        .padding(14)
+        .rossGlassSurface(
+            tint: Color.rossAccent.opacity(0.10),
+            cornerRadius: 18,
+            shadowOpacity: 0.07,
+            shadowRadius: 7,
+            shadowY: 3,
+            fillOpacity: 0.82,
+            strokeOpacity: 0.48
+        )
+    }
+}
+
+private struct AlphaDocumentReadinessRow: View {
+    let item: AlphaDocumentReadinessItem
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: item.systemImage)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(item.tint)
+                .frame(width: 28, height: 28)
+                .rossNativeGlassSurface(
+                    tint: item.tint.opacity(0.18),
+                    shape: RoundedRectangle(cornerRadius: 9, style: .continuous),
+                    interactive: false,
+                    fallbackFillOpacity: 0.76,
+                    fallbackStrokeOpacity: 0.40
+                )
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(item.title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.rossInk)
+
+                Text(item.detail)
+                    .font(.caption)
+                    .foregroundStyle(Color.rossInk.opacity(0.66))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .rossGlassSurface(
+            tint: item.tint.opacity(0.08),
+            cornerRadius: 14,
+            shadowOpacity: 0.035,
+            shadowRadius: 4,
+            shadowY: 1,
+            fillOpacity: 0.72,
+            strokeOpacity: 0.38
+        )
     }
 }
 
