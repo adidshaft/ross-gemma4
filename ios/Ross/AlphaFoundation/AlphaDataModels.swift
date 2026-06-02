@@ -2848,6 +2848,8 @@ extension AlphaPrivacyLedgerEntry {
             rossLocalized("privacy_ledger_document_imported_title")
         case "Case created locally":
             rossLocalized("privacy_ledger_case_created_title")
+        case "AI output reported":
+            rossLocalized("privacy_ledger_ai_output_reported_title")
         default:
             title
         }
@@ -2895,6 +2897,8 @@ extension AlphaPrivacyLedgerEntry {
             rossLocalized("privacy_ledger_local_export_generated_detail")
         case "Export generation failed":
             rossLocalized("privacy_ledger_local_export_failed_detail")
+        case "AI output reported":
+            rossLocalized("privacy_ledger_ai_output_reported_detail")
         default:
             detail
         }

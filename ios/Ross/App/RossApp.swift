@@ -1232,6 +1232,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Draft save செய்ய முடியவில்லை",
             "te": "Draft save కాలేదు"
         ],
+        "privacy_ledger_ai_output_reported_title": [
+            "en": "Saved answer feedback",
+            "hi": "Answer feedback save किया",
+            "bn": "Answer feedback save করা হয়েছে",
+            "ta": "Answer feedback save செய்யப்பட்டது",
+            "te": "Answer feedback save చేయబడింది"
+        ],
         "privacy_ledger_assistant_catalog_checked_title": [
             "en": "Checked private assistant setup",
             "hi": "Private assistant setup check किया",
@@ -1371,6 +1378,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "bn": "Ross draft file save করতে পারেনি। Case files এই device-এ রয়ে গেছে.",
             "ta": "Ross draft file-ஐ save செய்ய முடியவில்லை. Case files இந்த device-இல் இருந்தன.",
             "te": "Ross draft file save చేయలేకపోయింది. Case files ఈ device పైనే ఉన్నాయి."
+        ],
+        "privacy_ledger_ai_output_reported_detail": [
+            "en": "Ross saved the feedback on this device. Answer text and case files were not sent.",
+            "hi": "Ross ने feedback इसी device पर save किया। Answer text और case files नहीं भेजी गईं.",
+            "bn": "Ross feedback এই device-এ save করেছে। Answer text এবং case files পাঠানো হয়নি.",
+            "ta": "Ross feedback-ஐ இந்த device-இல் save செய்தது. Answer text மற்றும் case files அனுப்பப்படவில்லை.",
+            "te": "Ross feedback ను ఈ device పైనే save చేసింది. Answer text మరియు case files పంపబడలేదు."
         ],
         "privacy_ledger_assistant_catalog_checked_detail": [
             "en": "Ross checked private assistant setup. No case files were read or sent.",

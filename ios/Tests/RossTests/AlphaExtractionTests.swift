@@ -231,14 +231,26 @@ final class AlphaExtractionTests: XCTestCase {
             endpointLabel: "device://export",
             success: true
         )
+        let feedbackSaved = AlphaPrivacyLedgerEntry(
+            title: "AI output reported",
+            detail: "Feedback was saved for Case without sending answer text or case files.",
+            purpose: .local_only,
+            payloadClass: .local_only,
+            endpointLabel: "device://ai-output-report",
+            success: true
+        )
 
         XCTAssertEqual(publicLawFailure.lawyerTitle, "Legal Search கவனம் தேவை")
         XCTAssertTrue(publicLawFailure.lawyerDetail.contains("Case files இந்த device-இல் இருந்தன"), publicLawFailure.lawyerDetail)
         XCTAssertEqual(exportFailure.lawyerTitle, "Draft save செய்ய முடியவில்லை")
         XCTAssertTrue(exportFailure.lawyerDetail.contains("draft file-ஐ save செய்ய முடியவில்லை"), exportFailure.lawyerDetail)
         XCTAssertEqual(exportSuccess.lawyerTitle, "Notes & Drafts உருவாக்கப்பட்டது")
+        XCTAssertEqual(feedbackSaved.lawyerTitle, "Answer feedback save செய்யப்பட்டது")
+        XCTAssertTrue(feedbackSaved.lawyerDetail.contains("இந்த device-இல் save செய்தது"), feedbackSaved.lawyerDetail)
+        XCTAssertTrue(feedbackSaved.lawyerDetail.contains("Answer text மற்றும் case files அனுப்பப்படவில்லை"), feedbackSaved.lawyerDetail)
         XCTAssertFalse(exportFailure.lawyerDetail.localizedCaseInsensitiveContains("local report"), exportFailure.lawyerDetail)
         XCTAssertFalse(publicLawFailure.lawyerDetail.localizedCaseInsensitiveContains("sanitized"), publicLawFailure.lawyerDetail)
+        XCTAssertFalse(feedbackSaved.lawyerDetail.localizedCaseInsensitiveContains("AI output"), feedbackSaved.lawyerDetail)
     }
 
     func testAskPrivacyReceiptsFollowSelectedLanguage() {
