@@ -5264,6 +5264,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "%@ on %@",
             "te": "%@ on %@"
         ],
+        "ask_source_pack_confirmed_details_from": [
+            "en": "Confirmed details from %@",
+            "hi": "%@ से confirmed details",
+            "bn": "%@ থেকে confirmed details",
+            "ta": "%@-இலிருந்து confirmed details",
+            "te": "%@ నుండి confirmed details"
+        ],
         "ask_local_tasks_title": [
             "en": "Tasks from your files",
             "hi": "आपकी files से tasks",

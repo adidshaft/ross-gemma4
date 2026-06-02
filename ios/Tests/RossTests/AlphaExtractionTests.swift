@@ -1239,6 +1239,10 @@ final class AlphaExtractionTests: XCTestCase {
             "अगली hearing"
         )
         XCTAssertEqual(
+            String(format: rossLocalized("ask_source_pack_confirmed_details_from", languageCode: "hi"), "Order"),
+            "Order से confirmed details"
+        )
+        XCTAssertEqual(
             rossLocalized("notes_drafts_title", languageCode: "hi"),
             "नोट्स और ड्राफ्ट"
         )

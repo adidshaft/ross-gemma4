@@ -1590,7 +1590,8 @@ extension AlphaRossModel {
         let details = confirmedFields
             .map { "\($0.label): \($0.value)" }
             .joined(separator: "\n")
-        let text = "Confirmed details from \(document.title):\n\(details)"
+        let heading = String(format: rossLocalized("ask_source_pack_confirmed_details_from"), document.title)
+        let text = "\(heading):\n\(details)"
         let sourceRef = AlphaSourceRef(
             caseId: caseMatter.id,
             documentId: document.id,

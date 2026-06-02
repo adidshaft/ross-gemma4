@@ -413,6 +413,10 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
 
     @MainActor
     func testSelectedFileSourcePackIncludesConfirmedReviewDetails() {
+        let previousLanguageCode = rossSelectedLanguageCode()
+        rossSaveLanguageSelection(code: "hi")
+        defer { rossSaveLanguageSelection(code: previousLanguageCode) }
+
         let caseID = UUID()
         let documentID = UUID()
         let confirmedSource = AlphaSourceRef(
@@ -488,10 +492,11 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         )
         let combinedText = sourcePack.map(\.text).joined(separator: "\n")
 
-        XCTAssertTrue(combinedText.contains("Confirmed details from Order sheet"))
+        XCTAssertTrue(combinedText.contains("Order sheet से confirmed details"))
+        XCTAssertFalse(combinedText.contains("Confirmed details from Order sheet"))
         XCTAssertTrue(combinedText.contains("Next hearing: 17 June 2026"))
         XCTAssertFalse(combinedText.contains("Rs. 99,99,999"))
-        let confirmedBlock = sourcePack.first { $0.text.contains("Confirmed details from Order sheet") }
+        let confirmedBlock = sourcePack.first { $0.text.contains("Order sheet से confirmed details") }
         XCTAssertEqual(confirmedBlock?.sourceRef.pageNumber, 4)
     }
 
