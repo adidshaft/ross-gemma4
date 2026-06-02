@@ -109,7 +109,13 @@ struct AlphaWorkbenchTabBar: View {
                     .foregroundStyle(isSelected ? Color.rossAccent : Color.rossInk.opacity(0.56))
                     .frame(maxWidth: .infinity)
                     .frame(height: 46)
-                    .background(isSelected ? Color.rossAccent.opacity(0.1) : Color.clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .rossNativeGlassSurface(
+                        tint: isSelected ? Color.rossAccent : Color.rossInk.opacity(0.22),
+                        shape: RoundedRectangle(cornerRadius: 10, style: .continuous),
+                        interactive: true,
+                        fallbackFillOpacity: isSelected ? 0.72 : 0.18,
+                        fallbackStrokeOpacity: isSelected ? 0.38 : 0.16
+                    )
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(tab.title)
@@ -373,7 +379,12 @@ struct AlphaPreparedWorkCard: View {
                         .foregroundStyle(alphaPreparedBadgeColor(item.badge))
                         .padding(.horizontal, 8)
                         .frame(height: 24)
-                        .background(alphaPreparedBadgeColor(item.badge).opacity(0.1), in: Capsule())
+                        .rossNativeGlassSurface(
+                            tint: alphaPreparedBadgeColor(item.badge),
+                            shape: Capsule(),
+                            fallbackFillOpacity: 0.68,
+                            fallbackStrokeOpacity: 0.36
+                        )
                 }
 
                 if !item.sourceRefs.isEmpty {

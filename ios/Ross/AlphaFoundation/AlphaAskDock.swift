@@ -829,7 +829,12 @@ struct AlphaDockActivityPill: View {
                 .foregroundStyle(Color.rossAccent)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 5)
-                .background(Color.rossAccent.opacity(colorScheme == .dark ? 0.18 : 0.12), in: Capsule())
+                .rossNativeGlassSurface(
+                    tint: Color.rossAccent,
+                    shape: Capsule(),
+                    fallbackFillOpacity: colorScheme == .dark ? 0.74 : 0.68,
+                    fallbackStrokeOpacity: 0.36
+                )
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 9)
@@ -1806,7 +1811,12 @@ struct AlphaRootAskToolRow: View {
                     .foregroundStyle(Color.rossAccent)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
-                    .background(Color.rossAccent.opacity(0.1), in: Capsule())
+                    .rossNativeGlassSurface(
+                        tint: Color.rossAccent,
+                        shape: Capsule(),
+                        fallbackFillOpacity: 0.68,
+                        fallbackStrokeOpacity: 0.36
+                    )
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
