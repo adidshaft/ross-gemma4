@@ -241,18 +241,20 @@ struct AlphaMatterDraftActionStrip: View {
     let onGenerateOrderSummary: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
-                AlphaCompactDraftActionButton(title: "Chronology", systemImage: "list.bullet.rectangle") {
-                    onGenerateChronology()
+        RossGlassGroup(spacing: 10) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 10) {
+                    AlphaCompactDraftActionButton(title: "Chronology", systemImage: "list.bullet.rectangle") {
+                        onGenerateChronology()
+                    }
+                    AlphaCompactDraftActionButton(title: "Case note", systemImage: "square.and.pencil") {
+                        onGenerateCaseNote()
+                    }
                 }
-                AlphaCompactDraftActionButton(title: "Case note", systemImage: "square.and.pencil") {
-                    onGenerateCaseNote()
-                }
-            }
 
-            AlphaCompactDraftActionButton(title: "Order summary", systemImage: "doc.plaintext") {
-                onGenerateOrderSummary()
+                AlphaCompactDraftActionButton(title: "Order summary", systemImage: "doc.plaintext") {
+                    onGenerateOrderSummary()
+                }
             }
         }
     }

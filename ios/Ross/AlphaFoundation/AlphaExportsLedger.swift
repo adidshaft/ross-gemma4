@@ -48,21 +48,25 @@ struct AlphaExportsScreen: View {
                             .font(.subheadline)
                             .foregroundStyle(Color.rossInk.opacity(0.72))
 
-                        HStack(spacing: 10) {
-                            AlphaCompactDraftActionButton(title: "Chronology", systemImage: "list.bullet.rectangle") {
-                                Task { await model.generateExport(kind: "chronology_report", caseId: caseId) }
-                            }
-                            AlphaCompactDraftActionButton(title: "Case note", systemImage: "square.and.pencil") {
-                                Task { await model.generateExport(kind: "case_note", caseId: caseId) }
-                            }
-                        }
+                        RossGlassGroup(spacing: 10) {
+                            VStack(alignment: .leading, spacing: 10) {
+                                HStack(spacing: 10) {
+                                    AlphaCompactDraftActionButton(title: "Chronology", systemImage: "list.bullet.rectangle") {
+                                        Task { await model.generateExport(kind: "chronology_report", caseId: caseId) }
+                                    }
+                                    AlphaCompactDraftActionButton(title: "Case note", systemImage: "square.and.pencil") {
+                                        Task { await model.generateExport(kind: "case_note", caseId: caseId) }
+                                    }
+                                }
 
-                        HStack(spacing: 10) {
-                            AlphaCompactDraftActionButton(title: "Order summary", systemImage: "doc.plaintext") {
-                                Task { await model.generateExport(kind: "order_summary", caseId: caseId) }
-                            }
-                            AlphaCompactDraftActionButton(title: "Transcript", systemImage: "bubble.left.and.text.bubble.right") {
-                                Task { await model.generateExport(kind: "chat_transcript", caseId: caseId) }
+                                HStack(spacing: 10) {
+                                    AlphaCompactDraftActionButton(title: "Order summary", systemImage: "doc.plaintext") {
+                                        Task { await model.generateExport(kind: "order_summary", caseId: caseId) }
+                                    }
+                                    AlphaCompactDraftActionButton(title: "Transcript", systemImage: "bubble.left.and.text.bubble.right") {
+                                        Task { await model.generateExport(kind: "chat_transcript", caseId: caseId) }
+                                    }
+                                }
                             }
                         }
                     }
