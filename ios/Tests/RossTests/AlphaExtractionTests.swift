@@ -2637,6 +2637,29 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testLocalModelSmokeVisibleStatusesUseProductLanguage() {
+        let visibleStatuses = [
+            RossLocalModelSmokeStatusCopy.runningStatus,
+            RossLocalModelSmokeStatusCopy.missingAssistantStatus,
+            RossLocalModelSmokeStatusCopy.unavailableAssistantStatus,
+            RossLocalModelSmokeStatusCopy.passedStatus,
+            RossLocalModelSmokeStatusCopy.failedStatus
+        ]
+
+        XCTAssertFalse(visibleStatuses.isEmpty)
+        for status in visibleStatuses {
+            XCTAssertTrue(
+                status.localizedCaseInsensitiveContains("private assistant"),
+                status
+            )
+            XCTAssertFalse(status.localizedCaseInsensitiveContains("local model smoke"), status)
+            XCTAssertFalse(status.localizedCaseInsensitiveContains("real local provider"), status)
+            XCTAssertFalse(status.localizedCaseInsensitiveContains("runtime"), status)
+            XCTAssertFalse(status.localizedCaseInsensitiveContains("artifact"), status)
+            XCTAssertFalse(status.localizedCaseInsensitiveContains("checksum"), status)
+        }
+    }
+
     func testLocalModelSmokeReportsLanguagePreservingFallback() {
         let fallbackOutput = AlphaLocalModelOutput(
             rawText: "উৎসভিত্তিক উত্তর",
