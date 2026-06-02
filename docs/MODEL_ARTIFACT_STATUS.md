@@ -17,6 +17,7 @@ The current status of model artifacts for ROSS-Gemma4.
 - Local smoke artifact: `/Users/amanpandey/projects/ross-gemma4/artifacts/gemma-2-2b-it-Q4_K_M.gguf`
 - Local smoke artifact SHA-256: `e0aee85060f168f0f2d8473d7ea41ce2f3230c1bc1374847505ea599288a7787`
 - New smoke logs include `bengali_native_model` and `hindi_native_model` so QA can distinguish native multilingual model output from Ross's source-preserving fallback.
+- Matter Search registry consistency is checked by `scripts/verify-model-artifacts.sh`: every capability tier must reference registered retrieval model IDs, and the private assistant registry must include both EmbeddingGemma 300M and the Gemma 4 embedding fallback.
 
 ## Remaining Proof Steps
 
@@ -24,3 +25,4 @@ The current status of model artifacts for ROSS-Gemma4.
 2. Confirm pause/resume, checksum/provider digest handling, runtime validation, repair, and re-download.
 3. Import real PDF/image/text files from Files/iCloud/Downloads and ask source-grounded English, Hindi, and Bengali questions.
 4. Record device performance, storage, privacy-ledger, and fallback status in the QA report.
+5. Implement and prove the separate Matter Search embedding download/install/retrieval lifecycle.

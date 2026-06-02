@@ -31,6 +31,38 @@ if echo "$ACTIVE_MODELS" | grep -q "31b"; then
     fail "Active 31B tier found. 31B must not be active."
 fi
 
+if ! command -v jq >/dev/null 2>&1; then
+    fail "jq is required for registry consistency checks."
+fi
+
+# 2. Verify Matter Search retrieval metadata stays wired across registries.
+TECHNICAL_MODEL_IDS=$(jq -r '.[].id' shared/constants/technicalModelRegistry.json | sort -u)
+TIER_RETRIEVAL_IDS=$(jq -r '.[].retrievalModelIds[]?' shared/constants/modelCapabilityTiers.json | sort -u)
+PRIVATE_RETRIEVAL_IDS=$(jq -r '.retrievalModels[] | .repo + "|" + .runtimeMode + "|" + .artifactKind' shared/constants/privateAssistantModelRegistry.json | sort -u)
+
+while IFS= read -r retrieval_id; do
+    [ -n "$retrieval_id" ] || continue
+    if ! echo "$TECHNICAL_MODEL_IDS" | grep -qx "$retrieval_id"; then
+        fail "Capability tier references missing retrieval model id: $retrieval_id"
+    fi
+done <<< "$TIER_RETRIEVAL_IDS"
+
+if ! echo "$TIER_RETRIEVAL_IDS" | grep -qx "embeddinggemma-300m-litert"; then
+    fail "Capability tiers do not reference EmbeddingGemma 300M."
+fi
+
+if ! echo "$TIER_RETRIEVAL_IDS" | grep -qx "Gemma 4-embedding-0_6b-gguf"; then
+    fail "Capability tiers do not reference Gemma 4 embedding fallback."
+fi
+
+if ! echo "$PRIVATE_RETRIEVAL_IDS" | grep -qx "litert-community/embeddinggemma-300m|litert|local_embedding_model"; then
+    fail "Private assistant registry is missing preferred Matter Search EmbeddingGemma metadata."
+fi
+
+if ! echo "$PRIVATE_RETRIEVAL_IDS" | grep -qx "google/gemma-4-embedding-0.6b|gemma_local_runtime|local_embedding_model"; then
+    fail "Private assistant registry is missing Gemma 4 embedding fallback metadata."
+fi
+
 PLACEHOLDERS_FOUND=false
 
 if grep -q "__REPLACE_WITH_VERIFIED" ios/Ross/AlphaFoundation/AlphaRossModel.swift; then
