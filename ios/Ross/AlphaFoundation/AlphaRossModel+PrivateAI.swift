@@ -1192,22 +1192,23 @@ extension AlphaRossModel {
                 generatedLine,
                 draftReviewLine,
                 "",
-                "Chronology candidates",
-            ] + (chronologyLines.isEmpty ? ["- No verified chronology candidates found yet."] : chronologyLines) + [
+                rossLocalized("export_chronology_candidates"),
+            ] + (chronologyLines.isEmpty ? [rossLocalized("export_no_chronology_candidates")] : chronologyLines) + [
                 "",
-                "Review warnings",
-            ] + (warningLines.isEmpty ? ["- No unresolved warnings."] : warningLines) + [
+                rossLocalized("export_review_warnings"),
+            ] + (warningLines.isEmpty ? [rossLocalized("export_no_unresolved_warnings")] : warningLines) + [
                 "",
-                "Source references",
+                rossLocalized("export_source_references"),
             ] + (refs.isEmpty ? [missingSourceLine] : refs) + [
                 "",
                 localReviewFooter
             ]
 
         case "case_note":
-            let court = uniqueValues(for: .court, in: verifiedFields).joined(separator: " | ").ifEmpty("Not found")
-            let caseNumbers = uniqueValues(for: .caseNumber, in: verifiedFields).joined(separator: " | ").ifEmpty("Not found")
-            let parties = uniqueValues(for: .partyName, in: verifiedFields).joined(separator: " | ").ifEmpty("Not found")
+            let missingValue = rossLocalized("export_not_found")
+            let court = uniqueValues(for: .court, in: verifiedFields).joined(separator: " | ").ifEmpty(missingValue)
+            let caseNumbers = uniqueValues(for: .caseNumber, in: verifiedFields).joined(separator: " | ").ifEmpty(missingValue)
+            let parties = uniqueValues(for: .partyName, in: verifiedFields).joined(separator: " | ").ifEmpty(missingValue)
             let dateLines = sourcedValues(for: .date, in: verifiedFields)
             let pendingLines = pendingFields.map { "- \($0.label): \($0.value)" }
 
@@ -1216,21 +1217,21 @@ extension AlphaRossModel {
                 generatedLine,
                 draftReviewLine,
                 "",
-                "Court / case metadata",
-                "Court: \(court)",
-                "Case number: \(caseNumbers)",
-                "Parties: \(parties)",
+                rossLocalized("export_case_metadata"),
+                "\(rossLocalized("export_court")): \(court)",
+                "\(rossLocalized("export_case_number")): \(caseNumbers)",
+                "\(rossLocalized("export_parties")): \(parties)",
                 "",
-                "Document list",
-            ] + (documentLines.isEmpty ? ["- No imported documents yet."] : documentLines) + [
+                rossLocalized("export_document_list"),
+            ] + (documentLines.isEmpty ? [rossLocalized("export_no_imported_documents")] : documentLines) + [
                 "",
-                "Key dates",
-            ] + (dateLines.isEmpty ? ["- No verified key dates found yet."] : dateLines) + [
+                rossLocalized("export_key_dates"),
+            ] + (dateLines.isEmpty ? [rossLocalized("export_no_key_dates")] : dateLines) + [
                 "",
-                "Pending review fields",
-            ] + (pendingLines.isEmpty ? ["- No pending review fields."] : pendingLines) + [
+                rossLocalized("export_pending_review_fields"),
+            ] + (pendingLines.isEmpty ? [rossLocalized("export_no_pending_review_fields")] : pendingLines) + [
                 "",
-                "Source references",
+                rossLocalized("export_source_references"),
             ] + (refs.isEmpty ? [missingSourceLine] : refs) + [
                 "",
                 localReviewFooter
@@ -1251,19 +1252,19 @@ extension AlphaRossModel {
                 generatedLine,
                 draftReviewLine,
                 "",
-                "Operative directions",
-            ] + (directions.isEmpty ? ["- No verified operative directions found yet."] : directions) + [
+                rossLocalized("export_operative_directions"),
+            ] + (directions.isEmpty ? [rossLocalized("export_no_operative_directions")] : directions) + [
                 "",
-                "Next date",
-            ] + (nextDates.isEmpty ? ["- Not found"] : nextDates) + [
+                rossLocalized("export_next_date"),
+            ] + (nextDates.isEmpty ? ["- \(rossLocalized("export_not_found"))"] : nextDates) + [
                 "",
-                "Compliance requirements",
-            ] + (compliance.isEmpty ? ["- Review operative directions against cited source pages."] : compliance) + [
+                rossLocalized("export_compliance_requirements"),
+            ] + (compliance.isEmpty ? [rossLocalized("export_review_operative_directions")] : compliance) + [
                 "",
-                "Please confirm",
-            ] + (pendingLines.isEmpty ? ["- No pending review flags for order details."] : pendingLines) + [
+                rossLocalized("export_please_confirm"),
+            ] + (pendingLines.isEmpty ? [rossLocalized("export_no_pending_order_flags")] : pendingLines) + [
                 "",
-                "Source references",
+                rossLocalized("export_source_references"),
             ] + (refs.isEmpty ? [missingSourceLine] : refs) + [
                 "",
                 localReviewFooter
@@ -1289,8 +1290,8 @@ extension AlphaRossModel {
                 generatedLine,
                 draftReviewLine,
                 "",
-                "Ross thread transcript",
-            ] + (transcriptLines.isEmpty ? ["No chat turns are saved for this matter yet.", ""] : transcriptLines) + [
+                rossLocalized("export_thread_transcript"),
+            ] + (transcriptLines.isEmpty ? [rossLocalized("export_no_chat_turns"), ""] : transcriptLines) + [
                 localReviewFooter
             ]
 
@@ -1301,13 +1302,13 @@ extension AlphaRossModel {
                 generatedLine,
                 draftReviewLine,
                 "",
-                "Summary",
+                rossLocalized("export_summary"),
                 caseMatter.summary,
                 "",
-                "Working notes",
-            ] + (notes.isEmpty ? ["- No tasks yet."] : notes) + [
+                rossLocalized("export_working_notes"),
+            ] + (notes.isEmpty ? [rossLocalized("export_no_tasks")] : notes) + [
                 "",
-                "Source references",
+                rossLocalized("export_source_references"),
             ] + (refs.isEmpty ? [missingSourceLine] : refs) + [
                 "",
                 localReviewFooter

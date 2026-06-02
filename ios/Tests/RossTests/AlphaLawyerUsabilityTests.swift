@@ -1479,16 +1479,37 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         var state = AlphaPersistedState.empty()
         state.cases = [matter]
         let model = AlphaRossModel(previewState: state)
+        let emptyMatter = AlphaCaseMatter(
+            id: UUID(),
+            title: "Empty Hindi export matter",
+            forum: "District Court",
+            stage: .intake,
+            summary: "Summary",
+            issueHighlights: [],
+            evidenceNotes: [],
+            draftTasks: [],
+            documents: [],
+            sourceRefs: []
+        )
 
         let exportText = model.exportBodyLines(kind: "chronology_report", caseMatter: matter).joined(separator: "\n")
+        let emptyChronologyText = model.exportBodyLines(kind: "chronology_report", caseMatter: emptyMatter).joined(separator: "\n")
+        let caseNoteText = model.exportBodyLines(kind: "case_note", caseMatter: matter).joined(separator: "\n")
+        let emptyCaseNoteText = model.exportBodyLines(kind: "case_note", caseMatter: emptyMatter).joined(separator: "\n")
 
         XCTAssertTrue(exportText.contains("Draft - कृपया review करें"), exportText)
         XCTAssertTrue(exportText.contains("Advocate review के लिए locally generated."), exportText)
+        XCTAssertTrue(emptyChronologyText.contains("- अभी verified chronology candidates नहीं मिले."), emptyChronologyText)
         XCTAssertTrue(exportText.contains("- अभी linked source नहीं"), exportText)
+        XCTAssertTrue(caseNoteText.contains("Court: नहीं मिला"), caseNoteText)
+        XCTAssertTrue(caseNoteText.contains("- कोई pending review fields नहीं."), caseNoteText)
+        XCTAssertTrue(emptyCaseNoteText.contains("- अभी imported documents नहीं हैं."), emptyCaseNoteText)
         XCTAssertFalse(exportText.contains("Draft — please review"), exportText)
         XCTAssertFalse(exportText.contains("Generated locally for advocate review."), exportText)
         XCTAssertFalse(exportText.contains("No source references available yet."), exportText)
         XCTAssertFalse(exportText.contains("Source pending"), exportText)
+        XCTAssertFalse(caseNoteText.contains("Not found"), caseNoteText)
+        XCTAssertFalse(emptyCaseNoteText.contains("No imported documents yet."), emptyCaseNoteText)
     }
 
     func testDockCommandCreatesTasksFromSelectedDocument() async throws {

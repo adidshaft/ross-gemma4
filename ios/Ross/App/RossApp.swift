@@ -5320,6 +5320,202 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Advocate review-க்காக locally generated. எல்லா citations-ஐ verify செய்யவும்.",
             "te": "Advocate review కోసం locally generated. అన్ని citations verify చేయండి."
         ],
+        "export_chronology_candidates": [
+            "en": "Chronology candidates",
+            "hi": "Chronology candidates",
+            "bn": "Chronology candidates",
+            "ta": "Chronology candidates",
+            "te": "Chronology candidates"
+        ],
+        "export_no_chronology_candidates": [
+            "en": "- No verified chronology candidates found yet.",
+            "hi": "- अभी verified chronology candidates नहीं मिले.",
+            "bn": "- এখনও verified chronology candidates পাওয়া যায়নি.",
+            "ta": "- இன்னும் verified chronology candidates இல்லை.",
+            "te": "- ఇంకా verified chronology candidates లేవు."
+        ],
+        "export_review_warnings": [
+            "en": "Review warnings",
+            "hi": "Review warnings",
+            "bn": "Review warnings",
+            "ta": "Review warnings",
+            "te": "Review warnings"
+        ],
+        "export_no_unresolved_warnings": [
+            "en": "- No unresolved warnings.",
+            "hi": "- कोई unresolved warnings नहीं.",
+            "bn": "- কোনো unresolved warnings নেই.",
+            "ta": "- unresolved warnings இல்லை.",
+            "te": "- unresolved warnings లేవు."
+        ],
+        "export_source_references": [
+            "en": "Source references",
+            "hi": "Source references",
+            "bn": "Source references",
+            "ta": "Source references",
+            "te": "Source references"
+        ],
+        "export_case_metadata": [
+            "en": "Court / case metadata",
+            "hi": "Court / case metadata",
+            "bn": "Court / case metadata",
+            "ta": "Court / case metadata",
+            "te": "Court / case metadata"
+        ],
+        "export_court": [
+            "en": "Court",
+            "hi": "Court",
+            "bn": "Court",
+            "ta": "Court",
+            "te": "Court"
+        ],
+        "export_case_number": [
+            "en": "Case number",
+            "hi": "Case number",
+            "bn": "Case number",
+            "ta": "Case number",
+            "te": "Case number"
+        ],
+        "export_parties": [
+            "en": "Parties",
+            "hi": "Parties",
+            "bn": "Parties",
+            "ta": "Parties",
+            "te": "Parties"
+        ],
+        "export_not_found": [
+            "en": "Not found",
+            "hi": "नहीं मिला",
+            "bn": "পাওয়া যায়নি",
+            "ta": "கிடைக்கவில்லை",
+            "te": "కనబడలేదు"
+        ],
+        "export_document_list": [
+            "en": "Document list",
+            "hi": "Document list",
+            "bn": "Document list",
+            "ta": "Document list",
+            "te": "Document list"
+        ],
+        "export_no_imported_documents": [
+            "en": "- No imported documents yet.",
+            "hi": "- अभी imported documents नहीं हैं.",
+            "bn": "- এখনও imported documents নেই.",
+            "ta": "- இன்னும் imported documents இல்லை.",
+            "te": "- ఇంకా imported documents లేవు."
+        ],
+        "export_key_dates": [
+            "en": "Key dates",
+            "hi": "Key dates",
+            "bn": "Key dates",
+            "ta": "Key dates",
+            "te": "Key dates"
+        ],
+        "export_no_key_dates": [
+            "en": "- No verified key dates found yet.",
+            "hi": "- अभी verified key dates नहीं मिलीं.",
+            "bn": "- এখনও verified key dates পাওয়া যায়নি.",
+            "ta": "- இன்னும் verified key dates இல்லை.",
+            "te": "- ఇంకా verified key dates లేవు."
+        ],
+        "export_pending_review_fields": [
+            "en": "Pending review fields",
+            "hi": "Pending review fields",
+            "bn": "Pending review fields",
+            "ta": "Pending review fields",
+            "te": "Pending review fields"
+        ],
+        "export_no_pending_review_fields": [
+            "en": "- No pending review fields.",
+            "hi": "- कोई pending review fields नहीं.",
+            "bn": "- কোনো pending review fields নেই.",
+            "ta": "- pending review fields இல்லை.",
+            "te": "- pending review fields లేవు."
+        ],
+        "export_operative_directions": [
+            "en": "Operative directions",
+            "hi": "Operative directions",
+            "bn": "Operative directions",
+            "ta": "Operative directions",
+            "te": "Operative directions"
+        ],
+        "export_no_operative_directions": [
+            "en": "- No verified operative directions found yet.",
+            "hi": "- अभी verified operative directions नहीं मिलीं.",
+            "bn": "- এখনও verified operative directions পাওয়া যায়নি.",
+            "ta": "- இன்னும் verified operative directions இல்லை.",
+            "te": "- ఇంకా verified operative directions లేవు."
+        ],
+        "export_next_date": [
+            "en": "Next date",
+            "hi": "Next date",
+            "bn": "Next date",
+            "ta": "Next date",
+            "te": "Next date"
+        ],
+        "export_compliance_requirements": [
+            "en": "Compliance requirements",
+            "hi": "Compliance requirements",
+            "bn": "Compliance requirements",
+            "ta": "Compliance requirements",
+            "te": "Compliance requirements"
+        ],
+        "export_review_operative_directions": [
+            "en": "- Review operative directions against cited source pages.",
+            "hi": "- Operative directions को cited source pages से मिलाकर review करें.",
+            "bn": "- Operative directions cited source pages-এর সঙ্গে মিলিয়ে review করুন.",
+            "ta": "- Operative directions-ஐ cited source pages-உடன் review செய்யவும்.",
+            "te": "- Operative directions ను cited source pages తో review చేయండి."
+        ],
+        "export_please_confirm": [
+            "en": "Please confirm",
+            "hi": "कृपया confirm करें",
+            "bn": "অনুগ্রহ করে confirm করুন",
+            "ta": "தயவு செய்து confirm செய்யவும்",
+            "te": "దయచేసి confirm చేయండి"
+        ],
+        "export_no_pending_order_flags": [
+            "en": "- No pending review flags for order details.",
+            "hi": "- order details के लिए कोई pending review flags नहीं.",
+            "bn": "- order details-এর জন্য কোনো pending review flags নেই.",
+            "ta": "- order details-க்கு pending review flags இல்லை.",
+            "te": "- order details కోసం pending review flags లేవు."
+        ],
+        "export_thread_transcript": [
+            "en": "Ross thread transcript",
+            "hi": "Ross thread transcript",
+            "bn": "Ross thread transcript",
+            "ta": "Ross thread transcript",
+            "te": "Ross thread transcript"
+        ],
+        "export_no_chat_turns": [
+            "en": "No chat turns are saved for this matter yet.",
+            "hi": "इस matter के लिए अभी कोई chat turns saved नहीं हैं.",
+            "bn": "এই matter-এর জন্য এখনও কোনো chat turns saved নেই.",
+            "ta": "இந்த matter-க்கு இன்னும் chat turns saved இல்லை.",
+            "te": "ఈ matter కోసం ఇంకా chat turns saved లేవు."
+        ],
+        "export_summary": [
+            "en": "Summary",
+            "hi": "Summary",
+            "bn": "Summary",
+            "ta": "Summary",
+            "te": "Summary"
+        ],
+        "export_working_notes": [
+            "en": "Working notes",
+            "hi": "Working notes",
+            "bn": "Working notes",
+            "ta": "Working notes",
+            "te": "Working notes"
+        ],
+        "export_no_tasks": [
+            "en": "- No tasks yet.",
+            "hi": "- अभी tasks नहीं हैं.",
+            "bn": "- এখনও tasks নেই.",
+            "ta": "- இன்னும் tasks இல்லை.",
+            "te": "- ఇంకా tasks లేవు."
+        ],
         "draft_unavailable": [
             "en": "Draft unavailable",
             "hi": "Draft उपलब्ध नहीं",
