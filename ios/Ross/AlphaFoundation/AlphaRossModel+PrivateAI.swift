@@ -1548,24 +1548,17 @@ extension AlphaRossModel {
 
         let warnings = scopedReviewItems
         let notFound = sections.isEmpty && matchedSources.isEmpty
-        let answerTitle: String
-        if notFound {
-            answerTitle = "I could not find this in your case files."
-        } else if asksForMatterSummary {
-            answerTitle = "Matter summary"
-        } else if asksForDocumentSummary {
-            answerTitle = "Document summary"
-        } else if asksForImportantDates || asksAboutSchedule {
-            answerTitle = "Important dates"
-        } else if asksForNextActions {
-            answerTitle = "Next actions"
-        } else if asksAboutTasks {
-            answerTitle = "Tasks from your files"
-        } else if asksAboutReview {
-            answerTitle = "Review items from your files"
-        } else {
-            answerTitle = "Ross drafted this from your files"
-        }
+        let language = alphaAnswerLanguage(for: question)
+        let answerKind = alphaLocalAskFallbackAnswerKind(
+            notFound: notFound,
+            asksForMatterSummary: asksForMatterSummary,
+            asksForDocumentSummary: asksForDocumentSummary,
+            asksForImportantDates: asksForImportantDates || asksAboutSchedule,
+            asksForNextActions: asksForNextActions,
+            asksAboutTasks: asksAboutTasks,
+            asksAboutReview: asksAboutReview
+        )
+        let answerTitle = alphaLocalAskFallbackTitle(for: answerKind, language: language)
         return AlphaAskResult(
             chatSessionID: nil,
             chatTurnID: nil,
@@ -1575,12 +1568,12 @@ extension AlphaRossModel {
             scopeLabel: scopeLabel(for: scopeCaseID),
             selectedDocumentTitles: selectedDocuments.map(\.title),
             answerTitle: answerTitle,
-            answerSections: notFound ? ["I could not find this in your case files."] : Array(sections.prefix(3)),
+            answerSections: notFound ? [alphaLocalAskFallbackNotFoundDetail(language: language)] : Array(sections.prefix(3)),
             caseFileSources: Array(matchedSources.prefix(3)),
             publicLawPreview: nil,
             publicLawResults: [],
-            statusNote: notFound ? "Legal Search is off" : selectedDocuments.isEmpty ? "Answered from your files" : "Answered from selected files",
-            needsReviewWarning: warnings.isEmpty ? nil : "\(alphaReviewItemCountLabel(warnings.count)) still need review."
+            statusNote: alphaLocalAskFallbackStatus(notFound: notFound, hasSelectedDocuments: !selectedDocuments.isEmpty, language: language),
+            needsReviewWarning: warnings.isEmpty ? nil : alphaLocalAskFallbackReviewWarning(warnings.count, language: language)
         )
     }
 
@@ -1629,4 +1622,106 @@ func alphaAskStillReadingDocumentSummaryDetail(
     languageCode: String = rossSelectedLanguageCode()
 ) -> String {
     String(format: rossLocalized("ask_still_reading_summary_detail", languageCode: languageCode), title)
+}
+
+enum AlphaLocalAskFallbackAnswerKind {
+    case notFound
+    case matterSummary
+    case documentSummary
+    case importantDates
+    case nextActions
+    case tasks
+    case reviewItems
+    case drafted
+}
+
+func alphaLocalAskFallbackAnswerKind(
+    notFound: Bool,
+    asksForMatterSummary: Bool,
+    asksForDocumentSummary: Bool,
+    asksForImportantDates: Bool,
+    asksForNextActions: Bool,
+    asksAboutTasks: Bool,
+    asksAboutReview: Bool
+) -> AlphaLocalAskFallbackAnswerKind {
+    if notFound { return .notFound }
+    if asksForMatterSummary { return .matterSummary }
+    if asksForDocumentSummary { return .documentSummary }
+    if asksForImportantDates { return .importantDates }
+    if asksForNextActions { return .nextActions }
+    if asksAboutTasks { return .tasks }
+    if asksAboutReview { return .reviewItems }
+    return .drafted
+}
+
+func alphaLocalAskFallbackTitle(
+    for kind: AlphaLocalAskFallbackAnswerKind,
+    language: AlphaRossModel.AlphaMatterAskFallbackLanguage
+) -> String {
+    let languageCode = alphaLanguageCode(for: language)
+    let key: String
+    switch kind {
+    case .notFound:
+        key = "ask_local_not_found_title"
+    case .matterSummary:
+        key = "ask_local_matter_summary_title"
+    case .documentSummary:
+        key = "ask_local_document_summary_title"
+    case .importantDates:
+        key = "ask_local_important_dates_title"
+    case .nextActions:
+        key = "ask_local_next_actions_title"
+    case .tasks:
+        key = "ask_local_tasks_title"
+    case .reviewItems:
+        key = "ask_local_review_items_title"
+    case .drafted:
+        key = "ask_local_drafted_title"
+    }
+    return rossLocalized(key, languageCode: languageCode)
+}
+
+func alphaLocalAskFallbackNotFoundDetail(language: AlphaRossModel.AlphaMatterAskFallbackLanguage) -> String {
+    rossLocalized("ask_local_not_found_detail", languageCode: alphaLanguageCode(for: language))
+}
+
+func alphaLocalAskFallbackStatus(
+    notFound: Bool,
+    hasSelectedDocuments: Bool,
+    language: AlphaRossModel.AlphaMatterAskFallbackLanguage
+) -> String {
+    let key: String
+    if notFound {
+        key = "ask_local_legal_search_off_status"
+    } else if hasSelectedDocuments {
+        key = "ask_local_answered_selected_files_status"
+    } else {
+        key = "ask_local_answered_files_status"
+    }
+    return rossLocalized(key, languageCode: alphaLanguageCode(for: language))
+}
+
+func alphaLocalAskFallbackReviewWarning(
+    _ count: Int,
+    language: AlphaRossModel.AlphaMatterAskFallbackLanguage
+) -> String {
+    String(
+        format: rossLocalized("ask_local_review_items_still_need_review", languageCode: alphaLanguageCode(for: language)),
+        alphaReviewItemCountLabel(count)
+    )
+}
+
+func alphaLanguageCode(for language: AlphaRossModel.AlphaMatterAskFallbackLanguage) -> String {
+    switch language {
+    case .english:
+        return "en"
+    case .hindi:
+        return "hi"
+    case .bengali:
+        return "bn"
+    case .tamil:
+        return "ta"
+    case .telugu:
+        return "te"
+    }
 }

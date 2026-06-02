@@ -4207,6 +4207,97 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "%@ இந்த iPhone-ல் வேலை செய்கிறது. முடிந்ததும் Ross இதை private answer-ஆக replace செய்யும்.",
             "te": "%@ ఈ iPhone లో పని చేస్తోంది. పూర్తయ్యగానే Ross దీన్ని private answer తో replace చేస్తుంది."
         ],
+        "ask_local_not_found_title": [
+            "en": "I could not find this in your case files.",
+            "hi": "यह आपकी case files में नहीं मिला।",
+            "bn": "এটি আপনার case files-এ পাওয়া যায়নি।",
+            "ta": "இது உங்கள் case files-இல் கிடைக்கவில்லை.",
+            "te": "ఇది మీ case files లో కనిపించలేదు."
+        ],
+        "ask_local_not_found_detail": [
+            "en": "I could not find this in your case files.",
+            "hi": "यह आपकी case files में नहीं मिला।",
+            "bn": "এটি আপনার case files-এ পাওয়া যায়নি।",
+            "ta": "இது உங்கள் case files-இல் கிடைக்கவில்லை.",
+            "te": "ఇది మీ case files లో కనిపించలేదు."
+        ],
+        "ask_local_matter_summary_title": [
+            "en": "Matter summary",
+            "hi": "मामले का सारांश",
+            "bn": "মামলার সারাংশ",
+            "ta": "வழக்கு சுருக்கம்",
+            "te": "కేసు సారాంశం"
+        ],
+        "ask_local_document_summary_title": [
+            "en": "Document summary",
+            "hi": "दस्तावेज़ सारांश",
+            "bn": "নথির সারাংশ",
+            "ta": "ஆவண சுருக்கம்",
+            "te": "పత్ర సారాంశం"
+        ],
+        "ask_local_important_dates_title": [
+            "en": "Important dates",
+            "hi": "ज़रूरी तारीखें",
+            "bn": "গুরুত্বপূর্ণ তারিখ",
+            "ta": "முக்கிய தேதிகள்",
+            "te": "ముఖ్యమైన తేదీలు"
+        ],
+        "ask_local_next_actions_title": [
+            "en": "Next actions",
+            "hi": "अगले कदम",
+            "bn": "পরবর্তী পদক্ষেপ",
+            "ta": "அடுத்த படிகள்",
+            "te": "తదుపరి చర్యలు"
+        ],
+        "ask_local_tasks_title": [
+            "en": "Tasks from your files",
+            "hi": "आपकी files से tasks",
+            "bn": "আপনার files থেকে tasks",
+            "ta": "உங்கள் files-இலிருந்து tasks",
+            "te": "మీ files నుండి tasks"
+        ],
+        "ask_local_review_items_title": [
+            "en": "Review items from your files",
+            "hi": "आपकी files से review items",
+            "bn": "আপনার files থেকে review items",
+            "ta": "உங்கள் files-இலிருந்து review items",
+            "te": "మీ files నుండి review items"
+        ],
+        "ask_local_drafted_title": [
+            "en": "Ross drafted this from your files",
+            "hi": "Ross ने यह आपकी files से draft किया",
+            "bn": "Ross এটি আপনার files থেকে draft করেছে",
+            "ta": "Ross இதை உங்கள் files-இலிருந்து draft செய்தது",
+            "te": "Ross దీన్ని మీ files నుండి draft చేసింది"
+        ],
+        "ask_local_answered_files_status": [
+            "en": "Answered from your files",
+            "hi": "आपकी files से जवाब",
+            "bn": "আপনার files থেকে উত্তর",
+            "ta": "உங்கள் files-இலிருந்து பதில்",
+            "te": "మీ files నుండి సమాధానం"
+        ],
+        "ask_local_answered_selected_files_status": [
+            "en": "Answered from selected files",
+            "hi": "selected files से जवाब",
+            "bn": "selected files থেকে উত্তর",
+            "ta": "selected files-இலிருந்து பதில்",
+            "te": "selected files నుండి సమాధానం"
+        ],
+        "ask_local_legal_search_off_status": [
+            "en": "Legal Search is off",
+            "hi": "Legal Search off है",
+            "bn": "Legal Search off",
+            "ta": "Legal Search off",
+            "te": "Legal Search off"
+        ],
+        "ask_local_review_items_still_need_review": [
+            "en": "%@ still need review.",
+            "hi": "%@ को अभी review चाहिए।",
+            "bn": "%@ এখনও review দরকার।",
+            "ta": "%@ இன்னும் review தேவை.",
+            "te": "%@ కు ఇంకా review అవసరం."
+        ],
         "ask_pick_matter_before_date": [
             "en": "Pick a matter in the bar above before saving a hearing date, deadline, or reminder.",
             "hi": "hearing date, deadline, या reminder save करने से पहले ऊपर की bar में matter चुनें।",

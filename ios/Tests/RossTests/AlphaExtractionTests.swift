@@ -903,6 +903,18 @@ final class AlphaExtractionTests: XCTestCase {
             "Text ready కాదు; అందుకే Ross guess చేయకుండా ఈ file ready అయ్యే వరకు వేచి ఉంటుంది."
         )
         XCTAssertEqual(
+            rossLocalized("ask_local_document_summary_title", languageCode: "hi"),
+            "दस्तावेज़ सारांश"
+        )
+        XCTAssertEqual(
+            rossLocalized("ask_local_answered_selected_files_status", languageCode: "bn"),
+            "selected files থেকে উত্তর"
+        )
+        XCTAssertEqual(
+            rossLocalized("ask_local_important_dates_title", languageCode: "ta"),
+            "முக்கிய தேதிகள்"
+        )
+        XCTAssertEqual(
             rossLocalized("file_text_unavailable", languageCode: "bn"),
             "File text পাওয়া যাচ্ছে না"
         )

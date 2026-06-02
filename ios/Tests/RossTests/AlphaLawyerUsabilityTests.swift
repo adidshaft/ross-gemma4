@@ -319,10 +319,10 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             scopeCaseID: caseID
         )
 
-        XCTAssertEqual(result.answerTitle, "Document summary")
+        XCTAssertEqual(result.answerTitle, "दस्तावेज़ सारांश")
         XCTAssertEqual(result.selectedDocumentTitles, ["Hindi leave application"])
         XCTAssertTrue(result.answerSections.joined(separator: " ").contains("कर्मचारी ने छुट्टी"))
-        XCTAssertEqual(result.statusNote, "Answered from selected files")
+        XCTAssertEqual(result.statusNote, "selected files से जवाब")
     }
 
     @MainActor
@@ -380,10 +380,10 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             scopeCaseID: caseID
         )
 
-        XCTAssertEqual(result.answerTitle, "Document summary")
+        XCTAssertEqual(result.answerTitle, "নথির সারাংশ")
         XCTAssertEqual(result.selectedDocumentTitles, ["Bangla leave application"])
         XCTAssertTrue(result.answerSections.joined(separator: " ").contains("কর্মী ছুটির"))
-        XCTAssertEqual(result.statusNote, "Answered from selected files")
+        XCTAssertEqual(result.statusNote, "selected files থেকে উত্তর")
     }
 
     @MainActor
