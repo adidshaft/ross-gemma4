@@ -146,31 +146,27 @@ struct AlphaPrivateAISettingsScreen: View {
 
                 RossSectionCard(title: "Wi-Fi") {
                     DisclosureGroup(isExpanded: $downloadPreferencesExpanded) {
-                        VStack(alignment: .leading, spacing: 0) {
+                        VStack(alignment: .leading, spacing: 10) {
                             AlphaSettingsToggleRow(
                                 title: "Use Wi-Fi for larger downloads",
                                 detail: "Ross waits for Wi-Fi before downloading larger private assistant files.",
                                 isOn: wifiOnlyDownloadsBinding
                             )
-                            Divider()
                             AlphaSettingsToggleRow(
                                 title: "Allow mobile data",
                                 detail: "Only use cellular data for assistant setup when you choose to.",
                                 isOn: allowMobileDataBinding
                             )
-                            Divider()
                             AlphaSettingsToggleRow(
                                 title: "Background downloads",
                                 detail: alphaPrivateAIBackgroundDownloadsDetail,
                                 isOn: backgroundWorkBinding
                             )
-                            Divider()
                             AlphaSettingsToggleRow(
                                 title: alphaPrivateAIUpdateChecksTitle,
                                 detail: alphaPrivateAIUpdateChecksDetail,
                                 isOn: autoUpdatesBinding
                             )
-                            Divider()
                             AlphaSettingsToggleRow(
                                 title: "Device cache",
                                 detail: "Keep local workspace indexes on this device so Ross opens faster.",
@@ -466,6 +462,17 @@ struct AlphaSettingsToggleRow: View {
             .padding(.vertical, 10)
         }
         .tint(Color.rossAccent)
+        .padding(.horizontal, 12)
+        .rossGlassSurface(
+            tint: Color.rossAccent.opacity(0.10),
+            cornerRadius: 16,
+            interactive: true,
+            shadowOpacity: 0.04,
+            shadowRadius: 4,
+            shadowY: 1,
+            fillOpacity: 0.74,
+            strokeOpacity: 0.44
+        )
     }
 }
 
