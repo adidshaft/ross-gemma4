@@ -1841,6 +1841,38 @@ extension AlphaRossModel {
                     return "প্রবেশ-নথি হাতে মুছে ফেলা বা কাটাছেঁড়া দেখায় না, কিন্তু স্বয়ংক্রিয় অধিলেখনকে মুছে ফেলা হিসেবে নথিবদ্ধও করে না. সূত্র: আশা মেনন হলফনামা, পৃষ্ঠা ২."
                 }
             }
+        case .tamil:
+            headline = "ஆஷா மேனன் சத்தியப்பிரமாணத்தின் முக்கிய புள்ளிகள்"
+            sections = facts.prefix(3).map { fact in
+                switch fact {
+                case .retention:
+                    return "CAM-D3-ல் பகுதிகள் தனியாக ஏற்றுமதி செய்யப்படாத வரை சாதாரண வீடியோ சேமிப்பு காலம் பதினான்கு நாட்கள். ஆதாரம்: ஆஷா மேனன் சத்தியப்பிரமாணம், பக்கம் 1."
+                case .exportFailure:
+                    return "மேனன் நிலைப்படங்களை ஏற்றுமதி செய்தார், ஏனெனில் அவரது பணிப்பகுதியில் வீடியோ ஏற்றுமதி வரிசை இரண்டு முறை தோல்வியடைந்தது. ஆதாரம்: ஆஷா மேனன் சத்தியப்பிரமாணம், பக்கம் 1."
+                case .timestamp:
+                    return "CAM-D3-ல் காட்டிய நேரம் வசதி நெட்வொர்க் நேரத்தை விட சுமார் பதினொரு நிமிடங்கள் பின்தங்கியது. ஆதாரம்: ஆஷா மேனன் சத்தியப்பிரமாணம், பக்கம் 1."
+                case .nativeVideoUnavailable:
+                    return "30 அக்டோபர் 2025க்குள் தொடர்புடைய மூல வீடியோ பயனர் இடைமுகத்தில் இனி கிடைக்கவில்லை. ஆதாரம்: ஆஷா மேனன் சத்தியப்பிரமாணம், பக்கம் 1."
+                case .accessLog:
+                    return "அணுகல் பதிவு பயனர் CAM-D3-ஐ நீக்கியதாக அல்லது வெட்டியதாக காட்டவில்லை; தானியங்கி மேலெழுதல்களையும் நீக்கமாக பதிவு செய்யவில்லை. ஆதாரம்: ஆஷா மேனன் சத்தியப்பிரமாணம், பக்கம் 2."
+                }
+            }
+        case .telugu:
+            headline = "ఆశా మెనన్ అఫిడవిట్‌లోని ముఖ్య అంశాలు"
+            sections = facts.prefix(3).map { fact in
+                switch fact {
+                case .retention:
+                    return "భాగాలు వేరుగా ఎగుమతి చేయకపోతే CAM-D3 సాధారణ వీడియో నిల్వ కాలం పద్నాలుగు రోజులు. మూలం: ఆశా మెనన్ అఫిడవిట్, పేజీ 1."
+                case .exportFailure:
+                    return "మెనన్ స్థిర చిత్రాలను ఎగుమతి చేసింది, ఎందుకంటే ఆమె షిఫ్ట్‌లో వీడియో ఎగుమతి వరుస రెండుసార్లు విఫలమైంది. మూలం: ఆశా మెనన్ అఫిడవిట్, పేజీ 1."
+                case .timestamp:
+                    return "CAM-D3లో కనిపించిన సమయం సౌకర్యం నెట్‌వర్క్ సమయం కంటే సుమారు పదకొండు నిమిషాలు వెనుకబడింది. మూలం: ఆశా మెనన్ అఫిడవిట్, పేజీ 1."
+                case .nativeVideoUnavailable:
+                    return "30 అక్టోబర్ 2025 నాటికి సంబంధిత అసలు వీడియో వినియోగదారు ఇంటర్‌ఫేస్‌లో ఇక అందుబాటులో లేదు. మూలం: ఆశా మెనన్ అఫిడవిట్, పేజీ 1."
+                case .accessLog:
+                    return "యాక్సెస్ లాగ్ CAM-D3ను వినియోగదారు తొలగించినట్లు లేదా కత్తిరించినట్లు చూపదు; ఆటోమేటిక్ ఓవర్‌రైట్‌లను తొలగింపులుగా నమోదు చేయదు. మూలం: ఆశా మెనన్ అఫిడవిట్, పేజీ 2."
+                }
+            }
         case .english:
             headline = "Key points from Asha Menon affidavit"
             sections = facts.prefix(3).map { fact in
@@ -1901,6 +1933,32 @@ extension AlphaRossModel {
                 sections: Array(sections.prefix(3)),
                 statusNote: "Private assistant"
             )
+        case .tamil:
+            var sections = [
+                "கிடைக்கும் உள்ளூர் ஆதாரங்களின்படி இந்த விஷயத்தில் அடுத்த விசாரணை, தாக்கல் காலக்கெடு, மற்றும் உத்தரவு மதிப்பாய்வில் கவனம் தேவை.",
+                "வழக்கறிஞர் சமீபத்திய உத்தரவிலிருந்து தொடங்கி அடுத்த தேதியை உறுதி செய்து, சுருக்கமான விசாரணை குறிப்பை தயாரிக்க வேண்டும்."
+            ]
+            if normalized.contains("client follow-up") || normalized.contains("may 15, 2026") {
+                sections.append("சேமிக்கப்பட்ட பணியில் 15 மே 2026 அன்று வாடிக்கையாளர் தொடர்ச்சி நடவடிக்கையும் உள்ளது.")
+            }
+            return AlphaMatterAskRuntimePayload(
+                headline: "கிடைக்கும் ஆதாரங்களிலிருந்து சுருக்கம்",
+                sections: Array(sections.prefix(3)),
+                statusNote: "Private assistant"
+            )
+        case .telugu:
+            var sections = [
+                "లభ్యమైన స్థానిక మూలాల ప్రకారం ఈ విషయానికి తదుపరి విచారణ, దాఖలు గడువు, మరియు ఉత్తర్వు సమీక్షపై దృష్టి అవసరం.",
+                "న్యాయవాది తాజా ఉత్తర్వుతో ప్రారంభించి తదుపరి తేదీని నిర్ధారించి, సంక్షిప్త విచారణ గమనికను సిద్ధం చేయాలి."
+            ]
+            if normalized.contains("client follow-up") || normalized.contains("may 15, 2026") {
+                sections.append("సేవ్ చేసిన పనిలో 15 మే 2026 కోసం క్లయింట్ ఫాలో-అప్ కూడా కనిపిస్తోంది.")
+            }
+            return AlphaMatterAskRuntimePayload(
+                headline: "లభ్యమైన మూలాల నుంచి సారాంశం",
+                sections: Array(sections.prefix(3)),
+                statusNote: "Private assistant"
+            )
         case .english:
             let sections = baseResult.answerSections.isEmpty
                 ? ["Ross found local matter context, but the private assistant output was not usable enough to rely on without advocate review."]
@@ -1925,6 +1983,8 @@ extension AlphaRossModel {
         case english
         case hindi
         case bengali
+        case tamil
+        case telugu
     }
 
     func alphaMatterAskFallbackFacts(from text: String) -> [AlphaMatterAskFallbackFact] {
@@ -1958,17 +2018,33 @@ extension AlphaRossModel {
         if question.unicodeScalars.contains(where: { (0x0900...0x097F).contains(Int($0.value)) }) {
             return .hindi
         }
+        if question.unicodeScalars.contains(where: { (0x0B80...0x0BFF).contains(Int($0.value)) }) {
+            return .tamil
+        }
+        if question.unicodeScalars.contains(where: { (0x0C00...0x0C7F).contains(Int($0.value)) }) {
+            return .telugu
+        }
         if alphaQuestionRequestsBengali(normalized) {
             return .bengali
         }
         if alphaQuestionRequestsHindi(normalized) {
             return .hindi
         }
-        switch rossSelectedLanguageCode() {
+        if alphaQuestionRequestsTamil(normalized) {
+            return .tamil
+        }
+        if alphaQuestionRequestsTelugu(normalized) {
+            return .telugu
+        }
+        switch rossSelectedLanguageCode().split(separator: "-").first.map(String.init) ?? rossSelectedLanguageCode() {
         case "hi":
             return .hindi
         case "bn":
             return .bengali
+        case "ta":
+            return .tamil
+        case "te":
+            return .telugu
         default:
             break
         }
@@ -1983,6 +2059,10 @@ extension AlphaRossModel {
             return "Output language: Hindi only. Use Devanagari script. Do not answer in English except exact file names, dates, or case identifiers."
         case .bengali:
             return "Output language: Bengali only. Use Bangla script. Do not answer in English except exact file names, dates, or case identifiers."
+        case .tamil:
+            return "Output language: Tamil only. Use Tamil script. Do not answer in English except exact file names, dates, or case identifiers."
+        case .telugu:
+            return "Output language: Telugu only. Use Telugu script. Do not answer in English except exact file names, dates, or case identifiers."
         }
     }
 
@@ -1998,6 +2078,22 @@ extension AlphaRossModel {
         alphaContainsLanguagePhrase(
             normalizedQuestion,
             languageTerms: ["bengali", "bangla"],
+            nearbyTerms: ["answer", "respond", "reply", "write", "explain", "summarize", "summarise", "only", "language", "in"]
+        )
+    }
+
+    func alphaQuestionRequestsTamil(_ normalizedQuestion: String) -> Bool {
+        alphaContainsLanguagePhrase(
+            normalizedQuestion,
+            languageTerms: ["tamil"],
+            nearbyTerms: ["answer", "respond", "reply", "write", "explain", "summarize", "summarise", "only", "language", "in"]
+        )
+    }
+
+    func alphaQuestionRequestsTelugu(_ normalizedQuestion: String) -> Bool {
+        alphaContainsLanguagePhrase(
+            normalizedQuestion,
+            languageTerms: ["telugu"],
             nearbyTerms: ["answer", "respond", "reply", "write", "explain", "summarize", "summarise", "only", "language", "in"]
         )
     }
@@ -2035,6 +2131,14 @@ extension AlphaRossModel {
             return alphaIndicScriptCharacterCount(in: text, script: .bengali) >= 8 &&
                 alphaIndicScriptRatio(in: text, script: .bengali) >= 0.55 &&
                 alphaLatinWordCount(in: text) <= 8
+        case .tamil:
+            return alphaIndicScriptCharacterCount(in: text, script: .tamil) >= 8 &&
+                alphaIndicScriptRatio(in: text, script: .tamil) >= 0.55 &&
+                alphaLatinWordCount(in: text) <= 8
+        case .telugu:
+            return alphaIndicScriptCharacterCount(in: text, script: .telugu) >= 8 &&
+                alphaIndicScriptRatio(in: text, script: .telugu) >= 0.55 &&
+                alphaLatinWordCount(in: text) <= 8
         }
     }
 
@@ -2045,6 +2149,10 @@ extension AlphaRossModel {
                 return (0x0900...0x097F).contains(Int(scalar.value))
             case .bengali:
                 return (0x0980...0x09FF).contains(Int(scalar.value))
+            case .tamil:
+                return (0x0B80...0x0BFF).contains(Int(scalar.value))
+            case .telugu:
+                return (0x0C00...0x0C7F).contains(Int(scalar.value))
             case .english:
                 return false
             }
@@ -2058,6 +2166,10 @@ extension AlphaRossModel {
                 return (0x0900...0x097F).contains(Int(scalar.value))
             case .bengali:
                 return (0x0980...0x09FF).contains(Int(scalar.value))
+            case .tamil:
+                return (0x0B80...0x0BFF).contains(Int(scalar.value))
+            case .telugu:
+                return (0x0C00...0x0C7F).contains(Int(scalar.value))
             case .english:
                 return false
             }

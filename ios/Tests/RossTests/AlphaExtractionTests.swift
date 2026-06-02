@@ -261,6 +261,37 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     @MainActor
+    func testTamilTeluguMatterAnswerLanguageValidationUsesNativeScripts() {
+        let model = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
+        let tamilPayload = AlphaMatterAskRuntimePayload(
+            headline: "உள்ளூர் ஆதாரங்களிலிருந்து சுருக்கம்",
+            sections: [
+                "பிரிவு 417 படி வழக்கறிஞர் தாக்கல் செய்வதற்கு முன் மேற்கோளை சரிபார்க்க வேண்டும்.",
+                "சேமிக்கப்பட்ட கோப்பில் அடுத்த விசாரணை தேதியும் உள்ளது."
+            ],
+            statusNote: "Private assistant"
+        )
+        let teluguPayload = AlphaMatterAskRuntimePayload(
+            headline: "లభ్యమైన మూలాల నుంచి సారాంశం",
+            sections: [
+                "సెక్షన్ 417 ప్రకారం న్యాయవాది దాఖలు చేసే ముందు ఉదాహరణను ధృవీకరించాలి.",
+                "సేవ్ చేసిన ఫైలులో తదుపరి విచారణ తేదీ కూడా ఉంది."
+            ],
+            statusNote: "Private assistant"
+        )
+        let englishPayload = AlphaMatterAskRuntimePayload(
+            headline: "Summary from local sources",
+            sections: ["The advocate must verify citations before filing."],
+            statusNote: "Private assistant"
+        )
+
+        XCTAssertTrue(model.alphaPayloadMatchesRequestedLanguage(tamilPayload, requestedLanguage: .tamil))
+        XCTAssertTrue(model.alphaPayloadMatchesRequestedLanguage(teluguPayload, requestedLanguage: .telugu))
+        XCTAssertFalse(model.alphaPayloadMatchesRequestedLanguage(englishPayload, requestedLanguage: .tamil))
+        XCTAssertFalse(model.alphaPayloadMatchesRequestedLanguage(englishPayload, requestedLanguage: .telugu))
+    }
+
+    @MainActor
     func testHindiSourceGroundedFallbackUsesDevanagariText() {
         let model = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
         let sourceRef = AlphaSourceRef(
@@ -1279,7 +1310,27 @@ final class AlphaExtractionTests: XCTestCase {
         let hindiModel = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
         XCTAssertEqual(hindiModel.alphaAnswerLanguage(for: "What is the next hearing date?"), .hindi)
 
+        rossSaveLanguageSelection(code: "ta")
+        let tamilModel = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
+        XCTAssertEqual(tamilModel.alphaAnswerLanguage(for: "What is the next hearing date?"), .tamil)
+
+        rossSaveLanguageSelection(code: "te-IN")
+        let teluguModel = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
+        XCTAssertEqual(teluguModel.alphaAnswerLanguage(for: "What is the next hearing date?"), .telugu)
+
         rossSaveLanguageSelection(code: "en")
+    }
+
+    @MainActor
+    func testExplicitTamilTeluguAnswerRequestsSetOutputDirective() {
+        let model = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
+
+        XCTAssertEqual(model.alphaAnswerLanguage(for: "Answer in Tamil only: what should I verify?"), .tamil)
+        XCTAssertEqual(model.alphaAnswerLanguage(for: "Reply in Telugu language with source labels"), .telugu)
+        XCTAssertEqual(model.alphaAnswerLanguage(for: "தமிழில் பதில் அளிக்கவும்"), .tamil)
+        XCTAssertEqual(model.alphaAnswerLanguage(for: "తెలుగులో సమాధానం ఇవ్వండి"), .telugu)
+        XCTAssertTrue(model.alphaAnswerLanguageInstruction(for: "Answer in Tamil only").contains("Tamil only"))
+        XCTAssertTrue(model.alphaAnswerLanguageInstruction(for: "Reply in Telugu language").contains("Telugu only"))
     }
 
     func testPipelinePlanChangesWithInstalledPack() {
