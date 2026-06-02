@@ -637,6 +637,125 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "தொடரவும்",
             "te": "కొనసాగించండి"
         ],
+        "my_assistant": [
+            "en": "My assistant",
+            "hi": "My assistant",
+            "bn": "My assistant",
+            "ta": "My assistant",
+            "te": "My assistant"
+        ],
+        "assistant_local_answers_need_setup": [
+            "en": "Local answers need setup on this iPhone.",
+            "hi": "स्थानीय उत्तरों के लिए इस iPhone पर सेटअप चाहिए।",
+            "bn": "স্থানীয় উত্তরের জন্য এই iPhone-এ সেটআপ দরকার।",
+            "ta": "உள்ளூர் பதில்களுக்கு இந்த iPhone-இல் அமைப்பு தேவை.",
+            "te": "స్థానిక సమాధానాలకు ఈ iPhone లో సెటప్ అవసరం."
+        ],
+        "assistant_setup_section": [
+            "en": "Setup",
+            "hi": "सेटअप",
+            "bn": "সেটআপ",
+            "ta": "அமைப்பு",
+            "te": "సెటప్"
+        ],
+        "assistant_setup_on_phone": [
+            "en": "Set up on this iPhone",
+            "hi": "इस iPhone पर सेट करें",
+            "bn": "এই iPhone-এ সেট আপ করুন",
+            "ta": "இந்த iPhone-இல் அமைக்கவும்",
+            "te": "ఈ iPhone లో సెటప్ చేయండి"
+        ],
+        "assistant_choose_option_files": [
+            "en": "Choose the option that fits the files you usually handle.",
+            "hi": "आप जिन फ़ाइलों पर आमतौर पर काम करते हैं, उनके अनुसार विकल्प चुनें।",
+            "bn": "আপনি সাধারণত যে ফাইল সামলান, তার সঙ্গে মানানসই বিকল্প বেছে নিন।",
+            "ta": "நீங்கள் வழக்கமாக கையாளும் கோப்புகளுக்கு பொருந்தும் விருப்பத்தைத் தேர்வுசெய்க.",
+            "te": "మీరు సాధారణంగా చూసే ఫైళ్లకు సరిపోయే ఎంపికను ఎంచుకోండి."
+        ],
+        "assistant_wifi_section": [
+            "en": "Wi-Fi",
+            "hi": "Wi-Fi",
+            "bn": "Wi-Fi",
+            "ta": "Wi-Fi",
+            "te": "Wi-Fi"
+        ],
+        "assistant_wifi_larger_downloads": [
+            "en": "Use Wi-Fi for larger downloads",
+            "hi": "बड़े डाउनलोड के लिए Wi-Fi उपयोग करें",
+            "bn": "বড় ডাউনলোডের জন্য Wi-Fi ব্যবহার করুন",
+            "ta": "பெரிய பதிவிறக்கங்களுக்கு Wi-Fi பயன்படுத்தவும்",
+            "te": "పెద్ద డౌన్‌లోడ్‌లకు Wi-Fi ఉపయోగించండి"
+        ],
+        "assistant_wifi_larger_downloads_detail": [
+            "en": "Ross waits for Wi-Fi before downloading larger assistant setup files.",
+            "hi": "बड़ी सहायक सेटअप फ़ाइलें डाउनलोड करने से पहले Ross Wi-Fi की प्रतीक्षा करता है।",
+            "bn": "বড় সহকারী সেটআপ ফাইল ডাউনলোডের আগে Ross Wi-Fi-এর অপেক্ষা করে।",
+            "ta": "பெரிய உதவியாளர் அமைப்பு கோப்புகளை பதிவிறக்குவதற்கு முன் Ross Wi-Fi காத்திருக்கும்.",
+            "te": "పెద్ద సహాయక సెటప్ ఫైళ్లను డౌన్‌లోడ్ చేయడానికి ముందు Ross Wi-Fi కోసం వేచి ఉంటుంది."
+        ],
+        "assistant_allow_mobile_data": [
+            "en": "Allow mobile data",
+            "hi": "मोबाइल डेटा की अनुमति दें",
+            "bn": "মোবাইল ডেটা অনুমতি দিন",
+            "ta": "மொபைல் தரவை அனுமதிக்கவும்",
+            "te": "మొబైల్ డేటాను అనుమతించండి"
+        ],
+        "assistant_allow_mobile_data_detail": [
+            "en": "Only use cellular data for assistant setup when you choose to.",
+            "hi": "सहायक सेटअप के लिए cellular data तभी उपयोग करें जब आप चुनें।",
+            "bn": "আপনি চাইলে তবেই সহকারী সেটআপে cellular data ব্যবহার করুন।",
+            "ta": "நீங்கள் தேர்வு செய்தால் மட்டுமே உதவியாளர் அமைப்புக்கு cellular data பயன்படுத்தவும்.",
+            "te": "మీరు ఎంచుకున్నప్పుడు మాత్రమే సహాయక సెటప్‌కు cellular data ఉపయోగించండి."
+        ],
+        "assistant_background_downloads": [
+            "en": "Background downloads",
+            "hi": "बैकग्राउंड डाउनलोड",
+            "bn": "ব্যাকগ্রাউন্ড ডাউনলোড",
+            "ta": "பின்னணி பதிவிறக்கங்கள்",
+            "te": "బ్యాక్‌గ్రౌండ్ డౌన్‌లోడ్‌లు"
+        ],
+        "assistant_background_downloads_detail": [
+            "en": "Keep assistant downloads eligible to continue when Ross is backgrounded.",
+            "hi": "Ross background में होने पर सहायक डाउनलोड जारी रहने योग्य रखें।",
+            "bn": "Ross background-এ থাকলেও সহকারী ডাউনলোড চালিয়ে যাওয়ার সুযোগ রাখুন।",
+            "ta": "Ross background-இல் இருந்தாலும் உதவியாளர் பதிவிறக்கங்கள் தொடர அனுமதிக்கவும்.",
+            "te": "Ross background లో ఉన్నప్పుడు కూడా సహాయక డౌన్‌లోడ్‌లు కొనసాగేందుకు అనుమతించండి."
+        ],
+        "assistant_device_cache": [
+            "en": "Device cache",
+            "hi": "डिवाइस cache",
+            "bn": "ডিভাইস cache",
+            "ta": "சாதன cache",
+            "te": "పరికర cache"
+        ],
+        "assistant_device_cache_detail": [
+            "en": "Keep local workspace indexes on this device so Ross opens faster.",
+            "hi": "Ross जल्दी खुले, इसके लिए स्थानीय workspace indexes इसी डिवाइस पर रखें।",
+            "bn": "Ross দ্রুত খুলতে স্থানীয় workspace indexes এই ডিভাইসে রাখুন।",
+            "ta": "Ross வேகமாக திறக்க உள்ளூர் workspace indexes-ஐ இந்த சாதனத்தில் வைத்திருங்கள்.",
+            "te": "Ross వేగంగా తెరుచుకోవడానికి స్థానిక workspace indexes ను ఈ పరికరంలో ఉంచండి."
+        ],
+        "assistant_network": [
+            "en": "Network",
+            "hi": "नेटवर्क",
+            "bn": "নেটওয়ার্ক",
+            "ta": "நெட்வொர்க்",
+            "te": "నెట్‌వర్క్"
+        ],
+        "assistant_network_wifi_mobile": [
+            "en": "Wi-Fi or mobile data",
+            "hi": "Wi-Fi या मोबाइल डेटा",
+            "bn": "Wi-Fi বা মোবাইল ডেটা",
+            "ta": "Wi-Fi அல்லது மொபைல் தரவு",
+            "te": "Wi-Fi లేదా మొబైల్ డేటా"
+        ],
+        "assistant_network_wifi_preferred": [
+            "en": "Wi-Fi preferred",
+            "hi": "Wi-Fi बेहतर है",
+            "bn": "Wi-Fi পছন্দনীয়",
+            "ta": "Wi-Fi விரும்பப்படுகிறது",
+            "te": "Wi-Fi ప్రాధాన్యం"
+        ],
         "translate_to": [
             "en": "Translate to %@",
             "hi": "%@ में अनुवाद करें",

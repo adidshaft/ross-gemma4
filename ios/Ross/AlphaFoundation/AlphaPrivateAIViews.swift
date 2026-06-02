@@ -108,8 +108,8 @@ struct AlphaPrivateAISettingsScreen: View {
             RossGlassGroup(spacing: 12) {
                 LazyVStack(alignment: .leading, spacing: 12) {
                 RossSectionCard(
-                    title: "My assistant",
-                    subtitle: "Local answers need setup on this iPhone."
+                    title: rossLocalized("my_assistant"),
+                    subtitle: rossLocalized("assistant_local_answers_need_setup")
                 ) {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(assistantStatus.title)
@@ -125,7 +125,7 @@ struct AlphaPrivateAISettingsScreen: View {
                 }
 
                 if !visibleSetupJobs.isEmpty {
-                    RossSectionCard(title: "Setup") {
+                    RossSectionCard(title: rossLocalized("assistant_setup_section")) {
                         VStack(alignment: .leading, spacing: 12) {
                             ForEach(visibleSetupJobs) { job in
                                 AlphaPrivateAIJobCard(model: model, job: job)
@@ -135,8 +135,8 @@ struct AlphaPrivateAISettingsScreen: View {
                 }
 
                 RossSectionCard(
-                    title: "Set up on this iPhone",
-                    subtitle: "Choose the option that fits the files you usually handle."
+                    title: rossLocalized("assistant_setup_on_phone"),
+                    subtitle: rossLocalized("assistant_choose_option_files")
                 ) {
                     VStack(alignment: .leading, spacing: 8) {
                         ForEach(AlphaPackOffer.catalog) { offer in
@@ -145,22 +145,22 @@ struct AlphaPrivateAISettingsScreen: View {
                     }
                 }
 
-                RossSectionCard(title: "Wi-Fi") {
+                RossSectionCard(title: rossLocalized("assistant_wifi_section")) {
                     DisclosureGroup(isExpanded: $downloadPreferencesExpanded) {
                         VStack(alignment: .leading, spacing: 10) {
                             AlphaSettingsToggleRow(
-                                title: "Use Wi-Fi for larger downloads",
-                                detail: "Ross waits for Wi-Fi before downloading larger assistant setup files.",
+                                title: rossLocalized("assistant_wifi_larger_downloads"),
+                                detail: rossLocalized("assistant_wifi_larger_downloads_detail"),
                                 isOn: wifiOnlyDownloadsBinding
                             )
                             AlphaSettingsToggleRow(
-                                title: "Allow mobile data",
-                                detail: "Only use cellular data for assistant setup when you choose to.",
+                                title: rossLocalized("assistant_allow_mobile_data"),
+                                detail: rossLocalized("assistant_allow_mobile_data_detail"),
                                 isOn: allowMobileDataBinding
                             )
                             AlphaSettingsToggleRow(
-                                title: "Background downloads",
-                                detail: alphaPrivateAIBackgroundDownloadsDetail,
+                                title: rossLocalized("assistant_background_downloads"),
+                                detail: rossLocalized("assistant_background_downloads_detail"),
                                 isOn: backgroundWorkBinding
                             )
                             AlphaSettingsToggleRow(
@@ -169,14 +169,19 @@ struct AlphaPrivateAISettingsScreen: View {
                                 isOn: autoUpdatesBinding
                             )
                             AlphaSettingsToggleRow(
-                                title: "Device cache",
-                                detail: "Keep local workspace indexes on this device so Ross opens faster.",
+                                title: rossLocalized("assistant_device_cache"),
+                                detail: rossLocalized("assistant_device_cache_detail"),
                                 isOn: deviceCacheBinding
                             )
                         }
                         .padding(.top, 10)
                     } label: {
-                        AlphaSettingsValueRow(label: "Network", value: model.persisted.settings.allowMobileDataForLargePacks ? "Wi-Fi or mobile data" : "Wi-Fi preferred")
+                        AlphaSettingsValueRow(
+                            label: rossLocalized("assistant_network"),
+                            value: model.persisted.settings.allowMobileDataForLargePacks
+                                ? rossLocalized("assistant_network_wifi_mobile")
+                                : rossLocalized("assistant_network_wifi_preferred")
+                        )
                     }
                     .tint(Color.rossAccent)
                 }
@@ -265,7 +270,7 @@ struct AlphaPrivateAISettingsScreen: View {
             }
             .padding(alphaScreenPadding)
         }
-        .navigationTitle("My assistant")
+        .navigationTitle(rossLocalized("my_assistant"))
         .rossInlineNavigationTitle()
     }
 }

@@ -739,6 +739,18 @@ final class AlphaExtractionTests: XCTestCase {
             "सुझाया गया"
         )
         XCTAssertEqual(
+            rossLocalized("assistant_setup_on_phone", languageCode: "ta"),
+            "இந்த iPhone-இல் அமைக்கவும்"
+        )
+        XCTAssertEqual(
+            rossLocalized("assistant_network_wifi_preferred", languageCode: "te-IN"),
+            "Wi-Fi ప్రాధాన్యం"
+        )
+        XCTAssertTrue(
+            rossLocalized("assistant_wifi_larger_downloads_detail", languageCode: "bn")
+                .contains("Wi-Fi")
+        )
+        XCTAssertEqual(
             rossLocalized("download_size", languageCode: "ta"),
             "பதிவிறக்க அளவு"
         )
