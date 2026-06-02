@@ -938,6 +938,22 @@ final class AlphaExtractionTests: XCTestCase {
             "இதற்குப் பிறகு முதல் PDF, image அல்லது text file-ஐ import செய்யவும். Ross அதை இந்த iPhone-இல் வைத்து review-ஐ locally தயாரிக்கும்."
         )
         XCTAssertEqual(
+            rossLocalized("setup_my_assistant", languageCode: "hi"),
+            "My assistant setup करें"
+        )
+        XCTAssertEqual(
+            alphaReviewItemsFromFilesLabel(2, languageCode: "bn"),
+            "আপনার files থেকে 2 review items."
+        )
+        XCTAssertEqual(
+            alphaDeleteMatterDetail("Civil Appeal", languageCode: "ta"),
+            "Civil Appeal delete செய்தால் அதன் files, tasks, chat context மற்றும் saved reports இந்த device-இலிருந்து நீக்கப்படும்."
+        )
+        XCTAssertEqual(
+            rossLocalized("matter_search_placeholder", languageCode: "te-IN"),
+            "matter, client లేదా case number తో search చేయండి"
+        )
+        XCTAssertEqual(
             rossLocalized("download_size", languageCode: "ta"),
             "பதிவிறக்க அளவு"
         )

@@ -2184,6 +2184,118 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "matter workspace உருவாக்கவும்",
             "te": "matter workspace సృష్టించండి"
         ],
+        "setting_up_your_assistant": [
+            "en": "Setting up your assistant",
+            "hi": "आपका assistant setup हो रहा है",
+            "bn": "আপনার assistant setup হচ্ছে",
+            "ta": "உங்கள் assistant setup ஆகிறது",
+            "te": "మీ assistant setup అవుతోంది"
+        ],
+        "setup_my_assistant": [
+            "en": "Set up My assistant",
+            "hi": "My assistant setup करें",
+            "bn": "My assistant setup করুন",
+            "ta": "My assistant setup செய்யவும்",
+            "te": "My assistant setup చేయండి"
+        ],
+        "required_for_local_ai_tasks": [
+            "en": "Required for local AI tasks",
+            "hi": "local AI tasks के लिए ज़रूरी",
+            "bn": "local AI tasks-এর জন্য দরকার",
+            "ta": "local AI tasks-க்கு தேவை",
+            "te": "local AI tasks కోసం అవసరం"
+        ],
+        "sort_matters": [
+            "en": "Sort matters",
+            "hi": "मामले sort करें",
+            "bn": "মামলা sort করুন",
+            "ta": "வழக்குகளை sort செய்யவும்",
+            "te": "కేసులను sort చేయండి"
+        ],
+        "choose_matter_view": [
+            "en": "Choose matter view",
+            "hi": "matter view चुनें",
+            "bn": "matter view বেছে নিন",
+            "ta": "matter view தேர்வுசெய்க",
+            "te": "matter view ఎంచుకోండి"
+        ],
+        "needs_review": [
+            "en": "Needs review",
+            "hi": "Review चाहिए",
+            "bn": "Review দরকার",
+            "ta": "Review தேவை",
+            "te": "Review అవసరం"
+        ],
+        "review_items_from_files": [
+            "en": "%@ from your files.",
+            "hi": "आपकी files से %@.",
+            "bn": "আপনার files থেকে %@.",
+            "ta": "உங்கள் files-இலிருந்து %@.",
+            "te": "మీ files నుండి %@."
+        ],
+        "no_matters_match_search": [
+            "en": "No matters match this search.",
+            "hi": "इस search से कोई मामला नहीं मिला।",
+            "bn": "এই search-এ কোনো মামলা মেলেনি।",
+            "ta": "இந்த search-க்கு எந்த வழக்கும் பொருந்தவில்லை.",
+            "te": "ఈ search కు ఏ కేసులు సరిపోలలేదు."
+        ],
+        "recent_files": [
+            "en": "Recent files",
+            "hi": "हाल की files",
+            "bn": "সাম্প্রতিক files",
+            "ta": "சமீபத்திய files",
+            "te": "ఇటీవలి files"
+        ],
+        "save": [
+            "en": "Save",
+            "hi": "Save",
+            "bn": "Save",
+            "ta": "Save",
+            "te": "Save"
+        ],
+        "rename_matter_detail": [
+            "en": "Update the matter name on this device.",
+            "hi": "इस device पर matter name update करें।",
+            "bn": "এই device-এ matter name update করুন।",
+            "ta": "இந்த device-இல் matter name update செய்யவும்.",
+            "te": "ఈ device లో matter name update చేయండి."
+        ],
+        "delete_matter_question": [
+            "en": "Delete matter?",
+            "hi": "मामला delete करें?",
+            "bn": "মামলা delete করবেন?",
+            "ta": "வழக்கை delete செய்யவா?",
+            "te": "కేసును delete చేయాలా?"
+        ],
+        "delete": [
+            "en": "Delete",
+            "hi": "Delete",
+            "bn": "Delete",
+            "ta": "Delete",
+            "te": "Delete"
+        ],
+        "delete_matter_detail": [
+            "en": "Deleting %@ removes its files, tasks, chat context, and saved reports from this device.",
+            "hi": "%@ delete करने से इसकी files, tasks, chat context और saved reports इस device से हट जाएंगे।",
+            "bn": "%@ delete করলে এর files, tasks, chat context, এবং saved reports এই device থেকে মুছে যাবে।",
+            "ta": "%@ delete செய்தால் அதன் files, tasks, chat context மற்றும் saved reports இந்த device-இலிருந்து நீக்கப்படும்.",
+            "te": "%@ delete చేస్తే దాని files, tasks, chat context మరియు saved reports ఈ device నుండి తొలగించబడతాయి."
+        ],
+        "matter_search_placeholder": [
+            "en": "Search by matter, client, or case number",
+            "hi": "matter, client या case number से search करें",
+            "bn": "matter, client, বা case number দিয়ে search করুন",
+            "ta": "matter, client அல்லது case number மூலம் search செய்யவும்",
+            "te": "matter, client లేదా case number తో search చేయండి"
+        ],
+        "clear_matter_search": [
+            "en": "Clear matter search",
+            "hi": "matter search साफ़ करें",
+            "bn": "matter search পরিষ্কার করুন",
+            "ta": "matter search அழிக்கவும்",
+            "te": "matter search క్లియర్ చేయండి"
+        ],
         "translate_to": [
             "en": "Translate to %@",
             "hi": "%@ में अनुवाद करें",

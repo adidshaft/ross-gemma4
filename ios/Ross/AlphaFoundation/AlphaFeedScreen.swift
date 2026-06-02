@@ -88,7 +88,7 @@ struct AlphaFeedScreen: View {
                 ) {
                     if let activeJob = alphaActiveSetupJob(model) {
                         AlphaAssistantActivityStrip(
-                            title: "Setting up your assistant",
+                            title: rossLocalized("setting_up_your_assistant"),
                             detail: alphaAssistantActivityDetail(for: activeJob.state),
                             statusLabel: alphaAssistantStateLabel(activeJob.state),
                             tint: Color.rossAccent,
@@ -113,10 +113,10 @@ struct AlphaFeedScreen: View {
                                     )
                                     
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("Set up My assistant")
+                                    Text(rossLocalized("setup_my_assistant"))
                                         .font(.subheadline.weight(.semibold))
                                         .foregroundStyle(Color.rossInk)
-                                    Text("Required for local AI tasks")
+                                    Text(rossLocalized("required_for_local_ai_tasks"))
                                         .font(.caption2)
                                         .foregroundStyle(Color.rossInk.opacity(0.66))
                                 }
@@ -199,7 +199,7 @@ struct AlphaFeedScreen: View {
                                 )
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel("Sort matters")
+                            .accessibilityLabel(rossLocalized("sort_matters"))
 
                             Menu {
                                 ForEach(AlphaMatterListViewMode.allCases) { option in
@@ -215,7 +215,7 @@ struct AlphaFeedScreen: View {
                                     .rossGlassSurface(cornerRadius: 17, interactive: true, shadowOpacity: 0.06, shadowRadius: 6, shadowY: 2, strokeOpacity: 0.46)
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel("Choose matter view")
+                            .accessibilityLabel(rossLocalized("choose_matter_view"))
                         }
 
                         if viewMode == .folder {
@@ -299,12 +299,12 @@ struct AlphaFeedScreen: View {
 
                 if hasReviewItems {
                     AlphaDisclosureCard(
-                        title: "Needs review",
+                        title: rossLocalized("needs_review"),
                         badge: "\(reviewItems.count)",
                         isExpanded: $reviewExpanded
                     ) {
                     VStack(alignment: .leading, spacing: 10) {
-                        AlphaWorkspaceSectionLabel(title: "Needs review", detail: "\(alphaReviewItemCountLabel(reviewItems.count)) from your files.")
+                        AlphaWorkspaceSectionLabel(title: rossLocalized("needs_review"), detail: alphaReviewItemsFromFilesLabel(reviewItems.count))
                         ForEach(Array(reviewItems.prefix(4))) { item in
                             AlphaReviewNudgeCard(
                                 item: item,
@@ -325,7 +325,7 @@ struct AlphaFeedScreen: View {
                     }
                 } else if hasAnyMatters && !matterSearchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     RossSectionCard {
-                        Text("No matters match this search.")
+                        Text(rossLocalized("no_matters_match_search"))
                             .font(.subheadline)
                             .foregroundStyle(Color.rossInk.opacity(0.68))
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -334,7 +334,7 @@ struct AlphaFeedScreen: View {
 
                 if hasRecentDocuments {
                     AlphaDisclosureCard(
-                        title: "Recent files",
+                        title: rossLocalized("recent_files"),
                         badge: "\(recentDocuments.count)",
                         isExpanded: $recentFilesExpanded
                     ) {
@@ -362,37 +362,37 @@ struct AlphaFeedScreen: View {
             }
         }
         .rossHideNavigationBarIfSupported()
-        .alert("Rename matter", isPresented: Binding(
+        .alert(rossLocalized("rename_matter"), isPresented: Binding(
             get: { renameTarget != nil },
             set: { if !$0 { renameTarget = nil } }
         )) {
-            TextField("Matter name", text: $renameDraft)
-            Button("Save") {
+            TextField(rossLocalized("matter_name"), text: $renameDraft)
+            Button(rossLocalized("save")) {
                 if let renameTarget {
                     model.renameCase(renameTarget.id, title: renameDraft)
                 }
                 renameTarget = nil
             }
-            Button("Cancel", role: .cancel) {
+            Button(rossLocalized("cancel"), role: .cancel) {
                 renameTarget = nil
             }
         } message: {
-            Text("Update the matter name on this device.")
+            Text(rossLocalized("rename_matter_detail"))
         }
-        .alert("Delete matter?", isPresented: Binding(
+        .alert(rossLocalized("delete_matter_question"), isPresented: Binding(
             get: { deleteTarget != nil },
             set: { if !$0 { deleteTarget = nil } }
         ), presenting: deleteTarget) { caseMatter in
-            Button("Delete", role: .destructive) {
+            Button(rossLocalized("delete"), role: .destructive) {
                 alphaHaptic(.warning)
                 model.deleteCase(caseMatter.id)
                 deleteTarget = nil
             }
-            Button("Cancel", role: .cancel) {
+            Button(rossLocalized("cancel"), role: .cancel) {
                 deleteTarget = nil
             }
         } message: { caseMatter in
-            Text("Deleting \(caseMatter.title) removes its files, tasks, chat context, and saved reports from this device.")
+            Text(alphaDeleteMatterDetail(caseMatter.title))
         }
     }
 }
@@ -408,7 +408,7 @@ struct AlphaMatterSearchField: View {
                 .foregroundStyle(Color.rossInk.opacity(0.5))
                 .frame(width: 16)
 
-            TextField("Search by matter, client, or case number", text: $text)
+            TextField(rossLocalized("matter_search_placeholder"), text: $text)
                 .textFieldStyle(.plain)
                 .font(.body)
                 .foregroundStyle(Color.rossInk)
@@ -423,7 +423,7 @@ struct AlphaMatterSearchField: View {
                         .foregroundStyle(Color.rossInk.opacity(0.34))
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Clear matter search")
+                .accessibilityLabel(rossLocalized("clear_matter_search"))
             }
         }
         .padding(.horizontal, 16)
@@ -563,6 +563,14 @@ func alphaPageLabel(_ pageNumber: Int, languageCode: String = rossSelectedLangua
 
 func alphaReviewItemCountLabel(_ count: Int) -> String {
     count == 1 ? "1 review item" : "\(count) review items"
+}
+
+func alphaReviewItemsFromFilesLabel(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("review_items_from_files", languageCode: languageCode), alphaReviewItemCountLabel(count))
+}
+
+func alphaDeleteMatterDetail(_ title: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("delete_matter_detail", languageCode: languageCode), title)
 }
 
 func alphaUpdateCountLabel(_ count: Int) -> String {
