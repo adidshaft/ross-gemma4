@@ -108,7 +108,7 @@ struct AlphaPrivateAISettingsScreen: View {
             RossGlassGroup(spacing: 12) {
                 LazyVStack(alignment: .leading, spacing: 12) {
                 RossSectionCard(
-                    title: "Ross assistant",
+                    title: "My assistant",
                     subtitle: "Local answers need setup on this iPhone."
                 ) {
                     VStack(alignment: .leading, spacing: 6) {
@@ -263,7 +263,7 @@ struct AlphaPrivateAISettingsScreen: View {
             }
             .padding(alphaScreenPadding)
         }
-        .navigationTitle("Ross assistant")
+        .navigationTitle("My assistant")
         .rossInlineNavigationTitle()
     }
 }
@@ -343,7 +343,7 @@ func alphaAssistantVerificationSummary(
     if runtimeHealth.modelPathPresent {
         return "Downloaded file needs repair before Ross can use it."
     }
-    return "Assistant file is missing. Set up Ross assistant again."
+    return "Assistant file is missing. Open My assistant and set up again."
 }
 
 #if DEBUG
@@ -933,7 +933,7 @@ struct AlphaPrivateAIInstalledPackCard: View {
                         .font(.headline)
                         .foregroundStyle(Color.rossInk)
 
-                    Text(isReady ? "Ross assistant is ready" : "Ross assistant needs attention")
+                    Text(isReady ? "My assistant is ready" : "My assistant needs attention")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(isReady ? Color.rossSuccess : Color.orange)
                 }

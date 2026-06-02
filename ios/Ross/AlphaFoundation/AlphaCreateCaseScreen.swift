@@ -527,7 +527,7 @@ func alphaPrivateAIStatus(_ model: AlphaRossModel) -> String {
 func alphaAssistantStatusSnapshot(_ model: AlphaRossModel) -> AlphaAssistantStatusSnapshot {
     if model.privateAISnapshot.activeRuntimeHealth?.available == true {
         return AlphaAssistantStatusSnapshot(
-            title: "Ross assistant is ready",
+            title: "My assistant is ready",
             detail: "Ross can help read files, draft notes, and answer from local matter files on this device.",
             tint: Color.rossSuccess
         )
@@ -537,7 +537,7 @@ func alphaAssistantStatusSnapshot(_ model: AlphaRossModel) -> AlphaAssistantStat
         switch job.state {
         case .downloading, .queued, .verifying:
             return AlphaAssistantStatusSnapshot(
-                title: "Ross assistant is setting up",
+                title: "My assistant is setting up",
                 detail: "You can keep working while Ross finishes setup on this device.",
                 tint: Color.rossAccent
             )
@@ -549,25 +549,25 @@ func alphaAssistantStatusSnapshot(_ model: AlphaRossModel) -> AlphaAssistantStat
             )
         case .pausedUser:
             return AlphaAssistantStatusSnapshot(
-                title: "Ross assistant needs attention",
+                title: "My assistant needs attention",
                 detail: "Setup is paused. You can continue working and resume whenever you are ready.",
                 tint: .orange
             )
         case .pausedNoStorage:
             return AlphaAssistantStatusSnapshot(
-                title: "Ross assistant needs attention",
+                title: "My assistant needs attention",
                 detail: alphaAssistantRecoveryDetail(for: job, fallback: "Free up space and try again."),
                 tint: .orange
             )
         case .pausedError, .failed, .cancelled:
             return AlphaAssistantStatusSnapshot(
-                title: "Ross assistant needs attention",
+                title: "My assistant needs attention",
                 detail: alphaAssistantRecoveryDetail(for: job, fallback: "Setup could not finish. Open My assistant to retry or repair setup."),
                 tint: .orange
             )
         default:
             return AlphaAssistantStatusSnapshot(
-                title: "Ross assistant is setting up",
+                title: "My assistant is setting up",
                 detail: "Ross is still preparing on this device.",
                 tint: Color.rossAccent
             )
@@ -576,14 +576,14 @@ func alphaAssistantStatusSnapshot(_ model: AlphaRossModel) -> AlphaAssistantStat
 
     if model.activePack != nil {
         return AlphaAssistantStatusSnapshot(
-            title: "Ross assistant needs attention",
+            title: "My assistant needs attention",
             detail: "Ross needs to check setup before answering legal questions.",
             tint: .orange
         )
     }
 
     return AlphaAssistantStatusSnapshot(
-        title: "Ross assistant is not set up",
+        title: "My assistant is not set up",
         detail: "Ross can still organize matters, tasks, dates, and files. Legal answers need assistant setup.",
         tint: Color.rossAccent
     )

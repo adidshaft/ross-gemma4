@@ -167,7 +167,7 @@ struct AlphaSettingsScreen: View {
                     .tint(Color.rossAccent)
                 }
 
-                RossSectionCard(title: "Ross assistant") {
+                RossSectionCard(title: "My assistant") {
                     VStack(alignment: .leading, spacing: 12) {
                         Text(alphaPrivateAIStatus(model))
                             .font(.headline)
@@ -180,7 +180,7 @@ struct AlphaSettingsScreen: View {
                         Divider()
                         NavigationLink(value: AlphaRoute.privateAISettings) {
                             AlphaSettingsNavigationRow(
-                                title: "Set up Ross assistant",
+                                title: "Open My assistant",
                                 detail: "Use this when answers are unavailable or setup is paused.",
                                 systemImage: "gearshape.2"
                             )

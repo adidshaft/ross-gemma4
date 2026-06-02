@@ -418,7 +418,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             ]
 
             let status = alphaAssistantStatusSnapshot(model)
-            XCTAssertEqual("Ross assistant is ready", status.title)
+            XCTAssertEqual("My assistant is ready", status.title)
         }
     }
 
@@ -446,7 +446,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             ]
 
             let status = alphaAssistantStatusSnapshot(model)
-            XCTAssertEqual("Ross assistant needs attention", status.title)
+            XCTAssertEqual("My assistant needs attention", status.title)
             XCTAssertEqual("Free up 4 GB to finish assistant setup.", status.detail)
         }
     }
@@ -475,7 +475,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             ]
 
             let status = alphaAssistantStatusSnapshot(model)
-            XCTAssertEqual("Ross assistant needs attention", status.title)
+            XCTAssertEqual("My assistant needs attention", status.title)
             XCTAssertEqual("Setup could not finish. Open My assistant to retry or repair setup.", status.detail)
             XCTAssertFalse(status.detail.localizedCaseInsensitiveContains("NSURLErrorDomain"))
         }
