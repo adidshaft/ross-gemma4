@@ -1229,7 +1229,7 @@ extension AlphaRossModel {
                     bodyLines: [
                         "Draft — please review",
                         "Synthetic local inference smoke run",
-                        "Runtime: \(runtimeHealth.runtimeMode.rawValue)",
+                        "Assistant: Ready on this device",
                         "Fields found: \(result.extractedFields.count)",
                         "Fields verified: \(result.extractedFields.filter { !$0.needsReview || $0.userCorrected }.count)",
                         "Fields needing review: \(result.extractedFields.filter { $0.needsReview && !$0.userCorrected }.count)"
