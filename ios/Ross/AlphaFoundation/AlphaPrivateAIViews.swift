@@ -820,9 +820,6 @@ struct AlphaPrivateAIJobCard: View {
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
                             Capsule()
-                                .fill(Color.rossAccent.opacity(0.12))
-                                .frame(height: 7)
-                            Capsule()
                                 .fill(LinearGradient(
                                     colors: [Color.rossAccent.opacity(0.80), Color.rossAccent],
                                     startPoint: .leading, endPoint: .trailing
@@ -831,6 +828,12 @@ struct AlphaPrivateAIJobCard: View {
                                 .shadow(color: Color.rossAccent.opacity(0.35), radius: 4)
                                 .animation(.spring(response: 0.4, dampingFraction: 0.8), value: progressValue)
                         }
+                        .rossNativeGlassSurface(
+                            tint: Color.rossAccent.opacity(0.18),
+                            shape: Capsule(),
+                            fallbackFillOpacity: 0.62,
+                            fallbackStrokeOpacity: 0.34
+                        )
                     }
                     .frame(height: 7)
 
