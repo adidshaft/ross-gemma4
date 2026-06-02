@@ -368,6 +368,55 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertEqual(result.statusNote, "Answered from selected files")
     }
 
+    @MainActor
+    func testSelectedFileWaitingResultUsesPlainLanguage() {
+        let caseID = UUID()
+        let documentID = UUID()
+        var state = AlphaPersistedState.seed()
+        state.cases = [
+            AlphaCaseMatter(
+                id: caseID,
+                title: "Reading matter",
+                forum: "District Court",
+                stage: .evidence,
+                summary: "A selected file is still being read.",
+                issueHighlights: [],
+                evidenceNotes: [],
+                draftTasks: [],
+                documents: [
+                    AlphaCaseDocument(
+                        id: documentID,
+                        title: "Reading scan",
+                        fileName: "reading-scan.pdf",
+                        kind: .pdf,
+                        storedRelativePath: "docs/reading-scan.pdf",
+                        importedAt: .now,
+                        pageCount: 1,
+                        ocrStatus: .placeholder,
+                        indexingStatus: .extracting,
+                        pages: []
+                    )
+                ],
+                sourceRefs: []
+            )
+        ]
+
+        let model = AlphaRossModel(previewState: state)
+        model.setSelectedAskDocumentIDs([documentID], for: caseID)
+
+        let result = model.buildLocalAskResult(
+            question: "What does this selected file say?",
+            scopeCaseID: caseID
+        )
+        let answerText = result.answerSections.joined(separator: " ")
+
+        XCTAssertEqual(result.answerTitle, "Ross is still reading this file")
+        XCTAssertEqual(result.statusNote, "Reading")
+        XCTAssertTrue(answerText.contains("selected files are ready"))
+        XCTAssertFalse(answerText.localizedCaseInsensitiveContains("placeholder"), answerText)
+        XCTAssertFalse(answerText.localizedCaseInsensitiveContains("incomplete text"), answerText)
+    }
+
     func testReadyAssistantStatusWinsOverFailedInactiveDownload() async {
         let model = await MainActor.run {
             AlphaRossModel(previewState: AlphaPersistedState.demoSeed())
