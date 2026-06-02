@@ -8,11 +8,14 @@ This runbook exists to keep the repo honest about what was actually proven.
 
 ## Latest observed status
 
-Observed on 2026-04-19:
+Observed on 2026-06-02:
 
-- Android real local inference was not run because no physical Android device was connected and no developer-provided compatible `.task` artifact was configured.
-- iOS real local inference was not run because no compatible Apple device/runtime was used in this session.
-- Backend live smoke passed for the default deterministic model catalog/download flow and the optional external debug-model flow with a safe temporary file outside the repo.
+- iOS Swift tests and simulator build passed for the Gemma GGUF download/install/readiness plumbing.
+- iOS simulator real Gemma GGUF smoke passed with `/Users/amanpandey/projects/ross-gemma4/artifacts/gemma-2-2b-it-Q4_K_M.gguf` (`e0aee85060f168f0f2d8473d7ea41ce2f3230c1bc1374847505ea599288a7787`) using `ROSS_LOCAL_RUNTIME=gemma_local_runtime`.
+- The smoke passed English source grounding, Bengali Bangla-script source grounding, Hindi Devanagari source grounding, and a general cautious answer.
+- A stricter rerun later on 2026-06-02 emitted `ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime tier=quick_start elapsed=91.00s ... source_native_model=true bengali_native_model=false hindi_native_model=true general_native_model=true`.
+- Native Hindi behavior is proven in that simulator smoke; native Bengali behavior is not claimed yet because Bengali used Ross's source-preserving fallback.
+- A physical/device QA pass over user-imported files is still required before claiming App Store/device performance.
 
 ## Canonical environment names
 
@@ -75,15 +78,47 @@ Current status:
 
 ## iOS QA
 
-Requirements:
+Requirements for Apple Foundation Models:
 
 - `ROSS_ENABLE_REAL_LOCAL_INFERENCE=1`
 - `ROSS_LOCAL_RUNTIME=apple_foundation_models`
 - compatible Apple device/runtime
 
-Manual steps:
+Requirements for Gemma GGUF:
 
-1. Open `/Users/amanpandey/projects/ross/ios/Ross.xcodeproj`.
+- `ROSS_ENABLE_REAL_LOCAL_INFERENCE=1`
+- `ROSS_LOCAL_RUNTIME=gemma_local_runtime`
+- `ROSS_LOCAL_MODEL_PATH=<app-readable absolute GGUF path>`
+- optional `ROSS_LOCAL_MODEL_CHECKSUM=<sha256>`
+- optional `ROSS_LOCAL_MODEL_KIND=gguf`
+
+Manual setup smoke:
+
+1. Open `/Users/amanpandey/projects/ross-gemma4/ios/Ross.xcodeproj`.
+2. Add the environment variables to the scheme.
+3. For direct GGUF smoke, add `--local-model-smoke` to the scheme arguments.
+4. Run on a compatible simulator or device that can read the configured model path.
+5. Confirm the console prints `ROSS_LOCAL_MODEL_SMOKE_HEALTH`.
+6. Claim real local model execution only if the console prints `ROSS_LOCAL_MODEL_SMOKE_PASS`.
+7. Treat any `ROSS_LOCAL_MODEL_SMOKE_FAIL` as a failed proof, especially when it reports `source_grounded=false`, `bengali_grounded=false`, or `hindi_grounded=false`.
+8. Read `bengali_native_model` and `hindi_native_model` on the pass/fail line:
+   - `true` means the real provider produced that language/script answer itself.
+   - `false` means Ross kept the product answer safe by using the source-preserving extractive fallback.
+9. If the console only shows llama.cpp model/context setup and never prints a Ross pass/fail marker, record the run as stalled and terminate the app; do not claim native model proof from that run.
+
+The current `--local-model-smoke` pass requires all of these from the real provider:
+
+- English source-grounded answer about Article 417 citation verification.
+- Bengali source-grounded answer in Bangla script.
+- Hindi source-grounded answer in Devanagari script.
+- General cautious answer without a tagged source.
+- No deterministic fallback provider.
+
+Native multilingual model proof is stricter than product safety proof. To claim the model itself handled Bengali/Hindi, require `bengali_native_model=true` and `hindi_native_model=true` in addition to `ROSS_LOCAL_MODEL_SMOKE_PASS`.
+
+Manual in-app flow:
+
+1. Open `/Users/amanpandey/projects/ross-gemma4/ios/Ross.xcodeproj`.
 2. Add the environment variables to the scheme.
 3. Run on a compatible device.
 4. Open `Settings > Private AI > Technical details`.
@@ -96,6 +131,8 @@ Manual steps:
 7. Confirm the smoke report shows:
    - runtime used
    - schema valid
+   - source-grounded file answer
+   - Hindi/Bengali script-appropriate answer when prompted
    - fields found
    - fields verified
    - unsupported accepted `0`

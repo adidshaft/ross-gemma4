@@ -1131,11 +1131,6 @@ private struct RossLanguageOption: Identifiable {
 private let rossLanguageOptions: [RossLanguageOption] = [
     RossLanguageOption(id: "en", nativeName: "English", englishName: "English"),
     RossLanguageOption(id: "hi", nativeName: "हिन्दी", englishName: "Hindi"),
-    RossLanguageOption(id: "ta", nativeName: "தமிழ்", englishName: "Tamil"),
-    RossLanguageOption(id: "te", nativeName: "తెలుగు", englishName: "Telugu"),
-    RossLanguageOption(id: "kn", nativeName: "ಕನ್ನಡ", englishName: "Kannada"),
-    RossLanguageOption(id: "ml", nativeName: "മലയാളം", englishName: "Malayalam"),
-    RossLanguageOption(id: "mr", nativeName: "मराठी", englishName: "Marathi"),
     RossLanguageOption(id: "bn", nativeName: "বাংলা", englishName: "Bengali"),
 ]
 
@@ -1248,16 +1243,19 @@ private struct RossLanguageTile: View {
             .frame(maxWidth: .infinity, minHeight: 78, alignment: .leading)
             .padding(.horizontal, 16)
             .padding(.vertical, 2)
+            .rossGlassSurface(
+                tint: isSelected ? Color.rossAccent : Color.rossHighlight,
+                cornerRadius: 16,
+                interactive: true,
+                shadowOpacity: isSelected ? 0.24 : 0.10,
+                shadowRadius: isSelected ? 12 : 8,
+                shadowY: isSelected ? 8 : 4,
+                fillOpacity: isSelected ? 0.88 : 0.90,
+                strokeOpacity: isSelected ? 0.46 : 0.62
+            )
             .background {
                 if isSelected {
-                    shape
-                        .fill(Color.rossPillGradient.opacity(colorScheme == .dark ? 0.88 : 1))
-                        .background(.thinMaterial, in: shape)
-                        .shadow(color: Color.rossAccent.opacity(0.24), radius: 12, y: 8)
-                } else {
-                    shape
-                        .fill(Color.white.opacity(colorScheme == .dark ? 0.08 : 0.22))
-                        .background(.ultraThinMaterial, in: shape)
+                    shape.fill(Color.rossPillGradient)
                 }
             }
             .overlay {
@@ -1716,14 +1714,7 @@ private struct RossAuthNotice: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.rossSecondaryGroupedBackground.opacity(0.68))
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.rossBorder.opacity(0.72), lineWidth: 1)
-        }
+        .rossGlassSurface(tint: Color.orange, cornerRadius: 14, shadowOpacity: 0.06, shadowRadius: 6, shadowY: 2, fillOpacity: 0.76, strokeOpacity: 0.44)
     }
 }
 
@@ -1795,7 +1786,12 @@ private struct RossQuickUnlockScreen: View {
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
-                            .background(Color.rossSecondaryGroupedBackground.opacity(0.82), in: Capsule())
+                            .rossNativeGlassSurface(
+                                tint: Color.rossAccent,
+                                shape: Capsule(),
+                                fallbackFillOpacity: 0.82,
+                                fallbackStrokeOpacity: 0.44
+                            )
 
                         if let errorMessage = authController.authErrorMessage, !errorMessage.isEmpty {
                             RossAuthNotice(text: errorMessage)
@@ -1927,48 +1923,22 @@ private struct RossAuthGlassPanel<Content: View>: View {
     }
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-
         content
             .padding(padding)
             .frame(width: forcedWidth, alignment: .leading)
-            .background {
-                shape
-                    .fill(Color.rossGlassFill.opacity(colorScheme == .dark ? 0.9 : 0.78))
-                    .background(.ultraThinMaterial, in: shape)
-                    .overlay {
-                        shape
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        Color.rossBackdropGlow.opacity(colorScheme == .dark ? 0.12 : 0.22),
-                                        Color.rossGlassSubtleFill.opacity(colorScheme == .dark ? 0.12 : 0.18),
-                                        Color.clear
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .blendMode(.screen)
-                    }
-            }
-            .overlay {
-                shape.strokeBorder(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(colorScheme == .dark ? 0.12 : 0.48),
-                            Color.rossGlassStroke.opacity(colorScheme == .dark ? 0.28 : 0.62)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
-            }
+            .rossGlassSurface(
+                tint: Color.rossHighlight,
+                cornerRadius: cornerRadius,
+                shadowOpacity: colorScheme == .dark ? 0.24 : 0.16,
+                shadowRadius: colorScheme == .dark ? 18 : 24,
+                shadowY: colorScheme == .dark ? 10 : 14,
+                fillOpacity: colorScheme == .dark ? 0.86 : 0.92,
+                strokeOpacity: colorScheme == .dark ? 0.30 : 0.66
+            )
             .shadow(
-                color: Color.rossShadow.opacity(colorScheme == .dark ? 0.32 : 0.14),
-                radius: colorScheme == .dark ? 18 : 28,
-                y: colorScheme == .dark ? 10 : 18
+                color: Color.rossBackdropGlow.opacity(colorScheme == .dark ? 0.08 : 0.10),
+                radius: colorScheme == .dark ? 22 : 30,
+                y: colorScheme == .dark ? 8 : 12
             )
     }
 }
@@ -2003,11 +1973,7 @@ private struct RossAuthInputField: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 14)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color.white.opacity(0.12))
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            )
+            .rossGlassSurface(cornerRadius: 14, interactive: true, shadowOpacity: 0.08, shadowRadius: 8, shadowY: 2, fillOpacity: 0.74, strokeOpacity: isFocused ? 0.72 : 0.48)
             .overlay {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .stroke(
@@ -2047,6 +2013,10 @@ struct RossApp: App {
     #endif
 
     init() {
+        if RossLaunchMode.current == .localModelSmoke {
+            setvbuf(stdout, nil, _IONBF, 0)
+            setvbuf(stderr, nil, _IONBF, 0)
+        }
         alphaSweepTemporaryAssistantDownloadsAtLaunch()
     }
 

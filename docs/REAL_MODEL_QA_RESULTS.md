@@ -1,5 +1,49 @@
 # Real Model QA Results
 
+## 2026-06-02 iOS simulator GGUF smoke
+
+- Branch: `main`
+- Platform: iOS Simulator (`iPhone 17`)
+- Runtime mode: `gemma_local_runtime`
+- Model artifact used: `/Users/amanpandey/projects/ross-gemma4/artifacts/gemma-2-2b-it-Q4_K_M.gguf`
+- Model SHA-256 observed locally: `e0aee85060f168f0f2d8473d7ea41ce2f3230c1bc1374847505ea599288a7787`
+- Whether model files were committed: No
+- Whether real GGUF inference ran: Yes, in simulator, through `--local-model-smoke`
+- Proof marker: `ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime tier=quick_start`
+- What passed:
+  - English source-grounded answer about Article 417 citation verification
+  - Bengali Bangla-script source-grounded answer
+  - Hindi Devanagari source-grounded answer
+  - general cautious answer without tagged sources
+- Native model-vs-fallback marker: not recorded in this run. Later smoke logs include `bengali_native_model` and `hindi_native_model`; require those to be `true` before claiming native multilingual model behavior rather than product-safe source fallback behavior.
+- What is still not proven:
+  - physical iPhone download/resume/verify/activate of a multi-GB GGUF
+  - physical-device imported PDF/image/text Ask flow and performance
+  - separate embedding-model retrieval
+
+## 2026-06-02 stricter iOS simulator GGUF smoke rerun
+
+- Branch: `main`
+- Platform: iOS Simulator (`iPhone 17`, `DCE8EAA3-A325-4FA9-A37B-C2653ECEDA6D`)
+- Runtime mode: `gemma_local_runtime`
+- Model artifact used: `/Users/amanpandey/projects/ross-gemma4/artifacts/gemma-2-2b-it-Q4_K_M.gguf`
+- Model SHA-256 observed locally: `e0aee85060f168f0f2d8473d7ea41ce2f3230c1bc1374847505ea599288a7787`
+- Smoke command shape: `xcrun simctl launch --terminate-running-process --console ... com.ross.ios --local-model-smoke` with `SIMCTL_CHILD_ROSS_*` environment variables and `ROSS_LOCAL_MODEL_SMOKE_STAGE_TIMEOUT_SECONDS=45`
+- Result: passed.
+- Proof marker: `ROSS_LOCAL_MODEL_SMOKE_PASS runtime=gemma_local_runtime tier=quick_start elapsed=91.00s source_raw_chars=339 source_parsed_chars=167 bengali_output_chars=171 hindi_output_chars=277 general_output_chars=283 source_native_model=true bengali_native_model=false hindi_native_model=true general_native_model=true`
+- Observed behavior:
+  - the smoke runner used the explicit environment-provided debug pack directly instead of loading persisted app state first
+  - the simulator process loaded the GGUF metadata, constructed the llama.cpp context, and completed all four smoke stages
+  - the app was manually terminated after the pass marker with `xcrun simctl terminate`
+- Harness improvement made during this pass:
+  - `--local-model-smoke` now emits flushed stage markers to stderr around debug-pack selection, provider resolution, and each provider call
+  - each provider stage is guarded by a configurable timeout and returns a fail output if generation times out
+  - direct environment-supplied GGUF smoke skips heavyweight persisted-state runtime-health loading before provider execution
+- Current interpretation:
+  - real GGUF simulator inference is proven for English source grounding, Hindi Devanagari output, general cautious output, and product-safe Bengali Bangla-script output
+  - Bengali was kept safe by Ross's source-preserving fallback in this run (`bengali_native_model=false`), so native Bengali model generation is not yet proven
+  - physical iPhone proof remains required before claiming downloaded-model performance or reliability over user-imported files
+
 ## 2026-04-24 Gemma 4 metadata update
 
 - Branch: `gemma-4-gguf-model-strategy`
@@ -10,7 +54,7 @@
 - Backend default: tiny deterministic artifacts
 - Backend production metadata mode: Gemma 4 metadata only, no real download session
 - Whether model files were committed: No
-- Whether real Gemma 4 Q4 inference ran: Not yet
+- Whether real Gemma 4 Q4 inference ran: Not in this historical April pass. A later June 2 simulator GGUF smoke did run.
 - Whether separate embedding-model retrieval ran: Not yet
 - Exact next proof step: implement and test the Matter Search embedding install/retrieval path, then run hardware Q4 inference proof.
 

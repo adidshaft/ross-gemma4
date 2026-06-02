@@ -41,19 +41,28 @@ struct RossLocalModelSmokeView: View {
     @MainActor
     private func runSmoke() async {
         let model = AlphaRossModel()
-        await model.loadIfNeeded()
+        let activePack: AlphaInstalledModelPack?
+        if let debugPack = debugLocalModelSmokePack() {
+            activePack = debugPack
+            RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE using_debug_pack")
+        } else {
+            RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE load_model_state")
+            await model.loadIfNeeded()
+            RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE loaded_model_state")
+            activePack = model.activePack
+        }
 
-        guard let activePack = model.activePack else {
+        guard let activePack else {
             status = "No active local model pack."
-            print("ROSS_LOCAL_MODEL_SMOKE_FAIL no_active_pack")
+            RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_FAIL no_active_pack")
             return
         }
 
-        let health = model.activeRuntimeHealth
-        print(
-            "ROSS_LOCAL_MODEL_SMOKE_HEALTH runtime=\(health?.runtimeMode.rawValue ?? "nil") available=\(health?.available == true) model=\(health?.modelPathLabel ?? "nil") checksum=\(health?.checksumVerified == true)"
+        RossLocalModelSmokeView.log(
+            "ROSS_LOCAL_MODEL_SMOKE_HEALTH runtime=\(activePack.runtimeMode.rawValue) available=true model=\(URL(fileURLWithPath: activePack.installPath).lastPathComponent) checksum=\(activePack.checksumVerified)"
         )
 
+        RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE resolve_provider")
         guard let provider = AlphaLocalModelRuntime.resolveProvider(
             activePack: activePack,
             requestedTier: activePack.tier,
@@ -69,9 +78,10 @@ struct RossLocalModelSmokeView: View {
             }
         ), provider.runtimeMode != .deterministicDev else {
             status = "Real local provider unavailable."
-            print("ROSS_LOCAL_MODEL_SMOKE_FAIL provider_unavailable runtime=\(model.activeRuntimeHealth?.runtimeMode.rawValue ?? "nil")")
+            RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_FAIL provider_unavailable runtime=\(activePack.runtimeMode.rawValue)")
             return
         }
+        RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE provider_ready runtime=\(provider.runtimeMode.rawValue)")
 
         let sourceRef = AlphaSourceRef(
             caseId: UUID(),
@@ -99,6 +109,88 @@ struct RossLocalModelSmokeView: View {
             extractionMode: .fromInstalledPack(activePack),
             requireSourceRefs: true
         )
+        let bengaliDocumentId = UUID()
+        let bengaliSourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: bengaliDocumentId,
+            documentTitle: "Bangla Local Smoke Source",
+            pageNumber: 1,
+            textSnippet: "ধারা ৪১৭ অনুযায়ী আইনজীবীকে দাখিলের আগে উদ্ধৃতি যাচাই করতে হবে।"
+        )
+        let bengaliLanguageProfile = AlphaDocumentLanguageProfile(
+            documentId: bengaliDocumentId,
+            primaryLanguage: .bengali,
+            scriptsDetected: ["bengali"],
+            confidence: 0.98,
+            pageProfiles: [
+                AlphaDocumentLanguageProfilePage(
+                    pageNumber: 1,
+                    language: .bengali,
+                    script: .bengali,
+                    confidence: 0.98
+                )
+            ]
+        )
+        let bengaliSourceBoundInput = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "বাংলা স্ক্রিপ্টে উত্তর দিন। দেওয়া উৎস অনুযায়ী ধারা ৪১৭ কী করতে বলে? JSON ফিরিয়ে দিন: headline, sections, statusNote.",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: bengaliSourceRef,
+                    text: "বাংলা লোকাল স্মোক উৎস: ধারা ৪১৭ অনুযায়ী আইনজীবীকে দাখিলের আগে উদ্ধৃতি যাচাই করতে হবে। এটি স্বয়ংক্রিয় আইনি পরামর্শ অনুমোদন করে না।",
+                    pageNumber: 1,
+                    languageHint: "bn",
+                    ocrConfidence: 1
+                )
+            ],
+            expectedSchema: #"{"headline":"short Bengali string","sections":["one concise Bengali string"],"statusNote":"short Bengali string"}"#,
+            maxOutputTokens: 192,
+            languageProfile: bengaliLanguageProfile,
+            documentClassification: nil,
+            extractionMode: .fromInstalledPack(activePack),
+            requireSourceRefs: true
+        )
+        let hindiDocumentId = UUID()
+        let hindiSourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: hindiDocumentId,
+            documentTitle: "Hindi Local Smoke Source",
+            pageNumber: 1,
+            textSnippet: "धारा ४१७ के अनुसार अधिवक्ता को दाखिल करने से पहले उद्धरण सत्यापित करना होगा।"
+        )
+        let hindiLanguageProfile = AlphaDocumentLanguageProfile(
+            documentId: hindiDocumentId,
+            primaryLanguage: .hindi,
+            scriptsDetected: ["devanagari"],
+            confidence: 0.98,
+            pageProfiles: [
+                AlphaDocumentLanguageProfilePage(
+                    pageNumber: 1,
+                    language: .hindi,
+                    script: .devanagari,
+                    confidence: 0.98
+                )
+            ]
+        )
+        let hindiSourceBoundInput = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "देवनागरी हिंदी में उत्तर दें। दिए गए स्रोत के अनुसार धारा ४१७ क्या करने को कहती है? JSON लौटाएं: headline, sections, statusNote.",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: hindiSourceRef,
+                    text: "हिंदी लोकल स्मोक स्रोत: धारा ४१७ के अनुसार अधिवक्ता को दाखिल करने से पहले उद्धरण सत्यापित करना होगा। यह स्वचालित कानूनी सलाह की अनुमति नहीं देता।",
+                    pageNumber: 1,
+                    languageHint: "hi",
+                    ocrConfidence: 1
+                )
+            ],
+            expectedSchema: #"{"headline":"short Hindi string","sections":["one concise Hindi string"],"statusNote":"short Hindi string"}"#,
+            maxOutputTokens: 192,
+            languageProfile: hindiLanguageProfile,
+            documentClassification: nil,
+            extractionMode: .fromInstalledPack(activePack),
+            requireSourceRefs: true
+        )
         let generalInput = AlphaLocalModelInput(
             task: .matterQuestionAnswer,
             instruction: "No matter document is supplied. Answer cautiously: what should an advocate know when someone asks 'What is Article 417?' Return JSON with headline, sections, and statusNote.",
@@ -112,23 +204,225 @@ struct RossLocalModelSmokeView: View {
         )
 
         let started = Date()
-        let sourceBoundOutput = await provider.run(sourceBoundInput)
-        let generalOutput = await provider.run(generalInput)
+        let perStageTimeoutSeconds = RossLocalModelSmokeView.stageTimeoutSeconds()
+        RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE source timeout=\(Int(perStageTimeoutSeconds))s")
+        let sourceBoundOutput = await RossLocalModelSmokeView.runProviderStage(
+            provider: provider,
+            input: sourceBoundInput,
+            stage: "source",
+            timeoutSeconds: perStageTimeoutSeconds
+        )
+        RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE bengali timeout=\(Int(perStageTimeoutSeconds))s")
+        let bengaliOutput = await RossLocalModelSmokeView.runProviderStage(
+            provider: provider,
+            input: bengaliSourceBoundInput,
+            stage: "bengali",
+            timeoutSeconds: perStageTimeoutSeconds
+        )
+        RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE hindi timeout=\(Int(perStageTimeoutSeconds))s")
+        let hindiOutput = await RossLocalModelSmokeView.runProviderStage(
+            provider: provider,
+            input: hindiSourceBoundInput,
+            stage: "hindi",
+            timeoutSeconds: perStageTimeoutSeconds
+        )
+        RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE general timeout=\(Int(perStageTimeoutSeconds))s")
+        let generalOutput = await RossLocalModelSmokeView.runProviderStage(
+            provider: provider,
+            input: generalInput,
+            stage: "general",
+            timeoutSeconds: perStageTimeoutSeconds
+        )
         let elapsed = Date().timeIntervalSince(started)
         let sourceRawLength = sourceBoundOutput.rawText.count
         let sourceParsedLength = sourceBoundOutput.parsedJson?.count ?? 0
+        let bengaliOutputLength = (bengaliOutput.parsedJson ?? bengaliOutput.rawText).count
+        let hindiOutputLength = (hindiOutput.parsedJson ?? hindiOutput.rawText).count
         let generalOutputLength = (generalOutput.parsedJson ?? generalOutput.rawText).count
+        let sourceBoundText = sourceBoundOutput.parsedJson ?? sourceBoundOutput.rawText
+        let bengaliText = bengaliOutput.parsedJson ?? bengaliOutput.rawText
+        let hindiText = hindiOutput.parsedJson ?? hindiOutput.rawText
+        let generalText = generalOutput.parsedJson ?? generalOutput.rawText
+        let sourceUsedFileFact = RossLocalModelSmokeView.mentionsSmokeSourceFact(sourceBoundText)
+        let bengaliUsedFileFact = RossLocalModelSmokeView.mentionsBengaliSmokeSourceFact(bengaliText)
+        let hindiUsedFileFact = RossLocalModelSmokeView.mentionsHindiSmokeSourceFact(hindiText)
+        let sourceUsedLanguageFallback = RossLocalModelSmokeView.usedLanguagePreservingFallback(sourceBoundOutput)
+        let bengaliUsedLanguageFallback = RossLocalModelSmokeView.usedLanguagePreservingFallback(bengaliOutput)
+        let hindiUsedLanguageFallback = RossLocalModelSmokeView.usedLanguagePreservingFallback(hindiOutput)
+        let generalUsedLanguageFallback = RossLocalModelSmokeView.usedLanguagePreservingFallback(generalOutput)
+        let sourceNativeModel = !sourceUsedLanguageFallback
+        let bengaliNativeModel = !bengaliUsedLanguageFallback
+        let hindiNativeModel = !hindiUsedLanguageFallback
+        let generalNativeModel = !generalUsedLanguageFallback
 
         if sourceBoundOutput.schemaValid,
            sourceBoundOutput.errorCategory == nil,
+           bengaliOutput.schemaValid,
+           bengaliOutput.errorCategory == nil,
+           hindiOutput.schemaValid,
+           hindiOutput.errorCategory == nil,
            generalOutput.schemaValid,
-           generalOutput.errorCategory == nil {
+           generalOutput.errorCategory == nil,
+           sourceUsedFileFact,
+           bengaliUsedFileFact,
+           hindiUsedFileFact {
             status = "Local model smoke passed."
-            print("ROSS_LOCAL_MODEL_SMOKE_PASS runtime=\(provider.runtimeMode.rawValue) tier=\(activePack.tier.rawValue) elapsed=\(String(format: "%.2f", elapsed))s source_raw_chars=\(sourceRawLength) source_parsed_chars=\(sourceParsedLength) general_output_chars=\(generalOutputLength)")
+            RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_PASS runtime=\(provider.runtimeMode.rawValue) tier=\(activePack.tier.rawValue) elapsed=\(String(format: "%.2f", elapsed))s source_raw_chars=\(sourceRawLength) source_parsed_chars=\(sourceParsedLength) bengali_output_chars=\(bengaliOutputLength) hindi_output_chars=\(hindiOutputLength) general_output_chars=\(generalOutputLength) source_native_model=\(sourceNativeModel) bengali_native_model=\(bengaliNativeModel) hindi_native_model=\(hindiNativeModel) general_native_model=\(generalNativeModel)")
         } else {
             status = "Local model smoke failed."
-            print("ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(provider.runtimeMode.rawValue) tier=\(activePack.tier.rawValue) elapsed=\(String(format: "%.2f", elapsed))s source_error=\(sourceBoundOutput.errorCategory ?? "nil") general_error=\(generalOutput.errorCategory ?? "nil") source_warning_count=\(sourceBoundOutput.warnings.count) general_warning_count=\(generalOutput.warnings.count) source_raw_chars=\(sourceRawLength) general_output_chars=\(generalOutputLength)")
+            RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(provider.runtimeMode.rawValue) tier=\(activePack.tier.rawValue) elapsed=\(String(format: "%.2f", elapsed))s source_error=\(sourceBoundOutput.errorCategory ?? "nil") bengali_error=\(bengaliOutput.errorCategory ?? "nil") hindi_error=\(hindiOutput.errorCategory ?? "nil") general_error=\(generalOutput.errorCategory ?? "nil") source_grounded=\(sourceUsedFileFact) bengali_grounded=\(bengaliUsedFileFact) hindi_grounded=\(hindiUsedFileFact) source_native_model=\(sourceNativeModel) bengali_native_model=\(bengaliNativeModel) hindi_native_model=\(hindiNativeModel) general_native_model=\(generalNativeModel) source_warning_count=\(sourceBoundOutput.warnings.count) bengali_warning_count=\(bengaliOutput.warnings.count) hindi_warning_count=\(hindiOutput.warnings.count) general_warning_count=\(generalOutput.warnings.count) source_raw_chars=\(sourceRawLength) bengali_output_chars=\(bengaliOutputLength) hindi_output_chars=\(hindiOutputLength) general_output_chars=\(generalOutputLength)")
+            RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_OUTPUT source=\(RossLocalModelSmokeView.compactLogExcerpt(sourceBoundText))")
+            RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_OUTPUT bengali=\(RossLocalModelSmokeView.compactLogExcerpt(bengaliText))")
+            RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_OUTPUT hindi=\(RossLocalModelSmokeView.compactLogExcerpt(hindiText))")
+            RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_OUTPUT general=\(RossLocalModelSmokeView.compactLogExcerpt(generalText))")
         }
+    }
+
+    nonisolated static func log(_ message: String) {
+        let line = "\(message)\n"
+        if let data = line.data(using: .utf8) {
+            FileHandle.standardError.write(data)
+        } else {
+            fputs(line, stderr)
+        }
+        fflush(stderr)
+    }
+
+    nonisolated static func compactLogExcerpt(_ text: String) -> String {
+        let collapsed = text
+            .replacingOccurrences(of: "\n", with: " ")
+            .replacingOccurrences(of: "\r", with: " ")
+            .split(whereSeparator: { $0.isWhitespace })
+            .joined(separator: " ")
+        return String(collapsed.prefix(360))
+    }
+
+    nonisolated static func stageTimeoutSeconds() -> TimeInterval {
+        let rawValue = ProcessInfo.processInfo.environment["ROSS_LOCAL_MODEL_SMOKE_STAGE_TIMEOUT_SECONDS"] ?? ""
+        guard let seconds = TimeInterval(rawValue), seconds > 0 else {
+            return 180
+        }
+        return seconds
+    }
+
+    nonisolated static func runProviderStage(
+        provider: any AlphaLocalModelProvider,
+        input: AlphaLocalModelInput,
+        stage: String,
+        timeoutSeconds: TimeInterval
+    ) async -> AlphaLocalModelOutput {
+        let timeoutOutput = AlphaLocalModelOutput(
+            rawText: "",
+            parsedJson: nil,
+            schemaValid: false,
+            warnings: ["Smoke stage \(stage) timed out after \(Int(timeoutSeconds)) seconds."],
+            sourceRefs: [],
+            errorCategory: "smoke_stage_timeout_\(stage)"
+        )
+        let providerTask = Task {
+            await provider.run(input)
+        }
+
+        return await withCheckedContinuation { continuation in
+            let gate = RossLocalModelSmokeContinuationGate()
+            Task {
+                let output = await providerTask.value
+                _ = gate.resumeIfNeeded(continuation, output: output)
+            }
+            Task {
+                let nanoseconds = UInt64(max(1, timeoutSeconds) * 1_000_000_000)
+                try? await Task.sleep(nanoseconds: nanoseconds)
+                if gate.resumeIfNeeded(continuation, output: timeoutOutput) {
+                    providerTask.cancel()
+                    RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE_TIMEOUT stage=\(stage) timeout=\(Int(timeoutSeconds))s")
+                }
+            }
+        }
+    }
+
+    nonisolated static func usedLanguagePreservingFallback(_ output: AlphaLocalModelOutput) -> Bool {
+        output.warnings.contains { warning in
+            warning.localizedCaseInsensitiveContains("Language-preserving source fallback used")
+        }
+    }
+
+    nonisolated static func mentionsSmokeSourceFact(_ text: String) -> Bool {
+        let folded = text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+        return folded.contains("article 417")
+            && folded.contains("citation")
+            && (folded.contains("verify") || folded.contains("verification"))
+    }
+
+    nonisolated static func mentionsBengaliSmokeSourceFact(_ text: String) -> Bool {
+        let hasBengaliScript = text.unicodeScalars.contains { scalar in
+            (0x0980...0x09FF).contains(Int(scalar.value))
+        }
+        return hasBengaliScript
+            && (text.contains("৪১৭") || text.contains("417"))
+            && text.contains("উদ্ধৃতি")
+            && (text.contains("যাচাই") || text.contains("যাচাই করতে"))
+    }
+
+    nonisolated static func mentionsHindiSmokeSourceFact(_ text: String) -> Bool {
+        let hasDevanagariScript = text.unicodeScalars.contains { scalar in
+            (0x0900...0x097F).contains(Int(scalar.value))
+        }
+        return hasDevanagariScript
+            && (text.contains("४१७") || text.contains("417"))
+            && text.contains("उद्धरण")
+            && (text.contains("सत्यापित") || text.contains("जांच"))
+    }
+
+    private func debugLocalModelSmokePack() -> AlphaInstalledModelPack? {
+        let environment = AlphaLocalRuntimeEnvironment.fromEnvironment(ProcessInfo.processInfo.environment)
+        guard environment.enableRealInference,
+              let modelPath = environment.modelPath,
+              FileManager.default.fileExists(atPath: modelPath) else {
+            return nil
+        }
+        let runtimeMode = environment.runtimeModeOverride ?? .llamaCppGguf
+        guard runtimeMode == .llamaCppGguf || runtimeMode == .appleFoundationModels else {
+            return nil
+        }
+        let checksum = nonEmpty(environment.modelChecksum) ?? "debug-local-model-unverified"
+        return AlphaInstalledModelPack(
+            packId: "debug-local-smoke-\(runtimeMode.rawValue)",
+            tier: .quickStart,
+            installPath: modelPath,
+            checksumSha256: checksum,
+            artifactKind: nonEmpty(environment.modelKind) ?? "debug_local_model",
+            runtimeMode: runtimeMode,
+            developmentOnly: false,
+            checksumVerified: nonEmpty(environment.modelChecksum) != nil,
+            minimumAppVersion: "0.1.0-alpha",
+            isActive: true
+        )
+    }
+
+    private func nonEmpty(_ value: String?) -> String? {
+        let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
+    }
+}
+
+private final class RossLocalModelSmokeContinuationGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var didResume = false
+
+    func resumeIfNeeded(
+        _ continuation: CheckedContinuation<AlphaLocalModelOutput, Never>,
+        output: AlphaLocalModelOutput
+    ) -> Bool {
+        lock.lock()
+        if didResume {
+            lock.unlock()
+            return false
+        }
+        didResume = true
+        lock.unlock()
+
+        continuation.resume(returning: output)
+        return true
     }
 }
 
