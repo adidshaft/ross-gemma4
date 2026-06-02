@@ -774,6 +774,8 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(result.languageProfile?.primaryLanguage, .mixed)
         XCTAssertTrue(result.languageProfile?.scriptsDetected.contains("latin") == true)
         XCTAssertTrue(result.languageProfile?.scriptsDetected.contains("devanagari") == true)
+        let languageFinding = result.findings.first { $0.kind == .languageUncertain }
+        XCTAssertEqual(languageFinding?.sourceRefs.first?.documentTitle, "Bilingual Order")
     }
 
     func testLocalExtractionDetectsBengaliLanguageProfile() async {

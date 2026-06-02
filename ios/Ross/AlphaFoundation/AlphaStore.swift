@@ -1376,7 +1376,7 @@ private struct AlphaLocalExtractionOrchestrator {
         )
         var findings = verification.findings + baseFindings(
             caseId: caseId,
-            documentID: document.id,
+            document: document,
             pages: cleanedPages,
             languageProfile: languageProfile
         )
@@ -2527,10 +2527,11 @@ private struct AlphaLocalExtractionOrchestrator {
 
     private func baseFindings(
         caseId: UUID,
-        documentID: UUID,
+        document: AlphaCaseDocument,
         pages: [AlphaDocumentPage],
         languageProfile: AlphaDocumentLanguageProfile
     ) -> [AlphaExtractionFinding] {
+        let documentID = document.id
         var findings: [AlphaExtractionFinding] = []
         if languageProfile.primaryLanguage == .mixed || languageProfile.confidence < 0.62 {
             findings.append(
@@ -2540,7 +2541,7 @@ private struct AlphaLocalExtractionOrchestrator {
                     kind: .languageUncertain,
                     message: "Ross detected mixed or uncertain language/script content. Review bilingual fields carefully.",
                     sourceRefs: pages.prefix(2).map { page in
-                        AlphaSourceRef(caseId: caseId, documentId: documentID, documentTitle: "Imported document", pageNumber: page.pageNumber, textSnippet: page.snippet, ocrConfidence: page.ocrConfidence)
+                        AlphaSourceRef(caseId: caseId, documentId: documentID, documentTitle: document.title, pageNumber: page.pageNumber, textSnippet: page.snippet, ocrConfidence: page.ocrConfidence)
                     },
                     severity: .warning
                 )
@@ -2553,7 +2554,7 @@ private struct AlphaLocalExtractionOrchestrator {
                     documentId: documentID,
                     kind: .lowConfidenceOcr,
                     message: "Ross detected a low-confidence scan on at least one page. Review uncertain fields before relying on them.",
-                    sourceRefs: [AlphaSourceRef(caseId: caseId, documentId: documentID, documentTitle: "Imported document", pageNumber: page.pageNumber, textSnippet: page.snippet, ocrConfidence: page.ocrConfidence)],
+                    sourceRefs: [AlphaSourceRef(caseId: caseId, documentId: documentID, documentTitle: document.title, pageNumber: page.pageNumber, textSnippet: page.snippet, ocrConfidence: page.ocrConfidence)],
                     severity: .warning
                 )
             )
