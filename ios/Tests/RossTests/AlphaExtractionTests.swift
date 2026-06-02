@@ -436,7 +436,10 @@ final class AlphaExtractionTests: XCTestCase {
             alphaPrivateAIStorageTitle,
             alphaPrivateAIStorageDetail,
             alphaPrivateAIDeleteDownloadsTitle,
-            alphaPrivateAIDeleteDownloadsDetail
+            alphaPrivateAIDeleteDownloadsDetail,
+            alphaPrivateAIUpdateChecksTitle,
+            alphaPrivateAIUpdateChecksDetail,
+            alphaPrivateAIVerifiedStorageLabel
         ].joined(separator: "\n")
 
         let forbidden = [

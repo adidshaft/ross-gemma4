@@ -19,6 +19,9 @@ let alphaPrivateAIStorageTitle = "Assistant storage"
 let alphaPrivateAIStorageDetail = "App updates keep downloaded assistant files in Ross storage. A full uninstall removes the app container; iOS does not let Ross ask a question during uninstall."
 let alphaPrivateAIDeleteDownloadsTitle = "Delete downloaded assistant files"
 let alphaPrivateAIDeleteDownloadsDetail = "Keeps matters and drafts, removes local assistant files and resume data."
+let alphaPrivateAIUpdateChecksTitle = "Check for assistant updates"
+let alphaPrivateAIUpdateChecksDetail = "Ross checks assistant listings and asks before replacing a downloaded assistant."
+let alphaPrivateAIVerifiedStorageLabel = "Verified assistant files"
 
 struct AlphaPrivateAISettingsScreen: View {
     @Bindable var model: AlphaRossModel
@@ -163,8 +166,8 @@ struct AlphaPrivateAISettingsScreen: View {
                             )
                             Divider()
                             AlphaSettingsToggleRow(
-                                title: "Check for model updates",
-                                detail: "Ross checks model listings and asks before replacing a downloaded assistant.",
+                                title: alphaPrivateAIUpdateChecksTitle,
+                                detail: alphaPrivateAIUpdateChecksDetail,
                                 isOn: autoUpdatesBinding
                             )
                             Divider()
@@ -1013,7 +1016,7 @@ private struct AlphaAssistantStorageFootprintRow: View {
             }
 
             VStack(alignment: .leading, spacing: 3) {
-                storageDetail("Verified models", bytes: breakdown.modelPackBytes)
+                storageDetail(alphaPrivateAIVerifiedStorageLabel, bytes: breakdown.modelPackBytes)
                 storageDetail("Interrupted downloads", bytes: breakdown.pendingDownloadBytes)
                 storageDetail("Resume data", bytes: breakdown.resumeBytes)
                 storageDetail("Device cache", bytes: breakdown.deviceCacheBytes)
