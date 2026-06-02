@@ -1860,14 +1860,16 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 at: standardURL.deletingLastPathComponent(),
                 withIntermediateDirectories: true
             )
-            try makeSparseFile(at: basicURL, bytes: alphaAssistantModelArtifact(for: .quickStart).sizeBytes)
-            try makeSparseFile(at: standardURL, bytes: alphaAssistantModelArtifact(for: .caseAssociate).sizeBytes)
+            let basicArtifact = alphaAssistantModelArtifact(for: .quickStart)
+            let standardArtifact = alphaAssistantModelArtifact(for: .caseAssociate)
+            try makeSparseFile(at: basicURL, bytes: basicArtifact.sizeBytes)
+            try makeSparseFile(at: standardURL, bytes: standardArtifact.sizeBytes)
 
             let basicPack = AlphaInstalledModelPack(
                 packId: "gemma-4-e2b-q4",
                 tier: .quickStart,
                 installPath: basicPath,
-                checksumSha256: String(repeating: "a", count: 64),
+                checksumSha256: basicArtifact.sha256,
                 artifactKind: "local_model_artifact",
                 runtimeMode: .llamaCppGguf,
                 developmentOnly: false,
@@ -1878,7 +1880,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 packId: "gemma-4-e4b-q4",
                 tier: .caseAssociate,
                 installPath: standardPath,
-                checksumSha256: String(repeating: "b", count: 64),
+                checksumSha256: standardArtifact.sha256,
                 artifactKind: "local_model_artifact",
                 runtimeMode: .llamaCppGguf,
                 developmentOnly: false,
