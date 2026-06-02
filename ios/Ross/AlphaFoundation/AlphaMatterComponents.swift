@@ -775,7 +775,7 @@ func alphaAssistantActivityDetail(for state: AlphaDownloadState) -> String {
     case .pausedWaitingForWifi:
         "Ross is waiting for Wi-Fi before continuing the assistant setup."
     case .pausedUser:
-        "The assistant setup is paused. Open device setup to resume it."
+        "The assistant setup is paused. Open My assistant to resume it from this iPhone."
     case .pausedNoStorage:
         "Ross needs more free space before the assistant can finish setting up."
     case .pausedError, .failed:

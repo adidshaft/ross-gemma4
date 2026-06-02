@@ -1518,6 +1518,10 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertNil(normalized.settings.activeTier)
         XCTAssertFalse(normalized.installedPacks.first?.isActive ?? true)
         XCTAssertTrue(normalized.ledgerEntries.contains { $0.title == "Assistant paused" })
+        let pausedEntry = normalized.ledgerEntries.first { $0.title == "Assistant paused" }
+        XCTAssertTrue(pausedEntry?.detail.contains("downloaded assistant file") == true)
+        XCTAssertTrue(pausedEntry?.detail.contains("this device") == true)
+        XCTAssertFalse(pausedEntry?.detail.localizedCaseInsensitiveContains("Settings") == true)
     }
 
     func testModelResumeDataPersistsLoadsAndRemovesAcrossStoreCalls() async throws {

@@ -657,6 +657,15 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNil(alphaAssistantSetupRecoveryHint(for: .installed))
     }
 
+    func testAssistantActivityPausedCopyPointsToAssistantSurface() {
+        let detail = alphaAssistantActivityDetail(for: .pausedUser)
+
+        XCTAssertTrue(detail.contains("My assistant"))
+        XCTAssertTrue(detail.contains("this iPhone"))
+        XCTAssertFalse(detail.localizedCaseInsensitiveContains("device setup"))
+        XCTAssertFalse(detail.localizedCaseInsensitiveContains("Settings"))
+    }
+
     @MainActor
     func testAssistantChecksumMatchingAcceptsLocallyComputedChecksumWhenCatalogValueIsMissing() {
         let model = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })

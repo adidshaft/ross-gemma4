@@ -51,7 +51,7 @@ private func alphaQuarantineActiveAssistantAfterStartupFailure(_ state: inout Al
     state.modelJobs = state.modelJobs.map { job in
         var copy = job
         if copy.tier == activePack.tier, copy.state == .installed {
-            copy.failureReason = "Ross paused this assistant after the previous launch did not finish setup validation. Re-verify or delete it from Settings."
+            copy.failureReason = "Ross paused this assistant after the previous launch did not finish setup validation. Open My assistant to re-check it or delete the downloaded file."
             copy.updatedAt = .now
         }
         return copy
