@@ -1631,6 +1631,118 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "உறுதிப்படுத்தப்பட்டது",
             "te": "నిర్ధారించబడింది"
         ],
+        "document_title_suggestion_title": [
+            "en": "Ross suggests a clearer name",
+            "hi": "Ross एक साफ़ नाम सुझाता है",
+            "bn": "Ross একটি পরিষ্কার নাম প্রস্তাব করছে",
+            "ta": "Ross தெளிவான பெயரை பரிந்துரைக்கிறது",
+            "te": "Ross స్పష్టమైన పేరు సూచిస్తోంది"
+        ],
+        "document_title_suggestion_detail": [
+            "en": "Keep the file name, accept this label, or edit it before saving.",
+            "hi": "file name रखें, यह label accept करें, या save करने से पहले edit करें।",
+            "bn": "file name রাখুন, এই label accept করুন, বা save করার আগে edit করুন।",
+            "ta": "file name வைத்துக்கொள்ளவும், இந்த label accept செய்யவும், அல்லது save செய்வதற்கு முன் edit செய்யவும்.",
+            "te": "file name ఉంచండి, ఈ label accept చేయండి, లేదా save చేసే ముందు edit చేయండి."
+        ],
+        "document_name": [
+            "en": "Document name",
+            "hi": "Document name",
+            "bn": "Document name",
+            "ta": "Document name",
+            "te": "Document name"
+        ],
+        "keep_original_file_name": [
+            "en": "Keep %@",
+            "hi": "%@ रखें",
+            "bn": "%@ রাখুন",
+            "ta": "%@ வைத்துக்கொள்ளவும்",
+            "te": "%@ ఉంచండి"
+        ],
+        "type": [
+            "en": "Type",
+            "hi": "Type",
+            "bn": "Type",
+            "ta": "Type",
+            "te": "Type"
+        ],
+        "may_not_be_legal_document": [
+            "en": "This may not be a legal case document",
+            "hi": "यह legal case document नहीं हो सकता",
+            "bn": "এটি legal case document নাও হতে পারে",
+            "ta": "இது legal case document ஆக இருக்காமல் இருக்கலாம்",
+            "te": "ఇది legal case document కాకపోవచ్చు"
+        ],
+        "may_not_be_legal_document_detail": [
+            "en": "Ross found language suggesting this file is fictional, instructional, or non-legal. Ross will not save case details, hearing dates, or tasks from this file unless you confirm.",
+            "hi": "Ross को ऐसी language मिली जिससे file fictional, instructional, या non-legal लगती है। आप confirm न करें तो Ross इस file से case details, hearing dates, या tasks save नहीं करेगा।",
+            "bn": "Ross এমন language পেয়েছে যা file-টিকে fictional, instructional, বা non-legal মনে করায়। আপনি confirm না করলে Ross এই file থেকে case details, hearing dates, বা tasks save করবে না।",
+            "ta": "இந்த file fictional, instructional அல்லது non-legal ஆக இருக்கலாம் என Ross language கண்டது. நீங்கள் confirm செய்யாவிட்டால் Ross இந்த file-இலிருந்து case details, hearing dates அல்லது tasks save செய்யாது.",
+            "te": "ఈ file fictional, instructional, లేదా non-legal కావచ్చని సూచించే language ను Ross కనుగొంది. మీరు confirm చేయకపోతే Ross ఈ file నుండి case details, hearing dates, లేదా tasks save చేయదు."
+        ],
+        "use_as_reference_only": [
+            "en": "Use as reference only",
+            "hi": "सिर्फ reference की तरह use करें",
+            "bn": "শুধু reference হিসেবে use করুন",
+            "ta": "reference ஆக மட்டும் use செய்யவும்",
+            "te": "reference గా మాత్రమే use చేయండి"
+        ],
+        "mark_as_legal_document": [
+            "en": "Mark as legal document",
+            "hi": "legal document mark करें",
+            "bn": "legal document হিসেবে mark করুন",
+            "ta": "legal document ஆக mark செய்யவும்",
+            "te": "legal document గా mark చేయండి"
+        ],
+        "edit_field_placeholder": [
+            "en": "Edit %@",
+            "hi": "%@ edit करें",
+            "bn": "%@ edit করুন",
+            "ta": "%@ edit செய்யவும்",
+            "te": "%@ edit చేయండి"
+        ],
+        "ignore": [
+            "en": "Ignore",
+            "hi": "Ignore",
+            "bn": "Ignore",
+            "ta": "Ignore",
+            "te": "Ignore"
+        ],
+        "matter_value": [
+            "en": "Matter value",
+            "hi": "Matter value",
+            "bn": "Matter value",
+            "ta": "Matter value",
+            "te": "Matter value"
+        ],
+        "file_value": [
+            "en": "File value",
+            "hi": "File value",
+            "bn": "File value",
+            "ta": "File value",
+            "te": "File value"
+        ],
+        "keep_matter_value": [
+            "en": "Keep matter value",
+            "hi": "matter value रखें",
+            "bn": "matter value রাখুন",
+            "ta": "matter value வைத்துக்கொள்ளவும்",
+            "te": "matter value ఉంచండి"
+        ],
+        "use_file_value": [
+            "en": "Use file value",
+            "hi": "file value use करें",
+            "bn": "file value use করুন",
+            "ta": "file value use செய்யவும்",
+            "te": "file value use చేయండి"
+        ],
+        "save_as_alternate_reference": [
+            "en": "Save as alternate reference",
+            "hi": "alternate reference की तरह save करें",
+            "bn": "alternate reference হিসেবে save করুন",
+            "ta": "alternate reference ஆக save செய்யவும்",
+            "te": "alternate reference గా save చేయండి"
+        ],
         "preview": [
             "en": "Preview",
             "hi": "Preview",

@@ -1096,10 +1096,10 @@ struct AlphaDocumentTitleSuggestionCard: View {
                         )
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Ross suggests a clearer name")
+                        Text(rossLocalized("document_title_suggestion_title"))
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Color.rossInk)
-                        Text("Keep the file name, accept this label, or edit it before saving.")
+                        Text(rossLocalized("document_title_suggestion_detail"))
                             .font(.caption)
                             .foregroundStyle(Color.rossInk.opacity(0.66))
                             .fixedSize(horizontal: false, vertical: true)
@@ -1107,7 +1107,7 @@ struct AlphaDocumentTitleSuggestionCard: View {
                 }
 
                 if isEditing {
-                    TextField("Document name", text: $draftTitle)
+                    TextField(rossLocalized("document_name"), text: $draftTitle)
                         .textFieldStyle(.plain)
                         .font(.subheadline.weight(.semibold))
                         .padding(10)
@@ -1122,28 +1122,28 @@ struct AlphaDocumentTitleSuggestionCard: View {
                 RossGlassGroup(spacing: 8) {
                     HStack(spacing: 8) {
                         if isEditing {
-                            Button("Save") {
+                            Button(rossLocalized("save")) {
                                 onSaveEdit(draftTitle)
                                 isEditing = false
                             }
                             .buttonStyle(AlphaReviewActionButtonStyle(tint: Color.rossAccent))
 
-                            Button("Cancel") {
+                            Button(rossLocalized("cancel")) {
                                 draftTitle = suggestedTitle
                                 isEditing = false
                             }
                             .buttonStyle(AlphaReviewActionButtonStyle())
                         } else {
-                            Button("Accept", action: onAccept)
+                            Button(rossLocalized("accept"), action: onAccept)
                                 .buttonStyle(AlphaReviewActionButtonStyle(tint: Color.rossAccent))
 
-                            Button("Edit") {
+                            Button(rossLocalized("edit")) {
                                 draftTitle = suggestedTitle
                                 isEditing = true
                             }
                             .buttonStyle(AlphaReviewActionButtonStyle())
 
-                            Button("Keep \(originalFileName)", action: onKeepOriginal)
+                            Button(alphaKeepOriginalFileNameLabel(originalFileName), action: onKeepOriginal)
                                 .buttonStyle(AlphaReviewActionButtonStyle())
                         }
                     }
@@ -1662,6 +1662,14 @@ func alphaCleanDocumentTitle(_ title: String) -> String {
     return String(collapsed.prefix(69)).trimmingCharacters(in: .whitespacesAndNewlines) + "..."
 }
 
+func alphaKeepOriginalFileNameLabel(_ fileName: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("keep_original_file_name", languageCode: languageCode), fileName)
+}
+
+func alphaEditFieldPlaceholder(_ fieldLabel: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("edit_field_placeholder", languageCode: languageCode), fieldLabel.lowercased())
+}
+
 func alphaDocumentTypeTint(_ type: AlphaLegalDocumentType) -> Color {
     switch type {
     case .order, .judgment:
@@ -1755,7 +1763,7 @@ struct AlphaClassificationReviewCard: View {
 
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text("Type")
+                Text(rossLocalized("type"))
                     .font(.caption.weight(.bold))
                     .foregroundStyle(Color.rossInk.opacity(0.58))
                 Spacer(minLength: 8)
@@ -1783,9 +1791,9 @@ struct AlphaClassificationReviewCard: View {
 
             if classification.type.blocksAutomaticLegalFactSaving {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("This may not be a legal case document")
+                    Text(rossLocalized("may_not_be_legal_document"))
                         .font(.subheadline.weight(.semibold))
-                    Text("Ross found language suggesting this file is fictional, instructional, or non-legal. Ross will not save case details, hearing dates, or tasks from this file unless you confirm.")
+                    Text(rossLocalized("may_not_be_legal_document_detail"))
                         .font(.caption)
                         .foregroundStyle(Color.rossInk.opacity(0.7))
                         .fixedSize(horizontal: false, vertical: true)
@@ -1793,7 +1801,7 @@ struct AlphaClassificationReviewCard: View {
             }
 
             HStack(spacing: 10) {
-                Button(classification.type.blocksAutomaticLegalFactSaving ? "Use as reference only" : "Accept", action: onAccept)
+                Button(classification.type.blocksAutomaticLegalFactSaving ? rossLocalized("use_as_reference_only") : rossLocalized("accept"), action: onAccept)
                     .buttonStyle(AlphaReviewActionButtonStyle())
 
                 Menu {
@@ -1803,11 +1811,11 @@ struct AlphaClassificationReviewCard: View {
                         }
                     }
                 } label: {
-                    AlphaReviewActionLabel(title: "Edit")
+                    AlphaReviewActionLabel(title: rossLocalized("edit"))
                 }
 
                 if classification.type.blocksAutomaticLegalFactSaving {
-                    Button("Mark as legal document") {
+                    Button(rossLocalized("mark_as_legal_document")) {
                         onUpdateType(.courtFiling)
                     }
                     .buttonStyle(AlphaReviewActionButtonStyle(tint: Color.rossAccent))
@@ -1861,7 +1869,7 @@ struct AlphaExtractedFieldReviewCard: View {
             }
 
             if isEditing {
-                TextField("Edit \(field.label.lowercased())", text: $draftValue)
+                TextField(alphaEditFieldPlaceholder(field.label), text: $draftValue)
                     .textFieldStyle(.plain)
                     .padding(10)
                     .rossGlassSurface(cornerRadius: 10, interactive: true, shadowOpacity: 0.04, shadowRadius: 4, shadowY: 1, strokeOpacity: 0.44)
@@ -1887,28 +1895,28 @@ struct AlphaExtractedFieldReviewCard: View {
             RossGlassGroup(spacing: 10) {
                 HStack(spacing: 10) {
                     if isEditing {
-                        Button("Save") {
+                        Button(rossLocalized("save")) {
                             onSaveEdit(draftValue)
                             isEditing = false
                         }
                         .buttonStyle(AlphaReviewActionButtonStyle(tint: Color.rossAccent))
 
-                        Button("Cancel") {
+                        Button(rossLocalized("cancel")) {
                             draftValue = field.value
                             isEditing = false
                         }
                         .buttonStyle(AlphaReviewActionButtonStyle())
                     } else {
-                        Button("Accept", action: onAccept)
+                        Button(rossLocalized("accept"), action: onAccept)
                             .buttonStyle(AlphaReviewActionButtonStyle())
 
-                        Button("Edit") {
+                        Button(rossLocalized("edit")) {
                             draftValue = field.value
                             isEditing = true
                         }
                         .buttonStyle(AlphaReviewActionButtonStyle())
 
-                        Button("Ignore", role: .destructive, action: onIgnore)
+                        Button(rossLocalized("ignore"), role: .destructive, action: onIgnore)
                             .buttonStyle(AlphaReviewActionButtonStyle(tint: .red))
                     }
                 }
@@ -1959,10 +1967,10 @@ struct AlphaFindingCard: View {
             if isConflict {
                 VStack(alignment: .leading, spacing: 6) {
                     if let matterValue = finding.matterValue, !matterValue.isEmpty {
-                        AlphaSettingsValueRow(label: "Matter value", value: matterValue)
+                        AlphaSettingsValueRow(label: rossLocalized("matter_value"), value: matterValue)
                     }
                     if let fileValue = finding.fileValue, !fileValue.isEmpty {
-                        AlphaSettingsValueRow(label: "File value", value: fileValue)
+                        AlphaSettingsValueRow(label: rossLocalized("file_value"), value: fileValue)
                     }
                 }
             }
@@ -1977,15 +1985,15 @@ struct AlphaFindingCard: View {
                 RossGlassGroup(spacing: 8) {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(spacing: 8) {
-                            Button("Keep matter value", action: onKeepMatterValue)
+                            Button(rossLocalized("keep_matter_value"), action: onKeepMatterValue)
                                 .buttonStyle(AlphaReviewActionButtonStyle())
-                            Button("Use file value", action: onUseFileValue)
+                            Button(rossLocalized("use_file_value"), action: onUseFileValue)
                                 .buttonStyle(AlphaReviewActionButtonStyle(tint: Color.rossAccent))
                         }
                         HStack(spacing: 8) {
-                            Button("Save as alternate reference", action: onSaveAlternate)
+                            Button(rossLocalized("save_as_alternate_reference"), action: onSaveAlternate)
                                 .buttonStyle(AlphaReviewActionButtonStyle())
-                            Button("Ignore", role: .destructive, action: onIgnore)
+                            Button(rossLocalized("ignore"), role: .destructive, action: onIgnore)
                                 .buttonStyle(AlphaReviewActionButtonStyle(tint: .red))
                         }
                     }

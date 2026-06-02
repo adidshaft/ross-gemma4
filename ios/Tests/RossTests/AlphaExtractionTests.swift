@@ -842,6 +842,22 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(alphaSourceRefDetailLabel(sourceRef), "Page 3")
         XCTAssertEqual(alphaPageLabel(4, languageCode: "bn"), "Page 4")
         XCTAssertEqual(
+            rossLocalized("document_title_suggestion_title", languageCode: "hi"),
+            "Ross एक साफ़ नाम सुझाता है"
+        )
+        XCTAssertEqual(
+            alphaKeepOriginalFileNameLabel("order.pdf", languageCode: "ta"),
+            "order.pdf வைத்துக்கொள்ளவும்"
+        )
+        XCTAssertEqual(
+            alphaEditFieldPlaceholder("Next Date", languageCode: "bn"),
+            "next date edit করুন"
+        )
+        XCTAssertEqual(
+            rossLocalized("use_file_value", languageCode: "te-IN"),
+            "file value use చేయండి"
+        )
+        XCTAssertEqual(
             rossLocalized("image_preview_unavailable", languageCode: "hi"),
             "Image preview उपलब्ध नहीं है।"
         )
