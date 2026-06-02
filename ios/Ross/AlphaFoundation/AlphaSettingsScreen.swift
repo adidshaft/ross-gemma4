@@ -281,9 +281,14 @@ struct AlphaSettingsScreen: View {
                                 .font(.system(size: 13, weight: .regular, design: .monospaced))
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 10)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                        .fill(Color.rossGroupedBackground)
+                                .rossGlassSurface(
+                                    tint: Color.rossAccent.opacity(0.12),
+                                    cornerRadius: 14,
+                                    interactive: true,
+                                    shadowOpacity: 0.04,
+                                    shadowRadius: 4,
+                                    shadowY: 1,
+                                    strokeOpacity: 0.46
                                 )
 
                             Text("For internal testing only. iPhone Simulator usually uses 127.0.0.1, Android emulator uses 10.0.2.2, and a physical device needs your Mac's LAN IP.")
@@ -291,21 +296,21 @@ struct AlphaSettingsScreen: View {
                                 .foregroundStyle(Color.rossInk.opacity(0.7))
                                 .fixedSize(horizontal: false, vertical: true)
 
-                            HStack(spacing: 10) {
-                                Button("Save test server") {
-                                    let normalized = backendAddressDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-                                    backendAddressDraft = normalized
-                                    rossSetBackendBaseURLOverride(normalized)
-                                }
-                                .rossGlassButtonStyle(tint: Color.rossAccent)
+                            RossGlassGroup(spacing: 10) {
+                                HStack(spacing: 10) {
+                                    Button("Save test server") {
+                                        let normalized = backendAddressDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                                        backendAddressDraft = normalized
+                                        rossSetBackendBaseURLOverride(normalized)
+                                    }
+                                    .rossGlassButtonStyle(tint: Color.rossAccent)
 
-                                Button("Use default address") {
-                                    backendAddressDraft = ""
-                                    rossSetBackendBaseURLOverride(nil)
+                                    Button("Use default address") {
+                                        backendAddressDraft = ""
+                                        rossSetBackendBaseURLOverride(nil)
+                                    }
+                                    .rossGlassButtonStyle(tint: Color.rossHighlight, expandsHorizontally: false)
                                 }
-                                .buttonStyle(.plain)
-                                .font(.footnote.weight(.semibold))
-                                .foregroundStyle(Color.rossInk.opacity(0.7))
                             }
                         }
                         .padding(.top, 12)
