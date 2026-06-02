@@ -23,12 +23,12 @@ struct AlphaActiveMatterChatCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
-                Text("Matter chat")
+                Text(rossLocalized("matter_chat"))
                     .font(.subheadline.weight(.semibold))
                 Text(
                     session == nil
-                        ? "Keep questions, file follow-up, and next steps together for this matter."
-                        : "Continue in the current matter thread to keep related work in one place."
+                        ? rossLocalized("matter_chat_empty_detail")
+                        : rossLocalized("matter_chat_continue_detail")
                 )
                 .font(.caption)
                 .foregroundStyle(Color.rossInk.opacity(0.7))
@@ -46,7 +46,7 @@ struct AlphaActiveMatterChatCard: View {
                             .font(.footnote.weight(.semibold))
                             .foregroundStyle(Color.rossInk)
 
-                        Text("\(alphaUpdateCountLabel(session.turns.count)) · \(sessionSubtitle ?? "Recent activity")")
+                        Text("\(alphaUpdateCountLabel(session.turns.count)) · \(sessionSubtitle ?? rossLocalized("recent_activity"))")
                             .font(.caption2)
                             .foregroundStyle(Color.rossInk.opacity(0.7))
                     }
@@ -55,13 +55,13 @@ struct AlphaActiveMatterChatCard: View {
                 .padding(.vertical, 10)
                 .rossGlassSurface(cornerRadius: 14, shadowOpacity: 0.06, shadowRadius: 6, shadowY: 2, fillOpacity: 0.82, strokeOpacity: 0.52)
             } else {
-                Text("No matter chat yet. Ross will start one when you import a file, review a document, or ask the first question here.")
+                Text(rossLocalized("no_matter_chat_detail"))
                     .font(.footnote)
                     .foregroundStyle(Color.rossInk.opacity(0.72))
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            Button(session == nil ? "Open chat" : "Continue chat", action: onOpenChat)
+            Button(session == nil ? rossLocalized("open_chat") : rossLocalized("continue_chat"), action: onOpenChat)
                 .font(.footnote.weight(.semibold))
                 .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 14, expandsHorizontally: false)
         }
@@ -126,7 +126,7 @@ struct AlphaMatterCommandHintCard: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Use Ask Ross below")
+                Text(rossLocalized("use_ask_ross_below"))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Color.rossAccent)
                 Text(detail)
@@ -390,7 +390,7 @@ struct AlphaReviewNudgeCard: View {
                     .background(Color.orange.opacity(0.12), in: Circle())
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Ross found: \(item.title)")
+                    Text(alphaRossFoundLabel(item.title))
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.rossInk)
                         .lineLimit(2)
@@ -410,17 +410,17 @@ struct AlphaReviewNudgeCard: View {
             RossGlassGroup(spacing: 8) {
                 HStack(spacing: 8) {
                     Button(action: onAccept) {
-                        Label("Correct", systemImage: "checkmark")
+                        Label(rossLocalized("correct"), systemImage: "checkmark")
                     }
                     .buttonStyle(AlphaCompactNudgeButtonStyle(tint: Color.rossSuccess))
 
                     Button(action: onEdit) {
-                        Label("Edit", systemImage: "pencil")
+                        Label(rossLocalized("edit"), systemImage: "pencil")
                     }
                     .buttonStyle(AlphaCompactNudgeButtonStyle(tint: Color.rossAccent))
 
                     Button(action: onDismiss) {
-                        Label("Dismiss", systemImage: "xmark")
+                        Label(rossLocalized("dismiss"), systemImage: "xmark")
                     }
                     .buttonStyle(AlphaCompactNudgeButtonStyle(tint: Color.rossInk.opacity(0.68)))
                 }
@@ -430,6 +430,10 @@ struct AlphaReviewNudgeCard: View {
         .padding(12)
         .rossGlassSurface(tint: Color.orange, cornerRadius: 16, shadowOpacity: 0.08, shadowRadius: 8, shadowY: 3, fillOpacity: 0.8, strokeOpacity: 0.5)
     }
+}
+
+func alphaRossFoundLabel(_ title: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("ross_found_title", languageCode: languageCode), title)
 }
 
 struct AlphaCompactNudgeButtonStyle: ButtonStyle {

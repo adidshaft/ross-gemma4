@@ -401,17 +401,17 @@ struct AlphaPreparedWorkCard: View {
                         }
                         .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 14)
 
-                        Button("Accept") {
+                        Button(rossLocalized("accept")) {
                             model.setPreparedWorkStatus(item.id, status: .accepted)
                         }
                         .rossGlassButtonStyle(tint: Color.rossSuccess, cornerRadius: 14, expandsHorizontally: false)
 
-                        Button("Edit") {
+                        Button(rossLocalized("edit")) {
                             alphaHandlePreparedEdit(item, model: model)
                         }
                         .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 14, expandsHorizontally: false)
 
-                        Button("Dismiss") {
+                        Button(rossLocalized("dismiss")) {
                             model.setPreparedWorkStatus(item.id, status: .dismissed)
                         }
                         .rossGlassButtonStyle(tint: Color.rossInk.opacity(0.42), cornerRadius: 14, expandsHorizontally: false)

@@ -886,6 +886,22 @@ final class AlphaExtractionTests: XCTestCase {
             "కేసు పేరు నమోదు చేయండి"
         )
         XCTAssertEqual(
+            rossLocalized("matter_chat", languageCode: "ta"),
+            "வழக்கு chat"
+        )
+        XCTAssertEqual(
+            alphaRossFoundLabel("Next date", languageCode: "bn"),
+            "Ross পেয়েছে: Next date"
+        )
+        XCTAssertEqual(
+            rossLocalized("accept", languageCode: "hi"),
+            "स्वीकार करें"
+        )
+        XCTAssertEqual(
+            rossLocalized("dismiss", languageCode: "te-IN"),
+            "తొలగించండి"
+        )
+        XCTAssertEqual(
             rossLocalized("download_size", languageCode: "ta"),
             "பதிவிறக்க அளவு"
         )

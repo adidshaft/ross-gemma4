@@ -1715,6 +1715,97 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "வழக்கை உருவாக்கவும்",
             "te": "కేసు సృష్టించండి"
         ],
+        "matter_chat": [
+            "en": "Matter chat",
+            "hi": "मामला chat",
+            "bn": "মামলা chat",
+            "ta": "வழக்கு chat",
+            "te": "కేసు chat"
+        ],
+        "matter_chat_empty_detail": [
+            "en": "Keep questions, file follow-up, and next steps together for this matter.",
+            "hi": "इस मामले के questions, file follow-up और next steps साथ रखें।",
+            "bn": "এই মামলার questions, file follow-up, এবং next steps একসঙ্গে রাখুন।",
+            "ta": "இந்த வழக்கின் questions, file follow-up மற்றும் next steps-ஐ ஒன்றாக வைத்திருங்கள்.",
+            "te": "ఈ కేసు questions, file follow-up మరియు next steps ను కలిసి ఉంచండి."
+        ],
+        "matter_chat_continue_detail": [
+            "en": "Continue in the current matter thread to keep related work in one place.",
+            "hi": "संबंधित काम एक जगह रखने के लिए current matter thread में जारी रखें।",
+            "bn": "সম্পর্কিত কাজ এক জায়গায় রাখতে current matter thread-এ চালিয়ে যান।",
+            "ta": "தொடர்புடைய வேலையை ஒரே இடத்தில் வைத்திருக்க current matter thread-இல் தொடரவும்.",
+            "te": "సంబంధిత పనిని ఒకే చోట ఉంచడానికి current matter thread లో కొనసాగించండి."
+        ],
+        "recent_activity": [
+            "en": "Recent activity",
+            "hi": "हाल की activity",
+            "bn": "সাম্প্রতিক activity",
+            "ta": "சமீபத்திய activity",
+            "te": "ఇటీవలి activity"
+        ],
+        "no_matter_chat_detail": [
+            "en": "No matter chat yet. Ross will start one when you import a file, review a document, or ask the first question here.",
+            "hi": "अभी matter chat नहीं है। फ़ाइल import करने, document review करने, या पहला सवाल पूछने पर Ross इसे शुरू करेगा।",
+            "bn": "এখনও matter chat নেই। ফাইল import, document review, বা প্রথম প্রশ্ন করলে Ross এটি শুরু করবে।",
+            "ta": "இன்னும் matter chat இல்லை. நீங்கள் கோப்பை import செய்யும் போது, document review செய்யும் போது, அல்லது முதல் கேள்வியை இங்கே கேட்கும் போது Ross அதை தொடங்கும்.",
+            "te": "ఇంకా matter chat లేదు. మీరు ఫైల్ import చేసినప్పుడు, document review చేసినప్పుడు, లేదా ఇక్కడ మొదటి ప్రశ్న అడిగినప్పుడు Ross దాన్ని ప్రారంభిస్తుంది."
+        ],
+        "open_chat": [
+            "en": "Open chat",
+            "hi": "chat खोलें",
+            "bn": "chat খুলুন",
+            "ta": "chat திறக்கவும்",
+            "te": "chat తెరవండి"
+        ],
+        "continue_chat": [
+            "en": "Continue chat",
+            "hi": "chat जारी रखें",
+            "bn": "chat চালিয়ে যান",
+            "ta": "chat தொடரவும்",
+            "te": "chat కొనసాగించండి"
+        ],
+        "use_ask_ross_below": [
+            "en": "Use Ask Ross below",
+            "hi": "नीचे Ask Ross उपयोग करें",
+            "bn": "নিচে Ask Ross ব্যবহার করুন",
+            "ta": "கீழே Ask Ross-ஐ பயன்படுத்தவும்",
+            "te": "కింద Ask Ross ఉపయోగించండి"
+        ],
+        "ross_found_title": [
+            "en": "Ross found: %@",
+            "hi": "Ross ने पाया: %@",
+            "bn": "Ross পেয়েছে: %@",
+            "ta": "Ross கண்டது: %@",
+            "te": "Ross కనుగొన్నది: %@"
+        ],
+        "correct": [
+            "en": "Correct",
+            "hi": "सही",
+            "bn": "সঠিক",
+            "ta": "சரி",
+            "te": "సరైంది"
+        ],
+        "accept": [
+            "en": "Accept",
+            "hi": "स्वीकार करें",
+            "bn": "গ্রহণ করুন",
+            "ta": "ஏற்கவும்",
+            "te": "అంగీకరించండి"
+        ],
+        "edit": [
+            "en": "Edit",
+            "hi": "संपादित करें",
+            "bn": "সম্পাদনা করুন",
+            "ta": "திருத்தவும்",
+            "te": "సవరించండి"
+        ],
+        "dismiss": [
+            "en": "Dismiss",
+            "hi": "हटाएं",
+            "bn": "সরান",
+            "ta": "நீக்கவும்",
+            "te": "తొలగించండి"
+        ],
         "translate_to": [
             "en": "Translate to %@",
             "hi": "%@ में अनुवाद करें",
