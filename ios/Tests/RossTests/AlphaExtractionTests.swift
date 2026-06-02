@@ -178,6 +178,30 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(entries[10].lawyerTitle, "Private assistant चुना गया")
         XCTAssertTrue(entries[10].lawyerDetail.contains("इस iPhone वाला private assistant चालू किया"), entries[10].lawyerDetail)
         XCTAssertTrue(entries[11].lawyerDetail.contains("कोई case file पढ़ी या भेजी नहीं गई"), entries[11].lawyerDetail)
+        XCTAssertEqual(entries[0].lawyerPurposeLabel, "Private assistant setup")
+        XCTAssertEqual(entries[2].lawyerPurposeLabel, "Private assistant setup")
+        XCTAssertEqual(
+            AlphaPrivacyLedgerEntry(
+                title: "Public-law query sent",
+                detail: "Only the reviewed search was sent.",
+                purpose: .public_law_search,
+                payloadClass: .sanitized_public_query,
+                endpointLabel: "court-api",
+                success: true
+            ).lawyerPurposeLabel,
+            "सिर्फ law search"
+        )
+        XCTAssertEqual(
+            AlphaPrivacyLedgerEntry(
+                title: "Document imported locally",
+                detail: "Document text was read on this device.",
+                purpose: .local_only,
+                payloadClass: .local_only,
+                endpointLabel: "device://document-import",
+                success: true
+            ).lawyerPurposeLabel,
+            "इसी device पर रहा"
+        )
     }
 
     func testPrivacyLedgerPublicLawAndExportCopyFollowsSelectedLanguage() {

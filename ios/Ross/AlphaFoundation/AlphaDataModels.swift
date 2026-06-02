@@ -2903,11 +2903,11 @@ extension AlphaPrivacyLedgerEntry {
     var lawyerPurposeLabel: String {
         switch purpose {
         case .local_only:
-            "Stayed on this device"
+            rossLocalized("privacy_ledger_purpose_local_only")
         case .public_law_search:
-            "Law search only"
+            rossLocalized("privacy_ledger_purpose_public_law")
         case .model_catalog, .model_download, .model_verification:
-            "Private assistant setup"
+            rossLocalized("privacy_ledger_purpose_assistant_setup")
         }
     }
 }

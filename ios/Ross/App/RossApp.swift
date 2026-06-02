@@ -1288,6 +1288,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Private assistant தேர்ந்தெடுக்கப்பட்டது",
             "te": "Private assistant ఎంచుకోబడింది"
         ],
+        "privacy_ledger_purpose_local_only": [
+            "en": "Stayed on this device",
+            "hi": "इसी device पर रहा",
+            "bn": "এই device-এ রয়ে গেছে",
+            "ta": "இந்த device-இல் இருந்தது",
+            "te": "ఈ device పైనే ఉంది"
+        ],
+        "privacy_ledger_purpose_public_law": [
+            "en": "Law search only",
+            "hi": "सिर्फ law search",
+            "bn": "শুধু law search",
+            "ta": "Law search மட்டும்",
+            "te": "Law search మాత్రమే"
+        ],
+        "privacy_ledger_purpose_assistant_setup": [
+            "en": "Private assistant setup",
+            "hi": "Private assistant setup",
+            "bn": "Private assistant setup",
+            "ta": "Private assistant setup",
+            "te": "Private assistant setup"
+        ],
         "privacy_ledger_local_case_review_title": [
             "en": "Reviewed case locally",
             "hi": "Case locally review किया",
