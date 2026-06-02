@@ -1572,6 +1572,8 @@ extension AlphaRossModel {
         selectedDocumentIDs: Set<UUID>
     ) -> [AlphaSourceTextBlock] {
         let queryTerms = alphaAskSearchTerms(from: question)
+        let allowsSelectedDocumentBoost = alphaAskQuestionTargetsSelectedDocument(question)
+        let allowsEvidenceHeuristics = alphaAskQuestionTargetsEvidence(questionTerms: queryTerms)
         guard !blocks.isEmpty else { return [] }
 
         return blocks.enumerated()
@@ -1581,24 +1583,25 @@ extension AlphaRossModel {
                     block.sourceRef.label + " " +
                     block.text
                 ).lowercased()
-                var score = selectedDocumentIDs.contains(block.sourceRef.documentId) ? 3 : 0
+                var score = selectedDocumentIDs.contains(block.sourceRef.documentId) && allowsSelectedDocumentBoost ? 3 : 0
                 for term in queryTerms where haystack.contains(term) {
                     score += term.count >= 6 ? 7 : 4
                 }
-                if haystack.contains("cam-d3") || haystack.contains("cam d3") {
+                if allowsEvidenceHeuristics && (haystack.contains("cam-d3") || haystack.contains("cam d3")) {
                     score += 16
                 }
-                if haystack.contains("retention") || haystack.contains("overwrite") || haystack.contains("overwrites") {
+                if allowsEvidenceHeuristics && (haystack.contains("retention") || haystack.contains("overwrite") || haystack.contains("overwrites")) {
                     score += 12
                 }
-                if haystack.contains("export queue") || haystack.contains("native video") || haystack.contains("access log") {
+                if allowsEvidenceHeuristics && (haystack.contains("export queue") || haystack.contains("native video") || haystack.contains("access log")) {
                     score += 10
                 }
-                if haystack.contains("fourteen-day") || haystack.contains("fourteen day") || haystack.contains("14-day") {
+                if allowsEvidenceHeuristics && (haystack.contains("fourteen-day") || haystack.contains("fourteen day") || haystack.contains("14-day")) {
                     score += 8
                 }
                 return (index, score, block)
             }
+            .filter { $0.score > 0 }
             .sorted {
                 if $0.score != $1.score {
                     return $0.score > $1.score
@@ -1621,6 +1624,44 @@ extension AlphaRossModel {
             .split(separator: " ")
             .map(String.init)
             .filter { $0.count >= 3 && !stopWords.contains($0) }
+    }
+
+    func alphaAskQuestionTargetsSelectedDocument(_ question: String) -> Bool {
+        let lowered = question.lowercased()
+        let selectedDocumentPhrases = [
+            "this file",
+            "this document",
+            "tagged file",
+            "tagged document",
+            "selected file",
+            "selected document",
+            "summarize",
+            "summarise",
+            "what does this",
+            "what does the file",
+            "what does the document"
+        ]
+        return selectedDocumentPhrases.contains { lowered.contains($0) }
+    }
+
+    func alphaAskQuestionTargetsEvidence(questionTerms: [String]) -> Bool {
+        let evidenceTerms: Set<String> = [
+            "cam-d3",
+            "cam",
+            "camera",
+            "video",
+            "retention",
+            "overwrite",
+            "overwrites",
+            "export",
+            "queue",
+            "native",
+            "access",
+            "log",
+            "fourteen-day",
+            "14-day"
+        ]
+        return questionTerms.contains { evidenceTerms.contains($0) }
     }
 
     func askRuntimeMatterMemorySourcePack(scopeCaseID: UUID?) -> [AlphaSourceTextBlock] {

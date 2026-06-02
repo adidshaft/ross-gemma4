@@ -1448,4 +1448,58 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(fallback?.contains("उद्धरण सत्यापित") == true)
         XCTAssertTrue(fallback?.contains("Hindi Local Smoke Source · p. 1") == true)
     }
+
+    @MainActor
+    func testSelectedIrrelevantDocumentIsNotUsedAsAskSource() {
+        let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
+        let documentID = UUID()
+        let block = AlphaSourceTextBlock(
+            sourceRef: AlphaSourceRef(
+                caseId: UUID(),
+                documentId: documentID,
+                documentTitle: "Camera affidavit",
+                pageNumber: 1,
+                textSnippet: "CAM-D3 retention failed after fourteen days."
+            ),
+            text: "CAM-D3 retention failed after fourteen days and the export queue failed twice.",
+            pageNumber: 1,
+            languageHint: "en",
+            ocrConfidence: 0.94
+        )
+
+        let ranked = model.alphaRankedAskSourceBlocks(
+            [block],
+            question: "What is FMLA?",
+            selectedDocumentIDs: [documentID]
+        )
+
+        XCTAssertTrue(ranked.isEmpty)
+    }
+
+    @MainActor
+    func testSelectedDocumentSummaryQuestionKeepsTaggedFileSource() {
+        let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
+        let documentID = UUID()
+        let block = AlphaSourceTextBlock(
+            sourceRef: AlphaSourceRef(
+                caseId: UUID(),
+                documentId: documentID,
+                documentTitle: "Camera affidavit",
+                pageNumber: 1,
+                textSnippet: "CAM-D3 retention failed after fourteen days."
+            ),
+            text: "CAM-D3 retention failed after fourteen days and the export queue failed twice.",
+            pageNumber: 1,
+            languageHint: "en",
+            ocrConfidence: 0.94
+        )
+
+        let ranked = model.alphaRankedAskSourceBlocks(
+            [block],
+            question: "Summarize this file",
+            selectedDocumentIDs: [documentID]
+        )
+
+        XCTAssertEqual(ranked.first?.sourceRef.documentId, documentID)
+    }
 }
