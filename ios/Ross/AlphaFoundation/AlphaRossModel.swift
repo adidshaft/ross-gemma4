@@ -1462,7 +1462,7 @@ enum AlphaAssistantDownloadError: LocalizedError {
         case .insufficientStorage(let requiredGB, let availableGB):
             return "This private assistant needs about \(requiredGB) GB free. This iPhone currently reports \(availableGB) GB free."
         case .missingDownloadedFile:
-            return "Ross could not find the downloaded assistant file."
+            return "Assistant setup is missing or incomplete. Open My assistant and use Repair setup."
         case .pausedByUser:
             return "Assistant setup is paused."
         }

@@ -1846,13 +1846,18 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.preflightNotResumable),
                 model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.preflightChecksumMismatch(catalog: "abc", provider: "def")),
                 model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.rangeProbeInvalidStatus(200)),
-                model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.rangeProbeInvalidContentRange("bytes 0-10/*"))
+                model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.rangeProbeInvalidContentRange("bytes 0-10/*")),
+                model.assistantDownloadFailureMessage(AlphaAssistantDownloadError.missingDownloadedFile)
             ]
         }
 
         XCTAssertFalse(messages.isEmpty)
         for message in messages {
-            XCTAssertTrue(message.localizedCaseInsensitiveContains("assistant download"), message)
+            XCTAssertTrue(
+                message.localizedCaseInsensitiveContains("assistant download") ||
+                    message.localizedCaseInsensitiveContains("assistant setup"),
+                message
+            )
             XCTAssertFalse(message.localizedCaseInsensitiveContains("model download"), message)
             XCTAssertFalse(message.localizedCaseInsensitiveContains("runtime"), message)
             XCTAssertFalse(message.localizedCaseInsensitiveContains("artifact"), message)
@@ -1863,6 +1868,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertFalse(message.localizedCaseInsensitiveContains("HTTP"), message)
             XCTAssertFalse(message.localizedCaseInsensitiveContains("Content-Range"), message)
             XCTAssertFalse(message.localizedCaseInsensitiveContains("Error 99"), message)
+            XCTAssertFalse(message.localizedCaseInsensitiveContains("downloaded assistant file"), message)
         }
     }
 
