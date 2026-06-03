@@ -32,7 +32,13 @@ struct AlphaPDFPreview: View {
             if canUseNativePDF {
                 PDFRepresentedView(url: url, initialPage: initialPage)
                     .frame(minHeight: 360)
-                    .rossGlassSurface(cornerRadius: 14, shadowOpacity: 0.08, shadowRadius: 8, shadowY: 3, fillOpacity: 0.8, strokeOpacity: 0.48)
+                    .rossNativeGlassSurface(
+                        tint: Color.rossAccent,
+                        shape: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                        fallbackFillOpacity: 0.80,
+                        fallbackStrokeOpacity: 0.48
+                    )
+                    .shadow(color: Color.rossShadow.opacity(0.08), radius: 8, y: 3)
             } else {
                 AlphaDocumentTextPreview(document: document, initialPage: initialPage)
             }
@@ -144,7 +150,13 @@ struct AlphaDocumentTextPreview: View {
             }
         }
         .frame(minHeight: 320, maxHeight: 420)
-        .rossGlassSurface(cornerRadius: 14, shadowOpacity: 0.08, shadowRadius: 8, shadowY: 3, fillOpacity: 0.8, strokeOpacity: 0.48)
+        .rossNativeGlassSurface(
+            tint: Color.rossAccent,
+            shape: RoundedRectangle(cornerRadius: 14, style: .continuous),
+            fallbackFillOpacity: 0.80,
+            fallbackStrokeOpacity: 0.48
+        )
+        .shadow(color: Color.rossShadow.opacity(0.08), radius: 8, y: 3)
     }
 }
 
@@ -167,7 +179,13 @@ struct AlphaDocumentPreviewPage: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .rossGlassSurface(cornerRadius: 12, strokeOpacity: 0.48)
+        .rossNativeGlassSurface(
+            tint: Color.rossAccent,
+            shape: RoundedRectangle(cornerRadius: 12, style: .continuous),
+            fallbackFillOpacity: 0.84,
+            fallbackStrokeOpacity: 0.48
+        )
+        .shadow(color: Color.rossShadow.opacity(0.12), radius: 12, y: 5)
     }
 }
 
@@ -182,7 +200,13 @@ struct AlphaImagePreview: View {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFit()
-                    .rossGlassSurface(cornerRadius: 14, shadowOpacity: 0.08, shadowRadius: 8, shadowY: 3, fillOpacity: 0.8, strokeOpacity: 0.48)
+                    .rossNativeGlassSurface(
+                        tint: Color.rossAccent,
+                        shape: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                        fallbackFillOpacity: 0.80,
+                        fallbackStrokeOpacity: 0.48
+                    )
+                    .shadow(color: Color.rossShadow.opacity(0.08), radius: 8, y: 3)
             } else {
                 Text(rossLocalized("image_preview_unavailable"))
             }
@@ -191,7 +215,13 @@ struct AlphaImagePreview: View {
                 Image(nsImage: image)
                     .resizable()
                     .scaledToFit()
-                    .rossGlassSurface(cornerRadius: 14, shadowOpacity: 0.08, shadowRadius: 8, shadowY: 3, fillOpacity: 0.8, strokeOpacity: 0.48)
+                    .rossNativeGlassSurface(
+                        tint: Color.rossAccent,
+                        shape: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                        fallbackFillOpacity: 0.80,
+                        fallbackStrokeOpacity: 0.48
+                    )
+                    .shadow(color: Color.rossShadow.opacity(0.08), radius: 8, y: 3)
             } else {
                 Text(rossLocalized("image_preview_unavailable"))
             }
