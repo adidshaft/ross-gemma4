@@ -157,15 +157,13 @@ struct RossSectionCard<Content: View>: View {
             }
             .padding(.vertical, 16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .rossGlassSurface(
+            .rossNativeGlassSurface(
                 tint: colorScheme == .dark ? Color.rossHighlight : Color.white,
-                cornerRadius: RossSurface.cornerRadius,
-                shadowOpacity: colorScheme == .dark ? 0.16 : 0.07,
-                shadowRadius: 16,
-                shadowY: 7,
-                fillOpacity: colorScheme == .dark ? 0.68 : 0.82,
-                strokeOpacity: colorScheme == .dark ? 0.24 : 0.56
+                shape: RoundedRectangle(cornerRadius: RossSurface.cornerRadius, style: .continuous),
+                fallbackFillOpacity: colorScheme == .dark ? 0.68 : 0.82,
+                fallbackStrokeOpacity: colorScheme == .dark ? 0.24 : 0.56
             )
+            .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.16 : 0.07), radius: 16, y: 7)
         }
     }
 }
@@ -379,15 +377,13 @@ struct RossInfoPill: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Color.rossHighlight)
                 .frame(width: 30, height: 30)
-                .rossGlassSurface(
-                    tint: Color.rossHighlight.opacity(colorScheme == .dark ? 0.24 : 0.16),
-                    cornerRadius: RossSurface.iconRadius,
-                    shadowOpacity: 0.04,
-                    shadowRadius: 4,
-                    shadowY: 1,
-                    fillOpacity: 0.66,
-                    strokeOpacity: 0.34
+                .rossNativeGlassSurface(
+                    tint: Color.rossHighlight,
+                    shape: RoundedRectangle(cornerRadius: RossSurface.iconRadius, style: .continuous),
+                    fallbackFillOpacity: 0.66,
+                    fallbackStrokeOpacity: 0.34
                 )
+                .shadow(color: Color.rossShadow.opacity(0.04), radius: 4, y: 1)
                 .padding(.top, 1)
 
             Text(title)
@@ -402,15 +398,13 @@ struct RossInfoPill: View {
         .frame(minHeight: 60, alignment: .topLeading)
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .rossGlassSurface(
-            tint: Color.rossHighlight.opacity(0.10),
-            cornerRadius: cornerRadius,
-            shadowOpacity: colorScheme == .dark ? 0.18 : 0.12,
-            shadowRadius: 12,
-            shadowY: 5,
-            fillOpacity: 0.72,
-            strokeOpacity: 0.50
+        .rossNativeGlassSurface(
+            tint: Color.rossHighlight,
+            shape: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous),
+            fallbackFillOpacity: 0.72,
+            fallbackStrokeOpacity: 0.50
         )
+        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.18 : 0.12), radius: 12, y: 5)
     }
 }
 
@@ -434,15 +428,13 @@ struct RossMetricTile: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .rossGlassSurface(
-            tint: tint.opacity(0.12),
-            cornerRadius: 14,
-            shadowOpacity: 0.04,
-            shadowRadius: 4,
-            shadowY: 1,
-            fillOpacity: 0.62,
-            strokeOpacity: 0.36
+        .rossNativeGlassSurface(
+            tint: tint,
+            shape: RoundedRectangle(cornerRadius: 14, style: .continuous),
+            fallbackFillOpacity: 0.62,
+            fallbackStrokeOpacity: 0.36
         )
+        .shadow(color: Color.rossShadow.opacity(0.04), radius: 4, y: 1)
     }
 }
 
@@ -461,15 +453,13 @@ struct RossActionTile: View {
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(tint)
                     .frame(width: 50, height: 50)
-                    .rossGlassSurface(
-                        tint: tint.opacity(0.16),
-                        cornerRadius: RossSurface.iconRadius,
-                        shadowOpacity: 0.05,
-                        shadowRadius: 5,
-                        shadowY: 1,
-                        fillOpacity: 0.70,
-                        strokeOpacity: 0.38
+                    .rossNativeGlassSurface(
+                        tint: tint,
+                        shape: RoundedRectangle(cornerRadius: RossSurface.iconRadius, style: .continuous),
+                        fallbackFillOpacity: 0.70,
+                        fallbackStrokeOpacity: 0.38
                     )
+                    .shadow(color: Color.rossShadow.opacity(0.05), radius: 5, y: 1)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
@@ -491,16 +481,14 @@ struct RossActionTile: View {
                     .foregroundStyle(Color.rossInk.opacity(0.26))
             }
             .padding(18)
-            .rossGlassSurface(
-                tint: tint.opacity(0.14),
-                cornerRadius: RossSurface.cornerRadius,
+            .rossNativeGlassSurface(
+                tint: tint,
+                shape: RoundedRectangle(cornerRadius: RossSurface.cornerRadius, style: .continuous),
                 interactive: true,
-                shadowOpacity: 0.10,
-                shadowRadius: 10,
-                shadowY: 4,
-                fillOpacity: 0.78,
-                strokeOpacity: 0.52
+                fallbackFillOpacity: 0.78,
+                fallbackStrokeOpacity: 0.52
             )
+            .shadow(color: Color.rossShadow.opacity(0.10), radius: 10, y: 4)
         }
         .buttonStyle(.plain)
     }
