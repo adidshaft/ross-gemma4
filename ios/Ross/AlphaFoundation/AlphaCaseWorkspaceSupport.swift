@@ -209,29 +209,41 @@ struct AlphaCompactDraftActionButton: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 14, weight: .semibold))
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(1)
+        if #available(iOS 26.0, macOS 26.0, *) {
+            Button(action: action) {
+                label
             }
-            .frame(maxWidth: .infinity, minHeight: 40)
-            .foregroundStyle(Color.rossInk)
-            .padding(.horizontal, 12)
-            .rossGlassSurface(
-                tint: Color.rossAccent,
-                cornerRadius: 14,
-                interactive: true,
-                shadowOpacity: 0.06,
-                shadowRadius: 6,
-                shadowY: 2,
-                fillOpacity: 0.82,
-                strokeOpacity: 0.52
-            )
+            .buttonStyle(.glass)
+            .tint(Color.rossAccent)
+        } else {
+            Button(action: action) {
+                label
+                    .rossGlassSurface(
+                        tint: Color.rossAccent,
+                        cornerRadius: 14,
+                        interactive: true,
+                        shadowOpacity: 0.06,
+                        shadowRadius: 6,
+                        shadowY: 2,
+                        fillOpacity: 0.82,
+                        strokeOpacity: 0.52
+                    )
+            }
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
+    }
+
+    private var label: some View {
+        HStack(spacing: 8) {
+            Image(systemName: systemImage)
+                .font(.system(size: 14, weight: .semibold))
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, minHeight: 40)
+        .foregroundStyle(Color.rossInk)
+        .padding(.horizontal, 12)
     }
 }
 
