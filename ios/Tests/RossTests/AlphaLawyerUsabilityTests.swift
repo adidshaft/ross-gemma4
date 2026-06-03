@@ -938,6 +938,32 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
     }
 
     @MainActor
+    func testQuickUnlockLabelsFollowSelectedLanguage() {
+        let previousLanguageCode = rossSelectedLanguageCode()
+        defer { rossSaveLanguageSelection(code: previousLanguageCode) }
+
+        let localAuth = RossLocalAuthStub()
+        let controller = RossAuthController(
+            canEvaluateDeviceUnlock: { localAuth.canEvaluate },
+            biometryTypeProvider: { localAuth.biometryType },
+            evaluateDeviceUnlock: localAuth.evaluate
+        )
+
+        rossSaveLanguageSelection(code: "ta")
+        XCTAssertEqual(controller.quickUnlockSummary, "Face ID அல்லது device passcode")
+        XCTAssertEqual(controller.unlockButtonTitle, "Face ID மூலம் unlock செய்யவும்")
+
+        localAuth.biometryType = .none
+        XCTAssertEqual(controller.quickUnlockSummary, "Device passcode பயன்படுத்தவும்")
+        XCTAssertEqual(controller.unlockButtonTitle, "Unlock செய்யவும்")
+
+        rossSaveLanguageSelection(code: "hi")
+        localAuth.biometryType = .touchID
+        XCTAssertEqual(controller.quickUnlockSummary, "Touch ID या device passcode")
+        XCTAssertEqual(controller.unlockButtonTitle, "Touch ID से unlock करें")
+    }
+
+    @MainActor
     func testAutomaticQuickUnlockSuccessRestoresSignedInState() async {
         let localAuth = RossLocalAuthStub()
         let controller = RossAuthController(

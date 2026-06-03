@@ -3999,6 +3999,34 @@ final class AlphaExtractionTests: XCTestCase {
         }
     }
 
+    func testAccountAndUnlockLabelsAvoidEnglishFallbacksInSupportedLanguages() {
+        let labelsThatShouldBeLocalized = [
+            "email_access",
+            "workspace_locked",
+            "ross_is_locked",
+            "sign_out",
+            "account",
+            "signed_in_as",
+            "unlock",
+            "unlock_with_biometry",
+            "face_id_or_device_passcode",
+            "touch_id_or_device_passcode",
+            "device_passcode",
+            "sign_out_destructive"
+        ]
+
+        for key in labelsThatShouldBeLocalized {
+            let english = rossLocalized(key, languageCode: "en")
+            for languageCode in ["hi", "bn", "ta", "te"] {
+                XCTAssertNotEqual(
+                    rossLocalized(key, languageCode: languageCode),
+                    english,
+                    "\(key) falls back to English for \(languageCode)"
+                )
+            }
+        }
+    }
+
     func testAskSourcePackLabelsAvoidEnglishFallbacksInSupportedLanguages() {
         let labelsThatShouldBeLocalized = [
             "ask_source_pack_matter",

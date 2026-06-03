@@ -156,10 +156,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "email_access": [
             "en": "Email access",
-            "hi": "Email access",
-            "bn": "Email access",
-            "ta": "Email access",
-            "te": "Email access"
+            "hi": "ईमेल access",
+            "bn": "ইমেল access",
+            "ta": "மின்னஞ்சல் access",
+            "te": "ఇమెయిల్ access"
         ],
         "connecting_to_google": [
             "en": "Connecting to Google",
@@ -213,16 +213,16 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         "workspace_locked": [
             "en": "Workspace locked",
             "hi": "Workspace locked है",
-            "bn": "Workspace locked",
-            "ta": "Workspace locked",
-            "te": "Workspace locked"
+            "bn": "Workspace locked আছে",
+            "ta": "Workspace locked உள்ளது",
+            "te": "Workspace locked ఉంది"
         ],
         "ross_is_locked": [
             "en": "Ross is locked",
             "hi": "Ross locked है",
-            "bn": "Ross locked",
-            "ta": "Ross locked",
-            "te": "Ross locked"
+            "bn": "Ross locked আছে",
+            "ta": "Ross locked உள்ளது",
+            "te": "Ross locked ఉంది"
         ],
         "use_unlock_to_continue": [
             "en": "Use %@ to continue.",
@@ -233,24 +233,24 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "sign_out": [
             "en": "Sign out",
-            "hi": "Sign out",
-            "bn": "Sign out",
-            "ta": "Sign out",
-            "te": "Sign out"
+            "hi": "Sign out करें",
+            "bn": "Sign out করুন",
+            "ta": "Sign out செய்யவும்",
+            "te": "Sign out చేయండి"
         ],
         "account": [
             "en": "Account",
-            "hi": "Account",
-            "bn": "Account",
-            "ta": "Account",
-            "te": "Account"
+            "hi": "Account विवरण",
+            "bn": "Account বিবরণ",
+            "ta": "Account விவரம்",
+            "te": "Account వివరాలు"
         ],
         "signed_in_as": [
             "en": "Signed in as",
-            "hi": "Signed in as",
-            "bn": "Signed in as",
-            "ta": "Signed in as",
-            "te": "Signed in as"
+            "hi": "Signed in as:",
+            "bn": "Signed in as:",
+            "ta": "Signed in as:",
+            "te": "Signed in as:"
         ],
         "language": [
             "en": "Language",
@@ -282,10 +282,38 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "unlock": [
             "en": "Unlock",
-            "hi": "Unlock",
-            "bn": "Unlock",
-            "ta": "Unlock",
-            "te": "Unlock"
+            "hi": "Unlock करें",
+            "bn": "Unlock করুন",
+            "ta": "Unlock செய்யவும்",
+            "te": "Unlock చేయండి"
+        ],
+        "unlock_with_biometry": [
+            "en": "Unlock with %@",
+            "hi": "%@ से unlock करें",
+            "bn": "%@ দিয়ে unlock করুন",
+            "ta": "%@ மூலம் unlock செய்யவும்",
+            "te": "%@ తో unlock చేయండి"
+        ],
+        "face_id_or_device_passcode": [
+            "en": "Face ID or device passcode",
+            "hi": "Face ID या device passcode",
+            "bn": "Face ID বা device passcode",
+            "ta": "Face ID அல்லது device passcode",
+            "te": "Face ID లేదా device passcode"
+        ],
+        "touch_id_or_device_passcode": [
+            "en": "Touch ID or device passcode",
+            "hi": "Touch ID या device passcode",
+            "bn": "Touch ID বা device passcode",
+            "ta": "Touch ID அல்லது device passcode",
+            "te": "Touch ID లేదా device passcode"
+        ],
+        "device_passcode": [
+            "en": "Device passcode",
+            "hi": "Device passcode इस्तेमाल करें",
+            "bn": "Device passcode ব্যবহার করুন",
+            "ta": "Device passcode பயன்படுத்தவும்",
+            "te": "Device passcode ఉపయోగించండి"
         ],
         "quick_unlock_unavailable_detail": [
             "en": "Quick unlock is not available on this device.",
@@ -338,10 +366,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "sign_out_destructive": [
             "en": "Sign Out",
-            "hi": "Sign Out",
-            "bn": "Sign Out",
-            "ta": "Sign Out",
-            "te": "Sign Out"
+            "hi": "Sign Out करें",
+            "bn": "Sign Out করুন",
+            "ta": "Sign Out செய்யவும்",
+            "te": "Sign Out చేయండి"
         ],
         "sign_out_local_detail": [
             "en": "This removes the local sign-in from this device until you sign in again.",
@@ -8207,19 +8235,19 @@ final class RossAuthController: NSObject, ASWebAuthenticationPresentationContext
     var quickUnlockSummary: String {
         switch currentBiometryType() {
         case .faceID:
-            "Face ID or device passcode"
+            rossLocalized("face_id_or_device_passcode")
         case .touchID:
-            "Touch ID or device passcode"
+            rossLocalized("touch_id_or_device_passcode")
         default:
-            "Device passcode"
+            rossLocalized("device_passcode")
         }
     }
 
     var unlockButtonTitle: String {
         if let biometryLabel = availableBiometryLabel() {
-            return "Unlock with \(biometryLabel)"
+            return String(format: rossLocalized("unlock_with_biometry"), biometryLabel)
         }
-        return "Unlock"
+        return rossLocalized("unlock")
     }
 
     var unlockSymbolName: String {
