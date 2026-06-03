@@ -3934,6 +3934,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "வழக்கின் பெயர்",
             "te": "కేసు పేరు"
         ],
+        "matter": [
+            "en": "Matter",
+            "hi": "मामला",
+            "bn": "মামলা",
+            "ta": "வழக்கு",
+            "te": "కేసు"
+        ],
+        "workspace": [
+            "en": "Workspace",
+            "hi": "Workspace",
+            "bn": "Workspace",
+            "ta": "Workspace",
+            "te": "Workspace"
+        ],
         "create_matter_title": [
             "en": "Create a matter",
             "hi": "मामला बनाएं",

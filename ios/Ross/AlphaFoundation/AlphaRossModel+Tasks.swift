@@ -314,7 +314,7 @@ extension AlphaRossModel {
             stableKey: stableKey,
             caseId: caseId,
             type: .publicLawQueryAwaitingApproval,
-            matterName: caseMatter?.title ?? "Workspace",
+            matterName: caseMatter?.title ?? rossLocalized("workspace"),
             title: "Review public-law query",
             summary: preview.query,
             badge: .approvalRequired,

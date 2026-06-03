@@ -384,7 +384,7 @@ struct AlphaCaseWorkspaceScreen: View {
                 Task { await model.importDocuments(caseId: caseId, from: urls) }
             }
         }
-        .navigationTitle(caseMatter?.title ?? "Matter")
+        .navigationTitle(caseMatter?.title ?? rossLocalized("matter"))
         .rossInlineNavigationTitle()
     }
 }
