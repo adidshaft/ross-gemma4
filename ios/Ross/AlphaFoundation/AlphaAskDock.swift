@@ -468,16 +468,14 @@ struct AlphaRootAskDock: View {
                     .padding(.leading, 7)
                     .padding(.trailing, 13)
                     .padding(.vertical, 5)
-                    .rossGlassSurface(
+                    .rossNativeGlassSurface(
                         tint: Color.rossHighlight,
-                        cornerRadius: 20,
+                        shape: RoundedRectangle(cornerRadius: 20, style: .continuous),
                         interactive: true,
-                        shadowOpacity: colorScheme == .dark ? 0.16 : 0.08,
-                        shadowRadius: 8,
-                        shadowY: 3,
-                        fillOpacity: colorScheme == .dark ? 0.76 : 0.86,
-                        strokeOpacity: 0.52
+                        fallbackFillOpacity: colorScheme == .dark ? 0.76 : 0.86,
+                        fallbackStrokeOpacity: 0.52
                     )
+                    .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.16 : 0.08), radius: 8, y: 3)
 
                     AlphaAskDockSendButton(
                         canSend: canSend,
@@ -523,15 +521,13 @@ struct AlphaRootAskDock: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .rossGlassSurface(
+        .rossNativeGlassSurface(
             tint: dockBackdropTint,
-            cornerRadius: 22,
-            shadowOpacity: colorScheme == .dark ? 0.2 : 0.12,
-            shadowRadius: colorScheme == .dark ? 18 : 14,
-            shadowY: colorScheme == .dark ? 10 : 7,
-            fillOpacity: colorScheme == .dark ? 0.78 : 0.86,
-            strokeOpacity: colorScheme == .dark ? 0.22 : 0.7
+            shape: RoundedRectangle(cornerRadius: 22, style: .continuous),
+            fallbackFillOpacity: colorScheme == .dark ? 0.78 : 0.86,
+            fallbackStrokeOpacity: colorScheme == .dark ? 0.22 : 0.70
         )
+        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.20 : 0.12), radius: colorScheme == .dark ? 18 : 14, y: colorScheme == .dark ? 10 : 7)
     }
 
     var body: some View {
@@ -631,7 +627,14 @@ struct AlphaRootAskDock: View {
                                         .font(.callout.weight(.medium))
                                         .frame(minHeight: 96)
                                         .padding(8)
-                                        .rossGlassSurface(cornerRadius: 12, interactive: true, shadowOpacity: 0.04, shadowRadius: 4, shadowY: 1, strokeOpacity: 0.48)
+                                        .rossNativeGlassSurface(
+                                            tint: Color.rossAccent,
+                                            shape: RoundedRectangle(cornerRadius: 12, style: .continuous),
+                                            interactive: true,
+                                            fallbackFillOpacity: 0.84,
+                                            fallbackStrokeOpacity: 0.48
+                                        )
+                                        .shadow(color: Color.rossShadow.opacity(0.04), radius: 4, y: 1)
                                     } else {
                                         Text(preview.query)
                                             .font(.callout.weight(.semibold))
@@ -639,7 +642,12 @@ struct AlphaRootAskDock: View {
                                             .fixedSize(horizontal: false, vertical: true)
                                             .padding(12)
                                             .frame(maxWidth: .infinity, alignment: .leading)
-                                            .rossGlassSurface(cornerRadius: 12, strokeOpacity: 0.48)
+                                            .rossNativeGlassSurface(
+                                                tint: Color.rossAccent,
+                                                shape: RoundedRectangle(cornerRadius: 12, style: .continuous),
+                                                fallbackFillOpacity: 0.84,
+                                                fallbackStrokeOpacity: 0.48
+                                            )
                                     }
                                 }
 
@@ -648,7 +656,12 @@ struct AlphaRootAskDock: View {
                                     .foregroundStyle(Color.rossInk.opacity(0.62))
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 7)
-                                    .rossGlassSurface(cornerRadius: 999, strokeOpacity: 0.42)
+                                    .rossNativeGlassSurface(
+                                        tint: Color.rossAccent,
+                                        shape: Capsule(),
+                                        fallbackFillOpacity: 0.84,
+                                        fallbackStrokeOpacity: 0.42
+                                    )
 
                                 if model.publicLawSearchInFlight {
                                     ProgressView(rossLocalized("searching_legal_sources_ellipsis"))
@@ -678,15 +691,13 @@ struct AlphaRootAskDock: View {
                             }
                         }
                         .padding(12)
-                        .rossGlassSurface(
+                        .rossNativeGlassSurface(
                             tint: Color.rossHighlight,
-                            cornerRadius: 24,
-                            shadowOpacity: 0.08,
-                            shadowRadius: 10,
-                            shadowY: 4,
-                            fillOpacity: 0.82,
-                            strokeOpacity: 0.52
+                            shape: RoundedRectangle(cornerRadius: 24, style: .continuous),
+                            fallbackFillOpacity: 0.82,
+                            fallbackStrokeOpacity: 0.52
                         )
+                        .shadow(color: Color.rossShadow.opacity(0.08), radius: 10, y: 4)
                     }
                     .padding(alphaScreenPadding)
                 }
@@ -742,15 +753,13 @@ struct AlphaCollapsedAskDockPill: View {
         .padding(.trailing, 10)
         .frame(height: 44)
         .contentShape(Capsule())
-        .rossGlassSurface(
+        .rossNativeGlassSurface(
             tint: dockBackdropTint,
-            cornerRadius: 999,
-            shadowOpacity: colorScheme == .dark ? 0.18 : 0.1,
-            shadowRadius: 12,
-            shadowY: 6,
-            fillOpacity: colorScheme == .dark ? 0.82 : 0.88,
-            strokeOpacity: colorScheme == .dark ? 0.18 : 0.72
+            shape: Capsule(),
+            fallbackFillOpacity: colorScheme == .dark ? 0.82 : 0.88,
+            fallbackStrokeOpacity: colorScheme == .dark ? 0.18 : 0.72
         )
+        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.18 : 0.10), radius: 12, y: 6)
     }
 }
 
@@ -796,7 +805,13 @@ struct AlphaDockActivityPill: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 9)
-        .rossGlassSurface(cornerRadius: 16, shadowOpacity: 0.08, shadowRadius: 8, shadowY: 3, fillOpacity: 0.78, strokeOpacity: 0.44)
+        .rossNativeGlassSurface(
+            tint: Color.rossAccent,
+            shape: RoundedRectangle(cornerRadius: 16, style: .continuous),
+            fallbackFillOpacity: 0.78,
+            fallbackStrokeOpacity: 0.44
+        )
+        .shadow(color: Color.rossShadow.opacity(0.08), radius: 8, y: 3)
         .accessibilityElement(children: .combine)
     }
 }
