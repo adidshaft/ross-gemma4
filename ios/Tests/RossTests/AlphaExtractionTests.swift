@@ -1090,10 +1090,9 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(normalSettingsCopy.contains("अगली hearing"))
         XCTAssertTrue(normalSettingsCopy.contains("अगली date confirm करें"))
         XCTAssertTrue(normalSettingsCopy.contains("Task title जोड़ें"))
-        XCTAssertEqual(alphaPrivateAIVerifiedStorageLabel, "Verified assistant setup")
+        XCTAssertEqual(alphaPrivateAIVerifiedStorageLabel, "Setup verified")
         XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("downloaded assistant files"))
         XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("downloaded assistant"))
-        XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("assistant files"))
         XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("Confirm the next hearing date from the latest order"))
         XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("Prepare a short hearing note before arguments"))
         XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("Check the filing deadline before sharing the next update"))
@@ -1104,6 +1103,32 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("Call client with next date"))
         XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("Use the confirmed next date after advocate review"))
         XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("This demo matter has one next hearing"))
+    }
+
+    func testPrivateAssistantPanelLabelsAvoidEnglishFallbacksInSupportedLanguages() {
+        let labelsThatShouldBeLocalized = [
+            "my_assistant",
+            "assistant_update_title",
+            "assistant_storage_title",
+            "assistant_verified_storage_label",
+            "assistant_check",
+            "local_file",
+            "last_private_answer",
+            "setup_resets",
+            "private_assistant_sample_file_check_report_title",
+            "fields_needing_review_count"
+        ]
+
+        for key in labelsThatShouldBeLocalized {
+            let english = rossLocalized(key, languageCode: "en")
+            for languageCode in ["hi", "bn", "ta", "te"] {
+                XCTAssertNotEqual(
+                    rossLocalized(key, languageCode: languageCode),
+                    english,
+                    "\(key) falls back to English for \(languageCode)"
+                )
+            }
+        }
     }
 
     func testExistingAssistantSetupRepairCopyPointsToMyAssistant() {

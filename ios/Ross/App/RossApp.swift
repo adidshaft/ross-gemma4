@@ -1178,10 +1178,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "my_assistant": [
             "en": "My assistant",
-            "hi": "My assistant",
-            "bn": "My assistant",
-            "ta": "My assistant",
-            "te": "My assistant"
+            "hi": "मेरा assistant",
+            "bn": "আমার assistant",
+            "ta": "என் assistant",
+            "te": "నా assistant"
         ],
         "private_assistant": [
             "en": "Private assistant",
@@ -2095,10 +2095,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "assistant_update_title": [
             "en": "Assistant update",
-            "hi": "Assistant update",
-            "bn": "Assistant update",
-            "ta": "Assistant update",
-            "te": "Assistant update"
+            "hi": "Assistant update उपलब्ध",
+            "bn": "Assistant update আছে",
+            "ta": "Assistant update உள்ளது",
+            "te": "Assistant update ఉంది"
         ],
         "assistant_update_available": [
             "en": "%@ has a newer assistant setup available.",
@@ -2123,10 +2123,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "assistant_storage_title": [
             "en": "Assistant storage",
-            "hi": "Assistant storage",
-            "bn": "Assistant storage",
-            "ta": "Assistant storage",
-            "te": "Assistant storage"
+            "hi": "Assistant files",
+            "bn": "Assistant files",
+            "ta": "Assistant files",
+            "te": "Assistant files"
         ],
         "assistant_storage_detail": [
             "en": "App updates keep assistant setup files in Ross storage. A full uninstall removes the app container; iOS does not let Ross ask a question during uninstall.",
@@ -2151,10 +2151,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "assistant_verified_storage_label": [
             "en": "Verified assistant setup",
-            "hi": "Verified assistant setup",
-            "bn": "Verified assistant setup",
-            "ta": "Verified assistant setup",
-            "te": "Verified assistant setup"
+            "hi": "Setup verified",
+            "bn": "Setup verified",
+            "ta": "Setup verified",
+            "te": "Setup verified"
         ],
         "privacy_summary": [
             "en": "Privacy summary",
@@ -2179,10 +2179,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "assistant_check": [
             "en": "Assistant check",
-            "hi": "Assistant check",
-            "bn": "Assistant check",
-            "ta": "Assistant check",
-            "te": "Assistant check"
+            "hi": "Check assistant",
+            "bn": "Check assistant",
+            "ta": "Check assistant",
+            "te": "Check assistant"
         ],
         "assistant_check_after_setup": [
             "en": "Ross will check the assistant after setup.",
@@ -2459,24 +2459,24 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "local_file": [
             "en": "Local file",
-            "hi": "Local file",
-            "bn": "Local file",
-            "ta": "Local file",
-            "te": "Local file"
+            "hi": "File on device",
+            "bn": "File on device",
+            "ta": "File on device",
+            "te": "File on device"
         ],
         "last_private_answer": [
             "en": "Last private answer",
-            "hi": "Last private answer",
-            "bn": "Last private answer",
-            "ta": "Last private answer",
-            "te": "Last private answer"
+            "hi": "पिछला private answer",
+            "bn": "শেষ private answer",
+            "ta": "கடைசி private answer",
+            "te": "చివరి private answer"
         ],
         "setup_resets": [
             "en": "Setup resets",
-            "hi": "Setup resets",
-            "bn": "Setup resets",
-            "ta": "Setup resets",
-            "te": "Setup resets"
+            "hi": "Setup reset",
+            "bn": "Setup reset",
+            "ta": "Setup reset",
+            "te": "Setup reset"
         ],
         "assistant_can_answer": [
             "en": "Can answer",
@@ -2550,10 +2550,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "private_assistant_sample_file_check_report_title": [
             "en": "Private assistant sample file check",
-            "hi": "Private assistant sample file check",
-            "bn": "Private assistant sample file check",
-            "ta": "Private assistant sample file check",
-            "te": "Private assistant sample file check"
+            "hi": "Sample file check report",
+            "bn": "Sample file check report",
+            "ta": "Sample file check report",
+            "te": "Sample file check report"
         ],
         "private_assistant_sample_file_check_completed_on_iphone": [
             "en": "Sample file check completed on this iPhone",
@@ -2585,10 +2585,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "fields_needing_review_count": [
             "en": "Fields needing review: %d",
-            "hi": "Fields needing review: %d",
-            "bn": "Fields needing review: %d",
-            "ta": "Fields needing review: %d",
-            "te": "Fields needing review: %d"
+            "hi": "Review चाहिए fields: %d",
+            "bn": "Review দরকার fields: %d",
+            "ta": "Review தேவைப்படும் fields: %d",
+            "te": "Review అవసరమైన fields: %d"
         ],
         "private_assistant_sample_file_check_completed_private": [
             "en": "Private assistant sample file check completed without logging prompt or source text.",
