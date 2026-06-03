@@ -525,16 +525,43 @@ struct AlphaSettingsToggleRow: View {
         }
         .tint(Color.rossAccent)
         .padding(.horizontal, 12)
-        .rossGlassSurface(
-            tint: Color.rossAccent.opacity(0.10),
-            cornerRadius: 16,
-            interactive: true,
-            shadowOpacity: 0.04,
-            shadowRadius: 4,
-            shadowY: 1,
-            fillOpacity: 0.74,
-            strokeOpacity: 0.44
-        )
+        .modifier(AlphaSettingsToggleSurface())
+    }
+}
+
+private struct AlphaSettingsToggleSurface: ViewModifier {
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+
+        if #available(iOS 26.0, macOS 26.0, *) {
+            content
+                .background {
+                    shape.fill(Color.rossGlassFill.opacity(0.36))
+                }
+                .glassEffect(
+                    Glass.regular
+                        .tint(Color.rossAccent.opacity(0.10))
+                        .interactive(),
+                    in: shape
+                )
+                .overlay {
+                    shape.strokeBorder(Color.rossAccent.opacity(0.18), lineWidth: 1)
+                }
+                .shadow(color: Color.rossShadow.opacity(0.04), radius: 4, y: 1)
+        } else {
+            content
+                .rossGlassSurface(
+                    tint: Color.rossAccent.opacity(0.10),
+                    cornerRadius: 16,
+                    interactive: true,
+                    shadowOpacity: 0.04,
+                    shadowRadius: 4,
+                    shadowY: 1,
+                    fillOpacity: 0.74,
+                    strokeOpacity: 0.44
+                )
+        }
     }
 }
 
