@@ -617,8 +617,8 @@ extension AlphaRossModel {
         rebuildPreparedWork(reason: .afterDocumentImport, caseId: caseId, persistAfter: false)
         persisted.ledgerEntries.insert(
             AlphaPrivacyLedgerEntry(
-                title: "Local matter overview refreshed",
-                detail: "Ross reviewed the matter files, tasks, and progress on this device.",
+                title: rossLocalized("privacy_ledger_local_case_review_title"),
+                detail: rossLocalized("privacy_ledger_local_case_review_detail"),
                 purpose: .local_only,
                 payloadClass: .local_only,
                 endpointLabel: "device://matter-refresh",

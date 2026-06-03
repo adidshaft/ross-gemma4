@@ -2858,7 +2858,7 @@ extension AlphaPrivacyLedgerEntry {
             rossLocalized("privacy_ledger_local_export_generated_title")
         case "Export generation failed":
             rossLocalized("privacy_ledger_local_export_failed_title")
-        case "Local case review run":
+        case "Local case review run", "Local matter overview refreshed":
             rossLocalized("privacy_ledger_local_case_review_title")
         case "Document imported locally":
             rossLocalized("privacy_ledger_document_imported_title")
@@ -2913,6 +2913,8 @@ extension AlphaPrivacyLedgerEntry {
             rossLocalized("privacy_ledger_local_export_generated_detail")
         case "Export generation failed":
             rossLocalized("privacy_ledger_local_export_failed_detail")
+        case "Local case review run", "Local matter overview refreshed":
+            rossLocalized("privacy_ledger_local_case_review_detail")
         case "AI output reported":
             rossLocalized("privacy_ledger_ai_output_reported_detail")
         default:

@@ -960,6 +960,7 @@ final class AlphaExtractionTests: XCTestCase {
             rossLocalized("private_assistant_sample_file_check_report_title"),
             rossLocalized("private_assistant_sample_file_check_completed_private"),
             rossLocalized("private_assistant_ready_on_device"),
+            rossLocalized("privacy_ledger_local_case_review_detail"),
             AlphaMatterDateKind.hearing.title,
             AlphaMatterDateKind.filingDeadline.title,
             AlphaMatterDateKind.complianceDate.title,
@@ -996,6 +997,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(normalSettingsCopy.contains("Ross assistant listings जांचता है"))
         XCTAssertTrue(normalSettingsCopy.contains("prompt या source text log किए बिना"))
         XCTAssertTrue(normalSettingsCopy.contains("Private assistant: इस device पर ready"))
+        XCTAssertTrue(normalSettingsCopy.contains("matter files, tasks, और progress"))
         XCTAssertTrue(normalSettingsCopy.contains("अगली hearing"))
         XCTAssertTrue(normalSettingsCopy.contains("अगली date confirm करें"))
         XCTAssertTrue(normalSettingsCopy.contains("Task title जोड़ें"))

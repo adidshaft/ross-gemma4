@@ -1470,6 +1470,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Case locally review செய்யப்பட்டது",
             "te": "Case locally review చేయబడింది"
         ],
+        "privacy_ledger_local_case_review_detail": [
+            "en": "Ross reviewed the matter files, tasks, and progress on this device.",
+            "hi": "Ross ने matter files, tasks, और progress इसी device पर review किए.",
+            "bn": "Ross matter files, tasks, এবং progress এই device-এ review করেছে.",
+            "ta": "Ross matter files, tasks மற்றும் progress-ஐ இந்த device-இல் review செய்தது.",
+            "te": "Ross matter files, tasks మరియు progress ను ఈ device లో review చేసింది."
+        ],
         "privacy_ledger_document_imported_title": [
             "en": "Imported document",
             "hi": "Document import किया",
