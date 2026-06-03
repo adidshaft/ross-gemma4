@@ -2151,10 +2151,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "assistant_storage_title": [
             "en": "Assistant storage",
-            "hi": "Assistant files",
-            "bn": "Assistant files",
-            "ta": "Assistant files",
-            "te": "Assistant files"
+            "hi": "Assistant files देखें",
+            "bn": "Assistant files দেখুন",
+            "ta": "Assistant files பார்க்கவும்",
+            "te": "Assistant files చూడండి"
         ],
         "assistant_storage_detail": [
             "en": "App updates keep assistant setup files in Ross storage. A full uninstall removes the app container; iOS does not let Ross ask a question during uninstall.",
@@ -2179,17 +2179,17 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "assistant_verified_storage_label": [
             "en": "Verified assistant setup",
-            "hi": "Setup verified",
-            "bn": "Setup verified",
-            "ta": "Setup verified",
-            "te": "Setup verified"
+            "hi": "Setup verified है",
+            "bn": "Setup verified হয়েছে",
+            "ta": "Setup verified ஆனது",
+            "te": "Setup verified అయింది"
         ],
         "privacy_summary": [
             "en": "Privacy summary",
-            "hi": "Privacy summary",
-            "bn": "Privacy summary",
-            "ta": "Privacy summary",
-            "te": "Privacy summary"
+            "hi": "Privacy summary देखें",
+            "bn": "Privacy summary দেখুন",
+            "ta": "Privacy summary பார்க்கவும்",
+            "te": "Privacy summary చూడండి"
         ],
         "privacy_summary_detail": [
             "en": "In the last 30 days, 0 case details left this phone. Legal Search only used sanitized legal queries.",
@@ -2207,10 +2207,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "assistant_check": [
             "en": "Assistant check",
-            "hi": "Check assistant",
-            "bn": "Check assistant",
-            "ta": "Check assistant",
-            "te": "Check assistant"
+            "hi": "Assistant check करें",
+            "bn": "Assistant check করুন",
+            "ta": "Assistant check செய்யவும்",
+            "te": "Assistant check చేయండి"
         ],
         "assistant_check_after_setup": [
             "en": "Ross will check the assistant after setup.",
@@ -2222,9 +2222,9 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         "assistant_status_ready_title": [
             "en": "My assistant is ready",
             "hi": "My assistant ready है",
-            "bn": "My assistant ready",
-            "ta": "My assistant ready",
-            "te": "My assistant ready"
+            "bn": "My assistant ready আছে",
+            "ta": "My assistant ready உள்ளது",
+            "te": "My assistant ready ఉంది"
         ],
         "assistant_status_ready_detail": [
             "en": "Ross can help read files, draft notes, and answer from local matter files on this device.",
@@ -2466,10 +2466,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "status": [
             "en": "Status",
-            "hi": "Status",
-            "bn": "Status",
-            "ta": "Status",
-            "te": "Status"
+            "hi": "Status देखें",
+            "bn": "Status দেখুন",
+            "ta": "Status பார்க்கவும்",
+            "te": "Status చూడండి"
         ],
         "yes": [
             "en": "Yes",
@@ -2487,10 +2487,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "local_file": [
             "en": "Local file",
-            "hi": "File on device",
-            "bn": "File on device",
-            "ta": "File on device",
-            "te": "File on device"
+            "hi": "Device पर file",
+            "bn": "Device-এ file",
+            "ta": "Device-இல் file",
+            "te": "Device లో file"
         ],
         "last_private_answer": [
             "en": "Last private answer",
@@ -2501,10 +2501,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "setup_resets": [
             "en": "Setup resets",
-            "hi": "Setup reset",
-            "bn": "Setup reset",
-            "ta": "Setup reset",
-            "te": "Setup reset"
+            "hi": "Setup reset देखें",
+            "bn": "Setup reset দেখুন",
+            "ta": "Setup reset பார்க்கவும்",
+            "te": "Setup reset చూడండి"
         ],
         "assistant_can_answer": [
             "en": "Can answer",
@@ -2522,31 +2522,31 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "last_answer_check": [
             "en": "Last answer check",
-            "hi": "Last answer check",
-            "bn": "Last answer check",
-            "ta": "Last answer check",
-            "te": "Last answer check"
+            "hi": "Last answer check देखें",
+            "bn": "Last answer check দেখুন",
+            "ta": "Last answer check பார்க்கவும்",
+            "te": "Last answer check చూడండి"
         ],
         "last_check_result": [
             "en": "Last check result",
-            "hi": "Last check result",
-            "bn": "Last check result",
-            "ta": "Last check result",
-            "te": "Last check result"
+            "hi": "Last check result देखें",
+            "bn": "Last check result দেখুন",
+            "ta": "Last check result பார்க்கவும்",
+            "te": "Last check result చూడండి"
         ],
         "approx_time": [
             "en": "Approx time",
-            "hi": "Approx time",
-            "bn": "Approx time",
-            "ta": "Approx time",
-            "te": "Approx time"
+            "hi": "Approx time देखें",
+            "bn": "Approx time দেখুন",
+            "ta": "Approx time பார்க்கவும்",
+            "te": "Approx time చూడండి"
         ],
         "public_law_check": [
             "en": "Public-law check",
-            "hi": "Public-law check",
-            "bn": "Public-law check",
-            "ta": "Public-law check",
-            "te": "Public-law check"
+            "hi": "Public-law check देखें",
+            "bn": "Public-law check দেখুন",
+            "ta": "Public-law check பார்க்கவும்",
+            "te": "Public-law check చూడండి"
         ],
         "none_yet": [
             "en": "None yet",
@@ -2557,10 +2557,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "workspace_refreshes": [
             "en": "Workspace refreshes",
-            "hi": "Workspace refreshes",
-            "bn": "Workspace refreshes",
-            "ta": "Workspace refreshes",
-            "te": "Workspace refreshes"
+            "hi": "Workspace refreshes देखें",
+            "bn": "Workspace refreshes দেখুন",
+            "ta": "Workspace refreshes பார்க்கவும்",
+            "te": "Workspace refreshes చూడండి"
         ],
         "check_private_assistant_with_sample_file": [
             "en": "Check private assistant with a sample file",
@@ -2578,10 +2578,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "private_assistant_sample_file_check_report_title": [
             "en": "Private assistant sample file check",
-            "hi": "Sample file check report",
-            "bn": "Sample file check report",
-            "ta": "Sample file check report",
-            "te": "Sample file check report"
+            "hi": "Sample file check report देखें",
+            "bn": "Sample file check report দেখুন",
+            "ta": "Sample file check report பார்க்கவும்",
+            "te": "Sample file check report చూడండి"
         ],
         "private_assistant_sample_file_check_completed_on_iphone": [
             "en": "Sample file check completed on this iPhone",
@@ -2599,17 +2599,17 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "fields_found_count": [
             "en": "Fields found: %d",
-            "hi": "Fields found: %d",
-            "bn": "Fields found: %d",
-            "ta": "Fields found: %d",
-            "te": "Fields found: %d"
+            "hi": "Fields found: %d हैं",
+            "bn": "Fields found: %dটি",
+            "ta": "Fields found: %d உள்ளது",
+            "te": "Fields found: %d ఉన్నాయి"
         ],
         "fields_verified_count": [
             "en": "Fields verified: %d",
-            "hi": "Fields verified: %d",
-            "bn": "Fields verified: %d",
-            "ta": "Fields verified: %d",
-            "te": "Fields verified: %d"
+            "hi": "Fields verified: %d हैं",
+            "bn": "Fields verified: %dটি",
+            "ta": "Fields verified: %d உள்ளது",
+            "te": "Fields verified: %d ఉన్నాయి"
         ],
         "fields_needing_review_count": [
             "en": "Fields needing review: %d",

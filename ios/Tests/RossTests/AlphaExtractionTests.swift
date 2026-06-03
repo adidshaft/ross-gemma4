@@ -1090,7 +1090,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(normalSettingsCopy.contains("अगली hearing"))
         XCTAssertTrue(normalSettingsCopy.contains("अगली date confirm करें"))
         XCTAssertTrue(normalSettingsCopy.contains("Task title जोड़ें"))
-        XCTAssertEqual(alphaPrivateAIVerifiedStorageLabel, "Setup verified")
+        XCTAssertEqual(alphaPrivateAIVerifiedStorageLabel, "Setup verified है")
         XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("downloaded assistant files"))
         XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("downloaded assistant"))
         XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("Confirm the next hearing date from the latest order"))
@@ -1111,11 +1111,21 @@ final class AlphaExtractionTests: XCTestCase {
             "assistant_update_title",
             "assistant_storage_title",
             "assistant_verified_storage_label",
+            "privacy_summary",
             "assistant_check",
+            "assistant_status_ready_title",
+            "status",
             "local_file",
             "last_private_answer",
             "setup_resets",
+            "last_answer_check",
+            "last_check_result",
+            "approx_time",
+            "public_law_check",
+            "workspace_refreshes",
             "private_assistant_sample_file_check_report_title",
+            "fields_found_count",
+            "fields_verified_count",
             "fields_needing_review_count"
         ]
 
