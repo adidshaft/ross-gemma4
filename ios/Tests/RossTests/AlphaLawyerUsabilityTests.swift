@@ -494,11 +494,11 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         )
         let combinedText = sourcePack.map(\.text).joined(separator: "\n")
 
-        XCTAssertTrue(combinedText.contains("Order sheet से confirmed details"))
+        XCTAssertTrue(combinedText.contains("Order sheet से पुष्टि किए गए विवरण"))
         XCTAssertFalse(combinedText.contains("Confirmed details from Order sheet"))
         XCTAssertTrue(combinedText.contains("Next hearing: 17 June 2026"))
         XCTAssertFalse(combinedText.contains("Rs. 99,99,999"))
-        let confirmedBlock = sourcePack.first { $0.text.contains("Order sheet से confirmed details") }
+        let confirmedBlock = sourcePack.first { $0.text.contains("Order sheet से पुष्टि किए गए विवरण") }
         XCTAssertEqual(confirmedBlock?.sourceRef.pageNumber, 4)
     }
 
@@ -532,8 +532,18 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             .map(\.text)
             .joined(separator: "\n")
 
+        XCTAssertTrue(combinedText.contains("मामला: Hindi source-pack matter"), combinedText)
+        XCTAssertTrue(combinedText.contains("फोरम: District Court"), combinedText)
+        XCTAssertTrue(combinedText.contains("स्थिति: Arguments"), combinedText)
+        XCTAssertTrue(combinedText.contains("सारांश: Matter summary for local assistant context."), combinedText)
         XCTAssertTrue(combinedText.contains("अगली hearing:"), combinedText)
+        XCTAssertTrue(combinedText.contains("मुद्दे: Delay condonation"), combinedText)
+        XCTAssertFalse(combinedText.contains("Matter: Hindi source-pack matter"), combinedText)
+        XCTAssertFalse(combinedText.contains("Forum: District Court"), combinedText)
+        XCTAssertFalse(combinedText.contains("Stage: Arguments"), combinedText)
+        XCTAssertFalse(combinedText.contains("Summary: Matter summary for local assistant context."), combinedText)
         XCTAssertFalse(combinedText.contains("Next hearing:"), combinedText)
+        XCTAssertFalse(combinedText.contains("Issues: Delay condonation"), combinedText)
     }
 
     @MainActor

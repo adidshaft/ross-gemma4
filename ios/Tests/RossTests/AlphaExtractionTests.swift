@@ -1502,7 +1502,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
         XCTAssertEqual(
             String(format: rossLocalized("ask_source_pack_confirmed_details_from", languageCode: "hi"), "Order"),
-            "Order से confirmed details"
+            "Order से पुष्टि किए गए विवरण"
         )
         XCTAssertEqual(
             rossLocalized("notes_drafts_title", languageCode: "hi"),
@@ -3288,8 +3288,9 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertTrue(instruction.contains("प्रश्न: इस file से next date बताएं"), instruction)
-        XCTAssertTrue(instruction.contains("Tagged files: Order sheet"), instruction)
+        XCTAssertTrue(instruction.contains("चुनी हुई files: Order sheet"), instruction)
         XCTAssertFalse(instruction.contains("Question: इस file से next date बताएं"), instruction)
+        XCTAssertFalse(instruction.contains("Tagged files: Order sheet"), instruction)
     }
 
     func testPipelinePlanChangesWithInstalledPack() {
@@ -3901,6 +3902,33 @@ final class AlphaExtractionTests: XCTestCase {
             "document_type_fictional_game_material",
             "document_type_unknown",
             "document_script_detected"
+        ]
+
+        for key in labelsThatShouldBeLocalized {
+            let english = rossLocalized(key, languageCode: "en")
+            for languageCode in ["hi", "bn", "ta", "te"] {
+                XCTAssertNotEqual(
+                    rossLocalized(key, languageCode: languageCode),
+                    english,
+                    "\(key) falls back to English for \(languageCode)"
+                )
+            }
+        }
+    }
+
+    func testAskSourcePackLabelsAvoidEnglishFallbacksInSupportedLanguages() {
+        let labelsThatShouldBeLocalized = [
+            "ask_source_pack_matter",
+            "ask_source_pack_forum",
+            "ask_source_pack_stage",
+            "ask_source_pack_summary",
+            "ask_source_pack_issues",
+            "ask_source_pack_open_tasks",
+            "ask_source_pack_dates",
+            "ask_source_pack_date_on",
+            "ask_source_pack_confirmed_details_from",
+            "ask_instruction_scope",
+            "ask_instruction_tagged_files"
         ]
 
         for key in labelsThatShouldBeLocalized {

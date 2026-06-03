@@ -6400,31 +6400,31 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "ask_source_pack_matter": [
             "en": "Matter",
-            "hi": "Matter",
-            "bn": "Matter",
-            "ta": "Matter",
-            "te": "Matter"
+            "hi": "मामला",
+            "bn": "মামলা",
+            "ta": "வழக்கு",
+            "te": "కేసు"
         ],
         "ask_source_pack_forum": [
             "en": "Forum",
-            "hi": "Forum",
-            "bn": "Forum",
-            "ta": "Forum",
-            "te": "Forum"
+            "hi": "फोरम",
+            "bn": "ফোরাম",
+            "ta": "மன்றம்",
+            "te": "ఫోరం"
         ],
         "ask_source_pack_stage": [
             "en": "Stage",
-            "hi": "Stage",
-            "bn": "Stage",
-            "ta": "Stage",
-            "te": "Stage"
+            "hi": "स्थिति",
+            "bn": "পর্যায়",
+            "ta": "நிலை",
+            "te": "దశ"
         ],
         "ask_source_pack_summary": [
             "en": "Summary",
-            "hi": "Summary",
-            "bn": "Summary",
-            "ta": "Summary",
-            "te": "Summary"
+            "hi": "सारांश",
+            "bn": "সারাংশ",
+            "ta": "சுருக்கம்",
+            "te": "సారాంశం"
         ],
         "ask_source_pack_next_hearing": [
             "en": "Next hearing",
@@ -6463,38 +6463,38 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "ask_source_pack_issues": [
             "en": "Issues",
-            "hi": "Issues",
-            "bn": "Issues",
-            "ta": "Issues",
-            "te": "Issues"
+            "hi": "मुद्दे",
+            "bn": "বিষয়",
+            "ta": "சிக்கல்கள்",
+            "te": "సమస్యలు"
         ],
         "ask_source_pack_open_tasks": [
             "en": "Open tasks",
-            "hi": "Open tasks",
-            "bn": "Open tasks",
-            "ta": "Open tasks",
-            "te": "Open tasks"
+            "hi": "खुले काम",
+            "bn": "খোলা কাজ",
+            "ta": "திறந்த பணிகள்",
+            "te": "తెరిచి ఉన్న పనులు"
         ],
         "ask_source_pack_dates": [
             "en": "Dates",
-            "hi": "Dates",
-            "bn": "Dates",
-            "ta": "Dates",
-            "te": "Dates"
+            "hi": "तारीखें",
+            "bn": "তারিখ",
+            "ta": "தேதிகள்",
+            "te": "తేదీలు"
         ],
         "ask_source_pack_date_on": [
             "en": "%@ on %@",
-            "hi": "%@ on %@",
-            "bn": "%@ on %@",
-            "ta": "%@ on %@",
-            "te": "%@ on %@"
+            "hi": "%@: %@",
+            "bn": "%@: %@",
+            "ta": "%@: %@",
+            "te": "%@: %@"
         ],
         "ask_source_pack_confirmed_details_from": [
             "en": "Confirmed details from %@",
-            "hi": "%@ से confirmed details",
-            "bn": "%@ থেকে confirmed details",
-            "ta": "%@-இலிருந்து confirmed details",
-            "te": "%@ నుండి confirmed details"
+            "hi": "%@ से पुष्टि किए गए विवरण",
+            "bn": "%@ থেকে নিশ্চিত বিবরণ",
+            "ta": "%@-இலிருந்து உறுதிசெய்யப்பட்ட விவரங்கள்",
+            "te": "%@ నుండి నిర్ధారించిన వివరాలు"
         ],
         "ask_instruction_question": [
             "en": "Question",
@@ -6505,17 +6505,17 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "ask_instruction_scope": [
             "en": "Scope",
-            "hi": "Scope",
-            "bn": "Scope",
-            "ta": "Scope",
-            "te": "Scope"
+            "hi": "दायरा",
+            "bn": "সীমা",
+            "ta": "வரம்பு",
+            "te": "పరిధి"
         ],
         "ask_instruction_tagged_files": [
             "en": "Tagged files",
-            "hi": "Tagged files",
-            "bn": "Tagged files",
-            "ta": "Tagged files",
-            "te": "Tagged files"
+            "hi": "चुनी हुई files",
+            "bn": "ট্যাগ করা files",
+            "ta": "குறிக்கப்பட்ட files",
+            "te": "ట్యాగ్ చేసిన files"
         ],
         "ask_local_tasks_title": [
             "en": "Tasks from your files",
