@@ -2592,6 +2592,7 @@ final class AlphaExtractionTests: XCTestCase {
         let message = model.extractionUpgradeMessage(for: document)
 
         XCTAssertEqual(message, "इस scan में mixed language या unclear text है। Advanced review बेहतर कर सकता है.")
+        XCTAssertEqual(document.lawyerStatusTitle, "कम confidence scan")
         XCTAssertFalse(message?.localizedCaseInsensitiveContains("OCR") == true, message ?? "")
         XCTAssertEqual(
             alphaDocumentReviewSummaryLabel(fieldsFound: 4, verified: 2, pending: 1, languageCode: "ta"),
@@ -3527,6 +3528,18 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertTrue(classification.type.blocksAutomaticLegalFactSaving)
         XCTAssertEqual(classification.type.title, "Fictional/game material")
+        let document = AlphaCaseDocument(
+            title: "Game Notes",
+            fileName: "game.txt",
+            kind: .text,
+            storedRelativePath: "tests/game.txt",
+            importedAt: .now,
+            pageCount: 1,
+            ocrStatus: .nativeText,
+            pages: [],
+            classification: classification
+        )
+        XCTAssertEqual(document.lawyerStatusTitle, rossLocalized("document_status_fictional"))
     }
 
     func testRossBackendBaseURLUsesSavedOverride() {

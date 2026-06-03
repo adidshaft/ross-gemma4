@@ -3360,6 +3360,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Confirm",
             "te": "Confirm"
         ],
+        "document_status_fictional": [
+            "en": "Fictional",
+            "hi": "Fictional",
+            "bn": "Fictional",
+            "ta": "Fictional",
+            "te": "Fictional"
+        ],
+        "document_status_non_legal": [
+            "en": "Non-legal?",
+            "hi": "Non-legal?",
+            "bn": "Non-legal?",
+            "ta": "Non-legal?",
+            "te": "Non-legal?"
+        ],
+        "document_status_low_confidence_scan": [
+            "en": "Low confidence scan",
+            "hi": "कम confidence scan",
+            "bn": "কম confidence scan",
+            "ta": "குறைந்த confidence scan",
+            "te": "తక్కువ confidence scan"
+        ],
         "one_finding": [
             "en": "1 finding",
             "hi": "1 finding",

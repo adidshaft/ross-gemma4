@@ -2777,17 +2777,17 @@ extension AlphaCaseDocument {
 
     var lawyerStatusTitle: String {
         if classification?.type == .fictionalGameMaterial {
-            return "Fictional"
+            return rossLocalized("document_status_fictional")
         }
         if classification?.type == .nonLegalDocument {
-            return "Non-legal?"
+            return rossLocalized("document_status_non_legal")
         }
         let hasLowConfidenceScan = extractionFindings.contains {
             $0.kind == .lowConfidenceOcr || $0.kind == .languageUncertain || $0.kind == .possibleHandwriting
         }
 
         if hasLowConfidenceScan {
-            return "Low confidence scan"
+            return rossLocalized("document_status_low_confidence_scan")
         }
         return processingState.title
     }
