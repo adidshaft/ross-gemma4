@@ -239,7 +239,12 @@ struct AlphaOnboardingModelSelector: View {
             }
         }
         .padding(compact ? 9 : 11)
-        .rossGlassSurface(cornerRadius: compact ? 16 : 18, strokeOpacity: 0.62)
+        .rossNativeGlassSurface(
+            tint: Color.rossAccent,
+            shape: RoundedRectangle(cornerRadius: compact ? 16 : 18, style: .continuous),
+            fallbackFillOpacity: 0.84,
+            fallbackStrokeOpacity: 0.62
+        )
     }
 }
 
@@ -314,43 +319,23 @@ private struct AlphaOnboardingModelChoiceSurface: ViewModifier {
     let isSelected: Bool
     let cornerRadius: CGFloat
 
-    @ViewBuilder
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         let tint = isSelected ? Color.rossAccent.opacity(0.22) : Color.rossAccent.opacity(0.08)
 
-        if #available(iOS 26.0, macOS 26.0, *) {
-            content
-                .background {
-                    shape.fill(Color.rossGlassFill.opacity(isSelected ? 0.54 : 0.34))
-                }
-                .glassEffect(
-                    Glass.regular
-                        .tint(tint)
-                        .interactive(),
-                    in: shape
-                )
-                .overlay {
-                    shape.strokeBorder(Color.rossAccent.opacity(isSelected ? 0.32 : 0.18), lineWidth: 1)
-                }
-                .shadow(
-                    color: Color.rossShadow.opacity(isSelected ? 0.12 : 0.06),
-                    radius: isSelected ? 10 : 6,
-                    y: isSelected ? 4 : 2
-                )
-        } else {
-            content
-                .rossGlassSurface(
-                    tint: tint,
-                    cornerRadius: cornerRadius,
-                    interactive: true,
-                    shadowOpacity: isSelected ? 0.12 : 0.06,
-                    shadowRadius: isSelected ? 10 : 6,
-                    shadowY: isSelected ? 4 : 2,
-                    fillOpacity: isSelected ? 0.82 : 0.68,
-                    strokeOpacity: isSelected ? 0.62 : 0.42
-                )
-        }
+        content
+            .rossNativeGlassSurface(
+                tint: tint,
+                shape: shape,
+                interactive: true,
+                fallbackFillOpacity: isSelected ? 0.82 : 0.68,
+                fallbackStrokeOpacity: isSelected ? 0.62 : 0.42
+            )
+            .shadow(
+                color: Color.rossShadow.opacity(isSelected ? 0.12 : 0.06),
+                radius: isSelected ? 10 : 6,
+                y: isSelected ? 4 : 2
+            )
     }
 }
 
@@ -434,7 +419,13 @@ struct AlphaOnboardingSetupNoteRow: View {
         }
         .padding(.horizontal, compact ? 10 : 12)
         .padding(.vertical, compact ? 7 : 8)
-        .rossGlassSurface(cornerRadius: 12, shadowOpacity: 0.05, shadowRadius: 6, shadowY: 2, strokeOpacity: 0.50)
+        .rossNativeGlassSurface(
+            tint: Color.rossAccent,
+            shape: RoundedRectangle(cornerRadius: 12, style: .continuous),
+            fallbackFillOpacity: 0.84,
+            fallbackStrokeOpacity: 0.50
+        )
+        .shadow(color: Color.rossShadow.opacity(0.05), radius: 6, y: 2)
     }
 }
 
@@ -470,7 +461,13 @@ struct AlphaOnboardingDownloadCard: View {
                     .font(.system(size: compact ? 14 : 17, weight: .semibold))
                     .foregroundStyle(Color.rossAccent)
                     .frame(width: compact ? 32 : 40, height: compact ? 32 : 40)
-                    .rossGlassSurface(tint: Color.rossAccent.opacity(0.16), cornerRadius: compact ? 10 : 12, shadowOpacity: 0.05, shadowRadius: 5, shadowY: 1, strokeOpacity: 0.45)
+                    .rossNativeGlassSurface(
+                        tint: Color.rossAccent,
+                        shape: RoundedRectangle(cornerRadius: compact ? 10 : 12, style: .continuous),
+                        fallbackFillOpacity: 0.84,
+                        fallbackStrokeOpacity: 0.45
+                    )
+                    .shadow(color: Color.rossShadow.opacity(0.05), radius: 5, y: 1)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(tier.setupTitle)
@@ -533,7 +530,13 @@ struct AlphaOnboardingDownloadCard: View {
             }
         }
         .padding(compact ? 13 : 18)
-        .rossGlassSurface(cornerRadius: compact ? 16 : 20, shadowOpacity: 0.12, shadowRadius: 16, shadowY: 6, strokeOpacity: 0.62)
+        .rossNativeGlassSurface(
+            tint: Color.rossAccent,
+            shape: RoundedRectangle(cornerRadius: compact ? 16 : 20, style: .continuous),
+            fallbackFillOpacity: 0.84,
+            fallbackStrokeOpacity: 0.62
+        )
+        .shadow(color: Color.rossShadow.opacity(0.12), radius: 16, y: 6)
     }
 }
 
@@ -584,7 +587,13 @@ struct AlphaOnboardingPrivacyPill: View {
         }
         .padding(.horizontal, compact ? 12 : 16)
         .padding(.vertical, compact ? 8 : 11)
-        .rossGlassSurface(cornerRadius: compact ? 12 : 14, shadowOpacity: 0.06, shadowRadius: 7, shadowY: 2, strokeOpacity: 0.58)
+        .rossNativeGlassSurface(
+            tint: Color.rossAccent,
+            shape: RoundedRectangle(cornerRadius: compact ? 12 : 14, style: .continuous),
+            fallbackFillOpacity: 0.84,
+            fallbackStrokeOpacity: 0.58
+        )
+        .shadow(color: Color.rossShadow.opacity(0.06), radius: 7, y: 2)
     }
 }
 
@@ -681,7 +690,13 @@ struct AlphaModelPickerRow: View {
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.rossAccent)
                         .frame(width: 36, height: 36)
-                        .rossGlassSurface(tint: Color.rossAccent.opacity(0.16), cornerRadius: 10, shadowOpacity: 0.05, shadowRadius: 5, shadowY: 1, strokeOpacity: 0.42)
+                        .rossNativeGlassSurface(
+                            tint: Color.rossAccent,
+                            shape: RoundedRectangle(cornerRadius: 10, style: .continuous),
+                            fallbackFillOpacity: 0.84,
+                            fallbackStrokeOpacity: 0.42
+                        )
+                        .shadow(color: Color.rossShadow.opacity(0.05), radius: 5, y: 1)
 
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 6) {
@@ -735,38 +750,19 @@ struct AlphaModelPickerRow: View {
 private struct AlphaModelPickerRowSurface: ViewModifier {
     let isRecommended: Bool
 
-    @ViewBuilder
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
         let tint = isRecommended ? Color.rossAccent.opacity(0.18) : Color.rossAccent.opacity(0.08)
 
-        if #available(iOS 26.0, macOS 26.0, *) {
-            content
-                .background {
-                    shape.fill(Color.rossGlassFill.opacity(isRecommended ? 0.48 : 0.34))
-                }
-                .glassEffect(
-                    Glass.regular
-                        .tint(tint)
-                        .interactive(),
-                    in: shape
-                )
-                .overlay {
-                    shape.strokeBorder(Color.rossAccent.opacity(isRecommended ? 0.36 : 0.22), lineWidth: 1)
-                }
-                .shadow(color: Color.rossShadow.opacity(0.10), radius: 12, y: 4)
-        } else {
-            content
-                .rossGlassSurface(
-                    tint: tint,
-                    cornerRadius: 18,
-                    interactive: true,
-                    shadowOpacity: 0.10,
-                    shadowRadius: 12,
-                    shadowY: 4,
-                    strokeOpacity: isRecommended ? 0.72 : 0.54
-                )
-        }
+        content
+            .rossNativeGlassSurface(
+                tint: tint,
+                shape: shape,
+                interactive: true,
+                fallbackFillOpacity: isRecommended ? 0.82 : 0.72,
+                fallbackStrokeOpacity: isRecommended ? 0.72 : 0.54
+            )
+            .shadow(color: Color.rossShadow.opacity(0.10), radius: 12, y: 4)
     }
 }
 
