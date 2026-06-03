@@ -1109,7 +1109,7 @@ extension AlphaRossModel {
             kind: turn.kind,
             question: turn.question,
             scopeCaseID: isSharedWorkspace ? nil : caseMatter.id,
-            scopeLabel: isSharedWorkspace ? "All work" : caseMatter.title,
+            scopeLabel: isSharedWorkspace ? rossLocalized("all_work") : caseMatter.title,
             selectedDocumentTitles: turn.selectedDocumentTitles ?? [],
             answerTitle: turn.answerTitle,
             answerSections: turn.answerSections,

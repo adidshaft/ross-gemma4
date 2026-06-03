@@ -215,11 +215,11 @@ enum AlphaMatterAskPayloadParser {
                 !$0.isEmpty &&
                 !$0.caseInsensitiveContains("<think") &&
                 !looksLikeStructuredOutput($0)
-            }
+        }
         guard !sections.isEmpty else { return nil }
         let statusNote = payload.statusNote?
             .trimmingCharacters(in: .whitespacesAndNewlines)
-            .ifEmpty(baseResult.statusNote ?? "Private assistant")
+            .ifEmpty(baseResult.statusNote ?? rossLocalized("private_assistant"))
         return AlphaMatterAskRuntimePayload(
             headline: headline,
             sections: Array(sections.prefix(3)),
@@ -283,7 +283,7 @@ enum AlphaMatterAskPayloadParser {
             .ifEmpty(baseResult.answerTitle) ?? baseResult.answerTitle
         let statusNote = extractJSONStringValue(for: "statusNote", in: text)?
             .trimmingCharacters(in: .whitespacesAndNewlines)
-            .ifEmpty(baseResult.statusNote ?? "Private assistant")
+            .ifEmpty(baseResult.statusNote ?? rossLocalized("private_assistant"))
         let sections = extractJSONStringArray(for: "sections", in: text)
         guard !sections.isEmpty else { return nil }
         return normalizedPayload(
@@ -421,7 +421,7 @@ enum AlphaMatterAskPayloadParser {
             AlphaMatterAskRuntimePayload(
                 headline: headline,
                 sections: Array(sections.prefix(3)),
-                statusNote: baseResult.statusNote ?? "Private assistant"
+                statusNote: baseResult.statusNote ?? rossLocalized("private_assistant")
             ),
             baseResult: baseResult
         )
@@ -526,7 +526,7 @@ enum AlphaMatterAskPayloadParser {
         let headline = extractLenientScalar(for: "headline", in: normalized)?
             .ifEmpty(baseResult.answerTitle) ?? baseResult.answerTitle
         let statusNote = extractLenientScalar(for: "statusNote", in: normalized)?
-            .ifEmpty(baseResult.statusNote ?? "Private assistant")
+            .ifEmpty(baseResult.statusNote ?? rossLocalized("private_assistant"))
         let strictSections = extractLenientSections(in: normalized)
         let sections = strictSections.isEmpty ? extractLooseQuotedSections(in: normalized) : strictSections
         guard !sections.isEmpty else { return nil }
@@ -697,14 +697,14 @@ struct AlphaAskDocumentOption: Identifiable, Hashable {
         }
     }
 
-    func compactDetail(scopeCaseID: UUID?) -> String {
+    func compactDetail(scopeCaseID: UUID?, languageCode: String = rossSelectedLanguageCode()) -> String {
         let location: String
         if isShared {
-            location = "General files"
+            location = rossLocalized("general_files", languageCode: languageCode)
         } else if scopeCaseID == nil {
             location = caseTitle
         } else {
-            location = "This matter"
+            location = rossLocalized("this_matter", languageCode: languageCode)
         }
         return "\(kind.title) · \(location)"
     }

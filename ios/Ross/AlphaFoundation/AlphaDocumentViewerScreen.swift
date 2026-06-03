@@ -400,7 +400,7 @@ struct AlphaDocumentViewerScreen: View {
     }
 
     private var matterLabel: String {
-        guard !isSharedDocument else { return "General files" }
+        guard !isSharedDocument else { return rossLocalized("general_files") }
         return caseMatter?.title ?? "Matter"
     }
 

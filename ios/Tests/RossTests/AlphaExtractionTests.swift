@@ -1383,6 +1383,32 @@ final class AlphaExtractionTests: XCTestCase {
             rossLocalized("ask_local_output_review_recommended", languageCode: "bn")
                 .contains("advocate review ছাড়া")
         )
+        let sharedDocumentOption = AlphaAskDocumentOption(
+            id: UUID(),
+            caseId: alphaSharedWorkspaceID,
+            caseTitle: "General files",
+            title: "Notice",
+            fileName: "notice.pdf",
+            kind: .pdf,
+            isShared: true
+        )
+        XCTAssertEqual(
+            sharedDocumentOption.compactDetail(scopeCaseID: nil, languageCode: "hi"),
+            "PDF · सामान्य files"
+        )
+        let scopedDocumentOption = AlphaAskDocumentOption(
+            id: UUID(),
+            caseId: UUID(),
+            caseTitle: "Rao v State",
+            title: "Order",
+            fileName: "order.txt",
+            kind: .text,
+            isShared: false
+        )
+        XCTAssertEqual(
+            scopedDocumentOption.compactDetail(scopeCaseID: scopedDocumentOption.caseId, languageCode: "ta"),
+            "TXT · இந்த matter"
+        )
         XCTAssertEqual(
             rossLocalized("ask_local_answered_selected_files_status", languageCode: "bn"),
             "selected files থেকে উত্তর"

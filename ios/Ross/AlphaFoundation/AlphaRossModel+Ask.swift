@@ -366,7 +366,7 @@ extension AlphaRossModel {
     }
 
     func activeLocalModelDisplayLabel() -> String {
-        guard let activePack else { return "Private assistant" }
+        guard let activePack else { return rossLocalized("private_assistant") }
         return "\(activePack.tier.title) assistant"
     }
 
