@@ -487,19 +487,19 @@ enum AlphaOcrStatus: String, Codable, Hashable, Sendable {
     var title: String {
         switch self {
         case .notStarted:
-            "Not ready"
+            rossLocalized("document_status_not_ready")
         case .indexed:
-            "Ready"
+            rossLocalized("document_status_ready")
         case .placeholder:
-            "Reading your file..."
+            rossLocalized("document_status_reading_file")
         case .nativeText:
-            "Ready"
+            rossLocalized("document_status_ready")
         case .ocrComplete:
-            "Ready"
+            rossLocalized("document_status_ready")
         case .partial:
-            "Partially read (some pages unclear)"
+            rossLocalized("document_status_partial")
         case .failed:
-            "Could not read this file"
+            rossLocalized("document_status_could_not_read")
         }
     }
 }
@@ -514,15 +514,15 @@ enum AlphaIndexingStatus: String, Codable, Hashable, Sendable {
     var title: String {
         switch self {
         case .notStarted:
-            "Not ready"
+            rossLocalized("document_status_not_ready")
         case .extracting:
-            "Reading your file..."
+            rossLocalized("document_status_reading_file")
         case .indexed:
-            "Ready"
+            rossLocalized("document_status_ready")
         case .partial:
-            "Partially read (some pages unclear)"
+            rossLocalized("document_status_partial")
         case .failed:
-            "Could not read this file"
+            rossLocalized("document_status_could_not_read")
         }
     }
 }
@@ -538,17 +538,17 @@ enum AlphaDocumentProcessingState: String, Codable, Hashable, Sendable {
     var title: String {
         switch self {
         case .imported:
-            "Imported"
+            rossLocalized("document_status_imported")
         case .readingText:
-            "Reading"
+            rossLocalized("document_status_reading")
         case .reviewingFindings:
-            "Review"
+            rossLocalized("review")
         case .ready:
-            "Ready"
+            rossLocalized("document_status_ready")
         case .needsConfirmation:
-            "Needs review"
+            rossLocalized("needs_review")
         case .failed:
-            "Failed"
+            rossLocalized("document_status_failed")
         }
     }
 }

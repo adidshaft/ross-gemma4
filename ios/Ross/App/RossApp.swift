@@ -3157,12 +3157,40 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Reading",
             "te": "Reading"
         ],
+        "document_status_reading_file": [
+            "en": "Reading your file...",
+            "hi": "आपकी file पढ़ रहा है...",
+            "bn": "আপনার file পড়ছে...",
+            "ta": "உங்கள் file படிக்கிறது...",
+            "te": "మీ file చదువుతోంది..."
+        ],
         "document_status_imported": [
             "en": "Imported",
             "hi": "Imported",
             "bn": "Imported",
             "ta": "Imported",
             "te": "Imported"
+        ],
+        "document_status_not_ready": [
+            "en": "Not ready",
+            "hi": "ready नहीं",
+            "bn": "ready নয়",
+            "ta": "ready இல்லை",
+            "te": "ready కాదు"
+        ],
+        "document_status_partial": [
+            "en": "Partially read (some pages unclear)",
+            "hi": "आंशिक रूप से पढ़ा गया (कुछ pages unclear)",
+            "bn": "আংশিক পড়া হয়েছে (কিছু pages unclear)",
+            "ta": "பகுதியாக படிக்கப்பட்டது (சில pages unclear)",
+            "te": "భాగంగా చదివింది (కొన్ని pages unclear)"
+        ],
+        "document_status_could_not_read": [
+            "en": "Could not read this file",
+            "hi": "यह file पढ़ नहीं सका",
+            "bn": "এই file পড়তে পারেনি",
+            "ta": "இந்த file படிக்க முடியவில்லை",
+            "te": "ఈ file చదవలేకపోయింది"
         ],
         "document_status_failed": [
             "en": "Failed",

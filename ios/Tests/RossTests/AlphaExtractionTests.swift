@@ -1459,10 +1459,25 @@ final class AlphaExtractionTests: XCTestCase {
             rossLocalized("workspace", languageCode: "hi"),
             "Workspace"
         )
+        XCTAssertEqual(
+            rossLocalized("document_status_reading_file", languageCode: "hi"),
+            "आपकी file पढ़ रहा है..."
+        )
+        XCTAssertEqual(
+            rossLocalized("document_status_not_ready", languageCode: "ta"),
+            "ready இல்லை"
+        )
+        XCTAssertEqual(
+            rossLocalized("document_status_could_not_read", languageCode: "bn"),
+            "এই file পড়তে পারেনি"
+        )
         rossSaveLanguageSelection(code: "hi")
         XCTAssertEqual(AlphaPreparedWorkType.publicLawQueryAwaitingApproval.title, "Public-law query approval का इंतज़ार कर रही है")
         XCTAssertEqual(AlphaPreparedWorkBadge.needsReview.title, "Review चाहिए")
         XCTAssertEqual(AlphaPreparedWorkStatus.new.title, "नया")
+        XCTAssertEqual(AlphaOcrStatus.placeholder.title, "आपकी file पढ़ रहा है...")
+        XCTAssertEqual(AlphaIndexingStatus.notStarted.title, "ready नहीं")
+        XCTAssertEqual(AlphaDocumentProcessingState.needsConfirmation.title, "Review चाहिए")
         rossSaveLanguageSelection(code: "en")
         XCTAssertTrue(
             rossLocalized("ask_local_context_review_recommended", languageCode: "hi")
@@ -3387,7 +3402,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(document.processingState, .readingText)
-        XCTAssertEqual(document.lawyerStatusTitle, "Reading")
+        XCTAssertEqual(document.lawyerStatusTitle, rossLocalized("document_status_reading"))
         XCTAssertEqual(
             alphaExtractionProgressLabel(document.extractionRuns.first),
             rossLocalized("extraction_stage_reading_text")
