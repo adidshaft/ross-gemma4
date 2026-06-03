@@ -129,7 +129,13 @@ struct AlphaFeedScreen: View {
                             }
                             .padding(.horizontal, 14)
                             .padding(.vertical, 12)
-                            .rossGlassSurface(cornerRadius: 14, interactive: true, strokeOpacity: 0.58)
+                            .rossNativeGlassSurface(
+                                tint: Color.rossAccent,
+                                shape: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                                interactive: true,
+                                fallbackFillOpacity: 0.84,
+                                fallbackStrokeOpacity: 0.58
+                            )
                         }
                         .buttonStyle(.plain)
                         .padding(.top, 4)
@@ -212,7 +218,14 @@ struct AlphaFeedScreen: View {
                                     .font(.system(size: 14, weight: .semibold))
                                     .foregroundStyle(Color.rossInk)
                                     .frame(width: 34, height: 34)
-                                    .rossGlassSurface(cornerRadius: 17, interactive: true, shadowOpacity: 0.06, shadowRadius: 6, shadowY: 2, strokeOpacity: 0.46)
+                                    .rossNativeGlassSurface(
+                                        tint: Color.rossAccent,
+                                        shape: RoundedRectangle(cornerRadius: 17, style: .continuous),
+                                        interactive: true,
+                                        fallbackFillOpacity: 0.82,
+                                        fallbackStrokeOpacity: 0.46
+                                    )
+                                    .shadow(color: Color.rossShadow.opacity(0.06), radius: 6, y: 2)
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel(rossLocalized("choose_matter_view"))
@@ -429,14 +442,13 @@ struct AlphaMatterSearchField: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 3)
         .frame(minHeight: 50)
-        .rossGlassSurface(
-            cornerRadius: 16,
-            shadowOpacity: colorScheme == .dark ? 0 : 0.06,
-            shadowRadius: 10,
-            shadowY: 3,
-            fillOpacity: colorScheme == .dark ? 0.90 : 0.78,
-            strokeOpacity: 0.58
+        .rossNativeGlassSurface(
+            tint: Color.rossAccent,
+            shape: RoundedRectangle(cornerRadius: 16, style: .continuous),
+            fallbackFillOpacity: colorScheme == .dark ? 0.90 : 0.78,
+            fallbackStrokeOpacity: 0.58
         )
+        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0 : 0.06), radius: 10, y: 3)
     }
 }
 
