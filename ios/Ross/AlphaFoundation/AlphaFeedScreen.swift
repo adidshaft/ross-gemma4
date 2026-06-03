@@ -553,8 +553,9 @@ func alphaDocumentCountLabel(_ count: Int) -> String {
     count == 1 ? "1 document" : "\(count) documents"
 }
 
-func alphaPageCountLabel(_ count: Int) -> String {
-    count == 1 ? "1 page" : "\(count) pages"
+func alphaPageCountLabel(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    let key = count == 1 ? "page_count_one" : "page_count_many"
+    return String(format: rossLocalized(key, languageCode: languageCode), count)
 }
 
 func alphaPageLabel(_ pageNumber: Int, languageCode: String = rossSelectedLanguageCode()) -> String {

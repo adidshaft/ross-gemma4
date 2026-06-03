@@ -1439,6 +1439,18 @@ final class AlphaExtractionTests: XCTestCase {
             rossLocalized("file_room_empty_detail", languageCode: "te-IN")
                 .contains("local extraction")
         )
+        XCTAssertEqual(
+            alphaPageCountLabel(1, languageCode: "hi"),
+            "1 page"
+        )
+        XCTAssertEqual(
+            alphaPageCountLabel(4, languageCode: "ta"),
+            "4 pages"
+        )
+        XCTAssertEqual(
+            rossLocalized("sample_badge", languageCode: "bn"),
+            "Sample"
+        )
         rossSaveLanguageSelection(code: "hi")
         XCTAssertEqual(AlphaPreparedWorkType.publicLawQueryAwaitingApproval.title, "Public-law query approval का इंतज़ार कर रही है")
         XCTAssertEqual(AlphaPreparedWorkBadge.needsReview.title, "Review चाहिए")

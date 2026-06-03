@@ -288,8 +288,8 @@ struct AlphaDocumentFolderTile: View {
                 icon: glassIcon.0,
                 variant: glassIcon.1,
                 fallbackSystemImage: glassIcon.2,
-                topTagText: document.title.localizedCaseInsensitiveContains("demo") ? "SAMPLE" : alphaDocumentKindBadgeTitle(document.kind),
-                badgeText: document.pageCount == 1 ? "1 page" : "\(document.pageCount)"
+                topTagText: document.title.localizedCaseInsensitiveContains("demo") ? rossLocalized("sample_badge") : alphaDocumentKindBadgeTitle(document.kind),
+                badgeText: alphaPageCountLabel(document.pageCount)
             )
 
             Text(document.fileName.isEmpty ? document.title : document.fileName)

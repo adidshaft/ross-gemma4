@@ -196,6 +196,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Demo data sample மட்டும்.",
             "te": "Demo data sample మాత్రమే."
         ],
+        "sample_badge": [
+            "en": "Sample",
+            "hi": "Sample",
+            "bn": "Sample",
+            "ta": "Sample",
+            "te": "Sample"
+        ],
         "unlocking_ross": [
             "en": "Unlocking Ross",
             "hi": "Ross unlock हो रहा है",
@@ -3674,6 +3681,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "bn": "Page %d",
             "ta": "Page %d",
             "te": "Page %d"
+        ],
+        "page_count_one": [
+            "en": "%d page",
+            "hi": "%d page",
+            "bn": "%d page",
+            "ta": "%d page",
+            "te": "%d page"
+        ],
+        "page_count_many": [
+            "en": "%d pages",
+            "hi": "%d pages",
+            "bn": "%d pages",
+            "ta": "%d pages",
+            "te": "%d pages"
         ],
         "no_readable_preview": [
             "en": "No readable preview is available yet.",
