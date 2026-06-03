@@ -160,16 +160,16 @@ struct AlphaTodayWorkbenchScreen: View {
         ScrollView {
             RossGlassGroup(spacing: alphaSectionSpacing) {
                 LazyVStack(alignment: .leading, spacing: alphaSectionSpacing) {
-                    RossHeroCard(
-                    eyebrow: alphaGreeting(),
-                    title: work.isEmpty ? rossLocalized("no_prepared_work_needs_review") : alphaPreparedWorkHeadline(work.count),
-                    detail: nil,
-                    showsMedia: false,
-                    mediaHeight: 108,
-                    logoSize: 58
-                ) {
-                    AlphaLocalPrivacyBadge()
-                }
+                    VStack(alignment: .leading, spacing: 10) {
+                        AlphaInlineHeader(
+                            eyebrow: alphaGreeting(),
+                            title: work.isEmpty ? rossLocalized("no_prepared_work_needs_review") : alphaPreparedWorkHeadline(work.count),
+                            detail: nil
+                        )
+
+                        AlphaLocalPrivacyBadge()
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
                 if let setupJob = alphaActiveAssistantSetupJob(from: model.persisted.modelJobs) {
                     AlphaAssistantSetupProgressCard(model: model, job: setupJob)
