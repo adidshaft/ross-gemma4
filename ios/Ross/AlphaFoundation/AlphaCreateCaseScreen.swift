@@ -102,17 +102,19 @@ struct AlphaMatterEditorField: View {
                 .focused($isFocused)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 16)
-                .rossGlassSurface(
+                .rossNativeGlassSurface(
                     tint: validationMessage == nil
                         ? (isFocused ? Color.rossAccent : Color.rossHighlight)
                         : Color.orange,
-                    cornerRadius: 18,
+                    shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
                     interactive: true,
-                    shadowOpacity: isFocused ? 0.10 : 0.06,
-                    shadowRadius: isFocused ? 10 : 6,
-                    shadowY: isFocused ? 4 : 2,
-                    fillOpacity: 0.84,
-                    strokeOpacity: validationMessage == nil ? (isFocused ? 0.72 : 0.56) : 0.74
+                    fallbackFillOpacity: 0.84,
+                    fallbackStrokeOpacity: validationMessage == nil ? (isFocused ? 0.72 : 0.56) : 0.74
+                )
+                .shadow(
+                    color: Color.rossShadow.opacity(isFocused ? 0.10 : 0.06),
+                    radius: isFocused ? 10 : 6,
+                    y: isFocused ? 4 : 2
                 )
 
             if let validationMessage {
@@ -163,16 +165,14 @@ struct AlphaMatterEditorDateField: View {
                     }
                     .padding(.horizontal, 14)
                     .padding(.vertical, 16)
-                    .rossGlassSurface(
+                    .rossNativeGlassSurface(
                         tint: Color.rossAccent,
-                        cornerRadius: 18,
+                        shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
                         interactive: true,
-                        shadowOpacity: 0.07,
-                        shadowRadius: 7,
-                        shadowY: 3,
-                        fillOpacity: 0.84,
-                        strokeOpacity: 0.52
+                        fallbackFillOpacity: 0.84,
+                        fallbackStrokeOpacity: 0.52
                     )
+                    .shadow(color: Color.rossShadow.opacity(0.07), radius: 7, y: 3)
                 }
                 .buttonStyle(.plain)
             } else {
@@ -187,16 +187,14 @@ struct AlphaMatterEditorDateField: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 16)
-                    .rossGlassSurface(
+                    .rossNativeGlassSurface(
                         tint: Color.rossAccent,
-                        cornerRadius: 18,
+                        shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
                         interactive: true,
-                        shadowOpacity: 0.07,
-                        shadowRadius: 7,
-                        shadowY: 3,
-                        fillOpacity: 0.84,
-                        strokeOpacity: 0.52
+                        fallbackFillOpacity: 0.84,
+                        fallbackStrokeOpacity: 0.52
                     )
+                    .shadow(color: Color.rossShadow.opacity(0.07), radius: 7, y: 3)
 
                     RossGlassGroup(spacing: 8) {
                         Button(rossLocalized("clear_date")) {
@@ -238,16 +236,14 @@ struct AlphaMatterEditorMultilineField: View {
                         .allowsHitTesting(false)
                 }
             }
-            .rossGlassSurface(
+            .rossNativeGlassSurface(
                 tint: Color.rossHighlight,
-                cornerRadius: 18,
+                shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
                 interactive: true,
-                shadowOpacity: 0.06,
-                shadowRadius: 7,
-                shadowY: 3,
-                fillOpacity: 0.84,
-                strokeOpacity: 0.52
+                fallbackFillOpacity: 0.84,
+                fallbackStrokeOpacity: 0.52
             )
+            .shadow(color: Color.rossShadow.opacity(0.06), radius: 7, y: 3)
         }
     }
 }
@@ -302,16 +298,14 @@ struct AlphaCaseSummaryCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .rossGlassSurface(
+        .rossNativeGlassSurface(
             tint: caseMatter.nextHearing == nil ? Color.rossAccent : Color.rossHighlight,
-            cornerRadius: 16,
+            shape: RoundedRectangle(cornerRadius: 16, style: .continuous),
             interactive: true,
-            shadowOpacity: 0.08,
-            shadowRadius: 8,
-            shadowY: 3,
-            fillOpacity: 0.82,
-            strokeOpacity: 0.48
+            fallbackFillOpacity: 0.82,
+            fallbackStrokeOpacity: 0.48
         )
+        .shadow(color: Color.rossShadow.opacity(0.08), radius: 8, y: 3)
     }
 }
 
@@ -351,16 +345,14 @@ struct AlphaCaseSummaryLine: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .rossGlassSurface(
+        .rossNativeGlassSurface(
             tint: Color.rossAccent,
-            cornerRadius: 14,
+            shape: RoundedRectangle(cornerRadius: 14, style: .continuous),
             interactive: true,
-            shadowOpacity: 0.07,
-            shadowRadius: 7,
-            shadowY: 3,
-            fillOpacity: 0.80,
-            strokeOpacity: 0.44
+            fallbackFillOpacity: 0.80,
+            fallbackStrokeOpacity: 0.44
         )
+        .shadow(color: Color.rossShadow.opacity(0.07), radius: 7, y: 3)
     }
 }
 
@@ -397,16 +389,14 @@ struct AlphaCaseFolderCard: View {
         }
         .frame(maxWidth: .infinity, minHeight: 144, alignment: .topLeading)
         .padding(11)
-        .rossGlassSurface(
+        .rossNativeGlassSurface(
             tint: tint,
-            cornerRadius: 18,
+            shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
             interactive: true,
-            shadowOpacity: 0.08,
-            shadowRadius: 8,
-            shadowY: 3,
-            fillOpacity: 0.82,
-            strokeOpacity: 0.42
+            fallbackFillOpacity: 0.82,
+            fallbackStrokeOpacity: 0.42
         )
+        .shadow(color: Color.rossShadow.opacity(0.08), radius: 8, y: 3)
     }
 }
 
@@ -506,16 +496,14 @@ struct AlphaDocumentRow: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .rossGlassSurface(
+        .rossNativeGlassSurface(
             tint: Color.rossHighlight,
-            cornerRadius: 16,
+            shape: RoundedRectangle(cornerRadius: 16, style: .continuous),
             interactive: true,
-            shadowOpacity: 0.08,
-            shadowRadius: 8,
-            shadowY: 3,
-            fillOpacity: 0.82,
-            strokeOpacity: 0.48
+            fallbackFillOpacity: 0.82,
+            fallbackStrokeOpacity: 0.48
         )
+        .shadow(color: Color.rossShadow.opacity(0.08), radius: 8, y: 3)
     }
 }
 
