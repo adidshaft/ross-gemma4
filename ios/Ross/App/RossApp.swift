@@ -5397,6 +5397,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "இந்த case-க்கு முதல் order, pleading, அல்லது note சேர்க்கவும்.",
             "te": "ఈ case కోసం మొదటి order, pleading, లేదా note జోడించండి."
         ],
+        "court_not_yet_specified": [
+            "en": "Court not yet specified",
+            "hi": "Court अभी specified नहीं है",
+            "bn": "Court এখনও specified নয়",
+            "ta": "Court இன்னும் specified இல்லை",
+            "te": "Court ఇంకా specified కాలేదు"
+        ],
         "next_action": [
             "en": "Next action",
             "hi": "अगला action",

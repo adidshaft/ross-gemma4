@@ -1874,6 +1874,13 @@ final class AlphaExtractionTests: XCTestCase {
             "এই case-এর জন্য প্রথম order, pleading, বা note যোগ করুন."
         )
         XCTAssertEqual(
+            alphaCourtNotYetSpecifiedLabel(languageCode: "hi"),
+            "Court अभी specified नहीं है"
+        )
+        XCTAssertTrue(alphaIsCourtNotYetSpecified("Court not yet specified"))
+        XCTAssertTrue(alphaIsCourtNotYetSpecified("Court अभी specified नहीं है"))
+        XCTAssertFalse(alphaIsCourtNotYetSpecified("Delhi High Court"))
+        XCTAssertEqual(
             rossLocalized("privacy_ledger_case_created_detail", languageCode: "te-IN"),
             "ఈ device లో కొత్త matter సృష్టించబడింది."
         )

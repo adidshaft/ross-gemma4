@@ -40,6 +40,19 @@ func alphaNewMatterFirstTaskNotes(languageCode: String = rossSelectedLanguageCod
     rossLocalized("new_matter_first_task_notes", languageCode: languageCode)
 }
 
+func alphaCourtNotYetSpecifiedLabel(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("court_not_yet_specified", languageCode: languageCode)
+}
+
+func alphaIsCourtNotYetSpecified(_ forum: String) -> Bool {
+    let trimmed = forum.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return true }
+    if trimmed == "Court not yet specified" { return true }
+    return rossSupportedLanguageCodes().contains { languageCode in
+        trimmed == alphaCourtNotYetSpecifiedLabel(languageCode: languageCode)
+    }
+}
+
 extension AlphaRossModel {
 
     var sharedWorkspace: AlphaCaseMatter? {
@@ -159,7 +172,7 @@ extension AlphaRossModel {
 
         let matter = AlphaCaseMatter(
             title: title,
-            forum: "Court not yet specified",
+            forum: alphaCourtNotYetSpecifiedLabel(),
             caseNumber: nil,
             partiesSummary: nil,
             stage: .intake,

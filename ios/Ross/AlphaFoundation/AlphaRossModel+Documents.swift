@@ -653,7 +653,7 @@ extension AlphaRossModel {
         }
 
         if let forum = verifiedFields.first(where: { $0.fieldType == .court })?.value,
-           caseMatter.forum == "Court not yet specified" || caseMatter.forum.isEmpty {
+           alphaIsCourtNotYetSpecified(caseMatter.forum) {
             caseMatter.forum = forum
         }
 
