@@ -1916,7 +1916,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
         XCTAssertEqual(
             rossLocalized("ask_private_assistant_answer_unavailable", languageCode: "bn"),
-            "Private assistant answer পাওয়া যাচ্ছে না"
+            "Private assistant আবার চেষ্টা দরকার"
         )
         XCTAssertEqual(
             alphaPublicLawUnavailableStatus(languageCode: "hi"),
@@ -2572,6 +2572,36 @@ final class AlphaExtractionTests: XCTestCase {
             alphaLocalAskSetupRequiredSafetyNote(languageCode: "ml")
                 .contains("private assistant")
         )
+    }
+
+    func testAskRuntimeUnavailableCopyStaysActionableAndLocalized() {
+        let keys = [
+            "ask_private_assistant_could_not_answer",
+            "ask_private_assistant_unusable_response_detail",
+            "ask_private_assistant_no_substitute_detail",
+            "ask_private_assistant_answer_unavailable",
+            "ask_private_assistant_answer_unavailable_warning"
+        ]
+
+        XCTAssertFalse(
+            rossLocalized("ask_private_assistant_could_not_answer", languageCode: "en")
+                .localizedCaseInsensitiveContains("could not answer")
+        )
+        XCTAssertFalse(
+            rossLocalized("ask_private_assistant_unusable_response_detail", languageCode: "en")
+                .localizedCaseInsensitiveContains("usable response")
+        )
+        XCTAssertTrue(
+            rossLocalized("ask_private_assistant_no_substitute_detail", languageCode: "en")
+                .localizedCaseInsensitiveContains("retry Ask")
+        )
+
+        for key in keys {
+            let english = rossLocalized(key, languageCode: "en")
+            for languageCode in ["hi", "bn", "ta", "te"] {
+                XCTAssertNotEqual(rossLocalized(key, languageCode: languageCode), english)
+            }
+        }
     }
 
     func testAskRuntimeRepairDetailHidesInternalEngineWarnings() {

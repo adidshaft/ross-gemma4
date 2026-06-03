@@ -867,10 +867,15 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertTrue(presentation?.needsReviewWarning?.contains("needs repair") == true)
 
             let unavailable = model.askRuntimeUnavailablePresentation()
-            XCTAssertEqual("Private assistant could not answer", unavailable.title)
-            XCTAssertEqual("Private assistant answer unavailable", unavailable.statusNote)
-            XCTAssertTrue(unavailable.sections.joined(separator: " ").contains("did not return a usable response"))
+            let unavailableText = ([unavailable.title] + unavailable.sections + [unavailable.statusNote, unavailable.needsReviewWarning ?? ""])
+                .joined(separator: " ")
+            XCTAssertEqual("Private assistant needs another try", unavailable.title)
+            XCTAssertEqual("Private assistant needs another try", unavailable.statusNote)
+            XCTAssertTrue(unavailableText.contains("Check the tagged files"), unavailableText)
+            XCTAssertTrue(unavailableText.contains("retry Ask"), unavailableText)
             XCTAssertTrue(unavailable.needsReviewWarning?.contains("did not guess") == true)
+            XCTAssertFalse(unavailableText.contains("could not answer"), unavailableText)
+            XCTAssertFalse(unavailableText.contains("usable response"), unavailableText)
         }
     }
 
