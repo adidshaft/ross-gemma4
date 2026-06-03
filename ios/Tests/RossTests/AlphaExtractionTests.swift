@@ -586,6 +586,44 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     @MainActor
+    func testSourceGroundedFallbackCitesActualSelectedFile() {
+        let model = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "Order.pdf",
+            pageNumber: 3,
+            textSnippet: "CAM-D3 fourteen-day retention and video export queue failed twice."
+        )
+        let sourcePack = [
+            AlphaSourceTextBlock(
+                sourceRef: sourceRef,
+                text: "CAM-D3 had fourteen-day retention. The video export queue failed twice.",
+                pageNumber: 3,
+                languageHint: "en",
+                ocrConfidence: 0.91
+            )
+        ]
+
+        let englishPayload = model.sourceGroundedMatterAskFallback(
+            question: "Summarize this selected file",
+            sourcePack: sourcePack,
+            baseResult: baseAskResult()
+        )
+        let hindiPayload = model.sourceGroundedMatterAskFallback(
+            question: "इस tagged file के मुख्य बिंदु बताइए",
+            sourcePack: sourcePack,
+            baseResult: baseAskResult()
+        )
+
+        let englishText = ([englishPayload?.headline ?? ""] + (englishPayload?.sections ?? [])).joined(separator: " ")
+        let hindiText = ([hindiPayload?.headline ?? ""] + (hindiPayload?.sections ?? [])).joined(separator: " ")
+        XCTAssertTrue(englishText.contains("Source: Order.pdf · p. 3."), englishText)
+        XCTAssertTrue(hindiText.contains("स्रोत: Order.pdf · p. 3."), hindiText)
+        XCTAssertFalse(hindiText.contains("अशा मेनन हलफनामा"), hindiText)
+    }
+
+    @MainActor
     func testBengaliSourceGroundedFallbackUsesBanglaText() {
         let model = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
         let sourceRef = AlphaSourceRef(

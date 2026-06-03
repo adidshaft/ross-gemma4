@@ -1893,6 +1893,7 @@ extension AlphaRossModel {
 
         let facts = alphaMatterAskFallbackFacts(from: combinedText)
         let language = alphaAnswerLanguage(for: question)
+        let citation = alphaMatterAskFallbackCitation(language: language, sourceRef: localBlocks.first?.sourceRef)
         guard !facts.isEmpty else {
             return alphaGenericMatterAskFallback(
                 language: language,
@@ -1909,15 +1910,15 @@ extension AlphaRossModel {
             sections = facts.prefix(3).map { fact in
                 switch fact {
                 case .retention:
-                    return "कैमरा सीएएम-डी3 में सामान्य वीडियो सुरक्षित रखने की अवधि चौदह दिन थी, जब तक अंश अलग से निर्यात न किए जाएं. स्रोत: अशा मेनन हलफनामा, पृष्ठ 1."
+                    return "कैमरा सीएएम-डी3 में सामान्य वीडियो सुरक्षित रखने की अवधि चौदह दिन थी, जब तक अंश अलग से निर्यात न किए जाएं. \(citation)"
                 case .exportFailure:
-                    return "मेनन ने स्थिर चित्र इसलिए निर्यात किए क्योंकि उनकी पारी में वीडियो निर्यात कतार दो बार विफल हुई; कारण संजाल क्षमता, अनुमति, भंडारण या अन्य तकनीकी समस्या हो सकती थी. स्रोत: अशा मेनन हलफनामा, पृष्ठ 1."
+                    return "मेनन ने स्थिर चित्र इसलिए निर्यात किए क्योंकि उनकी पारी में वीडियो निर्यात कतार दो बार विफल हुई; कारण संजाल क्षमता, अनुमति, भंडारण या अन्य तकनीकी समस्या हो सकती थी. \(citation)"
                 case .timestamp:
-                    return "सीएएम-डी3 पर दिख रहा समय सुविधा के संजाल समय से लगभग ग्यारह मिनट पीछे था, इसलिए स्थिर चित्रों का समय वास्तविक समय से मिलाकर पढ़ना चाहिए. स्रोत: अशा मेनन हलफनामा, पृष्ठ 1."
+                    return "सीएएम-डी3 पर दिख रहा समय सुविधा के संजाल समय से लगभग ग्यारह मिनट पीछे था, इसलिए स्थिर चित्रों का समय वास्तविक समय से मिलाकर पढ़ना चाहिए. \(citation)"
                 case .nativeVideoUnavailable:
-                    return "30 अक्तूबर 2025 तक संबंधित मूल वीडियो उपयोगकर्ता पटल में उपलब्ध नहीं था, इसलिए संरक्षण और स्वतः अधिलेखन का प्रश्न अधिवक्ता समीक्षा के लिए महत्वपूर्ण है. स्रोत: अशा मेनन हलफनामा, पृष्ठ 1."
+                    return "30 अक्तूबर 2025 तक संबंधित मूल वीडियो उपयोगकर्ता पटल में उपलब्ध नहीं था, इसलिए संरक्षण और स्वतः अधिलेखन का प्रश्न अधिवक्ता समीक्षा के लिए महत्वपूर्ण है. \(citation)"
                 case .accessLog:
-                    return "प्रवेश अभिलेख किसी उपयोगकर्ता द्वारा हटाने या काट-छांट को नहीं दिखाता, लेकिन स्वतः अधिलेखन को हटाना मानकर दर्ज भी नहीं करता. स्रोत: अशा मेनन हलफनामा, पृष्ठ 2."
+                    return "प्रवेश अभिलेख किसी उपयोगकर्ता द्वारा हटाने या काट-छांट को नहीं दिखाता, लेकिन स्वतः अधिलेखन को हटाना मानकर दर्ज भी नहीं करता. \(citation)"
                 }
             }
         case .bengali:
@@ -1925,15 +1926,15 @@ extension AlphaRossModel {
             sections = facts.prefix(3).map { fact in
                 switch fact {
                 case .retention:
-                    return "CAM-D3-এ সাধারণ ভিডিও সংরক্ষণের মেয়াদ ছিল চৌদ্দ দিন, আলাদা করে অংশ রপ্তানি না করা হলে. সূত্র: আশা মেনন হলফনামা, পৃষ্ঠা ১."
+                    return "CAM-D3-এ সাধারণ ভিডিও সংরক্ষণের মেয়াদ ছিল চৌদ্দ দিন, আলাদা করে অংশ রপ্তানি না করা হলে. \(citation)"
                 case .exportFailure:
-                    return "মেনন স্থিরচিত্র রপ্তানি করেছিলেন, কারণ তাঁর পালায় ভিডিও রপ্তানির সারি দুবার ব্যর্থ হয়েছিল; কারণ সংযোগ, অনুমতি, সংরক্ষণ বা অন্য প্রযুক্তিগত সমস্যা হতে পারে. সূত্র: আশা মেনন হলফনামা, পৃষ্ঠা ১."
+                    return "মেনন স্থিরচিত্র রপ্তানি করেছিলেন, কারণ তাঁর পালায় ভিডিও রপ্তানির সারি দুবার ব্যর্থ হয়েছিল; কারণ সংযোগ, অনুমতি, সংরক্ষণ বা অন্য প্রযুক্তিগত সমস্যা হতে পারে. \(citation)"
                 case .timestamp:
-                    return "CAM-D3-এ দেখা সময়টি সুবিধার নেটওয়ার্ক সময়ের চেয়ে প্রায় এগারো মিনিট পিছিয়ে ছিল, তাই স্থিরচিত্রের সময় প্রকৃত সময়ের সঙ্গে মিলিয়ে পড়তে হবে. সূত্র: আশা মেনন হলফনামা, পৃষ্ঠা ১."
+                    return "CAM-D3-এ দেখা সময়টি সুবিধার নেটওয়ার্ক সময়ের চেয়ে প্রায় এগারো মিনিট পিছিয়ে ছিল, তাই স্থিরচিত্রের সময় প্রকৃত সময়ের সঙ্গে মিলিয়ে পড়তে হবে. \(citation)"
                 case .nativeVideoUnavailable:
-                    return "৩০ অক্টোবর ২০২৫-এ সংশ্লিষ্ট মূল ভিডিও ব্যবহারকারী পটলে আর ছিল না, তাই সংরক্ষণ ও স্বয়ংক্রিয় অধিলেখনের প্রশ্ন অধিবক্তা পর্যালোচনার জন্য গুরুত্বপূর্ণ. সূত্র: আশা মেনন হলফনামা, পৃষ্ঠা ১."
+                    return "৩০ অক্টোবর ২০২৫-এ সংশ্লিষ্ট মূল ভিডিও ব্যবহারকারী পটলে আর ছিল না, তাই সংরক্ষণ ও স্বয়ংক্রিয় অধিলেখনের প্রশ্ন অধিবক্তা পর্যালোচনার জন্য গুরুত্বপূর্ণ. \(citation)"
                 case .accessLog:
-                    return "প্রবেশ-নথি হাতে মুছে ফেলা বা কাটাছেঁড়া দেখায় না, কিন্তু স্বয়ংক্রিয় অধিলেখনকে মুছে ফেলা হিসেবে নথিবদ্ধও করে না. সূত্র: আশা মেনন হলফনামা, পৃষ্ঠা ২."
+                    return "প্রবেশ-নথি হাতে মুছে ফেলা বা কাটাছেঁড়া দেখায় না, কিন্তু স্বয়ংক্রিয় অধিলেখনকে মুছে ফেলা হিসেবে নথিবদ্ধও করে না. \(citation)"
                 }
             }
         case .tamil:
@@ -1941,15 +1942,15 @@ extension AlphaRossModel {
             sections = facts.prefix(3).map { fact in
                 switch fact {
                 case .retention:
-                    return "CAM-D3-ல் பகுதிகள் தனியாக ஏற்றுமதி செய்யப்படாத வரை சாதாரண வீடியோ சேமிப்பு காலம் பதினான்கு நாட்கள். ஆதாரம்: ஆஷா மேனன் சத்தியப்பிரமாணம், பக்கம் 1."
+                    return "CAM-D3-ல் பகுதிகள் தனியாக ஏற்றுமதி செய்யப்படாத வரை சாதாரண வீடியோ சேமிப்பு காலம் பதினான்கு நாட்கள். \(citation)"
                 case .exportFailure:
-                    return "மேனன் நிலைப்படங்களை ஏற்றுமதி செய்தார், ஏனெனில் அவரது பணிப்பகுதியில் வீடியோ ஏற்றுமதி வரிசை இரண்டு முறை தோல்வியடைந்தது. ஆதாரம்: ஆஷா மேனன் சத்தியப்பிரமாணம், பக்கம் 1."
+                    return "மேனன் நிலைப்படங்களை ஏற்றுமதி செய்தார், ஏனெனில் அவரது பணிப்பகுதியில் வீடியோ ஏற்றுமதி வரிசை இரண்டு முறை தோல்வியடைந்தது. \(citation)"
                 case .timestamp:
-                    return "CAM-D3-ல் காட்டிய நேரம் வசதி நெட்வொர்க் நேரத்தை விட சுமார் பதினொரு நிமிடங்கள் பின்தங்கியது. ஆதாரம்: ஆஷா மேனன் சத்தியப்பிரமாணம், பக்கம் 1."
+                    return "CAM-D3-ல் காட்டிய நேரம் வசதி நெட்வொர்க் நேரத்தை விட சுமார் பதினொரு நிமிடங்கள் பின்தங்கியது. \(citation)"
                 case .nativeVideoUnavailable:
-                    return "30 அக்டோபர் 2025க்குள் தொடர்புடைய மூல வீடியோ பயனர் இடைமுகத்தில் இனி கிடைக்கவில்லை. ஆதாரம்: ஆஷா மேனன் சத்தியப்பிரமாணம், பக்கம் 1."
+                    return "30 அக்டோபர் 2025க்குள் தொடர்புடைய மூல வீடியோ பயனர் இடைமுகத்தில் இனி கிடைக்கவில்லை. \(citation)"
                 case .accessLog:
-                    return "அணுகல் பதிவு பயனர் CAM-D3-ஐ நீக்கியதாக அல்லது வெட்டியதாக காட்டவில்லை; தானியங்கி மேலெழுதல்களையும் நீக்கமாக பதிவு செய்யவில்லை. ஆதாரம்: ஆஷா மேனன் சத்தியப்பிரமாணம், பக்கம் 2."
+                    return "அணுகல் பதிவு பயனர் CAM-D3-ஐ நீக்கியதாக அல்லது வெட்டியதாக காட்டவில்லை; தானியங்கி மேலெழுதல்களையும் நீக்கமாக பதிவு செய்யவில்லை. \(citation)"
                 }
             }
         case .telugu:
@@ -1957,15 +1958,15 @@ extension AlphaRossModel {
             sections = facts.prefix(3).map { fact in
                 switch fact {
                 case .retention:
-                    return "భాగాలు వేరుగా ఎగుమతి చేయకపోతే CAM-D3 సాధారణ వీడియో నిల్వ కాలం పద్నాలుగు రోజులు. మూలం: ఆశా మెనన్ అఫిడవిట్, పేజీ 1."
+                    return "భాగాలు వేరుగా ఎగుమతి చేయకపోతే CAM-D3 సాధారణ వీడియో నిల్వ కాలం పద్నాలుగు రోజులు. \(citation)"
                 case .exportFailure:
-                    return "మెనన్ స్థిర చిత్రాలను ఎగుమతి చేసింది, ఎందుకంటే ఆమె షిఫ్ట్‌లో వీడియో ఎగుమతి వరుస రెండుసార్లు విఫలమైంది. మూలం: ఆశా మెనన్ అఫిడవిట్, పేజీ 1."
+                    return "మెనన్ స్థిర చిత్రాలను ఎగుమతి చేసింది, ఎందుకంటే ఆమె షిఫ్ట్‌లో వీడియో ఎగుమతి వరుస రెండుసార్లు విఫలమైంది. \(citation)"
                 case .timestamp:
-                    return "CAM-D3లో కనిపించిన సమయం సౌకర్యం నెట్‌వర్క్ సమయం కంటే సుమారు పదకొండు నిమిషాలు వెనుకబడింది. మూలం: ఆశా మెనన్ అఫిడవిట్, పేజీ 1."
+                    return "CAM-D3లో కనిపించిన సమయం సౌకర్యం నెట్‌వర్క్ సమయం కంటే సుమారు పదకొండు నిమిషాలు వెనుకబడింది. \(citation)"
                 case .nativeVideoUnavailable:
-                    return "30 అక్టోబర్ 2025 నాటికి సంబంధిత అసలు వీడియో వినియోగదారు ఇంటర్‌ఫేస్‌లో ఇక అందుబాటులో లేదు. మూలం: ఆశా మెనన్ అఫిడవిట్, పేజీ 1."
+                    return "30 అక్టోబర్ 2025 నాటికి సంబంధిత అసలు వీడియో వినియోగదారు ఇంటర్‌ఫేస్‌లో ఇక అందుబాటులో లేదు. \(citation)"
                 case .accessLog:
-                    return "యాక్సెస్ లాగ్ CAM-D3ను వినియోగదారు తొలగించినట్లు లేదా కత్తిరించినట్లు చూపదు; ఆటోమేటిక్ ఓవర్‌రైట్‌లను తొలగింపులుగా నమోదు చేయదు. మూలం: ఆశా మెనన్ అఫిడవిట్, పేజీ 2."
+                    return "యాక్సెస్ లాగ్ CAM-D3ను వినియోగదారు తొలగించినట్లు లేదా కత్తిరించినట్లు చూపదు; ఆటోమేటిక్ ఓవర్‌రైట్‌లను తొలగింపులుగా నమోదు చేయదు. \(citation)"
                 }
             }
         case .english:
@@ -1973,15 +1974,15 @@ extension AlphaRossModel {
             sections = facts.prefix(3).map { fact in
                 switch fact {
                 case .retention:
-                    return "CAM-D3 used ordinary rolling video retention of fourteen days unless clips were manually exported. Source: 03_Affidavit_Asha_Menon_Camera_Retention · p. 1."
+                    return "CAM-D3 used ordinary rolling video retention of fourteen days unless clips were manually exported. \(citation)"
                 case .exportFailure:
-                    return "Menon exported still frames because the video export queue failed twice during her shift; she did not know whether bandwidth, permissions, storage, or another technical issue caused it. Source: 03_Affidavit_Asha_Menon_Camera_Retention · p. 1."
+                    return "Menon exported still frames because the video export queue failed twice during her shift; she did not know whether bandwidth, permissions, storage, or another technical issue caused it. \(citation)"
                 case .timestamp:
-                    return "The CAM-D3 overlay timestamp lagged facility network time by about eleven minutes, so the still-frame times need to be read against the approximate actual times. Source: 03_Affidavit_Asha_Menon_Camera_Retention · p. 1."
+                    return "The CAM-D3 overlay timestamp lagged facility network time by about eleven minutes, so the still-frame times need to be read against the approximate actual times. \(citation)"
                 case .nativeVideoUnavailable:
-                    return "By October 30, 2025, the relevant native video was no longer available through the user interface, making preservation and overwrite issues important for advocate review. Source: 03_Affidavit_Asha_Menon_Camera_Retention · p. 1."
+                    return "By October 30, 2025, the relevant native video was no longer available through the user interface, making preservation and overwrite issues important for advocate review. \(citation)"
                 case .accessLog:
-                    return "The access log does not show a user deleting or trimming CAM-D3, but it also does not record automated overwrites as deletions. Source: 03_Affidavit_Asha_Menon_Camera_Retention · p. 2."
+                    return "The access log does not show a user deleting or trimming CAM-D3, but it also does not record automated overwrites as deletions. \(citation)"
                 }
             }
         }
@@ -2101,6 +2102,58 @@ extension AlphaRossModel {
             facts.append(.accessLog)
         }
         return facts
+    }
+
+    func alphaMatterAskFallbackCitation(
+        language: AlphaMatterAskFallbackLanguage,
+        sourceRef: AlphaSourceRef?
+    ) -> String {
+        let label: String
+        if let sourceRef {
+            let candidate = sourceRef.label.trimmingCharacters(in: .whitespacesAndNewlines)
+            switch language {
+            case .english:
+                label = candidate.isEmpty ? "local source" : candidate
+            case .hindi, .bengali, .tamil, .telugu:
+                if !candidate.isEmpty && alphaLatinWordCount(in: candidate) <= 3 {
+                    label = candidate
+                } else {
+                    let page = sourceRef.pageNumber > 0 ? "\(sourceRef.pageNumber)" : nil
+                    switch language {
+                    case .hindi:
+                        label = page.map { "tagged file, पृष्ठ \($0)" } ?? "tagged file"
+                    case .bengali:
+                        label = page.map { "tagged file, পৃষ্ঠা \($0)" } ?? "tagged file"
+                    case .tamil:
+                        label = page.map { "tagged file, பக்கம் \($0)" } ?? "tagged file"
+                    case .telugu:
+                        label = page.map { "tagged file, పేజీ \($0)" } ?? "tagged file"
+                    case .english:
+                        label = candidate
+                    }
+                }
+            }
+        } else {
+            switch language {
+            case .english:
+                label = "local source"
+            case .hindi, .bengali, .tamil, .telugu:
+                label = "tagged file"
+            }
+        }
+
+        switch language {
+        case .english:
+            return "Source: \(label)."
+        case .hindi:
+            return "स्रोत: \(label)."
+        case .bengali:
+            return "সূত্র: \(label)."
+        case .tamil:
+            return "ஆதாரம்: \(label)."
+        case .telugu:
+            return "మూలం: \(label)."
+        }
     }
 
     func alphaAnswerLanguage(for question: String) -> AlphaMatterAskFallbackLanguage {
