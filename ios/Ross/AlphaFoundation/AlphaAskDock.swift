@@ -1003,15 +1003,13 @@ struct AlphaInlineAskResponseCard: View {
             }
         }
         .padding(14)
-        .rossGlassSurface(
+        .rossNativeGlassSurface(
             tint: Color.rossHighlight,
-            cornerRadius: 18,
-            shadowOpacity: 0.09,
-            shadowRadius: 10,
-            shadowY: 4,
-            fillOpacity: 0.84,
-            strokeOpacity: 0.48
+            shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
+            fallbackFillOpacity: 0.84,
+            fallbackStrokeOpacity: 0.48
         )
+        .shadow(color: Color.rossShadow.opacity(0.09), radius: 10, y: 4)
         .gesture(
             DragGesture(minimumDistance: 20, coordinateSpace: .local)
                 .onEnded { value in
@@ -1137,15 +1135,13 @@ struct AlphaAskSelectionChip: View {
         .foregroundStyle(tone == .dock ? dockForeground : Color.rossInk.opacity(0.82))
         .padding(.horizontal, AlphaAskPillMetrics.horizontalPadding)
         .frame(height: AlphaAskPillMetrics.height)
-        .rossGlassSurface(
+        .rossNativeGlassSurface(
             tint: tone == .dock ? Color.rossHighlight : Color.rossAccent.opacity(0.10),
-            cornerRadius: AlphaAskPillMetrics.cornerRadius,
-            shadowOpacity: tone == .dock ? 0.04 : 0.03,
-            shadowRadius: 4,
-            shadowY: 1,
-            fillOpacity: tone == .dock ? 0.68 : 0.78,
-            strokeOpacity: tone == .dock ? 0.48 : 0.56
+            shape: Capsule(),
+            fallbackFillOpacity: tone == .dock ? 0.68 : 0.78,
+            fallbackStrokeOpacity: tone == .dock ? 0.48 : 0.56
         )
+        .shadow(color: Color.rossShadow.opacity(tone == .dock ? 0.04 : 0.03), radius: 4, y: 1)
     }
 }
 
@@ -1211,15 +1207,13 @@ struct AlphaAskMentionSuggestionsCard: View {
             }
         }
         .padding(8)
-        .rossGlassSurface(
+        .rossNativeGlassSurface(
             tint: tone == .dock ? Color.rossHighlight : Color.rossAccent.opacity(0.10),
-            cornerRadius: 16,
-            shadowOpacity: tone == .dock ? 0.10 : 0.12,
-            shadowRadius: 10,
-            shadowY: 4,
-            fillOpacity: tone == .dock ? 0.74 : 0.82,
-            strokeOpacity: tone == .dock ? 0.52 : 0.58
+            shape: RoundedRectangle(cornerRadius: 16, style: .continuous),
+            fallbackFillOpacity: tone == .dock ? 0.74 : 0.82,
+            fallbackStrokeOpacity: tone == .dock ? 0.52 : 0.58
         )
+        .shadow(color: Color.rossShadow.opacity(tone == .dock ? 0.10 : 0.12), radius: 10, y: 4)
     }
 }
 
@@ -1427,16 +1421,14 @@ struct AlphaAskComposerSheet: View {
                         .padding(.horizontal, 14)
                         .padding(.vertical, 12)
                 }
-                .rossGlassSurface(
+                .rossNativeGlassSurface(
                     tint: Color.rossHighlight,
-                    cornerRadius: 24,
+                    shape: RoundedRectangle(cornerRadius: 24, style: .continuous),
                     interactive: true,
-                    shadowOpacity: 0.08,
-                    shadowRadius: 8,
-                    shadowY: 3,
-                    fillOpacity: 0.84,
-                    strokeOpacity: 0.50
+                    fallbackFillOpacity: 0.84,
+                    fallbackStrokeOpacity: 0.50
                 )
+                .shadow(color: Color.rossShadow.opacity(0.08), radius: 8, y: 3)
                 .frame(
                     maxWidth: .infinity,
                     minHeight: min(max(proxy.size.height * 0.34, 220), 320),
@@ -1730,15 +1722,13 @@ struct AlphaRootAskEmptyFilesCard: View {
             }
         }
         .padding(14)
-        .rossGlassSurface(
-            tint: Color.rossAccent.opacity(0.14),
-            cornerRadius: 18,
-            shadowOpacity: 0.07,
-            shadowRadius: 7,
-            shadowY: 3,
-            fillOpacity: 0.80,
-            strokeOpacity: 0.48
+        .rossNativeGlassSurface(
+            tint: Color.rossAccent,
+            shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
+            fallbackFillOpacity: 0.80,
+            fallbackStrokeOpacity: 0.48
         )
+        .shadow(color: Color.rossShadow.opacity(0.07), radius: 7, y: 3)
     }
 }
 
@@ -1777,16 +1767,14 @@ struct AlphaRootAskDocumentRow: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
-            .rossGlassSurface(
+            .rossNativeGlassSurface(
                 tint: isSelected ? Color.rossAccent : Color.rossHighlight,
-                cornerRadius: 18,
+                shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
                 interactive: true,
-                shadowOpacity: isSelected ? 0.10 : 0.07,
-                shadowRadius: isSelected ? 9 : 7,
-                shadowY: 3,
-                fillOpacity: 0.82,
-                strokeOpacity: isSelected ? 0.56 : 0.46
+                fallbackFillOpacity: 0.82,
+                fallbackStrokeOpacity: isSelected ? 0.56 : 0.46
             )
+            .shadow(color: Color.rossShadow.opacity(isSelected ? 0.10 : 0.07), radius: isSelected ? 9 : 7, y: 3)
         }
         .buttonStyle(.plain)
     }
@@ -1833,16 +1821,14 @@ struct AlphaRootAskToolRow: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
-            .rossGlassSurface(
+            .rossNativeGlassSurface(
                 tint: Color.rossAccent,
-                cornerRadius: 18,
+                shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
                 interactive: true,
-                shadowOpacity: 0.08,
-                shadowRadius: 8,
-                shadowY: 3,
-                fillOpacity: 0.82,
-                strokeOpacity: 0.48
+                fallbackFillOpacity: 0.82,
+                fallbackStrokeOpacity: 0.48
             )
+            .shadow(color: Color.rossShadow.opacity(0.08), radius: 8, y: 3)
         }
         .buttonStyle(.plain)
     }
@@ -1875,16 +1861,14 @@ struct AlphaRootAskScopeRow: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
-            .rossGlassSurface(
+            .rossNativeGlassSurface(
                 tint: isSelected ? Color.rossAccent.opacity(0.18) : Color.rossAccent.opacity(0.08),
-                cornerRadius: 18,
+                shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
                 interactive: true,
-                shadowOpacity: isSelected ? 0.08 : 0.04,
-                shadowRadius: isSelected ? 8 : 5,
-                shadowY: isSelected ? 2 : 1,
-                fillOpacity: isSelected ? 0.80 : 0.72,
-                strokeOpacity: isSelected ? 0.62 : 0.48
+                fallbackFillOpacity: isSelected ? 0.80 : 0.72,
+                fallbackStrokeOpacity: isSelected ? 0.62 : 0.48
             )
+            .shadow(color: Color.rossShadow.opacity(isSelected ? 0.08 : 0.04), radius: isSelected ? 8 : 5, y: isSelected ? 2 : 1)
         }
         .buttonStyle(.plain)
     }
