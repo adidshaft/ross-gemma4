@@ -2723,6 +2723,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "உத்தரவு சுருக்கம்",
             "te": "ఆర్డర్ సారాంశం"
         ],
+        "draft_action_hearing_note": [
+            "en": "Hearing note",
+            "hi": "सुनवाई नोट",
+            "bn": "শুনানি নোট",
+            "ta": "விசாரணை குறிப்பு",
+            "te": "విచారణ గమనిక"
+        ],
         "draft_action_transcript": [
             "en": "Transcript",
             "hi": "प्रतिलिपि",

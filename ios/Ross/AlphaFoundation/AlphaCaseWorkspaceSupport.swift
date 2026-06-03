@@ -244,15 +244,15 @@ struct AlphaMatterDraftActionStrip: View {
         RossGlassGroup(spacing: 10) {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 10) {
-                    AlphaCompactDraftActionButton(title: "Chronology", systemImage: "list.bullet.rectangle") {
+                    AlphaCompactDraftActionButton(title: rossLocalized("draft_action_chronology"), systemImage: "list.bullet.rectangle") {
                         onGenerateChronology()
                     }
-                    AlphaCompactDraftActionButton(title: "Case note", systemImage: "square.and.pencil") {
+                    AlphaCompactDraftActionButton(title: rossLocalized("draft_action_case_note"), systemImage: "square.and.pencil") {
                         onGenerateCaseNote()
                     }
                 }
 
-                AlphaCompactDraftActionButton(title: "Order summary", systemImage: "doc.plaintext") {
+                AlphaCompactDraftActionButton(title: rossLocalized("draft_action_order_summary"), systemImage: "doc.plaintext") {
                     onGenerateOrderSummary()
                 }
             }

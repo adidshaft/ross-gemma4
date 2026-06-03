@@ -1351,6 +1351,38 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             }
             XCTAssertEqual(dateTitle, "Date जोड़ें")
             XCTAssertTrue(dateDetail.contains("1 May 2026"))
+
+            let chronologyCommand = await MainActor.run {
+                model.dockCommandAction(for: "generate chronology")
+            }
+            guard case let .generateExport(_, chronologyLabel) = chronologyCommand else {
+                return XCTFail("Expected chronology export command")
+            }
+            XCTAssertEqual(chronologyLabel, "कालक्रम")
+
+            let hearingCommand = await MainActor.run {
+                model.dockCommandAction(for: "generate hearing note")
+            }
+            guard case let .generateExport(_, hearingLabel) = hearingCommand else {
+                return XCTFail("Expected hearing note export command")
+            }
+            XCTAssertEqual(hearingLabel, "सुनवाई नोट")
+
+            let orderCommand = await MainActor.run {
+                model.dockCommandAction(for: "generate order summary")
+            }
+            guard case let .generateExport(_, orderLabel) = orderCommand else {
+                return XCTFail("Expected order summary export command")
+            }
+            XCTAssertEqual(orderLabel, "आदेश सारांश")
+
+            let transcriptCommand = await MainActor.run {
+                model.dockCommandAction(for: "generate transcript")
+            }
+            guard case let .generateExport(_, transcriptLabel) = transcriptCommand else {
+                return XCTFail("Expected transcript export command")
+            }
+            XCTAssertEqual(transcriptLabel, rossLocalized("export_thread_transcript"))
         }
     }
 

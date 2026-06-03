@@ -884,11 +884,11 @@ extension AlphaRossModel {
         guard !normalized.isEmpty else { return nil }
 
         let exportCommands: [([String], String, String)] = [
-            (["generate chronology", "prepare chronology", "draft chronology", "export chronology", "create chronology"], "chronology_report", "Chronology"),
-            (["generate case note", "prepare case note", "draft case note", "export case note"], "case_note", "Case note"),
-            (["generate hearing note", "prepare hearing note", "draft hearing note", "export hearing note"], "case_note", "Hearing note"),
-            (["generate order summary", "prepare order summary", "draft order summary", "export order summary"], "order_summary", "Order summary"),
-            (["generate transcript", "draft transcript", "export transcript", "generate chat transcript", "generate thread transcript"], "chat_transcript", "Ross thread transcript")
+            (["generate chronology", "prepare chronology", "draft chronology", "export chronology", "create chronology"], "chronology_report", rossLocalized("draft_action_chronology")),
+            (["generate case note", "prepare case note", "draft case note", "export case note"], "case_note", rossLocalized("draft_action_case_note")),
+            (["generate hearing note", "prepare hearing note", "draft hearing note", "export hearing note"], "case_note", rossLocalized("draft_action_hearing_note")),
+            (["generate order summary", "prepare order summary", "draft order summary", "export order summary"], "order_summary", rossLocalized("draft_action_order_summary")),
+            (["generate transcript", "draft transcript", "export transcript", "generate chat transcript", "generate thread transcript"], "chat_transcript", rossLocalized("export_thread_transcript"))
         ]
 
         let lowered = normalized.lowercased()
