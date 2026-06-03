@@ -1014,8 +1014,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertEqual(1, publicLawCalls.value)
             XCTAssertEqual(1, resultCount)
             XCTAssertEqual(alphaPublicLawResultsStatus(languageCode: "en"), statusAfterConfirm)
-            XCTAssertTrue(ledgerTitles.contains("Public-law search reviewed by user"))
-            XCTAssertTrue(ledgerTitles.contains("Public-law query sent"))
+            XCTAssertTrue(ledgerTitles.contains(rossLocalized("privacy_ledger_public_law_reviewed_title")))
+            XCTAssertTrue(ledgerTitles.contains(rossLocalized("privacy_ledger_public_law_sent_title")))
         }
     }
 

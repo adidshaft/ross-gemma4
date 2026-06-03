@@ -35,8 +35,8 @@ extension AlphaRossModel {
         publicLawSearchStatus = .running
         persisted.ledgerEntries.insert(
             AlphaPrivacyLedgerEntry(
-                title: "Public-law search reviewed by user",
-                detail: "Sanitized query reviewed: \(preview.query). Removed private details: \(preview.removed.joined(separator: ", ")). 0 private case details sent.",
+                title: rossLocalized("privacy_ledger_public_law_reviewed_title"),
+                detail: rossLocalized("privacy_ledger_public_law_reviewed_detail"),
                 purpose: .public_law_search,
                 payloadClass: .no_case_data,
                 endpointLabel: "device://public-law-review",
@@ -90,8 +90,8 @@ extension AlphaRossModel {
             )
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
-                    title: "Public-law query sent",
-                    detail: "Sanitized query sent: \(preview.query). 0 private case details sent.",
+                    title: rossLocalized("privacy_ledger_public_law_sent_title"),
+                    detail: rossLocalized("privacy_ledger_public_law_sent_detail"),
                     purpose: .public_law_search,
                     payloadClass: .sanitized_public_query,
                     endpointLabel: "/public-law/search",
@@ -119,8 +119,8 @@ extension AlphaRossModel {
             }
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
-                    title: "Public-law search unavailable",
-                    detail: "Could not use public-law search right now. Your files stayed on this device.",
+                    title: rossLocalized("privacy_ledger_public_law_unavailable_title"),
+                    detail: rossLocalized("privacy_ledger_public_law_unavailable_detail"),
                     purpose: .public_law_search,
                     payloadClass: .sanitized_public_query,
                     endpointLabel: "/public-law/search",
@@ -203,8 +203,8 @@ extension AlphaRossModel {
         publicLawSearchStatus = .running
         persisted.ledgerEntries.insert(
             AlphaPrivacyLedgerEntry(
-                title: "Public-law search reviewed by user",
-                detail: "Sanitized query reviewed: \(preview.query). Removed private details: \(preview.removed.joined(separator: ", ")). 0 private case details sent.",
+                title: rossLocalized("privacy_ledger_public_law_reviewed_title"),
+                detail: rossLocalized("privacy_ledger_public_law_reviewed_detail"),
                 purpose: .public_law_search,
                 payloadClass: .no_case_data,
                 endpointLabel: "device://public-law-review",
@@ -221,8 +221,8 @@ extension AlphaRossModel {
             publicLawSearchStatus = .failed
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
-                    title: "Public-law search unavailable",
-                    detail: "Could not use public-law search right now. Your files stayed on this device.",
+                    title: rossLocalized("privacy_ledger_public_law_unavailable_title"),
+                    detail: rossLocalized("privacy_ledger_public_law_unavailable_detail"),
                     purpose: .public_law_search,
                     payloadClass: .sanitized_public_query,
                     endpointLabel: "/public-law/search",
@@ -243,8 +243,8 @@ extension AlphaRossModel {
         persisted.publicLawResults = publicLawResults
         persisted.ledgerEntries.insert(
             AlphaPrivacyLedgerEntry(
-                title: "Public-law query sent",
-                detail: "Sanitized query sent: \(preview.query). 0 private case details sent.",
+                title: rossLocalized("privacy_ledger_public_law_sent_title"),
+                detail: rossLocalized("privacy_ledger_public_law_sent_detail"),
                 purpose: .public_law_search,
                 payloadClass: .sanitized_public_query,
                 endpointLabel: "/public-law/search",
