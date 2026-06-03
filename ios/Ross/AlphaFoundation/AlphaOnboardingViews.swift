@@ -298,19 +298,59 @@ struct AlphaOnboardingModelChoiceRow: View {
             }
             .padding(.horizontal, compact ? 9 : 10)
             .padding(.vertical, compact ? 6 : 8)
-            .rossGlassSurface(
-                tint: isSelected ? Color.rossAccent.opacity(0.22) : Color.rossAccent.opacity(0.08),
-                cornerRadius: compact ? 11 : 12,
-                interactive: true,
-                shadowOpacity: isSelected ? 0.12 : 0.06,
-                shadowRadius: isSelected ? 10 : 6,
-                shadowY: isSelected ? 4 : 2,
-                fillOpacity: isSelected ? 0.82 : 0.68,
-                strokeOpacity: isSelected ? 0.62 : 0.42
+            .modifier(
+                AlphaOnboardingModelChoiceSurface(
+                    isSelected: isSelected,
+                    cornerRadius: compact ? 11 : 12
+                )
             )
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
+private struct AlphaOnboardingModelChoiceSurface: ViewModifier {
+    let isSelected: Bool
+    let cornerRadius: CGFloat
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        let tint = isSelected ? Color.rossAccent.opacity(0.22) : Color.rossAccent.opacity(0.08)
+
+        if #available(iOS 26.0, macOS 26.0, *) {
+            content
+                .background {
+                    shape.fill(Color.rossGlassFill.opacity(isSelected ? 0.54 : 0.34))
+                }
+                .glassEffect(
+                    Glass.regular
+                        .tint(tint)
+                        .interactive(),
+                    in: shape
+                )
+                .overlay {
+                    shape.strokeBorder(Color.rossAccent.opacity(isSelected ? 0.32 : 0.18), lineWidth: 1)
+                }
+                .shadow(
+                    color: Color.rossShadow.opacity(isSelected ? 0.12 : 0.06),
+                    radius: isSelected ? 10 : 6,
+                    y: isSelected ? 4 : 2
+                )
+        } else {
+            content
+                .rossGlassSurface(
+                    tint: tint,
+                    cornerRadius: cornerRadius,
+                    interactive: true,
+                    shadowOpacity: isSelected ? 0.12 : 0.06,
+                    shadowRadius: isSelected ? 10 : 6,
+                    shadowY: isSelected ? 4 : 2,
+                    fillOpacity: isSelected ? 0.82 : 0.68,
+                    strokeOpacity: isSelected ? 0.62 : 0.42
+                )
+        }
     }
 }
 
