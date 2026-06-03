@@ -630,10 +630,10 @@ struct AlphaAssistantActivityStrip: View {
             }
 
             if let clampedProgress {
-                ProgressView(value: clampedProgress, total: 1)
-                    .progressViewStyle(.linear)
-                    .tint(tint)
+                RossProgressBar(value: clampedProgress, tint: tint, height: 7)
+                    .frame(height: 7)
                     .accessibilityLabel(statusLabel)
+                    .accessibilityValue(Text("\(Int((clampedProgress * 100).rounded()))%"))
             } else if showsIndeterminateProgress {
                 HStack(spacing: 8) {
                     ProgressView()
