@@ -5166,6 +5166,76 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "தயவு செய்து confirm செய்யவும்",
             "te": "దయచేసి confirm చేయండి"
         ],
+        "review_title_confirm_next_date": [
+            "en": "Confirm next date",
+            "hi": "अगली date confirm करें",
+            "bn": "পরবর্তী date confirm করুন",
+            "ta": "அடுத்த date confirm செய்யவும்",
+            "te": "తదుపరి date confirm చేయండి"
+        ],
+        "review_title_review_party_name": [
+            "en": "Review party name",
+            "hi": "Party name review करें",
+            "bn": "Party name review করুন",
+            "ta": "Party name review செய்யவும்",
+            "te": "Party name review చేయండి"
+        ],
+        "review_title_check_order_direction": [
+            "en": "Check order direction",
+            "hi": "Order direction check करें",
+            "bn": "Order direction check করুন",
+            "ta": "Order direction check செய்யவும்",
+            "te": "Order direction check చేయండి"
+        ],
+        "dock_guidance_add_task_title": [
+            "en": "Add a task title",
+            "hi": "Task title जोड़ें",
+            "bn": "Task title যোগ করুন",
+            "ta": "Task title சேர்க்கவும்",
+            "te": "Task title జోడించండి"
+        ],
+        "dock_guidance_add_task_title_detail": [
+            "en": "Try “add task prepare hearing note tomorrow.”",
+            "hi": "Try “add task prepare hearing note tomorrow.”",
+            "bn": "Try “add task prepare hearing note tomorrow.”",
+            "ta": "Try “add task prepare hearing note tomorrow.”",
+            "te": "Try “add task prepare hearing note tomorrow.”"
+        ],
+        "dock_guidance_name_task": [
+            "en": "Name the task",
+            "hi": "Task का नाम लिखें",
+            "bn": "Task-এর নাম লিখুন",
+            "ta": "Task பெயரை எழுதவும்",
+            "te": "Task పేరు రాయండి"
+        ],
+        "dock_guidance_name_task_detail": [
+            "en": "Try “mark task prepare hearing note done.”",
+            "hi": "Try “mark task prepare hearing note done.”",
+            "bn": "Try “mark task prepare hearing note done.”",
+            "ta": "Try “mark task prepare hearing note done.”",
+            "te": "Try “mark task prepare hearing note done.”"
+        ],
+        "dock_guidance_add_date": [
+            "en": "Add the date",
+            "hi": "Date जोड़ें",
+            "bn": "Date যোগ করুন",
+            "ta": "Date சேர்க்கவும்",
+            "te": "Date జోడించండి"
+        ],
+        "dock_guidance_add_specific_date_detail": [
+            "en": "Try “%@ on 1 May 2026.”",
+            "hi": "Try “%@ on 1 May 2026.”",
+            "bn": "Try “%@ on 1 May 2026.”",
+            "ta": "Try “%@ on 1 May 2026.”",
+            "te": "Try “%@ on 1 May 2026.”"
+        ],
+        "dock_guidance_add_date_detail": [
+            "en": "Try “save date filing reminder on 1 May 2026.”",
+            "hi": "Try “save date filing reminder on 1 May 2026.”",
+            "bn": "Try “save date filing reminder on 1 May 2026.”",
+            "ta": "Try “save date filing reminder on 1 May 2026.”",
+            "te": "Try “save date filing reminder on 1 May 2026.”"
+        ],
         "low_confidence": [
             "en": "Low confidence",
             "hi": "कम confidence",

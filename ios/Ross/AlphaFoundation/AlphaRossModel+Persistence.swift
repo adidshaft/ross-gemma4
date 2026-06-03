@@ -1071,28 +1071,28 @@ extension AlphaRossModel {
         static func reviewTitle(for fieldType: AlphaExtractedLegalFieldType) -> String {
             switch fieldType {
             case .nextDate:
-                "Confirm next date"
+                rossLocalized("review_title_confirm_next_date")
             case .partyName:
-                "Review party name"
+                rossLocalized("review_title_review_party_name")
             case .orderDirection:
-                "Check order direction"
+                rossLocalized("review_title_check_order_direction")
             default:
-                "Please confirm"
+                rossLocalized("please_confirm")
             }
         }
 
         static func reviewTitle(for findingKind: AlphaExtractionFindingKind) -> String {
             switch findingKind {
             case .lowConfidenceOcr, .languageUncertain, .possibleHandwriting:
-                "Low confidence scan"
+                rossLocalized("document_status_low_confidence_scan")
             case .ambiguousOrderDirection:
-                "Check order direction"
+                rossLocalized("review_title_check_order_direction")
             case .dateConflict:
-                "Confirm next date"
+                rossLocalized("review_title_confirm_next_date")
             case .partyConflict:
-                "Review party name"
+                rossLocalized("review_title_review_party_name")
             default:
-                "Please confirm"
+                rossLocalized("please_confirm")
             }
         }
     }

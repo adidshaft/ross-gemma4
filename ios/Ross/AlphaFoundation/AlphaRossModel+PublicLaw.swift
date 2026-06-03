@@ -514,13 +514,13 @@ extension AlphaRossModel {
     func alphaReviewTitle(for fieldType: AlphaExtractedLegalFieldType) -> String {
         switch fieldType {
         case .nextDate:
-            "Confirm next date"
+            rossLocalized("review_title_confirm_next_date")
         case .partyName:
-            "Review party name"
+            rossLocalized("review_title_review_party_name")
         case .orderDirection:
-            "Check order direction"
+            rossLocalized("review_title_check_order_direction")
         default:
-            "Please confirm"
+            rossLocalized("please_confirm")
         }
     }
 }

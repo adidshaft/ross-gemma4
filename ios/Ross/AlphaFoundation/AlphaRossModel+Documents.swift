@@ -937,7 +937,10 @@ extension AlphaRossModel {
         if let body = dockCommandBody(in: normalized, prefixes: ["add task ", "create task ", "save task ", "add reminder ", "save reminder ", "remind me to "]) {
             let (title, dueDate) = dockCommandTitleAndDate(from: body)
             guard !title.isEmpty else {
-                return .guidance(title: "Add a task title", detail: "Try “add task prepare hearing note tomorrow.”")
+                return .guidance(
+                    title: rossLocalized("dock_guidance_add_task_title"),
+                    detail: rossLocalized("dock_guidance_add_task_title_detail")
+                )
             }
             return .addTask(title: title, dueDate: dueDate)
         }
@@ -947,7 +950,10 @@ extension AlphaRossModel {
                 .replacingOccurrences(of: "\\b(done|complete|completed|finished)\\b", with: "", options: [.regularExpression, .caseInsensitive])
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             guard !cleaned.isEmpty else {
-                return .guidance(title: "Name the task", detail: "Try “mark task prepare hearing note done.”")
+                return .guidance(
+                    title: rossLocalized("dock_guidance_name_task"),
+                    detail: rossLocalized("dock_guidance_name_task_detail")
+                )
             }
             return .completeTask(title: cleaned)
         }
@@ -964,8 +970,11 @@ extension AlphaRossModel {
                 let (title, date) = dockCommandTitleAndDate(from: body)
                 guard let date else {
                     return .guidance(
-                        title: "Add the date",
-                        detail: "Try “\(prefixes[0].trimmingCharacters(in: .whitespaces)) on 1 May 2026.”"
+                        title: rossLocalized("dock_guidance_add_date"),
+                        detail: String(
+                            format: rossLocalized("dock_guidance_add_specific_date_detail"),
+                            prefixes[0].trimmingCharacters(in: .whitespaces)
+                        )
                     )
                 }
                 return .addMatterDate(title: title.ifEmpty(kind.title), kind: kind, date: date)
@@ -975,7 +984,10 @@ extension AlphaRossModel {
         if let body = dockCommandBody(in: normalized, prefixes: ["save date ", "add date ", "set date "]) {
             let (title, date) = dockCommandTitleAndDate(from: body)
             guard let date else {
-                return .guidance(title: "Add the date", detail: "Try “save date filing reminder on 1 May 2026.”")
+                return .guidance(
+                    title: rossLocalized("dock_guidance_add_date"),
+                    detail: rossLocalized("dock_guidance_add_date_detail")
+                )
             }
             let inferredKind = inferredMatterDateKind(for: title)
             return .addMatterDate(title: title.ifEmpty(inferredKind.title), kind: inferredKind, date: date)
@@ -987,15 +999,15 @@ extension AlphaRossModel {
     func alphaReviewTitle(for findingKind: AlphaExtractionFindingKind) -> String {
         switch findingKind {
         case .lowConfidenceOcr, .languageUncertain, .possibleHandwriting:
-            "Low confidence scan"
+            rossLocalized("document_status_low_confidence_scan")
         case .ambiguousOrderDirection:
-            "Check order direction"
+            rossLocalized("review_title_check_order_direction")
         case .dateConflict:
-            "Confirm next date"
+            rossLocalized("review_title_confirm_next_date")
         case .partyConflict:
-            "Review party name"
+            rossLocalized("review_title_review_party_name")
         default:
-            "Please confirm"
+            rossLocalized("please_confirm")
         }
     }
 

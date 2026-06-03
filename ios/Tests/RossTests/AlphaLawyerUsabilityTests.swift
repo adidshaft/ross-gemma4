@@ -1316,6 +1316,44 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    func testDockCommandGuidanceUsesSelectedProductLanguage() async throws {
+        let previousLanguageCode = rossSelectedLanguageCode()
+        defer { rossSaveLanguageSelection(code: previousLanguageCode) }
+        rossSaveLanguageSelection(code: "hi")
+
+        try await withRestoredStore { store in
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+
+            let taskGuidance = await MainActor.run {
+                model.dockCommandAction(for: "add task on 1 May 2026")
+            }
+            guard case let .guidance(taskTitle, taskDetail) = taskGuidance else {
+                return XCTFail("Expected missing task title guidance")
+            }
+            XCTAssertEqual(taskTitle, "Task title जोड़ें")
+            XCTAssertTrue(taskDetail.contains("prepare hearing note"))
+
+            let completeGuidance = await MainActor.run {
+                model.dockCommandAction(for: "mark task done")
+            }
+            guard case let .guidance(completeTitle, _) = completeGuidance else {
+                return XCTFail("Expected missing task name guidance")
+            }
+            XCTAssertEqual(completeTitle, "Task का नाम लिखें")
+
+            let dateGuidance = await MainActor.run {
+                model.dockCommandAction(for: "save date filing reminder")
+            }
+            guard case let .guidance(dateTitle, dateDetail) = dateGuidance else {
+                return XCTFail("Expected missing date guidance")
+            }
+            XCTAssertEqual(dateTitle, "Date जोड़ें")
+            XCTAssertTrue(dateDetail.contains("1 May 2026"))
+        }
+    }
+
     func testDockCommandAddsMatterDateToScopedMatter() async throws {
         try await withRestoredStore { store in
             let state = AlphaPersistedState.demoSeed()

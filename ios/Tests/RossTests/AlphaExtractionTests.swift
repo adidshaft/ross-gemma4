@@ -960,7 +960,13 @@ final class AlphaExtractionTests: XCTestCase {
             AlphaMatterDateKind.hearing.title,
             AlphaMatterDateKind.filingDeadline.title,
             AlphaMatterDateKind.complianceDate.title,
-            AlphaMatterDateKind.clientFollowUp.title
+            AlphaMatterDateKind.clientFollowUp.title,
+            rossLocalized("review_title_confirm_next_date"),
+            rossLocalized("review_title_review_party_name"),
+            rossLocalized("review_title_check_order_direction"),
+            rossLocalized("dock_guidance_add_task_title"),
+            rossLocalized("dock_guidance_name_task"),
+            rossLocalized("dock_guidance_add_date")
         ].joined(separator: "\n")
 
         let forbidden = [
@@ -986,6 +992,8 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(normalSettingsCopy.contains("assistant setup files delete करें"))
         XCTAssertTrue(normalSettingsCopy.contains("Ross assistant listings जांचता है"))
         XCTAssertTrue(normalSettingsCopy.contains("अगली hearing"))
+        XCTAssertTrue(normalSettingsCopy.contains("अगली date confirm करें"))
+        XCTAssertTrue(normalSettingsCopy.contains("Task title जोड़ें"))
         XCTAssertEqual(alphaPrivateAIVerifiedStorageLabel, "Verified assistant setup")
         XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("downloaded assistant files"))
         XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("downloaded assistant"))
