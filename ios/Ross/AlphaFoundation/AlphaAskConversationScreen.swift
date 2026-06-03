@@ -947,23 +947,7 @@ struct AlphaAskEmptyState: View {
                     Button {
                         onSelectSuggestion(suggestion)
                     } label: {
-                        Text(suggestion)
-                            .font(.footnote.weight(.medium))
-                            .foregroundStyle(Color.rossInk)
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.88)
-                            .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
-                            .padding(.horizontal, 13)
-                            .rossGlassSurface(
-                                tint: Color.rossAccent,
-                                cornerRadius: RossSurface.cornerRadius,
-                                interactive: true,
-                                shadowOpacity: 0.07,
-                                shadowRadius: 7,
-                                shadowY: 3,
-                                fillOpacity: 0.82,
-                                strokeOpacity: 0.48
-                            )
+                        AlphaAskSuggestionLabel(suggestion)
                     }
                     .buttonStyle(.plain)
                 }
@@ -975,6 +959,55 @@ struct AlphaAskEmptyState: View {
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
+    }
+}
+
+private struct AlphaAskSuggestionLabel: View {
+    let suggestion: String
+
+    init(_ suggestion: String) {
+        self.suggestion = suggestion
+    }
+
+    var body: some View {
+        label
+            .modifier(AlphaAskSuggestionSurface())
+    }
+
+    private var label: some View {
+        Text(suggestion)
+            .font(.footnote.weight(.medium))
+            .foregroundStyle(Color.rossInk)
+            .lineLimit(2)
+            .minimumScaleFactor(0.88)
+            .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
+            .padding(.horizontal, 13)
+    }
+}
+
+private struct AlphaAskSuggestionSurface: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            content
+                .glassEffect(
+                    .regular
+                        .tint(Color.rossAccent.opacity(0.12))
+                        .interactive(),
+                    in: .rect(cornerRadius: RossSurface.cornerRadius)
+                )
+        } else {
+            content
+                .rossGlassSurface(
+                    tint: Color.rossAccent,
+                    cornerRadius: RossSurface.cornerRadius,
+                    interactive: true,
+                    shadowOpacity: 0.07,
+                    shadowRadius: 7,
+                    shadowY: 3,
+                    fillOpacity: 0.82,
+                    strokeOpacity: 0.48
+                )
+        }
     }
 }
 
