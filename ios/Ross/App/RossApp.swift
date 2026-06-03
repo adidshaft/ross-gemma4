@@ -1578,8 +1578,8 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         "privacy_ledger_assistant_update_available_title": [
             "en": "Private assistant update available",
             "hi": "Private assistant update available है",
-            "bn": "Private assistant update available",
-            "ta": "Private assistant update available",
+            "bn": "Private assistant update available আছে",
+            "ta": "Private assistant update available உள்ளது",
             "te": "Private assistant update available ఉంది"
         ],
         "privacy_ledger_private_assistant_setup_title": [
@@ -1640,10 +1640,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "privacy_ledger_purpose_assistant_setup": [
             "en": "Private assistant setup",
-            "hi": "Private assistant setup",
-            "bn": "Private assistant setup",
-            "ta": "Private assistant setup",
-            "te": "Private assistant setup"
+            "hi": "Private assistant setup कार्य",
+            "bn": "Private assistant setup কাজ",
+            "ta": "Private assistant setup பணி",
+            "te": "Private assistant setup పని"
         ],
         "privacy_ledger_local_case_review_title": [
             "en": "Reviewed case locally",
@@ -2739,24 +2739,24 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "answer_style": [
             "en": "Answer style",
-            "hi": "Answer style",
-            "bn": "Answer style",
-            "ta": "Answer style",
-            "te": "Answer style"
+            "hi": "Answer style सेटिंग",
+            "bn": "Answer style সেটিং",
+            "ta": "Answer style அமைப்பு",
+            "te": "Answer style సెట్టింగ్"
         ],
         "current_style": [
             "en": "Current style",
-            "hi": "Current style",
-            "bn": "Current style",
-            "ta": "Current style",
-            "te": "Current style"
+            "hi": "Current style स्थिति",
+            "bn": "Current style অবস্থা",
+            "ta": "Current style நிலை",
+            "te": "Current style స్థితి"
         ],
         "grounded_legal_answers": [
             "en": "Grounded legal answers",
-            "hi": "Grounded legal answers",
-            "bn": "Grounded legal answers",
-            "ta": "Grounded legal answers",
-            "te": "Grounded legal answers"
+            "hi": "Grounded legal answers मोड",
+            "bn": "Grounded legal answers মোড",
+            "ta": "Grounded legal answers முறை",
+            "te": "Grounded legal answers మోడ్"
         ],
         "answer_style_detail": [
             "en": "Ross uses conservative defaults for legal Q&A so answers stay concise and tied to your files.",
@@ -2774,31 +2774,31 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "creativity": [
             "en": "Creativity",
-            "hi": "Creativity",
-            "bn": "Creativity",
-            "ta": "Creativity",
-            "te": "Creativity"
+            "hi": "रचनात्मकता",
+            "bn": "সৃজনশীলতা",
+            "ta": "படைப்பாற்றல்",
+            "te": "సృజనాత్మకత"
         ],
         "focus": [
             "en": "Focus",
-            "hi": "Focus",
-            "bn": "Focus",
-            "ta": "Focus",
-            "te": "Focus"
+            "hi": "ध्यान",
+            "bn": "মনোযোগ",
+            "ta": "கவனம்",
+            "te": "దృష్టి"
         ],
         "repetition_control": [
             "en": "Repetition control",
-            "hi": "Repetition control",
-            "bn": "Repetition control",
-            "ta": "Repetition control",
-            "te": "Repetition control"
+            "hi": "Repetition control सेटिंग",
+            "bn": "Repetition control সেটিং",
+            "ta": "Repetition control அமைப்பு",
+            "te": "Repetition control సెట్టింగ్"
         ],
         "candidate_limit": [
             "en": "Candidate limit",
-            "hi": "Candidate limit",
-            "bn": "Candidate limit",
-            "ta": "Candidate limit",
-            "te": "Candidate limit"
+            "hi": "Candidate limit सीमा",
+            "bn": "Candidate limit সীমা",
+            "ta": "Candidate limit வரம்பு",
+            "te": "Candidate limit పరిమితి"
         ],
         "restore_recommended_style": [
             "en": "Restore recommended style",
@@ -2809,10 +2809,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "advanced_tuning": [
             "en": "Advanced tuning",
-            "hi": "Advanced tuning",
-            "bn": "Advanced tuning",
-            "ta": "Advanced tuning",
-            "te": "Advanced tuning"
+            "hi": "Advanced tuning सेटिंग",
+            "bn": "Advanced tuning সেটিং",
+            "ta": "Advanced tuning அமைப்பு",
+            "te": "Advanced tuning సెట్టింగ్"
         ],
         "settings_advanced": [
             "en": "Advanced",
@@ -2824,7 +2824,7 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         "settings_support_details": [
             "en": "Support details",
             "hi": "Support विवरण",
-            "bn": "Support details",
+            "bn": "Support বিবরণ",
             "ta": "Support விவரங்கள்",
             "te": "Support వివరాలు"
         ],
@@ -2872,31 +2872,31 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "ross_summary": [
             "en": "Ross Summary",
-            "hi": "Ross Summary",
-            "bn": "Ross Summary",
-            "ta": "Ross Summary",
-            "te": "Ross Summary"
+            "hi": "Ross Summary रिपोर्ट",
+            "bn": "Ross Summary রিপোর্ট",
+            "ta": "Ross Summary அறிக்கை",
+            "te": "Ross Summary నివేదిక"
         ],
         "case_number": [
             "en": "Case number",
-            "hi": "Case number",
-            "bn": "Case number",
-            "ta": "Case number",
-            "te": "Case number"
+            "hi": "Case number विवरण",
+            "bn": "Case number বিবরণ",
+            "ta": "Case number விவரம்",
+            "te": "Case number వివరాలు"
         ],
         "parties": [
             "en": "Parties",
-            "hi": "Parties",
-            "bn": "Parties",
-            "ta": "Parties",
-            "te": "Parties"
+            "hi": "Parties सूची",
+            "bn": "Parties তালিকা",
+            "ta": "Parties பட்டியல்",
+            "te": "Parties జాబితా"
         ],
         "next_hearing_deadline": [
             "en": "Next hearing/deadline",
-            "hi": "Next hearing/deadline",
-            "bn": "Next hearing/deadline",
-            "ta": "Next hearing/deadline",
-            "te": "Next hearing/deadline"
+            "hi": "Next hearing/deadline विवरण",
+            "bn": "Next hearing/deadline বিবরণ",
+            "ta": "Next hearing/deadline விவரம்",
+            "te": "Next hearing/deadline వివరాలు"
         ],
         "needs_review_detail": [
             "en": "Accept, edit, or dismiss facts before Ross relies on them.",
@@ -5175,17 +5175,17 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "upcoming_dates_and_urgent_tasks": [
             "en": "Upcoming dates and urgent tasks",
-            "hi": "Upcoming dates और urgent tasks",
-            "bn": "Upcoming dates এবং urgent tasks",
-            "ta": "Upcoming dates மற்றும் urgent tasks",
-            "te": "Upcoming dates మరియు urgent tasks"
+            "hi": "आने वाली dates और urgent tasks",
+            "bn": "আসন্ন dates এবং urgent tasks",
+            "ta": "வரவிருக்கும் dates மற்றும் urgent tasks",
+            "te": "రాబోయే dates మరియు urgent tasks"
         ],
         "work": [
             "en": "Work",
-            "hi": "Work",
-            "bn": "Work",
-            "ta": "Work",
-            "te": "Work"
+            "hi": "काम",
+            "bn": "কাজ",
+            "ta": "பணி",
+            "te": "పని"
         ],
         "prepared_work_inbox": [
             "en": "Prepared work inbox",
@@ -5301,10 +5301,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "latest_summary": [
             "en": "Latest summary",
-            "hi": "Latest summary",
-            "bn": "Latest summary",
-            "ta": "Latest summary",
-            "te": "Latest summary"
+            "hi": "Latest summary रिपोर्ट",
+            "bn": "Latest summary রিপোর্ট",
+            "ta": "Latest summary அறிக்கை",
+            "te": "Latest summary నివేదిక"
         ],
         "next_hearing_date": [
             "en": "Next hearing: %@",
@@ -5637,10 +5637,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "verified": [
             "en": "Verified",
-            "hi": "Verified",
-            "bn": "Verified",
-            "ta": "Verified",
-            "te": "Verified"
+            "hi": "Verified है",
+            "bn": "Verified হয়েছে",
+            "ta": "Verified ஆனது",
+            "te": "Verified అయింది"
         ],
         "verified_from_file": [
             "en": "Verified from the file",
@@ -6127,10 +6127,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "save": [
             "en": "Save",
-            "hi": "Save",
-            "bn": "Save",
-            "ta": "Save",
-            "te": "Save"
+            "hi": "Save करें",
+            "bn": "Save করুন",
+            "ta": "Save செய்யவும்",
+            "te": "Save చేయండి"
         ],
         "rename_matter_detail": [
             "en": "Update the matter name on this device.",
@@ -6148,10 +6148,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "delete": [
             "en": "Delete",
-            "hi": "Delete",
-            "bn": "Delete",
-            "ta": "Delete",
-            "te": "Delete"
+            "hi": "Delete करें",
+            "bn": "Delete করুন",
+            "ta": "Delete செய்யவும்",
+            "te": "Delete చేయండి"
         ],
         "delete_matter_detail": [
             "en": "Deleting %@ removes its files, tasks, chat context, and saved reports from this device.",

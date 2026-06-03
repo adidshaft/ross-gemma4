@@ -186,8 +186,8 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(entries[10].lawyerTitle, "Private assistant चुना गया")
         XCTAssertTrue(entries[10].lawyerDetail.contains("इस iPhone वाला private assistant चालू किया"), entries[10].lawyerDetail)
         XCTAssertTrue(entries[11].lawyerDetail.contains("कोई case file पढ़ी या भेजी नहीं गई"), entries[11].lawyerDetail)
-        XCTAssertEqual(entries[0].lawyerPurposeLabel, "Private assistant setup")
-        XCTAssertEqual(entries[2].lawyerPurposeLabel, "Private assistant setup")
+        XCTAssertEqual(entries[0].lawyerPurposeLabel, "Private assistant setup कार्य")
+        XCTAssertEqual(entries[2].lawyerPurposeLabel, "Private assistant setup कार्य")
         XCTAssertEqual(
             AlphaPrivacyLedgerEntry(
                 title: "Public-law query sent",
@@ -1111,6 +1111,15 @@ final class AlphaExtractionTests: XCTestCase {
             "assistant_update_title",
             "assistant_storage_title",
             "assistant_verified_storage_label",
+            "answer_style",
+            "current_style",
+            "grounded_legal_answers",
+            "creativity",
+            "focus",
+            "repetition_control",
+            "candidate_limit",
+            "advanced_tuning",
+            "settings_support_details",
             "privacy_summary",
             "assistant_check",
             "assistant_status_ready_title",
@@ -1424,7 +1433,7 @@ final class AlphaExtractionTests: XCTestCase {
         rossSaveLanguageSelection(code: "hi")
         XCTAssertEqual(
             alphaConfidenceLabel(confidence: 0.92, needsReview: false),
-            "Verified"
+            "Verified है"
         )
         XCTAssertEqual(
             AlphaLocalModelWarningCopy.assistantSetupMissing,
@@ -3941,6 +3950,10 @@ final class AlphaExtractionTests: XCTestCase {
             "document_type_fictional_game_material",
             "document_type_unknown",
             "document_script_detected",
+            "ross_summary",
+            "case_number",
+            "parties",
+            "next_hearing_deadline",
             "extracted_text",
             "ignore",
             "threads",
@@ -4011,6 +4024,14 @@ final class AlphaExtractionTests: XCTestCase {
             "drafts",
             "notes",
             "source_backed",
+            "upcoming_dates_and_urgent_tasks",
+            "work",
+            "latest_summary",
+            "verified",
+            "save",
+            "delete",
+            "privacy_ledger_assistant_update_available_title",
+            "privacy_ledger_purpose_assistant_setup",
             "prepared_work_type_suggested_tasks",
             "prepared_work_type_chronology_ready",
             "prepared_work_type_case_note_ready",
