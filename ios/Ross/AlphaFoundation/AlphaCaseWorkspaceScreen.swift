@@ -450,11 +450,11 @@ struct AlphaMatterAttentionCard: View {
                         .font(.caption.weight(.bold))
                         .foregroundStyle(Color.rossInk.opacity(0.48))
                 } else {
-                    Button(isRefreshing ? rossLocalized("refreshing") : rossLocalized("refresh"), action: onRefresh)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.rossAccent)
-                        .buttonStyle(.plain)
-                        .disabled(isRefreshing)
+                    AlphaWorkspaceRefreshButton(
+                        title: isRefreshing ? rossLocalized("refreshing") : rossLocalized("refresh"),
+                        isDisabled: isRefreshing,
+                        action: onRefresh
+                    )
                 }
             }
             .contentShape(Rectangle())
@@ -530,6 +530,28 @@ struct AlphaMatterAttentionCard: View {
             fillOpacity: 0.82,
             strokeOpacity: 0.46
         )
+    }
+}
+
+private struct AlphaWorkspaceRefreshButton: View {
+    let title: String
+    let isDisabled: Bool
+    let action: () -> Void
+
+    var body: some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            Button(title, action: action)
+                .font(.caption.weight(.semibold))
+                .buttonStyle(.glass)
+                .tint(Color.rossAccent)
+                .disabled(isDisabled)
+        } else {
+            Button(title, action: action)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.rossAccent)
+                .buttonStyle(.plain)
+                .disabled(isDisabled)
+        }
     }
 }
 
