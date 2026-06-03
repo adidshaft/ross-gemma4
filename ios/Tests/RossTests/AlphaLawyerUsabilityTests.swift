@@ -3714,7 +3714,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             let routineRun = await MainActor.run { seededModel.persisted.routineRuns?.first }
             XCTAssertTrue(routineRun?.summary.contains("local रूप से update") == true)
             let ledgerEntry = await MainActor.run { seededModel.persisted.ledgerEntries.first }
-            XCTAssertEqual(ledgerEntry?.title, "Morning brief local रूप से चला")
+            XCTAssertEqual(ledgerEntry?.title, "सुबह brief local रूप से चला")
             XCTAssertTrue(ledgerEntry?.detail.contains("saved matters") == true)
         }
     }

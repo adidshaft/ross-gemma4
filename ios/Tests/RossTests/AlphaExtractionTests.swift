@@ -1617,7 +1617,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
         XCTAssertEqual(
             rossLocalized("source_backed", languageCode: "bn"),
-            "source-backed"
+            "source-backed নিশ্চিত"
         )
         XCTAssertEqual(
             rossLocalized("prepared_work_status_new", languageCode: "te-IN"),
@@ -3999,7 +3999,18 @@ final class AlphaExtractionTests: XCTestCase {
             "legal_search_canceled_title",
             "private_assistant",
             "ask_assistant_setup_title",
+            "activity_log",
+            "theme",
+            "ross_routines",
+            "morning_brief",
+            "missing_facts_scan",
+            "draft_refresh",
+            "public_law_search",
+            "storage",
             "case_files",
+            "drafts",
+            "notes",
+            "source_backed",
             "prepared_work_type_suggested_tasks",
             "prepared_work_type_chronology_ready",
             "prepared_work_type_case_note_ready",
@@ -4102,7 +4113,15 @@ final class AlphaExtractionTests: XCTestCase {
             "ask_source_pack_date_on",
             "ask_source_pack_confirmed_details_from",
             "ask_instruction_scope",
-            "ask_instruction_tagged_files"
+            "ask_instruction_tagged_files",
+            "public_law_privacy_reason_matter_scoped_wording",
+            "public_law_privacy_reason_email_addresses",
+            "public_law_privacy_reason_phone_numbers",
+            "public_law_privacy_reason_file_names",
+            "public_law_privacy_reason_exact_private_dates",
+            "public_law_privacy_reason_long_factual_narrative",
+            "public_law_privacy_reason_private_case_details",
+            "public_law_privacy_reason_general_drafting_phrasing"
         ]
 
         for key in labelsThatShouldBeLocalized {

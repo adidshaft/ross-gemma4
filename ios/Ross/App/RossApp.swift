@@ -4797,10 +4797,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "activity_log": [
             "en": "Activity Log",
-            "hi": "Activity Log",
-            "bn": "Activity Log",
-            "ta": "Activity Log",
-            "te": "Activity Log"
+            "hi": "गतिविधि Log",
+            "bn": "কার্যকলাপ Log",
+            "ta": "செயல்பாட்டு Log",
+            "te": "కార్యకలాప Log"
         ],
         "activity_log_detail": [
             "en": "Local work and Legal Search, separated.",
@@ -4818,10 +4818,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "theme": [
             "en": "Theme",
-            "hi": "Theme",
-            "bn": "Theme",
-            "ta": "Theme",
-            "te": "Theme"
+            "hi": "थीम",
+            "bn": "থিম",
+            "ta": "தீம்",
+            "te": "థీమ్"
         ],
         "open_my_assistant": [
             "en": "Open My assistant",
@@ -4839,10 +4839,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "ross_routines": [
             "en": "Ross Routines",
-            "hi": "Ross Routines",
-            "bn": "Ross Routines",
-            "ta": "Ross Routines",
-            "te": "Ross Routines"
+            "hi": "Ross routines",
+            "bn": "Ross routines",
+            "ta": "Ross routines",
+            "te": "Ross routines"
         ],
         "ross_routines_detail": [
             "en": "Routines run locally from saved matters, files, dates, tasks, drafts, and accepted corrections.",
@@ -4853,10 +4853,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "morning_brief": [
             "en": "Morning brief",
-            "hi": "Morning brief",
-            "bn": "Morning brief",
-            "ta": "Morning brief",
-            "te": "Morning brief"
+            "hi": "सुबह brief",
+            "bn": "সকালের brief",
+            "ta": "காலை brief",
+            "te": "ఉదయం brief"
         ],
         "morning_brief_detail": [
             "en": "On app open, once per day.",
@@ -4895,10 +4895,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "missing_facts_scan": [
             "en": "Missing facts scan",
-            "hi": "Missing facts scan",
-            "bn": "Missing facts scan",
-            "ta": "Missing facts scan",
-            "te": "Missing facts scan"
+            "hi": "Missing facts जांच",
+            "bn": "Missing facts খোঁজা",
+            "ta": "Missing facts சரிபார்ப்பு",
+            "te": "Missing facts తనిఖీ"
         ],
         "missing_facts_scan_detail": [
             "en": "Find gaps and weak support in source-backed matter memory.",
@@ -4909,10 +4909,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "draft_refresh": [
             "en": "Draft refresh",
-            "hi": "Draft refresh",
-            "bn": "Draft refresh",
-            "ta": "Draft refresh",
-            "te": "Draft refresh"
+            "hi": "Draft update",
+            "bn": "Draft update",
+            "ta": "Draft update",
+            "te": "Draft update"
         ],
         "draft_refresh_detail": [
             "en": "Refresh local drafts from latest files and corrections.",
@@ -4923,10 +4923,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "public_law_search": [
             "en": "Public-law search",
-            "hi": "Public-law search",
-            "bn": "Public-law search",
-            "ta": "Public-law search",
-            "te": "Public-law search"
+            "hi": "Public-law खोज",
+            "bn": "Public-law খোঁজ",
+            "ta": "Public-law தேடல்",
+            "te": "Public-law శోధన"
         ],
         "approval_required": [
             "en": "Approval required",
@@ -4944,10 +4944,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "storage": [
             "en": "Storage",
-            "hi": "Storage",
-            "bn": "Storage",
-            "ta": "Storage",
-            "te": "Storage"
+            "hi": "Storage जगह",
+            "bn": "Storage জায়গা",
+            "ta": "Storage இடம்",
+            "te": "Storage స్థలం"
         ],
         "case_files": [
             "en": "Case files",
@@ -4958,17 +4958,17 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "drafts": [
             "en": "Drafts",
-            "hi": "Drafts",
-            "bn": "Drafts",
-            "ta": "Drafts",
-            "te": "Drafts"
+            "hi": "Drafts सूची",
+            "bn": "Drafts তালিকা",
+            "ta": "Drafts பட்டியல்",
+            "te": "Drafts జాబితా"
         ],
         "notes": [
             "en": "Notes",
-            "hi": "Notes",
-            "bn": "Notes",
-            "ta": "Notes",
-            "te": "Notes"
+            "hi": "Notes सूची",
+            "bn": "Notes তালিকা",
+            "ta": "Notes பட்டியல்",
+            "te": "Notes జాబితా"
         ],
         "snooze_by_one_day": [
             "en": "Snooze by 1 day",
@@ -4993,10 +4993,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "source_backed": [
             "en": "Source-backed",
-            "hi": "source-backed",
-            "bn": "source-backed",
-            "ta": "source-backed",
-            "te": "source-backed"
+            "hi": "source-backed प्रमाणित",
+            "bn": "source-backed নিশ্চিত",
+            "ta": "source-backed உறுதி",
+            "te": "source-backed నిర్ధారితం"
         ],
         "prepared_work_type_document_reviewed": [
             "en": "Document reviewed",
@@ -7065,10 +7065,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "public_law_privacy_reason_matter_scoped_wording": [
             "en": "Matter-scoped wording",
-            "hi": "Matter-scoped wording",
-            "bn": "Matter-scoped wording",
-            "ta": "Matter-scoped wording",
-            "te": "Matter-scoped wording"
+            "hi": "Matter-scoped wording मिला",
+            "bn": "Matter-scoped wording পাওয়া গেছে",
+            "ta": "Matter-scoped wording கண்டறியப்பட்டது",
+            "te": "Matter-scoped wording కనబడింది"
         ],
         "public_law_privacy_reason_case_numbers_or_filing_references": [
             "en": "Case numbers or filing references",
@@ -7079,17 +7079,17 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "public_law_privacy_reason_email_addresses": [
             "en": "Email addresses",
-            "hi": "Email addresses",
-            "bn": "Email addresses",
-            "ta": "Email addresses",
-            "te": "Email addresses"
+            "hi": "Email addresses मिले",
+            "bn": "Email addresses পাওয়া গেছে",
+            "ta": "Email addresses கண்டறியப்பட்டது",
+            "te": "Email addresses కనబడ్డాయి"
         ],
         "public_law_privacy_reason_phone_numbers": [
             "en": "Phone numbers",
-            "hi": "Phone numbers",
-            "bn": "Phone numbers",
-            "ta": "Phone numbers",
-            "te": "Phone numbers"
+            "hi": "Phone numbers मिले",
+            "bn": "Phone numbers পাওয়া গেছে",
+            "ta": "Phone numbers கண்டறியப்பட்டது",
+            "te": "Phone numbers కనబడ్డాయి"
         ],
         "public_law_privacy_reason_phone_numbers_or_long_numeric_strings": [
             "en": "Phone numbers or long numeric strings",
@@ -7100,17 +7100,17 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "public_law_privacy_reason_file_names": [
             "en": "File names",
-            "hi": "File names",
-            "bn": "File names",
-            "ta": "File names",
-            "te": "File names"
+            "hi": "File names मिले",
+            "bn": "File names পাওয়া গেছে",
+            "ta": "File names கண்டறியப்பட்டது",
+            "te": "File names కనబడ్డాయి"
         ],
         "public_law_privacy_reason_exact_private_dates": [
             "en": "Exact private dates",
-            "hi": "Exact private dates",
-            "bn": "Exact private dates",
-            "ta": "Exact private dates",
-            "te": "Exact private dates"
+            "hi": "Exact private dates मिलीं",
+            "bn": "Exact private dates পাওয়া গেছে",
+            "ta": "Exact private dates கண்டறியப்பட்டது",
+            "te": "Exact private dates కనబడ్డాయి"
         ],
         "public_law_privacy_reason_fake_secrets_and_private_facts": [
             "en": "Fake secrets and private facts",
@@ -7142,24 +7142,24 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "public_law_privacy_reason_long_factual_narrative": [
             "en": "Long factual narrative",
-            "hi": "Long factual narrative",
-            "bn": "Long factual narrative",
-            "ta": "Long factual narrative",
-            "te": "Long factual narrative"
+            "hi": "Long factual narrative मिला",
+            "bn": "Long factual narrative পাওয়া গেছে",
+            "ta": "Long factual narrative கண்டறியப்பட்டது",
+            "te": "Long factual narrative కనబడింది"
         ],
         "public_law_privacy_reason_private_case_details": [
             "en": "Private case details",
-            "hi": "Private case details",
-            "bn": "Private case details",
-            "ta": "Private case details",
-            "te": "Private case details"
+            "hi": "Private case details मिले",
+            "bn": "Private case details পাওয়া গেছে",
+            "ta": "Private case details கண்டறியப்பட்டது",
+            "te": "Private case details కనబడ్డాయి"
         ],
         "public_law_privacy_reason_general_drafting_phrasing": [
             "en": "General drafting phrasing",
-            "hi": "General drafting phrasing",
-            "bn": "General drafting phrasing",
-            "ta": "General drafting phrasing",
-            "te": "General drafting phrasing"
+            "hi": "General drafting phrasing मिली",
+            "bn": "General drafting phrasing পাওয়া গেছে",
+            "ta": "General drafting phrasing கண்டறியப்பட்டது",
+            "te": "General drafting phrasing కనబడింది"
         ],
         "ask_local_matter_state_reviewed": [
             "en": "Ross reviewed saved local matter state and updated prepared work.",
