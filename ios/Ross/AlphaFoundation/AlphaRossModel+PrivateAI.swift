@@ -17,6 +17,10 @@ var alphaAssistantExistingSetupRepairDetail: String {
     rossLocalized("assistant_existing_setup_repair_detail")
 }
 
+func alphaPrivateAIDocumentContextLine(_ document: AlphaCaseDocument, languageCode: String = rossSelectedLanguageCode()) -> String {
+    "- \(document.title) (\(alphaPageCountLabel(document.pageCount, languageCode: languageCode)), \(document.ocrStatus.title))"
+}
+
 private extension String {
     func ifEmpty(_ fallback: String) -> String {
         isEmpty ? fallback : self
@@ -1163,7 +1167,7 @@ extension AlphaRossModel {
         let pendingFields = allFields.filter(\.needsReview)
         let unresolvedFindings = documents.flatMap(\.extractionFindings).filter { !$0.resolved }
         let refs = caseMatter.sourceRefs.prefix(8).map { "- \($0.label): \($0.detail)" }
-        let documentLines = documents.map { "- \($0.title) (\($0.pageCount) pages, \($0.ocrStatus.title))" }
+        let documentLines = documents.map { alphaPrivateAIDocumentContextLine($0) }
         let missingSourceLabel = rossLocalized("no_linked_source_yet")
         let missingSourceLine = "- \(missingSourceLabel)"
 
@@ -1211,6 +1215,11 @@ extension AlphaRossModel {
             let parties = uniqueValues(for: .partyName, in: verifiedFields).joined(separator: " | ").ifEmpty(missingValue)
             let dateLines = sourcedValues(for: .date, in: verifiedFields)
             let pendingLines = pendingFields.map { "- \($0.label): \($0.value)" }
+            let metadataLines = [
+                "\(rossLocalized("export_court")): \(court)",
+                "\(rossLocalized("export_case_number")): \(caseNumbers)",
+                "\(rossLocalized("export_parties")): \(parties)"
+            ]
 
             return [
                 title,
@@ -1218,9 +1227,7 @@ extension AlphaRossModel {
                 draftReviewLine,
                 "",
                 rossLocalized("export_case_metadata"),
-                "\(rossLocalized("export_court")): \(court)",
-                "\(rossLocalized("export_case_number")): \(caseNumbers)",
-                "\(rossLocalized("export_parties")): \(parties)",
+            ] + metadataLines + [
                 "",
                 rossLocalized("export_document_list"),
             ] + (documentLines.isEmpty ? [rossLocalized("export_no_imported_documents")] : documentLines) + [

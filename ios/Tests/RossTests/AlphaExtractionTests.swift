@@ -1447,6 +1447,23 @@ final class AlphaExtractionTests: XCTestCase {
             alphaPageCountLabel(4, languageCode: "ta"),
             "4 pages"
         )
+        let contextDocument = AlphaCaseDocument(
+            id: UUID(),
+            title: "Order",
+            fileName: "order.pdf",
+            kind: .pdf,
+            storedRelativePath: "documents/order.pdf",
+            importedAt: Date(timeIntervalSince1970: 1_700_000_000),
+            pageCount: 4,
+            ocrStatus: .ocrComplete,
+            pages: [],
+            extractedFields: [],
+            extractionFindings: []
+        )
+        XCTAssertEqual(
+            alphaPrivateAIDocumentContextLine(contextDocument, languageCode: "ta"),
+            "- Order (4 pages, வாசித்தது)"
+        )
         XCTAssertEqual(
             rossLocalized("sample_badge", languageCode: "bn"),
             "Sample"
