@@ -380,15 +380,26 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
     }
 
     var setupTimeLabel: String {
+        setupTimeLabel(languageCode: rossSelectedLanguageCode())
+    }
+
+    func setupTimeLabel(languageCode: String) -> String {
+        String(
+            format: rossLocalized("assistant_setup_time_about_minutes", languageCode: languageCode),
+            setupTimeMinutes
+        )
+    }
+
+    private var setupTimeMinutes: Int {
         switch self {
         case .flash:
-            "about 2 min"
+            2
         case .quickStart:
-            "about 2 min"
+            2
         case .caseAssociate:
-            "about 4 min"
+            4
         case .seniorDraftingSupport:
-            "about 7 min"
+            7
         }
     }
 

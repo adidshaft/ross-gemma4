@@ -900,6 +900,14 @@ final class AlphaExtractionTests: XCTestCase {
             "పెద్ద bundles, లోతైన review, hearing preparation, మరింత detailed drafting support కోసం."
         )
         XCTAssertEqual(
+            AlphaCapabilityTier.flash.setupTimeLabel(languageCode: "hi"),
+            "लगभग 2 मिनट"
+        )
+        XCTAssertEqual(
+            AlphaCapabilityTier.caseAssociate.setupTimeLabel(languageCode: "ta"),
+            "சுமார் 4 நிமிடம்"
+        )
+        XCTAssertEqual(
             AlphaCapabilityTier.quickStart.summary(languageCode: "bn"),
             "ছোট আদেশ, নোটিস এবং হালকা নথি পর্যালোচনা।"
         )

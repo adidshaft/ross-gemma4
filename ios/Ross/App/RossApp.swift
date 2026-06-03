@@ -630,6 +630,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "தொடங்குவதற்கு முன் சுமார் %@ பதிவிறக்கவும். வலுவான Wi-Fi பயன்படுத்தி இந்த தொலைபேசியில் போதுமான காலி இடம் உள்ளதா பார்க்கவும்.",
             "te": "ప్రారంభించే ముందు సుమారు %@ డౌన్‌లోడ్ చేయండి. బలమైన Wi-Fi ఉపయోగించి ఈ ఫోన్‌లో చాలినంత ఖాళీ స్థలం ఉందో చూడండి."
         ],
+        "assistant_setup_time_about_minutes": [
+            "en": "about %d min",
+            "hi": "लगभग %d मिनट",
+            "bn": "প্রায় %d মিনিট",
+            "ta": "சுமார் %d நிமிடம்",
+            "te": "సుమారు %d నిమిషాలు"
+        ],
         "assistant": [
             "en": "Assistant",
             "hi": "सहायक",
