@@ -1408,7 +1408,7 @@ struct AlphaDocumentInspectCard: View {
                 }
                 .tint(Color.rossAccent)
                 .padding(12)
-                .rossGlassSurface(cornerRadius: 16, interactive: true, shadowOpacity: 0.04, shadowRadius: 4, shadowY: 1, strokeOpacity: 0.44)
+                .modifier(AlphaDocumentInspectDisclosureSurface())
 
                 DisclosureGroup(isExpanded: $rawTextExpanded) {
                     ScrollView {
@@ -1440,8 +1440,25 @@ struct AlphaDocumentInspectCard: View {
                 }
                 .tint(Color.rossAccent)
                 .padding(12)
-                .rossGlassSurface(cornerRadius: 16, interactive: true, shadowOpacity: 0.04, shadowRadius: 4, shadowY: 1, strokeOpacity: 0.44)
+                .modifier(AlphaDocumentInspectDisclosureSurface())
             }
+        }
+    }
+}
+
+private struct AlphaDocumentInspectDisclosureSurface: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            content
+                .glassEffect(
+                    .regular
+                        .tint(Color.rossAccent.opacity(0.10))
+                        .interactive(),
+                    in: .rect(cornerRadius: 16)
+                )
+        } else {
+            content
+                .rossGlassSurface(cornerRadius: 16, interactive: true, shadowOpacity: 0.04, shadowRadius: 4, shadowY: 1, strokeOpacity: 0.44)
         }
     }
 }
