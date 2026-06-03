@@ -79,15 +79,13 @@ struct AlphaPrivateAISettingsScreen: View {
     @State private var downloadPreferencesExpanded = false
 
     private var visibleSetupJobs: [AlphaModelDownloadJob] {
-        let activeTier = model.activePack?.tier
-        let activeRuntimeReady = model.activeRuntimeHealth?.available == true
         return model.persisted.modelJobs.filter { job in
             switch job.state {
-            case .queued, .downloading, .pausedWaitingForWifi, .verifying:
+            case .queued, .downloading, .pausedWaitingForWifi, .pausedUser, .verifying:
                 return true
-            case .pausedUser, .pausedNoStorage, .pausedError, .failed:
-                return !activeRuntimeReady || job.tier == activeTier
             case .notStarted, .installed, .cancelled:
+                return false
+            case .pausedNoStorage, .pausedError, .failed:
                 return false
             }
         }

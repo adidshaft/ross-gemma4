@@ -1588,14 +1588,13 @@ struct AlphaAssistantDownloadPreflight: Hashable, Sendable {
             throw AlphaAssistantDownloadError.preflightNotResumable
         }
 
-        let checksum = [headers["x-linked-etag"], headers["etag"], headers["x-xet-hash"]]
-            .compactMap { $0?.trimmingCharacters(in: CharacterSet(charactersIn: "\"")) }
-            .first(where: alphaLooksLikeSHA256Hex)
+        let checksum = headers["x-linked-etag"]?
+            .trimmingCharacters(in: CharacterSet(charactersIn: "\""))
 
         return AlphaAssistantDownloadPreflight(
             reportedBytes: reportedBytes,
             acceptsRanges: acceptRanges,
-            providerChecksumSha256: checksum?.lowercased()
+            providerChecksumSha256: checksum.flatMap { alphaLooksLikeSHA256Hex($0) ? $0.lowercased() : nil }
         )
     }
 }

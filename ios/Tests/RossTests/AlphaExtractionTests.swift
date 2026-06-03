@@ -3318,8 +3318,8 @@ final class AlphaExtractionTests: XCTestCase {
         }
     }
 
-    func testAssistantDownloadPreflightRejectsProviderChecksumMismatchBeforeDownload() throws {
-        let providerChecksum = String(repeating: "a", count: 64)
+    func testAssistantDownloadPreflightIgnoresRedirectStorageHashesBeforeDownload() throws {
+        let storageHash = String(repeating: "a", count: 64)
         let catalogChecksum = String(repeating: "b", count: 64)
         let response = try XCTUnwrap(HTTPURLResponse(
             url: URL(string: "https://huggingface.co/model.gguf")!,
@@ -3328,7 +3328,30 @@ final class AlphaExtractionTests: XCTestCase {
             headerFields: [
                 "Content-Length": "3020052224",
                 "Accept-Ranges": "bytes",
-                "X-Xet-Hash": providerChecksum
+                "ETag": "\"\(storageHash)\"",
+                "X-Xet-Hash": storageHash
+            ]
+        ))
+        let preflight = try AlphaAssistantDownloadPreflight.parse(
+            response: response,
+            expectedBytes: 3_020_052_224
+        )
+
+        XCTAssertNil(preflight.providerChecksumSha256)
+        XCTAssertEqual(try preflight.expectedChecksum(catalogChecksum: catalogChecksum), catalogChecksum)
+    }
+
+    func testAssistantDownloadPreflightRejectsLinkedChecksumMismatchBeforeDownload() throws {
+        let providerChecksum = String(repeating: "a", count: 64)
+        let catalogChecksum = String(repeating: "b", count: 64)
+        let response = try XCTUnwrap(HTTPURLResponse(
+            url: URL(string: "https://huggingface.co/model.gguf")!,
+            statusCode: 200,
+            httpVersion: nil,
+            headerFields: [
+                "X-Linked-Size": "3020052224",
+                "Accept-Ranges": "bytes",
+                "X-Linked-ETag": providerChecksum
             ]
         ))
         let preflight = try AlphaAssistantDownloadPreflight.parse(

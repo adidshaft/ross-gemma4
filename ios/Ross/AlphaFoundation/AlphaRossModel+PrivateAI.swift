@@ -643,6 +643,7 @@ extension AlphaRossModel {
         } onCancel: {
             taskBox.progressTask?.cancel()
             taskBox.task?.cancel()
+            AlphaBackgroundModelDownloadCenter.shared.cancel(jobID: jobID) { _ in }
             _ = alphaSweepTemporaryAssistantDownloads()
         }
     }
