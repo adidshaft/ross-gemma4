@@ -4270,6 +4270,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "%@ என்ற பெயரில் வழக்கை உருவாக்கி shared files-ஐ import செய்கிறது.",
             "te": "%@ పేరుతో కేసు సృష్టించి shared files ను import చేస్తుంది."
         ],
+        "imported_shared_files_matter_forum": [
+            "en": "Matter files",
+            "hi": "Matter files",
+            "bn": "Matter files",
+            "ta": "Matter files",
+            "te": "Matter files"
+        ],
+        "imported_shared_files_matter_summary": [
+            "en": "Ross created this matter from shared local files.",
+            "hi": "Ross ने यह matter shared local files से बनाया.",
+            "bn": "Ross shared local files থেকে এই matter তৈরি করেছে.",
+            "ta": "Ross shared local files-இலிருந்து இந்த matter-ஐ உருவாக்கியது.",
+            "te": "Ross shared local files నుండి ఈ matter ను సృష్టించింది."
+        ],
+        "review_imported_files_task_title": [
+            "en": "Review imported files",
+            "hi": "Imported files review करें",
+            "bn": "Imported files review করুন",
+            "ta": "Imported files review செய்யவும்",
+            "te": "Imported files review చేయండి"
+        ],
         "shared_files": [
             "en": "Shared files",
             "hi": "साझा फ़ाइलें",
@@ -7153,6 +7174,34 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "bn": "সাধারণ files",
             "ta": "பொது files",
             "te": "సాధారణ files"
+        ],
+        "shared_workspace_forum": [
+            "en": "Available across matters",
+            "hi": "सभी matters में available",
+            "bn": "সব matter-এ available",
+            "ta": "அனைத்து matters-இலும் available",
+            "te": "అన్ని matters లో available"
+        ],
+        "shared_workspace_summary": [
+            "en": "Files placed here stay available anywhere on this device.",
+            "hi": "यहाँ रखी files इस device पर हर जगह available रहती हैं.",
+            "bn": "এখানে রাখা files এই device-এ সব জায়গায় available থাকে.",
+            "ta": "இங்கே வைக்கப்பட்ட files இந்த device-இல் எங்கும் available ஆக இருக்கும்.",
+            "te": "ఇక్కడ ఉంచిన files ఈ device లో ఎక్కడైనా available గా ఉంటాయి."
+        ],
+        "shared_workspace_issue_highlight": [
+            "en": "Use shared files when a document should support more than one matter.",
+            "hi": "जब document एक से ज़्यादा matter support करे, shared files use करें.",
+            "bn": "একটি document একাধিক matter support করলে shared files use করুন.",
+            "ta": "ஒரு document ஒன்றுக்கு மேற்பட்ட matter-ஐ support செய்தால் shared files use செய்யவும்.",
+            "te": "ఒక document ఒకటి కంటే ఎక్కువ matter ను support చేస్తే shared files use చేయండి."
+        ],
+        "shared_workspace_evidence_note": [
+            "en": "Ross keeps these files local and ready for device-wide questions.",
+            "hi": "Ross इन files को local और device-wide questions के लिए ready रखता है.",
+            "bn": "Ross এই files local রাখে এবং device-wide questions-এর জন্য ready রাখে.",
+            "ta": "Ross இந்த files-ஐ local ஆகவும் device-wide questions-க்கு ready ஆகவும் வைத்திருக்கும்.",
+            "te": "Ross ఈ files ను local గా మరియు device-wide questions కోసం ready గా ఉంచుతుంది."
         ],
         "ask_new_chat": [
             "en": "New chat",

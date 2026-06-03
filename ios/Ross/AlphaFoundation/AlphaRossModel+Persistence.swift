@@ -1288,13 +1288,13 @@ extension AlphaRossModel {
     func createMatterForQueuedIncomingDocuments(title: String) {
         let cleanedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let matter = AlphaCaseMatter(
-            title: cleanedTitle.isEmpty ? "New matter" : cleanedTitle,
-            forum: "Matter files",
+            title: cleanedTitle.isEmpty ? rossLocalized("new_matter") : cleanedTitle,
+            forum: alphaImportedSharedFilesMatterForum(),
             stage: .intake,
-            summary: "Ross created this matter from shared local files.",
+            summary: alphaImportedSharedFilesMatterSummary(),
             issueHighlights: [],
             evidenceNotes: [],
-            draftTasks: ["Review imported files"],
+            draftTasks: [alphaReviewImportedFilesTaskTitle()],
             documents: [],
             sourceRefs: []
         )
@@ -1668,13 +1668,13 @@ extension AlphaRossModel {
     func sharedWorkspaceMatter() -> AlphaCaseMatter {
         AlphaCaseMatter(
             id: alphaSharedWorkspaceID,
-            title: "General files",
-            forum: "Available across matters",
+            title: alphaSharedWorkspaceTitle(),
+            forum: alphaSharedWorkspaceForum(),
             stage: .intake,
             nextHearing: nil,
-            summary: "Files placed here stay available anywhere on this device.",
-            issueHighlights: ["Use shared files when a document should support more than one matter."],
-            evidenceNotes: ["Ross keeps these files local and ready for device-wide questions."],
+            summary: alphaSharedWorkspaceSummary(),
+            issueHighlights: [alphaSharedWorkspaceIssueHighlight()],
+            evidenceNotes: [alphaSharedWorkspaceEvidenceNote()],
             draftTasks: [],
             documents: [],
             sourceRefs: [],

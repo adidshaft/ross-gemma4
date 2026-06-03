@@ -1898,6 +1898,22 @@ final class AlphaExtractionTests: XCTestCase {
             ])
         )
         XCTAssertEqual(
+            alphaSharedWorkspaceForum(languageCode: "hi"),
+            "सभी matters में available"
+        )
+        XCTAssertEqual(
+            alphaSharedWorkspaceSummary(languageCode: "bn"),
+            "এখানে রাখা files এই device-এ সব জায়গায় available থাকে."
+        )
+        XCTAssertEqual(
+            alphaImportedSharedFilesMatterSummary(languageCode: "ta"),
+            "Ross shared local files-இலிருந்து இந்த matter-ஐ உருவாக்கியது."
+        )
+        XCTAssertEqual(
+            alphaReviewImportedFilesTaskTitle(languageCode: "te-IN"),
+            "Imported files review చేయండి"
+        )
+        XCTAssertEqual(
             rossLocalized("public_law_search_confirmation_note", languageCode: "bn"),
             "Public-law search advocate review-এর পরে শুধু sanitized query পাঠায়."
         )

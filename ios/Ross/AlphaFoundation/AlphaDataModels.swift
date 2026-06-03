@@ -2,6 +2,38 @@ import Foundation
 
 let AlphaCurrentPersistedStateSchemaVersion = 2
 
+func alphaSharedWorkspaceTitle(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("general_files", languageCode: languageCode)
+}
+
+func alphaSharedWorkspaceForum(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("shared_workspace_forum", languageCode: languageCode)
+}
+
+func alphaSharedWorkspaceSummary(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("shared_workspace_summary", languageCode: languageCode)
+}
+
+func alphaSharedWorkspaceIssueHighlight(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("shared_workspace_issue_highlight", languageCode: languageCode)
+}
+
+func alphaSharedWorkspaceEvidenceNote(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("shared_workspace_evidence_note", languageCode: languageCode)
+}
+
+func alphaImportedSharedFilesMatterForum(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("imported_shared_files_matter_forum", languageCode: languageCode)
+}
+
+func alphaImportedSharedFilesMatterSummary(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("imported_shared_files_matter_summary", languageCode: languageCode)
+}
+
+func alphaReviewImportedFilesTaskTitle(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("review_imported_files_task_title", languageCode: languageCode)
+}
+
 enum AlphaOnboardingStage: String, Codable, Hashable, Sendable {
     case onboarding
     // Kept so older saved state can migrate into the simplified onboarding flow.
@@ -2577,17 +2609,17 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
 
         let sharedWorkspace = AlphaCaseMatter(
             id: sharedWorkspaceID,
-            title: "General files",
-            forum: "Available across matters",
+            title: alphaSharedWorkspaceTitle(),
+            forum: alphaSharedWorkspaceForum(),
             stage: .intake,
             nextHearing: nil,
             dates: [],
-            summary: "Files placed here stay available anywhere on this device.",
+            summary: alphaSharedWorkspaceSummary(),
             issueHighlights: [
-                "Use shared files when a document should support more than one matter."
+                alphaSharedWorkspaceIssueHighlight()
             ],
             evidenceNotes: [
-                "Ross keeps these files local and ready for device-wide questions."
+                alphaSharedWorkspaceEvidenceNote()
             ],
             draftTasks: [],
             documents: [],
@@ -2676,17 +2708,17 @@ private extension AlphaPersistedState {
     static func sharedWorkspaceMatter() -> AlphaCaseMatter {
         AlphaCaseMatter(
             id: UUID(uuidString: "0D9E5220-4D3C-4B49-9A67-10B42B593B7D")!,
-            title: "General files",
-            forum: "Available across matters",
+            title: alphaSharedWorkspaceTitle(),
+            forum: alphaSharedWorkspaceForum(),
             stage: .intake,
             nextHearing: nil,
             dates: [],
-            summary: "Files placed here stay available anywhere on this device.",
+            summary: alphaSharedWorkspaceSummary(),
             issueHighlights: [
-                "Use shared files when a document should support more than one matter."
+                alphaSharedWorkspaceIssueHighlight()
             ],
             evidenceNotes: [
-                "Ross keeps these files local and ready for device-wide questions."
+                alphaSharedWorkspaceEvidenceNote()
             ],
             draftTasks: [],
             documents: [],
