@@ -247,10 +247,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "signed_in_as": [
             "en": "Signed in as",
-            "hi": "Signed in as:",
-            "bn": "Signed in as:",
-            "ta": "Signed in as:",
-            "te": "Signed in as:"
+            "hi": "इस रूप में signed in:",
+            "bn": "এই হিসাবে signed in:",
+            "ta": "இந்த கணக்கில் signed in:",
+            "te": "ఈ పేరుతో signed in:"
         ],
         "language": [
             "en": "Language",
@@ -709,17 +709,17 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "canceled": [
             "en": "Canceled",
-            "hi": "Canceled",
-            "bn": "Canceled",
-            "ta": "Canceled",
-            "te": "Canceled"
+            "hi": "रद्द किया गया",
+            "bn": "বাতিল করা হয়েছে",
+            "ta": "ரத்து செய்யப்பட்டது",
+            "te": "రద్దు చేయబడింది"
         ],
         "legal_search_canceled_title": [
             "en": "Legal Search canceled",
-            "hi": "Legal Search canceled",
-            "bn": "Legal Search canceled",
-            "ta": "Legal Search canceled",
-            "te": "Legal Search canceled"
+            "hi": "Legal Search रद्द किया गया",
+            "bn": "Legal Search বাতিল করা হয়েছে",
+            "ta": "Legal Search ரத்து செய்யப்பட்டது",
+            "te": "Legal Search రద్దు చేయబడింది"
         ],
         "legal_search_canceled_detail": [
             "en": "No Legal Search was run. Ask again when you want Ross to use Legal Search.",
@@ -1213,17 +1213,17 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "private_assistant": [
             "en": "Private assistant",
-            "hi": "Private assistant",
-            "bn": "Private assistant",
-            "ta": "Private assistant",
-            "te": "Private assistant"
+            "hi": "Private assistant देखें",
+            "bn": "Private assistant দেখুন",
+            "ta": "Private assistant பார்க்கவும்",
+            "te": "Private assistant చూడండి"
         ],
         "ask_assistant_setup_title": [
             "en": "Private assistant setup",
-            "hi": "Private assistant setup",
-            "bn": "Private assistant setup",
-            "ta": "Private assistant setup",
-            "te": "Private assistant setup"
+            "hi": "Private assistant setup देखें",
+            "bn": "Private assistant setup দেখুন",
+            "ta": "Private assistant setup பார்க்கவும்",
+            "te": "Private assistant setup చూడండి"
         ],
         "ask_assistant_setup_before_detail": [
             "en": "Before setup, Ross can still organize matters, tasks, dates, and files on this device.",
@@ -1465,10 +1465,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "document_import_failed_title": [
             "en": "Document import failed",
-            "hi": "Document import failed",
-            "bn": "Document import failed",
-            "ta": "Document import failed",
-            "te": "Document import failed"
+            "hi": "Document import failed हुआ",
+            "bn": "Document import failed হয়েছে",
+            "ta": "Document import failed ஆனது",
+            "te": "Document import failed అయింది"
         ],
         "document_import_copy_failed_detail": [
             "en": "Ross could not copy the selected file into app-private storage.",
@@ -1479,10 +1479,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "imported_source_reference": [
             "en": "Imported source reference.",
-            "hi": "Imported source reference.",
-            "bn": "Imported source reference.",
-            "ta": "Imported source reference.",
-            "te": "Imported source reference."
+            "hi": "Source reference import हुआ।",
+            "bn": "Source reference import হয়েছে।",
+            "ta": "Source reference import ஆனது.",
+            "te": "Source reference import అయింది."
         ],
         "import_fallback_pdf_unreadable_text": [
             "en": "PDF imported locally. Ross could not read text from this file yet.",

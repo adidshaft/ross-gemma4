@@ -1954,7 +1954,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
         XCTAssertEqual(
             alphaImportedSourceReferenceFallback(languageCode: "ta"),
-            "Imported source reference."
+            "Source reference import ஆனது."
         )
         XCTAssertEqual(
             alphaFieldNeedsCitedPageConfirmationMessage("Court", languageCode: "bn"),
@@ -3920,6 +3920,7 @@ final class AlphaExtractionTests: XCTestCase {
             "document_status_reading",
             "document_status_imported",
             "document_status_failed",
+            "document_import_failed_title",
             "document_status_ready",
             "document_status_confirm",
             "document_status_fictional",
@@ -3948,6 +3949,7 @@ final class AlphaExtractionTests: XCTestCase {
             "workspace",
             "chat",
             "imported_document_label",
+            "imported_source_reference",
             "folder_color"
         ]
 
@@ -3993,6 +3995,10 @@ final class AlphaExtractionTests: XCTestCase {
 
     func testPreparedWorkAndTaskLabelsAvoidEnglishFallbacksInSupportedLanguages() {
         let labelsThatShouldBeLocalized = [
+            "canceled",
+            "legal_search_canceled_title",
+            "private_assistant",
+            "ask_assistant_setup_title",
             "case_files",
             "prepared_work_type_suggested_tasks",
             "prepared_work_type_chronology_ready",
