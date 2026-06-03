@@ -253,16 +253,7 @@ struct AlphaPrivateAISettingsScreen: View {
                                 Spacer(minLength: 0)
                             }
                             .padding(12)
-                            .rossGlassSurface(
-                                tint: Color.rossHighlight.opacity(0.16),
-                                cornerRadius: 16,
-                                interactive: true,
-                                shadowOpacity: 0.05,
-                                shadowRadius: 5,
-                                shadowY: 2,
-                                fillOpacity: 0.78,
-                                strokeOpacity: 0.46
-                            )
+                            .modifier(AlphaPrivateAIDestructiveStorageSurface())
                         }
                         .buttonStyle(.plain)
                     }
@@ -276,6 +267,43 @@ struct AlphaPrivateAISettingsScreen: View {
         }
         .navigationTitle(rossLocalized("my_assistant"))
         .rossInlineNavigationTitle()
+    }
+}
+
+private struct AlphaPrivateAIDestructiveStorageSurface: ViewModifier {
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+        let tint = Color.rossHighlight.opacity(0.16)
+
+        if #available(iOS 26.0, macOS 26.0, *) {
+            content
+                .background {
+                    shape.fill(Color.rossGlassFill.opacity(0.38))
+                }
+                .glassEffect(
+                    Glass.regular
+                        .tint(tint)
+                        .interactive(),
+                    in: shape
+                )
+                .overlay {
+                    shape.strokeBorder(Color.rossHighlight.opacity(0.18), lineWidth: 1)
+                }
+                .shadow(color: Color.rossShadow.opacity(0.05), radius: 5, y: 2)
+        } else {
+            content
+                .rossGlassSurface(
+                    tint: tint,
+                    cornerRadius: 16,
+                    interactive: true,
+                    shadowOpacity: 0.05,
+                    shadowRadius: 5,
+                    shadowY: 2,
+                    fillOpacity: 0.78,
+                    strokeOpacity: 0.46
+                )
+        }
     }
 }
 
