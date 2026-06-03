@@ -9640,52 +9640,17 @@ struct RossAuthBackdrop: View {
 
     var body: some View {
         ZStack {
+            Color.rossGroupedBackground
+
             LinearGradient(
                 colors: [
-                    Color.rossGroupedBackground,
-                    Color.rossSecondaryGroupedBackground,
-                    Color.rossGroupedBackground
+                    Color.rossHeroTop.opacity(colorScheme == .dark ? 0.34 : 0.44),
+                    Color.rossGroupedBackground.opacity(0.92),
+                    Color.rossHeroBottom.opacity(colorScheme == .dark ? 0.30 : 0.40)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-
-            Ellipse()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.rossBackdropGlow.opacity(colorScheme == .dark ? 0.36 : 0.48),
-                            Color.clear
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(width: 620, height: 320)
-                .rotationEffect(.degrees(-18))
-                .blur(radius: 34)
-                .offset(x: -40, y: -260)
-
-            Ellipse()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.rossHighlight.opacity(colorScheme == .dark ? 0.16 : 0.14),
-                            Color.clear
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .frame(width: 420, height: 420)
-                .blur(radius: 48)
-                .offset(x: 170, y: 250)
-
-            Circle()
-                .fill(Color.rossGlassStroke.opacity(colorScheme == .dark ? 0.12 : 0.28))
-                .frame(width: 320, height: 320)
-                .blur(radius: 76)
-                .offset(x: 148, y: -210)
         }
         .ignoresSafeArea()
     }

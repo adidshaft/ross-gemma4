@@ -4824,4 +4824,25 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(alphaSourceLanguageHint(profile: profile, pageNumber: 1), "mixed")
     }
 
+    func testAuthBackdropDoesNotUseLegacyBlurDecorations() throws {
+        let iosDirectory = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let appSource = iosDirectory.appendingPathComponent("Ross/App/RossApp.swift")
+        let source = try String(contentsOf: appSource)
+
+        guard
+            let backdropStart = source.range(of: "struct RossAuthBackdrop: View"),
+            let panelStart = source.range(of: "private struct RossAuthGlassPanel")
+        else {
+            return XCTFail("Expected RossAuthBackdrop and RossAuthGlassPanel in RossApp.swift")
+        }
+
+        let backdropSource = String(source[backdropStart.lowerBound..<panelStart.lowerBound])
+        XCTAssertFalse(backdropSource.contains(".blur("), backdropSource)
+        XCTAssertFalse(backdropSource.contains("Ellipse()"), backdropSource)
+        XCTAssertFalse(backdropSource.contains("Circle()"), backdropSource)
+    }
+
 }
