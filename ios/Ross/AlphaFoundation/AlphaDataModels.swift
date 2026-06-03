@@ -373,13 +373,13 @@ enum AlphaMatterDateKind: String, Codable, CaseIterable, Hashable, Sendable {
     var title: String {
         switch self {
         case .hearing:
-            "Next hearing"
+            rossLocalized("matter_date_kind_hearing")
         case .filingDeadline:
-            "Filing deadline"
+            rossLocalized("matter_date_kind_filing_deadline")
         case .complianceDate:
-            "Compliance date"
+            rossLocalized("matter_date_kind_compliance_date")
         case .clientFollowUp:
-            "Client follow-up"
+            rossLocalized("matter_date_kind_client_follow_up")
         }
     }
 }

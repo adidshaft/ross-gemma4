@@ -5992,6 +5992,34 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "அடுத்த hearing",
             "te": "తదుపరి hearing"
         ],
+        "matter_date_kind_hearing": [
+            "en": "Next hearing",
+            "hi": "अगली hearing",
+            "bn": "পরবর্তী hearing",
+            "ta": "அடுத்த hearing",
+            "te": "తదుపరి hearing"
+        ],
+        "matter_date_kind_filing_deadline": [
+            "en": "Filing deadline",
+            "hi": "Filing deadline",
+            "bn": "Filing deadline",
+            "ta": "Filing deadline",
+            "te": "Filing deadline"
+        ],
+        "matter_date_kind_compliance_date": [
+            "en": "Compliance date",
+            "hi": "Compliance date",
+            "bn": "Compliance date",
+            "ta": "Compliance date",
+            "te": "Compliance date"
+        ],
+        "matter_date_kind_client_follow_up": [
+            "en": "Client follow-up",
+            "hi": "Client follow-up",
+            "bn": "Client follow-up",
+            "ta": "Client follow-up",
+            "te": "Client follow-up"
+        ],
         "ask_source_pack_issues": [
             "en": "Issues",
             "hi": "Issues",

@@ -469,7 +469,7 @@ extension AlphaRossModel {
                 caseMatter.nextHearing = parsedDate
                 upsertMatterDate(
                     in: &caseMatter,
-                    title: "Next hearing",
+                    title: AlphaMatterDateKind.hearing.title,
                     kind: .hearing,
                     date: parsedDate,
                     sourceRef: finding.sourceRefs.first
@@ -681,7 +681,7 @@ extension AlphaRossModel {
                     caseMatter.nextHearing = parsedDate
                     upsertMatterDate(
                         in: &caseMatter,
-                        title: "Next hearing",
+                        title: AlphaMatterDateKind.hearing.title,
                         kind: .hearing,
                         date: parsedDate,
                         sourceRef: verifiedFields.first(where: { $0.fieldType == .nextDate })?.sourceRefs.first
@@ -689,7 +689,7 @@ extension AlphaRossModel {
                 }
             }
         } else if let nextHearing = caseMatter.nextHearing {
-            upsertMatterDate(in: &caseMatter, title: "Next hearing", kind: .hearing, date: nextHearing)
+            upsertMatterDate(in: &caseMatter, title: AlphaMatterDateKind.hearing.title, kind: .hearing, date: nextHearing)
         }
 
         let classifications = caseMatter.documents.compactMap { $0.classification?.type.title.lowercased() }
@@ -952,14 +952,14 @@ extension AlphaRossModel {
             return .completeTask(title: cleaned)
         }
 
-        let specificDateCommands: [([String], AlphaMatterDateKind, String)] = [
-            (["set next hearing ", "save next hearing ", "add next hearing ", "save hearing ", "add hearing "], .hearing, "Next hearing"),
-            (["save filing deadline ", "add filing deadline ", "set filing deadline "], .filingDeadline, "Filing deadline"),
-            (["save compliance date ", "add compliance date ", "set compliance date "], .complianceDate, "Compliance date"),
-            (["save client follow-up ", "add client follow-up ", "set client follow-up "], .clientFollowUp, "Client follow-up")
+        let specificDateCommands: [([String], AlphaMatterDateKind)] = [
+            (["set next hearing ", "save next hearing ", "add next hearing ", "save hearing ", "add hearing "], .hearing),
+            (["save filing deadline ", "add filing deadline ", "set filing deadline "], .filingDeadline),
+            (["save compliance date ", "add compliance date ", "set compliance date "], .complianceDate),
+            (["save client follow-up ", "add client follow-up ", "set client follow-up "], .clientFollowUp)
         ]
 
-        for (prefixes, kind, fallbackTitle) in specificDateCommands {
+        for (prefixes, kind) in specificDateCommands {
             if let body = dockCommandBody(in: normalized, prefixes: prefixes) {
                 let (title, date) = dockCommandTitleAndDate(from: body)
                 guard let date else {
@@ -968,7 +968,7 @@ extension AlphaRossModel {
                         detail: "Try “\(prefixes[0].trimmingCharacters(in: .whitespaces)) on 1 May 2026.”"
                     )
                 }
-                return .addMatterDate(title: title.ifEmpty(fallbackTitle), kind: kind, date: date)
+                return .addMatterDate(title: title.ifEmpty(kind.title), kind: kind, date: date)
             }
         }
 
