@@ -4880,4 +4880,25 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertFalse(backdropSource.contains("Circle()"), backdropSource)
     }
 
+    func testAppBackdropDoesNotUseLegacyMaterialWash() throws {
+        let iosDirectory = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let designSystemSource = iosDirectory.appendingPathComponent("Ross/App/AppDesignSystem.swift")
+        let source = try String(contentsOf: designSystemSource)
+
+        guard
+            let backdropStart = source.range(of: "public struct RossAppBackdropModifier"),
+            let cardStart = source.range(of: "// MARK: - Card Style")
+        else {
+            return XCTFail("Expected RossAppBackdropModifier and card style marker in AppDesignSystem.swift")
+        }
+
+        let backdropSource = String(source[backdropStart.lowerBound..<cardStart.lowerBound])
+        XCTAssertFalse(backdropSource.contains("ultraThinMaterial"), backdropSource)
+        XCTAssertFalse(backdropSource.contains("regularMaterial"), backdropSource)
+        XCTAssertFalse(backdropSource.contains("thinMaterial"), backdropSource)
+    }
+
 }

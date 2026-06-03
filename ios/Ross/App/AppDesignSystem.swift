@@ -87,9 +87,8 @@ public struct RossAppBackdropModifier: ViewModifier {
                         endPoint: .bottomTrailing
                     )
 
-                    Rectangle()
-                        .fill(.ultraThinMaterial)
-                        .opacity(colorScheme == .dark ? 0.10 : 0.18)
+                    Color.rossSecondaryGroupedBackground
+                        .opacity(colorScheme == .dark ? 0.08 : 0.14)
                 }
                 .ignoresSafeArea()
             }
