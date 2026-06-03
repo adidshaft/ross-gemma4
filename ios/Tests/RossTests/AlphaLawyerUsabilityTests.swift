@@ -7,10 +7,12 @@ import XCTest
 final class AlphaLawyerUsabilityTests: XCTestCase {
     override func setUp() {
         super.setUp()
+        rossSaveLanguageSelection(code: "en")
         AlphaLlamaCppProvider.modelLoadValidator = { _ in }
     }
 
     override func tearDown() {
+        rossSaveLanguageSelection(code: "en")
         AlphaLlamaCppProvider.modelLoadValidator = { path in
             _ = try LlamaContext.create_context(path: path)
         }

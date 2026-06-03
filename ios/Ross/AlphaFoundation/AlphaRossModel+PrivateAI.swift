@@ -18,7 +18,7 @@ var alphaAssistantExistingSetupRepairDetail: String {
 }
 
 func alphaPrivateAIDocumentContextLine(_ document: AlphaCaseDocument, languageCode: String = rossSelectedLanguageCode()) -> String {
-    "- \(document.title) (\(alphaPageCountLabel(document.pageCount, languageCode: languageCode)), \(document.ocrStatus.title))"
+    "- \(document.title) (\(alphaPageCountLabel(document.pageCount, languageCode: languageCode)), \(document.ocrStatus.title(languageCode: languageCode)))"
 }
 
 private extension String {

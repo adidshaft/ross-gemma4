@@ -706,7 +706,7 @@ struct AlphaAskDocumentOption: Identifiable, Hashable {
         } else {
             location = rossLocalized("this_matter", languageCode: languageCode)
         }
-        return "\(kind.title) · \(location)"
+        return "\(kind.title(languageCode: languageCode)) · \(location)"
     }
 }
 

@@ -3623,7 +3623,7 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "en": "Ready",
             "hi": "Ready",
             "bn": "Ready",
-            "ta": "Ready",
+            "ta": "வாசித்தது",
             "te": "Ready"
         ],
         "document_status_confirm": [

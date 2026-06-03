@@ -630,7 +630,20 @@ enum AlphaDocumentKind: String, Codable, Hashable, Sendable {
     case unknown
 
     var title: String {
-        rawValue.uppercased()
+        title(languageCode: rossSelectedLanguageCode())
+    }
+
+    func title(languageCode: String) -> String {
+        switch self {
+        case .pdf:
+            rossLocalized("document_kind_pdf", languageCode: languageCode)
+        case .image:
+            rossLocalized("document_kind_image_short", languageCode: languageCode)
+        case .text:
+            rossLocalized("document_kind_text_short", languageCode: languageCode)
+        case .unknown:
+            rossLocalized("document_kind_file", languageCode: languageCode)
+        }
     }
 }
 
@@ -644,21 +657,25 @@ enum AlphaOcrStatus: String, Codable, Hashable, Sendable {
     case failed
 
     var title: String {
+        title(languageCode: rossSelectedLanguageCode())
+    }
+
+    func title(languageCode: String) -> String {
         switch self {
         case .notStarted:
-            rossLocalized("document_status_not_ready")
+            rossLocalized("document_status_not_ready", languageCode: languageCode)
         case .indexed:
-            rossLocalized("document_status_ready")
+            rossLocalized("document_status_ready", languageCode: languageCode)
         case .placeholder:
-            rossLocalized("document_status_reading_file")
+            rossLocalized("document_status_reading_file", languageCode: languageCode)
         case .nativeText:
-            rossLocalized("document_status_ready")
+            rossLocalized("document_status_ready", languageCode: languageCode)
         case .ocrComplete:
-            rossLocalized("document_status_ready")
+            rossLocalized("document_status_ready", languageCode: languageCode)
         case .partial:
-            rossLocalized("document_status_partial")
+            rossLocalized("document_status_partial", languageCode: languageCode)
         case .failed:
-            rossLocalized("document_status_could_not_read")
+            rossLocalized("document_status_could_not_read", languageCode: languageCode)
         }
     }
 }
