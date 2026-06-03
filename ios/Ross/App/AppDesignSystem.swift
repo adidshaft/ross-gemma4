@@ -228,34 +228,6 @@ public struct RossGlassButtonStyle: ButtonStyle {
     }
 }
 
-private struct RossGlassSurfaceModifier: ViewModifier {
-    @Environment(\.colorScheme) private var colorScheme
-
-    let tint: Color
-    let cornerRadius: CGFloat
-    let interactive: Bool
-    let shadowOpacity: Double
-    let shadowRadius: CGFloat
-    let shadowY: CGFloat
-    let fillOpacity: Double
-    let strokeOpacity: Double
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-
-        content
-            .rossNativeGlassSurface(
-                tint: tint,
-                shape: shape,
-                interactive: interactive,
-                fallbackFillOpacity: fillOpacity,
-                fallbackStrokeOpacity: strokeOpacity
-            )
-            .shadow(color: Color.rossShadow.opacity(shadowOpacity), radius: shadowRadius, y: shadowY)
-    }
-}
-
 private struct RossNativeGlassSurfaceModifier<S: InsettableShape>: ViewModifier {
     @Environment(\.colorScheme) private var colorScheme
 
@@ -389,30 +361,6 @@ public extension View {
                 tint: tint ?? Color.rossAccent,
                 cornerRadius: cornerRadius,
                 expandsHorizontally: expandsHorizontally
-            )
-        )
-    }
-
-    func rossGlassSurface(
-        tint: Color? = nil,
-        cornerRadius: CGFloat = RossSurface.cornerRadius,
-        interactive: Bool = false,
-        shadowOpacity: Double = 0.12,
-        shadowRadius: CGFloat = 12,
-        shadowY: CGFloat = 5,
-        fillOpacity: Double = 0.84,
-        strokeOpacity: Double = 0.58
-    ) -> some View {
-        modifier(
-            RossGlassSurfaceModifier(
-                tint: tint ?? Color.rossAccent,
-                cornerRadius: cornerRadius,
-                interactive: interactive,
-                shadowOpacity: shadowOpacity,
-                shadowRadius: shadowRadius,
-                shadowY: shadowY,
-                fillOpacity: fillOpacity,
-                strokeOpacity: strokeOpacity
             )
         )
     }
