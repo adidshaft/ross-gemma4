@@ -180,8 +180,8 @@ extension AlphaRossModel {
                             "\(latestDocument.extractedFields.count)",
                             "\(latestDocument.extractionFindings.count)"
                         ]),
-                        primaryAction: reviewCount == 0 ? "Open" : "Review",
-                        secondaryActions: reviewCount == 0 ? ["Review sources", "Dismiss"] : ["Edit", "Dismiss"]
+                        primaryAction: reviewCount == 0 ? rossLocalized("open") : rossLocalized("review"),
+                        secondaryActions: reviewCount == 0 ? [rossLocalized("check_sources"), rossLocalized("dismiss")] : [rossLocalized("edit"), rossLocalized("dismiss")]
                     )
                 )
             }
@@ -198,8 +198,8 @@ extension AlphaRossModel {
                         badge: nextDate.sourceRef == nil ? .preparedLocally : .sourceBacked,
                         sourceRefs: nextDate.sourceRef.map { [$0] } ?? [],
                         sourceFingerprint: alphaPreparedFingerprint(parts: [nextDate.id.uuidString, nextDate.date.timeIntervalSince1970.description, nextDate.updatedAt.timeIntervalSince1970.description]),
-                        primaryAction: "Confirm",
-                        secondaryActions: ["Open", "Dismiss"]
+                        primaryAction: rossLocalized("confirm"),
+                        secondaryActions: [rossLocalized("open"), rossLocalized("dismiss")]
                     )
                 )
             }
@@ -217,8 +217,8 @@ extension AlphaRossModel {
                         badge: .preparedLocally,
                         sourceRefs: sourceRefs,
                         sourceFingerprint: alphaPreparedFingerprint(parts: matterTasks.map { "\($0.id.uuidString):\($0.updatedAt.timeIntervalSince1970)" }),
-                        primaryAction: "Review",
-                        secondaryActions: ["Accept", "Edit", "Dismiss"]
+                        primaryAction: rossLocalized("review"),
+                        secondaryActions: [rossLocalized("accept"), rossLocalized("edit"), rossLocalized("dismiss")]
                     )
                 )
             }
@@ -235,8 +235,8 @@ extension AlphaRossModel {
                         badge: .needsReview,
                         sourceRefs: Array(reviews.compactMap(\.sourceRef).prefix(3)),
                         sourceFingerprint: alphaPreparedFingerprint(parts: reviews.map(\.id)),
-                        primaryAction: "Review",
-                        secondaryActions: ["Edit", "Dismiss"]
+                        primaryAction: rossLocalized("review"),
+                        secondaryActions: [rossLocalized("edit"), rossLocalized("dismiss")]
                     )
                 )
             }
@@ -253,8 +253,8 @@ extension AlphaRossModel {
                         badge: reviews.isEmpty ? .preparedLocally : .needsReview,
                         sourceRefs: upcomingHearing.sourceRef.map { [$0] } ?? sourceRefs,
                         sourceFingerprint: alphaPreparedFingerprint(parts: [upcomingHearing.id.uuidString, "\(reviews.count)", matter.updatedAt.timeIntervalSince1970.description]),
-                        primaryAction: "Review",
-                        secondaryActions: ["Edit", "Dismiss"]
+                        primaryAction: rossLocalized("review"),
+                        secondaryActions: [rossLocalized("edit"), rossLocalized("dismiss")]
                     )
                 )
             }
@@ -271,8 +271,8 @@ extension AlphaRossModel {
                         badge: .preparedLocally,
                         sourceRefs: sourceRefs,
                         sourceFingerprint: alphaPreparedFingerprint(parts: [latestDraft.id.uuidString, latestDraft.createdAt.timeIntervalSince1970.description]),
-                        primaryAction: "Open",
-                        secondaryActions: ["Edit", "Dismiss"]
+                        primaryAction: rossLocalized("open"),
+                        secondaryActions: [rossLocalized("edit"), rossLocalized("dismiss")]
                     )
                 )
             }
@@ -289,8 +289,8 @@ extension AlphaRossModel {
                         badge: matter.documents.isEmpty ? .preparedLocally : .needsReview,
                         sourceRefs: sourceRefs,
                         sourceFingerprint: alphaPreparedFingerprint(parts: [matter.updatedAt.timeIntervalSince1970.description, "\(matter.documents.count)", "\(reviews.count)", "\(matterTasks.count)"]),
-                        primaryAction: matter.documents.isEmpty ? "Open" : "Review",
-                        secondaryActions: ["Dismiss"]
+                        primaryAction: matter.documents.isEmpty ? rossLocalized("open") : rossLocalized("review"),
+                        secondaryActions: [rossLocalized("dismiss")]
                     )
                 )
             }
@@ -320,8 +320,8 @@ extension AlphaRossModel {
             badge: .approvalRequired,
             sourceRefs: [],
             sourceFingerprint: alphaPreparedFingerprint(parts: [preview.query, preview.removed.joined(separator: "|")]),
-            primaryAction: "Approve",
-            secondaryActions: ["Edit", "Dismiss"]
+            primaryAction: rossLocalized("approve"),
+            secondaryActions: [rossLocalized("edit"), rossLocalized("dismiss")]
         )
         if let index = items.firstIndex(where: { $0.stableKey == stableKey }) {
             var updated = generated

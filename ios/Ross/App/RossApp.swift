@@ -4011,6 +4011,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "ஏற்கவும்",
             "te": "అంగీకరించండి"
         ],
+        "approve": [
+            "en": "Approve",
+            "hi": "मंज़ूर करें",
+            "bn": "অনুমোদন করুন",
+            "ta": "ஒப்புதல் அளிக்கவும்",
+            "te": "ఆమోదించండి"
+        ],
+        "confirm": [
+            "en": "Confirm",
+            "hi": "पुष्टि करें",
+            "bn": "নিশ্চিত করুন",
+            "ta": "உறுதிசெய்க",
+            "te": "నిర్ధారించండి"
+        ],
         "edit": [
             "en": "Edit",
             "hi": "संपादित करें",

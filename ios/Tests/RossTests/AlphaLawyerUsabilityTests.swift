@@ -3454,6 +3454,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
 
     func testPreparedWorkUsesOnlyPersistedMatterState() async throws {
         try await withRestoredStore { store in
+            defer { rossSaveLanguageSelection(code: "en") }
             var state = AlphaPersistedState.empty()
             state.onboardingStage = .completed
             try await store.replace(with: state)
@@ -3470,6 +3471,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertTrue(emptyItems.isEmpty)
 
             try await store.replace(with: AlphaPersistedState.seed())
+            rossSaveLanguageSelection(code: "hi")
             let seededModel = await MainActor.run {
                 AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
             }
@@ -3481,12 +3483,16 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             let items = await MainActor.run { seededModel.preparedWorkItems() }
             XCTAssertFalse(items.isEmpty)
             XCTAssertTrue(items.allSatisfy { $0.caseId != nil && !$0.matterName.isEmpty })
+            XCTAssertTrue(items.contains { $0.primaryAction == "खोलें" || $0.primaryAction == "Review" })
+            XCTAssertTrue(items.flatMap(\.secondaryActions).contains("हटाएं"))
         }
     }
 
     func testPublicLawRoutinePreparesPreviewWithoutNetworkUntilApproval() async throws {
         try await withRestoredStore { store in
+            defer { rossSaveLanguageSelection(code: "en") }
             try await store.replace(with: AlphaPersistedState.seed())
+            rossSaveLanguageSelection(code: "ta")
             let publicLawCalls = SendableBox(0)
             let model = await MainActor.run {
                 AlphaRossModel(store: store, publicLawSearchAction: { _ in
@@ -3505,6 +3511,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertEqual(status, .reviewing)
             XCTAssertEqual(publicLawCalls.value, 0)
             XCTAssertEqual(prepared?.badge, .approvalRequired)
+            XCTAssertEqual(prepared?.primaryAction, "ஒப்புதல் அளிக்கவும்")
+            XCTAssertEqual(prepared?.secondaryActions, ["திருத்தவும்", "நீக்கவும்"])
 
             await model.confirmPendingPublicLawSearch()
             XCTAssertEqual(publicLawCalls.value, 1)
