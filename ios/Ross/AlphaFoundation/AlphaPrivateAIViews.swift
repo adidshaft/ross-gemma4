@@ -688,15 +688,48 @@ struct AlphaPrivateAIOfferCard: View {
             .disabled(actionDisabled)
         }
         .padding(10)
-        .rossGlassSurface(
-            tint: isActive ? Color.rossAccent : Color.rossInk.opacity(0.42),
-            cornerRadius: 16,
-            shadowOpacity: isActive ? 0.12 : 0.07,
-            shadowRadius: isActive ? 10 : 7,
-            shadowY: isActive ? 4 : 3,
-            fillOpacity: 0.82,
-            strokeOpacity: isActive ? 0.58 : 0.42
-        )
+        .modifier(AlphaPrivateAIOfferSurface(isActive: isActive))
+    }
+}
+
+private struct AlphaPrivateAIOfferSurface: ViewModifier {
+    let isActive: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+        let tint = isActive ? Color.rossAccent : Color.rossInk.opacity(0.42)
+
+        if #available(iOS 26.0, macOS 26.0, *) {
+            content
+                .background {
+                    shape.fill(Color.rossGlassFill.opacity(isActive ? 0.52 : 0.38))
+                }
+                .glassEffect(
+                    Glass.regular
+                        .tint(tint.opacity(isActive ? 0.22 : 0.12)),
+                    in: shape
+                )
+                .overlay {
+                    shape.strokeBorder(tint.opacity(isActive ? 0.32 : 0.18), lineWidth: 1)
+                }
+                .shadow(
+                    color: Color.rossShadow.opacity(isActive ? 0.12 : 0.07),
+                    radius: isActive ? 10 : 7,
+                    y: isActive ? 4 : 3
+                )
+        } else {
+            content
+                .rossGlassSurface(
+                    tint: tint,
+                    cornerRadius: 16,
+                    shadowOpacity: isActive ? 0.12 : 0.07,
+                    shadowRadius: isActive ? 10 : 7,
+                    shadowY: isActive ? 4 : 3,
+                    fillOpacity: 0.82,
+                    strokeOpacity: isActive ? 0.58 : 0.42
+                )
+        }
     }
 }
 
