@@ -1134,7 +1134,7 @@ struct AlphaDocumentTitleSuggestionCard: View {
                         .textFieldStyle(.plain)
                         .font(.subheadline.weight(.semibold))
                         .padding(10)
-                        .rossGlassSurface(cornerRadius: 12, interactive: true, shadowOpacity: 0.04, shadowRadius: 4, shadowY: 1, strokeOpacity: 0.48)
+                        .modifier(AlphaDocumentEditFieldSurface(cornerRadius: 12, strokeOpacity: 0.48))
                 } else {
                     Text(suggestedTitle)
                         .font(.headline)
@@ -1248,6 +1248,33 @@ struct AlphaAcceptedReviewSummaryCard: View {
         .tint(Color.rossSuccess)
         .padding(12)
         .rossGlassSurface(tint: Color.rossSuccess.opacity(0.14), cornerRadius: 16, strokeOpacity: 0.48)
+    }
+}
+
+private struct AlphaDocumentEditFieldSurface: ViewModifier {
+    let cornerRadius: CGFloat
+    let strokeOpacity: Double
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            content
+                .glassEffect(
+                    .regular
+                        .tint(Color.rossAccent.opacity(0.08))
+                        .interactive(),
+                    in: .rect(cornerRadius: cornerRadius)
+                )
+        } else {
+            content
+                .rossGlassSurface(
+                    cornerRadius: cornerRadius,
+                    interactive: true,
+                    shadowOpacity: 0.04,
+                    shadowRadius: 4,
+                    shadowY: 1,
+                    strokeOpacity: strokeOpacity
+                )
+        }
     }
 }
 
@@ -2042,7 +2069,7 @@ struct AlphaExtractedFieldReviewCard: View {
                 TextField(alphaEditFieldPlaceholder(field.label), text: $draftValue)
                     .textFieldStyle(.plain)
                     .padding(10)
-                    .rossGlassSurface(cornerRadius: 10, interactive: true, shadowOpacity: 0.04, shadowRadius: 4, shadowY: 1, strokeOpacity: 0.44)
+                    .modifier(AlphaDocumentEditFieldSurface(cornerRadius: 10, strokeOpacity: 0.44))
             } else {
                 Text(field.value)
                     .font(.headline)
