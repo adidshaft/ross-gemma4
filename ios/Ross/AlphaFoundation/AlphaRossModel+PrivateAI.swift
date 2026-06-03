@@ -1510,6 +1510,7 @@ extension AlphaRossModel {
         if let target = selectedDocumentTarget,
            target.document.processingState == .readingText || target.document.processingState == .imported,
            !target.document.hasAskUsableExtractedText,
+           selectedDocuments.count <= 1,
            asksForDocumentSummary || asksAboutReview {
             return AlphaAskResult(
                 chatSessionID: nil,

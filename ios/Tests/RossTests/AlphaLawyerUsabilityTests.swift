@@ -3150,6 +3150,10 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
     }
 
     func testTaggedFileWithActiveExtractionReportsStillReading() async throws {
+        let previousLanguageCode = rossSelectedLanguageCode()
+        rossSaveLanguageSelection(code: "en")
+        defer { rossSaveLanguageSelection(code: previousLanguageCode) }
+
         try await withRestoredStore { store in
             try await store.replace(with: AlphaPersistedState.seed())
 
@@ -3215,6 +3219,115 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertEqual(latest?.statusNote, "File text not ready")
             XCTAssertTrue(latest?.answerSections.joined(separator: " ").contains("extracting readable text") == true)
             XCTAssertTrue(latest?.caseFileSources.isEmpty == true)
+        }
+    }
+
+    func testMixedSelectedFilesUseReadySourcesWhileAnotherFileIsStillReading() async throws {
+        let previousLanguageCode = rossSelectedLanguageCode()
+        rossSaveLanguageSelection(code: "en")
+        defer { rossSaveLanguageSelection(code: previousLanguageCode) }
+
+        try await withRestoredStore { store in
+            try await store.replace(with: AlphaPersistedState.seed())
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+
+            let maybeCaseID = await MainActor.run { model.cases.first?.id }
+            let caseID = try XCTUnwrap(maybeCaseID)
+            let readyDocumentID = UUID()
+            let readingDocumentID = UUID()
+            let readySource = AlphaSourceRef(
+                caseId: caseID,
+                documentId: readyDocumentID,
+                documentTitle: "Ready order",
+                pageNumber: 1,
+                paragraphRange: "¶2",
+                textSnippet: "The court listed the matter for filing compliance on 14 May 2026.",
+                ocrConfidence: 0.96
+            )
+            let readyDocument = AlphaCaseDocument(
+                id: readyDocumentID,
+                title: "Ready order",
+                fileName: "ready-order.txt",
+                kind: .text,
+                storedRelativePath: "docs/ready-order.txt",
+                importedAt: .now,
+                pageCount: 1,
+                ocrStatus: .nativeText,
+                indexingStatus: .indexed,
+                extractedText: "The court listed the matter for filing compliance on 14 May 2026.",
+                pages: [
+                    AlphaDocumentPage(
+                        pageNumber: 1,
+                        snippet: "The court listed the matter for filing compliance on 14 May 2026.",
+                        extractedText: "The court listed the matter for filing compliance on 14 May 2026."
+                    )
+                ]
+            )
+            let readingDocument = AlphaCaseDocument(
+                id: readingDocumentID,
+                title: "Reading scan",
+                fileName: "reading-scan.pdf",
+                kind: .pdf,
+                storedRelativePath: "docs/reading-scan.pdf",
+                importedAt: .now,
+                pageCount: 1,
+                ocrStatus: .placeholder,
+                indexingStatus: .extracting,
+                pages: [],
+                extractionRuns: [
+                    AlphaExtractionRun(
+                        caseId: caseID,
+                        documentId: readingDocumentID,
+                        mode: .caseAssociate,
+                        status: .running,
+                        progressState: .acquiringText,
+                        startedAt: .now,
+                        pagesProcessed: 0,
+                        totalPages: 1,
+                        fieldsExtracted: 0,
+                        fieldsNeedingReview: 0,
+                        warnings: []
+                    )
+                ]
+            )
+            await MainActor.run {
+                let testPack = AlphaInstalledModelPack(
+                    packId: "case-associate-test-pack",
+                    tier: .caseAssociate,
+                    installPath: "model-packs/case_associate/pack.dev",
+                    checksumSha256: String(repeating: "a", count: 64),
+                    artifactKind: "tiny_dev_artifact",
+                    runtimeMode: .deterministicDev,
+                    developmentOnly: true,
+                    isActive: true
+                )
+                model.privateAISnapshot.activePack = testPack
+                model.persisted.installedPacks = [testPack]
+                model.persisted.settings.activeTier = .caseAssociate
+                if let caseIndex = model.persisted.cases.firstIndex(where: { $0.id == caseID }) {
+                    model.persisted.cases[caseIndex].documents.append(contentsOf: [readyDocument, readingDocument])
+                    model.persisted.cases[caseIndex].sourceRefs.append(readySource)
+                }
+                model.invalidateWorkspaceDerivedState()
+                model.setSelectedAskDocumentIDs([readyDocumentID, readingDocumentID], for: caseID)
+                let sourcePack = model.askRuntimeSourcePack(
+                    question: "What does Ready order say?",
+                    scopeCaseID: caseID,
+                    selectedDocuments: model.selectedAskDocuments(for: caseID)
+                )
+                XCTAssertTrue(sourcePack.contains { $0.sourceRef.documentId == readyDocumentID })
+                XCTAssertFalse(sourcePack.contains { $0.sourceRef.documentId == readingDocumentID })
+                model.submitAsk(question: "What does Ready order say?", scopeCaseID: caseID, webEnabled: false)
+            }
+
+            let latest = await MainActor.run { model.latestAskResult }
+            XCTAssertNotEqual(latest?.answerTitle, "Selected files are still being read")
+            XCTAssertNotEqual(latest?.statusNote, "File text not ready")
+            XCTAssertEqual(latest?.selectedDocumentTitles.sorted(), ["Reading scan", "Ready order"])
         }
     }
 

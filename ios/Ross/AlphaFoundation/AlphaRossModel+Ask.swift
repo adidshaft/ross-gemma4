@@ -1062,18 +1062,20 @@ extension AlphaRossModel {
         guard activePack != nil else { return }
         let selectedDocuments = selectedAskDocuments(for: scopeCaseID)
         let selectedDocumentIDs = Set(selectedDocuments.map(\.id))
-        // Single pass over cases instead of materializing flatMap; bail as
-        // soon as we find any in-progress selected doc.
-        let blockedByPendingExtraction: Bool = {
+        let pendingSelectedDocumentCount: Int = {
+            guard !selectedDocumentIDs.isEmpty else { return 0 }
+            var count = 0
             for caseMatter in persisted.cases {
                 for document in caseMatter.documents where selectedDocumentIDs.contains(document.id) {
                     if document.isAwaitingReadableText {
-                        return true
+                        count += 1
                     }
                 }
             }
-            return false
+            return count
         }()
+        let blockedByPendingExtraction = !selectedDocuments.isEmpty &&
+            pendingSelectedDocumentCount == selectedDocuments.count
         if blockedByPendingExtraction {
             completeAskRuntimeWithoutAnswer(
                 scopeCaseID: scopeCaseID,
