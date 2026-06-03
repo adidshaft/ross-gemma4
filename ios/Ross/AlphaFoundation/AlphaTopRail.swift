@@ -666,23 +666,36 @@ struct AlphaTopRailIconButton: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Color.rossInk)
-                .frame(width: 34, height: 34)
-                .rossGlassSurface(
-                    tint: Color.rossAccent,
-                    cornerRadius: 17,
-                    interactive: true,
-                    shadowOpacity: 0.07,
-                    shadowRadius: 7,
-                    shadowY: 3,
-                    fillOpacity: 0.80,
-                    strokeOpacity: 0.46
-                )
+        if #available(iOS 26.0, macOS 26.0, *) {
+            Button(action: action) {
+                icon
+            }
+            .buttonStyle(.glass)
+            .tint(Color.rossAccent)
+            .accessibilityLabel(accessibilityLabel)
+        } else {
+            Button(action: action) {
+                icon
+                    .rossGlassSurface(
+                        tint: Color.rossAccent,
+                        cornerRadius: 17,
+                        interactive: true,
+                        shadowOpacity: 0.07,
+                        shadowRadius: 7,
+                        shadowY: 3,
+                        fillOpacity: 0.80,
+                        strokeOpacity: 0.46
+                    )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(accessibilityLabel)
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private var icon: some View {
+        Image(systemName: systemImage)
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(Color.rossInk)
+            .frame(width: 34, height: 34)
     }
 }
