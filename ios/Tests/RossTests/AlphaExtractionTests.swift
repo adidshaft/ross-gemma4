@@ -3033,12 +3033,59 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     func testReleaseReadyAssistantArtifactsPinDownloadMetadata() throws {
-        for artifact in alphaAssistantModelArtifacts.values where artifact.releaseReady {
-            XCTAssertNotNil(artifact.downloadURL, "Missing download URL for \(artifact.tier.rawValue)")
-            XCTAssertGreaterThan(artifact.sizeBytes, 0, "Missing size for \(artifact.tier.rawValue)")
+        let expected: [AlphaCapabilityTier: (repository: String, fileName: String, sizeBytes: Int64, sha256: String)] = [
+            .flash: (
+                repository: "bartowski/google_gemma-4-E2B-it-GGUF",
+                fileName: "google_gemma-4-E2B-it-Q2_K.gguf",
+                sizeBytes: 3_020_052_224,
+                sha256: "a7cfc9f9b305b54a4ba2a681ff8795f594eafbe8c2c9df25d2f030a64d97bda6"
+            ),
+            .quickStart: (
+                repository: "bartowski/google_gemma-4-E2B-it-GGUF",
+                fileName: "google_gemma-4-E2B-it-Q4_K_M.gguf",
+                sizeBytes: 3_462_678_272,
+                sha256: "b5310340b3a23d31655d7119d100d5df1b2d8ee17b3ca8b0a23ad7e9eb5fa705"
+            ),
+            .caseAssociate: (
+                repository: "bartowski/google_gemma-4-E4B-it-GGUF",
+                fileName: "google_gemma-4-E4B-it-Q4_K_M.gguf",
+                sizeBytes: 5_405_168_384,
+                sha256: "51865750adafd22de56994a343d5a887cc1a589b9bae41d62b748c8bd0ca9c76"
+            ),
+            .seniorDraftingSupport: (
+                repository: "bartowski/google_gemma-4-26B-A4B-it-GGUF",
+                fileName: "google_gemma-4-26B-A4B-it-Q4_K_M.gguf",
+                sizeBytes: 17_035_038_112,
+                sha256: "e718536fe9b4bd505b07d44ded8f1595053a5d5407315bccf555ce592f33c140"
+            )
+        ]
+
+        XCTAssertEqual(Set(alphaAssistantModelArtifacts.keys), Set(AlphaCapabilityTier.allCases))
+
+        for tier in AlphaCapabilityTier.allCases {
+            let artifact = try XCTUnwrap(alphaAssistantModelArtifacts[tier], "Missing artifact for \(tier.rawValue)")
+            let pinned = try XCTUnwrap(expected[tier], "Missing expected release metadata for \(tier.rawValue)")
+            XCTAssertEqual(artifact.tier, tier)
+            XCTAssertEqual(artifact.repository, pinned.repository)
+            XCTAssertEqual(artifact.fileName, pinned.fileName)
+            XCTAssertEqual(artifact.sizeBytes, pinned.sizeBytes)
+            XCTAssertEqual(artifact.sha256, pinned.sha256)
+            XCTAssertEqual(artifact.downloadSource, "huggingface")
+            XCTAssertTrue(artifact.verified, "Artifact must be verified for \(tier.rawValue)")
+            XCTAssertTrue(artifact.releaseReady, "Artifact must be release-ready for \(tier.rawValue)")
+            XCTAssertTrue(artifact.isActiveTier, "Artifact must stay selectable for \(tier.rawValue)")
+            XCTAssertFalse(
+                artifact.downloadURLString.contains("__REPLACE_WITH_VERIFIED"),
+                "Release URL still contains replacement marker for \(tier.rawValue)"
+            )
+            XCTAssertNotNil(artifact.downloadURL, "Missing download URL for \(tier.rawValue)")
+            XCTAssertEqual(
+                artifact.downloadURL?.absoluteString,
+                "https://huggingface.co/\(pinned.repository)/resolve/main/\(pinned.fileName)"
+            )
             XCTAssertTrue(
                 artifact.sha256.range(of: #"^[a-fA-F0-9]{64}$"#, options: .regularExpression) != nil,
-                "Missing pinned checksum for \(artifact.tier.rawValue)"
+                "Missing pinned checksum for \(tier.rawValue)"
             )
         }
     }
