@@ -4027,6 +4027,41 @@ final class AlphaExtractionTests: XCTestCase {
         }
     }
 
+    func testExportReportLabelsAvoidEnglishFallbacksInSupportedLanguages() {
+        let labelsThatShouldBeLocalized = [
+            "draft_ready",
+            "export_generated",
+            "export_chronology_candidates",
+            "export_review_warnings",
+            "export_source_references",
+            "export_case_metadata",
+            "export_court",
+            "export_case_number",
+            "export_parties",
+            "export_document_list",
+            "export_key_dates",
+            "export_pending_review_fields",
+            "export_operative_directions",
+            "export_next_date",
+            "export_compliance_requirements",
+            "export_thread_transcript",
+            "export_summary",
+            "export_working_notes",
+            "tasks_added_title"
+        ]
+
+        for key in labelsThatShouldBeLocalized {
+            let english = rossLocalized(key, languageCode: "en")
+            for languageCode in ["hi", "bn", "ta", "te"] {
+                XCTAssertNotEqual(
+                    rossLocalized(key, languageCode: languageCode),
+                    english,
+                    "\(key) falls back to English for \(languageCode)"
+                )
+            }
+        }
+    }
+
     func testAskSourcePackLabelsAvoidEnglishFallbacksInSupportedLanguages() {
         let labelsThatShouldBeLocalized = [
             "ask_source_pack_matter",

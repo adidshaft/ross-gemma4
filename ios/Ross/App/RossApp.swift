@@ -6687,17 +6687,17 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "draft_ready": [
             "en": "Draft ready",
-            "hi": "Draft ready",
-            "bn": "Draft ready",
-            "ta": "Draft ready",
-            "te": "Draft ready"
+            "hi": "Draft ready है",
+            "bn": "Draft ready আছে",
+            "ta": "Draft ready உள்ளது",
+            "te": "Draft ready ఉంది"
         ],
         "export_generated": [
             "en": "Generated: %@",
-            "hi": "Generated: %@",
-            "bn": "Generated: %@",
-            "ta": "Generated: %@",
-            "te": "Generated: %@"
+            "hi": "Generated: %@ है",
+            "bn": "Generated: %@ হয়েছে",
+            "ta": "Generated: %@ ஆனது",
+            "te": "Generated: %@ అయింది"
         ],
         "export_draft_review": [
             "en": "Draft - please review",
@@ -6722,10 +6722,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "export_chronology_candidates": [
             "en": "Chronology candidates",
-            "hi": "Chronology candidates",
-            "bn": "Chronology candidates",
-            "ta": "Chronology candidates",
-            "te": "Chronology candidates"
+            "hi": "Chronology candidates देखें",
+            "bn": "Chronology candidates দেখুন",
+            "ta": "Chronology candidates பார்க்கவும்",
+            "te": "Chronology candidates చూడండి"
         ],
         "export_no_chronology_candidates": [
             "en": "- No verified chronology candidates found yet.",
@@ -6736,10 +6736,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "export_review_warnings": [
             "en": "Review warnings",
-            "hi": "Review warnings",
-            "bn": "Review warnings",
-            "ta": "Review warnings",
-            "te": "Review warnings"
+            "hi": "Review warnings देखें",
+            "bn": "Review warnings দেখুন",
+            "ta": "Review warnings பார்க்கவும்",
+            "te": "Review warnings చూడండి"
         ],
         "export_no_unresolved_warnings": [
             "en": "- No unresolved warnings.",
@@ -6750,38 +6750,38 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "export_source_references": [
             "en": "Source references",
-            "hi": "Source references",
-            "bn": "Source references",
-            "ta": "Source references",
-            "te": "Source references"
+            "hi": "Source references देखें",
+            "bn": "Source references দেখুন",
+            "ta": "Source references பார்க்கவும்",
+            "te": "Source references చూడండి"
         ],
         "export_case_metadata": [
             "en": "Court / case metadata",
-            "hi": "Court / case metadata",
-            "bn": "Court / case metadata",
-            "ta": "Court / case metadata",
-            "te": "Court / case metadata"
+            "hi": "Court / case metadata देखें",
+            "bn": "Court / case metadata দেখুন",
+            "ta": "Court / case metadata பார்க்கவும்",
+            "te": "Court / case metadata చూడండి"
         ],
         "export_court": [
             "en": "Court",
-            "hi": "Court",
-            "bn": "Court",
-            "ta": "Court",
-            "te": "Court"
+            "hi": "Court नाम",
+            "bn": "Court নাম",
+            "ta": "Court பெயர்",
+            "te": "Court పేరు"
         ],
         "export_case_number": [
             "en": "Case number",
-            "hi": "Case number",
-            "bn": "Case number",
-            "ta": "Case number",
-            "te": "Case number"
+            "hi": "Case number देखें",
+            "bn": "Case number দেখুন",
+            "ta": "Case number பார்க்கவும்",
+            "te": "Case number చూడండి"
         ],
         "export_parties": [
             "en": "Parties",
-            "hi": "Parties",
-            "bn": "Parties",
-            "ta": "Parties",
-            "te": "Parties"
+            "hi": "Parties देखें",
+            "bn": "Parties দেখুন",
+            "ta": "Parties பார்க்கவும்",
+            "te": "Parties చూడండి"
         ],
         "export_not_found": [
             "en": "Not found",
@@ -6792,10 +6792,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "export_document_list": [
             "en": "Document list",
-            "hi": "Document list",
-            "bn": "Document list",
-            "ta": "Document list",
-            "te": "Document list"
+            "hi": "Document list देखें",
+            "bn": "Document list দেখুন",
+            "ta": "Document list பார்க்கவும்",
+            "te": "Document list చూడండి"
         ],
         "export_no_imported_documents": [
             "en": "- No imported documents yet.",
@@ -6806,10 +6806,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "export_key_dates": [
             "en": "Key dates",
-            "hi": "Key dates",
-            "bn": "Key dates",
-            "ta": "Key dates",
-            "te": "Key dates"
+            "hi": "Key dates देखें",
+            "bn": "Key dates দেখুন",
+            "ta": "Key dates பார்க்கவும்",
+            "te": "Key dates చూడండి"
         ],
         "export_no_key_dates": [
             "en": "- No verified key dates found yet.",
@@ -6820,10 +6820,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "export_pending_review_fields": [
             "en": "Pending review fields",
-            "hi": "Pending review fields",
-            "bn": "Pending review fields",
-            "ta": "Pending review fields",
-            "te": "Pending review fields"
+            "hi": "Pending review fields देखें",
+            "bn": "Pending review fields দেখুন",
+            "ta": "Pending review fields பார்க்கவும்",
+            "te": "Pending review fields చూడండి"
         ],
         "export_no_pending_review_fields": [
             "en": "- No pending review fields.",
@@ -6834,10 +6834,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "export_operative_directions": [
             "en": "Operative directions",
-            "hi": "Operative directions",
-            "bn": "Operative directions",
-            "ta": "Operative directions",
-            "te": "Operative directions"
+            "hi": "Operative directions देखें",
+            "bn": "Operative directions দেখুন",
+            "ta": "Operative directions பார்க்கவும்",
+            "te": "Operative directions చూడండి"
         ],
         "export_no_operative_directions": [
             "en": "- No verified operative directions found yet.",
@@ -6848,17 +6848,17 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "export_next_date": [
             "en": "Next date",
-            "hi": "Next date",
-            "bn": "Next date",
-            "ta": "Next date",
-            "te": "Next date"
+            "hi": "Next date देखें",
+            "bn": "Next date দেখুন",
+            "ta": "Next date பார்க்கவும்",
+            "te": "Next date చూడండి"
         ],
         "export_compliance_requirements": [
             "en": "Compliance requirements",
-            "hi": "Compliance requirements",
-            "bn": "Compliance requirements",
-            "ta": "Compliance requirements",
-            "te": "Compliance requirements"
+            "hi": "Compliance requirements देखें",
+            "bn": "Compliance requirements দেখুন",
+            "ta": "Compliance requirements பார்க்கவும்",
+            "te": "Compliance requirements చూడండి"
         ],
         "export_review_operative_directions": [
             "en": "- Review operative directions against cited source pages.",
@@ -6883,10 +6883,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "export_thread_transcript": [
             "en": "Ross thread transcript",
-            "hi": "Ross thread transcript",
-            "bn": "Ross thread transcript",
-            "ta": "Ross thread transcript",
-            "te": "Ross thread transcript"
+            "hi": "Ross thread transcript देखें",
+            "bn": "Ross thread transcript দেখুন",
+            "ta": "Ross thread transcript பார்க்கவும்",
+            "te": "Ross thread transcript చూడండి"
         ],
         "export_no_chat_turns": [
             "en": "No chat turns are saved for this matter yet.",
@@ -6918,17 +6918,17 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "export_summary": [
             "en": "Summary",
-            "hi": "Summary",
-            "bn": "Summary",
-            "ta": "Summary",
-            "te": "Summary"
+            "hi": "Summary देखें",
+            "bn": "Summary দেখুন",
+            "ta": "Summary பார்க்கவும்",
+            "te": "Summary చూడండి"
         ],
         "export_working_notes": [
             "en": "Working notes",
-            "hi": "Working notes",
-            "bn": "Working notes",
-            "ta": "Working notes",
-            "te": "Working notes"
+            "hi": "Working notes देखें",
+            "bn": "Working notes দেখুন",
+            "ta": "Working notes பார்க்கவும்",
+            "te": "Working notes చూడండి"
         ],
         "export_no_tasks": [
             "en": "- No tasks yet.",
@@ -7009,10 +7009,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "tasks_added_title": [
             "en": "Tasks added.",
-            "hi": "Tasks added.",
-            "bn": "Tasks added.",
-            "ta": "Tasks added.",
-            "te": "Tasks added."
+            "hi": "Tasks added हुईं.",
+            "bn": "Tasks added হয়েছে.",
+            "ta": "Tasks added ஆனது.",
+            "te": "Tasks added అయ్యాయి."
         ],
         "ask_follow_up_tasks_already_saved": [
             "en": "The likely follow-up tasks were already saved for this matter.",

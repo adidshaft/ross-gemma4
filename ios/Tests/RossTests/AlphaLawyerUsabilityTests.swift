@@ -1695,7 +1695,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertTrue(exportText.contains("Advocate review के लिए locally generated."), exportText)
         XCTAssertTrue(emptyChronologyText.contains("- अभी verified chronology candidates नहीं मिले."), emptyChronologyText)
         XCTAssertTrue(exportText.contains("- अभी linked source नहीं"), exportText)
-        XCTAssertTrue(caseNoteText.contains("Court: नहीं मिला"), caseNoteText)
+        XCTAssertTrue(caseNoteText.contains("Court नाम: नहीं मिला"), caseNoteText)
         XCTAssertTrue(caseNoteText.contains("- कोई pending review fields नहीं."), caseNoteText)
         XCTAssertTrue(emptyCaseNoteText.contains("- अभी imported documents नहीं हैं."), emptyCaseNoteText)
         XCTAssertTrue(chatTranscriptText.contains("सवाल: What is the next date?"), chatTranscriptText)
