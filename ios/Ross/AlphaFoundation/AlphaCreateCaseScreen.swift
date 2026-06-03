@@ -378,7 +378,7 @@ struct AlphaCaseFolderCard: View {
                 variant: .neutral,
                 fallbackSystemImage: "folder.fill",
                 topTagText: nil,
-                badgeText: caseMatter.documents.isEmpty ? "New" : "\(caseMatter.documents.count)"
+                badgeText: caseMatter.documents.isEmpty ? rossLocalized("prepared_work_status_new") : "\(caseMatter.documents.count)"
             )
 
             Text(caseMatter.title)

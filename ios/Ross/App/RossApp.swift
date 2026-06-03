@@ -4935,6 +4935,48 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "இந்த matter-க்கு முதல் pleading, order, அல்லது note import செய்யவும்.",
             "te": "ఈ matter కోసం మొదటి pleading, order, లేదా note import చేయండి."
         ],
+        "next_action": [
+            "en": "Next action",
+            "hi": "अगला action",
+            "bn": "পরবর্তী action",
+            "ta": "அடுத்த action",
+            "te": "తదుపరి action"
+        ],
+        "matter_attention_review_count": [
+            "en": "%d item(s) need review",
+            "hi": "%d item(s) को review चाहिए",
+            "bn": "%d item(s) review দরকার",
+            "ta": "%d item(s)-க்கு review தேவை",
+            "te": "%d item(s) కు review అవసరం"
+        ],
+        "import_first_document": [
+            "en": "Import the first document",
+            "hi": "पहला document import करें",
+            "bn": "প্রথম document import করুন",
+            "ta": "முதல் document import செய்யவும்",
+            "te": "మొదటి document import చేయండి"
+        ],
+        "review_latest_file": [
+            "en": "Review the latest file",
+            "hi": "latest file review करें",
+            "bn": "latest file review করুন",
+            "ta": "latest file review செய்யவும்",
+            "te": "latest file review చేయండి"
+        ],
+        "refresh": [
+            "en": "Refresh",
+            "hi": "refresh करें",
+            "bn": "refresh করুন",
+            "ta": "refresh செய்யவும்",
+            "te": "refresh చేయండి"
+        ],
+        "refreshing": [
+            "en": "Refreshing",
+            "hi": "refresh हो रहा है",
+            "bn": "refresh হচ্ছে",
+            "ta": "refresh ஆகிறது",
+            "te": "refresh అవుతోంది"
+        ],
         "matter_memory_open_source_chips": [
             "en": "Open source chips before sharing or filing.",
             "hi": "share या file करने से पहले source chips खोलें.",

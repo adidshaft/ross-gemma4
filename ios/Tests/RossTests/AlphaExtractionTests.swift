@@ -1407,6 +1407,22 @@ final class AlphaExtractionTests: XCTestCase {
             rossLocalized("searching", languageCode: "bn"),
             "search হচ্ছে"
         )
+        XCTAssertEqual(
+            rossLocalized("next_action", languageCode: "ta"),
+            "அடுத்த action"
+        )
+        XCTAssertEqual(
+            alphaMatterAttentionReviewCountLabel(3, languageCode: "hi"),
+            "3 item(s) को review चाहिए"
+        )
+        XCTAssertEqual(
+            rossLocalized("import_first_document", languageCode: "bn"),
+            "প্রথম document import করুন"
+        )
+        XCTAssertEqual(
+            rossLocalized("refreshing", languageCode: "te-IN"),
+            "refresh అవుతోంది"
+        )
         rossSaveLanguageSelection(code: "hi")
         XCTAssertEqual(AlphaPreparedWorkType.publicLawQueryAwaitingApproval.title, "Public-law query approval का इंतज़ार कर रही है")
         XCTAssertEqual(AlphaPreparedWorkBadge.needsReview.title, "Review चाहिए")

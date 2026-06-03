@@ -407,12 +407,12 @@ struct AlphaMatterAttentionCard: View {
     }
 
     private var eyebrow: String {
-        hasReview ? "Needs review" : "Next action"
+        hasReview ? rossLocalized("needs_review") : rossLocalized("next_action")
     }
 
     private var title: String {
         if hasReview {
-            return reviewItems.count == 1 ? "1 item needs review" : "\(reviewItems.count) items need review"
+            return alphaMatterAttentionReviewCountLabel(reviewItems.count)
         }
         if let firstOpenTask = matterTasks.first(where: { $0.status == .open }) {
             return firstOpenTask.title
@@ -421,9 +421,9 @@ struct AlphaMatterAttentionCard: View {
             return firstDraftTask
         }
         if caseMatter.documents.isEmpty {
-            return "Import the first document"
+            return rossLocalized("import_first_document")
         }
-        return "Review the latest file"
+        return rossLocalized("review_latest_file")
     }
 
     private var reviewPreviewItems: [AlphaReviewQueueItem] {
@@ -450,7 +450,7 @@ struct AlphaMatterAttentionCard: View {
                         .font(.caption.weight(.bold))
                         .foregroundStyle(Color.rossInk.opacity(0.48))
                 } else {
-                    Button(isRefreshing ? "Refreshing" : "Refresh", action: onRefresh)
+                    Button(isRefreshing ? rossLocalized("refreshing") : rossLocalized("refresh"), action: onRefresh)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Color.rossAccent)
                         .buttonStyle(.plain)
@@ -585,6 +585,10 @@ struct AlphaMatterOverviewSummaryCard: View {
             }
         }
     }
+}
+
+func alphaMatterAttentionReviewCountLabel(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("matter_attention_review_count", languageCode: languageCode), count)
 }
 
 private extension String {
