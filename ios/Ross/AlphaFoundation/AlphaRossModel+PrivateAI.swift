@@ -27,6 +27,18 @@ private extension String {
     }
 }
 
+private final class AlphaAssistantPreflightRedirectDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+    nonisolated func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        willPerformHTTPRedirection response: HTTPURLResponse,
+        newRequest request: URLRequest,
+        completionHandler: @escaping @Sendable (URLRequest?) -> Void
+    ) {
+        completionHandler(nil)
+    }
+}
+
 @discardableResult
 private func alphaPurgeTemporaryAssistantDownloadFiles() -> Int64 {
     alphaSweepTemporaryAssistantDownloads()
@@ -664,7 +676,10 @@ extension AlphaRossModel {
             $0.updatedAt = .now
         }
 
-        let (_, response) = try await URLSession.shared.data(for: request)
+        let (_, response) = try await URLSession.shared.data(
+            for: request,
+            delegate: AlphaAssistantPreflightRedirectDelegate()
+        )
         guard let http = response as? HTTPURLResponse else {
             throw AlphaAssistantDownloadError.invalidURL
         }

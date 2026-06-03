@@ -1570,7 +1570,7 @@ struct AlphaAssistantDownloadPreflight: Hashable, Sendable {
     }
 
     static func parse(response: HTTPURLResponse, expectedBytes: Int64) throws -> AlphaAssistantDownloadPreflight {
-        guard (200...299).contains(response.statusCode) else {
+        guard (200...399).contains(response.statusCode) else {
             throw AlphaAssistantDownloadError.httpStatus(response.statusCode)
         }
         let headers = alphaHTTPHeaders(from: response)
@@ -1589,6 +1589,7 @@ struct AlphaAssistantDownloadPreflight: Hashable, Sendable {
         }
 
         let checksum = headers["x-linked-etag"]?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
             .trimmingCharacters(in: CharacterSet(charactersIn: "\""))
 
         return AlphaAssistantDownloadPreflight(

@@ -3318,6 +3318,32 @@ final class AlphaExtractionTests: XCTestCase {
         }
     }
 
+    func testAssistantDownloadPreflightAcceptsHuggingFaceResolverRedirectMetadata() throws {
+        let checksum = "a7cfc9f9b305b54a4ba2a681ff8795f594eafbe8c2c9df25d2f030a64d97bda6"
+        let response = try XCTUnwrap(HTTPURLResponse(
+            url: URL(string: "https://huggingface.co/model.gguf")!,
+            statusCode: 302,
+            httpVersion: nil,
+            headerFields: [
+                "Location": "https://cas-bridge.xethub.hf.co/signed-download",
+                "Content-Length": "1040",
+                "Accept-Ranges": "bytes",
+                "X-Linked-Size": "3020052224",
+                "X-Linked-ETag": " \"\(checksum)\" ",
+                "X-Xet-Hash": String(repeating: "c", count: 64)
+            ]
+        ))
+
+        let preflight = try AlphaAssistantDownloadPreflight.parse(
+            response: response,
+            expectedBytes: 3_020_052_224
+        )
+
+        XCTAssertEqual(preflight.reportedBytes, 3_020_052_224)
+        XCTAssertEqual(preflight.providerChecksumSha256, checksum)
+        XCTAssertEqual(try preflight.expectedChecksum(catalogChecksum: checksum), checksum)
+    }
+
     func testAssistantDownloadPreflightIgnoresRedirectStorageHashesBeforeDownload() throws {
         let storageHash = String(repeating: "a", count: 64)
         let catalogChecksum = String(repeating: "b", count: 64)
