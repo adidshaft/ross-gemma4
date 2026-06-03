@@ -2331,15 +2331,17 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
 
             let snapshot = await MainActor.run { model.persisted }
             let restartedJob = snapshot.modelJobs.first(where: { $0.id == job.id })
-            XCTAssertNil(restartedJob?.resumeDataRelativePath)
-            XCTAssertTrue(snapshot.ledgerEntries.contains {
-                $0.title == "Assistant download resume restarted" &&
-                $0.detail.localizedCaseInsensitiveContains("assistant download") &&
-                $0.detail.contains("Case files ఏవీ చదవబడలేదు") &&
-                !$0.detail.localizedCaseInsensitiveContains("model download") &&
+            let restartEntry = snapshot.ledgerEntries.first {
                 $0.purpose == .model_download &&
-                $0.payloadClass == .no_case_data
-            })
+                $0.endpointLabel == "device://model-resume"
+            }
+            XCTAssertNil(restartedJob?.resumeDataRelativePath)
+            XCTAssertEqual(restartEntry?.title, rossLocalized("privacy_ledger_assistant_download_resume_restarted_title"))
+            XCTAssertEqual(restartEntry?.lawyerTitle, rossLocalized("privacy_ledger_assistant_download_resume_restarted_title"))
+            XCTAssertTrue(restartEntry?.detail.localizedCaseInsensitiveContains("assistant download") == true)
+            XCTAssertTrue(restartEntry?.detail.contains("Case files ఏవీ చదవబడలేదు") == true)
+            XCTAssertFalse(restartEntry?.detail.localizedCaseInsensitiveContains("model download") == true)
+            XCTAssertEqual(restartEntry?.payloadClass, .no_case_data)
         }
     }
 

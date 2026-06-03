@@ -2936,6 +2936,8 @@ extension AlphaPrivacyLedgerEntry {
             rossLocalized("privacy_ledger_private_assistant_setup_title")
         case "Assistant download verified", "Assistant verified", "Assistant download failed", "Assistant restored":
             rossLocalized("privacy_ledger_private_assistant_setup_title")
+        case "Assistant download resume restarted":
+            rossLocalized("privacy_ledger_assistant_download_resume_restarted_title")
         case "Assistant removed", "Assistant setup removed":
             rossLocalized("privacy_ledger_assistant_removed_title")
         case "Assistant activation failed", "Assistant file verification failed":

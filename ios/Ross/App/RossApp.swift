@@ -1141,6 +1141,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Saved assistant setup progress கிடைக்கவில்லை. Ross assistant download-ஐ தொடக்கம் முதல் restart செய்யும்.",
             "te": "Saved assistant setup progress అందుబాటులో లేదు. Ross assistant download ను మొదటి నుండి restart చేస్తుంది."
         ],
+        "privacy_ledger_assistant_download_resume_restarted_title": [
+            "en": "Assistant download restarted",
+            "hi": "Assistant download restart हुआ",
+            "bn": "Assistant download restart হয়েছে",
+            "ta": "Assistant download restart ஆனது",
+            "te": "Assistant download restart అయింది"
+        ],
         "assistant_download_resume_missing_restart_detail": [
             "en": "Saved assistant setup progress was unavailable, so Ross restarted the assistant download from the beginning. No case files were read.",
             "hi": "Saved assistant setup progress उपलब्ध नहीं था, इसलिए Ross ने assistant download शुरुआत से restart किया। कोई case files नहीं पढ़ी गईं.",

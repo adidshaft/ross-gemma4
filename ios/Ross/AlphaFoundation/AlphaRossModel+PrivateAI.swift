@@ -122,7 +122,7 @@ extension AlphaRossModel {
         }
         persisted.ledgerEntries.insert(
             AlphaPrivacyLedgerEntry(
-                title: "Assistant download resume restarted",
+                title: rossLocalized("privacy_ledger_assistant_download_resume_restarted_title"),
                 detail: rossLocalized("assistant_download_resume_missing_restart_detail"),
                 purpose: .model_download,
                 payloadClass: .no_case_data,
@@ -146,7 +146,7 @@ extension AlphaRossModel {
         }
         persisted.ledgerEntries.insert(
             AlphaPrivacyLedgerEntry(
-                title: "Assistant download resume restarted",
+                title: rossLocalized("privacy_ledger_assistant_download_resume_restarted_title"),
                 detail: rossLocalized("assistant_download_resume_stale_restart_detail"),
                 purpose: .model_download,
                 payloadClass: .no_case_data,
