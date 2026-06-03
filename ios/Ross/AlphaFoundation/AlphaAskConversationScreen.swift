@@ -280,15 +280,13 @@ struct AlphaFullScreenChatTopBar: View {
         .padding(.horizontal, 12)
         .padding(.top, 4)
         .padding(.bottom, 8)
-        .rossGlassSurface(
+        .rossNativeGlassSurface(
             tint: Color.rossHighlight,
-            cornerRadius: 22,
-            shadowOpacity: 0.05,
-            shadowRadius: 7,
-            shadowY: 2,
-            fillOpacity: 0.78,
-            strokeOpacity: 0.42
+            shape: RoundedRectangle(cornerRadius: 22, style: .continuous),
+            fallbackFillOpacity: 0.78,
+            fallbackStrokeOpacity: 0.42
         )
+        .shadow(color: Color.rossShadow.opacity(0.05), radius: 7, y: 2)
         .padding(.horizontal, 8)
         .padding(.top, 4)
     }
@@ -421,15 +419,13 @@ struct AlphaFullScreenAskEmptyState: View {
         }
         .frame(maxWidth: 560, alignment: .leading)
         .padding(16)
-        .rossGlassSurface(
+        .rossNativeGlassSurface(
             tint: Color.rossAccent.opacity(0.12),
-            cornerRadius: 22,
-            shadowOpacity: 0.08,
-            shadowRadius: 10,
-            shadowY: 4,
-            fillOpacity: 0.84,
-            strokeOpacity: 0.50
+            shape: RoundedRectangle(cornerRadius: 22, style: .continuous),
+            fallbackFillOpacity: 0.84,
+            fallbackStrokeOpacity: 0.50
         )
+        .shadow(color: Color.rossShadow.opacity(0.08), radius: 10, y: 4)
         .frame(maxWidth: .infinity)
     }
 }
@@ -447,15 +443,13 @@ private struct AlphaAskEmptyWorkflowChip: View {
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 9)
             .padding(.vertical, 8)
-            .rossGlassSurface(
+            .rossNativeGlassSurface(
                 tint: Color.rossHighlight,
-                cornerRadius: 13,
-                shadowOpacity: 0.035,
-                shadowRadius: 4,
-                shadowY: 1,
-                fillOpacity: 0.72,
-                strokeOpacity: 0.38
+                shape: RoundedRectangle(cornerRadius: 13, style: .continuous),
+                fallbackFillOpacity: 0.72,
+                fallbackStrokeOpacity: 0.38
             )
+            .shadow(color: Color.rossShadow.opacity(0.035), radius: 4, y: 1)
     }
 }
 
@@ -521,16 +515,14 @@ struct AlphaFullScreenChatComposer: View {
                     }
                     .padding(.horizontal, 14)
                     .padding(.vertical, 11)
-                    .rossGlassSurface(
+                    .rossNativeGlassSurface(
                         tint: Color.rossHighlight,
-                        cornerRadius: 18,
+                        shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
                         interactive: true,
-                        shadowOpacity: 0.07,
-                        shadowRadius: 8,
-                        shadowY: 3,
-                        fillOpacity: 0.84,
-                        strokeOpacity: 0.50
+                        fallbackFillOpacity: 0.84,
+                        fallbackStrokeOpacity: 0.50
                     )
+                    .shadow(color: Color.rossShadow.opacity(0.07), radius: 8, y: 3)
 
                     AlphaFullScreenChatSendButton(
                         canSend: liveCanSend,
@@ -551,15 +543,13 @@ struct AlphaFullScreenChatComposer: View {
         .padding(.horizontal, 12)
         .padding(.top, 10)
         .padding(.bottom, 8)
-        .rossGlassSurface(
+        .rossNativeGlassSurface(
             tint: Color.rossHighlight,
-            cornerRadius: 24,
-            shadowOpacity: 0.08,
-            shadowRadius: 10,
-            shadowY: 4,
-            fillOpacity: 0.82,
-            strokeOpacity: 0.50
+            shape: RoundedRectangle(cornerRadius: 24, style: .continuous),
+            fallbackFillOpacity: 0.82,
+            fallbackStrokeOpacity: 0.50
         )
+        .shadow(color: Color.rossShadow.opacity(0.08), radius: 10, y: 4)
         .padding(.horizontal, 8)
         .padding(.bottom, 6)
     }
@@ -607,15 +597,13 @@ struct AlphaFullScreenChatTurn: View {
                             .fixedSize(horizontal: false, vertical: true)
                             .padding(.horizontal, 13)
                             .padding(.vertical, 10)
-                            .rossGlassSurface(
+                            .rossNativeGlassSurface(
                                 tint: Color.rossAccent,
-                                cornerRadius: 18,
-                                shadowOpacity: 0.06,
-                                shadowRadius: 7,
-                                shadowY: 3,
-                                fillOpacity: 0.82,
-                                strokeOpacity: 0.46
+                                shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
+                                fallbackFillOpacity: 0.82,
+                                fallbackStrokeOpacity: 0.46
                             )
+                            .shadow(color: Color.rossShadow.opacity(0.06), radius: 7, y: 3)
                     }
                 }
             }
@@ -662,7 +650,12 @@ struct AlphaFullScreenChatTurn: View {
                 }
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .rossGlassSurface(cornerRadius: 20, strokeOpacity: 0.56)
+                .rossNativeGlassSurface(
+                    tint: Color.rossAccent,
+                    shape: RoundedRectangle(cornerRadius: 20, style: .continuous),
+                    fallbackFillOpacity: 0.84,
+                    fallbackStrokeOpacity: 0.56
+                )
                 .contextMenu {
                     Button {
                         alphaCopyAskResultToPasteboard(result)
@@ -758,7 +751,12 @@ struct AlphaPendingLocalModelCard: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .rossGlassSurface(cornerRadius: style.cornerRadius, strokeOpacity: 0.56)
+        .rossNativeGlassSurface(
+            tint: Color.rossAccent,
+            shape: RoundedRectangle(cornerRadius: style.cornerRadius, style: .continuous),
+            fallbackFillOpacity: 0.84,
+            fallbackStrokeOpacity: 0.56
+        )
     }
 }
 
@@ -841,7 +839,12 @@ private struct AlphaThreadGroupCard: View {
                         .foregroundStyle(Color.rossAccent)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .rossGlassSurface(tint: Color.rossAccent.opacity(0.16), cornerRadius: 999, strokeOpacity: 0.40)
+                        .rossNativeGlassSurface(
+                            tint: Color.rossAccent.opacity(0.16),
+                            shape: Capsule(),
+                            fallbackFillOpacity: 0.84,
+                            fallbackStrokeOpacity: 0.40
+                        )
                 }
 
                 Spacer(minLength: 0)
@@ -889,28 +892,26 @@ private struct AlphaThreadGroupCard: View {
             }
         }
         .padding(14)
-        .rossGlassSurface(
+        .rossNativeGlassSurface(
             tint: isActiveScope ? Color.rossAccent.opacity(0.14) : Color.rossAccent.opacity(0.06),
-            cornerRadius: 18,
-            strokeOpacity: isActiveScope ? 0.66 : 0.50
+            shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
+            fallbackFillOpacity: 0.84,
+            fallbackStrokeOpacity: isActiveScope ? 0.66 : 0.50
         )
     }
 }
 
 private struct AlphaAskThreadRowSurface: ViewModifier {
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, macOS 26.0, *) {
-            content
-                .glassEffect(
-                    .regular
-                        .tint(Color.rossAccent.opacity(0.10))
-                        .interactive(),
-                    in: .rect(cornerRadius: 14)
-                )
-        } else {
-            content
-                .rossGlassSurface(cornerRadius: 14, interactive: true, shadowOpacity: 0.05, shadowRadius: 5, shadowY: 2, strokeOpacity: 0.44)
-        }
+        content
+            .rossNativeGlassSurface(
+                tint: Color.rossAccent.opacity(0.10),
+                shape: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                interactive: true,
+                fallbackFillOpacity: 0.84,
+                fallbackStrokeOpacity: 0.44
+            )
+            .shadow(color: Color.rossShadow.opacity(0.05), radius: 5, y: 2)
     }
 }
 
@@ -987,27 +988,15 @@ private struct AlphaAskSuggestionLabel: View {
 
 private struct AlphaAskSuggestionSurface: ViewModifier {
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, macOS 26.0, *) {
-            content
-                .glassEffect(
-                    .regular
-                        .tint(Color.rossAccent.opacity(0.12))
-                        .interactive(),
-                    in: .rect(cornerRadius: RossSurface.cornerRadius)
-                )
-        } else {
-            content
-                .rossGlassSurface(
-                    tint: Color.rossAccent,
-                    cornerRadius: RossSurface.cornerRadius,
-                    interactive: true,
-                    shadowOpacity: 0.07,
-                    shadowRadius: 7,
-                    shadowY: 3,
-                    fillOpacity: 0.82,
-                    strokeOpacity: 0.48
-                )
-        }
+        content
+            .rossNativeGlassSurface(
+                tint: Color.rossAccent.opacity(0.12),
+                shape: RoundedRectangle(cornerRadius: RossSurface.cornerRadius, style: .continuous),
+                interactive: true,
+                fallbackFillOpacity: 0.82,
+                fallbackStrokeOpacity: 0.48
+            )
+            .shadow(color: Color.rossShadow.opacity(0.07), radius: 7, y: 3)
     }
 }
 
@@ -1038,15 +1027,13 @@ struct AlphaAskTurnCard: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 13)
                         .padding(.vertical, 9)
-                        .rossGlassSurface(
+                        .rossNativeGlassSurface(
                             tint: Color.rossAccent,
-                            cornerRadius: 18,
-                            shadowOpacity: 0.06,
-                            shadowRadius: 7,
-                            shadowY: 3,
-                            fillOpacity: 0.82,
-                            strokeOpacity: 0.46
+                            shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
+                            fallbackFillOpacity: 0.82,
+                            fallbackStrokeOpacity: 0.46
                         )
+                        .shadow(color: Color.rossShadow.opacity(0.06), radius: 7, y: 3)
                 }
             } else {
                 HStack(spacing: 8) {
@@ -1147,7 +1134,12 @@ struct AlphaAskTurnCard: View {
                                 .foregroundStyle(Color.rossInk.opacity(0.82))
                         }
                         .padding(12)
-                        .rossGlassSurface(cornerRadius: 18, strokeOpacity: 0.48)
+                        .rossNativeGlassSurface(
+                            tint: Color.rossAccent,
+                            shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
+                            fallbackFillOpacity: 0.84,
+                            fallbackStrokeOpacity: 0.48
+                        )
                     }
 
                     if !result.publicLawResults.isEmpty {
@@ -1158,7 +1150,12 @@ struct AlphaAskTurnCard: View {
                             }
                         }
                         .padding(12)
-                        .rossGlassSurface(cornerRadius: 18, strokeOpacity: 0.48)
+                        .rossNativeGlassSurface(
+                            tint: Color.rossAccent,
+                            shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
+                            fallbackFillOpacity: 0.84,
+                            fallbackStrokeOpacity: 0.48
+                        )
                     }
 
                     if result.publicLawPreview != nil || !result.publicLawResults.isEmpty || result.needsReviewWarning != nil {
@@ -1189,15 +1186,13 @@ struct AlphaAskTurnCard: View {
                     }
                 }
                 .padding(14)
-                .rossGlassSurface(
+                .rossNativeGlassSurface(
                     tint: Color.rossHighlight,
-                    cornerRadius: 22,
-                    shadowOpacity: 0.09,
-                    shadowRadius: 10,
-                    shadowY: 4,
-                    fillOpacity: 0.84,
-                    strokeOpacity: 0.50
+                    shape: RoundedRectangle(cornerRadius: 22, style: .continuous),
+                    fallbackFillOpacity: 0.84,
+                    fallbackStrokeOpacity: 0.50
                 )
+                .shadow(color: Color.rossShadow.opacity(0.09), radius: 10, y: 4)
 
                 Spacer(minLength: 40)
             }
@@ -1219,16 +1214,14 @@ private struct AlphaFullScreenChatAddFilesButton: View {
         } else {
             Button(action: action) {
                 icon
-                    .rossGlassSurface(
+                    .rossNativeGlassSurface(
                         tint: Color.rossAccent,
-                        cornerRadius: 20,
+                        shape: RoundedRectangle(cornerRadius: 20, style: .continuous),
                         interactive: true,
-                        shadowOpacity: 0.08,
-                        shadowRadius: 7,
-                        shadowY: 3,
-                        fillOpacity: 0.80,
-                        strokeOpacity: 0.48
+                        fallbackFillOpacity: 0.80,
+                        fallbackStrokeOpacity: 0.48
                     )
+                    .shadow(color: Color.rossShadow.opacity(0.08), radius: 7, y: 3)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(rossLocalized("add_files_or_images"))
@@ -1419,18 +1412,15 @@ private struct AlphaAnswerSourcesToggleLabel: View {
     let isExpanded: Bool
 
     var body: some View {
-        if #available(iOS 26.0, macOS 26.0, *) {
-            label
-                .glassEffect(
-                    .regular
-                        .tint(Color.rossAccent.opacity(0.10))
-                        .interactive(),
-                    in: .rect(cornerRadius: 14)
-                )
-        } else {
-            label
-                .rossGlassSurface(cornerRadius: 14, interactive: true, shadowOpacity: 0.03, shadowRadius: 3, shadowY: 1, strokeOpacity: 0.42)
-        }
+        label
+            .rossNativeGlassSurface(
+                tint: Color.rossAccent.opacity(0.10),
+                shape: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                interactive: true,
+                fallbackFillOpacity: 0.84,
+                fallbackStrokeOpacity: 0.42
+            )
+            .shadow(color: Color.rossShadow.opacity(0.03), radius: 3, y: 1)
     }
 
     private var label: some View {
@@ -1452,18 +1442,15 @@ private struct AlphaAnswerPrivacyToggleLabel: View {
     let isExpanded: Bool
 
     var body: some View {
-        if #available(iOS 26.0, macOS 26.0, *) {
-            label
-                .glassEffect(
-                    .regular
-                        .tint(Color.rossAccent.opacity(0.08))
-                        .interactive(),
-                    in: .capsule
-                )
-        } else {
-            label
-                .rossGlassSurface(cornerRadius: 999, interactive: true, shadowOpacity: 0.03, shadowRadius: 3, shadowY: 1, strokeOpacity: 0.44)
-        }
+        label
+            .rossNativeGlassSurface(
+                tint: Color.rossAccent.opacity(0.08),
+                shape: Capsule(),
+                interactive: true,
+                fallbackFillOpacity: 0.84,
+                fallbackStrokeOpacity: 0.44
+            )
+            .shadow(color: Color.rossShadow.opacity(0.03), radius: 3, y: 1)
     }
 
     private var label: some View {
@@ -1484,18 +1471,15 @@ private struct AlphaAnswerPrivacyToggleLabel: View {
 
 private struct AlphaCleanAnswerMenuLabel: View {
     var body: some View {
-        if #available(iOS 26.0, macOS 26.0, *) {
-            icon
-                .glassEffect(
-                    .regular
-                        .tint(Color.rossAccent.opacity(0.08))
-                        .interactive(),
-                    in: .capsule
-                )
-        } else {
-            icon
-                .rossGlassSurface(cornerRadius: 999, interactive: true, shadowOpacity: 0.03, shadowRadius: 3, shadowY: 1, strokeOpacity: 0.42)
-        }
+        icon
+            .rossNativeGlassSurface(
+                tint: Color.rossAccent.opacity(0.08),
+                shape: Capsule(),
+                interactive: true,
+                fallbackFillOpacity: 0.84,
+                fallbackStrokeOpacity: 0.42
+            )
+            .shadow(color: Color.rossShadow.opacity(0.03), radius: 3, y: 1)
     }
 
     private var icon: some View {
@@ -1520,7 +1504,14 @@ private struct AlphaCleanAnswerCopyButton: View {
         } else {
             Button(action: action) {
                 label
-                    .rossGlassSurface(cornerRadius: 999, interactive: true, shadowOpacity: 0.03, shadowRadius: 3, shadowY: 1, strokeOpacity: 0.42)
+                    .rossNativeGlassSurface(
+                        tint: Color.rossAccent.opacity(0.08),
+                        shape: Capsule(),
+                        interactive: true,
+                        fallbackFillOpacity: 0.84,
+                        fallbackStrokeOpacity: 0.42
+                    )
+                    .shadow(color: Color.rossShadow.opacity(0.03), radius: 3, y: 1)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(rossLocalized("copy_answer"))
@@ -1598,7 +1589,13 @@ struct AlphaPublicLawResultCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .rossGlassSurface(cornerRadius: 16, shadowOpacity: 0.07, shadowRadius: 7, shadowY: 3, fillOpacity: 0.78, strokeOpacity: 0.44)
+        .rossNativeGlassSurface(
+            tint: Color.rossAccent,
+            shape: RoundedRectangle(cornerRadius: 16, style: .continuous),
+            fallbackFillOpacity: 0.78,
+            fallbackStrokeOpacity: 0.44
+        )
+        .shadow(color: Color.rossShadow.opacity(0.07), radius: 7, y: 3)
     }
 }
 
