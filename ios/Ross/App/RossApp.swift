@@ -2359,6 +2359,55 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Sample file கொண்டு private assistant check செய்கிறது...",
             "te": "Sample file తో private assistant check చేస్తోంది..."
         ],
+        "private_assistant_sample_file_check_report_title": [
+            "en": "Private assistant sample file check",
+            "hi": "Private assistant sample file check",
+            "bn": "Private assistant sample file check",
+            "ta": "Private assistant sample file check",
+            "te": "Private assistant sample file check"
+        ],
+        "private_assistant_sample_file_check_completed_on_iphone": [
+            "en": "Sample file check completed on this iPhone",
+            "hi": "Sample file check इस iPhone पर पूरा हुआ",
+            "bn": "Sample file check এই iPhone-এ শেষ হয়েছে",
+            "ta": "Sample file check இந்த iPhone-இல் முடிந்தது",
+            "te": "Sample file check ఈ iPhone లో పూర్తయింది"
+        ],
+        "private_assistant_ready_on_device": [
+            "en": "Private assistant: Ready on this device",
+            "hi": "Private assistant: इस device पर ready",
+            "bn": "Private assistant: এই device-এ ready",
+            "ta": "Private assistant: இந்த device-இல் ready",
+            "te": "Private assistant: ఈ device లో ready"
+        ],
+        "fields_found_count": [
+            "en": "Fields found: %d",
+            "hi": "Fields found: %d",
+            "bn": "Fields found: %d",
+            "ta": "Fields found: %d",
+            "te": "Fields found: %d"
+        ],
+        "fields_verified_count": [
+            "en": "Fields verified: %d",
+            "hi": "Fields verified: %d",
+            "bn": "Fields verified: %d",
+            "ta": "Fields verified: %d",
+            "te": "Fields verified: %d"
+        ],
+        "fields_needing_review_count": [
+            "en": "Fields needing review: %d",
+            "hi": "Fields needing review: %d",
+            "bn": "Fields needing review: %d",
+            "ta": "Fields needing review: %d",
+            "te": "Fields needing review: %d"
+        ],
+        "private_assistant_sample_file_check_completed_private": [
+            "en": "Private assistant sample file check completed without logging prompt or source text.",
+            "hi": "Private assistant sample file check prompt या source text log किए बिना पूरा हुआ.",
+            "bn": "Private assistant sample file check prompt বা source text log না করেই শেষ হয়েছে.",
+            "ta": "Private assistant sample file check prompt அல்லது source text log செய்யாமல் முடிந்தது.",
+            "te": "Private assistant sample file check prompt లేదా source text log చేయకుండా పూర్తయింది."
+        ],
         "completed": [
             "en": "Completed",
             "hi": "पूरा हुआ",

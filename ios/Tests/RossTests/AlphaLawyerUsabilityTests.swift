@@ -2389,8 +2389,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
 
             let report = await MainActor.run { model.localInferenceSmokeReport }
             let exportTitle = await MainActor.run { model.persisted.exports.first?.title }
-            XCTAssertEqual(report?.message, "Private assistant sample file check completed without logging prompt or source text.")
-            XCTAssertEqual(exportTitle, "Private assistant sample file check")
+            XCTAssertEqual(report?.message, rossLocalized("private_assistant_sample_file_check_completed_private"))
+            XCTAssertEqual(exportTitle, rossLocalized("private_assistant_sample_file_check_report_title"))
 
             let visibleCopy = [report?.message, exportTitle].compactMap(\.self).joined(separator: "\n")
             XCTAssertTrue(visibleCopy.localizedCaseInsensitiveContains("private assistant"))

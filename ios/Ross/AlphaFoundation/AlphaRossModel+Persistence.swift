@@ -1223,16 +1223,16 @@ extension AlphaRossModel {
             let export: AlphaExportedReport?
             do {
                 export = try await store.createPDFExport(
-                    title: "Private assistant sample file check",
+                    title: rossLocalized("private_assistant_sample_file_check_report_title"),
                     kind: "case_note",
                     caseId: nil,
                     bodyLines: [
-                        "Draft — please review",
-                        "Sample file check completed on this iPhone",
-                        "Private assistant: Ready on this device",
-                        "Fields found: \(result.extractedFields.count)",
-                        "Fields verified: \(result.extractedFields.filter { !$0.needsReview || $0.userCorrected }.count)",
-                        "Fields needing review: \(result.extractedFields.filter { $0.needsReview && !$0.userCorrected }.count)"
+                        rossLocalized("export_draft_review"),
+                        rossLocalized("private_assistant_sample_file_check_completed_on_iphone"),
+                        rossLocalized("private_assistant_ready_on_device"),
+                        String(format: rossLocalized("fields_found_count"), result.extractedFields.count),
+                        String(format: rossLocalized("fields_verified_count"), result.extractedFields.filter { !$0.needsReview || $0.userCorrected }.count),
+                        String(format: rossLocalized("fields_needing_review_count"), result.extractedFields.filter { $0.needsReview && !$0.userCorrected }.count)
                     ]
                 )
             } catch {
@@ -1253,7 +1253,7 @@ extension AlphaRossModel {
                 fieldsNeedingReview: result.extractedFields.filter { $0.needsReview && !$0.userCorrected }.count,
                 unsupportedAccepted: 0,
                 exportRelativePath: export?.relativePath,
-                message: "Private assistant sample file check completed without logging prompt or source text."
+                message: rossLocalized("private_assistant_sample_file_check_completed_private")
             )
             localInferenceSmokeRunning = false
         }
