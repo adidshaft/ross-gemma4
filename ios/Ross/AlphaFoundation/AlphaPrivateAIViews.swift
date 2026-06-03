@@ -750,15 +750,41 @@ struct AlphaPrivateAIRecoveryHintRow: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .rossGlassSurface(
-            tint: Color.rossAccent.opacity(0.10),
-            cornerRadius: 14,
-            shadowOpacity: 0.04,
-            shadowRadius: 4,
-            shadowY: 1,
-            fillOpacity: 0.74,
-            strokeOpacity: 0.44
-        )
+        .modifier(AlphaPrivateAIRecoveryHintSurface())
+    }
+}
+
+private struct AlphaPrivateAIRecoveryHintSurface: ViewModifier {
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
+
+        if #available(iOS 26.0, macOS 26.0, *) {
+            content
+                .background {
+                    shape.fill(Color.rossGlassFill.opacity(0.36))
+                }
+                .glassEffect(
+                    Glass.regular
+                        .tint(Color.rossAccent.opacity(0.10)),
+                    in: shape
+                )
+                .overlay {
+                    shape.strokeBorder(Color.rossAccent.opacity(0.18), lineWidth: 1)
+                }
+                .shadow(color: Color.rossShadow.opacity(0.04), radius: 4, y: 1)
+        } else {
+            content
+                .rossGlassSurface(
+                    tint: Color.rossAccent.opacity(0.10),
+                    cornerRadius: 14,
+                    shadowOpacity: 0.04,
+                    shadowRadius: 4,
+                    shadowY: 1,
+                    fillOpacity: 0.74,
+                    strokeOpacity: 0.44
+                )
+        }
     }
 }
 
