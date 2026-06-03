@@ -3850,6 +3850,41 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "alternate reference ஆக save செய்யவும்",
             "te": "alternate reference గా save చేయండి"
         ],
+        "review_confirmed_from_inline_review": [
+            "en": "Confirmed from inline review",
+            "hi": "inline review से confirm किया",
+            "bn": "inline review থেকে confirm করা হয়েছে",
+            "ta": "inline review-இல் confirm செய்யப்பட்டது",
+            "te": "inline review నుండి confirm చేయబడింది"
+        ],
+        "review_dismissed_from_inline_review": [
+            "en": "Dismissed from inline review",
+            "hi": "inline review से dismiss किया",
+            "bn": "inline review থেকে dismiss করা হয়েছে",
+            "ta": "inline review-இல் dismiss செய்யப்பட்டது",
+            "te": "inline review నుండి dismiss చేయబడింది"
+        ],
+        "review_item_resolved_summary": [
+            "en": "Review item resolved: %@.",
+            "hi": "Review item resolved: %@.",
+            "bn": "Review item resolved: %@.",
+            "ta": "Review item resolved: %@.",
+            "te": "Review item resolved: %@."
+        ],
+        "conflict_resolved_using_file_value": [
+            "en": "Conflict resolved using file value '%@'.",
+            "hi": "Conflict file value '%@' से resolve हुआ.",
+            "bn": "Conflict file value '%@' দিয়ে resolve হয়েছে.",
+            "ta": "Conflict file value '%@' மூலம் resolve ஆனது.",
+            "te": "Conflict file value '%@' తో resolve అయ్యింది."
+        ],
+        "alternate_reference_from_document": [
+            "en": "Alternate reference from %@: %@.",
+            "hi": "%@ से alternate reference: %@.",
+            "bn": "%@ থেকে alternate reference: %@.",
+            "ta": "%@-இலிருந்து alternate reference: %@.",
+            "te": "%@ నుండి alternate reference: %@."
+        ],
         "preview": [
             "en": "Preview",
             "hi": "Preview",

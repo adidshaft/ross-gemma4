@@ -34,6 +34,18 @@ func alphaPossibleConflictMessage(
     )
 }
 
+func alphaReviewItemResolvedSummary(_ resolution: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("review_item_resolved_summary", languageCode: languageCode), resolution)
+}
+
+func alphaConflictResolvedUsingFileValueSummary(_ value: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("conflict_resolved_using_file_value", languageCode: languageCode), value)
+}
+
+func alphaAlternateReferenceNoteLine(documentTitle: String, alternate: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("alternate_reference_from_document", languageCode: languageCode), documentTitle, alternate)
+}
+
 func alphaDocumentReviewSummaryLabel(
     fieldsFound: Int,
     verified: Int,
@@ -405,7 +417,7 @@ extension AlphaRossModel {
             AlphaCaseMemoryUpdate(
                 caseId: caseId,
                 source: .userCorrection,
-                summary: "Review item resolved: \(resolution).",
+                summary: alphaReviewItemResolvedSummary(resolution),
                 affectedDocuments: [documentId]
             ),
             at: 0
@@ -421,7 +433,7 @@ extension AlphaRossModel {
         case .extractedField(let fieldId):
             acceptExtractedField(caseId: item.caseId, documentId: item.documentId, fieldId: fieldId)
         case .finding(let findingId):
-            resolveFinding(caseId: item.caseId, documentId: item.documentId, findingId: findingId, resolution: "Confirmed from inline review")
+            resolveFinding(caseId: item.caseId, documentId: item.documentId, findingId: findingId, resolution: rossLocalized("review_confirmed_from_inline_review"))
         }
     }
 
@@ -430,7 +442,7 @@ extension AlphaRossModel {
         case .extractedField(let fieldId):
             ignoreExtractedField(caseId: item.caseId, documentId: item.documentId, fieldId: fieldId)
         case .finding(let findingId):
-            resolveFinding(caseId: item.caseId, documentId: item.documentId, findingId: findingId, resolution: "Dismissed from inline review")
+            resolveFinding(caseId: item.caseId, documentId: item.documentId, findingId: findingId, resolution: rossLocalized("review_dismissed_from_inline_review"))
         }
     }
 
@@ -472,7 +484,7 @@ extension AlphaRossModel {
             AlphaCaseMemoryUpdate(
                 caseId: caseId,
                 source: .userCorrection,
-                summary: "Conflict resolved using file value '\(value)'.",
+                summary: alphaConflictResolvedUsingFileValueSummary(value),
                 affectedDocuments: [documentId]
             ),
             at: 0
@@ -492,9 +504,9 @@ extension AlphaRossModel {
         else { return }
 
         let finding = caseMatter.documents[documentIndex].extractionFindings[findingIndex]
-        let alternate = finding.fileValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "no linked source"
+        let alternate = finding.fileValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? rossLocalized("no_linked_source_yet")
         let existingNotes = caseMatter.notes?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let noteLine = "Alternate reference from \(caseMatter.documents[documentIndex].title): \(alternate)."
+        let noteLine = alphaAlternateReferenceNoteLine(documentTitle: caseMatter.documents[documentIndex].title, alternate: alternate)
         caseMatter.notes = [existingNotes, noteLine].compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: "\n")
         caseMatter.documents[documentIndex].extractionFindings[findingIndex].resolved = true
         refreshCaseWorkspace(caseMatter: &caseMatter)

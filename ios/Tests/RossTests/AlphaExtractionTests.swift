@@ -1322,6 +1322,18 @@ final class AlphaExtractionTests: XCTestCase {
             ),
             "Possible conflict கண்டுபிடிக்கப்பட்டது. Matter value: Old value. File value: New value."
         )
+        XCTAssertEqual(
+            alphaReviewItemResolvedSummary(rossLocalized("review_confirmed_from_inline_review", languageCode: "bn"), languageCode: "bn"),
+            "Review item resolved: inline review থেকে confirm করা হয়েছে."
+        )
+        XCTAssertEqual(
+            alphaConflictResolvedUsingFileValueSummary("Delhi High Court", languageCode: "hi"),
+            "Conflict file value 'Delhi High Court' से resolve हुआ."
+        )
+        XCTAssertEqual(
+            alphaAlternateReferenceNoteLine(documentTitle: "Order", alternate: "Delhi High Court", languageCode: "te-IN"),
+            "Order నుండి alternate reference: Delhi High Court."
+        )
         XCTAssertEqual(alphaAttentionHeadline(0), "आज सब under control है")
         XCTAssertEqual(alphaAttentionHeadline(1), "1 item को attention चाहिए")
         XCTAssertEqual(alphaAttentionHeadline(4), "4 items को attention चाहिए")
