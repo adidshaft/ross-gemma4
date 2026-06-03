@@ -46,6 +46,22 @@ func alphaDemoMatterLocalNotice(languageCode: String = rossSelectedLanguageCode(
     )
 }
 
+func alphaDemoConfirmNextHearingHighlight(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("demo_confirm_next_hearing_highlight", languageCode: languageCode)
+}
+
+func alphaDemoPrepareHearingNoteHighlight(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("demo_prepare_hearing_note_highlight", languageCode: languageCode)
+}
+
+func alphaDemoCheckFilingDeadlineHighlight(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("demo_check_filing_deadline_highlight", languageCode: languageCode)
+}
+
+func alphaDemoWorkspacePreparedMemorySummary(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("demo_workspace_prepared_memory_summary", languageCode: languageCode)
+}
+
 enum AlphaOnboardingStage: String, Codable, Hashable, Sendable {
     case onboarding
     // Kept so older saved state can migrate into the simplified onboarding flow.
@@ -2567,9 +2583,9 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
             notes: rossLocalized("demo_matter_sample_data_only"),
             summary: "This synthetic matter is ready for a morning check-in. Review the latest order, confirm the next date, prepare a hearing note, and keep filing compliance on track.",
             issueHighlights: [
-                "Confirm the next hearing date from the latest order.",
-                "Prepare a short hearing note before arguments.",
-                "Check the filing deadline before sharing the next update."
+                alphaDemoConfirmNextHearingHighlight(),
+                alphaDemoPrepareHearingNoteHighlight(),
+                alphaDemoCheckFilingDeadlineHighlight()
             ],
             evidenceNotes: [
                 "Demo order contains the next date and order direction.",
@@ -2611,7 +2627,7 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
                 AlphaCaseMemoryUpdate(
                     caseId: matterID,
                     source: .manualNote,
-                    summary: "Demo workspace prepared for local morning-use QA.",
+                    summary: alphaDemoWorkspacePreparedMemorySummary(),
                     affectedDocuments: [orderID, affidavitID, noticeID],
                     createdAt: noticeImportedAt
                 )

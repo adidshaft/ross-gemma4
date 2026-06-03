@@ -7308,6 +7308,34 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Ross இந்த files-ஐ local ஆகவும் device-wide questions-க்கு ready ஆகவும் வைத்திருக்கும்.",
             "te": "Ross ఈ files ను local గా మరియు device-wide questions కోసం ready గా ఉంచుతుంది."
         ],
+        "demo_confirm_next_hearing_highlight": [
+            "en": "Confirm the next hearing date from the latest order.",
+            "hi": "Latest order से अगली hearing date confirm करें.",
+            "bn": "Latest order থেকে পরের hearing date confirm করুন.",
+            "ta": "Latest order-இல் இருந்து அடுத்த hearing date-ஐ confirm செய்யவும்.",
+            "te": "Latest order నుండి తదుపరి hearing date confirm చేయండి."
+        ],
+        "demo_prepare_hearing_note_highlight": [
+            "en": "Prepare a short hearing note before arguments.",
+            "hi": "Arguments से पहले एक short hearing note तैयार करें.",
+            "bn": "Arguments-এর আগে একটি short hearing note তৈরি করুন.",
+            "ta": "Arguments-க்கு முன் ஒரு short hearing note தயார் செய்யவும்.",
+            "te": "Arguments ముందు ఒక short hearing note సిద్ధం చేయండి."
+        ],
+        "demo_check_filing_deadline_highlight": [
+            "en": "Check the filing deadline before sharing the next update.",
+            "hi": "Next update share करने से पहले filing deadline check करें.",
+            "bn": "Next update share করার আগে filing deadline check করুন.",
+            "ta": "Next update share செய்வதற்கு முன் filing deadline-ஐ check செய்யவும்.",
+            "te": "Next update share చేయడానికి ముందు filing deadline check చేయండి."
+        ],
+        "demo_workspace_prepared_memory_summary": [
+            "en": "Demo workspace prepared for local morning-use QA.",
+            "hi": "Local morning-use QA के लिए demo workspace तैयार है.",
+            "bn": "Local morning-use QA-এর জন্য demo workspace প্রস্তুত.",
+            "ta": "Local morning-use QA-க்கு demo workspace தயார்.",
+            "te": "Local morning-use QA కోసం demo workspace సిద్ధంగా ఉంది."
+        ],
         "ask_new_chat": [
             "en": "New chat",
             "hi": "नई chat",

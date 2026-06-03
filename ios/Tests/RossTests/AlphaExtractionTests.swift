@@ -963,6 +963,10 @@ final class AlphaExtractionTests: XCTestCase {
             rossLocalized("privacy_ledger_local_case_review_detail"),
             rossLocalized("privacy_ledger_demo_workspace_prepared_detail"),
             rossLocalized("privacy_ledger_demo_workspace_reset_detail"),
+            alphaDemoConfirmNextHearingHighlight(),
+            alphaDemoPrepareHearingNoteHighlight(),
+            alphaDemoCheckFilingDeadlineHighlight(),
+            alphaDemoWorkspacePreparedMemorySummary(),
             AlphaMatterDateKind.hearing.title,
             AlphaMatterDateKind.filingDeadline.title,
             AlphaMatterDateKind.complianceDate.title,
@@ -1002,6 +1006,10 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(normalSettingsCopy.contains("matter files, tasks, और progress"))
         XCTAssertTrue(normalSettingsCopy.contains("synthetic sample work"))
         XCTAssertTrue(normalSettingsCopy.contains("synthetic sample matter restore"))
+        XCTAssertTrue(normalSettingsCopy.contains("Latest order से अगली hearing date confirm करें"))
+        XCTAssertTrue(normalSettingsCopy.contains("Arguments से पहले एक short hearing note"))
+        XCTAssertTrue(normalSettingsCopy.contains("filing deadline check करें"))
+        XCTAssertTrue(normalSettingsCopy.contains("Local morning-use QA के लिए demo workspace"))
         XCTAssertTrue(normalSettingsCopy.contains("अगली hearing"))
         XCTAssertTrue(normalSettingsCopy.contains("अगली date confirm करें"))
         XCTAssertTrue(normalSettingsCopy.contains("Task title जोड़ें"))
@@ -1009,6 +1017,10 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("downloaded assistant files"))
         XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("downloaded assistant"))
         XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("assistant files"))
+        XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("Confirm the next hearing date from the latest order"))
+        XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("Prepare a short hearing note before arguments"))
+        XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("Check the filing deadline before sharing the next update"))
+        XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("Demo workspace prepared for local morning-use QA"))
     }
 
     func testExistingAssistantSetupRepairCopyPointsToMyAssistant() {
