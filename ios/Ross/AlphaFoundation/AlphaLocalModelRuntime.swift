@@ -95,10 +95,21 @@ struct AlphaLocalModelOutput: Codable, Hashable, Sendable {
 }
 
 enum AlphaLocalModelWarningCopy {
-    static let assistantSetupMissing = "Private assistant setup is missing or incomplete. Open My assistant and use Repair setup."
-    static let inputFocusedOnRelevantParts = "The file was long, so Ross focused on the most relevant parts."
-    static let sourceLanguageFallback = "Ross answered from the source text because the private assistant did not keep the requested language."
-    static let assistantCouldNotFinish = "The private assistant could not finish this request. Ross kept the request on this device."
+    static var assistantSetupMissing: String {
+        rossLocalized("local_model_warning_assistant_setup_missing")
+    }
+
+    static var inputFocusedOnRelevantParts: String {
+        rossLocalized("local_model_warning_input_focused_on_relevant_parts")
+    }
+
+    static var sourceLanguageFallback: String {
+        rossLocalized("local_model_warning_source_language_fallback")
+    }
+
+    static var assistantCouldNotFinish: String {
+        rossLocalized("local_model_warning_assistant_could_not_finish")
+    }
 }
 
 struct AlphaModelPromptPolicy: Codable, Hashable, Sendable {

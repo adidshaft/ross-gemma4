@@ -409,7 +409,7 @@ extension AlphaRossModel {
                 persisted.ledgerEntries.insert(
                     AlphaPrivacyLedgerEntry(
                         title: "Private assistant download queued",
-                        detail: "The system assistant was unavailable, so Ross will prepare a private on-device assistant without reading case files.",
+                        detail: rossLocalized("privacy_ledger_private_assistant_download_queued_detail"),
                         purpose: .model_catalog,
                         payloadClass: .no_case_data,
                         endpointLabel: "device://private-assistant",
@@ -429,7 +429,7 @@ extension AlphaRossModel {
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
                     title: "Private assistant setup unavailable",
-                    detail: "Ross checked this iPhone's on-device assistant and did not send case files.",
+                    detail: rossLocalized("privacy_ledger_private_assistant_unavailable_detail"),
                     purpose: .model_verification,
                     payloadClass: .no_case_data,
                     endpointLabel: "device://private-assistant",

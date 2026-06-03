@@ -1208,6 +1208,14 @@ final class AlphaExtractionTests: XCTestCase {
             "Private assistant ప్రస్తుతం ఈ device లో unavailable."
         )
         XCTAssertEqual(
+            rossLocalized("privacy_ledger_private_assistant_download_queued_detail", languageCode: "ta"),
+            "Ross இந்த device-இல் private assistant prepare செய்யும். Case file எதையும் படிக்கவோ அனுப்பவோ இல்லை."
+        )
+        XCTAssertEqual(
+            rossLocalized("privacy_ledger_private_assistant_unavailable_detail", languageCode: "bn"),
+            "Ross এই iPhone-এর private assistant check করেছে। কোনো case file পড়া বা পাঠানো হয়নি."
+        )
+        XCTAssertEqual(
             rossLocalized("settings_advanced", languageCode: "ta"),
             "மேம்பட்டது"
         )
@@ -1251,6 +1259,22 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(
             alphaConfidenceLabel(confidence: 0.92, needsReview: false),
             "Verified"
+        )
+        XCTAssertEqual(
+            AlphaLocalModelWarningCopy.assistantSetupMissing,
+            "Private assistant setup missing या incomplete है. My assistant खोलकर Repair setup use करें."
+        )
+        XCTAssertEqual(
+            AlphaLocalModelWarningCopy.assistantCouldNotFinish,
+            "Private assistant यह request finish नहीं कर पाया. Ross ने request इसी device पर रखी."
+        )
+        XCTAssertEqual(
+            AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts,
+            "File लंबी थी, इसलिए Ross ने सबसे relevant हिस्सों पर focus किया."
+        )
+        XCTAssertEqual(
+            AlphaLocalModelWarningCopy.sourceLanguageFallback,
+            "Private assistant requested language बनाए नहीं रख पाया, इसलिए Ross ने source text से जवाब दिया."
         )
         XCTAssertEqual(
             alphaConfidenceSupportText(confidence: 0.70, needsReview: false),

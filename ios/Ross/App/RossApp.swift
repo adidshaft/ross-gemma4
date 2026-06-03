@@ -1736,6 +1736,34 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Private assistant answer கிடைக்கவில்லை. Ross case memory-யிலிருந்து guess செய்யவில்லை.",
             "te": "Private assistant answer అందుబాటులో లేదు. Ross case memory నుండి guess చేయలేదు."
         ],
+        "local_model_warning_assistant_setup_missing": [
+            "en": "Private assistant setup is missing or incomplete. Open My assistant and use Repair setup.",
+            "hi": "Private assistant setup missing या incomplete है. My assistant खोलकर Repair setup use करें.",
+            "bn": "Private assistant setup missing বা incomplete. My assistant খুলে Repair setup use করুন.",
+            "ta": "Private assistant setup missing அல்லது incomplete. My assistant திறந்து Repair setup use செய்யவும்.",
+            "te": "Private assistant setup missing లేదా incomplete. My assistant తెరిచి Repair setup use చేయండి."
+        ],
+        "local_model_warning_input_focused_on_relevant_parts": [
+            "en": "The file was long, so Ross focused on the most relevant parts.",
+            "hi": "File लंबी थी, इसलिए Ross ने सबसे relevant हिस्सों पर focus किया.",
+            "bn": "File বড় ছিল, তাই Ross সবচেয়ে relevant অংশগুলোতে focus করেছে.",
+            "ta": "File நீளமாக இருந்ததால் Ross மிகவும் relevant பகுதிகளில் focus செய்தது.",
+            "te": "File పొడవుగా ఉండడంతో Ross అత్యంత relevant భాగాలపై focus చేసింది."
+        ],
+        "local_model_warning_source_language_fallback": [
+            "en": "Ross answered from the source text because the private assistant did not keep the requested language.",
+            "hi": "Private assistant requested language बनाए नहीं रख पाया, इसलिए Ross ने source text से जवाब दिया.",
+            "bn": "Private assistant requested language রাখতে পারেনি, তাই Ross source text থেকে উত্তর দিয়েছে.",
+            "ta": "Private assistant requested language-ஐ வைத்திருக்கவில்லை; அதனால் Ross source text-இலிருந்து பதிலளித்தது.",
+            "te": "Private assistant requested language ను నిలుపుకోలేకపోవడంతో Ross source text నుండి సమాధానం ఇచ్చింది."
+        ],
+        "local_model_warning_assistant_could_not_finish": [
+            "en": "The private assistant could not finish this request. Ross kept the request on this device.",
+            "hi": "Private assistant यह request finish नहीं कर पाया. Ross ने request इसी device पर रखी.",
+            "bn": "Private assistant এই request finish করতে পারেনি. Ross request এই device-এই রেখেছে.",
+            "ta": "Private assistant இந்த request-ஐ finish செய்ய முடியவில்லை. Ross request-ஐ இந்த device-இல் வைத்தது.",
+            "te": "Private assistant ఈ request ను finish చేయలేకపోయింది. Ross request ను ఈ device పైనే ఉంచింది."
+        ],
         "public_law_results_status": [
             "en": "Public-law results",
             "hi": "Public-law results",
