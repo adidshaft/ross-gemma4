@@ -4256,6 +4256,118 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "locally தயாரானது",
             "te": "locally సిద్ధం"
         ],
+        "source_backed": [
+            "en": "Source-backed",
+            "hi": "source-backed",
+            "bn": "source-backed",
+            "ta": "source-backed",
+            "te": "source-backed"
+        ],
+        "prepared_work_type_document_reviewed": [
+            "en": "Document reviewed",
+            "hi": "Document review हुआ",
+            "bn": "Document review হয়েছে",
+            "ta": "Document review முடிந்தது",
+            "te": "Document review పూర్తయింది"
+        ],
+        "prepared_work_type_next_date_found": [
+            "en": "Next date found",
+            "hi": "अगली तारीख मिली",
+            "bn": "পরবর্তী তারিখ পাওয়া গেছে",
+            "ta": "அடுத்த தேதி கண்டுபிடிக்கப்பட்டது",
+            "te": "తదుపరి తేదీ దొరికింది"
+        ],
+        "prepared_work_type_suggested_tasks": [
+            "en": "Suggested tasks",
+            "hi": "Suggested tasks",
+            "bn": "Suggested tasks",
+            "ta": "Suggested tasks",
+            "te": "Suggested tasks"
+        ],
+        "prepared_work_type_chronology_ready": [
+            "en": "Chronology ready",
+            "hi": "Chronology ready",
+            "bn": "Chronology ready",
+            "ta": "Chronology ready",
+            "te": "Chronology ready"
+        ],
+        "prepared_work_type_case_note_ready": [
+            "en": "Case note ready",
+            "hi": "Case note ready",
+            "bn": "Case note ready",
+            "ta": "Case note ready",
+            "te": "Case note ready"
+        ],
+        "prepared_work_type_order_summary_ready": [
+            "en": "Order summary ready",
+            "hi": "Order summary ready",
+            "bn": "Order summary ready",
+            "ta": "Order summary ready",
+            "te": "Order summary ready"
+        ],
+        "prepared_work_type_hearing_note_ready": [
+            "en": "Hearing note ready",
+            "hi": "Hearing note ready",
+            "bn": "Hearing note ready",
+            "ta": "Hearing note ready",
+            "te": "Hearing note ready"
+        ],
+        "prepared_work_type_public_law_query_awaiting_approval": [
+            "en": "Public-law query awaiting approval",
+            "hi": "Public-law query approval का इंतज़ार कर रही है",
+            "bn": "Public-law query approval-এর অপেক্ষায়",
+            "ta": "Public-law query approval காத்திருக்கிறது",
+            "te": "Public-law query approval కోసం వేచి ఉంది"
+        ],
+        "prepared_work_type_missing_facts_found": [
+            "en": "Missing facts found",
+            "hi": "Missing facts मिले",
+            "bn": "Missing facts পাওয়া গেছে",
+            "ta": "Missing facts கண்டுபிடிக்கப்பட்டன",
+            "te": "Missing facts దొరికాయి"
+        ],
+        "prepared_work_type_evidence_summary_needs_review": [
+            "en": "Evidence summary needs review",
+            "hi": "Evidence summary को review चाहिए",
+            "bn": "Evidence summary review দরকার",
+            "ta": "Evidence summary review தேவை",
+            "te": "Evidence summary కు review అవసరం"
+        ],
+        "prepared_work_type_matter_needs_attention": [
+            "en": "Matter needs attention",
+            "hi": "Matter को attention चाहिए",
+            "bn": "Matter attention দরকার",
+            "ta": "Matter attention தேவை",
+            "te": "Matter కు attention అవసరం"
+        ],
+        "prepared_work_status_new": [
+            "en": "New",
+            "hi": "नया",
+            "bn": "নতুন",
+            "ta": "புதியது",
+            "te": "కొత్తది"
+        ],
+        "prepared_work_status_reviewed": [
+            "en": "Reviewed",
+            "hi": "Reviewed",
+            "bn": "Reviewed",
+            "ta": "Reviewed",
+            "te": "Reviewed"
+        ],
+        "prepared_work_status_accepted": [
+            "en": "Accepted",
+            "hi": "Accepted",
+            "bn": "Accepted",
+            "ta": "Accepted",
+            "te": "Accepted"
+        ],
+        "prepared_work_status_dismissed": [
+            "en": "Dismissed",
+            "hi": "Dismissed",
+            "bn": "Dismissed",
+            "ta": "Dismissed",
+            "te": "Dismissed"
+        ],
         "no_prepared_work_needs_review": [
             "en": "No prepared work needs review",
             "hi": "कोई prepared work review के लिए नहीं है",

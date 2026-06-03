@@ -1933,19 +1933,7 @@ enum AlphaPreparedWorkType: String, Codable, CaseIterable, Hashable, Sendable {
     case matterNeedsAttention = "matter_needs_attention"
 
     var title: String {
-        switch self {
-        case .documentReviewed: "Document reviewed"
-        case .nextDateFound: "Next date found"
-        case .suggestedTasks: "Suggested tasks"
-        case .chronologyReady: "Chronology ready"
-        case .caseNoteReady: "Case note ready"
-        case .orderSummaryReady: "Order summary ready"
-        case .hearingNoteReady: "Hearing note ready"
-        case .publicLawQueryAwaitingApproval: "Public-law query awaiting approval"
-        case .missingFactsFound: "Missing facts found"
-        case .evidenceSummaryNeedsReview: "Evidence summary needs review"
-        case .matterNeedsAttention: "Matter needs attention"
-        }
+        rossLocalized("prepared_work_type_\(rawValue)")
     }
 }
 
@@ -1956,12 +1944,7 @@ enum AlphaPreparedWorkStatus: String, Codable, CaseIterable, Hashable, Sendable 
     case dismissed
 
     var title: String {
-        switch self {
-        case .new: "New"
-        case .reviewed: "Reviewed"
-        case .accepted: "Accepted"
-        case .dismissed: "Dismissed"
-        }
+        rossLocalized("prepared_work_status_\(rawValue)")
     }
 }
 
@@ -1973,10 +1956,10 @@ enum AlphaPreparedWorkBadge: String, Codable, CaseIterable, Hashable, Sendable {
 
     var title: String {
         switch self {
-        case .sourceBacked: "Source-backed"
-        case .preparedLocally: "Prepared locally"
-        case .needsReview: "Needs review"
-        case .approvalRequired: "Approval required"
+        case .sourceBacked: rossLocalized("source_backed")
+        case .preparedLocally: rossLocalized("prepared_locally")
+        case .needsReview: rossLocalized("needs_review")
+        case .approvalRequired: rossLocalized("approval_required")
         }
     }
 }

@@ -1383,6 +1383,27 @@ final class AlphaExtractionTests: XCTestCase {
             rossLocalized("translation_to_label", languageCode: "bn"),
             "তে"
         )
+        XCTAssertEqual(
+            rossLocalized("prepared_work_type_document_reviewed", languageCode: "ta"),
+            "Document review முடிந்தது"
+        )
+        XCTAssertEqual(
+            rossLocalized("prepared_work_type_public_law_query_awaiting_approval", languageCode: "hi"),
+            "Public-law query approval का इंतज़ार कर रही है"
+        )
+        XCTAssertEqual(
+            rossLocalized("source_backed", languageCode: "bn"),
+            "source-backed"
+        )
+        XCTAssertEqual(
+            rossLocalized("prepared_work_status_new", languageCode: "te-IN"),
+            "కొత్తది"
+        )
+        rossSaveLanguageSelection(code: "hi")
+        XCTAssertEqual(AlphaPreparedWorkType.publicLawQueryAwaitingApproval.title, "Public-law query approval का इंतज़ार कर रही है")
+        XCTAssertEqual(AlphaPreparedWorkBadge.needsReview.title, "Review चाहिए")
+        XCTAssertEqual(AlphaPreparedWorkStatus.new.title, "नया")
+        rossSaveLanguageSelection(code: "en")
         XCTAssertTrue(
             rossLocalized("ask_local_context_review_recommended", languageCode: "hi")
                 .contains("local matter context मिला")
