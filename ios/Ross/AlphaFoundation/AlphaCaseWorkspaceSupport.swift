@@ -225,27 +225,15 @@ struct AlphaDraftPreviewRow: View {
 
 private struct AlphaDraftPreviewRowSurface: ViewModifier {
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, macOS 26.0, *) {
-            content
-                .glassEffect(
-                    .regular
-                        .tint(Color.rossHighlight.opacity(0.12))
-                        .interactive(),
-                    in: .rect(cornerRadius: 16)
-                )
-        } else {
-            content
-                .rossGlassSurface(
-                    tint: Color.rossHighlight,
-                    cornerRadius: 16,
-                    interactive: true,
-                    shadowOpacity: 0.08,
-                    shadowRadius: 8,
-                    shadowY: 3,
-                    fillOpacity: 0.82,
-                    strokeOpacity: 0.46
-                )
-        }
+        content
+            .rossNativeGlassSurface(
+                tint: Color.rossHighlight.opacity(0.12),
+                shape: RoundedRectangle(cornerRadius: 16, style: .continuous),
+                interactive: true,
+                fallbackFillOpacity: 0.82,
+                fallbackStrokeOpacity: 0.46
+            )
+            .shadow(color: Color.rossShadow.opacity(0.08), radius: 8, y: 3)
     }
 }
 
@@ -264,16 +252,14 @@ struct AlphaCompactDraftActionButton: View {
         } else {
             Button(action: action) {
                 label
-                    .rossGlassSurface(
+                    .rossNativeGlassSurface(
                         tint: Color.rossAccent,
-                        cornerRadius: 14,
+                        shape: RoundedRectangle(cornerRadius: 14, style: .continuous),
                         interactive: true,
-                        shadowOpacity: 0.06,
-                        shadowRadius: 6,
-                        shadowY: 2,
-                        fillOpacity: 0.82,
-                        strokeOpacity: 0.52
+                        fallbackFillOpacity: 0.82,
+                        fallbackStrokeOpacity: 0.52
                     )
+                    .shadow(color: Color.rossShadow.opacity(0.06), radius: 6, y: 2)
             }
             .buttonStyle(.plain)
         }
@@ -463,27 +449,15 @@ struct AlphaReviewRow: View {
 
 private struct AlphaReviewQueueRowSurface: ViewModifier {
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, macOS 26.0, *) {
-            content
-                .glassEffect(
-                    .regular
-                        .tint(Color.orange.opacity(0.12))
-                        .interactive(),
-                    in: .rect(cornerRadius: 16)
-                )
-        } else {
-            content
-                .rossGlassSurface(
-                    tint: Color.orange,
-                    cornerRadius: 16,
-                    interactive: true,
-                    shadowOpacity: 0.07,
-                    shadowRadius: 7,
-                    shadowY: 3,
-                    fillOpacity: 0.78,
-                    strokeOpacity: 0.48
-                )
-        }
+        content
+            .rossNativeGlassSurface(
+                tint: Color.orange.opacity(0.12),
+                shape: RoundedRectangle(cornerRadius: 16, style: .continuous),
+                interactive: true,
+                fallbackFillOpacity: 0.78,
+                fallbackStrokeOpacity: 0.48
+            )
+            .shadow(color: Color.rossShadow.opacity(0.07), radius: 7, y: 3)
     }
 }
 
