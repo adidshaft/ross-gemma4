@@ -100,6 +100,14 @@ func alphaDocumentReviewQueueSummary(hasReviewWork: Bool, languageCode: String =
     )
 }
 
+func alphaImportedSourceReferenceFallback(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("imported_source_reference", languageCode: languageCode)
+}
+
+func alphaFieldNeedsCitedPageConfirmationMessage(_ fieldLabel: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("field_needs_cited_page_confirmation", languageCode: languageCode), fieldLabel)
+}
+
 private func alphaPDFReadableTextFallback() -> String {
     rossLocalized("import_fallback_pdf_unreadable_text")
 }
@@ -292,7 +300,7 @@ actor AlphaRossStore {
         let extraction = try extractDocumentContent(kind: kind, from: destinationURL)
         let pageCount = max(extraction.pages.count, 1)
         let pages = extraction.pages.isEmpty
-            ? [AlphaDocumentPage(pageNumber: 1, snippet: "Imported source reference.")]
+            ? [AlphaDocumentPage(pageNumber: 1, snippet: alphaImportedSourceReferenceFallback())]
             : extraction.pages
         let documentID = UUID()
         let languageProfile = alphaDetectLanguageProfile(documentID: documentID, pages: pages)
@@ -708,7 +716,7 @@ actor AlphaRossStore {
             )
         case .unknown:
             return AlphaDocumentExtraction(
-                pages: [AlphaDocumentPage(pageNumber: 1, snippet: "Imported source reference.")],
+                pages: [AlphaDocumentPage(pageNumber: 1, snippet: alphaImportedSourceReferenceFallback())],
                 extractedText: nil,
                 dominantSourceSnippet: nil,
                 ocrStatus: .placeholder,
@@ -2254,7 +2262,7 @@ private struct AlphaLocalExtractionOrchestrator {
                     textSnippet: page.anchorText ?? page.snippet,
                     ocrConfidence: page.ocrConfidence
                 ),
-                text: page.extractedText ?? page.snippet ?? "Imported source reference.",
+                text: page.extractedText ?? page.snippet ?? alphaImportedSourceReferenceFallback(),
                 pageNumber: page.pageNumber,
                 languageHint: alphaSourceLanguageHint(
                     profile: languageProfile,
@@ -2544,7 +2552,7 @@ private struct AlphaLocalExtractionOrchestrator {
                         caseId: caseId,
                         documentId: document.id,
                         kind: field.fieldType == .orderDirection ? .ambiguousOrderDirection : .unsupportedLayout,
-                        message: "\(field.label) needs review because Ross could not confirm it against the cited page text.",
+                        message: alphaFieldNeedsCitedPageConfirmationMessage(field.label),
                         sourceRefs: field.sourceRefs,
                         severity: .warning
                     )

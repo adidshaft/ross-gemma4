@@ -1370,7 +1370,7 @@ extension AlphaRossModel {
                 documentTitle: document.title,
                 pageNumber: 1,
                 paragraphRange: nil,
-                textSnippet: document.dominantSourceSnippet ?? document.extractedText ?? "Imported source reference",
+                textSnippet: document.dominantSourceSnippet ?? document.extractedText ?? alphaImportedSourceReferenceFallback(),
                 ocrConfidence: document.kind == .image ? nil : 0.92
             )
             caseMatter.sourceRefs.insert(sourceRef, at: 0)

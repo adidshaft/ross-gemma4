@@ -1795,6 +1795,14 @@ final class AlphaExtractionTests: XCTestCase {
             "Matter chat updated · source saved"
         )
         XCTAssertEqual(
+            alphaImportedSourceReferenceFallback(languageCode: "ta"),
+            "Imported source reference."
+        )
+        XCTAssertEqual(
+            alphaFieldNeedsCitedPageConfirmationMessage("Court", languageCode: "bn"),
+            "Court review দরকার, কারণ Ross cited page text দিয়ে এটি confirm করতে পারেনি."
+        )
+        XCTAssertEqual(
             alphaMatterChatUpdatedStatus(needsReview: true, languageCode: "ta"),
             "Matter chat updated · review தேவை"
         )

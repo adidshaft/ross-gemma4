@@ -1309,6 +1309,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Ross selected file-ஐ app-private storage-க்கு copy செய்ய முடியவில்லை.",
             "te": "Ross selected file ను app-private storage లోకి copy చేయలేకపోయింది."
         ],
+        "imported_source_reference": [
+            "en": "Imported source reference.",
+            "hi": "Imported source reference.",
+            "bn": "Imported source reference.",
+            "ta": "Imported source reference.",
+            "te": "Imported source reference."
+        ],
         "import_fallback_pdf_unreadable_text": [
             "en": "PDF imported locally. Ross could not read text from this file yet.",
             "hi": "PDF locally import हो गया। Ross इस file से text अभी पढ़ नहीं पाया.",
@@ -3457,6 +3464,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "bn": "Attention দরকার",
             "ta": "Attention தேவை",
             "te": "Attention అవసరం"
+        ],
+        "field_needs_cited_page_confirmation": [
+            "en": "%@ needs review because Ross could not confirm it against the cited page text.",
+            "hi": "%@ को review चाहिए क्योंकि Ross इसे cited page text से confirm नहीं कर पाया.",
+            "bn": "%@ review দরকার, কারণ Ross cited page text দিয়ে এটি confirm করতে পারেনি.",
+            "ta": "%@ review தேவை, ஏனெனில் Ross இதை cited page text-உடன் confirm செய்ய முடியவில்லை.",
+            "te": "%@ కు review అవసరం, ఎందుకంటే Ross cited page text తో దీన్ని confirm చేయలేకపోయింది."
         ],
         "extraction_pages_progress": [
             "en": "%@ · %d of %d pages",
