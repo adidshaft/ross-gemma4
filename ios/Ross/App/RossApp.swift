@@ -497,6 +497,34 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Ross இந்த device-இல் நீண்ட local drafting sessions-க்கு enough room கண்டது.",
             "te": "Ross ఈ device లో పొడవైన local drafting sessions కోసం enough room కనుగొంది."
         ],
+        "tier_flash_setup_title": [
+            "en": "Flash - simplest, ultra-fast",
+            "hi": "Flash - सबसे सरल, बहुत तेज़",
+            "bn": "Flash - সবচেয়ে সহজ, খুব দ্রুত",
+            "ta": "Flash - எளிமையானது, மிக வேகமானது",
+            "te": "Flash - సులభమైనది, చాలా వేగవంతం"
+        ],
+        "tier_quick_start_setup_title": [
+            "en": "Small - short orders only",
+            "hi": "Small - केवल छोटे आदेश",
+            "bn": "Small - শুধু ছোট আদেশ",
+            "ta": "Small - குறுகிய உத்தரவுகள் மட்டும்",
+            "te": "Small - చిన్న ఆదేశాలకు మాత్రమే"
+        ],
+        "tier_case_associate_setup_title": [
+            "en": "Standard - most matters",
+            "hi": "Standard - ज़्यादातर मामलों के लिए",
+            "bn": "Standard - বেশিরভাগ মামলার জন্য",
+            "ta": "Standard - பெரும்பாலான வழக்குகளுக்கு",
+            "te": "Standard - ఎక్కువ కేసులకు"
+        ],
+        "tier_senior_drafting_setup_title": [
+            "en": "Full - long bundles and drafting",
+            "hi": "Full - लंबे बंडल और ड्राफ्टिंग",
+            "bn": "Full - দীর্ঘ বান্ডিল এবং খসড়া",
+            "ta": "Full - நீண்ட தொகுப்புகள் மற்றும் வரைவு",
+            "te": "Full - పెద్ద బండిళ్లు మరియు డ్రాఫ్టింగ్"
+        ],
         "tier_flash_summary": [
             "en": "Fastest setup for quick questions and simple checklists.",
             "hi": "त्वरित प्रश्नों और सरल चेकलिस्ट के लिए सबसे तेज़ सेटअप।",

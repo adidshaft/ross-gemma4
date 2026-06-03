@@ -249,15 +249,19 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
     }
 
     var setupTitle: String {
+        setupTitle(languageCode: rossSelectedLanguageCode())
+    }
+
+    func setupTitle(languageCode: String) -> String {
         switch self {
         case .flash:
-            "Flash - simplest, ultra-fast"
+            rossLocalized("tier_flash_setup_title", languageCode: languageCode)
         case .quickStart:
-            "Small - short orders only"
+            rossLocalized("tier_quick_start_setup_title", languageCode: languageCode)
         case .caseAssociate:
-            "Standard - most matters"
+            rossLocalized("tier_case_associate_setup_title", languageCode: languageCode)
         case .seniorDraftingSupport:
-            "Full - long bundles and drafting"
+            rossLocalized("tier_senior_drafting_setup_title", languageCode: languageCode)
         }
     }
 

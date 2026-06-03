@@ -876,6 +876,14 @@ final class AlphaExtractionTests: XCTestCase {
                 .contains("ఖాళీ స్థలం")
         )
         XCTAssertEqual(
+            AlphaCapabilityTier.flash.setupTitle(languageCode: "hi"),
+            "Flash - सबसे सरल, बहुत तेज़"
+        )
+        XCTAssertEqual(
+            AlphaCapabilityTier.seniorDraftingSupport.setupTitle(languageCode: "te-IN"),
+            "Full - పెద్ద బండిళ్లు మరియు డ్రాఫ్టింగ్"
+        )
+        XCTAssertEqual(
             AlphaCapabilityTier.quickStart.summary(languageCode: "bn"),
             "ছোট আদেশ, নোটিস এবং হালকা নথি পর্যালোচনা।"
         )
