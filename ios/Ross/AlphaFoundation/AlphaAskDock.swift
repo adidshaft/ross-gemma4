@@ -220,18 +220,18 @@ struct AlphaRootAskDock: View {
     private var activeDockActivity: (title: String, detail: String, status: String, progress: Double?)? {
         if model.publicLawSearchStatus == .reviewing && model.publicLawPreview != nil {
             return (
-                "Review required",
-                "Check the search query before anything leaves this device.",
-                "Review",
+                rossLocalized("review_required"),
+                rossLocalized("ask_legal_search_review_before_send_detail"),
+                rossLocalized("review"),
                 nil
             )
         }
 
         if model.publicLawSearchInFlight {
             return (
-                "Searching legal sources",
-                "Ross is searching with a cleaned query. Your files stay on this iPhone.",
-                "Searching",
+                rossLocalized("searching_legal_sources_ellipsis"),
+                rossLocalized("ask_legal_search_clean_query_detail"),
+                rossLocalized("searching"),
                 nil
             )
         }

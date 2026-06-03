@@ -1399,6 +1399,14 @@ final class AlphaExtractionTests: XCTestCase {
             rossLocalized("prepared_work_status_new", languageCode: "te-IN"),
             "కొత్తది"
         )
+        XCTAssertTrue(
+            rossLocalized("ask_legal_search_review_before_send_detail", languageCode: "ta")
+                .contains("search query-ஐ check")
+        )
+        XCTAssertEqual(
+            rossLocalized("searching", languageCode: "bn"),
+            "search হচ্ছে"
+        )
         rossSaveLanguageSelection(code: "hi")
         XCTAssertEqual(AlphaPreparedWorkType.publicLawQueryAwaitingApproval.title, "Public-law query approval का इंतज़ार कर रही है")
         XCTAssertEqual(AlphaPreparedWorkBadge.needsReview.title, "Review चाहिए")

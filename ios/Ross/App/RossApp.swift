@@ -6153,6 +6153,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Ross cleaned query உடன் Legal Search பயன்படுத்தும். உங்கள் case files இந்த device-இலேயே இருக்கும்.",
             "te": "Ross cleaned query తో Legal Search ఉపయోగిస్తుంది. మీ case files ఈ device లోనే ఉంటాయి."
         ],
+        "ask_legal_search_review_before_send_detail": [
+            "en": "Check the search query before anything leaves this device.",
+            "hi": "इस device से कुछ भी बाहर जाने से पहले search query check करें.",
+            "bn": "এই device থেকে কিছু বাইরে যাওয়ার আগে search query check করুন.",
+            "ta": "இந்த device-இலிருந்து எதுவும் வெளியேறும் முன் search query-ஐ check செய்யவும்.",
+            "te": "ఈ device నుండి ఏదైనా బయటకు వెళ్లే ముందు search query check చేయండి."
+        ],
         "legal_search": [
             "en": "Legal Search",
             "hi": "Legal Search",
@@ -6250,6 +6257,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "bn": "legal sources search হচ্ছে...",
             "ta": "legal sources search ஆகின்றன...",
             "te": "legal sources search అవుతున్నాయి..."
+        ],
+        "searching": [
+            "en": "Searching",
+            "hi": "search हो रहा है",
+            "bn": "search হচ্ছে",
+            "ta": "search ஆகிறது",
+            "te": "search అవుతోంది"
         ],
         "send": [
             "en": "Send",
