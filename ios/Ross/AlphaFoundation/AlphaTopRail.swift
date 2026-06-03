@@ -217,7 +217,11 @@ struct AlphaMattersWorkbenchScreen: View {
         ScrollView {
             RossGlassGroup(spacing: 14) {
                 LazyVStack(alignment: .leading, spacing: 14) {
-                    AlphaInlineHeader(eyebrow: "Matters", title: "Matter workspaces", detail: "\(matters.count) active")
+                    AlphaInlineHeader(
+                        eyebrow: rossLocalized("tab_matters"),
+                        title: rossLocalized("matter_workspaces"),
+                        detail: alphaActiveMatterCountLabel(matters.count)
+                    )
                 if matters.isEmpty {
                     AlphaMatterStarterCard(model: model)
                 } else {
@@ -248,9 +252,16 @@ struct AlphaFilesWorkbenchScreen: View {
         ScrollView {
             RossGlassGroup(spacing: 14) {
                 LazyVStack(alignment: .leading, spacing: 14) {
-                    AlphaInlineHeader(eyebrow: "Files", title: "Local file room", detail: "\(documents.count) file(s) across matters")
+                    AlphaInlineHeader(
+                        eyebrow: rossLocalized("tab_files"),
+                        title: rossLocalized("local_file_room"),
+                        detail: alphaFilesAcrossMattersLabel(documents.count)
+                    )
                 if documents.isEmpty {
-                    AlphaHonestEmptyCard(title: "No files imported", detail: "Files you import stay inspectable here after local extraction.")
+                    AlphaHonestEmptyCard(
+                        title: rossLocalized("no_files_imported"),
+                        detail: rossLocalized("file_room_empty_detail")
+                    )
                 } else {
                     ForEach(documents) { entry in
                         Button {
@@ -538,6 +549,14 @@ func alphaPlainItemCountLabel(_ count: Int, languageCode: String = rossSelectedL
 
 func alphaViewAllPreparedWorkLabel(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
     String(format: rossLocalized("view_all_prepared_work", languageCode: languageCode), alphaPreparedWorkCountLabel(count, languageCode: languageCode))
+}
+
+func alphaActiveMatterCountLabel(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("active_matter_count", languageCode: languageCode), count)
+}
+
+func alphaFilesAcrossMattersLabel(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("files_across_matters_count", languageCode: languageCode), count)
 }
 
 func alphaAssistantSetupPreparingLabel(_ tierTitle: String, languageCode: String = rossSelectedLanguageCode()) -> String {

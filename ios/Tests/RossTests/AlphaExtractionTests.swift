@@ -1423,6 +1423,22 @@ final class AlphaExtractionTests: XCTestCase {
             rossLocalized("refreshing", languageCode: "te-IN"),
             "refresh అవుతోంది"
         )
+        XCTAssertEqual(
+            alphaActiveMatterCountLabel(4, languageCode: "bn"),
+            "4 active"
+        )
+        XCTAssertEqual(
+            alphaFilesAcrossMattersLabel(5, languageCode: "ta"),
+            "5 file(s) matters முழுவதும்"
+        )
+        XCTAssertEqual(
+            rossLocalized("no_files_imported", languageCode: "hi"),
+            "अभी files import नहीं हुईं"
+        )
+        XCTAssertTrue(
+            rossLocalized("file_room_empty_detail", languageCode: "te-IN")
+                .contains("local extraction")
+        )
         rossSaveLanguageSelection(code: "hi")
         XCTAssertEqual(AlphaPreparedWorkType.publicLawQueryAwaitingApproval.title, "Public-law query approval का इंतज़ार कर रही है")
         XCTAssertEqual(AlphaPreparedWorkBadge.needsReview.title, "Review चाहिए")

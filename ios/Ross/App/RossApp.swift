@@ -2779,6 +2779,48 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "இந்த வழக்கில் %@",
             "te": "ఈ కేసులో %@"
         ],
+        "matter_workspaces": [
+            "en": "Matter workspaces",
+            "hi": "Matter workspaces",
+            "bn": "Matter workspaces",
+            "ta": "Matter workspaces",
+            "te": "Matter workspaces"
+        ],
+        "active_matter_count": [
+            "en": "%d active",
+            "hi": "%d active",
+            "bn": "%d active",
+            "ta": "%d active",
+            "te": "%d active"
+        ],
+        "local_file_room": [
+            "en": "Local file room",
+            "hi": "Local file room",
+            "bn": "Local file room",
+            "ta": "Local file room",
+            "te": "Local file room"
+        ],
+        "files_across_matters_count": [
+            "en": "%d file(s) across matters",
+            "hi": "%d file(s) matters में",
+            "bn": "%d file(s) matters জুড়ে",
+            "ta": "%d file(s) matters முழுவதும்",
+            "te": "%d file(s) matters అంతటా"
+        ],
+        "no_files_imported": [
+            "en": "No files imported",
+            "hi": "अभी files import नहीं हुईं",
+            "bn": "এখনও files import হয়নি",
+            "ta": "இன்னும் files import ஆகவில்லை",
+            "te": "ఇంకా files import కాలేదు"
+        ],
+        "file_room_empty_detail": [
+            "en": "Files you import stay inspectable here after local extraction.",
+            "hi": "आप जो files import करते हैं, local extraction के बाद यहाँ inspectable रहती हैं.",
+            "bn": "আপনি যে files import করেন, local extraction-এর পরে এখানে inspect করা যায়.",
+            "ta": "நீங்கள் import செய்யும் files local extraction-க்கு பிறகு இங்கே inspect செய்யலாம்.",
+            "te": "మీరు import చేసే files local extraction తర్వాత ఇక్కడ inspect చేయవచ్చు."
+        ],
         "file_room_import_first_file": [
             "en": "Import the first file",
             "hi": "पहली फ़ाइल import करें",
