@@ -134,57 +134,57 @@ public struct RossCardStyle: ViewModifier {
 // MARK: - Primary Button Style
 
 public struct RossPrimaryButtonStyle: ButtonStyle {
+    @ViewBuilder
     public func makeBody(configuration: Configuration) -> some View {
         let shape = Capsule()
 
-        configuration.label
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(.white)
-            .shadow(color: .black.opacity(0.12), radius: 1, y: 1)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 15)
-            .background {
-                shape.fill(Color.rossAccent.opacity(configuration.isPressed ? 0.72 : 0.84))
-            }
-            .rossNativeGlassSurface(
-                tint: Color.rossAccent,
-                shape: shape,
-                interactive: true,
-                fallbackFillOpacity: configuration.isPressed ? 0.72 : 0.88,
-                fallbackStrokeOpacity: configuration.isPressed ? 0.34 : 0.52
-            )
-            .overlay {
-                shape.fill(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(configuration.isPressed ? 0.14 : 0.24),
-                            Color.rossAccent.opacity(configuration.isPressed ? 0.08 : 0.16),
-                            Color.clear
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
+        if #available(iOS 26.0, macOS 26.0, *) {
+            configuration.label
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 15)
+                .background {
+                    shape.fill(Color.rossAccent.opacity(configuration.isPressed ? 0.58 : 0.72))
+                }
+                .glassEffect(
+                    Glass.regular
+                        .tint(Color.rossAccent.opacity(configuration.isPressed ? 0.30 : 0.42))
+                        .interactive(),
+                    in: shape
                 )
-                .allowsHitTesting(false)
-            }
-            .overlay {
-                shape.strokeBorder(
-                    LinearGradient(
-                        colors: [Color.white.opacity(0.40), Color.white.opacity(0.08)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    ),
-                    lineWidth: 1
+                .overlay {
+                    shape.strokeBorder(Color.white.opacity(configuration.isPressed ? 0.26 : 0.40), lineWidth: 1)
+                }
+                .scaleEffect(configuration.isPressed ? 0.985 : 1)
+                .animation(.spring(response: 0.25, dampingFraction: 0.7), value: configuration.isPressed)
+                .sensoryFeedback(.impact(weight: .medium), trigger: configuration.isPressed)
+        } else {
+            configuration.label
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+                .shadow(color: .black.opacity(0.12), radius: 1, y: 1)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 15)
+                .background {
+                    shape.fill(Color.rossAccent.opacity(configuration.isPressed ? 0.72 : 0.84))
+                }
+                .rossNativeGlassSurface(
+                    tint: Color.rossAccent,
+                    shape: shape,
+                    interactive: true,
+                    fallbackFillOpacity: configuration.isPressed ? 0.72 : 0.88,
+                    fallbackStrokeOpacity: configuration.isPressed ? 0.34 : 0.52
                 )
-            }
-            .shadow(
-                color: Color.rossAccent.opacity(configuration.isPressed ? 0.12 : 0.28),
-                radius: configuration.isPressed ? 6 : 14,
-                y: configuration.isPressed ? 2 : 6
-            )
-            .scaleEffect(configuration.isPressed ? 0.985 : 1)
-            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: configuration.isPressed)
-            .sensoryFeedback(.impact(weight: .medium), trigger: configuration.isPressed)
+                .shadow(
+                    color: Color.rossAccent.opacity(configuration.isPressed ? 0.12 : 0.28),
+                    radius: configuration.isPressed ? 6 : 14,
+                    y: configuration.isPressed ? 2 : 6
+                )
+                .scaleEffect(configuration.isPressed ? 0.985 : 1)
+                .animation(.spring(response: 0.25, dampingFraction: 0.7), value: configuration.isPressed)
+                .sensoryFeedback(.impact(weight: .medium), trigger: configuration.isPressed)
+        }
     }
 }
 
@@ -453,53 +453,88 @@ public extension View {
 // MARK: - Secondary Button
 
 public struct RossSecondaryButtonStyle: ButtonStyle {
+    @ViewBuilder
     public func makeBody(configuration: Configuration) -> some View {
         let shape = RoundedRectangle(cornerRadius: RossCorner.sm, style: .continuous)
 
-        configuration.label
-            .font(.subheadline.weight(.medium))
-            .foregroundStyle(Color.rossAccent)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .rossNativeGlassSurface(
-                tint: Color.rossAccent,
-                shape: shape,
-                interactive: true,
-                fallbackFillOpacity: configuration.isPressed ? 0.58 : 0.72,
-                fallbackStrokeOpacity: configuration.isPressed ? 0.32 : 0.46
-            )
-            .overlay {
-                shape.strokeBorder(Color.rossAccent.opacity(configuration.isPressed ? 0.30 : 0.18), lineWidth: 1)
-            }
-            .scaleEffect(configuration.isPressed ? 0.975 : 1)
-            .animation(.spring(response: 0.2, dampingFraction: 0.7), value: configuration.isPressed)
+        if #available(iOS 26.0, macOS 26.0, *) {
+            configuration.label
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Color.rossAccent)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .glassEffect(
+                    Glass.regular
+                        .tint(Color.rossAccent.opacity(configuration.isPressed ? 0.12 : 0.20))
+                        .interactive(),
+                    in: shape
+                )
+                .scaleEffect(configuration.isPressed ? 0.975 : 1)
+                .animation(.spring(response: 0.2, dampingFraction: 0.7), value: configuration.isPressed)
+        } else {
+            configuration.label
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Color.rossAccent)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .rossNativeGlassSurface(
+                    tint: Color.rossAccent,
+                    shape: shape,
+                    interactive: true,
+                    fallbackFillOpacity: configuration.isPressed ? 0.58 : 0.72,
+                    fallbackStrokeOpacity: configuration.isPressed ? 0.32 : 0.46
+                )
+                .overlay {
+                    shape.strokeBorder(Color.rossAccent.opacity(configuration.isPressed ? 0.30 : 0.18), lineWidth: 1)
+                }
+                .scaleEffect(configuration.isPressed ? 0.975 : 1)
+                .animation(.spring(response: 0.2, dampingFraction: 0.7), value: configuration.isPressed)
+        }
     }
 }
 
 // MARK: - Destructive Button
 
 public struct RossDestructiveButtonStyle: ButtonStyle {
+    @ViewBuilder
     public func makeBody(configuration: Configuration) -> some View {
         let shape = RoundedRectangle(cornerRadius: RossCorner.md, style: .continuous)
 
-        configuration.label
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(.red)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .rossNativeGlassSurface(
-                tint: Color.red,
-                shape: shape,
-                interactive: true,
-                fallbackFillOpacity: configuration.isPressed ? 0.62 : 0.76,
-                fallbackStrokeOpacity: configuration.isPressed ? 0.34 : 0.48
-            )
-            .overlay {
-                shape.strokeBorder(Color.red.opacity(configuration.isPressed ? 0.34 : 0.24), lineWidth: 1)
-            }
-            .scaleEffect(configuration.isPressed ? 0.985 : 1)
-            .animation(.spring(response: 0.2, dampingFraction: 0.7), value: configuration.isPressed)
-            .sensoryFeedback(.impact(weight: .heavy), trigger: configuration.isPressed)
+        if #available(iOS 26.0, macOS 26.0, *) {
+            configuration.label
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.red)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .glassEffect(
+                    Glass.regular
+                        .tint(Color.red.opacity(configuration.isPressed ? 0.12 : 0.20))
+                        .interactive(),
+                    in: shape
+                )
+                .scaleEffect(configuration.isPressed ? 0.985 : 1)
+                .animation(.spring(response: 0.2, dampingFraction: 0.7), value: configuration.isPressed)
+                .sensoryFeedback(.impact(weight: .heavy), trigger: configuration.isPressed)
+        } else {
+            configuration.label
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.red)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .rossNativeGlassSurface(
+                    tint: Color.red,
+                    shape: shape,
+                    interactive: true,
+                    fallbackFillOpacity: configuration.isPressed ? 0.62 : 0.76,
+                    fallbackStrokeOpacity: configuration.isPressed ? 0.34 : 0.48
+                )
+                .overlay {
+                    shape.strokeBorder(Color.red.opacity(configuration.isPressed ? 0.34 : 0.24), lineWidth: 1)
+                }
+                .scaleEffect(configuration.isPressed ? 0.985 : 1)
+                .animation(.spring(response: 0.2, dampingFraction: 0.7), value: configuration.isPressed)
+                .sensoryFeedback(.impact(weight: .heavy), trigger: configuration.isPressed)
+        }
     }
 }
 
@@ -514,26 +549,43 @@ public struct RossIconActionButtonStyle: ButtonStyle {
         self.size = size
     }
 
+    @ViewBuilder
     public func makeBody(configuration: Configuration) -> some View {
         let shape = Circle()
 
-        configuration.label
-            .font(.system(size: size * 0.46, weight: .semibold))
-            .foregroundStyle(tint)
-            .frame(width: size, height: size)
-            .rossNativeGlassSurface(
-                tint: tint,
-                shape: shape,
-                interactive: true,
-                fallbackFillOpacity: configuration.isPressed ? 0.56 : 0.68,
-                fallbackStrokeOpacity: configuration.isPressed ? 0.34 : 0.44
-            )
-            .overlay {
-                shape.stroke(tint.opacity(configuration.isPressed ? 0.30 : 0.22), lineWidth: 1)
-            }
-            .scaleEffect(configuration.isPressed ? 0.90 : 1)
-            .animation(.spring(response: 0.18, dampingFraction: 0.60), value: configuration.isPressed)
-            .sensoryFeedback(.impact(weight: .light), trigger: configuration.isPressed)
+        if #available(iOS 26.0, macOS 26.0, *) {
+            configuration.label
+                .font(.system(size: size * 0.46, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: size, height: size)
+                .glassEffect(
+                    Glass.regular
+                        .tint(tint.opacity(configuration.isPressed ? 0.10 : 0.18))
+                        .interactive(),
+                    in: shape
+                )
+                .scaleEffect(configuration.isPressed ? 0.90 : 1)
+                .animation(.spring(response: 0.18, dampingFraction: 0.60), value: configuration.isPressed)
+                .sensoryFeedback(.impact(weight: .light), trigger: configuration.isPressed)
+        } else {
+            configuration.label
+                .font(.system(size: size * 0.46, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: size, height: size)
+                .rossNativeGlassSurface(
+                    tint: tint,
+                    shape: shape,
+                    interactive: true,
+                    fallbackFillOpacity: configuration.isPressed ? 0.56 : 0.68,
+                    fallbackStrokeOpacity: configuration.isPressed ? 0.34 : 0.44
+                )
+                .overlay {
+                    shape.stroke(tint.opacity(configuration.isPressed ? 0.30 : 0.22), lineWidth: 1)
+                }
+                .scaleEffect(configuration.isPressed ? 0.90 : 1)
+                .animation(.spring(response: 0.18, dampingFraction: 0.60), value: configuration.isPressed)
+                .sensoryFeedback(.impact(weight: .light), trigger: configuration.isPressed)
+        }
     }
 }
 
