@@ -1849,6 +1849,26 @@ final class AlphaExtractionTests: XCTestCase {
             "Latest file: Order.pdf."
         )
         XCTAssertEqual(
+            alphaNewMatterSummary(languageCode: "hi"),
+            "पहली file import करें, और Ross court, parties, और next date extract करेगा."
+        )
+        XCTAssertEqual(
+            alphaNewMatterDraftTasks(languageCode: "ta"),
+            ["முதல் case document-ஐ import செய்யவும்.", "முதல் source reference-ஐ pin செய்யவும்."]
+        )
+        XCTAssertEqual(
+            alphaNewMatterFirstTaskNotes(languageCode: "bn"),
+            "এই case-এর জন্য প্রথম order, pleading, বা note যোগ করুন."
+        )
+        XCTAssertEqual(
+            rossLocalized("privacy_ledger_case_created_detail", languageCode: "te-IN"),
+            "ఈ device లో కొత్త matter సృష్టించబడింది."
+        )
+        XCTAssertEqual(
+            rossLocalized("privacy_ledger_task_status_changed_detail", languageCode: "hi"),
+            "इस device पर task done mark हुआ."
+        )
+        XCTAssertEqual(
             alphaFindingsCountLabel(3, languageCode: "hi"),
             "3 findings"
         )

@@ -503,7 +503,7 @@ extension AlphaRossModel {
         persisted.ledgerEntries.insert(
             AlphaPrivacyLedgerEntry(
                 title: "Task status changed locally",
-                detail: "A task was marked done on this device.",
+                detail: rossLocalized("privacy_ledger_task_status_changed_detail"),
                 purpose: .local_only,
                 payloadClass: .local_only,
                 endpointLabel: "device://task-status",

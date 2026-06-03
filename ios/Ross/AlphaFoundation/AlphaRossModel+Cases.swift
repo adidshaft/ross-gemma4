@@ -13,6 +13,33 @@ import UIKit
 import AppKit
 #endif
 
+func alphaNewMatterSummary(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("new_matter_summary", languageCode: languageCode)
+}
+
+func alphaNewMatterIssueHighlight(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("new_matter_issue_highlight", languageCode: languageCode)
+}
+
+func alphaNewMatterEvidenceNote(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("new_matter_evidence_note", languageCode: languageCode)
+}
+
+func alphaNewMatterDraftTasks(languageCode: String = rossSelectedLanguageCode()) -> [String] {
+    [
+        rossLocalized("new_matter_draft_task_import_first_document", languageCode: languageCode),
+        rossLocalized("new_matter_draft_task_pin_first_source", languageCode: languageCode)
+    ]
+}
+
+func alphaNewMatterFirstTaskTitle(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("new_matter_first_task_title", languageCode: languageCode)
+}
+
+func alphaNewMatterFirstTaskNotes(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("new_matter_first_task_notes", languageCode: languageCode)
+}
+
 extension AlphaRossModel {
 
     var sharedWorkspace: AlphaCaseMatter? {
@@ -139,10 +166,10 @@ extension AlphaRossModel {
             nextHearing: nil,
             dates: [],
             notes: nil,
-            summary: "Import your first file, and Ross will extract the court, parties, and next date.",
-            issueHighlights: ["Import the first source document to begin chronology work."],
-            evidenceNotes: ["No imported documents yet."],
-            draftTasks: ["Import the first case document.", "Pin the first source reference."],
+            summary: alphaNewMatterSummary(),
+            issueHighlights: [alphaNewMatterIssueHighlight()],
+            evidenceNotes: [alphaNewMatterEvidenceNote()],
+            draftTasks: alphaNewMatterDraftTasks(),
             documents: [],
             sourceRefs: [],
             updatedAt: .now
@@ -154,8 +181,8 @@ extension AlphaRossModel {
         taskList.insert(
             AlphaTaskItem(
                 caseId: normalizedMatter.id,
-                title: "Import first document",
-                notes: "Add the first order, pleading, or note for this case.",
+                title: alphaNewMatterFirstTaskTitle(),
+                notes: alphaNewMatterFirstTaskNotes(),
                 dueDate: Calendar.current.date(byAdding: .day, value: 1, to: .now),
                 priority: .high,
                 source: .system
@@ -169,7 +196,7 @@ extension AlphaRossModel {
         persisted.ledgerEntries.insert(
             AlphaPrivacyLedgerEntry(
                 title: "Case created locally",
-                detail: "A new case matter was created on this device.",
+                detail: rossLocalized("privacy_ledger_case_created_detail"),
                 purpose: .local_only,
                 payloadClass: .local_only,
                 endpointLabel: "device://case-create",

@@ -1484,6 +1484,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Case உருவாக்கப்பட்டது",
             "te": "Case సృష్టించబడింది"
         ],
+        "privacy_ledger_case_created_detail": [
+            "en": "A new matter was created on this device.",
+            "hi": "इस device पर नया matter बनाया गया.",
+            "bn": "এই device-এ নতুন matter তৈরি হয়েছে.",
+            "ta": "இந்த device-இல் புதிய matter உருவாக்கப்பட்டது.",
+            "te": "ఈ device లో కొత్త matter సృష్టించబడింది."
+        ],
+        "privacy_ledger_task_status_changed_detail": [
+            "en": "A task was marked done on this device.",
+            "hi": "इस device पर task done mark हुआ.",
+            "bn": "এই device-এ task done mark হয়েছে.",
+            "ta": "இந்த device-இல் task done mark செய்யப்பட்டது.",
+            "te": "ఈ device లో task done గా mark చేయబడింది."
+        ],
         "privacy_ledger_public_law_reviewed_detail": [
             "en": "Ross prepared the search locally. 0 private case details left the device.",
             "hi": "Ross ने search locally तैयार किया। 0 private case details device से बाहर गईं.",
@@ -5263,6 +5277,55 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "bn": "এই matter-এর জন্য প্রথম pleading, order, বা note import করুন.",
             "ta": "இந்த matter-க்கு முதல் pleading, order, அல்லது note import செய்யவும்.",
             "te": "ఈ matter కోసం మొదటి pleading, order, లేదా note import చేయండి."
+        ],
+        "new_matter_summary": [
+            "en": "Import your first file, and Ross will extract the court, parties, and next date.",
+            "hi": "पहली file import करें, और Ross court, parties, और next date extract करेगा.",
+            "bn": "প্রথম file import করুন, Ross court, parties, এবং next date extract করবে.",
+            "ta": "முதல் file-ஐ import செய்யவும்; Ross court, parties மற்றும் next date-ஐ extract செய்யும்.",
+            "te": "మొదటి file ను import చేయండి; Ross court, parties, మరియు next date ను extract చేస్తుంది."
+        ],
+        "new_matter_issue_highlight": [
+            "en": "Import the first source document to begin chronology work.",
+            "hi": "chronology work शुरू करने के लिए पहला source document import करें.",
+            "bn": "chronology work শুরু করতে প্রথম source document import করুন.",
+            "ta": "chronology work தொடங்க முதல் source document-ஐ import செய்யவும்.",
+            "te": "chronology work ప్రారంభించడానికి మొదటి source document ను import చేయండి."
+        ],
+        "new_matter_evidence_note": [
+            "en": "No imported documents yet.",
+            "hi": "अभी documents import नहीं हुए.",
+            "bn": "এখনও documents import হয়নি.",
+            "ta": "இன்னும் documents import ஆகவில்லை.",
+            "te": "ఇంకా documents import కాలేదు."
+        ],
+        "new_matter_draft_task_import_first_document": [
+            "en": "Import the first case document.",
+            "hi": "पहला case document import करें.",
+            "bn": "প্রথম case document import করুন.",
+            "ta": "முதல் case document-ஐ import செய்யவும்.",
+            "te": "మొదటి case document ను import చేయండి."
+        ],
+        "new_matter_draft_task_pin_first_source": [
+            "en": "Pin the first source reference.",
+            "hi": "पहला source reference pin करें.",
+            "bn": "প্রথম source reference pin করুন.",
+            "ta": "முதல் source reference-ஐ pin செய்யவும்.",
+            "te": "మొదటి source reference ను pin చేయండి."
+        ],
+        "new_matter_first_task_title": [
+            "en": "Import first document",
+            "hi": "पहला document import करें",
+            "bn": "প্রথম document import করুন",
+            "ta": "முதல் document import செய்யவும்",
+            "te": "మొదటి document import చేయండి"
+        ],
+        "new_matter_first_task_notes": [
+            "en": "Add the first order, pleading, or note for this case.",
+            "hi": "इस case के लिए पहला order, pleading, या note जोड़ें.",
+            "bn": "এই case-এর জন্য প্রথম order, pleading, বা note যোগ করুন.",
+            "ta": "இந்த case-க்கு முதல் order, pleading, அல்லது note சேர்க்கவும்.",
+            "te": "ఈ case కోసం మొదటి order, pleading, లేదా note జోడించండి."
         ],
         "next_action": [
             "en": "Next action",
