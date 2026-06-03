@@ -2299,8 +2299,8 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
             tasks: [],
             ledgerEntries: [
                 AlphaPrivacyLedgerEntry(
-                    title: "Model catalog checked",
-                    detail: "Catalog metadata was reviewed without case files attached.",
+                    title: rossLocalized("privacy_ledger_assistant_catalog_checked_title"),
+                    detail: rossLocalized("privacy_ledger_assistant_catalog_checked_detail"),
                     purpose: .model_catalog,
                     payloadClass: .no_case_data,
                     endpointLabel: "/model-catalog",
@@ -2683,8 +2683,8 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
             tasks: seededTasks,
             ledgerEntries: [
                 AlphaPrivacyLedgerEntry(
-                    title: "Demo workspace prepared locally",
-                    detail: "Ross created synthetic sample work for local testing only.",
+                    title: rossLocalized("privacy_ledger_demo_workspace_prepared_title"),
+                    detail: rossLocalized("privacy_ledger_demo_workspace_prepared_detail"),
                     purpose: .local_only,
                     payloadClass: .local_only,
                     endpointLabel: "device://demo-seed",
@@ -2692,8 +2692,8 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
                 ),
                 AlphaPrivacyLedgerEntry(
                     timestamp: Calendar.current.date(byAdding: .hour, value: -4, to: .now) ?? .now,
-                    title: "Model catalog checked",
-                    detail: "Catalog metadata was reviewed without case files attached.",
+                    title: rossLocalized("privacy_ledger_assistant_catalog_checked_title"),
+                    detail: rossLocalized("privacy_ledger_assistant_catalog_checked_detail"),
                     purpose: .model_catalog,
                     payloadClass: .no_case_data,
                     endpointLabel: "/model-catalog",
@@ -2878,6 +2878,10 @@ extension AlphaPrivacyLedgerEntry {
             rossLocalized("privacy_ledger_case_created_title")
         case "AI output reported":
             rossLocalized("privacy_ledger_ai_output_reported_title")
+        case "Demo workspace prepared locally":
+            rossLocalized("privacy_ledger_demo_workspace_prepared_title")
+        case "Demo workspace reset locally":
+            rossLocalized("privacy_ledger_demo_workspace_reset_title")
         default:
             title
         }
@@ -2929,6 +2933,10 @@ extension AlphaPrivacyLedgerEntry {
             rossLocalized("privacy_ledger_local_case_review_detail")
         case "AI output reported":
             rossLocalized("privacy_ledger_ai_output_reported_detail")
+        case "Demo workspace prepared locally":
+            rossLocalized("privacy_ledger_demo_workspace_prepared_detail")
+        case "Demo workspace reset locally":
+            rossLocalized("privacy_ledger_demo_workspace_reset_detail")
         default:
             detail
         }

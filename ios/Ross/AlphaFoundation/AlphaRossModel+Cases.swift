@@ -154,8 +154,8 @@ extension AlphaRossModel {
         applyPreservedWorkspaceConfiguration(preserved)
         persisted.ledgerEntries.insert(
             AlphaPrivacyLedgerEntry(
-                title: "Demo workspace reset locally",
-                detail: "Ross restored the synthetic sample matter on this device.",
+                title: rossLocalized("privacy_ledger_demo_workspace_reset_title"),
+                detail: rossLocalized("privacy_ledger_demo_workspace_reset_detail"),
                 purpose: .local_only,
                 payloadClass: .local_only,
                 endpointLabel: "device://demo-reset",

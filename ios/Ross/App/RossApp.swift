@@ -1400,6 +1400,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Answer feedback save செய்யப்பட்டது",
             "te": "Answer feedback save చేయబడింది"
         ],
+        "privacy_ledger_demo_workspace_prepared_title": [
+            "en": "Demo workspace prepared locally",
+            "hi": "Demo workspace locally तैयार हुआ",
+            "bn": "Demo workspace locally প্রস্তুত হয়েছে",
+            "ta": "Demo workspace locally தயாரானது",
+            "te": "Demo workspace locally సిద్ధమైంది"
+        ],
+        "privacy_ledger_demo_workspace_reset_title": [
+            "en": "Demo workspace reset locally",
+            "hi": "Demo workspace locally reset हुआ",
+            "bn": "Demo workspace locally reset হয়েছে",
+            "ta": "Demo workspace locally reset செய்யப்பட்டது",
+            "te": "Demo workspace locally reset చేయబడింది"
+        ],
         "privacy_ledger_assistant_catalog_checked_title": [
             "en": "Checked private assistant setup",
             "hi": "Private assistant setup check किया",
@@ -1644,6 +1658,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "bn": "Ross private assistant setup open করতে পারেনি। My assistant খুলে Repair setup use করুন.",
             "ta": "Ross private assistant setup open செய்ய முடியவில்லை. My assistant திறந்து Repair setup use செய்யவும்.",
             "te": "Ross private assistant setup open చేయలేకపోయింది. My assistant తెరిచి Repair setup use చేయండి."
+        ],
+        "privacy_ledger_demo_workspace_prepared_detail": [
+            "en": "Ross created synthetic sample work for local testing only.",
+            "hi": "Ross ने local testing के लिए synthetic sample work बनाया.",
+            "bn": "Ross local testing-এর জন্য synthetic sample work তৈরি করেছে.",
+            "ta": "Ross local testing-க்காக synthetic sample work உருவாக்கியது.",
+            "te": "Ross local testing కోసం synthetic sample work సృష్టించింది."
+        ],
+        "privacy_ledger_demo_workspace_reset_detail": [
+            "en": "Ross restored the synthetic sample matter on this device.",
+            "hi": "Ross ने इस device पर synthetic sample matter restore किया.",
+            "bn": "Ross এই device-এ synthetic sample matter restore করেছে.",
+            "ta": "Ross இந்த device-இல் synthetic sample matter restore செய்தது.",
+            "te": "Ross ఈ device లో synthetic sample matter restore చేసింది."
         ],
         "privacy_ledger_private_assistant_enabled_detail": [
             "en": "Ross turned on the private assistant supplied by this iPhone. Case files stayed on this device.",
