@@ -581,6 +581,34 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "நீண்ட bundles, ஆழமான review, hearing preparation, மேலும் detailed drafting support-க்கு.",
             "te": "పెద్ద bundles, లోతైన review, hearing preparation, మరింత detailed drafting support కోసం."
         ],
+        "tier_flash_compact_summary": [
+            "en": "Simple answers",
+            "hi": "सरल जवाब",
+            "bn": "সহজ উত্তর",
+            "ta": "எளிய பதில்கள்",
+            "te": "సులభ జవాబులు"
+        ],
+        "tier_quick_start_compact_summary": [
+            "en": "Short orders",
+            "hi": "छोटे आदेश",
+            "bn": "ছোট আদেশ",
+            "ta": "குறுகிய உத்தரவுகள்",
+            "te": "చిన్న ఆదేశాలు"
+        ],
+        "tier_case_associate_compact_summary": [
+            "en": "Most matters",
+            "hi": "ज़्यादातर मामले",
+            "bn": "বেশিরভাগ মামলা",
+            "ta": "பெரும்பாலான வழக்குகள்",
+            "te": "ఎక్కువ కేసులు"
+        ],
+        "tier_senior_drafting_compact_summary": [
+            "en": "Long bundles",
+            "hi": "लंबे बंडल",
+            "bn": "দীর্ঘ বান্ডিল",
+            "ta": "நீண்ட தொகுப்புகள்",
+            "te": "పెద్ద బండిళ్లు"
+        ],
         "tier_flash_summary": [
             "en": "Fastest setup for quick questions and simple checklists.",
             "hi": "त्वरित प्रश्नों और सरल चेकलिस्ट के लिए सबसे तेज़ सेटअप।",

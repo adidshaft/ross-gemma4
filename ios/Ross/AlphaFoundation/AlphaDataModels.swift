@@ -343,15 +343,19 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
     }
 
     var compactSetupSummary: String {
+        compactSetupSummary(languageCode: rossSelectedLanguageCode())
+    }
+
+    func compactSetupSummary(languageCode: String) -> String {
         switch self {
         case .flash:
-            "Simple answers"
+            rossLocalized("tier_flash_compact_summary", languageCode: languageCode)
         case .quickStart:
-            "Short orders"
+            rossLocalized("tier_quick_start_compact_summary", languageCode: languageCode)
         case .caseAssociate:
-            "Most matters"
+            rossLocalized("tier_case_associate_compact_summary", languageCode: languageCode)
         case .seniorDraftingSupport:
-            "Long bundles"
+            rossLocalized("tier_senior_drafting_compact_summary", languageCode: languageCode)
         }
     }
 

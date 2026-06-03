@@ -908,6 +908,14 @@ final class AlphaExtractionTests: XCTestCase {
             "சுமார் 4 நிமிடம்"
         )
         XCTAssertEqual(
+            AlphaCapabilityTier.quickStart.compactSetupSummary(languageCode: "bn"),
+            "ছোট আদেশ"
+        )
+        XCTAssertEqual(
+            AlphaCapabilityTier.seniorDraftingSupport.compactSetupSummary(languageCode: "te-IN"),
+            "పెద్ద బండిళ్లు"
+        )
+        XCTAssertEqual(
             AlphaCapabilityTier.quickStart.summary(languageCode: "bn"),
             "ছোট আদেশ, নোটিস এবং হালকা নথি পর্যালোচনা।"
         )
