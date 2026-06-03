@@ -7336,6 +7336,125 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Local morning-use QA-க்கு demo workspace தயார்.",
             "te": "Local morning-use QA కోసం demo workspace సిద్ధంగా ఉంది."
         ],
+        "demo_matter_summary": [
+            "en": "This synthetic matter is ready for a morning check-in. Review the latest order, confirm the next date, prepare a hearing note, and keep filing compliance on track.",
+            "hi": "यह synthetic matter morning check-in के लिए ready है. Latest order review करें, next date confirm करें, hearing note तैयार करें, और filing compliance track पर रखें.",
+            "bn": "এই synthetic matter morning check-in-এর জন্য ready. Latest order review করুন, next date confirm করুন, hearing note তৈরি করুন, এবং filing compliance track-এ রাখুন.",
+            "ta": "இந்த synthetic matter morning check-in-க்கு ready. Latest order review செய்யவும், next date confirm செய்யவும், hearing note தயார் செய்யவும், filing compliance track-இல் வைத்திருக்கவும்.",
+            "te": "ఈ synthetic matter morning check-in కోసం ready. Latest order review చేయండి, next date confirm చేయండి, hearing note సిద్ధం చేయండి, filing compliance track లో ఉంచండి."
+        ],
+        "demo_order_evidence_note": [
+            "en": "Demo order contains the next date and order direction.",
+            "hi": "Demo order में next date और order direction है.",
+            "bn": "Demo order-এ next date এবং order direction আছে.",
+            "ta": "Demo order-இல் next date மற்றும் order direction உள்ளது.",
+            "te": "Demo order లో next date మరియు order direction ఉన్నాయి."
+        ],
+        "demo_affidavit_evidence_note": [
+            "en": "Demo affidavit still needs a quick party-name confirmation.",
+            "hi": "Demo affidavit में party-name की quick confirmation अभी बाकी है.",
+            "bn": "Demo affidavit-এ party-name-এর quick confirmation এখনও বাকি.",
+            "ta": "Demo affidavit-இல் party-name quick confirmation இன்னும் தேவை.",
+            "te": "Demo affidavit లో party-name quick confirmation ఇంకా అవసరం."
+        ],
+        "demo_notice_evidence_note": [
+            "en": "Demo notice flags the filing deadline.",
+            "hi": "Demo notice filing deadline flag करता है.",
+            "bn": "Demo notice filing deadline flag করে.",
+            "ta": "Demo notice filing deadline-ஐ flag செய்கிறது.",
+            "te": "Demo notice filing deadline ను flag చేస్తుంది."
+        ],
+        "demo_review_latest_order_task_title": [
+            "en": "Review latest order",
+            "hi": "Latest order review करें",
+            "bn": "Latest order review করুন",
+            "ta": "Latest order review செய்யவும்",
+            "te": "Latest order review చేయండి"
+        ],
+        "demo_prepare_hearing_note_task_title": [
+            "en": "Prepare hearing note",
+            "hi": "Hearing note तैयार करें",
+            "bn": "Hearing note তৈরি করুন",
+            "ta": "Hearing note தயார் செய்யவும்",
+            "te": "Hearing note సిద్ధం చేయండి"
+        ],
+        "demo_confirm_filing_deadline_task_title": [
+            "en": "Confirm filing deadline",
+            "hi": "Filing deadline confirm करें",
+            "bn": "Filing deadline confirm করুন",
+            "ta": "Filing deadline confirm செய்யவும்",
+            "te": "Filing deadline confirm చేయండి"
+        ],
+        "demo_call_client_task_title": [
+            "en": "Call client with next date",
+            "hi": "Next date के साथ client को call करें",
+            "bn": "Next date নিয়ে client-কে call করুন",
+            "ta": "Next date உடன் client-ஐ call செய்யவும்",
+            "te": "Next date తో client కి call చేయండి"
+        ],
+        "demo_review_latest_order_task_note": [
+            "en": "Confirm the next date and order direction from the demo order.",
+            "hi": "Demo order से next date और order direction confirm करें.",
+            "bn": "Demo order থেকে next date এবং order direction confirm করুন.",
+            "ta": "Demo order-இல் இருந்து next date மற்றும் order direction confirm செய்யவும்.",
+            "te": "Demo order నుండి next date మరియు order direction confirm చేయండి."
+        ],
+        "demo_prepare_hearing_note_task_note": [
+            "en": "Generate a short note after confirming the next date.",
+            "hi": "Next date confirm करने के बाद short note generate करें.",
+            "bn": "Next date confirm করার পর short note generate করুন.",
+            "ta": "Next date confirm செய்த பிறகு short note generate செய்யவும்.",
+            "te": "Next date confirm చేసిన తర్వాత short note generate చేయండి."
+        ],
+        "demo_confirm_filing_deadline_task_note": [
+            "en": "Check the demo notice before closing the review loop.",
+            "hi": "Review loop close करने से पहले demo notice check करें.",
+            "bn": "Review loop close করার আগে demo notice check করুন.",
+            "ta": "Review loop close செய்வதற்கு முன் demo notice check செய்யவும்.",
+            "te": "Review loop close చేయడానికి ముందు demo notice check చేయండి."
+        ],
+        "demo_call_client_task_note": [
+            "en": "Use the confirmed next date after advocate review.",
+            "hi": "Advocate review के बाद confirmed next date use करें.",
+            "bn": "Advocate review-এর পর confirmed next date use করুন.",
+            "ta": "Advocate review பிறகு confirmed next date use செய்யவும்.",
+            "te": "Advocate review తర్వాత confirmed next date use చేయండి."
+        ],
+        "demo_good_morning_answer_title": [
+            "en": "Good morning",
+            "hi": "सुप्रभात",
+            "bn": "সুপ্রভাত",
+            "ta": "காலை வணக்கம்",
+            "te": "శుభోదయం"
+        ],
+        "demo_matter_update_answer_section_one": [
+            "en": "This demo matter has one next hearing, one filing deadline, and one order that still needs advocate review.",
+            "hi": "इस demo matter में एक next hearing, एक filing deadline, और एक order है जिसे अभी advocate review चाहिए.",
+            "bn": "এই demo matter-এ একটি next hearing, একটি filing deadline, এবং একটি order আছে যার এখনও advocate review দরকার.",
+            "ta": "இந்த demo matter-இல் ஒரு next hearing, ஒரு filing deadline, மற்றும் இன்னும் advocate review தேவைப்படும் ஒரு order உள்ளது.",
+            "te": "ఈ demo matter లో ఒక next hearing, ఒక filing deadline, మరియు ఇంకా advocate review అవసరమైన ఒక order ఉంది."
+        ],
+        "demo_matter_update_answer_section_two": [
+            "en": "Start with the latest order, confirm the next date, then generate a short hearing note.",
+            "hi": "Latest order से start करें, next date confirm करें, फिर short hearing note generate करें.",
+            "bn": "Latest order দিয়ে start করুন, next date confirm করুন, তারপর short hearing note generate করুন.",
+            "ta": "Latest order-இல் start செய்யவும், next date confirm செய்யவும், பிறகு short hearing note generate செய்யவும்.",
+            "te": "Latest order తో start చేయండి, next date confirm చేయండి, తరువాత short hearing note generate చేయండి."
+        ],
+        "demo_matter_ready_status_note": [
+            "en": "Demo matter ready",
+            "hi": "Demo matter तैयार है",
+            "bn": "Demo matter প্রস্তুত",
+            "ta": "Demo matter தயார்",
+            "te": "Demo matter సిద్ధంగా ఉంది"
+        ],
+        "demo_review_next_date_warning": [
+            "en": "Review before relying on the next date.",
+            "hi": "Next date पर rely करने से पहले review करें.",
+            "bn": "Next date-এর উপর rely করার আগে review করুন.",
+            "ta": "Next date-ஐ rely செய்வதற்கு முன் review செய்யவும்.",
+            "te": "Next date పై rely చేయడానికి ముందు review చేయండి."
+        ],
         "ask_new_chat": [
             "en": "New chat",
             "hi": "नई chat",

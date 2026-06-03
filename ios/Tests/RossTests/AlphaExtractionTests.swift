@@ -967,6 +967,23 @@ final class AlphaExtractionTests: XCTestCase {
             alphaDemoPrepareHearingNoteHighlight(),
             alphaDemoCheckFilingDeadlineHighlight(),
             alphaDemoWorkspacePreparedMemorySummary(),
+            alphaDemoMatterSummary(),
+            alphaDemoOrderEvidenceNote(),
+            alphaDemoAffidavitEvidenceNote(),
+            alphaDemoNoticeEvidenceNote(),
+            alphaDemoReviewLatestOrderTaskTitle(),
+            alphaDemoPrepareHearingNoteTaskTitle(),
+            alphaDemoConfirmFilingDeadlineTaskTitle(),
+            alphaDemoCallClientTaskTitle(),
+            alphaDemoReviewLatestOrderTaskNote(),
+            alphaDemoPrepareHearingNoteTaskNote(),
+            alphaDemoConfirmFilingDeadlineTaskNote(),
+            alphaDemoCallClientTaskNote(),
+            alphaDemoGoodMorningAnswerTitle(),
+            alphaDemoMatterUpdateAnswerSectionOne(),
+            alphaDemoMatterUpdateAnswerSectionTwo(),
+            alphaDemoMatterReadyStatusNote(),
+            alphaDemoReviewNextDateWarning(),
             AlphaMatterDateKind.hearing.title,
             AlphaMatterDateKind.filingDeadline.title,
             AlphaMatterDateKind.complianceDate.title,
@@ -1010,6 +1027,18 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(normalSettingsCopy.contains("Arguments से पहले एक short hearing note"))
         XCTAssertTrue(normalSettingsCopy.contains("filing deadline check करें"))
         XCTAssertTrue(normalSettingsCopy.contains("Local morning-use QA के लिए demo workspace"))
+        XCTAssertTrue(normalSettingsCopy.contains("morning check-in के लिए ready"))
+        XCTAssertTrue(normalSettingsCopy.contains("Demo order में next date"))
+        XCTAssertTrue(normalSettingsCopy.contains("party-name की quick confirmation"))
+        XCTAssertTrue(normalSettingsCopy.contains("Latest order review करें"))
+        XCTAssertTrue(normalSettingsCopy.contains("Hearing note तैयार करें"))
+        XCTAssertTrue(normalSettingsCopy.contains("Filing deadline confirm करें"))
+        XCTAssertTrue(normalSettingsCopy.contains("client को call करें"))
+        XCTAssertTrue(normalSettingsCopy.contains("Review loop close करने से पहले demo notice"))
+        XCTAssertTrue(normalSettingsCopy.contains("सुप्रभात"))
+        XCTAssertTrue(normalSettingsCopy.contains("advocate review चाहिए"))
+        XCTAssertTrue(normalSettingsCopy.contains("Demo matter तैयार है"))
+        XCTAssertTrue(normalSettingsCopy.contains("Next date पर rely करने से पहले review करें"))
         XCTAssertTrue(normalSettingsCopy.contains("अगली hearing"))
         XCTAssertTrue(normalSettingsCopy.contains("अगली date confirm करें"))
         XCTAssertTrue(normalSettingsCopy.contains("Task title जोड़ें"))
@@ -1021,6 +1050,12 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("Prepare a short hearing note before arguments"))
         XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("Check the filing deadline before sharing the next update"))
         XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("Demo workspace prepared for local morning-use QA"))
+        XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("This synthetic matter is ready for a morning check-in"))
+        XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("Demo order contains the next date and order direction"))
+        XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("Demo affidavit still needs a quick party-name confirmation"))
+        XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("Call client with next date"))
+        XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("Use the confirmed next date after advocate review"))
+        XCTAssertFalse(normalSettingsCopy.localizedCaseInsensitiveContains("This demo matter has one next hearing"))
     }
 
     func testExistingAssistantSetupRepairCopyPointsToMyAssistant() {

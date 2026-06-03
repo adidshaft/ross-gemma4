@@ -62,6 +62,74 @@ func alphaDemoWorkspacePreparedMemorySummary(languageCode: String = rossSelected
     rossLocalized("demo_workspace_prepared_memory_summary", languageCode: languageCode)
 }
 
+func alphaDemoMatterSummary(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("demo_matter_summary", languageCode: languageCode)
+}
+
+func alphaDemoOrderEvidenceNote(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("demo_order_evidence_note", languageCode: languageCode)
+}
+
+func alphaDemoAffidavitEvidenceNote(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("demo_affidavit_evidence_note", languageCode: languageCode)
+}
+
+func alphaDemoNoticeEvidenceNote(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("demo_notice_evidence_note", languageCode: languageCode)
+}
+
+func alphaDemoReviewLatestOrderTaskTitle(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("demo_review_latest_order_task_title", languageCode: languageCode)
+}
+
+func alphaDemoPrepareHearingNoteTaskTitle(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("demo_prepare_hearing_note_task_title", languageCode: languageCode)
+}
+
+func alphaDemoConfirmFilingDeadlineTaskTitle(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("demo_confirm_filing_deadline_task_title", languageCode: languageCode)
+}
+
+func alphaDemoCallClientTaskTitle(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("demo_call_client_task_title", languageCode: languageCode)
+}
+
+func alphaDemoReviewLatestOrderTaskNote(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("demo_review_latest_order_task_note", languageCode: languageCode)
+}
+
+func alphaDemoPrepareHearingNoteTaskNote(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("demo_prepare_hearing_note_task_note", languageCode: languageCode)
+}
+
+func alphaDemoConfirmFilingDeadlineTaskNote(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("demo_confirm_filing_deadline_task_note", languageCode: languageCode)
+}
+
+func alphaDemoCallClientTaskNote(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("demo_call_client_task_note", languageCode: languageCode)
+}
+
+func alphaDemoGoodMorningAnswerTitle(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("demo_good_morning_answer_title", languageCode: languageCode)
+}
+
+func alphaDemoMatterUpdateAnswerSectionOne(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("demo_matter_update_answer_section_one", languageCode: languageCode)
+}
+
+func alphaDemoMatterUpdateAnswerSectionTwo(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("demo_matter_update_answer_section_two", languageCode: languageCode)
+}
+
+func alphaDemoMatterReadyStatusNote(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("demo_matter_ready_status_note", languageCode: languageCode)
+}
+
+func alphaDemoReviewNextDateWarning(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("demo_review_next_date_warning", languageCode: languageCode)
+}
+
 enum AlphaOnboardingStage: String, Codable, Hashable, Sendable {
     case onboarding
     // Kept so older saved state can migrate into the simplified onboarding flow.
@@ -2581,22 +2649,22 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
             dates: demoDates,
             localNotice: alphaDemoMatterLocalNotice(),
             notes: rossLocalized("demo_matter_sample_data_only"),
-            summary: "This synthetic matter is ready for a morning check-in. Review the latest order, confirm the next date, prepare a hearing note, and keep filing compliance on track.",
+            summary: alphaDemoMatterSummary(),
             issueHighlights: [
                 alphaDemoConfirmNextHearingHighlight(),
                 alphaDemoPrepareHearingNoteHighlight(),
                 alphaDemoCheckFilingDeadlineHighlight()
             ],
             evidenceNotes: [
-                "Demo order contains the next date and order direction.",
-                "Demo affidavit still needs a quick party-name confirmation.",
-                "Demo notice flags the filing deadline."
+                alphaDemoOrderEvidenceNote(),
+                alphaDemoAffidavitEvidenceNote(),
+                alphaDemoNoticeEvidenceNote()
             ],
             draftTasks: [
-                "Review latest order",
-                "Prepare hearing note",
-                "Confirm filing deadline",
-                "Call client with next date"
+                alphaDemoReviewLatestOrderTaskTitle(),
+                alphaDemoPrepareHearingNoteTaskTitle(),
+                alphaDemoConfirmFilingDeadlineTaskTitle(),
+                alphaDemoCallClientTaskTitle()
             ],
             documents: [demoOrder, demoAffidavit, demoNotice],
             sourceRefs: [hearingSource, directionSource, partySource, filingSource],
@@ -2609,16 +2677,16 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
                         AlphaChatTurn(
                             kind: .matterUpdate,
                             askedAt: orderImportedAt,
-                            question: "Matter update",
-                            answerTitle: "Good morning",
+                            question: rossLocalized("matter_update"),
+                            answerTitle: alphaDemoGoodMorningAnswerTitle(),
                             answerSections: [
-                                "This demo matter has one next hearing, one filing deadline, and one order that still needs advocate review.",
-                                "Start with the latest order, confirm the next date, then generate a short hearing note."
+                                alphaDemoMatterUpdateAnswerSectionOne(),
+                                alphaDemoMatterUpdateAnswerSectionTwo()
                             ],
                             sourceRefs: [hearingSource, directionSource],
                             selectedDocumentTitles: ["Demo order"],
-                            statusNote: "Demo matter ready",
-                            needsReviewWarning: "Review before relying on the next date."
+                            statusNote: alphaDemoMatterReadyStatusNote(),
+                            needsReviewWarning: alphaDemoReviewNextDateWarning()
                         )
                     ]
                 )
@@ -2658,32 +2726,32 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
         let seededTasks = [
             AlphaTaskItem(
                 caseId: matterID,
-                title: "Review latest order",
-                notes: "Confirm the next date and order direction from the demo order.",
+                title: alphaDemoReviewLatestOrderTaskTitle(),
+                notes: alphaDemoReviewLatestOrderTaskNote(),
                 dueDate: Calendar.current.date(byAdding: .day, value: 1, to: .now),
                 priority: .high,
                 source: .manual
             ),
             AlphaTaskItem(
                 caseId: matterID,
-                title: "Prepare hearing note",
-                notes: "Generate a short note after confirming the next date.",
+                title: alphaDemoPrepareHearingNoteTaskTitle(),
+                notes: alphaDemoPrepareHearingNoteTaskNote(),
                 dueDate: Calendar.current.date(byAdding: .day, value: 2, to: .now),
                 priority: .normal,
                 source: .system
             ),
             AlphaTaskItem(
                 caseId: matterID,
-                title: "Confirm filing deadline",
-                notes: "Check the demo notice before closing the review loop.",
+                title: alphaDemoConfirmFilingDeadlineTaskTitle(),
+                notes: alphaDemoConfirmFilingDeadlineTaskNote(),
                 dueDate: filingDeadline,
                 priority: .high,
                 source: .extraction
             ),
             AlphaTaskItem(
                 caseId: matterID,
-                title: "Call client with next date",
-                notes: "Use the confirmed next date after advocate review.",
+                title: alphaDemoCallClientTaskTitle(),
+                notes: alphaDemoCallClientTaskNote(),
                 dueDate: clientFollowUp,
                 priority: .normal,
                 source: .manual
