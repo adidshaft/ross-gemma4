@@ -1374,17 +1374,7 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
 
                 Spacer(minLength: 8)
 
-                Button(action: onCopy) {
-                    Label(rossLocalized("copy"), systemImage: "doc.on.doc")
-                        .font(.caption.weight(.semibold))
-                        .labelStyle(.titleAndIcon)
-                        .foregroundStyle(Color.rossInk.opacity(0.72))
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 6)
-                        .rossGlassSurface(cornerRadius: 999, interactive: true, shadowOpacity: 0.03, shadowRadius: 3, shadowY: 1, strokeOpacity: 0.42)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(rossLocalized("copy_answer"))
+                AlphaCleanAnswerCopyButton(action: onCopy)
 
                 if showsMenu {
                     Menu {
@@ -1405,6 +1395,37 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
                 AlphaAnswerStatusPill(note: statusNote)
             }
         }
+    }
+}
+
+private struct AlphaCleanAnswerCopyButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            Button(action: action) {
+                label
+            }
+            .buttonStyle(.glass)
+            .tint(Color.rossAccent)
+            .accessibilityLabel(rossLocalized("copy_answer"))
+        } else {
+            Button(action: action) {
+                label
+                    .rossGlassSurface(cornerRadius: 999, interactive: true, shadowOpacity: 0.03, shadowRadius: 3, shadowY: 1, strokeOpacity: 0.42)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(rossLocalized("copy_answer"))
+        }
+    }
+
+    private var label: some View {
+        Label(rossLocalized("copy"), systemImage: "doc.on.doc")
+            .font(.caption.weight(.semibold))
+            .labelStyle(.titleAndIcon)
+            .foregroundStyle(Color.rossInk.opacity(0.72))
+            .padding(.horizontal, 9)
+            .padding(.vertical, 6)
     }
 }
 
