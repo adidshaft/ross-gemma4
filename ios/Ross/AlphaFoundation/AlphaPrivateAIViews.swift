@@ -27,6 +27,53 @@ func alphaAssistantUpdateAvailableLabel(_ tierTitle: String, languageCode: Strin
     String(format: rossLocalized("assistant_update_available", languageCode: languageCode), tierTitle)
 }
 
+func alphaPrivateAIVisibleRecoveryText(
+    _ rawText: String?,
+    languageCode: String = rossSelectedLanguageCode(),
+    fallback: String
+) -> String {
+    guard let rawText = rawText?.trimmingCharacters(in: .whitespacesAndNewlines),
+          !rawText.isEmpty else {
+        return fallback
+    }
+
+    let technicalMarkers = [
+        "nserror",
+        "nsurlerror",
+        "runtime",
+        "checksum",
+        "gguf",
+        "llama",
+        "gemma",
+        "artifact",
+        "model",
+        "provider",
+        "byte-range"
+    ]
+    let lowercased = rawText.lowercased()
+    guard !technicalMarkers.contains(where: lowercased.contains) else {
+        return fallback
+    }
+
+    let normalizedCode = languageCode.split(separator: "-").first.map(String.init) ?? languageCode
+    if normalizedCode != "en" && !alphaPrivateAITextContainsSupportedLocalScript(rawText) {
+        return fallback
+    }
+
+    return rawText
+}
+
+private func alphaPrivateAITextContainsSupportedLocalScript(_ value: String) -> Bool {
+    value.unicodeScalars.contains { scalar in
+        switch scalar.value {
+        case 0x0900...0x097F, 0x0980...0x09FF, 0x0B80...0x0BFF, 0x0C00...0x0C7F:
+            return true
+        default:
+            return false
+        }
+    }
+}
+
 struct AlphaPrivateAISettingsScreen: View {
     @Bindable var model: AlphaRossModel
     @State private var downloadPreferencesExpanded = false
@@ -659,7 +706,12 @@ struct AlphaPrivateAIOfferCard: View {
             if let latestJob,
                (latestJob.state == .failed || latestJob.state == .pausedError || latestJob.state == .pausedNoStorage),
                let failureReason = latestJob.failureReason {
-                Text(failureReason)
+                Text(alphaPrivateAIVisibleRecoveryText(
+                    failureReason,
+                    fallback: latestJob.state == .pausedNoStorage
+                        ? rossLocalized("assistant_status_storage_detail")
+                        : rossLocalized("assistant_status_retry_detail")
+                ))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.orange)
                     .lineLimit(2)
@@ -669,7 +721,10 @@ struct AlphaPrivateAIOfferCard: View {
                     AlphaPrivateAIRecoveryHintRow(text: recoveryHint)
                 }
             } else if activeButRuntimeUnavailable, let runtimeStatus = model.activeRuntimeHealth?.userFacingStatus {
-                Text(runtimeStatus)
+                Text(alphaPrivateAIVisibleRecoveryText(
+                    runtimeStatus,
+                    fallback: rossLocalized("runtime_health_llama_needs_repair")
+                ))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.orange)
                     .lineLimit(2)
@@ -828,7 +883,12 @@ struct AlphaPrivateAIJobCard: View {
 
             if let failureReason = job.failureReason,
                job.state == .failed || job.state == .pausedError || job.state == .pausedNoStorage {
-                Text(failureReason)
+                Text(alphaPrivateAIVisibleRecoveryText(
+                    failureReason,
+                    fallback: job.state == .pausedNoStorage
+                        ? rossLocalized("assistant_status_storage_detail")
+                        : rossLocalized("assistant_status_retry_detail")
+                ))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.orange)
                     .fixedSize(horizontal: false, vertical: true)
@@ -984,7 +1044,10 @@ struct AlphaPrivateAIInstalledPackCard: View {
             }
 
             if runtimeUnavailable, let runtimeStatus = model.activeRuntimeHealth?.userFacingStatus {
-                Text(runtimeStatus)
+                Text(alphaPrivateAIVisibleRecoveryText(
+                    runtimeStatus,
+                    fallback: rossLocalized("runtime_health_llama_needs_repair")
+                ))
                     .font(.caption)
                     .foregroundStyle(.orange)
                     .fixedSize(horizontal: false, vertical: true)

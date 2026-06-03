@@ -1159,6 +1159,41 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertFalse(alphaAssistantExistingSetupRepairDetail.localizedCaseInsensitiveContains("Retry can download"))
     }
 
+    func testPrivateAssistantVisibleRecoveryTextAvoidsRawFallbacksInSupportedLanguages() {
+        XCTAssertEqual(
+            alphaPrivateAIVisibleRecoveryText(
+                "Free up 4 GB to finish assistant setup.",
+                languageCode: "en",
+                fallback: "fallback"
+            ),
+            "Free up 4 GB to finish assistant setup."
+        )
+        XCTAssertEqual(
+            alphaPrivateAIVisibleRecoveryText(
+                "Free up 4 GB to finish assistant setup.",
+                languageCode: "hi",
+                fallback: rossLocalized("assistant_status_storage_detail", languageCode: "hi")
+            ),
+            rossLocalized("assistant_status_storage_detail", languageCode: "hi")
+        )
+        XCTAssertEqual(
+            alphaPrivateAIVisibleRecoveryText(
+                "सेटअप पूरा करने के लिए 4 GB खाली करें।",
+                languageCode: "hi-IN",
+                fallback: "fallback"
+            ),
+            "सेटअप पूरा करने के लिए 4 GB खाली करें।"
+        )
+        XCTAssertEqual(
+            alphaPrivateAIVisibleRecoveryText(
+                "Model provider byte-range check failed.",
+                languageCode: "ta",
+                fallback: rossLocalized("assistant_status_retry_detail", languageCode: "ta")
+            ),
+            rossLocalized("assistant_status_retry_detail", languageCode: "ta")
+        )
+    }
+
     @MainActor
     func testInstantModeSetupGuidancePointsToAssistantSurface() {
         let service = StubLocalRuntimeService(privacyLedger: PrivacyLedgerService())
