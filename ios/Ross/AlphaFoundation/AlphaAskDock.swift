@@ -665,7 +665,7 @@ struct AlphaRootAskDock: View {
                                     }
                                 }
 
-                                Text(alphaPublicLawPrivacyCountLabel(preview.removed == ["No private case data detected"] ? 0 : preview.removed.count))
+                                Text(alphaPublicLawPrivacyCountLabel(alphaPublicLawRemovedReasonsContainOnlyNoPrivateData(preview.removed) ? 0 : preview.removed.count))
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(Color.rossInk.opacity(0.62))
                                     .padding(.horizontal, 10)

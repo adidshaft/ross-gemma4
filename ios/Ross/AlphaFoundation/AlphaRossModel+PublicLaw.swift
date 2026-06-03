@@ -13,6 +13,20 @@ import UIKit
 import AppKit
 #endif
 
+func alphaPublicLawPrivacyReason(_ key: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("public_law_privacy_reason_\(key)", languageCode: languageCode)
+}
+
+func alphaPublicLawNoPrivateDataReason(languageCode: String = rossSelectedLanguageCode()) -> String {
+    alphaPublicLawPrivacyReason("no_private_data", languageCode: languageCode)
+}
+
+func alphaPublicLawRemovedReasonsContainOnlyNoPrivateData(_ reasons: [String]) -> Bool {
+    reasons.count == 1 && rossSupportedLanguageCodes().contains { languageCode in
+        reasons[0] == alphaPublicLawNoPrivateDataReason(languageCode: languageCode)
+    }
+}
+
 extension AlphaRossModel {
 
     func confirmPendingPublicLawSearch() async {
@@ -434,29 +448,29 @@ extension AlphaRossModel {
             "next steps"
         ]
         let patterns: [(String, String)] = [
-            (#"\b(my|our)\s+(client|case|matter)\b"#, "Matter-scoped wording"),
-            (#"\b(this|private|confidential)\s+(case|matter)\b"#, "Matter-scoped wording"),
-            (#"\bwhat\s+should\s+i\b"#, "Matter-scoped wording"),
-            (#"\bdo\s+next\b"#, "Matter-scoped wording"),
-            (#"\bnext\s+steps?\b"#, "Matter-scoped wording"),
-            (#"\bfor\s+(this|my|our)\s+(client|case|matter)\b"#, "Matter-scoped wording"),
-            (#"\b[A-Za-z]{1,8}[(/\- ]*\d+[A-Za-z/()\- ]*\d{4}\b"#, "Case numbers or filing references"),
-            (#"\b[A-Z]{2,}(?:\([A-Z]+\))?(?:[/ -]?\d+/\d{4})\b"#, "Case numbers or filing references"),
-            (#"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+"#, "Email addresses"),
-            (#"\b\+?\d[\d\s-]{7,}\b"#, "Phone numbers"),
-            (#"\b\d{8,}\b"#, "Phone numbers or long numeric strings"),
-            (#"\b[^ ]+\.(pdf|docx|doc|txt|png|jpg|jpeg)\b"#, "File names"),
-            (#"\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b"#, "Exact private dates"),
-            (#"\b\d{1,2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+\d{4}\b"#, "Exact private dates"),
-            (#"raghav\s+fakepriv|blue suitcase near temple"#, "Fake secrets and private facts"),
-            (#"\b(?:near|behind|opposite|at)\s+[A-Za-z][A-Za-z\s]{3,40}\b"#, "Addresses or location details")
+            (#"\b(my|our)\s+(client|case|matter)\b"#, alphaPublicLawPrivacyReason("matter_scoped_wording")),
+            (#"\b(this|private|confidential)\s+(case|matter)\b"#, alphaPublicLawPrivacyReason("matter_scoped_wording")),
+            (#"\bwhat\s+should\s+i\b"#, alphaPublicLawPrivacyReason("matter_scoped_wording")),
+            (#"\bdo\s+next\b"#, alphaPublicLawPrivacyReason("matter_scoped_wording")),
+            (#"\bnext\s+steps?\b"#, alphaPublicLawPrivacyReason("matter_scoped_wording")),
+            (#"\bfor\s+(this|my|our)\s+(client|case|matter)\b"#, alphaPublicLawPrivacyReason("matter_scoped_wording")),
+            (#"\b[A-Za-z]{1,8}[(/\- ]*\d+[A-Za-z/()\- ]*\d{4}\b"#, alphaPublicLawPrivacyReason("case_numbers_or_filing_references")),
+            (#"\b[A-Z]{2,}(?:\([A-Z]+\))?(?:[/ -]?\d+/\d{4})\b"#, alphaPublicLawPrivacyReason("case_numbers_or_filing_references")),
+            (#"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+"#, alphaPublicLawPrivacyReason("email_addresses")),
+            (#"\b\+?\d[\d\s-]{7,}\b"#, alphaPublicLawPrivacyReason("phone_numbers")),
+            (#"\b\d{8,}\b"#, alphaPublicLawPrivacyReason("phone_numbers_or_long_numeric_strings")),
+            (#"\b[^ ]+\.(pdf|docx|doc|txt|png|jpg|jpeg)\b"#, alphaPublicLawPrivacyReason("file_names")),
+            (#"\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b"#, alphaPublicLawPrivacyReason("exact_private_dates")),
+            (#"\b\d{1,2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+\d{4}\b"#, alphaPublicLawPrivacyReason("exact_private_dates")),
+            (#"raghav\s+fakepriv|blue suitcase near temple"#, alphaPublicLawPrivacyReason("fake_secrets_and_private_facts")),
+            (#"\b(?:near|behind|opposite|at)\s+[A-Za-z][A-Za-z\s]{3,40}\b"#, alphaPublicLawPrivacyReason("addresses_or_location_details"))
         ]
 
         if let caseMatter {
             let sensitiveTokens = [caseMatter.title, caseMatter.forum] + caseMatter.documents.map(\.title) + caseMatter.documents.map(\.fileName)
             sensitiveTokens.filter { !$0.isEmpty }.forEach { token in
                 if sanitized.localizedCaseInsensitiveContains(token) {
-                    removed.append("Case titles, forum names, or document labels")
+                    removed.append(alphaPublicLawPrivacyReason("case_titles_forum_names_or_document_labels"))
                     sanitized = sanitized.replacingOccurrences(of: token, with: " ", options: .caseInsensitive)
                 }
             }
@@ -464,7 +478,7 @@ extension AlphaRossModel {
 
         blockedTerms.forEach { token in
             if sanitized.localizedCaseInsensitiveContains(token) {
-                removed.append("Case-detail phrasing and private drafting cues")
+                removed.append(alphaPublicLawPrivacyReason("case_detail_phrasing_and_private_drafting_cues"))
                 sanitized = sanitized.replacingOccurrences(of: token, with: " ", options: .caseInsensitive)
             }
         }
@@ -482,7 +496,7 @@ extension AlphaRossModel {
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
         if sanitized.count > 180 {
-            removed.append("Long factual narrative")
+            removed.append(alphaPublicLawPrivacyReason("long_factual_narrative"))
             sanitized = String(sanitized.prefix(180)).trimmingCharacters(in: .whitespacesAndNewlines)
         }
 
@@ -494,20 +508,20 @@ extension AlphaRossModel {
 
         if legalCandidate.isEmpty {
             sanitized = suggested
-            removed.append("Private case details")
+            removed.append(alphaPublicLawPrivacyReason("private_case_details"))
         } else if legalCandidate.range(of: #"\b(my|our)\s+(client|case|matter)\b|\b(this|private|confidential)\s+(case|matter)\b"#, options: .regularExpression) != nil {
             sanitized = suggested
-            removed.append("Matter-scoped wording")
+            removed.append(alphaPublicLawPrivacyReason("matter_scoped_wording"))
         } else if !looksLikeLegalConcept(legalCandidate) {
             sanitized = suggested
-            removed.append("General drafting phrasing")
+            removed.append(alphaPublicLawPrivacyReason("general_drafting_phrasing"))
         }
 
         let dedupedRemoved = Array(NSOrderedSet(array: removed)) as? [String] ?? removed
         return AlphaPublicLawPreview(
             query: sanitized,
-            removed: dedupedRemoved.isEmpty ? ["No private case data detected"] : dedupedRemoved,
-            confirmationNote: "Public-law search sends only the sanitized query after advocate review."
+            removed: dedupedRemoved.isEmpty ? [alphaPublicLawNoPrivateDataReason()] : dedupedRemoved,
+            confirmationNote: rossLocalized("public_law_search_confirmation_note")
         )
     }
 

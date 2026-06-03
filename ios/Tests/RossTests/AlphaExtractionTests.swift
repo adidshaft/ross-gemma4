@@ -1889,6 +1889,19 @@ final class AlphaExtractionTests: XCTestCase {
             "इस device पर task done mark हुआ."
         )
         XCTAssertEqual(
+            alphaPublicLawNoPrivateDataReason(languageCode: "hi"),
+            "Private case data नहीं मिला"
+        )
+        XCTAssertTrue(
+            alphaPublicLawRemovedReasonsContainOnlyNoPrivateData([
+                alphaPublicLawNoPrivateDataReason(languageCode: "hi")
+            ])
+        )
+        XCTAssertEqual(
+            rossLocalized("public_law_search_confirmation_note", languageCode: "bn"),
+            "Public-law search advocate review-এর পরে শুধু sanitized query পাঠায়."
+        )
+        XCTAssertEqual(
             alphaFindingsCountLabel(3, languageCode: "hi"),
             "3 findings"
         )

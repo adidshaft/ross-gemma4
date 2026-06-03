@@ -6748,6 +6748,118 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Ross sanitized public-law query preview தயாரித்தது. இன்னும் web search இயங்கவில்லை.",
             "te": "Ross sanitized public-law query preview సిద్ధం చేసింది. ఇంకా web search జరగలేదు."
         ],
+        "public_law_search_confirmation_note": [
+            "en": "Public-law search sends only the sanitized query after advocate review.",
+            "hi": "Public-law search advocate review के बाद सिर्फ sanitized query भेजता है.",
+            "bn": "Public-law search advocate review-এর পরে শুধু sanitized query পাঠায়.",
+            "ta": "Public-law search advocate review பிறகு sanitized query மட்டும் அனுப்பும்.",
+            "te": "Public-law search advocate review తర్వాత sanitized query మాత్రమే పంపుతుంది."
+        ],
+        "public_law_privacy_reason_no_private_data": [
+            "en": "No private case data detected",
+            "hi": "Private case data नहीं मिला",
+            "bn": "Private case data পাওয়া যায়নি",
+            "ta": "Private case data கண்டறியப்படவில்லை",
+            "te": "Private case data కనబడలేదు"
+        ],
+        "public_law_privacy_reason_matter_scoped_wording": [
+            "en": "Matter-scoped wording",
+            "hi": "Matter-scoped wording",
+            "bn": "Matter-scoped wording",
+            "ta": "Matter-scoped wording",
+            "te": "Matter-scoped wording"
+        ],
+        "public_law_privacy_reason_case_numbers_or_filing_references": [
+            "en": "Case numbers or filing references",
+            "hi": "Case numbers या filing references",
+            "bn": "Case numbers বা filing references",
+            "ta": "Case numbers அல்லது filing references",
+            "te": "Case numbers లేదా filing references"
+        ],
+        "public_law_privacy_reason_email_addresses": [
+            "en": "Email addresses",
+            "hi": "Email addresses",
+            "bn": "Email addresses",
+            "ta": "Email addresses",
+            "te": "Email addresses"
+        ],
+        "public_law_privacy_reason_phone_numbers": [
+            "en": "Phone numbers",
+            "hi": "Phone numbers",
+            "bn": "Phone numbers",
+            "ta": "Phone numbers",
+            "te": "Phone numbers"
+        ],
+        "public_law_privacy_reason_phone_numbers_or_long_numeric_strings": [
+            "en": "Phone numbers or long numeric strings",
+            "hi": "Phone numbers या लंबी numeric strings",
+            "bn": "Phone numbers বা long numeric strings",
+            "ta": "Phone numbers அல்லது long numeric strings",
+            "te": "Phone numbers లేదా long numeric strings"
+        ],
+        "public_law_privacy_reason_file_names": [
+            "en": "File names",
+            "hi": "File names",
+            "bn": "File names",
+            "ta": "File names",
+            "te": "File names"
+        ],
+        "public_law_privacy_reason_exact_private_dates": [
+            "en": "Exact private dates",
+            "hi": "Exact private dates",
+            "bn": "Exact private dates",
+            "ta": "Exact private dates",
+            "te": "Exact private dates"
+        ],
+        "public_law_privacy_reason_fake_secrets_and_private_facts": [
+            "en": "Fake secrets and private facts",
+            "hi": "Fake secrets और private facts",
+            "bn": "Fake secrets এবং private facts",
+            "ta": "Fake secrets மற்றும் private facts",
+            "te": "Fake secrets మరియు private facts"
+        ],
+        "public_law_privacy_reason_addresses_or_location_details": [
+            "en": "Addresses or location details",
+            "hi": "Addresses या location details",
+            "bn": "Addresses বা location details",
+            "ta": "Addresses அல்லது location details",
+            "te": "Addresses లేదా location details"
+        ],
+        "public_law_privacy_reason_case_titles_forum_names_or_document_labels": [
+            "en": "Case titles, forum names, or document labels",
+            "hi": "Case titles, forum names, या document labels",
+            "bn": "Case titles, forum names, বা document labels",
+            "ta": "Case titles, forum names, அல்லது document labels",
+            "te": "Case titles, forum names, లేదా document labels"
+        ],
+        "public_law_privacy_reason_case_detail_phrasing_and_private_drafting_cues": [
+            "en": "Case-detail phrasing and private drafting cues",
+            "hi": "Case-detail phrasing और private drafting cues",
+            "bn": "Case-detail phrasing এবং private drafting cues",
+            "ta": "Case-detail phrasing மற்றும் private drafting cues",
+            "te": "Case-detail phrasing మరియు private drafting cues"
+        ],
+        "public_law_privacy_reason_long_factual_narrative": [
+            "en": "Long factual narrative",
+            "hi": "Long factual narrative",
+            "bn": "Long factual narrative",
+            "ta": "Long factual narrative",
+            "te": "Long factual narrative"
+        ],
+        "public_law_privacy_reason_private_case_details": [
+            "en": "Private case details",
+            "hi": "Private case details",
+            "bn": "Private case details",
+            "ta": "Private case details",
+            "te": "Private case details"
+        ],
+        "public_law_privacy_reason_general_drafting_phrasing": [
+            "en": "General drafting phrasing",
+            "hi": "General drafting phrasing",
+            "bn": "General drafting phrasing",
+            "ta": "General drafting phrasing",
+            "te": "General drafting phrasing"
+        ],
         "ask_local_matter_state_reviewed": [
             "en": "Ross reviewed saved local matter state and updated prepared work.",
             "hi": "Ross ने saved local matter state review की और prepared work update किया।",

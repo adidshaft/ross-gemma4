@@ -1255,7 +1255,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertNil(preview?.query.range(of: "what should i", options: .caseInsensitive))
             XCTAssertNil(preview?.query.range(of: "this matter", options: .caseInsensitive))
             XCTAssertTrue(preview?.query.range(of: "delay condonation", options: .caseInsensitive) != nil)
-            XCTAssertFalse(preview?.removed.contains("No private case data detected") == true)
+            XCTAssertFalse(preview?.removed.contains(alphaPublicLawNoPrivateDataReason()) == true)
+            XCTAssertTrue(preview?.removed.contains(alphaPublicLawPrivacyReason("case_detail_phrasing_and_private_drafting_cues")) == true)
         }
     }
 
