@@ -1172,7 +1172,10 @@ extension AlphaRossModel {
                     fieldsNeedingReview: 0,
                     unsupportedAccepted: 0,
                     exportRelativePath: nil,
-                    message: runtimeHealth?.userFacingStatus ?? alphaRuntimeHealthStatus(.privateAssistantUnavailable)
+                    message: alphaPrivateAIVisibleRecoveryText(
+                        runtimeHealth?.userFacingStatus,
+                        fallback: alphaRuntimeHealthStatus(.privateAssistantUnavailable)
+                    )
                 )
                 localInferenceSmokeRunning = false
                 return

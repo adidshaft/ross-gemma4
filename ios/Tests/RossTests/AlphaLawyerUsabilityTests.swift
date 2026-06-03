@@ -2403,6 +2403,31 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertEqual(report?.ran, false)
         XCTAssertEqual(report?.message, "Private assistant अभी इस device पर unavailable है।")
         XCTAssertFalse(report?.message.localizedCaseInsensitiveContains("real local inference") == true)
+
+        await MainActor.run {
+            model.privateAISnapshot.activeRuntimeHealth = AlphaLocalRuntimeHealth(
+                runtimeMode: .llamaCppGguf,
+                available: false,
+                modelPathPresent: true,
+                modelPathLabel: "broken.gguf",
+                checksumVerified: false,
+                supportedTasks: [],
+                maxInputChars: 0,
+                estimatedContextTokens: 0,
+                lastErrorCategory: "runtime_validation_failed",
+                userFacingStatus: "Model provider byte-range check failed.",
+                explicitOptInEnabled: true
+            )
+            model.runLocalInferenceSmoke()
+        }
+        try? await Task.sleep(for: .milliseconds(120))
+
+        let sanitizedReport = await MainActor.run { model.localInferenceSmokeReport }
+        XCTAssertEqual(sanitizedReport?.ran, false)
+        XCTAssertEqual(sanitizedReport?.message, "Private assistant अभी इस device पर unavailable है।")
+        XCTAssertFalse(sanitizedReport?.message.localizedCaseInsensitiveContains("model") == true)
+        XCTAssertFalse(sanitizedReport?.message.localizedCaseInsensitiveContains("provider") == true)
+        XCTAssertFalse(sanitizedReport?.message.localizedCaseInsensitiveContains("byte-range") == true)
     }
 
     func testPrivateAssistantSampleCheckReportUsesProductLanguage() async throws {

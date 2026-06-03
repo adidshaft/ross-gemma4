@@ -344,7 +344,10 @@ struct AlphaPrivateAITechnicalDiagnosticsCard: View {
         if runtimeHealth.available {
             return rossLocalized("ready_for_private_answers_on_iphone")
         }
-        return runtimeHealth.userFacingStatus
+        return alphaPrivateAIVisibleRecoveryText(
+            runtimeHealth.userFacingStatus,
+            fallback: rossLocalized("runtime_health_llama_needs_repair")
+        )
     }
 
     private var assistantLastUsedLabel: String {
