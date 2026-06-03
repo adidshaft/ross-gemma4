@@ -110,6 +110,14 @@ enum AlphaLocalModelWarningCopy {
     static var assistantCouldNotFinish: String {
         rossLocalized("local_model_warning_assistant_could_not_finish")
     }
+
+    static var answerNotGeneratedAssistantNotReady: String {
+        rossLocalized("local_model_warning_answer_not_generated_assistant_not_ready")
+    }
+
+    static var sourceTextStayedLocal: String {
+        rossLocalized("local_model_warning_source_text_stayed_local")
+    }
 }
 
 struct AlphaModelPromptPolicy: Codable, Hashable, Sendable {
@@ -403,8 +411,8 @@ struct AlphaUnavailableRealLocalModelProvider: AlphaRealLocalModelProvider {
             schemaValid: false,
             warnings: [
                 statusMessage,
-                "No legal answer was generated because the private assistant is not ready.",
-                pack.truncated ? "The prompt pack was truncated before the runtime failed." : "The prompt pack stayed local and was not sent to a cloud model."
+                AlphaLocalModelWarningCopy.answerNotGeneratedAssistantNotReady,
+                pack.truncated ? AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts : AlphaLocalModelWarningCopy.sourceTextStayedLocal
             ],
             sourceRefs: pack.includedSourceRefs.isEmpty ? taskInput.sourcePack.map(\.sourceRef) : pack.includedSourceRefs,
             errorCategory: errorCategory
@@ -678,7 +686,7 @@ enum AlphaLocalModelRuntime {
             runtimeMode: runtimeMode,
             modelPathLabel: modelPathLabel,
             checksumVerified: checksumVerified,
-            statusMessage: "Private assistant support is not ready on this build.",
+            statusMessage: alphaRuntimeHealthStatus(.privateAssistantUnavailable),
             plannedTasks: plannedTasks,
             errorCategory: "unsupported_runtime",
             explicitOptInEnabled: explicitOptInEnabled
@@ -719,12 +727,12 @@ enum AlphaLocalModelRuntime {
         }
         switch runtimeMode {
         case .mediapipeLlm:
-                return AlphaUnavailableRealLocalModelProvider(
-                    capabilityTier: tier,
-                    runtimeMode: .mediapipeLlm,
-                    modelPathLabel: modelPathLabel,
-                    checksumVerified: checksumVerified,
-                statusMessage: "Private assistant support is not available on this iOS build.",
+            return AlphaUnavailableRealLocalModelProvider(
+                capabilityTier: tier,
+                runtimeMode: .mediapipeLlm,
+                modelPathLabel: modelPathLabel,
+                checksumVerified: checksumVerified,
+                statusMessage: alphaRuntimeHealthStatus(.privateAssistantUnavailable),
                 plannedTasks: [.documentClassification, .legalFieldExtraction, .legalFieldVerification, .caseMemorySynthesis, .chronologyGeneration, .orderSummary],
                 errorCategory: "unsupported_runtime",
                 explicitOptInEnabled: debug.enableRealInference
@@ -752,7 +760,7 @@ enum AlphaLocalModelRuntime {
                 runtimeMode: .appleFoundationModels,
                 modelPathLabel: modelPathLabel,
                 checksumVerified: checksumVerified,
-                statusMessage: "This private assistant option is not available on this device yet.",
+                statusMessage: alphaRuntimeHealthStatus(.foundationUnavailable),
                 plannedTasks: [.documentClassification, .legalFieldExtraction, .legalFieldVerification, .caseMemorySynthesis, .chronologyGeneration, .orderSummary],
                 errorCategory: "unsupported_runtime",
                 explicitOptInEnabled: debug.enableRealInference

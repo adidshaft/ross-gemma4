@@ -1841,6 +1841,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Private assistant இந்த request-ஐ finish செய்ய முடியவில்லை. Ross request-ஐ இந்த device-இல் வைத்தது.",
             "te": "Private assistant ఈ request ను finish చేయలేకపోయింది. Ross request ను ఈ device పైనే ఉంచింది."
         ],
+        "local_model_warning_answer_not_generated_assistant_not_ready": [
+            "en": "Ross did not generate a legal answer because the private assistant is not ready.",
+            "hi": "Private assistant ready नहीं है, इसलिए Ross ने legal answer generate नहीं किया.",
+            "bn": "Private assistant ready নয়, তাই Ross legal answer generate করেনি.",
+            "ta": "Private assistant ready இல்லை; அதனால் Ross legal answer generate செய்யவில்லை.",
+            "te": "Private assistant ready కాదు, కాబట్టి Ross legal answer generate చేయలేదు."
+        ],
+        "local_model_warning_source_text_stayed_local": [
+            "en": "Source text stayed on this device and was not sent to a cloud assistant.",
+            "hi": "Source text इसी device पर रहा और cloud assistant को नहीं भेजा गया.",
+            "bn": "Source text এই device-এই ছিল এবং cloud assistant-এ পাঠানো হয়নি.",
+            "ta": "Source text இந்த device-இலேயே இருந்தது; cloud assistant-க்கு அனுப்பப்படவில்லை.",
+            "te": "Source text ఈ device పైనే ఉంది మరియు cloud assistant కు పంపలేదు."
+        ],
         "public_law_results_status": [
             "en": "Public-law results",
             "hi": "Public-law results",

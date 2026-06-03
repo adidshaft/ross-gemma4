@@ -3502,6 +3502,69 @@ final class AlphaExtractionTests: XCTestCase {
         }
     }
 
+    func testUnavailableRuntimeWarningsUseProductLanguage() async throws {
+        let previousLanguageCode = rossSelectedLanguageCode()
+        rossSaveLanguageSelection(code: "hi")
+        defer { rossSaveLanguageSelection(code: previousLanguageCode) }
+
+        let disabledPack = AlphaInstalledModelPack(
+            packId: "disabled-apple-assistant",
+            tier: .quickStart,
+            installPath: "system://apple-foundation-models",
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "system_model",
+            runtimeMode: .appleFoundationModels,
+            developmentOnly: true,
+            isActive: true
+        )
+        let provider = AlphaLocalModelRuntime.resolveProvider(
+            activePack: disabledPack,
+            requestedTier: disabledPack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: false,
+                runtimeModeOverride: nil,
+                modelPath: nil,
+                modelChecksum: nil,
+                modelKind: nil
+            )
+        ) { _ in
+            AlphaLocalModelOutput(rawText: "", parsedJson: nil, schemaValid: false, warnings: [], sourceRefs: [])
+        }
+
+        let output = await provider?.run(
+            AlphaLocalModelInput(
+                task: .matterQuestionAnswer,
+                instruction: "Answer from this selected file.",
+                sourcePack: [
+                    AlphaSourceTextBlock(
+                        sourceRef: AlphaSourceRef(
+                            caseId: UUID(),
+                            documentId: UUID(),
+                            documentTitle: "Order",
+                            pageNumber: 1,
+                            textSnippet: "The matter is listed on 14 May 2026."
+                        ),
+                        text: "The matter is listed on 14 May 2026.",
+                        pageNumber: 1
+                    )
+                ],
+                expectedSchema: "plain_text",
+                maxOutputTokens: 128,
+                extractionMode: .quickStart
+            )
+        )
+
+        let warnings = try XCTUnwrap(output?.warnings)
+        let combined = warnings.joined(separator: "\n")
+        XCTAssertTrue(combined.contains("Private assistant ready नहीं है"), combined)
+        XCTAssertTrue(combined.contains("Source text इसी device पर रहा"), combined)
+        XCTAssertFalse(combined.localizedCaseInsensitiveContains("prompt pack"), combined)
+        XCTAssertFalse(combined.localizedCaseInsensitiveContains("runtime"), combined)
+        XCTAssertFalse(combined.localizedCaseInsensitiveContains("artifact"), combined)
+        XCTAssertFalse(combined.localizedCaseInsensitiveContains("model"), combined)
+        XCTAssertFalse(combined.localizedCaseInsensitiveContains("cloud model"), combined)
+    }
+
     func testSystemPrivateAssistantPackUsesDeviceModelWithoutDownloadedPath() {
         let pack = AlphaInstalledModelPack(
             packId: "apple-foundation-models-case_associate",
