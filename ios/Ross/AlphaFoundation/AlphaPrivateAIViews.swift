@@ -271,39 +271,19 @@ struct AlphaPrivateAISettingsScreen: View {
 }
 
 private struct AlphaPrivateAIDestructiveStorageSurface: ViewModifier {
-    @ViewBuilder
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
         let tint = Color.rossHighlight.opacity(0.16)
 
-        if #available(iOS 26.0, macOS 26.0, *) {
-            content
-                .background {
-                    shape.fill(Color.rossGlassFill.opacity(0.38))
-                }
-                .glassEffect(
-                    Glass.regular
-                        .tint(tint)
-                        .interactive(),
-                    in: shape
-                )
-                .overlay {
-                    shape.strokeBorder(Color.rossHighlight.opacity(0.18), lineWidth: 1)
-                }
-                .shadow(color: Color.rossShadow.opacity(0.05), radius: 5, y: 2)
-        } else {
-            content
-                .rossGlassSurface(
-                    tint: tint,
-                    cornerRadius: 16,
-                    interactive: true,
-                    shadowOpacity: 0.05,
-                    shadowRadius: 5,
-                    shadowY: 2,
-                    fillOpacity: 0.78,
-                    strokeOpacity: 0.46
-                )
-        }
+        content
+            .rossNativeGlassSurface(
+                tint: tint,
+                shape: shape,
+                interactive: true,
+                fallbackFillOpacity: 0.78,
+                fallbackStrokeOpacity: 0.46
+            )
+            .shadow(color: Color.rossShadow.opacity(0.05), radius: 5, y: 2)
     }
 }
 
@@ -530,38 +510,18 @@ struct AlphaSettingsToggleRow: View {
 }
 
 private struct AlphaSettingsToggleSurface: ViewModifier {
-    @ViewBuilder
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
 
-        if #available(iOS 26.0, macOS 26.0, *) {
-            content
-                .background {
-                    shape.fill(Color.rossGlassFill.opacity(0.36))
-                }
-                .glassEffect(
-                    Glass.regular
-                        .tint(Color.rossAccent.opacity(0.10))
-                        .interactive(),
-                    in: shape
-                )
-                .overlay {
-                    shape.strokeBorder(Color.rossAccent.opacity(0.18), lineWidth: 1)
-                }
-                .shadow(color: Color.rossShadow.opacity(0.04), radius: 4, y: 1)
-        } else {
-            content
-                .rossGlassSurface(
-                    tint: Color.rossAccent.opacity(0.10),
-                    cornerRadius: 16,
-                    interactive: true,
-                    shadowOpacity: 0.04,
-                    shadowRadius: 4,
-                    shadowY: 1,
-                    fillOpacity: 0.74,
-                    strokeOpacity: 0.44
-                )
-        }
+        content
+            .rossNativeGlassSurface(
+                tint: Color.rossAccent,
+                shape: shape,
+                interactive: true,
+                fallbackFillOpacity: 0.74,
+                fallbackStrokeOpacity: 0.44
+            )
+            .shadow(color: Color.rossShadow.opacity(0.04), radius: 4, y: 1)
     }
 }
 
@@ -750,41 +710,22 @@ struct AlphaPrivateAIOfferCard: View {
 private struct AlphaPrivateAIOfferSurface: ViewModifier {
     let isActive: Bool
 
-    @ViewBuilder
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
         let tint = isActive ? Color.rossAccent : Color.rossInk.opacity(0.42)
 
-        if #available(iOS 26.0, macOS 26.0, *) {
-            content
-                .background {
-                    shape.fill(Color.rossGlassFill.opacity(isActive ? 0.52 : 0.38))
-                }
-                .glassEffect(
-                    Glass.regular
-                        .tint(tint.opacity(isActive ? 0.22 : 0.12)),
-                    in: shape
-                )
-                .overlay {
-                    shape.strokeBorder(tint.opacity(isActive ? 0.32 : 0.18), lineWidth: 1)
-                }
-                .shadow(
-                    color: Color.rossShadow.opacity(isActive ? 0.12 : 0.07),
-                    radius: isActive ? 10 : 7,
-                    y: isActive ? 4 : 3
-                )
-        } else {
-            content
-                .rossGlassSurface(
-                    tint: tint,
-                    cornerRadius: 16,
-                    shadowOpacity: isActive ? 0.12 : 0.07,
-                    shadowRadius: isActive ? 10 : 7,
-                    shadowY: isActive ? 4 : 3,
-                    fillOpacity: 0.82,
-                    strokeOpacity: isActive ? 0.58 : 0.42
-                )
-        }
+        content
+            .rossNativeGlassSurface(
+                tint: tint,
+                shape: shape,
+                fallbackFillOpacity: 0.82,
+                fallbackStrokeOpacity: isActive ? 0.58 : 0.42
+            )
+            .shadow(
+                color: Color.rossShadow.opacity(isActive ? 0.12 : 0.07),
+                radius: isActive ? 10 : 7,
+                y: isActive ? 4 : 3
+            )
     }
 }
 
@@ -810,36 +751,17 @@ struct AlphaPrivateAIRecoveryHintRow: View {
 }
 
 private struct AlphaPrivateAIRecoveryHintSurface: ViewModifier {
-    @ViewBuilder
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
 
-        if #available(iOS 26.0, macOS 26.0, *) {
-            content
-                .background {
-                    shape.fill(Color.rossGlassFill.opacity(0.36))
-                }
-                .glassEffect(
-                    Glass.regular
-                        .tint(Color.rossAccent.opacity(0.10)),
-                    in: shape
-                )
-                .overlay {
-                    shape.strokeBorder(Color.rossAccent.opacity(0.18), lineWidth: 1)
-                }
-                .shadow(color: Color.rossShadow.opacity(0.04), radius: 4, y: 1)
-        } else {
-            content
-                .rossGlassSurface(
-                    tint: Color.rossAccent.opacity(0.10),
-                    cornerRadius: 14,
-                    shadowOpacity: 0.04,
-                    shadowRadius: 4,
-                    shadowY: 1,
-                    fillOpacity: 0.74,
-                    strokeOpacity: 0.44
-                )
-        }
+        content
+            .rossNativeGlassSurface(
+                tint: Color.rossAccent,
+                shape: shape,
+                fallbackFillOpacity: 0.74,
+                fallbackStrokeOpacity: 0.44
+            )
+            .shadow(color: Color.rossShadow.opacity(0.04), radius: 4, y: 1)
     }
 }
 
@@ -1005,29 +927,18 @@ struct AlphaPrivateAIJobCard: View {
 }
 
 private struct AlphaPrivateAIJobSurface: ViewModifier {
-    @ViewBuilder
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
 
-        if #available(iOS 26.0, macOS 26.0, *) {
-            content
-                .background {
-                    shape.fill(Color.rossGlassFill.opacity(0.42))
-                }
-                .glassEffect(
-                    Glass.regular
-                        .tint(Color.rossAccent.opacity(0.14))
-                        .interactive(),
-                    in: shape
-                )
-                .overlay {
-                    shape.strokeBorder(Color.rossAccent.opacity(0.24), lineWidth: 1)
-                }
-                .shadow(color: Color.rossShadow.opacity(0.08), radius: 8, y: 3)
-        } else {
-            content
-                .rossGlassSurface(cornerRadius: 18, interactive: true, strokeOpacity: 0.68)
-        }
+        content
+            .rossNativeGlassSurface(
+                tint: Color.rossAccent,
+                shape: shape,
+                interactive: true,
+                fallbackFillOpacity: 0.84,
+                fallbackStrokeOpacity: 0.68
+            )
+            .shadow(color: Color.rossShadow.opacity(0.08), radius: 8, y: 3)
     }
 }
 
@@ -1102,37 +1013,18 @@ struct AlphaPrivateAIInstalledPackCard: View {
 private struct AlphaPrivateAIInstalledPackSurface: ViewModifier {
     let isReady: Bool
 
-    @ViewBuilder
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
         let tint = isReady ? Color.rossSuccess : Color.orange
 
-        if #available(iOS 26.0, macOS 26.0, *) {
-            content
-                .background {
-                    shape.fill(Color.rossGlassFill.opacity(0.42))
-                }
-                .glassEffect(
-                    Glass.regular
-                        .tint(tint.opacity(0.14)),
-                    in: shape
-                )
-                .overlay {
-                    shape.strokeBorder(tint.opacity(0.24), lineWidth: 1)
-                }
-                .shadow(color: Color.rossShadow.opacity(0.08), radius: 8, y: 3)
-        } else {
-            content
-                .rossGlassSurface(
-                    tint: tint,
-                    cornerRadius: 18,
-                    shadowOpacity: 0.08,
-                    shadowRadius: 8,
-                    shadowY: 3,
-                    fillOpacity: 0.82,
-                    strokeOpacity: 0.48
-                )
-        }
+        content
+            .rossNativeGlassSurface(
+                tint: tint,
+                shape: shape,
+                fallbackFillOpacity: 0.82,
+                fallbackStrokeOpacity: 0.48
+            )
+            .shadow(color: Color.rossShadow.opacity(0.08), radius: 8, y: 3)
     }
 }
 
