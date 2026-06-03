@@ -683,8 +683,13 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertEqual("Free up 4 GB to finish assistant setup.", status.detail)
 
             let localizedStatus = alphaAssistantStatusSnapshot(model, languageCode: "hi")
-            XCTAssertTrue(localizedStatus.title.contains("attention"))
-            XCTAssertEqual("Free up 4 GB to finish assistant setup.", localizedStatus.detail)
+            XCTAssertEqual(rossLocalized("assistant_status_needs_attention_title", languageCode: "hi"), localizedStatus.title)
+            XCTAssertEqual(rossLocalized("assistant_status_storage_detail", languageCode: "hi"), localizedStatus.detail)
+            XCTAssertFalse(localizedStatus.detail.localizedCaseInsensitiveContains("Free up 4 GB"))
+
+            model.persisted.modelJobs[0].failureReason = "सेटअप पूरा करने के लिए 4 GB खाली करें।"
+            let storedHindiStatus = alphaAssistantStatusSnapshot(model, languageCode: "hi")
+            XCTAssertEqual("सेटअप पूरा करने के लिए 4 GB खाली करें।", storedHindiStatus.detail)
         }
     }
 
@@ -720,8 +725,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertFalse(status.detail.localizedCaseInsensitiveContains("byte-range"))
 
             let localizedStatus = alphaAssistantStatusSnapshot(model, languageCode: "ta")
-            XCTAssertTrue(localizedStatus.title.contains("attention"))
-            XCTAssertTrue(localizedStatus.detail.contains("Repair setup"))
+            XCTAssertEqual(rossLocalized("assistant_status_needs_attention_title", languageCode: "ta"), localizedStatus.title)
+            XCTAssertEqual(rossLocalized("assistant_status_retry_detail", languageCode: "ta"), localizedStatus.detail)
             XCTAssertFalse(localizedStatus.detail.localizedCaseInsensitiveContains("model"))
             XCTAssertFalse(localizedStatus.detail.localizedCaseInsensitiveContains("provider"))
         }

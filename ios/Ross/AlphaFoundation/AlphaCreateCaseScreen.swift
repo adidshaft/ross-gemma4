@@ -550,6 +550,7 @@ func alphaAssistantStatusSnapshot(
                 title: rossLocalized("assistant_status_needs_attention_title", languageCode: languageCode),
                 detail: alphaAssistantRecoveryDetail(
                     for: job,
+                    languageCode: languageCode,
                     fallback: rossLocalized("assistant_status_storage_detail", languageCode: languageCode)
                 ),
                 tint: .orange
@@ -559,6 +560,7 @@ func alphaAssistantStatusSnapshot(
                 title: rossLocalized("assistant_status_needs_attention_title", languageCode: languageCode),
                 detail: alphaAssistantRecoveryDetail(
                     for: job,
+                    languageCode: languageCode,
                     fallback: rossLocalized("assistant_status_retry_detail", languageCode: languageCode)
                 ),
                 tint: .orange
@@ -587,7 +589,11 @@ func alphaAssistantStatusSnapshot(
     )
 }
 
-private func alphaAssistantRecoveryDetail(for job: AlphaModelDownloadJob, fallback: String) -> String {
+private func alphaAssistantRecoveryDetail(
+    for job: AlphaModelDownloadJob,
+    languageCode: String,
+    fallback: String
+) -> String {
     guard let reason = job.failureReason?.trimmingCharacters(in: .whitespacesAndNewlines),
           !reason.isEmpty else {
         return fallback
@@ -610,5 +616,20 @@ private func alphaAssistantRecoveryDetail(for job: AlphaModelDownloadJob, fallba
     guard !technicalMarkers.contains(where: lowercased.contains) else {
         return fallback
     }
+    let normalizedCode = languageCode.split(separator: "-").first.map(String.init) ?? languageCode
+    if normalizedCode != "en" && !alphaContainsLocalizedScript(reason) {
+        return fallback
+    }
     return reason
+}
+
+private func alphaContainsLocalizedScript(_ value: String) -> Bool {
+    value.unicodeScalars.contains { scalar in
+        switch scalar.value {
+        case 0x0900...0x097F, 0x0980...0x09FF, 0x0B80...0x0BFF, 0x0C00...0x0C7F:
+            return true
+        default:
+            return false
+        }
+    }
 }
