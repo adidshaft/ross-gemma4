@@ -250,14 +250,11 @@ struct AlphaFullScreenChatTopBar: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Button(action: onBack) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(Color.rossInk)
-                    .frame(width: 36, height: 36)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(rossLocalized("back"))
+            AlphaFullScreenChatTopBarButton(
+                systemImage: "chevron.left",
+                accessibilityLabel: rossLocalized("back"),
+                action: onBack
+            )
 
             Spacer(minLength: 0)
 
@@ -267,30 +264,18 @@ struct AlphaFullScreenChatTopBar: View {
                     Button(caseMatter.title) { onSelectScope(caseMatter.id) }
                 }
             } label: {
-                HStack(spacing: 5) {
-                    Text(scopeTitle)
-                        .font(.headline.weight(.semibold))
-                        .foregroundStyle(Color.rossInk)
-                        .lineLimit(1)
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(Color.rossInk.opacity(0.45))
-                }
-                .frame(maxWidth: 220)
+                AlphaFullScreenChatScopeLabel(scopeTitle: scopeTitle)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(rossLocalized("choose_chat_scope"))
 
             Spacer(minLength: 0)
 
-            Button(action: onShowThreads) {
-                Image(systemName: "line.3.horizontal")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(Color.rossInk)
-                    .frame(width: 36, height: 36)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(rossLocalized("threads"))
+            AlphaFullScreenChatTopBarButton(
+                systemImage: "line.3.horizontal",
+                accessibilityLabel: rossLocalized("threads"),
+                action: onShowThreads
+            )
         }
         .padding(.horizontal, 12)
         .padding(.top, 4)
@@ -306,6 +291,93 @@ struct AlphaFullScreenChatTopBar: View {
         )
         .padding(.horizontal, 8)
         .padding(.top, 4)
+    }
+}
+
+private struct AlphaFullScreenChatTopBarButton: View {
+    let systemImage: String
+    let accessibilityLabel: String
+    let action: () -> Void
+
+    var body: some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            Button(action: action) {
+                icon
+            }
+            .buttonStyle(.glass)
+            .tint(Color.rossAccent)
+            .accessibilityLabel(accessibilityLabel)
+        } else {
+            Button(action: action) {
+                icon
+                    .rossNativeGlassSurface(
+                        tint: Color.rossAccent.opacity(0.28),
+                        shape: Circle(),
+                        interactive: true,
+                        fallbackFillOpacity: 0.74,
+                        fallbackStrokeOpacity: 0.42
+                    )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(accessibilityLabel)
+        }
+    }
+
+    private var icon: some View {
+        Image(systemName: systemImage)
+            .font(.system(size: 15, weight: .bold))
+            .foregroundStyle(Color.rossInk)
+            .frame(width: 36, height: 36)
+    }
+}
+
+private struct AlphaFullScreenChatScopeLabel: View {
+    let scopeTitle: String
+
+    var body: some View {
+        label
+            .modifier(AlphaFullScreenChatScopeGlassModifier())
+    }
+
+    private var label: some View {
+        HStack(spacing: 5) {
+            Text(scopeTitle)
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(Color.rossInk)
+                .lineLimit(1)
+            Image(systemName: "chevron.down")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(Color.rossInk.opacity(0.45))
+        }
+        .padding(.horizontal, 12)
+        .frame(maxWidth: 220)
+        .frame(height: 36)
+    }
+}
+
+private struct AlphaFullScreenChatScopeGlassModifier: ViewModifier {
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        let shape = Capsule()
+
+        if #available(iOS 26.0, macOS 26.0, *) {
+            content
+                .glassEffect(
+                    Glass.regular
+                        .tint(Color.rossHighlight.opacity(0.18))
+                        .interactive(),
+                    in: shape
+                )
+        } else {
+            content
+                .rossNativeGlassSurface(
+                    tint: Color.rossHighlight,
+                    shape: shape,
+                    interactive: true,
+                    fallbackFillOpacity: 0.74,
+                    fallbackStrokeOpacity: 0.42
+                )
+        }
     }
 }
 
