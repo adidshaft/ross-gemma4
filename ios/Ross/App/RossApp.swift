@@ -4923,10 +4923,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "case_files": [
             "en": "Case files",
-            "hi": "Case files",
-            "bn": "Case files",
-            "ta": "Case files",
-            "te": "Case files"
+            "hi": "Case files देखें",
+            "bn": "Case files দেখুন",
+            "ta": "Case files பார்க்கவும்",
+            "te": "Case files చూడండి"
         ],
         "drafts": [
             "en": "Drafts",
@@ -4986,38 +4986,38 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "prepared_work_type_suggested_tasks": [
             "en": "Suggested tasks",
-            "hi": "Suggested tasks",
-            "bn": "Suggested tasks",
-            "ta": "Suggested tasks",
-            "te": "Suggested tasks"
+            "hi": "Suggested tasks हैं",
+            "bn": "Suggested tasks আছে",
+            "ta": "Suggested tasks உள்ளன",
+            "te": "Suggested tasks ఉన్నాయి"
         ],
         "prepared_work_type_chronology_ready": [
             "en": "Chronology ready",
-            "hi": "Chronology ready",
-            "bn": "Chronology ready",
-            "ta": "Chronology ready",
-            "te": "Chronology ready"
+            "hi": "Chronology ready है",
+            "bn": "Chronology ready আছে",
+            "ta": "Chronology ready உள்ளது",
+            "te": "Chronology ready ఉంది"
         ],
         "prepared_work_type_case_note_ready": [
             "en": "Case note ready",
-            "hi": "Case note ready",
-            "bn": "Case note ready",
-            "ta": "Case note ready",
-            "te": "Case note ready"
+            "hi": "Case note ready है",
+            "bn": "Case note ready আছে",
+            "ta": "Case note ready உள்ளது",
+            "te": "Case note ready ఉంది"
         ],
         "prepared_work_type_order_summary_ready": [
             "en": "Order summary ready",
-            "hi": "Order summary ready",
-            "bn": "Order summary ready",
-            "ta": "Order summary ready",
-            "te": "Order summary ready"
+            "hi": "Order summary ready है",
+            "bn": "Order summary ready আছে",
+            "ta": "Order summary ready உள்ளது",
+            "te": "Order summary ready ఉంది"
         ],
         "prepared_work_type_hearing_note_ready": [
             "en": "Hearing note ready",
-            "hi": "Hearing note ready",
-            "bn": "Hearing note ready",
-            "ta": "Hearing note ready",
-            "te": "Hearing note ready"
+            "hi": "Hearing note ready है",
+            "bn": "Hearing note ready আছে",
+            "ta": "Hearing note ready உள்ளது",
+            "te": "Hearing note ready ఉంది"
         ],
         "prepared_work_type_public_law_query_awaiting_approval": [
             "en": "Public-law query awaiting approval",
@@ -5056,24 +5056,24 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "prepared_work_status_reviewed": [
             "en": "Reviewed",
-            "hi": "Reviewed",
-            "bn": "Reviewed",
-            "ta": "Reviewed",
-            "te": "Reviewed"
+            "hi": "Review हुआ",
+            "bn": "Review হয়েছে",
+            "ta": "Review ஆனது",
+            "te": "Review అయింది"
         ],
         "prepared_work_status_accepted": [
             "en": "Accepted",
-            "hi": "Accepted",
-            "bn": "Accepted",
-            "ta": "Accepted",
-            "te": "Accepted"
+            "hi": "Accept हुआ",
+            "bn": "Accept হয়েছে",
+            "ta": "Accept ஆனது",
+            "te": "Accept అయింది"
         ],
         "prepared_work_status_dismissed": [
             "en": "Dismissed",
-            "hi": "Dismissed",
-            "bn": "Dismissed",
-            "ta": "Dismissed",
-            "te": "Dismissed"
+            "hi": "Dismiss हुआ",
+            "bn": "Dismiss হয়েছে",
+            "ta": "Dismiss ஆனது",
+            "te": "Dismiss అయింది"
         ],
         "no_prepared_work_needs_review": [
             "en": "No prepared work needs review",
@@ -5112,17 +5112,17 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "prepared_work_count_one": [
             "en": "%d prepared item",
-            "hi": "%d prepared item",
-            "bn": "%d prepared item",
-            "ta": "%d prepared item",
-            "te": "%d prepared item"
+            "hi": "%d prepared item है",
+            "bn": "%d prepared item আছে",
+            "ta": "%d prepared item உள்ளது",
+            "te": "%d prepared item ఉంది"
         ],
         "prepared_work_count_many": [
             "en": "%d prepared items",
-            "hi": "%d prepared items",
-            "bn": "%d prepared items",
-            "ta": "%d prepared items",
-            "te": "%d prepared items"
+            "hi": "%d prepared items हैं",
+            "bn": "%d prepared items আছে",
+            "ta": "%d prepared items உள்ளன",
+            "te": "%d prepared items ఉన్నాయి"
         ],
         "plain_item_count_one": [
             "en": "%d item",
@@ -5161,10 +5161,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "prepared_work_inbox": [
             "en": "Prepared work inbox",
-            "hi": "Prepared work inbox",
-            "bn": "Prepared work inbox",
-            "ta": "Prepared work inbox",
-            "te": "Prepared work inbox"
+            "hi": "Prepared work inbox देखें",
+            "bn": "Prepared work inbox দেখুন",
+            "ta": "Prepared work inbox பார்க்கவும்",
+            "te": "Prepared work inbox చూడండి"
         ],
         "all": [
             "en": "All",
@@ -6274,17 +6274,17 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "task_added_title": [
             "en": "Task added.",
-            "hi": "Task added.",
-            "bn": "Task added.",
-            "ta": "Task added.",
-            "te": "Task added."
+            "hi": "Task जुड़ गया.",
+            "bn": "Task যোগ হয়েছে.",
+            "ta": "Task சேர்க்கப்பட்டது.",
+            "te": "Task జోడించబడింది."
         ],
         "ask_task_due_on": [
             "en": "Due %@.",
-            "hi": "Due %@.",
-            "bn": "Due %@.",
-            "ta": "Due %@.",
-            "te": "Due %@."
+            "hi": "Due: %@.",
+            "bn": "Due: %@.",
+            "ta": "Due: %@.",
+            "te": "Due: %@."
         ],
         "ask_open_task_list_any_time": [
             "en": "Open the task list any time to mark it done or snooze it.",

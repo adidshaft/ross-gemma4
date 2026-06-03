@@ -1785,7 +1785,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             )
 
             let taskResult = await MainActor.run { model.latestAskResult }
-            XCTAssertEqual("Task added.", taskResult?.answerTitle)
+            XCTAssertEqual("Task जुड़ गया.", taskResult?.answerTitle)
             XCTAssertEqual("locally saved", taskResult?.statusNote)
             XCTAssertTrue(taskResult?.answerSections.joined(separator: " ").contains("इस device पर added हुआ") == true)
         }

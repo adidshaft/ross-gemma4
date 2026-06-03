@@ -1329,7 +1329,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
         XCTAssertEqual(
             alphaViewAllPreparedWorkLabel(3, languageCode: "ta"),
-            "அனைத்து 3 prepared items பார்க்கவும்"
+            "அனைத்து 3 prepared items உள்ளன பார்க்கவும்"
         )
         XCTAssertEqual(
             alphaAssistantSetupPreparingLabel("Quick start", languageCode: "bn"),
@@ -3955,6 +3955,36 @@ final class AlphaExtractionTests: XCTestCase {
             "tagged_files_line",
             "review_updated_title",
             "review_updated"
+        ]
+
+        for key in labelsThatShouldBeLocalized {
+            let english = rossLocalized(key, languageCode: "en")
+            for languageCode in ["hi", "bn", "ta", "te"] {
+                XCTAssertNotEqual(
+                    rossLocalized(key, languageCode: languageCode),
+                    english,
+                    "\(key) falls back to English for \(languageCode)"
+                )
+            }
+        }
+    }
+
+    func testPreparedWorkAndTaskLabelsAvoidEnglishFallbacksInSupportedLanguages() {
+        let labelsThatShouldBeLocalized = [
+            "case_files",
+            "prepared_work_type_suggested_tasks",
+            "prepared_work_type_chronology_ready",
+            "prepared_work_type_case_note_ready",
+            "prepared_work_type_order_summary_ready",
+            "prepared_work_type_hearing_note_ready",
+            "prepared_work_status_reviewed",
+            "prepared_work_status_accepted",
+            "prepared_work_status_dismissed",
+            "prepared_work_count_one",
+            "prepared_work_count_many",
+            "prepared_work_inbox",
+            "task_added_title",
+            "ask_task_due_on"
         ]
 
         for key in labelsThatShouldBeLocalized {
