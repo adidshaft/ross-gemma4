@@ -477,22 +477,10 @@ struct AlphaFullScreenChatComposer: View {
                         strokeOpacity: 0.50
                     )
 
-                    Button(action: onSend) {
-                        Image(systemName: "arrow.up")
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundStyle(liveCanSend ? Color.rossCardBackground : Color.rossInk.opacity(0.44))
-                            .frame(width: 40, height: 40)
-                            .rossNativeGlassSurface(
-                                tint: liveCanSend ? Color.rossAccent : Color.rossInk.opacity(0.22),
-                                shape: Circle(),
-                                interactive: true,
-                                fallbackFillOpacity: liveCanSend ? 0.92 : 0.72,
-                                fallbackStrokeOpacity: liveCanSend ? 0.62 : 0.34
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(!liveCanSend)
-                    .accessibilityLabel(rossLocalized("send"))
+                    AlphaFullScreenChatSendButton(
+                        canSend: liveCanSend,
+                        onSend: onSend
+                    )
                 }
             }
 
@@ -1125,6 +1113,53 @@ struct AlphaAskTurnCard: View {
     }
 }
 
+private struct AlphaFullScreenChatSendButton: View {
+    let canSend: Bool
+    let onSend: () -> Void
+
+    var body: some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            if canSend {
+                Button(action: onSend) {
+                    icon
+                }
+                .buttonStyle(.glassProminent)
+                .tint(Color.rossAccent)
+                .accessibilityLabel(rossLocalized("send"))
+            } else {
+                Button(action: onSend) {
+                    icon
+                }
+                .buttonStyle(.glass)
+                .tint(Color.rossInk.opacity(0.22))
+                .disabled(true)
+                .accessibilityLabel(rossLocalized("send"))
+            }
+        } else {
+            Button(action: onSend) {
+                icon
+                    .foregroundStyle(canSend ? Color.rossCardBackground : Color.rossInk.opacity(0.44))
+                    .rossNativeGlassSurface(
+                        tint: canSend ? Color.rossAccent : Color.rossInk.opacity(0.22),
+                        shape: Circle(),
+                        interactive: true,
+                        fallbackFillOpacity: canSend ? 0.92 : 0.72,
+                        fallbackStrokeOpacity: canSend ? 0.62 : 0.34
+                    )
+            }
+            .buttonStyle(.plain)
+            .disabled(!canSend)
+            .accessibilityLabel(rossLocalized("send"))
+        }
+    }
+
+    private var icon: some View {
+        Image(systemName: "arrow.up")
+            .font(.system(size: 15, weight: .bold))
+            .frame(width: 40, height: 40)
+    }
+}
+
 struct AlphaAskToolbarButton: View {
     let systemImage: String
     var tint: Color = Color.rossInk
@@ -1132,21 +1167,34 @@ struct AlphaAskToolbarButton: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(tint)
-                .frame(width: 40, height: 40)
-                .rossNativeGlassSurface(
-                    tint: tint.opacity(0.64),
-                    shape: Circle(),
-                    interactive: true,
-                    fallbackFillOpacity: 0.74,
-                    fallbackStrokeOpacity: 0.48
-                )
+        if #available(iOS 26.0, macOS 26.0, *) {
+            Button(action: action) {
+                icon
+            }
+            .buttonStyle(.glass)
+            .tint(tint)
+            .accessibilityLabel(accessibilityLabel)
+        } else {
+            Button(action: action) {
+                icon
+                    .rossNativeGlassSurface(
+                        tint: tint.opacity(0.64),
+                        shape: Circle(),
+                        interactive: true,
+                        fallbackFillOpacity: 0.74,
+                        fallbackStrokeOpacity: 0.48
+                    )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(accessibilityLabel)
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private var icon: some View {
+        Image(systemName: systemImage)
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(tint)
+            .frame(width: 40, height: 40)
     }
 }
 
