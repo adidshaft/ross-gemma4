@@ -53,7 +53,13 @@ struct AlphaActiveMatterChatCard: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
-                .rossGlassSurface(cornerRadius: 14, shadowOpacity: 0.06, shadowRadius: 6, shadowY: 2, fillOpacity: 0.82, strokeOpacity: 0.52)
+                .rossNativeGlassSurface(
+                    tint: Color.rossAccent,
+                    shape: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                    fallbackFillOpacity: 0.82,
+                    fallbackStrokeOpacity: 0.52
+                )
+                .shadow(color: Color.rossShadow.opacity(0.06), radius: 6, y: 2)
             } else {
                 Text(rossLocalized("no_matter_chat_detail"))
                     .font(.footnote)
@@ -68,7 +74,13 @@ struct AlphaActiveMatterChatCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .rossGlassSurface(cornerRadius: 18, shadowOpacity: 0.08, shadowRadius: 8, shadowY: 3, fillOpacity: 0.84, strokeOpacity: 0.56)
+        .rossNativeGlassSurface(
+            tint: Color.rossAccent,
+            shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
+            fallbackFillOpacity: 0.84,
+            fallbackStrokeOpacity: 0.56
+        )
+        .shadow(color: Color.rossShadow.opacity(0.08), radius: 8, y: 3)
     }
 }
 
@@ -167,15 +179,13 @@ struct AlphaMatterCommandHintCard: View {
             }
         }
         .padding(14)
-        .rossGlassSurface(
+        .rossNativeGlassSurface(
             tint: Color.rossAccent,
-            cornerRadius: 18,
-            shadowOpacity: 0.08,
-            shadowRadius: 8,
-            shadowY: 3,
-            fillOpacity: 0.84,
-            strokeOpacity: 0.48
+            shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
+            fallbackFillOpacity: 0.84,
+            fallbackStrokeOpacity: 0.48
         )
+        .shadow(color: Color.rossShadow.opacity(0.08), radius: 8, y: 3)
     }
 }
 
@@ -356,15 +366,13 @@ struct AlphaTaskRow: View {
             }
         }
         .padding(14)
-        .rossGlassSurface(
+        .rossNativeGlassSurface(
             tint: task.status == .done ? Color.rossSuccess : Color.rossAccent,
-            cornerRadius: 18,
-            shadowOpacity: 0.08,
-            shadowRadius: 8,
-            shadowY: 3,
-            fillOpacity: 0.82,
-            strokeOpacity: 0.46
+            shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
+            fallbackFillOpacity: 0.82,
+            fallbackStrokeOpacity: 0.46
         )
+        .shadow(color: Color.rossShadow.opacity(0.08), radius: 8, y: 3)
     }
 }
 
@@ -533,7 +541,13 @@ struct AlphaReviewNudgeCard: View {
             }
         }
         .padding(12)
-        .rossGlassSurface(tint: Color.orange, cornerRadius: 16, shadowOpacity: 0.08, shadowRadius: 8, shadowY: 3, fillOpacity: 0.8, strokeOpacity: 0.5)
+        .rossNativeGlassSurface(
+            tint: Color.orange,
+            shape: RoundedRectangle(cornerRadius: 16, style: .continuous),
+            fallbackFillOpacity: 0.80,
+            fallbackStrokeOpacity: 0.50
+        )
+        .shadow(color: Color.rossShadow.opacity(0.08), radius: 8, y: 3)
     }
 }
 
@@ -622,14 +636,12 @@ struct AlphaMatterDateRow: View {
             }
         }
         .padding(14)
-        .rossGlassSurface(
+        .rossNativeGlassSurface(
             tint: matterDate.kind == .hearing ? Color.rossAccent : Color.rossHighlight,
-            cornerRadius: 18,
-            shadowOpacity: 0.08,
-            shadowRadius: 8,
-            shadowY: 3,
-            fillOpacity: 0.82,
-            strokeOpacity: 0.46
+            shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
+            fallbackFillOpacity: 0.82,
+            fallbackStrokeOpacity: 0.46
         )
+        .shadow(color: Color.rossShadow.opacity(0.08), radius: 8, y: 3)
     }
 }
