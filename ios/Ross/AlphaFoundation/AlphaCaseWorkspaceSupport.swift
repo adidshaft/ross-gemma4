@@ -289,12 +289,10 @@ struct AlphaTaskRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            Button(action: onToggle) {
-                Image(systemName: task.status == .done ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 19, weight: .semibold))
-                    .foregroundStyle(task.status == .done ? Color.rossSuccess : Color.rossAccent)
-            }
-            .buttonStyle(.plain)
+            AlphaTaskToggleButton(
+                isDone: task.status == .done,
+                action: onToggle
+            )
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(task.title)
@@ -331,6 +329,39 @@ struct AlphaTaskRow: View {
             fillOpacity: 0.82,
             strokeOpacity: 0.46
         )
+    }
+}
+
+private struct AlphaTaskToggleButton: View {
+    let isDone: Bool
+    let action: () -> Void
+
+    private var tint: Color {
+        isDone ? Color.rossSuccess : Color.rossAccent
+    }
+
+    var body: some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            Button(action: action) {
+                icon
+            }
+            .buttonStyle(.glass)
+            .tint(tint)
+            .accessibilityLabel(isDone ? rossLocalized("completed") : "Mark done")
+        } else {
+            Button(action: action) {
+                icon
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(isDone ? rossLocalized("completed") : "Mark done")
+        }
+    }
+
+    private var icon: some View {
+        Image(systemName: isDone ? "checkmark.circle.fill" : "circle")
+            .font(.system(size: 19, weight: .semibold))
+            .foregroundStyle(tint)
+            .frame(width: 30, height: 30)
     }
 }
 
