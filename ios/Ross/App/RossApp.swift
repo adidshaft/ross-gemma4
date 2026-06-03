@@ -5110,6 +5110,118 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "latest file review செய்யவும்",
             "te": "latest file review చేయండి"
         ],
+        "routine_no_prepared_work_changed": [
+            "en": "No prepared work changed.",
+            "hi": "कोई prepared work नहीं बदला.",
+            "bn": "কোনো prepared work বদলায়নি.",
+            "ta": "prepared work எதுவும் மாறவில்லை.",
+            "te": "prepared work ఏదీ మారలేదు."
+        ],
+        "routine_prepared_items_updated": [
+            "en": "%d prepared items updated locally.",
+            "hi": "%d prepared items local रूप से update हुए.",
+            "bn": "%d prepared items local ভাবে update হয়েছে.",
+            "ta": "%d prepared items local-ஆக update ஆனது.",
+            "te": "%d prepared items local గా update అయ్యాయి."
+        ],
+        "routine_ran_locally_title": [
+            "en": "%@ ran locally",
+            "hi": "%@ local रूप से चला",
+            "bn": "%@ local ভাবে চলেছে",
+            "ta": "%@ local-ஆக ஓடியது",
+            "te": "%@ local గా నడిచింది"
+        ],
+        "routine_used_saved_local_data_detail": [
+            "en": "Ross used saved matters, files, dates, tasks, drafts, and review items on this device.",
+            "hi": "Ross ने इस device पर saved matters, files, dates, tasks, drafts, और review items उपयोग किए.",
+            "bn": "Ross এই device-এ saved matters, files, dates, tasks, drafts, এবং review items ব্যবহার করেছে.",
+            "ta": "Ross இந்த device-ல் saved matters, files, dates, tasks, drafts, மற்றும் review items பயன்படுத்தியது.",
+            "te": "Ross ఈ device లో saved matters, files, dates, tasks, drafts, మరియు review items ఉపయోగించింది."
+        ],
+        "routine_sanitized_query_preview_prepared": [
+            "en": "Sanitized query preview prepared locally.",
+            "hi": "Sanitized query preview local रूप से तैयार हुआ.",
+            "bn": "Sanitized query preview local ভাবে তৈরি হয়েছে.",
+            "ta": "Sanitized query preview local-ஆக தயார் ஆனது.",
+            "te": "Sanitized query preview local గా సిద్ధమైంది."
+        ],
+        "prepared_work_next_date_saved_for_matter": [
+            "en": "%@ is saved for this matter.",
+            "hi": "%@ इस matter के लिए saved है.",
+            "bn": "%@ এই matter-এর জন্য saved আছে.",
+            "ta": "%@ இந்த matter-க்கு saved உள்ளது.",
+            "te": "%@ ఈ matter కోసం saved ఉంది."
+        ],
+        "prepared_work_file_read_updated_matter_memory": [
+            "en": "Ross read the file locally and updated the matter memory.",
+            "hi": "Ross ने file local रूप से पढ़ी और matter memory update की.",
+            "bn": "Ross file local ভাবে পড়ে matter memory update করেছে.",
+            "ta": "Ross file-ஐ local-ஆக படித்து matter memory-ஐ update செய்தது.",
+            "te": "Ross file ను local గా చదివి matter memory ను update చేసింది."
+        ],
+        "prepared_work_file_review_items_need_review": [
+            "en": "%@ from this file need advocate review.",
+            "hi": "इस file के %@ को advocate review चाहिए.",
+            "bn": "এই file-এর %@ advocate review দরকার.",
+            "ta": "இந்த file-இல் உள்ள %@-க்கு advocate review தேவை.",
+            "te": "ఈ file లోని %@ కు advocate review అవసరం."
+        ],
+        "prepared_work_tasks_ready_for_review": [
+            "en": "Tasks ready for review",
+            "hi": "Tasks review के लिए ready हैं",
+            "bn": "Tasks review-এর জন্য ready",
+            "ta": "Tasks review-க்கு ready",
+            "te": "Tasks review కోసం ready"
+        ],
+        "prepared_work_uncertain_facts_need_review": [
+            "en": "Uncertain facts need review",
+            "hi": "Uncertain facts को review चाहिए",
+            "bn": "Uncertain facts review দরকার",
+            "ta": "Uncertain facts review தேவை",
+            "te": "Uncertain facts కు review అవసరం"
+        ],
+        "prepared_work_hearing_note_checklist_ready": [
+            "en": "Hearing note checklist ready",
+            "hi": "Hearing note checklist ready है",
+            "bn": "Hearing note checklist ready",
+            "ta": "Hearing note checklist ready",
+            "te": "Hearing note checklist ready"
+        ],
+        "prepared_work_hearing_note_ready_summary": [
+            "en": "Ross prepared local next steps for %@.",
+            "hi": "Ross ने %@ के लिए local next steps तैयार किए.",
+            "bn": "Ross %@-এর জন্য local next steps তৈরি করেছে.",
+            "ta": "Ross %@-க்கு local next steps தயார் செய்தது.",
+            "te": "Ross %@ కోసం local next steps సిద్ధం చేసింది."
+        ],
+        "prepared_work_draft_ready_title": [
+            "en": "%@ is ready",
+            "hi": "%@ ready है",
+            "bn": "%@ ready",
+            "ta": "%@ ready",
+            "te": "%@ ready"
+        ],
+        "prepared_work_draft_for_review_summary": [
+            "en": "Draft for advocate review prepared from saved matter state.",
+            "hi": "Saved matter state से advocate review के लिए draft तैयार हुआ.",
+            "bn": "Saved matter state থেকে advocate review-এর জন্য draft তৈরি হয়েছে.",
+            "ta": "Saved matter state-இல் இருந்து advocate review-க்கு draft தயார் ஆனது.",
+            "te": "Saved matter state నుంచి advocate review కోసం draft సిద్ధమైంది."
+        ],
+        "prepared_work_import_real_file_before_source_backed": [
+            "en": "Import a real file before Ross can prepare source-backed work.",
+            "hi": "Ross source-backed work तैयार कर सके, उससे पहले real file import करें.",
+            "bn": "Ross source-backed work তৈরি করার আগে real file import করুন.",
+            "ta": "Ross source-backed work தயார் செய்ய real file import செய்யவும்.",
+            "te": "Ross source-backed work సిద్ధం చేయడానికి ముందు real file import చేయండి."
+        ],
+        "prepared_work_review_public_law_query": [
+            "en": "Review public-law query",
+            "hi": "Public-law query review करें",
+            "bn": "Public-law query review করুন",
+            "ta": "Public-law query review செய்யவும்",
+            "te": "Public-law query review చేయండి"
+        ],
         "refresh": [
             "en": "Refresh",
             "hi": "refresh करें",

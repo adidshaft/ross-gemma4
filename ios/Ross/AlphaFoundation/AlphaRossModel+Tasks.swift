@@ -19,6 +19,42 @@ private extension String {
     }
 }
 
+private func alphaRoutineRunSummary(updatedCount: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    guard updatedCount > 0 else {
+        return rossLocalized("routine_no_prepared_work_changed", languageCode: languageCode)
+    }
+    return String(format: rossLocalized("routine_prepared_items_updated", languageCode: languageCode), updatedCount)
+}
+
+private func alphaRoutineRanLocallyTitle(_ reason: AlphaRoutineKind, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("routine_ran_locally_title", languageCode: languageCode), rossLocalized(reason.rawValue, languageCode: languageCode))
+}
+
+private func alphaNextDateSavedForMatterSummary(_ date: Date, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(
+        format: rossLocalized("prepared_work_next_date_saved_for_matter", languageCode: languageCode),
+        date.formatted(date: .abbreviated, time: .omitted)
+    )
+}
+
+private func alphaDraftReadyTitle(_ title: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("prepared_work_draft_ready_title", languageCode: languageCode), title)
+}
+
+private func alphaHearingNoteReadySummary(_ date: Date, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(
+        format: rossLocalized("prepared_work_hearing_note_ready_summary", languageCode: languageCode),
+        date.formatted(date: .abbreviated, time: .omitted)
+    )
+}
+
+private func alphaReviewItemsFromFileNeedReviewSummary(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(
+        format: rossLocalized("prepared_work_file_review_items_need_review", languageCode: languageCode),
+        alphaReviewItemCountLabel(count)
+    )
+}
+
 extension AlphaRossModel {
     var routineSettings: AlphaRoutineSettings {
         persisted.routineSettings ?? .default
@@ -122,14 +158,14 @@ extension AlphaRossModel {
             kind: reason,
             caseId: caseId,
             preparedItemIDs: touchedIDs,
-            summary: touchedIDs.isEmpty ? "No prepared work changed." : "\(touchedIDs.count) prepared item(s) updated locally."
+            summary: alphaRoutineRunSummary(updatedCount: touchedIDs.count)
         )] + (persisted.routineRuns ?? [])).prefix(50).map { $0 }
 
         if persistAfter {
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
-                    title: "\(reason.title) ran locally",
-                    detail: "Ross used saved matters, files, dates, tasks, drafts, and review items on this device.",
+                    title: alphaRoutineRanLocallyTitle(reason),
+                    detail: rossLocalized("routine_used_saved_local_data_detail"),
                     purpose: .local_only,
                     payloadClass: .local_only,
                     endpointLabel: "device://routines/\(reason.rawValue)",
@@ -170,8 +206,8 @@ extension AlphaRossModel {
                         caseId: matter.id,
                         type: .documentReviewed,
                         matterName: matter.title,
-                        title: "Review updated for \(latestDocument.title)",
-                        summary: reviewCount == 0 ? "Ross read the file locally and updated the matter memory." : "\(alphaReviewItemCountLabel(reviewCount)) from this file need advocate review.",
+                        title: alphaDocumentReviewUpdatedTitle(latestDocument.title),
+                        summary: reviewCount == 0 ? rossLocalized("prepared_work_file_read_updated_matter_memory") : alphaReviewItemsFromFileNeedReviewSummary(reviewCount),
                         badge: reviewCount == 0 ? .sourceBacked : .needsReview,
                         sourceRefs: sourceRefsFor(documentId: latestDocument.id, in: matter, fallback: sourceRefs),
                         sourceFingerprint: alphaPreparedFingerprint(parts: [
@@ -194,7 +230,7 @@ extension AlphaRossModel {
                         type: .nextDateFound,
                         matterName: matter.title,
                         title: nextDate.title,
-                        summary: "\(nextDate.date.formatted(date: .abbreviated, time: .omitted)) is saved for this matter.",
+                        summary: alphaNextDateSavedForMatterSummary(nextDate.date),
                         badge: nextDate.sourceRef == nil ? .preparedLocally : .sourceBacked,
                         sourceRefs: nextDate.sourceRef.map { [$0] } ?? [],
                         sourceFingerprint: alphaPreparedFingerprint(parts: [nextDate.id.uuidString, nextDate.date.timeIntervalSince1970.description, nextDate.updatedAt.timeIntervalSince1970.description]),
@@ -212,7 +248,7 @@ extension AlphaRossModel {
                         caseId: matter.id,
                         type: .suggestedTasks,
                         matterName: matter.title,
-                        title: "Tasks ready for review",
+                        title: rossLocalized("prepared_work_tasks_ready_for_review"),
                         summary: topTasks.joined(separator: "; "),
                         badge: .preparedLocally,
                         sourceRefs: sourceRefs,
@@ -230,8 +266,8 @@ extension AlphaRossModel {
                         caseId: matter.id,
                         type: .missingFactsFound,
                         matterName: matter.title,
-                        title: "Uncertain facts need review",
-                        summary: "\(alphaReviewItemCountLabel(reviews.count)) should be confirmed before Ross relies on them.",
+                        title: rossLocalized("prepared_work_uncertain_facts_need_review"),
+                        summary: alphaResolveReviewItemsBeforeRelyingLabel(reviews.count),
                         badge: .needsReview,
                         sourceRefs: Array(reviews.compactMap(\.sourceRef).prefix(3)),
                         sourceFingerprint: alphaPreparedFingerprint(parts: reviews.map(\.id)),
@@ -248,8 +284,8 @@ extension AlphaRossModel {
                         caseId: matter.id,
                         type: .hearingNoteReady,
                         matterName: matter.title,
-                        title: "Hearing note checklist ready",
-                        summary: "Ross prepared local next steps for \(upcomingHearing.date.formatted(date: .abbreviated, time: .omitted)).",
+                        title: rossLocalized("prepared_work_hearing_note_checklist_ready"),
+                        summary: alphaHearingNoteReadySummary(upcomingHearing.date),
                         badge: reviews.isEmpty ? .preparedLocally : .needsReview,
                         sourceRefs: upcomingHearing.sourceRef.map { [$0] } ?? sourceRefs,
                         sourceFingerprint: alphaPreparedFingerprint(parts: [upcomingHearing.id.uuidString, "\(reviews.count)", matter.updatedAt.timeIntervalSince1970.description]),
@@ -266,8 +302,8 @@ extension AlphaRossModel {
                         caseId: matter.id,
                         type: alphaPreparedType(forExportKind: latestDraft.kind),
                         matterName: matter.title,
-                        title: "\(latestDraft.title) is ready",
-                        summary: "Draft for advocate review prepared from saved matter state.",
+                        title: alphaDraftReadyTitle(latestDraft.title),
+                        summary: rossLocalized("prepared_work_draft_for_review_summary"),
                         badge: .preparedLocally,
                         sourceRefs: sourceRefs,
                         sourceFingerprint: alphaPreparedFingerprint(parts: [latestDraft.id.uuidString, latestDraft.createdAt.timeIntervalSince1970.description]),
@@ -284,8 +320,8 @@ extension AlphaRossModel {
                         caseId: matter.id,
                         type: .matterNeedsAttention,
                         matterName: matter.title,
-                        title: "Matter needs attention",
-                        summary: matter.documents.isEmpty ? "Import a real file before Ross can prepare source-backed work." : matter.summary,
+                        title: rossLocalized("prepared_work_type_matter_needs_attention"),
+                        summary: matter.documents.isEmpty ? rossLocalized("prepared_work_import_real_file_before_source_backed") : matter.summary,
                         badge: matter.documents.isEmpty ? .preparedLocally : .needsReview,
                         sourceRefs: sourceRefs,
                         sourceFingerprint: alphaPreparedFingerprint(parts: [matter.updatedAt.timeIntervalSince1970.description, "\(matter.documents.count)", "\(reviews.count)", "\(matterTasks.count)"]),
@@ -315,7 +351,7 @@ extension AlphaRossModel {
             caseId: caseId,
             type: .publicLawQueryAwaitingApproval,
             matterName: caseMatter?.title ?? rossLocalized("workspace"),
-            title: "Review public-law query",
+            title: rossLocalized("prepared_work_review_public_law_query"),
             summary: preview.query,
             badge: .approvalRequired,
             sourceRefs: [],
@@ -333,7 +369,7 @@ extension AlphaRossModel {
             items.insert(generated, at: 0)
         }
         persisted.preparedWorkItems = items
-        persisted.routineRuns = ([AlphaRoutineRun(kind: .publicLawPreview, caseId: caseId, preparedItemIDs: [generated.id], summary: "Sanitized query preview prepared locally.")] + (persisted.routineRuns ?? [])).prefix(50).map { $0 }
+        persisted.routineRuns = ([AlphaRoutineRun(kind: .publicLawPreview, caseId: caseId, preparedItemIDs: [generated.id], summary: rossLocalized("routine_sanitized_query_preview_prepared"))] + (persisted.routineRuns ?? [])).prefix(50).map { $0 }
         persist(workspaceChanged: true)
     }
 

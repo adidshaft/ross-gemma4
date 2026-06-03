@@ -3485,6 +3485,13 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertTrue(items.allSatisfy { $0.caseId != nil && !$0.matterName.isEmpty })
             XCTAssertTrue(items.contains { $0.primaryAction == "खोलें" || $0.primaryAction == "Review" })
             XCTAssertTrue(items.flatMap(\.secondaryActions).contains("हटाएं"))
+            XCTAssertTrue(items.contains { $0.title.contains("review updated") })
+            XCTAssertTrue(items.contains { $0.summary.contains("matter memory update") || $0.summary.contains("review चाहिए") })
+            let routineRun = await MainActor.run { seededModel.persisted.routineRuns?.first }
+            XCTAssertTrue(routineRun?.summary.contains("local रूप से update") == true)
+            let ledgerEntry = await MainActor.run { seededModel.persisted.ledgerEntries.first }
+            XCTAssertEqual(ledgerEntry?.title, "Morning brief local रूप से चला")
+            XCTAssertTrue(ledgerEntry?.detail.contains("saved matters") == true)
         }
     }
 
@@ -3512,8 +3519,11 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertEqual(publicLawCalls.value, 0)
             XCTAssertEqual(prepared?.badge, .approvalRequired)
             XCTAssertEqual(prepared?.matterName, "Workspace")
+            XCTAssertEqual(prepared?.title, "Public-law query review செய்யவும்")
             XCTAssertEqual(prepared?.primaryAction, "ஒப்புதல் அளிக்கவும்")
             XCTAssertEqual(prepared?.secondaryActions, ["திருத்தவும்", "நீக்கவும்"])
+            let routineRun = await MainActor.run { model.persisted.routineRuns?.first }
+            XCTAssertEqual(routineRun?.summary, "Sanitized query preview local-ஆக தயார் ஆனது.")
 
             await model.confirmPendingPublicLawSearch()
             XCTAssertEqual(publicLawCalls.value, 1)
