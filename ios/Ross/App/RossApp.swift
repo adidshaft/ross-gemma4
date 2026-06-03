@@ -525,6 +525,34 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Full - நீண்ட தொகுப்புகள் மற்றும் வரைவு",
             "te": "Full - పెద్ద బండిళ్లు మరియు డ్రాఫ్టింగ్"
         ],
+        "tier_flash_storage_note": [
+            "en": "Smallest footprint",
+            "hi": "सबसे छोटा आकार",
+            "bn": "সবচেয়ে কম জায়গা",
+            "ta": "மிகச் சிறிய இடம்",
+            "te": "అతి చిన్న స్థలం"
+        ],
+        "tier_quick_start_storage_note": [
+            "en": "Light footprint",
+            "hi": "हल्का आकार",
+            "bn": "কম জায়গা",
+            "ta": "குறைந்த இடம்",
+            "te": "తక్కువ స్థలం"
+        ],
+        "tier_case_associate_storage_note": [
+            "en": "Balanced footprint",
+            "hi": "संतुलित आकार",
+            "bn": "সামঞ্জস্যপূর্ণ জায়গা",
+            "ta": "சமநிலை இடம்",
+            "te": "సమతుల్య స్థలం"
+        ],
+        "tier_senior_drafting_storage_note": [
+            "en": "Largest footprint",
+            "hi": "सबसे बड़ा आकार",
+            "bn": "সবচেয়ে বেশি জায়গা",
+            "ta": "மிகப் பெரிய இடம்",
+            "te": "అతి పెద్ద స్థలం"
+        ],
         "tier_flash_summary": [
             "en": "Fastest setup for quick questions and simple checklists.",
             "hi": "त्वरित प्रश्नों और सरल चेकलिस्ट के लिए सबसे तेज़ सेटअप।",

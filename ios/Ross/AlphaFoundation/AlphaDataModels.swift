@@ -283,15 +283,19 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
     }
 
     var storageNote: String {
+        storageNote(languageCode: rossSelectedLanguageCode())
+    }
+
+    func storageNote(languageCode: String) -> String {
         switch self {
         case .flash:
-            "Smallest footprint"
+            rossLocalized("tier_flash_storage_note", languageCode: languageCode)
         case .quickStart:
-            "Light footprint"
+            rossLocalized("tier_quick_start_storage_note", languageCode: languageCode)
         case .caseAssociate:
-            "Balanced footprint"
+            rossLocalized("tier_case_associate_storage_note", languageCode: languageCode)
         case .seniorDraftingSupport:
-            "Largest footprint"
+            rossLocalized("tier_senior_drafting_storage_note", languageCode: languageCode)
         }
     }
 

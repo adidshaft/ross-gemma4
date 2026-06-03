@@ -884,6 +884,14 @@ final class AlphaExtractionTests: XCTestCase {
             "Full - పెద్ద బండిళ్లు మరియు డ్రాఫ్టింగ్"
         )
         XCTAssertEqual(
+            AlphaCapabilityTier.flash.storageNote(languageCode: "bn"),
+            "সবচেয়ে কম জায়গা"
+        )
+        XCTAssertEqual(
+            AlphaCapabilityTier.caseAssociate.storageNote(languageCode: "hi"),
+            "संतुलित आकार"
+        )
+        XCTAssertEqual(
             AlphaCapabilityTier.quickStart.summary(languageCode: "bn"),
             "ছোট আদেশ, নোটিস এবং হালকা নথি পর্যালোচনা।"
         )
