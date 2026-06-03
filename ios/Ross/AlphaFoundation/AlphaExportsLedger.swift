@@ -147,13 +147,12 @@ private struct AlphaExportReviewMetadata: View {
             AlphaSettingsValueRow(label: rossLocalized("notes_drafts_metadata_saved_file"), value: fileName)
         }
         .padding(12)
-        .rossGlassSurface(
-            tint: Color.rossHighlight.opacity(0.12),
-            cornerRadius: 16,
-            shadowOpacity: 0.05,
-            shadowRadius: 5,
-            shadowY: 2,
-            strokeOpacity: 0.46
+        .rossNativeGlassSurface(
+            tint: Color.rossHighlight,
+            shape: RoundedRectangle(cornerRadius: 16, style: .continuous),
+            fallbackFillOpacity: 0.84,
+            fallbackStrokeOpacity: 0.46
         )
+        .shadow(color: Color.rossShadow.opacity(0.05), radius: 5, y: 2)
     }
 }
