@@ -617,6 +617,33 @@ func alphaMatterChatUpdatedStatus(needsReview: Bool, languageCode: String = ross
     )
 }
 
+func alphaMatterChatImportedFileStatus(hasReadableText: Bool, languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized(
+        hasReadableText ? "matter_chat_updated_file_ready" : "matter_chat_updated_source_saved",
+        languageCode: languageCode
+    )
+}
+
+func alphaImportedDocumentLedgerDetail(_ title: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("privacy_ledger_document_imported_detail", languageCode: languageCode), title)
+}
+
+func alphaImportBatchLimitDetail(importedLimit: Int, skippedCount: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("document_import_batch_limit_detail", languageCode: languageCode), importedLimit, skippedCount)
+}
+
+func alphaFileAddedToMatterSection(_ title: String, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(format: rossLocalized("file_added_to_matter_detail", languageCode: languageCode), title)
+}
+
+func alphaImportedFileAskReadyDetail(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("imported_file_ask_ready_detail", languageCode: languageCode)
+}
+
+func alphaImportedFileSourceSavedDetail(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("imported_file_source_saved_detail", languageCode: languageCode)
+}
+
 func alphaNextDateCapturedLabel(_ nextDate: String, languageCode: String = rossSelectedLanguageCode()) -> String {
     String(format: rossLocalized("document_review_next_date_captured", languageCode: languageCode), nextDate)
 }

@@ -1232,6 +1232,83 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "இந்த text file Ross இன்னும் படிக்க முடியாத encoding பயன்படுத்துகிறது.",
             "te": "ఈ text file Ross ఇంకా చదవలేని encoding ను ఉపయోగిస్తోంది."
         ],
+        "document_import_batch_limit_title": [
+            "en": "Some files were not imported",
+            "hi": "कुछ files import नहीं हुईं",
+            "bn": "কিছু files import হয়নি",
+            "ta": "சில files import ஆகவில்லை",
+            "te": "కొన్ని files import కాలేదు"
+        ],
+        "document_import_batch_limit_detail": [
+            "en": "Ross imported the first %d selected files and skipped %d. Import the remaining files in another batch.",
+            "hi": "Ross ने पहली %d selected files import कीं और %d skip कीं. बाकी files को दूसरे batch में import करें.",
+            "bn": "Ross প্রথম %d selected files import করেছে এবং %d skip করেছে. বাকি files আরেক batch-এ import করুন.",
+            "ta": "Ross முதல் %d selected files-ஐ import செய்து %d skip செய்தது. மீதமுள்ள files-ஐ வேறு batch-இல் import செய்யவும்.",
+            "te": "Ross మొదటి %d selected files ను import చేసి %d skip చేసింది. మిగిలిన files ను మరో batch లో import చేయండి."
+        ],
+        "privacy_ledger_document_imported_detail": [
+            "en": "%@ was copied into app-private storage.",
+            "hi": "%@ app-private storage में copy हुआ.",
+            "bn": "%@ app-private storage-এ copy হয়েছে.",
+            "ta": "%@ app-private storage-க்கு copy ஆனது.",
+            "te": "%@ app-private storage లోకి copy అయ్యింది."
+        ],
+        "file_added_to_matter_title": [
+            "en": "File added to this matter",
+            "hi": "File इस matter में जोड़ी गई",
+            "bn": "File এই matter-এ যোগ হয়েছে",
+            "ta": "File இந்த matter-க்கு சேர்க்கப்பட்டது",
+            "te": "File ఈ matter కు జోడించబడింది"
+        ],
+        "file_added_to_matter_detail": [
+            "en": "%@ was copied into private storage and linked to the current matter.",
+            "hi": "%@ private storage में copy होकर current matter से link हुआ.",
+            "bn": "%@ private storage-এ copy হয়ে current matter-এর সঙ্গে link হয়েছে.",
+            "ta": "%@ private storage-க்கு copy ஆகி current matter-க்கு link ஆனது.",
+            "te": "%@ private storage లోకి copy అయ్యి current matter కు link అయ్యింది."
+        ],
+        "imported_file_ask_ready_detail": [
+            "en": "Ross can answer from this file now. Use Review if you want a deeper field-by-field pass.",
+            "hi": "Ross अब इस file से जवाब दे सकता है. Deeper field-by-field pass चाहिए तो Review use करें.",
+            "bn": "Ross এখন এই file থেকে উত্তর দিতে পারে. Deeper field-by-field pass চাইলে Review use করুন.",
+            "ta": "Ross இப்போது இந்த file-இலிருந்து பதில் அளிக்க முடியும். Deeper field-by-field pass வேண்டுமெனில் Review use செய்யவும்.",
+            "te": "Ross ఇప్పుడు ఈ file నుండి సమాధానం ఇవ్వగలదు. Deeper field-by-field pass కావాలంటే Review use చేయండి."
+        ],
+        "imported_file_source_saved_detail": [
+            "en": "Ross saved the source reference. Review the original before relying on file facts.",
+            "hi": "Ross ने source reference save किया. File facts पर भरोसा करने से पहले original review करें.",
+            "bn": "Ross source reference save করেছে. File facts-এর ওপর নির্ভর করার আগে original review করুন.",
+            "ta": "Ross source reference-ஐ save செய்தது. File facts-ஐ நம்புவதற்கு முன் original-ஐ review செய்யவும்.",
+            "te": "Ross source reference ను save చేసింది. File facts పై ఆధారపడే ముందు original ను review చేయండి."
+        ],
+        "matter_chat_updated_file_ready": [
+            "en": "Matter chat updated · file ready",
+            "hi": "Matter chat updated · file ready",
+            "bn": "Matter chat updated · file ready",
+            "ta": "Matter chat updated · file ready",
+            "te": "Matter chat updated · file ready"
+        ],
+        "matter_chat_updated_source_saved": [
+            "en": "Matter chat updated · source saved",
+            "hi": "Matter chat updated · source saved",
+            "bn": "Matter chat updated · source saved",
+            "ta": "Matter chat updated · source saved",
+            "te": "Matter chat updated · source saved"
+        ],
+        "document_import_failed_title": [
+            "en": "Document import failed",
+            "hi": "Document import failed",
+            "bn": "Document import failed",
+            "ta": "Document import failed",
+            "te": "Document import failed"
+        ],
+        "document_import_copy_failed_detail": [
+            "en": "Ross could not copy the selected file into app-private storage.",
+            "hi": "Ross selected file को app-private storage में copy नहीं कर पाया.",
+            "bn": "Ross selected file app-private storage-এ copy করতে পারেনি.",
+            "ta": "Ross selected file-ஐ app-private storage-க்கு copy செய்ய முடியவில்லை.",
+            "te": "Ross selected file ను app-private storage లోకి copy చేయలేకపోయింది."
+        ],
         "import_fallback_pdf_unreadable_text": [
             "en": "PDF imported locally. Ross could not read text from this file yet.",
             "hi": "PDF locally import हो गया। Ross इस file से text अभी पढ़ नहीं पाया.",

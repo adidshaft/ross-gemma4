@@ -1705,6 +1705,26 @@ final class AlphaExtractionTests: XCTestCase {
             "Order-এর review updated"
         )
         XCTAssertEqual(
+            alphaImportedDocumentLedgerDetail("Order.pdf", languageCode: "hi"),
+            "Order.pdf app-private storage में copy हुआ."
+        )
+        XCTAssertEqual(
+            alphaImportBatchLimitDetail(importedLimit: 20, skippedCount: 3, languageCode: "bn"),
+            "Ross প্রথম 20 selected files import করেছে এবং 3 skip করেছে. বাকি files আরেক batch-এ import করুন."
+        )
+        XCTAssertEqual(
+            alphaFileAddedToMatterSection("Order.pdf", languageCode: "ta"),
+            "Order.pdf private storage-க்கு copy ஆகி current matter-க்கு link ஆனது."
+        )
+        XCTAssertEqual(
+            alphaImportedFileAskReadyDetail(languageCode: "te-IN"),
+            "Ross ఇప్పుడు ఈ file నుండి సమాధానం ఇవ్వగలదు. Deeper field-by-field pass కావాలంటే Review use చేయండి."
+        )
+        XCTAssertEqual(
+            alphaMatterChatImportedFileStatus(hasReadableText: false, languageCode: "hi"),
+            "Matter chat updated · source saved"
+        )
+        XCTAssertEqual(
             alphaMatterChatUpdatedStatus(needsReview: true, languageCode: "ta"),
             "Matter chat updated · review தேவை"
         )

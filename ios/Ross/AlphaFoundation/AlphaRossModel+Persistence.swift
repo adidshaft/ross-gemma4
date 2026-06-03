@@ -1325,8 +1325,8 @@ extension AlphaRossModel {
         if uniqueURLs.count > 20 {
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
-                    title: "Some files were not imported",
-                    detail: "Ross imported the first 20 selected files and skipped \(uniqueURLs.count - 20). Import the remaining files in another batch.",
+                    title: rossLocalized("document_import_batch_limit_title"),
+                    detail: alphaImportBatchLimitDetail(importedLimit: 20, skippedCount: uniqueURLs.count - 20),
                     purpose: .local_only,
                     payloadClass: .local_only,
                     endpointLabel: "device://document-import",
@@ -1379,7 +1379,7 @@ extension AlphaRossModel {
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
                     title: "Document imported locally",
-                    detail: "\(document.title) was copied into app-private storage.",
+                    detail: alphaImportedDocumentLedgerDetail(document.title),
                     purpose: .local_only,
                     payloadClass: .local_only,
                     endpointLabel: "device://document-import",
@@ -1390,19 +1390,17 @@ extension AlphaRossModel {
             persist(workspaceChanged: true)
             appendMatterThreadUpdate(
                 caseId: targetCaseID == alphaSharedWorkspaceID ? nil : targetCaseID,
-                title: "File added to this matter",
+                title: rossLocalized("file_added_to_matter_title"),
                 sections: [
-                    "\(document.title) was copied into private storage and linked to the current matter.",
+                    alphaFileAddedToMatterSection(document.title),
                     document.hasAskUsableExtractedText
-                        ? "Ross can answer from this file now. Use Review if you want a deeper field-by-field pass."
-                        : "Ross saved the source reference. Review the original before relying on file facts."
+                        ? alphaImportedFileAskReadyDetail()
+                        : alphaImportedFileSourceSavedDetail()
                 ],
                 sourceRefs: [sourceRef],
                 selectedDocumentIDs: [document.id],
                 selectedDocumentTitles: [document.title],
-                statusNote: document.hasAskUsableExtractedText
-                    ? "Matter chat updated · file ready"
-                    : "Matter chat updated · source saved"
+                statusNote: alphaMatterChatImportedFileStatus(hasReadableText: document.hasAskUsableExtractedText)
             )
             if openAfterImport {
                 path.append(.documentViewer(targetCaseID, document.id, 1))
@@ -1411,8 +1409,8 @@ extension AlphaRossModel {
         } catch {
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
-                    title: "Document import failed",
-                    detail: (error as? LocalizedError)?.errorDescription ?? "Ross could not copy the selected file into app-private storage.",
+                    title: rossLocalized("document_import_failed_title"),
+                    detail: (error as? LocalizedError)?.errorDescription ?? rossLocalized("document_import_copy_failed_detail"),
                     purpose: .local_only,
                     payloadClass: .local_only,
                     endpointLabel: "device://document-import",
