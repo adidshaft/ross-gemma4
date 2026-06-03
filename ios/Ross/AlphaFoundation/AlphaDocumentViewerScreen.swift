@@ -1288,34 +1288,75 @@ struct AlphaDocumentAdvocateNoteCard: View {
                 .frame(minHeight: 112)
                 .rossGlassSurface(cornerRadius: 18, interactive: true, shadowOpacity: 0.05, shadowRadius: 5, shadowY: 2, strokeOpacity: 0.50)
 
-                RossGlassGroup(spacing: 8) {
-                    HStack(spacing: 8) {
-                        Button(rossLocalized("save_note")) {
+                HStack(spacing: 8) {
+                    AlphaDocumentActionButton(
+                        title: rossLocalized("save_note"),
+                        systemImage: "checkmark",
+                        isProminent: true,
+                        action: {
                             noteFocused = false
                             onSave()
                         }
-                        .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
+                    )
 
-                        Button {
+                    AlphaDocumentActionButton(
+                        title: rossLocalized("ask"),
+                        systemImage: "bubble.left.and.text.bubble.right",
+                        action: {
                             noteFocused = false
                             onAskRoss()
-                        } label: {
-                            Label(rossLocalized("ask"), systemImage: "bubble.left.and.text.bubble.right")
                         }
-                        .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
+                    )
 
-                        Button {
-                            onReviewAgain()
-                        } label: {
-                            Label(rossLocalized("review"), systemImage: "arrow.clockwise")
-                                .font(.footnote.weight(.semibold))
-                        }
-                        .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
-                        .accessibilityLabel(rossLocalized("review_document_again"))
-                    }
+                    AlphaDocumentActionButton(
+                        title: rossLocalized("review"),
+                        systemImage: "arrow.clockwise",
+                        accessibilityLabel: rossLocalized("review_document_again"),
+                        action: onReviewAgain
+                    )
                 }
             }
         }
+    }
+}
+
+private struct AlphaDocumentActionButton: View {
+    let title: String
+    let systemImage: String
+    var accessibilityLabel: String?
+    var isProminent = false
+    let action: () -> Void
+
+    var body: some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            if isProminent {
+                Button(action: action) {
+                    label
+                }
+                .buttonStyle(.glassProminent)
+                .tint(Color.rossAccent)
+                .accessibilityLabel(accessibilityLabel ?? title)
+            } else {
+                Button(action: action) {
+                    label
+                }
+                .buttonStyle(.glass)
+                .tint(Color.rossAccent)
+                .accessibilityLabel(accessibilityLabel ?? title)
+            }
+        } else {
+            Button(action: action) {
+                label
+            }
+            .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
+            .accessibilityLabel(accessibilityLabel ?? title)
+        }
+    }
+
+    private var label: some View {
+        Label(title, systemImage: systemImage)
+            .font(.footnote.weight(.semibold))
+            .frame(maxWidth: .infinity)
     }
 }
 
