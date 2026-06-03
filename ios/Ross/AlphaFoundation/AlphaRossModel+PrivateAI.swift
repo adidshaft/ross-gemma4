@@ -1005,6 +1005,7 @@ extension AlphaRossModel {
 
         let availableStorageGB = alphaAvailableStorageInGigabytes()
         guard availableStorageGB >= artifact.requiredFreeSpaceGB else {
+            assistantDownloadTaskBoxes[job.id] = nil
             updateJob(job.id) {
                 $0.state = .pausedNoStorage
                 $0.failureReason = AlphaAssistantDownloadError.insufficientStorage(
