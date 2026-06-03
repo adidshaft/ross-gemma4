@@ -726,17 +726,47 @@ struct AlphaModelPickerRow: View {
                     .lineSpacing(2.5)
             }
             .padding(16)
-            .rossGlassSurface(
-                tint: isRecommended ? Color.rossAccent.opacity(0.18) : Color.rossAccent.opacity(0.08),
-                cornerRadius: 18,
-                interactive: true,
-                shadowOpacity: 0.10,
-                shadowRadius: 12,
-                shadowY: 4,
-                strokeOpacity: isRecommended ? 0.72 : 0.54
-            )
+            .modifier(AlphaModelPickerRowSurface(isRecommended: isRecommended))
         }
         .buttonStyle(.plain)
+    }
+}
+
+private struct AlphaModelPickerRowSurface: ViewModifier {
+    let isRecommended: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
+        let tint = isRecommended ? Color.rossAccent.opacity(0.18) : Color.rossAccent.opacity(0.08)
+
+        if #available(iOS 26.0, macOS 26.0, *) {
+            content
+                .background {
+                    shape.fill(Color.rossGlassFill.opacity(isRecommended ? 0.48 : 0.34))
+                }
+                .glassEffect(
+                    Glass.regular
+                        .tint(tint)
+                        .interactive(),
+                    in: shape
+                )
+                .overlay {
+                    shape.strokeBorder(Color.rossAccent.opacity(isRecommended ? 0.36 : 0.22), lineWidth: 1)
+                }
+                .shadow(color: Color.rossShadow.opacity(0.10), radius: 12, y: 4)
+        } else {
+            content
+                .rossGlassSurface(
+                    tint: tint,
+                    cornerRadius: 18,
+                    interactive: true,
+                    shadowOpacity: 0.10,
+                    shadowRadius: 12,
+                    shadowY: 4,
+                    strokeOpacity: isRecommended ? 0.72 : 0.54
+                )
+        }
     }
 }
 
