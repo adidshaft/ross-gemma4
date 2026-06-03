@@ -919,7 +919,34 @@ struct AlphaPrivateAIJobCard: View {
             }
         }
         .padding(16)
-        .rossGlassSurface(cornerRadius: 18, interactive: true, strokeOpacity: 0.68)
+        .modifier(AlphaPrivateAIJobSurface())
+    }
+}
+
+private struct AlphaPrivateAIJobSurface: ViewModifier {
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
+
+        if #available(iOS 26.0, macOS 26.0, *) {
+            content
+                .background {
+                    shape.fill(Color.rossGlassFill.opacity(0.42))
+                }
+                .glassEffect(
+                    Glass.regular
+                        .tint(Color.rossAccent.opacity(0.14))
+                        .interactive(),
+                    in: shape
+                )
+                .overlay {
+                    shape.strokeBorder(Color.rossAccent.opacity(0.24), lineWidth: 1)
+                }
+                .shadow(color: Color.rossShadow.opacity(0.08), radius: 8, y: 3)
+        } else {
+            content
+                .rossGlassSurface(cornerRadius: 18, interactive: true, strokeOpacity: 0.68)
+        }
     }
 }
 
