@@ -2152,8 +2152,16 @@ struct AlphaRossTokenChip: View {
     let title: String
     var detail: String? = nil
     var systemImage: String = "paperclip"
+    var isInteractive = false
 
     var body: some View {
+        content
+            .padding(.horizontal, 10)
+            .frame(height: 30)
+            .modifier(AlphaRossTokenChipSurface(isInteractive: isInteractive))
+    }
+
+    private var content: some View {
         HStack(spacing: 6) {
             Image(systemName: systemImage)
                 .font(.caption2.weight(.bold))
@@ -2171,9 +2179,25 @@ struct AlphaRossTokenChip: View {
                     .lineLimit(1)
             }
         }
-        .padding(.horizontal, 10)
-        .frame(height: 30)
-        .rossGlassSurface(cornerRadius: 15, shadowOpacity: 0.04, shadowRadius: 4, shadowY: 1, strokeOpacity: 0.48)
+    }
+}
+
+private struct AlphaRossTokenChipSurface: ViewModifier {
+    let isInteractive: Bool
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, macOS 26.0, *), isInteractive {
+            content
+                .glassEffect(
+                    .regular
+                        .tint(Color.rossAccent.opacity(0.12))
+                        .interactive(),
+                    in: .rect(cornerRadius: 15)
+                )
+        } else {
+            content
+                .rossGlassSurface(cornerRadius: 15, shadowOpacity: 0.04, shadowRadius: 4, shadowY: 1, strokeOpacity: 0.48)
+        }
     }
 }
 
@@ -2228,7 +2252,8 @@ struct AlphaSourceRefChips: View {
             AlphaRossTokenChip(
                 title: alphaSourceRefDisplayLabel(sourceRef, contextDocumentTitle: contextDocumentTitle),
                 detail: alphaSourceRefDetailLabel(sourceRef),
-                systemImage: "doc.text"
+                systemImage: "doc.text",
+                isInteractive: true
             )
         }
         .buttonStyle(.plain)
