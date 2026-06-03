@@ -1004,20 +1004,16 @@ struct AlphaDocumentTranslationCard: View {
                 }
             }
 
-            Button {
-                isAssistantReady ? onTranslate() : onSetupAssistant()
-            } label: {
-                Label(
-                    isAssistantReady
-                        ? String(format: rossLocalized("translate_to"), targetLanguage)
-                        : rossLocalized("setup_assistant"),
-                    systemImage: isAssistantReady ? "sparkles" : "arrow.down.circle"
-                )
-                .lineLimit(1)
-                .minimumScaleFactor(0.78)
-                .frame(maxWidth: .infinity)
-            }
-            .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
+            AlphaDocumentActionButton(
+                title: isAssistantReady
+                    ? String(format: rossLocalized("translate_to"), targetLanguage)
+                    : rossLocalized("setup_assistant"),
+                systemImage: isAssistantReady ? "sparkles" : "arrow.down.circle",
+                isProminent: isAssistantReady,
+                action: {
+                    isAssistantReady ? onTranslate() : onSetupAssistant()
+                }
+            )
         }
         .padding(14)
         .rossGlassSurface(
@@ -1356,6 +1352,8 @@ private struct AlphaDocumentActionButton: View {
     private var label: some View {
         Label(title, systemImage: systemImage)
             .font(.footnote.weight(.semibold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.78)
             .frame(maxWidth: .infinity)
     }
 }
