@@ -209,16 +209,33 @@ struct AlphaDraftPreviewRow: View {
                 .foregroundStyle(Color.rossInk.opacity(0.32))
         }
         .padding(12)
-        .rossGlassSurface(
-            tint: Color.rossHighlight,
-            cornerRadius: 16,
-            interactive: true,
-            shadowOpacity: 0.08,
-            shadowRadius: 8,
-            shadowY: 3,
-            fillOpacity: 0.82,
-            strokeOpacity: 0.46
-        )
+        .modifier(AlphaDraftPreviewRowSurface())
+    }
+}
+
+private struct AlphaDraftPreviewRowSurface: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            content
+                .glassEffect(
+                    .regular
+                        .tint(Color.rossHighlight.opacity(0.12))
+                        .interactive(),
+                    in: .rect(cornerRadius: 16)
+                )
+        } else {
+            content
+                .rossGlassSurface(
+                    tint: Color.rossHighlight,
+                    cornerRadius: 16,
+                    interactive: true,
+                    shadowOpacity: 0.08,
+                    shadowRadius: 8,
+                    shadowY: 3,
+                    fillOpacity: 0.82,
+                    strokeOpacity: 0.46
+                )
+        }
     }
 }
 
