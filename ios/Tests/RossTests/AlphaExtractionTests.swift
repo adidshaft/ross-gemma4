@@ -892,6 +892,14 @@ final class AlphaExtractionTests: XCTestCase {
             "संतुलित आकार"
         )
         XCTAssertEqual(
+            AlphaCapabilityTier.flash.bestFor(languageCode: "ta"),
+            "மிக வேகமான குறுகிய document Q&A-க்கு."
+        )
+        XCTAssertEqual(
+            AlphaCapabilityTier.seniorDraftingSupport.bestFor(languageCode: "te-IN"),
+            "పెద్ద bundles, లోతైన review, hearing preparation, మరింత detailed drafting support కోసం."
+        )
+        XCTAssertEqual(
             AlphaCapabilityTier.quickStart.summary(languageCode: "bn"),
             "ছোট আদেশ, নোটিস এবং হালকা নথি পর্যালোচনা।"
         )

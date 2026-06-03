@@ -553,6 +553,34 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "மிகப் பெரிய இடம்",
             "te": "అతి పెద్ద స్థలం"
         ],
+        "tier_flash_best_for": [
+            "en": "Ultra-fast short document Q&A.",
+            "hi": "बहुत तेज़ छोटे document Q&A के लिए.",
+            "bn": "খুব দ্রুত ছোট document Q&A-এর জন্য.",
+            "ta": "மிக வேகமான குறுகிய document Q&A-க்கு.",
+            "te": "చాలా వేగమైన చిన్న document Q&A కోసం."
+        ],
+        "tier_quick_start_best_for": [
+            "en": "Fast intake, smaller devices, and short document Q&A after the assistant is installed.",
+            "hi": "तेज़ intake, छोटे devices, और assistant setup के बाद छोटे document Q&A के लिए.",
+            "bn": "দ্রুত intake, ছোট devices, এবং assistant setup-এর পরে ছোট document Q&A-এর জন্য.",
+            "ta": "வேகமான intake, சிறிய devices, assistant setup ஆன பின் குறுகிய document Q&A-க்கு.",
+            "te": "వేగమైన intake, చిన్న devices, assistant setup తర్వాత చిన్న document Q&A కోసం."
+        ],
+        "tier_case_associate_best_for": [
+            "en": "Most advocates who need document review, next dates, chronologies, notes, and answers from your files on-device.",
+            "hi": "Document review, next dates, chronologies, notes, और files से on-device answers चाहने वाले अधिकतर advocates के लिए.",
+            "bn": "Document review, next dates, chronologies, notes, এবং files থেকে on-device answers দরকার এমন বেশিরভাগ advocates-এর জন্য.",
+            "ta": "Document review, next dates, chronologies, notes, files-இலிருந்து on-device answers தேவைப்படும் பெரும்பாலான advocates-க்கு.",
+            "te": "Document review, next dates, chronologies, notes, files నుండి on-device answers అవసరమైన ఎక్కువ advocates కోసం."
+        ],
+        "tier_senior_drafting_best_for": [
+            "en": "Longer bundles, deeper review, hearing preparation, and more detailed drafting support.",
+            "hi": "लंबे bundles, गहरी review, hearing preparation, और ज़्यादा detailed drafting support के लिए.",
+            "bn": "দীর্ঘ bundles, গভীর review, hearing preparation, এবং আরও detailed drafting support-এর জন্য.",
+            "ta": "நீண்ட bundles, ஆழமான review, hearing preparation, மேலும் detailed drafting support-க்கு.",
+            "te": "పెద్ద bundles, లోతైన review, hearing preparation, మరింత detailed drafting support కోసం."
+        ],
         "tier_flash_summary": [
             "en": "Fastest setup for quick questions and simple checklists.",
             "hi": "त्वरित प्रश्नों और सरल चेकलिस्ट के लिए सबसे तेज़ सेटअप।",

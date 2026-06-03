@@ -326,15 +326,19 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
     }
 
     var bestFor: String {
+        bestFor(languageCode: rossSelectedLanguageCode())
+    }
+
+    func bestFor(languageCode: String) -> String {
         switch self {
         case .flash:
-            "Ultra-fast short document Q&A."
+            rossLocalized("tier_flash_best_for", languageCode: languageCode)
         case .quickStart:
-            "Fast intake, smaller devices, and short document Q&A after the assistant is installed."
+            rossLocalized("tier_quick_start_best_for", languageCode: languageCode)
         case .caseAssociate:
-            "Most advocates who need document review, next dates, chronologies, notes, and answers from your files on-device."
+            rossLocalized("tier_case_associate_best_for", languageCode: languageCode)
         case .seniorDraftingSupport:
-            "Longer bundles, deeper review, hearing preparation, and more detailed drafting support."
+            rossLocalized("tier_senior_drafting_best_for", languageCode: languageCode)
         }
     }
 
