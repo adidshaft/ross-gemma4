@@ -498,24 +498,7 @@ struct AlphaFullScreenChatComposer: View {
 
             RossGlassGroup(spacing: 10) {
                 HStack(spacing: 10) {
-                    Button(action: onShowTools) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 17, weight: .bold))
-                            .foregroundStyle(Color.rossInk.opacity(0.72))
-                            .frame(width: 40, height: 40)
-                            .rossGlassSurface(
-                                tint: Color.rossAccent,
-                                cornerRadius: 20,
-                                interactive: true,
-                                shadowOpacity: 0.08,
-                                shadowRadius: 7,
-                                shadowY: 3,
-                                fillOpacity: 0.80,
-                                strokeOpacity: 0.48
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(rossLocalized("add_files_or_images"))
+                    AlphaFullScreenChatAddFilesButton(action: onShowTools)
 
                     VStack(alignment: .leading, spacing: 4) {
                         TextField(alphaAskConversationPlaceholder(), text: $text, axis: .vertical)
@@ -1182,6 +1165,44 @@ struct AlphaAskTurnCard: View {
                 Spacer(minLength: 40)
             }
         }
+    }
+}
+
+private struct AlphaFullScreenChatAddFilesButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            Button(action: action) {
+                icon
+            }
+            .buttonStyle(.glass)
+            .tint(Color.rossAccent)
+            .accessibilityLabel(rossLocalized("add_files_or_images"))
+        } else {
+            Button(action: action) {
+                icon
+                    .rossGlassSurface(
+                        tint: Color.rossAccent,
+                        cornerRadius: 20,
+                        interactive: true,
+                        shadowOpacity: 0.08,
+                        shadowRadius: 7,
+                        shadowY: 3,
+                        fillOpacity: 0.80,
+                        strokeOpacity: 0.48
+                    )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(rossLocalized("add_files_or_images"))
+        }
+    }
+
+    private var icon: some View {
+        Image(systemName: "plus")
+            .font(.system(size: 17, weight: .bold))
+            .foregroundStyle(Color.rossInk.opacity(0.72))
+            .frame(width: 40, height: 40)
     }
 }
 
