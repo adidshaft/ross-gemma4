@@ -1375,6 +1375,14 @@ final class AlphaExtractionTests: XCTestCase {
             rossLocalized("ask_local_answered_locally_title", languageCode: "te-IN"),
             "Ross locally సమాధానం ఇచ్చింది"
         )
+        XCTAssertEqual(
+            rossLocalized("translation_from_label", languageCode: "ta"),
+            "இருந்து"
+        )
+        XCTAssertEqual(
+            rossLocalized("translation_to_label", languageCode: "bn"),
+            "তে"
+        )
         XCTAssertTrue(
             rossLocalized("ask_local_context_review_recommended", languageCode: "hi")
                 .contains("local matter context मिला")

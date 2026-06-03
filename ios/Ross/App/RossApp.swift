@@ -2947,6 +2947,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "இந்த கோப்பை மொழிபெயர்க்கவும்",
             "te": "ఈ ఫైల్‌ను అనువదించండి"
         ],
+        "translation_from_label": [
+            "en": "From",
+            "hi": "से",
+            "bn": "থেকে",
+            "ta": "இருந்து",
+            "te": "నుండి"
+        ],
+        "translation_to_label": [
+            "en": "To",
+            "hi": "तक",
+            "bn": "তে",
+            "ta": "க்கு",
+            "te": "కు"
+        ],
         "document_readiness_ask_review_running": [
             "en": "Ross can answer from extracted text now. Deeper review is still running in the background.",
             "hi": "Ross अब extracted text से जवाब दे सकता है। deeper review अभी background में चल रहा है।",

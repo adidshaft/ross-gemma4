@@ -972,8 +972,8 @@ struct AlphaDocumentTranslationCard: View {
 
             RossGlassGroup(spacing: 8) {
                 HStack(spacing: 8) {
-                    AlphaTranslationLanguageChip(label: "From", value: documentLanguage, systemImage: "doc.text.magnifyingglass")
-                    AlphaTranslationLanguageChip(label: "To", value: targetLanguage, systemImage: "text.bubble")
+                    AlphaTranslationLanguageChip(label: rossLocalized("translation_from_label"), value: documentLanguage, systemImage: "doc.text.magnifyingglass")
+                    AlphaTranslationLanguageChip(label: rossLocalized("translation_to_label"), value: targetLanguage, systemImage: "text.bubble")
                 }
             }
 
