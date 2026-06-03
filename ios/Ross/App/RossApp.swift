@@ -4389,6 +4389,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Imported files review செய்யவும்",
             "te": "Imported files review చేయండి"
         ],
+        "prepare_file_for_date": [
+            "en": "Prepare the file for %@.",
+            "hi": "%@ के लिए file prepare करें.",
+            "bn": "%@-এর জন্য file prepare করুন.",
+            "ta": "%@-க்கு file prepare செய்யவும்.",
+            "te": "%@ కోసం file prepare చేయండి."
+        ],
         "shared_files": [
             "en": "Shared files",
             "hi": "साझा फ़ाइलें",

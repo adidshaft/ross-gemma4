@@ -46,6 +46,13 @@ func alphaAlternateReferenceNoteLine(documentTitle: String, alternate: String, l
     String(format: rossLocalized("alternate_reference_from_document", languageCode: languageCode), documentTitle, alternate)
 }
 
+func alphaPrepareFileForDateHighlight(_ date: Date, languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(
+        format: rossLocalized("prepare_file_for_date", languageCode: languageCode),
+        date.formatted(date: .abbreviated, time: .omitted)
+    )
+}
+
 func alphaDocumentReviewSummaryLabel(
     fieldsFound: Int,
     verified: Int,
@@ -730,7 +737,7 @@ extension AlphaRossModel {
         if issueCandidates.isEmpty {
             var fallbackHighlights: [String] = []
             if let nextHearing = caseMatter.nextHearing {
-                fallbackHighlights.append("Prepare the file for \(nextHearing.formatted(date: .abbreviated, time: .omitted)).")
+                fallbackHighlights.append(alphaPrepareFileForDateHighlight(nextHearing))
             }
             if let nextOpenTask {
                 fallbackHighlights.append(nextOpenTask.title)

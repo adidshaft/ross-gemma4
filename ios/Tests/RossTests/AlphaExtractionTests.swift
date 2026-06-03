@@ -1932,6 +1932,10 @@ final class AlphaExtractionTests: XCTestCase {
             alphaDemoMatterLocalNotice(languageCode: "bn"),
             "Demo matter শুধু sample data ব্যবহার করে। Case files এই device-এ থাকে."
         )
+        let fixedHearingDate = DateComponents(calendar: .current, year: 2026, month: 5, day: 7).date!
+        let preparedFileHighlight = alphaPrepareFileForDateHighlight(fixedHearingDate, languageCode: "hi")
+        XCTAssertTrue(preparedFileHighlight.contains("के लिए file prepare करें."))
+        XCTAssertFalse(preparedFileHighlight.localizedCaseInsensitiveContains("Prepare the file for"))
         XCTAssertEqual(
             rossLocalized("public_law_search_confirmation_note", languageCode: "bn"),
             "Public-law search advocate review-এর পরে শুধু sanitized query পাঠায়."
