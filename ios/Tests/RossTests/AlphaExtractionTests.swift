@@ -1921,6 +1921,14 @@ final class AlphaExtractionTests: XCTestCase {
             "Imported files review చేయండి"
         )
         XCTAssertEqual(
+            alphaCaseFilesStayOnDeviceNotice(languageCode: "hi"),
+            "Case files इसी device पर रहती हैं."
+        )
+        XCTAssertEqual(
+            alphaDemoMatterLocalNotice(languageCode: "bn"),
+            "Demo matter শুধু sample data ব্যবহার করে। Case files এই device-এ থাকে."
+        )
+        XCTAssertEqual(
             rossLocalized("public_law_search_confirmation_note", languageCode: "bn"),
             "Public-law search advocate review-এর পরে শুধু sanitized query পাঠায়."
         )

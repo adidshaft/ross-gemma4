@@ -34,6 +34,18 @@ func alphaReviewImportedFilesTaskTitle(languageCode: String = rossSelectedLangua
     rossLocalized("review_imported_files_task_title", languageCode: languageCode)
 }
 
+func alphaCaseFilesStayOnDeviceNotice(languageCode: String = rossSelectedLanguageCode()) -> String {
+    rossLocalized("case_files_stay_on_this_device", languageCode: languageCode)
+}
+
+func alphaDemoMatterLocalNotice(languageCode: String = rossSelectedLanguageCode()) -> String {
+    String(
+        format: rossLocalized("demo_matter_local_notice", languageCode: languageCode),
+        rossLocalized("demo_matter_sample_data_only", languageCode: languageCode),
+        alphaCaseFilesStayOnDeviceNotice(languageCode: languageCode)
+    )
+}
+
 enum AlphaOnboardingStage: String, Codable, Hashable, Sendable {
     case onboarding
     // Kept so older saved state can migrate into the simplified onboarding flow.
@@ -1453,7 +1465,7 @@ struct AlphaCaseMatter: Identifiable, Codable, Hashable, Sendable {
         folderTint: AlphaMatterTint = .indigo,
         nextHearing: Date? = nil,
         dates: [AlphaMatterDate] = [],
-        localNotice: String = "Case files stay on this device",
+        localNotice: String = alphaCaseFilesStayOnDeviceNotice(),
         notes: String? = nil,
         summary: String,
         issueHighlights: [String],
@@ -1537,7 +1549,7 @@ struct AlphaCaseMatter: Identifiable, Codable, Hashable, Sendable {
         folderTint = try container.decodeIfPresent(AlphaMatterTint.self, forKey: .folderTint) ?? .indigo
         nextHearing = try container.decodeIfPresent(Date.self, forKey: .nextHearing)
         dates = (try container.decodeIfPresent([AlphaMatterDate].self, forKey: .dates) ?? []).sorted { $0.date < $1.date }
-        localNotice = try container.decodeIfPresent(String.self, forKey: .localNotice) ?? "Case files stay on this device"
+        localNotice = try container.decodeIfPresent(String.self, forKey: .localNotice) ?? alphaCaseFilesStayOnDeviceNotice()
         notes = try container.decodeIfPresent(String.self, forKey: .notes)
         summary = try container.decode(String.self, forKey: .summary)
         issueHighlights = try container.decodeIfPresent([String].self, forKey: .issueHighlights) ?? []
@@ -2551,8 +2563,8 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
             folderTint: .indigo,
             nextHearing: nextHearing,
             dates: demoDates,
-            localNotice: "Demo matter uses sample data only. Case files stay on this device.",
-            notes: "Demo matter uses sample data only.",
+            localNotice: alphaDemoMatterLocalNotice(),
+            notes: rossLocalized("demo_matter_sample_data_only"),
             summary: "This synthetic matter is ready for a morning check-in. Review the latest order, confirm the next date, prepare a hearing note, and keep filing compliance on track.",
             issueHighlights: [
                 "Confirm the next hearing date from the latest order.",

@@ -315,6 +315,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Demo matter sample data மட்டும் பயன்படுத்தும்.",
             "te": "Demo matter sample data మాత్రమే ఉపయోగిస్తుంది."
         ],
+        "case_files_stay_on_this_device": [
+            "en": "Case files stay on this device.",
+            "hi": "Case files इसी device पर रहती हैं.",
+            "bn": "Case files এই device-এ থাকে.",
+            "ta": "Case files இந்த device-இல் இருக்கும்.",
+            "te": "Case files ఈ device లోనే ఉంటాయి."
+        ],
+        "demo_matter_local_notice": [
+            "en": "%@ %@",
+            "hi": "%@ %@",
+            "bn": "%@ %@",
+            "ta": "%@ %@",
+            "te": "%@ %@"
+        ],
         "sign_out_of_ross_question": [
             "en": "Sign out of Ross?",
             "hi": "Ross से sign out करें?",
