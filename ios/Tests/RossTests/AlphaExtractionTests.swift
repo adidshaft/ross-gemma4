@@ -1570,7 +1570,11 @@ final class AlphaExtractionTests: XCTestCase {
         )
         XCTAssertEqual(
             alphaFilesAcrossMattersLabel(5, languageCode: "ta"),
-            "5 file(s) matters முழுவதும்"
+            "5 files matters முழுவதும்"
+        )
+        XCTAssertEqual(
+            alphaFilesAcrossMattersLabel(1, languageCode: "en"),
+            "1 file across matters"
         )
         XCTAssertEqual(
             rossLocalized("no_files_imported", languageCode: "hi"),
@@ -2275,6 +2279,14 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(
             alphaAskEmptyDetail(scopeLabel: nil, selectedDocumentCount: 2, languageCode: "bn")
                 .contains("ট্যাগ করা ফাইল")
+        )
+        XCTAssertTrue(
+            alphaAskEmptyDetail(scopeLabel: nil, selectedDocumentCount: 1, languageCode: "en")
+                .contains("1 tagged file ready")
+        )
+        XCTAssertTrue(
+            alphaAskEmptyDetail(scopeLabel: nil, selectedDocumentCount: 2, languageCode: "en")
+                .contains("2 tagged files ready")
         )
         XCTAssertEqual(rossLocalized("ask_workflow_tag_file", languageCode: "bn"), "ফাইল ট্যাগ করুন")
         XCTAssertEqual(rossLocalized("ask_workflow_import", languageCode: "te"), "దిగుమతి")

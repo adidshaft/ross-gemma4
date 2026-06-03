@@ -1499,8 +1499,11 @@ func alphaAskEmptyDetail(
     languageCode: String = rossSelectedLanguageCode()
 ) -> String {
     if selectedDocumentCount > 0 {
+        let key = selectedDocumentCount == 1
+            ? "ask_empty_detail_selected_file_one"
+            : "ask_empty_detail_selected_files_many"
         return String(
-            format: rossLocalized("ask_empty_detail_selected_files", languageCode: languageCode),
+            format: rossLocalized(key, languageCode: languageCode),
             selectedDocumentCount
         )
     }

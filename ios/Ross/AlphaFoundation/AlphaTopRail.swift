@@ -556,7 +556,8 @@ func alphaActiveMatterCountLabel(_ count: Int, languageCode: String = rossSelect
 }
 
 func alphaFilesAcrossMattersLabel(_ count: Int, languageCode: String = rossSelectedLanguageCode()) -> String {
-    String(format: rossLocalized("files_across_matters_count", languageCode: languageCode), count)
+    let key = count == 1 ? "files_across_matters_count_one" : "files_across_matters_count_many"
+    return String(format: rossLocalized(key, languageCode: languageCode), count)
 }
 
 func alphaAssistantSetupPreparingLabel(_ tierTitle: String, languageCode: String = rossSelectedLanguageCode()) -> String {

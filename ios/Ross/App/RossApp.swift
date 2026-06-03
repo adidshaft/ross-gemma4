@@ -3045,12 +3045,19 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Local file room",
             "te": "Local file room"
         ],
-        "files_across_matters_count": [
-            "en": "%d file(s) across matters",
-            "hi": "%d file(s) matters में",
-            "bn": "%d file(s) matters জুড়ে",
-            "ta": "%d file(s) matters முழுவதும்",
-            "te": "%d file(s) matters అంతటా"
+        "files_across_matters_count_one": [
+            "en": "%d file across matters",
+            "hi": "%d file matters में",
+            "bn": "%d file matters জুড়ে",
+            "ta": "%d file matters முழுவதும்",
+            "te": "%d file matters అంతటా"
+        ],
+        "files_across_matters_count_many": [
+            "en": "%d files across matters",
+            "hi": "%d files matters में",
+            "bn": "%d files matters জুড়ে",
+            "ta": "%d files matters முழுவதும்",
+            "te": "%d files matters అంతటా"
         ],
         "no_files_imported": [
             "en": "No files imported",
@@ -7721,12 +7728,19 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "%@ பற்றி கேளுங்கள், @ மூலம் கோப்பை குறிக்கவும், அல்லது PDF, படம், உரை கோப்பை இறக்குமதி செய்ய + தட்டவும்.",
             "te": "%@ గురించి అడగండి, @తో ఫైల్‌ను ట్యాగ్ చేయండి, లేదా PDF, చిత్రం, లేదా టెక్స్ట్ ఫైల్‌ను దిగుమతి చేయడానికి + నొక్కండి."
         ],
-        "ask_empty_detail_selected_files": [
-            "en": "%d tagged file(s) ready. Ask a question, or tap + to add another PDF, image, or text file.",
+        "ask_empty_detail_selected_file_one": [
+            "en": "%d tagged file ready. Ask a question, or tap + to add another PDF, image, or text file.",
             "hi": "%d टैग की गई फ़ाइल तैयार है। सवाल पूछें, या दूसरी PDF, इमेज, या टेक्स्ट फ़ाइल जोड़ने के लिए + टैप करें।",
             "bn": "%dটি ট্যাগ করা ফাইল প্রস্তুত। প্রশ্ন করুন, অথবা আরেকটি PDF, ছবি, বা টেক্সট ফাইল যোগ করতে + চাপুন।",
             "ta": "%d குறியிட்ட கோப்பு தயார். கேள்வி கேளுங்கள், அல்லது மற்றொரு PDF, படம், உரை கோப்பை சேர்க்க + தட்டவும்.",
             "te": "%d ట్యాగ్ చేసిన ఫైల్ సిద్ధంగా ఉంది. ప్రశ్న అడగండి, లేదా మరో PDF, చిత్రం, లేదా టెక్స్ట్ ఫైల్ జోడించడానికి + నొక్కండి."
+        ],
+        "ask_empty_detail_selected_files_many": [
+            "en": "%d tagged files ready. Ask a question, or tap + to add another PDF, image, or text file.",
+            "hi": "%d टैग की गई फ़ाइलें तैयार हैं। सवाल पूछें, या दूसरी PDF, इमेज, या टेक्स्ट फ़ाइल जोड़ने के लिए + टैप करें।",
+            "bn": "%dটি ট্যাগ করা ফাইল প্রস্তুত। প্রশ্ন করুন, অথবা আরেকটি PDF, ছবি, বা টেক্সট ফাইল যোগ করতে + চাপুন।",
+            "ta": "%d குறியிட்ட கோப்புகள் தயார். கேள்வி கேளுங்கள், அல்லது மற்றொரு PDF, படம், உரை கோப்பை சேர்க்க + தட்டவும்.",
+            "te": "%d ట్యాగ్ చేసిన ఫైళ్లు సిద్ధంగా ఉన్నాయి. ప్రశ్న అడగండి, లేదా మరో PDF, చిత్రం, లేదా టెక్స్ట్ ఫైల్ జోడించడానికి + నొక్కండి."
         ],
         "ask_conversation_placeholder": [
             "en": "Ask Ross... Type @ to tag a file",
