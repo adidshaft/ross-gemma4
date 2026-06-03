@@ -1518,7 +1518,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
         XCTAssertEqual(
             String(format: rossLocalized("ask_local_next_actions", languageCode: "te"), "File reply"),
-            "Next actions: File reply."
+            "తదుపరి steps: File reply."
         )
         XCTAssertEqual(
             String(format: rossLocalized("ask_local_next_hearing", languageCode: "hi"), "12 Mar 2026"),
@@ -1975,7 +1975,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
         XCTAssertEqual(
             alphaNextDateCapturedLabel("12/05/2026", languageCode: "te-IN"),
-            "Next date captured: 12/05/2026."
+            "Next date కనుగొంది: 12/05/2026."
         )
         XCTAssertEqual(
             alphaDocumentClassifiedSummary(
@@ -2013,7 +2013,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
         XCTAssertEqual(
             alphaMatterLatestFileLabel("Order.pdf", languageCode: "te-IN"),
-            "Latest file: Order.pdf."
+            "Latest file కనుగొంది: Order.pdf."
         )
         XCTAssertEqual(
             alphaNewMatterSummary(languageCode: "hi"),
@@ -3954,6 +3954,7 @@ final class AlphaExtractionTests: XCTestCase {
             "case_number",
             "parties",
             "next_hearing_deadline",
+            "document_review_next_date_captured",
             "extracted_text",
             "ignore",
             "threads",
@@ -4032,6 +4033,18 @@ final class AlphaExtractionTests: XCTestCase {
             "delete",
             "privacy_ledger_assistant_update_available_title",
             "privacy_ledger_purpose_assistant_setup",
+            "prepared_work_hearing_note_checklist_ready",
+            "ask_local_next_actions",
+            "matter_memory_next_date_captured",
+            "matter_memory_latest_file",
+            "saved_locally",
+            "ask_task_due_on",
+            "matter_date_kind_filing_deadline",
+            "matter_date_kind_compliance_date",
+            "matter_date_kind_client_follow_up",
+            "ask_local_legal_search_off_status",
+            "date_saved_title",
+            "shared_file",
             "prepared_work_type_suggested_tasks",
             "prepared_work_type_chronology_ready",
             "prepared_work_type_case_note_ready",

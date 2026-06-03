@@ -5897,9 +5897,9 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         "prepared_work_hearing_note_checklist_ready": [
             "en": "Hearing note checklist ready",
             "hi": "Hearing note checklist ready है",
-            "bn": "Hearing note checklist ready",
-            "ta": "Hearing note checklist ready",
-            "te": "Hearing note checklist ready"
+            "bn": "Hearing note checklist ready আছে",
+            "ta": "Hearing note checklist ready உள்ளது",
+            "te": "Hearing note checklist ready ఉంది"
         ],
         "prepared_work_hearing_note_ready_summary": [
             "en": "Ross prepared local next steps for %@.",
@@ -5994,10 +5994,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "document_review_next_date_captured": [
             "en": "Next date captured: %@.",
-            "hi": "Next date captured: %@.",
-            "bn": "Next date captured: %@.",
-            "ta": "Next date captured: %@.",
-            "te": "Next date captured: %@."
+            "hi": "Next date मिली: %@.",
+            "bn": "Next date পাওয়া গেছে: %@.",
+            "ta": "Next date கண்டது: %@.",
+            "te": "Next date కనుగొంది: %@."
         ],
         "document_review_classified": [
             "en": "Ross classified %@ as %@.",
@@ -6029,10 +6029,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "ask_local_next_actions": [
             "en": "Next actions: %@.",
-            "hi": "Next actions: %@.",
-            "bn": "Next actions: %@.",
-            "ta": "Next actions: %@.",
-            "te": "Next actions: %@."
+            "hi": "अगले steps: %@.",
+            "bn": "পরবর্তী steps: %@.",
+            "ta": "அடுத்த steps: %@.",
+            "te": "తదుపరి steps: %@."
         ],
         "ask_local_next_hearing": [
             "en": "Next hearing: %@.",
@@ -6092,10 +6092,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "matter_memory_next_date_captured": [
             "en": "Next date %@ is already captured.",
-            "hi": "Next date %@ already captured है.",
-            "bn": "Next date %@ already captured.",
-            "ta": "Next date %@ already captured.",
-            "te": "Next date %@ already captured."
+            "hi": "Next date %@ पहले से captured है.",
+            "bn": "Next date %@ আগেই captured হয়েছে.",
+            "ta": "Next date %@ ஏற்கனவே captured ஆனது.",
+            "te": "Next date %@ ఇప్పటికే captured అయింది."
         ],
         "matter_memory_open_tasks_saved": [
             "en": "%d open task(s) are saved for this matter.",
@@ -6106,10 +6106,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "matter_memory_latest_file": [
             "en": "Latest file: %@.",
-            "hi": "Latest file: %@.",
-            "bn": "Latest file: %@.",
-            "ta": "Latest file: %@.",
-            "te": "Latest file: %@."
+            "hi": "Latest file मिला: %@.",
+            "bn": "Latest file পাওয়া গেছে: %@.",
+            "ta": "Latest file கண்டது: %@.",
+            "te": "Latest file కనుగొంది: %@."
         ],
         "no_matters_match_search": [
             "en": "No matters match this search.",
@@ -6295,10 +6295,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "saved_locally": [
             "en": "Saved locally",
-            "hi": "locally saved",
-            "bn": "locally saved",
-            "ta": "locally saved",
-            "te": "locally saved"
+            "hi": "locally saved है",
+            "bn": "locally saved হয়েছে",
+            "ta": "locally saved ஆனது",
+            "te": "locally saved అయింది"
         ],
         "task_added_title": [
             "en": "Task added.",
@@ -6309,10 +6309,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "ask_task_due_on": [
             "en": "Due %@.",
-            "hi": "Due: %@.",
-            "bn": "Due: %@.",
-            "ta": "Due: %@.",
-            "te": "Due: %@."
+            "hi": "Due date: %@.",
+            "bn": "Due date: %@.",
+            "ta": "Due date: %@.",
+            "te": "Due date: %@."
         ],
         "ask_open_task_list_any_time": [
             "en": "Open the task list any time to mark it done or snooze it.",
@@ -6470,24 +6470,24 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "matter_date_kind_filing_deadline": [
             "en": "Filing deadline",
-            "hi": "Filing deadline",
-            "bn": "Filing deadline",
-            "ta": "Filing deadline",
-            "te": "Filing deadline"
+            "hi": "Filing deadline तारीख",
+            "bn": "Filing deadline তারিখ",
+            "ta": "Filing deadline தேதி",
+            "te": "Filing deadline తేదీ"
         ],
         "matter_date_kind_compliance_date": [
             "en": "Compliance date",
-            "hi": "Compliance date",
-            "bn": "Compliance date",
-            "ta": "Compliance date",
-            "te": "Compliance date"
+            "hi": "Compliance date तारीख",
+            "bn": "Compliance date তারিখ",
+            "ta": "Compliance date தேதி",
+            "te": "Compliance date తేదీ"
         ],
         "matter_date_kind_client_follow_up": [
             "en": "Client follow-up",
-            "hi": "Client follow-up",
-            "bn": "Client follow-up",
-            "ta": "Client follow-up",
-            "te": "Client follow-up"
+            "hi": "Client follow-up काम",
+            "bn": "Client follow-up কাজ",
+            "ta": "Client follow-up பணி",
+            "te": "Client follow-up పని"
         ],
         "ask_source_pack_issues": [
             "en": "Issues",
@@ -6604,9 +6604,9 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         "ask_local_legal_search_off_status": [
             "en": "Legal Search is off",
             "hi": "Legal Search off है",
-            "bn": "Legal Search off",
-            "ta": "Legal Search off",
-            "te": "Legal Search off"
+            "bn": "Legal Search off আছে",
+            "ta": "Legal Search off உள்ளது",
+            "te": "Legal Search off ఉంది"
         ],
         "ask_local_review_items_still_need_review": [
             "en": "%@ still need review.",
@@ -6624,10 +6624,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "date_saved_title": [
             "en": "Date saved.",
-            "hi": "Date saved.",
-            "bn": "Date saved.",
-            "ta": "Date saved.",
-            "te": "Date saved."
+            "hi": "Date save हुई.",
+            "bn": "Date save হয়েছে.",
+            "ta": "Date save ஆனது.",
+            "te": "Date save అయింది."
         ],
         "ask_date_saved_for": [
             "en": "%@ is saved for %@.",
@@ -7807,10 +7807,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "shared_file": [
             "en": "Shared file",
-            "hi": "Shared file",
-            "bn": "Shared file",
-            "ta": "Shared file",
-            "te": "Shared file"
+            "hi": "Shared file मिला",
+            "bn": "Shared file পাওয়া গেছে",
+            "ta": "Shared file கண்டது",
+            "te": "Shared file కనుగొంది"
         ],
         "ask_empty_files_shared_detail": [
             "en": "Add a PDF, note, photo, or scan. Ross will read it locally before using it in Ask.",
