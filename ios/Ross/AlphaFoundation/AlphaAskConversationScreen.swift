@@ -881,7 +881,7 @@ private struct AlphaThreadGroupCard: View {
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(12)
-                            .rossGlassSurface(cornerRadius: 14, interactive: true, shadowOpacity: 0.05, shadowRadius: 5, shadowY: 2, strokeOpacity: 0.44)
+                            .modifier(AlphaAskThreadRowSurface())
                         }
                         .buttonStyle(.plain)
                     }
@@ -894,6 +894,23 @@ private struct AlphaThreadGroupCard: View {
             cornerRadius: 18,
             strokeOpacity: isActiveScope ? 0.66 : 0.50
         )
+    }
+}
+
+private struct AlphaAskThreadRowSurface: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            content
+                .glassEffect(
+                    .regular
+                        .tint(Color.rossAccent.opacity(0.10))
+                        .interactive(),
+                    in: .rect(cornerRadius: 14)
+                )
+        } else {
+            content
+                .rossGlassSurface(cornerRadius: 14, interactive: true, shadowOpacity: 0.05, shadowRadius: 5, shadowY: 2, strokeOpacity: 0.44)
+        }
     }
 }
 
