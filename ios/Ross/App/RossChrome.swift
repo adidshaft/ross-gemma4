@@ -288,12 +288,15 @@ struct RossHeroCard<Content: View>: View {
             }
 
             VStack(alignment: .leading, spacing: 10) {
-                Text(eyebrow)
-                    .font(.system(size: 13, weight: .regular))
-                    .foregroundStyle(Color.rossInk.opacity(0.6))
+                if !eyebrow.isEmpty {
+                    Text(eyebrow)
+                        .font(.system(size: showsMedia ? 13 : 12, weight: .semibold))
+                        .foregroundStyle(Color.rossInk.opacity(showsMedia ? 0.6 : 0.54))
+                        .textCase(showsMedia ? nil : .uppercase)
+                }
 
                 Text(title)
-                    .font(.rossSerifTitle())
+                    .font(showsMedia ? .rossSerifTitle() : .headline.weight(.semibold))
                     .foregroundStyle(Color.rossInk)
                     .lineSpacing(2)
                     .fixedSize(horizontal: false, vertical: true)
@@ -309,7 +312,7 @@ struct RossHeroCard<Content: View>: View {
                 content
                     .padding(.top, 2)
             }
-            .padding(16)
+            .padding(showsMedia ? 16 : 14)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
@@ -323,25 +326,31 @@ struct RossHeroCard<Content: View>: View {
                         fallbackStrokeOpacity: 0.30
                     )
                 LinearGradient(
-                    colors: [
-                        Color.rossHeroTop,
-                        Color.rossHeroTop.opacity(0.72),
-                        Color.rossHeroBottom
-                    ],
+                    colors: showsMedia
+                        ? [
+                            Color.rossHeroTop,
+                            Color.rossHeroTop.opacity(0.72),
+                            Color.rossHeroBottom
+                        ]
+                        : [
+                            Color.rossGlassFill.opacity(colorScheme == .dark ? 0.30 : 0.66),
+                            Color.rossHeroTop.opacity(colorScheme == .dark ? 0.22 : 0.38)
+                        ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
 
-                if colorScheme == .light {
+                if showsMedia && colorScheme == .light {
                     Color.rossAccent.opacity(0.04)
                 }
 
-                // Subtle lens sheen
-                LinearGradient(
-                    colors: [Color.white.opacity(colorScheme == .dark ? 0.05 : 0.30), Color.clear],
-                    startPoint: .top,
-                    endPoint: .center
-                )
+                if showsMedia {
+                    LinearGradient(
+                        colors: [Color.white.opacity(colorScheme == .dark ? 0.05 : 0.30), Color.clear],
+                        startPoint: .top,
+                        endPoint: .center
+                    )
+                }
             }
         }
         .overlay {
@@ -359,8 +368,8 @@ struct RossHeroCard<Content: View>: View {
             )
         }
         .clipShape(shape)
-        .shadow(color: Color.rossShadow.opacity(0.16), radius: 28, y: 14)
-        .shadow(color: Color.rossBackdropGlow.opacity(0.14), radius: 40, y: 10)
+        .shadow(color: Color.rossShadow.opacity(showsMedia ? 0.16 : 0.08), radius: showsMedia ? 28 : 12, y: showsMedia ? 14 : 5)
+        .shadow(color: Color.rossBackdropGlow.opacity(showsMedia ? 0.14 : 0.04), radius: showsMedia ? 40 : 16, y: showsMedia ? 10 : 4)
     }
 }
 
