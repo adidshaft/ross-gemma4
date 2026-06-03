@@ -22,7 +22,14 @@ struct AlphaGlassPlusButton: View {
                 .font(.system(size: 15, weight: .bold))
                 .foregroundStyle(Color.rossAccent)
                 .frame(width: 34, height: 34)
-                .rossGlassSurface(tint: Color.rossAccent.opacity(0.18), cornerRadius: 17, interactive: true, shadowOpacity: 0.06, shadowRadius: 6, shadowY: 2, strokeOpacity: 0.45)
+                .rossNativeGlassSurface(
+                    tint: Color.rossAccent,
+                    shape: RoundedRectangle(cornerRadius: 17, style: .continuous),
+                    interactive: true,
+                    fallbackFillOpacity: 0.82,
+                    fallbackStrokeOpacity: 0.45
+                )
+                .shadow(color: Color.rossShadow.opacity(0.06), radius: 6, y: 2)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(rossLocalized("create_matter"))
@@ -144,7 +151,13 @@ struct AlphaFolderArtwork: View {
                     .foregroundStyle(tint.opacity(0.94))
                     .padding(.horizontal, 7)
                     .padding(.vertical, 4)
-                    .rossGlassSurface(tint: tint.opacity(0.16), cornerRadius: 10, shadowOpacity: 0.04, shadowRadius: 4, shadowY: 1, strokeOpacity: 0.40)
+                    .rossNativeGlassSurface(
+                        tint: tint,
+                        shape: RoundedRectangle(cornerRadius: 10, style: .continuous),
+                        fallbackFillOpacity: 0.74,
+                        fallbackStrokeOpacity: 0.40
+                    )
+                    .shadow(color: Color.rossShadow.opacity(0.04), radius: 4, y: 1)
                     .padding(.top, 2)
                     .padding(.trailing, 2)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
@@ -156,7 +169,13 @@ struct AlphaFolderArtwork: View {
                     .foregroundStyle(tint.opacity(0.92))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .rossGlassSurface(tint: tint.opacity(0.16), cornerRadius: 10, shadowOpacity: 0.04, shadowRadius: 4, shadowY: 1, strokeOpacity: 0.44)
+                    .rossNativeGlassSurface(
+                        tint: tint,
+                        shape: RoundedRectangle(cornerRadius: 10, style: .continuous),
+                        fallbackFillOpacity: 0.74,
+                        fallbackStrokeOpacity: 0.44
+                    )
+                    .shadow(color: Color.rossShadow.opacity(0.04), radius: 4, y: 1)
                     .padding(.leading, 2)
                     .padding(.bottom, 2)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
@@ -182,7 +201,14 @@ struct AlphaDocumentLayoutMenu: View {
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(Color.rossInk)
                 .frame(width: 34, height: 34)
-                .rossGlassSurface(cornerRadius: 17, interactive: true, shadowOpacity: 0.06, shadowRadius: 6, shadowY: 2, strokeOpacity: 0.46)
+                .rossNativeGlassSurface(
+                    tint: Color.rossAccent,
+                    shape: RoundedRectangle(cornerRadius: 17, style: .continuous),
+                    interactive: true,
+                    fallbackFillOpacity: 0.82,
+                    fallbackStrokeOpacity: 0.46
+                )
+                .shadow(color: Color.rossShadow.opacity(0.06), radius: 6, y: 2)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(rossLocalized("choose_document_view"))
@@ -302,7 +328,13 @@ struct AlphaDocumentFolderTile: View {
         }
         .frame(maxWidth: .infinity, minHeight: 168, alignment: .topLeading)
         .padding(11)
-        .rossGlassSurface(tint: tint.opacity(0.16), cornerRadius: 18, strokeOpacity: 0.5)
+        .rossNativeGlassSurface(
+            tint: tint,
+            shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
+            fallbackFillOpacity: 0.84,
+            fallbackStrokeOpacity: 0.50
+        )
+        .shadow(color: Color.rossShadow.opacity(0.12), radius: 12, y: 5)
     }
 }
 
@@ -409,7 +441,13 @@ struct AlphaExpandableDocumentRow: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .rossGlassSurface(cornerRadius: 18, strokeOpacity: 0.62)
+        .rossNativeGlassSurface(
+            tint: Color.rossAccent,
+            shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
+            fallbackFillOpacity: 0.84,
+            fallbackStrokeOpacity: 0.62
+        )
+        .shadow(color: Color.rossShadow.opacity(0.12), radius: 12, y: 5)
         .animation(.snappy(duration: 0.24), value: isExpanded)
     }
 }
@@ -550,15 +588,17 @@ struct AlphaMatterStarterCard: View {
                         .focused($matterNameFocused)
                         .padding(.horizontal, 14)
                         .frame(minHeight: 52)
-                        .rossGlassSurface(
+                        .rossNativeGlassSurface(
                             tint: matterNameFocused ? Color.rossAccent : Color.rossHighlight,
-                            cornerRadius: 18,
+                            shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
                             interactive: true,
-                            shadowOpacity: matterNameFocused ? 0.10 : 0.06,
-                            shadowRadius: matterNameFocused ? 10 : 6,
-                            shadowY: matterNameFocused ? 4 : 2,
-                            fillOpacity: 0.84,
-                            strokeOpacity: 0.52
+                            fallbackFillOpacity: 0.84,
+                            fallbackStrokeOpacity: 0.52
+                        )
+                        .shadow(
+                            color: Color.rossShadow.opacity(matterNameFocused ? 0.10 : 0.06),
+                            radius: matterNameFocused ? 10 : 6,
+                            y: matterNameFocused ? 4 : 2
                         )
                         .accessibilityLabel(rossLocalized("matter_name"))
                         .submitLabel(.done)
@@ -648,7 +688,13 @@ struct AlphaAssistantActivityStrip: View {
             }
         }
         .padding(14)
-        .rossGlassSurface(tint: tint.opacity(colorScheme == .dark ? 0.18 : 0.14), cornerRadius: 18, strokeOpacity: 0.58)
+        .rossNativeGlassSurface(
+            tint: tint,
+            shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
+            fallbackFillOpacity: colorScheme == .dark ? 0.82 : 0.84,
+            fallbackStrokeOpacity: 0.58
+        )
+        .shadow(color: Color.rossShadow.opacity(0.12), radius: 12, y: 5)
     }
 }
 
