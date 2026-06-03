@@ -122,15 +122,13 @@ struct AlphaWorkbenchTabBar: View {
             }
         }
         .padding(4)
-        .rossGlassSurface(
+        .rossNativeGlassSurface(
             tint: Color.rossAccent,
-            cornerRadius: 14,
-            shadowOpacity: 0.10,
-            shadowRadius: 10,
-            shadowY: 4,
-            fillOpacity: 0.78,
-            strokeOpacity: 0.48
+            shape: RoundedRectangle(cornerRadius: 14, style: .continuous),
+            fallbackFillOpacity: 0.78,
+            fallbackStrokeOpacity: 0.48
         )
+        .shadow(color: Color.rossShadow.opacity(0.10), radius: 10, y: 4)
     }
 }
 
@@ -184,16 +182,14 @@ struct AlphaTodayWorkbenchScreen: View {
                             .foregroundStyle(Color.rossInk)
                             .padding(.horizontal, 16)
                             .frame(height: 48)
-                            .rossGlassSurface(
+                            .rossNativeGlassSurface(
                                 tint: Color.rossAccent,
-                                cornerRadius: 18,
+                                shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
                                 interactive: true,
-                                shadowOpacity: 0.08,
-                                shadowRadius: 8,
-                                shadowY: 3,
-                                fillOpacity: 0.82,
-                                strokeOpacity: 0.48
+                                fallbackFillOpacity: 0.82,
+                                fallbackStrokeOpacity: 0.48
                             )
+                            .shadow(color: Color.rossShadow.opacity(0.08), radius: 8, y: 3)
                         }
                         .buttonStyle(.plain)
                     }
@@ -306,16 +302,14 @@ struct AlphaPreparedWorkScreen: View {
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(Color.rossInk)
                             .frame(width: 34, height: 34)
-                            .rossGlassSurface(
+                            .rossNativeGlassSurface(
                                 tint: Color.rossAccent,
-                                cornerRadius: 17,
+                                shape: RoundedRectangle(cornerRadius: 17, style: .continuous),
                                 interactive: true,
-                                shadowOpacity: 0.07,
-                                shadowRadius: 7,
-                                shadowY: 3,
-                                fillOpacity: 0.80,
-                                strokeOpacity: 0.46
+                                fallbackFillOpacity: 0.80,
+                                fallbackStrokeOpacity: 0.46
                             )
+                            .shadow(color: Color.rossShadow.opacity(0.07), radius: 7, y: 3)
                     }
                 }
 
@@ -351,15 +345,13 @@ struct AlphaLocalPrivacyBadge: View {
         .foregroundStyle(Color.rossInk.opacity(0.76))
         .padding(.horizontal, 12)
         .frame(height: 32)
-        .rossGlassSurface(
+        .rossNativeGlassSurface(
             tint: Color.rossAccent,
-            cornerRadius: 16,
-            shadowOpacity: 0.06,
-            shadowRadius: 6,
-            shadowY: 2,
-            fillOpacity: 0.80,
-            strokeOpacity: 0.46
+            shape: RoundedRectangle(cornerRadius: 16, style: .continuous),
+            fallbackFillOpacity: 0.80,
+            fallbackStrokeOpacity: 0.46
         )
+        .shadow(color: Color.rossShadow.opacity(0.06), radius: 6, y: 2)
     }
 }
 
@@ -676,16 +668,14 @@ struct AlphaTopRailIconButton: View {
         } else {
             Button(action: action) {
                 icon
-                    .rossGlassSurface(
+                    .rossNativeGlassSurface(
                         tint: Color.rossAccent,
-                        cornerRadius: 17,
+                        shape: RoundedRectangle(cornerRadius: 17, style: .continuous),
                         interactive: true,
-                        shadowOpacity: 0.07,
-                        shadowRadius: 7,
-                        shadowY: 3,
-                        fillOpacity: 0.80,
-                        strokeOpacity: 0.46
+                        fallbackFillOpacity: 0.80,
+                        fallbackStrokeOpacity: 0.46
                     )
+                    .shadow(color: Color.rossShadow.opacity(0.07), radius: 7, y: 3)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(accessibilityLabel)
