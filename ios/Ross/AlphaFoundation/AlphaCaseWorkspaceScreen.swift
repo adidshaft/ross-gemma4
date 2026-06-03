@@ -491,23 +491,7 @@ struct AlphaMatterAttentionCard: View {
                     }
                 }
 
-                Button {
-                    onOpenReview()
-                } label: {
-                    Text(rossLocalized("open_review"))
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.rossInk)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .rossNativeGlassSurface(
-                            tint: Color.rossAccent,
-                            shape: Capsule(),
-                            interactive: true,
-                            fallbackFillOpacity: 0.82,
-                            fallbackStrokeOpacity: 0.48
-                        )
-                }
-                .buttonStyle(.plain)
+                AlphaWorkspaceReviewButton(action: onOpenReview)
                 .frame(maxWidth: .infinity, alignment: .trailing)
             }
         }
@@ -530,6 +514,37 @@ struct AlphaMatterAttentionCard: View {
             fillOpacity: 0.82,
             strokeOpacity: 0.46
         )
+    }
+}
+
+private struct AlphaWorkspaceReviewButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            Button(rossLocalized("open_review"), action: action)
+                .font(.caption.weight(.semibold))
+                .buttonStyle(.glass)
+                .tint(Color.rossAccent)
+        } else {
+            Button {
+                action()
+            } label: {
+                Text(rossLocalized("open_review"))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.rossInk)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .rossNativeGlassSurface(
+                        tint: Color.rossAccent,
+                        shape: Capsule(),
+                        interactive: true,
+                        fallbackFillOpacity: 0.82,
+                        fallbackStrokeOpacity: 0.48
+                    )
+            }
+            .buttonStyle(.plain)
+        }
     }
 }
 
