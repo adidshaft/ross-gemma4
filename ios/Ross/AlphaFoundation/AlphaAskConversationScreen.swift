@@ -1144,19 +1144,10 @@ struct AlphaAskTurnCard: View {
                             privacyExpanded.toggle()
                         }
                     } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "lock.fill")
-                                .font(.system(size: 10, weight: .bold))
-                            Text(alphaCompactPrivacyLabel(result))
-                                .font(.caption2.weight(.semibold))
-                            Spacer(minLength: 4)
-                            Image(systemName: privacyExpanded ? "chevron.up" : "chevron.down")
-                                .font(.system(size: 9, weight: .bold))
-                        }
-                        .foregroundStyle(Color.rossInk.opacity(0.52))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 7)
-                        .rossGlassSurface(cornerRadius: 999, interactive: true, shadowOpacity: 0.03, shadowRadius: 3, shadowY: 1, strokeOpacity: 0.44)
+                        AlphaAnswerPrivacyToggleLabel(
+                            title: alphaCompactPrivacyLabel(result),
+                            isExpanded: privacyExpanded
+                        )
                     }
                     .buttonStyle(.plain)
 
@@ -1391,6 +1382,41 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
                 AlphaAnswerStatusPill(note: statusNote)
             }
         }
+    }
+}
+
+private struct AlphaAnswerPrivacyToggleLabel: View {
+    let title: String
+    let isExpanded: Bool
+
+    var body: some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            label
+                .glassEffect(
+                    .regular
+                        .tint(Color.rossAccent.opacity(0.08))
+                        .interactive(),
+                    in: .capsule
+                )
+        } else {
+            label
+                .rossGlassSurface(cornerRadius: 999, interactive: true, shadowOpacity: 0.03, shadowRadius: 3, shadowY: 1, strokeOpacity: 0.44)
+        }
+    }
+
+    private var label: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 10, weight: .bold))
+            Text(title)
+                .font(.caption2.weight(.semibold))
+            Spacer(minLength: 4)
+            Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                .font(.system(size: 9, weight: .bold))
+        }
+        .foregroundStyle(Color.rossInk.opacity(0.52))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
     }
 }
 
