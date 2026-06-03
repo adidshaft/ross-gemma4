@@ -482,8 +482,10 @@ private struct AlphaAssistantSetupProgressCard: View {
                     .fixedSize(horizontal: false, vertical: true)
 
                 if let progress = alphaDownloadProgressValue(job) {
-                    ProgressView(value: progress)
-                        .tint(Color.rossAccent)
+                    RossProgressBar(value: progress, tint: Color.rossAccent, height: 7)
+                        .frame(height: 7)
+                        .accessibilityLabel(alphaAssistantSetupProgressLabel(job))
+                        .accessibilityValue(Text("\(Int((progress * 100).rounded()))%"))
                     Text(alphaAssistantSetupProgressLabel(job))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Color.rossInk.opacity(0.62))
