@@ -3773,6 +3773,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "File value",
             "te": "File value"
         ],
+        "possible_conflict_found_detail": [
+            "en": "Possible conflict found. %@: %@. %@: %@.",
+            "hi": "Possible conflict मिला. %@: %@. %@: %@.",
+            "bn": "Possible conflict পাওয়া গেছে. %@: %@. %@: %@.",
+            "ta": "Possible conflict கண்டுபிடிக்கப்பட்டது. %@: %@. %@: %@.",
+            "te": "Possible conflict కనుగొంది. %@: %@. %@: %@."
+        ],
         "keep_matter_value": [
             "en": "Keep matter value",
             "hi": "matter value रखें",

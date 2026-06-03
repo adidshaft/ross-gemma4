@@ -1260,9 +1260,31 @@ final class AlphaExtractionTests: XCTestCase {
             alphaConfidenceLabel(confidence: 0.92, needsReview: true),
             "कृपया confirm करें"
         )
+        let reviewField = AlphaExtractedLegalField(
+            caseId: UUID(),
+            documentId: UUID(),
+            fieldType: .court,
+            label: "Court",
+            value: "Delhi High Court",
+            sourceRefs: [],
+            confidence: 0.92,
+            extractionMode: .basic,
+            extractionPass: .regex,
+            needsReview: true
+        )
+        XCTAssertEqual(reviewField.confidenceLabel, "कृपया confirm करें")
         XCTAssertEqual(
             alphaConfidenceSupportText(confidence: 0.92, needsReview: true),
             "इस पर भरोसा करने से पहले आपका confirmation चाहिए"
+        )
+        XCTAssertEqual(
+            alphaPossibleConflictMessage(
+                matterLabel: rossLocalized("matter_value", languageCode: "ta"),
+                matterValue: "Old value",
+                fileValue: "New value",
+                languageCode: "ta"
+            ),
+            "Possible conflict கண்டுபிடிக்கப்பட்டது. Matter value: Old value. File value: New value."
         )
         XCTAssertEqual(alphaAttentionHeadline(0), "आज सब under control है")
         XCTAssertEqual(alphaAttentionHeadline(1), "1 item को attention चाहिए")

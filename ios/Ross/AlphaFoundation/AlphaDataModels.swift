@@ -959,12 +959,12 @@ struct AlphaExtractedLegalField: Identifiable, Codable, Hashable, Sendable {
 
     var confidenceLabel: String {
         if needsReview {
-            return "Please confirm"
+            return rossLocalized("please_confirm")
         }
         if confidence < 0.84 {
-            return "Low confidence"
+            return rossLocalized("low_confidence")
         }
-        return "Verified"
+        return rossLocalized("verified")
     }
 }
 

@@ -19,6 +19,21 @@ private extension String {
     }
 }
 
+func alphaPossibleConflictMessage(
+    matterLabel: String,
+    matterValue: String,
+    fileValue: String,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
+    String(
+        format: rossLocalized("possible_conflict_found_detail", languageCode: languageCode),
+        matterLabel,
+        matterValue,
+        rossLocalized("file_value", languageCode: languageCode),
+        fileValue
+    )
+}
+
 func alphaDocumentReviewSummaryLabel(
     fieldsFound: Int,
     verified: Int,
@@ -510,7 +525,7 @@ extension AlphaRossModel {
                     caseId: caseMatter.id,
                     documentId: document.id,
                     kind: kind,
-                    message: "Possible conflict found. \(matterLabel): \(existing). File value: \(fileValue).",
+                    message: alphaPossibleConflictMessage(matterLabel: matterLabel, matterValue: existing, fileValue: fileValue),
                     sourceRefs: field.sourceRefs,
                     severity: .warning,
                     fieldType: field.fieldType,
@@ -524,20 +539,20 @@ extension AlphaRossModel {
             switch field.fieldType {
             case .caseNumber:
                 if let caseNumber = caseMatter.caseNumber {
-                    appendConflict(field: field, kind: .caseNumberConflict, matterLabel: "Matter value", matterValue: caseNumber)
+                    appendConflict(field: field, kind: .caseNumberConflict, matterLabel: rossLocalized("matter_value"), matterValue: caseNumber)
                 }
             case .court:
-                appendConflict(field: field, kind: .courtConflict, matterLabel: "Matter value", matterValue: caseMatter.forum)
+                appendConflict(field: field, kind: .courtConflict, matterLabel: rossLocalized("matter_value"), matterValue: caseMatter.forum)
             case .partyName:
                 if let parties = caseMatter.partiesSummary {
-                    appendConflict(field: field, kind: .partyConflict, matterLabel: "Matter value", matterValue: parties)
+                    appendConflict(field: field, kind: .partyConflict, matterLabel: rossLocalized("matter_value"), matterValue: parties)
                 }
             case .nextDate:
                 if let nextHearing = caseMatter.nextHearing, let parsed = alphaParsedDate(from: field.value), !Calendar.current.isDate(nextHearing, inSameDayAs: parsed) {
                     appendConflict(
                         field: field,
                         kind: .dateConflict,
-                        matterLabel: "Matter value",
+                        matterLabel: rossLocalized("matter_value"),
                         matterValue: nextHearing.formatted(date: .abbreviated, time: .omitted)
                     )
                 }
