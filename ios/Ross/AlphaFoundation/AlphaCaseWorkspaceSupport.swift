@@ -380,9 +380,35 @@ struct AlphaReviewRow: View {
                     .foregroundStyle(Color.rossInk.opacity(0.35))
             }
             .padding(12)
-            .rossGlassSurface(tint: Color.orange, cornerRadius: 16, interactive: true, shadowOpacity: 0.07, shadowRadius: 7, shadowY: 3, fillOpacity: 0.78, strokeOpacity: 0.48)
+            .modifier(AlphaReviewQueueRowSurface())
         }
         .buttonStyle(.plain)
+    }
+}
+
+private struct AlphaReviewQueueRowSurface: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            content
+                .glassEffect(
+                    .regular
+                        .tint(Color.orange.opacity(0.12))
+                        .interactive(),
+                    in: .rect(cornerRadius: 16)
+                )
+        } else {
+            content
+                .rossGlassSurface(
+                    tint: Color.orange,
+                    cornerRadius: 16,
+                    interactive: true,
+                    shadowOpacity: 0.07,
+                    shadowRadius: 7,
+                    shadowY: 3,
+                    fillOpacity: 0.78,
+                    strokeOpacity: 0.48
+                )
+        }
     }
 }
 
