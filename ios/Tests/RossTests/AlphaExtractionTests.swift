@@ -1194,6 +1194,28 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testAssistantSupportStatusDetailAvoidsRawRuntimeTextInSupportedLanguages() {
+        let runtimeHealth = AlphaLocalRuntimeHealth(
+            runtimeMode: .llamaCppGguf,
+            available: false,
+            modelPathPresent: true,
+            modelPathLabel: "ross-model.gguf",
+            checksumVerified: false,
+            supportedTasks: [.matterQuestionAnswer],
+            lastErrorCategory: "network_range_probe_failed",
+            userFacingStatus: "Model provider byte-range check failed."
+        )
+
+        XCTAssertEqual(
+            alphaAssistantSupportStatusDetail(runtimeHealth: runtimeHealth, languageCode: "hi"),
+            rossLocalized("runtime_health_llama_needs_repair", languageCode: "hi")
+        )
+        XCTAssertFalse(
+            alphaAssistantSupportStatusDetail(runtimeHealth: runtimeHealth, languageCode: "hi")
+                .localizedCaseInsensitiveContains("byte-range check failed")
+        )
+    }
+
     @MainActor
     func testInstantModeSetupGuidancePointsToAssistantSurface() {
         let service = StubLocalRuntimeService(privacyLedger: PrivacyLedgerService())

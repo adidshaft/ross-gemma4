@@ -416,6 +416,20 @@ func alphaAssistantVerificationSummary(
     return rossLocalized("assistant_verification_missing", languageCode: languageCode)
 }
 
+func alphaAssistantSupportStatusDetail(
+    runtimeHealth: AlphaLocalRuntimeHealth,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
+    if runtimeHealth.available {
+        return rossLocalized("ready_for_private_answers_on_iphone", languageCode: languageCode)
+    }
+    return alphaPrivateAIVisibleRecoveryText(
+        runtimeHealth.userFacingStatus,
+        languageCode: languageCode,
+        fallback: rossLocalized("runtime_health_llama_needs_repair", languageCode: languageCode)
+    )
+}
+
 #if DEBUG
 private struct AlphaPrivateAIInternalDiagnostics: View {
     @Bindable var model: AlphaRossModel
@@ -446,7 +460,7 @@ private struct AlphaPrivateAIInternalDiagnostics: View {
                 let lastPreview = model.persisted.publicLawPreview
                 let resetCount = model.privateAISnapshot.resetCount
 
-                AlphaSettingsValueRow(label: rossLocalized("status"), value: runtimeHealth.userFacingStatus)
+                AlphaSettingsValueRow(label: rossLocalized("status"), value: alphaAssistantSupportStatusDetail(runtimeHealth: runtimeHealth))
                 AlphaSettingsValueRow(label: rossLocalized("assistant_can_answer"), value: runtimeHealth.available ? rossLocalized("yes") : rossLocalized("no"))
                 AlphaSettingsValueRow(label: rossLocalized("setup_file_present"), value: runtimeHealth.modelPathPresent ? rossLocalized("yes") : rossLocalized("no"))
 
