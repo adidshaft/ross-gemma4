@@ -1383,18 +1383,10 @@ struct AlphaDocumentInspectCard: View {
                             Button {
                                 onOpenSourceRef(source)
                             } label: {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(alphaSourceRefDisplayLabel(source, contextDocumentTitle: documentTitle))
-                                        .font(.subheadline.weight(.semibold))
-                                        .foregroundStyle(Color.rossInk)
-                                    Text(source.detail)
-                                        .font(.footnote)
-                                        .foregroundStyle(Color.rossInk.opacity(0.65))
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(12)
-                                .rossGlassSurface(cornerRadius: 14, interactive: true, shadowOpacity: 0.04, shadowRadius: 4, shadowY: 1, strokeOpacity: 0.46)
+                                AlphaDocumentSourceRow(
+                                    title: alphaSourceRefDisplayLabel(source, contextDocumentTitle: documentTitle),
+                                    detail: source.detail
+                                )
                             }
                             .buttonStyle(.plain)
                         }
@@ -1452,6 +1444,43 @@ struct AlphaDocumentInspectCard: View {
                 .padding(12)
                 .rossGlassSurface(cornerRadius: 16, interactive: true, shadowOpacity: 0.04, shadowRadius: 4, shadowY: 1, strokeOpacity: 0.44)
             }
+        }
+    }
+}
+
+private struct AlphaDocumentSourceRow: View {
+    let title: String
+    let detail: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Color.rossInk)
+            Text(detail)
+                .font(.footnote)
+                .foregroundStyle(Color.rossInk.opacity(0.65))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .modifier(AlphaDocumentSourceRowSurface())
+    }
+}
+
+private struct AlphaDocumentSourceRowSurface: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            content
+                .glassEffect(
+                    .regular
+                        .tint(Color.rossAccent.opacity(0.10))
+                        .interactive(),
+                    in: .rect(cornerRadius: 14)
+                )
+        } else {
+            content
+                .rossGlassSurface(cornerRadius: 14, interactive: true, shadowOpacity: 0.04, shadowRadius: 4, shadowY: 1, strokeOpacity: 0.46)
         }
     }
 }
