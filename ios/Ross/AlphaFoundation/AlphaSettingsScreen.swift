@@ -281,15 +281,14 @@ struct AlphaSettingsScreen: View {
                                 .font(.system(size: 13, weight: .regular, design: .monospaced))
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 10)
-                                .rossGlassSurface(
-                                    tint: Color.rossAccent.opacity(0.12),
-                                    cornerRadius: 14,
+                                .rossNativeGlassSurface(
+                                    tint: Color.rossAccent,
+                                    shape: RoundedRectangle(cornerRadius: 14, style: .continuous),
                                     interactive: true,
-                                    shadowOpacity: 0.04,
-                                    shadowRadius: 4,
-                                    shadowY: 1,
-                                    strokeOpacity: 0.46
+                                    fallbackFillOpacity: 0.84,
+                                    fallbackStrokeOpacity: 0.46
                                 )
+                                .shadow(color: Color.rossShadow.opacity(0.04), radius: 4, y: 1)
 
                             Text(rossLocalized("settings_test_server_detail"))
                                 .font(.caption2)
@@ -474,6 +473,13 @@ struct AlphaSettingsLanguageGrid: View {
             }
         }
         .padding(.horizontal, 12)
-        .rossGlassSurface(cornerRadius: 16, interactive: true, shadowOpacity: 0.07, shadowRadius: 7, shadowY: 3, fillOpacity: 0.8, strokeOpacity: 0.46)
+        .rossNativeGlassSurface(
+            tint: Color.rossAccent,
+            shape: RoundedRectangle(cornerRadius: 16, style: .continuous),
+            interactive: true,
+            fallbackFillOpacity: 0.80,
+            fallbackStrokeOpacity: 0.46
+        )
+        .shadow(color: Color.rossShadow.opacity(0.07), radius: 7, y: 3)
     }
 }

@@ -237,15 +237,13 @@ private struct AlphaIncomingFileRow: View {
         }
         .padding(.horizontal, 12)
         .frame(height: 46)
-        .rossGlassSurface(
+        .rossNativeGlassSurface(
             tint: Color.rossHighlight,
-            cornerRadius: 14,
-            shadowOpacity: 0.05,
-            shadowRadius: 5,
-            shadowY: 2,
-            fillOpacity: 0.78,
-            strokeOpacity: 0.42
+            shape: RoundedRectangle(cornerRadius: 14, style: .continuous),
+            fallbackFillOpacity: 0.78,
+            fallbackStrokeOpacity: 0.42
         )
+        .shadow(color: Color.rossShadow.opacity(0.05), radius: 5, y: 2)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(alphaIncomingFileReadyLabel(fileName))
     }
@@ -269,16 +267,14 @@ private struct AlphaIncomingMatterTitleField: View {
                 .focused($isFocused)
                 .padding(.horizontal, 14)
                 .frame(minHeight: 52)
-                .rossGlassSurface(
+                .rossNativeGlassSurface(
                     tint: isFocused ? Color.rossAccent : Color.rossHighlight,
-                    cornerRadius: 18,
+                    shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
                     interactive: true,
-                    shadowOpacity: isFocused ? 0.10 : 0.06,
-                    shadowRadius: isFocused ? 10 : 6,
-                    shadowY: isFocused ? 4 : 2,
-                    fillOpacity: 0.84,
-                    strokeOpacity: 0.52
+                    fallbackFillOpacity: 0.84,
+                    fallbackStrokeOpacity: 0.52
                 )
+                .shadow(color: Color.rossShadow.opacity(isFocused ? 0.10 : 0.06), radius: isFocused ? 10 : 6, y: isFocused ? 4 : 2)
                 .overlay {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .stroke(
@@ -326,16 +322,14 @@ private struct AlphaIncomingMatterRow: View {
                 .foregroundStyle(Color.rossInk.opacity(0.38))
         }
         .padding(12)
-        .rossGlassSurface(
+        .rossNativeGlassSurface(
             tint: Color.rossAccent,
-            cornerRadius: 14,
+            shape: RoundedRectangle(cornerRadius: 14, style: .continuous),
             interactive: true,
-            shadowOpacity: 0.08,
-            shadowRadius: 8,
-            shadowY: 3,
-            fillOpacity: 0.76,
-            strokeOpacity: 0.44
+            fallbackFillOpacity: 0.76,
+            fallbackStrokeOpacity: 0.44
         )
+        .shadow(color: Color.rossShadow.opacity(0.08), radius: 8, y: 3)
     }
 }
 

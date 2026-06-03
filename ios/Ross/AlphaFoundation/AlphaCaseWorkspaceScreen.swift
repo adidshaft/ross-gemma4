@@ -504,16 +504,14 @@ struct AlphaMatterAttentionCard: View {
                 .frame(width: 2)
                 .padding(.vertical, 10)
         }
-        .rossGlassSurface(
+        .rossNativeGlassSurface(
             tint: tint,
-            cornerRadius: 16,
+            shape: RoundedRectangle(cornerRadius: 16, style: .continuous),
             interactive: true,
-            shadowOpacity: 0.08,
-            shadowRadius: 8,
-            shadowY: 3,
-            fillOpacity: 0.82,
-            strokeOpacity: 0.46
+            fallbackFillOpacity: 0.82,
+            fallbackStrokeOpacity: 0.46
         )
+        .shadow(color: Color.rossShadow.opacity(0.08), radius: 8, y: 3)
     }
 }
 
