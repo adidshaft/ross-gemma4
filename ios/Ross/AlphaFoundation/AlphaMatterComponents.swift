@@ -374,13 +374,13 @@ struct AlphaExpandableDocumentRow: View {
 
                     RossGlassGroup(spacing: 8) {
                         HStack(spacing: 8) {
-                            Button(rossLocalized("open"), action: onOpen)
+                            Button(rossLocalized("open_document"), action: onOpen)
                                 .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 14)
 
-                            Button(rossLocalized("chat"), action: onOpenChat)
+                            Button(rossLocalized("continue_in_chat"), action: onOpenChat)
                                 .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 14, expandsHorizontally: false)
 
-                            Button(rossLocalized("new_review_chat"), action: onStartReviewChat)
+                            Button(rossLocalized("start_review_chat"), action: onStartReviewChat)
                                 .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 14, expandsHorizontally: false)
 
                             if canMoveEarlier {
