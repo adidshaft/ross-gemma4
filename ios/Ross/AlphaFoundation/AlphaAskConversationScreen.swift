@@ -1380,11 +1380,7 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
                     Menu {
                         menu()
                     } label: {
-                        Image(systemName: "ellipsis")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(Color.rossInk.opacity(0.48))
-                            .frame(width: 28, height: 28)
-                            .rossGlassSurface(cornerRadius: 999, interactive: true, shadowOpacity: 0.03, shadowRadius: 3, shadowY: 1, strokeOpacity: 0.42)
+                        AlphaCleanAnswerMenuLabel()
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(rossLocalized("more_answer_actions"))
@@ -1395,6 +1391,30 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
                 AlphaAnswerStatusPill(note: statusNote)
             }
         }
+    }
+}
+
+private struct AlphaCleanAnswerMenuLabel: View {
+    var body: some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            icon
+                .glassEffect(
+                    .regular
+                        .tint(Color.rossAccent.opacity(0.08))
+                        .interactive(),
+                    in: .capsule
+                )
+        } else {
+            icon
+                .rossGlassSurface(cornerRadius: 999, interactive: true, shadowOpacity: 0.03, shadowRadius: 3, shadowY: 1, strokeOpacity: 0.42)
+        }
+    }
+
+    private var icon: some View {
+        Image(systemName: "ellipsis")
+            .font(.system(size: 14, weight: .bold))
+            .foregroundStyle(Color.rossInk.opacity(0.48))
+            .frame(width: 28, height: 28)
     }
 }
 
