@@ -820,7 +820,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 baseResult: model.localModelAnswerBaseResult(from: baseResult)
             )
 
-            XCTAssertEqual("Ross answered locally", payload?.headline)
+            XCTAssertEqual(rossLocalized("ask_local_answered_locally_title"), payload?.headline)
             XCTAssertTrue(payload?.sections.first?.contains("FMLS") == true)
         }
     }

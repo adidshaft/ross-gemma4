@@ -5383,6 +5383,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Ross இதை உங்கள் files-இலிருந்து draft செய்தது",
             "te": "Ross దీన్ని మీ files నుండి draft చేసింది"
         ],
+        "ask_local_answered_locally_title": [
+            "en": "Ross answered locally",
+            "hi": "Ross ने locally जवाब दिया",
+            "bn": "Ross locally উত্তর দিয়েছে",
+            "ta": "Ross locally பதிலளித்தது",
+            "te": "Ross locally సమాధానం ఇచ్చింది"
+        ],
+        "ask_local_context_review_recommended": [
+            "en": "Ross found local matter context on this device, but advocate review is still recommended.",
+            "hi": "Ross को इस device पर local matter context मिला, लेकिन advocate review अभी भी recommended है.",
+            "bn": "Ross এই device-এ local matter context পেয়েছে, কিন্তু advocate review এখনও recommended.",
+            "ta": "Ross இந்த device-இல் local matter context கண்டது, ஆனால் advocate review இன்னும் recommended.",
+            "te": "Ross ఈ device లో local matter context కనుగొంది, కానీ advocate review ఇంకా recommended."
+        ],
+        "ask_local_output_review_recommended": [
+            "en": "Ross found local matter context, but the private assistant output was not usable enough to rely on without advocate review.",
+            "hi": "Ross को local matter context मिला, लेकिन private assistant output advocate review के बिना भरोसा करने लायक नहीं था.",
+            "bn": "Ross local matter context পেয়েছে, কিন্তু private assistant output advocate review ছাড়া নির্ভর করার মতো যথেষ্ট usable ছিল না.",
+            "ta": "Ross local matter context கண்டது, ஆனால் private assistant output advocate review இல்லாமல் நம்பும் அளவுக்கு usable இல்லை.",
+            "te": "Ross local matter context కనుగొంది, కానీ private assistant output advocate review లేకుండా ఆధారపడేంత usable కాదు."
+        ],
         "ask_local_answered_files_status": [
             "en": "Answered from your files",
             "hi": "आपकी files से जवाब",

@@ -1424,9 +1424,9 @@ extension AlphaRossModel {
 
     func localModelAnswerBaseResult(from baseResult: AlphaAskResult) -> AlphaAskResult {
         var copy = baseResult
-        copy.answerTitle = "Ross answered locally"
+        copy.answerTitle = rossLocalized("ask_local_answered_locally_title")
         copy.answerSections = []
-        copy.statusNote = "Private assistant"
+        copy.statusNote = rossLocalized("private_assistant")
         return copy
     }
 
@@ -1441,13 +1441,13 @@ extension AlphaRossModel {
         let headline = trimmedHeadline.isEmpty ? fallbackHeadline : trimmedHeadline
         let sections = AlphaMatterAskPayloadParser.normalizedDisplaySections(localResult.answerSections)
         let normalizedSections = sections.isEmpty
-            ? ["Ross found local matter context on this device, but advocate review is still recommended."]
+            ? [rossLocalized("ask_local_context_review_recommended")]
             : sections
         let trimmedStatusNote = localResult.statusNote?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return AlphaMatterAskRuntimePayload(
             headline: headline,
             sections: Array(normalizedSections.prefix(3)),
-            statusNote: trimmedStatusNote.isEmpty ? "Private assistant" : trimmedStatusNote
+            statusNote: trimmedStatusNote.isEmpty ? rossLocalized("private_assistant") : trimmedStatusNote
         )
     }
 
@@ -1987,7 +1987,7 @@ extension AlphaRossModel {
         return AlphaMatterAskRuntimePayload(
             headline: headline.isEmpty ? baseResult.answerTitle : headline,
             sections: sections,
-            statusNote: "Private assistant"
+            statusNote: rossLocalized("private_assistant")
         )
     }
 
@@ -2011,7 +2011,7 @@ extension AlphaRossModel {
             return AlphaMatterAskRuntimePayload(
                 headline: "उपलब्ध स्रोतों से सार",
                 sections: Array(sections.prefix(3)),
-                statusNote: "Private assistant"
+                statusNote: rossLocalized("private_assistant")
             )
         case .bengali:
             var sections = [
@@ -2024,7 +2024,7 @@ extension AlphaRossModel {
             return AlphaMatterAskRuntimePayload(
                 headline: "উপলব্ধ সূত্র থেকে সারাংশ",
                 sections: Array(sections.prefix(3)),
-                statusNote: "Private assistant"
+                statusNote: rossLocalized("private_assistant")
             )
         case .tamil:
             var sections = [
@@ -2037,7 +2037,7 @@ extension AlphaRossModel {
             return AlphaMatterAskRuntimePayload(
                 headline: "கிடைக்கும் ஆதாரங்களிலிருந்து சுருக்கம்",
                 sections: Array(sections.prefix(3)),
-                statusNote: "Private assistant"
+                statusNote: rossLocalized("private_assistant")
             )
         case .telugu:
             var sections = [
@@ -2050,16 +2050,16 @@ extension AlphaRossModel {
             return AlphaMatterAskRuntimePayload(
                 headline: "లభ్యమైన మూలాల నుంచి సారాంశం",
                 sections: Array(sections.prefix(3)),
-                statusNote: "Private assistant"
+                statusNote: rossLocalized("private_assistant")
             )
         case .english:
             let sections = baseResult.answerSections.isEmpty
-                ? ["Ross found local matter context, but the private assistant output was not usable enough to rely on without advocate review."]
+                ? [rossLocalized("ask_local_output_review_recommended")]
                 : baseResult.answerSections
             return AlphaMatterAskRuntimePayload(
                 headline: baseResult.answerTitle,
                 sections: Array(sections.prefix(3)),
-                statusNote: "Private assistant"
+                statusNote: rossLocalized("private_assistant")
             )
         }
     }
