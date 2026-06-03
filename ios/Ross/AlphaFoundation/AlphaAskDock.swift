@@ -479,33 +479,11 @@ struct AlphaRootAskDock: View {
                         strokeOpacity: 0.52
                     )
 
-                    Button {
-                        if canSend {
-                            send()
-                        } else {
-                            cancelDockEditing()
-                        }
-                    } label: {
-                        Image(systemName: canSend ? "arrow.up" : "xmark")
-                            .font((canSend ? Font.body : Font.callout).weight(.bold))
-                            .imageScale(.small)
-                            .foregroundStyle(canSend ? (colorScheme == .dark ? Color.rossGroupedBackground : Color.rossCardBackground) : dockPrimaryText.opacity(0.82))
-                            .frame(width: 36, height: 36)
-                            .background {
-                                if canSend {
-                                    Circle().fill(Color.rossAccent.opacity(0.92))
-                                }
-                            }
-                            .rossNativeGlassSurface(
-                                tint: canSend ? Color.rossAccent : Color.rossHighlight,
-                                shape: Circle(),
-                                interactive: true,
-                                fallbackFillOpacity: canSend ? 0.88 : (colorScheme == .dark ? 0.58 : 0.78),
-                                fallbackStrokeOpacity: canSend ? 0.24 : 0.52
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(canSend ? rossLocalized("send_ask_ross_question") : rossLocalized("close_ask_ross"))
+                    AlphaAskDockSendButton(
+                        canSend: canSend,
+                        onSend: { send() },
+                        onCancel: cancelDockEditing
+                    )
                 }
             }
             .contentShape(Rectangle())
@@ -880,6 +858,68 @@ struct AlphaStaticActivityGlyph: View {
         }
         .frame(width: 46, height: 16)
         .accessibilityHidden(true)
+    }
+}
+
+private struct AlphaAskDockSendButton: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    let canSend: Bool
+    let onSend: () -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            if canSend {
+                Button(action: onSend) {
+                    Image(systemName: "arrow.up")
+                        .font(Font.body.weight(.bold))
+                        .imageScale(.small)
+                        .frame(width: 36, height: 36)
+                }
+                .buttonStyle(.glassProminent)
+                .tint(Color.rossAccent)
+                .accessibilityLabel(rossLocalized("send_ask_ross_question"))
+            } else {
+                Button(action: onCancel) {
+                    Image(systemName: "xmark")
+                        .font(Font.callout.weight(.bold))
+                        .imageScale(.small)
+                        .frame(width: 36, height: 36)
+                }
+                .buttonStyle(.glass)
+                .tint(Color.rossHighlight)
+                .accessibilityLabel(rossLocalized("close_ask_ross"))
+            }
+        } else {
+            Button {
+                if canSend {
+                    onSend()
+                } else {
+                    onCancel()
+                }
+            } label: {
+                Image(systemName: canSend ? "arrow.up" : "xmark")
+                    .font((canSend ? Font.body : Font.callout).weight(.bold))
+                    .imageScale(.small)
+                    .foregroundStyle(canSend ? (colorScheme == .dark ? Color.rossGroupedBackground : Color.rossCardBackground) : Color.rossInk.opacity(0.82))
+                    .frame(width: 36, height: 36)
+                    .background {
+                        if canSend {
+                            Circle().fill(Color.rossAccent.opacity(0.92))
+                        }
+                    }
+                    .rossNativeGlassSurface(
+                        tint: canSend ? Color.rossAccent : Color.rossHighlight,
+                        shape: Circle(),
+                        interactive: true,
+                        fallbackFillOpacity: canSend ? 0.88 : (colorScheme == .dark ? 0.58 : 0.78),
+                        fallbackStrokeOpacity: canSend ? 0.24 : 0.52
+                    )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(canSend ? rossLocalized("send_ask_ross_question") : rossLocalized("close_ask_ross"))
+        }
     }
 }
 
