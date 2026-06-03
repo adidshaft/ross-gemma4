@@ -1110,14 +1110,10 @@ struct AlphaAskTurnCard: View {
                                         sourcesExpanded.toggle()
                                     }
                                 } label: {
-                                    HStack(spacing: 8) {
-                                        Text(sourcesExpanded ? rossLocalized("hide_sources") : alphaShowSourcesLabel(result.caseFileSources.count))
-                                            .font(.footnote.weight(.semibold))
-                                        Spacer(minLength: 8)
-                                        Image(systemName: sourcesExpanded ? "chevron.up" : "chevron.down")
-                                            .font(.system(size: 10, weight: .bold))
-                                    }
-                                    .foregroundStyle(Color.rossAccent)
+                                    AlphaAnswerSourcesToggleLabel(
+                                        title: sourcesExpanded ? rossLocalized("hide_sources") : alphaShowSourcesLabel(result.caseFileSources.count),
+                                        isExpanded: sourcesExpanded
+                                    )
                                 }
                                 .buttonStyle(.plain)
 
@@ -1415,6 +1411,39 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
                 AlphaAnswerStatusPill(note: statusNote)
             }
         }
+    }
+}
+
+private struct AlphaAnswerSourcesToggleLabel: View {
+    let title: String
+    let isExpanded: Bool
+
+    var body: some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            label
+                .glassEffect(
+                    .regular
+                        .tint(Color.rossAccent.opacity(0.10))
+                        .interactive(),
+                    in: .rect(cornerRadius: 14)
+                )
+        } else {
+            label
+                .rossGlassSurface(cornerRadius: 14, interactive: true, shadowOpacity: 0.03, shadowRadius: 3, shadowY: 1, strokeOpacity: 0.42)
+        }
+    }
+
+    private var label: some View {
+        HStack(spacing: 8) {
+            Text(title)
+                .font(.footnote.weight(.semibold))
+            Spacer(minLength: 8)
+            Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                .font(.system(size: 10, weight: .bold))
+        }
+        .foregroundStyle(Color.rossAccent)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
     }
 }
 
