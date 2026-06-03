@@ -108,13 +108,13 @@ func alphaDocumentGlassIcon(_ kind: AlphaDocumentKind) -> (RossGlassIconName, Ro
 func alphaDocumentKindBadgeTitle(_ kind: AlphaDocumentKind) -> String {
     switch kind {
     case .pdf:
-        return "PDF"
+        return rossLocalized("document_kind_pdf")
     case .image:
-        return "PHOTO"
+        return rossLocalized("document_kind_photo")
     case .text:
-        return "TEXT"
+        return rossLocalized("document_kind_text")
     case .unknown:
-        return "FILE"
+        return rossLocalized("document_kind_file")
     }
 }
 

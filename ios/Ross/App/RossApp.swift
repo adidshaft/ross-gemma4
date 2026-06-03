@@ -2828,6 +2828,48 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "நீங்கள் import செய்யும் files local extraction-க்கு பிறகு இங்கே inspect செய்யலாம்.",
             "te": "మీరు import చేసే files local extraction తర్వాత ఇక్కడ inspect చేయవచ్చు."
         ],
+        "document_kind_pdf": [
+            "en": "PDF",
+            "hi": "PDF",
+            "bn": "PDF",
+            "ta": "PDF",
+            "te": "PDF"
+        ],
+        "document_kind_photo": [
+            "en": "PHOTO",
+            "hi": "PHOTO",
+            "bn": "PHOTO",
+            "ta": "PHOTO",
+            "te": "PHOTO"
+        ],
+        "document_kind_text": [
+            "en": "TEXT",
+            "hi": "TEXT",
+            "bn": "TEXT",
+            "ta": "TEXT",
+            "te": "TEXT"
+        ],
+        "document_kind_file": [
+            "en": "FILE",
+            "hi": "FILE",
+            "bn": "FILE",
+            "ta": "FILE",
+            "te": "FILE"
+        ],
+        "document_kind_image_short": [
+            "en": "IMG",
+            "hi": "IMG",
+            "bn": "IMG",
+            "ta": "IMG",
+            "te": "IMG"
+        ],
+        "document_kind_text_short": [
+            "en": "TXT",
+            "hi": "TXT",
+            "bn": "TXT",
+            "ta": "TXT",
+            "te": "TXT"
+        ],
         "file_room_import_first_file": [
             "en": "Import the first file",
             "hi": "पहली फ़ाइल import करें",

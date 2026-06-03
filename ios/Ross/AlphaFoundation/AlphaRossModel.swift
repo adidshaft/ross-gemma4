@@ -687,13 +687,13 @@ struct AlphaAskDocumentOption: Identifiable, Hashable {
         }
         switch kind {
         case .pdf:
-            return "PDF"
+            return rossLocalized("document_kind_pdf")
         case .image:
-            return "IMG"
+            return rossLocalized("document_kind_image_short")
         case .text:
-            return "TXT"
+            return rossLocalized("document_kind_text_short")
         case .unknown:
-            return "FILE"
+            return rossLocalized("document_kind_file")
         }
     }
 

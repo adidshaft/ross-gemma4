@@ -1478,6 +1478,17 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(AlphaOcrStatus.placeholder.title, "आपकी file पढ़ रहा है...")
         XCTAssertEqual(AlphaIndexingStatus.notStarted.title, "ready नहीं")
         XCTAssertEqual(AlphaDocumentProcessingState.needsConfirmation.title, "Review चाहिए")
+        XCTAssertEqual(alphaDocumentKindBadgeTitle(.image), "PHOTO")
+        let fallbackImageOption = AlphaAskDocumentOption(
+            id: UUID(),
+            caseId: UUID(),
+            caseTitle: "Rao v State",
+            title: "Scan",
+            fileName: "",
+            kind: .image,
+            isShared: false
+        )
+        XCTAssertEqual(fallbackImageOption.badgeTitle, "IMG")
         rossSaveLanguageSelection(code: "en")
         XCTAssertTrue(
             rossLocalized("ask_local_context_review_recommended", languageCode: "hi")
