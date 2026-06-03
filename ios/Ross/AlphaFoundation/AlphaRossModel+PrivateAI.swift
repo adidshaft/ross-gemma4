@@ -270,7 +270,7 @@ extension AlphaRossModel {
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
                     title: "Assistant update available",
-                    detail: "Ross found a newer assistant setup listing. No case files were read or sent.",
+                    detail: rossLocalized("privacy_ledger_assistant_update_available_detail"),
                     purpose: .model_catalog,
                     payloadClass: .no_case_data,
                     endpointLabel: "device://model-update-check",
@@ -885,7 +885,7 @@ extension AlphaRossModel {
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
                     title: "Assistant selected",
-                    detail: "\(tier.title) was selected. Ross has not read any case files.",
+                    detail: rossLocalized("privacy_ledger_assistant_selected_detail"),
                     purpose: .model_catalog,
                     payloadClass: .no_case_data,
                     endpointLabel: "model-provider://private-assistant",

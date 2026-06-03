@@ -516,11 +516,10 @@ extension AlphaRossModel {
     }
 
     func reportAIOutput(question: String, scopeCaseID: UUID?) {
-        let scope = scopeLabel(for: scopeCaseID)
         persisted.ledgerEntries.insert(
             AlphaPrivacyLedgerEntry(
                 title: "AI output reported",
-                detail: "Feedback was saved for \(scope) without sending answer text or case files.",
+                detail: rossLocalized("privacy_ledger_ai_output_reported_detail"),
                 purpose: .local_only,
                 payloadClass: .local_only,
                 endpointLabel: "device://ai-output-report",

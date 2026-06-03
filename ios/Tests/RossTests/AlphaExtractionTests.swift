@@ -149,10 +149,18 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(entries[1].lawyerTitle, "Private assistant update available है")
         XCTAssertTrue(entries[1].lawyerDetail.contains("newer private assistant setup listing मिली"), entries[1].lawyerDetail)
         XCTAssertTrue(entries[1].lawyerDetail.contains("कोई case file पढ़ी या भेजी नहीं गई"), entries[1].lawyerDetail)
+        XCTAssertEqual(
+            rossLocalized("privacy_ledger_assistant_update_available_detail"),
+            "Ross को newer private assistant setup listing मिली। कोई case file पढ़ी या भेजी नहीं गई."
+        )
         XCTAssertEqual(entries[2].lawyerTitle, "Private assistant setup queue हुआ")
         XCTAssertTrue(entries[2].lawyerDetail.contains("private assistant prepare करेगा"), entries[2].lawyerDetail)
         XCTAssertEqual(entries[3].lawyerTitle, "Private assistant available नहीं")
         XCTAssertTrue(entries[3].lawyerDetail.contains("इस iPhone का private assistant check किया"), entries[3].lawyerDetail)
+        XCTAssertEqual(
+            rossLocalized("privacy_ledger_assistant_selected_detail"),
+            "Ross ने यह private assistant setup चुना। कोई case file पढ़ी या भेजी नहीं गई."
+        )
         for entry in entries {
             XCTAssertFalse(entry.detail.localizedCaseInsensitiveContains("provider"), entry.detail)
             XCTAssertFalse(entry.detail.localizedCaseInsensitiveContains("byte-range"), entry.detail)
@@ -248,6 +256,10 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(feedbackSaved.lawyerTitle, "Answer feedback save செய்யப்பட்டது")
         XCTAssertTrue(feedbackSaved.lawyerDetail.contains("இந்த device-இல் save செய்தது"), feedbackSaved.lawyerDetail)
         XCTAssertTrue(feedbackSaved.lawyerDetail.contains("Answer text மற்றும் case files அனுப்பப்படவில்லை"), feedbackSaved.lawyerDetail)
+        XCTAssertEqual(
+            rossLocalized("privacy_ledger_ai_output_reported_detail"),
+            "Ross feedback-ஐ இந்த device-இல் save செய்தது. Answer text மற்றும் case files அனுப்பப்படவில்லை."
+        )
         XCTAssertFalse(exportFailure.lawyerDetail.localizedCaseInsensitiveContains("local report"), exportFailure.lawyerDetail)
         XCTAssertFalse(publicLawFailure.lawyerDetail.localizedCaseInsensitiveContains("sanitized"), publicLawFailure.lawyerDetail)
         XCTAssertFalse(feedbackSaved.lawyerDetail.localizedCaseInsensitiveContains("AI output"), feedbackSaved.lawyerDetail)
