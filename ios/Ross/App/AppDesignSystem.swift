@@ -214,16 +214,14 @@ public struct RossGlassButtonStyle: ButtonStyle {
             .frame(maxWidth: expandsHorizontally ? .infinity : nil)
             .padding(.horizontal, 18)
             .padding(.vertical, 14)
-            .rossGlassSurface(
+            .rossNativeGlassSurface(
                 tint: tint,
-                cornerRadius: cornerRadius,
+                shape: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous),
                 interactive: true,
-                shadowOpacity: isPressed ? 0.06 : 0.14,
-                shadowRadius: isPressed ? 4 : 10,
-                shadowY: isPressed ? 2 : 5,
-                fillOpacity: isPressed ? 0.66 : 0.84,
-                strokeOpacity: isPressed ? 0.34 : 0.58
+                fallbackFillOpacity: isPressed ? 0.66 : 0.84,
+                fallbackStrokeOpacity: isPressed ? 0.34 : 0.58
             )
+            .shadow(color: Color.rossShadow.opacity(isPressed ? 0.06 : 0.14), radius: isPressed ? 4 : 10, y: isPressed ? 2 : 5)
             .scaleEffect(isPressed ? 0.98 : 1)
             .animation(.spring(response: 0.22, dampingFraction: 0.72), value: isPressed)
             .sensoryFeedback(.impact(weight: .medium), trigger: isPressed)

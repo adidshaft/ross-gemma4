@@ -8992,16 +8992,14 @@ private struct RossLanguageTile: View {
             .frame(maxWidth: .infinity, minHeight: 78, alignment: .leading)
             .padding(.horizontal, 16)
             .padding(.vertical, 2)
-            .rossGlassSurface(
+            .rossNativeGlassSurface(
                 tint: isSelected ? Color.rossAccent : Color.rossHighlight,
-                cornerRadius: 16,
+                shape: shape,
                 interactive: true,
-                shadowOpacity: isSelected ? 0.24 : 0.10,
-                shadowRadius: isSelected ? 12 : 8,
-                shadowY: isSelected ? 8 : 4,
-                fillOpacity: isSelected ? 0.88 : 0.90,
-                strokeOpacity: isSelected ? 0.46 : 0.62
+                fallbackFillOpacity: isSelected ? 0.88 : 0.90,
+                fallbackStrokeOpacity: isSelected ? 0.46 : 0.62
             )
+            .shadow(color: Color.rossShadow.opacity(isSelected ? 0.24 : 0.10), radius: isSelected ? 12 : 8, y: isSelected ? 8 : 4)
             .background {
                 if isSelected {
                     shape.fill(Color.rossPillGradient)
@@ -9465,7 +9463,13 @@ private struct RossAuthNotice: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .rossGlassSurface(tint: Color.orange, cornerRadius: 14, shadowOpacity: 0.06, shadowRadius: 6, shadowY: 2, fillOpacity: 0.76, strokeOpacity: 0.44)
+        .rossNativeGlassSurface(
+            tint: Color.orange,
+            shape: RoundedRectangle(cornerRadius: 14, style: .continuous),
+            fallbackFillOpacity: 0.76,
+            fallbackStrokeOpacity: 0.44
+        )
+        .shadow(color: Color.rossShadow.opacity(0.06), radius: 6, y: 2)
     }
 }
 
@@ -9683,14 +9687,16 @@ private struct RossAuthGlassPanel<Content: View>: View {
         content
             .padding(padding)
             .frame(width: forcedWidth, alignment: .leading)
-            .rossGlassSurface(
+            .rossNativeGlassSurface(
                 tint: Color.rossHighlight,
-                cornerRadius: cornerRadius,
-                shadowOpacity: colorScheme == .dark ? 0.24 : 0.16,
-                shadowRadius: colorScheme == .dark ? 18 : 24,
-                shadowY: colorScheme == .dark ? 10 : 14,
-                fillOpacity: colorScheme == .dark ? 0.86 : 0.92,
-                strokeOpacity: colorScheme == .dark ? 0.30 : 0.66
+                shape: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous),
+                fallbackFillOpacity: colorScheme == .dark ? 0.86 : 0.92,
+                fallbackStrokeOpacity: colorScheme == .dark ? 0.30 : 0.66
+            )
+            .shadow(
+                color: Color.rossShadow.opacity(colorScheme == .dark ? 0.24 : 0.16),
+                radius: colorScheme == .dark ? 18 : 24,
+                y: colorScheme == .dark ? 10 : 14
             )
             .shadow(
                 color: Color.rossBackdropGlow.opacity(colorScheme == .dark ? 0.08 : 0.10),
@@ -9730,7 +9736,14 @@ private struct RossAuthInputField: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 14)
-            .rossGlassSurface(cornerRadius: 14, interactive: true, shadowOpacity: 0.08, shadowRadius: 8, shadowY: 2, fillOpacity: 0.74, strokeOpacity: isFocused ? 0.72 : 0.48)
+            .rossNativeGlassSurface(
+                tint: Color.rossAccent,
+                shape: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                interactive: true,
+                fallbackFillOpacity: 0.74,
+                fallbackStrokeOpacity: isFocused ? 0.72 : 0.48
+            )
+            .shadow(color: Color.rossShadow.opacity(0.08), radius: 8, y: 2)
             .overlay {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .stroke(
