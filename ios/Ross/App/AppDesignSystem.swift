@@ -210,9 +210,11 @@ public struct RossGlassButtonStyle: ButtonStyle {
         configuration.label
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(Color.rossInk)
+            .lineLimit(1)
+            .minimumScaleFactor(0.82)
             .frame(maxWidth: expandsHorizontally ? .infinity : nil)
-            .padding(.horizontal, 18)
-            .padding(.vertical, 14)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
             .rossNativeGlassSurface(
                 tint: tint,
                 shape: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous),

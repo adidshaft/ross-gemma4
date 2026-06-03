@@ -2223,7 +2223,7 @@ struct AlphaRossTokenChip: View {
     var body: some View {
         content
             .padding(.horizontal, 10)
-            .frame(height: 30)
+            .frame(minHeight: 30)
             .modifier(AlphaRossTokenChipSurface(isInteractive: isInteractive))
     }
 
@@ -2237,12 +2237,15 @@ struct AlphaRossTokenChip: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(Color.rossInk.opacity(0.84))
                 .lineLimit(1)
+                .minimumScaleFactor(0.86)
+                .layoutPriority(1)
 
             if let detail, !detail.isEmpty {
                 Text(detail)
                     .font(.caption2.weight(.medium))
                     .foregroundStyle(Color.rossInk.opacity(0.54))
                     .lineLimit(1)
+                    .minimumScaleFactor(0.86)
             }
         }
     }
@@ -2293,7 +2296,7 @@ struct AlphaSourceRefChips: View {
                     }
 
                     LazyVGrid(
-                        columns: [GridItem(.adaptive(minimum: 116), spacing: 8, alignment: .leading)],
+                        columns: [GridItem(.adaptive(minimum: 146), spacing: 8, alignment: .leading)],
                         alignment: .leading,
                         spacing: 8
                     ) {

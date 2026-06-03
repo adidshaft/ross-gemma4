@@ -268,25 +268,29 @@ struct AlphaCaseSummaryCard: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
-            AlphaMatterFolderGlyph(tint: caseMatter.folderTint)
+            AlphaMatterFolderGlyph(tint: caseMatter.folderTint, size: 36)
 
             VStack(alignment: .leading, spacing: 5) {
                 Text(caseMatter.title)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color.rossInk)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.88)
 
                 Text(caseMatter.nextHearing?.formatted(date: .abbreviated, time: .omitted) ?? caseMatter.forum)
                     .font(.system(size: 13, weight: .regular))
                     .foregroundStyle(caseMatter.nextHearing == nil ? Color.rossInk.opacity(0.72) : Color.rossHighlight)
                     .lineLimit(1)
             }
-
-            Spacer(minLength: 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .layoutPriority(1)
 
             Text(alphaOpenTaskCountLabel(model.openTaskCount(for: caseMatter.id)))
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Color.rossAccent)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+                .layoutPriority(2)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
                 .rossNativeGlassSurface(

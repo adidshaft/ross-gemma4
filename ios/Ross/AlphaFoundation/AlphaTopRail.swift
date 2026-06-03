@@ -39,18 +39,10 @@ struct AlphaTabShell: View {
                     onCreateMatter: { model.path.append(.createCase) }
                 )
                 .padding(.horizontal, 12)
-                .padding(.top, 2)
-                .padding(.bottom, 6)
+                .padding(.top, 4)
+                .padding(.bottom, 8)
                 .background {
-                    Rectangle()
-                        .fill(Color.clear)
-                        .rossNativeGlassSurface(
-                            tint: Color.rossAccent.opacity(0.08),
-                            shape: Rectangle(),
-                            fallbackFillOpacity: 0.36,
-                            fallbackStrokeOpacity: 0.14
-                        )
-                        .ignoresSafeArea(edges: .top)
+                    AlphaChromeEdgeFade(edge: .top)
                 }
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -71,18 +63,42 @@ struct AlphaTabShell: View {
                         .padding(.bottom, 6)
                 }
                 .background {
-                    Rectangle()
-                        .fill(Color.clear)
-                        .rossNativeGlassSurface(
-                            tint: Color.rossAccent.opacity(0.08),
-                            shape: Rectangle(),
-                            fallbackFillOpacity: 0.78,
-                            fallbackStrokeOpacity: 0.16
-                        )
-                        .ignoresSafeArea(edges: .bottom)
+                    AlphaChromeEdgeFade(edge: .bottom)
                 }
             }
             .tint(Color.rossAccent)
+    }
+}
+
+private struct AlphaChromeEdgeFade: View {
+    enum Edge {
+        case top
+        case bottom
+    }
+
+    @Environment(\.colorScheme) private var colorScheme
+    let edge: Edge
+
+    var body: some View {
+        LinearGradient(
+            colors: gradientColors,
+            startPoint: edge == .top ? .top : .bottom,
+            endPoint: edge == .top ? .bottom : .top
+        )
+        .blur(radius: 18)
+        .ignoresSafeArea(edges: edge == .top ? .top : .bottom)
+        .allowsHitTesting(false)
+    }
+
+    private var gradientColors: [Color] {
+        let base = Color.rossGroupedBackground
+        let shadow = colorScheme == .dark ? Color.black : Color.rossShadow
+        return [
+            base.opacity(colorScheme == .dark ? 0.98 : 0.92),
+            base.opacity(colorScheme == .dark ? 0.82 : 0.68),
+            shadow.opacity(colorScheme == .dark ? 0.34 : 0.16),
+            Color.clear
+        ]
     }
 }
 
@@ -92,7 +108,7 @@ struct AlphaWorkbenchTabBar: View {
     private let tabs: [AlphaAppTab] = [.today, .matters, .files, .work, .settings]
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 5) {
             ForEach(tabs, id: \.rawValue) { tab in
                 let isSelected = tab == model.persisted.selectedTab || (tab == .today && model.persisted.selectedTab == .home)
                 Button {
@@ -108,10 +124,10 @@ struct AlphaWorkbenchTabBar: View {
                     }
                     .foregroundStyle(isSelected ? Color.rossAccent : Color.rossInk.opacity(0.56))
                     .frame(maxWidth: .infinity)
-                    .frame(height: 46)
+                    .frame(height: 44)
                     .rossNativeGlassSurface(
                         tint: isSelected ? Color.rossAccent : Color.rossInk.opacity(0.22),
-                        shape: RoundedRectangle(cornerRadius: 10, style: .continuous),
+                        shape: RoundedRectangle(cornerRadius: 12, style: .continuous),
                         interactive: true,
                         fallbackFillOpacity: isSelected ? 0.72 : 0.18,
                         fallbackStrokeOpacity: isSelected ? 0.38 : 0.16
@@ -121,14 +137,14 @@ struct AlphaWorkbenchTabBar: View {
                 .accessibilityLabel(tab.title)
             }
         }
-        .padding(4)
+        .padding(3)
         .rossNativeGlassSurface(
             tint: Color.rossAccent,
-            shape: RoundedRectangle(cornerRadius: 14, style: .continuous),
-            fallbackFillOpacity: 0.78,
-            fallbackStrokeOpacity: 0.48
+            shape: RoundedRectangle(cornerRadius: 15, style: .continuous),
+            fallbackFillOpacity: 0.46,
+            fallbackStrokeOpacity: 0.34
         )
-        .shadow(color: Color.rossShadow.opacity(0.10), radius: 10, y: 4)
+        .shadow(color: Color.rossShadow.opacity(0.08), radius: 8, y: 3)
     }
 }
 
@@ -397,7 +413,8 @@ struct AlphaPreparedWorkCard: View {
                 }
 
                 RossGlassGroup(spacing: 8) {
-                    HStack(spacing: 8) {
+                    Grid(horizontalSpacing: 8, verticalSpacing: 8) {
+                        GridRow {
                         Button(item.primaryAction) {
                             alphaHaptic(.selection)
                             alphaHandlePreparedPrimaryAction(item, model: model)
@@ -407,17 +424,18 @@ struct AlphaPreparedWorkCard: View {
                         Button(rossLocalized("accept")) {
                             model.setPreparedWorkStatus(item.id, status: .accepted)
                         }
-                        .rossGlassButtonStyle(tint: Color.rossSuccess, cornerRadius: 14, expandsHorizontally: false)
+                        .rossGlassButtonStyle(tint: Color.rossSuccess, cornerRadius: 14)
 
                         Button(rossLocalized("edit")) {
                             alphaHandlePreparedEdit(item, model: model)
                         }
-                        .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 14, expandsHorizontally: false)
+                        .rossGlassButtonStyle(tint: Color.rossHighlight, cornerRadius: 14)
 
                         Button(rossLocalized("dismiss")) {
                             model.setPreparedWorkStatus(item.id, status: .dismissed)
                         }
-                        .rossGlassButtonStyle(tint: Color.rossInk.opacity(0.42), cornerRadius: 14, expandsHorizontally: false)
+                        .rossGlassButtonStyle(tint: Color.rossInk.opacity(0.42), cornerRadius: 14)
+                        }
                     }
                     .font(.caption.weight(.semibold))
                 }
