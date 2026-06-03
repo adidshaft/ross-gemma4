@@ -3681,9 +3681,9 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             let items = await MainActor.run { seededModel.preparedWorkItems() }
             XCTAssertFalse(items.isEmpty)
             XCTAssertTrue(items.allSatisfy { $0.caseId != nil && !$0.matterName.isEmpty })
-            XCTAssertTrue(items.contains { $0.primaryAction == "खोलें" || $0.primaryAction == "Review" })
+            XCTAssertTrue(items.contains { $0.primaryAction == "खोलें" || $0.primaryAction == "Review करें" })
             XCTAssertTrue(items.flatMap(\.secondaryActions).contains("हटाएं"))
-            XCTAssertTrue(items.contains { $0.title.contains("review updated") })
+            XCTAssertTrue(items.contains { $0.title.localizedCaseInsensitiveContains("review update") })
             XCTAssertTrue(items.contains { $0.summary.contains("matter memory update") || $0.summary.contains("review चाहिए") })
             let routineRun = await MainActor.run { seededModel.persisted.routineRuns?.first }
             XCTAssertTrue(routineRun?.summary.contains("local रूप से update") == true)

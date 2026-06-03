@@ -3943,10 +3943,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "review": [
             "en": "Review",
-            "hi": "Review",
-            "bn": "Review",
-            "ta": "Review",
-            "te": "Review"
+            "hi": "Review करें",
+            "bn": "Review করুন",
+            "ta": "Review செய்யவும்",
+            "te": "Review చేయండి"
         ],
         "check_sources": [
             "en": "Check sources",
@@ -3971,10 +3971,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "source_links": [
             "en": "Source links",
-            "hi": "Source links",
-            "bn": "Source links",
-            "ta": "Source links",
-            "te": "Source links"
+            "hi": "Source links देखें",
+            "bn": "Source links দেখুন",
+            "ta": "Source links பார்க்கவும்",
+            "te": "Source links చూడండి"
         ],
         "hide_source_links": [
             "en": "Hide source links",
@@ -4034,10 +4034,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "document_source": [
             "en": "Document source",
-            "hi": "Document source",
-            "bn": "Document source",
-            "ta": "Document source",
-            "te": "Document source"
+            "hi": "Document source देखें",
+            "bn": "Document source দেখুন",
+            "ta": "Document source பார்க்கவும்",
+            "te": "Document source చూడండి"
         ],
         "suggested_by_ross": [
             "en": "Suggested by Ross",
@@ -4111,10 +4111,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "document_name": [
             "en": "Document name",
-            "hi": "Document name",
-            "bn": "Document name",
-            "ta": "Document name",
-            "te": "Document name"
+            "hi": "Document name लिखें",
+            "bn": "Document name লিখুন",
+            "ta": "Document name எழுதவும்",
+            "te": "Document name రాయండి"
         ],
         "keep_original_file_name": [
             "en": "Keep %@",
@@ -4174,17 +4174,17 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "matter_value": [
             "en": "Matter value",
-            "hi": "Matter value",
-            "bn": "Matter value",
-            "ta": "Matter value",
-            "te": "Matter value"
+            "hi": "Matter में value",
+            "bn": "Matter-এর value",
+            "ta": "Matter-இல் value",
+            "te": "Matter లో value"
         ],
         "file_value": [
             "en": "File value",
-            "hi": "File value",
-            "bn": "File value",
-            "ta": "File value",
-            "te": "File value"
+            "hi": "File से value",
+            "bn": "File-এর value",
+            "ta": "File-இலிருந்து value",
+            "te": "File నుండి value"
         ],
         "possible_conflict_found_detail": [
             "en": "Possible conflict found. %@: %@. %@: %@.",
@@ -4230,10 +4230,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "review_item_resolved_summary": [
             "en": "Review item resolved: %@.",
-            "hi": "Review item resolved: %@.",
-            "bn": "Review item resolved: %@.",
-            "ta": "Review item resolved: %@.",
-            "te": "Review item resolved: %@."
+            "hi": "Review item resolve हुआ: %@.",
+            "bn": "Review item resolve হয়েছে: %@.",
+            "ta": "Review item resolve ஆனது: %@.",
+            "te": "Review item resolve అయింది: %@."
         ],
         "conflict_resolved_using_file_value": [
             "en": "Conflict resolved using file value '%@'.",
@@ -4251,10 +4251,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "preview": [
             "en": "Preview",
-            "hi": "Preview",
-            "bn": "Preview",
-            "ta": "Preview",
-            "te": "Preview"
+            "hi": "Preview देखें",
+            "bn": "Preview দেখুন",
+            "ta": "Preview பார்க்கவும்",
+            "te": "Preview చూడండి"
         ],
         "confirmed_details_usage_detail": [
             "en": "Ross will use these confirmed details when preparing notes, tasks, and matter answers.",
@@ -4384,17 +4384,17 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "tagged_file_line": [
             "en": "Tagged file: %@",
-            "hi": "Tagged file: %@",
-            "bn": "Tagged file: %@",
-            "ta": "Tagged file: %@",
-            "te": "Tagged file: %@"
+            "hi": "Tagged file है: %@",
+            "bn": "Tagged file আছে: %@",
+            "ta": "Tagged file: %@ உள்ளது",
+            "te": "Tagged file ఉంది: %@"
         ],
         "tagged_files_line": [
             "en": "Tagged files: %@",
-            "hi": "Tagged files: %@",
-            "bn": "Tagged files: %@",
-            "ta": "Tagged files: %@",
-            "te": "Tagged files: %@"
+            "hi": "Tagged files हैं: %@",
+            "bn": "Tagged files আছে: %@",
+            "ta": "Tagged files: %@ உள்ளன",
+            "te": "Tagged files ఉన్నాయి: %@"
         ],
         "threads": [
             "en": "Threads",
@@ -6946,17 +6946,17 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "review_updated_title": [
             "en": "Review updated.",
-            "hi": "Review updated.",
-            "bn": "Review updated.",
-            "ta": "Review updated.",
-            "te": "Review updated."
+            "hi": "Review update हुआ.",
+            "bn": "Review update হয়েছে.",
+            "ta": "Review update ஆனது.",
+            "te": "Review update అయింది."
         ],
         "review_updated": [
             "en": "Review updated",
-            "hi": "Review updated",
-            "bn": "Review updated",
-            "ta": "Review updated",
-            "te": "Review updated"
+            "hi": "Review update हुआ",
+            "bn": "Review update হয়েছে",
+            "ta": "Review update ஆனது",
+            "te": "Review update అయింది"
         ],
         "ask_reviewed_document_again": [
             "en": "Ross reviewed %@ again on this device.",

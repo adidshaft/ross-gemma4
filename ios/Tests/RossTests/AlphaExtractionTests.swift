@@ -1464,11 +1464,11 @@ final class AlphaExtractionTests: XCTestCase {
                 fileValue: "New value",
                 languageCode: "ta"
             ),
-            "Possible conflict கண்டுபிடிக்கப்பட்டது. Matter value: Old value. File value: New value."
+            "Possible conflict கண்டுபிடிக்கப்பட்டது. Matter-இல் value: Old value. File-இலிருந்து value: New value."
         )
         XCTAssertEqual(
             alphaReviewItemResolvedSummary(rossLocalized("review_confirmed_from_inline_review", languageCode: "bn"), languageCode: "bn"),
-            "Review item resolved: inline review থেকে confirm করা হয়েছে."
+            "Review item resolve হয়েছে: inline review থেকে confirm করা হয়েছে."
         )
         XCTAssertEqual(
             alphaConflictResolvedUsingFileValueSummary("Delhi High Court", languageCode: "hi"),
@@ -2127,7 +2127,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
         XCTAssertEqual(
             alphaTaggedFilesLine(["Order", "Notice"], languageCode: "hi"),
-            "Tagged files: Order, Notice"
+            "Tagged files हैं: Order, Notice"
         )
         XCTAssertEqual(
             rossLocalized("no_saved_threads", languageCode: "ta"),
@@ -3831,7 +3831,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         rossSaveLanguageSelection(code: "hi")
         XCTAssertEqual(matterMemory.label, "मामले की details · linked source नहीं")
-        XCTAssertEqual(missingDocumentTitle.label, "Document source · linked source नहीं")
+        XCTAssertEqual(missingDocumentTitle.label, "Document source देखें · linked source नहीं")
         XCTAssertEqual(missingDocumentTitle.detail, "अभी linked source नहीं")
     }
 
@@ -3927,6 +3927,34 @@ final class AlphaExtractionTests: XCTestCase {
             "document_type_fictional_game_material",
             "document_type_unknown",
             "document_script_detected"
+        ]
+
+        for key in labelsThatShouldBeLocalized {
+            let english = rossLocalized(key, languageCode: "en")
+            for languageCode in ["hi", "bn", "ta", "te"] {
+                XCTAssertNotEqual(
+                    rossLocalized(key, languageCode: languageCode),
+                    english,
+                    "\(key) falls back to English for \(languageCode)"
+                )
+            }
+        }
+    }
+
+    func testDocumentReviewLabelsAvoidEnglishFallbacksInSupportedLanguages() {
+        let labelsThatShouldBeLocalized = [
+            "review",
+            "source_links",
+            "document_source",
+            "document_name",
+            "matter_value",
+            "file_value",
+            "review_item_resolved_summary",
+            "preview",
+            "tagged_file_line",
+            "tagged_files_line",
+            "review_updated_title",
+            "review_updated"
         ]
 
         for key in labelsThatShouldBeLocalized {
