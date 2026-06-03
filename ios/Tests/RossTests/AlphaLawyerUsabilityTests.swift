@@ -3742,7 +3742,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertEqual(status, .reviewing)
             XCTAssertEqual(publicLawCalls.value, 0)
             XCTAssertEqual(prepared?.badge, .approvalRequired)
-            XCTAssertEqual(prepared?.matterName, "Workspace")
+            XCTAssertEqual(prepared?.matterName, "Workspace பார்க்கவும்")
             XCTAssertEqual(prepared?.title, "Public-law query review செய்யவும்")
             XCTAssertEqual(prepared?.primaryAction, "ஒப்புதல் அளிக்கவும்")
             XCTAssertEqual(prepared?.secondaryActions, ["திருத்தவும்", "நீக்கவும்"])

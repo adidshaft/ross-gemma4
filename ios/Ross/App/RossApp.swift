@@ -3187,10 +3187,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "matter_workspaces": [
             "en": "Matter workspaces",
-            "hi": "Matter workspaces",
-            "bn": "Matter workspaces",
-            "ta": "Matter workspaces",
-            "te": "Matter workspaces"
+            "hi": "Matter workspaces देखें",
+            "bn": "Matter workspaces দেখুন",
+            "ta": "Matter workspaces பார்க்கவும்",
+            "te": "Matter workspaces చూడండి"
         ],
         "active_matter_count": [
             "en": "%d active",
@@ -3201,10 +3201,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "local_file_room": [
             "en": "Local file room",
-            "hi": "Local file room",
-            "bn": "Local file room",
-            "ta": "Local file room",
-            "te": "Local file room"
+            "hi": "Local file room देखें",
+            "bn": "Local file room দেখুন",
+            "ta": "Local file room பார்க்கவும்",
+            "te": "Local file room చూడండి"
         ],
         "files_across_matters_count_one": [
             "en": "%d file across matters",
@@ -3824,10 +3824,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "extraction_stage_complete": [
             "en": "Complete",
-            "hi": "Complete",
-            "bn": "Complete",
-            "ta": "Complete",
-            "te": "Complete"
+            "hi": "Complete है",
+            "bn": "Complete হয়েছে",
+            "ta": "Complete ஆனது",
+            "te": "Complete అయింది"
         ],
         "extraction_stage_please_confirm": [
             "en": "Please confirm",
@@ -4020,10 +4020,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "extracted_text": [
             "en": "Extracted text",
-            "hi": "Extracted text",
-            "bn": "Extracted text",
-            "ta": "Extracted text",
-            "te": "Extracted text"
+            "hi": "Extracted text देखें",
+            "bn": "Extracted text দেখুন",
+            "ta": "Extracted text பார்க்கவும்",
+            "te": "Extracted text చూడండి"
         ],
         "hide_extracted_text": [
             "en": "Hide extracted text",
@@ -4195,10 +4195,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "ignore": [
             "en": "Ignore",
-            "hi": "Ignore",
-            "bn": "Ignore",
-            "ta": "Ignore",
-            "te": "Ignore"
+            "hi": "Ignore करें",
+            "bn": "Ignore করুন",
+            "ta": "Ignore செய்யவும்",
+            "te": "Ignore చేయండి"
         ],
         "matter_value": [
             "en": "Matter value",
@@ -4426,10 +4426,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "threads": [
             "en": "Threads",
-            "hi": "Threads",
-            "bn": "Threads",
-            "ta": "Threads",
-            "te": "Threads"
+            "hi": "Threads देखें",
+            "bn": "Threads দেখুন",
+            "ta": "Threads பார்க்கவும்",
+            "te": "Threads చూడండి"
         ],
         "choose_chat_scope": [
             "en": "Choose chat scope",
@@ -4545,10 +4545,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "imported_shared_files_matter_forum": [
             "en": "Matter files",
-            "hi": "Matter files",
-            "bn": "Matter files",
-            "ta": "Matter files",
-            "te": "Matter files"
+            "hi": "Matter files देखें",
+            "bn": "Matter files দেখুন",
+            "ta": "Matter files பார்க்கவும்",
+            "te": "Matter files చూడండి"
         ],
         "imported_shared_files_matter_summary": [
             "en": "Ross created this matter from shared local files.",
@@ -4574,7 +4574,7 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         "shared_files": [
             "en": "Shared files",
             "hi": "साझा फ़ाइलें",
-            "bn": "shared files",
+            "bn": "শেয়ার করা files",
             "ta": "பகிரப்பட்ட கோப்புகள்",
             "te": "షేర్ చేసిన ఫైళ్లు"
         ],
@@ -4601,10 +4601,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "workspace": [
             "en": "Workspace",
-            "hi": "Workspace",
-            "bn": "Workspace",
-            "ta": "Workspace",
-            "te": "Workspace"
+            "hi": "Workspace देखें",
+            "bn": "Workspace দেখুন",
+            "ta": "Workspace பார்க்கவும்",
+            "te": "Workspace చూడండి"
         ],
         "create_matter_title": [
             "en": "Create a matter",
@@ -5413,10 +5413,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "chat": [
             "en": "Chat",
-            "hi": "Chat",
-            "bn": "Chat",
-            "ta": "Chat",
-            "te": "Chat"
+            "hi": "Chat देखें",
+            "bn": "Chat দেখুন",
+            "ta": "Chat பார்க்கவும்",
+            "te": "Chat చూడండి"
         ],
         "new_review_chat": [
             "en": "New review chat",
@@ -5441,10 +5441,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "imported_document_label": [
             "en": "Imported %@",
-            "hi": "Imported %@",
-            "bn": "Imported %@",
-            "ta": "Imported %@",
-            "te": "Imported %@"
+            "hi": "Imported %@ है",
+            "bn": "Imported %@ হয়েছে",
+            "ta": "Imported %@ ஆனது",
+            "te": "Imported %@ అయింది"
         ],
         "rename_matter": [
             "en": "Rename matter",
@@ -5455,10 +5455,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "folder_color": [
             "en": "Folder color",
-            "hi": "Folder color",
-            "bn": "Folder color",
-            "ta": "Folder color",
-            "te": "Folder color"
+            "hi": "Folder color देखें",
+            "bn": "Folder color দেখুন",
+            "ta": "Folder color பார்க்கவும்",
+            "te": "Folder color చూడండి"
         ],
         "archive_matter": [
             "en": "Archive matter",

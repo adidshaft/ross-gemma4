@@ -1702,7 +1702,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
         XCTAssertEqual(
             rossLocalized("workspace", languageCode: "hi"),
-            "Workspace"
+            "Workspace देखें"
         )
         XCTAssertEqual(
             rossLocalized("document_status_reading_file", languageCode: "hi"),
@@ -3924,6 +3924,9 @@ final class AlphaExtractionTests: XCTestCase {
             "document_status_confirm",
             "document_status_fictional",
             "document_status_non_legal",
+            "matter_workspaces",
+            "local_file_room",
+            "extraction_stage_complete",
             "document_type_pleading",
             "document_type_order",
             "document_type_judgment",
@@ -3936,7 +3939,16 @@ final class AlphaExtractionTests: XCTestCase {
             "document_type_non_legal_document",
             "document_type_fictional_game_material",
             "document_type_unknown",
-            "document_script_detected"
+            "document_script_detected",
+            "extracted_text",
+            "ignore",
+            "threads",
+            "imported_shared_files_matter_forum",
+            "shared_files",
+            "workspace",
+            "chat",
+            "imported_document_label",
+            "folder_color"
         ]
 
         for key in labelsThatShouldBeLocalized {
