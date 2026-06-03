@@ -3402,6 +3402,90 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "குறைந்த confidence scan",
             "te": "తక్కువ confidence scan"
         ],
+        "document_type_pleading": [
+            "en": "Pleading",
+            "hi": "Pleading",
+            "bn": "Pleading",
+            "ta": "Pleading",
+            "te": "Pleading"
+        ],
+        "document_type_order": [
+            "en": "Order",
+            "hi": "Order",
+            "bn": "Order",
+            "ta": "Order",
+            "te": "Order"
+        ],
+        "document_type_judgment": [
+            "en": "Judgment",
+            "hi": "Judgment",
+            "bn": "Judgment",
+            "ta": "Judgment",
+            "te": "Judgment"
+        ],
+        "document_type_affidavit": [
+            "en": "Affidavit",
+            "hi": "Affidavit",
+            "bn": "Affidavit",
+            "ta": "Affidavit",
+            "te": "Affidavit"
+        ],
+        "document_type_notice": [
+            "en": "Notice",
+            "hi": "Notice",
+            "bn": "Notice",
+            "ta": "Notice",
+            "te": "Notice"
+        ],
+        "document_type_evidence": [
+            "en": "Evidence",
+            "hi": "Evidence",
+            "bn": "Evidence",
+            "ta": "Evidence",
+            "te": "Evidence"
+        ],
+        "document_type_client_note": [
+            "en": "Client note",
+            "hi": "Client note",
+            "bn": "Client note",
+            "ta": "Client note",
+            "te": "Client note"
+        ],
+        "document_type_court_filing": [
+            "en": "Court filing",
+            "hi": "Court filing",
+            "bn": "Court filing",
+            "ta": "Court filing",
+            "te": "Court filing"
+        ],
+        "document_type_legal_research": [
+            "en": "Legal research",
+            "hi": "Legal research",
+            "bn": "Legal research",
+            "ta": "Legal research",
+            "te": "Legal research"
+        ],
+        "document_type_non_legal_document": [
+            "en": "Non-legal document",
+            "hi": "Non-legal document",
+            "bn": "Non-legal document",
+            "ta": "Non-legal document",
+            "te": "Non-legal document"
+        ],
+        "document_type_fictional_game_material": [
+            "en": "Fictional/game material",
+            "hi": "Fictional/game material",
+            "bn": "Fictional/game material",
+            "ta": "Fictional/game material",
+            "te": "Fictional/game material"
+        ],
+        "document_type_unknown": [
+            "en": "Unknown",
+            "hi": "Unknown",
+            "bn": "Unknown",
+            "ta": "Unknown",
+            "te": "Unknown"
+        ],
         "one_finding": [
             "en": "1 finding",
             "hi": "1 finding",

@@ -3577,6 +3577,10 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     func testFictionalClassificationBlocksAutomaticLegalFactSaving() {
+        let previousLanguageCode = rossSelectedLanguageCode()
+        defer { rossSaveLanguageSelection(code: previousLanguageCode) }
+        rossSaveLanguageSelection(code: "en")
+
         let classification = AlphaLegalDocumentClassification(
             documentId: UUID(),
             type: .fictionalGameMaterial,
@@ -3588,6 +3592,10 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertTrue(classification.type.blocksAutomaticLegalFactSaving)
         XCTAssertEqual(classification.type.title, "Fictional/game material")
+        XCTAssertEqual(AlphaLegalDocumentType.nonLegalDocument.title, "Non-legal document")
+        rossSaveLanguageSelection(code: "hi")
+        XCTAssertEqual(classification.type.title, rossLocalized("document_type_fictional_game_material"))
+        XCTAssertEqual(AlphaLegalDocumentType.unknown.title, rossLocalized("document_type_unknown"))
         let document = AlphaCaseDocument(
             title: "Game Notes",
             fileName: "game.txt",

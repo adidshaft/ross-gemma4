@@ -776,31 +776,31 @@ enum AlphaLegalDocumentType: String, Codable, Hashable, Sendable {
     var title: String {
         switch self {
         case .pleading:
-            "Pleading"
+            rossLocalized("document_type_pleading")
         case .order:
-            "Order"
+            rossLocalized("document_type_order")
         case .judgment:
-            "Judgment"
+            rossLocalized("document_type_judgment")
         case .affidavit:
-            "Affidavit"
+            rossLocalized("document_type_affidavit")
         case .notice:
-            "Notice"
+            rossLocalized("document_type_notice")
         case .evidence:
-            "Evidence"
+            rossLocalized("document_type_evidence")
         case .clientNote:
-            "Client note"
+            rossLocalized("document_type_client_note")
         case .courtFiling:
-            "Court filing"
+            rossLocalized("document_type_court_filing")
         case .legalResearch:
-            "Legal research"
+            rossLocalized("document_type_legal_research")
         case .nonLegalDocument:
-            "Non-legal document"
+            rossLocalized("document_type_non_legal_document")
         case .fictionalGameMaterial:
-            "Fictional/game material"
+            rossLocalized("document_type_fictional_game_material")
         case .unknown, .misc:
-            "Unknown"
+            rossLocalized("document_type_unknown")
         case .correspondence:
-            "Client note"
+            rossLocalized("document_type_client_note")
         }
     }
 
