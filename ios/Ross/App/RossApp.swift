@@ -3572,10 +3572,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "document_status_reading": [
             "en": "Reading",
-            "hi": "Reading",
-            "bn": "Reading",
-            "ta": "Reading",
-            "te": "Reading"
+            "hi": "पढ़ रहा है",
+            "bn": "পড়ছে",
+            "ta": "வாசிக்கிறது",
+            "te": "చదువుతోంది"
         ],
         "document_status_reading_file": [
             "en": "Reading your file...",
@@ -3586,10 +3586,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "document_status_imported": [
             "en": "Imported",
-            "hi": "Imported",
-            "bn": "Imported",
-            "ta": "Imported",
-            "te": "Imported"
+            "hi": "Import हुआ",
+            "bn": "Import হয়েছে",
+            "ta": "Import ஆனது",
+            "te": "Import అయింది"
         ],
         "document_status_not_ready": [
             "en": "Not ready",
@@ -3614,38 +3614,38 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "document_status_failed": [
             "en": "Failed",
-            "hi": "Failed",
-            "bn": "Failed",
-            "ta": "Failed",
-            "te": "Failed"
+            "hi": "नहीं हुआ",
+            "bn": "হয়নি",
+            "ta": "முடியவில்லை",
+            "te": "కాలేదు"
         ],
         "document_status_ready": [
             "en": "Ready",
-            "hi": "Ready",
-            "bn": "Ready",
+            "hi": "तैयार",
+            "bn": "প্রস্তুত",
             "ta": "வாசித்தது",
-            "te": "Ready"
+            "te": "సిద్ధం"
         ],
         "document_status_confirm": [
             "en": "Confirm",
-            "hi": "Confirm",
-            "bn": "Confirm",
-            "ta": "Confirm",
-            "te": "Confirm"
+            "hi": "पुष्टि करें",
+            "bn": "নিশ্চিত করুন",
+            "ta": "உறுதிசெய்க",
+            "te": "నిర్ధారించండి"
         ],
         "document_status_fictional": [
             "en": "Fictional",
-            "hi": "Fictional",
-            "bn": "Fictional",
-            "ta": "Fictional",
-            "te": "Fictional"
+            "hi": "काल्पनिक",
+            "bn": "কাল্পনিক",
+            "ta": "கற்பனை",
+            "te": "కల్పితం"
         ],
         "document_status_non_legal": [
             "en": "Non-legal?",
-            "hi": "Non-legal?",
-            "bn": "Non-legal?",
-            "ta": "Non-legal?",
-            "te": "Non-legal?"
+            "hi": "कानूनी नहीं?",
+            "bn": "আইনি নয়?",
+            "ta": "சட்டம் சார்ந்ததல்லவா?",
+            "te": "చట్టపరమైనది కాదా?"
         ],
         "document_status_low_confidence_scan": [
             "en": "Low confidence scan",
@@ -3656,87 +3656,87 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "document_type_pleading": [
             "en": "Pleading",
-            "hi": "Pleading",
-            "bn": "Pleading",
-            "ta": "Pleading",
-            "te": "Pleading"
+            "hi": "दलील",
+            "bn": "আবেদন",
+            "ta": "மனு",
+            "te": "ప్లీడింగ్"
         ],
         "document_type_order": [
             "en": "Order",
-            "hi": "Order",
-            "bn": "Order",
-            "ta": "Order",
-            "te": "Order"
+            "hi": "आदेश",
+            "bn": "আদেশ",
+            "ta": "உத்தரவு",
+            "te": "ఆదేశం"
         ],
         "document_type_judgment": [
             "en": "Judgment",
-            "hi": "Judgment",
-            "bn": "Judgment",
-            "ta": "Judgment",
-            "te": "Judgment"
+            "hi": "निर्णय",
+            "bn": "রায়",
+            "ta": "தீர்ப்பு",
+            "te": "తీర్పు"
         ],
         "document_type_affidavit": [
             "en": "Affidavit",
-            "hi": "Affidavit",
-            "bn": "Affidavit",
-            "ta": "Affidavit",
-            "te": "Affidavit"
+            "hi": "हलफ़नामा",
+            "bn": "হলফনামা",
+            "ta": "பிரமாணப் பத்திரம்",
+            "te": "అఫిడవిట్"
         ],
         "document_type_notice": [
             "en": "Notice",
-            "hi": "Notice",
-            "bn": "Notice",
-            "ta": "Notice",
-            "te": "Notice"
+            "hi": "नोटिस",
+            "bn": "নোটিশ",
+            "ta": "நோட்டீஸ்",
+            "te": "నోటీసు"
         ],
         "document_type_evidence": [
             "en": "Evidence",
-            "hi": "Evidence",
-            "bn": "Evidence",
-            "ta": "Evidence",
-            "te": "Evidence"
+            "hi": "सबूत",
+            "bn": "প্রমাণ",
+            "ta": "சான்று",
+            "te": "సాక్ష్యం"
         ],
         "document_type_client_note": [
             "en": "Client note",
-            "hi": "Client note",
-            "bn": "Client note",
-            "ta": "Client note",
-            "te": "Client note"
+            "hi": "क्लाइंट नोट",
+            "bn": "ক্লায়েন্ট নোট",
+            "ta": "வாடிக்கையாளர் குறிப்பு",
+            "te": "క్లయింట్ గమనిక"
         ],
         "document_type_court_filing": [
             "en": "Court filing",
-            "hi": "Court filing",
-            "bn": "Court filing",
-            "ta": "Court filing",
-            "te": "Court filing"
+            "hi": "अदालत में दाखिल दस्तावेज़",
+            "bn": "আদালতে দাখিল",
+            "ta": "நீதிமன்ற தாக்கல்",
+            "te": "కోర్టు దాఖలు"
         ],
         "document_type_legal_research": [
             "en": "Legal research",
-            "hi": "Legal research",
-            "bn": "Legal research",
-            "ta": "Legal research",
-            "te": "Legal research"
+            "hi": "कानूनी शोध",
+            "bn": "আইনি গবেষণা",
+            "ta": "சட்ட ஆய்வு",
+            "te": "చట్ట పరిశోధన"
         ],
         "document_type_non_legal_document": [
             "en": "Non-legal document",
-            "hi": "Non-legal document",
-            "bn": "Non-legal document",
-            "ta": "Non-legal document",
-            "te": "Non-legal document"
+            "hi": "गैर-कानूनी दस्तावेज़",
+            "bn": "আইনি নয় এমন নথি",
+            "ta": "சட்டம் சாராத ஆவணம்",
+            "te": "చట్టపరమైనది కాని పత్రం"
         ],
         "document_type_fictional_game_material": [
             "en": "Fictional/game material",
-            "hi": "Fictional/game material",
-            "bn": "Fictional/game material",
-            "ta": "Fictional/game material",
-            "te": "Fictional/game material"
+            "hi": "काल्पनिक/game सामग्री",
+            "bn": "কাল্পনিক/game উপাদান",
+            "ta": "கற்பனை/game பொருள்",
+            "te": "కల్పిత/game విషయం"
         ],
         "document_type_unknown": [
             "en": "Unknown",
-            "hi": "Unknown",
-            "bn": "Unknown",
-            "ta": "Unknown",
-            "te": "Unknown"
+            "hi": "अज्ञात",
+            "bn": "অজানা",
+            "ta": "தெரியாதது",
+            "te": "తెలియదు"
         ],
         "one_finding": [
             "en": "1 finding",
@@ -3887,10 +3887,10 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
         ],
         "document_script_detected": [
             "en": "script detected",
-            "hi": "script detected",
-            "bn": "script detected",
-            "ta": "script detected",
-            "te": "script detected"
+            "hi": "लिपि मिली",
+            "bn": "লিপি শনাক্ত হয়েছে",
+            "ta": "எழுத்து முறை கண்டறியப்பட்டது",
+            "te": "లిపి గుర్తించబడింది"
         ],
         "document_language_detected_detail": [
             "en": "Language detected from this file: %@.",

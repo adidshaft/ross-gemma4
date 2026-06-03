@@ -3879,6 +3879,42 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(document.lawyerStatusTitle, rossLocalized("document_status_fictional"))
     }
 
+    func testDocumentStatusAndTypeLabelsAvoidEnglishFallbacksInSupportedLanguages() {
+        let labelsThatShouldBeLocalized = [
+            "document_status_reading",
+            "document_status_imported",
+            "document_status_failed",
+            "document_status_ready",
+            "document_status_confirm",
+            "document_status_fictional",
+            "document_status_non_legal",
+            "document_type_pleading",
+            "document_type_order",
+            "document_type_judgment",
+            "document_type_affidavit",
+            "document_type_notice",
+            "document_type_evidence",
+            "document_type_client_note",
+            "document_type_court_filing",
+            "document_type_legal_research",
+            "document_type_non_legal_document",
+            "document_type_fictional_game_material",
+            "document_type_unknown",
+            "document_script_detected"
+        ]
+
+        for key in labelsThatShouldBeLocalized {
+            let english = rossLocalized(key, languageCode: "en")
+            for languageCode in ["hi", "bn", "ta", "te"] {
+                XCTAssertNotEqual(
+                    rossLocalized(key, languageCode: languageCode),
+                    english,
+                    "\(key) falls back to English for \(languageCode)"
+                )
+            }
+        }
+    }
+
     func testRossBackendBaseURLUsesSavedOverride() {
         rossSetBackendBaseURLOverride("http://127.0.0.1:8787")
 
