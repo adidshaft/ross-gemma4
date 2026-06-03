@@ -61,13 +61,32 @@ struct AlphaActiveMatterChatCard: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            Button(session == nil ? rossLocalized("open_chat") : rossLocalized("continue_chat"), action: onOpenChat)
-                .font(.footnote.weight(.semibold))
-                .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 14, expandsHorizontally: false)
+            AlphaMatterChatActionButton(
+                title: session == nil ? rossLocalized("open_chat") : rossLocalized("continue_chat"),
+                action: onOpenChat
+            )
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
         .rossGlassSurface(cornerRadius: 18, shadowOpacity: 0.08, shadowRadius: 8, shadowY: 3, fillOpacity: 0.84, strokeOpacity: 0.56)
+    }
+}
+
+private struct AlphaMatterChatActionButton: View {
+    let title: String
+    let action: () -> Void
+
+    var body: some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            Button(title, action: action)
+                .font(.footnote.weight(.semibold))
+                .buttonStyle(.glass)
+                .tint(Color.rossAccent)
+        } else {
+            Button(title, action: action)
+                .font(.footnote.weight(.semibold))
+                .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 14, expandsHorizontally: false)
+        }
     }
 }
 
