@@ -735,42 +735,30 @@ struct AlphaDocumentViewerScreen: View {
         .rossInlineNavigationTitle()
         .toolbar {
             ToolbarItem(placement: alphaNavigationBarLeadingPlacement) {
-                Button(action: exitDocument) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(Color.rossInk)
-                        .frame(width: 32, height: 32)
-                        .rossGlassSurface(cornerRadius: 16, interactive: true, shadowOpacity: 0.05, shadowRadius: 5, shadowY: 2, strokeOpacity: 0.48)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(rossLocalized("back"))
+                AlphaDocumentToolbarIconButton(
+                    systemImage: "chevron.left",
+                    accessibilityLabel: rossLocalized("back"),
+                    action: exitDocument
+                )
             }
 
             ToolbarItem(placement: alphaNavigationBarTrailingPlacement) {
                 HStack(spacing: 8) {
-                    Button {
-                        model.openDocumentInChat(caseId: caseId, documentId: documentId, startNewThread: false)
-                    } label: {
-                        Image(systemName: "bubble.right")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(Color.rossInk)
-                            .frame(width: 32, height: 32)
-                            .rossGlassSurface(cornerRadius: 16, interactive: true, shadowOpacity: 0.05, shadowRadius: 5, shadowY: 2, strokeOpacity: 0.48)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(rossLocalized("ask_ross_about_document"))
+                    AlphaDocumentToolbarIconButton(
+                        systemImage: "bubble.right",
+                        accessibilityLabel: rossLocalized("ask_ross_about_document"),
+                        action: {
+                            model.openDocumentInChat(caseId: caseId, documentId: documentId, startNewThread: false)
+                        }
+                    )
 
-                    Button {
-                        Task { await model.rerunReview(caseId: caseId, documentId: documentId) }
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(Color.rossInk)
-                            .frame(width: 32, height: 32)
-                            .rossGlassSurface(cornerRadius: 16, interactive: true, shadowOpacity: 0.05, shadowRadius: 5, shadowY: 2, strokeOpacity: 0.48)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(rossLocalized("review_document_again"))
+                    AlphaDocumentToolbarIconButton(
+                        systemImage: "arrow.clockwise",
+                        accessibilityLabel: rossLocalized("review_document_again"),
+                        action: {
+                            Task { await model.rerunReview(caseId: caseId, documentId: documentId) }
+                        }
+                    )
                 }
             }
         }
@@ -845,6 +833,45 @@ struct AlphaDocumentReadinessCard: View {
             fillOpacity: 0.82,
             strokeOpacity: 0.48
         )
+    }
+}
+
+private struct AlphaDocumentToolbarIconButton: View {
+    let systemImage: String
+    let accessibilityLabel: String
+    let action: () -> Void
+
+    var body: some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            Button(action: action) {
+                icon
+            }
+            .buttonStyle(.glass)
+            .tint(Color.rossAccent)
+            .accessibilityLabel(accessibilityLabel)
+        } else {
+            Button(action: action) {
+                icon
+                    .rossGlassSurface(
+                        tint: Color.rossAccent,
+                        cornerRadius: 16,
+                        interactive: true,
+                        shadowOpacity: 0.05,
+                        shadowRadius: 5,
+                        shadowY: 2,
+                        strokeOpacity: 0.48
+                    )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(accessibilityLabel)
+        }
+    }
+
+    private var icon: some View {
+        Image(systemName: systemImage)
+            .font(.system(size: 13, weight: .bold))
+            .foregroundStyle(Color.rossInk)
+            .frame(width: 32, height: 32)
     }
 }
 
