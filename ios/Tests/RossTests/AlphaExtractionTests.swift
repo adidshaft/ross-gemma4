@@ -875,6 +875,14 @@ final class AlphaExtractionTests: XCTestCase {
             AlphaCapabilityTier.seniorDraftingSupport.setupWarning(languageCode: "te-IN")
                 .contains("ఖాళీ స్థలం")
         )
+        XCTAssertEqual(
+            AlphaCapabilityTier.quickStart.summary(languageCode: "bn"),
+            "ছোট আদেশ, নোটিস এবং হালকা নথি পর্যালোচনা।"
+        )
+        XCTAssertEqual(
+            AlphaCapabilityTier.caseAssociate.summary(languageCode: "ta"),
+            "தினசரி வழக்குகள், சுருக்கங்கள், தேதிகள், மூல ஆதாரமுள்ள Ask."
+        )
 
         let forbidden = [
             "ChatGPT",

@@ -262,15 +262,19 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
     }
 
     var summary: String {
+        summary(languageCode: rossSelectedLanguageCode())
+    }
+
+    func summary(languageCode: String) -> String {
         switch self {
         case .flash:
-            "Lighter footprint for immediate, fast answers and simple checklists."
+            rossLocalized("tier_flash_summary", languageCode: languageCode)
         case .quickStart:
-            "Lighter setup for short orders, quick summaries, and simple private Ask Ross actions."
+            rossLocalized("tier_quick_start_summary", languageCode: languageCode)
         case .caseAssociate:
-            "Recommended for everyday matters, document review, chronology work, and answers from your files."
+            rossLocalized("tier_case_associate_summary", languageCode: languageCode)
         case .seniorDraftingSupport:
-            "Best for longer bundles, deeper review, and heavier drafting on this phone."
+            rossLocalized("tier_senior_drafting_summary", languageCode: languageCode)
         }
     }
 
