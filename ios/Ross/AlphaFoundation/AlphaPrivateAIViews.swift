@@ -1014,15 +1014,44 @@ struct AlphaPrivateAIInstalledPackCard: View {
             }
         }
         .padding(14)
-        .rossGlassSurface(
-            tint: isReady ? Color.rossSuccess : Color.orange,
-            cornerRadius: 18,
-            shadowOpacity: 0.08,
-            shadowRadius: 8,
-            shadowY: 3,
-            fillOpacity: 0.82,
-            strokeOpacity: 0.48
-        )
+        .modifier(AlphaPrivateAIInstalledPackSurface(isReady: isReady))
+    }
+}
+
+private struct AlphaPrivateAIInstalledPackSurface: ViewModifier {
+    let isReady: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
+        let tint = isReady ? Color.rossSuccess : Color.orange
+
+        if #available(iOS 26.0, macOS 26.0, *) {
+            content
+                .background {
+                    shape.fill(Color.rossGlassFill.opacity(0.42))
+                }
+                .glassEffect(
+                    Glass.regular
+                        .tint(tint.opacity(0.14)),
+                    in: shape
+                )
+                .overlay {
+                    shape.strokeBorder(tint.opacity(0.24), lineWidth: 1)
+                }
+                .shadow(color: Color.rossShadow.opacity(0.08), radius: 8, y: 3)
+        } else {
+            content
+                .rossGlassSurface(
+                    tint: tint,
+                    cornerRadius: 18,
+                    shadowOpacity: 0.08,
+                    shadowRadius: 8,
+                    shadowY: 3,
+                    fillOpacity: 0.82,
+                    strokeOpacity: 0.48
+                )
+        }
     }
 }
 
