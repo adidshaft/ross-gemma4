@@ -29,8 +29,8 @@ ROSS-Gemma4 is a mobile-first, privacy-preserving legal workbench built around G
 
 | Article | Link |
 | --- | --- |
-| <img src="ios/Ross/Resources/Assets.xcassets/RossLogo.imageset/RossLogo.png" width="72" alt="Ross logo" /> | [Run Gemma4 on iOS](https://x.com/adidshaft/status/2056256674286203006) |
-| <img src="ios/Ross/Resources/Assets.xcassets/RossLogo.imageset/RossLogo.png" width="72" alt="Ross logo" /> | [ROSS-Gemma4 private AI workflow](https://x.com/adidshaft/status/2055043263510544561) |
+| <img src="docs/images/ross-gemma4-ios-article.jpg" width="240" alt="Run Gemma4 on iOS article thumbnail" /> | [Run Gemma4 on iOS](https://x.com/adidshaft/status/2056256674286203006) |
+| <img src="docs/images/ross-gemma4-workflow-article.jpg" width="240" alt="ROSS-Gemma4 private AI workflow article thumbnail" /> | [ROSS-Gemma4 private AI workflow](https://x.com/adidshaft/status/2055043263510544561) |
 
 ---
 
