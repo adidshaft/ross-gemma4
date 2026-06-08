@@ -3,7 +3,7 @@
 **Private AI Junior Associate for Access-to-Justice Workflows**
 
 <p align="center">
-  <img src="docs/images/ross-logo.png" width="220" alt="Ross app logo" />
+  <img src="ios/Ross/Resources/Assets.xcassets/RossLogo.imageset/RossLogo.png" width="220" alt="Ross app logo" />
 </p>
 
 ROSS-Gemma4 is a mobile-first, privacy-preserving legal workbench built around Gemma 4. It helps advocates and legal-aid teams turn sensitive case bundles into source-grounded chronologies, issue notes, missing-fact checklists, and first drafts without sending private case documents to a cloud LLM.
@@ -29,8 +29,8 @@ ROSS-Gemma4 is a mobile-first, privacy-preserving legal workbench built around G
 
 | Article | Link |
 | --- | --- |
-| <img src="docs/images/ross-logo.png" width="72" alt="Ross logo" /> | [Run Gemma4 on iOS](https://x.com/adidshaft/status/2056256674286203006) |
-| <img src="docs/images/ross-logo.png" width="72" alt="Ross logo" /> | [ROSS-Gemma4 private AI workflow](https://x.com/adidshaft/status/2055043263510544561) |
+| <img src="ios/Ross/Resources/Assets.xcassets/RossLogo.imageset/RossLogo.png" width="72" alt="Ross logo" /> | [Run Gemma4 on iOS](https://x.com/adidshaft/status/2056256674286203006) |
+| <img src="ios/Ross/Resources/Assets.xcassets/RossLogo.imageset/RossLogo.png" width="72" alt="Ross logo" /> | [ROSS-Gemma4 private AI workflow](https://x.com/adidshaft/status/2055043263510544561) |
 
 ---
 
