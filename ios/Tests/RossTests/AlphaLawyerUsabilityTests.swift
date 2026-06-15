@@ -830,6 +830,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         )
 
         XCTAssertFalse(sourcePack.isEmpty)
+        XCTAssertEqual(sourcePack.first?.sourceRef.documentId, relevantDocumentID)
         XCTAssertTrue(sourcePack.contains { $0.sourceRef.documentId == relevantDocumentID })
         XCTAssertEqual(
             sourcePack.first(where: { $0.sourceRef.effectiveSourceCategory != .matterDetail })?.sourceRef.documentId,
@@ -911,6 +912,58 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertEqual(Set(documentSourceRefs.prefix(2).map(\.sourceRef.documentId)), Set([chronologyDocumentID, affidavitDocumentID]))
         XCTAssertTrue(documentSourceRefs.contains { $0.sourceRef.documentId == chronologyDocumentID })
         XCTAssertTrue(documentSourceRefs.contains { $0.sourceRef.documentId == affidavitDocumentID })
+    }
+
+    @MainActor
+    func testAskRuntimeSourcePackKeepsMatterContextFirstForGenericUntaggedGuidanceQuestion() {
+        let caseID = UUID()
+        let documentID = UUID()
+        let document = AlphaCaseDocument(
+            id: documentID,
+            title: "Routine reminder",
+            fileName: "routine-reminder.txt",
+            kind: .text,
+            storedRelativePath: "docs/routine-reminder.txt",
+            importedAt: .now,
+            pageCount: 1,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: "Routine filing reminder and correspondence log.",
+            pages: [
+                AlphaDocumentPage(
+                    pageNumber: 1,
+                    snippet: "Routine filing reminder.",
+                    extractedText: "Routine filing reminder and correspondence log."
+                )
+            ]
+        )
+
+        var state = AlphaPersistedState.seed()
+        state.cases = [
+            AlphaCaseMatter(
+                id: caseID,
+                title: "Guidance matter",
+                forum: "High Court",
+                stage: .arguments,
+                nextHearing: Date(timeIntervalSince1970: 1_781_568_000),
+                summary: "Matter summary should stay prominent for generic guidance asks.",
+                issueHighlights: ["Delay condonation"],
+                evidenceNotes: [],
+                draftTasks: [],
+                documents: [document],
+                sourceRefs: []
+            )
+        ]
+
+        let model = AlphaRossModel(previewState: state)
+        let sourcePack = model.askRuntimeSourcePack(
+            question: "What should I do next?",
+            scopeCaseID: caseID,
+            selectedDocuments: []
+        )
+
+        XCTAssertFalse(sourcePack.isEmpty)
+        XCTAssertEqual(sourcePack.first?.sourceRef.effectiveSourceCategory, .matterDetail)
     }
 
     @MainActor

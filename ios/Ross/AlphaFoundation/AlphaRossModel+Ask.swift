@@ -1760,6 +1760,12 @@ extension AlphaRossModel {
             rankedDocumentBlocks,
             selectedDocumentIDs: selectedIDs
         )
+        let leadingDocumentRelevanceScore = candidateDocuments.first.map {
+            alphaAskCandidateDocumentRelevanceScore(
+                document: $0.1,
+                questionTerms: queryTerms
+            )
+        } ?? 0
         if !selectedIDs.isEmpty {
             guard !prioritizedSelectedDocumentBlocks.isEmpty else { return [] }
             if !prioritizedFollowUpBlocks.isEmpty {
@@ -1786,6 +1792,9 @@ extension AlphaRossModel {
             return Array((prioritizedFollowUpBlocks + matterBlocks).prefix(sourcePackPolicy.sourceBlockLimit))
         }
         if !balancedRankedDocumentBlocks.isEmpty {
+            if leadingDocumentRelevanceScore >= 8 {
+                return Array((balancedRankedDocumentBlocks + matterBlocks).prefix(sourcePackPolicy.sourceBlockLimit))
+            }
             return Array((matterBlocks + balancedRankedDocumentBlocks).prefix(sourcePackPolicy.sourceBlockLimit))
         }
         return askRuntimeMatterMemorySourcePack(scopeCaseID: scopeCaseID)
