@@ -717,9 +717,19 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         let cleanedDraftLabel = draftLabel.isEmpty ? nil : draftLabel
 
         return (
-            tokens: draftModelTokens,
+            tokens: effectiveDraftTokenCount(),
             label: cleanedDraftLabel
         )
+    }
+
+    private func effectiveDraftTokenCount() -> Int? {
+        guard
+            let draftPath = draftModelPath?.trimmingCharacters(in: .whitespacesAndNewlines),
+            draftPath.isEmpty == false
+        else {
+            return nil
+        }
+        return max(1, min(draftModelTokens ?? 4, 8))
     }
 
     private func validatedDraftMetadata(runtimeAvailable: Bool) -> (tokens: Int?, label: String?)? {
