@@ -3441,6 +3441,60 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     @MainActor
+    func testRecoveredInstalledPackFromDiskNormalizesLegacyFlashLookupToQuickStart() async throws {
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+
+        let sourceDirectory = try makeMLXDirectoryFixture(named: "ross-mlx-quickstart-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: sourceDirectory) }
+
+        let expected = try XCTUnwrap(alphaModelArtifactVerification(at: sourceDirectory))
+        let installed = try await store.installDownloadedPackArtifact(
+            for: .quickStart,
+            fileName: "gemma-4-e4b-it-mlx",
+            downloadedFileURL: sourceDirectory,
+            expectedChecksum: expected.checksum,
+            expectedBytes: expected.bytes,
+            packId: "gemma-4-e4b-it-mlx",
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm
+        )
+
+        let model = AlphaRossModel(previewState: .empty())
+        let recovered = model.recoveredInstalledPackFromDisk(tier: .flash)
+
+        XCTAssertEqual(recovered?.tier, .quickStart)
+        XCTAssertEqual(recovered?.installPath, installed.relativePath)
+        XCTAssertEqual(recovered?.runtimeMode, .mlxSwiftLm)
+    }
+
+    @MainActor
+    func testRecoveredInstalledPackFromDiskIgnoresLegacyFlashArtifactOnDisk() async throws {
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+
+        let sourceDirectory = try makeMLXDirectoryFixture(named: "ross-mlx-flash-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: sourceDirectory) }
+
+        let expected = try XCTUnwrap(alphaModelArtifactVerification(at: sourceDirectory))
+        _ = try await store.installDownloadedPackArtifact(
+            for: .flash,
+            fileName: "gemma-4-e2b-it-mlx",
+            downloadedFileURL: sourceDirectory,
+            expectedChecksum: expected.checksum,
+            expectedBytes: expected.bytes,
+            packId: "gemma-4-e2b-it-mlx",
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm
+        )
+
+        let model = AlphaRossModel(previewState: .empty())
+
+        XCTAssertNil(model.recoveredInstalledPackFromDisk(preferredTier: nil))
+        XCTAssertNil(model.activePack)
+    }
+
+    @MainActor
     func testVerifiedExistingAssistantArtifactReusesInstalledMLXDirectoryFromArchiveName() async throws {
         let store = AlphaRossStore()
         await store.removeAllModelArtifacts()

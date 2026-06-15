@@ -358,6 +358,7 @@ private func alphaInstalledModelPackFileIsUsable(_ pack: AlphaInstalledModelPack
 }
 
 private func alphaRecoveredInstalledPackFromDisk(tier: AlphaCapabilityTier) -> AlphaInstalledModelPack? {
+    guard tier != .flash else { return nil }
     let tierFolder = alphaAbsoluteURL(for: "model-packs/\(tier.rawValue)")
     if let contents = try? FileManager.default.contentsOfDirectory(
         at: tierFolder,
@@ -481,7 +482,7 @@ private func alphaRecoverDownloadedAssistantArtifacts(from state: inout AlphaPer
     var recoveredPacks: [AlphaInstalledModelPack] = []
     let existingPackPaths = Set(state.installedPacks.map(\.installPath))
 
-    for tier in AlphaCapabilityTier.allCases {
+    for tier in AlphaCapabilityTier.installableAssistantTiers {
         guard let recovered = alphaRecoveredInstalledPackFromDisk(tier: tier),
               !existingPackPaths.contains(recovered.installPath) else { continue }
         recoveredPacks.append(recovered)
@@ -1630,7 +1631,7 @@ extension AlphaRossModel {
         if let recovered = alphaRecoveredInstalledPackFromDisk(tier: persisted.settings.activeTier ?? selectedTier) {
             return recovered
         }
-        return AlphaCapabilityTier.allCases.lazy.compactMap { alphaRecoveredInstalledPackFromDisk(tier: $0) }.first
+        return AlphaCapabilityTier.installableAssistantTiers.lazy.compactMap { alphaRecoveredInstalledPackFromDisk(tier: $0) }.first
     }
 
     func submitDockInput(question: String, scopeCaseID: UUID?, webEnabled: Bool) async {
@@ -2119,7 +2120,9 @@ extension AlphaRossModel {
     }
 
     func recoveredInstalledPackFromDisk(tier: AlphaCapabilityTier) -> AlphaInstalledModelPack? {
-        alphaRecoveredInstalledPackFromDisk(tier: tier)
+        alphaRecoveredInstalledPackFromDisk(
+            tier: AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? .quickStart
+        )
     }
 
     func alphaAssistantChecksumMatches(expected: String, actual: String) -> Bool {
