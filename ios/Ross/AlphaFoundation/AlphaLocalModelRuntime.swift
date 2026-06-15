@@ -218,18 +218,26 @@ func alphaAskRuntimeSourcePackPolicy(
     runtimeMode: AlphaPackRuntimeMode,
     capabilityTier: AlphaCapabilityTier,
     baseMaxInputChars: Int,
-    hasSelectedDocuments: Bool
+    hasSelectedDocuments: Bool,
+    selectedDocumentCount: Int = 0
 ) -> AlphaAskRuntimeSourcePackPolicy {
+    let hasSingleSelectedDocument = hasSelectedDocuments && selectedDocumentCount == 1
     switch runtimeMode {
     case .mlxSwiftLm:
         if capabilityTier == .caseAssociate || capabilityTier == .seniorDraftingSupport {
             if baseMaxInputChars >= 52_000 {
+                if hasSingleSelectedDocument {
+                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 16)
+                }
                 return AlphaAskRuntimeSourcePackPolicy(
                     documentCandidateLimit: hasSelectedDocuments ? 4 : 6,
                     sourceBlockLimit: hasSelectedDocuments ? 14 : 12
                 )
             }
             if baseMaxInputChars >= 40_000 {
+                if hasSingleSelectedDocument {
+                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 16)
+                }
                 return AlphaAskRuntimeSourcePackPolicy(
                     documentCandidateLimit: hasSelectedDocuments ? 4 : 5,
                     sourceBlockLimit: hasSelectedDocuments ? 12 : 10
@@ -243,12 +251,18 @@ func alphaAskRuntimeSourcePackPolicy(
     case .llamaCppGguf:
         if capabilityTier == .caseAssociate || capabilityTier == .seniorDraftingSupport {
             if baseMaxInputChars >= 48_000 {
+                if hasSingleSelectedDocument {
+                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 14)
+                }
                 return AlphaAskRuntimeSourcePackPolicy(
                     documentCandidateLimit: hasSelectedDocuments ? 4 : 6,
                     sourceBlockLimit: hasSelectedDocuments ? 12 : 10
                 )
             }
             if baseMaxInputChars >= 40_000 {
+                if hasSingleSelectedDocument {
+                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 14)
+                }
                 return AlphaAskRuntimeSourcePackPolicy(
                     documentCandidateLimit: hasSelectedDocuments ? 4 : 5,
                     sourceBlockLimit: hasSelectedDocuments ? 11 : 9
@@ -256,6 +270,9 @@ func alphaAskRuntimeSourcePackPolicy(
             }
         }
         if baseMaxInputChars >= 40_000 {
+            if hasSingleSelectedDocument {
+                return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 14)
+            }
             return AlphaAskRuntimeSourcePackPolicy(
                 documentCandidateLimit: hasSelectedDocuments ? 4 : 5,
                 sourceBlockLimit: hasSelectedDocuments ? 10 : 9
@@ -265,12 +282,18 @@ func alphaAskRuntimeSourcePackPolicy(
     case .appleFoundationModels:
         if capabilityTier == .caseAssociate || capabilityTier == .seniorDraftingSupport {
             if baseMaxInputChars >= 40_000 {
+                if hasSingleSelectedDocument {
+                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 16)
+                }
                 return AlphaAskRuntimeSourcePackPolicy(
                     documentCandidateLimit: hasSelectedDocuments ? 4 : 7,
                     sourceBlockLimit: hasSelectedDocuments ? 15 : 12
                 )
             }
             if baseMaxInputChars >= 28_000 {
+                if hasSingleSelectedDocument {
+                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 14)
+                }
                 return AlphaAskRuntimeSourcePackPolicy(
                     documentCandidateLimit: hasSelectedDocuments ? 4 : 6,
                     sourceBlockLimit: hasSelectedDocuments ? 12 : 10
@@ -293,6 +316,7 @@ enum AlphaLocalPromptBudgetPlanner {
         baseMaxInputChars: Int,
         sourceBlockCount: Int,
         sourceCharCount: Int,
+        selectedDocumentCount: Int = 0,
         lastInvocation: AlphaLocalModelInvocation?
     ) -> AlphaLocalPromptBudgetPlan {
         guard sourceBlockCount > 0 else {
@@ -315,6 +339,13 @@ enum AlphaLocalPromptBudgetPlanner {
             maxInputChars = max(Int(Double(maxInputChars) * 0.9), runtimeDefaults.minimumBudget)
             sourceBlockLimit = runtimeDefaults.largeFileBlockLimit
             sourceExcerptChars = runtimeDefaults.largeFileExcerptChars
+            if selectedDocumentCount == 1,
+               let expandedBlockLimit = singleSelectedMatterQuestionBlockLimit(
+                runtimeMode: runtimeMode,
+                baseMaxInputChars: baseMaxInputChars
+               ) {
+                sourceBlockLimit = min(expandedBlockLimit, sourceBlockCount)
+            }
         }
 
         guard let lastInvocation,
@@ -346,6 +377,25 @@ enum AlphaLocalPromptBudgetPlanner {
             sourceBlockLimit: sourceBlockLimit,
             sourceExcerptChars: sourceExcerptChars
         )
+    }
+
+    private static func singleSelectedMatterQuestionBlockLimit(
+        runtimeMode: AlphaPackRuntimeMode,
+        baseMaxInputChars: Int
+    ) -> Int? {
+        switch runtimeMode {
+        case .mlxSwiftLm:
+            return baseMaxInputChars >= 40_000 ? 16 : nil
+        case .llamaCppGguf:
+            return baseMaxInputChars >= 40_000 ? 14 : nil
+        case .appleFoundationModels:
+            if baseMaxInputChars >= 40_000 {
+                return 16
+            }
+            return baseMaxInputChars >= 28_000 ? 14 : nil
+        default:
+            return nil
+        }
     }
 
     static func structuredDocumentPlan(

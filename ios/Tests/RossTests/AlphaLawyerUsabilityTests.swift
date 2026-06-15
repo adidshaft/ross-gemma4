@@ -684,6 +684,142 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
     }
 
     @MainActor
+    func testAskRuntimeSourcePackKeepsMoreSingleSelectedPagesForCapableMLXAssistant() {
+        let caseID = UUID()
+        let documentID = UUID()
+        let pages = (1...16).map { pageNumber in
+            AlphaDocumentPage(
+                pageNumber: pageNumber,
+                snippet: "Detailed hearing page \(pageNumber)",
+                extractedText: "Page \(pageNumber) records the selected hearing chronology, next steps, and advocate instructions for the tagged file."
+            )
+        }
+        let document = AlphaCaseDocument(
+            id: documentID,
+            title: "Detailed hearing chronology",
+            fileName: "detailed-hearing-chronology.pdf",
+            kind: .pdf,
+            storedRelativePath: "docs/detailed-hearing-chronology.pdf",
+            importedAt: .now,
+            pageCount: pages.count,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: pages.compactMap(\.extractedText).joined(separator: "\n"),
+            pages: pages
+        )
+        var state = AlphaPersistedState.seed()
+        state.settings.activeTier = .caseAssociate
+        state.cases = [
+            AlphaCaseMatter(
+                id: caseID,
+                title: "Expanded MLX context matter",
+                forum: "High Court",
+                stage: .arguments,
+                summary: "Single selected file should keep more page coverage on capable MLX runs.",
+                issueHighlights: [],
+                evidenceNotes: [],
+                draftTasks: [],
+                documents: [document],
+                sourceRefs: []
+            )
+        ]
+
+        let model = AlphaRossModel(previewState: state)
+        let mlxPack = AlphaInstalledModelPack(
+            packId: "gemma-4-12b-mlx",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/gemma-4-12b-it-mlx",
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+        model.privateAISnapshot.activePack = mlxPack
+        model.privateAISnapshot.installedPacks = [mlxPack]
+        model.persisted.installedPacks = [mlxPack]
+        model.setSelectedAskDocumentIDs([documentID], for: caseID)
+
+        let sourcePack = model.askRuntimeSourcePack(
+            question: "What does this selected document say about the hearing chronology and next steps?",
+            scopeCaseID: caseID,
+            selectedDocuments: model.selectedAskDocuments(for: caseID)
+        )
+
+        XCTAssertEqual(sourcePack.count, 16)
+        XCTAssertEqual(sourcePack.filter { $0.sourceRef.documentId == documentID }.count, 16)
+    }
+
+    @MainActor
+    func testAskRuntimeSourcePackKeepsMoreSingleSelectedPagesForCapableGGUFAssistant() {
+        let caseID = UUID()
+        let documentID = UUID()
+        let pages = (1...14).map { pageNumber in
+            AlphaDocumentPage(
+                pageNumber: pageNumber,
+                snippet: "Selected order detail page \(pageNumber)",
+                extractedText: "Page \(pageNumber) records the selected order chronology, filing duties, and cited directions for the tagged file."
+            )
+        }
+        let document = AlphaCaseDocument(
+            id: documentID,
+            title: "Expanded selected order chronology",
+            fileName: "expanded-selected-order-chronology.pdf",
+            kind: .pdf,
+            storedRelativePath: "docs/expanded-selected-order-chronology.pdf",
+            importedAt: .now,
+            pageCount: pages.count,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: pages.compactMap(\.extractedText).joined(separator: "\n"),
+            pages: pages
+        )
+        var state = AlphaPersistedState.seed()
+        state.settings.activeTier = .caseAssociate
+        state.cases = [
+            AlphaCaseMatter(
+                id: caseID,
+                title: "Expanded GGUF context matter",
+                forum: "High Court",
+                stage: .arguments,
+                summary: "Single selected file should keep more page coverage on capable GGUF runs.",
+                issueHighlights: [],
+                evidenceNotes: [],
+                draftTasks: [],
+                documents: [document],
+                sourceRefs: []
+            )
+        ]
+
+        let model = AlphaRossModel(previewState: state)
+        let ggufPack = AlphaInstalledModelPack(
+            packId: "gemma-4-12b-gguf",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/gemma-4-12B-it-Q4_K_M.gguf",
+            checksumSha256: String(repeating: "b", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+        model.privateAISnapshot.activePack = ggufPack
+        model.privateAISnapshot.installedPacks = [ggufPack]
+        model.persisted.installedPacks = [ggufPack]
+        model.setSelectedAskDocumentIDs([documentID], for: caseID)
+
+        let sourcePack = model.askRuntimeSourcePack(
+            question: "What does this selected document say about the order chronology and filing duties?",
+            scopeCaseID: caseID,
+            selectedDocuments: model.selectedAskDocuments(for: caseID)
+        )
+
+        XCTAssertEqual(sourcePack.count, 14)
+        XCTAssertEqual(sourcePack.filter { $0.sourceRef.documentId == documentID }.count, 14)
+    }
+
+    @MainActor
     func testAskRuntimeSourcePackKeepsSelectedDocumentCoverageForBroadQuestion() {
         let caseID = UUID()
         let firstDocumentID = UUID()

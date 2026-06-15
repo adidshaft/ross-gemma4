@@ -1215,6 +1215,7 @@ extension AlphaRossModel {
             baseMaxInputChars: baseMaxInputChars,
             sourceBlockCount: input.sourcePack.count,
             sourceCharCount: sourceCharCount,
+            selectedDocumentCount: selectedDocuments.count,
             lastInvocation: lastModelInvocation
         )
         input.promptBudgetOverrideChars = budgetPlan.maxInputChars
@@ -1641,7 +1642,8 @@ extension AlphaRossModel {
                 runtimeMode: provider.runtimeMode,
                 capabilityTier: provider.capabilityTier,
                 baseMaxInputChars: baseMaxInputChars,
-                hasSelectedDocuments: !selectedIDs.isEmpty
+                hasSelectedDocuments: !selectedIDs.isEmpty,
+                selectedDocumentCount: selectedIDs.count
             )
         }()
         let scopedCases: [AlphaCaseMatter]

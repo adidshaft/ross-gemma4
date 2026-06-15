@@ -6311,6 +6311,21 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(plan.sourceExcerptChars, 1_450)
     }
 
+    func testMatterQuestionBudgetPlannerKeepsMoreSingleSelectedLlamaContext() {
+        let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
+            runtimeMode: .llamaCppGguf,
+            baseMaxInputChars: 42_000,
+            sourceBlockCount: 14,
+            sourceCharCount: 39_000,
+            selectedDocumentCount: 1,
+            lastInvocation: nil
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 37_800)
+        XCTAssertEqual(plan.sourceBlockLimit, 14)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_450)
+    }
+
     func testMatterQuestionBudgetPlannerUsesExpandedMLXBudgetsFor12BClassRuns() {
         let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
             runtimeMode: .mlxSwiftLm,
@@ -6325,6 +6340,21 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(plan.sourceExcerptChars, 1_650)
     }
 
+    func testMatterQuestionBudgetPlannerKeepsMoreSingleSelectedMLXContext() {
+        let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
+            runtimeMode: .mlxSwiftLm,
+            baseMaxInputChars: 44_000,
+            sourceBlockCount: 16,
+            sourceCharCount: 39_000,
+            selectedDocumentCount: 1,
+            lastInvocation: nil
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 39_600)
+        XCTAssertEqual(plan.sourceBlockLimit, 16)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_650)
+    }
+
     func testMatterQuestionBudgetPlannerUsesExpandedFoundationBudgetsForCapableRuns() {
         let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
             runtimeMode: .appleFoundationModels,
@@ -6336,6 +6366,21 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(plan.maxInputChars, 39_600)
         XCTAssertEqual(plan.sourceBlockLimit, 10)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_700)
+    }
+
+    func testMatterQuestionBudgetPlannerKeepsMoreSingleSelectedFoundationContext() {
+        let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
+            runtimeMode: .appleFoundationModels,
+            baseMaxInputChars: 44_000,
+            sourceBlockCount: 16,
+            sourceCharCount: 39_000,
+            selectedDocumentCount: 1,
+            lastInvocation: nil
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 39_600)
+        XCTAssertEqual(plan.sourceBlockLimit, 16)
         XCTAssertEqual(plan.sourceExcerptChars, 1_700)
     }
 
@@ -6452,6 +6497,19 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(policy.sourceBlockLimit, 14)
     }
 
+    func testAskRuntimeSourcePackPolicyExpandsFurtherForSingleSelectedMLXAsk() {
+        let policy = alphaAskRuntimeSourcePackPolicy(
+            runtimeMode: .mlxSwiftLm,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 52_000,
+            hasSelectedDocuments: true,
+            selectedDocumentCount: 1
+        )
+
+        XCTAssertEqual(policy.documentCandidateLimit, 4)
+        XCTAssertEqual(policy.sourceBlockLimit, 16)
+    }
+
     func testAskRuntimeSourcePackPolicyExpandsForCapableLlamaAsks() {
         let policy = alphaAskRuntimeSourcePackPolicy(
             runtimeMode: .llamaCppGguf,
@@ -6462,6 +6520,19 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(policy.documentCandidateLimit, 4)
         XCTAssertEqual(policy.sourceBlockLimit, 12)
+    }
+
+    func testAskRuntimeSourcePackPolicyExpandsFurtherForSingleSelectedLlamaAsk() {
+        let policy = alphaAskRuntimeSourcePackPolicy(
+            runtimeMode: .llamaCppGguf,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 48_000,
+            hasSelectedDocuments: true,
+            selectedDocumentCount: 1
+        )
+
+        XCTAssertEqual(policy.documentCandidateLimit, 4)
+        XCTAssertEqual(policy.sourceBlockLimit, 14)
     }
 
     func testAskRuntimeSourcePackPolicyExpandsLlamaCandidateWindowWithoutSelections() {
@@ -6486,6 +6557,19 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(policy.documentCandidateLimit, 4)
         XCTAssertEqual(policy.sourceBlockLimit, 15)
+    }
+
+    func testAskRuntimeSourcePackPolicyExpandsFurtherForSingleSelectedFoundationAsk() {
+        let policy = alphaAskRuntimeSourcePackPolicy(
+            runtimeMode: .appleFoundationModels,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 44_000,
+            hasSelectedDocuments: true,
+            selectedDocumentCount: 1
+        )
+
+        XCTAssertEqual(policy.documentCandidateLimit, 4)
+        XCTAssertEqual(policy.sourceBlockLimit, 16)
     }
 
     func testAskRuntimeSourcePackPolicyExpandsFoundationCandidateWindowWithoutSelections() {
