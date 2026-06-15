@@ -3974,6 +3974,80 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(plan.sourceExcerptChars, 760)
     }
 
+    func testLlamaRuntimeProfileExpandsContextFor12BOnCapablePhones() {
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.contextWindowTokens(
+                forModelPath: "/tmp/gemma-4-12B-it-Q4_K_M.gguf",
+                physicalMemory: 8_000_000_000
+            ),
+            16_384
+        )
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.contextWindowTokens(
+                forModelPath: "/tmp/gemma-4-12B-it-Q4_K_M.gguf",
+                physicalMemory: 12_000_000_000
+            ),
+            20_480
+        )
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.contextWindowTokens(
+                forModelPath: "/tmp/gemma-4-12B-it-Q4_K_M.gguf",
+                physicalMemory: 16_000_000_000
+            ),
+            24_576
+        )
+    }
+
+    func testLlamaRuntimeProfileRaisesHighQualityInputBudgets() {
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.maxInputChars(
+                for: .quickStart,
+                physicalMemory: 8_000_000_000
+            ),
+            26_000
+        )
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.maxInputChars(
+                for: .caseAssociate,
+                physicalMemory: 12_000_000_000
+            ),
+            42_000
+        )
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.maxInputChars(
+                for: .seniorDraftingSupport,
+                physicalMemory: 20_000_000_000
+            ),
+            54_000
+        )
+        XCTAssertEqual(AlphaLlamaRuntimeProfile.sourceBlockLimit(for: .caseAssociate), 8)
+        XCTAssertEqual(AlphaLlamaRuntimeProfile.sourceBlockLimit(for: .seniorDraftingSupport), 10)
+    }
+
+    func testLlamaRuntimeProfileUsesModelAwareGPUOffload() {
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.gpuLayerCount(
+                forModelPath: "/tmp/google_gemma-4-E4B-it-Q4_K_M.gguf",
+                physicalMemory: 7_000_000_000
+            ),
+            24
+        )
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.gpuLayerCount(
+                forModelPath: "/tmp/gemma-4-12B-it-Q4_K_M.gguf",
+                physicalMemory: 9_000_000_000
+            ),
+            40
+        )
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.gpuLayerCount(
+                forModelPath: "/tmp/google_gemma-4-26B-A4B-it-Q4_K_M.gguf",
+                physicalMemory: 11_000_000_000
+            ),
+            0
+        )
+    }
+
     func testRealRuntimeSelectionFailsClosedWhenUnavailable() async {
         let pack = installedPack(.caseAssociate, runtimeMode: .appleFoundationModels)
         let runtimeEnvironment = AlphaLocalRuntimeEnvironment(

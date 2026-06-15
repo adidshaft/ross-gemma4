@@ -2,28 +2,102 @@ import Foundation
 import LlamaSwift
 
 enum AlphaLlamaRuntimeProfile {
+    private enum ArchiveProfile {
+        case flash
+        case e4b
+        case gemma12b
+        case gemma26bA4b
+        case unknown
+    }
+
     private static func containsAny(_ value: String, fragments: [String]) -> Bool {
         let lowered = value.lowercased()
         return fragments.contains { lowered.contains($0.lowercased()) }
     }
 
-    static func contextWindowTokens(forModelPath path: String?, physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory) -> UInt32 {
-        guard let path else {
-            return physicalMemory < 6_000_000_000 ? 4_096 : 8_192
+    private static func archiveProfile(forModelPath path: String?) -> ArchiveProfile {
+        guard let path else { return .unknown }
+        if containsAny(path, fragments: ["E2B", "e2b"]) {
+            return .flash
         }
+        if containsAny(path, fragments: ["26B-A4B", "26b-a4b"]) {
+            return .gemma26bA4b
+        }
+        if containsAny(path, fragments: ["12B", "12b"]) {
+            return .gemma12b
+        }
+        if containsAny(path, fragments: ["E4B", "e4b"]) {
+            return .e4b
+        }
+        return .unknown
+    }
+
+    static func contextWindowTokens(forModelPath path: String?, physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory) -> UInt32 {
         if physicalMemory < 6_000_000_000 {
             return 4_096
         }
-        if containsAny(path, fragments: ["26B-A4B", "26b-a4b", "26B"]) {
-            return physicalMemory >= 18_000_000_000 ? 12_288 : 8_192
-        }
-        if containsAny(path, fragments: ["12B", "12b"]) {
-            return physicalMemory >= 12_000_000_000 ? 16_384 : 12_288
-        }
-        if containsAny(path, fragments: ["E4B", "e4b"]) {
+
+        switch archiveProfile(forModelPath: path) {
+        case .flash:
+            return physicalMemory >= 8_000_000_000 ? 8_192 : 6_144
+        case .e4b:
+            if physicalMemory >= 12_000_000_000 {
+                return 16_384
+            }
             return physicalMemory >= 8_000_000_000 ? 12_288 : 8_192
+        case .gemma12b:
+            if physicalMemory >= 16_000_000_000 {
+                return 24_576
+            }
+            if physicalMemory >= 12_000_000_000 {
+                return 20_480
+            }
+            return 16_384
+        case .gemma26bA4b:
+            if physicalMemory >= 20_000_000_000 {
+                return 16_384
+            }
+            return physicalMemory >= 16_000_000_000 ? 12_288 : 8_192
+        case .unknown:
+            return physicalMemory >= 10_000_000_000 ? 12_288 : 8_192
         }
-        return 8_192
+    }
+
+    static func gpuLayerCount(forModelPath path: String?, physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory) -> Int32 {
+        if physicalMemory < 6_000_000_000 {
+            return 0
+        }
+
+        switch archiveProfile(forModelPath: path) {
+        case .flash:
+            if physicalMemory < 8_000_000_000 {
+                return 16
+            }
+            return 40
+        case .e4b:
+            if physicalMemory < 8_000_000_000 {
+                return 24
+            }
+            return 99
+        case .gemma12b:
+            if physicalMemory < 8_000_000_000 {
+                return 20
+            }
+            if physicalMemory < 12_000_000_000 {
+                return 40
+            }
+            return 99
+        case .gemma26bA4b:
+            if physicalMemory < 12_000_000_000 {
+                return 0
+            }
+            if physicalMemory < 18_000_000_000 {
+                return 20
+            }
+            return 99
+        case .unknown:
+            return physicalMemory < 10_000_000_000 ? 24 : 99
+        }
     }
 
     static func maxInputChars(for tier: AlphaCapabilityTier, physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory) -> Int {
@@ -31,11 +105,17 @@ enum AlphaLlamaRuntimeProfile {
         case .flash:
             return 12_000
         case .quickStart:
-            return physicalMemory >= 8_000_000_000 ? 24_000 : 18_000
+            return physicalMemory >= 8_000_000_000 ? 26_000 : 20_000
         case .caseAssociate:
-            return physicalMemory >= 12_000_000_000 ? 36_000 : 28_000
+            if physicalMemory >= 16_000_000_000 {
+                return 48_000
+            }
+            return physicalMemory >= 12_000_000_000 ? 42_000 : 34_000
         case .seniorDraftingSupport:
-            return physicalMemory >= 18_000_000_000 ? 40_000 : 34_000
+            if physicalMemory >= 20_000_000_000 {
+                return 54_000
+            }
+            return physicalMemory >= 16_000_000_000 ? 46_000 : 38_000
         }
     }
 
@@ -46,22 +126,22 @@ enum AlphaLlamaRuntimeProfile {
             case .flash:
                 return 128
             case .quickStart:
-                return 192
+                return 224
             case .caseAssociate:
-                return 256
-            case .seniorDraftingSupport:
                 return 320
+            case .seniorDraftingSupport:
+                return 384
             }
         default:
             switch tier {
             case .flash:
                 return 128
             case .quickStart:
-                return 192
+                return 224
             case .caseAssociate:
-                return 256
-            case .seniorDraftingSupport:
                 return 320
+            case .seniorDraftingSupport:
+                return 384
             }
         }
     }
@@ -71,11 +151,11 @@ enum AlphaLlamaRuntimeProfile {
         case .flash:
             return 4
         case .quickStart:
-            return 5
+            return 6
         case .caseAssociate:
-            return 7
-        case .seniorDraftingSupport:
             return 8
+        case .seniorDraftingSupport:
+            return 10
         }
     }
 }

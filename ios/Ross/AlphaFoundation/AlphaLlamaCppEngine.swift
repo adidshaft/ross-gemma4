@@ -83,16 +83,11 @@ actor LlamaContext {
         model_params.n_gpu_layers = 0
         print("Running on simulator, force use n_gpu_layers = 0")
 #else
-        // For very large models on constrained devices, limit GPU offloading to avoid OOM
-        if memory < 6_000_000_000 || (memory < 12_000_000_000 && path.contains("26B")) {
-            model_params.n_gpu_layers = 0
-            print("Constrained memory, using CPU only to prevent crash")
-        } else if memory < 10_000_000_000 {
-            model_params.n_gpu_layers = 24
-            print("Moderate memory, using bounded GPU offload")
-        } else {
-            model_params.n_gpu_layers = 99 // Offload as much as possible
-        }
+        model_params.n_gpu_layers = AlphaLlamaRuntimeProfile.gpuLayerCount(
+            forModelPath: path,
+            physicalMemory: memory
+        )
+        print("Using n_gpu_layers = \(model_params.n_gpu_layers)")
 #endif
         let model = llama_model_load_from_file(path, model_params)
         guard let model else {
