@@ -55,6 +55,11 @@
 		CCEFEC94E7BC87A862C8F913 /* AlphaDataModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BDF2721944CAB65DC4F629C /* AlphaDataModels.swift */; };
 		CF913D4FB64C57942D3BA1BA /* CaseRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = E74DB047A5F457623AD25580 /* CaseRepository.swift */; };
 		AABBCCDD0011223344556677 /* LlamaSwift in Frameworks */ = {isa = PBXBuildFile; productRef = AABBCCDD0011223344556678 /* LlamaSwift */; };
+		BB11CC22DD33000000000001 /* AlphaMLXLocalProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB11CC22DD33000000000011 /* AlphaMLXLocalProvider.swift */; };
+		BB11CC22DD33000000000002 /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = BB11CC22DD33000000000012 /* MLXLLM */; };
+		BB11CC22DD33000000000003 /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = BB11CC22DD33000000000013 /* MLXLMCommon */; };
+		BB11CC22DD33000000000005 /* HuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = BB11CC22DD33000000000015 /* HuggingFace */; };
+		BB11CC22DD33000000000006 /* Tokenizers in Frameworks */ = {isa = PBXBuildFile; productRef = BB11CC22DD33000000000016 /* Tokenizers */; };
 		AA00BB11CC22DD3300000001 /* AlphaLlamaCppEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00BB11CC22DD3300000011 /* AlphaLlamaCppEngine.swift */; };
 		AA00BB11CC22DD3300000002 /* AlphaLlamaCppProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00BB11CC22DD3300000012 /* AlphaLlamaCppProvider.swift */; };
 			D59528BC93111C2F548C1C55 /* DeviceCapabilityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF026A2C0B93DFBD17AEFF9A /* DeviceCapabilityService.swift */; };
@@ -105,6 +110,7 @@
 		5993A6ABEC3B3ACA05CDEFD6 /* AlphaPrivateAIViews.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaPrivateAIViews.swift; sourceTree = "<group>"; };
 		9E2E70AB92D1E9D4CD052E3B /* AlphaDocumentPreviews.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaDocumentPreviews.swift; sourceTree = "<group>"; };
 		A64616242F098492C6821152 /* AlphaRossModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaRossModel.swift; sourceTree = "<group>"; };
+		BB11CC22DD33000000000011 /* AlphaMLXLocalProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AlphaMLXLocalProvider.swift; sourceTree = "<group>"; };
 		A90D3BC98733B6000CDDD236 /* SettingsModels.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SettingsModels.swift; sourceTree = "<group>"; };
 		B079B9809A778D83A52CDD22 /* DeviceCapability.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeviceCapability.swift; sourceTree = "<group>"; };
 		B44F9771029315078F6814ED /* LocalRuntimeService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LocalRuntimeService.swift; sourceTree = "<group>"; };
@@ -124,6 +130,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				AABBCCDD0011223344556677 /* LlamaSwift in Frameworks */,
+				BB11CC22DD33000000000002 /* MLXLLM in Frameworks */,
+				BB11CC22DD33000000000003 /* MLXLMCommon in Frameworks */,
+				BB11CC22DD33000000000005 /* HuggingFace in Frameworks */,
+				BB11CC22DD33000000000006 /* Tokenizers in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -183,6 +193,7 @@
 				A1B2C3D4E5F60718293A4B63 /* AlphaModelOutputValidator.swift */,
 				AA00BB11CC22DD3300000011 /* AlphaLlamaCppEngine.swift */,
 				AA00BB11CC22DD3300000012 /* AlphaLlamaCppProvider.swift */,
+				BB11CC22DD33000000000011 /* AlphaMLXLocalProvider.swift */,
 				6263477CDD4DB63E41096E91 /* AlphaStore.swift */,
 				45966E3C3DDFFF66C005FCF2 /* AlphaRootNavigation.swift */,
 				AA30A9973616B2AD314EE06C /* AlphaOnboardingViews.swift */,
@@ -271,6 +282,10 @@
 			name = Ross;
 			packageProductDependencies = (
 				AABBCCDD0011223344556678 /* LlamaSwift */,
+				BB11CC22DD33000000000012 /* MLXLLM */,
+				BB11CC22DD33000000000013 /* MLXLMCommon */,
+				BB11CC22DD33000000000015 /* HuggingFace */,
+				BB11CC22DD33000000000016 /* Tokenizers */,
 			);
 			productName = Ross;
 			productReference = 64DE66B33156149EA2DB94E5 /* Ross.app */;
@@ -304,6 +319,9 @@
 			projectDirPath = "";
 			packageReferences = (
 				AABBCCDD0011223344556679 /* XCRemoteSwiftPackageReference "llama.swift" */,
+				BB11CC22DD33000000000021 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */,
+				BB11CC22DD33000000000022 /* XCRemoteSwiftPackageReference "swift-huggingface" */,
+				BB11CC22DD33000000000023 /* XCRemoteSwiftPackageReference "swift-transformers" */,
 			);
 			projectRoot = "";
 			targets = (
@@ -379,6 +397,7 @@
 				2F2738401417D3E3C600DF81 /* AlphaRossModel+PrivateAI.swift in Sources */,
 				AA00BB11CC22DD3300000001 /* AlphaLlamaCppEngine.swift in Sources */,
 				AA00BB11CC22DD3300000002 /* AlphaLlamaCppProvider.swift in Sources */,
+				BB11CC22DD33000000000001 /* AlphaMLXLocalProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -592,6 +611,30 @@
 				minimumVersion = 2.9637.0;
 			};
 		};
+		BB11CC22DD33000000000021 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ml-explore/mlx-swift-lm";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.31.3;
+			};
+		};
+		BB11CC22DD33000000000022 /* XCRemoteSwiftPackageReference "swift-huggingface" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/huggingface/swift-huggingface";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.9.0;
+			};
+		};
+		BB11CC22DD33000000000023 /* XCRemoteSwiftPackageReference "swift-transformers" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/huggingface/swift-transformers";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.3.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -599,6 +642,26 @@
 			isa = XCSwiftPackageProductDependency;
 			package = AABBCCDD0011223344556679 /* XCRemoteSwiftPackageReference "llama.swift" */;
 			productName = LlamaSwift;
+		};
+		BB11CC22DD33000000000012 /* MLXLLM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BB11CC22DD33000000000021 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
+			productName = MLXLLM;
+		};
+		BB11CC22DD33000000000013 /* MLXLMCommon */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BB11CC22DD33000000000021 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
+			productName = MLXLMCommon;
+		};
+		BB11CC22DD33000000000015 /* HuggingFace */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BB11CC22DD33000000000022 /* XCRemoteSwiftPackageReference "swift-huggingface" */;
+			productName = HuggingFace;
+		};
+		BB11CC22DD33000000000016 /* Tokenizers */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BB11CC22DD33000000000023 /* XCRemoteSwiftPackageReference "swift-transformers" */;
+			productName = Tokenizers;
 		};
 /* End XCSwiftPackageProductDependency section */
 		};
