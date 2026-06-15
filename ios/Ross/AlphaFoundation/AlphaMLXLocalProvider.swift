@@ -6,6 +6,14 @@ import MLXLLM
 import MLXLMCommon
 import Tokenizers
 
+private final class AlphaUnsafeSendableBox<Value>: @unchecked Sendable {
+    let value: Value
+
+    init(_ value: Value) {
+        self.value = value
+    }
+}
+
 enum AlphaMLXRuntimeProfile {
     static func contextWindowTokens(
         for tier: AlphaCapabilityTier,
@@ -83,11 +91,10 @@ enum AlphaMLXRuntimeProfile {
 private actor AlphaMLXModelContainerCache {
     static let shared = AlphaMLXModelContainerCache()
 
-    private var cachedDirectory: String?
-    private var cachedContainer: ModelContainer?
+    private var cachedContainers: [String: ModelContainer] = [:]
 
     func container(for directory: URL) async throws -> ModelContainer {
-        if cachedDirectory == directory.path, let cachedContainer {
+        if let cachedContainer = cachedContainers[directory.path] {
             return cachedContainer
         }
 
@@ -95,8 +102,7 @@ private actor AlphaMLXModelContainerCache {
             from: directory,
             using: #huggingFaceTokenizerLoader()
         )
-        cachedDirectory = directory.path
-        cachedContainer = container
+        cachedContainers[directory.path] = container
         return container
     }
 }
@@ -107,34 +113,75 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
     let modelPathLabel: String?
     let modelPath: String?
     let checksumVerified: Bool
+    let draftModelPath: String?
+    let draftModelTokens: Int?
 
     init(
         capabilityTier: AlphaCapabilityTier,
         modelPathLabel: String?,
         modelPath: String?,
-        checksumVerified: Bool
+        checksumVerified: Bool,
+        draftModelPath: String? = nil,
+        draftModelTokens: Int? = nil
     ) {
         self.capabilityTier = capabilityTier
         self.modelPathLabel = modelPathLabel
         self.modelPath = modelPath
         self.checksumVerified = checksumVerified
+        self.draftModelPath = draftModelPath
+        self.draftModelTokens = draftModelTokens
     }
 
     nonisolated(unsafe) static var streamGenerator:
-        @Sendable (URL, String, String?, GenerateParameters, (@Sendable (String) -> Void)?) async throws -> String = {
-            directory, prompt, instructions, parameters, onChunk in
+        @Sendable (URL, URL?, Int?, String, String?, GenerateParameters, (@Sendable (String) -> Void)?) async throws -> String = {
+            directory, draftDirectory, draftTokens, prompt, instructions, parameters, onChunk in
             let container = try await AlphaMLXModelContainerCache.shared.container(for: directory)
-            let session = ChatSession(
-                container,
-                instructions: instructions,
-                generateParameters: parameters
-            )
-            var generated = ""
-            for try await chunk in session.streamResponse(to: prompt) {
-                generated += chunk
-                onChunk?(generated)
+            let effectivePrompt: String
+            if let instructions, !instructions.isEmpty {
+                effectivePrompt = "\(instructions)\n\n\(prompt)"
+            } else {
+                effectivePrompt = prompt
             }
-            return generated
+            let inputBox = AlphaUnsafeSendableBox(try await container.prepare(input: UserInput(prompt: effectivePrompt)))
+            if let draftDirectory {
+                let draftContainer = try await AlphaMLXModelContainerCache.shared.container(for: draftDirectory)
+                let draftModelBox = await draftContainer.perform { draftContext in
+                    AlphaUnsafeSendableBox(draftContext.model)
+                }
+                return try await container.perform { context in
+                    var generated = ""
+                    let stream = try generate(
+                        input: inputBox.value,
+                        parameters: parameters,
+                        context: context,
+                        draftModel: draftModelBox.value,
+                        numDraftTokens: max(1, draftTokens ?? 2)
+                    )
+                    for try await event in stream {
+                        if case .chunk(let text) = event {
+                            generated += text
+                            onChunk?(generated)
+                        }
+                    }
+                    return generated
+                }
+            } else {
+                return try await container.perform { context in
+                    var generated = ""
+                    let stream = try generate(
+                        input: inputBox.value,
+                        parameters: parameters,
+                        context: context
+                    )
+                    for try await event in stream {
+                        if case .chunk(let text) = event {
+                            generated += text
+                            onChunk?(generated)
+                        }
+                    }
+                    return generated
+                }
+            }
         }
 
     func isAvailable() -> Bool {
@@ -239,6 +286,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         }
 
         let directoryURL = URL(fileURLWithPath: modelPath, isDirectory: true)
+        let draftDirectoryURL = resolvedDraftDirectoryURL()
         let usesPlainMatterAnswerPrompt = taskInput.task == .matterQuestionAnswer
         let focusedMatterSourceRefs = usesPlainMatterAnswerPrompt ? focusedMatterSourceBlocks(for: taskInput).map(\.sourceRef) : []
         let instructions = usesPlainMatterAnswerPrompt ? nil : pack.systemInstructions
@@ -248,6 +296,8 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         do {
             let generatedResponse = try await Self.streamGenerator(
                 directoryURL,
+                draftDirectoryURL,
+                draftTokensForGeneration(),
                 prompt,
                 instructions,
                 parameters
@@ -315,6 +365,10 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         guard Self.localModelDirectoryLooksUsable(directoryURL) else {
             return (false, "runtime_validation_failed", alphaRuntimeHealthStatus(.llamaNeedsRepair))
         }
+        if let draftDirectoryURL = resolvedDraftDirectoryURL(),
+           !Self.localModelDirectoryLooksUsable(draftDirectoryURL) {
+            return (false, "runtime_validation_failed", alphaRuntimeHealthStatus(.llamaNeedsRepair))
+        }
         return (true, nil, alphaRuntimeHealthStatus(.llamaReady))
     }
 
@@ -333,6 +387,24 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             repetitionPenalty: sampler.repeatPenalty > 0 ? Float(sampler.repeatPenalty) : nil,
             prefillStepSize: capabilityTier == .seniorDraftingSupport ? 384 : 256
         )
+    }
+
+    private func resolvedDraftDirectoryURL() -> URL? {
+        guard let draftModelPath else {
+            return nil
+        }
+        let trimmedPath = draftModelPath.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedPath.isEmpty else {
+            return nil
+        }
+        return URL(fileURLWithPath: trimmedPath, isDirectory: true)
+    }
+
+    private func draftTokensForGeneration() -> Int? {
+        guard let draftModelPath, !draftModelPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+        return max(1, min(draftModelTokens ?? 2, 8))
     }
 
     private func extractJSON(from text: String) -> String? {
@@ -509,17 +581,23 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
     let modelPathLabel: String?
     let modelPath: String?
     let checksumVerified: Bool
+    let draftModelPath: String?
+    let draftModelTokens: Int?
 
     init(
         capabilityTier: AlphaCapabilityTier,
         modelPathLabel: String?,
         modelPath: String?,
-        checksumVerified: Bool
+        checksumVerified: Bool,
+        draftModelPath: String? = nil,
+        draftModelTokens: Int? = nil
     ) {
         self.capabilityTier = capabilityTier
         self.modelPathLabel = modelPathLabel
         self.modelPath = modelPath
         self.checksumVerified = checksumVerified
+        self.draftModelPath = draftModelPath
+        self.draftModelTokens = draftModelTokens
     }
 
     func isAvailable() -> Bool { false }

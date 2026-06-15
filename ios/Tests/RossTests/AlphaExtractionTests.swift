@@ -3717,6 +3717,8 @@ final class AlphaExtractionTests: XCTestCase {
             "ROSS_LOCAL_MODEL_PATH": "/tmp/ross/mlx-model",
             "ROSS_LOCAL_MODEL_CHECKSUM": String(repeating: "b", count: 64),
             "ROSS_LOCAL_MODEL_KIND": "mlx_directory",
+            "ROSS_LOCAL_DRAFT_MODEL_PATH": "/tmp/ross/mlx-draft",
+            "ROSS_LOCAL_DRAFT_MODEL_TOKENS": "4",
         ])
 
         XCTAssertTrue(environment.enableRealInference)
@@ -3724,6 +3726,8 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(environment.modelPath, "/tmp/ross/mlx-model")
         XCTAssertEqual(environment.modelChecksum, String(repeating: "b", count: 64))
         XCTAssertEqual(environment.modelKind, "mlx_directory")
+        XCTAssertEqual(environment.draftModelPath, "/tmp/ross/mlx-draft")
+        XCTAssertEqual(environment.draftModelTokens, 4)
     }
 
     func testRealRuntimeSelectionFailsClosedWhenUnavailable() async {
@@ -3912,6 +3916,97 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(provider?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(provider?.isAvailable(), true)
         XCTAssertEqual(provider?.runtimeHealth().modelPathLabel, directory.lastPathComponent)
+    }
+
+    func testExperimentalMLXProviderPassesDraftModelConfigToGenerator() async throws {
+        actor DraftCapture {
+            var mainPath: String?
+            var draftPath: String?
+            var draftTokens: Int?
+
+            func record(mainPath: String, draftPath: String?, draftTokens: Int?) {
+                self.mainPath = mainPath
+                self.draftPath = draftPath
+                self.draftTokens = draftTokens
+            }
+        }
+
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-main-\(UUID().uuidString)", isDirectory: true)
+        let draftDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-draft-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: draftDirectory, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+            try? FileManager.default.removeItem(at: draftDirectory)
+        }
+        for folder in [directory, draftDirectory] {
+            try Data("{}".utf8).write(to: folder.appendingPathComponent("config.json"))
+            try Data("{}".utf8).write(to: folder.appendingPathComponent("tokenizer.json"))
+            try Data("weights".utf8).write(to: folder.appendingPathComponent("model.safetensors"))
+        }
+
+        let previousGenerator = AlphaMLXLocalProvider.streamGenerator
+        defer { AlphaMLXLocalProvider.streamGenerator = previousGenerator }
+
+        let capture = DraftCapture()
+        AlphaMLXLocalProvider.streamGenerator = { mainURL, draftURL, draftTokens, prompt, instructions, parameters, onChunk in
+            await capture.record(mainPath: mainURL.path, draftPath: draftURL?.path, draftTokens: draftTokens)
+            onChunk?("Draft accelerated answer")
+            return "Draft accelerated answer"
+        }
+
+        let pack = installedPack(.caseAssociate, runtimeMode: .mlxSwiftLm)
+        let provider = AlphaLocalModelRuntime.resolveProvider(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: directory.path,
+                modelChecksum: String(repeating: "e", count: 64),
+                modelKind: "mlx_directory",
+                draftModelPath: draftDirectory.path,
+                draftModelTokens: 4
+            )
+        ) { _ in
+            AlphaLocalModelOutput(rawText: "", parsedJson: nil, schemaValid: false, warnings: [], sourceRefs: [])
+        }
+
+        let output = await provider?.run(
+            AlphaLocalModelInput(
+                task: .matterQuestionAnswer,
+                instruction: "What happened in the selected order?",
+                sourcePack: [
+                    AlphaSourceTextBlock(
+                        sourceRef: AlphaSourceRef(
+                            caseId: UUID(),
+                            documentId: UUID(),
+                            documentTitle: "Selected Order",
+                            pageNumber: 1,
+                            textSnippet: "The matter is listed on 14 May 2026."
+                        ),
+                        text: "The matter is listed on 14 May 2026.",
+                        pageNumber: 1,
+                        languageHint: "en",
+                        ocrConfidence: 0.99
+                    )
+                ],
+                expectedSchema: "plain_text",
+                maxOutputTokens: 128,
+                extractionMode: .caseAssociate
+            )
+        )
+
+        let recordedMainPath = await capture.mainPath
+        let recordedDraftPath = await capture.draftPath
+        let recordedDraftTokens = await capture.draftTokens
+
+        XCTAssertEqual(recordedMainPath, directory.path)
+        XCTAssertEqual(recordedDraftPath, draftDirectory.path)
+        XCTAssertEqual(recordedDraftTokens, 4)
+        XCTAssertEqual(output?.rawText, "Draft accelerated answer")
     }
 
     func testLlamaValidationRejectsMissingModelPath() {

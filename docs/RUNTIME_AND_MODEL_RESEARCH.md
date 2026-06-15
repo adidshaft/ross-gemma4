@@ -106,5 +106,6 @@
 
 - Ross now includes an experimental `mlx_swift_lm` runtime mode for iPhone/macOS developer testing.
 - The implementation is intentionally narrow: it is opt-in through local runtime overrides and expects a developer-supplied local MLX model directory containing config, tokenizer, and safetensor files.
+- Ross also now has an experimental env-gated speculative decoding hook for the MLX lane using a separate developer-supplied draft model directory, because upstream `mlx-swift-lm` already exposes that API while the current Ross `llama.swift` integration does not expose an equivalent high-level draft-model path.
 - The normal download/install catalog remains GGUF-first. This keeps the user-facing product path stable while giving Ross a concrete MLX lane for future iPhone performance comparison work.
 - Full physical-device proof still needs to answer the product question that matters: whether MLX is actually smoother or faster than the upgraded GGUF lane on representative iPhones and long private matter files.

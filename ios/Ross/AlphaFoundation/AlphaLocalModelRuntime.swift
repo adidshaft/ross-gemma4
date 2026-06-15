@@ -787,6 +787,26 @@ struct AlphaLocalRuntimeEnvironment: Sendable {
     let modelPath: String?
     let modelChecksum: String?
     let modelKind: String?
+    let draftModelPath: String?
+    let draftModelTokens: Int?
+
+    init(
+        enableRealInference: Bool,
+        runtimeModeOverride: AlphaPackRuntimeMode?,
+        modelPath: String?,
+        modelChecksum: String?,
+        modelKind: String?,
+        draftModelPath: String? = nil,
+        draftModelTokens: Int? = nil
+    ) {
+        self.enableRealInference = enableRealInference
+        self.runtimeModeOverride = runtimeModeOverride
+        self.modelPath = modelPath
+        self.modelChecksum = modelChecksum
+        self.modelKind = modelKind
+        self.draftModelPath = draftModelPath
+        self.draftModelTokens = draftModelTokens
+    }
 
     static func fromEnvironment(_ environment: [String: String]) -> AlphaLocalRuntimeEnvironment {
         func trimmedValue(_ key: String) -> String? {
@@ -798,13 +818,20 @@ struct AlphaLocalRuntimeEnvironment: Sendable {
             runtimeModeOverride: parseRuntimeMode(trimmedValue("ROSS_LOCAL_RUNTIME")),
             modelPath: trimmedValue("ROSS_LOCAL_MODEL_PATH"),
             modelChecksum: trimmedValue("ROSS_LOCAL_MODEL_CHECKSUM"),
-            modelKind: trimmedValue("ROSS_LOCAL_MODEL_KIND")
+            modelKind: trimmedValue("ROSS_LOCAL_MODEL_KIND"),
+            draftModelPath: trimmedValue("ROSS_LOCAL_DRAFT_MODEL_PATH"),
+            draftModelTokens: parsePositiveInt(trimmedValue("ROSS_LOCAL_DRAFT_MODEL_TOKENS"))
         )
     }
 
     private static func parseRuntimeMode(_ raw: String?) -> AlphaPackRuntimeMode? {
         guard let raw else { return nil }
         return AlphaPackRuntimeMode(rawValue: raw)
+    }
+
+    private static func parsePositiveInt(_ raw: String?) -> Int? {
+        guard let raw, let value = Int(raw), value > 0 else { return nil }
+        return value
     }
 }
 
@@ -814,6 +841,8 @@ private struct AlphaRuntimeDebugConfig {
     let modelPath: String?
     let modelChecksum: String?
     let modelKind: String?
+    let draftModelPath: String?
+    let draftModelTokens: Int?
 }
 
 enum AlphaLocalModelRuntime {
@@ -825,7 +854,9 @@ enum AlphaLocalModelRuntime {
             runtimeModeOverride: runtimeEnvironment.runtimeModeOverride,
             modelPath: runtimeEnvironment.modelPath,
             modelChecksum: runtimeEnvironment.modelChecksum,
-            modelKind: runtimeEnvironment.modelKind
+            modelKind: runtimeEnvironment.modelKind,
+            draftModelPath: runtimeEnvironment.draftModelPath,
+            draftModelTokens: runtimeEnvironment.draftModelTokens
         )
     }
 
@@ -915,7 +946,9 @@ enum AlphaLocalModelRuntime {
                 capabilityTier: tier,
                 modelPathLabel: modelPathLabel,
                 modelPath: modelPath,
-                checksumVerified: checksumVerified
+                checksumVerified: checksumVerified,
+                draftModelPath: debug.draftModelPath,
+                draftModelTokens: debug.draftModelTokens
             )
         case .appleFoundationModels:
             #if canImport(FoundationModels)
