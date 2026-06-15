@@ -1537,6 +1537,38 @@ extension AlphaRossModel {
         selectedDocuments: [AlphaAskDocumentOption]
     ) -> [AlphaSourceTextBlock] {
         let selectedIDs = Set(selectedDocuments.map(\.id))
+        let requestedTier = activePack?.tier ?? persisted.settings.activeTier ?? selectedTier
+        let runtimeEnvironment = alphaLocalRuntimeEnvironment(
+            activePack: activePack,
+            requestedTier: requestedTier,
+            installedPacks: persisted.installedPacks
+        )
+        let sourcePackPolicy: AlphaAskRuntimeSourcePackPolicy = {
+            guard let provider = AlphaLocalModelRuntime.resolveProvider(
+                activePack: activePack,
+                requestedTier: requestedTier,
+                runtimeEnvironment: runtimeEnvironment,
+                executor: { _ in
+                    AlphaLocalModelOutput(
+                        rawText: "",
+                        parsedJson: nil,
+                        schemaValid: false,
+                        warnings: [],
+                        sourceRefs: []
+                    )
+                }
+            ) else {
+                return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 8)
+            }
+
+            let baseMaxInputChars = provider.maxInputChars() ?? (provider.runtimeMode == .mlxSwiftLm ? 16_000 : 12_000)
+            return alphaAskRuntimeSourcePackPolicy(
+                runtimeMode: provider.runtimeMode,
+                capabilityTier: provider.capabilityTier,
+                baseMaxInputChars: baseMaxInputChars,
+                hasSelectedDocuments: !selectedIDs.isEmpty
+            )
+        }()
         let scopedCases: [AlphaCaseMatter]
         if let scopeCaseID {
             scopedCases = persisted.cases.filter { $0.id == scopeCaseID || $0.id == alphaSharedWorkspaceID }
@@ -1568,7 +1600,7 @@ extension AlphaRossModel {
                 }
                 return lhs.1.importedAt > rhs.1.importedAt
             }
-            candidateDocuments = Array(candidateDocuments.prefix(4))
+            candidateDocuments = Array(candidateDocuments.prefix(sourcePackPolicy.documentCandidateLimit))
         }
 
         let matterBlocks = askRuntimeMatterMemorySourcePack(scopeCaseID: scopeCaseID)
@@ -1615,7 +1647,7 @@ extension AlphaRossModel {
             selectedDocumentIDs: selectedIDs
         )
         if !rankedDocumentBlocks.isEmpty {
-            return Array((matterBlocks + rankedDocumentBlocks).prefix(8))
+            return Array((matterBlocks + rankedDocumentBlocks).prefix(sourcePackPolicy.sourceBlockLimit))
         }
         if !selectedIDs.isEmpty {
             return []

@@ -548,6 +548,74 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
     }
 
     @MainActor
+    func testAskRuntimeSourcePackExpandsSelectedDocumentCoverageForCapableMLXAssistant() {
+        let caseID = UUID()
+        let documentID = UUID()
+        let pages = (1...12).map { pageNumber in
+            AlphaDocumentPage(
+                pageNumber: pageNumber,
+                snippet: "Hearing note page \(pageNumber)",
+                extractedText: "Page \(pageNumber) states the hearing chronology and advocate instructions for the selected file."
+            )
+        }
+        let document = AlphaCaseDocument(
+            id: documentID,
+            title: "Hearing chronology",
+            fileName: "hearing-chronology.pdf",
+            kind: .pdf,
+            storedRelativePath: "docs/hearing-chronology.pdf",
+            importedAt: .now,
+            pageCount: pages.count,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: pages.compactMap(\.extractedText).joined(separator: "\n"),
+            pages: pages
+        )
+        var state = AlphaPersistedState.seed()
+        state.settings.activeTier = .caseAssociate
+        state.cases = [
+            AlphaCaseMatter(
+                id: caseID,
+                title: "MLX context matter",
+                forum: "High Court",
+                stage: .arguments,
+                summary: "Large selected-file ask coverage test.",
+                issueHighlights: [],
+                evidenceNotes: [],
+                draftTasks: [],
+                documents: [document],
+                sourceRefs: []
+            )
+        ]
+
+        let model = AlphaRossModel(previewState: state)
+        let mlxPack = AlphaInstalledModelPack(
+            packId: "gemma-4-12b-mlx",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/gemma-4-12b-it-mlx",
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+        model.privateAISnapshot.activePack = mlxPack
+        model.privateAISnapshot.installedPacks = [mlxPack]
+        model.persisted.installedPacks = [mlxPack]
+        model.setSelectedAskDocumentIDs([documentID], for: caseID)
+
+        let sourcePack = model.askRuntimeSourcePack(
+            question: "What does this selected document say about the hearing chronology?",
+            scopeCaseID: caseID,
+            selectedDocuments: model.selectedAskDocuments(for: caseID)
+        )
+
+        XCTAssertGreaterThan(sourcePack.count, 8)
+        XCTAssertEqual(sourcePack.filter { $0.sourceRef.documentId == documentID }.count, sourcePack.count)
+    }
+
+    @MainActor
     func testSelectedFileWaitingResultUsesPlainLanguage() {
         let previousLanguageCode = rossSelectedLanguageCode()
         rossSaveLanguageSelection(code: "hi")
