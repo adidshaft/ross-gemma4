@@ -4920,10 +4920,10 @@ final class AlphaExtractionTests: XCTestCase {
                 isActiveTier: true
             ),
             .seniorDraftingSupport: (
-                repository: "bartowski/google_gemma-4-26B-A4B-it-GGUF",
-                fileName: "google_gemma-4-26B-A4B-it-Q4_K_M.gguf",
-                sizeBytes: 17_035_038_112,
-                sha256: "e718536fe9b4bd505b07d44ded8f1595053a5d5407315bccf555ce592f33c140",
+                repository: "unsloth/gemma-4-26B-A4B-it-GGUF",
+                fileName: "gemma-4-26B-A4B-it-UD-Q4_K_M.gguf",
+                sizeBytes: 16_947_539_744,
+                sha256: "34c746b1d50ab813e29cd46c4796e3f43c741901a582f93a67b55b9fc9687b35",
                 releaseReady: true,
                 isActiveTier: true
             )
