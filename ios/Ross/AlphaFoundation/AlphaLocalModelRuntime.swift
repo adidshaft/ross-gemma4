@@ -95,6 +95,9 @@ struct AlphaLocalModelOutput: Codable, Hashable, Sendable {
     var warnings: [String]
     var sourceRefs: [AlphaSourceRef]
     var executionPathLabel: String? = nil
+    var accelerationMode: AlphaLocalRuntimeAccelerationMode? = nil
+    var accelerationDraftTokens: Int? = nil
+    var accelerationDraftModelLabel: String? = nil
     var inputChars: Int? = nil
     var inputTokenCount: Int? = nil
     var outputTokenCount: Int? = nil

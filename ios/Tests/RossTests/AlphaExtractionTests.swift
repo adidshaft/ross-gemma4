@@ -4019,6 +4019,9 @@ final class AlphaExtractionTests: XCTestCase {
                 warnings: [],
                 sourceRefs: [sourceRef],
                 executionPathLabel: "MLX with draft acceleration",
+                accelerationMode: .draftModelSpeculative,
+                accelerationDraftTokens: 4,
+                accelerationDraftModelLabel: "gemma-4-e4b-draft",
                 inputChars: 248,
                 inputTokenCount: 412,
                 outputTokenCount: 38,
@@ -4036,6 +4039,65 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(completed.reviewedSourceCount, 1)
         XCTAssertEqual(completed.promptBudgetChars, 1_850)
         XCTAssertEqual(completed.executionPathLabel, "MLX with draft acceleration")
+        XCTAssertEqual(completed.accelerationMode, .draftModelSpeculative)
+        XCTAssertEqual(completed.accelerationDraftTokens, 4)
+        XCTAssertEqual(completed.accelerationDraftModelLabel, "gemma-4-e4b-draft")
+    }
+
+    func testModelInvocationCompletionClearsDraftMetadataWhenRunUsesStandardGeneration() {
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "Order",
+            pageNumber: 1,
+            textSnippet: "Adjourned to 14 May 2026."
+        )
+        let input = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "Summarize the selected order.",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: sourceRef,
+                    text: "The matter was adjourned to 14 May 2026.",
+                    pageNumber: 1,
+                    languageHint: "en",
+                    ocrConfidence: 1
+                )
+            ],
+            expectedSchema: "plain_text",
+            maxOutputTokens: 128,
+            extractionMode: .quickStart
+        )
+        let invocation = AlphaModelInvocationStore.begin(
+            task: .matterQuestionAnswer,
+            runtimeMode: .mlxSwiftLm,
+            capabilityTier: .quickStart,
+            caseId: sourceRef.caseId,
+            documentId: sourceRef.documentId,
+            extractionRunId: nil,
+            accelerationMode: .draftModelSpeculative,
+            accelerationDraftTokens: 6,
+            accelerationDraftModelLabel: "gemma-4-e4b-draft",
+            input: input
+        )
+
+        let completed = AlphaModelInvocationStore.complete(
+            invocation,
+            output: AlphaLocalModelOutput(
+                rawText: "Answer from the selected order.",
+                parsedJson: nil,
+                schemaValid: true,
+                warnings: [],
+                sourceRefs: [sourceRef],
+                executionPathLabel: "MLX standard generation",
+                accelerationMode: .standard
+            )
+        )
+
+        XCTAssertEqual(completed.accelerationMode, .standard)
+        XCTAssertNil(completed.accelerationDraftTokens)
+        XCTAssertNil(completed.accelerationDraftModelLabel)
+        XCTAssertEqual(completed.answerDetailAccelerationLabel, "Standard generation")
     }
 
     func testLocalExtractionDetectsMixedLanguageProfile() async {
@@ -6273,7 +6335,7 @@ final class AlphaExtractionTests: XCTestCase {
             AlphaLocalModelOutput(rawText: "", parsedJson: nil, schemaValid: false, warnings: [], sourceRefs: [])
         }
 
-        _ = await provider?.run(
+        let output = await provider?.run(
             AlphaLocalModelInput(
                 task: .matterQuestionAnswer,
                 instruction: "Summarize the selected order.",
@@ -6305,6 +6367,10 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(runtimeHealth?.accelerationMode, .standard)
         XCTAssertEqual(runtimeHealth?.draftModelPathLabel, nil)
         XCTAssertEqual(runtimeHealth?.accelerationDraftTokens, nil)
+        XCTAssertEqual(output?.accelerationMode, .standard)
+        XCTAssertNil(output?.accelerationDraftTokens)
+        XCTAssertNil(output?.accelerationDraftModelLabel)
+        XCTAssertEqual(output?.executionPathLabel, "MLX standard generation")
     }
 
     func testExperimentalMLXProviderPassesDraftModelConfigToGenerator() async throws {
@@ -6399,6 +6465,10 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(provider?.runtimeHealth().accelerationDraftTokens, 4)
         XCTAssertEqual(provider?.runtimeHealth().draftModelPathLabel, draftDirectory.lastPathComponent)
         XCTAssertEqual(output?.rawText, "Draft accelerated answer")
+        XCTAssertEqual(output?.accelerationMode, .draftModelSpeculative)
+        XCTAssertEqual(output?.accelerationDraftTokens, 4)
+        XCTAssertEqual(output?.accelerationDraftModelLabel, draftDirectory.lastPathComponent)
+        XCTAssertEqual(output?.executionPathLabel, "MLX with draft acceleration")
     }
 
     func testExperimentalMLXProviderPreservesMeasuredGenerationMetrics() async throws {

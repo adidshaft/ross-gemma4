@@ -181,6 +181,19 @@ enum AlphaModelInvocationStore {
            !executionPathLabel.isEmpty {
             copy.executionPathLabel = executionPathLabel
         }
+        if let accelerationMode = output.accelerationMode {
+            copy.accelerationMode = accelerationMode
+        }
+        if output.accelerationMode == .draftModelSpeculative {
+            copy.accelerationDraftTokens = output.accelerationDraftTokens
+            if let draftModelLabel = output.accelerationDraftModelLabel?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !draftModelLabel.isEmpty {
+                copy.accelerationDraftModelLabel = draftModelLabel
+            }
+        } else if output.accelerationMode == .standard {
+            copy.accelerationDraftTokens = nil
+            copy.accelerationDraftModelLabel = nil
+        }
         if let inputChars = output.inputChars {
             copy.inputChars = inputChars
         }

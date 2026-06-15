@@ -429,6 +429,9 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
 
         let directoryURL = URL(fileURLWithPath: modelPath, isDirectory: true)
         let draftDirectoryURL = resolvedDraftDirectoryURL()
+        let draftTokens = draftTokensForGeneration()
+        let accelerationMode = draftAccelerationMode(draftDirectoryURL: draftDirectoryURL)
+        let draftModelLabel = draftDirectoryURL?.lastPathComponent
         let executionPathLabel = draftDirectoryURL == nil
             ? "MLX standard generation"
             : "MLX with draft acceleration"
@@ -442,7 +445,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             let generation = try await Self.streamGenerator(
                 directoryURL,
                 draftDirectoryURL,
-                draftTokensForGeneration(),
+                draftTokens,
                 prompt,
                 instructions,
                 parameters
@@ -460,6 +463,9 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                             ? (focusedMatterSourceRefs.isEmpty ? Array(taskInput.sourcePack.prefix(5).map(\.sourceRef)) : focusedMatterSourceRefs)
                             : pack.includedSourceRefs,
                         executionPathLabel: executionPathLabel,
+                        accelerationMode: accelerationMode,
+                        accelerationDraftTokens: draftTokens,
+                        accelerationDraftModelLabel: draftModelLabel,
                         inputChars: pack.inputChars
                     )
                     )
@@ -488,6 +494,9 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                     ? (focusedMatterSourceRefs.isEmpty ? Array(taskInput.sourcePack.prefix(5).map(\.sourceRef)) : focusedMatterSourceRefs)
                     : pack.includedSourceRefs,
                 executionPathLabel: executionPathLabel,
+                accelerationMode: accelerationMode,
+                accelerationDraftTokens: draftTokens,
+                accelerationDraftModelLabel: draftModelLabel,
                 inputChars: pack.inputChars,
                 inputTokenCount: generation.promptTokenCount,
                 outputTokenCount: generation.generationTokenCount,
