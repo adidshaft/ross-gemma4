@@ -390,7 +390,6 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         _ taskInput: AlphaLocalModelInput,
         onPartial: (@Sendable (AlphaLocalModelOutput) -> Void)?
     ) async -> AlphaLocalModelOutput {
-        let stagedDraft = stagedDraftMetadata()
         let effectiveMaxInputChars = taskInput.promptBudgetOverrideChars ?? maxInputChars() ?? 7_000
         let pack = AlphaPromptPackBuilder(
             maxInputChars: effectiveMaxInputChars,
@@ -471,6 +470,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                         lastEmittedPartialText = cleanedPartial
                         let activeExecutionPathLabel = await context.executionPathLabel()
                         let activeAccelerationMode = await context.accelerationMode()
+                        let surfacedDraftMetadata = surfacedDraftMetadata(for: activeAccelerationMode)
                         let partialOutput = AlphaLocalModelOutput(
                             rawText: cleanedPartial,
                             parsedJson: nil,
@@ -479,8 +479,8 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                             sourceRefs: pack.includedSourceRefs,
                             executionPathLabel: activeExecutionPathLabel,
                             accelerationMode: activeAccelerationMode,
-                            accelerationDraftTokens: stagedDraft?.tokens,
-                            accelerationDraftModelLabel: stagedDraft?.label,
+                            accelerationDraftTokens: surfacedDraftMetadata?.tokens,
+                            accelerationDraftModelLabel: surfacedDraftMetadata?.label,
                             inputChars: pack.inputChars
                         )
                         onPartial(partialOutput)
@@ -501,6 +501,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             }
             let activeExecutionPathLabel = await context.executionPathLabel()
             let activeAccelerationMode = await context.accelerationMode()
+            let surfacedDraftMetadata = surfacedDraftMetadata(for: activeAccelerationMode)
             
             let cleanedResponse = stripTurnMarkerFragments(from: generatedResponse)
             let languagePreservingFallback = usesPlainMatterAnswerPrompt
@@ -528,8 +529,8 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                 sourceRefs: pack.includedSourceRefs,
                 executionPathLabel: activeExecutionPathLabel,
                 accelerationMode: activeAccelerationMode,
-                accelerationDraftTokens: stagedDraft?.tokens,
-                accelerationDraftModelLabel: stagedDraft?.label,
+                accelerationDraftTokens: surfacedDraftMetadata?.tokens,
+                accelerationDraftModelLabel: surfacedDraftMetadata?.label,
                 inputChars: pack.inputChars,
                 inputTokenCount: promptTokenCount,
                 outputTokenCount: outputTokenCount,
@@ -720,6 +721,15 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             tokens: effectiveDraftTokenCount(),
             label: cleanedDraftLabel
         )
+    }
+
+    private func surfacedDraftMetadata(
+        for accelerationMode: AlphaLocalRuntimeAccelerationMode
+    ) -> (tokens: Int?, label: String?)? {
+        guard accelerationMode == .draftModelSpeculative else {
+            return nil
+        }
+        return stagedDraftMetadata()
     }
 
     private func effectiveDraftTokenCount() -> Int? {
