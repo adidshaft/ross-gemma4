@@ -180,6 +180,137 @@ struct AlphaLocalPromptPack: Hashable, Sendable {
     var truncated: Bool
 }
 
+enum AlphaPromptFocusPlanner {
+    private static let stopWords: Set<String> = [
+        "about", "after", "assistant", "before", "case", "could", "document", "files",
+        "from", "have", "into", "matter", "order", "question", "ross", "should",
+        "their", "there", "these", "this", "what", "when", "where", "which", "with",
+        "your"
+    ]
+
+    static func rankedSourceBlocks(_ blocks: [AlphaSourceTextBlock], instruction: String) -> [AlphaSourceTextBlock] {
+        let terms = focusTerms(from: instruction)
+        guard !terms.isEmpty else { return blocks }
+        return blocks.enumerated()
+            .sorted { lhs, rhs in
+                let lhsScore = focusScore(for: lhs.element, instructionTerms: terms)
+                let rhsScore = focusScore(for: rhs.element, instructionTerms: terms)
+                if lhsScore != rhsScore {
+                    return lhsScore > rhsScore
+                }
+                return lhs.offset < rhs.offset
+            }
+            .map(\.element)
+    }
+
+    static func focusedExcerpt(from text: String, instruction: String, maxChars: Int) -> String {
+        let cleanedText = normalized(text)
+        guard maxChars > 0, cleanedText.count > maxChars else {
+            return String(cleanedText.prefix(max(maxChars, 0)))
+        }
+        let terms = focusTerms(from: instruction)
+        guard !terms.isEmpty else {
+            return headTailExcerpt(from: cleanedText, maxChars: maxChars)
+        }
+
+        let separators = CharacterSet(charactersIn: ".!?।\n")
+        let segments = cleanedText
+            .components(separatedBy: separators)
+            .map { normalized($0) }
+            .filter { !$0.isEmpty }
+        guard !segments.isEmpty else {
+            return headTailExcerpt(from: cleanedText, maxChars: maxChars)
+        }
+
+        let scoredSegments = segments.enumerated().map { index, segment in
+            (index: index, score: matchCount(in: segment, instructionTerms: terms), segment: segment)
+        }
+        let topSegments = scoredSegments
+            .filter { $0.score > 0 }
+            .sorted {
+                if $0.score != $1.score {
+                    return $0.score > $1.score
+                }
+                return $0.index < $1.index
+            }
+        guard !topSegments.isEmpty else {
+            return headTailExcerpt(from: cleanedText, maxChars: maxChars)
+        }
+
+        var chosenIndices: [Int] = []
+        for candidate in topSegments.prefix(3) {
+            let lowerBound = max(0, candidate.index - 1)
+            let upperBound = min(segments.count - 1, candidate.index + 1)
+            for index in lowerBound...upperBound where !chosenIndices.contains(index) {
+                chosenIndices.append(index)
+            }
+        }
+        chosenIndices.sort()
+
+        var excerpt = ""
+        for index in chosenIndices {
+            let nextSegment = segments[index]
+            let candidate = excerpt.isEmpty ? nextSegment : "\(excerpt) ... \(nextSegment)"
+            guard candidate.count <= maxChars else { continue }
+            excerpt = candidate
+        }
+
+        return excerpt.isEmpty ? headTailExcerpt(from: cleanedText, maxChars: maxChars) : excerpt
+    }
+
+    private static func focusTerms(from instruction: String) -> Set<String> {
+        Set(
+            instruction
+                .lowercased()
+                .components(separatedBy: CharacterSet.alphanumerics.inverted)
+                .filter {
+                    $0.count >= 4 &&
+                    !$0.allSatisfy(\.isNumber) &&
+                    !stopWords.contains($0)
+                }
+        )
+    }
+
+    private static func focusScore(
+        for block: AlphaSourceTextBlock,
+        instructionTerms: Set<String>
+    ) -> Int {
+        let titleMatches = tokenSet(from: block.sourceRef.documentTitle).intersection(instructionTerms).count
+        let textMatches = tokenSet(from: block.text).intersection(instructionTerms).count
+        let snippetMatches = tokenSet(from: block.sourceRef.textSnippet ?? "").intersection(instructionTerms).count
+        return titleMatches * 5 + textMatches * 3 + snippetMatches * 2
+    }
+
+    private static func tokenSet(from value: String) -> Set<String> {
+        Set(
+            value
+                .lowercased()
+                .components(separatedBy: CharacterSet.alphanumerics.inverted)
+                .filter { $0.count >= 4 && !$0.allSatisfy(\.isNumber) }
+        )
+    }
+
+    private static func matchCount(
+        in value: String,
+        instructionTerms: Set<String>
+    ) -> Int {
+        tokenSet(from: value).intersection(instructionTerms).count
+    }
+
+    private static func normalized(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func headTailExcerpt(from text: String, maxChars: Int) -> String {
+        guard text.count > maxChars else { return text }
+        let headCount = max(1, Int(Double(maxChars) * 0.62))
+        let tailCount = max(1, maxChars - headCount - 6)
+        return "\(text.prefix(headCount)) ... \(text.suffix(tailCount))"
+    }
+}
+
 struct AlphaPromptPackBuilder {
     var maxInputChars: Int
     var maxFieldCount: Int = 12
@@ -233,31 +364,65 @@ struct AlphaPromptPackBuilder {
         var omitted: [AlphaSourceRef] = []
         var truncated = false
 
-        for block in input.sourcePack {
-            let sourceBlock = """
-            
-            <source_block page="\(block.pageNumber)" ref="\(block.sourceRef.label)" language="\(block.languageHint ?? "unknown")" ocr_confidence="\(block.ocrConfidence.map { String(format: "%.2f", $0) } ?? "unknown")"><![CDATA[\(block.text.replacingOccurrences(of: "]]>", with: "]]]]><![CDATA[>"))]]></source_block>
-            """
-            if prompt.count + sourceBlock.count + footer.count > maxInputChars, !included.isEmpty {
+        let rankedBlocks = AlphaPromptFocusPlanner.rankedSourceBlocks(input.sourcePack, instruction: input.instruction)
+        var remainingBlocks = rankedBlocks.count
+
+        for block in rankedBlocks {
+            defer { remainingBlocks = max(0, remainingBlocks - 1) }
+
+            let remainingBudget = max(maxInputChars - prompt.count - footer.count - 64, 48)
+            guard remainingBudget > 48 else {
                 truncated = true
                 omitted.append(block.sourceRef)
                 continue
             }
 
+            let preferredBudget = min(1_600, max(320, remainingBudget / max(1, remainingBlocks)))
+            var sourceText = block.text
+            var sourceWasTrimmed = false
+
+            if sourceText.count > preferredBudget {
+                sourceText = AlphaPromptFocusPlanner.focusedExcerpt(
+                    from: sourceText,
+                    instruction: input.instruction,
+                    maxChars: preferredBudget
+                )
+                sourceWasTrimmed = true
+            }
+
+            var sourceBlock = """
+            
+            <source_block page="\(block.pageNumber)" ref="\(block.sourceRef.label)" language="\(block.languageHint ?? "unknown")" ocr_confidence="\(block.ocrConfidence.map { String(format: "%.2f", $0) } ?? "unknown")"\(sourceWasTrimmed ? " truncated=\"true\"" : "")><![CDATA[\(sourceText.replacingOccurrences(of: "]]>", with: "]]]]><![CDATA[>"))]]></source_block>
+            """
+
             if prompt.count + sourceBlock.count + footer.count > maxInputChars {
-                let remainingBudget = max(maxInputChars - prompt.count - footer.count - 64, 48)
-                let shortened = clippedSourceText(block.text, budget: remainingBudget)
-                prompt += """
+                let finalBudget = max(maxInputChars - prompt.count - footer.count - 128, 48)
+                guard finalBudget > 48 else {
+                    truncated = true
+                    omitted.append(block.sourceRef)
+                    continue
+                }
+                sourceText = AlphaPromptFocusPlanner.focusedExcerpt(
+                    from: block.text,
+                    instruction: input.instruction,
+                    maxChars: finalBudget
+                )
+                sourceWasTrimmed = true
+                sourceBlock = """
                 
-                <source_block page="\(block.pageNumber)" ref="\(block.sourceRef.label)" truncated="true"><![CDATA[\(shortened.replacingOccurrences(of: "]]>", with: "]]]]><![CDATA[>"))]]></source_block>
+                <source_block page="\(block.pageNumber)" ref="\(block.sourceRef.label)" language="\(block.languageHint ?? "unknown")" ocr_confidence="\(block.ocrConfidence.map { String(format: "%.2f", $0) } ?? "unknown")" truncated="true"><![CDATA[\(sourceText.replacingOccurrences(of: "]]>", with: "]]]]><![CDATA[>"))]]></source_block>
                 """
-                included.append(block.sourceRef)
+            }
+
+            if prompt.count + sourceBlock.count + footer.count > maxInputChars {
                 truncated = true
+                omitted.append(block.sourceRef)
                 continue
             }
 
             prompt += sourceBlock
             included.append(block.sourceRef)
+            truncated = truncated || sourceWasTrimmed
         }
 
         prompt += footer
@@ -294,6 +459,7 @@ struct AlphaPromptPackBuilder {
         let tailCount = max(1, budget - headCount - 6)
         return "\(text.prefix(headCount))\n...\n\(text.suffix(tailCount))"
     }
+
 }
 
 protocol AlphaLocalModelProvider: Sendable {

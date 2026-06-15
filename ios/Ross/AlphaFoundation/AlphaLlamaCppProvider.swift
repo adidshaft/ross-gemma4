@@ -235,6 +235,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             await context.clear()
             
             let usesPlainMatterAnswerPrompt = taskInput.task == .matterQuestionAnswer
+            let focusedMatterSourceRefs = usesPlainMatterAnswerPrompt ? focusedMatterSourceBlocks(for: taskInput).map(\.sourceRef) : []
             let systemPrompt = usesPlainMatterAnswerPrompt ? "" : pack.systemInstructions
             let userPrompt = usesPlainMatterAnswerPrompt
                 ? conciseMatterQuestionPrompt(for: taskInput)
@@ -286,7 +287,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                             schemaValid: false,
                             warnings: pack.truncated ? [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts] : [],
                             sourceRefs: usesPlainMatterAnswerPrompt
-                                ? Array(taskInput.sourcePack.prefix(5).map(\.sourceRef))
+                                ? (focusedMatterSourceRefs.isEmpty ? Array(taskInput.sourcePack.prefix(5).map(\.sourceRef)) : focusedMatterSourceRefs)
                                 : pack.includedSourceRefs
                         )
                         onPartial(partialOutput)
@@ -317,7 +318,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                 schemaValid: schemaValid,
                 warnings: warnings,
                 sourceRefs: usesPlainMatterAnswerPrompt
-                    ? Array(taskInput.sourcePack.prefix(5).map(\.sourceRef))
+                    ? (focusedMatterSourceRefs.isEmpty ? Array(taskInput.sourcePack.prefix(5).map(\.sourceRef)) : focusedMatterSourceRefs)
                     : pack.includedSourceRefs
             )
         } catch {
@@ -333,15 +334,35 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     }
     
     func estimateCostOrResourceUse(_ input: AlphaLocalModelInput) -> AlphaLocalModelResourceEstimate {
-        AlphaLocalModelResourceEstimate(
-            inputChars: input.instruction.count,
-            estimatedTokens: nil,
-            estimatedRuntimeMs: 2000,
-            estimatedMemoryMb: 2000,
-            estimatedDurationSeconds: 2,
-            shouldRunNow: true,
-            reason: nil,
-            notes: ["Llama.cpp estimation"]
+        let maxChars = maxInputChars() ?? 12_000
+        let promptChars: Int
+        if input.task == .matterQuestionAnswer {
+            promptChars = conciseMatterQuestionPrompt(for: input).count
+        } else {
+            promptChars = AlphaPromptPackBuilder(maxInputChars: maxChars).build(input: input).inputChars
+        }
+        let estimatedTokens = max(promptChars / 4, 1)
+        let estimatedRuntimeMs = max(900, min(12_000, estimatedTokens * 6))
+        let estimatedMemoryMb: Int
+        switch capabilityTier {
+        case .flash:
+            estimatedMemoryMb = 3_500
+        case .quickStart:
+            estimatedMemoryMb = 5_500
+        case .caseAssociate:
+            estimatedMemoryMb = 8_000
+        case .seniorDraftingSupport:
+            estimatedMemoryMb = 14_000
+        }
+        return AlphaLocalModelResourceEstimate(
+            inputChars: promptChars,
+            estimatedTokens: estimatedTokens,
+            estimatedRuntimeMs: estimatedRuntimeMs,
+            estimatedMemoryMb: estimatedMemoryMb,
+            estimatedDurationSeconds: max(1, estimatedRuntimeMs / 1_000),
+            shouldRunNow: promptChars <= maxChars,
+            reason: promptChars > maxChars ? "Prompt pack exceeded the current local budget of \(maxChars) characters." : nil,
+            notes: ["Llama.cpp estimate after focused source packing."]
         )
     }
     
@@ -356,6 +377,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
 
     private func conciseMatterQuestionPrompt(for input: AlphaLocalModelInput) -> String {
         let languageInstruction = matterAnswerLanguageInstruction(for: input)
+        let sourceBlocks = focusedMatterSourceBlocks(for: input)
         var prompt = """
         Ross private local answer. Use only SOURCES. Do not invent facts.
         Match the question language exactly.
@@ -374,15 +396,12 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         """
 
         var remainingBudget = max((maxInputChars() ?? 12_000) - 2_000, 4_800)
-        for block in input.sourcePack.prefix(AlphaLlamaRuntimeProfile.sourceBlockLimit(for: capabilityTier)) {
+        for block in sourceBlocks {
             guard remainingBudget > 120 else { break }
             let label = block.sourceRef.label
-            let cleanedText = block.text
-                .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            let excerpt = relevantMatterExcerpt(
-                from: cleanedText,
-                question: input.instruction,
+            let excerpt = AlphaPromptFocusPlanner.focusedExcerpt(
+                from: block.text,
+                instruction: input.instruction,
                 maxChars: min(remainingBudget, 1_500)
             )
             prompt += "\n[\(label)] \(excerpt)\n"
@@ -437,6 +456,14 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         return nil
     }
 
+    private func focusedMatterSourceBlocks(for input: AlphaLocalModelInput) -> [AlphaSourceTextBlock] {
+        Array(
+            AlphaPromptFocusPlanner
+                .rankedSourceBlocks(input.sourcePack, instruction: input.instruction)
+                .prefix(AlphaLlamaRuntimeProfile.sourceBlockLimit(for: capabilityTier))
+        )
+    }
+
     private nonisolated static func extractiveMatterAnswer(
         from sourcePack: [AlphaSourceTextBlock],
         scriptRange: ClosedRange<Int>,
@@ -470,49 +497,6 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         text.unicodeScalars.contains { scalar in
             range.contains(Int(scalar.value))
         }
-    }
-
-    private func relevantMatterExcerpt(from text: String, question: String, maxChars: Int) -> String {
-        guard text.count > maxChars else { return text }
-        let questionTerms = Set(
-            question
-                .lowercased()
-                .components(separatedBy: CharacterSet.alphanumerics.inverted)
-                .filter { $0.count >= 4 }
-        )
-        let separators = CharacterSet(charactersIn: ".।?\n")
-        let sentences = text
-            .components(separatedBy: separators)
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-        guard !questionTerms.isEmpty, !sentences.isEmpty else {
-            return headTailExcerpt(from: text, maxChars: maxChars)
-        }
-
-        let scored = sentences.enumerated().map { index, sentence in
-            let words = Set(sentence.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted))
-            return (index: index, score: words.intersection(questionTerms).count)
-        }
-        guard let best = scored.max(by: { $0.score < $1.score }), best.score > 0 else {
-            return headTailExcerpt(from: text, maxChars: maxChars)
-        }
-
-        var selected = ""
-        let lowerBound = max(0, best.index - 1)
-        let upperBound = min(sentences.count - 1, best.index + 2)
-        for index in lowerBound...upperBound {
-            let candidate = selected.isEmpty ? sentences[index] : "\(selected). \(sentences[index])"
-            guard candidate.count <= maxChars else { break }
-            selected = candidate
-        }
-        return selected.isEmpty ? headTailExcerpt(from: text, maxChars: maxChars) : selected
-    }
-
-    private func headTailExcerpt(from text: String, maxChars: Int) -> String {
-        guard text.count > maxChars else { return text }
-        let headCount = max(1, Int(Double(maxChars) * 0.62))
-        let tailCount = max(1, maxChars - headCount - 6)
-        return "\(text.prefix(headCount)) ... \(text.suffix(tailCount))"
     }
 
     private func shouldStopGeneration(afterAppending token: String, fullText: String) -> Bool {

@@ -94,3 +94,10 @@
 - Run physical iPhone QA on the Standard 12B pack.
 - Record latency, memory pressure, and long-file behavior after the new context tuning.
 - Reassess whether an MLX branch is justified only after the current GGUF path is measured on device.
+
+## Part 5 — Current upstream runtime evidence
+
+- `llama.cpp` officially documents speculative decoding support in `docs/speculative.md`, including draft-model and related server-side implementations.
+- As of May 27, 2026, the Apple Silicon Metal report in `ggml-org/llama.cpp` issue `#23752` shows MTP speculative decoding underperforming the non-MTP baseline on that hardware, so Ross should not assume an iPhone speedup from enabling MTP blindly.
+- `mlx-swift` and `mlx-swift-examples` both document iOS-capable example apps, and `mlx-swift-lm` is the current reusable LLM package for MLX Swift.
+- That MLX path is promising for iPhone-native inference experiments, but it is a separate integration track from Ross's current GGUF delivery path because it requires MLX-specific model and tokenizer loading instead of direct GGUF execution.

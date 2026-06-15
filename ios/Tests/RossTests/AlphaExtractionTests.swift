@@ -888,6 +888,119 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNil(payload)
     }
 
+    func testPromptPackBuilderPrioritizesRelevantLaterSourceWhenBudgetIsTight() {
+        let caseID = UUID()
+        let documentA = UUID()
+        let documentB = UUID()
+        let irrelevantText = Array(repeating: "Inventory valuation ledger with warehouse counts.", count: 40).joined(separator: " ")
+        let relevantText = Array(
+            repeating: "The next hearing date is 12 July 2026 before the Delhi High Court and counsel should bring the affidavit set.",
+            count: 8
+        ).joined(separator: " ")
+        let input = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "What is the next hearing date and what should counsel bring?",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: AlphaSourceRef(
+                        caseId: caseID,
+                        documentId: documentA,
+                        documentTitle: "Warehouse Inventory",
+                        pageNumber: 1,
+                        textSnippet: "Inventory valuation"
+                    ),
+                    text: irrelevantText,
+                    pageNumber: 1,
+                    languageHint: "en",
+                    ocrConfidence: 0.95
+                ),
+                AlphaSourceTextBlock(
+                    sourceRef: AlphaSourceRef(
+                        caseId: caseID,
+                        documentId: documentB,
+                        documentTitle: "Hearing Order",
+                        pageNumber: 4,
+                        textSnippet: "The next hearing date is 12 July 2026"
+                    ),
+                    text: relevantText,
+                    pageNumber: 4,
+                    languageHint: "en",
+                    ocrConfidence: 0.97
+                )
+            ],
+            expectedSchema: "plain_text",
+            maxOutputTokens: 128,
+            languageProfile: nil,
+            documentClassification: nil,
+            extractionMode: .quickStart
+        )
+
+        let pack = AlphaPromptPackBuilder(maxInputChars: 1_300).build(input: input)
+
+        XCTAssertEqual(pack.includedSourceRefs.first?.documentTitle, "Hearing Order")
+        XCTAssertTrue(pack.promptText.contains("12 July 2026"))
+        XCTAssertTrue(pack.promptText.contains("Hearing Order"))
+        XCTAssertTrue(pack.truncated)
+    }
+
+    func testPromptPackBuilderKeepsMostRelevantSourceInsteadOfOnlyFirstLongBlock() {
+        let caseID = UUID()
+        let firstDocument = UUID()
+        let secondDocument = UUID()
+        let firstText = Array(
+            repeating: "The chronology notes mention the filing index and service stamp for the appeal record.",
+            count: 16
+        ).joined(separator: " ")
+        let secondText = Array(
+            repeating: "Counsel must bring the vakalatnama, annexure set, and proof of service at the next hearing.",
+            count: 14
+        ).joined(separator: " ")
+        let input = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "What should counsel bring at the next hearing?",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: AlphaSourceRef(
+                        caseId: caseID,
+                        documentId: firstDocument,
+                        documentTitle: "Chronology Notes",
+                        pageNumber: 2,
+                        textSnippet: "filing index and service stamp"
+                    ),
+                    text: firstText,
+                    pageNumber: 2,
+                    languageHint: "en",
+                    ocrConfidence: 0.94
+                ),
+                AlphaSourceTextBlock(
+                    sourceRef: AlphaSourceRef(
+                        caseId: caseID,
+                        documentId: secondDocument,
+                        documentTitle: "Checklist Order",
+                        pageNumber: 5,
+                        textSnippet: "Counsel must bring the vakalatnama"
+                    ),
+                    text: secondText,
+                    pageNumber: 5,
+                    languageHint: "en",
+                    ocrConfidence: 0.96
+                )
+            ],
+            expectedSchema: "plain_text",
+            maxOutputTokens: 128,
+            languageProfile: nil,
+            documentClassification: nil,
+            extractionMode: .quickStart
+        )
+
+        let pack = AlphaPromptPackBuilder(maxInputChars: 1_450).build(input: input)
+
+        XCTAssertEqual(pack.includedSourceRefs.first?.documentTitle, "Checklist Order")
+        XCTAssertTrue(pack.promptText.contains("vakalatnama"))
+        XCTAssertFalse(pack.promptText.contains("Inventory valuation"))
+        XCTAssertTrue(pack.truncated)
+    }
+
     func testPrivateAssistantTierCopyHidesTechnicalModelNames() {
         XCTAssertEqual(AlphaCapabilityTier.flash.downloadSizeLabel, "3.0 GB")
         XCTAssertEqual(AlphaCapabilityTier.quickStart.downloadSizeLabel, "5.4 GB")
