@@ -27,7 +27,10 @@ struct AlphaExtractionPipelinePlan: Codable, Hashable, Sendable {
 }
 
 enum AlphaExtractionPipelinePlanner {
-    static func plan(for pack: AlphaInstalledModelPack?) -> AlphaExtractionPipelinePlan {
+    static func plan(
+        for pack: AlphaInstalledModelPack?,
+        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory
+    ) -> AlphaExtractionPipelinePlan {
         let mode = AlphaExtractionMode.fromInstalledPack(pack)
         switch mode {
         case .basic, .flash:
@@ -45,10 +48,10 @@ enum AlphaExtractionPipelinePlanner {
             return AlphaExtractionPipelinePlan(
                 mode: mode,
                 passes: [
-                    AlphaExtractionPipelinePass(task: .ocrCleanup, required: false, maxPagesPerBatch: 10, fallback: .deterministic),
-                    AlphaExtractionPipelinePass(task: .documentClassification, required: true, maxPagesPerBatch: 10, fallback: .deterministic),
-                    AlphaExtractionPipelinePass(task: .legalFieldExtraction, required: true, maxPagesPerBatch: 10, fallback: .deterministic),
-                    AlphaExtractionPipelinePass(task: .legalFieldVerification, required: true, maxPagesPerBatch: 10, fallback: .deterministic)
+                    AlphaExtractionPipelinePass(task: .ocrCleanup, required: false, maxPagesPerBatch: tunedBatchPages(base: 10, task: .ocrCleanup, for: pack, physicalMemory: physicalMemory), fallback: .deterministic),
+                    AlphaExtractionPipelinePass(task: .documentClassification, required: true, maxPagesPerBatch: tunedBatchPages(base: 10, task: .documentClassification, for: pack, physicalMemory: physicalMemory), fallback: .deterministic),
+                    AlphaExtractionPipelinePass(task: .legalFieldExtraction, required: true, maxPagesPerBatch: tunedBatchPages(base: 10, task: .legalFieldExtraction, for: pack, physicalMemory: physicalMemory), fallback: .deterministic),
+                    AlphaExtractionPipelinePass(task: .legalFieldVerification, required: true, maxPagesPerBatch: tunedBatchPages(base: 10, task: .legalFieldVerification, for: pack, physicalMemory: physicalMemory), fallback: .deterministic)
                 ],
                 requiresInstalledPack: true,
                 userFacingQuality: .Standard
@@ -58,12 +61,12 @@ enum AlphaExtractionPipelinePlanner {
             return AlphaExtractionPipelinePlan(
                 mode: mode,
                 passes: [
-                    AlphaExtractionPipelinePass(task: .ocrCleanup, required: true, maxPagesPerBatch: 18, fallback: .deterministic),
-                    AlphaExtractionPipelinePass(task: .languageCorrection, required: true, maxPagesPerBatch: 18, fallback: .deterministic),
-                    AlphaExtractionPipelinePass(task: .documentClassification, required: true, maxPagesPerBatch: 18, fallback: .deterministic),
-                    AlphaExtractionPipelinePass(task: .legalFieldExtraction, required: true, maxPagesPerBatch: 18, fallback: .needsReview),
-                    AlphaExtractionPipelinePass(task: .legalFieldVerification, required: true, maxPagesPerBatch: 18, fallback: .deterministic),
-                    AlphaExtractionPipelinePass(task: .caseMemorySynthesis, required: true, maxPagesPerBatch: 24, fallback: .deterministic)
+                    AlphaExtractionPipelinePass(task: .ocrCleanup, required: true, maxPagesPerBatch: tunedBatchPages(base: 18, task: .ocrCleanup, for: pack, physicalMemory: physicalMemory), fallback: .deterministic),
+                    AlphaExtractionPipelinePass(task: .languageCorrection, required: true, maxPagesPerBatch: tunedBatchPages(base: 18, task: .languageCorrection, for: pack, physicalMemory: physicalMemory), fallback: .deterministic),
+                    AlphaExtractionPipelinePass(task: .documentClassification, required: true, maxPagesPerBatch: tunedBatchPages(base: 18, task: .documentClassification, for: pack, physicalMemory: physicalMemory), fallback: .deterministic),
+                    AlphaExtractionPipelinePass(task: .legalFieldExtraction, required: true, maxPagesPerBatch: tunedBatchPages(base: 18, task: .legalFieldExtraction, for: pack, physicalMemory: physicalMemory), fallback: .needsReview),
+                    AlphaExtractionPipelinePass(task: .legalFieldVerification, required: true, maxPagesPerBatch: tunedBatchPages(base: 18, task: .legalFieldVerification, for: pack, physicalMemory: physicalMemory), fallback: .deterministic),
+                    AlphaExtractionPipelinePass(task: .caseMemorySynthesis, required: true, maxPagesPerBatch: tunedBatchPages(base: 24, task: .caseMemorySynthesis, for: pack, physicalMemory: physicalMemory), fallback: .deterministic)
                 ],
                 requiresInstalledPack: true,
                 userFacingQuality: .Advanced
@@ -73,17 +76,59 @@ enum AlphaExtractionPipelinePlanner {
             return AlphaExtractionPipelinePlan(
                 mode: mode,
                 passes: [
-                    AlphaExtractionPipelinePass(task: .ocrCleanup, required: true, maxPagesPerBatch: 24, fallback: .deterministic),
-                    AlphaExtractionPipelinePass(task: .languageCorrection, required: true, maxPagesPerBatch: 24, fallback: .deterministic),
-                    AlphaExtractionPipelinePass(task: .documentClassification, required: true, maxPagesPerBatch: 24, fallback: .needsReview),
-                    AlphaExtractionPipelinePass(task: .legalFieldExtraction, required: true, maxPagesPerBatch: 24, fallback: .needsReview),
-                    AlphaExtractionPipelinePass(task: .legalFieldVerification, required: true, maxPagesPerBatch: 24, fallback: .deterministic),
-                    AlphaExtractionPipelinePass(task: .issueExtraction, required: false, maxPagesPerBatch: 24, fallback: .deterministic),
-                    AlphaExtractionPipelinePass(task: .caseMemorySynthesis, required: true, maxPagesPerBatch: 32, fallback: .deterministic)
+                    AlphaExtractionPipelinePass(task: .ocrCleanup, required: true, maxPagesPerBatch: tunedBatchPages(base: 24, task: .ocrCleanup, for: pack, physicalMemory: physicalMemory), fallback: .deterministic),
+                    AlphaExtractionPipelinePass(task: .languageCorrection, required: true, maxPagesPerBatch: tunedBatchPages(base: 24, task: .languageCorrection, for: pack, physicalMemory: physicalMemory), fallback: .deterministic),
+                    AlphaExtractionPipelinePass(task: .documentClassification, required: true, maxPagesPerBatch: tunedBatchPages(base: 24, task: .documentClassification, for: pack, physicalMemory: physicalMemory), fallback: .needsReview),
+                    AlphaExtractionPipelinePass(task: .legalFieldExtraction, required: true, maxPagesPerBatch: tunedBatchPages(base: 24, task: .legalFieldExtraction, for: pack, physicalMemory: physicalMemory), fallback: .needsReview),
+                    AlphaExtractionPipelinePass(task: .legalFieldVerification, required: true, maxPagesPerBatch: tunedBatchPages(base: 24, task: .legalFieldVerification, for: pack, physicalMemory: physicalMemory), fallback: .deterministic),
+                    AlphaExtractionPipelinePass(task: .issueExtraction, required: false, maxPagesPerBatch: tunedBatchPages(base: 24, task: .issueExtraction, for: pack, physicalMemory: physicalMemory), fallback: .deterministic),
+                    AlphaExtractionPipelinePass(task: .caseMemorySynthesis, required: true, maxPagesPerBatch: tunedBatchPages(base: 32, task: .caseMemorySynthesis, for: pack, physicalMemory: physicalMemory), fallback: .deterministic)
                 ],
                 requiresInstalledPack: true,
                 userFacingQuality: .Advanced
             )
+        }
+    }
+
+    private static func tunedBatchPages(
+        base: Int,
+        task: AlphaLocalModelTask,
+        for pack: AlphaInstalledModelPack?,
+        physicalMemory: UInt64
+    ) -> Int {
+        guard let pack else { return base }
+
+        switch pack.runtimeMode {
+        case .mlxSwiftLm:
+            switch pack.tier {
+            case .quickStart:
+                guard physicalMemory >= 8_000_000_000 else { return base }
+                return max(base, 12)
+            case .caseAssociate:
+                guard physicalMemory >= 12_000_000_000 else { return base }
+                return task == .caseMemorySynthesis ? max(base, 28) : max(base, 22)
+            case .seniorDraftingSupport:
+                guard physicalMemory >= 16_000_000_000 else { return base }
+                return task == .caseMemorySynthesis ? max(base, 36) : max(base, 28)
+            case .flash:
+                return base
+            }
+        case .appleFoundationModels:
+            switch pack.tier {
+            case .quickStart:
+                guard physicalMemory >= 8_000_000_000 else { return base }
+                return max(base, 12)
+            case .caseAssociate:
+                guard physicalMemory >= 12_000_000_000 else { return base }
+                return task == .caseMemorySynthesis ? max(base, 26) : max(base, 20)
+            case .seniorDraftingSupport:
+                guard physicalMemory >= 16_000_000_000 else { return base }
+                return task == .caseMemorySynthesis ? max(base, 34) : max(base, 26)
+            case .flash:
+                return base
+            }
+        case .deterministicDev, .mediapipeLlm, .llamaCppGguf, .unavailable:
+            return base
         }
     }
 }

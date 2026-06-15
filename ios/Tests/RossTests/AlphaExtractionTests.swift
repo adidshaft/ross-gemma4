@@ -7461,6 +7461,63 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(seniorPlan.passes.contains { $0.task == .issueExtraction })
     }
 
+    func testPipelinePlanExpandsBatchingForCapableMLXRuntime() {
+        let pack = installedPack(
+            .caseAssociate,
+            runtimeMode: .mlxSwiftLm,
+            packId: "gemma-4-12b-it-mlx",
+            installPath: "model-packs/case_associate/gemma-4-12b-it-mlx",
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+
+        let plan = AlphaExtractionPipelinePlanner.plan(
+            for: pack,
+            physicalMemory: 12_000_000_000
+        )
+
+        XCTAssertEqual(plan.pass(for: .legalFieldExtraction)?.maxPagesPerBatch, 22)
+        XCTAssertEqual(plan.pass(for: .caseMemorySynthesis)?.maxPagesPerBatch, 28)
+    }
+
+    func testPipelinePlanExpandsBatchingForCapableCoreAIRuntime() {
+        let pack = installedPack(
+            .caseAssociate,
+            runtimeMode: .appleFoundationModels,
+            packId: "foundation-case-associate",
+            installPath: "system://foundation/case-associate",
+            artifactKind: "system_model",
+            developmentOnly: false
+        )
+
+        let plan = AlphaExtractionPipelinePlanner.plan(
+            for: pack,
+            physicalMemory: 12_000_000_000
+        )
+
+        XCTAssertEqual(plan.pass(for: .legalFieldExtraction)?.maxPagesPerBatch, 20)
+        XCTAssertEqual(plan.pass(for: .caseMemorySynthesis)?.maxPagesPerBatch, 26)
+    }
+
+    func testPipelinePlanKeepsBaselineBatchingForConstrainedMLXRuntime() {
+        let pack = installedPack(
+            .caseAssociate,
+            runtimeMode: .mlxSwiftLm,
+            packId: "gemma-4-12b-it-mlx",
+            installPath: "model-packs/case_associate/gemma-4-12b-it-mlx",
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+
+        let plan = AlphaExtractionPipelinePlanner.plan(
+            for: pack,
+            physicalMemory: 8_000_000_000
+        )
+
+        XCTAssertEqual(plan.pass(for: .legalFieldExtraction)?.maxPagesPerBatch, 18)
+        XCTAssertEqual(plan.pass(for: .caseMemorySynthesis)?.maxPagesPerBatch, 24)
+    }
+
     func testQuickStartLongFileExtractionBatchesStructuredPasses() async {
         let store = AlphaRossStore()
         let caseId = UUID()
