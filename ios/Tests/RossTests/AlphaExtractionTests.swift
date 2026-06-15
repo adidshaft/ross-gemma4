@@ -7549,6 +7549,116 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(ranked.first?.sourceRef.documentId, documentID)
     }
 
+    @MainActor
+    func testSelectedDocumentFallbackKeepsConfirmedAndBoundaryPages() {
+        let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
+        let documentID = UUID()
+        let caseID = UUID()
+        let confirmed = AlphaSourceTextBlock(
+            sourceRef: AlphaSourceRef(
+                caseId: caseID,
+                documentId: documentID,
+                documentTitle: "Order bundle",
+                pageNumber: 2,
+                paragraphRange: "confirmed details",
+                textSnippet: "Confirmed details from Order bundle"
+            ),
+            text: "Confirmed details from Order bundle:\nNext hearing: 12 May 2026",
+            pageNumber: 2,
+            languageHint: "en",
+            ocrConfidence: nil
+        )
+        let firstPage = AlphaSourceTextBlock(
+            sourceRef: AlphaSourceRef(
+                caseId: caseID,
+                documentId: documentID,
+                documentTitle: "Order bundle",
+                pageNumber: 1,
+                textSnippet: "Opening summary"
+            ),
+            text: "Opening summary and parties",
+            pageNumber: 1,
+            languageHint: "en",
+            ocrConfidence: 0.92
+        )
+        let lastPage = AlphaSourceTextBlock(
+            sourceRef: AlphaSourceRef(
+                caseId: caseID,
+                documentId: documentID,
+                documentTitle: "Order bundle",
+                pageNumber: 9,
+                textSnippet: "Final directions"
+            ),
+            text: "Final directions and filing steps",
+            pageNumber: 9,
+            languageHint: "en",
+            ocrConfidence: 0.91
+        )
+
+        let prioritized = model.alphaPrioritizedSelectedDocumentSourceBlocks(
+            [confirmed, firstPage, lastPage],
+            rankedBlocks: [],
+            selectedDocumentIDs: [documentID]
+        )
+
+        XCTAssertEqual(prioritized.map(\.pageNumber), [2, 1, 9])
+        XCTAssertEqual(prioritized.first?.sourceRef.paragraphRange, "confirmed details")
+    }
+
+    @MainActor
+    func testSelectedDocumentCoverageKeepsRankedPageFirstThenFallbackPages() {
+        let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
+        let documentID = UUID()
+        let caseID = UUID()
+        let firstPage = AlphaSourceTextBlock(
+            sourceRef: AlphaSourceRef(
+                caseId: caseID,
+                documentId: documentID,
+                documentTitle: "Chronology draft",
+                pageNumber: 1,
+                textSnippet: "Opening background"
+            ),
+            text: "Opening background and parties",
+            pageNumber: 1,
+            languageHint: "en",
+            ocrConfidence: 0.94
+        )
+        let rankedPage = AlphaSourceTextBlock(
+            sourceRef: AlphaSourceRef(
+                caseId: caseID,
+                documentId: documentID,
+                documentTitle: "Chronology draft",
+                pageNumber: 4,
+                textSnippet: "Next hearing date 12 May 2026"
+            ),
+            text: "The next hearing date is 12 May 2026 and compliance is due before that.",
+            pageNumber: 4,
+            languageHint: "en",
+            ocrConfidence: 0.95
+        )
+        let lastPage = AlphaSourceTextBlock(
+            sourceRef: AlphaSourceRef(
+                caseId: caseID,
+                documentId: documentID,
+                documentTitle: "Chronology draft",
+                pageNumber: 7,
+                textSnippet: "Closing directions"
+            ),
+            text: "Closing directions and draft review steps",
+            pageNumber: 7,
+            languageHint: "en",
+            ocrConfidence: 0.93
+        )
+
+        let prioritized = model.alphaPrioritizedSelectedDocumentSourceBlocks(
+            [firstPage, rankedPage, lastPage],
+            rankedBlocks: [rankedPage],
+            selectedDocumentIDs: [documentID]
+        )
+
+        XCTAssertEqual(prioritized.map(\.pageNumber), [4, 1, 7])
+    }
+
     func testSourceLanguageHintFallsBackToDocumentProfile() {
         let profile = AlphaDocumentLanguageProfile(
             documentId: UUID(),

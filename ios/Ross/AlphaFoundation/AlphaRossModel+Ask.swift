@@ -1777,9 +1777,8 @@ extension AlphaRossModel {
         for documentID in orderedDocumentIDs {
             if let rankedBlock = groupedRankedBlocks[documentID]?.first {
                 appendIfNeeded(rankedBlock)
-                continue
             }
-            if let fallbackBlock = alphaPreferredSelectedDocumentFallbackBlock(
+            for fallbackBlock in alphaPreferredSelectedDocumentFallbackBlocks(
                 groupedBlocks[documentID] ?? []
             ) {
                 appendIfNeeded(fallbackBlock)
@@ -1793,14 +1792,25 @@ extension AlphaRossModel {
         return prioritized
     }
 
-    func alphaPreferredSelectedDocumentFallbackBlock(
+    func alphaPreferredSelectedDocumentFallbackBlocks(
         _ blocks: [AlphaSourceTextBlock]
-    ) -> AlphaSourceTextBlock? {
-        guard !blocks.isEmpty else { return nil }
-        if let confirmedDetails = blocks.first(where: { $0.sourceRef.paragraphRange == "confirmed details" }) {
-            return confirmedDetails
+    ) -> [AlphaSourceTextBlock] {
+        guard !blocks.isEmpty else { return [] }
+
+        var fallbackBlocks: [AlphaSourceTextBlock] = []
+        var seenKeys = Set<String>()
+        func appendIfNeeded(_ block: AlphaSourceTextBlock?) {
+            guard let block else { return }
+            let key = alphaAskSourceBlockKey(block)
+            guard seenKeys.insert(key).inserted else { return }
+            fallbackBlocks.append(block)
         }
-        return blocks
+
+        if let confirmedDetails = blocks.first(where: { $0.sourceRef.paragraphRange == "confirmed details" }) {
+            appendIfNeeded(confirmedDetails)
+        }
+
+        let orderedPageBlocks = blocks
             .filter { $0.sourceRef.paragraphRange != "confirmed details" }
             .sorted { lhs, rhs in
                 if lhs.pageNumber != rhs.pageNumber {
@@ -1808,7 +1818,15 @@ extension AlphaRossModel {
                 }
                 return lhs.sourceRef.label < rhs.sourceRef.label
             }
-            .first ?? blocks.first
+
+        appendIfNeeded(orderedPageBlocks.first)
+        appendIfNeeded(orderedPageBlocks.last)
+
+        if fallbackBlocks.isEmpty {
+            appendIfNeeded(blocks.first)
+        }
+
+        return fallbackBlocks
     }
 
     func alphaAskSourceBlockKey(_ block: AlphaSourceTextBlock) -> String {
