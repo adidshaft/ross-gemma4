@@ -1145,6 +1145,7 @@ extension AlphaRossModel {
         var modelJobs: [AlphaModelDownloadJob]
         var installedPacks: [AlphaInstalledModelPack]
         var lastModelCatalogRefresh: Date?
+        var cachedAssistantDownloads: [AlphaAssistantDownloadDescriptor]?
     }
 
     func preservedWorkspaceConfiguration() -> AlphaPreservedWorkspaceConfiguration {
@@ -1152,7 +1153,8 @@ extension AlphaRossModel {
             settings: persisted.settings,
             modelJobs: persisted.modelJobs,
             installedPacks: persisted.installedPacks,
-            lastModelCatalogRefresh: persisted.lastModelCatalogRefresh
+            lastModelCatalogRefresh: persisted.lastModelCatalogRefresh,
+            cachedAssistantDownloads: persisted.cachedAssistantDownloads
         )
     }
 
@@ -1161,6 +1163,7 @@ extension AlphaRossModel {
         persisted.modelJobs = preserved.modelJobs
         persisted.installedPacks = preserved.installedPacks
         persisted.lastModelCatalogRefresh = preserved.lastModelCatalogRefresh
+        persisted.cachedAssistantDownloads = preserved.cachedAssistantDownloads
         selectedTier = persisted.settings.activeTier ?? recommendedOnDeviceTier()
         publicLawDraft = persisted.publicLawDraft ?? publicLawDraft
         publicLawPreview = persisted.publicLawPreview

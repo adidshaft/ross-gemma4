@@ -44,7 +44,7 @@ private func alphaPurgeTemporaryAssistantDownloadFiles() -> Int64 {
     alphaSweepTemporaryAssistantDownloads()
 }
 
-struct AlphaAssistantCatalogDescriptor: Hashable, Sendable {
+struct AlphaAssistantCatalogDescriptor: Codable, Hashable, Sendable {
     let tier: AlphaCapabilityTier
     let packId: String
     let sizeBytes: Int64
@@ -54,7 +54,7 @@ struct AlphaAssistantCatalogDescriptor: Hashable, Sendable {
     let developmentOnly: Bool
 }
 
-struct AlphaAssistantDownloadDescriptor: Hashable, Sendable {
+struct AlphaAssistantDownloadDescriptor: Codable, Hashable, Sendable {
     let sessionId: String?
     let packId: String
     let tier: AlphaCapabilityTier
@@ -67,6 +67,64 @@ struct AlphaAssistantDownloadDescriptor: Hashable, Sendable {
     let downloadURLString: String
     let verified: Bool
     let releaseReady: Bool
+}
+
+private func alphaReusableAssistantDownloadDescriptor(
+    _ descriptor: AlphaAssistantDownloadDescriptor
+) -> AlphaAssistantDownloadDescriptor {
+    AlphaAssistantDownloadDescriptor(
+        sessionId: nil,
+        packId: descriptor.packId,
+        tier: descriptor.tier,
+        fileName: descriptor.fileName,
+        sizeBytes: descriptor.sizeBytes,
+        checksumSha256: descriptor.checksumSha256,
+        artifactKind: descriptor.artifactKind,
+        runtimeMode: descriptor.runtimeMode,
+        developmentOnly: descriptor.developmentOnly,
+        downloadURLString: descriptor.downloadURLString,
+        verified: descriptor.verified,
+        releaseReady: descriptor.releaseReady
+    )
+}
+
+func alphaAssistantDownloadDescriptorSupportsCurrentInstaller(_ descriptor: AlphaAssistantDownloadDescriptor) -> Bool {
+    guard !descriptor.developmentOnly,
+          descriptor.sizeBytes > 0,
+          descriptor.checksumSha256.range(of: #"^[a-fA-F0-9]{64}$"#, options: .regularExpression) != nil,
+          !descriptor.downloadURLString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        return false
+    }
+    switch descriptor.runtimeMode {
+    case .llamaCppGguf:
+        return descriptor.fileName.lowercased().hasSuffix(".gguf") &&
+            descriptor.artifactKind.localizedCaseInsensitiveContains("local_model_artifact")
+    case .mlxSwiftLm:
+        return alphaPackagedMLXArchiveArtifact(
+            fileName: descriptor.fileName,
+            artifactKind: descriptor.artifactKind,
+            runtimeMode: descriptor.runtimeMode
+        )
+    case .deterministicDev, .mediapipeLlm, .appleFoundationModels, .unavailable:
+        return false
+    }
+}
+
+func alphaPreferredAssistantDownloadFallback(
+    for tier: AlphaCapabilityTier,
+    preferredRuntimeMode: AlphaPackRuntimeMode,
+    cachedDownloads: [AlphaAssistantDownloadDescriptor]?
+) -> AlphaAssistantDownloadDescriptor {
+    let cachedCandidates = (cachedDownloads ?? []).filter {
+        $0.tier == tier && alphaAssistantDownloadDescriptorSupportsCurrentInstaller($0)
+    }
+    if let preferredCached = cachedCandidates.first(where: { $0.runtimeMode == preferredRuntimeMode }) {
+        return alphaReusableAssistantDownloadDescriptor(preferredCached)
+    }
+    if let fallbackCached = cachedCandidates.first {
+        return alphaReusableAssistantDownloadDescriptor(fallbackCached)
+    }
+    return alphaDefaultAssistantDownloadDescriptor(for: tier)
 }
 
 func alphaDefaultAssistantCatalogDescriptor(for tier: AlphaCapabilityTier) -> AlphaAssistantCatalogDescriptor {
@@ -1099,7 +1157,15 @@ extension AlphaRossModel {
 
     func startPackDownload(for tier: AlphaCapabilityTier, mobileAllowed: Bool, existingJobID: UUID?) async {
         let artifact = alphaAssistantModelArtifact(for: tier)
-        let fallbackDownload = alphaDefaultAssistantDownloadDescriptor(for: tier)
+        let preferredRuntime = alphaPreferredAssistantRuntimeMode(
+            for: tier,
+            existingRuntimeMode: persisted.installedPacks.first(where: { $0.tier == tier })?.runtimeMode
+        )
+        let fallbackDownload = alphaPreferredAssistantDownloadFallback(
+            for: tier,
+            preferredRuntimeMode: preferredRuntime,
+            cachedDownloads: persisted.cachedAssistantDownloads
+        )
         let policy: AlphaDownloadPolicy = mobileAllowed ? .mobileAllowed : .wifiOnly
         let existingJob = existingJobID.flatMap { requestedID in
             persisted.modelJobs.first { $0.id == requestedID }
@@ -1173,10 +1239,6 @@ extension AlphaRossModel {
             return
         }
 
-        let preferredRuntime = alphaPreferredAssistantRuntimeMode(
-            for: tier,
-            existingRuntimeMode: persisted.installedPacks.first(where: { $0.tier == tier })?.runtimeMode
-        )
         let resolvedDownload: AlphaAssistantDownloadDescriptor
         do {
             let catalog = try await backend.fetchCatalog(for: tier)
@@ -1195,6 +1257,15 @@ extension AlphaRossModel {
             )
         } catch {
             resolvedDownload = fallbackDownload
+        }
+
+        if resolvedDownload.sessionId != nil,
+           alphaAssistantDownloadDescriptorSupportsCurrentInstaller(resolvedDownload) {
+            let cachedDescriptor = alphaReusableAssistantDownloadDescriptor(resolvedDownload)
+            var cachedDownloads = persisted.cachedAssistantDownloads ?? []
+            cachedDownloads.removeAll { $0.tier == tier }
+            cachedDownloads.append(cachedDescriptor)
+            persisted.cachedAssistantDownloads = cachedDownloads
         }
 
         let isResumingPartialDownload = assistantDownloadTaskBoxes[job.id]?.resumeData != nil

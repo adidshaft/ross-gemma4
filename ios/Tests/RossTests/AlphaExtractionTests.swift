@@ -4639,6 +4639,65 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(descriptor.downloadURLString, pinned.downloadURLString)
     }
 
+    func testPreferredAssistantDownloadFallbackUsesCachedCompatibleMLXDescriptor() {
+        let cached = AlphaAssistantDownloadDescriptor(
+            sessionId: "sess-supported-mlx",
+            packId: "gemma-4-12b-mlx",
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-mlx.zip",
+            sizeBytes: 6_200_000_000,
+            checksumSha256: String(repeating: "d", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            downloadURLString: "https://ross.example/artifacts/gemma-4-12b-mlx.zip",
+            verified: true,
+            releaseReady: true
+        )
+
+        let fallback = alphaPreferredAssistantDownloadFallback(
+            for: .caseAssociate,
+            preferredRuntimeMode: .mlxSwiftLm,
+            cachedDownloads: [cached]
+        )
+
+        XCTAssertNil(fallback.sessionId)
+        XCTAssertEqual(fallback.packId, cached.packId)
+        XCTAssertEqual(fallback.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(fallback.fileName, "gemma-4-12b-mlx.zip")
+        XCTAssertEqual(fallback.downloadURLString, "https://ross.example/artifacts/gemma-4-12b-mlx.zip")
+    }
+
+    func testPreferredAssistantDownloadFallbackIgnoresUnsupportedCachedMLXDescriptor() {
+        let cached = AlphaAssistantDownloadDescriptor(
+            sessionId: "sess-unsupported-mlx",
+            packId: "gemma-4-12b-mlx",
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-mlx.tar.gz",
+            sizeBytes: 6_200_000_000,
+            checksumSha256: String(repeating: "e", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            downloadURLString: "https://ross.example/artifacts/gemma-4-12b-mlx.tar.gz",
+            verified: true,
+            releaseReady: true
+        )
+
+        let fallback = alphaPreferredAssistantDownloadFallback(
+            for: .caseAssociate,
+            preferredRuntimeMode: .mlxSwiftLm,
+            cachedDownloads: [cached]
+        )
+        let pinned = alphaAssistantModelArtifact(for: .caseAssociate)
+
+        XCTAssertNil(fallback.sessionId)
+        XCTAssertEqual(fallback.packId, pinned.packId)
+        XCTAssertEqual(fallback.fileName, pinned.fileName)
+        XCTAssertEqual(fallback.runtimeMode, pinned.runtimeMode)
+        XCTAssertEqual(fallback.downloadURLString, pinned.downloadURLString)
+    }
+
     func testAssistantDownloadPreflightRejectsWrongArtifactSize() throws {
         let response = try XCTUnwrap(HTTPURLResponse(
             url: URL(string: "https://huggingface.co/model.gguf")!,
