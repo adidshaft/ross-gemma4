@@ -3103,6 +3103,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 withIntermediateDirectories: true
             )
             try makeSparseFile(at: artifactURL, bytes: artifact.sizeBytes)
+            let checksum = try XCTUnwrap(alphaModelSHA256Hex(forFileAt: artifactURL))
 
             let encoder = JSONEncoder()
             encoder.dateEncodingStrategy = .iso8601
@@ -3111,7 +3112,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 tier: .caseAssociate,
                 fileName: artifactURL.lastPathComponent,
                 relativePath: relativePath,
-                checksumSha256: artifact.sha256,
+                checksumSha256: checksum,
                 bytes: artifact.sizeBytes,
                 artifactKind: "local_model_artifact",
                 runtimeMode: .llamaCppGguf,
@@ -3124,7 +3125,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 packId: manifest.packId,
                 tier: .caseAssociate,
                 installPath: relativePath,
-                checksumSha256: artifact.sha256,
+                checksumSha256: checksum,
                 artifactKind: manifest.artifactKind,
                 runtimeMode: manifest.runtimeMode,
                 developmentOnly: manifest.developmentOnly,
@@ -3161,6 +3162,9 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 activePack: alphaSystemAssistantPack(for: .caseAssociate),
                 requestedTier: .caseAssociate
             )
+            let recoveredFallback = await MainActor.run {
+                model.recoveredInstalledPackFromDisk(tier: .caseAssociate)
+            }
 
             let normalizedPack = normalized.installedPacks.first { $0.tier == .caseAssociate }
             let normalizedJob = normalized.modelJobs.first { $0.tier == .caseAssociate }
@@ -3172,6 +3176,10 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 XCTAssertEqual(normalizedJob?.artifactKind, "system_model")
                 XCTAssertEqual(normalizedJob?.bytesDownloaded, 0)
                 XCTAssertEqual(normalizedJob?.totalBytes, 0)
+                XCTAssertTrue(FileManager.default.fileExists(atPath: artifactURL.path()))
+                XCTAssertTrue(FileManager.default.fileExists(atPath: manifestURL.path()))
+                XCTAssertEqual(recoveredFallback?.runtimeMode, .llamaCppGguf)
+                XCTAssertEqual(recoveredFallback?.installPath, relativePath)
             } else {
                 XCTAssertEqual(normalizedPack?.runtimeMode, .llamaCppGguf)
                 XCTAssertEqual(normalizedPack?.installPath, relativePath)

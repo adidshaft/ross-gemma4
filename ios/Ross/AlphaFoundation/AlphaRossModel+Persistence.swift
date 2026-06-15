@@ -144,10 +144,18 @@ private func alphaPurgeAbandonedAssistantDownloadsFromDisk() -> Int64 {
 }
 
 @discardableResult
-private func alphaPruneUnreferencedAssistantArtifactsFromDisk(installedPacks: [AlphaInstalledModelPack]) -> Int64 {
+private func alphaPruneUnreferencedAssistantArtifactsFromDisk(
+    installedPacks: [AlphaInstalledModelPack],
+    lastInvocation: AlphaLocalModelInvocation? = nil
+) -> Int64 {
     let fileManager = FileManager.default
     var reclaimedBytes: Int64 = 0
     let installedPaths = Set(installedPacks.map(\.installPath))
+    let retainedFallbackManifests = alphaRetainedFallbackAssistantManifestURLs(
+        installedPacks: installedPacks,
+        lastInvocation: lastInvocation,
+        fileManager: fileManager
+    )
 
     func removeIfUnreferenced(_ url: URL) {
         let relativePath = url.path()
@@ -188,6 +196,9 @@ private func alphaPruneUnreferencedAssistantArtifactsFromDisk(installedPacks: [A
                   !installedPaths.contains(manifest.relativePath) else {
                 continue
             }
+            if retainedFallbackManifests.contains(manifestURL.standardizedFileURL) {
+                continue
+            }
             let artifactURL = alphaAbsoluteURL(for: manifest.relativePath)
             reclaimedBytes += alphaModelFileByteCount(at: artifactURL)
             if let draftArtifact = manifest.draftArtifact {
@@ -205,6 +216,105 @@ private func alphaPruneUnreferencedAssistantArtifactsFromDisk(installedPacks: [A
     }
 
     return reclaimedBytes
+}
+
+private func alphaRetainedFallbackAssistantManifestURLs(
+    installedPacks: [AlphaInstalledModelPack],
+    lastInvocation: AlphaLocalModelInvocation?,
+    fileManager: FileManager = .default
+) -> Set<URL> {
+    let retainedSystemTiers = Set(installedPacks.compactMap { pack -> AlphaCapabilityTier? in
+        guard pack.runtimeMode == .appleFoundationModels || pack.artifactKind == "system_model" else {
+            return nil
+        }
+        return AlphaCapabilityTier.normalizedAssistantSelection(pack.tier) ?? pack.tier
+    })
+    guard !retainedSystemTiers.isEmpty else { return [] }
+
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+    var retainedURLs = Set<URL>()
+
+    for tier in retainedSystemTiers {
+        let preferredFallbackRuntime = alphaPreferredAssistantRuntimeMode(
+            for: tier,
+            existingRuntimeMode: nil,
+            systemAssistantAvailable: false,
+            lastInvocation: lastInvocation
+        )
+        let tierDirectory = alphaAbsoluteURL(for: "model-packs/\(tier.rawValue)")
+        guard let contents = try? fileManager.contentsOfDirectory(
+            at: tierDirectory,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) else {
+            continue
+        }
+
+        var retainedManifest: (url: URL, manifest: AlphaModelArtifactManifest)?
+        for manifestURL in contents where manifestURL.lastPathComponent.hasSuffix(".manifest.json") {
+            guard let data = try? Data(contentsOf: manifestURL),
+                  let manifest = try? decoder.decode(AlphaModelArtifactManifest.self, from: data),
+                  manifest.tier == tier,
+                  !manifest.developmentOnly,
+                  manifest.runtimeMode != .appleFoundationModels,
+                  manifest.artifactKind != "system_model" else {
+                continue
+            }
+
+            let candidate = AlphaInstalledModelPack(
+                packId: manifest.packId,
+                tier: manifest.tier,
+                installPath: manifest.relativePath,
+                checksumSha256: manifest.checksumSha256,
+                artifactKind: manifest.artifactKind,
+                runtimeMode: manifest.runtimeMode,
+                developmentOnly: manifest.developmentOnly,
+                checksumVerified: true,
+                isActive: false
+            )
+            guard alphaInstalledModelPackFileIsUsable(candidate),
+                  alphaDownloadedAssistantArtifactPassesRuntimeValidation(candidate) else {
+                continue
+            }
+
+            guard let current = retainedManifest else {
+                retainedManifest = (manifestURL.standardizedFileURL, manifest)
+                continue
+            }
+
+            let currentMatchesPreferred = current.manifest.runtimeMode == preferredFallbackRuntime
+            let candidateMatchesPreferred = manifest.runtimeMode == preferredFallbackRuntime
+            if candidateMatchesPreferred != currentMatchesPreferred {
+                retainedManifest = candidateMatchesPreferred ? (manifestURL.standardizedFileURL, manifest) : current
+                continue
+            }
+
+            if manifest.verifiedAt != current.manifest.verifiedAt {
+                retainedManifest = manifest.verifiedAt > current.manifest.verifiedAt
+                    ? (manifestURL.standardizedFileURL, manifest)
+                    : current
+                continue
+            }
+
+            if manifest.bytes != current.manifest.bytes {
+                retainedManifest = manifest.bytes > current.manifest.bytes
+                    ? (manifestURL.standardizedFileURL, manifest)
+                    : current
+                continue
+            }
+
+            if manifestURL.lastPathComponent < current.url.lastPathComponent {
+                retainedManifest = (manifestURL.standardizedFileURL, manifest)
+            }
+        }
+
+        if let retainedManifest {
+            retainedURLs.insert(retainedManifest.url)
+        }
+    }
+
+    return retainedURLs
 }
 
 private func alphaModelFileByteCount(at url: URL) -> Int64 {
@@ -2251,7 +2361,10 @@ extension AlphaRossModel {
         alphaConvergeInstalledAssistantCatalog(&normalized)
         alphaConvergeAssistantUpdateCandidates(&normalized)
         alphaApplyPreferredInstalledRuntimeForSelectedTier(&normalized)
-        _ = alphaPruneUnreferencedAssistantArtifactsFromDisk(installedPacks: normalized.installedPacks)
+        _ = alphaPruneUnreferencedAssistantArtifactsFromDisk(
+            installedPacks: normalized.installedPacks,
+            lastInvocation: alphaLastModelInvocation(in: normalized)
+        )
         if alphaHadUnfinishedPrivateAIStartupValidation() {
             alphaQuarantineActiveAssistantAfterStartupFailure(&normalized)
         }
