@@ -238,8 +238,12 @@ struct AlphaAskConversationScreen: View {
             )
         ) {
             if let answerDetailsResult {
-                AlphaAnswerDetailsSheet(result: answerDetailsResult)
-                    .presentationDetents([.height(320), .medium])
+                AlphaAnswerDetailsSheet(
+                    result: answerDetailsResult,
+                    contextDocumentTitle: contextDocumentTitle,
+                    onOpenSource: model.openSourceRef
+                )
+                    .presentationDetents([.height(360), .medium])
                     .presentationDragIndicator(.visible)
             }
         }
@@ -709,6 +713,8 @@ struct AlphaFullScreenChatTurn: View {
 
 struct AlphaAnswerDetailsSheet: View {
     let result: AlphaAskResult
+    let contextDocumentTitle: String?
+    let onOpenSource: (AlphaSourceRef) -> Void
 
     private var invocation: AlphaLocalModelInvocation? {
         result.modelInvocation
@@ -722,6 +728,10 @@ struct AlphaAnswerDetailsSheet: View {
         invocation?.answerDetailSecondaryMetrics ?? []
     }
 
+    private var continuationContext: AlphaAnswerContinuationContext? {
+        result.answerContinuationContext
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
@@ -733,6 +743,11 @@ struct AlphaAnswerDetailsSheet: View {
                         .font(.footnote)
                         .foregroundStyle(Color.rossInk.opacity(0.68))
                         .fixedSize(horizontal: false, vertical: true)
+
+                    if let continuationContext {
+                        AlphaAnswerContinuationContextRow(context: continuationContext)
+                            .padding(.top, 2)
+                    }
                 }
 
                 if !overviewMetrics.isEmpty {
@@ -756,6 +771,17 @@ struct AlphaAnswerDetailsSheet: View {
                                 value: metric.value
                             )
                         }
+                    }
+                }
+
+                if !result.caseFileSources.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        AlphaSectionLabel(title: rossLocalized("sources"))
+                        AlphaSourceRefChips(
+                            sourceRefs: result.caseFileSources,
+                            contextDocumentTitle: contextDocumentTitle,
+                            onOpenSourceRef: onOpenSource
+                        )
                     }
                 }
             }
@@ -2047,6 +2073,9 @@ extension AlphaAskResult {
     }
 
     var hasAnswerDetails: Bool {
+        if !caseFileSources.isEmpty {
+            return true
+        }
         guard let modelInvocation else { return false }
         return modelInvocation.estimatedProcessedTokens != nil ||
             modelInvocation.estimatedOutputTokensPerSecond != nil ||

@@ -3842,6 +3842,34 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testAskResultHasAnswerDetailsWhenOnlySourcesArePresent() {
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "Order bundle",
+            pageNumber: 5,
+            textSnippet: "Written submissions are due before the hearing."
+        )
+        let result = AlphaAskResult(
+            chatSessionID: nil,
+            chatTurnID: nil,
+            kind: .userAsk,
+            question: "Which page is that on?",
+            scopeCaseID: nil,
+            scopeLabel: "All work",
+            selectedDocumentTitles: [],
+            answerTitle: "The direction appears in the cited order.",
+            answerSections: ["See Order bundle · p. 5."],
+            caseFileSources: [sourceRef],
+            publicLawPreview: nil,
+            publicLawResults: [],
+            statusNote: "Private assistant",
+            needsReviewWarning: nil
+        )
+
+        XCTAssertTrue(result.hasAnswerDetails)
+    }
+
     @MainActor
     func testAnswerDetailMetricsEstimateTokenCountAndExposeFirstResponse() {
         let invocation = AlphaLocalModelInvocation(

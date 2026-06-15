@@ -600,8 +600,12 @@ struct AlphaRootAskDock: View {
             )
         ) {
             if let answerDetailsResult {
-                AlphaAnswerDetailsSheet(result: answerDetailsResult)
-                    .presentationDetents([.height(260), .medium])
+                AlphaAnswerDetailsSheet(
+                    result: answerDetailsResult,
+                    contextDocumentTitle: fixedDocumentIDs.count == 1 ? activeSelectedDocuments.first?.title : nil,
+                    onOpenSource: model.openSourceRef
+                )
+                    .presentationDetents([.height(320), .medium])
                     .presentationDragIndicator(.visible)
             }
         }
