@@ -562,6 +562,109 @@ private func alphaNormalizedInstalledPacks(
     }
 }
 
+private func alphaPreferredInstalledPack(
+    for tier: AlphaCapabilityTier,
+    installedPacks: [AlphaInstalledModelPack]
+) -> AlphaInstalledModelPack? {
+    var candidates = installedPacks.filter {
+        $0.tier == tier && alphaInstalledAssistantPackPassesRuntimeValidation($0)
+    }
+
+    let systemPack = alphaSystemAssistantPack(for: tier)
+    let systemAvailable = !alphaAllowsDevelopmentModelArtifacts() &&
+        alphaInstalledAssistantPackPassesRuntimeValidation(systemPack)
+    if systemAvailable {
+        candidates.append(systemPack)
+    }
+
+    guard !candidates.isEmpty else { return nil }
+
+    let preferredRuntime: AlphaPackRuntimeMode = if systemAvailable {
+        .appleFoundationModels
+    } else {
+        alphaPreferredAssistantRuntimeMode(for: tier, existingRuntimeMode: nil)
+    }
+
+    func runtimeScore(_ runtimeMode: AlphaPackRuntimeMode) -> Int {
+        if runtimeMode == preferredRuntime { return 0 }
+        switch runtimeMode {
+        case .appleFoundationModels:
+            return 1
+        case .mlxSwiftLm:
+            return 2
+        case .llamaCppGguf:
+            return 3
+        case .deterministicDev:
+            return 4
+        case .mediapipeLlm, .unavailable:
+            return 5
+        }
+    }
+
+    return candidates.min { lhs, rhs in
+        let lhsScore = runtimeScore(lhs.runtimeMode)
+        let rhsScore = runtimeScore(rhs.runtimeMode)
+        if lhsScore != rhsScore {
+            return lhsScore < rhsScore
+        }
+        if lhs.checksumVerified != rhs.checksumVerified {
+            return lhs.checksumVerified && !rhs.checksumVerified
+        }
+        return lhs.installedAt > rhs.installedAt
+    }
+}
+
+private func alphaApplyPreferredInstalledRuntimeForSelectedTier(_ state: inout AlphaPersistedState) {
+    let selectedTier = alphaOptimisticActivePack(from: state)?.tier ?? state.settings.activeTier
+    guard let selectedTier,
+          let preferredPack = alphaPreferredInstalledPack(
+            for: selectedTier,
+            installedPacks: state.installedPacks
+          ) else {
+        return
+    }
+
+    let currentPack = state.installedPacks.first { $0.tier == selectedTier && $0.isActive } ??
+        state.installedPacks.first { $0.tier == selectedTier }
+    guard currentPack?.packId != preferredPack.packId ||
+            currentPack?.runtimeMode != preferredPack.runtimeMode ||
+            currentPack?.installPath != preferredPack.installPath else {
+        return
+    }
+
+    let migratedPack = AlphaInstalledModelPack(
+        id: currentPack?.id ?? preferredPack.id,
+        packId: preferredPack.packId,
+        tier: preferredPack.tier,
+        installPath: preferredPack.installPath,
+        checksumSha256: preferredPack.checksumSha256,
+        artifactKind: preferredPack.artifactKind,
+        runtimeMode: preferredPack.runtimeMode,
+        developmentOnly: preferredPack.developmentOnly,
+        checksumVerified: preferredPack.checksumVerified,
+        minimumAppVersion: preferredPack.minimumAppVersion,
+        installedAt: currentPack?.installedAt ?? preferredPack.installedAt,
+        isActive: true
+    )
+
+    state.installedPacks.removeAll { $0.tier == selectedTier }
+    state.installedPacks.insert(migratedPack, at: 0)
+    state.settings.activeTier = selectedTier
+    if let jobIndex = state.modelJobs.firstIndex(where: { $0.tier == selectedTier }) {
+        state.modelJobs[jobIndex].packId = migratedPack.packId
+        state.modelJobs[jobIndex].state = .installed
+        state.modelJobs[jobIndex].checksumSha256 = migratedPack.checksumSha256
+        state.modelJobs[jobIndex].artifactKind = migratedPack.artifactKind
+        state.modelJobs[jobIndex].runtimeMode = migratedPack.runtimeMode
+        state.modelJobs[jobIndex].developmentOnly = migratedPack.developmentOnly
+        state.modelJobs[jobIndex].failureReason = nil
+        state.modelJobs[jobIndex].bytesDownloaded = migratedPack.runtimeMode == .appleFoundationModels ? 0 : state.modelJobs[jobIndex].bytesDownloaded
+        state.modelJobs[jobIndex].totalBytes = migratedPack.runtimeMode == .appleFoundationModels ? 0 : state.modelJobs[jobIndex].totalBytes
+        state.modelJobs[jobIndex].updatedAt = .now
+        state.modelJobs[jobIndex].completedAt = state.modelJobs[jobIndex].completedAt ?? .now
+    }
+}
+
 private func alphaAvailableStorageInGigabytes() -> Int {
     let values = try? URL.homeDirectory.resourceValues(
         forKeys: [.volumeAvailableCapacityForImportantUsageKey]
@@ -1818,6 +1921,7 @@ extension AlphaRossModel {
         _ = alphaPurgeAbandonedAssistantDownloadsFromDisk()
         purgeDevelopmentModelArtifactsFromDisk()
         _ = recoverDownloadedAssistantArtifacts(from: &normalized)
+        alphaApplyPreferredInstalledRuntimeForSelectedTier(&normalized)
         _ = alphaPruneUnreferencedAssistantArtifactsFromDisk(installedPacks: normalized.installedPacks)
         if alphaHadUnfinishedPrivateAIStartupValidation() {
             alphaQuarantineActiveAssistantAfterStartupFailure(&normalized)

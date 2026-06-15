@@ -2298,6 +2298,108 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    func testNormalizeLoadedStatePrefersAvailableSystemAssistantForSelectedTier() async throws {
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        defer {
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+        }
+
+        try await withRestoredStore { store in
+            await store.removeAllModelArtifacts()
+            let artifact = alphaAssistantModelArtifact(for: .caseAssociate)
+            let relativePath = "model-packs/case_associate/startup-preferred.gguf"
+            let artifactURL = alphaAbsoluteURL(for: relativePath)
+            let manifestURL = artifactURL.deletingPathExtension().appendingPathExtension("manifest.json")
+            try FileManager.default.createDirectory(
+                at: artifactURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try makeSparseFile(at: artifactURL, bytes: artifact.sizeBytes)
+
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let manifest = AlphaModelArtifactManifest(
+                packId: "gemma-4-12b-startup-preferred",
+                tier: .caseAssociate,
+                fileName: artifactURL.lastPathComponent,
+                relativePath: relativePath,
+                checksumSha256: artifact.sha256,
+                bytes: artifact.sizeBytes,
+                artifactKind: "local_model_artifact",
+                runtimeMode: .llamaCppGguf,
+                developmentOnly: false,
+                verifiedAt: .now
+            )
+            try encoder.encode(manifest).write(to: manifestURL, options: .atomic)
+
+            let pack = AlphaInstalledModelPack(
+                packId: manifest.packId,
+                tier: .caseAssociate,
+                installPath: relativePath,
+                checksumSha256: artifact.sha256,
+                artifactKind: manifest.artifactKind,
+                runtimeMode: manifest.runtimeMode,
+                developmentOnly: manifest.developmentOnly,
+                checksumVerified: true,
+                isActive: true
+            )
+            var state = AlphaPersistedState.seed()
+            state.installedPacks = [pack]
+            state.modelJobs = [
+                AlphaModelDownloadJob(
+                    sessionId: "startup-runtime-preference",
+                    packId: pack.packId,
+                    tier: .caseAssociate,
+                    state: .installed,
+                    networkPolicy: .wifiOnly,
+                    bytesDownloaded: artifact.sizeBytes,
+                    totalBytes: artifact.sizeBytes,
+                    checksumSha256: pack.checksumSha256,
+                    artifactKind: pack.artifactKind,
+                    runtimeMode: pack.runtimeMode,
+                    developmentOnly: false,
+                    completedAt: .now
+                )
+            ]
+            state.settings.activeTier = .caseAssociate
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            let normalized = await MainActor.run {
+                model.normalizeLoadedState(state)
+            }
+            let systemHealth = AlphaLocalModelRuntime.runtimeHealth(
+                activePack: alphaSystemAssistantPack(for: .caseAssociate),
+                requestedTier: .caseAssociate
+            )
+
+            let normalizedPack = normalized.installedPacks.first { $0.tier == .caseAssociate }
+            let normalizedJob = normalized.modelJobs.first { $0.tier == .caseAssociate }
+            if systemHealth?.available == true {
+                XCTAssertEqual(normalizedPack?.runtimeMode, .appleFoundationModels)
+                XCTAssertEqual(normalizedPack?.installPath, "system://apple-foundation-models")
+                XCTAssertEqual(normalizedPack?.artifactKind, "system_model")
+                XCTAssertEqual(normalizedJob?.runtimeMode, .appleFoundationModels)
+                XCTAssertEqual(normalizedJob?.artifactKind, "system_model")
+                XCTAssertEqual(normalizedJob?.bytesDownloaded, 0)
+                XCTAssertEqual(normalizedJob?.totalBytes, 0)
+            } else {
+                XCTAssertEqual(normalizedPack?.runtimeMode, .llamaCppGguf)
+                XCTAssertEqual(normalizedPack?.installPath, relativePath)
+                XCTAssertEqual(normalizedJob?.runtimeMode, .llamaCppGguf)
+                XCTAssertEqual(normalizedJob?.artifactKind, "local_model_artifact")
+            }
+
+            await store.removeAllModelArtifacts()
+        }
+    }
+
     func testSystemAssistantRuntimeValidationMatchesRuntimeHealth() async throws {
         let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
         setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
