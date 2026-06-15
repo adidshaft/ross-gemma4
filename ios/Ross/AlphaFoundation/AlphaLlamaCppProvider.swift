@@ -42,24 +42,24 @@ enum AlphaLlamaRuntimeProfile {
             return physicalMemory >= 8_000_000_000 ? 8_192 : 6_144
         case .e4b:
             if physicalMemory >= 12_000_000_000 {
-                return 16_384
-            }
-            return physicalMemory >= 8_000_000_000 ? 12_288 : 8_192
-        case .gemma12b:
-            if physicalMemory >= 16_000_000_000 {
-                return 24_576
-            }
-            if physicalMemory >= 12_000_000_000 {
                 return 20_480
             }
-            return 16_384
+            return physicalMemory >= 8_000_000_000 ? 16_384 : 10_240
+        case .gemma12b:
+            if physicalMemory >= 16_000_000_000 {
+                return 32_768
+            }
+            if physicalMemory >= 12_000_000_000 {
+                return 24_576
+            }
+            return 18_432
         case .gemma26bA4b:
             if physicalMemory >= 20_000_000_000 {
-                return 16_384
+                return 24_576
             }
-            return physicalMemory >= 16_000_000_000 ? 12_288 : 8_192
+            return physicalMemory >= 16_000_000_000 ? 16_384 : 10_240
         case .unknown:
-            return physicalMemory >= 10_000_000_000 ? 12_288 : 8_192
+            return physicalMemory >= 10_000_000_000 ? 14_336 : 10_240
         }
     }
 
@@ -71,20 +71,20 @@ enum AlphaLlamaRuntimeProfile {
         switch archiveProfile(forModelPath: path) {
         case .flash:
             if physicalMemory < 8_000_000_000 {
-                return 16
+                return 20
             }
             return 40
         case .e4b:
             if physicalMemory < 8_000_000_000 {
-                return 24
+                return 32
             }
             return 99
         case .gemma12b:
             if physicalMemory < 8_000_000_000 {
-                return 20
+                return 24
             }
             if physicalMemory < 12_000_000_000 {
-                return 40
+                return 56
             }
             return 99
         case .gemma26bA4b:
@@ -92,11 +92,11 @@ enum AlphaLlamaRuntimeProfile {
                 return 0
             }
             if physicalMemory < 18_000_000_000 {
-                return 20
+                return 24
             }
-            return 99
+            return 40
         case .unknown:
-            return physicalMemory < 10_000_000_000 ? 24 : 99
+            return physicalMemory < 10_000_000_000 ? 32 : 99
         }
     }
 
@@ -105,17 +105,17 @@ enum AlphaLlamaRuntimeProfile {
         case .flash:
             return 12_000
         case .quickStart:
-            return physicalMemory >= 8_000_000_000 ? 26_000 : 20_000
+            return physicalMemory >= 8_000_000_000 ? 30_000 : 22_000
         case .caseAssociate:
             if physicalMemory >= 16_000_000_000 {
-                return 48_000
+                return 56_000
             }
-            return physicalMemory >= 12_000_000_000 ? 42_000 : 34_000
+            return physicalMemory >= 12_000_000_000 ? 48_000 : 38_000
         case .seniorDraftingSupport:
             if physicalMemory >= 20_000_000_000 {
-                return 54_000
+                return 60_000
             }
-            return physicalMemory >= 16_000_000_000 ? 46_000 : 38_000
+            return physicalMemory >= 16_000_000_000 ? 52_000 : 40_000
         }
     }
 
@@ -151,13 +151,68 @@ enum AlphaLlamaRuntimeProfile {
         case .flash:
             return 4
         case .quickStart:
-            return 6
+            return 7
         case .caseAssociate:
-            return 8
+            return 9
         case .seniorDraftingSupport:
-            return 10
+            return 12
         }
     }
+
+    static func promptBatchTokens(
+        forModelPath path: String?,
+        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory
+    ) -> UInt32 {
+        switch archiveProfile(forModelPath: path) {
+        case .flash:
+            return physicalMemory >= 8_000_000_000 ? 1_024 : 768
+        case .e4b:
+            if physicalMemory >= 12_000_000_000 {
+                return 2_048
+            }
+            return physicalMemory >= 8_000_000_000 ? 1_536 : 1_024
+        case .gemma12b:
+            if physicalMemory >= 16_000_000_000 {
+                return 2_048
+            }
+            return physicalMemory >= 12_000_000_000 ? 1_536 : 1_024
+        case .gemma26bA4b:
+            if physicalMemory >= 20_000_000_000 {
+                return 1_536
+            }
+            return physicalMemory >= 16_000_000_000 ? 1_024 : 768
+        case .unknown:
+            return physicalMemory >= 10_000_000_000 ? 1_536 : 1_024
+        }
+    }
+
+    static func physicalBatchTokens(
+        forModelPath path: String?,
+        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory
+    ) -> UInt32 {
+        switch archiveProfile(forModelPath: path) {
+        case .flash:
+            return physicalMemory >= 8_000_000_000 ? 768 : 512
+        case .e4b:
+            if physicalMemory >= 12_000_000_000 {
+                return 1_536
+            }
+            return physicalMemory >= 8_000_000_000 ? 1_024 : 768
+        case .gemma12b:
+            if physicalMemory >= 16_000_000_000 {
+                return 1_536
+            }
+            return physicalMemory >= 12_000_000_000 ? 1_024 : 768
+        case .gemma26bA4b:
+            if physicalMemory >= 20_000_000_000 {
+                return 1_024
+            }
+            return physicalMemory >= 16_000_000_000 ? 768 : 512
+        case .unknown:
+            return physicalMemory >= 10_000_000_000 ? 1_024 : 768
+        }
+    }
+
 }
 
 final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {

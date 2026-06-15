@@ -30,6 +30,7 @@ actor LlamaContext {
     private var vocab: OpaquePointer
     nonisolated(unsafe) private var sampling: UnsafeMutablePointer<llama_sampler>
     nonisolated(unsafe) private var batch: llama_batch
+    private let batchTokenCapacity: Int32
     private var tokens_list: [llama_token]
     var is_done: Bool = false
 
@@ -45,11 +46,17 @@ actor LlamaContext {
     var n_decode: Int32 = 0
     private var hasDecodableLogits = false
 
-    init(model: OpaquePointer, context: OpaquePointer, sampling: UnsafeMutablePointer<llama_sampler>) {
+    init(
+        model: OpaquePointer,
+        context: OpaquePointer,
+        sampling: UnsafeMutablePointer<llama_sampler>,
+        batchTokenCapacity: Int32
+    ) {
         self.model = model
         self.context = context
         self.tokens_list = []
-        self.batch = llama_batch_init(1024, 0, 1)
+        self.batchTokenCapacity = max(256, batchTokenCapacity)
+        self.batch = llama_batch_init(self.batchTokenCapacity, 0, 1)
         self.temporary_invalid_cchars = []
         self.sampling = sampling
         vocab = llama_model_get_vocab(model)
@@ -100,8 +107,13 @@ actor LlamaContext {
 
         var ctx_params = llama_context_default_params()
         ctx_params.n_ctx = AlphaLlamaRuntimeProfile.contextWindowTokens(forModelPath: path, physicalMemory: memory)
+        ctx_params.n_batch = AlphaLlamaRuntimeProfile.promptBatchTokens(forModelPath: path, physicalMemory: memory)
+        ctx_params.n_ubatch = AlphaLlamaRuntimeProfile.physicalBatchTokens(forModelPath: path, physicalMemory: memory)
         ctx_params.n_threads       = Int32(n_threads)
         ctx_params.n_threads_batch = Int32(n_threads)
+        ctx_params.offload_kqv = model_params.n_gpu_layers > 0
+        ctx_params.op_offload = model_params.n_gpu_layers > 0
+        ctx_params.defrag_thold = 0.1
 
         let context = llama_init_from_model(model, ctx_params)
         guard let context else {
@@ -112,7 +124,12 @@ actor LlamaContext {
 
         do {
             let sampler = try Self.makeSampler(settings: AlphaLlamaSamplerSettings.legalQA)
-            return LlamaContext(model: model, context: context, sampling: sampler)
+            return LlamaContext(
+                model: model,
+                context: context,
+                sampling: sampler,
+                batchTokenCapacity: Int32(ctx_params.n_batch)
+            )
         } catch {
             llama_free(context)
             llama_model_free(model)
@@ -206,7 +223,7 @@ actor LlamaContext {
             llama_batch_add(&batch, tokens_list[i], Int32(i), [0], isFinalPromptToken)
 
             // Chunk prompt evaluation to avoid exceeding batch size.
-            if batch.n_tokens >= 1024 {
+            if batch.n_tokens >= batchTokenCapacity {
                 if llama_decode(context, batch) != 0 {
                     print("llama_decode() failed during prompt evaluation chunk")
                     hasDecodableLogits = false

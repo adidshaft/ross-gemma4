@@ -4127,21 +4127,21 @@ final class AlphaExtractionTests: XCTestCase {
                 forModelPath: "/tmp/gemma-4-12B-it-Q4_K_M.gguf",
                 physicalMemory: 8_000_000_000
             ),
-            16_384
+            18_432
         )
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.contextWindowTokens(
                 forModelPath: "/tmp/gemma-4-12B-it-Q4_K_M.gguf",
                 physicalMemory: 12_000_000_000
             ),
-            20_480
+            24_576
         )
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.contextWindowTokens(
                 forModelPath: "/tmp/gemma-4-12B-it-Q4_K_M.gguf",
                 physicalMemory: 16_000_000_000
             ),
-            24_576
+            32_768
         )
     }
 
@@ -4151,24 +4151,24 @@ final class AlphaExtractionTests: XCTestCase {
                 for: .caseAssociate,
                 physicalMemory: 12_000_000_000
             ),
-            20_480
+            24_576
         )
         XCTAssertEqual(
             AlphaMLXRuntimeProfile.maxInputChars(
                 for: .quickStart,
                 physicalMemory: 8_000_000_000
             ),
-            30_000
+            34_000
         )
         XCTAssertEqual(
             AlphaMLXRuntimeProfile.maxInputChars(
                 for: .caseAssociate,
                 physicalMemory: 12_000_000_000
             ),
-            44_000
+            52_000
         )
-        XCTAssertEqual(AlphaMLXRuntimeProfile.defaultDraftTokens(for: .caseAssociate), 4)
-        XCTAssertEqual(AlphaMLXRuntimeProfile.defaultDraftTokens(for: .seniorDraftingSupport), 6)
+        XCTAssertEqual(AlphaMLXRuntimeProfile.defaultDraftTokens(for: .caseAssociate), 6)
+        XCTAssertEqual(AlphaMLXRuntimeProfile.defaultDraftTokens(for: .seniorDraftingSupport), 8)
     }
 
     func testLlamaRuntimeProfileRaisesHighQualityInputBudgets() {
@@ -4177,24 +4177,24 @@ final class AlphaExtractionTests: XCTestCase {
                 for: .quickStart,
                 physicalMemory: 8_000_000_000
             ),
-            26_000
+            30_000
         )
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.maxInputChars(
                 for: .caseAssociate,
                 physicalMemory: 12_000_000_000
             ),
-            42_000
+            48_000
         )
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.maxInputChars(
                 for: .seniorDraftingSupport,
                 physicalMemory: 20_000_000_000
             ),
-            54_000
+            60_000
         )
-        XCTAssertEqual(AlphaLlamaRuntimeProfile.sourceBlockLimit(for: .caseAssociate), 8)
-        XCTAssertEqual(AlphaLlamaRuntimeProfile.sourceBlockLimit(for: .seniorDraftingSupport), 10)
+        XCTAssertEqual(AlphaLlamaRuntimeProfile.sourceBlockLimit(for: .caseAssociate), 9)
+        XCTAssertEqual(AlphaLlamaRuntimeProfile.sourceBlockLimit(for: .seniorDraftingSupport), 12)
     }
 
     func testLlamaRuntimeProfileUsesModelAwareGPUOffload() {
@@ -4203,14 +4203,14 @@ final class AlphaExtractionTests: XCTestCase {
                 forModelPath: "/tmp/google_gemma-4-E4B-it-Q4_K_M.gguf",
                 physicalMemory: 7_000_000_000
             ),
-            24
+            32
         )
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.gpuLayerCount(
                 forModelPath: "/tmp/gemma-4-12B-it-Q4_K_M.gguf",
                 physicalMemory: 9_000_000_000
             ),
-            40
+            56
         )
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.gpuLayerCount(
@@ -4218,6 +4218,23 @@ final class AlphaExtractionTests: XCTestCase {
                 physicalMemory: 11_000_000_000
             ),
             0
+        )
+    }
+
+    func testLlamaRuntimeProfileEnablesBroaderBatching() {
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.promptBatchTokens(
+                forModelPath: "/tmp/gemma-4-12B-it-Q4_K_M.gguf",
+                physicalMemory: 12_000_000_000
+            ),
+            1_536
+        )
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.physicalBatchTokens(
+                forModelPath: "/tmp/gemma-4-12B-it-Q4_K_M.gguf",
+                physicalMemory: 12_000_000_000
+            ),
+            1_024
         )
     }
 
@@ -4725,8 +4742,8 @@ final class AlphaExtractionTests: XCTestCase {
 
         let recordedDraftTokens = await capture.draftTokens
 
-        XCTAssertEqual(recordedDraftTokens, 4)
-        XCTAssertEqual(provider?.runtimeHealth().accelerationDraftTokens, 4)
+        XCTAssertEqual(recordedDraftTokens, 6)
+        XCTAssertEqual(provider?.runtimeHealth().accelerationDraftTokens, 6)
     }
 
     func testLlamaValidationRejectsMissingModelPath() {

@@ -23,14 +23,14 @@ enum AlphaMLXRuntimeProfile {
         case .flash:
             return physicalMemory >= 8_000_000_000 ? 8_192 : 6_144
         case .quickStart:
-            return physicalMemory >= 8_000_000_000 ? 14_336 : 10_240
+            return physicalMemory >= 8_000_000_000 ? 16_384 : 12_288
         case .caseAssociate:
             if physicalMemory >= 16_000_000_000 {
-                return 24_576
+                return 32_768
             }
-            return physicalMemory >= 12_000_000_000 ? 20_480 : 16_384
+            return physicalMemory >= 12_000_000_000 ? 24_576 : 20_480
         case .seniorDraftingSupport:
-            return physicalMemory >= 18_000_000_000 ? 24_576 : 18_432
+            return physicalMemory >= 18_000_000_000 ? 28_672 : 24_576
         }
     }
 
@@ -42,14 +42,14 @@ enum AlphaMLXRuntimeProfile {
         case .flash:
             return physicalMemory >= 8_000_000_000 ? 18_000 : 14_000
         case .quickStart:
-            return physicalMemory >= 8_000_000_000 ? 30_000 : 22_000
+            return physicalMemory >= 8_000_000_000 ? 34_000 : 24_000
         case .caseAssociate:
             if physicalMemory >= 16_000_000_000 {
-                return 48_000
+                return 60_000
             }
-            return physicalMemory >= 12_000_000_000 ? 44_000 : 36_000
+            return physicalMemory >= 12_000_000_000 ? 52_000 : 40_000
         case .seniorDraftingSupport:
-            return physicalMemory >= 18_000_000_000 ? 56_000 : 44_000
+            return physicalMemory >= 18_000_000_000 ? 68_000 : 52_000
         }
     }
 
@@ -85,11 +85,11 @@ enum AlphaMLXRuntimeProfile {
         case .flash:
             return 5
         case .quickStart:
-            return 6
+            return 7
         case .caseAssociate:
-            return 8
+            return 9
         case .seniorDraftingSupport:
-            return 10
+            return 12
         }
     }
 
@@ -98,11 +98,11 @@ enum AlphaMLXRuntimeProfile {
         case .flash:
             return 2
         case .quickStart:
-            return 3
-        case .caseAssociate:
             return 4
-        case .seniorDraftingSupport:
+        case .caseAssociate:
             return 6
+        case .seniorDraftingSupport:
+            return 8
         }
     }
 }
