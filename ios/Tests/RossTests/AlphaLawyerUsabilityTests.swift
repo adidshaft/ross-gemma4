@@ -1101,6 +1101,8 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
 
         let documentSourceRefs = sourcePack.filter { $0.sourceRef.effectiveSourceCategory != .matterDetail }
         XCTAssertFalse(documentSourceRefs.isEmpty)
+        XCTAssertEqual(sourcePack.first?.sourceRef.documentId, citedDocumentID)
+        XCTAssertEqual(sourcePack.first?.pageNumber, 5)
         XCTAssertEqual(documentSourceRefs.first?.pageNumber, 5)
         XCTAssertEqual(documentSourceRefs.first?.sourceRef.documentId, citedDocumentID)
     }

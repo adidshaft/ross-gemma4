@@ -1783,7 +1783,7 @@ extension AlphaRossModel {
             return Array(prioritizedSelectedDocumentBlocks.prefix(sourcePackPolicy.sourceBlockLimit))
         }
         if !prioritizedFollowUpBlocks.isEmpty {
-            return Array((matterBlocks + prioritizedFollowUpBlocks).prefix(sourcePackPolicy.sourceBlockLimit))
+            return Array((prioritizedFollowUpBlocks + matterBlocks).prefix(sourcePackPolicy.sourceBlockLimit))
         }
         if !balancedRankedDocumentBlocks.isEmpty {
             return Array((matterBlocks + balancedRankedDocumentBlocks).prefix(sourcePackPolicy.sourceBlockLimit))
