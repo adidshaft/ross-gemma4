@@ -747,6 +747,54 @@ func alphaPreferredAssistantRuntimeMode(
     return baselineTier == .quickStart ? .llamaCppGguf : .mlxSwiftLm
 }
 
+func alphaAssistantRuntimeChoiceLabel(
+    selectedRuntimeMode: AlphaPackRuntimeMode,
+    tier: AlphaCapabilityTier,
+    isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
+    physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory,
+    freeStorageGB: Int = max(4, alphaAvailableStorageInGigabytes()),
+    systemAssistantAvailable: Bool? = nil
+) -> String {
+    let prefersSystemAssistant = systemAssistantAvailable ?? alphaSystemAssistantRuntimeAvailable(for: tier)
+
+    if selectedRuntimeMode == .appleFoundationModels && prefersSystemAssistant {
+        return "Built-in Apple model preferred"
+    }
+
+    if tier == .flash && selectedRuntimeMode == .llamaCppGguf {
+        return "Flash tier stays on GGUF"
+    }
+
+    if !isPhoneFormFactor && selectedRuntimeMode == .llamaCppGguf {
+        return "Larger devices default to GGUF"
+    }
+
+    let baselineTier = alphaRecommendedOnDeviceTier(
+        freeStorageGB: freeStorageGB,
+        physicalMemoryBytes: physicalMemoryBytes,
+        lowPowerMode: false
+    )
+
+    switch selectedRuntimeMode {
+    case .mlxSwiftLm:
+        return baselineTier == .quickStart
+            ? "MLX kept for installed assistant"
+            : "MLX enabled for deeper context"
+    case .llamaCppGguf:
+        return baselineTier == .quickStart
+            ? "iPhone baseline kept GGUF"
+            : "GGUF chosen for compatibility"
+    case .appleFoundationModels:
+        return "Built-in Apple model selected"
+    case .deterministicDev:
+        return "Development runtime override"
+    case .mediapipeLlm:
+        return "MediaPipe runtime selected"
+    case .unavailable:
+        return "Runtime unavailable"
+    }
+}
+
 func alphaAssistantUsesPhoneFormFactor() -> Bool {
     alphaCurrentDeviceModelIdentifier().lowercased().hasPrefix("iphone")
 }

@@ -844,6 +844,12 @@ extension AlphaLocalModelInvocation {
         }
     }
 
+    var answerDetailRuntimeChoiceLabel: String? {
+        guard let runtimeSelectionReason else { return nil }
+        let cleaned = runtimeSelectionReason.trimmingCharacters(in: .whitespacesAndNewlines)
+        return cleaned.isEmpty ? nil : cleaned
+    }
+
     var answerDetailProcessedTokensLabel: String? {
         guard let tokens = estimatedProcessedTokens else { return nil }
         return usesMeasuredTokenCounts ? tokens.formatted() : "~\(tokens.formatted())"
@@ -920,6 +926,16 @@ extension AlphaLocalModelInvocation {
                     key: "runtime_acceleration",
                     label: rossLocalized("runtime_acceleration"),
                     value: acceleration
+                )
+            )
+        }
+
+        if let runtimeChoice = answerDetailRuntimeChoiceLabel {
+            metrics.append(
+                AlphaAnswerDetailMetric(
+                    key: "runtime_choice",
+                    label: rossLocalized("runtime_choice"),
+                    value: runtimeChoice
                 )
             )
         }

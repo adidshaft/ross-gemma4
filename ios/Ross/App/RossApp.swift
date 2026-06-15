@@ -2611,6 +2611,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Runtime",
             "te": "Runtime"
         ],
+        "runtime_choice": [
+            "en": "Why this runtime",
+            "hi": "Why this runtime",
+            "bn": "Why this runtime",
+            "ta": "Why this runtime",
+            "te": "Why this runtime"
+        ],
         "last_check_result": [
             "en": "Last check result",
             "hi": "Last check result देखें",

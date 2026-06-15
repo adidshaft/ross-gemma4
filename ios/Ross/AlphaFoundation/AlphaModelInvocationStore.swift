@@ -11,6 +11,7 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
     var capabilityTier: String
     var inputSourceRefs: [AlphaSourceRef]
     var assistantDisplayName: String?
+    var runtimeSelectionReason: String?
     var reviewedSourceCount: Int?
     var promptBudgetChars: Int?
     var accelerationMode: AlphaLocalRuntimeAccelerationMode?
@@ -43,6 +44,7 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
         capabilityTier: String,
         inputSourceRefs: [AlphaSourceRef],
         assistantDisplayName: String? = nil,
+        runtimeSelectionReason: String? = nil,
         reviewedSourceCount: Int? = nil,
         promptBudgetChars: Int? = nil,
         accelerationMode: AlphaLocalRuntimeAccelerationMode? = nil,
@@ -74,6 +76,7 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
         self.capabilityTier = capabilityTier
         self.inputSourceRefs = inputSourceRefs
         self.assistantDisplayName = assistantDisplayName
+        self.runtimeSelectionReason = runtimeSelectionReason
         self.reviewedSourceCount = reviewedSourceCount
         self.promptBudgetChars = promptBudgetChars
         self.accelerationMode = accelerationMode
@@ -107,6 +110,7 @@ enum AlphaModelInvocationStore {
         documentId: UUID?,
         extractionRunId: UUID?,
         assistantDisplayName: String? = nil,
+        runtimeSelectionReason: String? = nil,
         accelerationMode: AlphaLocalRuntimeAccelerationMode? = nil,
         accelerationDraftTokens: Int? = nil,
         accelerationDraftModelLabel: String? = nil,
@@ -131,6 +135,7 @@ enum AlphaModelInvocationStore {
                 )
             },
             assistantDisplayName: assistantDisplayName,
+            runtimeSelectionReason: runtimeSelectionReason,
             promptBudgetChars: input.promptBudgetOverrideChars,
             accelerationMode: accelerationMode,
             accelerationDraftTokens: accelerationDraftTokens,

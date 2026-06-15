@@ -3885,6 +3885,7 @@ final class AlphaExtractionTests: XCTestCase {
                 AlphaSourceRef(caseId: UUID(), documentId: UUID(), documentTitle: "Order", pageNumber: 3)
             ],
             assistantDisplayName: "Gemma 4 12B Q4_K_M",
+            runtimeSelectionReason: "Built-in Apple model preferred",
             reviewedSourceCount: 2,
             promptBudgetChars: 700,
             accelerationMode: .draftModelSpeculative,
@@ -3920,6 +3921,11 @@ final class AlphaExtractionTests: XCTestCase {
                     key: "runtime_acceleration",
                     label: "Acceleration",
                     value: "Draft model x6 (gemma-4-e4b-draft)"
+                ),
+                AlphaAnswerDetailMetric(
+                    key: "runtime_choice",
+                    label: "Why this runtime",
+                    value: "Built-in Apple model preferred"
                 ),
                 AlphaAnswerDetailMetric(
                     key: "prompt_size",
@@ -4767,6 +4773,32 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(runtime, .appleFoundationModels)
+    }
+
+    func testAssistantRuntimeChoiceLabelExplainsSystemAssistantPreference() {
+        let label = alphaAssistantRuntimeChoiceLabel(
+            selectedRuntimeMode: .appleFoundationModels,
+            tier: .caseAssociate,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24,
+            systemAssistantAvailable: true
+        )
+
+        XCTAssertEqual(label, "Built-in Apple model preferred")
+    }
+
+    func testAssistantRuntimeChoiceLabelExplainsConstrainedIPhoneGGUFChoice() {
+        let label = alphaAssistantRuntimeChoiceLabel(
+            selectedRuntimeMode: .llamaCppGguf,
+            tier: .caseAssociate,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 4 * 1_073_741_824,
+            freeStorageGB: 6,
+            systemAssistantAvailable: false
+        )
+
+        XCTAssertEqual(label, "iPhone baseline kept GGUF")
     }
 
     func testAssistantCatalogDescriptorCompatibleOnlyPrefersRequestedQuickStartMLXPackWhenSupported() {
