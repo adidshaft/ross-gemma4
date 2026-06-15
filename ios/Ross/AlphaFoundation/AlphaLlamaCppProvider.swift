@@ -376,17 +376,14 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             await context.clear()
             
             let usesPlainMatterAnswerPrompt = taskInput.task == .matterQuestionAnswer
-            let focusedMatterSourceRefs = usesPlainMatterAnswerPrompt ? focusedMatterSourceBlocks(for: taskInput).map(\.sourceRef) : []
             let systemPrompt = usesPlainMatterAnswerPrompt ? "" : pack.systemInstructions
-            let userPrompt = usesPlainMatterAnswerPrompt
-                ? conciseMatterQuestionPrompt(for: taskInput)
-                : pack.promptText
+            let userPrompt = pack.promptText
             let combinedPrompt: String
             if usesPlainMatterAnswerPrompt {
                 // Matter chat is free-form text, and some GGUF exports already
                 // carry Gemma chat-template behavior. Plain prompting avoids
                 // the model echoing <start_of_turn>/<end_of_turn> markers.
-                combinedPrompt = "\(userPrompt)\n\nRoss answer:\n"
+                combinedPrompt = "\(userPrompt)\n"
             } else if systemPrompt.isEmpty {
                 combinedPrompt = "<start_of_turn>user\n\(userPrompt)<end_of_turn>\n<start_of_turn>model\n"
             } else {
@@ -427,9 +424,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                             parsedJson: nil,
                             schemaValid: false,
                             warnings: pack.truncated ? [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts] : [],
-                            sourceRefs: usesPlainMatterAnswerPrompt
-                                ? (focusedMatterSourceRefs.isEmpty ? Array(taskInput.sourcePack.prefix(5).map(\.sourceRef)) : focusedMatterSourceRefs)
-                                : pack.includedSourceRefs
+                            sourceRefs: pack.includedSourceRefs
                         )
                         onPartial(partialOutput)
                     }
@@ -441,7 +436,11 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             
             let cleanedResponse = stripTurnMarkerFragments(from: generatedResponse)
             let languagePreservingFallback = usesPlainMatterAnswerPrompt
-                ? Self.sourceLanguageFallbackIfNeeded(for: taskInput, generatedText: cleanedResponse)
+                ? Self.sourceLanguageFallbackIfNeeded(
+                    for: taskInput,
+                    sourcePack: pack.includedSourceBlocks,
+                    generatedText: cleanedResponse
+                )
                 : nil
             let finalResponse = languagePreservingFallback ?? cleanedResponse
             let jsonString = languagePreservingFallback == nil ? extractJSON(from: cleanedResponse) : nil
@@ -458,9 +457,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                 parsedJson: jsonString,
                 schemaValid: schemaValid,
                 warnings: warnings,
-                sourceRefs: usesPlainMatterAnswerPrompt
-                    ? (focusedMatterSourceRefs.isEmpty ? Array(taskInput.sourcePack.prefix(5).map(\.sourceRef)) : focusedMatterSourceRefs)
-                    : pack.includedSourceRefs
+                sourceRefs: pack.includedSourceRefs
             )
         } catch {
             return AlphaLocalModelOutput(
@@ -476,16 +473,11 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     
     func estimateCostOrResourceUse(_ input: AlphaLocalModelInput) -> AlphaLocalModelResourceEstimate {
         let maxChars = input.promptBudgetOverrideChars ?? maxInputChars() ?? 12_000
-        let promptChars: Int
-        if input.task == .matterQuestionAnswer {
-            promptChars = conciseMatterQuestionPrompt(for: input).count
-        } else {
-            promptChars = AlphaPromptPackBuilder(
-                maxInputChars: maxChars,
-                sourceBlockLimit: input.sourceBlockLimitOverride,
-                sourceExcerptChars: input.sourceExcerptCharsOverride
-            ).build(input: input).inputChars
-        }
+        let promptChars = AlphaPromptPackBuilder(
+            maxInputChars: maxChars,
+            sourceBlockLimit: input.sourceBlockLimitOverride,
+            sourceExcerptChars: input.sourceExcerptCharsOverride
+        ).build(input: input).inputChars
         let estimatedTokens = max(promptChars / 4, 1)
         let estimatedRuntimeMs = max(900, min(12_000, estimatedTokens * 6))
         let estimatedMemoryMb: Int
@@ -520,96 +512,32 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         return String(text[start...end])
     }
 
-    private func conciseMatterQuestionPrompt(for input: AlphaLocalModelInput) -> String {
-        let languageInstruction = matterAnswerLanguageInstruction(for: input)
-        let sourceBlocks = focusedMatterSourceBlocks(for: input)
-        var prompt = """
-        Ross private local answer. Use only SOURCES. Do not invent facts.
-        Match the question language exactly.
-        Hindi: Devanagari only, no Hinglish except names/dates/source labels.
-        Bengali: Bengali script only except names/dates/source labels.
-        Tamil: Tamil script only except names/dates/source labels.
-        Telugu: Telugu script only except names/dates/source labels.
-        \(languageInstruction)
-        No JSON, XML, markdown fences, or chat tokens.
-        Format: short heading, then 2-3 "- " bullets with source labels.
-
-        TASK:
-        \(input.instruction)
-
-        SOURCES:
-        """
-
-        let effectiveMaxInputChars = input.promptBudgetOverrideChars ?? maxInputChars() ?? 12_000
-        let excerptCap = input.sourceExcerptCharsOverride ?? 1_500
-        var remainingBudget = max(effectiveMaxInputChars - 2_000, 4_800)
-        for block in sourceBlocks {
-            guard remainingBudget > 120 else { break }
-            let label = block.sourceRef.label
-            let excerpt = AlphaPromptFocusPlanner.focusedExcerpt(
-                from: block.text,
-                instruction: input.instruction,
-                maxChars: min(remainingBudget, excerptCap)
-            )
-            prompt += "\n[\(label)] \(excerpt)\n"
-            remainingBudget -= excerpt.count + label.count + 8
-        }
-
-        prompt += "\nANSWER:"
-        return prompt
-    }
-
-    private func matterAnswerLanguageInstruction(for input: AlphaLocalModelInput) -> String {
-        let language = input.languageProfile?.primaryLanguage
-        let hints = Set(input.sourcePack.compactMap { $0.languageHint?.lowercased() })
-        if language == .bengali || hints.contains("bn") || hints.contains("bengali") {
-            return "Bengali source detected: answer only in Bangla script. Start with 'ধারা ৪১৭'. Copy these Bangla source words when relevant: ধারা, আইনজীবী, উদ্ধৃতি, যাচাই. Do not translate Bengali source facts into English."
-        }
-        if language == .hindi || hints.contains("hi") || hints.contains("hindi") {
-            return "Hindi source detected: answer only in Devanagari. Copy these Hindi source words when relevant: धारा, अधिवक्ता, उद्धरण, सत्यापित. Do not translate Hindi source facts into English."
-        }
-        if language == .tamil || hints.contains("ta") || hints.contains("tamil") {
-            return "Tamil source detected: answer only in Tamil script. Copy these Tamil source words when relevant: பிரிவு, வழக்கறிஞர், மேற்கோள், சரிபார்க்க. Do not translate Tamil source facts into English."
-        }
-        if language == .telugu || hints.contains("te") || hints.contains("telugu") {
-            return "Telugu source detected: answer only in Telugu script. Copy these Telugu source words when relevant: సెక్షన్, న్యాయవాది, ఉదాహరణ, ధృవీకరించు. Do not translate Telugu source facts into English."
-        }
-        return "If SOURCES use a non-English script, preserve that script in the answer."
-    }
-
     nonisolated static func sourceLanguageFallbackIfNeeded(
         for input: AlphaLocalModelInput,
+        sourcePack: [AlphaSourceTextBlock]? = nil,
         generatedText: String
     ) -> String? {
-        guard !input.sourcePack.isEmpty else { return nil }
+        let effectiveSourcePack = (sourcePack?.isEmpty == false ? sourcePack : nil) ?? input.sourcePack
+        guard !effectiveSourcePack.isEmpty else { return nil }
         let language = input.languageProfile?.primaryLanguage
-        let hints = Set(input.sourcePack.compactMap { $0.languageHint?.lowercased() })
+        let hints = Set(effectiveSourcePack.compactMap { $0.languageHint?.lowercased() })
         if language == .bengali || hints.contains("bn") || hints.contains("bengali") {
             guard !containsUnicodeScalar(in: generatedText, range: 0x0980...0x09FF) else { return nil }
-            return extractiveMatterAnswer(from: input.sourcePack, scriptRange: 0x0980...0x09FF, heading: "উৎসভিত্তিক উত্তর")
+            return extractiveMatterAnswer(from: effectiveSourcePack, scriptRange: 0x0980...0x09FF, heading: "উৎসভিত্তিক উত্তর")
         }
         if language == .hindi || hints.contains("hi") || hints.contains("hindi") {
             guard !containsUnicodeScalar(in: generatedText, range: 0x0900...0x097F) else { return nil }
-            return extractiveMatterAnswer(from: input.sourcePack, scriptRange: 0x0900...0x097F, heading: "स्रोत-आधारित उत्तर")
+            return extractiveMatterAnswer(from: effectiveSourcePack, scriptRange: 0x0900...0x097F, heading: "स्रोत-आधारित उत्तर")
         }
         if language == .tamil || hints.contains("ta") || hints.contains("tamil") {
             guard !containsUnicodeScalar(in: generatedText, range: 0x0B80...0x0BFF) else { return nil }
-            return extractiveMatterAnswer(from: input.sourcePack, scriptRange: 0x0B80...0x0BFF, heading: "மூலத்தின் அடிப்படையிலான பதில்")
+            return extractiveMatterAnswer(from: effectiveSourcePack, scriptRange: 0x0B80...0x0BFF, heading: "மூலத்தின் அடிப்படையிலான பதில்")
         }
         if language == .telugu || hints.contains("te") || hints.contains("telugu") {
             guard !containsUnicodeScalar(in: generatedText, range: 0x0C00...0x0C7F) else { return nil }
-            return extractiveMatterAnswer(from: input.sourcePack, scriptRange: 0x0C00...0x0C7F, heading: "మూలాల ఆధారిత సమాధానం")
+            return extractiveMatterAnswer(from: effectiveSourcePack, scriptRange: 0x0C00...0x0C7F, heading: "మూలాల ఆధారిత సమాధానం")
         }
         return nil
-    }
-
-    private func focusedMatterSourceBlocks(for input: AlphaLocalModelInput) -> [AlphaSourceTextBlock] {
-        let sourceBlockLimit = input.sourceBlockLimitOverride ?? AlphaLlamaRuntimeProfile.sourceBlockLimit(for: capabilityTier)
-        return Array(
-            AlphaPromptFocusPlanner
-                .rankedSourceBlocks(input.sourcePack, instruction: input.instruction)
-                .prefix(sourceBlockLimit)
-        )
     }
 
     private nonisolated static func extractiveMatterAnswer(

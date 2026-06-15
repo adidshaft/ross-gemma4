@@ -1078,6 +1078,132 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(pack.promptText.contains("truncated=\"true\""))
     }
 
+    func testPromptPackBuilderReservesBudgetForLaterRelevantBlocks() {
+        let caseID = UUID()
+        let docA = UUID()
+        let docB = UUID()
+        let docC = UUID()
+        let firstText = Array(
+            repeating: "The limitation issue summary mentions registry defects and serial indexing for the appeal bundle.",
+            count: 10
+        ).joined(separator: " ")
+        let secondText = Array(
+            repeating: "The annexure note says counsel must carry the vakalatnama and service proof for the next listing.",
+            count: 10
+        ).joined(separator: " ")
+        let thirdText = Array(
+            repeating: "The hearing note confirms the next date is 12 July 2026 and requires the affidavit set at call time.",
+            count: 10
+        ).joined(separator: " ")
+        let input = AlphaLocalModelInput(
+            task: .legalFieldExtraction,
+            instruction: "Find the next date, vakalatnama requirement, service proof, and affidavit set.",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: AlphaSourceRef(caseId: caseID, documentId: docA, documentTitle: "Registry Note", pageNumber: 1, textSnippet: "registry defects"),
+                    text: firstText,
+                    pageNumber: 1,
+                    languageHint: "en",
+                    ocrConfidence: 0.95
+                ),
+                AlphaSourceTextBlock(
+                    sourceRef: AlphaSourceRef(caseId: caseID, documentId: docB, documentTitle: "Annexure Checklist", pageNumber: 2, textSnippet: "vakalatnama and service proof"),
+                    text: secondText,
+                    pageNumber: 2,
+                    languageHint: "en",
+                    ocrConfidence: 0.95
+                ),
+                AlphaSourceTextBlock(
+                    sourceRef: AlphaSourceRef(caseId: caseID, documentId: docC, documentTitle: "Hearing Note", pageNumber: 3, textSnippet: "next date is 12 July 2026"),
+                    text: thirdText,
+                    pageNumber: 3,
+                    languageHint: "en",
+                    ocrConfidence: 0.95
+                )
+            ],
+            expectedSchema: "json",
+            maxOutputTokens: 256,
+            languageProfile: nil,
+            documentClassification: nil,
+            extractionMode: .caseAssociate,
+            promptBudgetOverrideChars: 1_850
+        )
+
+        let pack = AlphaPromptPackBuilder(maxInputChars: input.promptBudgetOverrideChars ?? 1_850).build(input: input)
+
+        XCTAssertEqual(pack.includedSourceRefs.count, 3)
+        XCTAssertTrue(pack.promptText.contains("page=\"2\""))
+        XCTAssertTrue(pack.promptText.contains("page=\"3\""))
+        XCTAssertTrue(pack.promptText.contains("12 July 2026"))
+        XCTAssertTrue(pack.truncated)
+    }
+
+    func testMatterQuestionPromptPackStaysInsideBudgetAndTracksActualIncludedSources() {
+        let caseID = UUID()
+        let firstDocument = UUID()
+        let secondDocument = UUID()
+        let thirdDocument = UUID()
+        let firstText = Array(
+            repeating: "The registry note discusses filing defects and serial numbering for the appeal record.",
+            count: 12
+        ).joined(separator: " ")
+        let secondText = Array(
+            repeating: "Counsel must bring the vakalatnama, service proof, and annexure set for the next hearing.",
+            count: 12
+        ).joined(separator: " ")
+        let thirdText = Array(
+            repeating: "The hearing note fixes 12 July 2026 as the next date and asks for the affidavit set.",
+            count: 12
+        ).joined(separator: " ")
+        let input = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "What is the next date and what should counsel bring?",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: AlphaSourceRef(caseId: caseID, documentId: firstDocument, documentTitle: "Registry Note", pageNumber: 1, textSnippet: "filing defects"),
+                    text: firstText,
+                    pageNumber: 1,
+                    languageHint: "en",
+                    ocrConfidence: 0.95
+                ),
+                AlphaSourceTextBlock(
+                    sourceRef: AlphaSourceRef(caseId: caseID, documentId: secondDocument, documentTitle: "Checklist Order", pageNumber: 2, textSnippet: "vakalatnama, service proof"),
+                    text: secondText,
+                    pageNumber: 2,
+                    languageHint: "en",
+                    ocrConfidence: 0.95
+                ),
+                AlphaSourceTextBlock(
+                    sourceRef: AlphaSourceRef(caseId: caseID, documentId: thirdDocument, documentTitle: "Hearing Note", pageNumber: 3, textSnippet: "12 July 2026"),
+                    text: thirdText,
+                    pageNumber: 3,
+                    languageHint: "en",
+                    ocrConfidence: 0.95
+                )
+            ],
+            expectedSchema: "plain_text",
+            maxOutputTokens: 128,
+            languageProfile: nil,
+            documentClassification: nil,
+            extractionMode: .caseAssociate,
+            promptBudgetOverrideChars: 1_850,
+            sourceBlockLimitOverride: 3,
+            sourceExcerptCharsOverride: 320
+        )
+
+        let pack = AlphaPromptPackBuilder(
+            maxInputChars: input.promptBudgetOverrideChars ?? 1_850,
+            sourceBlockLimit: input.sourceBlockLimitOverride,
+            sourceExcerptChars: input.sourceExcerptCharsOverride
+        ).build(input: input)
+
+        XCTAssertLessThanOrEqual(pack.inputChars, 1_850)
+        XCTAssertEqual(pack.includedSourceRefs, pack.includedSourceBlocks.map(\.sourceRef))
+        XCTAssertEqual(pack.includedSourceRefs.count, 3)
+        XCTAssertTrue(pack.promptText.contains("12 July 2026"))
+        XCTAssertTrue(pack.truncated)
+    }
+
     func testPrivateAssistantTierCopyHidesTechnicalModelNames() {
         XCTAssertEqual(
             AlphaCapabilityTier.visibleAssistantTiers,
@@ -2875,6 +3001,21 @@ final class AlphaExtractionTests: XCTestCase {
             "Ross focused on 4 of 9 source sections to keep this answer on this device. Narrow the selected files or use a stronger assistant for a deeper pass."
         )
         XCTAssertNotEqual(warning, AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts)
+    }
+
+    func testLocalAskNeedsReviewWarningPrefersActualIncludedSourceCount() {
+        let warning = alphaLocalAskNeedsReviewWarning(
+            runtimeWarnings: [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts],
+            sourcePackCount: 9,
+            includedSourceCount: 3,
+            sourceBlockLimit: 4,
+            languageCode: "en"
+        )
+
+        XCTAssertEqual(
+            warning,
+            "Ross focused on 3 of 9 source sections to keep this answer on this device. Narrow the selected files or use a stronger assistant for a deeper pass."
+        )
     }
 
     func testLocalAskNeedsReviewWarningKeepsLanguageFallbackAndDeduplicates() throws {

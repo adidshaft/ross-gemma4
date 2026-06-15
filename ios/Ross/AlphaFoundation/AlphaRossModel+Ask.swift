@@ -1267,6 +1267,7 @@ extension AlphaRossModel {
                 let needsReviewWarning = alphaLocalAskNeedsReviewWarning(
                     runtimeWarnings: output.warnings,
                     sourcePackCount: input.sourcePack.count,
+                    includedSourceCount: output.sourceRefs.count,
                     sourceBlockLimit: input.sourceBlockLimitOverride
                 )
                 let payload = self.displayableMatterAskPayload(
@@ -2611,6 +2612,7 @@ func alphaLocalAskFocusedSourcesWarning(
 func alphaLocalAskNeedsReviewWarning(
     runtimeWarnings: [String],
     sourcePackCount: Int,
+    includedSourceCount: Int? = nil,
     sourceBlockLimit: Int?,
     languageCode: String = rossSelectedLanguageCode()
 ) -> String? {
@@ -2618,9 +2620,10 @@ func alphaLocalAskNeedsReviewWarning(
         .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
         .filter { !$0.isEmpty }
 
-    if let sourceBlockLimit, sourcePackCount > sourceBlockLimit {
+    let effectiveIncludedCount = includedSourceCount ?? sourceBlockLimit
+    if let effectiveIncludedCount, sourcePackCount > effectiveIncludedCount {
         let focusedWarning = alphaLocalAskFocusedSourcesWarning(
-            includedCount: sourceBlockLimit,
+            includedCount: effectiveIncludedCount,
             totalCount: sourcePackCount,
             languageCode: languageCode
         )
