@@ -717,9 +717,7 @@ struct AlphaAnswerDetailsSheet: View {
 
     private var estimatedProcessedTokensLabel: String? {
         guard let tokens = invocation?.estimatedProcessedTokens else { return nil }
-        let runtimeMode = invocation.flatMap { AlphaPackRuntimeMode(rawValue: $0.runtimeMode) }
-        let usesMeasuredRuntimeCounts = runtimeMode == .mlxSwiftLm || runtimeMode == .llamaCppGguf
-        return usesMeasuredRuntimeCounts ? tokens.formatted() : "~\(tokens.formatted())"
+        return invocation?.usesMeasuredTokenCounts == true ? tokens.formatted() : "~\(tokens.formatted())"
     }
 
     var body: some View {

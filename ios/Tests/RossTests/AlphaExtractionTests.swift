@@ -6261,6 +6261,137 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(valid.schemaValid)
         XCTAssertNil(valid.errorCategory)
     }
+
+    @available(iOS 26.0, macOS 26.0, *)
+    func testFoundationProviderStreamsMeasuredAnswerMetrics() async {
+        let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
+        let previousStreamGenerator = AlphaFoundationModelsLocalProvider.streamGenerator
+        defer {
+            AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
+            AlphaFoundationModelsLocalProvider.streamGenerator = previousStreamGenerator
+        }
+
+        AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in true }
+        AlphaFoundationModelsLocalProvider.streamGenerator = { _, _, _, _, onPartial in
+            onPartial?("Selected order")
+            onPartial?("Selected order\n- The matter is listed on 14 May 2026. [Order p.1]")
+            return AlphaFoundationModelsGenerationSnapshot(
+                text: "Selected order\n- The matter is listed on 14 May 2026. [Order p.1]",
+                inputTokenCount: 410,
+                outputTokenCount: 28,
+                outputTokensPerSecond: 19.4,
+                timeToFirstTokenMs: 480,
+                usesMeasuredTokenCounts: true
+            )
+        }
+
+        let provider = AlphaFoundationModelsLocalProvider(
+            capabilityTier: .quickStart,
+            modelPathLabel: "system-model",
+            modelPath: nil,
+            checksumVerified: true
+        )
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "Order",
+            pageNumber: 1,
+            textSnippet: "Matter listed on 14 May 2026."
+        )
+        let input = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "What happened in the selected order?",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: sourceRef,
+                    text: "The matter is listed on 14 May 2026.",
+                    pageNumber: 1,
+                    languageHint: "en",
+                    ocrConfidence: 0.99
+                )
+            ],
+            expectedSchema: "plain_text",
+            maxOutputTokens: 128,
+            extractionMode: .quickStart
+        )
+
+        var streamed: [AlphaLocalModelOutput] = []
+        let stream = provider.runStreaming(input)
+        XCTAssertNotNil(stream)
+
+        if let stream {
+            for await partial in stream {
+                streamed.append(partial)
+            }
+        }
+
+        XCTAssertEqual(streamed.count, 3)
+        XCTAssertEqual(streamed.dropLast().map(\.rawText), [
+            "Selected order",
+            "Selected order\n- The matter is listed on 14 May 2026. [Order p.1]"
+        ])
+        XCTAssertTrue(streamed.dropLast().allSatisfy { !$0.usesMeasuredTokenCounts })
+        XCTAssertEqual(streamed.last?.inputTokenCount, 410)
+        XCTAssertEqual(streamed.last?.outputTokenCount, 28)
+        XCTAssertEqual(streamed.last?.timeToFirstTokenMs, 480)
+        XCTAssertNotNil(streamed.last?.outputTokensPerSecond)
+        XCTAssertEqual(streamed.last?.outputTokensPerSecond ?? 0, 19.4, accuracy: 0.001)
+        XCTAssertTrue(streamed.last?.usesMeasuredTokenCounts == true)
+    }
+
+    func testModelInvocationStorePreservesMeasuredTokenPrecisionFlag() {
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "Order",
+            pageNumber: 1,
+            textSnippet: "Matter listed on 14 May 2026."
+        )
+        let input = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "What happened in the selected order?",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: sourceRef,
+                    text: "The matter is listed on 14 May 2026.",
+                    pageNumber: 1,
+                    languageHint: "en",
+                    ocrConfidence: 0.99
+                )
+            ],
+            expectedSchema: "plain_text",
+            maxOutputTokens: 128,
+            extractionMode: .quickStart
+        )
+
+        let invocation = AlphaModelInvocationStore.begin(
+            task: .matterQuestionAnswer,
+            runtimeMode: .appleFoundationModels,
+            capabilityTier: .quickStart,
+            caseId: sourceRef.caseId,
+            documentId: sourceRef.documentId,
+            extractionRunId: nil,
+            input: input
+        )
+        let completed = AlphaModelInvocationStore.complete(
+            invocation,
+            output: AlphaLocalModelOutput(
+                rawText: "Selected order\n- The matter is listed on 14 May 2026. [Order p.1]",
+                parsedJson: nil,
+                schemaValid: true,
+                warnings: [],
+                sourceRefs: [sourceRef],
+                inputTokenCount: 410,
+                outputTokenCount: 28,
+                outputTokensPerSecond: 19.4,
+                timeToFirstTokenMs: 480,
+                usesMeasuredTokenCounts: true
+            )
+        )
+
+        XCTAssertTrue(completed.usesMeasuredTokenCounts)
+        XCTAssertEqual(completed.estimatedProcessedTokens, 438)
+    }
     #endif
 
     @MainActor

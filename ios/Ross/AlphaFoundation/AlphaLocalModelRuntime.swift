@@ -98,6 +98,7 @@ struct AlphaLocalModelOutput: Codable, Hashable, Sendable {
     var outputTokenCount: Int? = nil
     var outputTokensPerSecond: Double? = nil
     var timeToFirstTokenMs: Int? = nil
+    var usesMeasuredTokenCounts: Bool = false
     var errorCategory: String? = nil
 }
 
@@ -1193,6 +1194,15 @@ struct AlphaUnavailableRealLocalModelProvider: AlphaRealLocalModelProvider {
 }
 
 #if canImport(FoundationModels)
+struct AlphaFoundationModelsGenerationSnapshot: Sendable {
+    var text: String
+    var inputTokenCount: Int? = nil
+    var outputTokenCount: Int? = nil
+    var outputTokensPerSecond: Double? = nil
+    var timeToFirstTokenMs: Int? = nil
+    var usesMeasuredTokenCounts: Bool = false
+}
+
 func alphaFoundationModelOutput(
     for taskInput: AlphaLocalModelInput,
     promptPack: AlphaLocalPromptPack,
@@ -1229,6 +1239,24 @@ func alphaFoundationModelOutput(
         warnings: warnings,
         sourceRefs: promptPack.includedSourceRefs,
         errorCategory: parsedJson == nil ? "invalid_model_output" : nil
+    )
+}
+
+func alphaFoundationModelPartialOutput(
+    for taskInput: AlphaLocalModelInput,
+    promptPack: AlphaLocalPromptPack,
+    rawResponse: String
+) -> AlphaLocalModelOutput {
+    let trimmedResponse = rawResponse.trimmingCharacters(in: .whitespacesAndNewlines)
+    let usesPlainMatterAnswerPrompt = taskInput.task == .matterQuestionAnswer
+    return AlphaLocalModelOutput(
+        rawText: trimmedResponse,
+        parsedJson: nil,
+        schemaValid: usesPlainMatterAnswerPrompt
+            ? !trimmedResponse.isEmpty
+            : alphaFoundationExtractJSONCandidate(from: trimmedResponse) != nil,
+        warnings: promptPack.truncated ? [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts] : [],
+        sourceRefs: promptPack.includedSourceRefs
     )
 }
 
@@ -1315,12 +1343,31 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
     }
 
     func run(_ taskInput: AlphaLocalModelInput) async -> AlphaLocalModelOutput {
+        await runInternal(taskInput, onPartial: nil)
+    }
+
+    func runStreaming(_ taskInput: AlphaLocalModelInput) -> AsyncStream<AlphaLocalModelOutput>? {
+        AsyncStream { continuation in
+            Task {
+                let output = await self.runInternal(taskInput) { partial in
+                    continuation.yield(partial)
+                }
+                continuation.yield(output)
+                continuation.finish()
+            }
+        }
+    }
+
+    private func runInternal(
+        _ taskInput: AlphaLocalModelInput,
+        onPartial: (@Sendable (AlphaLocalModelOutput) -> Void)?
+    ) async -> AlphaLocalModelOutput {
         let promptPack = AlphaPromptPackBuilder(
             maxInputChars: taskInput.promptBudgetOverrideChars ?? maxInputChars() ?? 14_000,
             sourceBlockLimit: taskInput.sourceBlockLimitOverride,
             sourceExcerptChars: taskInput.sourceExcerptCharsOverride
         ).build(input: taskInput)
-        guard let model = try? resolvedModel(), model.isAvailable else {
+        guard let model = try? resolvedModel(), Self.modelAvailabilityProbe(model) else {
             return AlphaLocalModelOutput(
                 rawText: "",
                 parsedJson: nil,
@@ -1335,16 +1382,32 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
             if let modelPath, !modelPath.isEmpty {
                 _ = try adapter(from: modelPath)
             }
-            let session = LanguageModelSession(model: model, instructions: promptPack.systemInstructions)
-            let response = try await session.respond(
-                to: promptPack.promptText,
-                options: GenerationOptions(maximumResponseTokens: min(taskInput.maxOutputTokens, 2_048))
-            )
-            return alphaFoundationModelOutput(
+            let generation = try await Self.streamGenerator(
+                model,
+                promptPack.systemInstructions,
+                promptPack.promptText,
+                min(taskInput.maxOutputTokens, 2_048)
+            ) { partialText in
+                guard let onPartial else { return }
+                let partial = alphaFoundationModelPartialOutput(
+                    for: taskInput,
+                    promptPack: promptPack,
+                    rawResponse: partialText
+                )
+                guard !partial.rawText.isEmpty else { return }
+                onPartial(partial)
+            }
+            var output = alphaFoundationModelOutput(
                 for: taskInput,
                 promptPack: promptPack,
-                rawResponse: response.content
+                rawResponse: generation.text
             )
+            output.inputTokenCount = generation.inputTokenCount
+            output.outputTokenCount = generation.outputTokenCount
+            output.outputTokensPerSecond = generation.outputTokensPerSecond
+            output.timeToFirstTokenMs = generation.timeToFirstTokenMs
+            output.usesMeasuredTokenCounts = generation.usesMeasuredTokenCounts
+            return output
         } catch {
             return AlphaLocalModelOutput(
                 rawText: "",
@@ -1376,6 +1439,95 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
     }
 
     func cancel(invocationID: UUID) -> Bool { true }
+
+    nonisolated(unsafe) static var modelAvailabilityProbe: @Sendable (SystemLanguageModel) -> Bool = { model in
+        model.isAvailable
+    }
+
+    nonisolated(unsafe) static var streamGenerator:
+        @Sendable (
+            SystemLanguageModel,
+            String,
+            String,
+            Int,
+            (@Sendable (String) -> Void)?
+        ) async throws -> AlphaFoundationModelsGenerationSnapshot = { model, instructions, prompt, maxOutputTokens, onPartial in
+            let session = LanguageModelSession(model: model, instructions: instructions)
+            let options = GenerationOptions(maximumResponseTokens: maxOutputTokens)
+            let startedAt = Date()
+            let stream = session.streamResponse(
+                to: prompt,
+                generating: String.self,
+                options: options
+            )
+            var latestText = ""
+            var firstTokenAt: Date?
+
+            for try await snapshot in stream {
+                let partialText = snapshot.content.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !partialText.isEmpty else { continue }
+                if firstTokenAt == nil {
+                    firstTokenAt = Date()
+                }
+                guard partialText != latestText else { continue }
+                latestText = partialText
+                onPartial?(partialText)
+            }
+
+            let finalText: String
+            if latestText.isEmpty {
+                let response = try await session.respond(to: prompt, options: options)
+                finalText = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+            } else {
+                finalText = latestText
+            }
+
+            let completedAt = Date()
+            let tokenCounts = await Self.tokenCounter(model, instructions, prompt, finalText)
+            let timeToFirstTokenMs = firstTokenAt.map { max(Int($0.timeIntervalSince(startedAt) * 1_000), 0) }
+            let outputTokensPerSecond: Double?
+            if let outputTokenCount = tokenCounts.outputTokenCount,
+               outputTokenCount > 0,
+               let firstTokenAt,
+               completedAt.timeIntervalSince(firstTokenAt) > 0 {
+                outputTokensPerSecond = Double(outputTokenCount) / completedAt.timeIntervalSince(firstTokenAt)
+            } else {
+                outputTokensPerSecond = nil
+            }
+
+            return AlphaFoundationModelsGenerationSnapshot(
+                text: finalText,
+                inputTokenCount: tokenCounts.inputTokenCount,
+                outputTokenCount: tokenCounts.outputTokenCount,
+                outputTokensPerSecond: outputTokensPerSecond,
+                timeToFirstTokenMs: timeToFirstTokenMs,
+                usesMeasuredTokenCounts: tokenCounts.usesMeasuredTokenCounts
+            )
+        }
+
+    nonisolated(unsafe) static var tokenCounter:
+        @Sendable (
+            SystemLanguageModel,
+            String,
+            String,
+            String
+        ) async -> (
+            inputTokenCount: Int?,
+            outputTokenCount: Int?,
+            usesMeasuredTokenCounts: Bool
+        ) = { model, instructions, prompt, output in
+            guard #available(iOS 26.4, macOS 26.4, visionOS 26.4, *) else {
+                return (nil, nil, false)
+            }
+
+            let promptTokenCount = try? await model.tokenCount(for: prompt)
+            let instructionTokenCount = try? await model.tokenCount(for: Instructions(instructions))
+            let outputTokenCount = try? await model.tokenCount(for: output)
+            let inputComponents = [promptTokenCount, instructionTokenCount].compactMap { $0 }
+            let inputTokenCount = inputComponents.isEmpty ? nil : inputComponents.reduce(0, +)
+            let usesMeasuredTokenCounts = inputTokenCount != nil && outputTokenCount != nil
+            return (inputTokenCount, outputTokenCount, usesMeasuredTokenCounts)
+        }
 
     private func resolvedModel() throws -> SystemLanguageModel {
         if let modelPath, !modelPath.isEmpty {

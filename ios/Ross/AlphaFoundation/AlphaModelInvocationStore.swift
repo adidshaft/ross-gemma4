@@ -20,6 +20,7 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
     var estimatedOutputTokensPerSecond: Double?
     var durationMs: Int?
     var timeToFirstTokenMs: Int?
+    var usesMeasuredTokenCounts: Bool
     var startedAt: Date
     var completedAt: Date?
     var status: AlphaLocalModelInvocationStatus
@@ -45,6 +46,7 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
         estimatedOutputTokensPerSecond: Double? = nil,
         durationMs: Int? = nil,
         timeToFirstTokenMs: Int? = nil,
+        usesMeasuredTokenCounts: Bool = false,
         startedAt: Date = .now,
         completedAt: Date? = nil,
         status: AlphaLocalModelInvocationStatus,
@@ -69,6 +71,7 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
         self.estimatedOutputTokensPerSecond = estimatedOutputTokensPerSecond
         self.durationMs = durationMs
         self.timeToFirstTokenMs = timeToFirstTokenMs
+        self.usesMeasuredTokenCounts = usesMeasuredTokenCounts
         self.startedAt = startedAt
         self.completedAt = completedAt
         self.status = status
@@ -137,6 +140,12 @@ enum AlphaModelInvocationStore {
         if copy.timeToFirstTokenMs == nil, let timeToFirstTokenMs = output.timeToFirstTokenMs {
             copy.timeToFirstTokenMs = timeToFirstTokenMs
         }
+        let runtimeUsesMeasuredTokenCounts =
+            invocation.runtimeMode == AlphaPackRuntimeMode.mlxSwiftLm.rawValue ||
+            invocation.runtimeMode == AlphaPackRuntimeMode.llamaCppGguf.rawValue
+        copy.usesMeasuredTokenCounts =
+            output.usesMeasuredTokenCounts ||
+            (runtimeUsesMeasuredTokenCounts && output.inputTokenCount != nil && output.outputTokenCount != nil)
         copy.status = switch output.errorCategory {
         case "cancelled":
             .cancelled
