@@ -1329,9 +1329,12 @@ extension AlphaRossModel {
         }
     }
 
-    func refreshPrivateAISnapshot(forceValidation: Bool = false) {
+    func refreshPrivateAISnapshot(
+        forceValidation: Bool = false,
+        forceRebuild: Bool = false
+    ) {
         let refreshKey = alphaPrivateAISnapshotRefreshKey(for: persisted)
-        guard forceValidation || privateAISnapshotRefreshKey != refreshKey else { return }
+        guard forceValidation || forceRebuild || privateAISnapshotRefreshKey != refreshKey else { return }
 
         privateAISnapshotRefreshKey = refreshKey
         let state = persisted

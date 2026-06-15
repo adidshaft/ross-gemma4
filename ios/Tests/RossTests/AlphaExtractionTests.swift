@@ -6116,6 +6116,81 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(model.persisted.settings.activeTier, .caseAssociate)
     }
 
+    #if canImport(FoundationModels)
+    @available(iOS 26.0, macOS 26.0, *)
+    @MainActor
+    func testRefreshPrivateAISnapshotForceRebuildPrefersSystemAssistantWhenAvailable() async throws {
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        defer {
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+        }
+
+        let previousModelValidator = AlphaLlamaCppProvider.modelLoadValidator
+        AlphaLlamaCppProvider.modelLoadValidator = { _ in }
+        defer {
+            AlphaLlamaCppProvider.modelLoadValidator = previousModelValidator
+        }
+
+        let artifact = alphaAssistantModelArtifact(for: .caseAssociate)
+        let relativePath = "model-packs/case_associate/\(artifact.fileName)"
+        let artifactURL = alphaAbsoluteURL(for: relativePath)
+        try FileManager.default.createDirectory(
+            at: artifactURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        FileManager.default.createFile(atPath: artifactURL.path(), contents: nil)
+        let handle = try FileHandle(forWritingTo: artifactURL)
+        try handle.truncate(atOffset: UInt64(artifact.sizeBytes))
+        try handle.close()
+        defer {
+            try? FileManager.default.removeItem(at: artifactURL)
+        }
+
+        let downloadedPack = AlphaInstalledModelPack(
+            packId: artifact.packId,
+            tier: .caseAssociate,
+            installPath: relativePath,
+            checksumSha256: artifact.sha256,
+            artifactKind: artifact.artifactKind,
+            runtimeMode: artifact.runtimeMode,
+            developmentOnly: artifact.developmentOnly,
+            checksumVerified: true,
+            isActive: true
+        )
+
+        let model = AlphaRossModel()
+        var state = AlphaPersistedState.empty()
+        state.settings.activeTier = .caseAssociate
+        state.installedPacks = [downloadedPack]
+        model.persisted = state
+
+        model.refreshPrivateAISnapshot(forceRebuild: true)
+        await model.privateAISnapshotTask?.value
+        let systemHealth = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: alphaSystemAssistantPack(for: .caseAssociate),
+            requestedTier: .caseAssociate
+        )
+
+        if systemHealth?.available == true {
+            XCTAssertEqual(model.privateAISnapshot.activePack?.runtimeMode, .appleFoundationModels)
+            XCTAssertEqual(model.privateAISnapshot.activePack?.installPath, "system://apple-foundation-models")
+            XCTAssertEqual(model.persisted.installedPacks.first?.runtimeMode, .appleFoundationModels)
+            XCTAssertEqual(model.persisted.installedPacks.first?.installPath, "system://apple-foundation-models")
+        } else {
+            XCTAssertEqual(model.privateAISnapshot.activePack?.runtimeMode, .llamaCppGguf)
+            XCTAssertEqual(model.privateAISnapshot.activePack?.installPath, relativePath)
+            XCTAssertEqual(model.persisted.installedPacks.first?.runtimeMode, .llamaCppGguf)
+            XCTAssertEqual(model.persisted.installedPacks.first?.installPath, relativePath)
+        }
+        XCTAssertEqual(model.persisted.settings.activeTier, .caseAssociate)
+    }
+    #endif
+
     @MainActor
     func testNormalizeLoadedStateKeepsOnlyOneInstalledPackPerVisibleTier() {
         let fileManager = FileManager.default

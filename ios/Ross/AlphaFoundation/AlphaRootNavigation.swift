@@ -84,6 +84,7 @@ struct AlphaRossRootView: View {
             await MainActor.run {
                 model.syncWorkspaceForSession(authController?.session)
                 model.runMorningRoutineIfNeeded()
+                model.refreshPrivateAISnapshot(forceRebuild: true)
                 model.checkForAssistantModelUpdates()
                 if showingLaunchSplash {
                     withAnimation(.easeOut(duration: 0.12)) {
@@ -98,6 +99,7 @@ struct AlphaRossRootView: View {
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             model.runMorningRoutineIfNeeded()
+            model.refreshPrivateAISnapshot(forceRebuild: true)
             model.checkForAssistantModelUpdates()
         }
         .onOpenURL { url in
