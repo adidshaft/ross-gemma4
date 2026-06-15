@@ -49,7 +49,7 @@ actor LlamaContext {
         self.model = model
         self.context = context
         self.tokens_list = []
-        self.batch = llama_batch_init(512, 0, 1)
+        self.batch = llama_batch_init(1024, 0, 1)
         self.temporary_invalid_cchars = []
         self.sampling = sampling
         vocab = llama_model_get_vocab(model)
@@ -104,7 +104,7 @@ actor LlamaContext {
         print("Using \(n_threads) threads")
 
         var ctx_params = llama_context_default_params()
-        ctx_params.n_ctx = memory < 6_000_000_000 ? 4096 : 8192
+        ctx_params.n_ctx = AlphaLlamaRuntimeProfile.contextWindowTokens(forModelPath: path, physicalMemory: memory)
         ctx_params.n_threads       = Int32(n_threads)
         ctx_params.n_threads_batch = Int32(n_threads)
 
@@ -210,8 +210,8 @@ actor LlamaContext {
             let isFinalPromptToken = i == tokens_list.count - 1
             llama_batch_add(&batch, tokens_list[i], Int32(i), [0], isFinalPromptToken)
 
-            // Chunk prompt evaluation to avoid exceeding batch size (512)
-            if batch.n_tokens >= 512 {
+            // Chunk prompt evaluation to avoid exceeding batch size.
+            if batch.n_tokens >= 1024 {
                 if llama_decode(context, batch) != 0 {
                     print("llama_decode() failed during prompt evaluation chunk")
                     hasDecodableLogits = false

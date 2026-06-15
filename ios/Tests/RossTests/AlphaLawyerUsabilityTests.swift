@@ -636,7 +636,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             model.persisted.modelJobs = [
                 AlphaModelDownloadJob(
                     sessionId: "failed-optional-download",
-                    packId: "gemma-4-e2b-q4",
+                    packId: "gemma-4-e4b-q4",
                     tier: .quickStart,
                     state: .failed,
                     networkPolicy: .wifiOnly,
@@ -664,7 +664,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             model.persisted.modelJobs = [
                 AlphaModelDownloadJob(
                     sessionId: "needs-space",
-                    packId: "gemma-4-e2b-q4",
+                    packId: "gemma-4-e4b-q4",
                     tier: .quickStart,
                     state: .pausedNoStorage,
                     networkPolicy: .wifiOnly,
@@ -702,7 +702,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             model.persisted.modelJobs = [
                 AlphaModelDownloadJob(
                     sessionId: "technical-failure",
-                    packId: "gemma-4-e2b-q4",
+                    packId: "gemma-4-e4b-q4",
                     tier: .quickStart,
                     state: .failed,
                     networkPolicy: .wifiOnly,
@@ -734,9 +734,9 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
 
     func testAssistantVerificationSummaryUsesProductLanguage() {
         let activePack = AlphaInstalledModelPack(
-            packId: "gemma-4-e2b-q4",
+            packId: "gemma-4-e4b-q4",
             tier: .quickStart,
-            installPath: "model-packs/quick_start/google_gemma-4-E2B-it-Q4_K_M.gguf",
+            installPath: "model-packs/quick_start/google_gemma-4-E4B-it-Q4_K_M.gguf",
             checksumSha256: String(repeating: "a", count: 64),
             artifactKind: "local_model_artifact",
             runtimeMode: .llamaCppGguf,
@@ -2056,9 +2056,9 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         defer { UserDefaults.standard.removeObject(forKey: startupValidationKey) }
 
         let pack = AlphaInstalledModelPack(
-            packId: "gemma-4-e4b-q4",
+            packId: "gemma-4-12b-q4",
             tier: .caseAssociate,
-            installPath: "model-packs/case_associate/gemma-4-e4b-q4.gguf",
+            installPath: "model-packs/case_associate/gemma-4-12b-q4.gguf",
             checksumSha256: String(repeating: "b", count: 64),
             artifactKind: "local_model_artifact",
             runtimeMode: .llamaCppGguf,
@@ -2601,7 +2601,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             try makeSparseFile(at: standardURL, bytes: standardArtifact.sizeBytes)
 
             let basicPack = AlphaInstalledModelPack(
-                packId: "gemma-4-e2b-q4",
+                packId: "gemma-4-e4b-q4",
                 tier: .quickStart,
                 installPath: basicPath,
                 checksumSha256: basicArtifact.sha256,
@@ -2612,7 +2612,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 isActive: true
             )
             let standardPack = AlphaInstalledModelPack(
-                packId: "gemma-4-e4b-q4",
+                packId: "gemma-4-12b-q4",
                 tier: .caseAssociate,
                 installPath: standardPath,
                 checksumSha256: standardArtifact.sha256,
@@ -2678,7 +2678,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             try makeSparseFile(at: brokenURL, bytes: alphaAssistantModelArtifact(for: .caseAssociate).sizeBytes)
 
             let activePack = AlphaInstalledModelPack(
-                packId: "gemma-4-e2b-q4",
+                packId: "gemma-4-e4b-q4",
                 tier: .quickStart,
                 installPath: activePath,
                 checksumSha256: String(repeating: "a", count: 64),
@@ -2689,7 +2689,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 isActive: true
             )
             let brokenPack = AlphaInstalledModelPack(
-                packId: "gemma-4-e4b-q4",
+                packId: "gemma-4-12b-q4",
                 tier: .caseAssociate,
                 installPath: brokenPath,
                 checksumSha256: String(repeating: "b", count: 64),
@@ -2763,7 +2763,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             try makeSparseFile(at: brokenURL, bytes: alphaAssistantModelArtifact(for: .quickStart).sizeBytes)
 
             let pack = AlphaInstalledModelPack(
-                packId: "gemma-4-e2b-q4",
+                packId: "gemma-4-e4b-q4",
                 tier: .quickStart,
                 installPath: brokenPath,
                 checksumSha256: "catalog-size:\(alphaAssistantModelArtifact(for: .quickStart).fileName):\(alphaAssistantModelArtifact(for: .quickStart).sizeBytes)",
@@ -2808,7 +2808,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             try Data("broken model artifact".utf8).write(to: brokenURL)
 
             let brokenPack = AlphaInstalledModelPack(
-                packId: "gemma-4-e4b-q4",
+                packId: "gemma-4-12b-q4",
                 tier: .caseAssociate,
                 installPath: brokenPath,
                 checksumSha256: String(repeating: "b", count: 64),

@@ -1,4 +1,4 @@
-# Ross Gemma 4 Model Strategy Update
+# Ross Gemma 4 Quality Pass
 
 ## Branch Used
 
@@ -6,39 +6,38 @@
 
 ## What Changed
 
-- added canonical Gemma 4-first model registry metadata
-- mapped Flash, Quick Start, Case Associate, and Senior Drafting Support to Gemma 4 tiers
-- added separate Matter Search retrieval model metadata
-- added backend `ROSS_MODEL_CATALOG_MODE=dev | production_metadata`
-- kept deterministic tiny artifacts as the default backend catalog mode
-- updated Android and iOS user-facing tier sizes and copy
-- moved technical model details out of normal Private Assistant UI
-- documented the Gemma 4 strategy and hardware estimates
+- reduced the exposed lineup to three higher-quality packs
+- promoted Gemma 4 12B Q4_K_M into the default Standard tier
+- kept Gemma 4 E4B Q4_K_M as the lighter Basic tier
+- kept Gemma 4 26B-A4B Q4_K_M as the Advanced tier
+- updated backend and shared registry metadata with verified URLs, sizes, and SHA-256 values
+- widened iPhone context and input budgets for larger files and smoother on-device use
+- updated the iOS llama runtime package to `llama.swift` `2.9637.0`
+- resolved the newer `llama.cpp` XCFramework (`b9637`)
 
 ## Model Mapping
 
-- Flash -> Gemma 4 E2B Q2, about 3.0 GB
-- Quick Start -> Gemma 4 E2B Q4, about 3.5 GB
-- Case Associate -> Gemma 4 E4B Q4, about 5.4 GB
-- Senior Drafting Support -> Gemma 4 26B-A4B Q4, about 17.0 GB
-- Matter Search -> EmbeddingGemma 300M preferred, Gemma 4-Embedding 0.6B Q4 fallback
+- Basic -> Gemma 4 E4B Q4_K_M, about 5.4 GB
+- Standard -> Gemma 4 12B Q4_K_M, about 7.4 GB
+- Advanced -> Gemma 4 26B-A4B Q4_K_M, about 17.0 GB
+- Flash remains a legacy compatibility tier and is no longer shown in the normal setup catalog
 
 ## Current Truth
 
-- The registry and catalog metadata are updated.
-- The backend still serves tiny deterministic artifacts by default.
-- Production metadata mode does not serve real model files.
-- No model files are committed or bundled.
-- Normal UI should hide model names and runtime details.
+- The registry and catalog metadata now match the intended 3-pack product lineup.
+- The iOS runtime now derives context windows from the active model and device RAM instead of a fixed 4k or 8k cap.
+- Prompt chunking and batch sizing are tuned upward for longer local reads.
+- The backend still serves tiny deterministic artifacts by default in `dev` mode.
+- No model files are committed or bundled in the repository.
 
 ## Still Unimplemented
 
-- production serving for real Q4 files
-- Android native Q4 inference
-- iOS Q4 inference proof with a linked runtime bridge
-- separate embedding model download/install lifecycle
-- hardware proof for each tier
+- production delivery of real Q4 files from a trusted distribution path
+- Android native Q4 inference and memory tuning
+- physical iPhone QA for the 12B pack on representative 8 GB and 12 GB devices
+- speculative decoding or MTP-specific runtime proof on iPhone
+- MLX-based iPhone pathfinding for cases where converted weights outperform GGUF on-device
 
 ## Exact Next Recommended Step
 
-Implement the Matter Search embedding model lifecycle first: catalog entry, download state, install state, retrieval-provider health, and a small local RAG smoke test that proves source retrieval remains on-device.
+Finish a physical-device validation pass for the new Standard tier: prove download/resume/verify/activate, measure prompt latency on a long matter file, and capture whether the updated llama runtime is sufficient before investing in an MLX-specific iPhone path.

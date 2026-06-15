@@ -15,7 +15,7 @@ let package = Package(
         )
     ],
     dependencies: [
-        .package(url: "https://github.com/mattt/llama.swift", branch: "main")
+        .package(url: "https://github.com/mattt/llama.swift", .upToNextMajor(from: "2.9637.0"))
     ],
     targets: [
         .executableTarget(

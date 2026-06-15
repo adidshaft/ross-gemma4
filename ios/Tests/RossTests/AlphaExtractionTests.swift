@@ -890,8 +890,8 @@ final class AlphaExtractionTests: XCTestCase {
 
     func testPrivateAssistantTierCopyHidesTechnicalModelNames() {
         XCTAssertEqual(AlphaCapabilityTier.flash.downloadSizeLabel, "3.0 GB")
-        XCTAssertEqual(AlphaCapabilityTier.quickStart.downloadSizeLabel, "3.5 GB")
-        XCTAssertEqual(AlphaCapabilityTier.caseAssociate.downloadSizeLabel, "5.4 GB")
+        XCTAssertEqual(AlphaCapabilityTier.quickStart.downloadSizeLabel, "5.4 GB")
+        XCTAssertEqual(AlphaCapabilityTier.caseAssociate.downloadSizeLabel, "7.4 GB")
         XCTAssertEqual(AlphaCapabilityTier.seniorDraftingSupport.downloadSizeLabel, "17.0 GB")
         XCTAssertEqual(
             AlphaCapabilityTier.flash.setupWarning(languageCode: "en"),
@@ -899,7 +899,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
         XCTAssertTrue(
             AlphaCapabilityTier.caseAssociate.setupWarning(languageCode: "ta")
-                .contains("5.4 GB")
+                .contains("7.4 GB")
         )
         XCTAssertTrue(
             AlphaCapabilityTier.caseAssociate.setupWarning(languageCode: "ta")
@@ -914,12 +914,12 @@ final class AlphaExtractionTests: XCTestCase {
                 .contains("ఖాళీ స్థలం")
         )
         XCTAssertEqual(
-            AlphaCapabilityTier.flash.setupTitle(languageCode: "hi"),
-            "Flash - सबसे सरल, बहुत तेज़"
+            AlphaCapabilityTier.quickStart.setupTitle(languageCode: "hi"),
+            "Basic - रोज़मर्रा के काम के लिए संतुलित"
         )
         XCTAssertEqual(
             AlphaCapabilityTier.seniorDraftingSupport.setupTitle(languageCode: "te-IN"),
-            "Full - పెద్ద బండిళ్లు మరియు డ్రాఫ్టింగ్"
+            "Advanced - పెద్ద బండిళ్లు మరియు డ్రాఫ్టింగ్"
         )
         XCTAssertEqual(
             AlphaCapabilityTier.flash.storageNote(languageCode: "bn"),
@@ -943,7 +943,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
         XCTAssertEqual(
             AlphaCapabilityTier.caseAssociate.setupTimeLabel(languageCode: "ta"),
-            "சுமார் 4 நிமிடம்"
+            "சுமார் 6 நிமிடம்"
         )
         XCTAssertEqual(
             AlphaCapabilityTier.quickStart.compactSetupSummary(languageCode: "bn"),
@@ -2750,9 +2750,9 @@ final class AlphaExtractionTests: XCTestCase {
         var failedJob = preparingJob
         failedJob.state = .failed
 
-        XCTAssertEqual(alphaAssistantActivityTitle(for: preparingJob), "Small is preparing")
-        XCTAssertEqual(alphaAssistantActivityTitle(for: preparingJob, languageCode: "hi"), "Small तैयार हो रहा है")
-        XCTAssertEqual(alphaAssistantActivityTitle(for: pausedJob, languageCode: "ta"), "Small setup paused உள்ளது")
+        XCTAssertEqual(alphaAssistantActivityTitle(for: preparingJob), "Basic is preparing")
+        XCTAssertEqual(alphaAssistantActivityTitle(for: preparingJob, languageCode: "hi"), "Basic तैयार हो रहा है")
+        XCTAssertEqual(alphaAssistantActivityTitle(for: pausedJob, languageCode: "ta"), "Basic setup paused உள்ளது")
         XCTAssertEqual(alphaAssistantActivityTitle(for: failedJob, languageCode: "te"), "Private assistant కు retry కావాలి")
     }
 
@@ -3160,8 +3160,8 @@ final class AlphaExtractionTests: XCTestCase {
         )
         let pack = ModelPack(
             tier: .caseAssociate,
-            downloadSize: "3.5 GB",
-            installedFootprint: "4.0 GB",
+            downloadSize: "7.4 GB",
+            installedFootprint: "7.4 GB",
             recommendedFor: "Document review",
             technicalDetails: []
         )
@@ -3202,30 +3202,45 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     func testReleaseReadyAssistantArtifactsPinDownloadMetadata() throws {
-        let expected: [AlphaCapabilityTier: (repository: String, fileName: String, sizeBytes: Int64, sha256: String)] = [
+        let expected: [AlphaCapabilityTier: (
+            repository: String,
+            fileName: String,
+            sizeBytes: Int64,
+            sha256: String,
+            releaseReady: Bool,
+            isActiveTier: Bool
+        )] = [
             .flash: (
                 repository: "bartowski/google_gemma-4-E2B-it-GGUF",
                 fileName: "google_gemma-4-E2B-it-Q2_K.gguf",
                 sizeBytes: 3_020_052_224,
-                sha256: "a7cfc9f9b305b54a4ba2a681ff8795f594eafbe8c2c9df25d2f030a64d97bda6"
+                sha256: "a7cfc9f9b305b54a4ba2a681ff8795f594eafbe8c2c9df25d2f030a64d97bda6",
+                releaseReady: false,
+                isActiveTier: false
             ),
             .quickStart: (
-                repository: "bartowski/google_gemma-4-E2B-it-GGUF",
-                fileName: "google_gemma-4-E2B-it-Q4_K_M.gguf",
-                sizeBytes: 3_462_678_272,
-                sha256: "b5310340b3a23d31655d7119d100d5df1b2d8ee17b3ca8b0a23ad7e9eb5fa705"
-            ),
-            .caseAssociate: (
                 repository: "bartowski/google_gemma-4-E4B-it-GGUF",
                 fileName: "google_gemma-4-E4B-it-Q4_K_M.gguf",
                 sizeBytes: 5_405_168_384,
-                sha256: "51865750adafd22de56994a343d5a887cc1a589b9bae41d62b748c8bd0ca9c76"
+                sha256: "51865750adafd22de56994a343d5a887cc1a589b9bae41d62b748c8bd0ca9c76",
+                releaseReady: true,
+                isActiveTier: true
+            ),
+            .caseAssociate: (
+                repository: "ggml-org/gemma-4-12B-it-GGUF",
+                fileName: "gemma-4-12B-it-Q4_K_M.gguf",
+                sizeBytes: 7_381_382_048,
+                sha256: "1278394b693672ac2799eadc9a83fd98259a6a88a40acfb1dcaa6c6fc895a606",
+                releaseReady: true,
+                isActiveTier: true
             ),
             .seniorDraftingSupport: (
                 repository: "bartowski/google_gemma-4-26B-A4B-it-GGUF",
                 fileName: "google_gemma-4-26B-A4B-it-Q4_K_M.gguf",
                 sizeBytes: 17_035_038_112,
-                sha256: "e718536fe9b4bd505b07d44ded8f1595053a5d5407315bccf555ce592f33c140"
+                sha256: "e718536fe9b4bd505b07d44ded8f1595053a5d5407315bccf555ce592f33c140",
+                releaseReady: true,
+                isActiveTier: true
             )
         ]
 
@@ -3241,8 +3256,8 @@ final class AlphaExtractionTests: XCTestCase {
             XCTAssertEqual(artifact.sha256, pinned.sha256)
             XCTAssertEqual(artifact.downloadSource, "huggingface")
             XCTAssertTrue(artifact.verified, "Artifact must be verified for \(tier.rawValue)")
-            XCTAssertTrue(artifact.releaseReady, "Artifact must be release-ready for \(tier.rawValue)")
-            XCTAssertTrue(artifact.isActiveTier, "Artifact must stay selectable for \(tier.rawValue)")
+            XCTAssertEqual(artifact.releaseReady, pinned.releaseReady, "Unexpected release-ready state for \(tier.rawValue)")
+            XCTAssertEqual(artifact.isActiveTier, pinned.isActiveTier, "Unexpected active-tier state for \(tier.rawValue)")
             XCTAssertFalse(
                 artifact.downloadURLString.contains("__REPLACE_WITH_VERIFIED"),
                 "Release URL still contains replacement marker for \(tier.rawValue)"

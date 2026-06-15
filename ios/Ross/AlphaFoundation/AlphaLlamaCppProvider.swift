@@ -1,6 +1,85 @@
 import Foundation
 import LlamaSwift
 
+enum AlphaLlamaRuntimeProfile {
+    private static func containsAny(_ value: String, fragments: [String]) -> Bool {
+        let lowered = value.lowercased()
+        return fragments.contains { lowered.contains($0.lowercased()) }
+    }
+
+    static func contextWindowTokens(forModelPath path: String?, physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory) -> UInt32 {
+        guard let path else {
+            return physicalMemory < 6_000_000_000 ? 4_096 : 8_192
+        }
+        if physicalMemory < 6_000_000_000 {
+            return 4_096
+        }
+        if containsAny(path, fragments: ["26B-A4B", "26b-a4b", "26B"]) {
+            return physicalMemory >= 18_000_000_000 ? 12_288 : 8_192
+        }
+        if containsAny(path, fragments: ["12B", "12b"]) {
+            return physicalMemory >= 12_000_000_000 ? 16_384 : 12_288
+        }
+        if containsAny(path, fragments: ["E4B", "e4b"]) {
+            return physicalMemory >= 8_000_000_000 ? 12_288 : 8_192
+        }
+        return 8_192
+    }
+
+    static func maxInputChars(for tier: AlphaCapabilityTier, physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory) -> Int {
+        switch tier {
+        case .flash:
+            return 12_000
+        case .quickStart:
+            return physicalMemory >= 8_000_000_000 ? 24_000 : 18_000
+        case .caseAssociate:
+            return physicalMemory >= 12_000_000_000 ? 36_000 : 28_000
+        case .seniorDraftingSupport:
+            return physicalMemory >= 18_000_000_000 ? 40_000 : 34_000
+        }
+    }
+
+    static func maxNewTokens(for tier: AlphaCapabilityTier, task: AlphaLocalModelTask) -> Int32 {
+        switch task {
+        case .matterQuestionAnswer, .orderSummary, .chronologyGeneration, .issueExtraction, .caseMemorySynthesis:
+            switch tier {
+            case .flash:
+                return 128
+            case .quickStart:
+                return 192
+            case .caseAssociate:
+                return 256
+            case .seniorDraftingSupport:
+                return 320
+            }
+        default:
+            switch tier {
+            case .flash:
+                return 128
+            case .quickStart:
+                return 192
+            case .caseAssociate:
+                return 256
+            case .seniorDraftingSupport:
+                return 320
+            }
+        }
+    }
+
+    static func sourceBlockLimit(for tier: AlphaCapabilityTier) -> Int {
+        switch tier {
+        case .flash:
+            return 4
+        case .quickStart:
+            return 5
+        case .caseAssociate:
+            return 7
+        case .seniorDraftingSupport:
+            return 8
+        }
+    }
+}
+
 final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     let capabilityTier: AlphaCapabilityTier
     let runtimeMode: AlphaPackRuntimeMode = .llamaCppGguf
@@ -90,11 +169,11 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     }
     
     func contextWindowEstimate() -> Int? {
-        return 8192
+        Int(AlphaLlamaRuntimeProfile.contextWindowTokens(forModelPath: modelPath))
     }
     
     func maxInputChars() -> Int? {
-        return 12000
+        AlphaLlamaRuntimeProfile.maxInputChars(for: capabilityTier)
     }
     
     nonisolated(unsafe) private static var cachedContext: LlamaContext?
@@ -172,9 +251,10 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                 combinedPrompt = "<start_of_turn>user\n\(systemPrompt)\n\n\(userPrompt)<end_of_turn>\n<start_of_turn>model\n"
             }
             
-            let maxNewTokens = usesPlainMatterAnswerPrompt
-                ? min(Int32(max(taskInput.maxOutputTokens, 1)), 96)
-                : min(Int32(max(taskInput.maxOutputTokens, 1)), 96)
+            let maxNewTokens = min(
+                Int32(max(taskInput.maxOutputTokens, 1)),
+                AlphaLlamaRuntimeProfile.maxNewTokens(for: capabilityTier, task: taskInput.task)
+            )
             try await context.completion_init(
                 text: combinedPrompt,
                 maxNewTokens: maxNewTokens,
@@ -214,7 +294,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                 }
                 
                 // Safety cutoff for runaway generation
-                if generatedResponse.count > 10000 { break }
+                if generatedResponse.count > max(maxInputChars() ?? 12_000, 12_000) { break }
             }
             
             let cleanedResponse = stripTurnMarkerFragments(from: generatedResponse)
@@ -293,8 +373,8 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         SOURCES:
         """
 
-        var remainingBudget = 6_500
-        for block in input.sourcePack.prefix(6) {
+        var remainingBudget = max((maxInputChars() ?? 12_000) - 2_000, 4_800)
+        for block in input.sourcePack.prefix(AlphaLlamaRuntimeProfile.sourceBlockLimit(for: capabilityTier)) {
             guard remainingBudget > 120 else { break }
             let label = block.sourceRef.label
             let cleanedText = block.text

@@ -240,11 +240,11 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
         case .flash:
             "Flash"
         case .quickStart:
-            "Small"
+            "Basic"
         case .caseAssociate:
             "Standard"
         case .seniorDraftingSupport:
-            "Full"
+            "Advanced"
         }
     }
 
@@ -304,9 +304,9 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
         case .flash:
             "3.0 GB"
         case .quickStart:
-            "3.5 GB"
-        case .caseAssociate:
             "5.4 GB"
+        case .caseAssociate:
+            "7.4 GB"
         case .seniorDraftingSupport:
             "17.0 GB"
         }
@@ -317,9 +317,9 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
         case .flash:
             "3.0 GB"
         case .quickStart:
-            "3.5 GB"
-        case .caseAssociate:
             "5.4 GB"
+        case .caseAssociate:
+            "7.4 GB"
         case .seniorDraftingSupport:
             "17.0 GB"
         }
@@ -399,11 +399,11 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
         case .flash:
             2
         case .quickStart:
-            2
-        case .caseAssociate:
             4
+        case .caseAssociate:
+            6
         case .seniorDraftingSupport:
-            7
+            10
         }
     }
 
@@ -446,7 +446,6 @@ struct AlphaPackOffer: Identifiable, Codable, Hashable, Sendable {
     var id: AlphaCapabilityTier { tier }
 
     static let catalog: [AlphaPackOffer] = [
-        AlphaPackOffer(tier: .flash, runtimeLabel: "Flash", supportsBilingualDrafting: false),
         AlphaPackOffer(tier: .quickStart, runtimeLabel: "Basic", supportsBilingualDrafting: false),
         AlphaPackOffer(tier: .caseAssociate, runtimeLabel: "Standard", supportsBilingualDrafting: true),
         AlphaPackOffer(tier: .seniorDraftingSupport, runtimeLabel: "Advanced", supportsBilingualDrafting: true)

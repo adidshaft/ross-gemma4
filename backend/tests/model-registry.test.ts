@@ -53,7 +53,7 @@ function buildTestEnv(overrides: Record<string, string | undefined> = {}) {
   });
 }
 
-test("canonical private assistant registry maps tiers to qwen gguf models and separate retrieval", () => {
+test("canonical private assistant registry maps tiers to the current three-pack Gemma GGUF lineup and separate retrieval", () => {
   const registry = readRegistry();
   const quickStart = registry.assistantTiers.quick_start;
   const caseAssociate = registry.assistantTiers.case_associate;
@@ -68,22 +68,22 @@ test("canonical private assistant registry maps tiers to qwen gguf models and se
   assert.ok(fallbackRetrieval);
 
   assert.equal(quickStart.displayName, "Basic");
-  assert.equal(quickStart.technicalModelName, "Gemma 4 E2B Q4");
-  assert.equal(quickStart.repo, "google/gemma-4-e2b-q4");
+  assert.equal(quickStart.technicalModelName, "Gemma 4 E4B Q4_K_M");
+  assert.equal(quickStart.repo, "bartowski/google_gemma-4-E4B-it-GGUF");
   assert.equal(quickStart.quantization, "Q4");
   assert.equal(quickStart.runtimeMode, "gemma_local_runtime");
-  assert.equal(quickStart.approxDownloadSizeMb, 429);
+  assert.equal(quickStart.approxDownloadSizeMb, 5405);
 
   assert.equal(caseAssociate.displayName, "Standard");
-  assert.equal(caseAssociate.technicalModelName, "Gemma 4 E4B Q4");
-  assert.equal(caseAssociate.repo, "google/gemma-4-e4b-q4");
-  assert.equal(caseAssociate.alternateRepo, "jc-builds/gemma-4-e4b-q4-Q4");
+  assert.equal(caseAssociate.technicalModelName, "Gemma 4 12B Q4_K_M");
+  assert.equal(caseAssociate.repo, "ggml-org/gemma-4-12B-it-GGUF");
+  assert.equal(caseAssociate.alternateRepo, "bartowski/gemma-4-12B-it-GGUF");
   assert.equal(caseAssociate.quantization, "Q4");
 
   assert.equal(seniorDrafting.displayName, "Advanced");
-  assert.equal(seniorDrafting.technicalModelName, "Gemma 4 26B-A4B Q4");
-  assert.equal(seniorDrafting.repo, "google/gemma-4-26b-a4b-q4");
-  assert.equal(seniorDrafting.alternateRepo, "Gemma/gemma-4-26b-a4b-q4");
+  assert.equal(seniorDrafting.technicalModelName, "Gemma 4 26B-A4B Q4_K_M");
+  assert.equal(seniorDrafting.repo, "bartowski/google_gemma-4-26B-A4B-it-GGUF");
+  assert.equal(seniorDrafting.alternateRepo, undefined);
   assert.equal(seniorDrafting.quantization, "Q4");
 
   assert.equal(preferredRetrieval.displayName, "Matter Search");
@@ -271,7 +271,7 @@ test("production model catalog advertises platform runtime packs with real downl
   assert.equal(iosCatalog.statusCode, 200);
   const iosBody = JSON.parse(iosCatalog.body) as typeof androidBody;
   const iosQuickStart = iosBody.manifest.payload.packs.find((pack) => pack.tier === "quick_start");
-  assert.equal(iosQuickStart?.technicalModelName, "Gemma 4 E2B Q4");
+  assert.equal(iosQuickStart?.technicalModelName, "Gemma 4 E4B Q4_K_M");
   assert.equal(iosQuickStart?.runtimeMode, "gemma_local_runtime");
   assert.equal(iosQuickStart?.artifactKind, "local_model_artifact");
 });

@@ -533,25 +533,25 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "te": "Flash - సులభమైనది, చాలా వేగవంతం"
         ],
         "tier_quick_start_setup_title": [
-            "en": "Small - short orders only",
-            "hi": "Small - केवल छोटे आदेश",
-            "bn": "Small - শুধু ছোট আদেশ",
-            "ta": "Small - குறுகிய உத்தரவுகள் மட்டும்",
-            "te": "Small - చిన్న ఆదేశాలకు మాత్రమే"
+            "en": "Basic - balanced everyday work",
+            "hi": "Basic - रोज़मर्रा के काम के लिए संतुलित",
+            "bn": "Basic - প্রতিদিনের কাজের জন্য সুষম",
+            "ta": "Basic - தினசரி வேலைக்கு சமநிலை",
+            "te": "Basic - రోజువారీ పనికి సమతుల్యం"
         ],
         "tier_case_associate_setup_title": [
-            "en": "Standard - most matters",
-            "hi": "Standard - ज़्यादातर मामलों के लिए",
-            "bn": "Standard - বেশিরভাগ মামলার জন্য",
-            "ta": "Standard - பெரும்பாலான வழக்குகளுக்கு",
-            "te": "Standard - ఎక్కువ కేసులకు"
+            "en": "Standard - most matters and larger files",
+            "hi": "Standard - ज़्यादातर मामलों और बड़े files के लिए",
+            "bn": "Standard - বেশিরভাগ মামলা ও বড় files-এর জন্য",
+            "ta": "Standard - பெரும்பாலான வழக்குகள் மற்றும் பெரிய files-க்கு",
+            "te": "Standard - ఎక్కువ కేసులు మరియు పెద్ద files కోసం"
         ],
         "tier_senior_drafting_setup_title": [
-            "en": "Full - long bundles and drafting",
-            "hi": "Full - लंबे बंडल और ड्राफ्टिंग",
-            "bn": "Full - দীর্ঘ বান্ডিল এবং খসড়া",
-            "ta": "Full - நீண்ட தொகுப்புகள் மற்றும் வரைவு",
-            "te": "Full - పెద్ద బండిళ్లు మరియు డ్రాఫ్టింగ్"
+            "en": "Advanced - larger bundles and drafting",
+            "hi": "Advanced - बड़े बंडल और ड्राफ्टिंग",
+            "bn": "Advanced - বড় বান্ডিল এবং খসড়া",
+            "ta": "Advanced - பெரிய தொகுப்புகள் மற்றும் வரைவு",
+            "te": "Advanced - పెద్ద బండిళ్లు మరియు డ్రాఫ్టింగ్"
         ],
         "tier_flash_storage_note": [
             "en": "Smallest footprint",

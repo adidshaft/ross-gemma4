@@ -1,28 +1,33 @@
-# Gemma 4 Model Strategy
+# Gemma 4 Product Architecture
 
-Ross uses a Gemma 4-first local generative stack for Private AI Pack tiers and a separate embedding model for local retrieval.
+Ross now uses a 3-pack Gemma 4-first local generative stack for the visible Private AI setup flow.
 
 Normal product UI shows assistant levels, not model names. Technical names, repository names, runtime modes, checksums, and artifact details belong only under `Settings -> Advanced -> Support details` in debug builds or dedicated QA logs.
 
 ## Why Gemma 4 Q4
 
 - Q4 gives Ross one practical local model packaging path across Android, iOS, desktop, and backend metadata.
-- Gemma 4 has compact tiers that match Ross's private-assistant ladder without forcing a very large first download.
-- `gemma_local_runtime` is the preferred generative runtime mode for the production-intended local stack.
+- Gemma 4 now has a credible middle tier with the 12B instruct pack, which is a better default quality target than the older E2B/E4B-only ladder.
+- `llama.cpp` through `llama.swift` is the active iOS GGUF runtime path today.
 - Deterministic development artifacts remain the CI and local-test default until a real model runtime is explicitly installed and proven.
 
 ## Assistant Tiers
 
 | User tier | Technical model | Repo | Runtime | Download |
 | --- | --- | --- | --- | --- |
-| Flash | Gemma 4 E2B Q2 | `bartowski/google_gemma-4-E2B-it-GGUF` | `gemma_local_runtime` | about 3.0 GB |
-| Quick Start | Gemma 4 E2B Q4 | `bartowski/google_gemma-4-E2B-it-GGUF` | `gemma_local_runtime` | about 3.5 GB |
-| Case Associate | Gemma 4 E4B Q4 | `bartowski/google_gemma-4-E4B-it-GGUF` | `gemma_local_runtime` | about 5.4 GB |
-| Senior Drafting Support | Gemma 4 26B-A4B Q4 | `bartowski/google_gemma-4-26B-A4B-it-GGUF` | `gemma_local_runtime` | about 17.0 GB |
+| Basic | Gemma 4 E4B Q4_K_M | `bartowski/google_gemma-4-E4B-it-GGUF` | `llama_cpp_gguf` | about 5.4 GB |
+| Standard | Gemma 4 12B Q4_K_M | `ggml-org/gemma-4-12B-it-GGUF` | `llama_cpp_gguf` | about 7.4 GB |
+| Advanced | Gemma 4 26B-A4B Q4_K_M | `bartowski/google_gemma-4-26B-A4B-it-GGUF` | `llama_cpp_gguf` | about 17.0 GB |
 
-Case Associate alternate repo: `google/gemma-4-E4B-it`.
+Standard alternate repo: `bartowski/gemma-4-12B-it-GGUF`.
 
-Senior Drafting Support alternate official repo: `google/gemma-4-26B-A4B-it`.
+Advanced alternate official repo: `google/gemma-4-26B-A4B-it`.
+
+Legacy compatibility tier:
+
+- Flash -> Gemma 4 E2B Q2
+- kept only so older state can still decode cleanly
+- not shown in the normal setup catalog
 
 ## Retrieval Model
 
@@ -46,22 +51,22 @@ Single-runtime fallback:
 
 ## Hardware Estimates
 
-Quick Start:
+Basic:
 
 - minimum: 4-6 GB RAM phone
 - recommended: 6-8 GB RAM
-- download: about 3.5 GB
+- download: about 5.4 GB
 
-Case Associate:
+Standard:
 
 - minimum: 6-8 GB RAM
 - recommended: 8-12 GB RAM
-- download: about 5.4 GB
+- download: about 7.4 GB
 
-Senior Drafting Support:
+Advanced:
 
 - minimum: 8-12 GB RAM
-- recommended: 12-16 GB RAM
+- recommended: 12-18 GB RAM
 - download: about 17.0 GB
 
 Embedding model:
@@ -76,12 +81,23 @@ Embedding model:
 - Backend `ROSS_MODEL_CATALOG_MODE=production_metadata` advertises Gemma 4 metadata but does not serve large model files unless a future delivery path is configured.
 - If a real local runtime is unavailable, Ross falls back to basic local review and says so in plain language.
 
+## iPhone Runtime Notes
+
+- `ios/Package.swift` now pins `llama.swift` with `.upToNextMajor(from: "2.9637.0")`.
+- `ios/Package.resolved` currently resolves commit `d159d5ccf8fc8a3c55c05a72980f3c94ad91f734`.
+- Context windows now scale by pack and device RAM:
+  - Basic: 8k to 12k tokens
+  - Standard: 12k to 16k tokens
+  - Advanced: 8k to 12k tokens
+- Input budgets are widened per tier so longer matter files can stay on-device instead of being truncated to the old fixed limits.
+
 ## Not Implemented Yet
 
 - Production backend serving for real Q4 files.
 - Automatic install and lifecycle management for the separate Matter Search embedding model.
 - Android native Q4 inference.
-- full physical-iPhone download/resume/verify/activate and imported-file QA with a configured multi-GB pack.
+- full physical-iPhone download/resume/verify/activate and imported-file QA with the 12B pack.
 - Hardware proof of the full Gemma 4 stack on target devices.
+- MLX-native iPhone experiments for cases where converted Gemma 4 weights may outperform GGUF.
 
 No model files are committed, bundled, or downloaded into the repository.

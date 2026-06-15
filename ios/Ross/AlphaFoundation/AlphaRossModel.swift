@@ -1145,9 +1145,9 @@ struct AlphaAssistantModelArtifact: Hashable, Sendable {
         case .flash:
             "about 3.0 GB"
         case .quickStart:
-            "about 3.5 GB"
-        case .caseAssociate:
             "about 5.4 GB"
+        case .caseAssociate:
+            "about 7.4 GB"
         case .seniorDraftingSupport:
             "about 17.0 GB"
         }
@@ -1176,35 +1176,13 @@ let alphaAssistantModelArtifacts: [AlphaCapabilityTier: AlphaAssistantModelArtif
         sourcePageURLString: "https://huggingface.co/bartowski/google_gemma-4-E2B-it-GGUF",
         downloadSource: "huggingface",
         verified: true,
-        releaseReady: true,
+        releaseReady: false,
         licenseNotice: "Gemma License",
         safetyNotice: "Review generated content.",
-        isActiveTier: true
+        isActiveTier: false
     ),
     .quickStart: AlphaAssistantModelArtifact(
         tier: .quickStart,
-        packId: "gemma-4-e2b-q4",
-        displayName: "Gemma 4 E2B Q4_K_M",
-        repository: "bartowski/google_gemma-4-E2B-it-GGUF",
-        fileName: "google_gemma-4-E2B-it-Q4_K_M.gguf",
-        quantization: "Q4_K_M",
-        downloadURLString: "https://huggingface.co/bartowski/google_gemma-4-E2B-it-GGUF/resolve/main/google_gemma-4-E2B-it-Q4_K_M.gguf",
-        sizeBytes: 3_462_678_272,
-        sha256: "b5310340b3a23d31655d7119d100d5df1b2d8ee17b3ca8b0a23ad7e9eb5fa705",
-        minimumMemoryGB: 3,
-        recommendedMemoryGB: 4,
-        requiredFreeSpaceGB: 4,
-        recommendedPhone: "Fastest setup — intake, checklists, quick summaries.",
-        sourcePageURLString: "https://huggingface.co/bartowski/google_gemma-4-E2B-it-GGUF",
-        downloadSource: "huggingface",
-        verified: true,
-        releaseReady: true,
-        licenseNotice: "Gemma License",
-        safetyNotice: "Review generated content.",
-        isActiveTier: true
-    ),
-    .caseAssociate: AlphaAssistantModelArtifact(
-        tier: .caseAssociate,
         packId: "gemma-4-e4b-q4",
         displayName: "Gemma 4 E4B Q4_K_M",
         repository: "bartowski/google_gemma-4-E4B-it-GGUF",
@@ -1216,8 +1194,30 @@ let alphaAssistantModelArtifacts: [AlphaCapabilityTier: AlphaAssistantModelArtif
         minimumMemoryGB: 4,
         recommendedMemoryGB: 6,
         requiredFreeSpaceGB: 6,
-        recommendedPhone: "Chronology, issue extraction, missing-fact analysis, longer notes.",
+        recommendedPhone: "Balanced setup — quick case Q&A, intake review, lighter matter work.",
         sourcePageURLString: "https://huggingface.co/bartowski/google_gemma-4-E4B-it-GGUF",
+        downloadSource: "huggingface",
+        verified: true,
+        releaseReady: true,
+        licenseNotice: "Gemma License",
+        safetyNotice: "Review generated content.",
+        isActiveTier: true
+    ),
+    .caseAssociate: AlphaAssistantModelArtifact(
+        tier: .caseAssociate,
+        packId: "gemma-4-12b-q4",
+        displayName: "Gemma 4 12B Q4_K_M",
+        repository: "ggml-org/gemma-4-12B-it-GGUF",
+        fileName: "gemma-4-12B-it-Q4_K_M.gguf",
+        quantization: "Q4_K_M",
+        downloadURLString: "https://huggingface.co/ggml-org/gemma-4-12B-it-GGUF/resolve/main/gemma-4-12B-it-Q4_K_M.gguf",
+        sizeBytes: 7_381_382_048,
+        sha256: "1278394b693672ac2799eadc9a83fd98259a6a88a40acfb1dcaa6c6fc895a606",
+        minimumMemoryGB: 6,
+        recommendedMemoryGB: 8,
+        requiredFreeSpaceGB: 8,
+        recommendedPhone: "Richer matter reasoning, larger files, longer chronology and note work.",
+        sourcePageURLString: "https://huggingface.co/ggml-org/gemma-4-12B-it-GGUF",
         downloadSource: "huggingface",
         verified: true,
         releaseReady: true,
@@ -1238,7 +1238,7 @@ let alphaAssistantModelArtifacts: [AlphaCapabilityTier: AlphaAssistantModelArtif
         minimumMemoryGB: 12,
         recommendedMemoryGB: 20,
         requiredFreeSpaceGB: 18,
-        recommendedPhone: "Advanced drafting, workstation or high-end device mode.",
+        recommendedPhone: "Deep drafting and workstation-class matter synthesis.",
         sourcePageURLString: "https://huggingface.co/bartowski/google_gemma-4-26B-A4B-it-GGUF",
         downloadSource: "huggingface",
         verified: true,

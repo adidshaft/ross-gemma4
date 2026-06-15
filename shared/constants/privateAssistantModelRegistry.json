@@ -2,36 +2,35 @@
   "assistantTiers": {
     "quick_start": {
       "displayName": "Basic",
-      "technicalModelName": "Gemma 4 E2B Q4",
-      "repo": "google/gemma-4-e2b-q4",
+      "technicalModelName": "Gemma 4 E4B Q4_K_M",
+      "repo": "bartowski/google_gemma-4-E4B-it-GGUF",
       "quantization": "Q4",
       "runtimeMode": "gemma_local_runtime",
       "artifactKind": "local_model_artifact",
-      "approxDownloadSizeMb": 429,
-      "userFacingRole": "Start quickly with short local Q&A and simple Ask Ross actions after setup",
-      "technicalRole": "command routing, short summaries, basic local Q&A, local public-law query shaping"
+      "approxDownloadSizeMb": 5405,
+      "userFacingRole": "Balanced local assistant for short case Q&A, intake review, and lighter matter work",
+      "technicalRole": "short source-backed Ask Ross answers, lighter summaries, and quick matter review"
     },
     "case_associate": {
       "displayName": "Standard",
-      "technicalModelName": "Gemma 4 E4B Q4",
-      "repo": "google/gemma-4-e4b-q4",
-      "alternateRepo": "jc-builds/gemma-4-e4b-q4-Q4",
+      "technicalModelName": "Gemma 4 12B Q4_K_M",
+      "repo": "ggml-org/gemma-4-12B-it-GGUF",
+      "alternateRepo": "bartowski/gemma-4-12B-it-GGUF",
       "quantization": "Q4",
       "runtimeMode": "gemma_local_runtime",
       "artifactKind": "local_model_artifact",
-      "approxDownloadSizeMb": 1280,
-      "userFacingRole": "Recommended private assistant for most matters",
-      "technicalRole": "default legal document assistant, document review, drafting, source-backed Ask Ross"
+      "approxDownloadSizeMb": 7381,
+      "userFacingRole": "Recommended private assistant for richer matter review, larger files, and longer answers",
+      "technicalRole": "default higher-quality legal assistant, deeper matter reasoning, and longer source-backed Ask Ross"
     },
     "senior_drafting_support": {
       "displayName": "Advanced",
-      "technicalModelName": "Gemma 4 26B-A4B Q4",
-      "repo": "google/gemma-4-26b-a4b-q4",
-      "alternateRepo": "Gemma/gemma-4-26b-a4b-q4",
+      "technicalModelName": "Gemma 4 26B-A4B Q4_K_M",
+      "repo": "bartowski/google_gemma-4-26B-A4B-it-GGUF",
       "quantization": "Q4",
       "runtimeMode": "gemma_local_runtime",
       "artifactKind": "local_model_artifact",
-      "approxDownloadSizeMb": 2500,
+      "approxDownloadSizeMb": 17035,
       "userFacingRole": "Advanced private assistant for deeper review and drafting",
       "technicalRole": "advanced drafting, chronology refinement, issue extraction, deeper matter reasoning"
     }
