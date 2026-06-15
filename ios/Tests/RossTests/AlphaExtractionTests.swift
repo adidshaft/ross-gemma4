@@ -4787,11 +4787,64 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     func testPipelinePlanChangesWithInstalledPack() {
-        XCTAssertEqual(AlphaExtractionPipelinePlanner.plan(for: nil).mode, .basic)
-        XCTAssertEqual(AlphaExtractionPipelinePlanner.plan(for: installedPack(.quickStart)).mode, .quickStart)
-        XCTAssertEqual(AlphaExtractionPipelinePlanner.plan(for: installedPack(.caseAssociate)).mode, .caseAssociate)
-        XCTAssertEqual(AlphaExtractionPipelinePlanner.plan(for: installedPack(.seniorDraftingSupport)).mode, .seniorDraftingSupport)
-        XCTAssertTrue(AlphaExtractionPipelinePlanner.plan(for: installedPack(.seniorDraftingSupport)).passes.contains { $0.task == .issueExtraction })
+        let basicPlan = AlphaExtractionPipelinePlanner.plan(for: nil)
+        let quickStartPlan = AlphaExtractionPipelinePlanner.plan(for: installedPack(.quickStart))
+        let caseAssociatePlan = AlphaExtractionPipelinePlanner.plan(for: installedPack(.caseAssociate))
+        let seniorPlan = AlphaExtractionPipelinePlanner.plan(for: installedPack(.seniorDraftingSupport))
+
+        XCTAssertEqual(basicPlan.mode, .basic)
+        XCTAssertEqual(quickStartPlan.mode, .quickStart)
+        XCTAssertEqual(caseAssociatePlan.mode, .caseAssociate)
+        XCTAssertEqual(seniorPlan.mode, .seniorDraftingSupport)
+        XCTAssertEqual(quickStartPlan.pass(for: .legalFieldExtraction)?.maxPagesPerBatch, 10)
+        XCTAssertEqual(caseAssociatePlan.pass(for: .caseMemorySynthesis)?.maxPagesPerBatch, 24)
+        XCTAssertEqual(seniorPlan.pass(for: .issueExtraction)?.maxPagesPerBatch, 24)
+        XCTAssertTrue(seniorPlan.passes.contains { $0.task == .issueExtraction })
+    }
+
+    func testQuickStartLongFileExtractionBatchesStructuredPasses() async {
+        let store = AlphaRossStore()
+        let caseId = UUID()
+        let pages = (1...13).map { page in
+            AlphaDocumentPage(
+                pageNumber: page,
+                snippet: """
+                IN THE HIGH COURT OF DELHI
+                CS No. \(page)/2026
+                Listed on 12/\(String(format: "%02d", page))/2026
+                It is directed that reply be filed within two weeks.
+                """
+            )
+        }
+        let document = AlphaCaseDocument(
+            title: "Batched Quick Start Order",
+            fileName: "batched-quick-start-order.pdf",
+            kind: .pdf,
+            storedRelativePath: "tests/batched-quick-start-order.pdf",
+            importedAt: .now,
+            pageCount: pages.count,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            pages: pages
+        )
+
+        let result = await store.runLocalExtraction(
+            caseId: caseId,
+            document: document,
+            activePack: installedPack(.quickStart)
+        )
+        let grouped = Dictionary(grouping: result.modelInvocations, by: \.task)
+
+        XCTAssertEqual(grouped[.ocrCleanup]?.count, 2)
+        XCTAssertEqual(grouped[.documentClassification]?.count, 2)
+        XCTAssertEqual(grouped[.legalFieldExtraction]?.count, 2)
+        XCTAssertEqual(grouped[.legalFieldVerification]?.count, 2)
+        XCTAssertTrue(
+            result.modelInvocations
+                .filter { $0.task == .ocrCleanup || $0.task == .documentClassification || $0.task == .legalFieldExtraction || $0.task == .legalFieldVerification }
+                .allSatisfy { $0.inputSourceRefs.count <= 10 }
+        )
+        XCTAssertTrue(result.extractedFields.contains { $0.sourceRefs.contains(where: { $0.pageNumber == 13 }) })
     }
 
     func testModelInvocationMetadataStoresOnlyHashes() {

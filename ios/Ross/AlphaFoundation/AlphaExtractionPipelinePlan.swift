@@ -87,3 +87,9 @@ enum AlphaExtractionPipelinePlanner {
         }
     }
 }
+
+extension AlphaExtractionPipelinePlan {
+    func pass(for task: AlphaLocalModelTask) -> AlphaExtractionPipelinePass? {
+        passes.first { $0.task == task }
+    }
+}
