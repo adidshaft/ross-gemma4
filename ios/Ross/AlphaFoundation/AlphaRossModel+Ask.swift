@@ -1502,6 +1502,9 @@ extension AlphaRossModel {
         }
 
         instruction += "\n\(alphaAnswerLanguageInstruction(for: question))"
+        if let followUpInstruction = alphaAskFollowUpAnswerInstruction(question) {
+            instruction += "\n\(followUpInstruction)"
+        }
 
         if hasLocalSources {
             instruction += "\nIf support is weak, say the answer needs advocate review instead of inventing facts."
@@ -2404,6 +2407,123 @@ extension AlphaRossModel {
         return .citedPage
     }
 
+    func alphaAskFollowUpAnswerInstruction(_ question: String) -> String? {
+        switch alphaAskFollowUpSourceDirective(question) {
+        case .nextPage:
+            return "This is a page-continuation follow-up. Focus first on the page after the previously cited page from the same file. First bullet: what that next page says with its source label."
+        case .previousPage:
+            return "This is a page-continuation follow-up. Focus first on the page before the previously cited page from the same file. First bullet: what that prior page says with its source label."
+        case .exactQuote:
+            return "This is a quote follow-up. Use the closest exact quoted source passage first, preserve the source wording, and cite the local source label in that first bullet."
+        case .citedPage:
+            return "This is a source-location follow-up. Focus first on the previously cited page or source passage and cite that local source label in the first bullet."
+        case .none:
+            return nil
+        }
+    }
+
+    func alphaAskFollowUpHeadline(
+        language: AlphaMatterAskFallbackLanguage,
+        directive: AlphaAskFollowUpSourceDirective
+    ) -> String {
+        switch language {
+        case .hindi:
+            switch directive {
+            case .nextPage: return "उद्धृत पृष्ठ के बाद वाला पृष्ठ"
+            case .previousPage: return "उद्धृत पृष्ठ के पहले वाला पृष्ठ"
+            case .exactQuote: return "उद्धृत स्रोत से सटीक पंक्ति"
+            case .citedPage: return "उद्धृत स्रोत का संबंधित पृष्ठ"
+            }
+        case .bengali:
+            switch directive {
+            case .nextPage: return "উদ্ধৃত পৃষ্ঠার পরের পৃষ্ঠা"
+            case .previousPage: return "উদ্ধৃত পৃষ্ঠার আগের পৃষ্ঠা"
+            case .exactQuote: return "উদ্ধৃত উৎসের হুবহু লাইন"
+            case .citedPage: return "উদ্ধৃত উৎসের সংশ্লিষ্ট পৃষ্ঠা"
+            }
+        case .tamil:
+            switch directive {
+            case .nextPage: return "மேற்கோள் காட்டிய பக்கத்துக்குப் பிந்தைய பக்கம்"
+            case .previousPage: return "மேற்கோள் காட்டிய பக்கத்துக்கு முந்தைய பக்கம்"
+            case .exactQuote: return "மேற்கோள் காட்டிய ஆதாரத்தின் அசல் வரி"
+            case .citedPage: return "மேற்கோள் காட்டிய ஆதாரத்தின் தொடர்புடைய பக்கம்"
+            }
+        case .telugu:
+            switch directive {
+            case .nextPage: return "ఉద్ధరించిన పేజీ తరువాతి పేజీ"
+            case .previousPage: return "ఉద్ధరించిన పేజీ ముందరి పేజీ"
+            case .exactQuote: return "ఉద్ధరించిన మూలంలోని అసలు వాక్యం"
+            case .citedPage: return "ఉద్ధరించిన మూలంలోని సంబంధించిన పేజీ"
+            }
+        case .english:
+            switch directive {
+            case .nextPage: return "Next page from the cited source"
+            case .previousPage: return "Previous page from the cited source"
+            case .exactQuote: return "Quoted passage from the cited source"
+            case .citedPage: return "Relevant page from the cited source"
+            }
+        }
+    }
+
+    func alphaAskFollowUpSupportLine(
+        language: AlphaMatterAskFallbackLanguage,
+        directive: AlphaAskFollowUpSourceDirective
+    ) -> String {
+        switch language {
+        case .hindi:
+            switch directive {
+            case .nextPage: return "यह उत्तर पिछले उद्धरण के ठीक बाद वाले पृष्ठ पर केंद्रित है."
+            case .previousPage: return "यह उत्तर पिछले उद्धरण के ठीक पहले वाले पृष्ठ पर केंद्रित है."
+            case .exactQuote: return "Ross ने उपलब्ध स्थानीय स्रोत से निकटतम शब्दशः पंक्ति दिखाई है."
+            case .citedPage: return "यह उत्तर पहले उद्धृत स्थानीय पृष्ठ पर केंद्रित है."
+            }
+        case .bengali:
+            switch directive {
+            case .nextPage: return "এই উত্তরটি আগের উদ্ধৃতির ঠিক পরের পৃষ্ঠায় কেন্দ্রীভূত."
+            case .previousPage: return "এই উত্তরটি আগের উদ্ধৃতির ঠিক আগের পৃষ্ঠায় কেন্দ্রীভূত."
+            case .exactQuote: return "Ross উপলব্ধ স্থানীয় উৎস থেকে সবচেয়ে কাছের হুবহু লাইন দেখিয়েছে."
+            case .citedPage: return "এই উত্তরটি আগের উদ্ধৃত স্থানীয় পৃষ্ঠায় কেন্দ্রীভূত."
+            }
+        case .tamil:
+            switch directive {
+            case .nextPage: return "இந்த பதில் முந்தைய மேற்கோளுக்கு அடுத்துள்ள பக்கத்தில் கவனம் செலுத்துகிறது."
+            case .previousPage: return "இந்த பதில் முந்தைய மேற்கோளுக்கு முந்தைய பக்கத்தில் கவனம் செலுத்துகிறது."
+            case .exactQuote: return "Ross கிடைத்த உள்ளூர் ஆதாரத்திலிருந்து அருகிலுள்ள அசல் வரியை காட்டுகிறது."
+            case .citedPage: return "இந்த பதில் முன்பு மேற்கோள் காட்டிய உள்ளூர் பக்கத்தில் கவனம் செலுத்துகிறது."
+            }
+        case .telugu:
+            switch directive {
+            case .nextPage: return "ఈ సమాధానం మునుపటి ఉదాహరణ తరువాతి పేజీపై కేంద్రీకృతమైంది."
+            case .previousPage: return "ఈ సమాధానం మునుపటి ఉదాహరణకు ముందరి పేజీపై కేంద్రీకృతమైంది."
+            case .exactQuote: return "Ross అందుబాటులో ఉన్న స్థానిక మూలం నుంచి అత్యంత సమీప అసలు వాక్యాన్ని చూపించింది."
+            case .citedPage: return "ఈ సమాధానం ముందుగా ఉద్ధరించిన స్థానిక పేజీపై కేంద్రీకృతమైంది."
+            }
+        case .english:
+            switch directive {
+            case .nextPage: return "This answer focuses on the page immediately after the prior citation."
+            case .previousPage: return "This answer focuses on the page immediately before the prior citation."
+            case .exactQuote: return "Ross surfaced the closest verbatim local passage it could find."
+            case .citedPage: return "This answer stays focused on the previously cited local page."
+            }
+        }
+    }
+
+    func alphaAskFollowUpQuotedExcerpt(from text: String, maxChars: Int) -> String {
+        let cleaned = text
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleaned.isEmpty else { return "" }
+
+        let sentenceCandidates = cleaned
+            .components(separatedBy: CharacterSet(charactersIn: ".!?।\n"))
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        if let firstSentence = sentenceCandidates.first, firstSentence.count <= maxChars {
+            return firstSentence
+        }
+        return String(cleaned.prefix(max(maxChars, 0))).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     func alphaAskQuestionTargetsEvidence(questionTerms: [String]) -> Bool {
         let evidenceTerms: Set<String> = [
             "cam-d3",
@@ -2609,6 +2729,13 @@ extension AlphaRossModel {
             .joined(separator: " ")
             .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
         guard !combinedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        if let followUpPayload = alphaFollowUpMatterAskFallback(
+            question: question,
+            sourcePack: localBlocks,
+            baseResult: baseResult
+        ) {
+            return followUpPayload
+        }
 
         let facts = alphaMatterAskFallbackFacts(from: combinedText)
         let language = alphaAnswerLanguage(for: question)
@@ -2711,6 +2838,48 @@ extension AlphaRossModel {
             sections: sections,
             statusNote: rossLocalized("private_assistant")
         )
+    }
+
+    func alphaFollowUpMatterAskFallback(
+        question: String,
+        sourcePack: [AlphaSourceTextBlock],
+        baseResult: AlphaAskResult
+    ) -> AlphaMatterAskRuntimePayload? {
+        guard let directive = alphaAskFollowUpSourceDirective(question),
+              let anchorBlock = sourcePack.first(where: { $0.sourceRef.effectiveSourceCategory == .documentSource }) ?? sourcePack.first else {
+            return nil
+        }
+
+        let language = alphaAnswerLanguage(for: question)
+        let citation = alphaMatterAskFallbackCitation(language: language, sourceRef: anchorBlock.sourceRef)
+        switch directive {
+        case .exactQuote:
+            let quotedText = alphaAskFollowUpQuotedExcerpt(from: anchorBlock.text, maxChars: 220)
+            guard !quotedText.isEmpty else { return nil }
+            return AlphaMatterAskRuntimePayload(
+                headline: alphaAskFollowUpHeadline(language: language, directive: directive),
+                sections: [
+                    "\"\(quotedText)\" \(citation)",
+                    alphaAskFollowUpSupportLine(language: language, directive: directive)
+                ],
+                statusNote: rossLocalized("private_assistant")
+            )
+        case .nextPage, .previousPage, .citedPage:
+            let excerpt = AlphaPromptFocusPlanner.focusedExcerpt(
+                from: anchorBlock.text,
+                instruction: question,
+                maxChars: 220
+            )
+            guard !excerpt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+            return AlphaMatterAskRuntimePayload(
+                headline: alphaAskFollowUpHeadline(language: language, directive: directive),
+                sections: [
+                    "\(excerpt) \(citation)",
+                    alphaAskFollowUpSupportLine(language: language, directive: directive)
+                ],
+                statusNote: rossLocalized("private_assistant")
+            )
+        }
     }
 
     func alphaGenericMatterAskFallback(

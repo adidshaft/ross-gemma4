@@ -661,6 +661,38 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     @MainActor
+    func testSourceGroundedFollowUpQuoteFallbackUsesQuotedPassageAndCitation() {
+        let model = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "Order.pdf",
+            pageNumber: 5,
+            textSnippet: "Written submissions are due before the hearing."
+        )
+        let sourcePack = [
+            AlphaSourceTextBlock(
+                sourceRef: sourceRef,
+                text: "Written submissions are due before the hearing. Counsel should carry the annexure set.",
+                pageNumber: 5,
+                languageHint: "en",
+                ocrConfidence: 0.94
+            )
+        ]
+
+        let payload = model.sourceGroundedMatterAskFallback(
+            question: "Quote that exactly.",
+            sourcePack: sourcePack,
+            baseResult: baseAskResult()
+        )
+
+        let text = ([payload?.headline ?? ""] + (payload?.sections ?? [])).joined(separator: " ")
+        XCTAssertEqual(payload?.headline, "Quoted passage from the cited source")
+        XCTAssertTrue(text.contains("\"Written submissions are due before the hearing\""), text)
+        XCTAssertTrue(text.contains("Source: Order.pdf · p. 5."), text)
+    }
+
+    @MainActor
     func testBengaliSourceGroundedFallbackUsesBanglaText() {
         let model = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
         let sourceRef = AlphaSourceRef(
@@ -5214,6 +5246,28 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(instruction.contains("चुनी हुई files: Order sheet"), instruction)
         XCTAssertFalse(instruction.contains("Question: इस file से next date बताएं"), instruction)
         XCTAssertFalse(instruction.contains("Tagged files: Order sheet"), instruction)
+    }
+
+    @MainActor
+    func testAskRuntimeInstructionAddsFollowUpFormattingGuidance() {
+        let model = AlphaRossModel(store: AlphaRossStore(), publicLawSearchAction: { _ in [] })
+
+        let quoteInstruction = model.askRuntimeInstruction(
+            question: "Quote that exactly.",
+            scopeCaseID: nil,
+            selectedDocuments: [],
+            hasLocalSources: true
+        )
+        let nextPageInstruction = model.askRuntimeInstruction(
+            question: "What does the next page say?",
+            scopeCaseID: nil,
+            selectedDocuments: [],
+            hasLocalSources: true
+        )
+
+        XCTAssertTrue(quoteInstruction.contains("This is a quote follow-up."), quoteInstruction)
+        XCTAssertTrue(nextPageInstruction.contains("This is a page-continuation follow-up."), nextPageInstruction)
+        XCTAssertTrue(nextPageInstruction.contains("page after the previously cited page"), nextPageInstruction)
     }
 
     func testPipelinePlanChangesWithInstalledPack() {
