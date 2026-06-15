@@ -214,6 +214,40 @@ struct AlphaLocalPromptPack: Hashable, Sendable {
     var truncated: Bool
 }
 
+enum AlphaFoundationRuntimeProfile {
+    static func contextWindowTokens(
+        for tier: AlphaCapabilityTier,
+        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory
+    ) -> Int {
+        switch tier {
+        case .flash:
+            return 4_096
+        case .quickStart:
+            return physicalMemory >= 8_000_000_000 ? 8_192 : 6_144
+        case .caseAssociate:
+            return physicalMemory >= 12_000_000_000 ? 12_288 : 10_240
+        case .seniorDraftingSupport:
+            return physicalMemory >= 16_000_000_000 ? 16_384 : 12_288
+        }
+    }
+
+    static func maxInputChars(
+        for tier: AlphaCapabilityTier,
+        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory
+    ) -> Int {
+        switch tier {
+        case .flash:
+            return 14_000
+        case .quickStart:
+            return physicalMemory >= 8_000_000_000 ? 32_000 : 24_000
+        case .caseAssociate:
+            return physicalMemory >= 12_000_000_000 ? 44_000 : 36_000
+        case .seniorDraftingSupport:
+            return physicalMemory >= 16_000_000_000 ? 56_000 : 44_000
+        }
+    }
+}
+
 struct AlphaLocalPromptBudgetPlan: Hashable, Sendable {
     var maxInputChars: Int
     var sourceBlockLimit: Int?
@@ -1662,14 +1696,16 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
     }
 
     func contextWindowEstimate() -> Int? {
+        let heuristic = AlphaFoundationRuntimeProfile.contextWindowTokens(for: capabilityTier)
         if let model = try? resolvedModel() {
-            return model.contextSize
+            return max(model.contextSize, heuristic)
         }
-        return 4_096
+        return heuristic
     }
 
     func maxInputChars() -> Int? {
-        contextWindowEstimate().map { max($0 * 4 - 800, 4_000) }
+        let heuristic = AlphaFoundationRuntimeProfile.maxInputChars(for: capabilityTier)
+        return contextWindowEstimate().map { max($0 * 4 - 800, heuristic) }
     }
 
     func run(_ taskInput: AlphaLocalModelInput) async -> AlphaLocalModelOutput {

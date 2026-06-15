@@ -8251,6 +8251,37 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testFoundationRuntimeProfileRaisesHighContextBudgets() {
+        XCTAssertEqual(
+            AlphaFoundationRuntimeProfile.contextWindowTokens(
+                for: .quickStart,
+                physicalMemory: 8_000_000_000
+            ),
+            8_192
+        )
+        XCTAssertEqual(
+            AlphaFoundationRuntimeProfile.contextWindowTokens(
+                for: .caseAssociate,
+                physicalMemory: 12_000_000_000
+            ),
+            12_288
+        )
+        XCTAssertEqual(
+            AlphaFoundationRuntimeProfile.maxInputChars(
+                for: .caseAssociate,
+                physicalMemory: 12_000_000_000
+            ),
+            44_000
+        )
+        XCTAssertEqual(
+            AlphaFoundationRuntimeProfile.maxInputChars(
+                for: .seniorDraftingSupport,
+                physicalMemory: 16_000_000_000
+            ),
+            56_000
+        )
+    }
+
     func testLlamaRuntimeProfileRaisesHighQualityInputBudgets() {
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.maxInputChars(
@@ -8357,6 +8388,25 @@ final class AlphaExtractionTests: XCTestCase {
         }
         XCTAssertNotNil(health?.userFacingStatus)
     }
+
+    #if canImport(FoundationModels)
+    @available(iOS 26.0, macOS 26.0, *)
+    func testFoundationRuntimeProviderUsesHeuristicBudgetFloor() {
+        let previousProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
+        defer { AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousProbe }
+        AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in false }
+
+        let provider = AlphaFoundationModelsLocalProvider(
+            capabilityTier: .caseAssociate,
+            modelPathLabel: "system-model",
+            modelPath: nil,
+            checksumVerified: true
+        )
+
+        XCTAssertEqual(provider.contextWindowEstimate(), 12_288)
+        XCTAssertEqual(provider.maxInputChars(), 48_352)
+    }
+    #endif
 
     func testRuntimeHealthUsesInstalledPackPathLabelForAdapterArtifacts() {
         let pack = AlphaInstalledModelPack(
