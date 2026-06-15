@@ -1192,6 +1192,70 @@ struct AlphaUnavailableRealLocalModelProvider: AlphaRealLocalModelProvider {
     func cancel(invocationID: UUID) -> Bool { false }
 }
 
+#if canImport(FoundationModels)
+func alphaFoundationModelOutput(
+    for taskInput: AlphaLocalModelInput,
+    promptPack: AlphaLocalPromptPack,
+    rawResponse: String
+) -> AlphaLocalModelOutput {
+    let trimmedResponse = rawResponse.trimmingCharacters(in: .whitespacesAndNewlines)
+    let usesPlainMatterAnswerPrompt = taskInput.task == .matterQuestionAnswer
+    var warnings = promptPack.truncated ? [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts] : []
+
+    if usesPlainMatterAnswerPrompt {
+        let languagePreservingFallback = AlphaLlamaCppProvider.sourceLanguageFallbackIfNeeded(
+            for: taskInput,
+            sourcePack: promptPack.includedSourceBlocks,
+            generatedText: trimmedResponse
+        )
+        if languagePreservingFallback != nil {
+            warnings.append(AlphaLocalModelWarningCopy.sourceLanguageFallback)
+        }
+        let finalResponse = languagePreservingFallback ?? trimmedResponse
+        return AlphaLocalModelOutput(
+            rawText: finalResponse,
+            parsedJson: nil,
+            schemaValid: !finalResponse.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+            warnings: warnings,
+            sourceRefs: promptPack.includedSourceRefs
+        )
+    }
+
+    let parsedJson = alphaFoundationExtractJSONCandidate(from: trimmedResponse)
+    return AlphaLocalModelOutput(
+        rawText: trimmedResponse,
+        parsedJson: parsedJson,
+        schemaValid: parsedJson != nil,
+        warnings: warnings,
+        sourceRefs: promptPack.includedSourceRefs,
+        errorCategory: parsedJson == nil ? "invalid_model_output" : nil
+    )
+}
+
+func alphaFoundationExtractJSONCandidate(from value: String) -> String? {
+    let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    if (trimmed.hasPrefix("{") && trimmed.hasSuffix("}")) || (trimmed.hasPrefix("[") && trimmed.hasSuffix("]")) {
+        return trimmed
+    }
+    if let fencedRange = trimmed.range(of: "```json") ?? trimmed.range(of: "```") {
+        let suffix = trimmed[fencedRange.upperBound...]
+        if let closing = suffix.range(of: "```") {
+            let candidate = suffix[..<closing.lowerBound].trimmingCharacters(in: .whitespacesAndNewlines)
+            if candidate.hasPrefix("{") || candidate.hasPrefix("[") {
+                return candidate
+            }
+        }
+    }
+    if let arrayStart = trimmed.firstIndex(of: "["), let arrayEnd = trimmed.lastIndex(of: "]"), arrayStart < arrayEnd {
+        return String(trimmed[arrayStart...arrayEnd])
+    }
+    if let objectStart = trimmed.firstIndex(of: "{"), let objectEnd = trimmed.lastIndex(of: "}"), objectStart < objectEnd {
+        return String(trimmed[objectStart...objectEnd])
+    }
+    return nil
+}
+#endif
+
 
 #if canImport(FoundationModels)
 @available(iOS 26.0, macOS 26.0, *)
@@ -1251,7 +1315,11 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
     }
 
     func run(_ taskInput: AlphaLocalModelInput) async -> AlphaLocalModelOutput {
-        let promptPack = AlphaPromptPackBuilder(maxInputChars: maxInputChars() ?? 14_000).build(input: taskInput)
+        let promptPack = AlphaPromptPackBuilder(
+            maxInputChars: taskInput.promptBudgetOverrideChars ?? maxInputChars() ?? 14_000,
+            sourceBlockLimit: taskInput.sourceBlockLimitOverride,
+            sourceExcerptChars: taskInput.sourceExcerptCharsOverride
+        ).build(input: taskInput)
         guard let model = try? resolvedModel(), model.isAvailable else {
             return AlphaLocalModelOutput(
                 rawText: "",
@@ -1272,14 +1340,10 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
                 to: promptPack.promptText,
                 options: GenerationOptions(maximumResponseTokens: min(taskInput.maxOutputTokens, 2_048))
             )
-            let raw = response.content
-            return AlphaLocalModelOutput(
-                rawText: raw,
-                parsedJson: extractJSONCandidate(from: raw),
-                schemaValid: extractJSONCandidate(from: raw) != nil,
-                warnings: promptPack.truncated ? [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts] : [],
-                sourceRefs: promptPack.includedSourceRefs,
-                errorCategory: extractJSONCandidate(from: raw) == nil ? "invalid_model_output" : nil
+            return alphaFoundationModelOutput(
+                for: taskInput,
+                promptPack: promptPack,
+                rawResponse: response.content
             )
         } catch {
             return AlphaLocalModelOutput(
@@ -1294,7 +1358,11 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
     }
 
     func estimateCostOrResourceUse(_ input: AlphaLocalModelInput) -> AlphaLocalModelResourceEstimate {
-        let promptPack = AlphaPromptPackBuilder(maxInputChars: maxInputChars() ?? 14_000).build(input: input)
+        let promptPack = AlphaPromptPackBuilder(
+            maxInputChars: input.promptBudgetOverrideChars ?? maxInputChars() ?? 14_000,
+            sourceBlockLimit: input.sourceBlockLimitOverride,
+            sourceExcerptChars: input.sourceExcerptCharsOverride
+        ).build(input: input)
         return AlphaLocalModelResourceEstimate(
             inputChars: promptPack.inputChars,
             estimatedTokens: promptPack.estimatedTokens,
@@ -1344,29 +1412,6 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
         } catch {
             return (false, alphaRuntimeHealthStatus(.foundationCouldNotOpen), "runtime_dependency_unavailable")
         }
-    }
-
-    private func extractJSONCandidate(from value: String) -> String? {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        if (trimmed.hasPrefix("{") && trimmed.hasSuffix("}")) || (trimmed.hasPrefix("[") && trimmed.hasSuffix("]")) {
-            return trimmed
-        }
-        if let fencedRange = trimmed.range(of: "```json") ?? trimmed.range(of: "```") {
-            let suffix = trimmed[fencedRange.upperBound...]
-            if let closing = suffix.range(of: "```") {
-                let candidate = suffix[..<closing.lowerBound].trimmingCharacters(in: .whitespacesAndNewlines)
-                if candidate.hasPrefix("{") || candidate.hasPrefix("[") {
-                    return candidate
-                }
-            }
-        }
-        if let arrayStart = trimmed.firstIndex(of: "["), let arrayEnd = trimmed.lastIndex(of: "]"), arrayStart < arrayEnd {
-            return String(trimmed[arrayStart...arrayEnd])
-        }
-        if let objectStart = trimmed.firstIndex(of: "{"), let objectEnd = trimmed.lastIndex(of: "}"), objectStart < objectEnd {
-            return String(trimmed[objectStart...objectEnd])
-        }
-        return nil
     }
 }
 #endif

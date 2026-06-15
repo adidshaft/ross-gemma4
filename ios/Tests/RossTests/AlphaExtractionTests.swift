@@ -6179,6 +6179,90 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.explicitOptInEnabled, true)
     }
 
+    #if canImport(FoundationModels)
+    func testFoundationModelOutputAllowsPlainMatterAnswersWithoutJSON() {
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "Order",
+            pageNumber: 1,
+            textSnippet: "Matter listed on 14 May 2026."
+        )
+        let input = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "What happened in the selected order?",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: sourceRef,
+                    text: "The matter is listed on 14 May 2026.",
+                    pageNumber: 1,
+                    languageHint: "en",
+                    ocrConfidence: 0.99
+                )
+            ],
+            expectedSchema: "plain_text",
+            maxOutputTokens: 128,
+            extractionMode: .quickStart
+        )
+        let promptPack = AlphaPromptPackBuilder(maxInputChars: 4_000).build(input: input)
+
+        let output = alphaFoundationModelOutput(
+            for: input,
+            promptPack: promptPack,
+            rawResponse: "Selected order\n- The matter is listed on 14 May 2026. [Order p.1]"
+        )
+
+        XCTAssertTrue(output.schemaValid)
+        XCTAssertNil(output.parsedJson)
+        XCTAssertNil(output.errorCategory)
+        XCTAssertTrue(output.rawText.contains("14 May 2026"))
+    }
+
+    func testFoundationModelOutputStillRequiresJSONForStructuredTasks() {
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "Order",
+            pageNumber: 1,
+            textSnippet: "Adjourned."
+        )
+        let input = AlphaLocalModelInput(
+            task: .orderSummary,
+            instruction: "Return the order summary as JSON.",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: sourceRef,
+                    text: "The matter was adjourned.",
+                    pageNumber: 1,
+                    languageHint: "en",
+                    ocrConfidence: 0.99
+                )
+            ],
+            expectedSchema: #"{"headline":"string","sections":["string"]}"#,
+            maxOutputTokens: 128,
+            extractionMode: .caseAssociate
+        )
+        let promptPack = AlphaPromptPackBuilder(maxInputChars: 4_000).build(input: input)
+
+        let invalid = alphaFoundationModelOutput(
+            for: input,
+            promptPack: promptPack,
+            rawResponse: "The matter was adjourned."
+        )
+        let valid = alphaFoundationModelOutput(
+            for: input,
+            promptPack: promptPack,
+            rawResponse: #"{"headline":"Adjourned","sections":["The matter was adjourned."]}"#
+        )
+
+        XCTAssertFalse(invalid.schemaValid)
+        XCTAssertEqual(invalid.errorCategory, "invalid_model_output")
+        XCTAssertNotNil(valid.parsedJson)
+        XCTAssertTrue(valid.schemaValid)
+        XCTAssertNil(valid.errorCategory)
+    }
+    #endif
+
     @MainActor
     func testPublicLawPreviewUsesVerifiedFieldsOnly() {
         let model = AlphaRossModel()
