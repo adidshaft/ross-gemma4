@@ -2457,6 +2457,7 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
     var modelJobs: [AlphaModelDownloadJob]
     var installedPacks: [AlphaInstalledModelPack]
     var lastModelCatalogRefresh: Date?
+    var cachedAssistantCatalogs: [AlphaAssistantCatalogDescriptor]? = nil
     var cachedAssistantDownloads: [AlphaAssistantDownloadDescriptor]? = nil
     var publicLawCache: [AlphaPublicLawCacheItem]
     var publicLawDraft: String?
@@ -2489,6 +2490,7 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
             modelJobs: [],
             installedPacks: [],
             lastModelCatalogRefresh: nil,
+            cachedAssistantCatalogs: [],
             cachedAssistantDownloads: [],
             publicLawCache: [],
             publicLawDraft: "Find Indian public-law guidance on delay condonation and filing compliance.",
@@ -2883,6 +2885,7 @@ struct AlphaPersistedState: Codable, Hashable, Sendable {
             modelJobs: [],
             installedPacks: [],
             lastModelCatalogRefresh: nil,
+            cachedAssistantCatalogs: [],
             cachedAssistantDownloads: [],
             publicLawCache: [],
             publicLawDraft: "Find Indian public-law guidance on delay condonation and filing compliance after an interim order.",

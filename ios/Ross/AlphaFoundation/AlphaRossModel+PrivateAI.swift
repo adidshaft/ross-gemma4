@@ -110,6 +110,22 @@ func alphaAssistantDownloadDescriptorSupportsCurrentInstaller(_ descriptor: Alph
     }
 }
 
+func alphaAssistantCatalogDescriptorSupportsCurrentInstaller(_ descriptor: AlphaAssistantCatalogDescriptor) -> Bool {
+    guard !descriptor.developmentOnly,
+          descriptor.sizeBytes > 0,
+          descriptor.checksumSha256.range(of: #"^[a-fA-F0-9]{64}$"#, options: .regularExpression) != nil else {
+        return false
+    }
+    switch descriptor.runtimeMode {
+    case .llamaCppGguf:
+        return descriptor.artifactKind.localizedCaseInsensitiveContains("local_model_artifact")
+    case .mlxSwiftLm:
+        return descriptor.artifactKind == "mlx_directory"
+    case .deterministicDev, .mediapipeLlm, .appleFoundationModels, .unavailable:
+        return false
+    }
+}
+
 func alphaShouldReuseInstalledAssistantPack(
     _ pack: AlphaInstalledModelPack?,
     preferredRuntimeMode: AlphaPackRuntimeMode,
@@ -130,10 +146,15 @@ func alphaClearedAssistantUpdateCandidates(
 func alphaPreferredAssistantDownloadFallback(
     for tier: AlphaCapabilityTier,
     preferredRuntimeMode: AlphaPackRuntimeMode,
+    targetPackId: String? = nil,
     cachedDownloads: [AlphaAssistantDownloadDescriptor]?
 ) -> AlphaAssistantDownloadDescriptor {
     let cachedCandidates = (cachedDownloads ?? []).filter {
         $0.tier == tier && alphaAssistantDownloadDescriptorSupportsCurrentInstaller($0)
+    }
+    if let targetPackId,
+       let targetedCached = cachedCandidates.first(where: { $0.packId == targetPackId }) {
+        return alphaReusableAssistantDownloadDescriptor(targetedCached)
     }
     if let preferredCached = cachedCandidates.first(where: { $0.runtimeMode == preferredRuntimeMode }) {
         return alphaReusableAssistantDownloadDescriptor(preferredCached)
@@ -173,6 +194,30 @@ func alphaDefaultAssistantDownloadDescriptor(for tier: AlphaCapabilityTier) -> A
         verified: artifact.verified,
         releaseReady: artifact.releaseReady
     )
+}
+
+func alphaPreferredAssistantCatalogFallback(
+    for tier: AlphaCapabilityTier,
+    preferredRuntimeMode: AlphaPackRuntimeMode,
+    targetPackId: String? = nil,
+    cachedCatalogs: [AlphaAssistantCatalogDescriptor]?
+) -> AlphaAssistantCatalogDescriptor {
+    let effectiveTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
+    let cachedCandidates = (cachedCatalogs ?? []).filter {
+        AlphaCapabilityTier.normalizedAssistantSelection($0.tier) == effectiveTier &&
+            alphaAssistantCatalogDescriptorSupportsCurrentInstaller($0)
+    }
+    if let targetPackId,
+       let targetedCached = cachedCandidates.first(where: { $0.packId == targetPackId }) {
+        return targetedCached
+    }
+    if let preferredCached = cachedCandidates.first(where: { $0.runtimeMode == preferredRuntimeMode }) {
+        return preferredCached
+    }
+    if let fallbackCached = cachedCandidates.first {
+        return fallbackCached
+    }
+    return alphaDefaultAssistantCatalogDescriptor(for: tier)
 }
 
 func alphaAssistantCatalogDescriptor(
@@ -533,14 +578,23 @@ extension AlphaRossModel {
         let dismissedCandidates = persisted.modelUpdateCandidates ?? []
         let tiers = Array(Set(installedPacks.map(\.tier)))
         let fallbackCandidates = installedPacks.compactMap { pack in
+            let preferredRuntime = alphaPreferredAssistantRuntimeMode(
+                for: pack.tier,
+                existingRuntimeMode: pack.runtimeMode
+            )
+            let fallbackDescriptor = alphaPreferredAssistantCatalogFallback(
+                for: pack.tier,
+                preferredRuntimeMode: preferredRuntime,
+                cachedCatalogs: persisted.cachedAssistantCatalogs
+            )
             let dismissed = dismissedCandidates.first {
                 $0.tier == pack.tier &&
-                    $0.availablePackId == alphaDefaultAssistantCatalogDescriptor(for: pack.tier).packId &&
+                    $0.availablePackId == fallbackDescriptor.packId &&
                     $0.dismissedAt != nil
             }
             return alphaAssistantUpdateCandidate(
                 installedPack: pack,
-                availableDescriptor: alphaDefaultAssistantCatalogDescriptor(for: pack.tier),
+                availableDescriptor: fallbackDescriptor,
                 existingDismissed: dismissed
             )
         }
@@ -564,6 +618,7 @@ extension AlphaRossModel {
 
         Task {
             var descriptorsByTier: [AlphaCapabilityTier: AlphaAssistantCatalogDescriptor] = [:]
+            var refreshedCatalogsByTier: [AlphaCapabilityTier: AlphaAssistantCatalogDescriptor] = [:]
             for tier in tiers {
                 let preferredRuntime = alphaPreferredAssistantRuntimeMode(
                     for: tier,
@@ -571,14 +626,20 @@ extension AlphaRossModel {
                 )
                 do {
                     let manifest = try await backend.fetchCatalog(for: tier)
-                    descriptorsByTier[tier] = alphaAssistantCatalogDescriptor(
+                    let descriptor = alphaAssistantCatalogDescriptor(
                         for: tier,
                         preferredRuntimeMode: preferredRuntime,
                         compatibleOnly: true,
                         manifest: manifest
                     )
+                    descriptorsByTier[tier] = descriptor
+                    refreshedCatalogsByTier[tier] = descriptor
                 } catch {
-                    descriptorsByTier[tier] = alphaDefaultAssistantCatalogDescriptor(for: tier)
+                    descriptorsByTier[tier] = alphaPreferredAssistantCatalogFallback(
+                        for: tier,
+                        preferredRuntimeMode: preferredRuntime,
+                        cachedCatalogs: self.persisted.cachedAssistantCatalogs
+                    )
                 }
             }
 
@@ -598,6 +659,15 @@ extension AlphaRossModel {
 
             await MainActor.run {
                 let shouldRecordLedger = self.persisted.modelUpdateCandidates?.isEmpty != false && !candidates.isEmpty
+                var cachedCatalogs = self.persisted.cachedAssistantCatalogs ?? []
+                for (tier, descriptor) in refreshedCatalogsByTier {
+                    cachedCatalogs.removeAll {
+                        AlphaCapabilityTier.normalizedAssistantSelection($0.tier) ==
+                            AlphaCapabilityTier.normalizedAssistantSelection(tier)
+                    }
+                    cachedCatalogs.append(descriptor)
+                }
+                self.persisted.cachedAssistantCatalogs = cachedCatalogs
                 self.persisted.modelUpdateCandidates = candidates
                 self.persisted.lastModelCatalogRefresh = .now
                 if shouldRecordLedger {
@@ -1214,6 +1284,7 @@ extension AlphaRossModel {
         let fallbackDownload = alphaPreferredAssistantDownloadFallback(
             for: tier,
             preferredRuntimeMode: preferredRuntime,
+            targetPackId: targetPackId,
             cachedDownloads: persisted.cachedAssistantDownloads
         )
         let policy: AlphaDownloadPolicy = mobileAllowed ? .mobileAllowed : .wifiOnly

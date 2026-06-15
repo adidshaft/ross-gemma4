@@ -5991,6 +5991,103 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(fallback.downloadURLString, "https://ross.example/artifacts/gemma-4-12b-mlx.zip")
     }
 
+    func testPreferredAssistantDownloadFallbackHonorsTargetPackId() {
+        let cachedPreferred = AlphaAssistantDownloadDescriptor(
+            sessionId: "sess-preferred-mlx",
+            packId: "gemma-4-12b-mlx",
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-mlx.zip",
+            sizeBytes: 6_200_000_000,
+            checksumSha256: String(repeating: "d", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            downloadURLString: "https://ross.example/artifacts/gemma-4-12b-mlx.zip",
+            verified: true,
+            releaseReady: true
+        )
+        let cachedTarget = AlphaAssistantDownloadDescriptor(
+            sessionId: "sess-target-gguf",
+            packId: "gemma-4-12b-gguf-new",
+            tier: .caseAssociate,
+            fileName: "gemma-4-12B-it-Q4_K_M.gguf",
+            sizeBytes: 7_400_000_000,
+            checksumSha256: String(repeating: "e", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            downloadURLString: "https://ross.example/artifacts/gemma-4-12b-new.gguf",
+            verified: true,
+            releaseReady: true
+        )
+
+        let fallback = alphaPreferredAssistantDownloadFallback(
+            for: .caseAssociate,
+            preferredRuntimeMode: .mlxSwiftLm,
+            targetPackId: cachedTarget.packId,
+            cachedDownloads: [cachedPreferred, cachedTarget]
+        )
+
+        XCTAssertNil(fallback.sessionId)
+        XCTAssertEqual(fallback.packId, cachedTarget.packId)
+        XCTAssertEqual(fallback.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(fallback.downloadURLString, cachedTarget.downloadURLString)
+    }
+
+    func testPreferredAssistantCatalogFallbackUsesCachedCompatibleDescriptor() {
+        let cached = AlphaAssistantCatalogDescriptor(
+            tier: .caseAssociate,
+            packId: "gemma-4-12b-mlx",
+            sizeBytes: 6_200_000_000,
+            checksumSha256: String(repeating: "f", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false
+        )
+
+        let fallback = alphaPreferredAssistantCatalogFallback(
+            for: .caseAssociate,
+            preferredRuntimeMode: .mlxSwiftLm,
+            cachedCatalogs: [cached]
+        )
+
+        XCTAssertEqual(fallback.packId, cached.packId)
+        XCTAssertEqual(fallback.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(fallback.artifactKind, "mlx_directory")
+    }
+
+    func testPreferredAssistantCatalogFallbackHonorsTargetPackId() {
+        let cachedPreferred = AlphaAssistantCatalogDescriptor(
+            tier: .caseAssociate,
+            packId: "gemma-4-12b-mlx",
+            sizeBytes: 6_200_000_000,
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false
+        )
+        let cachedTarget = AlphaAssistantCatalogDescriptor(
+            tier: .caseAssociate,
+            packId: "gemma-4-12b-gguf-new",
+            sizeBytes: 7_400_000_000,
+            checksumSha256: String(repeating: "b", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false
+        )
+
+        let fallback = alphaPreferredAssistantCatalogFallback(
+            for: .caseAssociate,
+            preferredRuntimeMode: .mlxSwiftLm,
+            targetPackId: cachedTarget.packId,
+            cachedCatalogs: [cachedPreferred, cachedTarget]
+        )
+
+        XCTAssertEqual(fallback.packId, cachedTarget.packId)
+        XCTAssertEqual(fallback.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(fallback.artifactKind, "local_model_artifact")
+    }
+
     func testPreferredAssistantDownloadFallbackIgnoresUnsupportedCachedMLXDescriptor() {
         let cached = AlphaAssistantDownloadDescriptor(
             sessionId: "sess-unsupported-mlx",
