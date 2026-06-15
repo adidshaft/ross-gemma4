@@ -5391,6 +5391,84 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(normalized.installedPacks.filter { $0.tier == .seniorDraftingSupport }.count, 1)
     }
 
+    @MainActor
+    func testNormalizeLoadedStateKeepsOneUpdateCandidateForRetainedPackPerTier() {
+        let fileManager = FileManager.default
+        let packPaths = [
+            "model-packs/case_associate/case-gguf-update.dev",
+            "model-packs/case_associate/case-mlx-update.dev"
+        ]
+        for relativePath in packPaths {
+            let url = alphaAbsoluteURL(for: relativePath)
+            try? fileManager.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try? Data(relativePath.utf8).write(to: url)
+        }
+        defer {
+            for relativePath in packPaths {
+                try? fileManager.removeItem(at: alphaAbsoluteURL(for: relativePath))
+            }
+        }
+
+        let retainedPack = installedPack(
+            .caseAssociate,
+            runtimeMode: .mlxSwiftLm,
+            packId: "case-mlx-retained",
+            installPath: packPaths[1],
+            artifactKind: "mlx_directory",
+            developmentOnly: true
+        )
+        let stalePack = installedPack(
+            .caseAssociate,
+            runtimeMode: .llamaCppGguf,
+            packId: "case-gguf-stale",
+            installPath: packPaths[0],
+            artifactKind: "local_model_artifact",
+            developmentOnly: true
+        )
+
+        var state = AlphaPersistedState.empty()
+        state.settings.activeTier = .caseAssociate
+        state.installedPacks = [retainedPack, stalePack]
+        state.modelUpdateCandidates = [
+            AlphaModelUpdateCandidate(
+                tier: .caseAssociate,
+                installedPackId: stalePack.packId,
+                availablePackId: "stale-update",
+                availableSizeBytes: 7_000_000_000,
+                checkedAt: Date(timeIntervalSinceReferenceDate: 10)
+            ),
+            AlphaModelUpdateCandidate(
+                tier: .caseAssociate,
+                installedPackId: retainedPack.packId,
+                availablePackId: "retained-older-update",
+                availableSizeBytes: 7_100_000_000,
+                checkedAt: Date(timeIntervalSinceReferenceDate: 20),
+                dismissedAt: Date(timeIntervalSinceReferenceDate: 25)
+            ),
+            AlphaModelUpdateCandidate(
+                tier: .caseAssociate,
+                installedPackId: retainedPack.packId,
+                availablePackId: "retained-new-update",
+                availableSizeBytes: 7_200_000_000,
+                checkedAt: Date(timeIntervalSinceReferenceDate: 30)
+            )
+        ]
+
+        let model = AlphaRossModel(previewState: state)
+        let normalized = model.normalizeLoadedState(state)
+        let candidates = normalized.modelUpdateCandidates ?? []
+        let retainedInstalledPack = normalized.installedPacks.first { $0.tier == .caseAssociate }
+
+        XCTAssertEqual(candidates.count, 1)
+        XCTAssertEqual(candidates.first?.tier, .caseAssociate)
+        XCTAssertEqual(candidates.first?.installedPackId, retainedInstalledPack?.packId)
+        if retainedInstalledPack?.packId == retainedPack.packId {
+            XCTAssertEqual(candidates.first?.availablePackId, "retained-new-update")
+        } else {
+            XCTAssertEqual(candidates.first?.availablePackId, "stale-update")
+        }
+    }
+
     func testAssistantRuntimeChoiceLabelExplainsSystemAssistantPreference() {
         let label = alphaAssistantRuntimeChoiceLabel(
             selectedRuntimeMode: .appleFoundationModels,

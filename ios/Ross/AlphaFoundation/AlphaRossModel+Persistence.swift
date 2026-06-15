@@ -618,6 +618,43 @@ private func alphaConvergeInstalledAssistantCatalog(_ state: inout AlphaPersiste
     }
 }
 
+private func alphaConvergeAssistantUpdateCandidates(_ state: inout AlphaPersistedState) {
+    guard let candidates = state.modelUpdateCandidates, !candidates.isEmpty else {
+        state.modelUpdateCandidates = []
+        return
+    }
+
+    let retainedPackIDsByTier = Dictionary(
+        uniqueKeysWithValues: state.installedPacks.map { ($0.tier, $0.packId) }
+    )
+    var converged: [AlphaModelUpdateCandidate] = []
+
+    for tier in AlphaCapabilityTier.installableAssistantTiers {
+        let tierCandidates = candidates
+            .filter { candidate in
+                candidate.tier == tier &&
+                    retainedPackIDsByTier[tier] == candidate.installedPackId
+            }
+            .sorted { lhs, rhs in
+                let lhsDismissed = lhs.dismissedAt != nil
+                let rhsDismissed = rhs.dismissedAt != nil
+                if lhsDismissed != rhsDismissed {
+                    return !lhsDismissed && rhsDismissed
+                }
+                if lhs.checkedAt != rhs.checkedAt {
+                    return lhs.checkedAt > rhs.checkedAt
+                }
+                return lhs.id.uuidString < rhs.id.uuidString
+            }
+
+        if let candidate = tierCandidates.first {
+            converged.append(candidate)
+        }
+    }
+
+    state.modelUpdateCandidates = converged
+}
+
 private enum AlphaRecentRuntimeSelectionSignal {
     case keepFast(AlphaPackRuntimeMode)
     case avoidSlow(AlphaPackRuntimeMode)
@@ -1121,6 +1158,7 @@ private func alphaBuildPrivateAISnapshot(
         alphaQuarantineIncompleteInstalledAssistantJob(&recoveredState)
         alphaQuarantineUnusableActiveDownloadedAssistant(&recoveredState)
         alphaConvergeInstalledAssistantCatalog(&recoveredState)
+        alphaConvergeAssistantUpdateCandidates(&recoveredState)
         alphaApplyPreferredInstalledRuntimeForSelectedTier(&recoveredState)
         let activePack = alphaValidatedActivePack(from: recoveredState)
         recoveredState.installedPacks = alphaNormalizedInstalledPacks(from: recoveredState, activePack: activePack)
@@ -2137,6 +2175,7 @@ extension AlphaRossModel {
         purgeDevelopmentModelArtifactsFromDisk()
         _ = recoverDownloadedAssistantArtifacts(from: &normalized)
         alphaConvergeInstalledAssistantCatalog(&normalized)
+        alphaConvergeAssistantUpdateCandidates(&normalized)
         alphaApplyPreferredInstalledRuntimeForSelectedTier(&normalized)
         _ = alphaPruneUnreferencedAssistantArtifactsFromDisk(installedPacks: normalized.installedPacks)
         if alphaHadUnfinishedPrivateAIStartupValidation() {
