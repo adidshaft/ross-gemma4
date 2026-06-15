@@ -578,6 +578,16 @@ func alphaAssistantStatusSnapshot(
         }
     }
 
+    let suggestedTier = model.persisted.settings.activeTier ?? model.selectedTier
+    if model.activePack == nil,
+       model.systemAssistantHealth(for: suggestedTier)?.available == true {
+        return AlphaAssistantStatusSnapshot(
+            title: rossLocalized("assistant_status_built_in_title", languageCode: languageCode),
+            detail: rossLocalized("assistant_status_built_in_detail", languageCode: languageCode),
+            tint: Color.rossAccent
+        )
+    }
+
     if model.activePack != nil {
         return AlphaAssistantStatusSnapshot(
             title: rossLocalized("assistant_status_needs_attention_title", languageCode: languageCode),

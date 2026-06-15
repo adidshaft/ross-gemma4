@@ -651,6 +651,10 @@ struct AlphaPrivateAIOfferCard: View {
         model.installedPack(for: offer.tier)
     }
 
+    private var systemAssistantAvailable: Bool {
+        model.systemAssistantHealth(for: offer.tier)?.available == true
+    }
+
     private var isActive: Bool {
         guard let activePack = model.activePack else { return false }
         return activePack.tier == offer.tier &&
@@ -667,6 +671,11 @@ struct AlphaPrivateAIOfferCard: View {
 
     private var isInstalledButInactive: Bool {
         installedPack != nil && !isActive && !activeButRuntimeUnavailable
+    }
+
+    private var prefersBuiltInActivation: Bool {
+        guard systemAssistantAvailable, !isActive, !activeButRuntimeUnavailable else { return false }
+        return installedPack?.runtimeMode != .appleFoundationModels
     }
 
     private var isSettingUp: Bool {
@@ -702,6 +711,9 @@ struct AlphaPrivateAIOfferCard: View {
         if activeButRuntimeUnavailable {
             return (alphaAssistantOfferBadge(.needsAttention), .orange)
         }
+        if prefersBuiltInActivation {
+            return (alphaAssistantOfferBadge(.builtIn), Color.rossAccent)
+        }
         if isInstalledButInactive {
             return (alphaAssistantStateLabel(.installed), Color.rossSuccess)
         }
@@ -724,6 +736,9 @@ struct AlphaPrivateAIOfferCard: View {
         if activeButRuntimeUnavailable {
             return alphaAssistantOfferAction(.repair)
         }
+        if prefersBuiltInActivation {
+            return alphaAssistantOfferAction(.useOnThisIPhone)
+        }
         if isInstalledButInactive {
             return alphaAssistantOfferAction(.use)
         }
@@ -737,7 +752,7 @@ struct AlphaPrivateAIOfferCard: View {
     }
 
     private var actionDisabled: Bool {
-        isActive || isSettingUp
+        isActive || (isSettingUp && !prefersBuiltInActivation)
     }
 
     var body: some View {
@@ -762,15 +777,21 @@ struct AlphaPrivateAIOfferCard: View {
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
 
-                AlphaAssistantSetupMetaLabels(
-                    sizeLabel: offer.tier.downloadSizeLabel,
-                    freeSpaceLabel: model.freeDiskSpaceLabel,
-                    font: .caption2.weight(.medium)
-                )
-                .padding(.top, 2)
+                if prefersBuiltInActivation {
+                    AlphaAssistantBuiltInMetaLabels(font: .caption2.weight(.medium))
+                        .padding(.top, 2)
+                } else {
+                    AlphaAssistantSetupMetaLabels(
+                        sizeLabel: offer.tier.downloadSizeLabel,
+                        freeSpaceLabel: model.freeDiskSpaceLabel,
+                        font: .caption2.weight(.medium)
+                    )
+                    .padding(.top, 2)
+                }
             }
 
-            if let latestJob,
+            if !prefersBuiltInActivation,
+               let latestJob,
                (latestJob.state == .failed || latestJob.state == .pausedError || latestJob.state == .pausedNoStorage),
                let failureReason = latestJob.failureReason {
                 Text(alphaPrivateAIVisibleRecoveryText(
@@ -800,12 +821,22 @@ struct AlphaPrivateAIOfferCard: View {
                 AlphaPrivateAIRecoveryHintRow(
                     text: rossLocalized("assistant_repair_setup_removes_broken")
                 )
+            } else if prefersBuiltInActivation {
+                Text(rossLocalized("assistant_built_in_offer_detail"))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.rossAccent)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Button(actionTitle) {
                 Task {
                     if activeButRuntimeUnavailable {
                         await model.repairAssistantPack(
+                            for: offer.tier,
+                            mobileAllowed: model.persisted.settings.allowMobileDataForLargePacks || offer.tier == .quickStart
+                        )
+                    } else if prefersBuiltInActivation {
+                        await model.startPackDownload(
                             for: offer.tier,
                             mobileAllowed: model.persisted.settings.allowMobileDataForLargePacks || offer.tier == .quickStart
                         )
@@ -848,6 +879,32 @@ private struct AlphaPrivateAIOfferSurface: ViewModifier {
                 radius: isActive ? 10 : 7,
                 y: isActive ? 4 : 3
             )
+    }
+}
+
+private struct AlphaAssistantBuiltInMetaLabels: View {
+    var font: Font = .caption.weight(.medium)
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 10) {
+                metaLabel(rossLocalized("assistant_meta_no_download"), systemImage: "checkmark.circle")
+                metaLabel(rossLocalized("assistant_meta_built_in"), systemImage: "iphone")
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                metaLabel(rossLocalized("assistant_meta_no_download"), systemImage: "checkmark.circle")
+                metaLabel(rossLocalized("assistant_meta_built_in"), systemImage: "iphone")
+            }
+        }
+        .font(font)
+        .foregroundStyle(Color.rossInk.opacity(0.55))
+        .lineLimit(1)
+        .minimumScaleFactor(0.86)
+    }
+
+    private func metaLabel(_ text: String, systemImage: String) -> some View {
+        Label(text, systemImage: systemImage)
     }
 }
 
@@ -1242,6 +1299,7 @@ func alphaAssistantDownloadWifiAdvisory(languageCode: String = rossSelectedLangu
 
 enum AlphaAssistantOfferBadgeKind {
     case active
+    case builtIn
     case needsAttention
     case settingUp
 }
@@ -1253,6 +1311,8 @@ func alphaAssistantOfferBadge(
     switch kind {
     case .active:
         return rossLocalized("assistant_badge_active", languageCode: languageCode)
+    case .builtIn:
+        return rossLocalized("assistant_badge_built_in", languageCode: languageCode)
     case .needsAttention:
         return rossLocalized("assistant_badge_needs_attention", languageCode: languageCode)
     case .settingUp:
@@ -1262,6 +1322,7 @@ func alphaAssistantOfferBadge(
 
 enum AlphaAssistantOfferActionKind {
     case using
+    case useOnThisIPhone
     case repair
     case use
     case resumeSetup
@@ -1275,6 +1336,8 @@ func alphaAssistantOfferAction(
     switch kind {
     case .using:
         return rossLocalized("assistant_action_using", languageCode: languageCode)
+    case .useOnThisIPhone:
+        return rossLocalized("assistant_action_use_on_this_iphone", languageCode: languageCode)
     case .repair:
         return rossLocalized("assistant_action_repair", languageCode: languageCode)
     case .use:

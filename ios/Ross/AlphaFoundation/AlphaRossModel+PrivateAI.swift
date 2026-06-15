@@ -1047,16 +1047,20 @@ extension AlphaRossModel {
         await startPackDownload(for: tier, mobileAllowed: mobileAllowed, existingJobID: nil)
     }
 
-    private func systemAssistantReadyForActivation(for tier: AlphaCapabilityTier) -> Bool {
-        guard !alphaAllowsDevelopmentModelArtifacts() else { return false }
+    func systemAssistantHealth(for tier: AlphaCapabilityTier) -> AlphaLocalRuntimeHealth? {
+        guard !alphaAllowsDevelopmentModelArtifacts() else { return nil }
         let installed = alphaSystemAssistantPack(for: tier)
         guard let health = AlphaLocalModelRuntime.runtimeHealth(
             activePack: installed,
             requestedTier: tier
         ), health.runtimeMode == .appleFoundationModels else {
-            return false
+            return nil
         }
-        return health.available
+        return health
+    }
+
+    private func systemAssistantReadyForActivation(for tier: AlphaCapabilityTier) -> Bool {
+        systemAssistantHealth(for: tier)?.available == true
     }
 
     func startPackDownload(for tier: AlphaCapabilityTier, mobileAllowed: Bool, existingJobID: UUID?) async {

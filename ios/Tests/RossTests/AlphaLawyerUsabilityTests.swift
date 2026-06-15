@@ -694,6 +694,32 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    func testAssistantStatusPrefersBuiltInSetupWhenSystemAssistantIsAvailable() async {
+        let model = await MainActor.run {
+            AlphaRossModel(previewState: AlphaPersistedState.demoSeed())
+        }
+
+        let expectedTier = await MainActor.run { model.selectedTier }
+        let systemHealth = await MainActor.run {
+            model.systemAssistantHealth(for: expectedTier)
+        }
+
+        await MainActor.run {
+            model.privateAISnapshot.activePack = nil
+            model.privateAISnapshot.activeRuntimeHealth = nil
+            model.persisted.modelJobs = []
+
+            let status = alphaAssistantStatusSnapshot(model)
+            if systemHealth?.available == true {
+                XCTAssertEqual(rossLocalized("assistant_status_built_in_title"), status.title)
+                XCTAssertEqual(rossLocalized("assistant_status_built_in_detail"), status.detail)
+            } else {
+                XCTAssertEqual(rossLocalized("assistant_status_not_set_up_title"), status.title)
+                XCTAssertEqual(rossLocalized("assistant_status_not_set_up_detail"), status.detail)
+            }
+        }
+    }
+
     func testAssistantStatusHidesTechnicalRecoveryReason() async {
         let model = await MainActor.run {
             AlphaRossModel(previewState: AlphaPersistedState.demoSeed())

@@ -1134,6 +1134,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "செயலில்",
             "te": "సక్రియం"
         ],
+        "assistant_badge_built_in": [
+            "en": "Built in",
+            "hi": "Built in",
+            "bn": "Built in",
+            "ta": "Built in",
+            "te": "Built in"
+        ],
         "assistant_badge_needs_attention": [
             "en": "Needs attention",
             "hi": "ध्यान चाहिए",
@@ -1154,6 +1161,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "bn": "এই বিকল্প ব্যবহার হচ্ছে",
             "ta": "இந்த விருப்பம் பயன்படுத்தப்படுகிறது",
             "te": "ఈ ఎంపిక ఉపయోగంలో ఉంది"
+        ],
+        "assistant_action_use_on_this_iphone": [
+            "en": "Use on this iPhone",
+            "hi": "इस iPhone पर उपयोग करें",
+            "bn": "এই iPhone-এ ব্যবহার করুন",
+            "ta": "இந்த iPhone-இல் பயன்படுத்தவும்",
+            "te": "ఈ iPhone లో ఉపయోగించండి"
         ],
         "assistant_action_repair": [
             "en": "Repair setup",
@@ -2247,6 +2261,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Ross இந்த device-இல் local matter files-இருந்து files படிக்க, notes draft செய்ய, answers தர help செய்யும்.",
             "te": "Ross ఈ device లో local matter files నుండి files చదవడానికి, notes draft చేయడానికి, answers ఇవ్వడానికి help చేస్తుంది."
         ],
+        "assistant_status_built_in_title": [
+            "en": "My assistant is built in",
+            "hi": "My assistant built in है",
+            "bn": "My assistant built in আছে",
+            "ta": "My assistant built in உள்ளது",
+            "te": "My assistant built in ఉంది"
+        ],
+        "assistant_status_built_in_detail": [
+            "en": "This iPhone can turn on local legal answers without a download. Choose an option below to start.",
+            "hi": "यह iPhone बिना download के local legal answers चालू कर सकता है। शुरू करने के लिए नीचे से विकल्प चुनें।",
+            "bn": "এই iPhone download ছাড়াই local legal answers চালু করতে পারে। শুরু করতে নিচের একটি বিকল্প বেছে নিন।",
+            "ta": "இந்த iPhone download இல்லாமல் local legal answers-ஐ இயக்க முடியும். தொடங்க கீழே உள்ள ஒரு விருப்பத்தைத் தேர்வுசெய்க.",
+            "te": "ఈ iPhone download లేకుండానే local legal answers ను ప్రారంభించగలదు. ప్రారంభించడానికి క్రింద ఒక ఎంపికను ఎంచుకోండి."
+        ],
         "assistant_status_setting_up_title": [
             "en": "My assistant is setting up",
             "hi": "My assistant setup हो रहा है",
@@ -2323,6 +2351,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "bn": "Ross এখনও matters, tasks, dates, এবং files organize করতে পারে। Legal answers-এর জন্য assistant setup দরকার।",
             "ta": "Ross இன்னும் matters, tasks, dates மற்றும் files organize செய்ய முடியும். Legal answers-க்கு assistant setup தேவை.",
             "te": "Ross ఇంకా matters, tasks, dates, files organize చేయగలదు. Legal answers కు assistant setup కావాలి."
+        ],
+        "assistant_built_in_offer_detail": [
+            "en": "This option can start on this iPhone without downloading assistant files.",
+            "hi": "यह विकल्प इस iPhone पर assistant files download किए बिना शुरू हो सकता है।",
+            "bn": "এই বিকল্পটি এই iPhone-এ assistant files download ছাড়াই শুরু হতে পারে।",
+            "ta": "இந்த விருப்பம் assistant files download செய்யாமல் இந்த iPhone-இல் தொடங்க முடியும்.",
+            "te": "ఈ ఎంపిక assistant files download చేయకుండా ఈ iPhone లో ప్రారంభమవుతుంది."
+        ],
+        "assistant_meta_no_download": [
+            "en": "No download",
+            "hi": "No download",
+            "bn": "No download",
+            "ta": "No download",
+            "te": "No download"
+        ],
+        "assistant_meta_built_in": [
+            "en": "Built in on this iPhone",
+            "hi": "Built in on this iPhone",
+            "bn": "Built in on this iPhone",
+            "ta": "Built in on this iPhone",
+            "te": "Built in on this iPhone"
         ],
         "assistant_verification_no_setup": [
             "en": "No assistant setup is active yet.",
