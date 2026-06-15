@@ -93,6 +93,18 @@ func alphaFileReviewBasicTooLongWarning(languageCode: String = rossSelectedLangu
     rossLocalized("file_review_basic_too_long_warning", languageCode: languageCode)
 }
 
+func alphaFileReviewFocusedSourceSectionsWarning(
+    focusedCount: Int,
+    totalCount: Int,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
+    String(
+        format: rossLocalized("file_review_focused_source_sections_warning", languageCode: languageCode),
+        focusedCount,
+        totalCount
+    )
+}
+
 func alphaDocumentReviewQueueSummary(hasReviewWork: Bool, languageCode: String = rossSelectedLanguageCode()) -> String {
     rossLocalized(
         hasReviewWork ? "document_review_queue_summary_needs_review" : "document_review_queue_summary_ready",
@@ -1295,6 +1307,53 @@ private struct AlphaLocalExtractionOrchestrator {
         return copy
     }
 
+    private func focusedStructuredReviewFinding(
+        caseId: UUID,
+        document: AlphaCaseDocument,
+        pages: [AlphaDocumentPage],
+        languageProfile: AlphaDocumentLanguageProfile?,
+        provider: (any AlphaLocalModelProvider)?,
+        priorInvocations: [AlphaLocalModelInvocation]
+    ) -> AlphaExtractionFinding? {
+        guard let provider else { return nil }
+        let sourcePack = sourcePackFor(
+            caseId: caseId,
+            document: document,
+            pages: pages,
+            languageProfile: languageProfile
+        )
+        guard !sourcePack.isEmpty else { return nil }
+
+        let baseMaxInputChars = provider.maxInputChars() ?? (provider.runtimeMode == .mlxSwiftLm ? 16_000 : 12_000)
+        let sourceCharCount = sourcePack.reduce(0) { $0 + $1.text.count }
+        let lastStructuredInvocation = priorInvocations.last {
+            $0.runtimeMode == provider.runtimeMode.rawValue && $0.task != .matterQuestionAnswer
+        }
+        let budgetPlan = AlphaLocalPromptBudgetPlanner.structuredDocumentPlan(
+            runtimeMode: provider.runtimeMode,
+            baseMaxInputChars: baseMaxInputChars,
+            sourceBlockCount: sourcePack.count,
+            sourceCharCount: sourceCharCount,
+            lastInvocation: lastStructuredInvocation
+        )
+
+        guard let sourceBlockLimit = budgetPlan.sourceBlockLimit, sourcePack.count > sourceBlockLimit else {
+            return nil
+        }
+
+        return AlphaExtractionFinding(
+            caseId: caseId,
+            documentId: document.id,
+            kind: .unsupportedLayout,
+            message: alphaFileReviewFocusedSourceSectionsWarning(
+                focusedCount: sourceBlockLimit,
+                totalCount: sourcePack.count
+            ),
+            sourceRefs: Array(sourcePack.prefix(min(max(sourceBlockLimit, 1), 3)).map(\.sourceRef)),
+            severity: .warning
+        )
+    }
+
     func extract(caseId: UUID, document: AlphaCaseDocument, activePack: AlphaInstalledModelPack?) async -> AlphaLocalExtractionResult {
         let pipelinePlan = AlphaExtractionPipelinePlanner.plan(for: activePack)
         let mode = pipelinePlan.mode
@@ -1455,6 +1514,16 @@ private struct AlphaLocalExtractionOrchestrator {
             pages: cleanedPages,
             languageProfile: languageProfile
         )
+        if let focusedReviewFinding = focusedStructuredReviewFinding(
+            caseId: caseId,
+            document: document,
+            pages: cleanedPages,
+            languageProfile: languageProfile,
+            provider: provider,
+            priorInvocations: modelInvocations
+        ) {
+            findings.append(focusedReviewFinding)
+        }
         if quickStartTooLong {
             findings.append(
                 AlphaExtractionFinding(

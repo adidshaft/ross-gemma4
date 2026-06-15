@@ -1981,6 +1981,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "இந்த பதில் இந்த device-இல் இருக்க Ross %2$d source section-களில் %1$d பகுதிகளில் focus செய்தது. இன்னும் ஆழமான review-க்கு selected files-ஐ குறைக்கவும் அல்லது stronger assistant பயன்படுத்தவும்.",
             "te": "ఈ సమాధానం ఈ device లోనే ఉండేందుకు Ross %2$d source sectionల్లో %1$d భాగాలపై focus చేసింది. ఇంకా లోతైన review కోసం selected files ను తగ్గించండి లేదా stronger assistant ఉపయోగించండి."
         ],
+        "file_review_focused_source_sections_warning": [
+            "en": "Ross focused on %1$d of %2$d source sections during local review. Split the file or use a stronger assistant for a deeper pass.",
+            "hi": "Local review के दौरान Ross ने %2$d में से %1$d source sections पर focus किया। और गहरी review के लिए file को बाँटें या stronger assistant इस्तेमाल करें।",
+            "bn": "Local review-এর সময় Ross %2$dটির মধ্যে %1$dটি source section-এ focus করেছে। আরও গভীর review-এর জন্য file ভাগ করুন বা stronger assistant ব্যবহার করুন।",
+            "ta": "Local review போது Ross %2$d source section-களில் %1$d பகுதிகளில் focus செய்தது. இன்னும் ஆழமான review-க்கு file-ஐ பிரிக்கவும் அல்லது stronger assistant பயன்படுத்தவும்.",
+            "te": "Local review సమయంలో Ross %2$d source sectionల్లో %1$d భాగాలపై focus చేసింది. ఇంకా లోతైన review కోసం file ను విభజించండి లేదా stronger assistant ఉపయోగించండి."
+        ],
         "local_model_warning_source_language_fallback": [
             "en": "Ross answered from the source text because the private assistant did not keep the requested language.",
             "hi": "Private assistant requested language बनाए नहीं रख पाया, इसलिए Ross ने source text से जवाब दिया.",

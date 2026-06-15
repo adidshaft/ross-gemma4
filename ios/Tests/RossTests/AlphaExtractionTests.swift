@@ -3114,6 +3114,64 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertFalse(warningText.localizedCaseInsensitiveContains("longer document with your private assistant"), warningText)
     }
 
+    func testCaseAssociateLongFileReviewWarnsWhenLocalReviewFocusesSources() async {
+        let store = AlphaRossStore()
+        let caseId = UUID()
+        let repeatedSentence = String(repeating: "The respondent shall file a reply before the next hearing date. ", count: 55)
+        let pages = (1...11).map { page in
+            AlphaDocumentPage(
+                pageNumber: page,
+                snippet: "Order page \(page). \(repeatedSentence)"
+            )
+        }
+        let sourceCharCount = pages.reduce(0) { total, page in
+            total + ((page.extractedText ?? page.snippet) ?? "").count
+        }
+        let document = AlphaCaseDocument(
+            title: "Detailed Order",
+            fileName: "detailed-order.pdf",
+            kind: .pdf,
+            storedRelativePath: "tests/detailed-order.pdf",
+            importedAt: .now,
+            pageCount: pages.count,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            pages: pages
+        )
+
+        let result = await store.runLocalExtraction(
+            caseId: caseId,
+            document: document,
+            activePack: installedPack(.caseAssociate)
+        )
+        let lastStructuredInvocation = result.modelInvocations.last {
+            $0.runtimeMode == AlphaPackRuntimeMode.deterministicDev.rawValue && $0.task != .matterQuestionAnswer
+        }
+        let plan = AlphaLocalPromptBudgetPlanner.structuredDocumentPlan(
+            runtimeMode: .deterministicDev,
+            baseMaxInputChars: 12_000,
+            sourceBlockCount: pages.count,
+            sourceCharCount: sourceCharCount,
+            lastInvocation: lastStructuredInvocation
+        )
+        let warningText = (result.extractionRun.warnings + result.findings.map(\.message)).joined(separator: "\n")
+
+        guard let focusedCount = plan.sourceBlockLimit else {
+            return XCTFail("Expected structured document planner to focus source sections for this fixture.")
+        }
+
+        XCTAssertTrue(
+            warningText.contains(
+                alphaFileReviewFocusedSourceSectionsWarning(
+                    focusedCount: focusedCount,
+                    totalCount: pages.count
+                )
+            ),
+            warningText
+        )
+        XCTAssertFalse(warningText.localizedCaseInsensitiveContains("keep this answer on this device"), warningText)
+    }
+
     func testLocalExtractionDetectsBengaliLanguageProfile() async {
         let store = AlphaRossStore()
         let caseId = UUID()
