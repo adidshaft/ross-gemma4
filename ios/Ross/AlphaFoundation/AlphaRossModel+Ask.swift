@@ -146,11 +146,13 @@ extension AlphaRossModel {
         scopeCaseID: UUID?,
         excluding turnID: UUID?
     ) -> [AlphaSourceRef] {
-        guard selectedAskDocumentIDs(for: scopeCaseID).isEmpty else { return [] }
         guard alphaAskQuestionReferencesPriorSources(question) else { return [] }
         guard let previousTurn = alphaPreviousAskTurn(for: scopeCaseID, excluding: turnID) else { return [] }
         let preferredSourceRefs = previousTurn.sourceRefs.filter { $0.effectiveSourceCategory == .documentSource }
-        return preferredSourceRefs.isEmpty ? previousTurn.sourceRefs : preferredSourceRefs
+        let inheritedSourceRefs = preferredSourceRefs.isEmpty ? previousTurn.sourceRefs : preferredSourceRefs
+        let selectedDocumentIDs = selectedAskDocumentIDs(for: scopeCaseID)
+        guard !selectedDocumentIDs.isEmpty else { return inheritedSourceRefs }
+        return inheritedSourceRefs.filter { selectedDocumentIDs.contains($0.documentId) }
     }
 
     func chatSessions(for caseId: UUID) -> [AlphaChatSession] {
@@ -1760,6 +1762,24 @@ extension AlphaRossModel {
         )
         if !selectedIDs.isEmpty {
             guard !prioritizedSelectedDocumentBlocks.isEmpty else { return [] }
+            if !prioritizedFollowUpBlocks.isEmpty {
+                var mergedBlocks: [AlphaSourceTextBlock] = []
+                var seenBlockKeys = Set<String>()
+
+                func appendIfNeeded(_ block: AlphaSourceTextBlock) {
+                    let key = alphaAskSourceBlockKey(block)
+                    guard seenBlockKeys.insert(key).inserted else { return }
+                    mergedBlocks.append(block)
+                }
+
+                for block in prioritizedFollowUpBlocks {
+                    appendIfNeeded(block)
+                }
+                for block in prioritizedSelectedDocumentBlocks {
+                    appendIfNeeded(block)
+                }
+                return Array(mergedBlocks.prefix(sourcePackPolicy.sourceBlockLimit))
+            }
             return Array(prioritizedSelectedDocumentBlocks.prefix(sourcePackPolicy.sourceBlockLimit))
         }
         if !prioritizedFollowUpBlocks.isEmpty {
