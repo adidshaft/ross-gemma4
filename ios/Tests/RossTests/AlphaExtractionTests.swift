@@ -3887,6 +3887,7 @@ final class AlphaExtractionTests: XCTestCase {
             assistantDisplayName: "Gemma 4 12B Q4_K_M",
             preferredRuntimeMode: AlphaPackRuntimeMode.appleFoundationModels.rawValue,
             runtimeSelectionReason: "Built-in Apple model preferred",
+            executionPathLabel: "Gemma GGUF via llama.cpp",
             runtimeContextTokens: 131_072,
             runtimeInputBudgetChars: 52_000,
             reviewedSourceCount: 2,
@@ -3929,6 +3930,11 @@ final class AlphaExtractionTests: XCTestCase {
                     key: "runtime_choice",
                     label: "Why this runtime",
                     value: "Built-in Apple model preferred"
+                ),
+                AlphaAnswerDetailMetric(
+                    key: "execution_path",
+                    label: "Execution path",
+                    value: "Gemma GGUF via llama.cpp"
                 ),
                 AlphaAnswerDetailMetric(
                     key: "preferred_runtime",
@@ -4012,6 +4018,7 @@ final class AlphaExtractionTests: XCTestCase {
                 schemaValid: true,
                 warnings: [],
                 sourceRefs: [sourceRef],
+                executionPathLabel: "MLX with draft acceleration",
                 inputChars: 248,
                 inputTokenCount: 412,
                 outputTokenCount: 38,
@@ -4028,6 +4035,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(completed.inputChars, 248)
         XCTAssertEqual(completed.reviewedSourceCount, 1)
         XCTAssertEqual(completed.promptBudgetChars, 1_850)
+        XCTAssertEqual(completed.executionPathLabel, "MLX with draft acceleration")
     }
 
     func testLocalExtractionDetectsMixedLanguageProfile() async {

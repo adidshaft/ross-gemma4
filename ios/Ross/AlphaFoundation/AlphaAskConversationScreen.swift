@@ -877,6 +877,12 @@ extension AlphaLocalModelInvocation {
         return cleaned.isEmpty ? nil : cleaned
     }
 
+    var answerDetailExecutionPathLabel: String? {
+        guard let executionPathLabel else { return nil }
+        let cleaned = executionPathLabel.trimmingCharacters(in: .whitespacesAndNewlines)
+        return cleaned.isEmpty ? nil : cleaned
+    }
+
     var answerDetailProcessedTokensLabel: String? {
         guard let tokens = estimatedProcessedTokens else { return nil }
         return usesMeasuredTokenCounts ? tokens.formatted() : "~\(tokens.formatted())"
@@ -973,6 +979,16 @@ extension AlphaLocalModelInvocation {
                     key: "runtime_choice",
                     label: rossLocalized("runtime_choice"),
                     value: runtimeChoice
+                )
+            )
+        }
+
+        if let executionPath = answerDetailExecutionPathLabel {
+            metrics.append(
+                AlphaAnswerDetailMetric(
+                    key: "execution_path",
+                    label: rossLocalized("execution_path"),
+                    value: executionPath
                 )
             )
         }

@@ -13,6 +13,7 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
     var assistantDisplayName: String?
     var preferredRuntimeMode: String?
     var runtimeSelectionReason: String?
+    var executionPathLabel: String?
     var runtimeContextTokens: Int?
     var runtimeInputBudgetChars: Int?
     var reviewedSourceCount: Int?
@@ -49,6 +50,7 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
         assistantDisplayName: String? = nil,
         preferredRuntimeMode: String? = nil,
         runtimeSelectionReason: String? = nil,
+        executionPathLabel: String? = nil,
         runtimeContextTokens: Int? = nil,
         runtimeInputBudgetChars: Int? = nil,
         reviewedSourceCount: Int? = nil,
@@ -84,6 +86,7 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
         self.assistantDisplayName = assistantDisplayName
         self.preferredRuntimeMode = preferredRuntimeMode
         self.runtimeSelectionReason = runtimeSelectionReason
+        self.executionPathLabel = executionPathLabel
         self.runtimeContextTokens = runtimeContextTokens
         self.runtimeInputBudgetChars = runtimeInputBudgetChars
         self.reviewedSourceCount = reviewedSourceCount
@@ -121,6 +124,7 @@ enum AlphaModelInvocationStore {
         assistantDisplayName: String? = nil,
         preferredRuntimeMode: AlphaPackRuntimeMode? = nil,
         runtimeSelectionReason: String? = nil,
+        executionPathLabel: String? = nil,
         runtimeContextTokens: Int? = nil,
         runtimeInputBudgetChars: Int? = nil,
         accelerationMode: AlphaLocalRuntimeAccelerationMode? = nil,
@@ -149,6 +153,7 @@ enum AlphaModelInvocationStore {
             assistantDisplayName: assistantDisplayName,
             preferredRuntimeMode: preferredRuntimeMode?.rawValue,
             runtimeSelectionReason: runtimeSelectionReason,
+            executionPathLabel: executionPathLabel,
             runtimeContextTokens: runtimeContextTokens,
             runtimeInputBudgetChars: runtimeInputBudgetChars,
             promptBudgetChars: input.promptBudgetOverrideChars,
@@ -172,6 +177,10 @@ enum AlphaModelInvocationStore {
         let completedAt = Date.now
         let outputTokens = output.outputTokenCount ?? (outputText.isEmpty ? 0 : max(outputText.count / 4, 1))
         copy.outputHash = sha256Hex(outputText)
+        if let executionPathLabel = output.executionPathLabel?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !executionPathLabel.isEmpty {
+            copy.executionPathLabel = executionPathLabel
+        }
         if let inputChars = output.inputChars {
             copy.inputChars = inputChars
         }

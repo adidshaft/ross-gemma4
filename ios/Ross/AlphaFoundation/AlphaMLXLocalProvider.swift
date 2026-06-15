@@ -429,6 +429,9 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
 
         let directoryURL = URL(fileURLWithPath: modelPath, isDirectory: true)
         let draftDirectoryURL = resolvedDraftDirectoryURL()
+        let executionPathLabel = draftDirectoryURL == nil
+            ? "MLX standard generation"
+            : "MLX with draft acceleration"
         let usesPlainMatterAnswerPrompt = taskInput.task == .matterQuestionAnswer
         let focusedMatterSourceRefs = usesPlainMatterAnswerPrompt ? focusedMatterSourceBlocks(for: taskInput).map(\.sourceRef) : []
         let instructions = usesPlainMatterAnswerPrompt ? nil : pack.systemInstructions
@@ -456,6 +459,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                         sourceRefs: usesPlainMatterAnswerPrompt
                             ? (focusedMatterSourceRefs.isEmpty ? Array(taskInput.sourcePack.prefix(5).map(\.sourceRef)) : focusedMatterSourceRefs)
                             : pack.includedSourceRefs,
+                        executionPathLabel: executionPathLabel,
                         inputChars: pack.inputChars
                     )
                     )
@@ -483,6 +487,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                 sourceRefs: usesPlainMatterAnswerPrompt
                     ? (focusedMatterSourceRefs.isEmpty ? Array(taskInput.sourcePack.prefix(5).map(\.sourceRef)) : focusedMatterSourceRefs)
                     : pack.includedSourceRefs,
+                executionPathLabel: executionPathLabel,
                 inputChars: pack.inputChars,
                 inputTokenCount: generation.promptTokenCount,
                 outputTokenCount: generation.generationTokenCount,

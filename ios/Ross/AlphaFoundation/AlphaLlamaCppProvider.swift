@@ -437,6 +437,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                             schemaValid: false,
                             warnings: pack.truncated ? [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts] : [],
                             sourceRefs: pack.includedSourceRefs,
+                            executionPathLabel: "Gemma GGUF via llama.cpp",
                             inputChars: pack.inputChars
                         )
                         onPartial(partialOutput)
@@ -480,6 +481,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                 schemaValid: schemaValid,
                 warnings: warnings,
                 sourceRefs: pack.includedSourceRefs,
+                executionPathLabel: "Gemma GGUF via llama.cpp",
                 inputChars: pack.inputChars,
                 inputTokenCount: promptTokenCount,
                 outputTokenCount: outputTokenCount,

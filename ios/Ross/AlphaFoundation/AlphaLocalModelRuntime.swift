@@ -94,6 +94,7 @@ struct AlphaLocalModelOutput: Codable, Hashable, Sendable {
     var schemaValid: Bool
     var warnings: [String]
     var sourceRefs: [AlphaSourceRef]
+    var executionPathLabel: String? = nil
     var inputChars: Int? = nil
     var inputTokenCount: Int? = nil
     var outputTokenCount: Int? = nil
@@ -1392,6 +1393,7 @@ func alphaFoundationModelOutput(
             schemaValid: !finalResponse.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
             warnings: warnings,
             sourceRefs: promptPack.includedSourceRefs,
+            executionPathLabel: "CoreAI built-in model",
             inputChars: promptPack.inputChars
         )
     }
@@ -1403,6 +1405,7 @@ func alphaFoundationModelOutput(
         schemaValid: parsedJson != nil,
         warnings: warnings,
         sourceRefs: promptPack.includedSourceRefs,
+        executionPathLabel: "CoreAI built-in model",
         inputChars: promptPack.inputChars,
         errorCategory: parsedJson == nil ? "invalid_model_output" : nil
     )
@@ -1423,6 +1426,7 @@ func alphaFoundationModelPartialOutput(
             : alphaFoundationExtractJSONCandidate(from: trimmedResponse) != nil,
         warnings: promptPack.truncated ? [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts] : [],
         sourceRefs: promptPack.includedSourceRefs,
+        executionPathLabel: "CoreAI built-in model",
         inputChars: promptPack.inputChars
     )
 }

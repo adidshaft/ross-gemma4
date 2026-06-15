@@ -2618,6 +2618,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Why this runtime",
             "te": "Why this runtime"
         ],
+        "execution_path": [
+            "en": "Execution path",
+            "hi": "Execution path",
+            "bn": "Execution path",
+            "ta": "Execution path",
+            "te": "Execution path"
+        ],
         "preferred_runtime": [
             "en": "Preferred runtime",
             "hi": "Preferred runtime",
