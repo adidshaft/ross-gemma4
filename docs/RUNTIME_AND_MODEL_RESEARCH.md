@@ -63,7 +63,7 @@
 - integration complexity: Medium
 - license notes: MIT
 - chosen/not chosen: chosen
-- reason: Current Ross iPhone path. Verified package release `2.9637.0`, resolved to `llama.cpp` XCFramework `b9637`.
+- reason: Current Ross iPhone path. Verified package release `2.9647.0`, resolved to `llama.cpp` XCFramework `b9647`.
 
 ### MLX Swift candidate
 - package URL: `https://github.com/ml-explore/mlx-swift.git`
@@ -106,6 +106,6 @@
 
 - Ross now includes an experimental `mlx_swift_lm` runtime mode for iPhone/macOS developer testing.
 - The implementation is intentionally narrow: it is opt-in through local runtime overrides and expects a developer-supplied local MLX model directory containing config, tokenizer, and safetensor files.
-- Ross also now has an experimental env-gated speculative decoding hook for the MLX lane using a separate developer-supplied draft model directory, because upstream `mlx-swift-lm` already exposes that API while the current Ross `llama.swift` integration does not expose an equivalent high-level draft-model path.
+- Ross also now has an experimental env-gated speculative decoding hook for the MLX lane using a separate developer-supplied draft model directory, because upstream `mlx-swift-lm` already exposes that API while the current Ross `llama.swift` integration still does not expose an equivalent high-level draft-model path in the surface Ross uses today.
 - The normal download/install catalog remains GGUF-first. This keeps the user-facing product path stable while giving Ross a concrete MLX lane for future iPhone performance comparison work.
 - Full physical-device proof still needs to answer the product question that matters: whether MLX is actually smoother or faster than the upgraded GGUF lane on representative iPhones and long private matter files.

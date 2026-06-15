@@ -12,8 +12,8 @@
 - kept Gemma 4 26B-A4B Q4_K_M as the Advanced tier
 - updated backend and shared registry metadata with verified URLs, sizes, and SHA-256 values
 - widened iPhone context and input budgets for larger files and smoother on-device use
-- updated the iOS llama runtime package to `llama.swift` `2.9637.0`
-- resolved the newer `llama.cpp` XCFramework (`b9637`)
+- updated the iOS llama runtime package floor to `llama.swift` `2.9647.0`
+- resolved the newer `llama.cpp` XCFramework (`b9647`)
 
 ## Model Mapping
 

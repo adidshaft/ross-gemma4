@@ -83,8 +83,8 @@ Embedding model:
 
 ## iPhone Runtime Notes
 
-- `ios/Package.swift` now pins `llama.swift` with `.upToNextMajor(from: "2.9637.0")`.
-- `ios/Package.resolved` currently resolves commit `d159d5ccf8fc8a3c55c05a72980f3c94ad91f734`.
+- `ios/Package.swift` now pins `llama.swift` with `.upToNextMajor(from: "2.9647.0")`.
+- `ios/Package.resolved` currently resolves commit `d17244eaa9562942a0f07881ee54fab988cd510e`.
 - Context windows now scale by pack and device RAM:
   - Basic: 8k to 12k tokens
   - Standard: 12k to 16k tokens
