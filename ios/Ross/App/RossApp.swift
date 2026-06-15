@@ -2597,6 +2597,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Last answer check பார்க்கவும்",
             "te": "Last answer check చూడండి"
         ],
+        "assistant_used": [
+            "en": "Assistant",
+            "hi": "Assistant",
+            "bn": "Assistant",
+            "ta": "Assistant",
+            "te": "Assistant"
+        ],
+        "runtime_used": [
+            "en": "Runtime",
+            "hi": "Runtime",
+            "bn": "Runtime",
+            "ta": "Runtime",
+            "te": "Runtime"
+        ],
         "last_check_result": [
             "en": "Last check result",
             "hi": "Last check result देखें",

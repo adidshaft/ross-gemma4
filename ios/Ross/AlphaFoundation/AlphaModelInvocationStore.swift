@@ -10,8 +10,12 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
     var extractionRunId: UUID?
     var capabilityTier: String
     var inputSourceRefs: [AlphaSourceRef]
+    var assistantDisplayName: String?
     var reviewedSourceCount: Int?
     var promptBudgetChars: Int?
+    var accelerationMode: AlphaLocalRuntimeAccelerationMode?
+    var accelerationDraftTokens: Int?
+    var accelerationDraftModelLabel: String?
     var promptHash: String
     var inputHash: String
     var outputHash: String?
@@ -38,8 +42,12 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
         extractionRunId: UUID?,
         capabilityTier: String,
         inputSourceRefs: [AlphaSourceRef],
+        assistantDisplayName: String? = nil,
         reviewedSourceCount: Int? = nil,
         promptBudgetChars: Int? = nil,
+        accelerationMode: AlphaLocalRuntimeAccelerationMode? = nil,
+        accelerationDraftTokens: Int? = nil,
+        accelerationDraftModelLabel: String? = nil,
         promptHash: String,
         inputHash: String,
         outputHash: String? = nil,
@@ -65,8 +73,12 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
         self.extractionRunId = extractionRunId
         self.capabilityTier = capabilityTier
         self.inputSourceRefs = inputSourceRefs
+        self.assistantDisplayName = assistantDisplayName
         self.reviewedSourceCount = reviewedSourceCount
         self.promptBudgetChars = promptBudgetChars
+        self.accelerationMode = accelerationMode
+        self.accelerationDraftTokens = accelerationDraftTokens
+        self.accelerationDraftModelLabel = accelerationDraftModelLabel
         self.promptHash = promptHash
         self.inputHash = inputHash
         self.outputHash = outputHash
@@ -94,6 +106,10 @@ enum AlphaModelInvocationStore {
         caseId: UUID?,
         documentId: UUID?,
         extractionRunId: UUID?,
+        assistantDisplayName: String? = nil,
+        accelerationMode: AlphaLocalRuntimeAccelerationMode? = nil,
+        accelerationDraftTokens: Int? = nil,
+        accelerationDraftModelLabel: String? = nil,
         input: AlphaLocalModelInput
     ) -> AlphaLocalModelInvocation {
         AlphaLocalModelInvocation(
@@ -114,7 +130,11 @@ enum AlphaModelInvocationStore {
                     ocrConfidence: sourceBlock.sourceRef.ocrConfidence
                 )
             },
+            assistantDisplayName: assistantDisplayName,
             promptBudgetChars: input.promptBudgetOverrideChars,
+            accelerationMode: accelerationMode,
+            accelerationDraftTokens: accelerationDraftTokens,
+            accelerationDraftModelLabel: accelerationDraftModelLabel,
             promptHash: sha256Hex("\(input.instruction)\n\(input.expectedSchema)"),
             inputHash: sha256Hex(input.sourcePack.map { "\($0.sourceRef.documentId.uuidString):\($0.pageNumber):\($0.text)" }.joined(separator: "|")),
             inputChars: input.instruction.count + input.expectedSchema.count + input.sourcePack.reduce(0) { $0 + $1.text.count },

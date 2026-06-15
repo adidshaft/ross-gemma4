@@ -1217,6 +1217,14 @@ extension AlphaRossModel {
         input.promptBudgetOverrideChars = budgetPlan.maxInputChars
         input.sourceBlockLimitOverride = budgetPlan.sourceBlockLimit
         input.sourceExcerptCharsOverride = budgetPlan.sourceExcerptChars
+        let runtimeHealth = provider.runtimeHealth()
+        let assistantDisplayName: String? = {
+            if provider.runtimeMode == .appleFoundationModels {
+                return "Apple Foundation Models"
+            }
+            guard let activePack else { return nil }
+            return alphaAssistantModelArtifacts[activePack.tier]?.displayName
+        }()
 
         let chatSessionID = storedResult.chatSessionID
         let chatTurnID = storedResult.chatTurnID
@@ -1227,6 +1235,10 @@ extension AlphaRossModel {
             caseId: scopeCaseID,
             documentId: selectedDocuments.first?.id,
             extractionRunId: nil,
+            assistantDisplayName: assistantDisplayName,
+            accelerationMode: runtimeHealth.accelerationMode,
+            accelerationDraftTokens: runtimeHealth.accelerationDraftTokens,
+            accelerationDraftModelLabel: runtimeHealth.draftModelPathLabel,
             input: input
         )
         // Precompute outside the mutate closure: `activeLocalModelRunningStatus`

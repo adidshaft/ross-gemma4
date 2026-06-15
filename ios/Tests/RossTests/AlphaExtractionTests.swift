@@ -3884,8 +3884,12 @@ final class AlphaExtractionTests: XCTestCase {
                 AlphaSourceRef(caseId: UUID(), documentId: UUID(), documentTitle: "Order", pageNumber: 2),
                 AlphaSourceRef(caseId: UUID(), documentId: UUID(), documentTitle: "Order", pageNumber: 3)
             ],
+            assistantDisplayName: "Gemma 4 12B Q4_K_M",
             reviewedSourceCount: 2,
             promptBudgetChars: 700,
+            accelerationMode: .draftModelSpeculative,
+            accelerationDraftTokens: 6,
+            accelerationDraftModelLabel: "gemma-4-e4b-draft",
             promptHash: "prompt",
             inputHash: "input",
             outputHash: "output",
@@ -3902,6 +3906,21 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(
             invocation.answerDetailSecondaryMetrics,
             [
+                AlphaAnswerDetailMetric(
+                    key: "assistant_used",
+                    label: "Assistant",
+                    value: "Gemma 4 12B Q4_K_M"
+                ),
+                AlphaAnswerDetailMetric(
+                    key: "runtime_used",
+                    label: "Runtime",
+                    value: "Gemma GGUF"
+                ),
+                AlphaAnswerDetailMetric(
+                    key: "runtime_acceleration",
+                    label: "Acceleration",
+                    value: "Draft model x6 (gemma-4-e4b-draft)"
+                ),
                 AlphaAnswerDetailMetric(
                     key: "prompt_size",
                     label: "Prompt size",

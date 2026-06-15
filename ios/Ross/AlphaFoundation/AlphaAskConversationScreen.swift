@@ -800,6 +800,50 @@ struct AlphaAnswerDetailMetric: Equatable, Identifiable {
 }
 
 extension AlphaLocalModelInvocation {
+    var answerDetailAssistantLabel: String? {
+        guard let assistantDisplayName else { return nil }
+        let cleaned = assistantDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return cleaned.isEmpty ? nil : cleaned
+    }
+
+    var answerDetailRuntimeLabel: String {
+        guard let runtime = AlphaPackRuntimeMode(rawValue: runtimeMode) else {
+            return runtimeMode.replacingOccurrences(of: "_", with: " ").capitalized
+        }
+        switch runtime {
+        case .appleFoundationModels:
+            return "Apple Foundation Models"
+        case .mlxSwiftLm:
+            return "MLX"
+        case .llamaCppGguf:
+            return "Gemma GGUF"
+        case .mediapipeLlm:
+            return "MediaPipe"
+        case .deterministicDev:
+            return "Development"
+        case .unavailable:
+            return "Unavailable"
+        }
+    }
+
+    var answerDetailAccelerationLabel: String? {
+        switch accelerationMode {
+        case .draftModelSpeculative:
+            let cleanedLabel = accelerationDraftModelLabel?.trimmingCharacters(in: .whitespacesAndNewlines)
+            if let tokens = accelerationDraftTokens, let draftLabel = cleanedLabel, !draftLabel.isEmpty {
+                return "Draft model x\(tokens) (\(draftLabel))"
+            }
+            if let tokens = accelerationDraftTokens {
+                return "Draft model x\(tokens)"
+            }
+            return "Draft model"
+        case .standard:
+            return "Standard generation"
+        case nil:
+            return nil
+        }
+    }
+
     var answerDetailProcessedTokensLabel: String? {
         guard let tokens = estimatedProcessedTokens else { return nil }
         return usesMeasuredTokenCounts ? tokens.formatted() : "~\(tokens.formatted())"
@@ -851,6 +895,34 @@ extension AlphaLocalModelInvocation {
 
     var answerDetailSecondaryMetrics: [AlphaAnswerDetailMetric] {
         var metrics: [AlphaAnswerDetailMetric] = []
+
+        if let assistant = answerDetailAssistantLabel {
+            metrics.append(
+                AlphaAnswerDetailMetric(
+                    key: "assistant_used",
+                    label: rossLocalized("assistant_used"),
+                    value: assistant
+                )
+            )
+        }
+
+        metrics.append(
+            AlphaAnswerDetailMetric(
+                key: "runtime_used",
+                label: rossLocalized("runtime_used"),
+                value: answerDetailRuntimeLabel
+            )
+        )
+
+        if let acceleration = answerDetailAccelerationLabel {
+            metrics.append(
+                AlphaAnswerDetailMetric(
+                    key: "runtime_acceleration",
+                    label: rossLocalized("runtime_acceleration"),
+                    value: acceleration
+                )
+            )
+        }
 
         if let promptSize = answerDetailPromptSizeLabel {
             metrics.append(
