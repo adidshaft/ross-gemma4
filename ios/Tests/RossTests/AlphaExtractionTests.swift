@@ -7123,6 +7123,24 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNil(presentation)
     }
 
+    func testAssistantCatalogRefreshTiersIncludeVisibleOptionsWithoutInstalledPacks() {
+        XCTAssertEqual(
+            alphaAssistantCatalogRefreshTiers(installedPacks: []),
+            AlphaCapabilityTier.visibleAssistantTiers
+        )
+    }
+
+    func testAssistantCatalogRefreshTiersNormalizesLegacyFlashIntoQuickStart() {
+        let tiers = alphaAssistantCatalogRefreshTiers(
+            installedPacks: [
+                installedPack(.flash, runtimeMode: .llamaCppGguf, artifactKind: "local_model_artifact", developmentOnly: false),
+                installedPack(.caseAssociate, runtimeMode: .mlxSwiftLm, artifactKind: "mlx_directory", developmentOnly: false)
+            ]
+        )
+
+        XCTAssertEqual(tiers, AlphaCapabilityTier.visibleAssistantTiers)
+    }
+
     func testPreferredAssistantDownloadFallbackIgnoresUnsupportedCachedMLXDescriptor() {
         let cached = AlphaAssistantDownloadDescriptor(
             sessionId: "sess-unsupported-mlx",

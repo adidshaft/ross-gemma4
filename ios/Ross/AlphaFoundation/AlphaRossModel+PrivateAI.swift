@@ -530,6 +530,17 @@ func alphaAssistantUpdateCandidate(
     )
 }
 
+func alphaAssistantCatalogRefreshTiers(installedPacks: [AlphaInstalledModelPack]) -> [AlphaCapabilityTier] {
+    var tiers = AlphaCapabilityTier.visibleAssistantTiers
+    for pack in installedPacks {
+        let normalizedTier = AlphaCapabilityTier.normalizedAssistantSelection(pack.tier) ?? pack.tier
+        if !tiers.contains(normalizedTier) {
+            tiers.append(normalizedTier)
+        }
+    }
+    return tiers
+}
+
 func alphaBackendCatalogPackSupportsCurrentInstaller(_ pack: AlphaBackendCatalogPack) -> Bool {
     guard pack.developmentOnly == false,
           pack.sizeBytes > 0 else {
@@ -847,7 +858,7 @@ extension AlphaRossModel {
         let installedPacks = persisted.installedPacks.filter { !$0.developmentOnly && !$0.installPath.hasPrefix("system://") }
         let dismissedCandidates = persisted.modelUpdateCandidates ?? []
         let lastInvocation = alphaLastModelInvocation(in: persisted)
-        let tiers = Array(Set(installedPacks.map(\.tier)))
+        let refreshTiers = alphaAssistantCatalogRefreshTiers(installedPacks: installedPacks)
         let fallbackCandidates = installedPacks.compactMap { pack in
             let preferredRuntime = alphaPreferredAssistantRuntimeMode(
                 for: pack.tier,
@@ -891,10 +902,12 @@ extension AlphaRossModel {
         Task {
             var descriptorsByTier: [AlphaCapabilityTier: AlphaAssistantCatalogDescriptor] = [:]
             var refreshedCatalogsByTier: [AlphaCapabilityTier: AlphaAssistantCatalogDescriptor] = [:]
-            for tier in tiers {
+            for tier in refreshTiers {
                 let preferredRuntime = alphaPreferredAssistantRuntimeMode(
                     for: tier,
-                    existingRuntimeMode: installedPacks.first(where: { $0.tier == tier })?.runtimeMode,
+                    existingRuntimeMode: installedPacks.first(where: {
+                        (AlphaCapabilityTier.normalizedAssistantSelection($0.tier) ?? $0.tier) == tier
+                    })?.runtimeMode,
                     lastInvocation: lastInvocation
                 )
                 do {
@@ -917,7 +930,8 @@ extension AlphaRossModel {
             }
 
             let candidates = installedPacks.compactMap { pack in
-                let descriptor = descriptorsByTier[pack.tier] ?? alphaDefaultAssistantCatalogDescriptor(for: pack.tier)
+                let resolvedTier = AlphaCapabilityTier.normalizedAssistantSelection(pack.tier) ?? pack.tier
+                let descriptor = descriptorsByTier[resolvedTier] ?? alphaDefaultAssistantCatalogDescriptor(for: resolvedTier)
                 let dismissed = dismissedCandidates.first {
                     $0.tier == pack.tier &&
                         $0.availablePackId == descriptor.packId &&
