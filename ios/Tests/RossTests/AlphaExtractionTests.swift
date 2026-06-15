@@ -3637,6 +3637,62 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(result.hasAnswerDetails)
     }
 
+    func testModelInvocationCompletionPrefersMeasuredTokenMetrics() {
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "Order",
+            pageNumber: 1,
+            textSnippet: "Adjourned to 14 May 2026."
+        )
+        let input = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "Summarize the selected order.",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: sourceRef,
+                    text: "The matter was adjourned to 14 May 2026.",
+                    pageNumber: 1,
+                    languageHint: "en",
+                    ocrConfidence: 1
+                )
+            ],
+            expectedSchema: "plain_text",
+            maxOutputTokens: 128,
+            extractionMode: .quickStart
+        )
+        let invocation = AlphaModelInvocationStore.begin(
+            task: .matterQuestionAnswer,
+            runtimeMode: .mlxSwiftLm,
+            capabilityTier: .quickStart,
+            caseId: sourceRef.caseId,
+            documentId: sourceRef.documentId,
+            extractionRunId: nil,
+            input: input
+        )
+
+        let completed = AlphaModelInvocationStore.complete(
+            invocation,
+            output: AlphaLocalModelOutput(
+                rawText: "Answer from the selected order.",
+                parsedJson: nil,
+                schemaValid: true,
+                warnings: [],
+                sourceRefs: [sourceRef],
+                inputTokenCount: 412,
+                outputTokenCount: 38,
+                outputTokensPerSecond: 19.25,
+                timeToFirstTokenMs: 610
+            )
+        )
+
+        XCTAssertEqual(completed.estimatedInputTokens, 412)
+        XCTAssertEqual(completed.estimatedOutputTokens, 38)
+        XCTAssertEqual(completed.estimatedProcessedTokens, 450)
+        XCTAssertEqual(completed.estimatedOutputTokensPerSecond, 19.25)
+        XCTAssertEqual(completed.timeToFirstTokenMs, 610)
+    }
+
     func testLocalExtractionDetectsMixedLanguageProfile() async {
         let store = AlphaRossStore()
         let caseId = UUID()
@@ -5602,7 +5658,7 @@ final class AlphaExtractionTests: XCTestCase {
         let capture = DraftCapture()
         AlphaMLXLocalProvider.streamGenerator = { _, draftURL, _, _, _, _, _ in
             await capture.record(draftPath: draftURL?.path)
-            return "Standard answer"
+            return AlphaMLXGenerationSnapshot(text: "Standard answer")
         }
 
         let pack = installedPack(.caseAssociate, runtimeMode: .mlxSwiftLm)
@@ -5692,7 +5748,7 @@ final class AlphaExtractionTests: XCTestCase {
         AlphaMLXLocalProvider.streamGenerator = { mainURL, draftURL, draftTokens, prompt, instructions, parameters, onChunk in
             await capture.record(mainPath: mainURL.path, draftPath: draftURL?.path, draftTokens: draftTokens)
             onChunk?("Draft accelerated answer")
-            return "Draft accelerated answer"
+            return AlphaMLXGenerationSnapshot(text: "Draft accelerated answer")
         }
 
         let pack = installedPack(.caseAssociate, runtimeMode: .mlxSwiftLm)
@@ -5750,6 +5806,75 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(output?.rawText, "Draft accelerated answer")
     }
 
+    func testExperimentalMLXProviderPreservesMeasuredGenerationMetrics() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-metrics-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try Data("{}".utf8).write(to: directory.appendingPathComponent("config.json"))
+        try Data("{}".utf8).write(to: directory.appendingPathComponent("tokenizer.json"))
+        try Data("weights".utf8).write(to: directory.appendingPathComponent("model.safetensors"))
+
+        let previousGenerator = AlphaMLXLocalProvider.streamGenerator
+        defer { AlphaMLXLocalProvider.streamGenerator = previousGenerator }
+
+        AlphaMLXLocalProvider.streamGenerator = { _, _, _, _, _, _, onChunk in
+            onChunk?("Measured")
+            return AlphaMLXGenerationSnapshot(
+                text: "Measured output",
+                promptTokenCount: 640,
+                generationTokenCount: 52,
+                outputTokensPerSecond: 17.8,
+                timeToFirstTokenMs: 720
+            )
+        }
+
+        let pack = installedPack(.quickStart, runtimeMode: .mlxSwiftLm)
+        let provider = AlphaLocalModelRuntime.resolveProvider(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: directory.path,
+                modelChecksum: String(repeating: "1", count: 64),
+                modelKind: "mlx_directory"
+            )
+        ) { _ in
+            AlphaLocalModelOutput(rawText: "", parsedJson: nil, schemaValid: false, warnings: [], sourceRefs: [])
+        }
+
+        let output = await provider?.run(
+            AlphaLocalModelInput(
+                task: .matterQuestionAnswer,
+                instruction: "Summarize the selected order.",
+                sourcePack: [
+                    AlphaSourceTextBlock(
+                        sourceRef: AlphaSourceRef(
+                            caseId: UUID(),
+                            documentId: UUID(),
+                            documentTitle: "Selected Order",
+                            pageNumber: 1,
+                            textSnippet: "The matter is listed on 14 May 2026."
+                        ),
+                        text: "The matter is listed on 14 May 2026.",
+                        pageNumber: 1,
+                        languageHint: "en",
+                        ocrConfidence: 0.99
+                    )
+                ],
+                expectedSchema: "plain_text",
+                maxOutputTokens: 128,
+                extractionMode: .quickStart
+            )
+        )
+
+        XCTAssertEqual(output?.inputTokenCount, 640)
+        XCTAssertEqual(output?.outputTokenCount, 52)
+        XCTAssertEqual(output?.outputTokensPerSecond, 17.8)
+        XCTAssertEqual(output?.timeToFirstTokenMs, 720)
+    }
+
     func testExperimentalMLXProviderDefaultsDraftTokensByTier() async throws {
         actor DraftCapture {
             var draftTokens: Int?
@@ -5781,7 +5906,7 @@ final class AlphaExtractionTests: XCTestCase {
         let capture = DraftCapture()
         AlphaMLXLocalProvider.streamGenerator = { mainURL, draftURL, draftTokens, prompt, instructions, parameters, onChunk in
             await capture.record(draftTokens: draftTokens)
-            return "Draft accelerated answer"
+            return AlphaMLXGenerationSnapshot(text: "Draft accelerated answer")
         }
 
         let pack = installedPack(.caseAssociate, runtimeMode: .mlxSwiftLm)

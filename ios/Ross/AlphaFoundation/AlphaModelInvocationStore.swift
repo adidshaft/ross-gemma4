@@ -120,14 +120,22 @@ enum AlphaModelInvocationStore {
         var copy = invocation
         let outputText = output.parsedJson ?? output.rawText
         let completedAt = Date.now
-        let outputTokens = outputText.isEmpty ? 0 : max(outputText.count / 4, 1)
+        let outputTokens = output.outputTokenCount ?? (outputText.isEmpty ? 0 : max(outputText.count / 4, 1))
         copy.outputHash = sha256Hex(outputText)
         copy.outputChars = outputText.isEmpty ? 0 : outputText.count
+        if let inputTokenCount = output.inputTokenCount {
+            copy.estimatedInputTokens = inputTokenCount
+        }
         copy.estimatedOutputTokens = outputTokens
         copy.completedAt = completedAt
         copy.durationMs = max(Int(completedAt.timeIntervalSince(invocation.startedAt) * 1_000), 0)
-        if let durationMs = copy.durationMs, durationMs > 0, outputTokens > 0 {
+        if let measuredOutputSpeed = output.outputTokensPerSecond, measuredOutputSpeed > 0 {
+            copy.estimatedOutputTokensPerSecond = measuredOutputSpeed
+        } else if let durationMs = copy.durationMs, durationMs > 0, outputTokens > 0 {
             copy.estimatedOutputTokensPerSecond = Double(outputTokens) / (Double(durationMs) / 1_000)
+        }
+        if copy.timeToFirstTokenMs == nil, let timeToFirstTokenMs = output.timeToFirstTokenMs {
+            copy.timeToFirstTokenMs = timeToFirstTokenMs
         }
         copy.status = switch output.errorCategory {
         case "cancelled":

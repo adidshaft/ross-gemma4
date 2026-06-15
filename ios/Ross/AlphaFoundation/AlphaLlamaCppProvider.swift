@@ -374,6 +374,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         do {
             let context = try getOrContext(path: modelPath)
             await context.clear()
+            let runStartedAt = Date()
             
             let usesPlainMatterAnswerPrompt = taskInput.task == .matterQuestionAnswer
             let systemPrompt = usesPlainMatterAnswerPrompt ? "" : pack.systemInstructions
@@ -399,12 +400,19 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                 maxNewTokens: maxNewTokens,
                 samplerSettings: taskInput.samplerSettings ?? .legalQA
             )
+            let promptTokenCount = await context.promptTokenCount()
             
             var generatedResponse = ""
             var lastPartialCount = 0
+            var timeToFirstTokenMs: Int?
+            let generationLoopStartedAt = Date()
             while await !context.is_done {
                 let tokenStr = await context.completion_loop()
                 generatedResponse += tokenStr
+                let generatedTokenCount = await context.generatedTokenCount()
+                if generatedTokenCount > 0, timeToFirstTokenMs == nil {
+                    timeToFirstTokenMs = max(Int(Date().timeIntervalSince(runStartedAt) * 1_000), 0)
+                }
                 if shouldStopGeneration(afterAppending: tokenStr, fullText: generatedResponse) {
                     let strippedResponse = stripTurnMarkerFragments(from: generatedResponse)
                     if strippedResponse.isEmpty {
@@ -433,6 +441,15 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                 // Safety cutoff for runaway generation
                 if generatedResponse.count > max(effectiveMaxInputChars, 12_000) { break }
             }
+            let generationLoopEndedAt = Date()
+            let outputTokenCount = await context.generatedTokenCount()
+            let outputTokensPerSecond: Double?
+            if outputTokenCount > 0 {
+                let elapsedSeconds = max(generationLoopEndedAt.timeIntervalSince(generationLoopStartedAt), 0.001)
+                outputTokensPerSecond = Double(outputTokenCount) / elapsedSeconds
+            } else {
+                outputTokensPerSecond = nil
+            }
             
             let cleanedResponse = stripTurnMarkerFragments(from: generatedResponse)
             let languagePreservingFallback = usesPlainMatterAnswerPrompt
@@ -457,7 +474,11 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                 parsedJson: jsonString,
                 schemaValid: schemaValid,
                 warnings: warnings,
-                sourceRefs: pack.includedSourceRefs
+                sourceRefs: pack.includedSourceRefs,
+                inputTokenCount: promptTokenCount,
+                outputTokenCount: outputTokenCount,
+                outputTokensPerSecond: outputTokensPerSecond,
+                timeToFirstTokenMs: timeToFirstTokenMs
             )
         } catch {
             return AlphaLocalModelOutput(

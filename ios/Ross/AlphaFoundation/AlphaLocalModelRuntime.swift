@@ -94,6 +94,10 @@ struct AlphaLocalModelOutput: Codable, Hashable, Sendable {
     var schemaValid: Bool
     var warnings: [String]
     var sourceRefs: [AlphaSourceRef]
+    var inputTokenCount: Int? = nil
+    var outputTokenCount: Int? = nil
+    var outputTokensPerSecond: Double? = nil
+    var timeToFirstTokenMs: Int? = nil
     var errorCategory: String? = nil
 }
 

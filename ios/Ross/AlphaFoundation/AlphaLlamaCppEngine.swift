@@ -155,6 +155,14 @@ actor LlamaContext {
         return batch.n_tokens;
     }
 
+    func promptTokenCount() -> Int {
+        tokens_list.count
+    }
+
+    func generatedTokenCount() -> Int {
+        Int(n_decode)
+    }
+
     nonisolated(unsafe) static var samplerFactory: (llama_sampler_chain_params) -> UnsafeMutablePointer<llama_sampler>? = { params in
         llama_sampler_chain_init(params)
     }

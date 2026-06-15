@@ -183,6 +183,14 @@ private enum AlphaMLXArchiveCompatibility {
     case unsupportedGemma4Dense31B
 }
 
+struct AlphaMLXGenerationSnapshot: Sendable {
+    var text: String
+    var promptTokenCount: Int?
+    var generationTokenCount: Int?
+    var outputTokensPerSecond: Double?
+    var timeToFirstTokenMs: Int?
+}
+
 final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
     let capabilityTier: AlphaCapabilityTier
     let runtimeMode: AlphaPackRuntimeMode = .mlxSwiftLm
@@ -209,7 +217,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
     }
 
     nonisolated(unsafe) static var streamGenerator:
-        @Sendable (URL, URL?, Int?, String, String?, GenerateParameters, (@Sendable (String) -> Void)?) async throws -> String = {
+        @Sendable (URL, URL?, Int?, String, String?, GenerateParameters, (@Sendable (String) -> Void)?) async throws -> AlphaMLXGenerationSnapshot = {
             directory, draftDirectory, draftTokens, prompt, instructions, parameters, onChunk in
             let container = try await AlphaMLXModelContainerCache.shared.container(for: directory)
             let effectivePrompt: String
@@ -219,6 +227,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                 effectivePrompt = prompt
             }
             let inputBox = AlphaUnsafeSendableBox(try await container.prepare(input: UserInput(prompt: effectivePrompt)))
+            let promptTokenCount = inputBox.value.text.tokens.size
             if let draftDirectory {
                 let draftContainer = try await AlphaMLXModelContainerCache.shared.container(for: draftDirectory)
                 let draftModelBox = await draftContainer.perform { draftContext in
@@ -226,6 +235,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                 }
                 return try await container.perform { context in
                     var generated = ""
+                    var completionInfo: GenerateCompletionInfo?
                     let stream = try generate(
                         input: inputBox.value,
                         parameters: parameters,
@@ -237,13 +247,22 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                         if case .chunk(let text) = event {
                             generated += text
                             onChunk?(generated)
+                        } else if case .info(let info) = event {
+                            completionInfo = info
                         }
                     }
-                    return generated
+                    return AlphaMLXGenerationSnapshot(
+                        text: generated,
+                        promptTokenCount: completionInfo?.promptTokenCount ?? promptTokenCount,
+                        generationTokenCount: completionInfo?.generationTokenCount,
+                        outputTokensPerSecond: completionInfo?.tokensPerSecond,
+                        timeToFirstTokenMs: completionInfo.map { max(Int(($0.promptTime * 1_000).rounded()), 0) }
+                    )
                 }
             } else {
                 return try await container.perform { context in
                     var generated = ""
+                    var completionInfo: GenerateCompletionInfo?
                     let stream = try generate(
                         input: inputBox.value,
                         parameters: parameters,
@@ -253,9 +272,17 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                         if case .chunk(let text) = event {
                             generated += text
                             onChunk?(generated)
+                        } else if case .info(let info) = event {
+                            completionInfo = info
                         }
                     }
-                    return generated
+                    return AlphaMLXGenerationSnapshot(
+                        text: generated,
+                        promptTokenCount: completionInfo?.promptTokenCount ?? promptTokenCount,
+                        generationTokenCount: completionInfo?.generationTokenCount,
+                        outputTokensPerSecond: completionInfo?.tokensPerSecond,
+                        timeToFirstTokenMs: completionInfo.map { max(Int(($0.promptTime * 1_000).rounded()), 0) }
+                    )
                 }
             }
         }
@@ -384,7 +411,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         let parameters = generateParameters(for: taskInput)
 
         do {
-            let generatedResponse = try await Self.streamGenerator(
+            let generation = try await Self.streamGenerator(
                 directoryURL,
                 draftDirectoryURL,
                 draftTokensForGeneration(),
@@ -405,10 +432,10 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                             ? (focusedMatterSourceRefs.isEmpty ? Array(taskInput.sourcePack.prefix(5).map(\.sourceRef)) : focusedMatterSourceRefs)
                             : pack.includedSourceRefs
                     )
-                )
-            }
+                    )
+                }
 
-            let cleanedResponse = cleanedModelText(generatedResponse)
+            let cleanedResponse = cleanedModelText(generation.text)
             let languagePreservingFallback = usesPlainMatterAnswerPrompt
                 ? Self.sourceLanguageFallbackIfNeeded(for: taskInput, generatedText: cleanedResponse)
                 : nil
@@ -429,7 +456,11 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                 warnings: warnings,
                 sourceRefs: usesPlainMatterAnswerPrompt
                     ? (focusedMatterSourceRefs.isEmpty ? Array(taskInput.sourcePack.prefix(5).map(\.sourceRef)) : focusedMatterSourceRefs)
-                    : pack.includedSourceRefs
+                    : pack.includedSourceRefs,
+                inputTokenCount: generation.promptTokenCount,
+                outputTokenCount: generation.generationTokenCount,
+                outputTokensPerSecond: generation.outputTokensPerSecond,
+                timeToFirstTokenMs: generation.timeToFirstTokenMs
             )
         } catch {
             return AlphaLocalModelOutput(
