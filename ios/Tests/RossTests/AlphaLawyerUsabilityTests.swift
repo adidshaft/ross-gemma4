@@ -1975,6 +1975,18 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    func testModelStartsOnCaseAssociateBeforePersistedTierLoads() async throws {
+        try await withRestoredStore { store in
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+
+            let selectedTier = await MainActor.run { model.selectedTier }
+
+            XCTAssertEqual(selectedTier, .caseAssociate)
+        }
+    }
+
     func testAssistantSetupCanUseExplicitDevelopmentArtifactInTestHarness() async throws {
         rossSetBackendBaseURLOverride("http://127.0.0.1:9")
         defer { rossSetBackendBaseURLOverride(nil) }

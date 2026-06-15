@@ -2,7 +2,7 @@
 
 **Setup**
 1. Open ROSS-Gemma4. Navigate to Settings -> Assistant.
-2. Tap "Install Quick Associate" to download the Gemma 4 E2B Q4 capability pack.
+2. Tap "Install Case Associate" to download the Gemma 4 12B Q4 capability pack.
 
 **Import**
 1. Create a new matter "State v. Doe".

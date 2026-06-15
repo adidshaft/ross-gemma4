@@ -781,7 +781,7 @@ final class AlphaRossModel {
     }
     var path: [AlphaRoute] = []
     var selectedCaseID: UUID?
-    var selectedTier: AlphaCapabilityTier = .flash
+    var selectedTier: AlphaCapabilityTier = .caseAssociate
     var caseDraftTitle = ""
     var askDrafts: [UUID: String] = [:]
     var globalAskDraft = ""
