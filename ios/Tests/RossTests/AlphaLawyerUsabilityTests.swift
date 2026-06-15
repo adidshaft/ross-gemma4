@@ -950,6 +950,94 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
     }
 
     @MainActor
+    func testFollowUpNextPageQuestionPrefersPageAfterPriorCitation() {
+        let caseID = UUID()
+        let citedDocumentID = UUID()
+        let citedSourceRef = AlphaSourceRef(
+            caseId: caseID,
+            documentId: citedDocumentID,
+            documentTitle: "Order bundle",
+            pageNumber: 4,
+            textSnippet: "The court listed the matter on 17 June 2026."
+        )
+        let citedDocument = AlphaCaseDocument(
+            id: citedDocumentID,
+            title: "Order bundle",
+            fileName: "order-bundle.txt",
+            kind: .text,
+            storedRelativePath: "docs/order-bundle.txt",
+            importedAt: .now,
+            pageCount: 3,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: "Page 4 says the matter is listed on 17 June 2026.\nPage 5 says written submissions are due before that.\nPage 6 gives compliance directions.",
+            pages: [
+                AlphaDocumentPage(
+                    pageNumber: 4,
+                    snippet: "Matter listed on 17 June 2026.",
+                    extractedText: "Page 4 says the matter is listed on 17 June 2026."
+                ),
+                AlphaDocumentPage(
+                    pageNumber: 5,
+                    snippet: "Written submissions due before hearing.",
+                    extractedText: "Page 5 says written submissions are due before that."
+                ),
+                AlphaDocumentPage(
+                    pageNumber: 6,
+                    snippet: "Compliance directions after hearing.",
+                    extractedText: "Page 6 gives compliance directions."
+                )
+            ]
+        )
+        let priorTurn = AlphaChatTurn(
+            askedAt: .now.addingTimeInterval(-120),
+            question: "What is the next hearing date?",
+            answerTitle: "Answered from your files",
+            answerSections: ["The matter is listed on 17 June 2026."],
+            sourceRefs: [citedSourceRef]
+        )
+
+        var state = AlphaPersistedState.seed()
+        state.cases = [
+            AlphaCaseMatter(
+                id: caseID,
+                title: "Next-page follow-up matter",
+                forum: "High Court",
+                stage: .arguments,
+                summary: "Next-page follow-ups should move forward from the cited page.",
+                issueHighlights: [],
+                evidenceNotes: [],
+                draftTasks: [],
+                documents: [citedDocument],
+                sourceRefs: [],
+                chatSessions: [
+                    AlphaChatSession(
+                        turns: [priorTurn]
+                    )
+                ]
+            )
+        ]
+
+        let model = AlphaRossModel(previewState: state)
+        let inheritedSourceRefs = model.alphaInheritedAskSourceRefsForFollowUp(
+            question: "What does the next page say?",
+            scopeCaseID: caseID,
+            excluding: nil
+        )
+        let sourcePack = model.askRuntimeSourcePack(
+            question: "What does the next page say?",
+            scopeCaseID: caseID,
+            selectedDocuments: [],
+            preferredFollowUpSourceRefs: inheritedSourceRefs
+        )
+
+        let documentSourceRefs = sourcePack.filter { $0.sourceRef.effectiveSourceCategory != .matterDetail }
+        XCTAssertFalse(documentSourceRefs.isEmpty)
+        XCTAssertEqual(documentSourceRefs.first?.pageNumber, 5)
+        XCTAssertEqual(documentSourceRefs.first?.sourceRef.documentId, citedDocumentID)
+    }
+
+    @MainActor
     func testSelectedFileWaitingResultUsesPlainLanguage() {
         let previousLanguageCode = rossSelectedLanguageCode()
         rossSaveLanguageSelection(code: "hi")

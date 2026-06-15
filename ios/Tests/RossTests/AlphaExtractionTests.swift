@@ -8037,6 +8037,14 @@ final class AlphaExtractionTests: XCTestCase {
                 "What is FMLA?"
             )
         )
+        XCTAssertEqual(
+            model.alphaAskFollowUpSourceDirective("What does the next page say?"),
+            .nextPage
+        )
+        XCTAssertEqual(
+            model.alphaAskFollowUpSourceDirective("Quote that exactly."),
+            .exactQuote
+        )
     }
 
     @MainActor

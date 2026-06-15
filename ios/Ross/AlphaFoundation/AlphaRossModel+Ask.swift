@@ -15,6 +15,13 @@ import AppKit
 
 extension AlphaRossModel {
 
+    enum AlphaAskFollowUpSourceDirective: String {
+        case citedPage
+        case nextPage
+        case previousPage
+        case exactQuote
+    }
+
     func setAskDraft(_ value: String, for scopeCaseID: UUID?) {
         if let scopeCaseID {
             askDrafts[scopeCaseID] = value
@@ -1714,7 +1721,8 @@ extension AlphaRossModel {
         let prioritizedFollowUpBlocks = alphaPrioritizedFollowUpSourceBlocks(
             documentBlocks,
             rankedBlocks: rankedDocumentBlocks,
-            preferredSourceRefs: preferredFollowUpSourceRefs
+            preferredSourceRefs: preferredFollowUpSourceRefs,
+            question: question
         )
         let balancedRankedDocumentBlocks = alphaBalancedRankedAskSourceBlocks(
             rankedDocumentBlocks,
@@ -2007,12 +2015,14 @@ extension AlphaRossModel {
     func alphaPrioritizedFollowUpSourceBlocks(
         _ blocks: [AlphaSourceTextBlock],
         rankedBlocks: [AlphaSourceTextBlock],
-        preferredSourceRefs: [AlphaSourceRef]
+        preferredSourceRefs: [AlphaSourceRef],
+        question: String
     ) -> [AlphaSourceTextBlock] {
         guard !preferredSourceRefs.isEmpty else { return [] }
 
         let groupedBlocks = Dictionary(grouping: blocks) { $0.sourceRef.documentId }
         let groupedRankedBlocks = Dictionary(grouping: rankedBlocks) { $0.sourceRef.documentId }
+        let directive = alphaAskFollowUpSourceDirective(question)
         var prioritized: [AlphaSourceTextBlock] = []
         var seenBlockKeys = Set<String>()
 
@@ -2025,13 +2035,18 @@ extension AlphaRossModel {
 
         for sourceRef in preferredSourceRefs {
             let documentBlocks = groupedBlocks[sourceRef.documentId] ?? []
-            let anchorBlock = alphaMatchingAskSourceBlock(for: sourceRef, in: documentBlocks) ??
+            let anchorBlock = alphaPreferredFollowUpAnchorBlock(
+                for: sourceRef,
+                directive: directive,
+                in: documentBlocks
+            ) ?? alphaMatchingAskSourceBlock(for: sourceRef, in: documentBlocks) ??
                 groupedRankedBlocks[sourceRef.documentId]?.first
             appendIfNeeded(anchorBlock)
             if let anchorBlock {
-                for contextualBlock in alphaContextualAskSourceBlocks(
+                for contextualBlock in alphaFollowUpContextualAskSourceBlocks(
                     around: anchorBlock,
-                    groupedBlocks: groupedBlocks
+                    groupedBlocks: groupedBlocks,
+                    directive: directive
                 ) {
                     appendIfNeeded(contextualBlock)
                 }
@@ -2066,6 +2081,72 @@ extension AlphaRossModel {
             return pageMatch
         }
         return blocks.first(where: { $0.sourceRef.documentId == sourceRef.documentId })
+    }
+
+    func alphaPreferredFollowUpAnchorBlock(
+        for sourceRef: AlphaSourceRef,
+        directive: AlphaAskFollowUpSourceDirective?,
+        in blocks: [AlphaSourceTextBlock]
+    ) -> AlphaSourceTextBlock? {
+        guard !blocks.isEmpty else { return nil }
+
+        switch directive {
+        case .nextPage:
+            return blocks.first(where: {
+                $0.sourceRef.documentId == sourceRef.documentId &&
+                $0.pageNumber == sourceRef.pageNumber + 1
+            })
+        case .previousPage:
+            return blocks.first(where: {
+                $0.sourceRef.documentId == sourceRef.documentId &&
+                $0.pageNumber == max(1, sourceRef.pageNumber - 1)
+            })
+        case .exactQuote, .citedPage, .none:
+            return nil
+        }
+    }
+
+    func alphaFollowUpContextualAskSourceBlocks(
+        around anchor: AlphaSourceTextBlock,
+        groupedBlocks: [UUID: [AlphaSourceTextBlock]],
+        directive: AlphaAskFollowUpSourceDirective?
+    ) -> [AlphaSourceTextBlock] {
+        guard let documentBlocks = groupedBlocks[anchor.sourceRef.documentId], !documentBlocks.isEmpty else {
+            return []
+        }
+
+        let orderedPageBlocks = documentBlocks
+            .filter { $0.sourceRef.paragraphRange != "confirmed details" }
+            .sorted { lhs, rhs in
+                if lhs.pageNumber != rhs.pageNumber {
+                    return lhs.pageNumber < rhs.pageNumber
+                }
+                return lhs.sourceRef.label < rhs.sourceRef.label
+            }
+
+        let anchorKey = alphaAskSourceBlockKey(anchor)
+        guard let anchorIndex = orderedPageBlocks.firstIndex(where: { alphaAskSourceBlockKey($0) == anchorKey }) else {
+            return []
+        }
+
+        switch directive {
+        case .nextPage:
+            return Array(orderedPageBlocks.dropFirst(anchorIndex + 1).prefix(1))
+        case .previousPage:
+            if anchorIndex > 0 {
+                return [orderedPageBlocks[anchorIndex - 1]]
+            }
+            return []
+        case .exactQuote, .citedPage, .none:
+            var contextualBlocks: [AlphaSourceTextBlock] = []
+            if anchorIndex > 0 {
+                contextualBlocks.append(orderedPageBlocks[anchorIndex - 1])
+            }
+            if anchorIndex + 1 < orderedPageBlocks.count {
+                contextualBlocks.append(orderedPageBlocks[anchorIndex + 1])
+            }
+            return contextualBlocks
+        }
     }
 
     func alphaPreferredSelectedDocumentFallbackBlocks(
@@ -2259,6 +2340,11 @@ extension AlphaRossModel {
         let followUpPhrases = [
             "which page",
             "what page",
+            "next page",
+            "following page",
+            "previous page",
+            "prior page",
+            "page before",
             "where does it say",
             "where do they say",
             "where is that",
@@ -2268,6 +2354,9 @@ extension AlphaRossModel {
             "show me that source",
             "cite that",
             "cite this",
+            "exact quote",
+            "quote exactly",
+            "exact words",
             "quote that",
             "quote this",
             "which file",
@@ -2293,6 +2382,26 @@ extension AlphaRossModel {
         return normalizedTokens.count <= 14 &&
             !tokens.isDisjoint(with: referentialTerms) &&
             !tokens.isDisjoint(with: sourceTerms)
+    }
+
+    func alphaAskFollowUpSourceDirective(_ question: String) -> AlphaAskFollowUpSourceDirective? {
+        guard alphaAskQuestionReferencesPriorSources(question) else { return nil }
+
+        let lowered = alphaAskNormalizedQuestionTokens(from: question).joined(separator: " ")
+        if lowered.contains("next page") || lowered.contains("following page") {
+            return .nextPage
+        }
+        if lowered.contains("previous page") || lowered.contains("prior page") || lowered.contains("page before") {
+            return .previousPage
+        }
+        if lowered.contains("exact quote") ||
+            lowered.contains("quote exactly") ||
+            lowered.contains("exact words") ||
+            lowered.contains("quote that") ||
+            lowered.contains("quote this") {
+            return .exactQuote
+        }
+        return .citedPage
     }
 
     func alphaAskQuestionTargetsEvidence(questionTerms: [String]) -> Bool {
