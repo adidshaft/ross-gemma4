@@ -25,6 +25,7 @@ export class ModelDownloadService {
 
     const artifact =
       pack.artifactKind === "local_model_artifact" ||
+      pack.artifactKind === "mlx_directory" ||
       pack.artifactKind === "huggingface_gated_model_artifact"
         ? buildDownloadArtifact(pack)
         : pack.artifactKind === "external_debug_model"
@@ -47,6 +48,7 @@ export class ModelDownloadService {
       deliveryBoundary: "no_case_data",
       deliveryMode:
         pack.artifactKind === "local_model_artifact" ||
+        pack.artifactKind === "mlx_directory" ||
         pack.artifactKind === "huggingface_gated_model_artifact"
           ? "signed_segmented_local_model_artifact"
           :

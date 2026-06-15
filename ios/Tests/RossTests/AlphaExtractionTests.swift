@@ -4327,6 +4327,47 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(descriptor.runtimeMode, pinned.runtimeMode)
     }
 
+    func testPreferredAssistantRuntimeModePrefersMLXOnCapablePhoneForDeeperTiers() {
+        let runtime = alphaPreferredAssistantRuntimeMode(
+            for: .caseAssociate,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24
+        )
+
+        XCTAssertEqual(runtime, .mlxSwiftLm)
+    }
+
+    func testPreferredAssistantRuntimeModeKeepsGGUFForQuickStartAndConstrainedPhones() {
+        let quickStart = alphaPreferredAssistantRuntimeMode(
+            for: .quickStart,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 16 * 1_073_741_824,
+            freeStorageGB: 32
+        )
+        let constrained = alphaPreferredAssistantRuntimeMode(
+            for: .caseAssociate,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 4 * 1_073_741_824,
+            freeStorageGB: 6
+        )
+
+        XCTAssertEqual(quickStart, .llamaCppGguf)
+        XCTAssertEqual(constrained, .llamaCppGguf)
+    }
+
+    func testPreferredAssistantRuntimeModePreservesInstalledMLXRuntime() {
+        let runtime = alphaPreferredAssistantRuntimeMode(
+            for: .caseAssociate,
+            existingRuntimeMode: .mlxSwiftLm,
+            isPhoneFormFactor: false,
+            physicalMemoryBytes: 4 * 1_073_741_824,
+            freeStorageGB: 6
+        )
+
+        XCTAssertEqual(runtime, .mlxSwiftLm)
+    }
+
     func testAssistantUpdateCandidateIgnoresMLXArchiveChecksumStyleWhenPackIdMatches() {
         let installedPack = AlphaInstalledModelPack(
             packId: "gemma-4-12b-mlx",

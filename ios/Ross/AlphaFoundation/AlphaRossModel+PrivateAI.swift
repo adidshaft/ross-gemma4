@@ -472,7 +472,10 @@ extension AlphaRossModel {
         Task {
             var descriptorsByTier: [AlphaCapabilityTier: AlphaAssistantCatalogDescriptor] = [:]
             for tier in tiers {
-                let preferredRuntime = installedPacks.first(where: { $0.tier == tier })?.runtimeMode
+                let preferredRuntime = alphaPreferredAssistantRuntimeMode(
+                    for: tier,
+                    existingRuntimeMode: installedPacks.first(where: { $0.tier == tier })?.runtimeMode
+                )
                 do {
                     let manifest = try await backend.fetchCatalog(for: tier)
                     descriptorsByTier[tier] = alphaAssistantCatalogDescriptor(
@@ -1173,7 +1176,10 @@ extension AlphaRossModel {
             return
         }
 
-        let preferredRuntime = persisted.installedPacks.first(where: { $0.tier == tier })?.runtimeMode
+        let preferredRuntime = alphaPreferredAssistantRuntimeMode(
+            for: tier,
+            existingRuntimeMode: persisted.installedPacks.first(where: { $0.tier == tier })?.runtimeMode
+        )
         let resolvedDownload: AlphaAssistantDownloadDescriptor
         do {
             let catalog = try await backend.fetchCatalog(for: tier)

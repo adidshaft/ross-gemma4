@@ -337,7 +337,7 @@ export const MODEL_PACKS: ModelPack[] = PRODUCTION_IOS_MODEL_PACKS;
 
 export function buildDirectDownloadArtifact(pack: ModelPack): DirectDownloadArtifactDescriptor | null {
   if (
-    pack.artifactKind !== "local_model_artifact" ||
+    (pack.artifactKind !== "local_model_artifact" && pack.artifactKind !== "mlx_directory") ||
     !pack.fileName ||
     !pack.downloadUrl ||
     !pack.finalSha256 ||
@@ -370,7 +370,7 @@ export function buildDirectDownloadArtifact(pack: ModelPack): DirectDownloadArti
 }
 
 export function buildDownloadArtifact(pack: ModelPack): DirectDownloadArtifactDescriptor | null {
-  if (pack.artifactKind === "local_model_artifact") {
+  if (pack.artifactKind === "local_model_artifact" || pack.artifactKind === "mlx_directory") {
     return buildDirectDownloadArtifact(pack);
   }
 
@@ -464,6 +464,39 @@ function buildExternalDebugPack(env: RuntimeEnv): ModelPack | null {
   };
 }
 
+function buildAdditionalIOSMLXPacks(env: RuntimeEnv): ModelPack[] {
+  return env.iosAdditionalMLXPacks.flatMap((config) => {
+    const basePack = PRODUCTION_METADATA_MODEL_PACKS.find((candidate) => candidate.tier === config.tier);
+    if (!basePack) {
+      return [];
+    }
+
+    const resolvedRepo = config.repo ?? basePack.repo;
+    const resolvedAlternateRepo = config.alternateRepo ?? basePack.alternateRepo;
+
+    return [
+      {
+        ...basePack,
+        packId: config.packId,
+        sizeBytes: config.sizeBytes,
+        segmentSizeBytes: config.sizeBytes,
+        technicalModels: config.technicalModels ?? basePack.technicalModels,
+        technicalModelName: config.technicalModelName ?? `${basePack.technicalModelName} MLX`,
+        artifactSeed: config.artifactSeed ?? `${config.packId}-metadata-v1`,
+        artifactKind: "mlx_directory",
+        runtimeMode: "mlx_swift_lm",
+        minimumAppVersion: config.minimumAppVersion ?? basePack.minimumAppVersion,
+        fileName: config.fileName,
+        downloadUrl: config.downloadUrl,
+        finalSha256: config.finalSha256,
+        downloadSource: "direct",
+        ...(resolvedRepo ? { repo: resolvedRepo } : {}),
+        ...(resolvedAlternateRepo ? { alternateRepo: resolvedAlternateRepo } : {})
+      }
+    ];
+  });
+}
+
 export function listModelPacks(env: RuntimeEnv, platform: ModelCatalogQuery["platform"] = "ios"): ModelPack[] {
   const basePacks =
     env.modelCatalogMode === "production_metadata"
@@ -472,7 +505,12 @@ export function listModelPacks(env: RuntimeEnv, platform: ModelCatalogQuery["pla
         : PRODUCTION_IOS_MODEL_PACKS
       : DEV_MODEL_PACKS;
   const externalPack = buildExternalDebugPack(env);
-  return externalPack ? [...basePacks, externalPack] : basePacks;
+  const additionalIOSMLXPacks =
+    env.modelCatalogMode === "production_metadata" && platform === "ios"
+      ? buildAdditionalIOSMLXPacks(env)
+      : [];
+  const packs = [...basePacks, ...additionalIOSMLXPacks];
+  return externalPack ? [...packs, externalPack] : packs;
 }
 
 export interface ModelCatalogQuery {

@@ -571,6 +571,60 @@ func alphaRecommendedOnDeviceTier(
     return .quickStart
 }
 
+func alphaPreferredAssistantRuntimeMode(
+    for tier: AlphaCapabilityTier,
+    existingRuntimeMode: AlphaPackRuntimeMode? = nil,
+    isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
+    physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory,
+    freeStorageGB: Int = max(4, alphaAvailableStorageInGigabytes())
+) -> AlphaPackRuntimeMode {
+    if existingRuntimeMode == .mlxSwiftLm {
+        return .mlxSwiftLm
+    }
+
+    switch tier {
+    case .quickStart, .flash:
+        return .llamaCppGguf
+    case .caseAssociate, .seniorDraftingSupport:
+        break
+    }
+
+    guard isPhoneFormFactor else {
+        return .llamaCppGguf
+    }
+
+    let baselineTier = alphaRecommendedOnDeviceTier(
+        freeStorageGB: freeStorageGB,
+        physicalMemoryBytes: physicalMemoryBytes,
+        lowPowerMode: false
+    )
+    return baselineTier == .quickStart ? .llamaCppGguf : .mlxSwiftLm
+}
+
+func alphaAssistantUsesPhoneFormFactor() -> Bool {
+    alphaCurrentDeviceModelIdentifier().lowercased().hasPrefix("iphone")
+}
+
+func alphaCurrentDeviceModelIdentifier(
+    environment: [String: String] = ProcessInfo.processInfo.environment
+) -> String {
+    if let simulatorIdentifier = environment["SIMULATOR_MODEL_IDENTIFIER"]?.trimmingCharacters(in: .whitespacesAndNewlines),
+       !simulatorIdentifier.isEmpty {
+        return simulatorIdentifier
+    }
+
+    var systemInfo = utsname()
+    uname(&systemInfo)
+    let mirror = Mirror(reflecting: systemInfo.machine)
+    let identifierBytes = mirror.children.compactMap { child -> UInt8? in
+        guard let value = child.value as? Int8, value != 0 else {
+            return nil
+        }
+        return UInt8(value)
+    }
+    return String(decoding: identifierBytes, as: UTF8.self)
+}
+
 private func alphaAutomaticMLXDraftPack(
     for activePack: AlphaInstalledModelPack?,
     installedPacks: [AlphaInstalledModelPack],

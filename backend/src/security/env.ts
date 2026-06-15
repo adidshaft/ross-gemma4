@@ -36,9 +36,25 @@ export interface RuntimeEnv {
   huggingFaceAccessToken?: string | undefined;
   modelArtifactBaseUrl?: string | undefined;
   modelArtifactBearerToken?: string | undefined;
+  iosAdditionalMLXPacks: IOSAdditionalMLXPackConfig[];
 }
 
 const backendRootDirectory = fileURLToPath(new URL("../../", import.meta.url));
+
+export interface IOSAdditionalMLXPackConfig {
+  packId: string;
+  tier: "quick_start" | "case_associate" | "senior_drafting_support";
+  sizeBytes: number;
+  fileName: string;
+  downloadUrl: string;
+  finalSha256: string;
+  technicalModelName?: string | undefined;
+  technicalModels?: string[] | undefined;
+  repo?: string | undefined;
+  alternateRepo?: string | undefined;
+  artifactSeed?: string | undefined;
+  minimumAppVersion?: string | null | undefined;
+}
 
 function parsePort(value: string | undefined): number {
   const parsed = Number.parseInt(value ?? "", 10);
@@ -57,6 +73,94 @@ function parseOptionalPositiveInteger(value: string | undefined): number | undef
 
   const parsed = Number.parseInt(trimmed, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function parseOptionalStringArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const strings = value
+    .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
+    .filter((entry) => entry.length > 0);
+  return strings.length > 0 ? strings : undefined;
+}
+
+function parseIOSAdditionalMLXPacks(value: string | undefined): IOSAdditionalMLXPackConfig[] {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as unknown;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.flatMap((entry) => {
+      if (!entry || typeof entry !== "object") {
+        return [];
+      }
+
+      const record = entry as Record<string, unknown>;
+      const packId = typeof record.packId === "string" ? record.packId.trim() : "";
+      const tier = typeof record.tier === "string" ? record.tier.trim() : "";
+      const fileName = typeof record.fileName === "string" ? record.fileName.trim() : "";
+      const downloadUrl = typeof record.downloadUrl === "string" ? record.downloadUrl.trim() : "";
+      const finalSha256 = typeof record.finalSha256 === "string" ? record.finalSha256.trim().toLowerCase() : "";
+      const sizeBytes =
+        typeof record.sizeBytes === "number" && Number.isFinite(record.sizeBytes)
+          ? Math.trunc(record.sizeBytes)
+          : 0;
+
+      if (
+        !packId ||
+        !["quick_start", "case_associate", "senior_drafting_support"].includes(tier) ||
+        sizeBytes <= 0 ||
+        !fileName ||
+        !downloadUrl ||
+        !/^[a-f0-9]{64}$/i.test(finalSha256)
+      ) {
+        return [];
+      }
+
+      const minimumAppVersion =
+        typeof record.minimumAppVersion === "string"
+          ? record.minimumAppVersion.trim() || null
+          : record.minimumAppVersion === null
+            ? null
+            : undefined;
+
+      return [
+        {
+          packId,
+          tier: tier as IOSAdditionalMLXPackConfig["tier"],
+          sizeBytes,
+          fileName,
+          downloadUrl,
+          finalSha256,
+          technicalModelName:
+            typeof record.technicalModelName === "string"
+              ? record.technicalModelName.trim() || undefined
+              : undefined,
+          technicalModels: parseOptionalStringArray(record.technicalModels),
+          repo: typeof record.repo === "string" ? record.repo.trim() || undefined : undefined,
+          alternateRepo:
+            typeof record.alternateRepo === "string"
+              ? record.alternateRepo.trim() || undefined
+              : undefined,
+          artifactSeed:
+            typeof record.artifactSeed === "string"
+              ? record.artifactSeed.trim() || undefined
+              : undefined,
+          minimumAppVersion
+        }
+      ];
+    });
+  } catch {
+    return [];
+  }
 }
 
 function parseModelCatalogMode(
@@ -191,6 +295,7 @@ export function readRuntimeEnv(
       trimmedValue(environment.HUGGING_FACE_HUB_TOKEN) ??
       trimmedValue(environment.HF_TOKEN),
     modelArtifactBaseUrl: trimmedValue(environment.ROSS_MODEL_ARTIFACT_BASE_URL),
-    modelArtifactBearerToken: trimmedValue(environment.ROSS_MODEL_ARTIFACT_BEARER_TOKEN)
+    modelArtifactBearerToken: trimmedValue(environment.ROSS_MODEL_ARTIFACT_BEARER_TOKEN),
+    iosAdditionalMLXPacks: parseIOSAdditionalMLXPacks(environment.ROSS_IOS_ADDITIONAL_MLX_PACKS_JSON)
   };
 }

@@ -275,3 +275,107 @@ test("production model catalog advertises platform runtime packs with real downl
   assert.equal(iosQuickStart?.runtimeMode, "gemma_local_runtime");
   assert.equal(iosQuickStart?.artifactKind, "local_model_artifact");
 });
+
+test("production model catalog can append configured iOS MLX packs for capable clients", async (t) => {
+  const mlxPackSha = "a".repeat(64);
+  const app = await buildApp({
+    env: buildTestEnv({
+      ROSS_MODEL_CATALOG_MODE: "production_metadata",
+      ROSS_IOS_ADDITIONAL_MLX_PACKS_JSON: JSON.stringify([
+        {
+          packId: "gemma-4-12b-it-mlx-packaged",
+          tier: "case_associate",
+          sizeBytes: 6_200_000_000,
+          fileName: "gemma-4-12b-it-mlx.zip",
+          downloadUrl: "https://models.ross.example/ios/gemma-4-12b-it-mlx.zip",
+          finalSha256: mlxPackSha,
+          technicalModelName: "Gemma 4 12B IT MLX"
+        }
+      ])
+    }),
+    emitLogsToConsole: false
+  });
+
+  t.after(async () => {
+    await app.close();
+  });
+
+  const iosCatalog = await app.inject({
+    method: "GET",
+    url: "/model-catalog?platform=ios&tier=case_associate"
+  });
+
+  assert.equal(iosCatalog.statusCode, 200);
+  const iosBody = JSON.parse(iosCatalog.body) as {
+    manifest: {
+      payload: {
+        packs: Array<{
+          packId: string;
+          tier: string;
+          technicalModelName: string;
+          artifactKind: string;
+          runtimeMode: string;
+          checksumSha256: string;
+          sizeBytes: number;
+        }>;
+      };
+    };
+  };
+
+  const ggufPack = iosBody.manifest.payload.packs.find((pack) => pack.packId === "gemma-4-12b-q4");
+  const mlxPack = iosBody.manifest.payload.packs.find(
+    (pack) => pack.packId === "gemma-4-12b-it-mlx-packaged"
+  );
+
+  assert.ok(ggufPack);
+  assert.ok(mlxPack);
+  assert.equal(mlxPack?.artifactKind, "mlx_directory");
+  assert.equal(mlxPack?.runtimeMode, "mlx_swift_lm");
+  assert.equal(mlxPack?.checksumSha256, mlxPackSha);
+  assert.equal(mlxPack?.technicalModelName, "Gemma 4 12B IT MLX");
+  assert.equal(mlxPack?.sizeBytes, 6_200_000_000);
+
+  const download = await app.inject({
+    method: "POST",
+    url: "/model-download/session",
+    payload: {
+      accountToken: "acct_test_token_1234567890",
+      packId: "gemma-4-12b-it-mlx-packaged",
+      platform: "ios",
+      appVersion: "1.0.0",
+      deviceIdHash: "a1b2c3d4e5f6a7b8"
+    }
+  });
+
+  assert.equal(download.statusCode, 200);
+  const downloadBody = JSON.parse(download.body) as {
+    downloadSession: {
+      payload: {
+        deliveryMode: string;
+        artifactKind: string;
+        runtimeMode: string;
+        artifact: {
+          fileName: string;
+          downloadUrl: string;
+          finalSha256: string;
+          segmentCount: number;
+          artifactKind: string;
+          runtimeMode: string;
+        };
+      };
+    };
+  };
+
+  assert.equal(downloadBody.downloadSession.payload.deliveryMode, "signed_segmented_local_model_artifact");
+  assert.equal(downloadBody.downloadSession.payload.artifactKind, "mlx_directory");
+  assert.equal(downloadBody.downloadSession.payload.runtimeMode, "mlx_swift_lm");
+  assert.equal(downloadBody.downloadSession.payload.artifact.fileName, "gemma-4-12b-it-mlx.zip");
+  assert.equal(
+    downloadBody.downloadSession.payload.artifact.downloadUrl,
+    "https://models.ross.example/ios/gemma-4-12b-it-mlx.zip"
+  );
+  assert.equal(downloadBody.downloadSession.payload.artifact.finalSha256, mlxPackSha);
+  assert.equal(downloadBody.downloadSession.payload.artifact.segmentCount, 1);
+  assert.equal(downloadBody.downloadSession.payload.artifact.artifactKind, "mlx_directory");
+  assert.equal(downloadBody.downloadSession.payload.artifact.runtimeMode, "mlx_swift_lm");
+});
