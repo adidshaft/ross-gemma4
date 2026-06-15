@@ -1599,8 +1599,8 @@ private struct AlphaLocalExtractionOrchestrator {
                 highlightRects: page.highlightRects
             )
         }
-        let quickStartTooLong = mode == .quickStart && pages.count > 12
-        let provider = quickStartTooLong ? nil : AlphaLocalModelRuntime.resolveProvider(
+        let quickStartNeedsUpgradeWarning = mode == .quickStart && pages.count > 12
+        let provider = AlphaLocalModelRuntime.resolveProvider(
             activePack: activePack,
             requestedTier: activePack?.tier,
             runtimeEnvironment: runtimeEnvironment
@@ -1753,7 +1753,7 @@ private struct AlphaLocalExtractionOrchestrator {
         ) {
             findings.append(focusedReviewFinding)
         }
-        if quickStartTooLong {
+        if quickStartNeedsUpgradeWarning {
             findings.append(
                 AlphaExtractionFinding(
                     caseId: caseId,

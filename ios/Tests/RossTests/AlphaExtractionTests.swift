@@ -3476,6 +3476,8 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(warningText.contains(alphaFileReviewBasicTooLongWarning(languageCode: "te")))
         XCTAssertFalse(warningText.localizedCaseInsensitiveContains("Quick Start is best for shorter files"), warningText)
         XCTAssertFalse(warningText.localizedCaseInsensitiveContains("longer document with your private assistant"), warningText)
+        XCTAssertFalse(result.modelInvocations.isEmpty)
+        XCTAssertTrue(result.modelInvocations.contains { $0.runtimeMode == AlphaPackRuntimeMode.deterministicDev.rawValue })
     }
 
     func testCaseAssociateLongFileReviewWarnsWhenLocalReviewFocusesSources() async {
