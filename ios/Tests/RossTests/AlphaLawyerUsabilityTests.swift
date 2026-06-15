@@ -693,6 +693,83 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
     }
 
     @MainActor
+    func testAskRuntimeSourcePackPrefersRelevantOlderDocumentOverRecentNoise() {
+        let caseID = UUID()
+        let relevantDocumentID = UUID()
+        let recentNoiseDocuments: [AlphaCaseDocument] = (1...4).map { index in
+            AlphaCaseDocument(
+                id: UUID(),
+                title: "Recent note \(index)",
+                fileName: "recent-note-\(index).txt",
+                kind: .text,
+                storedRelativePath: "docs/recent-note-\(index).txt",
+                importedAt: .now.addingTimeInterval(TimeInterval(-index * 60)),
+                pageCount: 1,
+                ocrStatus: .nativeText,
+                indexingStatus: .indexed,
+                extractedText: "Routine filing reminder and general correspondence.",
+                pages: [
+                    AlphaDocumentPage(
+                        pageNumber: 1,
+                        snippet: "Routine filing reminder.",
+                        extractedText: "Routine filing reminder and general correspondence."
+                    )
+                ]
+            )
+        }
+        let relevantDocument = AlphaCaseDocument(
+            id: relevantDocumentID,
+            title: "CAM-D3 retention memo",
+            fileName: "cam-d3-retention-memo.txt",
+            kind: .text,
+            storedRelativePath: "docs/cam-d3-retention-memo.txt",
+            importedAt: .now.addingTimeInterval(-8_000),
+            pageCount: 1,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: "CAM-D3 retention lasted fourteen days and the export queue failed twice.",
+            pages: [
+                AlphaDocumentPage(
+                    pageNumber: 1,
+                    snippet: "CAM-D3 retention and export queue failure.",
+                    extractedText: "CAM-D3 retention lasted fourteen days and the export queue failed twice."
+                )
+            ]
+        )
+
+        var state = AlphaPersistedState.seed()
+        state.cases = [
+            AlphaCaseMatter(
+                id: caseID,
+                title: "Document ranking matter",
+                forum: "High Court",
+                stage: .evidence,
+                summary: "Relevant older file should beat recent noise.",
+                issueHighlights: [],
+                evidenceNotes: [],
+                draftTasks: [],
+                documents: recentNoiseDocuments + [relevantDocument],
+                sourceRefs: []
+            )
+        ]
+
+        let model = AlphaRossModel(previewState: state)
+
+        let sourcePack = model.askRuntimeSourcePack(
+            question: "What does CAM-D3 retention say about the export queue?",
+            scopeCaseID: caseID,
+            selectedDocuments: []
+        )
+
+        XCTAssertFalse(sourcePack.isEmpty)
+        XCTAssertTrue(sourcePack.contains { $0.sourceRef.documentId == relevantDocumentID })
+        XCTAssertEqual(
+            sourcePack.first(where: { $0.sourceRef.effectiveSourceCategory != .matterDetail })?.sourceRef.documentId,
+            relevantDocumentID
+        )
+    }
+
+    @MainActor
     func testSelectedFileWaitingResultUsesPlainLanguage() {
         let previousLanguageCode = rossSelectedLanguageCode()
         rossSaveLanguageSelection(code: "hi")

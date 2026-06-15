@@ -1543,6 +1543,7 @@ extension AlphaRossModel {
         selectedDocuments: [AlphaAskDocumentOption]
     ) -> [AlphaSourceTextBlock] {
         let selectedIDs = Set(selectedDocuments.map(\.id))
+        let queryTerms = alphaAskSearchTerms(from: question)
         let requestedTier = activePack?.tier ?? persisted.settings.activeTier ?? selectedTier
         let runtimeEnvironment = alphaLocalRuntimeEnvironment(
             activePack: activePack,
@@ -1596,17 +1597,35 @@ extension AlphaRossModel {
         if !selectedIDs.isEmpty {
             candidateDocuments.removeAll { !selectedIDs.contains($0.1.id) }
         } else {
-            candidateDocuments.sort { lhs, rhs in
-                if let scopeCaseID {
-                    let lhsScoped = lhs.0.id == scopeCaseID
-                    let rhsScoped = rhs.0.id == scopeCaseID
-                    if lhsScoped != rhsScoped {
-                        return lhsScoped && !rhsScoped
+            candidateDocuments = candidateDocuments
+                .enumerated()
+                .sorted { lhs, rhs in
+                    if let scopeCaseID {
+                        let lhsScoped = lhs.element.0.id == scopeCaseID
+                        let rhsScoped = rhs.element.0.id == scopeCaseID
+                        if lhsScoped != rhsScoped {
+                            return lhsScoped && !rhsScoped
+                        }
                     }
+
+                    let lhsScore = alphaAskCandidateDocumentRelevanceScore(
+                        document: lhs.element.1,
+                        questionTerms: queryTerms
+                    )
+                    let rhsScore = alphaAskCandidateDocumentRelevanceScore(
+                        document: rhs.element.1,
+                        questionTerms: queryTerms
+                    )
+                    if lhsScore != rhsScore {
+                        return lhsScore > rhsScore
+                    }
+                    if lhs.element.1.importedAt != rhs.element.1.importedAt {
+                        return lhs.element.1.importedAt > rhs.element.1.importedAt
+                    }
+                    return lhs.offset < rhs.offset
                 }
-                return lhs.1.importedAt > rhs.1.importedAt
-            }
-            candidateDocuments = Array(candidateDocuments.prefix(sourcePackPolicy.documentCandidateLimit))
+                .prefix(sourcePackPolicy.documentCandidateLimit)
+                .map(\.element)
         }
 
         let matterBlocks = askRuntimeMatterMemorySourcePack(scopeCaseID: scopeCaseID)
@@ -1665,6 +1684,56 @@ extension AlphaRossModel {
             return Array((matterBlocks + rankedDocumentBlocks).prefix(sourcePackPolicy.sourceBlockLimit))
         }
         return askRuntimeMatterMemorySourcePack(scopeCaseID: scopeCaseID)
+    }
+
+    func alphaAskCandidateDocumentRelevanceScore(
+        document: AlphaCaseDocument,
+        questionTerms: [String]
+    ) -> Int {
+        guard !questionTerms.isEmpty else { return 0 }
+
+        let haystack = alphaAskCandidateDocumentSignalText(document: document)
+        guard !haystack.isEmpty else { return 0 }
+
+        let titleHaystack = document.title.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).lowercased()
+        var score = 0
+        for term in questionTerms where haystack.contains(term) {
+            score += term.count >= 6 ? 7 : 4
+            if titleHaystack.contains(term) {
+                score += 3
+            }
+        }
+        return score
+    }
+
+    func alphaAskCandidateDocumentSignalText(document: AlphaCaseDocument) -> String {
+        var signals: [String] = [document.title, document.fileName]
+
+        let dominantSnippet = document.dominantSourceSnippet?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !dominantSnippet.isEmpty {
+            signals.append(dominantSnippet)
+        }
+
+        for field in document.extractedFields where !field.needsReview {
+            signals.append(field.label)
+            signals.append(field.value)
+            if signals.count >= 14 {
+                break
+            }
+        }
+
+        let pageSignals = document.pages.prefix(6).compactMap { page -> String? in
+            let text = page.anchorText ?? page.snippet ?? page.extractedText
+            let cleaned = text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            guard !cleaned.isEmpty else { return nil }
+            return alphaAskCompactSnippet(from: cleaned)
+        }
+        signals.append(contentsOf: pageSignals)
+
+        return signals
+            .joined(separator: "\n")
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+            .lowercased()
     }
 
     func alphaConfirmedDocumentDetailsSourceBlock(
