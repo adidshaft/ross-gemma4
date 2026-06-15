@@ -1329,16 +1329,16 @@ final class AlphaExtractionTests: XCTestCase {
             [.quickStart, .caseAssociate, .seniorDraftingSupport]
         )
         XCTAssertEqual(AlphaCapabilityTier.flash.downloadSizeLabel, "3.0 GB")
-        XCTAssertEqual(AlphaCapabilityTier.quickStart.downloadSizeLabel, "5.4 GB")
-        XCTAssertEqual(AlphaCapabilityTier.caseAssociate.downloadSizeLabel, "7.4 GB")
-        XCTAssertEqual(AlphaCapabilityTier.seniorDraftingSupport.downloadSizeLabel, "17.0 GB")
+        XCTAssertEqual(AlphaCapabilityTier.quickStart.downloadSizeLabel, "5.2 GB")
+        XCTAssertEqual(AlphaCapabilityTier.caseAssociate.downloadSizeLabel, "7.8 GB")
+        XCTAssertEqual(AlphaCapabilityTier.seniorDraftingSupport.downloadSizeLabel, "17.4 GB")
         XCTAssertEqual(
             AlphaCapabilityTier.flash.setupWarning(languageCode: "en"),
             "Download about 3.0 GB before you begin. Wi-Fi is still the safest option."
         )
         XCTAssertTrue(
             AlphaCapabilityTier.caseAssociate.setupWarning(languageCode: "ta")
-                .contains("7.4 GB")
+                .contains("7.8 GB")
         )
         XCTAssertTrue(
             AlphaCapabilityTier.caseAssociate.setupWarning(languageCode: "ta")
@@ -1346,7 +1346,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
         XCTAssertTrue(
             AlphaCapabilityTier.seniorDraftingSupport.setupWarning(languageCode: "te-IN")
-                .contains("17.0 GB")
+                .contains("17.4 GB")
         )
         XCTAssertTrue(
             AlphaCapabilityTier.seniorDraftingSupport.setupWarning(languageCode: "te-IN")

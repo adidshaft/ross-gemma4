@@ -317,11 +317,11 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
         case .flash:
             "3.0 GB"
         case .quickStart:
-            "5.4 GB"
+            alphaAssistantStorageSizeLabel(alphaAssistantModelArtifact(for: .quickStart).totalDownloadBytes)
         case .caseAssociate:
-            "7.4 GB"
+            alphaAssistantStorageSizeLabel(alphaAssistantModelArtifact(for: .caseAssociate).totalDownloadBytes)
         case .seniorDraftingSupport:
-            "17.0 GB"
+            alphaAssistantStorageSizeLabel(alphaAssistantModelArtifact(for: .seniorDraftingSupport).totalDownloadBytes)
         }
     }
 
@@ -330,11 +330,11 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
         case .flash:
             "3.0 GB"
         case .quickStart:
-            "5.4 GB"
+            alphaAssistantStorageSizeLabel(alphaAssistantModelArtifact(for: .quickStart).totalDownloadBytes)
         case .caseAssociate:
-            "7.4 GB"
+            alphaAssistantStorageSizeLabel(alphaAssistantModelArtifact(for: .caseAssociate).totalDownloadBytes)
         case .seniorDraftingSupport:
-            "17.0 GB"
+            alphaAssistantStorageSizeLabel(alphaAssistantModelArtifact(for: .seniorDraftingSupport).totalDownloadBytes)
         }
     }
 

@@ -1168,22 +1168,22 @@ struct AlphaAssistantModelArtifact: Hashable, Sendable {
         "Hugging Face · \(repository)"
     }
 
+    var totalDownloadBytes: Int64 {
+        sizeBytes + (draftArtifact?.sizeBytes ?? 0)
+    }
+
     var sizeLabel: String {
-        switch tier {
-        case .flash:
-            "about 3.0 GB"
-        case .quickStart:
-            "about 5.4 GB"
-        case .caseAssociate:
-            "about 7.4 GB"
-        case .seniorDraftingSupport:
-            "about 17.0 GB"
-        }
+        "about \(alphaAssistantStorageSizeLabel(totalDownloadBytes))"
     }
 
     var requirementLabel: String {
         "Min \(minimumMemoryGB) GB memory · Rec \(recommendedMemoryGB) GB · \(requiredFreeSpaceGB) GB free"
     }
+}
+
+func alphaAssistantStorageSizeLabel(_ bytes: Int64) -> String {
+    let gigabytes = max(Double(bytes), 0) / 1_000_000_000
+    return String(format: "%.1f GB", gigabytes)
 }
 
 let alphaAssistantModelArtifacts: [AlphaCapabilityTier: AlphaAssistantModelArtifact] = [
