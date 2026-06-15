@@ -3944,6 +3944,46 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(result.hasAnswerDetails)
     }
 
+    func testAnswerDetailReviewedSourceSectionsLabelIgnoresMatterMemoryBlocks() {
+        let invocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [
+                AlphaSourceRef(
+                    caseId: UUID(),
+                    documentId: UUID(),
+                    documentTitle: "Matter memory",
+                    pageNumber: 0,
+                    paragraphRange: "Next hearing",
+                    textSnippet: "Next hearing: 14 May 2026",
+                    sourceCategory: .matterDetail
+                ),
+                AlphaSourceRef(
+                    caseId: UUID(),
+                    documentId: UUID(),
+                    documentTitle: "Order",
+                    pageNumber: 1
+                ),
+                AlphaSourceRef(
+                    caseId: UUID(),
+                    documentId: UUID(),
+                    documentTitle: "Order",
+                    pageNumber: 2
+                )
+            ],
+            reviewedSourceCount: 1,
+            promptHash: "prompt",
+            inputHash: "input",
+            status: .complete
+        )
+
+        XCTAssertEqual(invocation.answerDetailReviewedSourceSectionsLabel, "1 / 2")
+    }
+
     @MainActor
     func testAnswerDetailMetricsEstimateTokenCountAndExposeFirstResponse() {
         let invocation = AlphaLocalModelInvocation(
@@ -4116,6 +4156,70 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(completed.accelerationMode, .draftModelSpeculative)
         XCTAssertEqual(completed.accelerationDraftTokens, 4)
         XCTAssertEqual(completed.accelerationDraftModelLabel, "gemma-4-e4b-draft")
+    }
+
+    func testModelInvocationCompletionCountsOnlyDocumentSourcesAsReviewed() {
+        let documentSourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "Order",
+            pageNumber: 1,
+            textSnippet: "Adjourned to 14 May 2026."
+        )
+        let matterDetailRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "Matter memory",
+            pageNumber: 0,
+            paragraphRange: "Next hearing",
+            textSnippet: "Next hearing: 14 May 2026",
+            sourceCategory: .matterDetail
+        )
+        let input = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "Summarize the selected order.",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: matterDetailRef,
+                    text: "Next hearing: 14 May 2026",
+                    pageNumber: 0,
+                    languageHint: "en",
+                    ocrConfidence: 1
+                ),
+                AlphaSourceTextBlock(
+                    sourceRef: documentSourceRef,
+                    text: "The matter was adjourned to 14 May 2026.",
+                    pageNumber: 1,
+                    languageHint: "en",
+                    ocrConfidence: 1
+                )
+            ],
+            expectedSchema: "plain_text",
+            maxOutputTokens: 128,
+            extractionMode: .quickStart
+        )
+        let invocation = AlphaModelInvocationStore.begin(
+            task: .matterQuestionAnswer,
+            runtimeMode: .mlxSwiftLm,
+            capabilityTier: .quickStart,
+            caseId: documentSourceRef.caseId,
+            documentId: documentSourceRef.documentId,
+            extractionRunId: nil,
+            input: input
+        )
+
+        let completed = AlphaModelInvocationStore.complete(
+            invocation,
+            output: AlphaLocalModelOutput(
+                rawText: "Answer from the selected order.",
+                parsedJson: nil,
+                schemaValid: true,
+                warnings: [],
+                sourceRefs: [matterDetailRef, documentSourceRef]
+            )
+        )
+
+        XCTAssertEqual(completed.reviewedSourceCount, 1)
     }
 
     func testModelInvocationCompletionClearsDraftMetadataWhenRunUsesStandardGeneration() {

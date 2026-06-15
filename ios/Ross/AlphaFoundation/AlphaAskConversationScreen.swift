@@ -908,8 +908,10 @@ extension AlphaLocalModelInvocation {
 
     var answerDetailReviewedSourceSectionsLabel: String? {
         guard let reviewedSourceCount else { return nil }
-        let totalSourceCount = inputSourceRefs.count
-        guard totalSourceCount > 0 else { return reviewedSourceCount.formatted() }
+        let totalSourceCount = inputSourceRefs.filter {
+            $0.effectiveSourceCategory == .documentSource
+        }.count
+        guard totalSourceCount > 0 else { return reviewedSourceCount > 0 ? reviewedSourceCount.formatted() : nil }
         if reviewedSourceCount < totalSourceCount {
             return "\(reviewedSourceCount.formatted()) / \(totalSourceCount.formatted())"
         }

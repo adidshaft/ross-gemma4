@@ -201,8 +201,11 @@ enum AlphaModelInvocationStore {
         if let inputTokenCount = output.inputTokenCount {
             copy.estimatedInputTokens = inputTokenCount
         }
-        if !output.sourceRefs.isEmpty {
-            copy.reviewedSourceCount = output.sourceRefs.count
+        let reviewedDocumentSourceCount = output.sourceRefs.filter {
+            $0.effectiveSourceCategory == .documentSource
+        }.count
+        if reviewedDocumentSourceCount > 0 {
+            copy.reviewedSourceCount = reviewedDocumentSourceCount
         }
         copy.estimatedOutputTokens = outputTokens
         copy.completedAt = completedAt
