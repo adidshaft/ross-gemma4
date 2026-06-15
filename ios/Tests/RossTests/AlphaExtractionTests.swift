@@ -4904,18 +4904,18 @@ final class AlphaExtractionTests: XCTestCase {
                 isActiveTier: false
             ),
             .quickStart: (
-                repository: "bartowski/google_gemma-4-E4B-it-GGUF",
-                fileName: "google_gemma-4-E4B-it-Q4_K_M.gguf",
-                sizeBytes: 5_405_168_384,
-                sha256: "51865750adafd22de56994a343d5a887cc1a589b9bae41d62b748c8bd0ca9c76",
+                repository: "unsloth/gemma-4-E4B-it-GGUF",
+                fileName: "gemma-4-E4B-it-Q4_K_M.gguf",
+                sizeBytes: 4_977_169_568,
+                sha256: "519b9793ed6ce0ff530f1b7c96e848e08e49e7af4d57bb97f76215963a54146d",
                 releaseReady: true,
                 isActiveTier: true
             ),
             .caseAssociate: (
-                repository: "ggml-org/gemma-4-12B-it-GGUF",
-                fileName: "gemma-4-12B-it-Q4_K_M.gguf",
-                sizeBytes: 7_381_382_048,
-                sha256: "1278394b693672ac2799eadc9a83fd98259a6a88a40acfb1dcaa6c6fc895a606",
+                repository: "unsloth/gemma-4-12b-it-GGUF",
+                fileName: "gemma-4-12b-it-Q4_K_M.gguf",
+                sizeBytes: 7_121_860_000,
+                sha256: "43fec98c5102b1c446b4ddd0a9439f1db3a2e1f2e0b8cd143ce1ea619a9403d6",
                 releaseReady: true,
                 isActiveTier: true
             ),
