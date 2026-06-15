@@ -22,6 +22,17 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    private func makeMLXDirectoryFixture(
+        named name: String = "ross-mlx-\(UUID().uuidString)"
+    ) throws -> URL {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(name, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try Data(#"{"model_type":"gemma4"}"#.utf8).write(to: directory.appendingPathComponent("config.json"))
+        try Data("{}".utf8).write(to: directory.appendingPathComponent("tokenizer.json"))
+        try Data("weights".utf8).write(to: directory.appendingPathComponent("model.safetensors"))
+        return directory
+    }
+
     private func baseAskResult(
         answerTitle: String = "Answered from your files",
         statusNote: String? = "Private assistant"
@@ -3030,6 +3041,102 @@ final class AlphaExtractionTests: XCTestCase {
                 actual: String(repeating: "d", count: 64)
             )
         )
+    }
+
+    @MainActor
+    func testStoreInstallsAndRemovesMLXDirectoryArtifact() async throws {
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+
+        let sourceDirectory = try makeMLXDirectoryFixture()
+        defer { try? FileManager.default.removeItem(at: sourceDirectory) }
+
+        let expected = try XCTUnwrap(alphaModelArtifactVerification(at: sourceDirectory))
+        let installed = try await store.installDownloadedPackArtifact(
+            for: .caseAssociate,
+            fileName: "gemma-4-12b-it-mlx.zip",
+            downloadedFileURL: sourceDirectory,
+            expectedChecksum: expected.checksum,
+            expectedBytes: expected.bytes,
+            packId: "gemma-4-12b-it-mlx",
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm
+        )
+
+        XCTAssertEqual(installed.relativePath, "model-packs/case_associate/gemma-4-12b-it-mlx")
+        XCTAssertEqual(installed.checksum, expected.checksum)
+        XCTAssertEqual(installed.bytes, expected.bytes)
+
+        let artifactURL = alphaAbsoluteURL(for: installed.relativePath)
+        var isDirectory: ObjCBool = false
+        XCTAssertTrue(FileManager.default.fileExists(atPath: artifactURL.path, isDirectory: &isDirectory))
+        XCTAssertTrue(isDirectory.boolValue)
+        XCTAssertEqual(AlphaRossModel(previewState: .empty()).alphaFileByteCount(at: artifactURL), expected.bytes)
+
+        let manifestURL = alphaModelArtifactManifestURL(forArtifactAt: artifactURL)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: manifestURL.path))
+
+        await store.removeDownloadedPackArtifact(relativePath: installed.relativePath)
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: artifactURL.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: manifestURL.path))
+    }
+
+    @MainActor
+    func testRecoveredInstalledPackFromDiskRestoresMLXDirectoryArtifact() async throws {
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+
+        let sourceDirectory = try makeMLXDirectoryFixture()
+        defer { try? FileManager.default.removeItem(at: sourceDirectory) }
+
+        let expected = try XCTUnwrap(alphaModelArtifactVerification(at: sourceDirectory))
+        let installed = try await store.installDownloadedPackArtifact(
+            for: .caseAssociate,
+            fileName: "gemma-4-12b-it-mlx",
+            downloadedFileURL: sourceDirectory,
+            expectedChecksum: expected.checksum,
+            expectedBytes: expected.bytes,
+            packId: "gemma-4-12b-it-mlx",
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm
+        )
+
+        let model = AlphaRossModel(previewState: .empty())
+        let recovered = model.recoveredInstalledPackFromDisk(tier: .caseAssociate)
+
+        XCTAssertEqual(recovered?.installPath, installed.relativePath)
+        XCTAssertEqual(recovered?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(recovered?.artifactKind, "mlx_directory")
+        XCTAssertEqual(recovered?.checksumSha256, expected.checksum)
+        XCTAssertEqual(recovered?.packId, "gemma-4-12b-it-mlx")
+    }
+
+    @MainActor
+    func testRecoveredInstalledPackFromDiskRejectsTamperedMLXDirectoryArtifact() async throws {
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+
+        let sourceDirectory = try makeMLXDirectoryFixture()
+        defer { try? FileManager.default.removeItem(at: sourceDirectory) }
+
+        let expected = try XCTUnwrap(alphaModelArtifactVerification(at: sourceDirectory))
+        let installed = try await store.installDownloadedPackArtifact(
+            for: .caseAssociate,
+            fileName: "gemma-4-12b-it-mlx",
+            downloadedFileURL: sourceDirectory,
+            expectedChecksum: expected.checksum,
+            expectedBytes: expected.bytes,
+            packId: "gemma-4-12b-it-mlx",
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm
+        )
+
+        let installedDirectory = alphaAbsoluteURL(for: installed.relativePath)
+        try FileManager.default.removeItem(at: installedDirectory.appendingPathComponent("tokenizer.json"))
+
+        let model = AlphaRossModel(previewState: .empty())
+        XCTAssertNil(model.recoveredInstalledPackFromDisk(tier: .caseAssociate))
     }
 
     func testLocalExtractionDetectsMixedLanguageProfile() async {

@@ -165,6 +165,108 @@ func alphaSweepTemporaryAssistantDownloads(fileManager: FileManager = .default) 
     return reclaimedBytes
 }
 
+func alphaModelArtifactByteCount(at url: URL, fileManager: FileManager = .default) -> Int64 {
+    var isDirectory: ObjCBool = false
+    guard fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory) else { return 0 }
+    guard isDirectory.boolValue else {
+        let attributes = try? fileManager.attributesOfItem(atPath: url.path)
+        if let size = attributes?[.size] as? NSNumber {
+            return size.int64Value
+        }
+        let values = try? url.resourceValues(forKeys: [.fileSizeKey])
+        return Int64(values?.fileSize ?? 0)
+    }
+
+    guard let enumerator = fileManager.enumerator(
+        at: url,
+        includingPropertiesForKeys: [.isRegularFileKey, .fileSizeKey],
+        options: []
+    ) else {
+        return 0
+    }
+
+    var totalBytes: Int64 = 0
+    for case let fileURL as URL in enumerator {
+        let values = try? fileURL.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
+        guard values?.isRegularFile == true else { continue }
+        totalBytes += Int64(values?.fileSize ?? 0)
+    }
+    return totalBytes
+}
+
+func alphaModelArtifactVerification(
+    at url: URL,
+    fileManager: FileManager = .default
+) -> (checksum: String, bytes: Int64)? {
+    var isDirectory: ObjCBool = false
+    guard fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory) else { return nil }
+    guard isDirectory.boolValue else {
+        guard let checksum = alphaModelSHA256Hex(forFileAt: url) else { return nil }
+        return (checksum, alphaModelArtifactByteCount(at: url, fileManager: fileManager))
+    }
+
+    guard let enumerator = fileManager.enumerator(
+        at: url,
+        includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey],
+        options: []
+    ) else {
+        return nil
+    }
+
+    var entries: [(relativePath: String, checksum: String, bytes: Int64)] = []
+    for case let fileURL as URL in enumerator {
+        let values = try? fileURL.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
+        if values?.isSymbolicLink == true {
+            return nil
+        }
+        guard values?.isRegularFile == true else { continue }
+        guard let checksum = alphaModelSHA256Hex(forFileAt: fileURL) else { return nil }
+        let relativePath = fileURL.path.replacingOccurrences(of: url.path + "/", with: "")
+        entries.append((relativePath, checksum, Int64(values?.fileSize ?? 0)))
+    }
+
+    guard !entries.isEmpty else { return nil }
+    let manifestPayload = entries
+        .sorted(by: { $0.relativePath < $1.relativePath })
+        .map { "\($0.relativePath)\t\($0.bytes)\t\($0.checksum)" }
+        .joined(separator: "\n")
+    let digest = SHA256.hash(data: Data(manifestPayload.utf8)).map { String(format: "%02x", $0) }.joined()
+    let totalBytes = entries.reduce(into: Int64(0)) { $0 += $1.bytes }
+    return (digest, totalBytes)
+}
+
+func alphaModelArtifactManifestURL(
+    forArtifactAt artifactURL: URL,
+    fileManager: FileManager = .default
+) -> URL {
+    var isDirectory: ObjCBool = false
+    let artifactExists = fileManager.fileExists(atPath: artifactURL.path, isDirectory: &isDirectory)
+    let shouldTreatAsDirectory = (artifactExists && isDirectory.boolValue) || artifactURL.hasDirectoryPath
+    if shouldTreatAsDirectory {
+        return artifactURL
+            .deletingLastPathComponent()
+            .appendingPathComponent("\(artifactURL.lastPathComponent).manifest.json", isDirectory: false)
+    }
+    return artifactURL.deletingPathExtension().appendingPathExtension("manifest.json")
+}
+
+func alphaModelSHA256Hex(forFileAt url: URL) -> String? {
+    guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+    defer { try? handle.close() }
+
+    var hasher = SHA256()
+    do {
+        while true {
+            let data = try handle.read(upToCount: 1024 * 1024)
+            guard let data, !data.isEmpty else { break }
+            hasher.update(data: data)
+        }
+    } catch {
+        return nil
+    }
+    return hasher.finalize().map { String(format: "%02x", $0) }.joined()
+}
+
 struct AlphaModelArtifactManifest: Codable, Hashable, Sendable {
     let packId: String
     let tier: AlphaCapabilityTier
@@ -463,7 +565,24 @@ actor AlphaRossStore {
         developmentOnly: Bool = false
     ) throws -> (relativePath: String, checksum: String, bytes: Int64) {
         try ensureFolders()
-        let verified = try sha256Hex(forFileAt: downloadedFileURL)
+        let folder = modelPacksURL.appendingPathComponent(tier.rawValue, isDirectory: true)
+        try fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
+        let artifactURL = resolvedInstalledArtifactURL(
+            in: folder,
+            requestedFileName: fileName,
+            sourceURL: downloadedFileURL
+        )
+
+        guard let verified = alphaModelArtifactVerification(
+            at: downloadedFileURL,
+            fileManager: fileManager
+        ) else {
+            throw NSError(
+                domain: "RossAlphaPack",
+                code: 2,
+                userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."]
+            )
+        }
         if let expectedBytes, verified.bytes != expectedBytes {
             throw NSError(
                 domain: "RossAlphaPack",
@@ -477,10 +596,6 @@ actor AlphaRossStore {
             throw NSError(domain: "RossAlphaPack", code: 2, userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."])
         }
 
-        let folder = modelPacksURL.appendingPathComponent(tier.rawValue, isDirectory: true)
-        try fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
-        let artifactURL = folder.appendingPathComponent(fileName)
-
         do {
             try removeExistingItemIfNeeded(at: artifactURL)
             try fileManager.moveItem(at: downloadedFileURL, to: artifactURL)
@@ -489,6 +604,7 @@ actor AlphaRossStore {
             try fileManager.copyItem(at: downloadedFileURL, to: artifactURL)
             try? fileManager.removeItem(at: downloadedFileURL)
         }
+
         try writeModelArtifactManifest(
             tier: tier,
             packId: packId,
@@ -549,7 +665,7 @@ actor AlphaRossStore {
         guard let relativePath, !relativePath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         let artifactURL = alphaAbsoluteURL(for: relativePath)
         try? fileManager.removeItem(at: artifactURL)
-        try? fileManager.removeItem(at: artifactURL.deletingPathExtension().appendingPathExtension("manifest.json"))
+        try? fileManager.removeItem(at: alphaModelArtifactManifestURL(forArtifactAt: artifactURL, fileManager: fileManager))
     }
 
     @discardableResult
@@ -629,6 +745,45 @@ actor AlphaRossStore {
         }
     }
 
+    private func resolvedInstalledArtifactURL(
+        in folder: URL,
+        requestedFileName: String,
+        sourceURL: URL
+    ) -> URL {
+        var isDirectory: ObjCBool = false
+        let sourceExists = fileManager.fileExists(atPath: sourceURL.path, isDirectory: &isDirectory)
+        guard sourceExists, isDirectory.boolValue else {
+            return folder.appendingPathComponent(requestedFileName)
+        }
+
+        let trimmedName = requestedFileName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedName = normalizedInstalledDirectoryName(
+            requestedFileName: trimmedName,
+            fallbackName: sourceURL.lastPathComponent
+        )
+        return folder.appendingPathComponent(normalizedName, isDirectory: true)
+    }
+
+    private func normalizedInstalledDirectoryName(
+        requestedFileName: String,
+        fallbackName: String
+    ) -> String {
+        guard !requestedFileName.isEmpty else { return fallbackName }
+        let lowercased = requestedFileName.lowercased()
+        let archiveSuffixes = [".tar.gz", ".tgz", ".zip", ".tar"]
+        for suffix in archiveSuffixes {
+            if lowercased.hasSuffix(suffix) {
+                let endIndex = requestedFileName.index(
+                    requestedFileName.endIndex,
+                    offsetBy: -suffix.count
+                )
+                let trimmed = String(requestedFileName[..<endIndex]).trimmingCharacters(in: .whitespacesAndNewlines)
+                return trimmed.isEmpty ? fallbackName : trimmed
+            }
+        }
+        return requestedFileName
+    }
+
     private func pruneModelPackSiblings(in folder: URL, keeping artifactURL: URL) throws {
         guard let siblings = try? fileManager.contentsOfDirectory(
             at: folder,
@@ -636,7 +791,10 @@ actor AlphaRossStore {
             options: [.skipsHiddenFiles]
         ) else { return }
         let keep = artifactURL.standardizedFileURL.path()
-        let keepManifest = artifactURL.deletingPathExtension().appendingPathExtension("manifest.json").standardizedFileURL.path()
+        let keepManifest = alphaModelArtifactManifestURL(
+            forArtifactAt: artifactURL,
+            fileManager: fileManager
+        ).standardizedFileURL.path()
         for sibling in siblings {
             let path = sibling.standardizedFileURL.path()
             guard path != keep && path != keepManifest else { continue }
@@ -667,7 +825,7 @@ actor AlphaRossStore {
             developmentOnly: developmentOnly,
             verifiedAt: .now
         )
-        let manifestURL = artifactURL.deletingPathExtension().appendingPathExtension("manifest.json")
+        let manifestURL = alphaModelArtifactManifestURL(forArtifactAt: artifactURL, fileManager: fileManager)
         let data = try JSONEncoder.ross.encode(manifest)
         try data.write(to: manifestURL, options: .atomic)
     }
@@ -697,23 +855,6 @@ actor AlphaRossStore {
         if fileManager.fileExists(atPath: legacyStateURL.path()) {
             try? fileManager.removeItem(at: legacyStateURL)
         }
-    }
-
-    private func sha256Hex(forFileAt url: URL) throws -> (checksum: String, bytes: Int64) {
-        let handle = try FileHandle(forReadingFrom: url)
-        defer { try? handle.close() }
-
-        var hasher = SHA256()
-        var bytes: Int64 = 0
-        while true {
-            let chunk = try handle.read(upToCount: 1_048_576) ?? Data()
-            guard !chunk.isEmpty else { break }
-            bytes += Int64(chunk.count)
-            hasher.update(data: chunk)
-        }
-
-        let checksum = hasher.finalize().map { String(format: "%02x", $0) }.joined()
-        return (checksum, bytes)
     }
 
     private func ensureFolders() throws {

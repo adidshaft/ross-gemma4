@@ -179,6 +179,20 @@ private func alphaPruneUnreferencedAssistantArtifactsFromDisk(installedPacks: [A
             }
             removeIfUnreferenced(url)
         }
+        for manifestURL in contents where manifestURL.lastPathComponent.hasSuffix(".manifest.json") {
+            guard let data = try? Data(contentsOf: manifestURL) else { continue }
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            guard let manifest = try? decoder.decode(AlphaModelArtifactManifest.self, from: data),
+                  manifest.tier == tier,
+                  !installedPaths.contains(manifest.relativePath) else {
+                continue
+            }
+            let artifactURL = alphaAbsoluteURL(for: manifest.relativePath)
+            reclaimedBytes += alphaModelFileByteCount(at: artifactURL)
+            try? fileManager.removeItem(at: artifactURL)
+            try? fileManager.removeItem(at: manifestURL)
+        }
         if let remaining = try? fileManager.contentsOfDirectory(atPath: tierDirectory.path()),
            remaining.isEmpty {
             try? fileManager.removeItem(at: tierDirectory)
@@ -189,29 +203,7 @@ private func alphaPruneUnreferencedAssistantArtifactsFromDisk(installedPacks: [A
 }
 
 private func alphaModelFileByteCount(at url: URL) -> Int64 {
-    let attributes = try? FileManager.default.attributesOfItem(atPath: url.path())
-    if let size = attributes?[.size] as? NSNumber {
-        return size.int64Value
-    }
-    let values = try? url.resourceValues(forKeys: [.fileSizeKey])
-    return Int64(values?.fileSize ?? 0)
-}
-
-private func alphaModelSHA256Hex(forFileAt url: URL) -> String? {
-    guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
-    defer { try? handle.close() }
-
-    var hasher = SHA256()
-    do {
-        while true {
-            let data = try handle.read(upToCount: 1024 * 1024)
-            guard let data, !data.isEmpty else { break }
-            hasher.update(data: data)
-        }
-    } catch {
-        return nil
-    }
-    return hasher.finalize().map { String(format: "%02x", $0) }.joined()
+    alphaModelArtifactByteCount(at: url)
 }
 
 func alphaModelAssistantChecksumMatches(expected: String, actual: String) -> Bool {
@@ -245,10 +237,6 @@ private func alphaModelArtifactManifest(forFileAt fileURL: URL) -> AlphaModelArt
     return try? decoder.decode(AlphaModelArtifactManifest.self, from: data)
 }
 
-private func alphaModelArtifactManifestURL(forArtifactAt artifactURL: URL) -> URL {
-    artifactURL.deletingPathExtension().appendingPathExtension("manifest.json")
-}
-
 struct AlphaExpectedDownloadedAssistantArtifact {
     let packId: String
     let tier: AlphaCapabilityTier
@@ -275,6 +263,10 @@ func alphaExpectedDownloadedAssistantArtifact(for pack: AlphaInstalledModelPack)
             runtimeMode: manifest.runtimeMode,
             developmentOnly: manifest.developmentOnly
         )
+    }
+
+    if pack.runtimeMode == .mlxSwiftLm || pack.artifactKind == "mlx_directory" {
+        return nil
     }
 
     let artifact = alphaAssistantModelArtifact(for: pack.tier)
@@ -363,17 +355,20 @@ private func alphaRecoveredInstalledPackFromDisk(tier: AlphaCapabilityTier) -> A
             guard alphaModelArtifactManifestURL(forArtifactAt: fileURL).standardizedFileURL == manifestURL.standardizedFileURL else {
                 continue
             }
-            guard alphaModelFileByteCount(at: fileURL) == manifest.bytes,
-                  alphaModelLooksLikeSHA256(manifest.checksumSha256),
-                  let verifiedChecksum = alphaModelSHA256Hex(forFileAt: fileURL),
-                  alphaModelAssistantChecksumMatches(expected: manifest.checksumSha256, actual: verifiedChecksum) else {
+            guard alphaModelLooksLikeSHA256(manifest.checksumSha256),
+                  let verifiedArtifact = alphaModelArtifactVerification(at: fileURL),
+                  verifiedArtifact.bytes == manifest.bytes,
+                  alphaModelAssistantChecksumMatches(
+                    expected: manifest.checksumSha256,
+                    actual: verifiedArtifact.checksum
+                  ) else {
                 continue
             }
             let recovered = AlphaInstalledModelPack(
                 packId: manifest.packId,
                 tier: manifest.tier,
                 installPath: manifest.relativePath,
-                checksumSha256: verifiedChecksum,
+                checksumSha256: verifiedArtifact.checksum,
                 artifactKind: manifest.artifactKind,
                 runtimeMode: manifest.runtimeMode,
                 developmentOnly: manifest.developmentOnly,
@@ -388,6 +383,7 @@ private func alphaRecoveredInstalledPackFromDisk(tier: AlphaCapabilityTier) -> A
     }
 
     let artifact = alphaAssistantModelArtifact(for: tier)
+    guard artifact.runtimeMode == .llamaCppGguf else { return nil }
     let relativePath = "model-packs/\(tier.rawValue)/\(artifact.fileName)"
     let fileURL = alphaAbsoluteURL(for: relativePath)
     guard alphaModelFileByteCount(at: fileURL) == artifact.sizeBytes else { return nil }
