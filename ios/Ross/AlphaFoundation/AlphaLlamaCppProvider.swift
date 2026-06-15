@@ -403,7 +403,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             let promptTokenCount = await context.promptTokenCount()
             
             var generatedResponse = ""
-            var lastPartialCount = 0
+            var lastEmittedPartialText: String?
             var timeToFirstTokenMs: Int?
             let generationLoopStartedAt = Date()
             while await !context.is_done {
@@ -425,8 +425,12 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
 
                 if let onPartial {
                     let cleanedPartial = stripTurnMarkerFragments(from: generatedResponse)
-                    if cleanedPartial.count - lastPartialCount >= 48 || tokenStr.contains("\n") {
-                        lastPartialCount = cleanedPartial.count
+                    if Self.shouldEmitStreamingPartial(
+                        cleanedPartial: cleanedPartial,
+                        lastEmittedPartialText: lastEmittedPartialText,
+                        latestToken: tokenStr
+                    ) {
+                        lastEmittedPartialText = cleanedPartial
                         let partialOutput = AlphaLocalModelOutput(
                             rawText: cleanedPartial,
                             parsedJson: nil,
@@ -594,6 +598,23 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         text.unicodeScalars.contains { scalar in
             range.contains(Int(scalar.value))
         }
+    }
+
+    nonisolated static func shouldEmitStreamingPartial(
+        cleanedPartial: String,
+        lastEmittedPartialText: String?,
+        latestToken: String
+    ) -> Bool {
+        guard cleanedPartial.count >= 16 else { return false }
+        guard let lastEmittedPartialText, !lastEmittedPartialText.isEmpty else { return true }
+
+        let growth = cleanedPartial.count - lastEmittedPartialText.count
+        guard growth > 0 else { return false }
+
+        if latestToken.contains("\n"), growth >= 8 {
+            return true
+        }
+        return growth >= 24
     }
 
     private func shouldStopGeneration(afterAppending token: String, fullText: String) -> Bool {

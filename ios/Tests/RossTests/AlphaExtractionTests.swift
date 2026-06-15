@@ -7493,6 +7493,43 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testLlamaStreamingPartialPublishesFirstMeaningfulChunk() {
+        XCTAssertTrue(
+            AlphaLlamaCppProvider.shouldEmitStreamingPartial(
+                cleanedPartial: "Selected order answer",
+                lastEmittedPartialText: nil,
+                latestToken: "answer"
+            )
+        )
+    }
+
+    func testLlamaStreamingPartialSuppressesTinyGrowthWithoutBoundary() {
+        XCTAssertFalse(
+            AlphaLlamaCppProvider.shouldEmitStreamingPartial(
+                cleanedPartial: "Selected order answer grows",
+                lastEmittedPartialText: "Selected order answer",
+                latestToken: "grows"
+            )
+        )
+    }
+
+    func testLlamaStreamingPartialPublishesOnNewlineOrMeaningfulGrowth() {
+        XCTAssertTrue(
+            AlphaLlamaCppProvider.shouldEmitStreamingPartial(
+                cleanedPartial: "Selected order answer\n- The matter is listed on 14 May 2026.",
+                lastEmittedPartialText: "Selected order answer",
+                latestToken: "\n"
+            )
+        )
+        XCTAssertTrue(
+            AlphaLlamaCppProvider.shouldEmitStreamingPartial(
+                cleanedPartial: "Selected order answer with enough additional text to cross the next visible growth threshold.",
+                lastEmittedPartialText: "Selected order answer",
+                latestToken: "threshold"
+            )
+        )
+    }
+
     @MainActor
     func testSelectedDocumentSummaryQuestionKeepsTaggedFileSource() {
         let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
