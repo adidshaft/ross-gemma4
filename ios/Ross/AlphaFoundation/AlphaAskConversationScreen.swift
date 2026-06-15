@@ -853,6 +853,18 @@ private extension AlphaPackRuntimeMode {
 }
 
 extension AlphaLocalModelInvocation {
+    private var uniqueDocumentInputSourceCount: Int {
+        Set(inputSourceRefs.compactMap { sourceRef -> String? in
+            guard sourceRef.effectiveSourceCategory == .documentSource else { return nil }
+            return [
+                sourceRef.documentId.uuidString,
+                String(sourceRef.pageNumber),
+                sourceRef.paragraphRange ?? "",
+                sourceRef.label
+            ].joined(separator: "|")
+        }).count
+    }
+
     var answerDetailAccelerationLabel: String? {
         switch accelerationMode {
         case .draftModelSpeculative:
@@ -908,9 +920,7 @@ extension AlphaLocalModelInvocation {
 
     var answerDetailReviewedSourceSectionsLabel: String? {
         guard let reviewedSourceCount else { return nil }
-        let totalSourceCount = inputSourceRefs.filter {
-            $0.effectiveSourceCategory == .documentSource
-        }.count
+        let totalSourceCount = uniqueDocumentInputSourceCount
         guard totalSourceCount > 0 else { return reviewedSourceCount > 0 ? reviewedSourceCount.formatted() : nil }
         if reviewedSourceCount < totalSourceCount {
             return "\(reviewedSourceCount.formatted()) / \(totalSourceCount.formatted())"

@@ -114,6 +114,16 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
 }
 
 enum AlphaModelInvocationStore {
+    private static func documentSourceIdentity(_ sourceRef: AlphaSourceRef) -> String? {
+        guard sourceRef.effectiveSourceCategory == .documentSource else { return nil }
+        return [
+            sourceRef.documentId.uuidString,
+            String(sourceRef.pageNumber),
+            sourceRef.paragraphRange ?? "",
+            sourceRef.label
+        ].joined(separator: "|")
+    }
+
     static func begin(
         task: AlphaLocalModelTask,
         runtimeMode: AlphaPackRuntimeMode = .deterministicDev,
@@ -201,9 +211,9 @@ enum AlphaModelInvocationStore {
         if let inputTokenCount = output.inputTokenCount {
             copy.estimatedInputTokens = inputTokenCount
         }
-        let reviewedDocumentSourceCount = output.sourceRefs.filter {
-            $0.effectiveSourceCategory == .documentSource
-        }.count
+        let reviewedDocumentSourceCount = Set(output.sourceRefs.compactMap {
+            documentSourceIdentity($0)
+        }).count
         if reviewedDocumentSourceCount > 0 {
             copy.reviewedSourceCount = reviewedDocumentSourceCount
         }
