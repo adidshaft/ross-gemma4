@@ -563,6 +563,61 @@ private func alphaNormalizedInstalledPacks(
     }
 }
 
+private func alphaConvergeInstalledAssistantCatalog(_ state: inout AlphaPersistedState) {
+    let lastInvocation = alphaLastModelInvocation(in: state)
+    var retainedPackIDs = Set<UUID>()
+    var retainedPacksByTier: [AlphaCapabilityTier: AlphaInstalledModelPack] = [:]
+
+    for tier in AlphaCapabilityTier.installableAssistantTiers {
+        guard let preferredPack = alphaPreferredInstalledPack(
+            for: tier,
+            installedPacks: state.installedPacks,
+            lastInvocation: lastInvocation
+        ) else {
+            continue
+        }
+        retainedPackIDs.insert(preferredPack.id)
+        retainedPacksByTier[tier] = preferredPack
+    }
+
+    state.installedPacks.removeAll { pack in
+        AlphaCapabilityTier.installableAssistantTiers.contains(pack.tier) &&
+            !retainedPackIDs.contains(pack.id)
+    }
+
+    for tier in AlphaCapabilityTier.installableAssistantTiers {
+        guard let retainedPack = retainedPacksByTier[tier] else { continue }
+        var keptInstalledJobID: UUID?
+        let installedJobs = state.modelJobs.enumerated().filter { _, job in
+            job.tier == tier && job.state == .installed
+        }
+        if let matchingInstalledJob = installedJobs
+            .sorted(by: { lhs, rhs in
+                let lhsDate = lhs.element.completedAt ?? lhs.element.updatedAt
+                let rhsDate = rhs.element.completedAt ?? rhs.element.updatedAt
+                return lhsDate > rhsDate
+            })
+            .first(where: { _, job in
+                job.packId == retainedPack.packId &&
+                    job.runtimeMode == retainedPack.runtimeMode &&
+                    job.artifactKind == retainedPack.artifactKind
+            }) {
+            keptInstalledJobID = matchingInstalledJob.element.id
+        } else if let fallbackInstalledJob = installedJobs.max(by: { lhs, rhs in
+            let lhsDate = lhs.element.completedAt ?? lhs.element.updatedAt
+            let rhsDate = rhs.element.completedAt ?? rhs.element.updatedAt
+            return lhsDate < rhsDate
+        }) {
+            keptInstalledJobID = fallbackInstalledJob.element.id
+        }
+
+        state.modelJobs.removeAll { job in
+            guard job.tier == tier, job.state == .installed else { return false }
+            return keptInstalledJobID == nil || job.id != keptInstalledJobID
+        }
+    }
+}
+
 private enum AlphaRecentRuntimeSelectionSignal {
     case keepFast(AlphaPackRuntimeMode)
     case avoidSlow(AlphaPackRuntimeMode)
@@ -1065,6 +1120,7 @@ private func alphaBuildPrivateAISnapshot(
         }
         alphaQuarantineIncompleteInstalledAssistantJob(&recoveredState)
         alphaQuarantineUnusableActiveDownloadedAssistant(&recoveredState)
+        alphaConvergeInstalledAssistantCatalog(&recoveredState)
         alphaApplyPreferredInstalledRuntimeForSelectedTier(&recoveredState)
         let activePack = alphaValidatedActivePack(from: recoveredState)
         recoveredState.installedPacks = alphaNormalizedInstalledPacks(from: recoveredState, activePack: activePack)
@@ -2080,6 +2136,7 @@ extension AlphaRossModel {
         _ = alphaPurgeAbandonedAssistantDownloadsFromDisk()
         purgeDevelopmentModelArtifactsFromDisk()
         _ = recoverDownloadedAssistantArtifacts(from: &normalized)
+        alphaConvergeInstalledAssistantCatalog(&normalized)
         alphaApplyPreferredInstalledRuntimeForSelectedTier(&normalized)
         _ = alphaPruneUnreferencedAssistantArtifactsFromDisk(installedPacks: normalized.installedPacks)
         if alphaHadUnfinishedPrivateAIStartupValidation() {

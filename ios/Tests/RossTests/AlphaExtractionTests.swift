@@ -5314,6 +5314,83 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(model.persisted.settings.activeTier, .caseAssociate)
     }
 
+    @MainActor
+    func testNormalizeLoadedStateKeepsOnlyOneInstalledPackPerVisibleTier() {
+        let fileManager = FileManager.default
+        let packPaths = [
+            "model-packs/quick_start/quick-gguf.dev",
+            "model-packs/quick_start/quick-mlx.dev",
+            "model-packs/case_associate/case-gguf.dev",
+            "model-packs/case_associate/case-mlx.dev",
+            "model-packs/senior_drafting_support/senior-gguf.dev"
+        ]
+        for relativePath in packPaths {
+            let url = alphaAbsoluteURL(for: relativePath)
+            try? fileManager.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try? Data(relativePath.utf8).write(to: url)
+        }
+        defer {
+            for relativePath in packPaths {
+                try? fileManager.removeItem(at: alphaAbsoluteURL(for: relativePath))
+            }
+        }
+
+        var state = AlphaPersistedState.empty()
+        state.settings.activeTier = .caseAssociate
+        state.installedPacks = [
+            installedPack(
+                .quickStart,
+                runtimeMode: .llamaCppGguf,
+                packId: "quick-gguf",
+                installPath: packPaths[0],
+                artifactKind: "local_model_artifact",
+                developmentOnly: true
+            ),
+            installedPack(
+                .quickStart,
+                runtimeMode: .mlxSwiftLm,
+                packId: "quick-mlx",
+                installPath: packPaths[1],
+                artifactKind: "mlx_directory",
+                developmentOnly: true
+            ),
+            installedPack(
+                .caseAssociate,
+                runtimeMode: .llamaCppGguf,
+                packId: "case-gguf",
+                installPath: packPaths[2],
+                artifactKind: "local_model_artifact",
+                developmentOnly: true
+            ),
+            installedPack(
+                .caseAssociate,
+                runtimeMode: .mlxSwiftLm,
+                packId: "case-mlx",
+                installPath: packPaths[3],
+                artifactKind: "mlx_directory",
+                developmentOnly: true
+            ),
+            installedPack(
+                .seniorDraftingSupport,
+                runtimeMode: .llamaCppGguf,
+                packId: "senior-gguf",
+                installPath: packPaths[4],
+                artifactKind: "local_model_artifact",
+                developmentOnly: true
+            )
+        ]
+
+        let model = AlphaRossModel(previewState: state)
+        let normalized = model.normalizeLoadedState(state)
+        let retainedTiers = normalized.installedPacks.map(\.tier)
+
+        XCTAssertEqual(normalized.installedPacks.count, 3)
+        XCTAssertEqual(Set(retainedTiers), Set(AlphaCapabilityTier.visibleAssistantTiers))
+        XCTAssertEqual(normalized.installedPacks.filter { $0.tier == .quickStart }.count, 1)
+        XCTAssertEqual(normalized.installedPacks.filter { $0.tier == .caseAssociate }.count, 1)
+        XCTAssertEqual(normalized.installedPacks.filter { $0.tier == .seniorDraftingSupport }.count, 1)
+    }
+
     func testAssistantRuntimeChoiceLabelExplainsSystemAssistantPreference() {
         let label = alphaAssistantRuntimeChoiceLabel(
             selectedRuntimeMode: .appleFoundationModels,
