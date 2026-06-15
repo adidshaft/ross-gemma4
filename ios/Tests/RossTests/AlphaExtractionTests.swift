@@ -7043,6 +7043,86 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(fallback.artifactKind, "local_model_artifact")
     }
 
+    func testAssistantSetupPresentationUsesCachedPreferredMLXCatalogOnCapableIPhone() {
+        let cachedMLX = AlphaAssistantCatalogDescriptor(
+            tier: .caseAssociate,
+            packId: "gemma-4-12b-mlx",
+            sizeBytes: 6_200_000_000,
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            draftArtifact: AlphaAssistantDraftArtifactDescriptor(
+                fileName: "mtp-gemma-4-12b-it.gguf",
+                sizeBytes: 200_000_000,
+                checksumSha256: String(repeating: "b", count: 64),
+                artifactKind: "local_model_artifact",
+                downloadURLString: "https://ross.example/drafts/mtp-gemma-4-12b-it.gguf",
+                draftTokens: 64
+            )
+        )
+        let cachedGGUF = AlphaAssistantCatalogDescriptor(
+            tier: .caseAssociate,
+            packId: "gemma-4-12b-gguf",
+            sizeBytes: 7_400_000_000,
+            checksumSha256: String(repeating: "c", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false
+        )
+
+        let presentation = alphaAssistantSetupPresentation(
+            for: .caseAssociate,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24,
+            systemAssistantAvailable: false,
+            cachedCatalogs: [cachedMLX, cachedGGUF]
+        )
+
+        XCTAssertEqual(presentation?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(presentation?.totalDownloadBytes, 6_400_000_000)
+        XCTAssertEqual(presentation?.sizeLabel, "6.4 GB")
+    }
+
+    func testAssistantSetupPresentationFallsBackToCachedDownloadWhenCatalogMissing() {
+        let cachedDownload = AlphaAssistantDownloadDescriptor(
+            sessionId: "sess-mlx",
+            packId: "gemma-4-12b-mlx",
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-mlx.zip",
+            sizeBytes: 6_200_000_000,
+            checksumSha256: String(repeating: "d", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            downloadURLString: "https://ross.example/artifacts/gemma-4-12b-mlx.zip",
+            verified: true,
+            releaseReady: true
+        )
+
+        let presentation = alphaAssistantSetupPresentation(
+            for: .caseAssociate,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24,
+            systemAssistantAvailable: false,
+            cachedDownloads: [cachedDownload]
+        )
+
+        XCTAssertEqual(presentation?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(presentation?.sizeLabel, "6.2 GB")
+    }
+
+    func testAssistantSetupPresentationReturnsNilWhenBuiltInCoreAIIsAvailable() {
+        let presentation = alphaAssistantSetupPresentation(
+            for: .caseAssociate,
+            systemAssistantAvailable: true
+        )
+
+        XCTAssertNil(presentation)
+    }
+
     func testPreferredAssistantDownloadFallbackIgnoresUnsupportedCachedMLXDescriptor() {
         let cached = AlphaAssistantDownloadDescriptor(
             sessionId: "sess-unsupported-mlx",

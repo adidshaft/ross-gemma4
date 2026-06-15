@@ -842,7 +842,7 @@ private func alphaApplyPreferredInstalledRuntimeForSelectedTier(_ state: inout A
     }
 }
 
-private func alphaAvailableStorageInGigabytes() -> Int {
+func alphaAvailableStorageInGigabytes() -> Int {
     let values = try? URL.homeDirectory.resourceValues(
         forKeys: [.volumeAvailableCapacityForImportantUsageKey]
     )

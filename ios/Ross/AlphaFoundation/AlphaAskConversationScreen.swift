@@ -833,25 +833,6 @@ extension AlphaLocalModelInvocation {
     }
 }
 
-private extension AlphaPackRuntimeMode {
-    var displayLabel: String {
-        switch self {
-        case .appleFoundationModels:
-            return alphaFoundationRuntimeDisplayLabel()
-        case .mlxSwiftLm:
-            return "MLX"
-        case .llamaCppGguf:
-            return "Gemma GGUF"
-        case .mediapipeLlm:
-            return "MediaPipe"
-        case .deterministicDev:
-            return "Development"
-        case .unavailable:
-            return "Unavailable"
-        }
-    }
-}
-
 extension AlphaLocalModelInvocation {
     private var uniqueDocumentInputSourceCount: Int {
         Set(inputSourceRefs.compactMap { sourceRef -> String? in

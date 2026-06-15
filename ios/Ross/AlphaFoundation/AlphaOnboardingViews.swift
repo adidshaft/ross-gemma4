@@ -140,6 +140,7 @@ struct AlphaOnboardingScreen: View {
                     Spacer(minLength: compact ? 14 : 18)
 
                     AlphaOnboardingModelSelector(
+                        model: model,
                         selectedTier: displayedTier,
                         recommendedTier: recommendedTier,
                         compact: compact
@@ -208,10 +209,16 @@ struct AlphaOnboardingScreen: View {
 }
 
 struct AlphaOnboardingModelSelector: View {
+    let model: AlphaRossModel
     let selectedTier: AlphaCapabilityTier
     let recommendedTier: AlphaCapabilityTier
     let compact: Bool
     let onSelect: (AlphaCapabilityTier) -> Void
+
+    private var selectedSetupSizeLabel: String {
+        model.assistantSetupPresentation(for: selectedTier)?.sizeLabel ??
+            rossLocalized("assistant_meta_no_download")
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: compact ? 6 : 8) {
@@ -220,13 +227,14 @@ struct AlphaOnboardingModelSelector: View {
                     .font(.system(size: compact ? 13 : 15, weight: .bold))
                     .foregroundStyle(Color.rossInk)
                 Spacer(minLength: 0)
-                Text("\(selectedTier.downloadSizeLabel)")
+                Text(selectedSetupSizeLabel)
                     .font(.system(size: compact ? 11 : 12, weight: .bold))
                     .foregroundStyle(Color.rossAccent)
             }
 
             ForEach(AlphaCapabilityTier.visibleAssistantTiers, id: \.self) { tier in
                 AlphaOnboardingModelChoiceRow(
+                    model: model,
                     tier: tier,
                     isSelected: tier == selectedTier,
                     isRecommended: tier == recommendedTier,
@@ -247,11 +255,17 @@ struct AlphaOnboardingModelSelector: View {
 }
 
 struct AlphaOnboardingModelChoiceRow: View {
+    let model: AlphaRossModel
     let tier: AlphaCapabilityTier
     let isSelected: Bool
     let isRecommended: Bool
     let compact: Bool
     let onSelect: () -> Void
+
+    private var setupSizeLabel: String {
+        model.assistantSetupPresentation(for: tier)?.sizeLabel ??
+            rossLocalized("assistant_meta_no_download")
+    }
 
     var body: some View {
         Button(action: onSelect) {
@@ -269,7 +283,7 @@ struct AlphaOnboardingModelChoiceRow: View {
                             .foregroundStyle(Color.rossInk)
                             .lineLimit(1)
 
-                        Text(tier.downloadSizeLabel)
+                        Text(setupSizeLabel)
                             .font(.system(size: compact ? 9 : 11, weight: .semibold))
                             .foregroundStyle(Color.rossInk.opacity(0.56))
                             .lineLimit(1)
@@ -680,6 +694,10 @@ struct AlphaModelPickerRow: View {
         }
     }
 
+    private var setupPresentation: AlphaAssistantSetupPresentation? {
+        model.assistantSetupPresentation(for: tier)
+    }
+
     var body: some View {
         Button(action: onSelect) {
             VStack(alignment: .leading, spacing: 10) {
@@ -717,12 +735,17 @@ struct AlphaModelPickerRow: View {
                             }
                         }
 
-                        AlphaAssistantSetupMetaLabels(
-                            sizeLabel: tier.downloadSizeLabel,
-                            etaLabel: etaLabel,
-                            freeSpaceLabel: model.freeDiskSpaceLabel,
-                            font: .caption.weight(.medium)
-                        )
+                        if let setupPresentation {
+                            AlphaAssistantSetupMetaLabels(
+                                sizeLabel: setupPresentation.sizeLabel,
+                                runtimeLabel: setupPresentation.runtimeMode.displayLabel,
+                                etaLabel: etaLabel,
+                                freeSpaceLabel: model.freeDiskSpaceLabel,
+                                font: .caption.weight(.medium)
+                            )
+                        } else {
+                            AlphaAssistantBuiltInMetaLabels(font: .caption.weight(.medium))
+                        }
                     }
 
                     Spacer(minLength: 0)
@@ -766,6 +789,7 @@ private struct AlphaModelPickerRowSurface: ViewModifier {
 
 struct AlphaAssistantSetupMetaLabels: View {
     let sizeLabel: String
+    var runtimeLabel: String?
     var etaLabel: String?
     let freeSpaceLabel: String
     var font: Font = .caption.weight(.medium)
@@ -774,6 +798,9 @@ struct AlphaAssistantSetupMetaLabels: View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: 10) {
                 metaLabel(sizeLabel, systemImage: "arrow.down.circle")
+                if let runtimeLabel {
+                    metaLabel(runtimeLabel, systemImage: "cpu")
+                }
                 if let etaLabel {
                     metaLabel(etaLabel, systemImage: "wifi")
                 }
@@ -782,6 +809,9 @@ struct AlphaAssistantSetupMetaLabels: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 metaLabel(sizeLabel, systemImage: "arrow.down.circle")
+                if let runtimeLabel {
+                    metaLabel(runtimeLabel, systemImage: "cpu")
+                }
                 if let etaLabel {
                     metaLabel(etaLabel, systemImage: "wifi")
                 }

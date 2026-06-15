@@ -806,8 +806,10 @@ struct AlphaPrivateAIOfferCard: View {
                     AlphaAssistantBuiltInMetaLabels(font: .caption2.weight(.medium))
                         .padding(.top, 2)
                 } else {
+                    let setupPresentation = model.assistantSetupPresentation(for: offer.tier)
                     AlphaAssistantSetupMetaLabels(
-                        sizeLabel: offer.tier.downloadSizeLabel,
+                        sizeLabel: setupPresentation?.sizeLabel ?? offer.tier.downloadSizeLabel,
+                        runtimeLabel: setupPresentation?.runtimeMode.displayLabel,
                         freeSpaceLabel: model.freeDiskSpaceLabel,
                         font: .caption2.weight(.medium)
                     )
@@ -907,7 +909,7 @@ private struct AlphaPrivateAIOfferSurface: ViewModifier {
     }
 }
 
-private struct AlphaAssistantBuiltInMetaLabels: View {
+struct AlphaAssistantBuiltInMetaLabels: View {
     var font: Font = .caption.weight(.medium)
 
     var body: some View {

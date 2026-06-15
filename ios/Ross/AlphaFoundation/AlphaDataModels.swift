@@ -1848,6 +1848,25 @@ enum AlphaPackRuntimeMode: String, Codable, Hashable, Sendable {
     }
 }
 
+extension AlphaPackRuntimeMode {
+    var displayLabel: String {
+        switch self {
+        case .appleFoundationModels:
+            return alphaFoundationRuntimeDisplayLabel()
+        case .mlxSwiftLm:
+            return "MLX"
+        case .llamaCppGguf:
+            return "Gemma GGUF"
+        case .mediapipeLlm:
+            return "MediaPipe"
+        case .deterministicDev:
+            return "Development"
+        case .unavailable:
+            return "Unavailable"
+        }
+    }
+}
+
 struct AlphaModelDownloadJob: Identifiable, Codable, Hashable, Sendable {
     let id: UUID
     var sessionId: String

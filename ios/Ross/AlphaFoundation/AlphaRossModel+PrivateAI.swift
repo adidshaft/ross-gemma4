@@ -332,6 +332,97 @@ func alphaDefaultAssistantDownloadDescriptor(for tier: AlphaCapabilityTier) -> A
     )
 }
 
+private func alphaAssistantCatalogDescriptor(
+    from downloadDescriptor: AlphaAssistantDownloadDescriptor
+) -> AlphaAssistantCatalogDescriptor {
+    AlphaAssistantCatalogDescriptor(
+        tier: downloadDescriptor.tier,
+        packId: downloadDescriptor.packId,
+        sizeBytes: downloadDescriptor.sizeBytes,
+        checksumSha256: downloadDescriptor.checksumSha256,
+        artifactKind: downloadDescriptor.artifactKind,
+        runtimeMode: downloadDescriptor.runtimeMode,
+        developmentOnly: downloadDescriptor.developmentOnly,
+        draftArtifact: downloadDescriptor.draftArtifact
+    )
+}
+
+private func alphaCachedPreferredAssistantSetupDescriptor(
+    for tier: AlphaCapabilityTier,
+    preferredRuntimeMode: AlphaPackRuntimeMode,
+    cachedCatalogs: [AlphaAssistantCatalogDescriptor]?,
+    cachedDownloads: [AlphaAssistantDownloadDescriptor]?
+) -> AlphaAssistantCatalogDescriptor? {
+    let effectiveTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
+    let catalogCandidates = (cachedCatalogs ?? []).filter {
+        AlphaCapabilityTier.normalizedAssistantSelection($0.tier) == effectiveTier &&
+            alphaAssistantCatalogDescriptorSupportsCurrentInstaller($0)
+    }
+    if let preferredCatalog = catalogCandidates.first(where: { $0.runtimeMode == preferredRuntimeMode }) {
+        return preferredCatalog
+    }
+    if let fallbackCatalog = catalogCandidates.first {
+        return fallbackCatalog
+    }
+
+    let downloadCandidates = (cachedDownloads ?? []).filter {
+        AlphaCapabilityTier.normalizedAssistantSelection($0.tier) == effectiveTier &&
+            alphaAssistantDownloadDescriptorSupportsCurrentInstaller($0)
+    }
+    if let preferredDownload = downloadCandidates.first(where: { $0.runtimeMode == preferredRuntimeMode }) {
+        return alphaAssistantCatalogDescriptor(from: preferredDownload)
+    }
+    if let fallbackDownload = downloadCandidates.first {
+        return alphaAssistantCatalogDescriptor(from: fallbackDownload)
+    }
+
+    return nil
+}
+
+struct AlphaAssistantSetupPresentation: Equatable, Sendable {
+    let runtimeMode: AlphaPackRuntimeMode
+    let sizeLabel: String
+    let totalDownloadBytes: Int64
+}
+
+func alphaAssistantSetupPresentation(
+    for tier: AlphaCapabilityTier,
+    existingRuntimeMode: AlphaPackRuntimeMode? = nil,
+    isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
+    physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory,
+    freeStorageGB: Int = max(4, alphaAvailableStorageInGigabytes()),
+    systemAssistantAvailable: Bool? = nil,
+    lastInvocation: AlphaLocalModelInvocation? = nil,
+    cachedCatalogs: [AlphaAssistantCatalogDescriptor]? = nil,
+    cachedDownloads: [AlphaAssistantDownloadDescriptor]? = nil
+) -> AlphaAssistantSetupPresentation? {
+    let preferredRuntime = alphaPreferredAssistantRuntimeMode(
+        for: tier,
+        existingRuntimeMode: existingRuntimeMode,
+        isPhoneFormFactor: isPhoneFormFactor,
+        physicalMemoryBytes: physicalMemoryBytes,
+        freeStorageGB: freeStorageGB,
+        systemAssistantAvailable: systemAssistantAvailable,
+        lastInvocation: lastInvocation
+    )
+    guard preferredRuntime != .appleFoundationModels else {
+        return nil
+    }
+
+    let descriptor = alphaCachedPreferredAssistantSetupDescriptor(
+        for: tier,
+        preferredRuntimeMode: preferredRuntime,
+        cachedCatalogs: cachedCatalogs,
+        cachedDownloads: cachedDownloads
+    ) ?? alphaDefaultAssistantCatalogDescriptor(for: tier)
+    let totalDownloadBytes = descriptor.sizeBytes + Int64(descriptor.draftArtifact?.sizeBytes ?? 0)
+    return AlphaAssistantSetupPresentation(
+        runtimeMode: descriptor.runtimeMode,
+        sizeLabel: alphaAssistantStorageSizeLabel(totalDownloadBytes),
+        totalDownloadBytes: totalDownloadBytes
+    )
+}
+
 func alphaPreferredAssistantCatalogFallback(
     for tier: AlphaCapabilityTier,
     preferredRuntimeMode: AlphaPackRuntimeMode,
@@ -534,6 +625,17 @@ extension AlphaRossModel {
 
     func installedPack(for tier: AlphaCapabilityTier) -> AlphaInstalledModelPack? {
         privateAISnapshot.installedPack(for: tier)
+    }
+
+    func assistantSetupPresentation(for tier: AlphaCapabilityTier) -> AlphaAssistantSetupPresentation? {
+        alphaAssistantSetupPresentation(
+            for: tier,
+            existingRuntimeMode: persisted.installedPacks.first(where: { $0.tier == tier })?.runtimeMode,
+            systemAssistantAvailable: systemAssistantHealth(for: tier)?.available == true,
+            lastInvocation: alphaLastModelInvocation(in: persisted),
+            cachedCatalogs: persisted.cachedAssistantCatalogs,
+            cachedDownloads: persisted.cachedAssistantDownloads
+        )
     }
 
     var activeRuntimeHealth: AlphaLocalRuntimeHealth? {
