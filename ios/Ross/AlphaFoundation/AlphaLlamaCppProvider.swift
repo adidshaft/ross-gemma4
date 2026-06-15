@@ -105,17 +105,17 @@ enum AlphaLlamaRuntimeProfile {
         case .flash:
             return 12_000
         case .quickStart:
-            return physicalMemory >= 8_000_000_000 ? 30_000 : 22_000
+            return physicalMemory >= 8_000_000_000 ? 32_000 : 22_000
         case .caseAssociate:
             if physicalMemory >= 16_000_000_000 {
-                return 56_000
-            }
-            return physicalMemory >= 12_000_000_000 ? 48_000 : 38_000
-        case .seniorDraftingSupport:
-            if physicalMemory >= 20_000_000_000 {
                 return 60_000
             }
-            return physicalMemory >= 16_000_000_000 ? 52_000 : 40_000
+            return physicalMemory >= 12_000_000_000 ? 52_000 : 38_000
+        case .seniorDraftingSupport:
+            if physicalMemory >= 20_000_000_000 {
+                return 64_000
+            }
+            return physicalMemory >= 16_000_000_000 ? 56_000 : 40_000
         }
     }
 
