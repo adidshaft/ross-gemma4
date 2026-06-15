@@ -136,6 +136,26 @@ func alphaShouldReuseInstalledAssistantPack(
     return pack.runtimeMode == preferredRuntimeMode
 }
 
+func alphaInstalledAssistantPackMatchesDownloadDescriptor(
+    _ pack: AlphaInstalledModelPack?,
+    descriptor: AlphaAssistantDownloadDescriptor,
+    forceDownload: Bool = false
+) -> Bool {
+    guard let pack else { return false }
+    guard !forceDownload else { return false }
+    guard pack.tier == descriptor.tier,
+          pack.packId == descriptor.packId,
+          pack.artifactKind == descriptor.artifactKind,
+          pack.runtimeMode == descriptor.runtimeMode,
+          pack.developmentOnly == descriptor.developmentOnly else {
+        return false
+    }
+    if !descriptor.checksumSha256.isEmpty {
+        return pack.checksumSha256.caseInsensitiveCompare(descriptor.checksumSha256) == .orderedSame
+    }
+    return true
+}
+
 func alphaClearedAssistantUpdateCandidates(
     _ candidates: [AlphaModelUpdateCandidate]?,
     for tier: AlphaCapabilityTier
@@ -1419,6 +1439,29 @@ extension AlphaRossModel {
 
         if alphaAllowsDevelopmentModelArtifacts() {
             _ = await installDevelopmentPackForTestRun(tier: tier, jobID: job.id)
+            return
+        }
+
+        if let existingInstalled = persisted.installedPacks.first(where: { $0.tier == tier && installedModelPackFileIsUsable($0) }),
+           alphaInstalledAssistantPackMatchesDownloadDescriptor(
+            existingInstalled,
+            descriptor: resolvedDownload,
+            forceDownload: forceRefreshInstalledPack
+           ) {
+            activateInstalledPack(existingInstalled)
+            updateJob(job.id) {
+                $0.state = .installed
+                $0.bytesDownloaded = resolvedDownload.sizeBytes
+                $0.totalBytes = resolvedDownload.sizeBytes
+                $0.checksumSha256 = existingInstalled.checksumSha256
+                $0.artifactKind = existingInstalled.artifactKind
+                $0.runtimeMode = existingInstalled.runtimeMode
+                $0.developmentOnly = existingInstalled.developmentOnly
+                $0.failureReason = nil
+                $0.updatedAt = .now
+                $0.completedAt = .now
+            }
+            persist()
             return
         }
 

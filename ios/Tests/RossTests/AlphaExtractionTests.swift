@@ -5602,6 +5602,72 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testInstalledAssistantPackMatchesResolvedDownloadDescriptor() {
+        let pack = installedPack(
+            .caseAssociate,
+            runtimeMode: .llamaCppGguf,
+            packId: "gemma-4-12b-q4",
+            installPath: "model-packs/case_associate/gemma-4-12B-it-Q4_K_M.gguf",
+            checksum: String(repeating: "a", count: 64),
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+        let descriptor = AlphaAssistantDownloadDescriptor(
+            sessionId: nil,
+            packId: "gemma-4-12b-q4",
+            tier: .caseAssociate,
+            fileName: "gemma-4-12B-it-Q4_K_M.gguf",
+            sizeBytes: 7_381_382_048,
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            downloadURLString: "https://ross.example/artifacts/gemma-4-12b.gguf",
+            verified: true,
+            releaseReady: true
+        )
+
+        XCTAssertTrue(
+            alphaInstalledAssistantPackMatchesDownloadDescriptor(
+                pack,
+                descriptor: descriptor
+            )
+        )
+    }
+
+    func testInstalledAssistantPackDoesNotMatchDifferentResolvedRuntimeDescriptor() {
+        let pack = installedPack(
+            .caseAssociate,
+            runtimeMode: .llamaCppGguf,
+            packId: "gemma-4-12b-q4",
+            installPath: "model-packs/case_associate/gemma-4-12B-it-Q4_K_M.gguf",
+            checksum: String(repeating: "a", count: 64),
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+        let descriptor = AlphaAssistantDownloadDescriptor(
+            sessionId: nil,
+            packId: "gemma-4-12b-mlx",
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-mlx.zip",
+            sizeBytes: 6_200_000_000,
+            checksumSha256: String(repeating: "b", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            downloadURLString: "https://ross.example/artifacts/gemma-4-12b-mlx.zip",
+            verified: true,
+            releaseReady: true
+        )
+
+        XCTAssertFalse(
+            alphaInstalledAssistantPackMatchesDownloadDescriptor(
+                pack,
+                descriptor: descriptor
+            )
+        )
+    }
+
     func testAssistantRuntimeChoiceLabelExplainsConstrainedIPhoneGGUFChoice() {
         let label = alphaAssistantRuntimeChoiceLabel(
             selectedRuntimeMode: .llamaCppGguf,
