@@ -1230,6 +1230,11 @@ extension AlphaRossModel {
             tier: requestedTier,
             systemAssistantAvailable: provider.runtimeMode == .appleFoundationModels ? runtimeHealth.available : nil
         )
+        let preferredRuntimeMode = alphaPreferredAssistantRuntimeMode(
+            for: requestedTier,
+            existingRuntimeMode: nil,
+            systemAssistantAvailable: provider.runtimeMode == .appleFoundationModels ? runtimeHealth.available : nil
+        )
 
         let chatSessionID = storedResult.chatSessionID
         let chatTurnID = storedResult.chatTurnID
@@ -1241,6 +1246,7 @@ extension AlphaRossModel {
             documentId: selectedDocuments.first?.id,
             extractionRunId: nil,
             assistantDisplayName: assistantDisplayName,
+            preferredRuntimeMode: preferredRuntimeMode,
             runtimeSelectionReason: runtimeSelectionReason,
             accelerationMode: runtimeHealth.accelerationMode,
             accelerationDraftTokens: runtimeHealth.accelerationDraftTokens,

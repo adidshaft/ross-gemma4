@@ -3885,6 +3885,7 @@ final class AlphaExtractionTests: XCTestCase {
                 AlphaSourceRef(caseId: UUID(), documentId: UUID(), documentTitle: "Order", pageNumber: 3)
             ],
             assistantDisplayName: "Gemma 4 12B Q4_K_M",
+            preferredRuntimeMode: AlphaPackRuntimeMode.appleFoundationModels.rawValue,
             runtimeSelectionReason: "Built-in Apple model preferred",
             reviewedSourceCount: 2,
             promptBudgetChars: 700,
@@ -3926,6 +3927,16 @@ final class AlphaExtractionTests: XCTestCase {
                     key: "runtime_choice",
                     label: "Why this runtime",
                     value: "Built-in Apple model preferred"
+                ),
+                AlphaAnswerDetailMetric(
+                    key: "preferred_runtime",
+                    label: "Preferred runtime",
+                    value: "Apple Foundation Models"
+                ),
+                AlphaAnswerDetailMetric(
+                    key: "runtime_fallback",
+                    label: "Fallback",
+                    value: "Using an available installed runtime instead"
                 ),
                 AlphaAnswerDetailMetric(
                     key: "prompt_size",

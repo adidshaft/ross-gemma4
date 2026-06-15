@@ -810,7 +810,32 @@ extension AlphaLocalModelInvocation {
         guard let runtime = AlphaPackRuntimeMode(rawValue: runtimeMode) else {
             return runtimeMode.replacingOccurrences(of: "_", with: " ").capitalized
         }
-        switch runtime {
+        return runtime.displayLabel
+    }
+
+    var answerDetailPreferredRuntimeLabel: String? {
+        guard let preferredRuntimeMode,
+              let preferredRuntime = AlphaPackRuntimeMode(rawValue: preferredRuntimeMode),
+              preferredRuntime.rawValue != runtimeMode else {
+            return nil
+        }
+        return preferredRuntime.displayLabel
+    }
+
+    var answerDetailRuntimeUsedPreferredSelection: Bool? {
+        guard let preferredRuntimeMode else { return nil }
+        return preferredRuntimeMode == runtimeMode
+    }
+
+    var answerDetailRuntimeFallbackLabel: String? {
+        guard let usesPreferred = answerDetailRuntimeUsedPreferredSelection, !usesPreferred else { return nil }
+        return "Using an available installed runtime instead"
+    }
+}
+
+private extension AlphaPackRuntimeMode {
+    var displayLabel: String {
+        switch self {
         case .appleFoundationModels:
             return "Apple Foundation Models"
         case .mlxSwiftLm:
@@ -825,7 +850,9 @@ extension AlphaLocalModelInvocation {
             return "Unavailable"
         }
     }
+}
 
+extension AlphaLocalModelInvocation {
     var answerDetailAccelerationLabel: String? {
         switch accelerationMode {
         case .draftModelSpeculative:
@@ -936,6 +963,26 @@ extension AlphaLocalModelInvocation {
                     key: "runtime_choice",
                     label: rossLocalized("runtime_choice"),
                     value: runtimeChoice
+                )
+            )
+        }
+
+        if let preferredRuntime = answerDetailPreferredRuntimeLabel {
+            metrics.append(
+                AlphaAnswerDetailMetric(
+                    key: "preferred_runtime",
+                    label: rossLocalized("preferred_runtime"),
+                    value: preferredRuntime
+                )
+            )
+        }
+
+        if let runtimeFallback = answerDetailRuntimeFallbackLabel {
+            metrics.append(
+                AlphaAnswerDetailMetric(
+                    key: "runtime_fallback",
+                    label: rossLocalized("runtime_fallback"),
+                    value: runtimeFallback
                 )
             )
         }
