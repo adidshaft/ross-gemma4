@@ -217,7 +217,7 @@ extension AlphaRossModel {
         }
         assistantDownloadTaskBoxes.removeAll()
         persisted.installedPacks.removeAll { !$0.installPath.hasPrefix("system://") }
-        persisted.modelJobs.removeAll { $0.artifactKind == "local_model_artifact" || $0.runtimeMode == .llamaCppGguf }
+        persisted.modelJobs.removeAll { !$0.developmentOnly && $0.artifactKind != "system_model" }
         persisted.settings.activeTier = persisted.installedPacks.first(where: \.isActive)?.tier
         persisted.modelUpdateCandidates = []
         persisted.ledgerEntries.insert(
@@ -354,7 +354,8 @@ extension AlphaRossModel {
             copy.isActive = copy.id == pack.id
             if copy.id == pack.id,
                !copy.developmentOnly,
-               copy.checksumSha256.caseInsensitiveCompare(alphaAssistantModelArtifact(for: copy.tier).sha256) == .orderedSame {
+               let expected = alphaExpectedDownloadedAssistantArtifact(for: copy),
+               alphaModelAssistantChecksumMatches(expected: expected.checksumSha256, actual: copy.checksumSha256) {
                 copy.checksumVerified = true
             }
             return copy
@@ -367,18 +368,13 @@ extension AlphaRossModel {
     }
 
     func installedPackPassesRuntimeValidation(_ pack: AlphaInstalledModelPack) -> Bool {
-        guard pack.runtimeMode == .llamaCppGguf, !pack.developmentOnly else {
+        guard !pack.developmentOnly else {
             return true
         }
         guard installedModelPackFileIsUsable(pack) else {
             return false
         }
-        do {
-            try AlphaLlamaCppProvider.validateModelCanLoad(at: alphaAbsoluteURL(for: pack.installPath).path)
-            return true
-        } catch {
-            return false
-        }
+        return alphaDownloadedAssistantArtifactPassesRuntimeValidation(pack)
     }
 
     func prepareSystemAssistantPack(for tier: AlphaCapabilityTier, jobID: UUID) -> Bool {
@@ -884,9 +880,9 @@ extension AlphaRossModel {
                 bytesDownloaded: 0,
                 totalBytes: artifact.sizeBytes,
                 checksumSha256: artifact.sha256,
-                artifactKind: "local_model_artifact",
-                runtimeMode: .llamaCppGguf,
-                developmentOnly: false
+                artifactKind: artifact.artifactKind,
+                runtimeMode: artifact.runtimeMode,
+                developmentOnly: artifact.developmentOnly
             )
             shouldRecordSelection = true
         }
@@ -923,9 +919,9 @@ extension AlphaRossModel {
                 $0.resumeDataRelativePath = nil
             }
             $0.checksumSha256 = artifact.sha256
-            $0.artifactKind = "local_model_artifact"
-            $0.runtimeMode = .llamaCppGguf
-            $0.developmentOnly = false
+            $0.artifactKind = artifact.artifactKind
+            $0.runtimeMode = artifact.runtimeMode
+            $0.developmentOnly = artifact.developmentOnly
             $0.failureReason = nil
             $0.updatedAt = .now
         }
@@ -944,25 +940,40 @@ extension AlphaRossModel {
         persist()
 
         if let existingArtifact = await verifiedExistingAssistantArtifact(for: tier, artifact: artifact) {
-            do {
-                try AlphaLlamaCppProvider.validateModelCanLoad(at: alphaAbsoluteURL(for: existingArtifact.relativePath).path)
-            } catch {
+            let installed = AlphaInstalledModelPack(
+                packId: artifact.packId,
+                tier: tier,
+                installPath: existingArtifact.relativePath,
+                checksumSha256: existingArtifact.checksum,
+                artifactKind: artifact.artifactKind,
+                runtimeMode: artifact.runtimeMode,
+                developmentOnly: artifact.developmentOnly,
+                checksumVerified: true,
+                isActive: true
+            )
+            guard alphaDownloadedAssistantArtifactPassesRuntimeValidation(installed) else {
                 await store.removeDownloadedPackArtifact(relativePath: existingArtifact.relativePath)
                 updateJob(job.id) {
                     $0.state = .failed
                     $0.bytesDownloaded = existingArtifact.bytes
                     $0.totalBytes = existingArtifact.bytes
                     $0.checksumSha256 = existingArtifact.checksum
-                    $0.failureReason = assistantDownloadFailureMessage(error)
+                    $0.failureReason = assistantDownloadFailureMessage(
+                        NSError(
+                            domain: "RossAlphaPack",
+                            code: 4,
+                            userInfo: [NSLocalizedDescriptionKey: alphaAssistantExistingSetupRepairDetail]
+                        )
+                    )
                     $0.updatedAt = .now
                 }
                 persisted.ledgerEntries.insert(
-                        AlphaPrivacyLedgerEntry(
-                            title: "Assistant file verification failed",
-                            detail: alphaAssistantExistingSetupRepairDetail,
-                            purpose: .model_verification,
-                            payloadClass: .no_case_data,
-                            endpointLabel: "device://model-verify",
+                    AlphaPrivacyLedgerEntry(
+                        title: "Assistant file verification failed",
+                        detail: alphaAssistantExistingSetupRepairDetail,
+                        purpose: .model_verification,
+                        payloadClass: .no_case_data,
+                        endpointLabel: "device://model-verify",
                         success: false
                     ),
                     at: 0
@@ -970,17 +981,6 @@ extension AlphaRossModel {
                 persist()
                 return
             }
-            let installed = AlphaInstalledModelPack(
-                packId: artifact.packId,
-                tier: tier,
-                installPath: existingArtifact.relativePath,
-                checksumSha256: existingArtifact.checksum,
-                artifactKind: "local_model_artifact",
-                runtimeMode: .llamaCppGguf,
-                developmentOnly: false,
-                checksumVerified: true,
-                isActive: true
-            )
             persisted.installedPacks = persisted.installedPacks.map {
                 var copy = $0
                 copy.isActive = false
@@ -1077,20 +1077,30 @@ extension AlphaRossModel {
                 fileName: artifact.fileName,
                 downloadedFileURL: downloadedFileURL,
                 expectedChecksum: expectedChecksum,
-                expectedBytes: preflight.reportedBytes
+                expectedBytes: preflight.reportedBytes,
+                packId: artifact.packId,
+                artifactKind: artifact.artifactKind,
+                runtimeMode: artifact.runtimeMode,
+                developmentOnly: artifact.developmentOnly
             )
-            try AlphaLlamaCppProvider.validateModelCanLoad(at: alphaAbsoluteURL(for: installedArtifact.relativePath).path)
             let installed = AlphaInstalledModelPack(
                 packId: artifact.packId,
                 tier: tier,
                 installPath: installedArtifact.relativePath,
                 checksumSha256: installedArtifact.checksum,
-                artifactKind: "local_model_artifact",
-                runtimeMode: .llamaCppGguf,
-                developmentOnly: false,
+                artifactKind: artifact.artifactKind,
+                runtimeMode: artifact.runtimeMode,
+                developmentOnly: artifact.developmentOnly,
                 checksumVerified: true,
                 isActive: true
             )
+            guard alphaDownloadedAssistantArtifactPassesRuntimeValidation(installed) else {
+                throw NSError(
+                    domain: "RossAlphaPack",
+                    code: 4,
+                    userInfo: [NSLocalizedDescriptionKey: alphaAssistantExistingSetupRepairDetail]
+                )
+            }
 
             persisted.installedPacks = persisted.installedPacks.map {
                 var copy = $0

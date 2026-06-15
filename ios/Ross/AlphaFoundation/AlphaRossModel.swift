@@ -1123,6 +1123,9 @@ struct AlphaAssistantModelArtifact: Hashable, Sendable {
     let downloadURLString: String
     let sizeBytes: Int64
     let sha256: String
+    let artifactKind: String
+    let runtimeMode: AlphaPackRuntimeMode
+    let developmentOnly: Bool
     let minimumMemoryGB: Int
     let recommendedMemoryGB: Int
     let requiredFreeSpaceGB: Int
@@ -1172,6 +1175,9 @@ let alphaAssistantModelArtifacts: [AlphaCapabilityTier: AlphaAssistantModelArtif
         downloadURLString: "https://huggingface.co/bartowski/google_gemma-4-E4B-it-GGUF/resolve/main/google_gemma-4-E4B-it-Q4_K_M.gguf",
         sizeBytes: 5_405_168_384,
         sha256: "51865750adafd22de56994a343d5a887cc1a589b9bae41d62b748c8bd0ca9c76",
+        artifactKind: "local_model_artifact",
+        runtimeMode: .llamaCppGguf,
+        developmentOnly: false,
         minimumMemoryGB: 4,
         recommendedMemoryGB: 6,
         requiredFreeSpaceGB: 6,
@@ -1194,6 +1200,9 @@ let alphaAssistantModelArtifacts: [AlphaCapabilityTier: AlphaAssistantModelArtif
         downloadURLString: "https://huggingface.co/ggml-org/gemma-4-12B-it-GGUF/resolve/main/gemma-4-12B-it-Q4_K_M.gguf",
         sizeBytes: 7_381_382_048,
         sha256: "1278394b693672ac2799eadc9a83fd98259a6a88a40acfb1dcaa6c6fc895a606",
+        artifactKind: "local_model_artifact",
+        runtimeMode: .llamaCppGguf,
+        developmentOnly: false,
         minimumMemoryGB: 6,
         recommendedMemoryGB: 8,
         requiredFreeSpaceGB: 8,
@@ -1216,6 +1225,9 @@ let alphaAssistantModelArtifacts: [AlphaCapabilityTier: AlphaAssistantModelArtif
         downloadURLString: "https://huggingface.co/bartowski/google_gemma-4-26B-A4B-it-GGUF/resolve/main/google_gemma-4-26B-A4B-it-Q4_K_M.gguf",
         sizeBytes: 17_035_038_112,
         sha256: "e718536fe9b4bd505b07d44ded8f1595053a5d5407315bccf555ce592f33c140",
+        artifactKind: "local_model_artifact",
+        runtimeMode: .llamaCppGguf,
+        developmentOnly: false,
         minimumMemoryGB: 12,
         recommendedMemoryGB: 20,
         requiredFreeSpaceGB: 18,

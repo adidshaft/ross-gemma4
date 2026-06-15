@@ -2357,6 +2357,116 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    func testInstalledPackUsabilityAcceptsManifestBackedAlternatePack() async throws {
+        try await withRestoredStore { store in
+            await store.removeAllModelArtifacts()
+            let data = Data("manifest-backed assistant".utf8)
+            let checksum = sha256Hex(data)
+            let relativePath = "model-packs/quick_start/gemma-4-12b-runtime-refresh.gguf"
+            let artifactURL = alphaAbsoluteURL(for: relativePath)
+            let manifestURL = artifactURL.deletingPathExtension().appendingPathExtension("manifest.json")
+            try FileManager.default.createDirectory(
+                at: artifactURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try data.write(to: artifactURL)
+
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let manifest = AlphaModelArtifactManifest(
+                packId: "gemma-4-12b-runtime-refresh",
+                tier: .quickStart,
+                fileName: artifactURL.lastPathComponent,
+                relativePath: relativePath,
+                checksumSha256: checksum,
+                bytes: Int64(data.count),
+                artifactKind: "local_model_artifact",
+                runtimeMode: .llamaCppGguf,
+                developmentOnly: false,
+                verifiedAt: .now
+            )
+            try encoder.encode(manifest).write(to: manifestURL, options: .atomic)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            let pack = AlphaInstalledModelPack(
+                packId: manifest.packId,
+                tier: .quickStart,
+                installPath: relativePath,
+                checksumSha256: checksum,
+                artifactKind: manifest.artifactKind,
+                runtimeMode: manifest.runtimeMode,
+                developmentOnly: manifest.developmentOnly,
+                checksumVerified: true,
+                isActive: true
+            )
+
+            let usable = await MainActor.run {
+                model.installedModelPackFileIsUsable(pack)
+            }
+
+            XCTAssertTrue(usable)
+
+            await store.removeAllModelArtifacts()
+        }
+    }
+
+    func testRecoveredDownloadedPackRestoresManifestBackedAlternatePack() async throws {
+        try await withRestoredStore { store in
+            await store.removeAllModelArtifacts()
+            let data = Data("manifest-backed recovery".utf8)
+            let checksum = sha256Hex(data)
+            let relativePath = "model-packs/quick_start/gemma-4-12b-recovered.gguf"
+            let artifactURL = alphaAbsoluteURL(for: relativePath)
+            let manifestURL = artifactURL.deletingPathExtension().appendingPathExtension("manifest.json")
+            try FileManager.default.createDirectory(
+                at: artifactURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try data.write(to: artifactURL)
+
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let manifest = AlphaModelArtifactManifest(
+                packId: "gemma-4-12b-recovered",
+                tier: .quickStart,
+                fileName: artifactURL.lastPathComponent,
+                relativePath: relativePath,
+                checksumSha256: checksum,
+                bytes: Int64(data.count),
+                artifactKind: "local_model_artifact",
+                runtimeMode: .llamaCppGguf,
+                developmentOnly: false,
+                verifiedAt: .now
+            )
+            try encoder.encode(manifest).write(to: manifestURL, options: .atomic)
+
+            AlphaLlamaCppProvider.modelLoadValidator = { _ in }
+            defer {
+                AlphaLlamaCppProvider.modelLoadValidator = { path in
+                    _ = try LlamaContext.create_context(path: path)
+                }
+            }
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+
+            let recovered = await MainActor.run {
+                model.recoveredInstalledPackFromDisk(tier: .quickStart)
+            }
+
+            XCTAssertEqual(recovered?.packId, manifest.packId)
+            XCTAssertEqual(recovered?.installPath, relativePath)
+            XCTAssertEqual(recovered?.checksumSha256, checksum)
+            XCTAssertEqual(recovered?.artifactKind, manifest.artifactKind)
+            XCTAssertEqual(recovered?.runtimeMode, manifest.runtimeMode)
+
+            await store.removeAllModelArtifacts()
+        }
+    }
+
     func testResumeJobClearsStaleResumeDataAndRecordsRestart() async throws {
         rossSaveLanguageSelection(code: "te")
         try await withRestoredStore { store in

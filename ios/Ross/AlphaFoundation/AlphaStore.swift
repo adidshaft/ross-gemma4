@@ -172,7 +172,61 @@ struct AlphaModelArtifactManifest: Codable, Hashable, Sendable {
     let relativePath: String
     let checksumSha256: String
     let bytes: Int64
+    let artifactKind: String
+    let runtimeMode: AlphaPackRuntimeMode
+    let developmentOnly: Bool
     let verifiedAt: Date
+
+    init(
+        packId: String,
+        tier: AlphaCapabilityTier,
+        fileName: String,
+        relativePath: String,
+        checksumSha256: String,
+        bytes: Int64,
+        artifactKind: String = "local_model_artifact",
+        runtimeMode: AlphaPackRuntimeMode = .llamaCppGguf,
+        developmentOnly: Bool = false,
+        verifiedAt: Date
+    ) {
+        self.packId = packId
+        self.tier = tier
+        self.fileName = fileName
+        self.relativePath = relativePath
+        self.checksumSha256 = checksumSha256
+        self.bytes = bytes
+        self.artifactKind = artifactKind
+        self.runtimeMode = runtimeMode
+        self.developmentOnly = developmentOnly
+        self.verifiedAt = verifiedAt
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case packId
+        case tier
+        case fileName
+        case relativePath
+        case checksumSha256
+        case bytes
+        case artifactKind
+        case runtimeMode
+        case developmentOnly
+        case verifiedAt
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        packId = try container.decode(String.self, forKey: .packId)
+        tier = try container.decode(AlphaCapabilityTier.self, forKey: .tier)
+        fileName = try container.decode(String.self, forKey: .fileName)
+        relativePath = try container.decode(String.self, forKey: .relativePath)
+        checksumSha256 = try container.decode(String.self, forKey: .checksumSha256)
+        bytes = try container.decode(Int64.self, forKey: .bytes)
+        artifactKind = try container.decodeIfPresent(String.self, forKey: .artifactKind) ?? "local_model_artifact"
+        runtimeMode = try container.decodeIfPresent(AlphaPackRuntimeMode.self, forKey: .runtimeMode) ?? .llamaCppGguf
+        developmentOnly = try container.decodeIfPresent(Bool.self, forKey: .developmentOnly) ?? false
+        verifiedAt = try container.decode(Date.self, forKey: .verifiedAt)
+    }
 }
 
 actor AlphaRossStore {
@@ -366,7 +420,11 @@ actor AlphaRossStore {
         for tier: AlphaCapabilityTier,
         fileName: String,
         data: Data,
-        expectedChecksum: String
+        expectedChecksum: String,
+        packId: String,
+        artifactKind: String = "local_model_artifact",
+        runtimeMode: AlphaPackRuntimeMode = .llamaCppGguf,
+        developmentOnly: Bool = false
     ) throws -> (relativePath: String, checksum: String, bytes: Int64) {
         try ensureFolders()
         let checksum = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
@@ -380,10 +438,14 @@ actor AlphaRossStore {
         try data.write(to: artifactURL, options: .atomic)
         try writeModelArtifactManifest(
             tier: tier,
+            packId: packId,
             fileName: fileName,
             artifactURL: artifactURL,
             checksum: checksum,
-            bytes: Int64(data.count)
+            bytes: Int64(data.count),
+            artifactKind: artifactKind,
+            runtimeMode: runtimeMode,
+            developmentOnly: developmentOnly
         )
         try pruneModelPackSiblings(in: folder, keeping: artifactURL)
         return (relativePath(for: artifactURL), checksum, Int64(data.count))
@@ -394,7 +456,11 @@ actor AlphaRossStore {
         fileName: String,
         downloadedFileURL: URL,
         expectedChecksum: String,
-        expectedBytes: Int64? = nil
+        expectedBytes: Int64? = nil,
+        packId: String,
+        artifactKind: String = "local_model_artifact",
+        runtimeMode: AlphaPackRuntimeMode = .llamaCppGguf,
+        developmentOnly: Bool = false
     ) throws -> (relativePath: String, checksum: String, bytes: Int64) {
         try ensureFolders()
         let verified = try sha256Hex(forFileAt: downloadedFileURL)
@@ -425,10 +491,14 @@ actor AlphaRossStore {
         }
         try writeModelArtifactManifest(
             tier: tier,
+            packId: packId,
             fileName: fileName,
             artifactURL: artifactURL,
             checksum: verified.checksum,
-            bytes: verified.bytes
+            bytes: verified.bytes,
+            artifactKind: artifactKind,
+            runtimeMode: runtimeMode,
+            developmentOnly: developmentOnly
         )
         try pruneModelPackSiblings(in: folder, keeping: artifactURL)
 
@@ -576,19 +646,25 @@ actor AlphaRossStore {
 
     private func writeModelArtifactManifest(
         tier: AlphaCapabilityTier,
+        packId: String,
         fileName: String,
         artifactURL: URL,
         checksum: String,
-        bytes: Int64
+        bytes: Int64,
+        artifactKind: String,
+        runtimeMode: AlphaPackRuntimeMode,
+        developmentOnly: Bool
     ) throws {
-        let artifact = alphaAssistantModelArtifact(for: tier)
         let manifest = AlphaModelArtifactManifest(
-            packId: artifact.packId,
+            packId: packId,
             tier: tier,
             fileName: fileName,
             relativePath: relativePath(for: artifactURL),
             checksumSha256: checksum,
             bytes: bytes,
+            artifactKind: artifactKind,
+            runtimeMode: runtimeMode,
+            developmentOnly: developmentOnly,
             verifiedAt: .now
         )
         let manifestURL = artifactURL.deletingPathExtension().appendingPathExtension("manifest.json")
