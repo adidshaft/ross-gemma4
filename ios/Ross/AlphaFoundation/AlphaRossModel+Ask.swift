@@ -1209,6 +1209,7 @@ extension AlphaRossModel {
         let sourceCharCount = input.sourcePack.reduce(0) { $0 + $1.text.count }
         let budgetPlan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
             runtimeMode: provider.runtimeMode,
+            capabilityTier: provider.capabilityTier,
             baseMaxInputChars: baseMaxInputChars,
             sourceBlockCount: input.sourcePack.count,
             sourceCharCount: sourceCharCount,

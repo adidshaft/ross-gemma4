@@ -5997,6 +5997,36 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNil(plan.sourceExcerptChars)
     }
 
+    func testMatterQuestionBudgetPlannerIgnoresSlowHistoryFromDifferentTier() {
+        let slowInvocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.quickStart.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 6.5,
+            timeToFirstTokenMs: 4_800,
+            status: .complete
+        )
+
+        let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
+            runtimeMode: .mlxSwiftLm,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 44_000,
+            sourceBlockCount: 11,
+            sourceCharCount: 39_000,
+            lastInvocation: slowInvocation
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 39_600)
+        XCTAssertEqual(plan.sourceBlockLimit, 10)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_650)
+    }
+
     func testMatterQuestionBudgetPlannerUsesExpandedLlamaBudgetsFor12BClassRuns() {
         let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
             runtimeMode: .llamaCppGguf,
@@ -6066,6 +6096,36 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(plan.maxInputChars, 9_574)
         XCTAssertEqual(plan.sourceBlockLimit, 4)
         XCTAssertEqual(plan.sourceExcerptChars, 760)
+    }
+
+    func testStructuredDocumentBudgetPlannerIgnoresSlowHistoryFromDifferentTier() {
+        let slowInvocation = AlphaLocalModelInvocation(
+            task: .legalFieldExtraction,
+            runtimeMode: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.quickStart.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 4.5,
+            timeToFirstTokenMs: 6_400,
+            status: .complete
+        )
+
+        let plan = AlphaLocalPromptBudgetPlanner.structuredDocumentPlan(
+            runtimeMode: .llamaCppGguf,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 48_000,
+            sourceBlockCount: 16,
+            sourceCharCount: 52_000,
+            lastInvocation: slowInvocation
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 42_240)
+        XCTAssertEqual(plan.sourceBlockLimit, 12)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_500)
     }
 
     func testStructuredDocumentBudgetPlannerUsesExpandedLlamaBudgetsFor12BClassRuns() {

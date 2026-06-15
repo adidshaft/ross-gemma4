@@ -275,6 +275,7 @@ func alphaAskRuntimeSourcePackPolicy(
 enum AlphaLocalPromptBudgetPlanner {
     static func matterQuestionPlan(
         runtimeMode: AlphaPackRuntimeMode,
+        capabilityTier: AlphaCapabilityTier? = nil,
         baseMaxInputChars: Int,
         sourceBlockCount: Int,
         sourceCharCount: Int,
@@ -304,6 +305,7 @@ enum AlphaLocalPromptBudgetPlanner {
 
         guard let lastInvocation,
               lastInvocation.runtimeMode == runtimeMode.rawValue,
+              (capabilityTier == nil || lastInvocation.capabilityTier == capabilityTier?.rawValue),
               lastInvocation.task == .matterQuestionAnswer else {
             return AlphaLocalPromptBudgetPlan(
                 maxInputChars: maxInputChars,
@@ -334,6 +336,7 @@ enum AlphaLocalPromptBudgetPlanner {
 
     static func structuredDocumentPlan(
         runtimeMode: AlphaPackRuntimeMode,
+        capabilityTier: AlphaCapabilityTier? = nil,
         baseMaxInputChars: Int,
         sourceBlockCount: Int,
         sourceCharCount: Int,
@@ -363,6 +366,7 @@ enum AlphaLocalPromptBudgetPlanner {
 
         guard let lastInvocation,
               lastInvocation.runtimeMode == runtimeMode.rawValue,
+              (capabilityTier == nil || lastInvocation.capabilityTier == capabilityTier?.rawValue),
               lastInvocation.task != .matterQuestionAnswer else {
             return AlphaLocalPromptBudgetPlan(
                 maxInputChars: maxInputChars,

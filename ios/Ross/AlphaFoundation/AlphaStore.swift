@@ -1630,6 +1630,7 @@ private struct AlphaLocalExtractionOrchestrator {
         }
         let budgetPlan = AlphaLocalPromptBudgetPlanner.structuredDocumentPlan(
             runtimeMode: provider.runtimeMode,
+            capabilityTier: provider.capabilityTier,
             baseMaxInputChars: baseMaxInputChars,
             sourceBlockCount: input.sourcePack.count,
             sourceCharCount: sourceCharCount,
@@ -1666,6 +1667,7 @@ private struct AlphaLocalExtractionOrchestrator {
         }
         let budgetPlan = AlphaLocalPromptBudgetPlanner.structuredDocumentPlan(
             runtimeMode: provider.runtimeMode,
+            capabilityTier: provider.capabilityTier,
             baseMaxInputChars: baseMaxInputChars,
             sourceBlockCount: sourcePack.count,
             sourceCharCount: sourceCharCount,
