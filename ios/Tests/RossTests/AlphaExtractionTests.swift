@@ -5236,6 +5236,157 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testExperimentalGGUFProviderPassesDraftModelConfigToContextFactory() async throws {
+        final class DraftCapture: @unchecked Sendable {
+            private let lock = NSLock()
+            private(set) var mainPath: String?
+            private(set) var draftPath: String?
+            private(set) var draftTokens: Int?
+
+            func record(mainPath: String, draftPath: String?, draftTokens: Int?) {
+                lock.lock()
+                defer { lock.unlock() }
+                self.mainPath = mainPath
+                self.draftPath = draftPath
+                self.draftTokens = draftTokens
+            }
+        }
+
+        actor StubLlamaContext: AlphaLlamaCompletionContext {
+            private let chunks: [String]
+            private let reportedAccelerationMode: AlphaLocalRuntimeAccelerationMode
+            private let reportedExecutionPathLabel: String
+            private let promptTokens: Int
+            private var emittedIndex = 0
+            private var generatedTokens = 0
+
+            init(
+                chunks: [String],
+                reportedAccelerationMode: AlphaLocalRuntimeAccelerationMode,
+                reportedExecutionPathLabel: String,
+                promptTokens: Int
+            ) {
+                self.chunks = chunks
+                self.reportedAccelerationMode = reportedAccelerationMode
+                self.reportedExecutionPathLabel = reportedExecutionPathLabel
+                self.promptTokens = promptTokens
+            }
+
+            func clear() {
+                emittedIndex = 0
+                generatedTokens = 0
+            }
+
+            func completionInit(
+                text: String,
+                maxNewTokens requestedMaxNewTokens: Int32?,
+                samplerSettings requestedSamplerSettings: AlphaLlamaSamplerSettings?
+            ) throws {}
+
+            func completionLoop() -> String {
+                guard emittedIndex < chunks.count else { return "" }
+                let chunk = chunks[emittedIndex]
+                emittedIndex += 1
+                generatedTokens += max(chunk.count / 4, 1)
+                return chunk
+            }
+
+            func isDone() -> Bool {
+                emittedIndex >= chunks.count
+            }
+
+            func promptTokenCount() -> Int {
+                promptTokens
+            }
+
+            func generatedTokenCount() -> Int {
+                generatedTokens
+            }
+
+            func accelerationMode() -> AlphaLocalRuntimeAccelerationMode {
+                reportedAccelerationMode
+            }
+
+            func executionPathLabel() -> String {
+                reportedExecutionPathLabel
+            }
+        }
+
+        let mainURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-gguf-main-\(UUID().uuidString)")
+            .appendingPathExtension("gguf")
+        let draftURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-gguf-draft-\(UUID().uuidString)")
+            .appendingPathExtension("gguf")
+        try Data("gguf-main-runtime".utf8).write(to: mainURL)
+        try Data("gguf-draft-runtime".utf8).write(to: draftURL)
+        defer {
+            try? FileManager.default.removeItem(at: mainURL)
+            try? FileManager.default.removeItem(at: draftURL)
+        }
+
+        let previousContextFactory = AlphaLlamaCppProvider.contextFactory
+        defer {
+            AlphaLlamaCppProvider.contextFactory = previousContextFactory
+        }
+
+        let capture = DraftCapture()
+        AlphaLlamaCppProvider.contextFactory = { mainPath, draftPath, draftTokens in
+            capture.record(mainPath: mainPath, draftPath: draftPath, draftTokens: draftTokens)
+            return StubLlamaContext(
+                chunks: ["Draft accelerated ", "answer"],
+                reportedAccelerationMode: .draftModelSpeculative,
+                reportedExecutionPathLabel: "Gemma GGUF with draft acceleration",
+                promptTokens: 640
+            )
+        }
+
+        let provider = AlphaLlamaCppProvider(
+            capabilityTier: .caseAssociate,
+            modelPathLabel: mainURL.lastPathComponent,
+            modelPath: mainURL.path,
+            checksumVerified: true,
+            draftModelPath: draftURL.path,
+            draftModelTokens: 6
+        )
+
+        let output = await provider.run(
+            AlphaLocalModelInput(
+                task: .matterQuestionAnswer,
+                instruction: "What happened in the selected order?",
+                sourcePack: [
+                    AlphaSourceTextBlock(
+                        sourceRef: AlphaSourceRef(
+                            caseId: UUID(),
+                            documentId: UUID(),
+                            documentTitle: "Selected Order",
+                            pageNumber: 1,
+                            textSnippet: "The matter is listed on 14 May 2026."
+                        ),
+                        text: "The matter is listed on 14 May 2026.",
+                        pageNumber: 1,
+                        languageHint: "en",
+                        ocrConfidence: 0.99
+                    )
+                ],
+                expectedSchema: "plain_text",
+                maxOutputTokens: 128,
+                extractionMode: .caseAssociate
+            )
+        )
+
+        XCTAssertEqual(capture.mainPath, mainURL.path)
+        XCTAssertEqual(capture.draftPath, draftURL.path)
+        XCTAssertEqual(capture.draftTokens, 6)
+        XCTAssertEqual(output.rawText, "Draft accelerated answer")
+        XCTAssertEqual(output.accelerationMode, .draftModelSpeculative)
+        XCTAssertEqual(output.accelerationDraftTokens, 6)
+        XCTAssertEqual(output.accelerationDraftModelLabel, draftURL.lastPathComponent)
+        XCTAssertEqual(output.executionPathLabel, "Gemma GGUF with draft acceleration")
+        XCTAssertEqual(output.inputTokenCount, 640)
+        XCTAssertTrue(output.outputTokenCount ?? 0 > 0)
+    }
+
     func testAssistantCatalogDescriptorPrefersMatchingRuntimeFromBackendManifest() {
         let manifest = AlphaBackendCatalogManifest(
             packs: [

@@ -273,8 +273,13 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         _ = try LlamaContext.create_context(path: path)
     }
 
-    nonisolated(unsafe) static var contextFactory: (String) throws -> LlamaContext = { path in
-        try LlamaContext.create_context(path: path)
+    nonisolated(unsafe) static var contextFactory: (String, String?, Int?) throws -> any AlphaLlamaCompletionContext = {
+        path, draftPath, draftTokens in
+        try LlamaContext.create_context(
+            path: path,
+            draftPath: draftPath,
+            draftTokens: draftTokens
+        )
     }
 
     static func validateModelCanLoad(at modelPath: String) throws {
@@ -321,24 +326,34 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         AlphaLlamaRuntimeProfile.maxInputChars(for: capabilityTier)
     }
     
-    nonisolated(unsafe) private static var cachedContext: LlamaContext?
-    nonisolated(unsafe) private static var cachedPath: String?
+    nonisolated(unsafe) private static var cachedContext: (any AlphaLlamaCompletionContext)?
+    nonisolated(unsafe) private static var cachedKey: String?
     private static let cacheLock = NSLock()
 
-    private func getOrContext(path: String) throws -> LlamaContext {
+    private func contextCacheKey(path: String) -> String {
+        let draftKey = draftModelPath?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let tokenKey = draftModelTokens.map(String.init) ?? ""
+        return [path, draftKey, tokenKey].joined(separator: "|")
+    }
+
+    private func getOrContext(path: String) throws -> any AlphaLlamaCompletionContext {
         AlphaLlamaCppProvider.cacheLock.lock()
         defer { AlphaLlamaCppProvider.cacheLock.unlock() }
-        
-        if let cached = AlphaLlamaCppProvider.cachedContext, AlphaLlamaCppProvider.cachedPath == path {
+
+        let cacheKey = contextCacheKey(path: path)
+        if let cached = AlphaLlamaCppProvider.cachedContext, AlphaLlamaCppProvider.cachedKey == cacheKey {
             return cached
         }
-        
-        // Clear old context if path changed
+
         AlphaLlamaCppProvider.cachedContext = nil
-        
-        let newContext = try AlphaLlamaCppProvider.contextFactory(path)
+
+        let newContext = try AlphaLlamaCppProvider.contextFactory(
+            path,
+            draftModelPath,
+            draftModelTokens
+        )
         AlphaLlamaCppProvider.cachedContext = newContext
-        AlphaLlamaCppProvider.cachedPath = path
+        AlphaLlamaCppProvider.cachedKey = cacheKey
         return newContext
     }
     
@@ -405,7 +420,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                 Int32(max(taskInput.maxOutputTokens, 1)),
                 AlphaLlamaRuntimeProfile.maxNewTokens(for: capabilityTier, task: taskInput.task)
             )
-            try await context.completion_init(
+            try await context.completionInit(
                 text: combinedPrompt,
                 maxNewTokens: maxNewTokens,
                 samplerSettings: taskInput.samplerSettings ?? .legalQA
@@ -416,8 +431,8 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             var lastEmittedPartialText: String?
             var timeToFirstTokenMs: Int?
             let generationLoopStartedAt = Date()
-            while await !context.is_done {
-                let tokenStr = await context.completion_loop()
+            while await !context.isDone() {
+                let tokenStr = await context.completionLoop()
                 generatedResponse += tokenStr
                 let generatedTokenCount = await context.generatedTokenCount()
                 if generatedTokenCount > 0, timeToFirstTokenMs == nil {
@@ -441,14 +456,16 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                         latestToken: tokenStr
                     ) {
                         lastEmittedPartialText = cleanedPartial
+                        let activeExecutionPathLabel = await context.executionPathLabel()
+                        let activeAccelerationMode = await context.accelerationMode()
                         let partialOutput = AlphaLocalModelOutput(
                             rawText: cleanedPartial,
                             parsedJson: nil,
                             schemaValid: false,
                             warnings: pack.truncated ? [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts] : [],
                             sourceRefs: pack.includedSourceRefs,
-                            executionPathLabel: "Gemma GGUF via llama.cpp",
-                            accelerationMode: .standard,
+                            executionPathLabel: activeExecutionPathLabel,
+                            accelerationMode: activeAccelerationMode,
                             accelerationDraftTokens: stagedDraft?.tokens,
                             accelerationDraftModelLabel: stagedDraft?.label,
                             inputChars: pack.inputChars
@@ -469,6 +486,8 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             } else {
                 outputTokensPerSecond = nil
             }
+            let activeExecutionPathLabel = await context.executionPathLabel()
+            let activeAccelerationMode = await context.accelerationMode()
             
             let cleanedResponse = stripTurnMarkerFragments(from: generatedResponse)
             let languagePreservingFallback = usesPlainMatterAnswerPrompt
@@ -494,8 +513,8 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                 schemaValid: schemaValid,
                 warnings: warnings,
                 sourceRefs: pack.includedSourceRefs,
-                executionPathLabel: "Gemma GGUF via llama.cpp",
-                accelerationMode: .standard,
+                executionPathLabel: activeExecutionPathLabel,
+                accelerationMode: activeAccelerationMode,
                 accelerationDraftTokens: stagedDraft?.tokens,
                 accelerationDraftModelLabel: stagedDraft?.label,
                 inputChars: pack.inputChars,

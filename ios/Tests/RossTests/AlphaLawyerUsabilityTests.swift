@@ -17,8 +17,12 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         AlphaLlamaCppProvider.modelLoadValidator = { path in
             _ = try LlamaContext.create_context(path: path)
         }
-        AlphaLlamaCppProvider.contextFactory = { path in
-            try LlamaContext.create_context(path: path)
+        AlphaLlamaCppProvider.contextFactory = { path, draftPath, draftTokens in
+            try LlamaContext.create_context(
+                path: path,
+                draftPath: draftPath,
+                draftTokens: draftTokens
+            )
         }
         LlamaContext.samplerFactory = { params in
             llama_sampler_chain_init(params)
@@ -79,7 +83,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         try Data([0x52, 0x4f, 0x53, 0x53]).write(to: tempURL)
         defer { try? FileManager.default.removeItem(at: tempURL) }
 
-        AlphaLlamaCppProvider.contextFactory = { _ in
+        AlphaLlamaCppProvider.contextFactory = { _, _, _ in
             throw LlamaError.couldNotInitializeSampler
         }
 
