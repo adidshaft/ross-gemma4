@@ -6119,6 +6119,91 @@ final class AlphaExtractionTests: XCTestCase {
     #if canImport(FoundationModels)
     @available(iOS 26.0, macOS 26.0, *)
     @MainActor
+    func testCanRunRealLocalAskFallsBackFromUnavailableSystemAssistantToRecoveredDownload() async throws {
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        defer {
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+        }
+
+        let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
+        let previousModelValidator = AlphaLlamaCppProvider.modelLoadValidator
+        AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in false }
+        AlphaLlamaCppProvider.modelLoadValidator = { _ in }
+        defer {
+            AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
+            AlphaLlamaCppProvider.modelLoadValidator = previousModelValidator
+        }
+
+        let data = Data("recovered ask fallback".utf8)
+        let checksum = sha256Hex(data)
+        let relativePath = "model-packs/case_associate/recovered-ask-fallback.gguf"
+        let artifactURL = alphaAbsoluteURL(for: relativePath)
+        let manifestURL = artifactURL.deletingPathExtension().appendingPathExtension("manifest.json")
+        try FileManager.default.createDirectory(
+            at: artifactURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try data.write(to: artifactURL)
+        defer {
+            try? FileManager.default.removeItem(at: artifactURL)
+            try? FileManager.default.removeItem(at: manifestURL)
+        }
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let manifest = AlphaModelArtifactManifest(
+            packId: "recovered-ask-fallback",
+            tier: .caseAssociate,
+            fileName: artifactURL.lastPathComponent,
+            relativePath: relativePath,
+            checksumSha256: checksum,
+            bytes: Int64(data.count),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            verifiedAt: .now
+        )
+        try encoder.encode(manifest).write(to: manifestURL, options: .atomic)
+
+        let model = AlphaRossModel()
+        var state = AlphaPersistedState.empty()
+        let systemPack = alphaSystemAssistantPack(for: .caseAssociate)
+        state.settings.activeTier = .caseAssociate
+        state.installedPacks = [systemPack]
+        state.modelJobs = [
+            AlphaModelDownloadJob(
+                sessionId: "system-case-associate",
+                packId: systemPack.packId,
+                tier: systemPack.tier,
+                state: .installed,
+                networkPolicy: .wifiOnly,
+                bytesDownloaded: 0,
+                totalBytes: 0,
+                checksumSha256: systemPack.checksumSha256,
+                artifactKind: systemPack.artifactKind,
+                runtimeMode: systemPack.runtimeMode,
+                developmentOnly: systemPack.developmentOnly,
+                completedAt: .now
+            )
+        ]
+        model.persisted = state
+
+        XCTAssertTrue(model.canRunRealLocalAsk(question: "What does the selected file say?", scopeCaseID: nil))
+        XCTAssertEqual(model.persisted.installedPacks.first?.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(model.persisted.installedPacks.first?.installPath, relativePath)
+        XCTAssertEqual(model.activePack?.runtimeMode, .llamaCppGguf)
+        XCTAssertTrue(model.persisted.ledgerEntries.contains { $0.title == "Assistant fallback enabled" })
+    }
+    #endif
+
+    #if canImport(FoundationModels)
+    @available(iOS 26.0, macOS 26.0, *)
+    @MainActor
     func testRefreshPrivateAISnapshotForceRebuildPrefersSystemAssistantWhenAvailable() async throws {
         let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
         setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)

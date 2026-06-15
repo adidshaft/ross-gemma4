@@ -22,6 +22,141 @@ extension AlphaRossModel {
         case exactQuote
     }
 
+    private typealias AlphaResolvedLocalAskProvider = (
+        activePack: AlphaInstalledModelPack?,
+        provider: any AlphaLocalModelProvider,
+        runtimeEnvironment: AlphaLocalRuntimeEnvironment
+    )
+
+    private func activatedRecoveredAssistantFallback(for tier: AlphaCapabilityTier) -> AlphaInstalledModelPack? {
+        let resolvedTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
+        guard let recoveredFallback = recoveredInstalledPackFromDisk(tier: resolvedTier),
+              recoveredFallback.runtimeMode != .appleFoundationModels,
+              recoveredFallback.artifactKind != "system_model",
+              alphaInstalledAssistantPackPassesRuntimeValidation(recoveredFallback) else {
+            return nil
+        }
+
+        let activatedFallback = AlphaInstalledModelPack(
+            id: recoveredFallback.id,
+            packId: recoveredFallback.packId,
+            tier: recoveredFallback.tier,
+            installPath: recoveredFallback.installPath,
+            checksumSha256: recoveredFallback.checksumSha256,
+            artifactKind: recoveredFallback.artifactKind,
+            runtimeMode: recoveredFallback.runtimeMode,
+            developmentOnly: recoveredFallback.developmentOnly,
+            checksumVerified: recoveredFallback.checksumVerified,
+            minimumAppVersion: recoveredFallback.minimumAppVersion,
+            installedAt: recoveredFallback.installedAt,
+            isActive: true
+        )
+
+        var nextState = persisted
+        nextState.installedPacks = nextState.installedPacks.map { pack in
+            var copy = pack
+            copy.isActive = false
+            return copy
+        }
+        nextState.installedPacks.removeAll {
+            (AlphaCapabilityTier.normalizedAssistantSelection($0.tier) ?? $0.tier) == resolvedTier
+        }
+        nextState.installedPacks.insert(activatedFallback, at: 0)
+        nextState.settings.activeTier = resolvedTier
+
+        let installedBytes = alphaExpectedDownloadedAssistantArtifact(for: activatedFallback)?.bytes ?? 0
+        if let jobIndex = nextState.modelJobs.firstIndex(where: {
+            (AlphaCapabilityTier.normalizedAssistantSelection($0.tier) ?? $0.tier) == resolvedTier
+        }) {
+            nextState.modelJobs[jobIndex].packId = activatedFallback.packId
+            nextState.modelJobs[jobIndex].state = .installed
+            nextState.modelJobs[jobIndex].checksumSha256 = activatedFallback.checksumSha256
+            nextState.modelJobs[jobIndex].artifactKind = activatedFallback.artifactKind
+            nextState.modelJobs[jobIndex].runtimeMode = activatedFallback.runtimeMode
+            nextState.modelJobs[jobIndex].developmentOnly = activatedFallback.developmentOnly
+            nextState.modelJobs[jobIndex].failureReason = nil
+            nextState.modelJobs[jobIndex].bytesDownloaded = installedBytes
+            nextState.modelJobs[jobIndex].totalBytes = installedBytes
+            nextState.modelJobs[jobIndex].updatedAt = .now
+            nextState.modelJobs[jobIndex].completedAt = nextState.modelJobs[jobIndex].completedAt ?? .now
+        } else {
+            nextState.modelJobs.insert(
+                AlphaModelDownloadJob(
+                    sessionId: "recovered-fallback-\(UUID().uuidString.prefix(8))",
+                    packId: activatedFallback.packId,
+                    tier: activatedFallback.tier,
+                    state: .installed,
+                    networkPolicy: .wifiOnly,
+                    bytesDownloaded: installedBytes,
+                    totalBytes: installedBytes,
+                    checksumSha256: activatedFallback.checksumSha256,
+                    artifactKind: activatedFallback.artifactKind,
+                    runtimeMode: activatedFallback.runtimeMode,
+                    developmentOnly: activatedFallback.developmentOnly,
+                    completedAt: .now
+                ),
+                at: 0
+            )
+        }
+
+        nextState.ledgerEntries.insert(
+            AlphaPrivacyLedgerEntry(
+                title: "Assistant fallback enabled",
+                detail: "Ross switched back to the downloaded private assistant for this tier because the built-in CoreAI model was not available right now. Case files stayed on this device.",
+                purpose: .model_verification,
+                payloadClass: .no_case_data,
+                endpointLabel: "device://private-assistant-fallback",
+                success: true
+            ),
+            at: 0
+        )
+        persisted = nextState
+        persist()
+        return activatedFallback
+    }
+
+    private func resolvedLocalAskProvider(
+        requestedTier: AlphaCapabilityTier,
+        task: AlphaLocalModelTask,
+        executor: @escaping @Sendable (AlphaLocalModelInput) async -> AlphaLocalModelOutput
+    ) -> AlphaResolvedLocalAskProvider? {
+        func resolve(for pack: AlphaInstalledModelPack?) -> AlphaResolvedLocalAskProvider? {
+            let runtimeEnvironment = alphaLocalRuntimeEnvironment(
+                activePack: pack,
+                requestedTier: requestedTier,
+                installedPacks: persisted.installedPacks
+            )
+            guard let provider = AlphaLocalModelRuntime.resolveProvider(
+                activePack: pack,
+                requestedTier: requestedTier,
+                runtimeEnvironment: runtimeEnvironment,
+                executor: executor
+            ) else {
+                return nil
+            }
+            let runtimeAllowedForAsk = provider.runtimeMode != .deterministicDev || alphaAllowsDevelopmentModelArtifacts()
+            guard runtimeAllowedForAsk,
+                  provider.isAvailable(),
+                  provider.supportedTasks().contains(task) else {
+                return nil
+            }
+            return (pack, provider, runtimeEnvironment)
+        }
+
+        let currentPack = activePack
+        if let resolved = resolve(for: currentPack) {
+            return resolved
+        }
+
+        guard currentPack?.runtimeMode == .appleFoundationModels || currentPack?.artifactKind == "system_model" else {
+            return nil
+        }
+        guard let fallbackPack = activatedRecoveredAssistantFallback(for: requestedTier) else {
+            return nil
+        }
+        return resolve(for: fallbackPack)
+    }
+
     func setAskDraft(_ value: String, for scopeCaseID: UUID?) {
         if let scopeCaseID {
             askDrafts[scopeCaseID] = value
@@ -384,22 +519,11 @@ extension AlphaRossModel {
 
     func canRunRealLocalAsk(question: String, scopeCaseID: UUID?) -> Bool {
         let requestedTier = activePack?.tier ?? persisted.settings.activeTier ?? selectedTier
-        let runtimeEnvironment = alphaLocalRuntimeEnvironment(
-            activePack: activePack,
+        return resolvedLocalAskProvider(
             requestedTier: requestedTier,
-            installedPacks: persisted.installedPacks
-        )
-        guard let provider = AlphaLocalModelRuntime.resolveProvider(
-            activePack: activePack,
-            requestedTier: requestedTier,
-            runtimeEnvironment: runtimeEnvironment,
+            task: .matterQuestionAnswer,
             executor: { _ in AlphaLocalModelOutput(rawText: "", parsedJson: nil, schemaValid: false, warnings: [], sourceRefs: []) }
-        ) else {
-            return false
-        }
-        let runtimeAllowedForAsk = provider.runtimeMode != .deterministicDev || alphaAllowsDevelopmentModelArtifacts()
-        guard runtimeAllowedForAsk, provider.isAvailable(), provider.supportedTasks().contains(.matterQuestionAnswer) else { return false }
-        return true
+        ) != nil
     }
 
     func activeLocalModelDisplayLabel() -> String {
@@ -1181,15 +1305,9 @@ extension AlphaRossModel {
             samplerSettings: persisted.settings.llamaSamplerSettings
         )
         let requestedTier = activePack?.tier ?? persisted.settings.activeTier ?? selectedTier
-        let runtimeEnvironment = alphaLocalRuntimeEnvironment(
-            activePack: activePack,
+        guard let resolvedProvider = resolvedLocalAskProvider(
             requestedTier: requestedTier,
-            installedPacks: persisted.installedPacks
-        )
-        guard let provider = AlphaLocalModelRuntime.resolveProvider(
-            activePack: activePack,
-            requestedTier: requestedTier,
-            runtimeEnvironment: runtimeEnvironment,
+            task: .matterQuestionAnswer,
             executor: { _ in
                 AlphaLocalModelOutput(
                     rawText: "",
@@ -1203,10 +1321,8 @@ extension AlphaRossModel {
         ) else {
             return
         }
-        let runtimeAllowedForAsk = provider.runtimeMode != .deterministicDev || alphaAllowsDevelopmentModelArtifacts()
-        guard runtimeAllowedForAsk, provider.isAvailable(), provider.supportedTasks().contains(.matterQuestionAnswer) else {
-            return
-        }
+        let activePack = resolvedProvider.activePack
+        let provider = resolvedProvider.provider
         let baseMaxInputChars = provider.maxInputChars() ?? (provider.runtimeMode == .mlxSwiftLm ? 16_000 : 12_000)
         let sourceCharCount = input.sourcePack.reduce(0) { $0 + $1.text.count }
         let budgetPlan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(

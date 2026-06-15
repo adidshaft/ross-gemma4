@@ -1922,12 +1922,12 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
     private func availabilityStatus() -> (available: Bool, userFacingStatus: String, lastErrorCategory: String?) {
         do {
             let model = try resolvedModel()
-            if model.isAvailable {
+            if Self.modelAvailabilityProbe(model) {
                 return (true, alphaRuntimeHealthStatus(.foundationAvailable), nil)
             }
             switch model.availability {
             case .available:
-                return (true, alphaRuntimeHealthStatus(.foundationAvailable), nil)
+                return (false, alphaRuntimeHealthStatus(.foundationUnavailable), "unsupported_runtime")
             case .unavailable:
                 return (false, alphaRuntimeHealthStatus(.foundationUnavailable), "unsupported_runtime")
             @unknown default:
