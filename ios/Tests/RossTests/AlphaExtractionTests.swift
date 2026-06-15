@@ -7998,6 +7998,68 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     @MainActor
+    func testSelectedDocumentIntentRecognizesNaturalPluralAndPageQuestions() {
+        let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
+
+        XCTAssertTrue(
+            model.alphaAskQuestionTargetsSelectedDocument(
+                "What do these documents say about the hearing chronology?"
+            )
+        )
+        XCTAssertTrue(
+            model.alphaAskQuestionTargetsSelectedDocument(
+                "Which page in the tagged files mentions CAM-D3 retention?"
+            )
+        )
+        XCTAssertTrue(
+            model.alphaAskQuestionTargetsSelectedDocument(
+                "Where in these files does it mention the affidavit corrections?"
+            )
+        )
+    }
+
+    @MainActor
+    func testNaturalPluralSelectedDocumentQuestionPrefersTaggedFileSource() {
+        let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
+        let selectedDocumentID = UUID()
+        let otherDocumentID = UUID()
+        let unselectedBlock = AlphaSourceTextBlock(
+            sourceRef: AlphaSourceRef(
+                caseId: UUID(),
+                documentId: otherDocumentID,
+                documentTitle: "General chronology",
+                pageNumber: 2,
+                textSnippet: "Hearing chronology overview"
+            ),
+            text: "The hearing chronology shows the first listing, the adjournment, and the next hearing date.",
+            pageNumber: 2,
+            languageHint: "en",
+            ocrConfidence: 0.94
+        )
+        let selectedBlock = AlphaSourceTextBlock(
+            sourceRef: AlphaSourceRef(
+                caseId: UUID(),
+                documentId: selectedDocumentID,
+                documentTitle: "Tagged chronology",
+                pageNumber: 4,
+                textSnippet: "Hearing chronology and next hearing date"
+            ),
+            text: "The hearing chronology shows the first listing, the adjournment, and the next hearing date.",
+            pageNumber: 4,
+            languageHint: "en",
+            ocrConfidence: 0.95
+        )
+
+        let ranked = model.alphaRankedAskSourceBlocks(
+            [unselectedBlock, selectedBlock],
+            question: "What do these documents say about the hearing chronology?",
+            selectedDocumentIDs: [selectedDocumentID]
+        )
+
+        XCTAssertEqual(ranked.first?.sourceRef.documentId, selectedDocumentID)
+    }
+
+    @MainActor
     func testUntaggedRankedAskSourceBlocksKeepNeighboringPagesForContext() {
         let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
         let caseID = UUID()

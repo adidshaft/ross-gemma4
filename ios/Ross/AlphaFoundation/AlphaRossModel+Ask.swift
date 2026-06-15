@@ -1917,34 +1917,67 @@ extension AlphaRossModel {
         ].joined(separator: "|")
     }
 
-    func alphaAskSearchTerms(from question: String) -> [String] {
-        let normalized = question
+    func alphaAskNormalizedQuestionTokens(from question: String) -> [String] {
+        question
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
             .lowercased()
             .replacingOccurrences(
                 of: #"[^a-z0-9\-\u{0900}-\u{097F}\u{0980}-\u{09FF}\u{0B80}-\u{0BFF}\u{0C00}-\u{0C7F}]+"#,
                 with: " ",
                 options: .regularExpression
             )
+            .split(separator: " ")
+            .map(String.init)
+    }
+
+    func alphaAskSearchTerms(from question: String) -> [String] {
         let stopWords: Set<String> = [
             "the", "and", "with", "from", "this", "that", "what", "which",
             "summarize", "summarise", "source", "sources", "citation", "citations",
             "issue", "issues", "about", "please", "give", "answer", "only"
         ]
-        return normalized
-            .split(separator: " ")
-            .map(String.init)
+        return alphaAskNormalizedQuestionTokens(from: question)
             .filter { $0.count >= 3 && !stopWords.contains($0) }
     }
 
     func alphaAskQuestionTargetsSelectedDocument(_ question: String) -> Bool {
-        let lowered = question.lowercased()
+        let normalizedTokens = alphaAskNormalizedQuestionTokens(from: question)
+        let lowered = normalizedTokens.joined(separator: " ")
         let selectedDocumentPhrases = [
             "this file",
+            "these files",
             "this document",
+            "these documents",
             "tagged file",
+            "tagged files",
             "tagged document",
+            "tagged documents",
             "selected file",
+            "selected files",
             "selected document",
+            "selected documents",
+            "answer from this file",
+            "answer from these files",
+            "answer from this document",
+            "answer from these documents",
+            "in this file",
+            "in these files",
+            "in this document",
+            "in these documents",
+            "from this file",
+            "from these files",
+            "from this document",
+            "from these documents",
+            "which page",
+            "which pages",
+            "where in this file",
+            "where in these files",
+            "where in this document",
+            "where in these documents",
+            "what does it say",
+            "what do they say",
+            "where does it say",
+            "where do they say",
             "summarize",
             "summarise",
             "सारांश",
@@ -1965,7 +1998,25 @@ extension AlphaRossModel {
             "what does the file",
             "what does the document"
         ]
-        return selectedDocumentPhrases.contains { lowered.contains($0) }
+        if selectedDocumentPhrases.contains(where: { lowered.contains($0) }) {
+            return true
+        }
+
+        let tokens = Set(normalizedTokens)
+        let documentReferenceTerms: Set<String> = [
+            "file", "files", "document", "documents", "doc", "docs",
+            "page", "pages", "pdf", "bundle", "bundles",
+            "annexure", "annexures", "attachment", "attachments",
+            "record", "records"
+        ]
+        let selectedDocumentIntentTerms: Set<String> = [
+            "selected", "tagged", "this", "these", "that", "those",
+            "what", "which", "where", "summarize", "summarise", "summary",
+            "compare", "comparison", "mention", "mentions", "mentioned",
+            "say", "says", "show", "shows", "shown", "state", "states", "stated"
+        ]
+        return !tokens.isDisjoint(with: documentReferenceTerms) &&
+            !tokens.isDisjoint(with: selectedDocumentIntentTerms)
     }
 
     func alphaAskQuestionTargetsEvidence(questionTerms: [String]) -> Bool {
