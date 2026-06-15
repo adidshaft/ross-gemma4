@@ -126,6 +126,7 @@ struct AlphaRootAskDock: View {
     @State private var pendingCollapseQuestion: String?
     @State private var composerResetToken = UUID()
     @State private var editingPublicLawQuery = false
+    @State private var answerDetailsResult: AlphaAskResult?
     @FocusState private var dockComposerFocused: Bool
 
     init(
@@ -546,6 +547,7 @@ struct AlphaRootAskDock: View {
                     result: inlineResult,
                     contextDocumentTitle: fixedDocumentIDs.count == 1 ? activeSelectedDocuments.first?.title : nil,
                     onOpenSource: model.openSourceRef,
+                    onShowDetails: { answerDetailsResult = $0 },
                     onOpenConversation: {
                         if fixedDocumentIDs.count == 1, let documentID = fixedDocumentIDs.first {
                             model.openAsk(scopeCaseID: activeScopeCaseID, documentID: documentID)
@@ -590,6 +592,18 @@ struct AlphaRootAskDock: View {
             )
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.hidden)
+        }
+        .sheet(
+            isPresented: Binding(
+                get: { answerDetailsResult != nil },
+                set: { if !$0 { answerDetailsResult = nil } }
+            )
+        ) {
+            if let answerDetailsResult {
+                AlphaAnswerDetailsSheet(result: answerDetailsResult)
+                    .presentationDetents([.height(260), .medium])
+                    .presentationDragIndicator(.visible)
+            }
         }
         .fileImporter(
             isPresented: Binding(
@@ -942,6 +956,7 @@ struct AlphaInlineAskResponseCard: View {
     let result: AlphaAskResult
     let contextDocumentTitle: String?
     let onOpenSource: (AlphaSourceRef) -> Void
+    let onShowDetails: (AlphaAskResult) -> Void
     let onOpenConversation: () -> Void
     let onClose: () -> Void
 
@@ -958,24 +973,35 @@ struct AlphaInlineAskResponseCard: View {
                         Text(result.answerTitle)
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Color.rossInk)
+                            .lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)
+                            .layoutPriority(2)
 
                         if let note = result.statusNote {
                             Text(note)
                                 .font(.caption2.weight(.medium))
                                 .foregroundStyle(Color.rossAccent)
+                                .lineLimit(2)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     Spacer(minLength: 8)
-                    Button(action: onClose) {
-                        Image(systemName: "xmark")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(Color.rossInk.opacity(0.45))
-                            .padding(6)
-                            .contentShape(Rectangle())
+                    if result.hasAnswerDetails {
+                        AlphaInlineAskResponseAccessoryButton(
+                            systemImage: "info.circle",
+                            accessibilityLabel: rossLocalized("answer_details"),
+                            action: {
+                                alphaHaptic(.light)
+                                onShowDetails(result)
+                            }
+                        )
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(rossLocalized("dismiss"))
+                    AlphaInlineAskResponseAccessoryButton(
+                        systemImage: "xmark",
+                        accessibilityLabel: rossLocalized("dismiss"),
+                        action: onClose
+                    )
                 }
 
                 ForEach(result.answerSectionItems(limit: 2)) { section in
@@ -1010,6 +1036,20 @@ struct AlphaInlineAskResponseCard: View {
             fallbackStrokeOpacity: 0.48
         )
         .shadow(color: Color.rossShadow.opacity(0.09), radius: 10, y: 4)
+        .contextMenu {
+            if result.hasAnswerDetails {
+                Button {
+                    onShowDetails(result)
+                } label: {
+                    Label(rossLocalized("answer_details"), systemImage: "info.circle")
+                }
+            }
+            Button {
+                alphaCopyAskResultToPasteboard(result)
+            } label: {
+                Label(rossLocalized("copy_answer"), systemImage: "doc.on.doc")
+            }
+        }
         .gesture(
             DragGesture(minimumDistance: 20, coordinateSpace: .local)
                 .onEnded { value in
@@ -1020,6 +1060,43 @@ struct AlphaInlineAskResponseCard: View {
                     }
                 }
         )
+    }
+}
+
+private struct AlphaInlineAskResponseAccessoryButton: View {
+    let systemImage: String
+    let accessibilityLabel: String
+    let action: () -> Void
+
+    var body: some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            Button(action: action) {
+                icon(foregroundOpacity: 0.62)
+            }
+            .buttonStyle(.glass)
+            .tint(Color.rossHighlight)
+            .accessibilityLabel(accessibilityLabel)
+        } else {
+            Button(action: action) {
+                icon(foregroundOpacity: 0.45)
+                    .rossNativeGlassSurface(
+                        tint: Color.rossHighlight,
+                        shape: Circle(),
+                        interactive: true,
+                        fallbackFillOpacity: 0.68,
+                        fallbackStrokeOpacity: 0.36
+                    )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(accessibilityLabel)
+        }
+    }
+
+    private func icon(foregroundOpacity: Double) -> some View {
+        Image(systemName: systemImage)
+            .font(.caption.weight(.bold))
+            .foregroundStyle(Color.rossInk.opacity(foregroundOpacity))
+            .frame(width: 32, height: 32)
     }
 }
 

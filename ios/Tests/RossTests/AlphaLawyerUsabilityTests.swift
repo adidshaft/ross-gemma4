@@ -1335,6 +1335,84 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    func testLatestAskResultPreservesModelInvocationForDockAnswerDetails() async throws {
+        try await withRestoredStore { store in
+            try await store.replace(with: AlphaPersistedState.seed())
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+
+            let maybeCaseID = await MainActor.run { model.cases.first?.id }
+            let caseID = try XCTUnwrap(maybeCaseID)
+            let documentID = UUID()
+            let sourceRef = AlphaSourceRef(
+                caseId: caseID,
+                documentId: documentID,
+                documentTitle: "Ready order",
+                pageNumber: 1,
+                paragraphRange: "¶1",
+                textSnippet: "The court listed the matter for filing compliance on 14 May 2026.",
+                ocrConfidence: 0.97
+            )
+            let document = AlphaCaseDocument(
+                id: documentID,
+                title: "Ready order",
+                fileName: "ready-order.txt",
+                kind: .text,
+                storedRelativePath: "docs/ready-order.txt",
+                importedAt: .now,
+                pageCount: 1,
+                ocrStatus: .nativeText,
+                indexingStatus: .indexed,
+                extractedText: "The court listed the matter for filing compliance on 14 May 2026.",
+                pages: [
+                    AlphaDocumentPage(
+                        pageNumber: 1,
+                        snippet: "The court listed the matter for filing compliance on 14 May 2026.",
+                        extractedText: "The court listed the matter for filing compliance on 14 May 2026."
+                    )
+                ]
+            )
+
+            await MainActor.run {
+                let testPack = AlphaInstalledModelPack(
+                    packId: "case-associate-test-pack",
+                    tier: .caseAssociate,
+                    installPath: "model-packs/case_associate/pack.dev",
+                    checksumSha256: String(repeating: "a", count: 64),
+                    artifactKind: "tiny_dev_artifact",
+                    runtimeMode: .deterministicDev,
+                    developmentOnly: true,
+                    isActive: true
+                )
+                model.privateAISnapshot.activePack = testPack
+                model.persisted.installedPacks = [testPack]
+                model.persisted.settings.activeTier = .caseAssociate
+                if let caseIndex = model.persisted.cases.firstIndex(where: { $0.id == caseID }) {
+                    model.persisted.cases[caseIndex].documents.append(document)
+                    model.persisted.cases[caseIndex].sourceRefs.append(sourceRef)
+                }
+                model.invalidateWorkspaceDerivedState()
+                model.submitAsk(question: "What happened in Ready order?", scopeCaseID: caseID, webEnabled: false)
+            }
+
+            try await eventually(timeoutNanoseconds: 2_000_000_000) {
+                await MainActor.run { model.latestAskResult?.modelInvocation != nil }
+            }
+
+            let latestResult = await MainActor.run { model.latestAskResult }
+            let conversationResult = await MainActor.run { model.askConversation(for: caseID).last }
+
+            XCTAssertEqual(latestResult?.chatTurnID, conversationResult?.chatTurnID)
+            XCTAssertNotNil(latestResult?.modelInvocation)
+            XCTAssertTrue(latestResult?.hasAnswerDetails == true)
+            XCTAssertEqual(latestResult?.modelInvocation?.runtimeMode, AlphaPackRuntimeMode.deterministicDev.rawValue)
+            XCTAssertEqual(conversationResult?.modelInvocation, latestResult?.modelInvocation)
+        }
+    }
+
     func testDockCommandAddsTaskWithoutTriggeringWebPreview() async throws {
         try await withRestoredStore { store in
             let state = AlphaPersistedState.demoSeed()

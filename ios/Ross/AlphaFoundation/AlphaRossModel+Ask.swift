@@ -1250,6 +1250,7 @@ extension AlphaRossModel {
                             latest.answerSections = displaySections
                             latest.caseFileSources = filteredSourceRefs
                             latest.statusNote = runningStatus
+                            latest.modelInvocation = trackedInvocation
                             self.latestAskResult = latest
                         }
                     }
@@ -1297,6 +1298,7 @@ extension AlphaRossModel {
                             latest.answerSections = runtimeFailure.sections
                             latest.statusNote = runtimeFailure.statusNote
                             latest.needsReviewWarning = runtimeFailure.needsReviewWarning
+                            latest.modelInvocation = completedInvocation
                             self.latestAskResult = latest
                         }
                         return
@@ -1318,6 +1320,7 @@ extension AlphaRossModel {
                         latest.answerSections = unavailablePresentation.sections
                         latest.statusNote = unavailablePresentation.statusNote
                         latest.needsReviewWarning = unavailablePresentation.needsReviewWarning
+                        latest.modelInvocation = completedInvocation
                         self.latestAskResult = latest
                     }
                     return
@@ -1356,6 +1359,7 @@ extension AlphaRossModel {
                         latest.needsReviewWarning,
                         needsReviewWarning
                     )
+                    latest.modelInvocation = completedInvocation
                     self.latestAskResult = latest
                 }
             }

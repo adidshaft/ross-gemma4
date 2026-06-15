@@ -708,7 +708,7 @@ struct AlphaFullScreenChatTurn: View {
     }
 }
 
-private struct AlphaAnswerDetailsSheet: View {
+struct AlphaAnswerDetailsSheet: View {
     let result: AlphaAskResult
 
     private var invocation: AlphaLocalModelInvocation? {
