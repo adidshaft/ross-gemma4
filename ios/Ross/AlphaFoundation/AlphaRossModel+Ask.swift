@@ -1224,7 +1224,7 @@ extension AlphaRossModel {
         let runtimeHealth = provider.runtimeHealth()
         let assistantDisplayName: String? = {
             if provider.runtimeMode == .appleFoundationModels {
-                return "Apple Foundation Models"
+                return alphaFoundationRuntimeDisplayLabel()
             }
             guard let activePack else { return nil }
             return alphaAssistantModelArtifacts[activePack.tier]?.displayName

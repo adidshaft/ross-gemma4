@@ -4053,7 +4053,7 @@ final class AlphaExtractionTests: XCTestCase {
             ],
             assistantDisplayName: "Gemma 4 12B Q4_K_M",
             preferredRuntimeMode: AlphaPackRuntimeMode.appleFoundationModels.rawValue,
-            runtimeSelectionReason: "Built-in Apple model preferred",
+            runtimeSelectionReason: "Built-in CoreAI model preferred",
             executionPathLabel: "Gemma GGUF via llama.cpp",
             runtimeContextTokens: 131_072,
             runtimeInputBudgetChars: 52_000,
@@ -4096,7 +4096,7 @@ final class AlphaExtractionTests: XCTestCase {
                 AlphaAnswerDetailMetric(
                     key: "runtime_choice",
                     label: "Why this runtime",
-                    value: "Built-in Apple model preferred"
+                    value: "Built-in CoreAI model preferred"
                 ),
                 AlphaAnswerDetailMetric(
                     key: "execution_path",
@@ -4106,7 +4106,7 @@ final class AlphaExtractionTests: XCTestCase {
                 AlphaAnswerDetailMetric(
                     key: "preferred_runtime",
                     label: "Preferred runtime",
-                    value: "Apple Foundation Models"
+                    value: "CoreAI"
                 ),
                 AlphaAnswerDetailMetric(
                     key: "runtime_fallback",
@@ -5962,7 +5962,7 @@ final class AlphaExtractionTests: XCTestCase {
             systemAssistantAvailable: true
         )
 
-        XCTAssertEqual(label, "Built-in Apple model preferred")
+        XCTAssertEqual(label, "Built-in CoreAI model preferred")
     }
 
     func testAssistantRuntimeChoiceLabelExplainsKeepingFasterRecentGGUFRun() {

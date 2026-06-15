@@ -837,7 +837,7 @@ private extension AlphaPackRuntimeMode {
     var displayLabel: String {
         switch self {
         case .appleFoundationModels:
-            return "Apple Foundation Models"
+            return alphaFoundationRuntimeDisplayLabel()
         case .mlxSwiftLm:
             return "MLX"
         case .llamaCppGguf:

@@ -953,7 +953,7 @@ func alphaAssistantRuntimeChoiceLabel(
     let prefersSystemAssistant = systemAssistantAvailable ?? alphaSystemAssistantRuntimeAvailable(for: tier)
 
     if selectedRuntimeMode == .appleFoundationModels && prefersSystemAssistant {
-        return "Built-in Apple model preferred"
+        return "Built-in CoreAI model preferred"
     }
 
     if tier == .flash && selectedRuntimeMode == .llamaCppGguf {

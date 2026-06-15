@@ -163,6 +163,14 @@ enum AlphaLocalRuntimeAccelerationMode: String, Codable, Hashable, Sendable {
     case draftModelSpeculative
 }
 
+func alphaFoundationRuntimeDisplayLabel() -> String {
+    "CoreAI"
+}
+
+func alphaFoundationRuntimeExecutionPathLabel() -> String {
+    "CoreAI built-in model"
+}
+
 func alphaRuntimeHealthStatus(_ key: AlphaRuntimeHealthStatusKey, languageCode: String = rossSelectedLanguageCode()) -> String {
     rossLocalized(key.rawValue, languageCode: languageCode)
 }
@@ -1529,7 +1537,7 @@ func alphaFoundationModelOutput(
             schemaValid: !finalResponse.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
             warnings: warnings,
             sourceRefs: promptPack.includedSourceRefs,
-            executionPathLabel: "CoreAI built-in model",
+            executionPathLabel: alphaFoundationRuntimeExecutionPathLabel(),
             inputChars: promptPack.inputChars
         )
     }
@@ -1541,7 +1549,7 @@ func alphaFoundationModelOutput(
         schemaValid: parsedJson != nil,
         warnings: warnings,
         sourceRefs: promptPack.includedSourceRefs,
-        executionPathLabel: "CoreAI built-in model",
+        executionPathLabel: alphaFoundationRuntimeExecutionPathLabel(),
         inputChars: promptPack.inputChars,
         errorCategory: parsedJson == nil ? "invalid_model_output" : nil
     )
@@ -1562,7 +1570,7 @@ func alphaFoundationModelPartialOutput(
             : alphaFoundationExtractJSONCandidate(from: trimmedResponse) != nil,
         warnings: promptPack.truncated ? [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts] : [],
         sourceRefs: promptPack.includedSourceRefs,
-        executionPathLabel: "CoreAI built-in model",
+        executionPathLabel: alphaFoundationRuntimeExecutionPathLabel(),
         inputChars: promptPack.inputChars
     )
 }
@@ -1741,7 +1749,7 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
             estimatedDurationSeconds: max(input.sourcePack.count, 1),
             shouldRunNow: maxInputChars().map { promptPack.inputChars <= $0 } ?? true,
             reason: maxInputChars().flatMap { promptPack.inputChars > $0 ? "Prompt pack exceeded the local runtime budget of \($0) characters." : nil },
-            notes: ["Apple Foundation Models local runtime estimate."]
+            notes: ["CoreAI local runtime estimate."]
         )
     }
 
