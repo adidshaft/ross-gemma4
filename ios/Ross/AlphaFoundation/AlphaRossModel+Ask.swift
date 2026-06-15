@@ -1676,12 +1676,16 @@ extension AlphaRossModel {
             rankedBlocks: rankedDocumentBlocks,
             selectedDocumentIDs: selectedIDs
         )
+        let balancedRankedDocumentBlocks = alphaBalancedRankedAskSourceBlocks(
+            rankedDocumentBlocks,
+            selectedDocumentIDs: selectedIDs
+        )
         if !selectedIDs.isEmpty {
             guard !prioritizedSelectedDocumentBlocks.isEmpty else { return [] }
             return Array(prioritizedSelectedDocumentBlocks.prefix(sourcePackPolicy.sourceBlockLimit))
         }
-        if !rankedDocumentBlocks.isEmpty {
-            return Array((matterBlocks + rankedDocumentBlocks).prefix(sourcePackPolicy.sourceBlockLimit))
+        if !balancedRankedDocumentBlocks.isEmpty {
+            return Array((matterBlocks + balancedRankedDocumentBlocks).prefix(sourcePackPolicy.sourceBlockLimit))
         }
         return askRuntimeMatterMemorySourcePack(scopeCaseID: scopeCaseID)
     }
@@ -1903,6 +1907,58 @@ extension AlphaRossModel {
         }
 
         return prioritized
+    }
+
+    func alphaBalancedRankedAskSourceBlocks(
+        _ rankedBlocks: [AlphaSourceTextBlock],
+        selectedDocumentIDs: Set<UUID>
+    ) -> [AlphaSourceTextBlock] {
+        guard selectedDocumentIDs.isEmpty, !rankedBlocks.isEmpty else { return rankedBlocks }
+
+        let groupedRankedBlocks = Dictionary(grouping: rankedBlocks) { $0.sourceRef.documentId }
+        var orderedDocumentIDs: [UUID] = []
+        var seenDocumentIDs = Set<UUID>()
+        for block in rankedBlocks {
+            if seenDocumentIDs.insert(block.sourceRef.documentId).inserted {
+                orderedDocumentIDs.append(block.sourceRef.documentId)
+            }
+        }
+
+        var balanced: [AlphaSourceTextBlock] = []
+        var seenBlockKeys = Set<String>()
+
+        func appendIfNeeded(_ block: AlphaSourceTextBlock) {
+            let key = alphaAskSourceBlockKey(block)
+            guard seenBlockKeys.insert(key).inserted else { return }
+            balanced.append(block)
+        }
+
+        for documentID in orderedDocumentIDs {
+            if let firstBlock = groupedRankedBlocks[documentID]?.first {
+                appendIfNeeded(firstBlock)
+            }
+        }
+
+        var remainingByDocument: [UUID: ArraySlice<AlphaSourceTextBlock>] = [:]
+        for documentID in orderedDocumentIDs {
+            remainingByDocument[documentID] = ArraySlice((groupedRankedBlocks[documentID] ?? []).dropFirst())
+        }
+
+        while true {
+            var appendedAny = false
+            for documentID in orderedDocumentIDs {
+                guard var remaining = remainingByDocument[documentID], let next = remaining.first else {
+                    continue
+                }
+                appendIfNeeded(next)
+                remaining = remaining.dropFirst()
+                remainingByDocument[documentID] = remaining
+                appendedAny = true
+            }
+            guard appendedAny else { break }
+        }
+
+        return balanced
     }
 
     func alphaPreferredSelectedDocumentFallbackBlocks(

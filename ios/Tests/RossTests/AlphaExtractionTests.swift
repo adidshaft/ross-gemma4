@@ -8336,6 +8336,62 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(prioritized.map(\.pageNumber), [4, 3, 1, 1])
     }
 
+    @MainActor
+    func testUntaggedRankedSourceBlocksBalancePrimaryMatchesAcrossDocuments() {
+        let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
+        let caseID = UUID()
+        let firstDocumentID = UUID()
+        let secondDocumentID = UUID()
+
+        let firstPrimary = AlphaSourceTextBlock(
+            sourceRef: AlphaSourceRef(
+                caseId: caseID,
+                documentId: firstDocumentID,
+                documentTitle: "Chronology bundle",
+                pageNumber: 4,
+                textSnippet: "Hearing chronology and next listing"
+            ),
+            text: "The hearing chronology shows the next listing on 17 June 2026.",
+            pageNumber: 4,
+            languageHint: "en",
+            ocrConfidence: 0.95
+        )
+        let firstNeighbor = AlphaSourceTextBlock(
+            sourceRef: AlphaSourceRef(
+                caseId: caseID,
+                documentId: firstDocumentID,
+                documentTitle: "Chronology bundle",
+                pageNumber: 5,
+                textSnippet: "Chronology directions after hearing"
+            ),
+            text: "Chronology directions after hearing include filing compliance.",
+            pageNumber: 5,
+            languageHint: "en",
+            ocrConfidence: 0.94
+        )
+        let secondPrimary = AlphaSourceTextBlock(
+            sourceRef: AlphaSourceRef(
+                caseId: caseID,
+                documentId: secondDocumentID,
+                documentTitle: "Affidavit note",
+                pageNumber: 2,
+                textSnippet: "Affidavit corrections before filing"
+            ),
+            text: "Affidavit corrections must be verified with the client before filing.",
+            pageNumber: 2,
+            languageHint: "en",
+            ocrConfidence: 0.93
+        )
+
+        let balanced = model.alphaBalancedRankedAskSourceBlocks(
+            [firstPrimary, firstNeighbor, secondPrimary],
+            selectedDocumentIDs: []
+        )
+
+        XCTAssertEqual(balanced.prefix(2).map(\.sourceRef.documentId), [firstDocumentID, secondDocumentID])
+        XCTAssertEqual(balanced.map(\.pageNumber), [4, 2, 5])
+    }
+
     func testSourceLanguageHintFallsBackToDocumentProfile() {
         let profile = AlphaDocumentLanguageProfile(
             documentId: UUID(),

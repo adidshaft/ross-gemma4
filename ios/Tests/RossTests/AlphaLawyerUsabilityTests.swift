@@ -770,6 +770,82 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
     }
 
     @MainActor
+    func testAskRuntimeSourcePackKeepsBroadUntaggedCoverageAcrossTwoRelevantFiles() {
+        let caseID = UUID()
+        let chronologyDocumentID = UUID()
+        let affidavitDocumentID = UUID()
+        let chronologyPages = (1...10).map { pageNumber in
+            AlphaDocumentPage(
+                pageNumber: pageNumber,
+                snippet: "Hearing chronology page \(pageNumber).",
+                extractedText: "Hearing chronology page \(pageNumber) covers the listing history and directions after the hearing."
+            )
+        }
+        let chronologyDocument = AlphaCaseDocument(
+            id: chronologyDocumentID,
+            title: "Hearing chronology bundle",
+            fileName: "hearing-chronology.txt",
+            kind: .text,
+            storedRelativePath: "docs/hearing-chronology.txt",
+            importedAt: .now,
+            pageCount: chronologyPages.count,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: chronologyPages.compactMap(\.extractedText).joined(separator: "\n"),
+            pages: chronologyPages
+        )
+        let affidavitDocument = AlphaCaseDocument(
+            id: affidavitDocumentID,
+            title: "Affidavit correction note",
+            fileName: "affidavit-correction-note.txt",
+            kind: .text,
+            storedRelativePath: "docs/affidavit-correction-note.txt",
+            importedAt: .now.addingTimeInterval(-600),
+            pageCount: 1,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: "Affidavit corrections must be verified with the client before filing.",
+            pages: [
+                AlphaDocumentPage(
+                    pageNumber: 1,
+                    snippet: "Affidavit corrections before filing.",
+                    extractedText: "Affidavit corrections must be verified with the client before filing."
+                )
+            ]
+        )
+
+        var state = AlphaPersistedState.seed()
+        state.cases = [
+            AlphaCaseMatter(
+                id: caseID,
+                title: "Broad untagged ask matter",
+                forum: "High Court",
+                stage: .arguments,
+                summary: "Broad asks should still cover multiple relevant files.",
+                issueHighlights: [],
+                evidenceNotes: [],
+                draftTasks: [],
+                documents: [chronologyDocument, affidavitDocument],
+                sourceRefs: []
+            )
+        ]
+
+        let model = AlphaRossModel(previewState: state)
+
+        let sourcePack = model.askRuntimeSourcePack(
+            question: "What does the hearing chronology say and what affidavit corrections are required before filing?",
+            scopeCaseID: caseID,
+            selectedDocuments: []
+        )
+
+        let documentSourceRefs = sourcePack.filter { $0.sourceRef.effectiveSourceCategory != .matterDetail }
+        XCTAssertFalse(documentSourceRefs.isEmpty)
+        XCTAssertEqual(Set(documentSourceRefs.prefix(2).map(\.sourceRef.documentId)), Set([chronologyDocumentID, affidavitDocumentID]))
+        XCTAssertTrue(documentSourceRefs.contains { $0.sourceRef.documentId == chronologyDocumentID })
+        XCTAssertTrue(documentSourceRefs.contains { $0.sourceRef.documentId == affidavitDocumentID })
+    }
+
+    @MainActor
     func testSelectedFileWaitingResultUsesPlainLanguage() {
         let previousLanguageCode = rossSelectedLanguageCode()
         rossSaveLanguageSelection(code: "hi")
