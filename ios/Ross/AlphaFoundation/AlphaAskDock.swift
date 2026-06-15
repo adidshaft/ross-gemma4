@@ -476,7 +476,7 @@ struct AlphaRootAskDock: View {
                         fallbackFillOpacity: colorScheme == .dark ? 0.76 : 0.86,
                         fallbackStrokeOpacity: 0.52
                     )
-                    .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.16 : 0.08), radius: 8, y: 3)
+                    .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.10 : 0.04), radius: 5, y: 1)
 
                     AlphaAskDockSendButton(
                         canSend: canSend,
@@ -528,7 +528,7 @@ struct AlphaRootAskDock: View {
             fallbackFillOpacity: colorScheme == .dark ? 0.78 : 0.86,
             fallbackStrokeOpacity: colorScheme == .dark ? 0.22 : 0.70
         )
-        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.20 : 0.12), radius: colorScheme == .dark ? 18 : 14, y: colorScheme == .dark ? 10 : 7)
+        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.12 : 0.055), radius: colorScheme == .dark ? 11 : 7, y: colorScheme == .dark ? 5 : 2)
     }
 
     var body: some View {
@@ -759,6 +759,7 @@ struct AlphaCollapsedAskDockPill: View {
                 .font(.callout)
                 .foregroundStyle(colorScheme == .dark ? Color.white.opacity(0.78) : Color.rossInk.opacity(0.72))
                 .lineLimit(1)
+                .minimumScaleFactor(0.86)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             Image(systemName: "chevron.up")
@@ -777,7 +778,7 @@ struct AlphaCollapsedAskDockPill: View {
             fallbackFillOpacity: colorScheme == .dark ? 0.82 : 0.88,
             fallbackStrokeOpacity: colorScheme == .dark ? 0.18 : 0.72
         )
-        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.18 : 0.10), radius: 12, y: 6)
+        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.10 : 0.045), radius: 7, y: 2)
     }
 }
 
@@ -849,11 +850,15 @@ struct AlphaDockActivityBar: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(colorScheme == .dark ? Color.white.opacity(0.86) : Color.rossInk.opacity(0.84))
                     .lineLimit(1)
+                    .minimumScaleFactor(0.86)
+                    .layoutPriority(2)
                 Text(detail)
                     .font(.caption2)
                     .foregroundStyle(colorScheme == .dark ? Color.white.opacity(0.58) : Color.rossInk.opacity(0.58))
                     .lineLimit(1)
+                    .minimumScaleFactor(0.82)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             Spacer(minLength: 0)
         }
@@ -865,7 +870,7 @@ struct AlphaDockActivityBar: View {
             fallbackFillOpacity: 0.82,
             fallbackStrokeOpacity: 0.48
         )
-        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.14 : 0.08), radius: 10, y: 4)
+        .shadow(color: Color.rossShadow.opacity(colorScheme == .dark ? 0.08 : 0.035), radius: 6, y: 2)
         .accessibilityElement(children: .combine)
     }
 }
@@ -995,16 +1000,6 @@ struct AlphaInlineAskResponseCard: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     Spacer(minLength: 8)
-                    if result.hasAnswerDetails {
-                        AlphaInlineAskResponseAccessoryButton(
-                            systemImage: "info.circle",
-                            accessibilityLabel: rossLocalized("answer_details"),
-                            action: {
-                                alphaHaptic(.light)
-                                onShowDetails(result)
-                            }
-                        )
-                    }
                     AlphaInlineAskResponseAccessoryButton(
                         systemImage: "xmark",
                         accessibilityLabel: rossLocalized("dismiss"),
@@ -1040,10 +1035,10 @@ struct AlphaInlineAskResponseCard: View {
         .rossNativeGlassSurface(
             tint: Color.rossHighlight,
             shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
-            fallbackFillOpacity: 0.84,
-            fallbackStrokeOpacity: 0.48
+            fallbackFillOpacity: 0.76,
+            fallbackStrokeOpacity: 0.40
         )
-        .shadow(color: Color.rossShadow.opacity(0.09), radius: 10, y: 4)
+        .shadow(color: Color.rossShadow.opacity(0.035), radius: 5, y: 1)
         .contextMenu {
             if result.hasAnswerDetails {
                 Button {
@@ -1116,14 +1111,16 @@ struct AlphaAskScopePill: View {
     let showsChevron: Bool
 
     var body: some View {
-        HStack(spacing: 4) {
-            Text(title)
-                .lineLimit(1)
-
+        HStack(spacing: 5) {
             if let statusSystemImage {
                 Image(systemName: statusSystemImage)
                     .font(.caption2.weight(.bold))
             }
+
+            Text(title)
+                .lineLimit(1)
+                .minimumScaleFactor(0.84)
+                .layoutPriority(1)
 
             if showsChevron {
                 Image(systemName: "chevron.down")
@@ -1141,6 +1138,7 @@ struct AlphaAskScopePill: View {
             fallbackFillOpacity: backgroundOpacity,
             fallbackStrokeOpacity: 0.38
         )
+        .contentShape(Capsule())
     }
 }
 
@@ -1226,7 +1224,7 @@ struct AlphaAskSelectionChip: View {
             fallbackFillOpacity: tone == .dock ? 0.68 : 0.78,
             fallbackStrokeOpacity: tone == .dock ? 0.48 : 0.56
         )
-        .shadow(color: Color.rossShadow.opacity(tone == .dock ? 0.04 : 0.03), radius: 4, y: 1)
+        .shadow(color: Color.rossShadow.opacity(tone == .dock ? 0.025 : 0.02), radius: 3, y: 1)
     }
 }
 
@@ -1298,7 +1296,7 @@ struct AlphaAskMentionSuggestionsCard: View {
             fallbackFillOpacity: tone == .dock ? 0.74 : 0.82,
             fallbackStrokeOpacity: tone == .dock ? 0.52 : 0.58
         )
-        .shadow(color: Color.rossShadow.opacity(tone == .dock ? 0.10 : 0.12), radius: 10, y: 4)
+        .shadow(color: Color.rossShadow.opacity(tone == .dock ? 0.045 : 0.055), radius: 6, y: 2)
     }
 }
 

@@ -1859,14 +1859,6 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
 
                 AlphaCleanAnswerCopyButton(action: onCopy)
 
-                if let onShowDetails {
-                    AlphaAnswerAccessoryIconButton(
-                        systemImage: "info.circle",
-                        accessibilityLabel: rossLocalized("answer_details"),
-                        action: onShowDetails
-                    )
-                }
-
                 if showsMenu {
                     Menu {
                         menu()
