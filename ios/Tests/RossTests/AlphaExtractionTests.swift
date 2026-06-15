@@ -5234,6 +5234,86 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(model.persisted.settings.activeTier, .caseAssociate)
     }
 
+    @MainActor
+    func testRefreshPrivateAISnapshotKeepsFasterRecentInstalledRuntime() async throws {
+        let model = AlphaRossModel()
+        let fileManager = FileManager.default
+        let mlxURL = alphaAbsoluteURL(for: "model-packs/case_associate/recent-fast-mlx.dev")
+        let ggufURL = alphaAbsoluteURL(for: "model-packs/case_associate/recent-fast-gguf.dev")
+        try fileManager.createDirectory(
+            at: mlxURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try Data("mlx".utf8).write(to: mlxURL)
+        try Data("gguf".utf8).write(to: ggufURL)
+        defer {
+            try? fileManager.removeItem(at: mlxURL)
+            try? fileManager.removeItem(at: ggufURL)
+        }
+
+        let mlxPack = AlphaInstalledModelPack(
+            packId: "case-associate-fast-mlx",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/recent-fast-mlx.dev",
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: true,
+            checksumVerified: true,
+            isActive: true
+        )
+        let ggufPack = AlphaInstalledModelPack(
+            packId: "case-associate-fast-gguf",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/recent-fast-gguf.dev",
+            checksumSha256: String(repeating: "b", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: true,
+            checksumVerified: true,
+            isActive: false
+        )
+        let fastMLXInvocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 22,
+            timeToFirstTokenMs: 780,
+            status: .complete
+        )
+        let session = AlphaChatSession(
+            turns: [
+                AlphaChatTurn(
+                    question: "What does the selected file say?",
+                    answerTitle: "Answer",
+                    answerSections: ["Section"],
+                    sourceRefs: [],
+                    modelInvocation: fastMLXInvocation
+                )
+            ]
+        )
+
+        var state = AlphaPersistedState.empty()
+        state.settings.activeTier = .caseAssociate
+        state.installedPacks = [mlxPack, ggufPack]
+        state.cases[0].chatSessions = [session]
+        state.cases[0].activeChatSessionID = session.id
+
+        model.persisted = state
+        model.refreshPrivateAISnapshot(forceValidation: true)
+        await model.privateAISnapshotTask?.value
+
+        XCTAssertEqual(model.privateAISnapshot.activePack?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(model.privateAISnapshot.activePack?.packId, "case-associate-fast-mlx")
+        XCTAssertEqual(model.persisted.settings.activeTier, .caseAssociate)
+    }
+
     func testAssistantRuntimeChoiceLabelExplainsSystemAssistantPreference() {
         let label = alphaAssistantRuntimeChoiceLabel(
             selectedRuntimeMode: .appleFoundationModels,
@@ -5245,6 +5325,62 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(label, "Built-in Apple model preferred")
+    }
+
+    func testAssistantRuntimeChoiceLabelExplainsKeepingFasterRecentGGUFRun() {
+        let fastGGUFInvocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 16,
+            timeToFirstTokenMs: 980,
+            status: .complete
+        )
+        let label = alphaAssistantRuntimeChoiceLabel(
+            selectedRuntimeMode: .llamaCppGguf,
+            tier: .caseAssociate,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24,
+            systemAssistantAvailable: false,
+            lastInvocation: fastGGUFInvocation
+        )
+
+        XCTAssertEqual(label, "GGUF kept after faster recent run")
+    }
+
+    func testAssistantRuntimeChoiceLabelExplainsFallbackAfterSlowMLXRun() {
+        let slowMLXInvocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 7,
+            timeToFirstTokenMs: 3_600,
+            status: .complete
+        )
+        let label = alphaAssistantRuntimeChoiceLabel(
+            selectedRuntimeMode: .llamaCppGguf,
+            tier: .caseAssociate,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24,
+            systemAssistantAvailable: false,
+            lastInvocation: slowMLXInvocation
+        )
+
+        XCTAssertEqual(label, "GGUF selected after slower MLX run")
     }
 
     func testReuseInstalledAssistantPackWhenRuntimeAlreadyMatchesPreference() {

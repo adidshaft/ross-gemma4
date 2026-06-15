@@ -563,9 +563,41 @@ private func alphaNormalizedInstalledPacks(
     }
 }
 
+private enum AlphaRecentRuntimeSelectionSignal {
+    case keepFast(AlphaPackRuntimeMode)
+    case avoidSlow(AlphaPackRuntimeMode)
+}
+
+private func alphaRecentRuntimeSelectionSignal(
+    for tier: AlphaCapabilityTier,
+    lastInvocation: AlphaLocalModelInvocation?
+) -> AlphaRecentRuntimeSelectionSignal? {
+    guard let lastInvocation,
+          lastInvocation.task == .matterQuestionAnswer,
+          lastInvocation.status == .complete,
+          lastInvocation.capabilityTier == tier.rawValue,
+          let runtimeMode = AlphaPackRuntimeMode(rawValue: lastInvocation.runtimeMode),
+          runtimeMode == .mlxSwiftLm || runtimeMode == .llamaCppGguf,
+          let outputSpeed = lastInvocation.estimatedOutputTokensPerSecond,
+          let firstTokenMs = lastInvocation.timeToFirstTokenMs else {
+        return nil
+    }
+
+    if outputSpeed >= 14, firstTokenMs <= 1_500 {
+        return .keepFast(runtimeMode)
+    }
+
+    if outputSpeed <= 8 || firstTokenMs >= 3_000 {
+        return .avoidSlow(runtimeMode)
+    }
+
+    return nil
+}
+
 private func alphaPreferredInstalledPack(
     for tier: AlphaCapabilityTier,
-    installedPacks: [AlphaInstalledModelPack]
+    installedPacks: [AlphaInstalledModelPack],
+    lastInvocation: AlphaLocalModelInvocation? = nil
 ) -> AlphaInstalledModelPack? {
     var candidates = installedPacks.filter {
         $0.tier == tier && alphaInstalledAssistantPackPassesRuntimeValidation($0)
@@ -585,20 +617,41 @@ private func alphaPreferredInstalledPack(
     } else {
         alphaPreferredAssistantRuntimeMode(for: tier, existingRuntimeMode: nil)
     }
+    let recentSignal = alphaRecentRuntimeSelectionSignal(for: tier, lastInvocation: lastInvocation)
+    let hasDownloadedMLX = candidates.contains { $0.runtimeMode == .mlxSwiftLm }
+    let hasDownloadedGGUF = candidates.contains { $0.runtimeMode == .llamaCppGguf }
+    let canUseRecentRuntimeSignal = !systemAvailable && hasDownloadedMLX && hasDownloadedGGUF
 
     func runtimeScore(_ runtimeMode: AlphaPackRuntimeMode) -> Int {
-        if runtimeMode == preferredRuntime { return 0 }
-        switch runtimeMode {
-        case .appleFoundationModels:
-            return 1
-        case .mlxSwiftLm:
-            return 2
-        case .llamaCppGguf:
-            return 3
-        case .deterministicDev:
-            return 4
-        case .mediapipeLlm, .unavailable:
-            return 5
+        let baseScore: Int
+        if runtimeMode == preferredRuntime {
+            baseScore = 0
+        } else {
+            switch runtimeMode {
+            case .appleFoundationModels:
+                baseScore = 1
+            case .mlxSwiftLm:
+                baseScore = 2
+            case .llamaCppGguf:
+                baseScore = 3
+            case .deterministicDev:
+                baseScore = 4
+            case .mediapipeLlm, .unavailable:
+                baseScore = 5
+            }
+        }
+
+        guard canUseRecentRuntimeSignal, let recentSignal else {
+            return baseScore
+        }
+
+        switch recentSignal {
+        case .keepFast(let runtime) where runtimeMode == runtime:
+            return baseScore - 3
+        case .avoidSlow(let runtime) where runtimeMode == runtime:
+            return baseScore + 3
+        default:
+            return baseScore
         }
     }
 
@@ -620,7 +673,8 @@ private func alphaApplyPreferredInstalledRuntimeForSelectedTier(_ state: inout A
     guard let selectedTier,
           let preferredPack = alphaPreferredInstalledPack(
             for: selectedTier,
-            installedPacks: state.installedPacks
+            installedPacks: state.installedPacks,
+            lastInvocation: alphaLastModelInvocation(in: state)
           ) else {
         return
     }
@@ -754,7 +808,8 @@ func alphaAssistantRuntimeChoiceLabel(
     isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
     physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory,
     freeStorageGB: Int = max(4, alphaAvailableStorageInGigabytes()),
-    systemAssistantAvailable: Bool? = nil
+    systemAssistantAvailable: Bool? = nil,
+    lastInvocation: AlphaLocalModelInvocation? = nil
 ) -> String {
     let prefersSystemAssistant = systemAssistantAvailable ?? alphaSystemAssistantRuntimeAvailable(for: tier)
 
@@ -764,6 +819,29 @@ func alphaAssistantRuntimeChoiceLabel(
 
     if tier == .flash && selectedRuntimeMode == .llamaCppGguf {
         return "Flash tier stays on GGUF"
+    }
+
+    if let recentSignal = alphaRecentRuntimeSelectionSignal(for: tier, lastInvocation: lastInvocation) {
+        switch recentSignal {
+        case .keepFast(let runtime) where selectedRuntimeMode == runtime:
+            switch runtime {
+            case .mlxSwiftLm:
+                return "MLX kept after faster recent run"
+            case .llamaCppGguf:
+                return "GGUF kept after faster recent run"
+            default:
+                break
+            }
+        case .avoidSlow(let runtime):
+            if runtime == .mlxSwiftLm && selectedRuntimeMode == .llamaCppGguf {
+                return "GGUF selected after slower MLX run"
+            }
+            if runtime == .llamaCppGguf && selectedRuntimeMode == .mlxSwiftLm {
+                return "MLX selected after slower GGUF run"
+            }
+        default:
+            break
+        }
     }
 
     if !isPhoneFormFactor && selectedRuntimeMode == .llamaCppGguf {

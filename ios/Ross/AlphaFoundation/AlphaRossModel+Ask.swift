@@ -1232,7 +1232,8 @@ extension AlphaRossModel {
         let runtimeSelectionReason = alphaAssistantRuntimeChoiceLabel(
             selectedRuntimeMode: provider.runtimeMode,
             tier: requestedTier,
-            systemAssistantAvailable: provider.runtimeMode == .appleFoundationModels ? runtimeHealth.available : nil
+            systemAssistantAvailable: provider.runtimeMode == .appleFoundationModels ? runtimeHealth.available : nil,
+            lastInvocation: lastModelInvocation
         )
         let preferredRuntimeMode = alphaPreferredAssistantRuntimeMode(
             for: requestedTier,
