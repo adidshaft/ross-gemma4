@@ -69,6 +69,7 @@ private struct LlamaSpeculativeDraftState: @unchecked Sendable {
 actor LlamaContext: AlphaLlamaCompletionContext {
     nonisolated(unsafe) private var model: OpaquePointer
     nonisolated(unsafe) private var context: OpaquePointer
+    nonisolated let configuredAccelerationMode: AlphaLocalRuntimeAccelerationMode
     private var draftState: LlamaSpeculativeDraftState?
     private var vocab: OpaquePointer
     nonisolated(unsafe) private var sampling: UnsafeMutablePointer<llama_sampler>
@@ -100,6 +101,7 @@ actor LlamaContext: AlphaLlamaCompletionContext {
         self.model = model
         self.context = context
         self.draftState = draftState
+        self.configuredAccelerationMode = draftState == nil ? .standard : .draftModelSpeculative
         self.tokensList = []
         self.batchTokenCapacity = max(256, batchTokenCapacity)
         self.batch = llama_batch_init(self.batchTokenCapacity, 0, 1)

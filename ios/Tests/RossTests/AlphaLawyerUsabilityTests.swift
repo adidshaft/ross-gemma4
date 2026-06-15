@@ -24,6 +24,13 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 draftTokens: draftTokens
             )
         }
+        AlphaLlamaCppProvider.draftAccelerationValidator = { path, draftPath, draftTokens in
+            try LlamaContext.create_context(
+                path: path,
+                draftPath: draftPath,
+                draftTokens: draftTokens
+            ).configuredAccelerationMode == .draftModelSpeculative
+        }
         LlamaContext.samplerFactory = { params in
             llama_sampler_chain_init(params)
         }

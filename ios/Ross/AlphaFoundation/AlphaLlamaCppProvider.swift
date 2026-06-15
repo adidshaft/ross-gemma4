@@ -282,6 +282,15 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         )
     }
 
+    nonisolated(unsafe) static var draftAccelerationValidator: (String, String, Int?) throws -> Bool = {
+        path, draftPath, draftTokens in
+        try LlamaContext.create_context(
+            path: path,
+            draftPath: draftPath,
+            draftTokens: draftTokens
+        ).configuredAccelerationMode == .draftModelSpeculative
+    }
+
     static func validateModelCanLoad(at modelPath: String) throws {
         guard !modelPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw NSError(
@@ -299,7 +308,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     
     func runtimeHealth() -> AlphaLocalRuntimeHealth {
         let availability = runtimeAvailability()
-        let stagedDraft = stagedDraftMetadata()
+        let stagedDraft = validatedDraftMetadata(runtimeAvailable: availability.available)
         let accelerationMode: AlphaLocalRuntimeAccelerationMode =
             availability.available && stagedDraft != nil
             ? .draftModelSpeculative
@@ -711,5 +720,27 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             tokens: draftModelTokens,
             label: cleanedDraftLabel
         )
+    }
+
+    private func validatedDraftMetadata(runtimeAvailable: Bool) -> (tokens: Int?, label: String?)? {
+        guard
+            runtimeAvailable,
+            let modelPath,
+            let draftPath = draftModelPath?.trimmingCharacters(in: .whitespacesAndNewlines),
+            let stagedDraft = stagedDraftMetadata()
+        else {
+            return nil
+        }
+
+        do {
+            let supportsDraftAcceleration = try Self.draftAccelerationValidator(
+                modelPath,
+                draftPath,
+                draftModelTokens
+            )
+            return supportsDraftAcceleration ? stagedDraft : nil
+        } catch {
+            return nil
+        }
     }
 }

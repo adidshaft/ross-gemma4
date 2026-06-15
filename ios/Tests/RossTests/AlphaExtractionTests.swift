@@ -5203,11 +5203,13 @@ final class AlphaExtractionTests: XCTestCase {
             try? FileManager.default.removeItem(at: draftURL)
         }
 
+        let previousModelValidator = AlphaLlamaCppProvider.modelLoadValidator
+        let previousDraftValidator = AlphaLlamaCppProvider.draftAccelerationValidator
         AlphaLlamaCppProvider.modelLoadValidator = { _ in }
+        AlphaLlamaCppProvider.draftAccelerationValidator = { _, _, _ in true }
         defer {
-            AlphaLlamaCppProvider.modelLoadValidator = { path in
-                _ = try LlamaContext.create_context(path: path)
-            }
+            AlphaLlamaCppProvider.modelLoadValidator = previousModelValidator
+            AlphaLlamaCppProvider.draftAccelerationValidator = previousDraftValidator
         }
 
         let pack = installedPack(.caseAssociate, runtimeMode: .llamaCppGguf)
@@ -5233,6 +5235,55 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(
             alphaAssistantAccelerationLabel(runtimeHealth: try XCTUnwrap(health)),
             "Draft model x6 (\(draftURL.lastPathComponent))"
+        )
+    }
+
+    func testRuntimeHealthSuppressesInvalidGGUFDraftAccelerationClaim() throws {
+        let mainURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-gguf-main-invalid-draft-\(UUID().uuidString)")
+            .appendingPathExtension("gguf")
+        let draftURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-gguf-draft-invalid-\(UUID().uuidString)")
+            .appendingPathExtension("gguf")
+        try Data("gguf-main-runtime".utf8).write(to: mainURL)
+        try Data("gguf-draft-runtime".utf8).write(to: draftURL)
+        defer {
+            try? FileManager.default.removeItem(at: mainURL)
+            try? FileManager.default.removeItem(at: draftURL)
+        }
+
+        let previousModelValidator = AlphaLlamaCppProvider.modelLoadValidator
+        let previousDraftValidator = AlphaLlamaCppProvider.draftAccelerationValidator
+        AlphaLlamaCppProvider.modelLoadValidator = { _ in }
+        AlphaLlamaCppProvider.draftAccelerationValidator = { _, _, _ in false }
+        defer {
+            AlphaLlamaCppProvider.modelLoadValidator = previousModelValidator
+            AlphaLlamaCppProvider.draftAccelerationValidator = previousDraftValidator
+        }
+
+        let pack = installedPack(.caseAssociate, runtimeMode: .llamaCppGguf)
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .llamaCppGguf,
+                modelPath: mainURL.path,
+                modelChecksum: String(repeating: "a", count: 64),
+                modelKind: "gguf",
+                draftModelPath: draftURL.path,
+                draftModelTokens: 6
+            )
+        )
+
+        XCTAssertEqual(health?.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(health?.available, true)
+        XCTAssertEqual(health?.accelerationMode, .standard)
+        XCTAssertNil(health?.draftModelPathLabel)
+        XCTAssertNil(health?.accelerationDraftTokens)
+        XCTAssertEqual(
+            alphaAssistantAccelerationLabel(runtimeHealth: try XCTUnwrap(health)),
+            "Standard generation"
         )
     }
 
