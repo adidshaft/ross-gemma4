@@ -137,6 +137,7 @@ struct AlphaAskResult: Hashable {
     var publicLawResults: [AlphaPublicLawResult]
     var statusNote: String?
     var needsReviewWarning: String?
+    var modelInvocation: AlphaLocalModelInvocation? = nil
 }
 
 enum AlphaPublicLawSearchStatus: Hashable {

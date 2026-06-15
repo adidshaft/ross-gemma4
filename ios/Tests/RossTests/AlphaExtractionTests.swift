@@ -3340,6 +3340,58 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNil(runtimeEnvironment.draftModelTokens)
     }
 
+    @MainActor
+    func testAskResultPreservesModelInvocationForAnswerDetails() {
+        let invocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            outputHash: "output",
+            inputChars: 480,
+            estimatedInputTokens: 120,
+            outputChars: 192,
+            estimatedOutputTokens: 48,
+            estimatedOutputTokensPerSecond: 21.5,
+            durationMs: 2200,
+            timeToFirstTokenMs: 430,
+            status: .complete
+        )
+        let turn = AlphaChatTurn(
+            question: "What happened in the hearing?",
+            answerTitle: "Answered from your files",
+            answerSections: ["The matter was adjourned."],
+            sourceRefs: [],
+            modelInvocation: invocation
+        )
+        let caseMatter = AlphaCaseMatter(
+            title: "Acme v. Beta",
+            forum: "Delhi High Court",
+            stage: .pleadings,
+            summary: "Commercial dispute",
+            issueHighlights: [],
+            evidenceNotes: [],
+            draftTasks: [],
+            documents: [],
+            sourceRefs: []
+        )
+
+        let result = AlphaRossModel(previewState: .empty()).askResult(
+            from: turn,
+            in: caseMatter,
+            chatSessionID: UUID()
+        )
+
+        XCTAssertEqual(result.modelInvocation, invocation)
+        XCTAssertEqual(result.modelInvocation?.estimatedProcessedTokens, 168)
+        XCTAssertTrue(result.hasAnswerDetails)
+    }
+
     func testLocalExtractionDetectsMixedLanguageProfile() async {
         let store = AlphaRossStore()
         let caseId = UUID()

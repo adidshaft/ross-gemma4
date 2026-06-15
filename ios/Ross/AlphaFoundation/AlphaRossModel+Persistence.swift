@@ -1351,7 +1351,8 @@ extension AlphaRossModel {
             publicLawPreview: turn.publicLawPreview,
             publicLawResults: turn.publicLawResults,
             statusNote: turn.statusNote,
-            needsReviewWarning: turn.needsReviewWarning
+            needsReviewWarning: turn.needsReviewWarning,
+            modelInvocation: turn.modelInvocation
         )
     }
 

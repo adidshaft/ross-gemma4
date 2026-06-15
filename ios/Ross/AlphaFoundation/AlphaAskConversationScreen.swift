@@ -20,6 +20,7 @@ struct AlphaAskConversationScreen: View {
     @State private var showingThreads = false
     @State private var showingTools = false
     @State private var pendingImportKind: AlphaDockImportKind?
+    @State private var answerDetailsResult: AlphaAskResult?
     @State private var composerResetToken = UUID()
     @FocusState private var composerFocused: Bool
 
@@ -157,7 +158,8 @@ struct AlphaAskConversationScreen: View {
                                 AlphaFullScreenChatTurn(
                                     result: result,
                                     contextDocumentTitle: contextDocumentTitle,
-                                    onOpenSource: model.openSourceRef
+                                    onOpenSource: model.openSourceRef,
+                                    onShowDetails: { answerDetailsResult = $0 }
                                 )
                                 .id(result.stableIdentity)
                                 .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
@@ -228,6 +230,18 @@ struct AlphaAskConversationScreen: View {
             )
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.hidden)
+        }
+        .sheet(
+            isPresented: Binding(
+                get: { answerDetailsResult != nil },
+                set: { if !$0 { answerDetailsResult = nil } }
+            )
+        ) {
+            if let answerDetailsResult {
+                AlphaAnswerDetailsSheet(result: answerDetailsResult)
+                    .presentationDetents([.height(260), .medium])
+                    .presentationDragIndicator(.visible)
+            }
         }
         .fileImporter(
             isPresented: Binding(
@@ -559,6 +573,7 @@ struct AlphaFullScreenChatTurn: View {
     let result: AlphaAskResult
     let contextDocumentTitle: String?
     let onOpenSource: (AlphaSourceRef) -> Void
+    let onShowDetails: (AlphaAskResult) -> Void
 
     private var deduplicatedStatusNote: String? {
         guard let note = result.statusNote?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -615,14 +630,32 @@ struct AlphaFullScreenChatTurn: View {
                 )
             } else {
                 VStack(alignment: .leading, spacing: 14) {
-                    AlphaCleanAnswerHeader(
-                        title: result.answerTitle,
-                        statusNote: deduplicatedStatusNote,
-                        onCopy: {
-                            alphaCopyAskResultToPasteboard(result)
-                            alphaHaptic(.light)
+                    if result.hasAnswerDetails {
+                        AlphaCleanAnswerHeader(
+                            title: result.answerTitle,
+                            statusNote: deduplicatedStatusNote,
+                            onCopy: {
+                                alphaCopyAskResultToPasteboard(result)
+                                alphaHaptic(.light)
+                            }
+                        ) {
+                            Button {
+                                alphaHaptic(.light)
+                                onShowDetails(result)
+                            } label: {
+                                Label(rossLocalized("answer_details"), systemImage: "info.circle")
+                            }
                         }
-                    )
+                    } else {
+                        AlphaCleanAnswerHeader(
+                            title: result.answerTitle,
+                            statusNote: deduplicatedStatusNote,
+                            onCopy: {
+                                alphaCopyAskResultToPasteboard(result)
+                                alphaHaptic(.light)
+                            }
+                        )
+                    }
 
                     ForEach(Array(answerItems.enumerated()), id: \.element.id) { index, section in
                         VStack(alignment: .leading, spacing: 10) {
@@ -657,6 +690,13 @@ struct AlphaFullScreenChatTurn: View {
                     fallbackStrokeOpacity: 0.56
                 )
                 .contextMenu {
+                    if result.hasAnswerDetails {
+                        Button {
+                            onShowDetails(result)
+                        } label: {
+                            Label(rossLocalized("answer_details"), systemImage: "info.circle")
+                        }
+                    }
                     Button {
                         alphaCopyAskResultToPasteboard(result)
                     } label: {
@@ -665,6 +705,85 @@ struct AlphaFullScreenChatTurn: View {
                 }
             }
         }
+    }
+}
+
+private struct AlphaAnswerDetailsSheet: View {
+    let result: AlphaAskResult
+
+    private var invocation: AlphaLocalModelInvocation? {
+        result.modelInvocation
+    }
+
+    private var estimatedProcessedTokensLabel: String? {
+        guard let tokens = invocation?.estimatedProcessedTokens else { return nil }
+        return "~\(tokens.formatted())"
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(rossLocalized("answer_details"))
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(Color.rossInk)
+                    Text(result.answerTitle)
+                        .font(.footnote)
+                        .foregroundStyle(Color.rossInk.opacity(0.68))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                VStack(alignment: .leading, spacing: 12) {
+                    if let estimatedProcessedTokensLabel {
+                        AlphaAnswerDetailsRow(
+                            label: rossLocalized("tokens_processed"),
+                            value: estimatedProcessedTokensLabel
+                        )
+                    }
+
+                    if let tokenSpeed = invocation?.estimatedOutputTokensPerSecond {
+                        AlphaAnswerDetailsRow(
+                            label: rossLocalized("token_speed"),
+                            value: alphaAssistantTokenRateLabel(tokensPerSecond: tokenSpeed)
+                        )
+                    }
+
+                    if let firstTokenMs = invocation?.timeToFirstTokenMs {
+                        AlphaAnswerDetailsRow(
+                            label: rossLocalized("runtime_first_response"),
+                            value: alphaAssistantFirstResponseLabel(milliseconds: firstTokenMs)
+                        )
+                    }
+                }
+            }
+            .padding(20)
+        }
+        .rossAppBackdrop()
+    }
+}
+
+private struct AlphaAnswerDetailsRow: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(label)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color.rossInk.opacity(0.72))
+            Spacer(minLength: 12)
+            Text(value)
+                .font(.footnote.monospacedDigit())
+                .foregroundStyle(Color.rossInk)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .rossNativeGlassSurface(
+            tint: Color.rossAccent.opacity(0.22),
+            shape: RoundedRectangle(cornerRadius: 16, style: .continuous),
+            fallbackFillOpacity: 0.76,
+            fallbackStrokeOpacity: 0.40
+        )
     }
 }
 
@@ -1760,12 +1879,27 @@ extension AlphaAskResult {
         return alphaPendingLocalModelLabel(from: statusNote)
     }
 
+    var hasAnswerDetails: Bool {
+        guard let modelInvocation else { return false }
+        return modelInvocation.estimatedProcessedTokens != nil ||
+            modelInvocation.estimatedOutputTokensPerSecond != nil ||
+            modelInvocation.timeToFirstTokenMs != nil
+    }
+
     func answerSectionItems(limit: Int? = nil) -> [AlphaAnswerSectionItem] {
         let displaySections = AlphaMatterAskPayloadParser.displaySections(from: answerSections)
         let sections = limit.map { Array(displaySections.prefix($0)) } ?? displaySections
         return sections.enumerated().map { index, section in
             AlphaAnswerSectionItem(id: "\(stableIdentity)-section-\(index)", text: section)
         }
+    }
+}
+
+extension AlphaLocalModelInvocation {
+    var estimatedProcessedTokens: Int? {
+        let components = [estimatedInputTokens, estimatedOutputTokens].compactMap { $0 }
+        guard !components.isEmpty else { return nil }
+        return components.reduce(0, +)
     }
 }
 
