@@ -1634,6 +1634,7 @@ private struct AlphaLocalExtractionOrchestrator {
             baseMaxInputChars: baseMaxInputChars,
             sourceBlockCount: input.sourcePack.count,
             sourceCharCount: sourceCharCount,
+            selectedDocumentCount: 1,
             lastInvocation: lastStructuredInvocation
         )
         var copy = input
@@ -1671,6 +1672,7 @@ private struct AlphaLocalExtractionOrchestrator {
             baseMaxInputChars: baseMaxInputChars,
             sourceBlockCount: sourcePack.count,
             sourceCharCount: sourceCharCount,
+            selectedDocumentCount: 1,
             lastInvocation: lastStructuredInvocation
         )
 

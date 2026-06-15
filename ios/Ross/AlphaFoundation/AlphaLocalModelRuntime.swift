@@ -404,6 +404,7 @@ enum AlphaLocalPromptBudgetPlanner {
         baseMaxInputChars: Int,
         sourceBlockCount: Int,
         sourceCharCount: Int,
+        selectedDocumentCount: Int = 0,
         lastInvocation: AlphaLocalModelInvocation?
     ) -> AlphaLocalPromptBudgetPlan {
         guard sourceBlockCount > 0 else {
@@ -426,6 +427,13 @@ enum AlphaLocalPromptBudgetPlanner {
             maxInputChars = max(Int(Double(maxInputChars) * 0.88), runtimeDefaults.minimumBudget)
             sourceBlockLimit = runtimeDefaults.largeFileBlockLimit
             sourceExcerptChars = runtimeDefaults.largeFileExcerptChars
+            if selectedDocumentCount == 1,
+               let expandedBlockLimit = singleSelectedStructuredDocumentBlockLimit(
+                runtimeMode: runtimeMode,
+                baseMaxInputChars: baseMaxInputChars
+               ) {
+                sourceBlockLimit = min(expandedBlockLimit, sourceBlockCount)
+            }
         }
 
         guard let lastInvocation,
@@ -457,6 +465,25 @@ enum AlphaLocalPromptBudgetPlanner {
             sourceBlockLimit: sourceBlockLimit,
             sourceExcerptChars: sourceExcerptChars
         )
+    }
+
+    private static func singleSelectedStructuredDocumentBlockLimit(
+        runtimeMode: AlphaPackRuntimeMode,
+        baseMaxInputChars: Int
+    ) -> Int? {
+        switch runtimeMode {
+        case .mlxSwiftLm:
+            return baseMaxInputChars >= 40_000 ? 16 : nil
+        case .llamaCppGguf:
+            return baseMaxInputChars >= 40_000 ? 14 : nil
+        case .appleFoundationModels:
+            if baseMaxInputChars >= 40_000 {
+                return 16
+            }
+            return baseMaxInputChars >= 28_000 ? 14 : nil
+        default:
+            return nil
+        }
     }
 
     private static func defaultMatterAnswerFocus(
