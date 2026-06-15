@@ -5455,6 +5455,62 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(runtime, .appleFoundationModels)
     }
 
+    func testPreferredAssistantRuntimeModeKeepsFastRecentGGUFOnCapablePhone() {
+        let fastGGUFInvocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 18,
+            timeToFirstTokenMs: 1_200,
+            status: .complete
+        )
+
+        let runtime = alphaPreferredAssistantRuntimeMode(
+            for: .caseAssociate,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24,
+            systemAssistantAvailable: false,
+            lastInvocation: fastGGUFInvocation
+        )
+
+        XCTAssertEqual(runtime, .llamaCppGguf)
+    }
+
+    func testPreferredAssistantRuntimeModeFallsBackToGGUFAfterSlowMLXRun() {
+        let slowMLXInvocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 7,
+            timeToFirstTokenMs: 3_600,
+            status: .complete
+        )
+
+        let runtime = alphaPreferredAssistantRuntimeMode(
+            for: .caseAssociate,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24,
+            systemAssistantAvailable: false,
+            lastInvocation: slowMLXInvocation
+        )
+
+        XCTAssertEqual(runtime, .llamaCppGguf)
+    }
+
     @MainActor
     func testRefreshPrivateAISnapshotReappliesPreferredInstalledRuntimeSelection() async throws {
         let model = AlphaRossModel()

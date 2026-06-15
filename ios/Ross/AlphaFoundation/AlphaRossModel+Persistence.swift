@@ -892,7 +892,8 @@ func alphaPreferredAssistantRuntimeMode(
     isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
     physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory,
     freeStorageGB: Int = max(4, alphaAvailableStorageInGigabytes()),
-    systemAssistantAvailable: Bool? = nil
+    systemAssistantAvailable: Bool? = nil,
+    lastInvocation: AlphaLocalModelInvocation? = nil
 ) -> AlphaPackRuntimeMode {
     let prefersSystemAssistant = systemAssistantAvailable ?? alphaSystemAssistantRuntimeAvailable(for: tier)
 
@@ -921,6 +922,22 @@ func alphaPreferredAssistantRuntimeMode(
         physicalMemoryBytes: physicalMemoryBytes,
         lowPowerMode: false
     )
+
+    if let recentSignal = alphaRecentRuntimeSelectionSignal(for: tier, lastInvocation: lastInvocation) {
+        switch recentSignal {
+        case .keepFast(let runtime):
+            return runtime
+        case .avoidSlow(.mlxSwiftLm):
+            return .llamaCppGguf
+        case .avoidSlow(.llamaCppGguf):
+            if baselineTier != .quickStart {
+                return .mlxSwiftLm
+            }
+        default:
+            break
+        }
+    }
+
     return baselineTier == .quickStart ? .llamaCppGguf : .mlxSwiftLm
 }
 
@@ -1160,7 +1177,7 @@ private func alphaFreeDiskSpaceLabel() -> String {
     return "\(formatter.string(fromByteCount: freeSize.int64Value)) available"
 }
 
-private func alphaLastModelInvocation(in state: AlphaPersistedState) -> AlphaLocalModelInvocation? {
+func alphaLastModelInvocation(in state: AlphaPersistedState) -> AlphaLocalModelInvocation? {
     let documentInvocations = state.cases
         .flatMap(\.documents)
         .flatMap(\.modelInvocations)

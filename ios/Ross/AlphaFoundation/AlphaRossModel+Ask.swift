@@ -1238,7 +1238,8 @@ extension AlphaRossModel {
         let preferredRuntimeMode = alphaPreferredAssistantRuntimeMode(
             for: requestedTier,
             existingRuntimeMode: nil,
-            systemAssistantAvailable: provider.runtimeMode == .appleFoundationModels ? runtimeHealth.available : nil
+            systemAssistantAvailable: provider.runtimeMode == .appleFoundationModels ? runtimeHealth.available : nil,
+            lastInvocation: lastModelInvocation
         )
 
         let chatSessionID = storedResult.chatSessionID

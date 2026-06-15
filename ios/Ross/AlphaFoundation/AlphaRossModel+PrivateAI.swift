@@ -744,11 +744,13 @@ extension AlphaRossModel {
         }
         let installedPacks = persisted.installedPacks.filter { !$0.developmentOnly && !$0.installPath.hasPrefix("system://") }
         let dismissedCandidates = persisted.modelUpdateCandidates ?? []
+        let lastInvocation = alphaLastModelInvocation(in: persisted)
         let tiers = Array(Set(installedPacks.map(\.tier)))
         let fallbackCandidates = installedPacks.compactMap { pack in
             let preferredRuntime = alphaPreferredAssistantRuntimeMode(
                 for: pack.tier,
-                existingRuntimeMode: pack.runtimeMode
+                existingRuntimeMode: pack.runtimeMode,
+                lastInvocation: lastInvocation
             )
             let fallbackDescriptor = alphaPreferredAssistantCatalogFallback(
                 for: pack.tier,
@@ -790,7 +792,8 @@ extension AlphaRossModel {
             for tier in tiers {
                 let preferredRuntime = alphaPreferredAssistantRuntimeMode(
                     for: tier,
-                    existingRuntimeMode: installedPacks.first(where: { $0.tier == tier })?.runtimeMode
+                    existingRuntimeMode: installedPacks.first(where: { $0.tier == tier })?.runtimeMode,
+                    lastInvocation: lastInvocation
                 )
                 do {
                     let manifest = try await backend.fetchCatalog(for: tier)
@@ -1478,9 +1481,11 @@ extension AlphaRossModel {
         targetPackId: String? = nil
     ) async {
         let artifact = alphaAssistantModelArtifact(for: tier)
+        let lastInvocation = alphaLastModelInvocation(in: persisted)
         let preferredRuntime = alphaPreferredAssistantRuntimeMode(
             for: tier,
-            existingRuntimeMode: persisted.installedPacks.first(where: { $0.tier == tier })?.runtimeMode
+            existingRuntimeMode: persisted.installedPacks.first(where: { $0.tier == tier })?.runtimeMode,
+            lastInvocation: lastInvocation
         )
         let fallbackDownload = alphaPreferredAssistantDownloadFallback(
             for: tier,
