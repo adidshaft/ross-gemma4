@@ -1063,6 +1063,10 @@ final class AlphaExtractionTests: XCTestCase {
             AlphaCapabilityTier.visibleAssistantTiers,
             [.quickStart, .caseAssociate, .seniorDraftingSupport]
         )
+        XCTAssertEqual(
+            AlphaCapabilityTier.installableAssistantTiers,
+            [.quickStart, .caseAssociate, .seniorDraftingSupport]
+        )
         XCTAssertEqual(AlphaCapabilityTier.flash.downloadSizeLabel, "3.0 GB")
         XCTAssertEqual(AlphaCapabilityTier.quickStart.downloadSizeLabel, "5.4 GB")
         XCTAssertEqual(AlphaCapabilityTier.caseAssociate.downloadSizeLabel, "7.4 GB")
@@ -3544,9 +3548,9 @@ final class AlphaExtractionTests: XCTestCase {
             )
         ]
 
-        XCTAssertEqual(Set(alphaAssistantModelArtifacts.keys), Set(AlphaCapabilityTier.allCases))
+        XCTAssertEqual(Set(alphaAssistantModelArtifacts.keys), Set(AlphaCapabilityTier.installableAssistantTiers))
 
-        for tier in AlphaCapabilityTier.allCases {
+        for tier in AlphaCapabilityTier.installableAssistantTiers {
             let artifact = try XCTUnwrap(alphaAssistantModelArtifacts[tier], "Missing artifact for \(tier.rawValue)")
             let pinned = try XCTUnwrap(expected[tier], "Missing expected release metadata for \(tier.rawValue)")
             XCTAssertEqual(artifact.tier, tier)
@@ -3572,6 +3576,7 @@ final class AlphaExtractionTests: XCTestCase {
                 "Missing pinned checksum for \(tier.rawValue)"
             )
         }
+        XCTAssertEqual(alphaAssistantModelArtifact(for: .flash).tier, .quickStart)
     }
 
     func testAssistantDownloadPreflightRejectsWrongArtifactSize() throws {

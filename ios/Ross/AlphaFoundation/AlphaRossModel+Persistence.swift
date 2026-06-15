@@ -1484,6 +1484,10 @@ extension AlphaRossModel {
     func normalizeLoadedState(_ state: AlphaPersistedState) -> AlphaPersistedState {
         var normalized = state
         let originalInstalledPacks = state.installedPacks
+        normalized.settings.activeTier = AlphaCapabilityTier.normalizedAssistantSelection(normalized.settings.activeTier)
+        normalized.modelJobs.removeAll { $0.tier == .flash }
+        normalized.installedPacks.removeAll { $0.tier == .flash }
+        normalized.modelUpdateCandidates?.removeAll { $0.tier == .flash }
         if normalized.schemaVersion != AlphaCurrentPersistedStateSchemaVersion {
             normalized.schemaVersion = AlphaCurrentPersistedStateSchemaVersion
             normalized.cases = normalized.cases.map { caseMatter in
@@ -1614,7 +1618,7 @@ extension AlphaRossModel {
 
     func recoveredInstalledPackFromDisk(preferredTier: AlphaCapabilityTier?) -> AlphaInstalledModelPack? {
         var seenTiers = Set<AlphaCapabilityTier>()
-        let tiers = ([preferredTier].compactMap { $0 } + AlphaCapabilityTier.allCases).filter { tier in
+        let tiers = ([AlphaCapabilityTier.normalizedAssistantSelection(preferredTier)].compactMap { $0 } + AlphaCapabilityTier.installableAssistantTiers).filter { tier in
             seenTiers.insert(tier).inserted
         }
         for tier in tiers {

@@ -239,6 +239,15 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
         [.quickStart, .caseAssociate, .seniorDraftingSupport]
     }
 
+    static var installableAssistantTiers: [AlphaCapabilityTier] {
+        visibleAssistantTiers
+    }
+
+    static func normalizedAssistantSelection(_ tier: AlphaCapabilityTier?) -> AlphaCapabilityTier? {
+        guard let tier else { return nil }
+        return tier == .flash ? .quickStart : tier
+    }
+
     var title: String {
         switch self {
         case .flash:
@@ -1930,7 +1939,9 @@ struct AlphaModelDownloadJob: Identifiable, Codable, Hashable, Sendable {
         id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
         sessionId = try container.decode(String.self, forKey: .sessionId)
         packId = try container.decode(String.self, forKey: .packId)
-        tier = try container.decode(AlphaCapabilityTier.self, forKey: .tier)
+        tier = AlphaCapabilityTier.normalizedAssistantSelection(
+            try container.decode(AlphaCapabilityTier.self, forKey: .tier)
+        ) ?? .quickStart
         state = try container.decode(AlphaDownloadState.self, forKey: .state)
         networkPolicy = try container.decode(AlphaDownloadPolicy.self, forKey: .networkPolicy)
         bytesDownloaded = try container.decode(Int64.self, forKey: .bytesDownloaded)
@@ -2009,7 +2020,9 @@ struct AlphaInstalledModelPack: Identifiable, Codable, Hashable, Sendable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
         packId = try container.decode(String.self, forKey: .packId)
-        tier = try container.decode(AlphaCapabilityTier.self, forKey: .tier)
+        tier = AlphaCapabilityTier.normalizedAssistantSelection(
+            try container.decode(AlphaCapabilityTier.self, forKey: .tier)
+        ) ?? .quickStart
         installPath = try container.decode(String.self, forKey: .installPath)
         checksumSha256 = try container.decode(String.self, forKey: .checksumSha256)
         artifactKind = try container.decodeIfPresent(String.self, forKey: .artifactKind) ?? "local_model_artifact"
@@ -2080,6 +2093,31 @@ struct AlphaModelUpdateCandidate: Identifiable, Codable, Hashable, Sendable {
         self.requiresWifi = requiresWifi
         self.checkedAt = checkedAt
         self.dismissedAt = dismissedAt
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case tier
+        case installedPackId
+        case availablePackId
+        case availableSizeBytes
+        case requiresWifi
+        case checkedAt
+        case dismissedAt
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        tier = AlphaCapabilityTier.normalizedAssistantSelection(
+            try container.decode(AlphaCapabilityTier.self, forKey: .tier)
+        ) ?? .quickStart
+        installedPackId = try container.decode(String.self, forKey: .installedPackId)
+        availablePackId = try container.decode(String.self, forKey: .availablePackId)
+        availableSizeBytes = try container.decode(Int64.self, forKey: .availableSizeBytes)
+        requiresWifi = try container.decodeIfPresent(Bool.self, forKey: .requiresWifi) ?? true
+        checkedAt = try container.decodeIfPresent(Date.self, forKey: .checkedAt) ?? .now
+        dismissedAt = try container.decodeIfPresent(Date.self, forKey: .dismissedAt)
     }
 }
 
@@ -2330,7 +2368,9 @@ struct AlphaSettings: Codable, Hashable, Sendable {
 
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        activeTier = try container.decodeIfPresent(AlphaCapabilityTier.self, forKey: .activeTier)
+        activeTier = AlphaCapabilityTier.normalizedAssistantSelection(
+            try container.decodeIfPresent(AlphaCapabilityTier.self, forKey: .activeTier)
+        )
         appearanceMode = try container.decodeIfPresent(AlphaAppearanceMode.self, forKey: .appearanceMode) ?? .auto
         wifiOnlyDownloads = try container.decodeIfPresent(Bool.self, forKey: .wifiOnlyDownloads) ?? true
         allowMobileDataForLargePacks = try container.decodeIfPresent(Bool.self, forKey: .allowMobileDataForLargePacks) ?? false

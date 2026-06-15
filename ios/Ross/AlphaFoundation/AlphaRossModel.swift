@@ -1162,28 +1162,6 @@ struct AlphaAssistantModelArtifact: Hashable, Sendable {
 }
 
 let alphaAssistantModelArtifacts: [AlphaCapabilityTier: AlphaAssistantModelArtifact] = [
-    .flash: AlphaAssistantModelArtifact(
-        tier: .flash,
-        packId: "gemma-4-e2b-q2",
-        displayName: "Gemma 4 E2B Q2_K",
-        repository: "bartowski/google_gemma-4-E2B-it-GGUF",
-        fileName: "google_gemma-4-E2B-it-Q2_K.gguf",
-        quantization: "Q2_K",
-        downloadURLString: "https://huggingface.co/bartowski/google_gemma-4-E2B-it-GGUF/resolve/main/google_gemma-4-E2B-it-Q2_K.gguf",
-        sizeBytes: 3_020_052_224,
-        sha256: "a7cfc9f9b305b54a4ba2a681ff8795f594eafbe8c2c9df25d2f030a64d97bda6",
-        minimumMemoryGB: 3,
-        recommendedMemoryGB: 4,
-        requiredFreeSpaceGB: 4,
-        recommendedPhone: "Fastest setup — simple answers.",
-        sourcePageURLString: "https://huggingface.co/bartowski/google_gemma-4-E2B-it-GGUF",
-        downloadSource: "huggingface",
-        verified: true,
-        releaseReady: false,
-        licenseNotice: "Gemma License",
-        safetyNotice: "Review generated content.",
-        isActiveTier: false
-    ),
     .quickStart: AlphaAssistantModelArtifact(
         tier: .quickStart,
         packId: "gemma-4-e4b-q4",
@@ -1253,7 +1231,8 @@ let alphaAssistantModelArtifacts: [AlphaCapabilityTier: AlphaAssistantModelArtif
 ]
 
 func alphaAssistantModelArtifact(for tier: AlphaCapabilityTier) -> AlphaAssistantModelArtifact {
-    alphaAssistantModelArtifacts[tier] ?? alphaAssistantModelArtifacts[.caseAssociate]!
+    let effectiveTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? .caseAssociate
+    return alphaAssistantModelArtifacts[effectiveTier] ?? alphaAssistantModelArtifacts[.caseAssociate]!
 }
 
 final class AlphaAssistantDownloadTaskBox: @unchecked Sendable {

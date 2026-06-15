@@ -1341,8 +1341,8 @@ extension AlphaRossModel {
     }
 
     func assistantRuntimeDecision(selectedTier: AlphaCapabilityTier? = nil) -> AlphaAssistantRuntimeDecision {
-        let selected = selectedTier ?? self.selectedTier
-        let recommended = recommendedOnDeviceTier()
+        let selected = AlphaCapabilityTier.normalizedAssistantSelection(selectedTier ?? self.selectedTier) ?? .quickStart
+        let recommended = AlphaCapabilityTier.normalizedAssistantSelection(recommendedOnDeviceTier()) ?? .quickStart
         let effective = selected.rank > recommended.rank ? recommended : selected
         let activeJob = persisted.modelJobs.first { $0.tier == effective }
         let installed = persisted.installedPacks.contains { $0.tier == effective && $0.isActive }
@@ -1386,14 +1386,14 @@ extension AlphaRossModel {
 
     var recommendedAssistantTitle: String {
         switch recommendedOnDeviceTier() {
-        case .flash:
-            return "Ultra-fast flash setup"
         case .quickStart:
             return "Phone-optimized reading"
         case .caseAssociate:
             return "Balanced local matter review"
         case .seniorDraftingSupport:
             return "Deeper drafting and review"
+        case .flash:
+            return "Phone-optimized reading"
         }
     }
 
@@ -1402,28 +1402,28 @@ extension AlphaRossModel {
         let freeStorageGB = max(4, alphaAvailableStorageInGigabytes())
         let summary: String
         switch recommendedOnDeviceTier() {
-        case .flash:
-            summary = "Ross will use the lightest, fastest assistant for immediate short answers and basic review."
         case .quickStart:
             summary = "Ross will keep setup lighter on this phone so imports, case review, and short legal questions stay responsive."
         case .caseAssociate:
             summary = "Ross will use a balanced on-device assistant for matter summaries, chronology work, Q&A from your files, and everyday legal review."
         case .seniorDraftingSupport:
             summary = "Ross can prepare a deeper on-device assistant on this phone for longer bundles, hearing prep, and richer drafting support."
+        case .flash:
+            summary = "Ross will keep setup lighter on this phone so imports, case review, and short legal questions stay responsive."
         }
         return "\(summary) (\(totalMemoryGB) GB memory · \(freeStorageGB) GB free)"
     }
 
     var recommendedAssistantSetupNote: String {
         switch recommendedOnDeviceTier() {
-        case .flash:
-            return rossLocalized("assistant_setup_note_flash")
         case .quickStart:
             return rossLocalized("assistant_setup_note_quick_start")
         case .caseAssociate:
             return rossLocalized("assistant_setup_note_case_associate")
         case .seniorDraftingSupport:
             return rossLocalized("assistant_setup_note_senior_drafting")
+        case .flash:
+            return rossLocalized("assistant_setup_note_quick_start")
         }
     }
 
