@@ -608,7 +608,7 @@
 			repositoryURL = "https://github.com/mattt/llama.swift";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 2.9637.0;
+				minimumVersion = 2.9644.0;
 			};
 		};
 		BB11CC22DD33000000000021 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */ = {
