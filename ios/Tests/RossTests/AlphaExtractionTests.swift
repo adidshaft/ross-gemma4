@@ -2838,6 +2838,39 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testLocalAskNeedsReviewWarningExplainsFocusedSourceCounts() {
+        let warning = alphaLocalAskNeedsReviewWarning(
+            runtimeWarnings: [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts],
+            sourcePackCount: 9,
+            sourceBlockLimit: 4,
+            languageCode: "en"
+        )
+
+        XCTAssertEqual(
+            warning,
+            "Ross focused on 4 of 9 source sections to keep this answer on this device. Narrow the selected files or use a stronger assistant for a deeper pass."
+        )
+        XCTAssertNotEqual(warning, AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts)
+    }
+
+    func testLocalAskNeedsReviewWarningKeepsLanguageFallbackAndDeduplicates() throws {
+        let warning = alphaLocalAskNeedsReviewWarning(
+            runtimeWarnings: [
+                AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts,
+                AlphaLocalModelWarningCopy.sourceLanguageFallback,
+                AlphaLocalModelWarningCopy.sourceLanguageFallback
+            ],
+            sourcePackCount: 7,
+            sourceBlockLimit: 3,
+            languageCode: "en"
+        )
+
+        let combined = try XCTUnwrap(warning)
+        XCTAssertTrue(combined.contains("Ross focused on 3 of 7 source sections"), combined)
+        XCTAssertTrue(combined.contains(AlphaLocalModelWarningCopy.sourceLanguageFallback), combined)
+        XCTAssertEqual(combined.components(separatedBy: AlphaLocalModelWarningCopy.sourceLanguageFallback).count, 2)
+    }
+
     func testAssistantSetupPhasesExplainDownloadCheckAndReady() {
         XCTAssertEqual(alphaAssistantSetupPhases(languageCode: "en"), ["Download", "Check", "Ready"])
         XCTAssertEqual(alphaAssistantSetupPhases(languageCode: "ta"), ["பதிவிறக்கம்", "சரிபார்ப்பு", "தயார்"])

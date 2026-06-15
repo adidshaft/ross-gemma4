@@ -1250,6 +1250,11 @@ extension AlphaRossModel {
             let completedInvocation = AlphaModelInvocationStore.complete(trackedInvocation, output: output)
             await MainActor.run {
                 let requestedLanguage = self.alphaAnswerLanguage(for: question)
+                let needsReviewWarning = alphaLocalAskNeedsReviewWarning(
+                    runtimeWarnings: output.warnings,
+                    sourcePackCount: input.sourcePack.count,
+                    sourceBlockLimit: input.sourceBlockLimitOverride
+                )
                 let payload = self.displayableMatterAskPayload(
                     output: output,
                     baseResult: baseResult,
@@ -1317,6 +1322,10 @@ extension AlphaRossModel {
                         : (turn.publicLawResults.isEmpty
                             ? (payload.statusNote ?? rossLocalized("private_assistant"))
                             : alphaPrivateAssistantWithPublicLawStatus())
+                    turn.needsReviewWarning = alphaCombinedAskWarnings(
+                        turn.needsReviewWarning,
+                        needsReviewWarning
+                    )
                     turn.modelInvocation = completedInvocation
                 }
                 if var latest = self.latestAskResult, latest.chatTurnID == chatTurnID {
@@ -1328,6 +1337,10 @@ extension AlphaRossModel {
                         : (latest.publicLawResults.isEmpty == false
                             ? alphaPrivateAssistantWithPublicLawStatus()
                             : (payload.statusNote ?? rossLocalized("private_assistant")))
+                    latest.needsReviewWarning = alphaCombinedAskWarnings(
+                        latest.needsReviewWarning,
+                        needsReviewWarning
+                    )
                     self.latestAskResult = latest
                 }
             }
@@ -2567,4 +2580,70 @@ func alphaAskRuntimeRepairDetail(
         return cleanedWarning
     }
     return rossLocalized("ask_private_assistant_answer_repair_detail", languageCode: languageCode)
+}
+
+func alphaLocalAskFocusedSourcesWarning(
+    includedCount: Int,
+    totalCount: Int,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
+    String(
+        format: rossLocalized("ask_private_assistant_focused_sources_warning", languageCode: languageCode),
+        includedCount,
+        totalCount
+    )
+}
+
+func alphaLocalAskNeedsReviewWarning(
+    runtimeWarnings: [String],
+    sourcePackCount: Int,
+    sourceBlockLimit: Int?,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String? {
+    var warnings = runtimeWarnings
+        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        .filter { !$0.isEmpty }
+
+    if let sourceBlockLimit, sourcePackCount > sourceBlockLimit {
+        let focusedWarning = alphaLocalAskFocusedSourcesWarning(
+            includedCount: sourceBlockLimit,
+            totalCount: sourcePackCount,
+            languageCode: languageCode
+        )
+        if let focusIndex = warnings.firstIndex(of: AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts) {
+            warnings[focusIndex] = focusedWarning
+        } else {
+            warnings.insert(focusedWarning, at: 0)
+        }
+    }
+
+    var deduplicated: [String] = []
+    var seen = Set<String>()
+    for warning in warnings {
+        let key = warning.lowercased()
+        if seen.insert(key).inserted {
+            deduplicated.append(warning)
+        }
+    }
+
+    guard !deduplicated.isEmpty else { return nil }
+    return deduplicated.joined(separator: "\n")
+}
+
+func alphaCombinedAskWarnings(
+    _ warnings: String?...
+) -> String? {
+    var deduplicated: [String] = []
+    var seen = Set<String>()
+    for warning in warnings {
+        guard let warning else { continue }
+        let trimmed = warning.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { continue }
+        let key = trimmed.lowercased()
+        if seen.insert(key).inserted {
+            deduplicated.append(trimmed)
+        }
+    }
+    guard !deduplicated.isEmpty else { return nil }
+    return deduplicated.joined(separator: "\n")
 }
