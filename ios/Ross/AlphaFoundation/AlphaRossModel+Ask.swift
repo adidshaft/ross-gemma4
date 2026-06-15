@@ -1213,6 +1213,7 @@ extension AlphaRossModel {
             let streamingAnswerTitle = alphaAskStreamingAnswerTitle()
             if let stream = provider.runStreaming(input) {
                 var lastPartialUpdatedAt = Date.distantPast
+                var lastPublishedText: String?
                 for await partial in stream {
                     streamedOutput = partial
                     let cleaned = partial.rawText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1220,9 +1221,14 @@ extension AlphaRossModel {
                     if !cleaned.isEmpty, trackedInvocation.timeToFirstTokenMs == nil {
                         trackedInvocation = AlphaModelInvocationStore.recordFirstToken(trackedInvocation, at: now)
                     }
-                    guard cleaned.count >= 24 else { continue }
-                    guard now.timeIntervalSince(lastPartialUpdatedAt) >= 0.35 || partial.schemaValid else { continue }
+                    guard alphaShouldPublishStreamingPartial(
+                        cleanedText: cleaned,
+                        lastPublishedText: lastPublishedText,
+                        elapsedSinceLastPublish: now.timeIntervalSince(lastPartialUpdatedAt),
+                        schemaValid: partial.schemaValid
+                    ) else { continue }
                     lastPartialUpdatedAt = now
+                    lastPublishedText = cleaned
                     await MainActor.run {
                         let sections = AlphaMatterAskPayloadParser.displaySections(from: [cleaned])
                         let displaySections = sections.isEmpty ? [cleaned] : sections
@@ -1966,6 +1972,34 @@ extension AlphaRossModel {
             "14-day"
         ]
         return questionTerms.contains { evidenceTerms.contains($0) }
+    }
+
+    func alphaShouldPublishStreamingPartial(
+        cleanedText: String,
+        lastPublishedText: String?,
+        elapsedSinceLastPublish: TimeInterval,
+        schemaValid: Bool
+    ) -> Bool {
+        if schemaValid {
+            return true
+        }
+
+        guard cleanedText.count >= 16 else { return false }
+        guard let lastPublishedText, !lastPublishedText.isEmpty else { return true }
+
+        let growth = cleanedText.count - lastPublishedText.count
+        guard growth > 0 else { return false }
+
+        if cleanedText.contains("\n"), growth >= 12 {
+            return elapsedSinceLastPublish >= 0.12
+        }
+        if growth >= 72 {
+            return elapsedSinceLastPublish >= 0.12
+        }
+        if growth >= 32 {
+            return elapsedSinceLastPublish >= 0.2
+        }
+        return elapsedSinceLastPublish >= 0.3
     }
 
     func askRuntimeMatterMemorySourcePack(scopeCaseID: UUID?) -> [AlphaSourceTextBlock] {

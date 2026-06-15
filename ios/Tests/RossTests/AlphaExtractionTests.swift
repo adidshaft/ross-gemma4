@@ -7422,6 +7422,78 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     @MainActor
+    func testStreamingPartialPublishesFirstMeaningfulAnswerImmediately() {
+        let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
+
+        XCTAssertTrue(
+            model.alphaShouldPublishStreamingPartial(
+                cleanedText: "Selected order answer",
+                lastPublishedText: nil,
+                elapsedSinceLastPublish: 0.01,
+                schemaValid: false
+            )
+        )
+    }
+
+    @MainActor
+    func testStreamingPartialSuppressesTinyOrUnchangedUpdates() {
+        let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
+
+        XCTAssertFalse(
+            model.alphaShouldPublishStreamingPartial(
+                cleanedText: "Too short",
+                lastPublishedText: nil,
+                elapsedSinceLastPublish: 1,
+                schemaValid: false
+            )
+        )
+        XCTAssertFalse(
+            model.alphaShouldPublishStreamingPartial(
+                cleanedText: "Selected order answer",
+                lastPublishedText: "Selected order answer",
+                elapsedSinceLastPublish: 1,
+                schemaValid: false
+            )
+        )
+    }
+
+    @MainActor
+    func testStreamingPartialPublishesLargeGrowthSoonerThanSteadyCadence() {
+        let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
+
+        XCTAssertTrue(
+            model.alphaShouldPublishStreamingPartial(
+                cleanedText: "Selected order answer\n- The matter is listed on 14 May 2026 and counsel must carry the vakalatnama.",
+                lastPublishedText: "Selected order answer",
+                elapsedSinceLastPublish: 0.14,
+                schemaValid: false
+            )
+        )
+        XCTAssertFalse(
+            model.alphaShouldPublishStreamingPartial(
+                cleanedText: "Selected order answer grows a little more",
+                lastPublishedText: "Selected order answer",
+                elapsedSinceLastPublish: 0.14,
+                schemaValid: false
+            )
+        )
+    }
+
+    @MainActor
+    func testStreamingPartialAlwaysPublishesSchemaValidPayload() {
+        let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
+
+        XCTAssertTrue(
+            model.alphaShouldPublishStreamingPartial(
+                cleanedText: "{}",
+                lastPublishedText: "{}",
+                elapsedSinceLastPublish: 0,
+                schemaValid: true
+            )
+        )
+    }
+
+    @MainActor
     func testSelectedDocumentSummaryQuestionKeepsTaggedFileSource() {
         let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
         let documentID = UUID()
