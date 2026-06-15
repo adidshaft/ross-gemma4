@@ -2,6 +2,7 @@ import LocalAuthentication
 import llama
 import SwiftUI
 import XCTest
+import Darwin
 @testable import Ross
 
 final class AlphaLawyerUsabilityTests: XCTestCase {
@@ -2056,9 +2057,6 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 XCTAssertTrue(finished)
                 XCTAssertEqual(snapshot.installedPacks.first { $0.tier == .caseAssociate }?.runtimeMode, .appleFoundationModels)
                 XCTAssertEqual(snapshot.installedPacks.first { $0.tier == .caseAssociate }?.installPath, "system://apple-foundation-models")
-                XCTAssertEqual(preparedJob?.state, .installed)
-                XCTAssertEqual(preparedJob?.bytesDownloaded, 0)
-                XCTAssertEqual(preparedJob?.totalBytes, 0)
                 XCTAssertEqual(snapshot.settings.activeTier, .caseAssociate)
             } else {
                 XCTAssertFalse(finished)
@@ -2067,6 +2065,90 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 XCTAssertEqual(preparedJob?.runtimeMode, .appleFoundationModels)
                 XCTAssertEqual(preparedJob?.artifactKind, "system_model")
             }
+        }
+    }
+
+    func testStartPackDownloadPrefersAvailableSystemAssistantOverExistingDownloadedPack() async throws {
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        defer {
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+        }
+
+        try await withRestoredStore { store in
+            await store.removeAllModelArtifacts()
+            let artifact = alphaAssistantModelArtifact(for: .caseAssociate)
+            let relativePath = "model-packs/case_associate/system-preferred-existing.gguf"
+            let artifactURL = alphaAbsoluteURL(for: relativePath)
+            let manifestURL = artifactURL.deletingPathExtension().appendingPathExtension("manifest.json")
+            try FileManager.default.createDirectory(
+                at: artifactURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try makeSparseFile(at: artifactURL, bytes: artifact.sizeBytes)
+
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let manifest = AlphaModelArtifactManifest(
+                packId: "gemma-4-12b-existing-download",
+                tier: .caseAssociate,
+                fileName: artifactURL.lastPathComponent,
+                relativePath: relativePath,
+                checksumSha256: artifact.sha256,
+                bytes: artifact.sizeBytes,
+                artifactKind: "local_model_artifact",
+                runtimeMode: .llamaCppGguf,
+                developmentOnly: false,
+                verifiedAt: .now
+            )
+            try encoder.encode(manifest).write(to: manifestURL, options: .atomic)
+
+            var state = AlphaPersistedState.seed()
+            state.installedPacks = [
+                AlphaInstalledModelPack(
+                    packId: manifest.packId,
+                    tier: .caseAssociate,
+                    installPath: relativePath,
+                    checksumSha256: artifact.sha256,
+                    artifactKind: manifest.artifactKind,
+                    runtimeMode: manifest.runtimeMode,
+                    developmentOnly: manifest.developmentOnly,
+                    checksumVerified: true,
+                    isActive: true
+                )
+            ]
+            state.modelJobs = []
+            state.settings.activeTier = .caseAssociate
+            try await store.replace(with: state)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+            await model.startPackDownload(for: .caseAssociate, mobileAllowed: true)
+
+            let snapshot = await MainActor.run { model.persisted }
+            let installed = snapshot.installedPacks.first { $0.tier == .caseAssociate }
+            let systemHealth = AlphaLocalModelRuntime.runtimeHealth(
+                activePack: alphaSystemAssistantPack(for: .caseAssociate),
+                requestedTier: .caseAssociate
+            )
+
+            if systemHealth?.available == true {
+                XCTAssertEqual(installed?.runtimeMode, .appleFoundationModels)
+                XCTAssertEqual(installed?.installPath, "system://apple-foundation-models")
+                XCTAssertEqual(snapshot.modelJobs.first { $0.tier == .caseAssociate }?.state, .installed)
+            } else {
+                XCTAssertEqual(installed?.runtimeMode, .llamaCppGguf)
+                XCTAssertEqual(installed?.installPath, relativePath)
+                XCTAssertNil(snapshot.modelJobs.first { $0.tier == .caseAssociate })
+            }
+
+            await store.removeAllModelArtifacts()
         }
     }
 

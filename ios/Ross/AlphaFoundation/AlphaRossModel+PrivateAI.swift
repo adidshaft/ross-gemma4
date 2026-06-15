@@ -1047,14 +1047,22 @@ extension AlphaRossModel {
         await startPackDownload(for: tier, mobileAllowed: mobileAllowed, existingJobID: nil)
     }
 
+    private func systemAssistantReadyForActivation(for tier: AlphaCapabilityTier) -> Bool {
+        guard !alphaAllowsDevelopmentModelArtifacts() else { return false }
+        let installed = alphaSystemAssistantPack(for: tier)
+        guard let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: installed,
+            requestedTier: tier
+        ), health.runtimeMode == .appleFoundationModels else {
+            return false
+        }
+        return health.available
+    }
+
     func startPackDownload(for tier: AlphaCapabilityTier, mobileAllowed: Bool, existingJobID: UUID?) async {
         let artifact = alphaAssistantModelArtifact(for: tier)
         let fallbackDownload = alphaDefaultAssistantDownloadDescriptor(for: tier)
         let policy: AlphaDownloadPolicy = mobileAllowed ? .mobileAllowed : .wifiOnly
-        if let existingInstalled = persisted.installedPacks.first(where: { $0.tier == tier && installedModelPackFileIsUsable($0) }) {
-            activateInstalledPack(existingInstalled)
-            return
-        }
         let existingJob = existingJobID.flatMap { requestedID in
             persisted.modelJobs.first { $0.id == requestedID }
         } ?? persisted.modelJobs.first { job in
@@ -1092,6 +1100,16 @@ extension AlphaRossModel {
         }
 
         upsertJob(job)
+        if systemAssistantReadyForActivation(for: tier),
+           prepareSystemAssistantPack(for: tier, jobID: job.id) {
+            return
+        }
+
+        if let existingInstalled = persisted.installedPacks.first(where: { $0.tier == tier && installedModelPackFileIsUsable($0) }) {
+            activateInstalledPack(existingInstalled)
+            return
+        }
+
         let keptResumePaths = Set(persisted.modelJobs.compactMap(\.resumeDataRelativePath))
         Task {
             await store.sweepModelResumeData(keeping: keptResumePaths)
