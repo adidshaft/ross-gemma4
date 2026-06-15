@@ -103,6 +103,7 @@ func alphaDefaultAssistantDownloadDescriptor(for tier: AlphaCapabilityTier) -> A
 func alphaAssistantCatalogDescriptor(
     for tier: AlphaCapabilityTier,
     preferredRuntimeMode: AlphaPackRuntimeMode? = nil,
+    compatibleOnly: Bool = false,
     manifest: AlphaBackendCatalogManifest?
 ) -> AlphaAssistantCatalogDescriptor {
     guard let manifest else {
@@ -112,6 +113,7 @@ func alphaAssistantCatalogDescriptor(
     let matchingTier = manifest.packs.filter {
         AlphaCapabilityTier.normalizedAssistantSelection($0.tier) == AlphaCapabilityTier.normalizedAssistantSelection(tier)
             && !$0.developmentOnly
+            && (!compatibleOnly || alphaBackendCatalogPackSupportsCurrentInstaller($0))
     }
     guard let selected =
             matchingTier.first(where: { preferredRuntimeMode != nil && $0.runtimeMode == preferredRuntimeMode }) ??
@@ -153,6 +155,13 @@ func alphaAssistantUpdateCandidate(
         requiresWifi: true,
         dismissedAt: existingDismissed?.dismissedAt
     )
+}
+
+func alphaBackendCatalogPackSupportsCurrentInstaller(_ pack: AlphaBackendCatalogPack) -> Bool {
+    pack.runtimeMode == .llamaCppGguf &&
+        pack.developmentOnly == false &&
+        pack.sizeBytes > 0 &&
+        pack.artifactKind.localizedCaseInsensitiveContains("local_model_artifact")
 }
 
 func alphaBackendArtifactSupportsCurrentInstaller(_ artifact: AlphaBackendArtifact) -> Bool {
@@ -444,6 +453,7 @@ extension AlphaRossModel {
                     descriptorsByTier[tier] = alphaAssistantCatalogDescriptor(
                         for: tier,
                         preferredRuntimeMode: preferredRuntime,
+                        compatibleOnly: true,
                         manifest: manifest
                     )
                 } catch {
@@ -1109,6 +1119,7 @@ extension AlphaRossModel {
             let preferredCatalog = alphaAssistantCatalogDescriptor(
                 for: tier,
                 preferredRuntimeMode: preferredRuntime,
+                compatibleOnly: true,
                 manifest: catalog
             )
             let session = try await backend.createDownloadSession(for: preferredCatalog.packId)

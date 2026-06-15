@@ -3652,6 +3652,74 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(descriptor.runtimeMode, pinned.runtimeMode)
     }
 
+    func testAssistantCatalogDescriptorCompatibleOnlySkipsUnsupportedRuntimePacks() {
+        let manifest = AlphaBackendCatalogManifest(
+            packs: [
+                AlphaBackendCatalogPack(
+                    packId: "gemma-4-12b-mlx",
+                    displayName: "Gemma 4 12B MLX",
+                    tier: .caseAssociate,
+                    sizeBytes: 6_200_000_000,
+                    checksumSha256: String(repeating: "d", count: 64),
+                    artifactKind: "mlx_directory",
+                    runtimeMode: .mlxSwiftLm,
+                    developmentOnly: false
+                ),
+                AlphaBackendCatalogPack(
+                    packId: "gemma-4-12b-gguf",
+                    displayName: "Gemma 4 12B GGUF",
+                    tier: .caseAssociate,
+                    sizeBytes: 7_381_382_048,
+                    checksumSha256: String(repeating: "e", count: 64),
+                    artifactKind: "local_model_artifact",
+                    runtimeMode: .llamaCppGguf,
+                    developmentOnly: false
+                )
+            ]
+        )
+
+        let descriptor = alphaAssistantCatalogDescriptor(
+            for: .caseAssociate,
+            preferredRuntimeMode: .mlxSwiftLm,
+            compatibleOnly: true,
+            manifest: manifest
+        )
+
+        XCTAssertEqual(descriptor.packId, "gemma-4-12b-gguf")
+        XCTAssertEqual(descriptor.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(descriptor.artifactKind, "local_model_artifact")
+    }
+
+    func testAssistantCatalogDescriptorCompatibleOnlyFallsBackToPinnedArtifactWithoutSupportedPack() {
+        let manifest = AlphaBackendCatalogManifest(
+            packs: [
+                AlphaBackendCatalogPack(
+                    packId: "gemma-4-12b-mlx",
+                    displayName: "Gemma 4 12B MLX",
+                    tier: .caseAssociate,
+                    sizeBytes: 6_200_000_000,
+                    checksumSha256: String(repeating: "f", count: 64),
+                    artifactKind: "mlx_directory",
+                    runtimeMode: .mlxSwiftLm,
+                    developmentOnly: false
+                )
+            ]
+        )
+
+        let descriptor = alphaAssistantCatalogDescriptor(
+            for: .caseAssociate,
+            preferredRuntimeMode: .mlxSwiftLm,
+            compatibleOnly: true,
+            manifest: manifest
+        )
+        let pinned = alphaAssistantModelArtifact(for: .caseAssociate)
+
+        XCTAssertEqual(descriptor.packId, pinned.packId)
+        XCTAssertEqual(descriptor.sizeBytes, pinned.sizeBytes)
+        XCTAssertEqual(descriptor.checksumSha256, pinned.sha256)
+        XCTAssertEqual(descriptor.runtimeMode, pinned.runtimeMode)
+    }
+
     func testAssistantUpdateCandidateUsesBackendDescriptorMetadata() {
         let installedPack = AlphaInstalledModelPack(
             packId: "gemma-4-12b-q4-old",
