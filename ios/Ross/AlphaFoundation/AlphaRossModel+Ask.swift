@@ -353,9 +353,16 @@ extension AlphaRossModel {
     }
 
     func canRunRealLocalAsk(question: String, scopeCaseID: UUID?) -> Bool {
+        let requestedTier = activePack?.tier ?? persisted.settings.activeTier ?? selectedTier
+        let runtimeEnvironment = alphaLocalRuntimeEnvironment(
+            activePack: activePack,
+            requestedTier: requestedTier,
+            installedPacks: persisted.installedPacks
+        )
         guard let provider = AlphaLocalModelRuntime.resolveProvider(
             activePack: activePack,
-            requestedTier: activePack?.tier ?? persisted.settings.activeTier ?? selectedTier,
+            requestedTier: requestedTier,
+            runtimeEnvironment: runtimeEnvironment,
             executor: { _ in AlphaLocalModelOutput(rawText: "", parsedJson: nil, schemaValid: false, warnings: [], sourceRefs: []) }
         ) else {
             return false
@@ -1137,9 +1144,16 @@ extension AlphaRossModel {
             requireSourceRefs: !sourcePack.isEmpty,
             samplerSettings: persisted.settings.llamaSamplerSettings
         )
+        let requestedTier = activePack?.tier ?? persisted.settings.activeTier ?? selectedTier
+        let runtimeEnvironment = alphaLocalRuntimeEnvironment(
+            activePack: activePack,
+            requestedTier: requestedTier,
+            installedPacks: persisted.installedPacks
+        )
         guard let provider = AlphaLocalModelRuntime.resolveProvider(
             activePack: activePack,
-            requestedTier: activePack?.tier ?? persisted.settings.activeTier ?? selectedTier,
+            requestedTier: requestedTier,
+            runtimeEnvironment: runtimeEnvironment,
             executor: { _ in
                 AlphaLocalModelOutput(
                     rawText: "",

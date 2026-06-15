@@ -9,15 +9,24 @@ final class AlphaExtractionTests: XCTestCase {
         super.tearDown()
     }
 
-    private func installedPack(_ tier: AlphaCapabilityTier, runtimeMode: AlphaPackRuntimeMode = .deterministicDev) -> AlphaInstalledModelPack {
-        AlphaInstalledModelPack(
-            packId: "\(tier.rawValue)-pack",
+    private func installedPack(
+        _ tier: AlphaCapabilityTier,
+        runtimeMode: AlphaPackRuntimeMode = .deterministicDev,
+        packId: String? = nil,
+        installPath: String? = nil,
+        checksum: String = String(repeating: "a", count: 64),
+        artifactKind: String? = nil,
+        developmentOnly: Bool? = nil
+    ) -> AlphaInstalledModelPack {
+        let resolvedDevelopmentOnly = developmentOnly ?? (runtimeMode == .deterministicDev)
+        return AlphaInstalledModelPack(
+            packId: packId ?? "\(tier.rawValue)-pack",
             tier: tier,
-            installPath: "model-packs/\(tier.rawValue)/pack.dev",
-            checksumSha256: String(repeating: "a", count: 64),
-            artifactKind: runtimeMode == .deterministicDev ? "tiny_dev_artifact" : "future_model_artifact",
+            installPath: installPath ?? "model-packs/\(tier.rawValue)/pack.dev",
+            checksumSha256: checksum,
+            artifactKind: artifactKind ?? (runtimeMode == .deterministicDev ? "tiny_dev_artifact" : "future_model_artifact"),
             runtimeMode: runtimeMode,
-            developmentOnly: runtimeMode == .deterministicDev,
+            developmentOnly: resolvedDevelopmentOnly,
             isActive: true
         )
     }
@@ -3137,6 +3146,198 @@ final class AlphaExtractionTests: XCTestCase {
 
         let model = AlphaRossModel(previewState: .empty())
         XCTAssertNil(model.recoveredInstalledPackFromDisk(tier: .caseAssociate))
+    }
+
+    @MainActor
+    func testAutomaticMLXDraftEnvironmentUsesInstalledQuickStartForCaseAssociate() async throws {
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+
+        let quickStartSource = try makeMLXDirectoryFixture(named: "ross-mlx-quickstart-\(UUID().uuidString)")
+        let caseAssociateSource = try makeMLXDirectoryFixture(named: "ross-mlx-caseassociate-\(UUID().uuidString)")
+        defer {
+            try? FileManager.default.removeItem(at: quickStartSource)
+            try? FileManager.default.removeItem(at: caseAssociateSource)
+        }
+
+        let quickStartExpected = try XCTUnwrap(alphaModelArtifactVerification(at: quickStartSource))
+        let quickStartInstalled = try await store.installDownloadedPackArtifact(
+            for: .quickStart,
+            fileName: "gemma-4-e4b-it-mlx",
+            downloadedFileURL: quickStartSource,
+            expectedChecksum: quickStartExpected.checksum,
+            expectedBytes: quickStartExpected.bytes,
+            packId: "gemma-4-e4b-it-mlx",
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm
+        )
+        let caseAssociateExpected = try XCTUnwrap(alphaModelArtifactVerification(at: caseAssociateSource))
+        let caseAssociateInstalled = try await store.installDownloadedPackArtifact(
+            for: .caseAssociate,
+            fileName: "gemma-4-12b-it-mlx",
+            downloadedFileURL: caseAssociateSource,
+            expectedChecksum: caseAssociateExpected.checksum,
+            expectedBytes: caseAssociateExpected.bytes,
+            packId: "gemma-4-12b-it-mlx",
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm
+        )
+
+        let quickStartPack = installedPack(
+            .quickStart,
+            runtimeMode: .mlxSwiftLm,
+            packId: "gemma-4-e4b-it-mlx",
+            installPath: quickStartInstalled.relativePath,
+            checksum: quickStartInstalled.checksum,
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+        let caseAssociatePack = installedPack(
+            .caseAssociate,
+            runtimeMode: .mlxSwiftLm,
+            packId: "gemma-4-12b-it-mlx",
+            installPath: caseAssociateInstalled.relativePath,
+            checksum: caseAssociateInstalled.checksum,
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+        let runtimeEnvironment = alphaLocalRuntimeEnvironment(
+            activePack: caseAssociatePack,
+            requestedTier: caseAssociatePack.tier,
+            installedPacks: [quickStartPack, caseAssociatePack],
+            baseEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: alphaAbsoluteURL(for: caseAssociateInstalled.relativePath).path,
+                modelChecksum: caseAssociateInstalled.checksum,
+                modelKind: "mlx_directory"
+            ),
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            lowPowerMode: false
+        )
+
+        XCTAssertEqual(runtimeEnvironment.modelPath, alphaAbsoluteURL(for: caseAssociateInstalled.relativePath).path)
+        XCTAssertEqual(runtimeEnvironment.draftModelPath, alphaAbsoluteURL(for: quickStartInstalled.relativePath).path)
+        XCTAssertEqual(runtimeEnvironment.draftModelTokens, 6)
+
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: caseAssociatePack,
+            requestedTier: caseAssociatePack.tier,
+            runtimeEnvironment: runtimeEnvironment
+        )
+
+        XCTAssertEqual(health?.accelerationMode, .draftModelSpeculative)
+        XCTAssertEqual(health?.draftModelPathLabel, alphaAbsoluteURL(for: quickStartInstalled.relativePath).lastPathComponent)
+        XCTAssertEqual(health?.accelerationDraftTokens, 6)
+    }
+
+    func testAutomaticMLXDraftEnvironmentRespectsExplicitDraftOverride() {
+        let activePack = installedPack(
+            .caseAssociate,
+            runtimeMode: .mlxSwiftLm,
+            installPath: "model-packs/case_associate/gemma-4-12b-it-mlx",
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+        let quickStartPack = installedPack(
+            .quickStart,
+            runtimeMode: .mlxSwiftLm,
+            packId: "gemma-4-e4b-it-mlx",
+            installPath: "model-packs/quick_start/gemma-4-e4b-it-mlx",
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+        let runtimeEnvironment = alphaLocalRuntimeEnvironment(
+            activePack: activePack,
+            requestedTier: activePack.tier,
+            installedPacks: [quickStartPack, activePack],
+            baseEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: "/tmp/main-model",
+                modelChecksum: String(repeating: "d", count: 64),
+                modelKind: "mlx_directory",
+                draftModelPath: "/tmp/manual-draft",
+                draftModelTokens: 9
+            ),
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            lowPowerMode: false
+        )
+
+        XCTAssertEqual(runtimeEnvironment.draftModelPath, "/tmp/manual-draft")
+        XCTAssertEqual(runtimeEnvironment.draftModelTokens, 9)
+    }
+
+    @MainActor
+    func testAutomaticMLXDraftEnvironmentSkipsInLowPowerMode() async throws {
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+
+        let quickStartSource = try makeMLXDirectoryFixture(named: "ross-mlx-low-power-quickstart-\(UUID().uuidString)")
+        let caseAssociateSource = try makeMLXDirectoryFixture(named: "ross-mlx-low-power-caseassociate-\(UUID().uuidString)")
+        defer {
+            try? FileManager.default.removeItem(at: quickStartSource)
+            try? FileManager.default.removeItem(at: caseAssociateSource)
+        }
+
+        let quickStartExpected = try XCTUnwrap(alphaModelArtifactVerification(at: quickStartSource))
+        let quickStartInstalled = try await store.installDownloadedPackArtifact(
+            for: .quickStart,
+            fileName: "gemma-4-e4b-it-mlx",
+            downloadedFileURL: quickStartSource,
+            expectedChecksum: quickStartExpected.checksum,
+            expectedBytes: quickStartExpected.bytes,
+            packId: "gemma-4-e4b-it-mlx",
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm
+        )
+        let caseAssociateExpected = try XCTUnwrap(alphaModelArtifactVerification(at: caseAssociateSource))
+        let caseAssociateInstalled = try await store.installDownloadedPackArtifact(
+            for: .caseAssociate,
+            fileName: "gemma-4-12b-it-mlx",
+            downloadedFileURL: caseAssociateSource,
+            expectedChecksum: caseAssociateExpected.checksum,
+            expectedBytes: caseAssociateExpected.bytes,
+            packId: "gemma-4-12b-it-mlx",
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm
+        )
+
+        let quickStartPack = installedPack(
+            .quickStart,
+            runtimeMode: .mlxSwiftLm,
+            packId: "gemma-4-e4b-it-mlx",
+            installPath: quickStartInstalled.relativePath,
+            checksum: quickStartInstalled.checksum,
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+        let caseAssociatePack = installedPack(
+            .caseAssociate,
+            runtimeMode: .mlxSwiftLm,
+            packId: "gemma-4-12b-it-mlx",
+            installPath: caseAssociateInstalled.relativePath,
+            checksum: caseAssociateInstalled.checksum,
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+        let runtimeEnvironment = alphaLocalRuntimeEnvironment(
+            activePack: caseAssociatePack,
+            requestedTier: caseAssociatePack.tier,
+            installedPacks: [quickStartPack, caseAssociatePack],
+            baseEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: alphaAbsoluteURL(for: caseAssociateInstalled.relativePath).path,
+                modelChecksum: caseAssociateInstalled.checksum,
+                modelKind: "mlx_directory"
+            ),
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            lowPowerMode: true
+        )
+
+        XCTAssertNil(runtimeEnvironment.draftModelPath)
+        XCTAssertNil(runtimeEnvironment.draftModelTokens)
     }
 
     func testLocalExtractionDetectsMixedLanguageProfile() async {

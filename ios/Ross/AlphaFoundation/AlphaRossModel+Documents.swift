@@ -81,7 +81,18 @@ extension AlphaRossModel {
         guard let document = persisted.cases.first(where: { $0.id == caseId })?.documents.first(where: { $0.id == documentId }) else {
             return
         }
-        let result = await store.runLocalExtraction(caseId: caseId, document: document, activePack: activePack)
+        let requestedTier = activePack?.tier ?? persisted.settings.activeTier ?? selectedTier
+        let runtimeEnvironment = alphaLocalRuntimeEnvironment(
+            activePack: activePack,
+            requestedTier: requestedTier,
+            installedPacks: persisted.installedPacks
+        )
+        let result = await store.runLocalExtraction(
+            caseId: caseId,
+            document: document,
+            activePack: activePack,
+            runtimeEnvironment: runtimeEnvironment
+        )
         applyExtractionResult(result, caseId: caseId, documentId: documentId)
     }
 

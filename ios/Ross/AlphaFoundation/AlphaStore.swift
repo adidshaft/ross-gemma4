@@ -513,9 +513,15 @@ actor AlphaRossStore {
     func runLocalExtraction(
         caseId: UUID,
         document: AlphaCaseDocument,
-        activePack: AlphaInstalledModelPack?
+        activePack: AlphaInstalledModelPack?,
+        runtimeEnvironment: AlphaLocalRuntimeEnvironment = .fromEnvironment(ProcessInfo.processInfo.environment)
     ) async -> AlphaLocalExtractionResult {
-        await AlphaLocalExtractionOrchestrator().extract(caseId: caseId, document: document, activePack: activePack)
+        await AlphaLocalExtractionOrchestrator().extract(
+            caseId: caseId,
+            document: document,
+            activePack: activePack,
+            runtimeEnvironment: runtimeEnvironment
+        )
     }
 
     func installDownloadedPackArtifact(
@@ -1571,7 +1577,12 @@ private struct AlphaLocalExtractionOrchestrator {
         )
     }
 
-    func extract(caseId: UUID, document: AlphaCaseDocument, activePack: AlphaInstalledModelPack?) async -> AlphaLocalExtractionResult {
+    func extract(
+        caseId: UUID,
+        document: AlphaCaseDocument,
+        activePack: AlphaInstalledModelPack?,
+        runtimeEnvironment: AlphaLocalRuntimeEnvironment = .fromEnvironment(ProcessInfo.processInfo.environment)
+    ) async -> AlphaLocalExtractionResult {
         let pipelinePlan = AlphaExtractionPipelinePlanner.plan(for: activePack)
         let mode = pipelinePlan.mode
         let extractionRunID = UUID()
@@ -1591,7 +1602,8 @@ private struct AlphaLocalExtractionOrchestrator {
         let quickStartTooLong = mode == .quickStart && pages.count > 12
         let provider = quickStartTooLong ? nil : AlphaLocalModelRuntime.resolveProvider(
             activePack: activePack,
-            requestedTier: activePack?.tier
+            requestedTier: activePack?.tier,
+            runtimeEnvironment: runtimeEnvironment
         ) { taskInput in
             await deterministicRuntimeOutput(caseId: caseId, document: document, pages: pages, input: taskInput)
         }

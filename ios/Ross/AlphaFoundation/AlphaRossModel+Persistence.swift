@@ -571,6 +571,103 @@ func alphaRecommendedOnDeviceTier(
     return .quickStart
 }
 
+private func alphaAutomaticMLXDraftPack(
+    for activePack: AlphaInstalledModelPack?,
+    installedPacks: [AlphaInstalledModelPack],
+    physicalMemoryBytes: UInt64,
+    lowPowerMode: Bool
+) -> AlphaInstalledModelPack? {
+    guard let activePack,
+          activePack.runtimeMode == .mlxSwiftLm,
+          !activePack.developmentOnly,
+          !lowPowerMode else {
+        return nil
+    }
+
+    let memoryGB = max(2, Int(physicalMemoryBytes / 1_073_741_824))
+    let preferredTiers: [AlphaCapabilityTier]
+    switch activePack.tier {
+    case .quickStart, .flash:
+        preferredTiers = []
+    case .caseAssociate:
+        preferredTiers = memoryGB >= 8 ? [.quickStart] : []
+    case .seniorDraftingSupport:
+        if memoryGB >= 16 {
+            preferredTiers = [.caseAssociate, .quickStart]
+        } else if memoryGB >= 12 {
+            preferredTiers = [.quickStart]
+        } else {
+            preferredTiers = []
+        }
+    }
+
+    for tier in preferredTiers {
+        if let candidate = installedPacks.first(where: { pack in
+            pack.id != activePack.id &&
+                pack.tier == tier &&
+                pack.runtimeMode == .mlxSwiftLm &&
+                !pack.developmentOnly &&
+                alphaInstalledModelPackFileIsUsable(pack)
+        }) {
+            return candidate
+        }
+    }
+    return nil
+}
+
+private func alphaAutomaticMLXDraftTokens(
+    for activePack: AlphaInstalledModelPack?,
+    physicalMemoryBytes: UInt64
+) -> Int? {
+    guard let activePack, activePack.runtimeMode == .mlxSwiftLm else { return nil }
+    let memoryGB = max(2, Int(physicalMemoryBytes / 1_073_741_824))
+    switch activePack.tier {
+    case .quickStart, .flash:
+        return nil
+    case .caseAssociate:
+        return memoryGB >= 12 ? 6 : 4
+    case .seniorDraftingSupport:
+        return memoryGB >= 16 ? 6 : 4
+    }
+}
+
+func alphaLocalRuntimeEnvironment(
+    activePack: AlphaInstalledModelPack?,
+    requestedTier: AlphaCapabilityTier?,
+    installedPacks: [AlphaInstalledModelPack],
+    baseEnvironment: AlphaLocalRuntimeEnvironment = .fromEnvironment(ProcessInfo.processInfo.environment),
+    physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory,
+    lowPowerMode: Bool = alphaCurrentLowPowerMode()
+) -> AlphaLocalRuntimeEnvironment {
+    if baseEnvironment.draftModelPath != nil {
+        return baseEnvironment
+    }
+
+    guard let activePack,
+          activePack.tier == (requestedTier ?? activePack.tier) || requestedTier == nil,
+          let draftPack = alphaAutomaticMLXDraftPack(
+            for: activePack,
+            installedPacks: installedPacks,
+            physicalMemoryBytes: physicalMemoryBytes,
+            lowPowerMode: lowPowerMode
+          ) else {
+        return baseEnvironment
+    }
+
+    return AlphaLocalRuntimeEnvironment(
+        enableRealInference: baseEnvironment.enableRealInference,
+        runtimeModeOverride: baseEnvironment.runtimeModeOverride,
+        modelPath: baseEnvironment.modelPath,
+        modelChecksum: baseEnvironment.modelChecksum,
+        modelKind: baseEnvironment.modelKind,
+        draftModelPath: alphaAbsoluteURL(for: draftPack.installPath).path,
+        draftModelTokens: baseEnvironment.draftModelTokens ?? alphaAutomaticMLXDraftTokens(
+            for: activePack,
+            physicalMemoryBytes: physicalMemoryBytes
+        )
+    )
+}
+
 private func alphaFreeDiskSpaceLabel() -> String {
     guard let systemAttributes = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory()),
           let freeSize = systemAttributes[.systemFreeSize] as? NSNumber else {
@@ -640,12 +737,19 @@ private func alphaBuildPrivateAISnapshot(
         }
 
         let freeStorageGB = max(4, alphaAvailableStorageInGigabytes())
+        let requestedTier = activePack?.tier ?? recoveredState.settings.activeTier
+        let runtimeEnvironment = alphaLocalRuntimeEnvironment(
+            activePack: activePack,
+            requestedTier: requestedTier,
+            installedPacks: recoveredState.installedPacks
+        )
         let snapshot = AlphaPrivateAISnapshot(
             installedPacks: recoveredState.installedPacks,
             activePack: activePack,
             activeRuntimeHealth: AlphaLocalModelRuntime.runtimeHealth(
                 activePack: activePack,
-                requestedTier: activePack?.tier ?? recoveredState.settings.activeTier
+                requestedTier: requestedTier,
+                runtimeEnvironment: runtimeEnvironment
             ),
             recommendedTier: alphaRecommendedOnDeviceTier(freeStorageGB: freeStorageGB),
             freeDiskSpaceLabel: alphaFreeDiskSpaceLabel(),
@@ -693,9 +797,16 @@ extension AlphaRossModel {
             )
         } else {
             privateAISnapshot.activePack = optimisticActivePack
+            let requestedTier = optimisticActivePack?.tier ?? persisted.settings.activeTier
+            let runtimeEnvironment = alphaLocalRuntimeEnvironment(
+                activePack: optimisticActivePack,
+                requestedTier: requestedTier,
+                installedPacks: persisted.installedPacks
+            )
             privateAISnapshot.activeRuntimeHealth = AlphaLocalModelRuntime.runtimeHealth(
                 activePack: optimisticActivePack,
-                requestedTier: optimisticActivePack?.tier ?? persisted.settings.activeTier
+                requestedTier: requestedTier,
+                runtimeEnvironment: runtimeEnvironment
             )
         }
         privateAISnapshot.resetCount = persisted.ledgerEntries.filter { $0.title.localizedCaseInsensitiveContains("reset") }.count
@@ -1343,7 +1454,12 @@ extension AlphaRossModel {
             let result = await store.runLocalExtraction(
                 caseId: smokeCaseID,
                 document: smokeDocument,
-                activePack: activePack
+                activePack: activePack,
+                runtimeEnvironment: alphaLocalRuntimeEnvironment(
+                    activePack: activePack,
+                    requestedTier: activePack?.tier ?? persisted.settings.activeTier ?? selectedTier,
+                    installedPacks: persisted.installedPacks
+                )
             )
 
             let export: AlphaExportedReport?
