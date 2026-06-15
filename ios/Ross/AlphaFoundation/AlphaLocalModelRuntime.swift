@@ -214,7 +214,10 @@ enum AlphaLocalPromptBudgetPlanner {
             )
         }
 
-        let runtimeDefaults = defaultMatterAnswerFocus(for: runtimeMode)
+        let runtimeDefaults = defaultMatterAnswerFocus(
+            for: runtimeMode,
+            baseMaxInputChars: baseMaxInputChars
+        )
         var maxInputChars = baseMaxInputChars
         var sourceBlockLimit: Int? = nil
         var sourceExcerptChars: Int? = nil
@@ -270,7 +273,10 @@ enum AlphaLocalPromptBudgetPlanner {
             )
         }
 
-        let runtimeDefaults = defaultStructuredDocumentFocus(for: runtimeMode)
+        let runtimeDefaults = defaultStructuredDocumentFocus(
+            for: runtimeMode,
+            baseMaxInputChars: baseMaxInputChars
+        )
         var maxInputChars = baseMaxInputChars
         var sourceBlockLimit: Int? = nil
         var sourceExcerptChars: Int? = nil
@@ -311,7 +317,10 @@ enum AlphaLocalPromptBudgetPlanner {
         )
     }
 
-    private static func defaultMatterAnswerFocus(for runtimeMode: AlphaPackRuntimeMode) -> (
+    private static func defaultMatterAnswerFocus(
+        for runtimeMode: AlphaPackRuntimeMode,
+        baseMaxInputChars: Int
+    ) -> (
         minimumBudget: Int,
         largeFileBlockLimit: Int,
         largeFileExcerptChars: Int,
@@ -336,6 +345,32 @@ enum AlphaLocalPromptBudgetPlanner {
                 slowTokensPerSecond: 8
             )
         case .llamaCppGguf:
+            if baseMaxInputChars >= 48_000 {
+                return (
+                    minimumBudget: 8_400,
+                    largeFileBlockLimit: 7,
+                    largeFileExcerptChars: 1_450,
+                    cautionBlockLimit: 6,
+                    cautionExcerptChars: 1_200,
+                    slowBlockLimit: 4,
+                    slowExcerptChars: 950,
+                    cautionTokensPerSecond: 10,
+                    slowTokensPerSecond: 6
+                )
+            }
+            if baseMaxInputChars >= 40_000 {
+                return (
+                    minimumBudget: 7_200,
+                    largeFileBlockLimit: 6,
+                    largeFileExcerptChars: 1_300,
+                    cautionBlockLimit: 5,
+                    cautionExcerptChars: 1_100,
+                    slowBlockLimit: 3,
+                    slowExcerptChars: 880,
+                    cautionTokensPerSecond: 10,
+                    slowTokensPerSecond: 6
+                )
+            }
             return (
                 minimumBudget: 5_800,
                 largeFileBlockLimit: 4,
@@ -362,7 +397,10 @@ enum AlphaLocalPromptBudgetPlanner {
         }
     }
 
-    private static func defaultStructuredDocumentFocus(for runtimeMode: AlphaPackRuntimeMode) -> (
+    private static func defaultStructuredDocumentFocus(
+        for runtimeMode: AlphaPackRuntimeMode,
+        baseMaxInputChars: Int
+    ) -> (
         minimumBudget: Int,
         largeFileBlockLimit: Int,
         largeFileExcerptChars: Int,
@@ -387,6 +425,32 @@ enum AlphaLocalPromptBudgetPlanner {
                 slowTokensPerSecond: 7
             )
         case .llamaCppGguf:
+            if baseMaxInputChars >= 48_000 {
+                return (
+                    minimumBudget: 8_200,
+                    largeFileBlockLimit: 10,
+                    largeFileExcerptChars: 1_350,
+                    cautionBlockLimit: 8,
+                    cautionExcerptChars: 1_100,
+                    slowBlockLimit: 5,
+                    slowExcerptChars: 820,
+                    cautionTokensPerSecond: 8,
+                    slowTokensPerSecond: 5
+                )
+            }
+            if baseMaxInputChars >= 40_000 {
+                return (
+                    minimumBudget: 7_000,
+                    largeFileBlockLimit: 8,
+                    largeFileExcerptChars: 1_200,
+                    cautionBlockLimit: 6,
+                    cautionExcerptChars: 980,
+                    slowBlockLimit: 4,
+                    slowExcerptChars: 760,
+                    cautionTokensPerSecond: 8,
+                    slowTokensPerSecond: 5
+                )
+            }
             return (
                 minimumBudget: 5_400,
                 largeFileBlockLimit: 6,

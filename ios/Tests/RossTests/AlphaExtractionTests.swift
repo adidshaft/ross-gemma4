@@ -3978,6 +3978,20 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNil(plan.sourceExcerptChars)
     }
 
+    func testMatterQuestionBudgetPlannerUsesExpandedLlamaBudgetsFor12BClassRuns() {
+        let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
+            runtimeMode: .llamaCppGguf,
+            baseMaxInputChars: 42_000,
+            sourceBlockCount: 11,
+            sourceCharCount: 39_000,
+            lastInvocation: nil
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 37_800)
+        XCTAssertEqual(plan.sourceBlockLimit, 6)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_300)
+    }
+
     func testStructuredDocumentBudgetPlannerTightensAfterSlowRun() {
         let slowInvocation = AlphaLocalModelInvocation(
             task: .legalFieldExtraction,
@@ -4005,6 +4019,20 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(plan.maxInputChars, 9_574)
         XCTAssertEqual(plan.sourceBlockLimit, 4)
         XCTAssertEqual(plan.sourceExcerptChars, 760)
+    }
+
+    func testStructuredDocumentBudgetPlannerUsesExpandedLlamaBudgetsFor12BClassRuns() {
+        let plan = AlphaLocalPromptBudgetPlanner.structuredDocumentPlan(
+            runtimeMode: .llamaCppGguf,
+            baseMaxInputChars: 48_000,
+            sourceBlockCount: 16,
+            sourceCharCount: 52_000,
+            lastInvocation: nil
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 42_240)
+        XCTAssertEqual(plan.sourceBlockLimit, 10)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_350)
     }
 
     func testLlamaRuntimeProfileExpandsContextFor12BOnCapablePhones() {
