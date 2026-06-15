@@ -300,6 +300,10 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     func runtimeHealth() -> AlphaLocalRuntimeHealth {
         let availability = runtimeAvailability()
         let stagedDraft = stagedDraftMetadata()
+        let accelerationMode: AlphaLocalRuntimeAccelerationMode =
+            availability.available && stagedDraft != nil
+            ? .draftModelSpeculative
+            : .standard
         return AlphaLocalRuntimeHealth(
             runtimeMode: runtimeMode,
             available: availability.available,
@@ -309,7 +313,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             supportedTasks: Array(supportedTasks()),
             maxInputChars: maxInputChars(),
             estimatedContextTokens: contextWindowEstimate(),
-            accelerationMode: .standard,
+            accelerationMode: accelerationMode,
             accelerationDraftTokens: stagedDraft?.tokens,
             draftModelPathLabel: stagedDraft?.label,
             lastErrorCategory: availability.errorCategory,

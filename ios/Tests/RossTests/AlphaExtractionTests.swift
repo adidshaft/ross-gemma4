@@ -5189,7 +5189,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNil(environment.draftModelTokens)
     }
 
-    func testRuntimeHealthShowsStagedGGUFDraftHeadWhileRemainingStandard() throws {
+    func testRuntimeHealthShowsConfiguredGGUFDraftAcceleration() throws {
         let mainURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ross-gguf-main-\(UUID().uuidString)")
             .appendingPathExtension("gguf")
@@ -5227,12 +5227,12 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(health?.runtimeMode, .llamaCppGguf)
         XCTAssertEqual(health?.available, true)
-        XCTAssertEqual(health?.accelerationMode, .standard)
+        XCTAssertEqual(health?.accelerationMode, .draftModelSpeculative)
         XCTAssertEqual(health?.draftModelPathLabel, draftURL.lastPathComponent)
         XCTAssertEqual(health?.accelerationDraftTokens, 6)
         XCTAssertEqual(
             alphaAssistantAccelerationLabel(runtimeHealth: try XCTUnwrap(health)),
-            "Standard generation (draft head ready: \(draftURL.lastPathComponent))"
+            "Draft model x6 (\(draftURL.lastPathComponent))"
         )
     }
 

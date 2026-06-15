@@ -548,6 +548,9 @@ func alphaAssistantAccelerationLabel(
         if let tokens = draftTokens, let cleanedDraftLabel {
             return "Draft model x\(tokens) (\(cleanedDraftLabel))"
         }
+        if let cleanedDraftLabel {
+            return "Draft model (\(cleanedDraftLabel))"
+        }
         if let tokens = draftTokens {
             return "Draft model x\(tokens)"
         }
