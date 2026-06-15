@@ -4779,6 +4779,38 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(candidate?.dismissedAt, existingDismissed.dismissedAt)
     }
 
+    func testAssistantUpdateCandidateSkipsDownloadPromptWhenFoundationIsPreferred() {
+        let installedPack = AlphaInstalledModelPack(
+            packId: "gemma-4-12b-q4-old",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/current.gguf",
+            checksumSha256: String(repeating: "d", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+        let available = AlphaAssistantCatalogDescriptor(
+            tier: .caseAssociate,
+            packId: "gemma-4-12b-q4-new",
+            sizeBytes: 7_500_000_000,
+            checksumSha256: String(repeating: "e", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false
+        )
+
+        XCTAssertNil(
+            alphaAssistantUpdateCandidate(
+                installedPack: installedPack,
+                availableDescriptor: available,
+                existingDismissed: nil,
+                systemAssistantAvailable: true
+            )
+        )
+    }
+
     func testAssistantDownloadDescriptorPrefersCompatibleBackendSessionArtifact() {
         let session = AlphaBackendDownloadSessionPayload(
             sessionId: "sess-mlx-or-gguf",

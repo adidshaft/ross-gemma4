@@ -3057,6 +3057,92 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    func testAssistantModelUpdatesSkipDownloadPromptWhenSystemAssistantIsAvailable() async throws {
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        defer {
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+        }
+
+        rossSetBackendBaseURLOverride("http://127.0.0.1:9")
+        defer { rossSetBackendBaseURLOverride(nil) }
+
+        try await withRestoredStore { store in
+            let artifact = alphaAssistantModelArtifact(for: .caseAssociate)
+            let relativePath = "model-packs/case_associate/update-coreai-skip.gguf"
+            let artifactURL = alphaAbsoluteURL(for: relativePath)
+            let manifestURL = artifactURL.deletingPathExtension().appendingPathExtension("manifest.json")
+            try FileManager.default.createDirectory(
+                at: artifactURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try makeSparseFile(at: artifactURL, bytes: artifact.sizeBytes)
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let manifest = AlphaModelArtifactManifest(
+                packId: "gemma-4-12b-q4-old",
+                tier: .caseAssociate,
+                fileName: artifactURL.lastPathComponent,
+                relativePath: relativePath,
+                checksumSha256: artifact.sha256,
+                bytes: artifact.sizeBytes,
+                artifactKind: "local_model_artifact",
+                runtimeMode: .llamaCppGguf,
+                developmentOnly: false,
+                verifiedAt: .now
+            )
+            try encoder.encode(manifest).write(to: manifestURL, options: .atomic)
+            var state = AlphaPersistedState.seed()
+            state.installedPacks = [
+                AlphaInstalledModelPack(
+                    packId: "gemma-4-12b-q4-old",
+                    tier: .caseAssociate,
+                    installPath: relativePath,
+                    checksumSha256: artifact.sha256,
+                    artifactKind: "local_model_artifact",
+                    runtimeMode: .llamaCppGguf,
+                    developmentOnly: false,
+                    checksumVerified: true,
+                    isActive: true
+                )
+            ]
+            state.modelUpdateCandidates = []
+            try await store.replace(with: state)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+            await MainActor.run {
+                model.checkForAssistantModelUpdates(force: true)
+            }
+
+            let systemHealth = AlphaLocalModelRuntime.runtimeHealth(
+                activePack: alphaSystemAssistantPack(for: .caseAssociate),
+                requestedTier: .caseAssociate
+            )
+
+            try await eventually(timeoutNanoseconds: 2_000_000_000) {
+                await MainActor.run {
+                    let candidates = model.persisted.modelUpdateCandidates ?? []
+                    if systemHealth?.available == true {
+                        return candidates.isEmpty
+                    }
+                    let candidate = candidates.first
+                    return candidate?.tier == .caseAssociate &&
+                        candidate?.installedPackId == "gemma-4-12b-q4-old" &&
+                        candidate?.availablePackId == artifact.packId
+                }
+            }
+
+            await store.removeAllModelArtifacts()
+        }
+    }
+
     func testRecoveredDownloadedPackRestoresManifestBackedAlternatePack() async throws {
         try await withRestoredStore { store in
             await store.removeAllModelArtifacts()

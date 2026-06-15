@@ -193,10 +193,20 @@ func alphaAssistantCatalogDescriptor(
 func alphaAssistantUpdateCandidate(
     installedPack: AlphaInstalledModelPack,
     availableDescriptor: AlphaAssistantCatalogDescriptor,
-    existingDismissed: AlphaModelUpdateCandidate?
+    existingDismissed: AlphaModelUpdateCandidate?,
+    systemAssistantAvailable: Bool? = nil
 ) -> AlphaModelUpdateCandidate? {
     guard !installedPack.developmentOnly,
           !installedPack.installPath.hasPrefix("system://") else {
+        return nil
+    }
+
+    let preferredRuntime = alphaPreferredAssistantRuntimeMode(
+        for: installedPack.tier,
+        existingRuntimeMode: installedPack.runtimeMode,
+        systemAssistantAvailable: systemAssistantAvailable
+    )
+    guard preferredRuntime != .appleFoundationModels else {
         return nil
     }
 
