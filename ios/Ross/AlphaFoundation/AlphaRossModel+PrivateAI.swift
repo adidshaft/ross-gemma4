@@ -142,8 +142,13 @@ func alphaAssistantUpdateCandidate(
         return nil
     }
 
+    let usesComparableChecksum = !(
+        availableDescriptor.runtimeMode == .mlxSwiftLm &&
+            availableDescriptor.artifactKind == "mlx_directory"
+    )
     let changed = installedPack.packId != availableDescriptor.packId ||
-        (!availableDescriptor.checksumSha256.isEmpty &&
+        (usesComparableChecksum &&
+         !availableDescriptor.checksumSha256.isEmpty &&
          installedPack.checksumSha256.caseInsensitiveCompare(availableDescriptor.checksumSha256) != .orderedSame)
     guard changed else { return nil }
 
@@ -158,20 +163,40 @@ func alphaAssistantUpdateCandidate(
 }
 
 func alphaBackendCatalogPackSupportsCurrentInstaller(_ pack: AlphaBackendCatalogPack) -> Bool {
-    pack.runtimeMode == .llamaCppGguf &&
-        pack.developmentOnly == false &&
-        pack.sizeBytes > 0 &&
-        pack.artifactKind.localizedCaseInsensitiveContains("local_model_artifact")
+    guard pack.developmentOnly == false,
+          pack.sizeBytes > 0 else {
+        return false
+    }
+    switch pack.runtimeMode {
+    case .llamaCppGguf:
+        return pack.artifactKind.localizedCaseInsensitiveContains("local_model_artifact")
+    case .mlxSwiftLm:
+        return pack.artifactKind == "mlx_directory"
+    case .deterministicDev, .mediapipeLlm, .appleFoundationModels, .unavailable:
+        return false
+    }
 }
 
 func alphaBackendArtifactSupportsCurrentInstaller(_ artifact: AlphaBackendArtifact) -> Bool {
-    guard artifact.runtimeMode == .llamaCppGguf,
-          artifact.developmentOnly == false,
+    guard artifact.developmentOnly == false,
           artifact.sizeBytes > 0,
           artifact.finalSha256.range(of: #"^[a-fA-F0-9]{64}$"#, options: .regularExpression) != nil else {
         return false
     }
-    return artifact.fileName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().hasSuffix(".gguf")
+    let fileName = artifact.fileName.trimmingCharacters(in: .whitespacesAndNewlines)
+    switch artifact.runtimeMode {
+    case .llamaCppGguf:
+        return fileName.lowercased().hasSuffix(".gguf") &&
+            artifact.artifactKind.localizedCaseInsensitiveContains("local_model_artifact")
+    case .mlxSwiftLm:
+        return alphaPackagedMLXArchiveArtifact(
+            fileName: fileName,
+            artifactKind: artifact.artifactKind,
+            runtimeMode: artifact.runtimeMode
+        )
+    case .deterministicDev, .mediapipeLlm, .appleFoundationModels, .unavailable:
+        return false
+    }
 }
 
 func alphaAssistantDownloadDescriptor(
@@ -968,40 +993,49 @@ extension AlphaRossModel {
         for tier: AlphaCapabilityTier,
         artifact: AlphaAssistantDownloadDescriptor
     ) async -> (relativePath: String, checksum: String, bytes: Int64)? {
-        let relativePath = "model-packs/\(tier.rawValue)/\(artifact.fileName)"
+        let usesPackagedDirectory = alphaPackagedMLXArchiveArtifact(
+            fileName: artifact.fileName,
+            artifactKind: artifact.artifactKind,
+            runtimeMode: artifact.runtimeMode
+        )
+        let installedName = usesPackagedDirectory
+            ? alphaNormalizedInstalledDirectoryName(
+                requestedFileName: artifact.fileName,
+                fallbackName: artifact.fileName
+            )
+            : artifact.fileName
+        let relativePath = "model-packs/\(tier.rawValue)/\(installedName)"
         let fileURL = alphaAbsoluteURL(for: relativePath)
         let expectedBytes = artifact.sizeBytes
         let expectedChecksum = artifact.checksumSha256
 
         return await Task.detached(priority: .utility) { () -> (relativePath: String, checksum: String, bytes: Int64)? in
-            let path = fileURL.path()
-            let attributes = try? FileManager.default.attributesOfItem(atPath: path)
-            guard let bytes = (attributes?[.size] as? NSNumber)?.int64Value,
-                  bytes == expectedBytes else {
+            guard let verified = alphaModelArtifactVerification(at: fileURL) else {
                 return nil
             }
-            guard !expectedChecksum.isEmpty else {
-                return (relativePath, "catalog-size:\(artifact.fileName):\(bytes)", bytes)
-            }
-            guard let handle = try? FileHandle(forReadingFrom: fileURL) else { return nil }
-            defer { try? handle.close() }
-
-            var hasher = SHA256()
-            do {
-                while true {
-                    let data = try handle.read(upToCount: 1024 * 1024)
-                    guard let data, !data.isEmpty else { break }
-                    hasher.update(data: data)
+            if usesPackagedDirectory {
+                guard let manifest = alphaModelArtifactManifest(forFileAt: fileURL),
+                      manifest.packId == artifact.packId,
+                      manifest.tier == tier,
+                      manifest.relativePath == relativePath,
+                      manifest.artifactKind == artifact.artifactKind,
+                      manifest.runtimeMode == artifact.runtimeMode,
+                      manifest.developmentOnly == artifact.developmentOnly,
+                      manifest.bytes == verified.bytes,
+                      manifest.checksumSha256.caseInsensitiveCompare(verified.checksum) == .orderedSame else {
+                    return nil
                 }
-            } catch {
-                return nil
+                return (relativePath, verified.checksum, verified.bytes)
             }
 
-            let checksum = hasher.finalize().map { String(format: "%02x", $0) }.joined()
-            guard checksum.caseInsensitiveCompare(expectedChecksum) == .orderedSame else {
+            guard verified.bytes == expectedBytes else { return nil }
+            guard !expectedChecksum.isEmpty else {
+                return (relativePath, "catalog-size:\(artifact.fileName):\(verified.bytes)", verified.bytes)
+            }
+            guard verified.checksum.caseInsensitiveCompare(expectedChecksum) == .orderedSame else {
                 return nil
             }
-            return (relativePath, checksum, bytes)
+            return (relativePath, verified.checksum, verified.bytes)
         }.value
     }
 

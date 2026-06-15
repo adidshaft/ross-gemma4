@@ -69,6 +69,7 @@ export interface ModelCapabilityTier {
 export type ModelArtifactKind =
   | "tiny_dev_artifact"
   | "local_model_artifact"
+  | "mlx_directory"
   | "local_embedding_model"
   | "system_model"
   | "external_debug_model";

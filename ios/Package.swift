@@ -18,7 +18,8 @@ let package = Package(
         .package(url: "https://github.com/mattt/llama.swift", .upToNextMajor(from: "2.9637.0")),
         .package(url: "https://github.com/ml-explore/mlx-swift-lm", .upToNextMajor(from: "3.31.3")),
         .package(url: "https://github.com/huggingface/swift-huggingface", from: "0.9.0"),
-        .package(url: "https://github.com/huggingface/swift-transformers", from: "1.3.0")
+        .package(url: "https://github.com/huggingface/swift-transformers", from: "1.3.0"),
+        .package(url: "https://github.com/weichsel/ZIPFoundation.git", from: "0.9.20")
     ],
     targets: [
         .executableTarget(
@@ -28,7 +29,8 @@ let package = Package(
                 .product(name: "MLXLLM", package: "mlx-swift-lm"),
                 .product(name: "MLXLMCommon", package: "mlx-swift-lm"),
                 .product(name: "HuggingFace", package: "swift-huggingface"),
-                .product(name: "Tokenizers", package: "swift-transformers")
+                .product(name: "Tokenizers", package: "swift-transformers"),
+                .product(name: "ZIPFoundation", package: "ZIPFoundation")
             ],
             path: "Ross",
             exclude: [

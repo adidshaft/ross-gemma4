@@ -1,5 +1,6 @@
 import llama
 import XCTest
+import ZIPFoundation
 @testable import Ross
 
 final class AlphaExtractionTests: XCTestCase {
@@ -40,6 +41,22 @@ final class AlphaExtractionTests: XCTestCase {
         try Data("{}".utf8).write(to: directory.appendingPathComponent("tokenizer.json"))
         try Data("weights".utf8).write(to: directory.appendingPathComponent("model.safetensors"))
         return directory
+    }
+
+    private func makeMLXZipFixture(
+        named name: String = "ross-mlx-archive-\(UUID().uuidString)",
+        archiveName: String = "gemma-4-12b-it-mlx.zip",
+        keepParent: Bool = false
+    ) throws -> (directory: URL, archive: URL) {
+        let directory = try makeMLXDirectoryFixture(named: name)
+        let archive = FileManager.default.temporaryDirectory.appendingPathComponent(archiveName)
+        try? FileManager.default.removeItem(at: archive)
+        try FileManager.default.zipItem(
+            at: directory,
+            to: archive,
+            shouldKeepParent: keepParent
+        )
+        return (directory, archive)
     }
 
     private func baseAskResult(
@@ -3233,6 +3250,47 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     @MainActor
+    func testStoreInstallsZippedMLXDirectoryArtifact() async throws {
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+
+        let fixture = try makeMLXZipFixture(named: "ross-mlx-zipped-\(UUID().uuidString)")
+        defer {
+            try? FileManager.default.removeItem(at: fixture.directory)
+            try? FileManager.default.removeItem(at: fixture.archive)
+        }
+
+        let expectedArchive = try XCTUnwrap(alphaModelArtifactVerification(at: fixture.archive))
+        let expectedDirectory = try XCTUnwrap(alphaModelArtifactVerification(at: fixture.directory))
+        let installed = try await store.installDownloadedPackArtifact(
+            for: .caseAssociate,
+            fileName: "gemma-4-12b-it-mlx.zip",
+            downloadedFileURL: fixture.archive,
+            expectedChecksum: expectedArchive.checksum,
+            expectedBytes: expectedArchive.bytes,
+            packId: "gemma-4-12b-it-mlx",
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm
+        )
+
+        XCTAssertEqual(installed.relativePath, "model-packs/case_associate/gemma-4-12b-it-mlx")
+        XCTAssertEqual(installed.checksum, expectedDirectory.checksum)
+        XCTAssertEqual(installed.bytes, expectedDirectory.bytes)
+
+        let artifactURL = alphaAbsoluteURL(for: installed.relativePath)
+        var isDirectory: ObjCBool = false
+        XCTAssertTrue(FileManager.default.fileExists(atPath: artifactURL.path, isDirectory: &isDirectory))
+        XCTAssertTrue(isDirectory.boolValue)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: artifactURL.appendingPathComponent("config.json").path))
+
+        let manifest = try XCTUnwrap(alphaModelArtifactManifest(forFileAt: artifactURL))
+        XCTAssertEqual(manifest.packId, "gemma-4-12b-it-mlx")
+        XCTAssertEqual(manifest.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(manifest.artifactKind, "mlx_directory")
+        XCTAssertEqual(manifest.checksumSha256, expectedDirectory.checksum)
+    }
+
+    @MainActor
     func testRecoveredInstalledPackFromDiskRestoresMLXDirectoryArtifact() async throws {
         let store = AlphaRossStore()
         await store.removeAllModelArtifacts()
@@ -3287,6 +3345,52 @@ final class AlphaExtractionTests: XCTestCase {
 
         let model = AlphaRossModel(previewState: .empty())
         XCTAssertNil(model.recoveredInstalledPackFromDisk(tier: .caseAssociate))
+    }
+
+    @MainActor
+    func testVerifiedExistingAssistantArtifactReusesInstalledMLXDirectoryFromArchiveName() async throws {
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+
+        let fixture = try makeMLXZipFixture(named: "ross-mlx-existing-\(UUID().uuidString)")
+        defer {
+            try? FileManager.default.removeItem(at: fixture.directory)
+            try? FileManager.default.removeItem(at: fixture.archive)
+        }
+
+        let expectedArchive = try XCTUnwrap(alphaModelArtifactVerification(at: fixture.archive))
+        let expectedDirectory = try XCTUnwrap(alphaModelArtifactVerification(at: fixture.directory))
+        let installed = try await store.installDownloadedPackArtifact(
+            for: .caseAssociate,
+            fileName: "gemma-4-12b-it-mlx.zip",
+            downloadedFileURL: fixture.archive,
+            expectedChecksum: expectedArchive.checksum,
+            expectedBytes: expectedArchive.bytes,
+            packId: "gemma-4-12b-it-mlx",
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm
+        )
+        let model = AlphaRossModel(previewState: .empty())
+        let descriptor = AlphaAssistantDownloadDescriptor(
+            sessionId: "sess-mlx-existing",
+            packId: "gemma-4-12b-it-mlx",
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-it-mlx.zip",
+            sizeBytes: 6_200_000_000,
+            checksumSha256: String(repeating: "b", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            downloadURLString: "https://ross.example/artifacts/gemma-4-12b-it-mlx.zip",
+            verified: true,
+            releaseReady: true
+        )
+
+        let reused = await model.verifiedExistingAssistantArtifact(for: .caseAssociate, artifact: descriptor)
+
+        XCTAssertEqual(reused?.relativePath, installed.relativePath)
+        XCTAssertEqual(reused?.checksum, expectedDirectory.checksum)
+        XCTAssertEqual(reused?.bytes, expectedDirectory.bytes)
     }
 
     @MainActor
@@ -4155,7 +4259,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(descriptor.runtimeMode, pinned.runtimeMode)
     }
 
-    func testAssistantCatalogDescriptorCompatibleOnlySkipsUnsupportedRuntimePacks() {
+    func testAssistantCatalogDescriptorCompatibleOnlyPrefersRequestedMLXPackWhenSupported() {
         let manifest = AlphaBackendCatalogManifest(
             packs: [
                 AlphaBackendCatalogPack(
@@ -4188,9 +4292,9 @@ final class AlphaExtractionTests: XCTestCase {
             manifest: manifest
         )
 
-        XCTAssertEqual(descriptor.packId, "gemma-4-12b-gguf")
-        XCTAssertEqual(descriptor.runtimeMode, .llamaCppGguf)
-        XCTAssertEqual(descriptor.artifactKind, "local_model_artifact")
+        XCTAssertEqual(descriptor.packId, "gemma-4-12b-mlx")
+        XCTAssertEqual(descriptor.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(descriptor.artifactKind, "mlx_directory")
     }
 
     func testAssistantCatalogDescriptorCompatibleOnlyFallsBackToPinnedArtifactWithoutSupportedPack() {
@@ -4202,7 +4306,7 @@ final class AlphaExtractionTests: XCTestCase {
                     tier: .caseAssociate,
                     sizeBytes: 6_200_000_000,
                     checksumSha256: String(repeating: "f", count: 64),
-                    artifactKind: "mlx_directory",
+                    artifactKind: "future_model_artifact",
                     runtimeMode: .mlxSwiftLm,
                     developmentOnly: false
                 )
@@ -4221,6 +4325,37 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(descriptor.sizeBytes, pinned.sizeBytes)
         XCTAssertEqual(descriptor.checksumSha256, pinned.sha256)
         XCTAssertEqual(descriptor.runtimeMode, pinned.runtimeMode)
+    }
+
+    func testAssistantUpdateCandidateIgnoresMLXArchiveChecksumStyleWhenPackIdMatches() {
+        let installedPack = AlphaInstalledModelPack(
+            packId: "gemma-4-12b-mlx",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/gemma-4-12b-it-mlx",
+            checksumSha256: String(repeating: "d", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+        let available = AlphaAssistantCatalogDescriptor(
+            tier: .caseAssociate,
+            packId: "gemma-4-12b-mlx",
+            sizeBytes: 6_200_000_000,
+            checksumSha256: String(repeating: "e", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false
+        )
+
+        XCTAssertNil(
+            alphaAssistantUpdateCandidate(
+                installedPack: installedPack,
+                availableDescriptor: available,
+                existingDismissed: nil
+            )
+        )
     }
 
     func testAssistantUpdateCandidateUsesBackendDescriptorMetadata() {
@@ -4296,9 +4431,9 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(descriptor.releaseReady)
     }
 
-    func testAssistantDownloadDescriptorFallsBackWhenBackendArtifactIsUnsupported() {
+    func testAssistantDownloadDescriptorPrefersCompatibleMLXArchiveSessionArtifact() {
         let session = AlphaBackendDownloadSessionPayload(
-            sessionId: "sess-unsupported-mlx",
+            sessionId: "sess-supported-mlx",
             packId: "gemma-4-12b-mlx",
             artifact: AlphaBackendArtifact(
                 fileName: "gemma-4-12b-mlx.zip",
@@ -4317,6 +4452,37 @@ final class AlphaExtractionTests: XCTestCase {
             for: .caseAssociate,
             session: session,
             resolvedURLString: "https://ross.example/artifacts/gemma-4-12b-mlx.zip"
+        )
+
+        XCTAssertEqual(descriptor.sessionId, "sess-supported-mlx")
+        XCTAssertEqual(descriptor.packId, "gemma-4-12b-mlx")
+        XCTAssertEqual(descriptor.fileName, "gemma-4-12b-mlx.zip")
+        XCTAssertEqual(descriptor.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(descriptor.artifactKind, "mlx_directory")
+        XCTAssertEqual(descriptor.downloadURLString, "https://ross.example/artifacts/gemma-4-12b-mlx.zip")
+    }
+
+    func testAssistantDownloadDescriptorFallsBackWhenBackendMLXArchiveIsUnsupported() {
+        let session = AlphaBackendDownloadSessionPayload(
+            sessionId: "sess-unsupported-mlx",
+            packId: "gemma-4-12b-mlx",
+            artifact: AlphaBackendArtifact(
+                fileName: "gemma-4-12b-mlx.tar.gz",
+                sizeBytes: 6_200_000_000,
+                finalSha256: String(repeating: "c", count: 64),
+                artifactKind: "mlx_directory",
+                runtimeMode: .mlxSwiftLm,
+                developmentOnly: false,
+                downloadPath: "/artifacts/gemma-4-12b-mlx.tar.gz",
+                downloadUrl: "https://downloads.example.invalid/artifacts/gemma-4-12b-mlx.tar.gz",
+                segments: []
+            )
+        )
+
+        let descriptor = alphaAssistantDownloadDescriptor(
+            for: .caseAssociate,
+            session: session,
+            resolvedURLString: "https://ross.example/artifacts/gemma-4-12b-mlx.tar.gz"
         )
         let pinned = alphaAssistantModelArtifact(for: .caseAssociate)
 

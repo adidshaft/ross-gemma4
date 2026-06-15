@@ -7,6 +7,7 @@ export type CapabilityTier = "quick_start" | "case_associate" | "senior_drafting
 export type ModelArtifactKind =
   | "tiny_dev_artifact"
   | "local_model_artifact"
+  | "mlx_directory"
   | "huggingface_gated_model_artifact"
   | "system_model"
   | "external_debug_model";
@@ -15,6 +16,7 @@ export type LocalRuntimeMode =
   | "deterministic_dev"
   | "mediapipe_llm"
   | "gemma_local_runtime"
+  | "mlx_swift_lm"
   | "apple_foundation_models"
   | "unavailable";
 

@@ -8,7 +8,7 @@ Ross no longer uses the old `Gemma4DemoRuntime`-only path described in earlier n
 | --- | --- | --- |
 | Deterministic development runtime | `AlphaLocalModelRuntime` deterministic provider | Used by tests and local CI-style validation. It must not be claimed as real model execution. |
 | GGUF llama.cpp runtime | `AlphaLlamaCppEngine` and `AlphaLlamaCppProvider` | Simulator smoke passed on June 2, 2026 with a local GGUF developer artifact. |
-| Experimental MLX local-directory runtime | `AlphaMLXLocalProvider` with `mlx-swift-lm` | Added as an explicit opt-in iPhone/macOS path for developer-supplied local model directories. It can also use an optional developer-supplied draft model for speculative decoding. It is not yet wired into the normal download/install catalog and has not been proven on a physical iPhone. |
+| Experimental MLX local-directory runtime | `AlphaMLXLocalProvider` with `mlx-swift-lm` | Added as an explicit opt-in iPhone/macOS path for MLX model directories. The iOS installer can now unpack ZIP-packaged MLX directories, but the production catalog still defaults to GGUF and the MLX lane has not yet been proven on a physical iPhone. |
 | Apple on-device assistant path | `apple_foundation_models` pack mode | Available only when the OS/device supports it and explicit runtime checks pass. |
 
 ## Verified Evidence
@@ -30,7 +30,7 @@ Do not claim release-ready physical iPhone inference until these are recorded:
 3. Imported PDF, image, and text files from Files/iCloud/Downloads are used in Ask Ross with source-grounded English, Hindi, and Bengali questions.
 4. Device performance, storage use, privacy ledger entries, logs, and fallback behavior are recorded in `docs/REAL_MODEL_QA_RESULTS.md`.
 
-The new experimental MLX lane also remains unproven on physical iPhone hardware. It currently supports only developer-supplied local directories selected through explicit runtime overrides such as `ROSS_LOCAL_RUNTIME=mlx_swift_lm`.
+The new experimental MLX lane also remains unproven on physical iPhone hardware. It now supports both developer-supplied local directories and ZIP-packaged MLX directory installs, but production catalog rollout and physical-device validation are still pending.
 
 Ross now fails closed on known-bad Gemma 4 MLX archives instead of waiting for an inference-time crash:
 - `gemma4_assistant` draft checkpoints are not treated as runnable Ross archives yet because upstream `mlx-swift-lm` still lacks the Gemma 4 assistant loader needed for MTP draft models.

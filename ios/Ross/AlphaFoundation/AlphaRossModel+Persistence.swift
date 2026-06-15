@@ -229,7 +229,7 @@ private func alphaModelLooksLikeSHA256(_ value: String?) -> Bool {
     }
 }
 
-private func alphaModelArtifactManifest(forFileAt fileURL: URL) -> AlphaModelArtifactManifest? {
+func alphaModelArtifactManifest(forFileAt fileURL: URL) -> AlphaModelArtifactManifest? {
     let manifestURL = alphaModelArtifactManifestURL(forArtifactAt: fileURL)
     guard let data = try? Data(contentsOf: manifestURL) else { return nil }
     let decoder = JSONDecoder()

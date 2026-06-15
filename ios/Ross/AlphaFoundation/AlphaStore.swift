@@ -3,6 +3,7 @@ import CoreGraphics
 import CoreText
 import Foundation
 import Security
+import ZIPFoundation
 #if canImport(UIKit)
 import UIKit
 #endif
@@ -248,6 +249,39 @@ func alphaModelArtifactManifestURL(
             .appendingPathComponent("\(artifactURL.lastPathComponent).manifest.json", isDirectory: false)
     }
     return artifactURL.deletingPathExtension().appendingPathExtension("manifest.json")
+}
+
+private let alphaInstalledArtifactArchiveSuffixes = [".tar.gz", ".tgz", ".zip", ".tar"]
+
+func alphaNormalizedInstalledDirectoryName(
+    requestedFileName: String,
+    fallbackName: String
+) -> String {
+    guard !requestedFileName.isEmpty else { return fallbackName }
+    let lowercased = requestedFileName.lowercased()
+    for suffix in alphaInstalledArtifactArchiveSuffixes {
+        if lowercased.hasSuffix(suffix) {
+            let endIndex = requestedFileName.index(
+                requestedFileName.endIndex,
+                offsetBy: -suffix.count
+            )
+            let trimmed = String(requestedFileName[..<endIndex]).trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? fallbackName : trimmed
+        }
+    }
+    return requestedFileName
+}
+
+func alphaPackagedMLXArchiveArtifact(
+    fileName: String,
+    artifactKind: String,
+    runtimeMode: AlphaPackRuntimeMode
+) -> Bool {
+    guard runtimeMode == .mlxSwiftLm,
+          artifactKind == "mlx_directory" else {
+        return false
+    }
+    return fileName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().hasSuffix(".zip")
 }
 
 func alphaModelSHA256Hex(forFileAt url: URL) -> String? {
@@ -573,41 +607,93 @@ actor AlphaRossStore {
         try ensureFolders()
         let folder = modelPacksURL.appendingPathComponent(tier.rawValue, isDirectory: true)
         try fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
+        let installSourceURL: URL
+        let verified: (checksum: String, bytes: Int64)
+        if alphaPackagedMLXArchiveArtifact(fileName: fileName, artifactKind: artifactKind, runtimeMode: runtimeMode) {
+            guard let archiveVerification = alphaModelArtifactVerification(
+                at: downloadedFileURL,
+                fileManager: fileManager
+            ) else {
+                throw NSError(
+                    domain: "RossAlphaPack",
+                    code: 2,
+                    userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."]
+                )
+            }
+            if let expectedBytes, archiveVerification.bytes != expectedBytes {
+                throw NSError(
+                    domain: "RossAlphaPack",
+                    code: 3,
+                    userInfo: [
+                        NSLocalizedDescriptionKey: "Assistant setup did not finish downloading. Expected \(ByteCountFormatter.string(fromByteCount: expectedBytes, countStyle: .file)), got \(ByteCountFormatter.string(fromByteCount: archiveVerification.bytes, countStyle: .file))."
+                    ]
+                )
+            }
+            guard expectedChecksum.isEmpty ||
+                archiveVerification.checksum.caseInsensitiveCompare(expectedChecksum) == .orderedSame else {
+                throw NSError(domain: "RossAlphaPack", code: 2, userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."])
+            }
+            installSourceURL = try extractedArchiveInstallSource(
+                archiveURL: downloadedFileURL,
+                fileName: fileName
+            )
+            guard let extractedVerification = alphaModelArtifactVerification(
+                at: installSourceURL,
+                fileManager: fileManager
+            ) else {
+                throw NSError(
+                    domain: "RossAlphaPack",
+                    code: 2,
+                    userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."]
+                )
+            }
+            verified = extractedVerification
+        } else {
+            installSourceURL = downloadedFileURL
+            guard let directVerification = alphaModelArtifactVerification(
+                at: downloadedFileURL,
+                fileManager: fileManager
+            ) else {
+                throw NSError(
+                    domain: "RossAlphaPack",
+                    code: 2,
+                    userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."]
+                )
+            }
+            if let expectedBytes, directVerification.bytes != expectedBytes {
+                throw NSError(
+                    domain: "RossAlphaPack",
+                    code: 3,
+                    userInfo: [
+                        NSLocalizedDescriptionKey: "Assistant setup did not finish downloading. Expected \(ByteCountFormatter.string(fromByteCount: expectedBytes, countStyle: .file)), got \(ByteCountFormatter.string(fromByteCount: directVerification.bytes, countStyle: .file))."
+                    ]
+                )
+            }
+            guard expectedChecksum.isEmpty ||
+                directVerification.checksum.caseInsensitiveCompare(expectedChecksum) == .orderedSame else {
+                throw NSError(domain: "RossAlphaPack", code: 2, userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."])
+            }
+            verified = directVerification
+        }
         let artifactURL = resolvedInstalledArtifactURL(
             in: folder,
             requestedFileName: fileName,
-            sourceURL: downloadedFileURL
+            sourceURL: installSourceURL
         )
-
-        guard let verified = alphaModelArtifactVerification(
-            at: downloadedFileURL,
-            fileManager: fileManager
-        ) else {
-            throw NSError(
-                domain: "RossAlphaPack",
-                code: 2,
-                userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."]
-            )
-        }
-        if let expectedBytes, verified.bytes != expectedBytes {
-            throw NSError(
-                domain: "RossAlphaPack",
-                code: 3,
-                userInfo: [
-                    NSLocalizedDescriptionKey: "Assistant setup did not finish downloading. Expected \(ByteCountFormatter.string(fromByteCount: expectedBytes, countStyle: .file)), got \(ByteCountFormatter.string(fromByteCount: verified.bytes, countStyle: .file))."
-                ]
-            )
-        }
-        guard expectedChecksum.isEmpty || verified.checksum.caseInsensitiveCompare(expectedChecksum) == .orderedSame else {
-            throw NSError(domain: "RossAlphaPack", code: 2, userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."])
-        }
 
         do {
             try removeExistingItemIfNeeded(at: artifactURL)
-            try fileManager.moveItem(at: downloadedFileURL, to: artifactURL)
+            try fileManager.moveItem(at: installSourceURL, to: artifactURL)
         } catch {
             try removeExistingItemIfNeeded(at: artifactURL)
-            try fileManager.copyItem(at: downloadedFileURL, to: artifactURL)
+            try fileManager.copyItem(at: installSourceURL, to: artifactURL)
+        }
+
+        if installSourceURL.standardizedFileURL != artifactURL.standardizedFileURL {
+            try? fileManager.removeItem(at: installSourceURL)
+        }
+        if downloadedFileURL.standardizedFileURL != artifactURL.standardizedFileURL &&
+            downloadedFileURL.standardizedFileURL != installSourceURL.standardizedFileURL {
             try? fileManager.removeItem(at: downloadedFileURL)
         }
 
@@ -722,7 +808,7 @@ actor AlphaRossStore {
     private func temporaryAssistantDownloadsByteCount() -> Int64 {
         guard let contents = try? fileManager.contentsOfDirectory(
             at: FileManager.default.temporaryDirectory,
-            includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey],
+            includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey, .isDirectoryKey],
             options: [.skipsHiddenFiles]
         ) else { return 0 }
         return contents.reduce(into: Int64(0)) { total, url in
@@ -733,9 +819,7 @@ actor AlphaRossStore {
                 ext == "tmp" ||
                 ext == "part" ||
                 ext == "download" else { return }
-            let values = try? url.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey])
-            guard values?.isRegularFile == true else { return }
-            total += Int64(values?.fileSize ?? 0)
+            total += alphaModelArtifactByteCount(at: url, fileManager: fileManager)
         }
     }
 
@@ -763,31 +847,59 @@ actor AlphaRossStore {
         }
 
         let trimmedName = requestedFileName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let normalizedName = normalizedInstalledDirectoryName(
+        let normalizedName = alphaNormalizedInstalledDirectoryName(
             requestedFileName: trimmedName,
             fallbackName: sourceURL.lastPathComponent
         )
         return folder.appendingPathComponent(normalizedName, isDirectory: true)
     }
 
-    private func normalizedInstalledDirectoryName(
-        requestedFileName: String,
-        fallbackName: String
-    ) -> String {
-        guard !requestedFileName.isEmpty else { return fallbackName }
-        let lowercased = requestedFileName.lowercased()
-        let archiveSuffixes = [".tar.gz", ".tgz", ".zip", ".tar"]
-        for suffix in archiveSuffixes {
-            if lowercased.hasSuffix(suffix) {
-                let endIndex = requestedFileName.index(
-                    requestedFileName.endIndex,
-                    offsetBy: -suffix.count
-                )
-                let trimmed = String(requestedFileName[..<endIndex]).trimmingCharacters(in: .whitespacesAndNewlines)
-                return trimmed.isEmpty ? fallbackName : trimmed
+    private func extractedArchiveInstallSource(
+        archiveURL: URL,
+        fileName: String
+    ) throws -> URL {
+        let extractionRoot = fileManager.temporaryDirectory
+            .appendingPathComponent("ross-extracted-\(UUID().uuidString)", isDirectory: true)
+        try fileManager.createDirectory(at: extractionRoot, withIntermediateDirectories: true)
+
+        do {
+            try fileManager.unzipItem(at: archiveURL, to: extractionRoot)
+        } catch {
+            try? fileManager.removeItem(at: extractionRoot)
+            throw error
+        }
+
+        let visibleContents = try fileManager.contentsOfDirectory(
+            at: extractionRoot,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ).filter { itemURL in
+            let name = itemURL.lastPathComponent
+            return name != "__MACOSX" && !name.hasPrefix("._")
+        }
+        if visibleContents.count == 1 {
+            let first = visibleContents[0]
+            let values = try? first.resourceValues(forKeys: [.isDirectoryKey])
+            if values?.isDirectory == true {
+                return first
             }
         }
-        return requestedFileName
+
+        let wrappedDirectory = extractionRoot.appendingPathComponent(
+            alphaNormalizedInstalledDirectoryName(
+                requestedFileName: fileName.trimmingCharacters(in: .whitespacesAndNewlines),
+                fallbackName: "model"
+            ),
+            isDirectory: true
+        )
+        try fileManager.createDirectory(at: wrappedDirectory, withIntermediateDirectories: true)
+        for itemURL in visibleContents {
+            try fileManager.moveItem(
+                at: itemURL,
+                to: wrappedDirectory.appendingPathComponent(itemURL.lastPathComponent, isDirectory: true)
+            )
+        }
+        return wrappedDirectory
     }
 
     private func pruneModelPackSiblings(in folder: URL, keeping artifactURL: URL) throws {
