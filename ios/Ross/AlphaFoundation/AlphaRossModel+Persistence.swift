@@ -984,6 +984,7 @@ private func alphaBuildPrivateAISnapshot(
         }
         alphaQuarantineIncompleteInstalledAssistantJob(&recoveredState)
         alphaQuarantineUnusableActiveDownloadedAssistant(&recoveredState)
+        alphaApplyPreferredInstalledRuntimeForSelectedTier(&recoveredState)
         let activePack = alphaValidatedActivePack(from: recoveredState)
         recoveredState.installedPacks = alphaNormalizedInstalledPacks(from: recoveredState, activePack: activePack)
         if let activePack, recoveredState.settings.activeTier != activePack.tier {

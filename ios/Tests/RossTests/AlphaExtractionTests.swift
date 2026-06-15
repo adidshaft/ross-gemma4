@@ -4922,6 +4922,61 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(runtime, .appleFoundationModels)
     }
 
+    @MainActor
+    func testRefreshPrivateAISnapshotReappliesPreferredInstalledRuntimeSelection() async throws {
+        let model = AlphaRossModel()
+        let fileManager = FileManager.default
+        let mlxURL = alphaAbsoluteURL(for: "model-packs/case_associate/refresh-mlx.dev")
+        let ggufURL = alphaAbsoluteURL(for: "model-packs/case_associate/refresh-gguf.dev")
+        try fileManager.createDirectory(
+            at: mlxURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try Data("mlx".utf8).write(to: mlxURL)
+        try Data("gguf".utf8).write(to: ggufURL)
+        defer {
+            try? fileManager.removeItem(at: mlxURL)
+            try? fileManager.removeItem(at: ggufURL)
+        }
+
+        let mlxPack = AlphaInstalledModelPack(
+            packId: "case-associate-mlx",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/refresh-mlx.dev",
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: true,
+            checksumVerified: true,
+            isActive: true
+        )
+        let ggufPack = AlphaInstalledModelPack(
+            packId: "case-associate-gguf",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/refresh-gguf.dev",
+            checksumSha256: String(repeating: "b", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: true,
+            checksumVerified: true,
+            isActive: false
+        )
+
+        var state = AlphaPersistedState.empty()
+        state.settings.activeTier = .caseAssociate
+        state.installedPacks = [mlxPack, ggufPack]
+
+        model.persisted = state
+        model.refreshPrivateAISnapshot(forceValidation: true)
+        await model.privateAISnapshotTask?.value
+
+        XCTAssertEqual(model.privateAISnapshot.activePack?.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(model.privateAISnapshot.activePack?.packId, "case-associate-gguf")
+        XCTAssertEqual(model.persisted.installedPacks.count, 1)
+        XCTAssertEqual(model.persisted.installedPacks.first?.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(model.persisted.settings.activeTier, .caseAssociate)
+    }
+
     func testAssistantRuntimeChoiceLabelExplainsSystemAssistantPreference() {
         let label = alphaAssistantRuntimeChoiceLabel(
             selectedRuntimeMode: .appleFoundationModels,
