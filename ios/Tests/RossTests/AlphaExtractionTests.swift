@@ -4602,6 +4602,19 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(runtime, .mlxSwiftLm)
     }
 
+    func testPreferredAssistantRuntimeModePrefersFoundationWhenSystemAssistantIsAvailable() {
+        let runtime = alphaPreferredAssistantRuntimeMode(
+            for: .caseAssociate,
+            existingRuntimeMode: .mlxSwiftLm,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24,
+            systemAssistantAvailable: true
+        )
+
+        XCTAssertEqual(runtime, .appleFoundationModels)
+    }
+
     func testPreferredAssistantRuntimeModePrefersMLXForQuickStartOnCapablePhone() {
         let quickStart = alphaPreferredAssistantRuntimeMode(
             for: .quickStart,
@@ -4641,6 +4654,19 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(runtime, .mlxSwiftLm)
+    }
+
+    func testPreferredAssistantRuntimeModePreservesInstalledFoundationRuntime() {
+        let runtime = alphaPreferredAssistantRuntimeMode(
+            for: .caseAssociate,
+            existingRuntimeMode: .appleFoundationModels,
+            isPhoneFormFactor: false,
+            physicalMemoryBytes: 4 * 1_073_741_824,
+            freeStorageGB: 6,
+            systemAssistantAvailable: false
+        )
+
+        XCTAssertEqual(runtime, .appleFoundationModels)
     }
 
     func testAssistantCatalogDescriptorCompatibleOnlyPrefersRequestedQuickStartMLXPackWhenSupported() {

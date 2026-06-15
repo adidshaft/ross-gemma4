@@ -697,19 +697,42 @@ func alphaRecommendedOnDeviceTier(
     return .quickStart
 }
 
+private func alphaSystemAssistantRuntimeAvailable(for tier: AlphaCapabilityTier) -> Bool {
+    guard !alphaAllowsDevelopmentModelArtifacts(),
+          let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: alphaSystemAssistantPack(for: tier),
+            requestedTier: tier
+          ),
+          health.runtimeMode == .appleFoundationModels else {
+        return false
+    }
+    return health.available
+}
+
 func alphaPreferredAssistantRuntimeMode(
     for tier: AlphaCapabilityTier,
     existingRuntimeMode: AlphaPackRuntimeMode? = nil,
     isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
     physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory,
-    freeStorageGB: Int = max(4, alphaAvailableStorageInGigabytes())
+    freeStorageGB: Int = max(4, alphaAvailableStorageInGigabytes()),
+    systemAssistantAvailable: Bool? = nil
 ) -> AlphaPackRuntimeMode {
-    if existingRuntimeMode == .mlxSwiftLm {
-        return .mlxSwiftLm
+    let prefersSystemAssistant = systemAssistantAvailable ?? alphaSystemAssistantRuntimeAvailable(for: tier)
+
+    if prefersSystemAssistant {
+        return .appleFoundationModels
     }
 
     if tier == .flash {
         return .llamaCppGguf
+    }
+
+    if existingRuntimeMode == .appleFoundationModels {
+        return .appleFoundationModels
+    }
+
+    if existingRuntimeMode == .mlxSwiftLm {
+        return .mlxSwiftLm
     }
 
     guard isPhoneFormFactor else {
