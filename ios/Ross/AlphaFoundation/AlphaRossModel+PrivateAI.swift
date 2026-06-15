@@ -178,6 +178,7 @@ func alphaDefaultAssistantDownloadDescriptor(for tier: AlphaCapabilityTier) -> A
 func alphaAssistantCatalogDescriptor(
     for tier: AlphaCapabilityTier,
     preferredRuntimeMode: AlphaPackRuntimeMode? = nil,
+    targetPackId: String? = nil,
     compatibleOnly: Bool = false,
     manifest: AlphaBackendCatalogManifest?
 ) -> AlphaAssistantCatalogDescriptor {
@@ -189,6 +190,18 @@ func alphaAssistantCatalogDescriptor(
         AlphaCapabilityTier.normalizedAssistantSelection($0.tier) == AlphaCapabilityTier.normalizedAssistantSelection(tier)
             && !$0.developmentOnly
             && (!compatibleOnly || alphaBackendCatalogPackSupportsCurrentInstaller($0))
+    }
+    if let targetPackId,
+       let targeted = matchingTier.first(where: { $0.packId == targetPackId }) {
+        return AlphaAssistantCatalogDescriptor(
+            tier: AlphaCapabilityTier.normalizedAssistantSelection(targeted.tier) ?? tier,
+            packId: targeted.packId,
+            sizeBytes: targeted.sizeBytes,
+            checksumSha256: targeted.checksumSha256,
+            artifactKind: targeted.artifactKind,
+            runtimeMode: targeted.runtimeMode,
+            developmentOnly: targeted.developmentOnly
+        )
     }
     guard let selected =
             matchingTier.first(where: { preferredRuntimeMode != nil && $0.runtimeMode == preferredRuntimeMode }) ??
@@ -626,7 +639,8 @@ extension AlphaRossModel {
             await startPackDownload(
                 for: candidate.tier,
                 mobileAllowed: mobileAllowed,
-                forceRefreshInstalledPack: true
+                forceRefreshInstalledPack: true,
+                targetPackId: candidate.availablePackId
             )
         }
     }
@@ -1194,7 +1208,8 @@ extension AlphaRossModel {
         for tier: AlphaCapabilityTier,
         mobileAllowed: Bool,
         existingJobID: UUID? = nil,
-        forceRefreshInstalledPack: Bool = false
+        forceRefreshInstalledPack: Bool = false,
+        targetPackId: String? = nil
     ) async {
         let artifact = alphaAssistantModelArtifact(for: tier)
         let preferredRuntime = alphaPreferredAssistantRuntimeMode(
@@ -1290,6 +1305,7 @@ extension AlphaRossModel {
             let preferredCatalog = alphaAssistantCatalogDescriptor(
                 for: tier,
                 preferredRuntimeMode: preferredRuntime,
+                targetPackId: targetPackId,
                 compatibleOnly: true,
                 manifest: catalog
             )
