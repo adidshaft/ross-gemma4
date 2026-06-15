@@ -3986,10 +3986,10 @@ final class AlphaExtractionTests: XCTestCase {
             status: .complete
         )
 
-        XCTAssertEqual(invocation.answerDetailReviewedSourceSectionsLabel, "1 / 2")
+        XCTAssertEqual(invocation.answerDetailSourceCoverageLabel, "1 / 2")
     }
 
-    func testAnswerDetailReviewedSourceSectionsLabelDeduplicatesDocumentInputs() {
+    func testAnswerDetailSourceCoverageLabelDeduplicatesDocumentInputs() {
         let sharedCaseId = UUID()
         let sharedDocumentId = UUID()
         let invocation = AlphaLocalModelInvocation(
@@ -4034,7 +4034,33 @@ final class AlphaExtractionTests: XCTestCase {
             status: .complete
         )
 
-        XCTAssertEqual(invocation.answerDetailReviewedSourceSectionsLabel, "1 / 2")
+        XCTAssertEqual(invocation.answerDetailSourceCoverageLabel, "1 / 2")
+    }
+
+    func testAnswerDetailOmittedSourceSectionsLabelSummarizesSkippedPages() {
+        let invocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [
+                AlphaSourceRef(caseId: UUID(), documentId: UUID(), documentTitle: "Order", pageNumber: 1),
+                AlphaSourceRef(caseId: UUID(), documentId: UUID(), documentTitle: "Order", pageNumber: 2),
+                AlphaSourceRef(caseId: UUID(), documentId: UUID(), documentTitle: "Order", pageNumber: 3),
+                AlphaSourceRef(caseId: UUID(), documentId: UUID(), documentTitle: "Order", pageNumber: 4)
+            ],
+            packedSourceCount: 2,
+            omittedSourceCount: 2,
+            omittedSourceLabels: ["Order · p. 3", "Order · p. 4"],
+            promptHash: "prompt",
+            inputHash: "input",
+            status: .complete
+        )
+
+        XCTAssertEqual(invocation.answerDetailSourceCoverageLabel, "2 / 4")
+        XCTAssertEqual(invocation.answerDetailOmittedSourceSectionsLabel, "Order · p. 3, Order · p. 4")
     }
 
     @MainActor
@@ -4058,6 +4084,9 @@ final class AlphaExtractionTests: XCTestCase {
             runtimeContextTokens: 131_072,
             runtimeInputBudgetChars: 52_000,
             reviewedSourceCount: 2,
+            packedSourceCount: 2,
+            omittedSourceCount: 1,
+            omittedSourceLabels: ["Order · p. 3"],
             promptBudgetChars: 700,
             accelerationMode: .draftModelSpeculative,
             accelerationDraftTokens: 6,
@@ -4129,9 +4158,14 @@ final class AlphaExtractionTests: XCTestCase {
                     value: "480 / 700 chars"
                 ),
                 AlphaAnswerDetailMetric(
-                    key: "source_sections_reviewed",
-                    label: "Source sections reviewed",
+                    key: "source_coverage",
+                    label: "Source coverage",
                     value: "2 / 3"
+                ),
+                AlphaAnswerDetailMetric(
+                    key: "source_sections_skipped",
+                    label: "Skipped sections",
+                    value: "Order · p. 3"
                 ),
                 AlphaAnswerDetailMetric(
                     key: "runtime_first_response",
@@ -4185,6 +4219,8 @@ final class AlphaExtractionTests: XCTestCase {
                 schemaValid: true,
                 warnings: [],
                 sourceRefs: [sourceRef],
+                packedSourceCount: 1,
+                omittedSourceCount: 0,
                 executionPathLabel: "MLX with draft acceleration",
                 accelerationMode: .draftModelSpeculative,
                 accelerationDraftTokens: 4,
@@ -4204,9 +4240,11 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(completed.timeToFirstTokenMs, 610)
         XCTAssertEqual(completed.inputChars, 248)
         XCTAssertEqual(completed.reviewedSourceCount, 1)
+        XCTAssertEqual(completed.packedSourceCount, 1)
+        XCTAssertEqual(completed.omittedSourceCount, 0)
         XCTAssertEqual(completed.promptBudgetChars, 1_850)
         XCTAssertEqual(completed.executionPathLabel, "MLX with draft acceleration")
-        XCTAssertEqual(completed.accelerationMode, .draftModelSpeculative)
+        XCTAssertEqual(completed.accelerationMode, AlphaLocalRuntimeAccelerationMode.draftModelSpeculative)
         XCTAssertEqual(completed.accelerationDraftTokens, 4)
         XCTAssertEqual(completed.accelerationDraftModelLabel, "gemma-4-e4b-draft")
     }

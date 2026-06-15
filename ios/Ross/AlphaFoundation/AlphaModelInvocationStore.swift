@@ -17,6 +17,9 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
     var runtimeContextTokens: Int?
     var runtimeInputBudgetChars: Int?
     var reviewedSourceCount: Int?
+    var packedSourceCount: Int?
+    var omittedSourceCount: Int?
+    var omittedSourceLabels: [String]?
     var promptBudgetChars: Int?
     var accelerationMode: AlphaLocalRuntimeAccelerationMode?
     var accelerationDraftTokens: Int?
@@ -54,6 +57,9 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
         runtimeContextTokens: Int? = nil,
         runtimeInputBudgetChars: Int? = nil,
         reviewedSourceCount: Int? = nil,
+        packedSourceCount: Int? = nil,
+        omittedSourceCount: Int? = nil,
+        omittedSourceLabels: [String]? = nil,
         promptBudgetChars: Int? = nil,
         accelerationMode: AlphaLocalRuntimeAccelerationMode? = nil,
         accelerationDraftTokens: Int? = nil,
@@ -90,6 +96,9 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
         self.runtimeContextTokens = runtimeContextTokens
         self.runtimeInputBudgetChars = runtimeInputBudgetChars
         self.reviewedSourceCount = reviewedSourceCount
+        self.packedSourceCount = packedSourceCount
+        self.omittedSourceCount = omittedSourceCount
+        self.omittedSourceLabels = omittedSourceLabels
         self.promptBudgetChars = promptBudgetChars
         self.accelerationMode = accelerationMode
         self.accelerationDraftTokens = accelerationDraftTokens
@@ -224,6 +233,9 @@ enum AlphaModelInvocationStore {
         if reviewedDocumentSourceCount > 0 {
             copy.reviewedSourceCount = reviewedDocumentSourceCount
         }
+        copy.packedSourceCount = output.packedSourceCount ?? (reviewedDocumentSourceCount > 0 ? reviewedDocumentSourceCount : nil)
+        copy.omittedSourceCount = output.omittedSourceCount
+        copy.omittedSourceLabels = output.omittedSourceLabels?.isEmpty == false ? output.omittedSourceLabels : nil
         copy.estimatedOutputTokens = outputTokens
         copy.completedAt = completedAt
         copy.durationMs = max(Int(completedAt.timeIntervalSince(invocation.startedAt) * 1_000), 0)

@@ -370,7 +370,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         let maxChars = input.promptBudgetOverrideChars ?? maxInputChars() ?? 16_000
         let promptChars: Int
         if input.task == .matterQuestionAnswer {
-            promptChars = conciseMatterQuestionPrompt(for: input).count
+            promptChars = conciseMatterQuestionPack(for: input).inputChars
         } else {
             promptChars = AlphaPromptPackBuilder(
                 maxInputChars: maxChars,
@@ -422,7 +422,10 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                 parsedJson: nil,
                 schemaValid: false,
                 warnings: [AlphaLocalModelWarningCopy.assistantSetupMissing],
-                sourceRefs: [],
+                sourceRefs: pack.includedSourceRefs,
+                packedSourceCount: pack.includedSourceRefs.count,
+                omittedSourceCount: pack.omittedSourceRefs.count,
+                omittedSourceLabels: pack.omittedSourceRefs.map(\.label),
                 errorCategory: "model_path_missing"
             )
         }
@@ -436,9 +439,10 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             ? "MLX standard generation"
             : "MLX with draft acceleration"
         let usesPlainMatterAnswerPrompt = taskInput.task == .matterQuestionAnswer
-        let focusedMatterSourceRefs = usesPlainMatterAnswerPrompt ? focusedMatterSourceBlocks(for: taskInput).map(\.sourceRef) : []
+        let matterPromptPack = usesPlainMatterAnswerPrompt ? conciseMatterQuestionPack(for: taskInput) : nil
+        let activePromptPack = usesPlainMatterAnswerPrompt ? matterPromptPack : pack
         let instructions = usesPlainMatterAnswerPrompt ? nil : pack.systemInstructions
-        let prompt = usesPlainMatterAnswerPrompt ? conciseMatterQuestionPrompt(for: taskInput) : pack.promptText
+        let prompt = usesPlainMatterAnswerPrompt ? (matterPromptPack?.promptText ?? "") : pack.promptText
         let parameters = generateParameters(for: taskInput)
 
         do {
@@ -458,15 +462,22 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                         rawText: cleanedPartial,
                         parsedJson: nil,
                         schemaValid: false,
-                        warnings: pack.truncated ? [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts] : [],
+                        warnings: activePromptPack?.truncated == true ? [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts] : [],
                         sourceRefs: usesPlainMatterAnswerPrompt
-                            ? (focusedMatterSourceRefs.isEmpty ? Array(taskInput.sourcePack.prefix(5).map(\.sourceRef)) : focusedMatterSourceRefs)
+                            ? (matterPromptPack?.includedSourceRefs.isEmpty == false
+                                ? (matterPromptPack?.includedSourceRefs ?? [])
+                                : Array(taskInput.sourcePack.prefix(5).map(\.sourceRef)))
                             : pack.includedSourceRefs,
+                        packedSourceCount: usesPlainMatterAnswerPrompt ? matterPromptPack?.includedSourceRefs.count : pack.includedSourceRefs.count,
+                        omittedSourceCount: usesPlainMatterAnswerPrompt ? matterPromptPack?.omittedSourceRefs.count : pack.omittedSourceRefs.count,
+                        omittedSourceLabels: usesPlainMatterAnswerPrompt
+                            ? matterPromptPack?.omittedSourceRefs.map(\.label)
+                            : pack.omittedSourceRefs.map(\.label),
                         executionPathLabel: executionPathLabel,
                         accelerationMode: accelerationMode,
                         accelerationDraftTokens: draftTokens,
                         accelerationDraftModelLabel: draftModelLabel,
-                        inputChars: pack.inputChars
+                        inputChars: activePromptPack?.inputChars
                     )
                     )
                 }
@@ -480,7 +491,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             let schemaValid = usesPlainMatterAnswerPrompt
                 ? !finalResponse.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 : jsonString != nil
-            var warnings = pack.truncated ? [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts] : []
+            var warnings = activePromptPack?.truncated == true ? [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts] : []
             if languagePreservingFallback != nil {
                 warnings.append(AlphaLocalModelWarningCopy.sourceLanguageFallback)
             }
@@ -491,13 +502,20 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                 schemaValid: schemaValid,
                 warnings: warnings,
                 sourceRefs: usesPlainMatterAnswerPrompt
-                    ? (focusedMatterSourceRefs.isEmpty ? Array(taskInput.sourcePack.prefix(5).map(\.sourceRef)) : focusedMatterSourceRefs)
+                    ? (matterPromptPack?.includedSourceRefs.isEmpty == false
+                        ? (matterPromptPack?.includedSourceRefs ?? [])
+                        : Array(taskInput.sourcePack.prefix(5).map(\.sourceRef)))
                     : pack.includedSourceRefs,
+                packedSourceCount: usesPlainMatterAnswerPrompt ? matterPromptPack?.includedSourceRefs.count : pack.includedSourceRefs.count,
+                omittedSourceCount: usesPlainMatterAnswerPrompt ? matterPromptPack?.omittedSourceRefs.count : pack.omittedSourceRefs.count,
+                omittedSourceLabels: usesPlainMatterAnswerPrompt
+                    ? matterPromptPack?.omittedSourceRefs.map(\.label)
+                    : pack.omittedSourceRefs.map(\.label),
                 executionPathLabel: executionPathLabel,
                 accelerationMode: accelerationMode,
                 accelerationDraftTokens: draftTokens,
                 accelerationDraftModelLabel: draftModelLabel,
-                inputChars: pack.inputChars,
+                inputChars: activePromptPack?.inputChars,
                 inputTokenCount: generation.promptTokenCount,
                 outputTokenCount: generation.generationTokenCount,
                 outputTokensPerSecond: generation.outputTokensPerSecond,
@@ -509,7 +527,10 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                 parsedJson: nil,
                 schemaValid: false,
                 warnings: [AlphaLocalModelWarningCopy.assistantCouldNotFinish],
-                sourceRefs: [],
+                sourceRefs: activePromptPack?.includedSourceRefs ?? [],
+                packedSourceCount: activePromptPack?.includedSourceRefs.count,
+                omittedSourceCount: activePromptPack?.omittedSourceRefs.count,
+                omittedSourceLabels: activePromptPack?.omittedSourceRefs.map(\.label),
                 errorCategory: "inference_failed"
             )
         }
@@ -624,7 +645,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private func conciseMatterQuestionPrompt(for input: AlphaLocalModelInput) -> String {
+    private func conciseMatterQuestionPack(for input: AlphaLocalModelInput) -> AlphaLocalPromptPack {
         let languageInstruction = matterAnswerLanguageInstruction(for: input)
         let sourceBlocks = focusedMatterSourceBlocks(for: input)
         var prompt = """
@@ -647,8 +668,17 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         let effectiveMaxInputChars = input.promptBudgetOverrideChars ?? maxInputChars() ?? 16_000
         let excerptCap = input.sourceExcerptCharsOverride ?? 1_800
         var remainingBudget = max(effectiveMaxInputChars - 2_000, 5_600)
+        var truncated = false
+        var includedRefs: [AlphaSourceRef] = []
+        var includedBlocks: [AlphaSourceTextBlock] = []
+        var omittedRefs: [AlphaSourceRef] = []
+
         for block in sourceBlocks {
-            guard remainingBudget > 120 else { break }
+            guard remainingBudget > 120 else {
+                truncated = true
+                omittedRefs.append(block.sourceRef)
+                continue
+            }
             let label = block.sourceRef.label
             let excerpt = AlphaPromptFocusPlanner.focusedExcerpt(
                 from: block.text,
@@ -656,11 +686,44 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                 maxChars: min(remainingBudget, excerptCap)
             )
             prompt += "\n[\(label)] \(excerpt)\n"
+            includedRefs.append(block.sourceRef)
+            includedBlocks.append(block)
+            if excerpt.count < block.text.count {
+                truncated = true
+            }
             remainingBudget -= excerpt.count + label.count + 8
         }
 
+        if sourceBlocks.count < input.sourcePack.count {
+            truncated = true
+            let includedRefKeys = Set(sourceBlocks.map {
+                [$0.sourceRef.documentId.uuidString, String($0.sourceRef.pageNumber), $0.sourceRef.label].joined(separator: "|")
+            })
+            omittedRefs.append(
+                contentsOf: input.sourcePack
+                    .map(\.sourceRef)
+                    .filter { sourceRef in
+                        let key = [sourceRef.documentId.uuidString, String(sourceRef.pageNumber), sourceRef.label].joined(separator: "|")
+                        return !includedRefKeys.contains(key)
+                    }
+            )
+        }
+
         prompt += "\nANSWER:"
-        return prompt
+        return AlphaLocalPromptPack(
+            systemInstructions: "Ross local ask prompt",
+            promptText: prompt,
+            includedSourceRefs: includedRefs,
+            includedSourceBlocks: includedBlocks,
+            omittedSourceRefs: omittedRefs,
+            inputChars: prompt.count,
+            estimatedTokens: max(prompt.count / 4, 1),
+            truncated: truncated
+        )
+    }
+
+    private func conciseMatterQuestionPrompt(for input: AlphaLocalModelInput) -> String {
+        conciseMatterQuestionPack(for: input).promptText
     }
 
     private func matterAnswerLanguageInstruction(for input: AlphaLocalModelInput) -> String {

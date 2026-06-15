@@ -908,14 +908,28 @@ extension AlphaLocalModelInvocation {
         return alphaAssistantInputBudgetLabel(chars: runtimeInputBudgetChars)
     }
 
-    var answerDetailReviewedSourceSectionsLabel: String? {
-        guard let reviewedSourceCount else { return nil }
+    var answerDetailSourceCoverageLabel: String? {
+        guard let packedSourceCount = packedSourceCount ?? reviewedSourceCount else { return nil }
         let totalSourceCount = uniqueDocumentInputSourceCount
-        guard totalSourceCount > 0 else { return reviewedSourceCount > 0 ? reviewedSourceCount.formatted() : nil }
-        if reviewedSourceCount < totalSourceCount {
-            return "\(reviewedSourceCount.formatted()) / \(totalSourceCount.formatted())"
+        guard totalSourceCount > 0 else { return packedSourceCount > 0 ? packedSourceCount.formatted() : nil }
+        if packedSourceCount < totalSourceCount {
+            return "\(packedSourceCount.formatted()) / \(totalSourceCount.formatted())"
         }
-        return reviewedSourceCount.formatted()
+        return packedSourceCount.formatted()
+    }
+
+    var answerDetailOmittedSourceSectionsLabel: String? {
+        guard let omittedSourceCount, omittedSourceCount > 0 else { return nil }
+        let labels = (omittedSourceLabels ?? [])
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        guard !labels.isEmpty else { return omittedSourceCount.formatted() }
+        let preview = Array(labels.prefix(2))
+        let remainingCount = max(omittedSourceCount - preview.count, 0)
+        if remainingCount > 0 {
+            return preview.joined(separator: ", ") + ", +\(remainingCount.formatted())"
+        }
+        return preview.joined(separator: ", ")
     }
 
     var answerDetailOverviewMetrics: [AlphaAnswerDetailMetric] {
@@ -1045,12 +1059,22 @@ extension AlphaLocalModelInvocation {
             )
         }
 
-        if let reviewedSourceSections = answerDetailReviewedSourceSectionsLabel {
+        if let sourceCoverage = answerDetailSourceCoverageLabel {
             metrics.append(
                 AlphaAnswerDetailMetric(
-                    key: "source_sections_reviewed",
-                    label: rossLocalized("source_sections_reviewed"),
-                    value: reviewedSourceSections
+                    key: "source_coverage",
+                    label: rossLocalized("source_coverage"),
+                    value: sourceCoverage
+                )
+            )
+        }
+
+        if let omittedSourceSections = answerDetailOmittedSourceSectionsLabel {
+            metrics.append(
+                AlphaAnswerDetailMetric(
+                    key: "source_sections_skipped",
+                    label: rossLocalized("source_sections_skipped"),
+                    value: omittedSourceSections
                 )
             )
         }

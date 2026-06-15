@@ -403,7 +403,10 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                 parsedJson: nil,
                 schemaValid: false,
                 warnings: [AlphaLocalModelWarningCopy.assistantSetupMissing],
-                sourceRefs: [],
+                sourceRefs: pack.includedSourceRefs,
+                packedSourceCount: pack.includedSourceRefs.count,
+                omittedSourceCount: pack.omittedSourceRefs.count,
+                omittedSourceLabels: pack.omittedSourceRefs.map(\.label),
                 errorCategory: "model_path_missing"
             )
         }
@@ -477,6 +480,9 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                             schemaValid: false,
                             warnings: pack.truncated ? [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts] : [],
                             sourceRefs: pack.includedSourceRefs,
+                            packedSourceCount: pack.includedSourceRefs.count,
+                            omittedSourceCount: pack.omittedSourceRefs.count,
+                            omittedSourceLabels: pack.omittedSourceRefs.map(\.label),
                             executionPathLabel: activeExecutionPathLabel,
                             accelerationMode: activeAccelerationMode,
                             accelerationDraftTokens: surfacedDraftMetadata?.tokens,
@@ -527,6 +533,9 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                 schemaValid: schemaValid,
                 warnings: warnings,
                 sourceRefs: pack.includedSourceRefs,
+                packedSourceCount: pack.includedSourceRefs.count,
+                omittedSourceCount: pack.omittedSourceRefs.count,
+                omittedSourceLabels: pack.omittedSourceRefs.map(\.label),
                 executionPathLabel: activeExecutionPathLabel,
                 accelerationMode: activeAccelerationMode,
                 accelerationDraftTokens: surfacedDraftMetadata?.tokens,
@@ -543,7 +552,10 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                 parsedJson: nil,
                 schemaValid: false,
                 warnings: [AlphaLocalModelWarningCopy.assistantCouldNotFinish],
-                sourceRefs: [],
+                sourceRefs: pack.includedSourceRefs,
+                packedSourceCount: pack.includedSourceRefs.count,
+                omittedSourceCount: pack.omittedSourceRefs.count,
+                omittedSourceLabels: pack.omittedSourceRefs.map(\.label),
                 errorCategory: "inference_failed"
             )
         }

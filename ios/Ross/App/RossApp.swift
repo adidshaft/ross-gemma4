@@ -2723,6 +2723,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Source sections reviewed",
             "te": "Source sections reviewed"
         ],
+        "source_coverage": [
+            "en": "Source coverage",
+            "hi": "Source coverage",
+            "bn": "Source coverage",
+            "ta": "Source coverage",
+            "te": "Source coverage"
+        ],
+        "source_sections_skipped": [
+            "en": "Skipped sections",
+            "hi": "Skipped sections",
+            "bn": "Skipped sections",
+            "ta": "Skipped sections",
+            "te": "Skipped sections"
+        ],
         "public_law_check": [
             "en": "Public-law check",
             "hi": "Public-law check देखें",

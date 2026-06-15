@@ -94,6 +94,9 @@ struct AlphaLocalModelOutput: Codable, Hashable, Sendable {
     var schemaValid: Bool
     var warnings: [String]
     var sourceRefs: [AlphaSourceRef]
+    var packedSourceCount: Int? = nil
+    var omittedSourceCount: Int? = nil
+    var omittedSourceLabels: [String]? = nil
     var executionPathLabel: String? = nil
     var accelerationMode: AlphaLocalRuntimeAccelerationMode? = nil
     var accelerationDraftTokens: Int? = nil
@@ -1480,6 +1483,9 @@ struct AlphaUnavailableRealLocalModelProvider: AlphaRealLocalModelProvider {
                 pack.truncated ? AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts : AlphaLocalModelWarningCopy.sourceTextStayedLocal
             ],
             sourceRefs: pack.includedSourceRefs.isEmpty ? taskInput.sourcePack.map(\.sourceRef) : pack.includedSourceRefs,
+            packedSourceCount: pack.includedSourceRefs.count,
+            omittedSourceCount: pack.omittedSourceRefs.count,
+            omittedSourceLabels: pack.omittedSourceRefs.map(\.label),
             inputChars: pack.inputChars,
             errorCategory: errorCategory
         )
@@ -1537,6 +1543,9 @@ func alphaFoundationModelOutput(
             schemaValid: !finalResponse.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
             warnings: warnings,
             sourceRefs: promptPack.includedSourceRefs,
+            packedSourceCount: promptPack.includedSourceRefs.count,
+            omittedSourceCount: promptPack.omittedSourceRefs.count,
+            omittedSourceLabels: promptPack.omittedSourceRefs.map(\.label),
             executionPathLabel: alphaFoundationRuntimeExecutionPathLabel(),
             inputChars: promptPack.inputChars
         )
@@ -1549,6 +1558,9 @@ func alphaFoundationModelOutput(
         schemaValid: parsedJson != nil,
         warnings: warnings,
         sourceRefs: promptPack.includedSourceRefs,
+        packedSourceCount: promptPack.includedSourceRefs.count,
+        omittedSourceCount: promptPack.omittedSourceRefs.count,
+        omittedSourceLabels: promptPack.omittedSourceRefs.map(\.label),
         executionPathLabel: alphaFoundationRuntimeExecutionPathLabel(),
         inputChars: promptPack.inputChars,
         errorCategory: parsedJson == nil ? "invalid_model_output" : nil
@@ -1570,6 +1582,9 @@ func alphaFoundationModelPartialOutput(
             : alphaFoundationExtractJSONCandidate(from: trimmedResponse) != nil,
         warnings: promptPack.truncated ? [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts] : [],
         sourceRefs: promptPack.includedSourceRefs,
+        packedSourceCount: promptPack.includedSourceRefs.count,
+        omittedSourceCount: promptPack.omittedSourceRefs.count,
+        omittedSourceLabels: promptPack.omittedSourceRefs.map(\.label),
         executionPathLabel: alphaFoundationRuntimeExecutionPathLabel(),
         inputChars: promptPack.inputChars
     )
@@ -1689,6 +1704,9 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
                 schemaValid: false,
                 warnings: [runtimeHealth().userFacingStatus],
                 sourceRefs: promptPack.includedSourceRefs,
+                packedSourceCount: promptPack.includedSourceRefs.count,
+                omittedSourceCount: promptPack.omittedSourceRefs.count,
+                omittedSourceLabels: promptPack.omittedSourceRefs.map(\.label),
                 errorCategory: "unsupported_runtime"
             )
         }
@@ -1730,6 +1748,9 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
                 schemaValid: false,
                 warnings: [AlphaLocalModelWarningCopy.assistantCouldNotFinish],
                 sourceRefs: promptPack.includedSourceRefs,
+                packedSourceCount: promptPack.includedSourceRefs.count,
+                omittedSourceCount: promptPack.omittedSourceRefs.count,
+                omittedSourceLabels: promptPack.omittedSourceRefs.map(\.label),
                 errorCategory: "unknown_runtime_error"
             )
         }
