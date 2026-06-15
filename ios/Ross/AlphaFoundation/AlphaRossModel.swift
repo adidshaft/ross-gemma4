@@ -1044,6 +1044,15 @@ struct AlphaBackendCatalogPack: Codable {
     let artifactKind: String
     let runtimeMode: AlphaPackRuntimeMode
     let developmentOnly: Bool
+    var draftArtifact: AlphaBackendCatalogDraftArtifact? = nil
+}
+
+struct AlphaBackendCatalogDraftArtifact: Codable {
+    let fileName: String
+    let sizeBytes: Int64
+    let checksumSha256: String
+    let artifactKind: String
+    let draftTokens: Int?
 }
 
 struct AlphaBackendDownloadSessionRequest: Codable {
@@ -1074,6 +1083,17 @@ struct AlphaBackendArtifact: Codable {
     let downloadPath: String?
     let downloadUrl: String
     let segments: [AlphaBackendArtifactSegment]
+    var draftArtifact: AlphaBackendArtifactDraft? = nil
+}
+
+struct AlphaBackendArtifactDraft: Codable {
+    let fileName: String
+    let sizeBytes: Int64
+    let finalSha256: String
+    let artifactKind: String
+    let downloadPath: String?
+    let downloadUrl: String
+    let draftTokens: Int?
 }
 
 struct AlphaBackendArtifactSegment: Codable {
@@ -1138,6 +1158,7 @@ struct AlphaAssistantModelArtifact: Hashable, Sendable {
     let licenseNotice: String
     let safetyNotice: String
     let isActiveTier: Bool
+    var draftArtifact: AlphaAssistantDraftArtifactDescriptor? = nil
 
     var downloadURL: URL? {
         URL(string: downloadURLString)
@@ -1189,7 +1210,15 @@ let alphaAssistantModelArtifacts: [AlphaCapabilityTier: AlphaAssistantModelArtif
         releaseReady: true,
         licenseNotice: "Gemma License",
         safetyNotice: "Review generated content.",
-        isActiveTier: true
+        isActiveTier: true,
+        draftArtifact: AlphaAssistantDraftArtifactDescriptor(
+            fileName: "mtp-gemma-4-E4B-it.gguf",
+            sizeBytes: 98_653_248,
+            checksumSha256: "b6a723115efa510d3b3215db1e26790dae84cd08c2134a764f3d194f1f0c3376",
+            artifactKind: "local_model_artifact",
+            downloadURLString: "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/resolve/main/mtp-gemma-4-E4B-it.gguf",
+            draftTokens: nil
+        )
     ),
     .caseAssociate: AlphaAssistantModelArtifact(
         tier: .caseAssociate,
@@ -1214,7 +1243,15 @@ let alphaAssistantModelArtifacts: [AlphaCapabilityTier: AlphaAssistantModelArtif
         releaseReady: true,
         licenseNotice: "Gemma License",
         safetyNotice: "Review generated content.",
-        isActiveTier: true
+        isActiveTier: true,
+        draftArtifact: AlphaAssistantDraftArtifactDescriptor(
+            fileName: "mtp-gemma-4-12b-it.gguf",
+            sizeBytes: 465_109_248,
+            checksumSha256: "145db9094bc0f85f1701e255a2ed216dcc9800fc8bc8631ad00905b456bd451b",
+            artifactKind: "local_model_artifact",
+            downloadURLString: "https://huggingface.co/unsloth/gemma-4-12b-it-GGUF/resolve/main/mtp-gemma-4-12b-it.gguf",
+            draftTokens: nil
+        )
     ),
     .seniorDraftingSupport: AlphaAssistantModelArtifact(
         tier: .seniorDraftingSupport,
@@ -1239,7 +1276,15 @@ let alphaAssistantModelArtifacts: [AlphaCapabilityTier: AlphaAssistantModelArtif
         releaseReady: true,
         licenseNotice: "Gemma License",
         safetyNotice: "Review generated content.",
-        isActiveTier: true
+        isActiveTier: true,
+        draftArtifact: AlphaAssistantDraftArtifactDescriptor(
+            fileName: "mtp-gemma-4-26B-A4B-it.gguf",
+            sizeBytes: 461_766_816,
+            checksumSha256: "6326fb9f5e487aa8dcdd313a091e3c67724cb2a666ec3b7d2895b5b26d93ed1b",
+            artifactKind: "local_model_artifact",
+            downloadURLString: "https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF/resolve/main/mtp-gemma-4-26B-A4B-it.gguf",
+            draftTokens: nil
+        )
     )
 ]
 
@@ -1254,6 +1299,7 @@ final class AlphaAssistantDownloadTaskBox: @unchecked Sendable {
     var progressTask: Task<Void, Never>?
     var pausedByUser = false
     var resumeData: Data?
+    var supportsResumePersistence = true
     var lastPublishedProgressBytes: Int64 = 0
     var lastPublishedProgressAt: Date = .distantPast
 }

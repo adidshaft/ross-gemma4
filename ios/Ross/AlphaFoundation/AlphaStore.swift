@@ -311,6 +311,7 @@ struct AlphaModelArtifactManifest: Codable, Hashable, Sendable {
     let artifactKind: String
     let runtimeMode: AlphaPackRuntimeMode
     let developmentOnly: Bool
+    let draftArtifact: AlphaInstalledAssistantDraftArtifact?
     let verifiedAt: Date
 
     init(
@@ -323,6 +324,7 @@ struct AlphaModelArtifactManifest: Codable, Hashable, Sendable {
         artifactKind: String = "local_model_artifact",
         runtimeMode: AlphaPackRuntimeMode = .llamaCppGguf,
         developmentOnly: Bool = false,
+        draftArtifact: AlphaInstalledAssistantDraftArtifact? = nil,
         verifiedAt: Date
     ) {
         self.packId = packId
@@ -334,6 +336,7 @@ struct AlphaModelArtifactManifest: Codable, Hashable, Sendable {
         self.artifactKind = artifactKind
         self.runtimeMode = runtimeMode
         self.developmentOnly = developmentOnly
+        self.draftArtifact = draftArtifact
         self.verifiedAt = verifiedAt
     }
 
@@ -347,6 +350,7 @@ struct AlphaModelArtifactManifest: Codable, Hashable, Sendable {
         case artifactKind
         case runtimeMode
         case developmentOnly
+        case draftArtifact
         case verifiedAt
     }
 
@@ -361,6 +365,7 @@ struct AlphaModelArtifactManifest: Codable, Hashable, Sendable {
         artifactKind = try container.decodeIfPresent(String.self, forKey: .artifactKind) ?? "local_model_artifact"
         runtimeMode = try container.decodeIfPresent(AlphaPackRuntimeMode.self, forKey: .runtimeMode) ?? .llamaCppGguf
         developmentOnly = try container.decodeIfPresent(Bool.self, forKey: .developmentOnly) ?? false
+        draftArtifact = try container.decodeIfPresent(AlphaInstalledAssistantDraftArtifact.self, forKey: .draftArtifact)
         verifiedAt = try container.decode(Date.self, forKey: .verifiedAt)
     }
 }
@@ -566,7 +571,9 @@ actor AlphaRossStore {
         packId: String,
         artifactKind: String = "local_model_artifact",
         runtimeMode: AlphaPackRuntimeMode = .llamaCppGguf,
-        developmentOnly: Bool = false
+        developmentOnly: Bool = false,
+        draftArtifact: AlphaAssistantDraftArtifactDescriptor? = nil,
+        draftArtifactData: Data? = nil
     ) throws -> (relativePath: String, checksum: String, bytes: Int64) {
         try ensureFolders()
         let checksum = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
@@ -578,6 +585,28 @@ actor AlphaRossStore {
         try fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
         let artifactURL = folder.appendingPathComponent(fileName)
         try data.write(to: artifactURL, options: .atomic)
+        let installedDraftArtifact: AlphaInstalledAssistantDraftArtifact?
+        if let draftArtifact {
+            guard let draftArtifactData else {
+                throw NSError(domain: "RossAlphaPack", code: 2, userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."])
+            }
+            let draftChecksum = SHA256.hash(data: draftArtifactData).map { String(format: "%02x", $0) }.joined()
+            guard draftChecksum.caseInsensitiveCompare(draftArtifact.checksumSha256) == .orderedSame else {
+                throw NSError(domain: "RossAlphaPack", code: 2, userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."])
+            }
+            let draftURL = folder.appendingPathComponent(draftArtifact.fileName)
+            try draftArtifactData.write(to: draftURL, options: .atomic)
+            installedDraftArtifact = AlphaInstalledAssistantDraftArtifact(
+                fileName: draftArtifact.fileName,
+                relativePath: relativePath(for: draftURL),
+                checksumSha256: draftChecksum,
+                bytes: Int64(draftArtifactData.count),
+                artifactKind: draftArtifact.artifactKind,
+                draftTokens: draftArtifact.draftTokens
+            )
+        } else {
+            installedDraftArtifact = nil
+        }
         try writeModelArtifactManifest(
             tier: tier,
             packId: packId,
@@ -587,9 +616,13 @@ actor AlphaRossStore {
             bytes: Int64(data.count),
             artifactKind: artifactKind,
             runtimeMode: runtimeMode,
-            developmentOnly: developmentOnly
+            developmentOnly: developmentOnly,
+            draftArtifact: installedDraftArtifact
         )
-        try pruneModelPackSiblings(in: folder, keeping: artifactURL)
+        try pruneModelPackSiblings(
+            in: folder,
+            keeping: Set([artifactURL, installedDraftArtifact.map { alphaAbsoluteURL(for: $0.relativePath) }].compactMap { $0 })
+        )
         return (relativePath(for: artifactURL), checksum, Int64(data.count))
     }
 
@@ -602,99 +635,72 @@ actor AlphaRossStore {
         packId: String,
         artifactKind: String = "local_model_artifact",
         runtimeMode: AlphaPackRuntimeMode = .llamaCppGguf,
-        developmentOnly: Bool = false
+        developmentOnly: Bool = false,
+        draftArtifact: AlphaAssistantDraftArtifactDescriptor? = nil,
+        draftDownloadedFileURL: URL? = nil
     ) throws -> (relativePath: String, checksum: String, bytes: Int64) {
         try ensureFolders()
         let folder = modelPacksURL.appendingPathComponent(tier.rawValue, isDirectory: true)
         try fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
-        let installSourceURL: URL
-        let verified: (checksum: String, bytes: Int64)
-        if alphaPackagedMLXArchiveArtifact(fileName: fileName, artifactKind: artifactKind, runtimeMode: runtimeMode) {
-            guard let archiveVerification = alphaModelArtifactVerification(
-                at: downloadedFileURL,
-                fileManager: fileManager
-            ) else {
-                throw NSError(
-                    domain: "RossAlphaPack",
-                    code: 2,
-                    userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."]
-                )
-            }
-            if let expectedBytes, archiveVerification.bytes != expectedBytes {
-                throw NSError(
-                    domain: "RossAlphaPack",
-                    code: 3,
-                    userInfo: [
-                        NSLocalizedDescriptionKey: "Assistant setup did not finish downloading. Expected \(ByteCountFormatter.string(fromByteCount: expectedBytes, countStyle: .file)), got \(ByteCountFormatter.string(fromByteCount: archiveVerification.bytes, countStyle: .file))."
-                    ]
-                )
-            }
-            guard expectedChecksum.isEmpty ||
-                archiveVerification.checksum.caseInsensitiveCompare(expectedChecksum) == .orderedSame else {
-                throw NSError(domain: "RossAlphaPack", code: 2, userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."])
-            }
-            installSourceURL = try extractedArchiveInstallSource(
-                archiveURL: downloadedFileURL,
-                fileName: fileName
-            )
-            guard let extractedVerification = alphaModelArtifactVerification(
-                at: installSourceURL,
-                fileManager: fileManager
-            ) else {
-                throw NSError(
-                    domain: "RossAlphaPack",
-                    code: 2,
-                    userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."]
-                )
-            }
-            verified = extractedVerification
-        } else {
-            installSourceURL = downloadedFileURL
-            guard let directVerification = alphaModelArtifactVerification(
-                at: downloadedFileURL,
-                fileManager: fileManager
-            ) else {
-                throw NSError(
-                    domain: "RossAlphaPack",
-                    code: 2,
-                    userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."]
-                )
-            }
-            if let expectedBytes, directVerification.bytes != expectedBytes {
-                throw NSError(
-                    domain: "RossAlphaPack",
-                    code: 3,
-                    userInfo: [
-                        NSLocalizedDescriptionKey: "Assistant setup did not finish downloading. Expected \(ByteCountFormatter.string(fromByteCount: expectedBytes, countStyle: .file)), got \(ByteCountFormatter.string(fromByteCount: directVerification.bytes, countStyle: .file))."
-                    ]
-                )
-            }
-            guard expectedChecksum.isEmpty ||
-                directVerification.checksum.caseInsensitiveCompare(expectedChecksum) == .orderedSame else {
-                throw NSError(domain: "RossAlphaPack", code: 2, userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."])
-            }
-            verified = directVerification
-        }
+        let verifiedMain = try verifiedDownloadedArtifact(
+            fileName: fileName,
+            downloadedFileURL: downloadedFileURL,
+            expectedChecksum: expectedChecksum,
+            expectedBytes: expectedBytes,
+            artifactKind: artifactKind,
+            runtimeMode: runtimeMode
+        )
         let artifactURL = resolvedInstalledArtifactURL(
             in: folder,
             requestedFileName: fileName,
-            sourceURL: installSourceURL
+            sourceURL: verifiedMain.installSourceURL
         )
+        let verifiedDraft: (descriptor: AlphaAssistantDraftArtifactDescriptor, installSourceURL: URL, verification: (checksum: String, bytes: Int64), artifactURL: URL)?
+        if let draftArtifact {
+            guard let draftDownloadedFileURL else {
+                throw NSError(domain: "RossAlphaPack", code: 2, userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."])
+            }
+            let draftVerification = try verifiedDownloadedArtifact(
+                fileName: draftArtifact.fileName,
+                downloadedFileURL: draftDownloadedFileURL,
+                expectedChecksum: draftArtifact.checksumSha256,
+                expectedBytes: draftArtifact.sizeBytes,
+                artifactKind: draftArtifact.artifactKind,
+                runtimeMode: .llamaCppGguf
+            )
+            verifiedDraft = (
+                descriptor: draftArtifact,
+                installSourceURL: draftVerification.installSourceURL,
+                verification: draftVerification.verification,
+                artifactURL: resolvedInstalledArtifactURL(
+                    in: folder,
+                    requestedFileName: draftArtifact.fileName,
+                    sourceURL: draftVerification.installSourceURL
+                )
+            )
+        } else {
+            verifiedDraft = nil
+        }
 
         do {
-            try removeExistingItemIfNeeded(at: artifactURL)
-            try fileManager.moveItem(at: installSourceURL, to: artifactURL)
+            try installVerifiedArtifact(
+                from: verifiedMain.installSourceURL,
+                originalDownloadedURL: downloadedFileURL,
+                to: artifactURL
+            )
+            if let verifiedDraft {
+                try installVerifiedArtifact(
+                    from: verifiedDraft.installSourceURL,
+                    originalDownloadedURL: draftDownloadedFileURL,
+                    to: verifiedDraft.artifactURL
+                )
+            }
         } catch {
-            try removeExistingItemIfNeeded(at: artifactURL)
-            try fileManager.copyItem(at: installSourceURL, to: artifactURL)
-        }
-
-        if installSourceURL.standardizedFileURL != artifactURL.standardizedFileURL {
-            try? fileManager.removeItem(at: installSourceURL)
-        }
-        if downloadedFileURL.standardizedFileURL != artifactURL.standardizedFileURL &&
-            downloadedFileURL.standardizedFileURL != installSourceURL.standardizedFileURL {
-            try? fileManager.removeItem(at: downloadedFileURL)
+            try? fileManager.removeItem(at: artifactURL)
+            if let verifiedDraft {
+                try? fileManager.removeItem(at: verifiedDraft.artifactURL)
+            }
+            throw error
         }
 
         try writeModelArtifactManifest(
@@ -702,15 +708,28 @@ actor AlphaRossStore {
             packId: packId,
             fileName: fileName,
             artifactURL: artifactURL,
-            checksum: verified.checksum,
-            bytes: verified.bytes,
+            checksum: verifiedMain.verification.checksum,
+            bytes: verifiedMain.verification.bytes,
             artifactKind: artifactKind,
             runtimeMode: runtimeMode,
-            developmentOnly: developmentOnly
+            developmentOnly: developmentOnly,
+            draftArtifact: verifiedDraft.map {
+                AlphaInstalledAssistantDraftArtifact(
+                    fileName: $0.descriptor.fileName,
+                    relativePath: relativePath(for: $0.artifactURL),
+                    checksumSha256: $0.verification.checksum,
+                    bytes: $0.verification.bytes,
+                    artifactKind: $0.descriptor.artifactKind,
+                    draftTokens: $0.descriptor.draftTokens
+                )
+            }
         )
-        try pruneModelPackSiblings(in: folder, keeping: artifactURL)
+        try pruneModelPackSiblings(
+            in: folder,
+            keeping: Set([artifactURL, verifiedDraft?.artifactURL].compactMap { $0 })
+        )
 
-        return (relativePath(for: artifactURL), verified.checksum, verified.bytes)
+        return (relativePath(for: artifactURL), verifiedMain.verification.checksum, verifiedMain.verification.bytes)
     }
 
     func saveModelResumeData(_ data: Data, for jobID: UUID) throws -> String {
@@ -756,6 +775,10 @@ actor AlphaRossStore {
     func removeDownloadedPackArtifact(relativePath: String?) {
         guard let relativePath, !relativePath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         let artifactURL = alphaAbsoluteURL(for: relativePath)
+        let manifest = alphaModelArtifactManifest(forFileAt: artifactURL)
+        if let draftArtifact = manifest?.draftArtifact {
+            try? fileManager.removeItem(at: alphaAbsoluteURL(for: draftArtifact.relativePath))
+        }
         try? fileManager.removeItem(at: artifactURL)
         try? fileManager.removeItem(at: alphaModelArtifactManifestURL(forArtifactAt: artifactURL, fileManager: fileManager))
     }
@@ -835,6 +858,104 @@ actor AlphaRossStore {
         }
     }
 
+    private func verifiedDownloadedArtifact(
+        fileName: String,
+        downloadedFileURL: URL,
+        expectedChecksum: String,
+        expectedBytes: Int64?,
+        artifactKind: String,
+        runtimeMode: AlphaPackRuntimeMode
+    ) throws -> (installSourceURL: URL, verification: (checksum: String, bytes: Int64)) {
+        if alphaPackagedMLXArchiveArtifact(fileName: fileName, artifactKind: artifactKind, runtimeMode: runtimeMode) {
+            guard let archiveVerification = alphaModelArtifactVerification(
+                at: downloadedFileURL,
+                fileManager: fileManager
+            ) else {
+                throw NSError(
+                    domain: "RossAlphaPack",
+                    code: 2,
+                    userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."]
+                )
+            }
+            if let expectedBytes, archiveVerification.bytes != expectedBytes {
+                throw NSError(
+                    domain: "RossAlphaPack",
+                    code: 3,
+                    userInfo: [
+                        NSLocalizedDescriptionKey: "Assistant setup did not finish downloading. Expected \(ByteCountFormatter.string(fromByteCount: expectedBytes, countStyle: .file)), got \(ByteCountFormatter.string(fromByteCount: archiveVerification.bytes, countStyle: .file))."
+                    ]
+                )
+            }
+            guard expectedChecksum.isEmpty ||
+                archiveVerification.checksum.caseInsensitiveCompare(expectedChecksum) == .orderedSame else {
+                throw NSError(domain: "RossAlphaPack", code: 2, userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."])
+            }
+            let installSourceURL = try extractedArchiveInstallSource(
+                archiveURL: downloadedFileURL,
+                fileName: fileName
+            )
+            guard let extractedVerification = alphaModelArtifactVerification(
+                at: installSourceURL,
+                fileManager: fileManager
+            ) else {
+                throw NSError(
+                    domain: "RossAlphaPack",
+                    code: 2,
+                    userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."]
+                )
+            }
+            return (installSourceURL, extractedVerification)
+        }
+
+        guard let directVerification = alphaModelArtifactVerification(
+            at: downloadedFileURL,
+            fileManager: fileManager
+        ) else {
+            throw NSError(
+                domain: "RossAlphaPack",
+                code: 2,
+                userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."]
+            )
+        }
+        if let expectedBytes, directVerification.bytes != expectedBytes {
+            throw NSError(
+                domain: "RossAlphaPack",
+                code: 3,
+                userInfo: [
+                    NSLocalizedDescriptionKey: "Assistant setup did not finish downloading. Expected \(ByteCountFormatter.string(fromByteCount: expectedBytes, countStyle: .file)), got \(ByteCountFormatter.string(fromByteCount: directVerification.bytes, countStyle: .file))."
+                ]
+            )
+        }
+        guard expectedChecksum.isEmpty ||
+            directVerification.checksum.caseInsensitiveCompare(expectedChecksum) == .orderedSame else {
+            throw NSError(domain: "RossAlphaPack", code: 2, userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."])
+        }
+        return (downloadedFileURL, directVerification)
+    }
+
+    private func installVerifiedArtifact(
+        from installSourceURL: URL,
+        originalDownloadedURL: URL?,
+        to artifactURL: URL
+    ) throws {
+        do {
+            try removeExistingItemIfNeeded(at: artifactURL)
+            try fileManager.moveItem(at: installSourceURL, to: artifactURL)
+        } catch {
+            try removeExistingItemIfNeeded(at: artifactURL)
+            try fileManager.copyItem(at: installSourceURL, to: artifactURL)
+        }
+
+        if installSourceURL.standardizedFileURL != artifactURL.standardizedFileURL {
+            try? fileManager.removeItem(at: installSourceURL)
+        }
+        if let originalDownloadedURL,
+           originalDownloadedURL.standardizedFileURL != artifactURL.standardizedFileURL &&
+            originalDownloadedURL.standardizedFileURL != installSourceURL.standardizedFileURL {
+            try? fileManager.removeItem(at: originalDownloadedURL)
+        }
+    }
+
     private func resolvedInstalledArtifactURL(
         in folder: URL,
         requestedFileName: String,
@@ -902,20 +1023,22 @@ actor AlphaRossStore {
         return wrappedDirectory
     }
 
-    private func pruneModelPackSiblings(in folder: URL, keeping artifactURL: URL) throws {
+    private func pruneModelPackSiblings(in folder: URL, keeping keptArtifactURLs: Set<URL>) throws {
         guard let siblings = try? fileManager.contentsOfDirectory(
             at: folder,
             includingPropertiesForKeys: [.isRegularFileKey],
             options: [.skipsHiddenFiles]
         ) else { return }
-        let keep = artifactURL.standardizedFileURL.path()
-        let keepManifest = alphaModelArtifactManifestURL(
-            forArtifactAt: artifactURL,
-            fileManager: fileManager
-        ).standardizedFileURL.path()
+        let keepPaths = Set(keptArtifactURLs.map { $0.standardizedFileURL.path() })
+        let keepManifestPaths = Set(keptArtifactURLs.map {
+            alphaModelArtifactManifestURL(
+                forArtifactAt: $0,
+                fileManager: fileManager
+            ).standardizedFileURL.path()
+        })
         for sibling in siblings {
             let path = sibling.standardizedFileURL.path()
-            guard path != keep && path != keepManifest else { continue }
+            guard !keepPaths.contains(path) && !keepManifestPaths.contains(path) else { continue }
             try? fileManager.removeItem(at: sibling)
         }
     }
@@ -929,7 +1052,8 @@ actor AlphaRossStore {
         bytes: Int64,
         artifactKind: String,
         runtimeMode: AlphaPackRuntimeMode,
-        developmentOnly: Bool
+        developmentOnly: Bool,
+        draftArtifact: AlphaInstalledAssistantDraftArtifact? = nil
     ) throws {
         let manifest = AlphaModelArtifactManifest(
             packId: packId,
@@ -941,6 +1065,7 @@ actor AlphaRossStore {
             artifactKind: artifactKind,
             runtimeMode: runtimeMode,
             developmentOnly: developmentOnly,
+            draftArtifact: draftArtifact,
             verifiedAt: .now
         )
         let manifestURL = alphaModelArtifactManifestURL(forArtifactAt: artifactURL, fileManager: fileManager)

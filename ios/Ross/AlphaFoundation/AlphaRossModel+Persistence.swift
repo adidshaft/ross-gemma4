@@ -190,6 +190,11 @@ private func alphaPruneUnreferencedAssistantArtifactsFromDisk(installedPacks: [A
             }
             let artifactURL = alphaAbsoluteURL(for: manifest.relativePath)
             reclaimedBytes += alphaModelFileByteCount(at: artifactURL)
+            if let draftArtifact = manifest.draftArtifact {
+                let draftURL = alphaAbsoluteURL(for: draftArtifact.relativePath)
+                reclaimedBytes += alphaModelFileByteCount(at: draftURL)
+                try? fileManager.removeItem(at: draftURL)
+            }
             try? fileManager.removeItem(at: artifactURL)
             try? fileManager.removeItem(at: manifestURL)
         }
@@ -246,6 +251,7 @@ struct AlphaExpectedDownloadedAssistantArtifact {
     let artifactKind: String
     let runtimeMode: AlphaPackRuntimeMode
     let developmentOnly: Bool
+    let draftArtifact: AlphaInstalledAssistantDraftArtifact?
 }
 
 func alphaExpectedDownloadedAssistantArtifact(for pack: AlphaInstalledModelPack) -> AlphaExpectedDownloadedAssistantArtifact? {
@@ -261,7 +267,8 @@ func alphaExpectedDownloadedAssistantArtifact(for pack: AlphaInstalledModelPack)
             bytes: manifest.bytes,
             artifactKind: manifest.artifactKind,
             runtimeMode: manifest.runtimeMode,
-            developmentOnly: manifest.developmentOnly
+            developmentOnly: manifest.developmentOnly,
+            draftArtifact: manifest.draftArtifact
         )
     }
 
@@ -282,7 +289,22 @@ func alphaExpectedDownloadedAssistantArtifact(for pack: AlphaInstalledModelPack)
         bytes: artifact.sizeBytes,
         artifactKind: artifact.artifactKind,
         runtimeMode: artifact.runtimeMode,
-        developmentOnly: artifact.developmentOnly
+        developmentOnly: artifact.developmentOnly,
+        draftArtifact: nil
+    )
+}
+
+private func alphaInstalledDraftArtifactIsUsable(_ artifact: AlphaInstalledAssistantDraftArtifact) -> Bool {
+    let fileURL = alphaAbsoluteURL(for: artifact.relativePath)
+    guard alphaModelFileByteCount(at: fileURL) == artifact.bytes else { return false }
+    guard alphaModelLooksLikeSHA256(artifact.checksumSha256),
+          let verifiedArtifact = alphaModelArtifactVerification(at: fileURL),
+          verifiedArtifact.bytes == artifact.bytes else {
+        return false
+    }
+    return alphaModelAssistantChecksumMatches(
+        expected: artifact.checksumSha256,
+        actual: verifiedArtifact.checksum
     )
 }
 
@@ -351,6 +373,10 @@ private func alphaInstalledModelPackFileIsUsable(_ pack: AlphaInstalledModelPack
         return false
     }
     guard alphaModelFileByteCount(at: fileURL) == expected.bytes else { return false }
+    if let draftArtifact = expected.draftArtifact,
+       !alphaInstalledDraftArtifactIsUsable(draftArtifact) {
+        return false
+    }
     guard !expected.checksumSha256.isEmpty else {
         return alphaModelLooksLikeSHA256(pack.checksumSha256)
     }
@@ -382,6 +408,7 @@ private func alphaRecoveredInstalledPackFromDisk(tier: AlphaCapabilityTier) -> A
             guard alphaModelLooksLikeSHA256(manifest.checksumSha256),
                   let verifiedArtifact = alphaModelArtifactVerification(at: fileURL),
                   verifiedArtifact.bytes == manifest.bytes,
+                  (manifest.draftArtifact.map(alphaInstalledDraftArtifactIsUsable) ?? true),
                   alphaModelAssistantChecksumMatches(
                     expected: manifest.checksumSha256,
                     actual: verifiedArtifact.checksum
@@ -1058,6 +1085,19 @@ private func alphaAutomaticMLXDraftTokens(
     }
 }
 
+private func alphaInstalledGGUFDraftArtifact(
+    for activePack: AlphaInstalledModelPack?
+) -> AlphaInstalledAssistantDraftArtifact? {
+    guard let activePack,
+          activePack.runtimeMode == .llamaCppGguf,
+          let expectedArtifact = alphaExpectedDownloadedAssistantArtifact(for: activePack),
+          let draftArtifact = expectedArtifact.draftArtifact,
+          alphaInstalledDraftArtifactIsUsable(draftArtifact) else {
+        return nil
+    }
+    return draftArtifact
+}
+
 func alphaLocalRuntimeEnvironment(
     activePack: AlphaInstalledModelPack?,
     requestedTier: AlphaCapabilityTier?,
@@ -1068,6 +1108,20 @@ func alphaLocalRuntimeEnvironment(
 ) -> AlphaLocalRuntimeEnvironment {
     if baseEnvironment.draftModelPath != nil {
         return baseEnvironment
+    }
+
+    if let activePack,
+       activePack.tier == (requestedTier ?? activePack.tier) || requestedTier == nil,
+       let ggufDraftArtifact = alphaInstalledGGUFDraftArtifact(for: activePack) {
+        return AlphaLocalRuntimeEnvironment(
+            enableRealInference: baseEnvironment.enableRealInference,
+            runtimeModeOverride: baseEnvironment.runtimeModeOverride,
+            modelPath: baseEnvironment.modelPath,
+            modelChecksum: baseEnvironment.modelChecksum,
+            modelKind: baseEnvironment.modelKind,
+            draftModelPath: alphaAbsoluteURL(for: ggufDraftArtifact.relativePath).path,
+            draftModelTokens: baseEnvironment.draftModelTokens ?? ggufDraftArtifact.draftTokens
+        )
     }
 
     guard let activePack,

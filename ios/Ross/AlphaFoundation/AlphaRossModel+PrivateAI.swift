@@ -52,6 +52,25 @@ struct AlphaAssistantCatalogDescriptor: Codable, Hashable, Sendable {
     let artifactKind: String
     let runtimeMode: AlphaPackRuntimeMode
     let developmentOnly: Bool
+    var draftArtifact: AlphaAssistantDraftArtifactDescriptor? = nil
+}
+
+struct AlphaAssistantDraftArtifactDescriptor: Codable, Hashable, Sendable {
+    let fileName: String
+    let sizeBytes: Int64
+    let checksumSha256: String
+    let artifactKind: String
+    let downloadURLString: String
+    let draftTokens: Int?
+}
+
+struct AlphaInstalledAssistantDraftArtifact: Codable, Hashable, Sendable {
+    let fileName: String
+    let relativePath: String
+    let checksumSha256: String
+    let bytes: Int64
+    let artifactKind: String
+    let draftTokens: Int?
 }
 
 struct AlphaAssistantDownloadDescriptor: Codable, Hashable, Sendable {
@@ -67,6 +86,7 @@ struct AlphaAssistantDownloadDescriptor: Codable, Hashable, Sendable {
     let downloadURLString: String
     let verified: Bool
     let releaseReady: Bool
+    var draftArtifact: AlphaAssistantDraftArtifactDescriptor? = nil
 }
 
 private func alphaReusableAssistantDownloadDescriptor(
@@ -84,8 +104,28 @@ private func alphaReusableAssistantDownloadDescriptor(
         developmentOnly: descriptor.developmentOnly,
         downloadURLString: descriptor.downloadURLString,
         verified: descriptor.verified,
-        releaseReady: descriptor.releaseReady
+        releaseReady: descriptor.releaseReady,
+        draftArtifact: descriptor.draftArtifact
     )
+}
+
+func alphaAssistantDraftArtifactSupportsCurrentInstaller(_ artifact: AlphaAssistantDraftArtifactDescriptor) -> Bool {
+    guard artifact.sizeBytes > 0,
+          artifact.checksumSha256.range(of: #"^[a-fA-F0-9]{64}$"#, options: .regularExpression) != nil,
+          !artifact.downloadURLString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        return false
+    }
+    return artifact.fileName.lowercased().hasSuffix(".gguf") &&
+        artifact.artifactKind.localizedCaseInsensitiveContains("local_model_artifact")
+}
+
+private func alphaAssistantCatalogDraftArtifactSupportsCurrentInstaller(
+    _ artifact: AlphaAssistantDraftArtifactDescriptor
+) -> Bool {
+    artifact.sizeBytes > 0 &&
+        artifact.checksumSha256.range(of: #"^[a-fA-F0-9]{64}$"#, options: .regularExpression) != nil &&
+        artifact.fileName.lowercased().hasSuffix(".gguf") &&
+        artifact.artifactKind.localizedCaseInsensitiveContains("local_model_artifact")
 }
 
 func alphaAssistantDownloadDescriptorSupportsCurrentInstaller(_ descriptor: AlphaAssistantDownloadDescriptor) -> Bool {
@@ -93,6 +133,10 @@ func alphaAssistantDownloadDescriptorSupportsCurrentInstaller(_ descriptor: Alph
           descriptor.sizeBytes > 0,
           descriptor.checksumSha256.range(of: #"^[a-fA-F0-9]{64}$"#, options: .regularExpression) != nil,
           !descriptor.downloadURLString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        return false
+    }
+    if let draftArtifact = descriptor.draftArtifact,
+       !alphaAssistantDraftArtifactSupportsCurrentInstaller(draftArtifact) {
         return false
     }
     switch descriptor.runtimeMode {
@@ -114,6 +158,10 @@ func alphaAssistantCatalogDescriptorSupportsCurrentInstaller(_ descriptor: Alpha
     guard !descriptor.developmentOnly,
           descriptor.sizeBytes > 0,
           descriptor.checksumSha256.range(of: #"^[a-fA-F0-9]{64}$"#, options: .regularExpression) != nil else {
+        return false
+    }
+    if let draftArtifact = descriptor.draftArtifact,
+       !alphaAssistantCatalogDraftArtifactSupportsCurrentInstaller(draftArtifact) {
         return false
     }
     switch descriptor.runtimeMode {
@@ -151,9 +199,75 @@ func alphaInstalledAssistantPackMatchesDownloadDescriptor(
         return false
     }
     if !descriptor.checksumSha256.isEmpty {
-        return pack.checksumSha256.caseInsensitiveCompare(descriptor.checksumSha256) == .orderedSame
+        guard pack.checksumSha256.caseInsensitiveCompare(descriptor.checksumSha256) == .orderedSame else {
+            return false
+        }
     }
-    return true
+    guard let descriptorDraft = descriptor.draftArtifact else {
+        return true
+    }
+    guard let expected = alphaExpectedDownloadedAssistantArtifact(for: pack),
+          let installedDraft = expected.draftArtifact else {
+        return false
+    }
+    return installedDraft.fileName == descriptorDraft.fileName &&
+        installedDraft.bytes == descriptorDraft.sizeBytes &&
+        installedDraft.artifactKind == descriptorDraft.artifactKind &&
+        alphaModelAssistantChecksumMatches(
+            expected: descriptorDraft.checksumSha256,
+            actual: installedDraft.checksumSha256
+        )
+}
+
+private func alphaAssistantDownloadDescriptorDraftArtifact(
+    _ artifact: AlphaBackendArtifactDraft?
+) -> AlphaAssistantDraftArtifactDescriptor? {
+    guard let artifact else { return nil }
+    return AlphaAssistantDraftArtifactDescriptor(
+        fileName: artifact.fileName,
+        sizeBytes: artifact.sizeBytes,
+        checksumSha256: artifact.finalSha256.lowercased(),
+        artifactKind: artifact.artifactKind,
+        downloadURLString: artifact.downloadUrl,
+        draftTokens: artifact.draftTokens
+    )
+}
+
+private func alphaAssistantCatalogDescriptorDraftArtifact(
+    _ artifact: AlphaBackendCatalogDraftArtifact?
+) -> AlphaAssistantDraftArtifactDescriptor? {
+    guard let artifact else { return nil }
+    return AlphaAssistantDraftArtifactDescriptor(
+        fileName: artifact.fileName,
+        sizeBytes: artifact.sizeBytes,
+        checksumSha256: artifact.checksumSha256.lowercased(),
+        artifactKind: artifact.artifactKind,
+        downloadURLString: "",
+        draftTokens: artifact.draftTokens
+    )
+}
+
+func alphaAssistantCatalogDraftArtifactMatchesInstalledPack(
+    _ pack: AlphaInstalledModelPack,
+    descriptor: AlphaAssistantCatalogDescriptor
+) -> Bool {
+    guard let expected = alphaExpectedDownloadedAssistantArtifact(for: pack) else {
+        return descriptor.draftArtifact == nil
+    }
+    switch (expected.draftArtifact, descriptor.draftArtifact) {
+    case (nil, nil):
+        return true
+    case let (installed?, available?):
+        return installed.fileName == available.fileName &&
+            installed.bytes == available.sizeBytes &&
+            installed.artifactKind == available.artifactKind &&
+            alphaModelAssistantChecksumMatches(
+                expected: available.checksumSha256,
+                actual: installed.checksumSha256
+            )
+    default:
+        return false
+    }
 }
 
 func alphaClearedAssistantUpdateCandidates(
@@ -194,7 +308,8 @@ func alphaDefaultAssistantCatalogDescriptor(for tier: AlphaCapabilityTier) -> Al
         checksumSha256: artifact.sha256,
         artifactKind: artifact.artifactKind,
         runtimeMode: artifact.runtimeMode,
-        developmentOnly: artifact.developmentOnly
+        developmentOnly: artifact.developmentOnly,
+        draftArtifact: artifact.draftArtifact
     )
 }
 
@@ -212,7 +327,8 @@ func alphaDefaultAssistantDownloadDescriptor(for tier: AlphaCapabilityTier) -> A
         developmentOnly: artifact.developmentOnly,
         downloadURLString: artifact.downloadURLString,
         verified: artifact.verified,
-        releaseReady: artifact.releaseReady
+        releaseReady: artifact.releaseReady,
+        draftArtifact: artifact.draftArtifact
     )
 }
 
@@ -265,7 +381,8 @@ func alphaAssistantCatalogDescriptor(
             checksumSha256: targeted.checksumSha256,
             artifactKind: targeted.artifactKind,
             runtimeMode: targeted.runtimeMode,
-            developmentOnly: targeted.developmentOnly
+            developmentOnly: targeted.developmentOnly,
+            draftArtifact: alphaAssistantCatalogDescriptorDraftArtifact(targeted.draftArtifact)
         )
     }
     guard let selected =
@@ -281,7 +398,8 @@ func alphaAssistantCatalogDescriptor(
         checksumSha256: selected.checksumSha256,
         artifactKind: selected.artifactKind,
         runtimeMode: selected.runtimeMode,
-        developmentOnly: selected.developmentOnly
+        developmentOnly: selected.developmentOnly,
+        draftArtifact: alphaAssistantCatalogDescriptorDraftArtifact(selected.draftArtifact)
     )
 }
 
@@ -307,7 +425,8 @@ func alphaAssistantUpdateCandidate(
 
     let changed = installedPack.packId != availableDescriptor.packId ||
         (!availableDescriptor.checksumSha256.isEmpty &&
-         installedPack.checksumSha256.caseInsensitiveCompare(availableDescriptor.checksumSha256) != .orderedSame)
+         installedPack.checksumSha256.caseInsensitiveCompare(availableDescriptor.checksumSha256) != .orderedSame) ||
+        !alphaAssistantCatalogDraftArtifactMatchesInstalledPack(installedPack, descriptor: availableDescriptor)
     guard changed else { return nil }
 
     return AlphaModelUpdateCandidate(
@@ -325,6 +444,19 @@ func alphaBackendCatalogPackSupportsCurrentInstaller(_ pack: AlphaBackendCatalog
           pack.sizeBytes > 0 else {
         return false
     }
+    if let draftArtifact = pack.draftArtifact,
+       !alphaAssistantCatalogDraftArtifactSupportsCurrentInstaller(
+        AlphaAssistantDraftArtifactDescriptor(
+            fileName: draftArtifact.fileName,
+            sizeBytes: draftArtifact.sizeBytes,
+            checksumSha256: draftArtifact.checksumSha256,
+            artifactKind: draftArtifact.artifactKind,
+            downloadURLString: "",
+            draftTokens: draftArtifact.draftTokens
+        )
+       ) {
+        return false
+    }
     switch pack.runtimeMode {
     case .llamaCppGguf:
         return pack.artifactKind.localizedCaseInsensitiveContains("local_model_artifact")
@@ -339,6 +471,19 @@ func alphaBackendArtifactSupportsCurrentInstaller(_ artifact: AlphaBackendArtifa
     guard artifact.developmentOnly == false,
           artifact.sizeBytes > 0,
           artifact.finalSha256.range(of: #"^[a-fA-F0-9]{64}$"#, options: .regularExpression) != nil else {
+        return false
+    }
+    if let draftArtifact = artifact.draftArtifact,
+       !alphaAssistantDraftArtifactSupportsCurrentInstaller(
+        AlphaAssistantDraftArtifactDescriptor(
+            fileName: draftArtifact.fileName,
+            sizeBytes: draftArtifact.sizeBytes,
+            checksumSha256: draftArtifact.finalSha256,
+            artifactKind: draftArtifact.artifactKind,
+            downloadURLString: draftArtifact.downloadUrl,
+            draftTokens: draftArtifact.draftTokens
+        )
+       ) {
         return false
     }
     let fileName = artifact.fileName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -380,7 +525,8 @@ func alphaAssistantDownloadDescriptor(
         developmentOnly: session.artifact.developmentOnly,
         downloadURLString: resolvedURLString,
         verified: true,
-        releaseReady: true
+        releaseReady: true,
+        draftArtifact: alphaAssistantDownloadDescriptorDraftArtifact(session.artifact.draftArtifact)
     )
 }
 
@@ -411,9 +557,10 @@ extension AlphaRossModel {
             AlphaBackgroundModelDownloadCenter.shared.cancel(jobID: job.id) { [weak self] resumeData in
                 Task { @MainActor [weak self] in
                     guard let self else { return }
-                    self.assistantDownloadTaskBoxes[job.id]?.resumeData = resumeData
+                    let shouldPersistResumeData = self.assistantDownloadTaskBoxes[job.id]?.supportsResumePersistence ?? true
+                    self.assistantDownloadTaskBoxes[job.id]?.resumeData = shouldPersistResumeData ? resumeData : nil
                     let resumePath: String?
-                    if let resumeData {
+                    if let resumeData, shouldPersistResumeData {
                         resumePath = try? await self.store.saveModelResumeData(resumeData, for: job.id)
                     } else {
                         resumePath = nil
@@ -525,8 +672,9 @@ extension AlphaRossModel {
 
     func removeInstalledPack(_ pack: AlphaInstalledModelPack) {
         if !pack.installPath.hasPrefix("system://") {
-            let fileURL = alphaAbsoluteURL(for: pack.installPath)
-            try? FileManager.default.removeItem(at: fileURL)
+            Task {
+                await store.removeDownloadedPackArtifact(relativePath: pack.installPath)
+            }
         }
         persisted.installedPacks.removeAll { $0.id == pack.id }
         if persisted.settings.activeTier == pack.tier {
@@ -951,7 +1099,14 @@ extension AlphaRossModel {
         }
     }
 
-    func downloadAssistantModelArtifact(_ artifact: AlphaAssistantDownloadDescriptor, tier: AlphaCapabilityTier, jobID: UUID) async throws -> URL {
+    func downloadAssistantModelArtifact(
+        _ artifact: AlphaAssistantDownloadDescriptor,
+        tier: AlphaCapabilityTier,
+        jobID: UUID,
+        progressOffsetBytes: Int64 = 0,
+        progressTotalBytes: Int64? = nil,
+        allowsResumePersistence: Bool = true
+    ) async throws -> URL {
         alphaPurgeTemporaryAssistantDownloadFiles()
         let isRealMode = true
         if isRealMode && (artifact.downloadURLString.contains("__REPLACE_WITH_VERIFIED") || !artifact.verified || !artifact.releaseReady) {
@@ -974,17 +1129,25 @@ extension AlphaRossModel {
             return created
         }()
         taskBox.pausedByUser = false
+        taskBox.supportsResumePersistence = allowsResumePersistence
+        taskBox.lastPublishedProgressBytes = 0
+        taskBox.lastPublishedProgressAt = .distantPast
         let fileExtension = (artifact.fileName as NSString).pathExtension.isEmpty
             ? "gguf"
             : (artifact.fileName as NSString).pathExtension
+        let baseName = artifact.fileName
+            .replacingOccurrences(of: #"[^A-Za-z0-9._-]+"#, with: "-", options: .regularExpression)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
         let destinationURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("ross-pending-\(tier.rawValue)")
+            .appendingPathComponent("ross-pending-\(tier.rawValue)-\(baseName.isEmpty ? artifact.packId : baseName)")
             .appendingPathExtension(fileExtension)
         try? FileManager.default.removeItem(at: destinationURL)
 
-        let persistedResumeData = try? await store.loadModelResumeData(
-            relativePath: persisted.modelJobs.first(where: { $0.id == jobID })?.resumeDataRelativePath
-        )
+        let persistedResumeData = allowsResumePersistence
+            ? (try? await store.loadModelResumeData(
+                relativePath: persisted.modelJobs.first(where: { $0.id == jobID })?.resumeDataRelativePath
+            ))
+            : nil
         let resumeData = taskBox.resumeData ?? persistedResumeData
         let allowsMobileData = persisted.modelJobs.first(where: { $0.id == jobID })?.networkPolicy == .mobileAllowed
         taskBox.resumeData = nil
@@ -994,21 +1157,24 @@ extension AlphaRossModel {
                 let progress: AlphaBackgroundModelDownloadCenter.ProgressHandler = { [weak self] received, expected in
                     await MainActor.run {
                         guard let self else { return }
-                        let expectedBytes = expected > 0 ? expected : artifact.sizeBytes
+                        let expectedBytes = progressTotalBytes ?? (expected > 0 ? expected : artifact.sizeBytes)
                         let minimumByteDelta = max(Int64(8 * 1024 * 1024), expectedBytes / 200)
                         let now = Date()
-                        let finished = expectedBytes > 0 && received >= expectedBytes
-                        let byteDelta = received - taskBox.lastPublishedProgressBytes
+                        let combinedReceived = max(0, progressOffsetBytes + received)
+                        let finished = expectedBytes > 0 && combinedReceived >= expectedBytes
+                        let byteDelta = combinedReceived - taskBox.lastPublishedProgressBytes
                         guard finished ||
                             byteDelta >= minimumByteDelta ||
                             now.timeIntervalSince(taskBox.lastPublishedProgressAt) >= 0.75 else {
                             return
                         }
-                        taskBox.lastPublishedProgressBytes = max(0, received)
+                        taskBox.lastPublishedProgressBytes = combinedReceived
                         taskBox.lastPublishedProgressAt = now
                         self.updateJob(jobID) {
-                            $0.bytesDownloaded = max(0, received)
-                            if expected > 0 {
+                            $0.bytesDownloaded = combinedReceived
+                            if let progressTotalBytes {
+                                $0.totalBytes = progressTotalBytes
+                            } else if expected > 0 {
                                 $0.totalBytes = expected
                             }
                             $0.updatedAt = .now
@@ -1049,11 +1215,15 @@ extension AlphaRossModel {
                     }
                 }
                 taskBox.resumeData = nil
-                await store.removeModelResumeData(
-                    relativePath: persisted.modelJobs.first(where: { $0.id == jobID })?.resumeDataRelativePath
-                )
+                if allowsResumePersistence {
+                    await store.removeModelResumeData(
+                        relativePath: persisted.modelJobs.first(where: { $0.id == jobID })?.resumeDataRelativePath
+                    )
+                }
                 updateJob(jobID) {
-                    $0.resumeDataRelativePath = nil
+                    if allowsResumePersistence {
+                        $0.resumeDataRelativePath = nil
+                    }
                     $0.updatedAt = .now
                 }
                 _ = alphaSweepTemporaryAssistantDownloads()
@@ -1218,6 +1388,17 @@ extension AlphaRossModel {
                     return nil
                 }
                 return (relativePath, verified.checksum, verified.bytes)
+            }
+
+            if let expectedDraftArtifact = artifact.draftArtifact {
+                let expectedDraftURL = alphaAbsoluteURL(
+                    for: "model-packs/\(tier.rawValue)/\(expectedDraftArtifact.fileName)"
+                )
+                guard let verifiedDraft = alphaModelArtifactVerification(at: expectedDraftURL),
+                      verifiedDraft.bytes == expectedDraftArtifact.sizeBytes,
+                      verifiedDraft.checksum.caseInsensitiveCompare(expectedDraftArtifact.checksumSha256) == .orderedSame else {
+                    return nil
+                }
             }
 
             guard verified.bytes == expectedBytes else { return nil }
@@ -1556,9 +1737,10 @@ extension AlphaRossModel {
         }
 
         let availableStorageGB = alphaAvailableStorageInGigabytes()
+        let companionBytes = resolvedDownload.draftArtifact?.sizeBytes ?? 0
         let requiredFreeSpaceGB = max(
             artifact.requiredFreeSpaceGB,
-            Int(ceil(Double(resolvedDownload.sizeBytes) / 1_000_000_000)) + 1
+            Int(ceil(Double(resolvedDownload.sizeBytes + companionBytes) / 1_000_000_000)) + 1
         )
         guard availableStorageGB >= requiredFreeSpaceGB else {
             assistantDownloadTaskBoxes[job.id] = nil
@@ -1578,11 +1760,35 @@ extension AlphaRossModel {
             let preflight = try await preflightAssistantModelArtifact(resolvedDownload, jobID: job.id)
             let expectedChecksum = try preflight.expectedChecksum(catalogChecksum: resolvedDownload.checksumSha256)
             _ = try await probeAssistantModelRange(resolvedDownload, preflight: preflight)
+            let draftPreflight: AlphaAssistantDownloadPreflight?
+            if let draftArtifact = resolvedDownload.draftArtifact {
+                let draftDescriptor = AlphaAssistantDownloadDescriptor(
+                    sessionId: resolvedDownload.sessionId,
+                    packId: resolvedDownload.packId,
+                    tier: resolvedDownload.tier,
+                    fileName: draftArtifact.fileName,
+                    sizeBytes: draftArtifact.sizeBytes,
+                    checksumSha256: draftArtifact.checksumSha256,
+                    artifactKind: draftArtifact.artifactKind,
+                    runtimeMode: .llamaCppGguf,
+                    developmentOnly: resolvedDownload.developmentOnly,
+                    downloadURLString: draftArtifact.downloadURLString,
+                    verified: resolvedDownload.verified,
+                    releaseReady: resolvedDownload.releaseReady,
+                    draftArtifact: nil
+                )
+                let verifiedDraftPreflight = try await preflightAssistantModelArtifact(draftDescriptor, jobID: job.id)
+                _ = try await probeAssistantModelRange(draftDescriptor, preflight: verifiedDraftPreflight)
+                draftPreflight = verifiedDraftPreflight
+            } else {
+                draftPreflight = nil
+            }
+            let combinedExpectedBytes = preflight.reportedBytes + (draftPreflight?.reportedBytes ?? 0)
 
             updateJob(job.id) {
                 $0.state = .downloading
                 $0.failureReason = nil
-                $0.totalBytes = preflight.reportedBytes
+                $0.totalBytes = combinedExpectedBytes
                 $0.checksumSha256 = expectedChecksum
                 $0.updatedAt = .now
             }
@@ -1599,8 +1805,45 @@ extension AlphaRossModel {
             )
             persist()
 
-            let downloadedFileURL = try await downloadAssistantModelArtifact(resolvedDownload, tier: tier, jobID: job.id)
+            let downloadedFileURL = try await downloadAssistantModelArtifact(
+                resolvedDownload,
+                tier: tier,
+                jobID: job.id,
+                progressTotalBytes: combinedExpectedBytes,
+                allowsResumePersistence: true
+            )
             let downloadedBytes = downloadedFileSize(at: downloadedFileURL)
+            let draftDownloadedFileURL: URL?
+            let downloadedDraftBytes: Int64
+            if let draftArtifact = resolvedDownload.draftArtifact {
+                let draftDescriptor = AlphaAssistantDownloadDescriptor(
+                    sessionId: resolvedDownload.sessionId,
+                    packId: resolvedDownload.packId,
+                    tier: resolvedDownload.tier,
+                    fileName: draftArtifact.fileName,
+                    sizeBytes: draftArtifact.sizeBytes,
+                    checksumSha256: draftArtifact.checksumSha256,
+                    artifactKind: draftArtifact.artifactKind,
+                    runtimeMode: .llamaCppGguf,
+                    developmentOnly: resolvedDownload.developmentOnly,
+                    downloadURLString: draftArtifact.downloadURLString,
+                    verified: resolvedDownload.verified,
+                    releaseReady: resolvedDownload.releaseReady,
+                    draftArtifact: nil
+                )
+                draftDownloadedFileURL = try await downloadAssistantModelArtifact(
+                    draftDescriptor,
+                    tier: tier,
+                    jobID: job.id,
+                    progressOffsetBytes: downloadedBytes > 0 ? downloadedBytes : resolvedDownload.sizeBytes,
+                    progressTotalBytes: combinedExpectedBytes,
+                    allowsResumePersistence: false
+                )
+                downloadedDraftBytes = draftDownloadedFileURL.map { downloadedFileSize(at: $0) } ?? 0
+            } else {
+                draftDownloadedFileURL = nil
+                downloadedDraftBytes = 0
+            }
 
             guard persisted.modelJobs.first(where: { $0.id == job.id })?.state != .pausedUser else {
                 return
@@ -1608,7 +1851,12 @@ extension AlphaRossModel {
 
             updateJob(job.id) {
                 $0.state = .verifying
-                $0.bytesDownloaded = downloadedBytes > 0 ? downloadedBytes : resolvedDownload.sizeBytes
+                let verifiedMainBytes = downloadedBytes > 0 ? downloadedBytes : resolvedDownload.sizeBytes
+                let verifiedDraftBytes = resolvedDownload.draftArtifact == nil
+                    ? 0
+                    : (downloadedDraftBytes > 0 ? downloadedDraftBytes : (draftPreflight?.reportedBytes ?? 0))
+                $0.bytesDownloaded = verifiedMainBytes + verifiedDraftBytes
+                $0.totalBytes = combinedExpectedBytes
                 $0.updatedAt = .now
             }
             persist()
@@ -1622,7 +1870,9 @@ extension AlphaRossModel {
                 packId: resolvedDownload.packId,
                 artifactKind: resolvedDownload.artifactKind,
                 runtimeMode: resolvedDownload.runtimeMode,
-                developmentOnly: resolvedDownload.developmentOnly
+                developmentOnly: resolvedDownload.developmentOnly,
+                draftArtifact: resolvedDownload.draftArtifact,
+                draftDownloadedFileURL: draftDownloadedFileURL
             )
             let installed = AlphaInstalledModelPack(
                 packId: resolvedDownload.packId,
@@ -1657,8 +1907,8 @@ extension AlphaRossModel {
             )
             updateJob(job.id) {
                 $0.state = .installed
-                $0.bytesDownloaded = installedArtifact.bytes
-                $0.totalBytes = installedArtifact.bytes
+                $0.bytesDownloaded = combinedExpectedBytes
+                $0.totalBytes = combinedExpectedBytes
                 $0.checksumSha256 = installedArtifact.checksum
                 $0.artifactKind = installed.artifactKind
                 $0.runtimeMode = installed.runtimeMode

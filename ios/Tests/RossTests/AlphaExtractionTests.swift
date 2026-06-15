@@ -1,3 +1,4 @@
+import CryptoKit
 import llama
 import XCTest
 import ZIPFoundation
@@ -41,6 +42,10 @@ final class AlphaExtractionTests: XCTestCase {
         try Data("{}".utf8).write(to: directory.appendingPathComponent("tokenizer.json"))
         try Data("weights".utf8).write(to: directory.appendingPathComponent("model.safetensors"))
         return directory
+    }
+
+    private func sha256Hex(_ data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
     private func makeMLXZipFixture(
@@ -4892,6 +4897,9 @@ final class AlphaExtractionTests: XCTestCase {
             fileName: String,
             sizeBytes: Int64,
             sha256: String,
+            draftFileName: String?,
+            draftSizeBytes: Int64?,
+            draftSha256: String?,
             releaseReady: Bool,
             isActiveTier: Bool
         )] = [
@@ -4900,6 +4908,9 @@ final class AlphaExtractionTests: XCTestCase {
                 fileName: "google_gemma-4-E2B-it-Q2_K.gguf",
                 sizeBytes: 3_020_052_224,
                 sha256: "a7cfc9f9b305b54a4ba2a681ff8795f594eafbe8c2c9df25d2f030a64d97bda6",
+                draftFileName: nil,
+                draftSizeBytes: nil,
+                draftSha256: nil,
                 releaseReady: false,
                 isActiveTier: false
             ),
@@ -4908,6 +4919,9 @@ final class AlphaExtractionTests: XCTestCase {
                 fileName: "gemma-4-E4B-it-Q4_K_M.gguf",
                 sizeBytes: 4_977_169_568,
                 sha256: "519b9793ed6ce0ff530f1b7c96e848e08e49e7af4d57bb97f76215963a54146d",
+                draftFileName: "mtp-gemma-4-E4B-it.gguf",
+                draftSizeBytes: 98_653_248,
+                draftSha256: "b6a723115efa510d3b3215db1e26790dae84cd08c2134a764f3d194f1f0c3376",
                 releaseReady: true,
                 isActiveTier: true
             ),
@@ -4916,6 +4930,9 @@ final class AlphaExtractionTests: XCTestCase {
                 fileName: "gemma-4-12b-it-Q4_K_M.gguf",
                 sizeBytes: 7_121_860_000,
                 sha256: "43fec98c5102b1c446b4ddd0a9439f1db3a2e1f2e0b8cd143ce1ea619a9403d6",
+                draftFileName: "mtp-gemma-4-12b-it.gguf",
+                draftSizeBytes: 465_109_248,
+                draftSha256: "145db9094bc0f85f1701e255a2ed216dcc9800fc8bc8631ad00905b456bd451b",
                 releaseReady: true,
                 isActiveTier: true
             ),
@@ -4924,6 +4941,9 @@ final class AlphaExtractionTests: XCTestCase {
                 fileName: "gemma-4-26B-A4B-it-UD-Q4_K_M.gguf",
                 sizeBytes: 16_947_539_744,
                 sha256: "34c746b1d50ab813e29cd46c4796e3f43c741901a582f93a67b55b9fc9687b35",
+                draftFileName: "mtp-gemma-4-26B-A4B-it.gguf",
+                draftSizeBytes: 461_766_816,
+                draftSha256: "6326fb9f5e487aa8dcdd313a091e3c67724cb2a666ec3b7d2895b5b26d93ed1b",
                 releaseReady: true,
                 isActiveTier: true
             )
@@ -4939,6 +4959,9 @@ final class AlphaExtractionTests: XCTestCase {
             XCTAssertEqual(artifact.fileName, pinned.fileName)
             XCTAssertEqual(artifact.sizeBytes, pinned.sizeBytes)
             XCTAssertEqual(artifact.sha256, pinned.sha256)
+            XCTAssertEqual(artifact.draftArtifact?.fileName, pinned.draftFileName)
+            XCTAssertEqual(artifact.draftArtifact?.sizeBytes, pinned.draftSizeBytes)
+            XCTAssertEqual(artifact.draftArtifact?.checksumSha256, pinned.draftSha256)
             XCTAssertEqual(artifact.downloadSource, "huggingface")
             XCTAssertTrue(artifact.verified, "Artifact must be verified for \(tier.rawValue)")
             XCTAssertEqual(artifact.releaseReady, pinned.releaseReady, "Unexpected release-ready state for \(tier.rawValue)")
@@ -4958,6 +4981,151 @@ final class AlphaExtractionTests: XCTestCase {
             )
         }
         XCTAssertEqual(alphaAssistantModelArtifact(for: .flash).tier, .quickStart)
+    }
+
+    @MainActor
+    func testStoreInstallsAndRemovesGGUFCompanionDraftArtifact() async throws {
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+
+        let mainData = Data("gguf-main".utf8)
+        let draftData = Data("gguf-draft".utf8)
+        let draftDescriptor = AlphaAssistantDraftArtifactDescriptor(
+            fileName: "mtp-gemma-4-12b-it.gguf",
+            sizeBytes: Int64(draftData.count),
+            checksumSha256: sha256Hex(draftData),
+            artifactKind: "local_model_artifact",
+            downloadURLString: "https://ross.example/mtp-gemma-4-12b-it.gguf",
+            draftTokens: nil
+        )
+
+        let installed = try await store.installDownloadedPackArtifact(
+            for: .caseAssociate,
+            fileName: "gemma-4-12b-it-Q4_K_M.gguf",
+            data: mainData,
+            expectedChecksum: sha256Hex(mainData),
+            packId: "gemma-4-12b-q4",
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            draftArtifact: draftDescriptor,
+            draftArtifactData: draftData
+        )
+
+        let artifactURL = alphaAbsoluteURL(for: installed.relativePath)
+        let manifest = try XCTUnwrap(alphaModelArtifactManifest(forFileAt: artifactURL))
+        let draftArtifact = try XCTUnwrap(manifest.draftArtifact)
+        let draftURL = alphaAbsoluteURL(for: draftArtifact.relativePath)
+
+        XCTAssertEqual(draftArtifact.fileName, draftDescriptor.fileName)
+        XCTAssertEqual(draftArtifact.bytes, Int64(draftData.count))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: draftURL.path))
+
+        await store.removeDownloadedPackArtifact(relativePath: installed.relativePath)
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: artifactURL.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: draftURL.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: alphaModelArtifactManifestURL(forArtifactAt: artifactURL).path))
+    }
+
+    @MainActor
+    func testRecoveredInstalledPackFromDiskRestoresGGUFCompanionDraftArtifact() async throws {
+        let previousValidator = AlphaLlamaCppProvider.modelLoadValidator
+        AlphaLlamaCppProvider.modelLoadValidator = { _ in }
+        defer { AlphaLlamaCppProvider.modelLoadValidator = previousValidator }
+
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+
+        let mainData = Data("gguf-main-recover".utf8)
+        let draftData = Data("gguf-draft-recover".utf8)
+        let draftDescriptor = AlphaAssistantDraftArtifactDescriptor(
+            fileName: "mtp-gemma-4-12b-it.gguf",
+            sizeBytes: Int64(draftData.count),
+            checksumSha256: sha256Hex(draftData),
+            artifactKind: "local_model_artifact",
+            downloadURLString: "https://ross.example/mtp-gemma-4-12b-it.gguf",
+            draftTokens: nil
+        )
+
+        let installed = try await store.installDownloadedPackArtifact(
+            for: .caseAssociate,
+            fileName: "gemma-4-12b-it-Q4_K_M.gguf",
+            data: mainData,
+            expectedChecksum: sha256Hex(mainData),
+            packId: "gemma-4-12b-q4",
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            draftArtifact: draftDescriptor,
+            draftArtifactData: draftData
+        )
+
+        let model = AlphaRossModel(previewState: .empty())
+        let recovered = try XCTUnwrap(model.recoveredInstalledPackFromDisk(tier: .caseAssociate))
+        let expected = try XCTUnwrap(alphaExpectedDownloadedAssistantArtifact(for: recovered))
+
+        XCTAssertEqual(recovered.installPath, installed.relativePath)
+        XCTAssertEqual(expected.draftArtifact?.fileName, draftDescriptor.fileName)
+        XCTAssertEqual(expected.draftArtifact?.bytes, Int64(draftData.count))
+    }
+
+    @MainActor
+    func testLocalRuntimeEnvironmentUsesInstalledGGUFDraftArtifact() async throws {
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+
+        let mainData = Data("gguf-main-runtime".utf8)
+        let draftData = Data("gguf-draft-runtime".utf8)
+        let draftDescriptor = AlphaAssistantDraftArtifactDescriptor(
+            fileName: "mtp-gemma-4-12b-it.gguf",
+            sizeBytes: Int64(draftData.count),
+            checksumSha256: sha256Hex(draftData),
+            artifactKind: "local_model_artifact",
+            downloadURLString: "https://ross.example/mtp-gemma-4-12b-it.gguf",
+            draftTokens: nil
+        )
+
+        let installed = try await store.installDownloadedPackArtifact(
+            for: .caseAssociate,
+            fileName: "gemma-4-12b-it-Q4_K_M.gguf",
+            data: mainData,
+            expectedChecksum: sha256Hex(mainData),
+            packId: "gemma-4-12b-q4",
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            draftArtifact: draftDescriptor,
+            draftArtifactData: draftData
+        )
+        let activePack = installedPack(
+            .caseAssociate,
+            runtimeMode: .llamaCppGguf,
+            packId: "gemma-4-12b-q4",
+            installPath: installed.relativePath,
+            checksum: installed.checksum,
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+
+        let environment = alphaLocalRuntimeEnvironment(
+            activePack: activePack,
+            requestedTier: activePack.tier,
+            installedPacks: [activePack],
+            baseEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .llamaCppGguf,
+                modelPath: alphaAbsoluteURL(for: installed.relativePath).path,
+                modelChecksum: installed.checksum,
+                modelKind: "gguf"
+            )
+        )
+
+        XCTAssertEqual(
+            environment.draftModelPath,
+            alphaAbsoluteURL(for: "model-packs/case_associate/\(draftDescriptor.fileName)").path
+        )
+        XCTAssertNil(environment.draftModelTokens)
     }
 
     func testAssistantCatalogDescriptorPrefersMatchingRuntimeFromBackendManifest() {
@@ -5668,6 +5836,62 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    @MainActor
+    func testInstalledAssistantPackDoesNotMatchDescriptorRequiringDraftArtifact() async throws {
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+
+        let mainData = Data("gguf-main-match".utf8)
+        let installed = try await store.installDownloadedPackArtifact(
+            for: .caseAssociate,
+            fileName: "gemma-4-12b-it-Q4_K_M.gguf",
+            data: mainData,
+            expectedChecksum: sha256Hex(mainData),
+            packId: "gemma-4-12b-q4",
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false
+        )
+        let pack = installedPack(
+            .caseAssociate,
+            runtimeMode: .llamaCppGguf,
+            packId: "gemma-4-12b-q4",
+            installPath: installed.relativePath,
+            checksum: installed.checksum,
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+        let descriptor = AlphaAssistantDownloadDescriptor(
+            sessionId: nil,
+            packId: "gemma-4-12b-q4",
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-it-Q4_K_M.gguf",
+            sizeBytes: Int64(mainData.count),
+            checksumSha256: installed.checksum,
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            downloadURLString: "https://ross.example/artifacts/gemma-4-12b.gguf",
+            verified: true,
+            releaseReady: true,
+            draftArtifact: AlphaAssistantDraftArtifactDescriptor(
+                fileName: "mtp-gemma-4-12b-it.gguf",
+                sizeBytes: 12,
+                checksumSha256: String(repeating: "b", count: 64),
+                artifactKind: "local_model_artifact",
+                downloadURLString: "https://ross.example/artifacts/mtp-gemma-4-12b-it.gguf",
+                draftTokens: nil
+            )
+        )
+
+        XCTAssertFalse(
+            alphaInstalledAssistantPackMatchesDownloadDescriptor(
+                pack,
+                descriptor: descriptor
+            )
+        )
+    }
+
     func testAssistantRuntimeChoiceLabelExplainsConstrainedIPhoneGGUFChoice() {
         let label = alphaAssistantRuntimeChoiceLabel(
             selectedRuntimeMode: .llamaCppGguf,
@@ -5900,6 +6124,70 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(candidate?.availablePackId, available.packId)
         XCTAssertEqual(candidate?.availableSizeBytes, available.sizeBytes)
         XCTAssertEqual(candidate?.dismissedAt, existingDismissed.dismissedAt)
+    }
+
+    @MainActor
+    func testAssistantUpdateCandidatePromptsWhenDraftArtifactChanges() async throws {
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+
+        let mainData = Data("gguf-main-update".utf8)
+        let draftData = Data("gguf-draft-update".utf8)
+        let installed = try await store.installDownloadedPackArtifact(
+            for: .caseAssociate,
+            fileName: "gemma-4-12b-it-Q4_K_M.gguf",
+            data: mainData,
+            expectedChecksum: sha256Hex(mainData),
+            packId: "gemma-4-12b-q4",
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            draftArtifact: AlphaAssistantDraftArtifactDescriptor(
+                fileName: "mtp-gemma-4-12b-it.gguf",
+                sizeBytes: Int64(draftData.count),
+                checksumSha256: sha256Hex(draftData),
+                artifactKind: "local_model_artifact",
+                downloadURLString: "https://ross.example/mtp-gemma-4-12b-it.gguf",
+                draftTokens: nil
+            ),
+            draftArtifactData: draftData
+        )
+        let installedPack = AlphaInstalledModelPack(
+            packId: "gemma-4-12b-q4",
+            tier: .caseAssociate,
+            installPath: installed.relativePath,
+            checksumSha256: installed.checksum,
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+        let available = AlphaAssistantCatalogDescriptor(
+            tier: .caseAssociate,
+            packId: "gemma-4-12b-q4",
+            sizeBytes: Int64(mainData.count),
+            checksumSha256: installed.checksum,
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            draftArtifact: AlphaAssistantDraftArtifactDescriptor(
+                fileName: "mtp-gemma-4-12b-it.gguf",
+                sizeBytes: Int64(draftData.count + 1),
+                checksumSha256: String(repeating: "c", count: 64),
+                artifactKind: "local_model_artifact",
+                downloadURLString: "",
+                draftTokens: nil
+            )
+        )
+
+        let candidate = alphaAssistantUpdateCandidate(
+            installedPack: installedPack,
+            availableDescriptor: available,
+            existingDismissed: nil
+        )
+
+        XCTAssertEqual(candidate?.availablePackId, available.packId)
     }
 
     func testAssistantUpdateCandidateSkipsDownloadPromptWhenFoundationIsPreferred() {
