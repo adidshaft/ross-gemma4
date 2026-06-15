@@ -910,6 +910,13 @@ enum AlphaLocalModelRuntime {
                 modelPath: modelPath,
                 checksumVerified: checksumVerified
             )
+        case .mlxSwiftLm:
+            return AlphaMLXLocalProvider(
+                capabilityTier: tier,
+                modelPathLabel: modelPathLabel,
+                modelPath: modelPath,
+                checksumVerified: checksumVerified
+            )
         case .appleFoundationModels:
             #if canImport(FoundationModels)
             if #available(iOS 26.0, macOS 26.0, *) {
@@ -948,7 +955,7 @@ enum AlphaLocalModelRuntime {
         switch activePack.runtimeMode {
         case .appleFoundationModels:
             guard usesBundledAdapterArtifact(activePack) else { return nil }
-        case .mediapipeLlm, .llamaCppGguf:
+        case .mediapipeLlm, .llamaCppGguf, .mlxSwiftLm:
             break
         case .deterministicDev, .unavailable:
             return nil
@@ -1029,7 +1036,7 @@ enum AlphaLocalModelRuntime {
                 return nil
             }
             return DeterministicDevLocalModelProvider(capabilityTier: tier, executor: executor)
-        case .mediapipeLlm, .llamaCppGguf, .appleFoundationModels, .unavailable:
+        case .mediapipeLlm, .llamaCppGguf, .mlxSwiftLm, .appleFoundationModels, .unavailable:
             return realProvider(activePack: activePack, tier: tier, runtimeEnvironment: runtimeEnvironment)
         }
     }

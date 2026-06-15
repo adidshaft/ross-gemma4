@@ -101,3 +101,10 @@
 - As of May 27, 2026, the Apple Silicon Metal report in `ggml-org/llama.cpp` issue `#23752` shows MTP speculative decoding underperforming the non-MTP baseline on that hardware, so Ross should not assume an iPhone speedup from enabling MTP blindly.
 - `mlx-swift` and `mlx-swift-examples` both document iOS-capable example apps, and `mlx-swift-lm` is the current reusable LLM package for MLX Swift.
 - That MLX path is promising for iPhone-native inference experiments, but it is a separate integration track from Ross's current GGUF delivery path because it requires MLX-specific model and tokenizer loading instead of direct GGUF execution.
+
+## Part 6 — Current Ross implementation result
+
+- Ross now includes an experimental `mlx_swift_lm` runtime mode for iPhone/macOS developer testing.
+- The implementation is intentionally narrow: it is opt-in through local runtime overrides and expects a developer-supplied local MLX model directory containing config, tokenizer, and safetensor files.
+- The normal download/install catalog remains GGUF-first. This keeps the user-facing product path stable while giving Ross a concrete MLX lane for future iPhone performance comparison work.
+- Full physical-device proof still needs to answer the product question that matters: whether MLX is actually smoother or faster than the upgraded GGUF lane on representative iPhones and long private matter files.

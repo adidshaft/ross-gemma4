@@ -3710,6 +3710,22 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(environment.modelKind, "foundation_adapter")
     }
 
+    func testCanonicalRuntimeConfigParsesMLXEnvironment() {
+        let environment = AlphaLocalRuntimeEnvironment.fromEnvironment([
+            "ROSS_ENABLE_REAL_LOCAL_INFERENCE": "true",
+            "ROSS_LOCAL_RUNTIME": "mlx_swift_lm",
+            "ROSS_LOCAL_MODEL_PATH": "/tmp/ross/mlx-model",
+            "ROSS_LOCAL_MODEL_CHECKSUM": String(repeating: "b", count: 64),
+            "ROSS_LOCAL_MODEL_KIND": "mlx_directory",
+        ])
+
+        XCTAssertTrue(environment.enableRealInference)
+        XCTAssertEqual(environment.runtimeModeOverride, .mlxSwiftLm)
+        XCTAssertEqual(environment.modelPath, "/tmp/ross/mlx-model")
+        XCTAssertEqual(environment.modelChecksum, String(repeating: "b", count: 64))
+        XCTAssertEqual(environment.modelKind, "mlx_directory")
+    }
+
     func testRealRuntimeSelectionFailsClosedWhenUnavailable() async {
         let pack = installedPack(.caseAssociate, runtimeMode: .appleFoundationModels)
         let runtimeEnvironment = AlphaLocalRuntimeEnvironment(
@@ -3796,6 +3812,34 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.modelPathLabel, "foundation-adapter.bundle")
     }
 
+    func testRuntimeHealthRedactsConfiguredMLXDirectoryToBasename() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try Data("{}".utf8).write(to: directory.appendingPathComponent("config.json"))
+        try Data("{}".utf8).write(to: directory.appendingPathComponent("tokenizer.json"))
+        try Data("weights".utf8).write(to: directory.appendingPathComponent("model.safetensors"))
+
+        let pack = installedPack(.caseAssociate, runtimeMode: .mlxSwiftLm)
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: directory.path,
+                modelChecksum: String(repeating: "b", count: 64),
+                modelKind: "mlx_directory"
+            )
+        )
+
+        XCTAssertEqual(health?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(health?.available, true)
+        XCTAssertEqual(health?.modelPathLabel, directory.lastPathComponent)
+        XCTAssertEqual(health?.modelPathPresent, true)
+    }
+
     func testRuntimeHealthMarksMissingConfiguredAdapterPathUnavailable() {
         let pack = installedPack(.caseAssociate, runtimeMode: .appleFoundationModels)
         let environment = AlphaLocalRuntimeEnvironment(
@@ -3814,6 +3858,60 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(health?.available, false)
         XCTAssertEqual(health?.lastErrorCategory, "runtime_dependency_unavailable")
+    }
+
+    func testRuntimeHealthMarksIncompleteConfiguredMLXDirectoryUnavailable() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-incomplete-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try Data("{}".utf8).write(to: directory.appendingPathComponent("config.json"))
+
+        let pack = installedPack(.quickStart, runtimeMode: .mlxSwiftLm)
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: directory.path,
+                modelChecksum: String(repeating: "c", count: 64),
+                modelKind: "mlx_directory"
+            )
+        )
+
+        XCTAssertEqual(health?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(health?.available, false)
+        XCTAssertEqual(health?.lastErrorCategory, "runtime_validation_failed")
+    }
+
+    func testResolveProviderReturnsExperimentalMLXProviderForDebugDirectory() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-provider-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try Data("{}".utf8).write(to: directory.appendingPathComponent("config.json"))
+        try Data("{}".utf8).write(to: directory.appendingPathComponent("tokenizer.json"))
+        try Data("weights".utf8).write(to: directory.appendingPathComponent("model.safetensors"))
+
+        let pack = installedPack(.caseAssociate, runtimeMode: .mlxSwiftLm)
+        let provider = AlphaLocalModelRuntime.resolveProvider(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: directory.path,
+                modelChecksum: String(repeating: "d", count: 64),
+                modelKind: "mlx_directory"
+            )
+        ) { _ in
+            AlphaLocalModelOutput(rawText: "", parsedJson: nil, schemaValid: false, warnings: [], sourceRefs: [])
+        }
+
+        XCTAssertEqual(provider?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(provider?.isAvailable(), true)
+        XCTAssertEqual(provider?.runtimeHealth().modelPathLabel, directory.lastPathComponent)
     }
 
     func testLlamaValidationRejectsMissingModelPath() {

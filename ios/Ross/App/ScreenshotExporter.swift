@@ -542,7 +542,7 @@ struct RossLocalModelSmokeView: View {
             return nil
         }
         let runtimeMode = environment.runtimeModeOverride ?? .llamaCppGguf
-        guard runtimeMode == .llamaCppGguf || runtimeMode == .appleFoundationModels else {
+        guard runtimeMode == .llamaCppGguf || runtimeMode == .mlxSwiftLm || runtimeMode == .appleFoundationModels else {
             return nil
         }
         let checksum = nonEmpty(environment.modelChecksum) ?? "debug-local-model-unverified"

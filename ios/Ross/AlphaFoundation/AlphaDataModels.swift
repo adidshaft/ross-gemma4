@@ -1809,6 +1809,7 @@ enum AlphaPackRuntimeMode: String, Codable, Hashable, Sendable {
     case deterministicDev = "deterministic_dev"
     case mediapipeLlm = "mediapipe_llm"
     case llamaCppGguf = "gemma_local_runtime"
+    case mlxSwiftLm = "mlx_swift_lm"
     case appleFoundationModels = "apple_foundation_models"
     case unavailable = "unavailable"
 
@@ -1822,6 +1823,8 @@ enum AlphaPackRuntimeMode: String, Codable, Hashable, Sendable {
             self = .mediapipeLlm
         case AlphaPackRuntimeMode.llamaCppGguf.rawValue:
             self = .llamaCppGguf
+        case AlphaPackRuntimeMode.mlxSwiftLm.rawValue:
+            self = .mlxSwiftLm
         case AlphaPackRuntimeMode.appleFoundationModels.rawValue:
             self = .appleFoundationModels
         case "platform_stub", AlphaPackRuntimeMode.unavailable.rawValue:

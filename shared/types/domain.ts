@@ -74,6 +74,7 @@ export type LocalRuntimeMode =
   | "deterministic_dev"
   | "mediapipe_llm"
   | "gemma_local_runtime"
+  | "mlx_swift_lm"
   | "apple_foundation_models"
   | "litert"
   | "unavailable";
