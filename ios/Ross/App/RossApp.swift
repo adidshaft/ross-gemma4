@@ -2667,6 +2667,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Answer details",
             "te": "Answer details"
         ],
+        "prompt_size": [
+            "en": "Prompt size",
+            "hi": "Prompt size",
+            "bn": "Prompt size",
+            "ta": "Prompt size",
+            "te": "Prompt size"
+        ],
+        "source_sections_reviewed": [
+            "en": "Source sections reviewed",
+            "hi": "Source sections reviewed",
+            "bn": "Source sections reviewed",
+            "ta": "Source sections reviewed",
+            "te": "Source sections reviewed"
+        ],
         "public_law_check": [
             "en": "Public-law check",
             "hi": "Public-law check देखें",

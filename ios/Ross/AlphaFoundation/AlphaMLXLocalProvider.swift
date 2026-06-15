@@ -455,7 +455,8 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                         warnings: pack.truncated ? [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts] : [],
                         sourceRefs: usesPlainMatterAnswerPrompt
                             ? (focusedMatterSourceRefs.isEmpty ? Array(taskInput.sourcePack.prefix(5).map(\.sourceRef)) : focusedMatterSourceRefs)
-                            : pack.includedSourceRefs
+                            : pack.includedSourceRefs,
+                        inputChars: pack.inputChars
                     )
                     )
                 }
@@ -482,6 +483,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
                 sourceRefs: usesPlainMatterAnswerPrompt
                     ? (focusedMatterSourceRefs.isEmpty ? Array(taskInput.sourcePack.prefix(5).map(\.sourceRef)) : focusedMatterSourceRefs)
                     : pack.includedSourceRefs,
+                inputChars: pack.inputChars,
                 inputTokenCount: generation.promptTokenCount,
                 outputTokenCount: generation.generationTokenCount,
                 outputTokensPerSecond: generation.outputTokensPerSecond,

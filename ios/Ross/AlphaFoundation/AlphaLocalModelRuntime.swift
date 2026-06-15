@@ -94,6 +94,7 @@ struct AlphaLocalModelOutput: Codable, Hashable, Sendable {
     var schemaValid: Bool
     var warnings: [String]
     var sourceRefs: [AlphaSourceRef]
+    var inputChars: Int? = nil
     var inputTokenCount: Int? = nil
     var outputTokenCount: Int? = nil
     var outputTokensPerSecond: Double? = nil
@@ -1334,6 +1335,7 @@ struct AlphaUnavailableRealLocalModelProvider: AlphaRealLocalModelProvider {
                 pack.truncated ? AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts : AlphaLocalModelWarningCopy.sourceTextStayedLocal
             ],
             sourceRefs: pack.includedSourceRefs.isEmpty ? taskInput.sourcePack.map(\.sourceRef) : pack.includedSourceRefs,
+            inputChars: pack.inputChars,
             errorCategory: errorCategory
         )
     }
@@ -1389,7 +1391,8 @@ func alphaFoundationModelOutput(
             parsedJson: nil,
             schemaValid: !finalResponse.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
             warnings: warnings,
-            sourceRefs: promptPack.includedSourceRefs
+            sourceRefs: promptPack.includedSourceRefs,
+            inputChars: promptPack.inputChars
         )
     }
 
@@ -1400,6 +1403,7 @@ func alphaFoundationModelOutput(
         schemaValid: parsedJson != nil,
         warnings: warnings,
         sourceRefs: promptPack.includedSourceRefs,
+        inputChars: promptPack.inputChars,
         errorCategory: parsedJson == nil ? "invalid_model_output" : nil
     )
 }
@@ -1418,7 +1422,8 @@ func alphaFoundationModelPartialOutput(
             ? !trimmedResponse.isEmpty
             : alphaFoundationExtractJSONCandidate(from: trimmedResponse) != nil,
         warnings: promptPack.truncated ? [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts] : [],
-        sourceRefs: promptPack.includedSourceRefs
+        sourceRefs: promptPack.includedSourceRefs,
+        inputChars: promptPack.inputChars
     )
 }
 

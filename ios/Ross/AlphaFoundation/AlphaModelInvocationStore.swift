@@ -10,6 +10,8 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
     var extractionRunId: UUID?
     var capabilityTier: String
     var inputSourceRefs: [AlphaSourceRef]
+    var reviewedSourceCount: Int?
+    var promptBudgetChars: Int?
     var promptHash: String
     var inputHash: String
     var outputHash: String?
@@ -36,6 +38,8 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
         extractionRunId: UUID?,
         capabilityTier: String,
         inputSourceRefs: [AlphaSourceRef],
+        reviewedSourceCount: Int? = nil,
+        promptBudgetChars: Int? = nil,
         promptHash: String,
         inputHash: String,
         outputHash: String? = nil,
@@ -61,6 +65,8 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
         self.extractionRunId = extractionRunId
         self.capabilityTier = capabilityTier
         self.inputSourceRefs = inputSourceRefs
+        self.reviewedSourceCount = reviewedSourceCount
+        self.promptBudgetChars = promptBudgetChars
         self.promptHash = promptHash
         self.inputHash = inputHash
         self.outputHash = outputHash
@@ -108,6 +114,7 @@ enum AlphaModelInvocationStore {
                     ocrConfidence: sourceBlock.sourceRef.ocrConfidence
                 )
             },
+            promptBudgetChars: input.promptBudgetOverrideChars,
             promptHash: sha256Hex("\(input.instruction)\n\(input.expectedSchema)"),
             inputHash: sha256Hex(input.sourcePack.map { "\($0.sourceRef.documentId.uuidString):\($0.pageNumber):\($0.text)" }.joined(separator: "|")),
             inputChars: input.instruction.count + input.expectedSchema.count + input.sourcePack.reduce(0) { $0 + $1.text.count },
@@ -125,9 +132,15 @@ enum AlphaModelInvocationStore {
         let completedAt = Date.now
         let outputTokens = output.outputTokenCount ?? (outputText.isEmpty ? 0 : max(outputText.count / 4, 1))
         copy.outputHash = sha256Hex(outputText)
+        if let inputChars = output.inputChars {
+            copy.inputChars = inputChars
+        }
         copy.outputChars = outputText.isEmpty ? 0 : outputText.count
         if let inputTokenCount = output.inputTokenCount {
             copy.estimatedInputTokens = inputTokenCount
+        }
+        if !output.sourceRefs.isEmpty {
+            copy.reviewedSourceCount = output.sourceRefs.count
         }
         copy.estimatedOutputTokens = outputTokens
         copy.completedAt = completedAt

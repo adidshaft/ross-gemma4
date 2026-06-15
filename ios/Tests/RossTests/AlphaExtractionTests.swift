@@ -3879,7 +3879,13 @@ final class AlphaExtractionTests: XCTestCase {
             documentId: nil,
             extractionRunId: nil,
             capabilityTier: AlphaCapabilityTier.quickStart.rawValue,
-            inputSourceRefs: [],
+            inputSourceRefs: [
+                AlphaSourceRef(caseId: UUID(), documentId: UUID(), documentTitle: "Order", pageNumber: 1),
+                AlphaSourceRef(caseId: UUID(), documentId: UUID(), documentTitle: "Order", pageNumber: 2),
+                AlphaSourceRef(caseId: UUID(), documentId: UUID(), documentTitle: "Order", pageNumber: 3)
+            ],
+            reviewedSourceCount: 2,
+            promptBudgetChars: 700,
             promptHash: "prompt",
             inputHash: "input",
             outputHash: "output",
@@ -3896,6 +3902,16 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(
             invocation.answerDetailSecondaryMetrics,
             [
+                AlphaAnswerDetailMetric(
+                    key: "prompt_size",
+                    label: "Prompt size",
+                    value: "480 / 700 chars"
+                ),
+                AlphaAnswerDetailMetric(
+                    key: "source_sections_reviewed",
+                    label: "Source sections reviewed",
+                    value: "2 / 3"
+                ),
                 AlphaAnswerDetailMetric(
                     key: "runtime_first_response",
                     label: "First response",
@@ -3927,7 +3943,8 @@ final class AlphaExtractionTests: XCTestCase {
             ],
             expectedSchema: "plain_text",
             maxOutputTokens: 128,
-            extractionMode: .quickStart
+            extractionMode: .quickStart,
+            promptBudgetOverrideChars: 1_850
         )
         let invocation = AlphaModelInvocationStore.begin(
             task: .matterQuestionAnswer,
@@ -3947,6 +3964,7 @@ final class AlphaExtractionTests: XCTestCase {
                 schemaValid: true,
                 warnings: [],
                 sourceRefs: [sourceRef],
+                inputChars: 248,
                 inputTokenCount: 412,
                 outputTokenCount: 38,
                 outputTokensPerSecond: 19.25,
@@ -3959,6 +3977,9 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(completed.estimatedProcessedTokens, 450)
         XCTAssertEqual(completed.estimatedOutputTokensPerSecond, 19.25)
         XCTAssertEqual(completed.timeToFirstTokenMs, 610)
+        XCTAssertEqual(completed.inputChars, 248)
+        XCTAssertEqual(completed.reviewedSourceCount, 1)
+        XCTAssertEqual(completed.promptBudgetChars, 1_850)
     }
 
     func testLocalExtractionDetectsMixedLanguageProfile() async {

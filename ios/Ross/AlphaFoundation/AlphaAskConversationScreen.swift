@@ -805,6 +805,24 @@ extension AlphaLocalModelInvocation {
         return usesMeasuredTokenCounts ? tokens.formatted() : "~\(tokens.formatted())"
     }
 
+    var answerDetailPromptSizeLabel: String? {
+        guard let inputChars else { return nil }
+        if let promptBudgetChars, promptBudgetChars > 0 {
+            return "\(inputChars.formatted()) / \(promptBudgetChars.formatted()) chars"
+        }
+        return alphaAssistantInputBudgetLabel(chars: inputChars)
+    }
+
+    var answerDetailReviewedSourceSectionsLabel: String? {
+        guard let reviewedSourceCount else { return nil }
+        let totalSourceCount = inputSourceRefs.count
+        guard totalSourceCount > 0 else { return reviewedSourceCount.formatted() }
+        if reviewedSourceCount < totalSourceCount {
+            return "\(reviewedSourceCount.formatted()) / \(totalSourceCount.formatted())"
+        }
+        return reviewedSourceCount.formatted()
+    }
+
     var answerDetailOverviewMetrics: [AlphaAnswerDetailMetric] {
         var metrics: [AlphaAnswerDetailMetric] = []
 
@@ -832,14 +850,39 @@ extension AlphaLocalModelInvocation {
     }
 
     var answerDetailSecondaryMetrics: [AlphaAnswerDetailMetric] {
-        guard let timeToFirstTokenMs else { return [] }
-        return [
-            AlphaAnswerDetailMetric(
-                key: "runtime_first_response",
-                label: rossLocalized("runtime_first_response"),
-                value: alphaAssistantFirstResponseLabel(milliseconds: timeToFirstTokenMs)
+        var metrics: [AlphaAnswerDetailMetric] = []
+
+        if let promptSize = answerDetailPromptSizeLabel {
+            metrics.append(
+                AlphaAnswerDetailMetric(
+                    key: "prompt_size",
+                    label: rossLocalized("prompt_size"),
+                    value: promptSize
+                )
             )
-        ]
+        }
+
+        if let reviewedSourceSections = answerDetailReviewedSourceSectionsLabel {
+            metrics.append(
+                AlphaAnswerDetailMetric(
+                    key: "source_sections_reviewed",
+                    label: rossLocalized("source_sections_reviewed"),
+                    value: reviewedSourceSections
+                )
+            )
+        }
+
+        if let timeToFirstTokenMs {
+            metrics.append(
+                AlphaAnswerDetailMetric(
+                    key: "runtime_first_response",
+                    label: rossLocalized("runtime_first_response"),
+                    value: alphaAssistantFirstResponseLabel(milliseconds: timeToFirstTokenMs)
+                )
+            )
+        }
+
+        return metrics
     }
 }
 
