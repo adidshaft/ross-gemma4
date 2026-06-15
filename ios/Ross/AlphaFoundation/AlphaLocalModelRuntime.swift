@@ -757,8 +757,21 @@ enum AlphaPromptFocusPlanner {
         for index in chosenIndices {
             let nextSegment = segments[index]
             let candidate = excerpt.isEmpty ? nextSegment : "\(excerpt) ... \(nextSegment)"
-            guard candidate.count <= maxChars else { continue }
-            excerpt = candidate
+            if candidate.count <= maxChars {
+                excerpt = candidate
+                continue
+            }
+
+            let remainingChars = excerpt.isEmpty ? maxChars : maxChars - excerpt.count - 5
+            guard remainingChars > 24 else { continue }
+            let trimmedSegment = focusedSegmentExcerpt(
+                from: nextSegment,
+                instructionTerms: terms,
+                maxChars: remainingChars
+            )
+            let compactCandidate = excerpt.isEmpty ? trimmedSegment : "\(excerpt) ... \(trimmedSegment)"
+            guard compactCandidate.count <= maxChars else { continue }
+            excerpt = compactCandidate
         }
 
         return excerpt.isEmpty ? headTailExcerpt(from: cleanedText, maxChars: maxChars) : excerpt
@@ -807,6 +820,60 @@ enum AlphaPromptFocusPlanner {
         value
             .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func focusedSegmentExcerpt(
+        from text: String,
+        instructionTerms: Set<String>,
+        maxChars: Int
+    ) -> String {
+        let cleanedText = normalized(text)
+        guard maxChars > 0, cleanedText.count > maxChars else {
+            return String(cleanedText.prefix(max(maxChars, 0)))
+        }
+
+        let loweredText = cleanedText.lowercased()
+        let matchRanges = instructionTerms.compactMap { term in
+            loweredText.range(of: term.lowercased())
+        }
+        guard !matchRanges.isEmpty else {
+            return headTailExcerpt(from: cleanedText, maxChars: maxChars)
+        }
+
+        let visibleBudget = max(maxChars - 6, 24)
+        let startOffsets = matchRanges.map { loweredText.distance(from: loweredText.startIndex, to: $0.lowerBound) }
+        let endOffsets = matchRanges.map { loweredText.distance(from: loweredText.startIndex, to: $0.upperBound) }
+        let firstMatchOffset = startOffsets.min() ?? 0
+        let lastMatchOffset = endOffsets.max() ?? min(cleanedText.count, visibleBudget)
+
+        let windowStart: Int
+        let windowEnd: Int
+        if lastMatchOffset - firstMatchOffset >= visibleBudget {
+            let midpoint = (firstMatchOffset + lastMatchOffset) / 2
+            windowStart = max(0, midpoint - visibleBudget / 2)
+            windowEnd = min(cleanedText.count, windowStart + visibleBudget)
+        } else {
+            let extraContext = visibleBudget - (lastMatchOffset - firstMatchOffset)
+            let leadingContext = extraContext / 2
+            let trailingContext = extraContext - leadingContext
+            let tentativeStart = max(0, firstMatchOffset - leadingContext)
+            let tentativeEnd = min(cleanedText.count, lastMatchOffset + trailingContext)
+            let shortfall = visibleBudget - (tentativeEnd - tentativeStart)
+            windowStart = max(0, tentativeStart - shortfall)
+            windowEnd = min(cleanedText.count, windowStart + visibleBudget)
+        }
+
+        let snippet = substring(cleanedText, from: windowStart, to: windowEnd)
+        let prefix = windowStart > 0 ? "..." : ""
+        let suffix = windowEnd < cleanedText.count ? "..." : ""
+        return prefix + snippet + suffix
+    }
+
+    private static func substring(_ text: String, from startOffset: Int, to endOffset: Int) -> String {
+        guard startOffset < endOffset else { return "" }
+        let start = text.index(text.startIndex, offsetBy: max(0, min(startOffset, text.count)))
+        let end = text.index(text.startIndex, offsetBy: max(0, min(endOffset, text.count)))
+        return String(text[start..<end])
     }
 
     private static func headTailExcerpt(from text: String, maxChars: Int) -> String {

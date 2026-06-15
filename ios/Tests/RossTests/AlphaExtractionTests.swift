@@ -1155,6 +1155,67 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(pack.truncated)
     }
 
+    func testFocusedExcerptKeepsMiddleMatchFromLongSegment() {
+        let text = """
+        The registry summary explains the filing path and serial defects for the appeal record while the next hearing date is 12 July 2026 and counsel must carry the vakalatnama and affidavit set before listing, followed by additional notes about later compliance steps.
+        """
+
+        let excerpt = AlphaPromptFocusPlanner.focusedExcerpt(
+            from: text,
+            instruction: "What is the next hearing date and what should counsel carry?",
+            maxChars: 96
+        )
+
+        XCTAssertLessThanOrEqual(excerpt.count, 96)
+        XCTAssertTrue(excerpt.contains("12 July 2026"), excerpt)
+        XCTAssertTrue(excerpt.localizedCaseInsensitiveContains("vakalatnama"), excerpt)
+        XCTAssertFalse(excerpt.hasPrefix("The registry summary explains"), excerpt)
+    }
+
+    func testPromptPackBuilderPreservesMiddleRelevantEvidenceWhenSourceIsTrimmed() {
+        let caseID = UUID()
+        let documentID = UUID()
+        let longText = """
+        The registry summary explains the filing path and serial defects for the appeal record while the next hearing date is 12 July 2026 and counsel must carry the vakalatnama and affidavit set before listing, followed by additional notes about later compliance steps and ministerial reminders that are not directly relevant to the question.
+        """
+        let input = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "What is the next hearing date and what should counsel carry?",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: AlphaSourceRef(
+                        caseId: caseID,
+                        documentId: documentID,
+                        documentTitle: "Hearing Order",
+                        pageNumber: 4,
+                        textSnippet: "next hearing date is 12 July 2026"
+                    ),
+                    text: longText,
+                    pageNumber: 4,
+                    languageHint: "en",
+                    ocrConfidence: 0.96
+                )
+            ],
+            expectedSchema: "plain_text",
+            maxOutputTokens: 128,
+            languageProfile: nil,
+            documentClassification: nil,
+            extractionMode: .caseAssociate,
+            promptBudgetOverrideChars: 820,
+            sourceExcerptCharsOverride: 96
+        )
+
+        let pack = AlphaPromptPackBuilder(
+            maxInputChars: input.promptBudgetOverrideChars ?? 820,
+            sourceBlockLimit: input.sourceBlockLimitOverride,
+            sourceExcerptChars: input.sourceExcerptCharsOverride
+        ).build(input: input)
+
+        XCTAssertTrue(pack.promptText.contains("12 July 2026"), pack.promptText)
+        XCTAssertTrue(pack.promptText.localizedCaseInsensitiveContains("vakalatnama"), pack.promptText)
+        XCTAssertTrue(pack.truncated)
+    }
+
     func testMatterQuestionPromptPackStaysInsideBudgetAndTracksActualIncludedSources() {
         let caseID = UUID()
         let firstDocument = UUID()
