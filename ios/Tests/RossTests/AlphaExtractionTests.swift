@@ -8204,6 +8204,76 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(prioritized.map(\.pageNumber), [4, 1, 7])
     }
 
+    @MainActor
+    func testSelectedDocumentCoverageBalancesPrimaryBlocksAcrossMultipleTaggedFiles() {
+        let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
+        let caseID = UUID()
+        let firstDocumentID = UUID()
+        let secondDocumentID = UUID()
+
+        let firstRanked = AlphaSourceTextBlock(
+            sourceRef: AlphaSourceRef(
+                caseId: caseID,
+                documentId: firstDocumentID,
+                documentTitle: "Order sheet",
+                pageNumber: 4,
+                textSnippet: "Hearing on 17 June 2026"
+            ),
+            text: "The hearing is listed on 17 June 2026 and written submissions are due before that.",
+            pageNumber: 4,
+            languageHint: "en",
+            ocrConfidence: 0.95
+        )
+        let firstBoundary = AlphaSourceTextBlock(
+            sourceRef: AlphaSourceRef(
+                caseId: caseID,
+                documentId: firstDocumentID,
+                documentTitle: "Order sheet",
+                pageNumber: 1,
+                textSnippet: "Opening directions"
+            ),
+            text: "Opening directions and filing context.",
+            pageNumber: 1,
+            languageHint: "en",
+            ocrConfidence: 0.93
+        )
+        let secondRanked = AlphaSourceTextBlock(
+            sourceRef: AlphaSourceRef(
+                caseId: caseID,
+                documentId: secondDocumentID,
+                documentTitle: "Affidavit note",
+                pageNumber: 3,
+                textSnippet: "Affidavit corrections"
+            ),
+            text: "Affidavit corrections must be verified with the client before filing.",
+            pageNumber: 3,
+            languageHint: "en",
+            ocrConfidence: 0.94
+        )
+        let secondBoundary = AlphaSourceTextBlock(
+            sourceRef: AlphaSourceRef(
+                caseId: caseID,
+                documentId: secondDocumentID,
+                documentTitle: "Affidavit note",
+                pageNumber: 1,
+                textSnippet: "Opening affidavit note"
+            ),
+            text: "Opening affidavit note and context.",
+            pageNumber: 1,
+            languageHint: "en",
+            ocrConfidence: 0.92
+        )
+
+        let prioritized = model.alphaPrioritizedSelectedDocumentSourceBlocks(
+            [firstBoundary, firstRanked, secondBoundary, secondRanked],
+            rankedBlocks: [firstRanked, secondRanked],
+            selectedDocumentIDs: [firstDocumentID, secondDocumentID]
+        )
+
+        XCTAssertEqual(prioritized.prefix(2).map(\.sourceRef.documentId), [firstDocumentID, secondDocumentID])
+        XCTAssertEqual(prioritized.map(\.pageNumber), [4, 3, 1, 1])
+    }
+
     func testSourceLanguageHintFallsBackToDocumentProfile() {
         let profile = AlphaDocumentLanguageProfile(
             documentId: UUID(),

@@ -1804,15 +1804,29 @@ extension AlphaRossModel {
             prioritized.append(block)
         }
 
+        var fallbackBlocksByDocument: [UUID: [AlphaSourceTextBlock]] = [:]
         for documentID in orderedDocumentIDs {
             if let rankedBlock = groupedRankedBlocks[documentID]?.first {
                 appendIfNeeded(rankedBlock)
             }
-            for fallbackBlock in alphaPreferredSelectedDocumentFallbackBlocks(
+            fallbackBlocksByDocument[documentID] = alphaPreferredSelectedDocumentFallbackBlocks(
                 groupedBlocks[documentID] ?? []
-            ) {
-                appendIfNeeded(fallbackBlock)
+            )
+        }
+
+        var fallbackIndex = 0
+        while true {
+            var appendedAnyFallback = false
+            for documentID in orderedDocumentIDs {
+                guard let fallbackBlocks = fallbackBlocksByDocument[documentID],
+                      fallbackIndex < fallbackBlocks.count else {
+                    continue
+                }
+                appendIfNeeded(fallbackBlocks[fallbackIndex])
+                appendedAnyFallback = true
             }
+            guard appendedAnyFallback else { break }
+            fallbackIndex += 1
         }
 
         for block in rankedBlocks {
