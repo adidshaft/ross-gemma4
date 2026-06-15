@@ -30,7 +30,14 @@ Do not claim release-ready physical iPhone inference until these are recorded:
 3. Imported PDF, image, and text files from Files/iCloud/Downloads are used in Ask Ross with source-grounded English, Hindi, and Bengali questions.
 4. Device performance, storage use, privacy ledger entries, logs, and fallback behavior are recorded in `docs/REAL_MODEL_QA_RESULTS.md`.
 
-The new experimental MLX lane also remains unproven on physical iPhone hardware. It currently supports only developer-supplied local directories selected through explicit runtime overrides such as `ROSS_LOCAL_RUNTIME=mlx_swift_lm`. Optional speculative decoding can be enabled with `ROSS_LOCAL_DRAFT_MODEL_PATH` and `ROSS_LOCAL_DRAFT_MODEL_TOKENS` when both main and draft directories share a compatible tokenizer.
+The new experimental MLX lane also remains unproven on physical iPhone hardware. It currently supports only developer-supplied local directories selected through explicit runtime overrides such as `ROSS_LOCAL_RUNTIME=mlx_swift_lm`.
+
+Ross now fails closed on known-bad Gemma 4 MLX archives instead of waiting for an inference-time crash:
+- `gemma4_assistant` draft checkpoints are not treated as runnable Ross archives yet because upstream `mlx-swift-lm` still lacks the Gemma 4 assistant loader needed for MTP draft models.
+- Gemma 4 26B-A4B MLX archives are rejected because the current upstream loader still does not support the MoE routing keys.
+- Known Gemma 4 31B dense MLX archives are also treated as unsupported because the current stack can still crash on first generation.
+
+If `ROSS_LOCAL_DRAFT_MODEL_PATH` points at one of those unsupported draft archives, Ross now drops back to standard MLX generation instead of poisoning the whole runtime.
 
 ## Build Notes
 

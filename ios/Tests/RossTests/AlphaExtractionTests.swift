@@ -4208,6 +4208,62 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.lastErrorCategory, "runtime_validation_failed")
     }
 
+    func testRuntimeHealthMarksUnsupportedGemma4AssistantMLXArchiveUnavailable() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-assistant-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try Data(#"{"model_type":"gemma4_assistant","architectures":["Gemma4AssistantForCausalLM"]}"#.utf8)
+            .write(to: directory.appendingPathComponent("config.json"))
+        try Data("{}".utf8).write(to: directory.appendingPathComponent("tokenizer.json"))
+        try Data("weights".utf8).write(to: directory.appendingPathComponent("model.safetensors"))
+
+        let pack = installedPack(.caseAssociate, runtimeMode: .mlxSwiftLm)
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: directory.path,
+                modelChecksum: String(repeating: "c", count: 64),
+                modelKind: "mlx_directory"
+            )
+        )
+
+        XCTAssertEqual(health?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(health?.available, false)
+        XCTAssertEqual(health?.lastErrorCategory, "unsupported_model_archive")
+        XCTAssertEqual(health?.userFacingStatus, rossLocalized("runtime_health_mlx_archive_unsupported"))
+    }
+
+    func testRuntimeHealthMarksUnsupportedGemma4MoEMLXArchiveUnavailable() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-26b-a4b-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try Data(#"{"model_type":"gemma4","num_local_experts":64,"router_aux_loss_coef":0.01}"#.utf8)
+            .write(to: directory.appendingPathComponent("config.json"))
+        try Data("{}".utf8).write(to: directory.appendingPathComponent("tokenizer.json"))
+        try Data("weights".utf8).write(to: directory.appendingPathComponent("model.safetensors"))
+
+        let pack = installedPack(.seniorDraftingSupport, runtimeMode: .mlxSwiftLm)
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: directory.path,
+                modelChecksum: String(repeating: "d", count: 64),
+                modelKind: "mlx_directory"
+            )
+        )
+
+        XCTAssertEqual(health?.available, false)
+        XCTAssertEqual(health?.lastErrorCategory, "unsupported_model_archive")
+    }
+
     func testResolveProviderReturnsExperimentalMLXProviderForDebugDirectory() throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ross-mlx-provider-\(UUID().uuidString)", isDirectory: true)
@@ -4235,6 +4291,93 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(provider?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(provider?.isAvailable(), true)
         XCTAssertEqual(provider?.runtimeHealth().modelPathLabel, directory.lastPathComponent)
+    }
+
+    func testExperimentalMLXProviderIgnoresUnsupportedDraftArchive() async throws {
+        actor DraftCapture {
+            var draftPath: String?
+
+            func record(draftPath: String?) {
+                self.draftPath = draftPath
+            }
+        }
+
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-main-\(UUID().uuidString)", isDirectory: true)
+        let draftDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-assistant-draft-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: draftDirectory, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+            try? FileManager.default.removeItem(at: draftDirectory)
+        }
+        try Data(#"{"model_type":"gemma4"}"#.utf8).write(to: directory.appendingPathComponent("config.json"))
+        try Data("{}".utf8).write(to: directory.appendingPathComponent("tokenizer.json"))
+        try Data("weights".utf8).write(to: directory.appendingPathComponent("model.safetensors"))
+        try Data(#"{"model_type":"gemma4_assistant","architectures":["Gemma4AssistantForCausalLM"]}"#.utf8)
+            .write(to: draftDirectory.appendingPathComponent("config.json"))
+        try Data("{}".utf8).write(to: draftDirectory.appendingPathComponent("tokenizer.json"))
+        try Data("weights".utf8).write(to: draftDirectory.appendingPathComponent("model.safetensors"))
+
+        let previousGenerator = AlphaMLXLocalProvider.streamGenerator
+        defer { AlphaMLXLocalProvider.streamGenerator = previousGenerator }
+
+        let capture = DraftCapture()
+        AlphaMLXLocalProvider.streamGenerator = { _, draftURL, _, _, _, _, _ in
+            await capture.record(draftPath: draftURL?.path)
+            return "Standard answer"
+        }
+
+        let pack = installedPack(.caseAssociate, runtimeMode: .mlxSwiftLm)
+        let provider = AlphaLocalModelRuntime.resolveProvider(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: directory.path,
+                modelChecksum: String(repeating: "e", count: 64),
+                modelKind: "mlx_directory",
+                draftModelPath: draftDirectory.path,
+                draftModelTokens: 4
+            )
+        ) { _ in
+            AlphaLocalModelOutput(rawText: "", parsedJson: nil, schemaValid: false, warnings: [], sourceRefs: [])
+        }
+
+        _ = await provider?.run(
+            AlphaLocalModelInput(
+                task: .matterQuestionAnswer,
+                instruction: "Summarize the selected order.",
+                sourcePack: [
+                    AlphaSourceTextBlock(
+                        sourceRef: AlphaSourceRef(
+                            caseId: UUID(),
+                            documentId: UUID(),
+                            documentTitle: "Selected Order",
+                            pageNumber: 1,
+                            textSnippet: "The matter is listed on 14 May 2026."
+                        ),
+                        text: "The matter is listed on 14 May 2026.",
+                        pageNumber: 1,
+                        languageHint: "en",
+                        ocrConfidence: 0.99
+                    )
+                ],
+                expectedSchema: "plain_text",
+                maxOutputTokens: 128,
+                extractionMode: .caseAssociate
+            )
+        )
+
+        let runtimeHealth = provider?.runtimeHealth()
+        let recordedDraftPath = await capture.draftPath
+
+        XCTAssertEqual(recordedDraftPath, nil)
+        XCTAssertEqual(runtimeHealth?.accelerationMode, .standard)
+        XCTAssertEqual(runtimeHealth?.draftModelPathLabel, nil)
+        XCTAssertEqual(runtimeHealth?.accelerationDraftTokens, nil)
     }
 
     func testExperimentalMLXProviderPassesDraftModelConfigToGenerator() async throws {

@@ -2401,6 +2401,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Ross இந்த assistant setup-ஐ திறக்க முடியவில்லை. My assistant திறந்து Repair setup பயன்படுத்தவும்.",
             "te": "Ross ఈ assistant setup తెరవలేకపోయింది. My assistant తెరిచి Repair setup ఉపయోగించండి."
         ],
+        "runtime_health_mlx_archive_unsupported": [
+            "en": "This MLX archive is not supported yet. Use the GGUF assistant pack or a compatible MLX Gemma 4 archive.",
+            "hi": "यह MLX archive अभी supported नहीं है। GGUF assistant pack या compatible MLX Gemma 4 archive इस्तेमाल करें।",
+            "bn": "এই MLX archive এখনও supported নয়। GGUF assistant pack বা compatible MLX Gemma 4 archive ব্যবহার করুন।",
+            "ta": "இந்த MLX archive இன்னும் supported அல்ல. GGUF assistant pack அல்லது compatible MLX Gemma 4 archive பயன்படுத்தவும்.",
+            "te": "ఈ MLX archive ఇంకా supported కాదు. GGUF assistant pack లేదా compatible MLX Gemma 4 archive ఉపయోగించండి."
+        ],
         "runtime_health_foundation_available": [
             "en": "Private assistant on this device is available.",
             "hi": "इस device पर private assistant available है।",

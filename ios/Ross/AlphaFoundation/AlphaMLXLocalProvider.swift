@@ -107,6 +107,13 @@ private actor AlphaMLXModelContainerCache {
     }
 }
 
+private enum AlphaMLXArchiveCompatibility {
+    case supported
+    case unsupportedGemma4Assistant
+    case unsupportedGemma4MoE
+    case unsupportedGemma4Dense31B
+}
+
 final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
     let capabilityTier: AlphaCapabilityTier
     let runtimeMode: AlphaPackRuntimeMode = .mlxSwiftLm
@@ -194,6 +201,8 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
 
     func runtimeHealth() -> AlphaLocalRuntimeHealth {
         let availability = runtimeAvailability()
+        let draftDirectoryURL = resolvedDraftDirectoryURL()
+        let draftTokens = draftTokensForGeneration()
         return AlphaLocalRuntimeHealth(
             runtimeMode: runtimeMode,
             available: availability.available,
@@ -203,9 +212,9 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             supportedTasks: Array(supportedTasks()),
             maxInputChars: maxInputChars(),
             estimatedContextTokens: contextWindowEstimate(),
-            accelerationMode: draftAccelerationMode(),
-            accelerationDraftTokens: draftTokensForGeneration(),
-            draftModelPathLabel: resolvedDraftDirectoryURL()?.lastPathComponent,
+            accelerationMode: draftAccelerationMode(draftDirectoryURL: draftDirectoryURL),
+            accelerationDraftTokens: draftTokens,
+            draftModelPathLabel: draftDirectoryURL?.lastPathComponent,
             lastErrorCategory: availability.errorCategory,
             userFacingStatus: availability.status,
             explicitOptInEnabled: true
@@ -377,9 +386,18 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         guard Self.localModelDirectoryLooksUsable(directoryURL) else {
             return (false, "runtime_validation_failed", alphaRuntimeHealthStatus(.llamaNeedsRepair))
         }
-        if let draftDirectoryURL = resolvedDraftDirectoryURL(),
-           !Self.localModelDirectoryLooksUsable(draftDirectoryURL) {
-            return (false, "runtime_validation_failed", alphaRuntimeHealthStatus(.llamaNeedsRepair))
+
+        switch Self.archiveCompatibility(for: directoryURL) {
+        case .supported:
+            break
+        case .unsupportedGemma4Assistant, .unsupportedGemma4MoE, .unsupportedGemma4Dense31B:
+            return (false, "unsupported_model_archive", alphaRuntimeHealthStatus(.mlxArchiveUnsupported))
+        }
+
+        if let configuredDraftDirectoryURL = configuredDraftDirectoryURL() {
+            guard Self.localModelDirectoryLooksUsable(configuredDraftDirectoryURL) else {
+                return (false, "runtime_validation_failed", alphaRuntimeHealthStatus(.llamaNeedsRepair))
+            }
         }
         return (true, nil, alphaRuntimeHealthStatus(.llamaReady))
     }
@@ -401,7 +419,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         )
     }
 
-    private func resolvedDraftDirectoryURL() -> URL? {
+    private func configuredDraftDirectoryURL() -> URL? {
         guard let draftModelPath else {
             return nil
         }
@@ -412,15 +430,28 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         return URL(fileURLWithPath: trimmedPath, isDirectory: true)
     }
 
+    private func resolvedDraftDirectoryURL() -> URL? {
+        guard let draftDirectoryURL = configuredDraftDirectoryURL() else {
+            return nil
+        }
+        guard Self.localModelDirectoryLooksUsable(draftDirectoryURL) else {
+            return nil
+        }
+        guard Self.archiveCompatibility(for: draftDirectoryURL) == .supported else {
+            return nil
+        }
+        return draftDirectoryURL
+    }
+
     private func draftTokensForGeneration() -> Int? {
-        guard let draftModelPath, !draftModelPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        guard resolvedDraftDirectoryURL() != nil else {
             return nil
         }
         return max(1, min(draftModelTokens ?? 2, 8))
     }
 
-    private func draftAccelerationMode() -> AlphaLocalRuntimeAccelerationMode {
-        draftTokensForGeneration() == nil ? .standard : .draftModelSpeculative
+    private func draftAccelerationMode(draftDirectoryURL: URL? = nil) -> AlphaLocalRuntimeAccelerationMode {
+        (draftDirectoryURL ?? resolvedDraftDirectoryURL()) == nil ? .standard : .draftModelSpeculative
     }
 
     private func extractJSON(from text: String) -> String? {
@@ -556,6 +587,46 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             }
         }
         return false
+    }
+
+    private static func archiveCompatibility(for directoryURL: URL) -> AlphaMLXArchiveCompatibility {
+        guard
+            let data = try? Data(contentsOf: directoryURL.appendingPathComponent("config.json")),
+            let rawValue = try? JSONSerialization.jsonObject(with: data),
+            let json = rawValue as? [String: Any]
+        else {
+            return .supported
+        }
+
+        let modelType = (json["model_type"] as? String)?.lowercased()
+        let architectures = (json["architectures"] as? [String] ?? []).map { $0.lowercased() }
+        let rawNameHints = [
+            directoryURL.lastPathComponent,
+            json["_name_or_path"] as? String,
+            json["name_or_path"] as? String
+        ]
+        let nameHints = rawNameHints
+            .compactMap { $0?.lowercased() }
+            .joined(separator: " ")
+
+        if modelType == "gemma4_assistant" || architectures.contains(where: { $0.contains("gemma4assistant") }) {
+            return .unsupportedGemma4Assistant
+        }
+
+        let hasMoEKeys =
+            json["num_local_experts"] != nil ||
+            json["num_experts"] != nil ||
+            json["router_aux_loss_coef"] != nil ||
+            json["expert_capacity"] != nil
+        if hasMoEKeys || nameHints.contains("26b-a4b") {
+            return .unsupportedGemma4MoE
+        }
+
+        if nameHints.contains("gemma-4-31b") || nameHints.contains("gemma4-31b") || nameHints.contains("31b-it") {
+            return .unsupportedGemma4Dense31B
+        }
+
+        return .supported
     }
 
     private nonisolated static func extractiveMatterAnswer(

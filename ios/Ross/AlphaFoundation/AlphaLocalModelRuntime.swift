@@ -162,6 +162,7 @@ enum AlphaRuntimeHealthStatusKey: String {
     case llamaMissingSetup = "runtime_health_llama_missing_setup"
     case llamaReady = "runtime_health_llama_ready"
     case llamaNeedsRepair = "runtime_health_llama_needs_repair"
+    case mlxArchiveUnsupported = "runtime_health_mlx_archive_unsupported"
     case foundationAvailable = "runtime_health_foundation_available"
     case foundationUnavailable = "runtime_health_foundation_unavailable"
     case foundationUnknown = "runtime_health_foundation_unknown"
