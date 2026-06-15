@@ -3172,6 +3172,121 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    func testNormalizeLoadedStateKeepsFasterDownloadedRuntimeEvenWhenSystemAssistantIsAvailable() async throws {
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        defer {
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+        }
+
+        try await withRestoredStore { store in
+            await store.removeAllModelArtifacts()
+            let artifact = alphaAssistantModelArtifact(for: .caseAssociate)
+            let relativePath = "model-packs/case_associate/startup-fast-downloaded.gguf"
+            let artifactURL = alphaAbsoluteURL(for: relativePath)
+            let manifestURL = artifactURL.deletingPathExtension().appendingPathExtension("manifest.json")
+            try FileManager.default.createDirectory(
+                at: artifactURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try makeSparseFile(at: artifactURL, bytes: artifact.sizeBytes)
+
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let manifest = AlphaModelArtifactManifest(
+                packId: "gemma-4-12b-fast-downloaded",
+                tier: .caseAssociate,
+                fileName: artifactURL.lastPathComponent,
+                relativePath: relativePath,
+                checksumSha256: artifact.sha256,
+                bytes: artifact.sizeBytes,
+                artifactKind: "local_model_artifact",
+                runtimeMode: .llamaCppGguf,
+                developmentOnly: false,
+                verifiedAt: .now
+            )
+            try encoder.encode(manifest).write(to: manifestURL, options: .atomic)
+
+            let pack = AlphaInstalledModelPack(
+                packId: manifest.packId,
+                tier: .caseAssociate,
+                installPath: relativePath,
+                checksumSha256: artifact.sha256,
+                artifactKind: manifest.artifactKind,
+                runtimeMode: manifest.runtimeMode,
+                developmentOnly: manifest.developmentOnly,
+                checksumVerified: true,
+                isActive: true
+            )
+            let fastDownloadedInvocation = AlphaLocalModelInvocation(
+                task: .matterQuestionAnswer,
+                runtimeMode: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+                caseId: nil,
+                documentId: nil,
+                extractionRunId: nil,
+                capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+                inputSourceRefs: [],
+                promptHash: "prompt",
+                inputHash: "input",
+                estimatedOutputTokensPerSecond: 18,
+                timeToFirstTokenMs: 920,
+                status: .complete
+            )
+            let session = AlphaChatSession(
+                turns: [
+                    AlphaChatTurn(
+                        question: "What does the selected file say?",
+                        answerTitle: "Answer",
+                        answerSections: ["Section"],
+                        sourceRefs: [],
+                        modelInvocation: fastDownloadedInvocation
+                    )
+                ]
+            )
+            var state = AlphaPersistedState.seed()
+            state.installedPacks = [pack]
+            state.modelJobs = [
+                AlphaModelDownloadJob(
+                    sessionId: "startup-fast-downloaded",
+                    packId: pack.packId,
+                    tier: .caseAssociate,
+                    state: .installed,
+                    networkPolicy: .wifiOnly,
+                    bytesDownloaded: artifact.sizeBytes,
+                    totalBytes: artifact.sizeBytes,
+                    checksumSha256: pack.checksumSha256,
+                    artifactKind: pack.artifactKind,
+                    runtimeMode: pack.runtimeMode,
+                    developmentOnly: false,
+                    completedAt: .now
+                )
+            ]
+            state.settings.activeTier = .caseAssociate
+            state.cases[0].chatSessions = [session]
+            state.cases[0].activeChatSessionID = session.id
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            let normalized = await MainActor.run {
+                model.normalizeLoadedState(state)
+            }
+
+            let normalizedPack = normalized.installedPacks.first { $0.tier == .caseAssociate }
+            let normalizedJob = normalized.modelJobs.first { $0.tier == .caseAssociate }
+            XCTAssertEqual(normalizedPack?.runtimeMode, .llamaCppGguf)
+            XCTAssertEqual(normalizedPack?.installPath, relativePath)
+            XCTAssertEqual(normalizedJob?.runtimeMode, .llamaCppGguf)
+            XCTAssertEqual(normalizedJob?.artifactKind, "local_model_artifact")
+
+            await store.removeAllModelArtifacts()
+        }
+    }
+
     func testSystemAssistantRuntimeValidationMatchesRuntimeHealth() async throws {
         let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
         setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)

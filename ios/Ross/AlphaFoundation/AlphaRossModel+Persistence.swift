@@ -618,9 +618,12 @@ private func alphaPreferredInstalledPack(
         alphaPreferredAssistantRuntimeMode(for: tier, existingRuntimeMode: nil)
     }
     let recentSignal = alphaRecentRuntimeSelectionSignal(for: tier, lastInvocation: lastInvocation)
-    let hasDownloadedMLX = candidates.contains { $0.runtimeMode == .mlxSwiftLm }
-    let hasDownloadedGGUF = candidates.contains { $0.runtimeMode == .llamaCppGguf }
-    let canUseRecentRuntimeSignal = !systemAvailable && hasDownloadedMLX && hasDownloadedGGUF
+    let candidateRuntimeModes = Set(candidates.map(\.runtimeMode))
+    let hasComparableRuntimeChoice =
+        (candidateRuntimeModes.contains(.mlxSwiftLm) && candidateRuntimeModes.contains(.llamaCppGguf)) ||
+        (candidateRuntimeModes.contains(.appleFoundationModels) &&
+         (candidateRuntimeModes.contains(.mlxSwiftLm) || candidateRuntimeModes.contains(.llamaCppGguf)))
+    let canUseRecentRuntimeSignal = hasComparableRuntimeChoice
 
     func runtimeScore(_ runtimeMode: AlphaPackRuntimeMode) -> Int {
         let baseScore: Int
@@ -647,9 +650,9 @@ private func alphaPreferredInstalledPack(
 
         switch recentSignal {
         case .keepFast(let runtime) where runtimeMode == runtime:
-            return baseScore - 3
+            return baseScore - 4
         case .avoidSlow(let runtime) where runtimeMode == runtime:
-            return baseScore + 3
+            return baseScore + 4
         default:
             return baseScore
         }
