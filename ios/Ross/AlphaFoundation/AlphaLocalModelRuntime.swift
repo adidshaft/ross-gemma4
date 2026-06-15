@@ -247,14 +247,14 @@ func alphaAskRuntimeSourcePackPolicy(
         if capabilityTier == .caseAssociate || capabilityTier == .seniorDraftingSupport {
             if baseMaxInputChars >= 40_000 {
                 return AlphaAskRuntimeSourcePackPolicy(
-                    documentCandidateLimit: hasSelectedDocuments ? 4 : 6,
-                    sourceBlockLimit: hasSelectedDocuments ? 13 : 11
+                    documentCandidateLimit: hasSelectedDocuments ? 4 : 7,
+                    sourceBlockLimit: hasSelectedDocuments ? 15 : 12
                 )
             }
             if baseMaxInputChars >= 28_000 {
                 return AlphaAskRuntimeSourcePackPolicy(
-                    documentCandidateLimit: hasSelectedDocuments ? 4 : 5,
-                    sourceBlockLimit: hasSelectedDocuments ? 11 : 9
+                    documentCandidateLimit: hasSelectedDocuments ? 4 : 6,
+                    sourceBlockLimit: hasSelectedDocuments ? 12 : 10
                 )
             }
         }
@@ -480,11 +480,11 @@ enum AlphaLocalPromptBudgetPlanner {
         case .appleFoundationModels:
             if baseMaxInputChars >= 40_000 {
                 return (
-                    minimumBudget: 8_600,
-                    largeFileBlockLimit: 9,
-                    largeFileExcerptChars: 1_550,
-                    cautionBlockLimit: 7,
-                    cautionExcerptChars: 1_200,
+                    minimumBudget: 9_000,
+                    largeFileBlockLimit: 10,
+                    largeFileExcerptChars: 1_700,
+                    cautionBlockLimit: 8,
+                    cautionExcerptChars: 1_260,
                     slowBlockLimit: 5,
                     slowExcerptChars: 900,
                     cautionTokensPerSecond: 14,
@@ -493,13 +493,13 @@ enum AlphaLocalPromptBudgetPlanner {
             }
             if baseMaxInputChars >= 28_000 {
                 return (
-                    minimumBudget: 7_400,
-                    largeFileBlockLimit: 8,
-                    largeFileExcerptChars: 1_350,
-                    cautionBlockLimit: 5,
-                    cautionExcerptChars: 1_050,
-                    slowBlockLimit: 3,
-                    slowExcerptChars: 820,
+                    minimumBudget: 7_800,
+                    largeFileBlockLimit: 9,
+                    largeFileExcerptChars: 1_450,
+                    cautionBlockLimit: 6,
+                    cautionExcerptChars: 1_120,
+                    slowBlockLimit: 4,
+                    slowExcerptChars: 860,
                     cautionTokensPerSecond: 14,
                     slowTokensPerSecond: 9
                 )
@@ -624,26 +624,26 @@ enum AlphaLocalPromptBudgetPlanner {
         case .appleFoundationModels:
             if baseMaxInputChars >= 40_000 {
                 return (
-                    minimumBudget: 8_000,
-                    largeFileBlockLimit: 11,
-                    largeFileExcerptChars: 1_400,
-                    cautionBlockLimit: 8,
-                    cautionExcerptChars: 1_120,
-                    slowBlockLimit: 5,
-                    slowExcerptChars: 840,
+                    minimumBudget: 8_400,
+                    largeFileBlockLimit: 13,
+                    largeFileExcerptChars: 1_520,
+                    cautionBlockLimit: 9,
+                    cautionExcerptChars: 1_180,
+                    slowBlockLimit: 6,
+                    slowExcerptChars: 880,
                     cautionTokensPerSecond: 12,
                     slowTokensPerSecond: 8
                 )
             }
             if baseMaxInputChars >= 28_000 {
                 return (
-                    minimumBudget: 7_200,
-                    largeFileBlockLimit: 9,
-                    largeFileExcerptChars: 1_220,
-                    cautionBlockLimit: 6,
-                    cautionExcerptChars: 980,
+                    minimumBudget: 7_600,
+                    largeFileBlockLimit: 10,
+                    largeFileExcerptChars: 1_320,
+                    cautionBlockLimit: 7,
+                    cautionExcerptChars: 1_040,
                     slowBlockLimit: 4,
-                    slowExcerptChars: 760,
+                    slowExcerptChars: 780,
                     cautionTokensPerSecond: 12,
                     slowTokensPerSecond: 8
                 )

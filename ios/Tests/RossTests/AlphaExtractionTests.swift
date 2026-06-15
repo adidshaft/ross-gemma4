@@ -5485,8 +5485,8 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(plan.maxInputChars, 39_600)
-        XCTAssertEqual(plan.sourceBlockLimit, 9)
-        XCTAssertEqual(plan.sourceExcerptChars, 1_550)
+        XCTAssertEqual(plan.sourceBlockLimit, 10)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_700)
     }
 
     func testStructuredDocumentBudgetPlannerTightensAfterSlowRun() {
@@ -5556,8 +5556,8 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(plan.maxInputChars, 38_720)
-        XCTAssertEqual(plan.sourceBlockLimit, 11)
-        XCTAssertEqual(plan.sourceExcerptChars, 1_400)
+        XCTAssertEqual(plan.sourceBlockLimit, 13)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_520)
     }
 
     func testAskRuntimeSourcePackPolicyExpandsForCapableMLXAsks() {
@@ -5581,7 +5581,19 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(policy.documentCandidateLimit, 4)
-        XCTAssertEqual(policy.sourceBlockLimit, 13)
+        XCTAssertEqual(policy.sourceBlockLimit, 15)
+    }
+
+    func testAskRuntimeSourcePackPolicyExpandsFoundationCandidateWindowWithoutSelections() {
+        let policy = alphaAskRuntimeSourcePackPolicy(
+            runtimeMode: .appleFoundationModels,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 44_000,
+            hasSelectedDocuments: false
+        )
+
+        XCTAssertEqual(policy.documentCandidateLimit, 7)
+        XCTAssertEqual(policy.sourceBlockLimit, 12)
     }
 
     func testAskRuntimeSourcePackPolicyKeepsFallbackBudgetsCompact() {
