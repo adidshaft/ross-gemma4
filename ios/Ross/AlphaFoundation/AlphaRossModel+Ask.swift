@@ -1712,8 +1712,8 @@ extension AlphaRossModel {
         let allowsSelectedDocumentBoost = alphaAskQuestionTargetsSelectedDocument(question)
         let allowsEvidenceHeuristics = alphaAskQuestionTargetsEvidence(questionTerms: queryTerms)
         guard !blocks.isEmpty else { return [] }
-
-        return blocks.enumerated()
+        let groupedBlocks = Dictionary(grouping: blocks) { $0.sourceRef.documentId }
+        let scoredBlocks = blocks.enumerated()
             .map { index, block -> (index: Int, score: Int, block: AlphaSourceTextBlock) in
                 let haystack = (
                     block.sourceRef.documentTitle + " " +
@@ -1723,6 +1723,9 @@ extension AlphaRossModel {
                 var score = selectedDocumentIDs.contains(block.sourceRef.documentId) && allowsSelectedDocumentBoost ? 3 : 0
                 for term in queryTerms where haystack.contains(term) {
                     score += term.count >= 6 ? 7 : 4
+                }
+                if block.sourceRef.paragraphRange == "confirmed details" {
+                    score = max(score - 6, 1)
                 }
                 if allowsEvidenceHeuristics && (haystack.contains("cam-d3") || haystack.contains("cam d3")) {
                     score += 16
@@ -1745,7 +1748,28 @@ extension AlphaRossModel {
                 }
                 return $0.index < $1.index
             }
-            .map(\.block)
+        guard !scoredBlocks.isEmpty else { return [] }
+
+        var rankedBlocks: [AlphaSourceTextBlock] = []
+        var seenKeys = Set<String>()
+        func appendIfNeeded(_ block: AlphaSourceTextBlock?) {
+            guard let block else { return }
+            let key = alphaAskSourceBlockKey(block)
+            guard seenKeys.insert(key).inserted else { return }
+            rankedBlocks.append(block)
+        }
+
+        for candidate in scoredBlocks {
+            appendIfNeeded(candidate.block)
+            for contextualBlock in alphaContextualAskSourceBlocks(
+                around: candidate.block,
+                groupedBlocks: groupedBlocks
+            ) {
+                appendIfNeeded(contextualBlock)
+            }
+        }
+
+        return rankedBlocks
     }
 
     func alphaPrioritizedSelectedDocumentSourceBlocks(
@@ -1827,6 +1851,41 @@ extension AlphaRossModel {
         }
 
         return fallbackBlocks
+    }
+
+    func alphaContextualAskSourceBlocks(
+        around anchor: AlphaSourceTextBlock,
+        groupedBlocks: [UUID: [AlphaSourceTextBlock]]
+    ) -> [AlphaSourceTextBlock] {
+        guard let documentBlocks = groupedBlocks[anchor.sourceRef.documentId], !documentBlocks.isEmpty else {
+            return []
+        }
+
+        var contextualBlocks: [AlphaSourceTextBlock] = []
+        if let confirmedDetails = documentBlocks.first(where: { $0.sourceRef.paragraphRange == "confirmed details" }) {
+            contextualBlocks.append(confirmedDetails)
+        }
+
+        let orderedPageBlocks = documentBlocks
+            .filter { $0.sourceRef.paragraphRange != "confirmed details" }
+            .sorted { lhs, rhs in
+                if lhs.pageNumber != rhs.pageNumber {
+                    return lhs.pageNumber < rhs.pageNumber
+                }
+                return lhs.sourceRef.label < rhs.sourceRef.label
+            }
+
+        let anchorKey = alphaAskSourceBlockKey(anchor)
+        if let anchorIndex = orderedPageBlocks.firstIndex(where: { alphaAskSourceBlockKey($0) == anchorKey }) {
+            if anchorIndex > 0 {
+                contextualBlocks.append(orderedPageBlocks[anchorIndex - 1])
+            }
+            if anchorIndex + 1 < orderedPageBlocks.count {
+                contextualBlocks.append(orderedPageBlocks[anchorIndex + 1])
+            }
+        }
+
+        return contextualBlocks
     }
 
     func alphaAskSourceBlockKey(_ block: AlphaSourceTextBlock) -> String {

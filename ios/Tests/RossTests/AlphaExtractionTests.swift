@@ -7550,6 +7550,103 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     @MainActor
+    func testUntaggedRankedAskSourceBlocksKeepNeighboringPagesForContext() {
+        let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
+        let caseID = UUID()
+        let documentID = UUID()
+        let page3 = AlphaSourceTextBlock(
+            sourceRef: AlphaSourceRef(
+                caseId: caseID,
+                documentId: documentID,
+                documentTitle: "Chronology bundle",
+                pageNumber: 3,
+                textSnippet: "Background before the hearing"
+            ),
+            text: "Background before the hearing and prior filings.",
+            pageNumber: 3,
+            languageHint: "en",
+            ocrConfidence: 0.93
+        )
+        let page4 = AlphaSourceTextBlock(
+            sourceRef: AlphaSourceRef(
+                caseId: caseID,
+                documentId: documentID,
+                documentTitle: "Chronology bundle",
+                pageNumber: 4,
+                textSnippet: "Next hearing date 12 May 2026"
+            ),
+            text: "The next hearing date is 12 May 2026 and compliance is due before that date.",
+            pageNumber: 4,
+            languageHint: "en",
+            ocrConfidence: 0.95
+        )
+        let page5 = AlphaSourceTextBlock(
+            sourceRef: AlphaSourceRef(
+                caseId: caseID,
+                documentId: documentID,
+                documentTitle: "Chronology bundle",
+                pageNumber: 5,
+                textSnippet: "Directions after the hearing"
+            ),
+            text: "Directions after the hearing include filing the compliance note.",
+            pageNumber: 5,
+            languageHint: "en",
+            ocrConfidence: 0.94
+        )
+
+        let ranked = model.alphaRankedAskSourceBlocks(
+            [page3, page4, page5],
+            question: "What is the next hearing date?",
+            selectedDocumentIDs: []
+        )
+
+        XCTAssertEqual(ranked.map(\.pageNumber), [4, 3, 5])
+    }
+
+    @MainActor
+    func testUntaggedRankedAskSourceBlocksKeepConfirmedDetailsWithTopMatch() {
+        let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
+        let caseID = UUID()
+        let documentID = UUID()
+        let confirmed = AlphaSourceTextBlock(
+            sourceRef: AlphaSourceRef(
+                caseId: caseID,
+                documentId: documentID,
+                documentTitle: "Order bundle",
+                pageNumber: 2,
+                paragraphRange: "confirmed details",
+                textSnippet: "Confirmed details from Order bundle"
+            ),
+            text: "Confirmed details from Order bundle:\nNext hearing: 12 May 2026",
+            pageNumber: 2,
+            languageHint: "en",
+            ocrConfidence: nil
+        )
+        let matchedPage = AlphaSourceTextBlock(
+            sourceRef: AlphaSourceRef(
+                caseId: caseID,
+                documentId: documentID,
+                documentTitle: "Order bundle",
+                pageNumber: 4,
+                textSnippet: "The next hearing date is 12 May 2026"
+            ),
+            text: "The next hearing date is 12 May 2026 and the filing note is due two days before.",
+            pageNumber: 4,
+            languageHint: "en",
+            ocrConfidence: 0.96
+        )
+
+        let ranked = model.alphaRankedAskSourceBlocks(
+            [confirmed, matchedPage],
+            question: "What is the next hearing date?",
+            selectedDocumentIDs: []
+        )
+
+        XCTAssertEqual(ranked.map(\.pageNumber), [4, 2])
+        XCTAssertEqual(ranked.dropFirst().first?.sourceRef.paragraphRange, "confirmed details")
+    }
+
+    @MainActor
     func testSelectedDocumentFallbackKeepsConfirmedAndBoundaryPages() {
         let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
         let documentID = UUID()
