@@ -2240,6 +2240,97 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    func testNormalizeLoadedStatePreservesInstalledSystemAssistantPack() async throws {
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        defer {
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+        }
+
+        try await withRestoredStore { store in
+            let systemPack = alphaSystemAssistantPack(for: .caseAssociate)
+            var state = AlphaPersistedState.seed()
+            state.installedPacks = [systemPack]
+            state.modelJobs = [
+                AlphaModelDownloadJob(
+                    sessionId: "system-assistant-restart",
+                    packId: systemPack.packId,
+                    tier: .caseAssociate,
+                    state: .installed,
+                    networkPolicy: .wifiOnly,
+                    bytesDownloaded: 0,
+                    totalBytes: 0,
+                    checksumSha256: systemPack.checksumSha256,
+                    artifactKind: systemPack.artifactKind,
+                    runtimeMode: systemPack.runtimeMode,
+                    developmentOnly: systemPack.developmentOnly,
+                    completedAt: .now
+                )
+            ]
+            state.settings.activeTier = .caseAssociate
+            try await store.replace(with: state)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            let normalized = await MainActor.run {
+                model.normalizeLoadedState(state)
+            }
+
+            XCTAssertTrue(
+                normalized.installedPacks.contains {
+                    $0.tier == .caseAssociate &&
+                        $0.runtimeMode == .appleFoundationModels &&
+                        $0.installPath == "system://apple-foundation-models"
+                }
+            )
+            XCTAssertTrue(
+                normalized.modelJobs.contains {
+                    $0.tier == .caseAssociate &&
+                        $0.runtimeMode == .appleFoundationModels &&
+                        $0.artifactKind == "system_model"
+                }
+            )
+        }
+    }
+
+    func testSystemAssistantRuntimeValidationMatchesRuntimeHealth() async throws {
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        defer {
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+        }
+
+        try await withRestoredStore { store in
+            let systemPack = alphaSystemAssistantPack(for: .caseAssociate)
+            let expected = AlphaLocalModelRuntime.runtimeHealth(
+                activePack: systemPack,
+                requestedTier: .caseAssociate
+            )?.available == true
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+
+            let isUsable = await MainActor.run {
+                model.installedModelPackFileIsUsable(systemPack)
+            }
+            let passesValidation = await MainActor.run {
+                model.installedPackPassesRuntimeValidation(systemPack)
+            }
+
+            XCTAssertTrue(isUsable)
+            XCTAssertEqual(passesValidation, expected)
+        }
+    }
+
     func testStartPackDownloadPrefersAvailableSystemAssistantOverExistingDownloadedPack() async throws {
         let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
         setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)

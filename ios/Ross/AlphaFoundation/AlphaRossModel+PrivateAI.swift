@@ -556,7 +556,10 @@ extension AlphaRossModel {
 
     func activateInstalledPack(_ pack: AlphaInstalledModelPack) {
         guard installedPackPassesRuntimeValidation(pack) else {
-            let message = rossLocalized("runtime_health_llama_needs_repair")
+            let message = AlphaLocalModelRuntime.runtimeHealth(
+                activePack: pack,
+                requestedTier: pack.tier
+            )?.userFacingStatus ?? rossLocalized("runtime_health_llama_needs_repair")
             persisted.modelJobs = persisted.modelJobs.map { job in
                 var copy = job
                 if job.tier == pack.tier, job.state == .installed {
@@ -599,13 +602,7 @@ extension AlphaRossModel {
     }
 
     func installedPackPassesRuntimeValidation(_ pack: AlphaInstalledModelPack) -> Bool {
-        guard !pack.developmentOnly else {
-            return true
-        }
-        guard installedModelPackFileIsUsable(pack) else {
-            return false
-        }
-        return alphaDownloadedAssistantArtifactPassesRuntimeValidation(pack)
+        alphaInstalledAssistantPackPassesRuntimeValidation(pack)
     }
 
     func prepareSystemAssistantPack(for tier: AlphaCapabilityTier, jobID: UUID) -> Bool {

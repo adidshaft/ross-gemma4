@@ -302,15 +302,38 @@ func alphaDownloadedAssistantArtifactPassesRuntimeValidation(_ pack: AlphaInstal
         )?.available == true
     case .deterministicDev:
         return alphaAllowsDevelopmentModelArtifacts()
-    case .mediapipeLlm, .appleFoundationModels, .unavailable:
+    case .appleFoundationModels:
+        return AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier
+        )?.available == true
+    case .mediapipeLlm, .unavailable:
         return false
     }
 }
 
-private func alphaInstalledModelPackFileIsUsable(_ pack: AlphaInstalledModelPack) -> Bool {
-    guard pack.runtimeMode != .appleFoundationModels,
-          pack.artifactKind != "system_model" else {
+func alphaInstalledAssistantPackPassesRuntimeValidation(_ pack: AlphaInstalledModelPack) -> Bool {
+    guard !pack.developmentOnly else {
+        return true
+    }
+    if pack.runtimeMode == .appleFoundationModels || pack.artifactKind == "system_model" {
+        return AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier
+        )?.available == true
+    }
+    guard alphaInstalledModelPackFileIsUsable(pack) else {
         return false
+    }
+    return alphaDownloadedAssistantArtifactPassesRuntimeValidation(pack)
+}
+
+private func alphaInstalledModelPackFileIsUsable(_ pack: AlphaInstalledModelPack) -> Bool {
+    if pack.runtimeMode == .appleFoundationModels || pack.artifactKind == "system_model" {
+        guard !pack.developmentOnly || alphaAllowsDevelopmentModelArtifacts() else {
+            return false
+        }
+        return pack.installPath.hasPrefix("system://")
     }
     guard !pack.developmentOnly || alphaAllowsDevelopmentModelArtifacts() else {
         return false
@@ -518,11 +541,11 @@ private func alphaOptimisticActivePack(from state: AlphaPersistedState) -> Alpha
 
 private func alphaValidatedActivePack(from state: AlphaPersistedState) -> AlphaInstalledModelPack? {
     if let active = state.installedPacks.first(where: \.isActive),
-       alphaInstalledModelPackFileIsUsable(active) {
+       alphaInstalledAssistantPackPassesRuntimeValidation(active) {
         return active
     }
     if let preferredTier = state.settings.activeTier,
-       let preferred = state.installedPacks.first(where: { $0.tier == preferredTier && alphaInstalledModelPackFileIsUsable($0) }) {
+       let preferred = state.installedPacks.first(where: { $0.tier == preferredTier && alphaInstalledAssistantPackPassesRuntimeValidation($0) }) {
         return preferred
     }
     return nil
@@ -1793,7 +1816,6 @@ extension AlphaRossModel {
             }
         }
         _ = alphaPurgeAbandonedAssistantDownloadsFromDisk()
-        removeSystemAssistantShortcutState(from: &normalized)
         purgeDevelopmentModelArtifactsFromDisk()
         _ = recoverDownloadedAssistantArtifacts(from: &normalized)
         _ = alphaPruneUnreferencedAssistantArtifactsFromDisk(installedPacks: normalized.installedPacks)
