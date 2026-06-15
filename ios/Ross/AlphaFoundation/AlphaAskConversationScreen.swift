@@ -890,6 +890,16 @@ extension AlphaLocalModelInvocation {
         return alphaAssistantInputBudgetLabel(chars: inputChars)
     }
 
+    var answerDetailContextWindowLabel: String? {
+        guard let runtimeContextTokens else { return nil }
+        return alphaAssistantContextWindowLabel(tokens: runtimeContextTokens)
+    }
+
+    var answerDetailRuntimeInputBudgetLabel: String? {
+        guard let runtimeInputBudgetChars else { return nil }
+        return alphaAssistantInputBudgetLabel(chars: runtimeInputBudgetChars)
+    }
+
     var answerDetailReviewedSourceSectionsLabel: String? {
         guard let reviewedSourceCount else { return nil }
         let totalSourceCount = inputSourceRefs.count
@@ -983,6 +993,26 @@ extension AlphaLocalModelInvocation {
                     key: "runtime_fallback",
                     label: rossLocalized("runtime_fallback"),
                     value: runtimeFallback
+                )
+            )
+        }
+
+        if let contextWindow = answerDetailContextWindowLabel {
+            metrics.append(
+                AlphaAnswerDetailMetric(
+                    key: "runtime_context_window",
+                    label: rossLocalized("runtime_context_window"),
+                    value: contextWindow
+                )
+            )
+        }
+
+        if let runtimeInputBudget = answerDetailRuntimeInputBudgetLabel {
+            metrics.append(
+                AlphaAnswerDetailMetric(
+                    key: "runtime_input_budget",
+                    label: rossLocalized("runtime_input_budget"),
+                    value: runtimeInputBudget
                 )
             )
         }

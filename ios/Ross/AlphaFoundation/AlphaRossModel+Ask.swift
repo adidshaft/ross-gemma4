@@ -1248,6 +1248,8 @@ extension AlphaRossModel {
             assistantDisplayName: assistantDisplayName,
             preferredRuntimeMode: preferredRuntimeMode,
             runtimeSelectionReason: runtimeSelectionReason,
+            runtimeContextTokens: runtimeHealth.estimatedContextTokens,
+            runtimeInputBudgetChars: runtimeHealth.maxInputChars,
             accelerationMode: runtimeHealth.accelerationMode,
             accelerationDraftTokens: runtimeHealth.accelerationDraftTokens,
             accelerationDraftModelLabel: runtimeHealth.draftModelPathLabel,

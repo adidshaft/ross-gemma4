@@ -13,6 +13,8 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
     var assistantDisplayName: String?
     var preferredRuntimeMode: String?
     var runtimeSelectionReason: String?
+    var runtimeContextTokens: Int?
+    var runtimeInputBudgetChars: Int?
     var reviewedSourceCount: Int?
     var promptBudgetChars: Int?
     var accelerationMode: AlphaLocalRuntimeAccelerationMode?
@@ -47,6 +49,8 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
         assistantDisplayName: String? = nil,
         preferredRuntimeMode: String? = nil,
         runtimeSelectionReason: String? = nil,
+        runtimeContextTokens: Int? = nil,
+        runtimeInputBudgetChars: Int? = nil,
         reviewedSourceCount: Int? = nil,
         promptBudgetChars: Int? = nil,
         accelerationMode: AlphaLocalRuntimeAccelerationMode? = nil,
@@ -80,6 +84,8 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
         self.assistantDisplayName = assistantDisplayName
         self.preferredRuntimeMode = preferredRuntimeMode
         self.runtimeSelectionReason = runtimeSelectionReason
+        self.runtimeContextTokens = runtimeContextTokens
+        self.runtimeInputBudgetChars = runtimeInputBudgetChars
         self.reviewedSourceCount = reviewedSourceCount
         self.promptBudgetChars = promptBudgetChars
         self.accelerationMode = accelerationMode
@@ -115,6 +121,8 @@ enum AlphaModelInvocationStore {
         assistantDisplayName: String? = nil,
         preferredRuntimeMode: AlphaPackRuntimeMode? = nil,
         runtimeSelectionReason: String? = nil,
+        runtimeContextTokens: Int? = nil,
+        runtimeInputBudgetChars: Int? = nil,
         accelerationMode: AlphaLocalRuntimeAccelerationMode? = nil,
         accelerationDraftTokens: Int? = nil,
         accelerationDraftModelLabel: String? = nil,
@@ -141,6 +149,8 @@ enum AlphaModelInvocationStore {
             assistantDisplayName: assistantDisplayName,
             preferredRuntimeMode: preferredRuntimeMode?.rawValue,
             runtimeSelectionReason: runtimeSelectionReason,
+            runtimeContextTokens: runtimeContextTokens,
+            runtimeInputBudgetChars: runtimeInputBudgetChars,
             promptBudgetChars: input.promptBudgetOverrideChars,
             accelerationMode: accelerationMode,
             accelerationDraftTokens: accelerationDraftTokens,

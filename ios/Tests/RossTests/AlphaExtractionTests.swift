@@ -3887,6 +3887,8 @@ final class AlphaExtractionTests: XCTestCase {
             assistantDisplayName: "Gemma 4 12B Q4_K_M",
             preferredRuntimeMode: AlphaPackRuntimeMode.appleFoundationModels.rawValue,
             runtimeSelectionReason: "Built-in Apple model preferred",
+            runtimeContextTokens: 131_072,
+            runtimeInputBudgetChars: 52_000,
             reviewedSourceCount: 2,
             promptBudgetChars: 700,
             accelerationMode: .draftModelSpeculative,
@@ -3937,6 +3939,16 @@ final class AlphaExtractionTests: XCTestCase {
                     key: "runtime_fallback",
                     label: "Fallback",
                     value: "Using an available installed runtime instead"
+                ),
+                AlphaAnswerDetailMetric(
+                    key: "runtime_context_window",
+                    label: "Context window",
+                    value: alphaAssistantContextWindowLabel(tokens: 131_072)
+                ),
+                AlphaAnswerDetailMetric(
+                    key: "runtime_input_budget",
+                    label: "Input budget",
+                    value: alphaAssistantInputBudgetLabel(chars: 52_000)
                 ),
                 AlphaAnswerDetailMetric(
                     key: "prompt_size",
