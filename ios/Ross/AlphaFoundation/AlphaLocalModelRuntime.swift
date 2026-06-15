@@ -241,6 +241,20 @@ func alphaAskRuntimeSourcePackPolicy(
             sourceBlockLimit: hasSelectedDocuments ? 9 : 8
         )
     case .llamaCppGguf:
+        if capabilityTier == .caseAssociate || capabilityTier == .seniorDraftingSupport {
+            if baseMaxInputChars >= 48_000 {
+                return AlphaAskRuntimeSourcePackPolicy(
+                    documentCandidateLimit: hasSelectedDocuments ? 4 : 6,
+                    sourceBlockLimit: hasSelectedDocuments ? 12 : 10
+                )
+            }
+            if baseMaxInputChars >= 40_000 {
+                return AlphaAskRuntimeSourcePackPolicy(
+                    documentCandidateLimit: hasSelectedDocuments ? 4 : 5,
+                    sourceBlockLimit: hasSelectedDocuments ? 11 : 9
+                )
+            }
+        }
         if baseMaxInputChars >= 40_000 {
             return AlphaAskRuntimeSourcePackPolicy(
                 documentCandidateLimit: hasSelectedDocuments ? 4 : 5,

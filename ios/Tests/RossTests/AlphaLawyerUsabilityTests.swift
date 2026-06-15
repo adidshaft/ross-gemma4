@@ -616,6 +616,74 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
     }
 
     @MainActor
+    func testAskRuntimeSourcePackExpandsSelectedDocumentCoverageForCapableGGUFAssistant() {
+        let caseID = UUID()
+        let documentID = UUID()
+        let pages = (1...12).map { pageNumber in
+            AlphaDocumentPage(
+                pageNumber: pageNumber,
+                snippet: "Selected order page \(pageNumber)",
+                extractedText: "Page \(pageNumber) records the selected order timeline, filing obligations, and cited directions for the tagged file."
+            )
+        }
+        let document = AlphaCaseDocument(
+            id: documentID,
+            title: "Selected order chronology",
+            fileName: "selected-order-chronology.pdf",
+            kind: .pdf,
+            storedRelativePath: "docs/selected-order-chronology.pdf",
+            importedAt: .now,
+            pageCount: pages.count,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: pages.compactMap(\.extractedText).joined(separator: "\n"),
+            pages: pages
+        )
+        var state = AlphaPersistedState.seed()
+        state.settings.activeTier = .caseAssociate
+        state.cases = [
+            AlphaCaseMatter(
+                id: caseID,
+                title: "GGUF context matter",
+                forum: "High Court",
+                stage: .arguments,
+                summary: "Large selected-file GGUF coverage test.",
+                issueHighlights: [],
+                evidenceNotes: [],
+                draftTasks: [],
+                documents: [document],
+                sourceRefs: []
+            )
+        ]
+
+        let model = AlphaRossModel(previewState: state)
+        let ggufPack = AlphaInstalledModelPack(
+            packId: "gemma-4-12b-gguf",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/gemma-4-12B-it-Q4_K_M.gguf",
+            checksumSha256: String(repeating: "b", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+        model.privateAISnapshot.activePack = ggufPack
+        model.privateAISnapshot.installedPacks = [ggufPack]
+        model.persisted.installedPacks = [ggufPack]
+        model.setSelectedAskDocumentIDs([documentID], for: caseID)
+
+        let sourcePack = model.askRuntimeSourcePack(
+            question: "What does this selected document say about the order chronology?",
+            scopeCaseID: caseID,
+            selectedDocuments: model.selectedAskDocuments(for: caseID)
+        )
+
+        XCTAssertEqual(sourcePack.count, 12)
+        XCTAssertEqual(sourcePack.filter { $0.sourceRef.documentId == documentID }.count, 12)
+    }
+
+    @MainActor
     func testAskRuntimeSourcePackKeepsSelectedDocumentCoverageForBroadQuestion() {
         let caseID = UUID()
         let firstDocumentID = UUID()

@@ -6182,6 +6182,30 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(policy.sourceBlockLimit, 14)
     }
 
+    func testAskRuntimeSourcePackPolicyExpandsForCapableLlamaAsks() {
+        let policy = alphaAskRuntimeSourcePackPolicy(
+            runtimeMode: .llamaCppGguf,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 48_000,
+            hasSelectedDocuments: true
+        )
+
+        XCTAssertEqual(policy.documentCandidateLimit, 4)
+        XCTAssertEqual(policy.sourceBlockLimit, 12)
+    }
+
+    func testAskRuntimeSourcePackPolicyExpandsLlamaCandidateWindowWithoutSelections() {
+        let policy = alphaAskRuntimeSourcePackPolicy(
+            runtimeMode: .llamaCppGguf,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 48_000,
+            hasSelectedDocuments: false
+        )
+
+        XCTAssertEqual(policy.documentCandidateLimit, 6)
+        XCTAssertEqual(policy.sourceBlockLimit, 10)
+    }
+
     func testAskRuntimeSourcePackPolicyExpandsForCapableFoundationAsks() {
         let policy = alphaAskRuntimeSourcePackPolicy(
             runtimeMode: .appleFoundationModels,
