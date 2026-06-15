@@ -3537,6 +3537,77 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.accelerationDraftTokens, 6)
     }
 
+    @MainActor
+    func testAutomaticMLXDraftEnvironmentUsesHigherDraftTokensOnMoreCapablePhone() async throws {
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+
+        let quickStartSource = try makeMLXDirectoryFixture(named: "ross-mlx-quickstart-hi-mem-\(UUID().uuidString)")
+        let caseAssociateSource = try makeMLXDirectoryFixture(named: "ross-mlx-caseassociate-hi-mem-\(UUID().uuidString)")
+        defer {
+            try? FileManager.default.removeItem(at: quickStartSource)
+            try? FileManager.default.removeItem(at: caseAssociateSource)
+        }
+
+        let quickStartExpected = try XCTUnwrap(alphaModelArtifactVerification(at: quickStartSource))
+        let quickStartInstalled = try await store.installDownloadedPackArtifact(
+            for: .quickStart,
+            fileName: "gemma-4-e4b-it-mlx",
+            downloadedFileURL: quickStartSource,
+            expectedChecksum: quickStartExpected.checksum,
+            expectedBytes: quickStartExpected.bytes,
+            packId: "gemma-4-e4b-it-mlx",
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm
+        )
+        let caseAssociateExpected = try XCTUnwrap(alphaModelArtifactVerification(at: caseAssociateSource))
+        let caseAssociateInstalled = try await store.installDownloadedPackArtifact(
+            for: .caseAssociate,
+            fileName: "gemma-4-12b-it-mlx",
+            downloadedFileURL: caseAssociateSource,
+            expectedChecksum: caseAssociateExpected.checksum,
+            expectedBytes: caseAssociateExpected.bytes,
+            packId: "gemma-4-12b-it-mlx",
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm
+        )
+
+        let quickStartPack = installedPack(
+            .quickStart,
+            runtimeMode: .mlxSwiftLm,
+            packId: "gemma-4-e4b-it-mlx",
+            installPath: quickStartInstalled.relativePath,
+            checksum: quickStartInstalled.checksum,
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+        let caseAssociatePack = installedPack(
+            .caseAssociate,
+            runtimeMode: .mlxSwiftLm,
+            packId: "gemma-4-12b-it-mlx",
+            installPath: caseAssociateInstalled.relativePath,
+            checksum: caseAssociateInstalled.checksum,
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+        let runtimeEnvironment = alphaLocalRuntimeEnvironment(
+            activePack: caseAssociatePack,
+            requestedTier: caseAssociatePack.tier,
+            installedPacks: [quickStartPack, caseAssociatePack],
+            baseEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: alphaAbsoluteURL(for: caseAssociateInstalled.relativePath).path,
+                modelChecksum: caseAssociateInstalled.checksum,
+                modelKind: "mlx_directory"
+            ),
+            physicalMemoryBytes: 16 * 1_073_741_824,
+            lowPowerMode: false
+        )
+
+        XCTAssertEqual(runtimeEnvironment.draftModelTokens, 8)
+    }
+
     func testAutomaticMLXDraftEnvironmentRespectsExplicitDraftOverride() {
         let activePack = installedPack(
             .caseAssociate,
@@ -6112,9 +6183,37 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         let recordedDraftTokens = await capture.draftTokens
+        let expectedDraftTokens = AlphaMLXRuntimeProfile.defaultDraftTokens(
+            for: .caseAssociate,
+            physicalMemory: ProcessInfo.processInfo.physicalMemory
+        )
 
-        XCTAssertEqual(recordedDraftTokens, 6)
-        XCTAssertEqual(provider?.runtimeHealth().accelerationDraftTokens, 6)
+        XCTAssertEqual(recordedDraftTokens, expectedDraftTokens)
+        XCTAssertEqual(provider?.runtimeHealth().accelerationDraftTokens, expectedDraftTokens)
+    }
+
+    func testMLXRuntimeProfileRaisesDraftTokensOnCapablePhones() {
+        XCTAssertEqual(
+            AlphaMLXRuntimeProfile.defaultDraftTokens(
+                for: .quickStart,
+                physicalMemory: 12_000_000_000
+            ),
+            6
+        )
+        XCTAssertEqual(
+            AlphaMLXRuntimeProfile.defaultDraftTokens(
+                for: .caseAssociate,
+                physicalMemory: 16_000_000_000
+            ),
+            8
+        )
+        XCTAssertEqual(
+            AlphaMLXRuntimeProfile.defaultDraftTokens(
+                for: .seniorDraftingSupport,
+                physicalMemory: 12_000_000_000
+            ),
+            8
+        )
     }
 
     func testLlamaValidationRejectsMissingModelPath() {

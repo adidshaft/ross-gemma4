@@ -92,16 +92,22 @@ enum AlphaMLXRuntimeProfile {
         }
     }
 
-    static func defaultDraftTokens(for tier: AlphaCapabilityTier) -> Int {
+    static func defaultDraftTokens(
+        for tier: AlphaCapabilityTier,
+        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory
+    ) -> Int {
         switch tier {
         case .flash:
             return 2
         case .quickStart:
-            return 4
+            return physicalMemory >= 12_000_000_000 ? 6 : 4
         case .caseAssociate:
-            return 6
+            if physicalMemory >= 16_000_000_000 {
+                return 8
+            }
+            return physicalMemory >= 12_000_000_000 ? 6 : 4
         case .seniorDraftingSupport:
-            return 8
+            return physicalMemory >= 12_000_000_000 ? 8 : 6
         }
     }
 }
@@ -547,7 +553,16 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         guard resolvedDraftDirectoryURL() != nil else {
             return nil
         }
-        return max(1, min(draftModelTokens ?? AlphaMLXRuntimeProfile.defaultDraftTokens(for: capabilityTier), 8))
+        return max(
+            1,
+            min(
+                draftModelTokens ?? AlphaMLXRuntimeProfile.defaultDraftTokens(
+                    for: capabilityTier,
+                    physicalMemory: ProcessInfo.processInfo.physicalMemory
+                ),
+                8
+            )
+        )
     }
 
     private func draftAccelerationMode(draftDirectoryURL: URL? = nil) -> AlphaLocalRuntimeAccelerationMode {

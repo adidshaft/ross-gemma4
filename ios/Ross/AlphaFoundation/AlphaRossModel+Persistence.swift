@@ -797,14 +797,19 @@ private func alphaAutomaticMLXDraftTokens(
     physicalMemoryBytes: UInt64
 ) -> Int? {
     guard let activePack, activePack.runtimeMode == .mlxSwiftLm else { return nil }
-    let memoryGB = max(2, Int(physicalMemoryBytes / 1_073_741_824))
     switch activePack.tier {
     case .quickStart, .flash:
         return nil
     case .caseAssociate:
-        return memoryGB >= 12 ? 6 : 4
+        return AlphaMLXRuntimeProfile.defaultDraftTokens(
+            for: .caseAssociate,
+            physicalMemory: physicalMemoryBytes
+        )
     case .seniorDraftingSupport:
-        return memoryGB >= 16 ? 6 : 4
+        return AlphaMLXRuntimeProfile.defaultDraftTokens(
+            for: .seniorDraftingSupport,
+            physicalMemory: physicalMemoryBytes
+        )
     }
 }
 
