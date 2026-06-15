@@ -242,7 +242,11 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         if input.task == .matterQuestionAnswer {
             promptChars = conciseMatterQuestionPrompt(for: input).count
         } else {
-            promptChars = AlphaPromptPackBuilder(maxInputChars: maxChars).build(input: input).inputChars
+            promptChars = AlphaPromptPackBuilder(
+                maxInputChars: maxChars,
+                sourceBlockLimit: input.sourceBlockLimitOverride,
+                sourceExcerptChars: input.sourceExcerptCharsOverride
+            ).build(input: input).inputChars
         }
         let estimatedTokens = max(promptChars / 4, 1)
         let estimatedRuntimeMs = max(700, min(8_000, estimatedTokens * 4))
@@ -276,7 +280,11 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         onPartial: (@Sendable (AlphaLocalModelOutput) -> Void)?
     ) async -> AlphaLocalModelOutput {
         let effectiveMaxInputChars = taskInput.promptBudgetOverrideChars ?? maxInputChars() ?? 16_000
-        let pack = AlphaPromptPackBuilder(maxInputChars: effectiveMaxInputChars).build(input: taskInput)
+        let pack = AlphaPromptPackBuilder(
+            maxInputChars: effectiveMaxInputChars,
+            sourceBlockLimit: taskInput.sourceBlockLimitOverride,
+            sourceExcerptChars: taskInput.sourceExcerptCharsOverride
+        ).build(input: taskInput)
 
         guard let modelPath = self.modelPath, !modelPath.isEmpty else {
             return AlphaLocalModelOutput(

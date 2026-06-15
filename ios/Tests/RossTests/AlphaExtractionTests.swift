@@ -1001,6 +1001,63 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(pack.truncated)
     }
 
+    func testPromptPackBuilderHonorsSourceBlockAndExcerptOverrides() {
+        let caseID = UUID()
+        let docA = UUID()
+        let docB = UUID()
+        let docC = UUID()
+        let longRelevantText = Array(
+            repeating: "The affidavit confirms the limitation date and requires the annexure bundle before listing.",
+            count: 18
+        ).joined(separator: " ")
+        let input = AlphaLocalModelInput(
+            task: .legalFieldExtraction,
+            instruction: "Find the limitation date and annexure bundle requirement.",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: AlphaSourceRef(caseId: caseID, documentId: docA, documentTitle: "A", pageNumber: 1, textSnippet: "limitation date"),
+                    text: longRelevantText,
+                    pageNumber: 1,
+                    languageHint: "en",
+                    ocrConfidence: 0.95
+                ),
+                AlphaSourceTextBlock(
+                    sourceRef: AlphaSourceRef(caseId: caseID, documentId: docB, documentTitle: "B", pageNumber: 2, textSnippet: "annexure bundle"),
+                    text: longRelevantText,
+                    pageNumber: 2,
+                    languageHint: "en",
+                    ocrConfidence: 0.95
+                ),
+                AlphaSourceTextBlock(
+                    sourceRef: AlphaSourceRef(caseId: caseID, documentId: docC, documentTitle: "C", pageNumber: 3, textSnippet: "listing"),
+                    text: longRelevantText,
+                    pageNumber: 3,
+                    languageHint: "en",
+                    ocrConfidence: 0.95
+                )
+            ],
+            expectedSchema: "json",
+            maxOutputTokens: 256,
+            languageProfile: nil,
+            documentClassification: nil,
+            extractionMode: .caseAssociate,
+            promptBudgetOverrideChars: 2_000,
+            sourceBlockLimitOverride: 2,
+            sourceExcerptCharsOverride: 280
+        )
+
+        let pack = AlphaPromptPackBuilder(
+            maxInputChars: input.promptBudgetOverrideChars ?? 2_000,
+            sourceBlockLimit: input.sourceBlockLimitOverride,
+            sourceExcerptChars: input.sourceExcerptCharsOverride
+        ).build(input: input)
+
+        XCTAssertEqual(pack.includedSourceRefs.count, 2)
+        XCTAssertEqual(pack.omittedSourceRefs.count, 0)
+        XCTAssertFalse(pack.promptText.contains("page=\"3\""))
+        XCTAssertTrue(pack.promptText.contains("truncated=\"true\""))
+    }
+
     func testPrivateAssistantTierCopyHidesTechnicalModelNames() {
         XCTAssertEqual(AlphaCapabilityTier.flash.downloadSizeLabel, "3.0 GB")
         XCTAssertEqual(AlphaCapabilityTier.quickStart.downloadSizeLabel, "5.4 GB")
@@ -3847,6 +3904,35 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(plan.maxInputChars, 16_000)
         XCTAssertNil(plan.sourceBlockLimit)
         XCTAssertNil(plan.sourceExcerptChars)
+    }
+
+    func testStructuredDocumentBudgetPlannerTightensAfterSlowRun() {
+        let slowInvocation = AlphaLocalModelInvocation(
+            task: .legalFieldExtraction,
+            runtimeMode: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 6.5,
+            timeToFirstTokenMs: 6_200,
+            status: .complete
+        )
+
+        let plan = AlphaLocalPromptBudgetPlanner.structuredDocumentPlan(
+            runtimeMode: .mlxSwiftLm,
+            baseMaxInputChars: 16_000,
+            sourceBlockCount: 14,
+            sourceCharCount: 44_000,
+            lastInvocation: slowInvocation
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 9_574)
+        XCTAssertEqual(plan.sourceBlockLimit, 4)
+        XCTAssertEqual(plan.sourceExcerptChars, 760)
     }
 
     func testRealRuntimeSelectionFailsClosedWhenUnavailable() async {

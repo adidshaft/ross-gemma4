@@ -254,6 +254,62 @@ enum AlphaLocalPromptBudgetPlanner {
         )
     }
 
+    static func structuredDocumentPlan(
+        runtimeMode: AlphaPackRuntimeMode,
+        baseMaxInputChars: Int,
+        sourceBlockCount: Int,
+        sourceCharCount: Int,
+        lastInvocation: AlphaLocalModelInvocation?
+    ) -> AlphaLocalPromptBudgetPlan {
+        guard sourceBlockCount > 0 else {
+            return AlphaLocalPromptBudgetPlan(
+                maxInputChars: baseMaxInputChars,
+                sourceBlockLimit: nil,
+                sourceExcerptChars: nil
+            )
+        }
+
+        let runtimeDefaults = defaultStructuredDocumentFocus(for: runtimeMode)
+        var maxInputChars = baseMaxInputChars
+        var sourceBlockLimit: Int? = nil
+        var sourceExcerptChars: Int? = nil
+
+        if sourceBlockCount >= 12 || sourceCharCount >= 36_000 {
+            maxInputChars = max(Int(Double(maxInputChars) * 0.88), runtimeDefaults.minimumBudget)
+            sourceBlockLimit = runtimeDefaults.largeFileBlockLimit
+            sourceExcerptChars = runtimeDefaults.largeFileExcerptChars
+        }
+
+        guard let lastInvocation,
+              lastInvocation.runtimeMode == runtimeMode.rawValue,
+              lastInvocation.task != .matterQuestionAnswer else {
+            return AlphaLocalPromptBudgetPlan(
+                maxInputChars: maxInputChars,
+                sourceBlockLimit: sourceBlockLimit,
+                sourceExcerptChars: sourceExcerptChars
+            )
+        }
+
+        let firstTokenMs = lastInvocation.timeToFirstTokenMs ?? Int.max
+        let outputSpeed = lastInvocation.estimatedOutputTokensPerSecond ?? .greatestFiniteMagnitude
+
+        if firstTokenMs >= 6_000 || outputSpeed <= runtimeDefaults.slowTokensPerSecond {
+            maxInputChars = max(Int(Double(maxInputChars) * 0.68), runtimeDefaults.minimumBudget)
+            sourceBlockLimit = min(sourceBlockLimit ?? runtimeDefaults.slowBlockLimit, runtimeDefaults.slowBlockLimit)
+            sourceExcerptChars = min(sourceExcerptChars ?? runtimeDefaults.slowExcerptChars, runtimeDefaults.slowExcerptChars)
+        } else if firstTokenMs >= 4_000 || outputSpeed <= runtimeDefaults.cautionTokensPerSecond {
+            maxInputChars = max(Int(Double(maxInputChars) * 0.78), runtimeDefaults.minimumBudget)
+            sourceBlockLimit = min(sourceBlockLimit ?? runtimeDefaults.cautionBlockLimit, runtimeDefaults.cautionBlockLimit)
+            sourceExcerptChars = min(sourceExcerptChars ?? runtimeDefaults.cautionExcerptChars, runtimeDefaults.cautionExcerptChars)
+        }
+
+        return AlphaLocalPromptBudgetPlan(
+            maxInputChars: min(maxInputChars, baseMaxInputChars),
+            sourceBlockLimit: sourceBlockLimit,
+            sourceExcerptChars: sourceExcerptChars
+        )
+    }
+
     private static func defaultMatterAnswerFocus(for runtimeMode: AlphaPackRuntimeMode) -> (
         minimumBudget: Int,
         largeFileBlockLimit: Int,
@@ -301,6 +357,57 @@ enum AlphaLocalPromptBudgetPlanner {
                 slowExcerptChars: 720,
                 cautionTokensPerSecond: 10,
                 slowTokensPerSecond: 6
+            )
+        }
+    }
+
+    private static func defaultStructuredDocumentFocus(for runtimeMode: AlphaPackRuntimeMode) -> (
+        minimumBudget: Int,
+        largeFileBlockLimit: Int,
+        largeFileExcerptChars: Int,
+        cautionBlockLimit: Int,
+        cautionExcerptChars: Int,
+        slowBlockLimit: Int,
+        slowExcerptChars: Int,
+        cautionTokensPerSecond: Double,
+        slowTokensPerSecond: Double
+    ) {
+        switch runtimeMode {
+        case .mlxSwiftLm:
+            return (
+                minimumBudget: 7_600,
+                largeFileBlockLimit: 8,
+                largeFileExcerptChars: 1_200,
+                cautionBlockLimit: 6,
+                cautionExcerptChars: 950,
+                slowBlockLimit: 4,
+                slowExcerptChars: 760,
+                cautionTokensPerSecond: 10,
+                slowTokensPerSecond: 7
+            )
+        case .llamaCppGguf:
+            return (
+                minimumBudget: 5_400,
+                largeFileBlockLimit: 6,
+                largeFileExcerptChars: 1_000,
+                cautionBlockLimit: 5,
+                cautionExcerptChars: 820,
+                slowBlockLimit: 3,
+                slowExcerptChars: 640,
+                cautionTokensPerSecond: 8,
+                slowTokensPerSecond: 5
+            )
+        default:
+            return (
+                minimumBudget: max(baseFallbackBudget(for: runtimeMode) / 2, 4_800),
+                largeFileBlockLimit: 6,
+                largeFileExcerptChars: 950,
+                cautionBlockLimit: 5,
+                cautionExcerptChars: 800,
+                slowBlockLimit: 3,
+                slowExcerptChars: 620,
+                cautionTokensPerSecond: 8,
+                slowTokensPerSecond: 5
             )
         }
     }
@@ -451,6 +558,8 @@ enum AlphaPromptFocusPlanner {
 struct AlphaPromptPackBuilder {
     var maxInputChars: Int
     var maxFieldCount: Int = 12
+    var sourceBlockLimit: Int? = nil
+    var sourceExcerptChars: Int? = nil
 
     func build(input: AlphaLocalModelInput) -> AlphaLocalPromptPack {
         var refusalRules = [
@@ -501,7 +610,11 @@ struct AlphaPromptPackBuilder {
         var omitted: [AlphaSourceRef] = []
         var truncated = false
 
-        let rankedBlocks = AlphaPromptFocusPlanner.rankedSourceBlocks(input.sourcePack, instruction: input.instruction)
+        let rankedBlocks = Array(
+            AlphaPromptFocusPlanner
+                .rankedSourceBlocks(input.sourcePack, instruction: input.instruction)
+                .prefix(sourceBlockLimit ?? Int.max)
+        )
         var remainingBlocks = rankedBlocks.count
 
         for block in rankedBlocks {
@@ -514,7 +627,7 @@ struct AlphaPromptPackBuilder {
                 continue
             }
 
-            let preferredBudget = min(1_600, max(320, remainingBudget / max(1, remainingBlocks)))
+            let preferredBudget = min(sourceExcerptChars ?? 1_600, max(320, remainingBudget / max(1, remainingBlocks)))
             var sourceText = block.text
             var sourceWasTrimmed = false
 
