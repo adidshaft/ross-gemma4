@@ -237,7 +237,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
     }
 
     func estimateCostOrResourceUse(_ input: AlphaLocalModelInput) -> AlphaLocalModelResourceEstimate {
-        let maxChars = maxInputChars() ?? 16_000
+        let maxChars = input.promptBudgetOverrideChars ?? maxInputChars() ?? 16_000
         let promptChars: Int
         if input.task == .matterQuestionAnswer {
             promptChars = conciseMatterQuestionPrompt(for: input).count
@@ -275,7 +275,8 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         _ taskInput: AlphaLocalModelInput,
         onPartial: (@Sendable (AlphaLocalModelOutput) -> Void)?
     ) async -> AlphaLocalModelOutput {
-        let pack = AlphaPromptPackBuilder(maxInputChars: maxInputChars() ?? 16_000).build(input: taskInput)
+        let effectiveMaxInputChars = taskInput.promptBudgetOverrideChars ?? maxInputChars() ?? 16_000
+        let pack = AlphaPromptPackBuilder(maxInputChars: effectiveMaxInputChars).build(input: taskInput)
 
         guard let modelPath = self.modelPath, !modelPath.isEmpty else {
             return AlphaLocalModelOutput(
@@ -451,14 +452,16 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         SOURCES:
         """
 
-        var remainingBudget = max((maxInputChars() ?? 16_000) - 2_000, 5_600)
+        let effectiveMaxInputChars = input.promptBudgetOverrideChars ?? maxInputChars() ?? 16_000
+        let excerptCap = input.sourceExcerptCharsOverride ?? 1_800
+        var remainingBudget = max(effectiveMaxInputChars - 2_000, 5_600)
         for block in sourceBlocks {
             guard remainingBudget > 120 else { break }
             let label = block.sourceRef.label
             let excerpt = AlphaPromptFocusPlanner.focusedExcerpt(
                 from: block.text,
                 instruction: input.instruction,
-                maxChars: min(remainingBudget, 1_800)
+                maxChars: min(remainingBudget, excerptCap)
             )
             prompt += "\n[\(label)] \(excerpt)\n"
             remainingBudget -= excerpt.count + label.count + 8
@@ -513,10 +516,11 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
     }
 
     private func focusedMatterSourceBlocks(for input: AlphaLocalModelInput) -> [AlphaSourceTextBlock] {
-        Array(
+        let sourceBlockLimit = input.sourceBlockLimitOverride ?? AlphaMLXRuntimeProfile.sourceBlockLimit(for: capabilityTier)
+        return Array(
             AlphaPromptFocusPlanner
                 .rankedSourceBlocks(input.sourcePack, instruction: input.instruction)
-                .prefix(AlphaMLXRuntimeProfile.sourceBlockLimit(for: capabilityTier))
+                .prefix(sourceBlockLimit)
         )
     }
 

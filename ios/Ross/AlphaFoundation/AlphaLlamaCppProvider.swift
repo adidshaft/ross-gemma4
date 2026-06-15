@@ -218,7 +218,8 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         _ taskInput: AlphaLocalModelInput,
         onPartial: (@Sendable (AlphaLocalModelOutput) -> Void)?
     ) async -> AlphaLocalModelOutput {
-        let pack = AlphaPromptPackBuilder(maxInputChars: maxInputChars() ?? 7000).build(input: taskInput)
+        let effectiveMaxInputChars = taskInput.promptBudgetOverrideChars ?? maxInputChars() ?? 7_000
+        let pack = AlphaPromptPackBuilder(maxInputChars: effectiveMaxInputChars).build(input: taskInput)
         
         guard let modelPath = self.modelPath, !modelPath.isEmpty else {
             return AlphaLocalModelOutput(
@@ -296,7 +297,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                 }
                 
                 // Safety cutoff for runaway generation
-                if generatedResponse.count > max(maxInputChars() ?? 12_000, 12_000) { break }
+                if generatedResponse.count > max(effectiveMaxInputChars, 12_000) { break }
             }
             
             let cleanedResponse = stripTurnMarkerFragments(from: generatedResponse)
@@ -335,7 +336,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     }
     
     func estimateCostOrResourceUse(_ input: AlphaLocalModelInput) -> AlphaLocalModelResourceEstimate {
-        let maxChars = maxInputChars() ?? 12_000
+        let maxChars = input.promptBudgetOverrideChars ?? maxInputChars() ?? 12_000
         let promptChars: Int
         if input.task == .matterQuestionAnswer {
             promptChars = conciseMatterQuestionPrompt(for: input).count
@@ -396,14 +397,16 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         SOURCES:
         """
 
-        var remainingBudget = max((maxInputChars() ?? 12_000) - 2_000, 4_800)
+        let effectiveMaxInputChars = input.promptBudgetOverrideChars ?? maxInputChars() ?? 12_000
+        let excerptCap = input.sourceExcerptCharsOverride ?? 1_500
+        var remainingBudget = max(effectiveMaxInputChars - 2_000, 4_800)
         for block in sourceBlocks {
             guard remainingBudget > 120 else { break }
             let label = block.sourceRef.label
             let excerpt = AlphaPromptFocusPlanner.focusedExcerpt(
                 from: block.text,
                 instruction: input.instruction,
-                maxChars: min(remainingBudget, 1_500)
+                maxChars: min(remainingBudget, excerptCap)
             )
             prompt += "\n[\(label)] \(excerpt)\n"
             remainingBudget -= excerpt.count + label.count + 8
@@ -458,10 +461,11 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     }
 
     private func focusedMatterSourceBlocks(for input: AlphaLocalModelInput) -> [AlphaSourceTextBlock] {
-        Array(
+        let sourceBlockLimit = input.sourceBlockLimitOverride ?? AlphaLlamaRuntimeProfile.sourceBlockLimit(for: capabilityTier)
+        return Array(
             AlphaPromptFocusPlanner
                 .rankedSourceBlocks(input.sourcePack, instruction: input.instruction)
-                .prefix(AlphaLlamaRuntimeProfile.sourceBlockLimit(for: capabilityTier))
+                .prefix(sourceBlockLimit)
         )
     }
 

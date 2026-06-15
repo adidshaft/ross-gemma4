@@ -3791,6 +3791,64 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertGreaterThan(completed.estimatedOutputTokensPerSecond ?? 0, 0)
     }
 
+    func testMatterQuestionBudgetPlannerTightensSlowLlamaRuns() {
+        let slowInvocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 5.5,
+            timeToFirstTokenMs: 4_900,
+            status: .complete
+        )
+
+        let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
+            runtimeMode: .llamaCppGguf,
+            baseMaxInputChars: 12_000,
+            sourceBlockCount: 9,
+            sourceCharCount: 28_000,
+            lastInvocation: slowInvocation
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 7_776)
+        XCTAssertEqual(plan.sourceBlockLimit, 2)
+        XCTAssertEqual(plan.sourceExcerptChars, 760)
+    }
+
+    func testMatterQuestionBudgetPlannerKeepsFastMLXRunsBroad() {
+        let fastInvocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 21,
+            timeToFirstTokenMs: 1_200,
+            status: .complete
+        )
+
+        let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
+            runtimeMode: .mlxSwiftLm,
+            baseMaxInputChars: 16_000,
+            sourceBlockCount: 4,
+            sourceCharCount: 10_000,
+            lastInvocation: fastInvocation
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 16_000)
+        XCTAssertNil(plan.sourceBlockLimit)
+        XCTAssertNil(plan.sourceExcerptChars)
+    }
+
     func testRealRuntimeSelectionFailsClosedWhenUnavailable() async {
         let pack = installedPack(.caseAssociate, runtimeMode: .appleFoundationModels)
         let runtimeEnvironment = AlphaLocalRuntimeEnvironment(

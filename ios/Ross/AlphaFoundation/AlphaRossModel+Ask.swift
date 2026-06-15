@@ -1120,7 +1120,7 @@ extension AlphaRossModel {
             return
         }
 
-        let input = AlphaLocalModelInput(
+        var input = AlphaLocalModelInput(
             task: .matterQuestionAnswer,
             instruction: askRuntimeInstruction(
                 question: question,
@@ -1157,6 +1157,18 @@ extension AlphaRossModel {
         guard runtimeAllowedForAsk, provider.isAvailable(), provider.supportedTasks().contains(.matterQuestionAnswer) else {
             return
         }
+        let baseMaxInputChars = provider.maxInputChars() ?? (provider.runtimeMode == .mlxSwiftLm ? 16_000 : 12_000)
+        let sourceCharCount = input.sourcePack.reduce(0) { $0 + $1.text.count }
+        let budgetPlan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
+            runtimeMode: provider.runtimeMode,
+            baseMaxInputChars: baseMaxInputChars,
+            sourceBlockCount: input.sourcePack.count,
+            sourceCharCount: sourceCharCount,
+            lastInvocation: lastModelInvocation
+        )
+        input.promptBudgetOverrideChars = budgetPlan.maxInputChars
+        input.sourceBlockLimitOverride = budgetPlan.sourceBlockLimit
+        input.sourceExcerptCharsOverride = budgetPlan.sourceExcerptChars
 
         let chatSessionID = storedResult.chatSessionID
         let chatTurnID = storedResult.chatTurnID

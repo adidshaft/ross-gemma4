@@ -61,6 +61,9 @@ struct AlphaLocalModelInput: Codable, Hashable, Sendable {
     var extractionMode: AlphaExtractionMode
     var requireSourceRefs: Bool? = nil
     var samplerSettings: AlphaLlamaSamplerSettings? = nil
+    var promptBudgetOverrideChars: Int? = nil
+    var sourceBlockLimitOverride: Int? = nil
+    var sourceExcerptCharsOverride: Int? = nil
 
     var sourceRefsRequired: Bool {
         requireSourceRefs ?? true
@@ -186,6 +189,132 @@ struct AlphaLocalPromptPack: Hashable, Sendable {
     var inputChars: Int
     var estimatedTokens: Int?
     var truncated: Bool
+}
+
+struct AlphaLocalPromptBudgetPlan: Hashable, Sendable {
+    var maxInputChars: Int
+    var sourceBlockLimit: Int?
+    var sourceExcerptChars: Int?
+}
+
+enum AlphaLocalPromptBudgetPlanner {
+    static func matterQuestionPlan(
+        runtimeMode: AlphaPackRuntimeMode,
+        baseMaxInputChars: Int,
+        sourceBlockCount: Int,
+        sourceCharCount: Int,
+        lastInvocation: AlphaLocalModelInvocation?
+    ) -> AlphaLocalPromptBudgetPlan {
+        guard sourceBlockCount > 0 else {
+            return AlphaLocalPromptBudgetPlan(
+                maxInputChars: baseMaxInputChars,
+                sourceBlockLimit: nil,
+                sourceExcerptChars: nil
+            )
+        }
+
+        let runtimeDefaults = defaultMatterAnswerFocus(for: runtimeMode)
+        var maxInputChars = baseMaxInputChars
+        var sourceBlockLimit: Int? = nil
+        var sourceExcerptChars: Int? = nil
+
+        if sourceBlockCount >= 8 || sourceCharCount >= 24_000 {
+            maxInputChars = max(Int(Double(maxInputChars) * 0.9), runtimeDefaults.minimumBudget)
+            sourceBlockLimit = runtimeDefaults.largeFileBlockLimit
+            sourceExcerptChars = runtimeDefaults.largeFileExcerptChars
+        }
+
+        guard let lastInvocation,
+              lastInvocation.runtimeMode == runtimeMode.rawValue,
+              lastInvocation.task == .matterQuestionAnswer else {
+            return AlphaLocalPromptBudgetPlan(
+                maxInputChars: maxInputChars,
+                sourceBlockLimit: sourceBlockLimit,
+                sourceExcerptChars: sourceExcerptChars
+            )
+        }
+
+        let firstTokenMs = lastInvocation.timeToFirstTokenMs ?? Int.max
+        let outputSpeed = lastInvocation.estimatedOutputTokensPerSecond ?? .greatestFiniteMagnitude
+
+        if firstTokenMs >= 4_500 || outputSpeed <= runtimeDefaults.slowTokensPerSecond {
+            maxInputChars = max(Int(Double(maxInputChars) * 0.72), runtimeDefaults.minimumBudget)
+            sourceBlockLimit = min(sourceBlockLimit ?? runtimeDefaults.slowBlockLimit, runtimeDefaults.slowBlockLimit)
+            sourceExcerptChars = min(sourceExcerptChars ?? runtimeDefaults.slowExcerptChars, runtimeDefaults.slowExcerptChars)
+        } else if firstTokenMs >= 3_000 || outputSpeed <= runtimeDefaults.cautionTokensPerSecond {
+            maxInputChars = max(Int(Double(maxInputChars) * 0.84), runtimeDefaults.minimumBudget)
+            sourceBlockLimit = min(sourceBlockLimit ?? runtimeDefaults.cautionBlockLimit, runtimeDefaults.cautionBlockLimit)
+            sourceExcerptChars = min(sourceExcerptChars ?? runtimeDefaults.cautionExcerptChars, runtimeDefaults.cautionExcerptChars)
+        }
+
+        return AlphaLocalPromptBudgetPlan(
+            maxInputChars: min(maxInputChars, baseMaxInputChars),
+            sourceBlockLimit: sourceBlockLimit,
+            sourceExcerptChars: sourceExcerptChars
+        )
+    }
+
+    private static func defaultMatterAnswerFocus(for runtimeMode: AlphaPackRuntimeMode) -> (
+        minimumBudget: Int,
+        largeFileBlockLimit: Int,
+        largeFileExcerptChars: Int,
+        cautionBlockLimit: Int,
+        cautionExcerptChars: Int,
+        slowBlockLimit: Int,
+        slowExcerptChars: Int,
+        cautionTokensPerSecond: Double,
+        slowTokensPerSecond: Double
+    ) {
+        switch runtimeMode {
+        case .mlxSwiftLm:
+            return (
+                minimumBudget: 7_200,
+                largeFileBlockLimit: 5,
+                largeFileExcerptChars: 1_350,
+                cautionBlockLimit: 4,
+                cautionExcerptChars: 1_150,
+                slowBlockLimit: 3,
+                slowExcerptChars: 900,
+                cautionTokensPerSecond: 12,
+                slowTokensPerSecond: 8
+            )
+        case .llamaCppGguf:
+            return (
+                minimumBudget: 5_800,
+                largeFileBlockLimit: 4,
+                largeFileExcerptChars: 1_150,
+                cautionBlockLimit: 3,
+                cautionExcerptChars: 950,
+                slowBlockLimit: 2,
+                slowExcerptChars: 760,
+                cautionTokensPerSecond: 10,
+                slowTokensPerSecond: 6
+            )
+        default:
+            return (
+                minimumBudget: max(baseFallbackBudget(for: runtimeMode) / 2, 4_800),
+                largeFileBlockLimit: 4,
+                largeFileExcerptChars: 1_100,
+                cautionBlockLimit: 3,
+                cautionExcerptChars: 900,
+                slowBlockLimit: 2,
+                slowExcerptChars: 720,
+                cautionTokensPerSecond: 10,
+                slowTokensPerSecond: 6
+            )
+        }
+    }
+
+    private static func baseFallbackBudget(for runtimeMode: AlphaPackRuntimeMode) -> Int {
+        switch runtimeMode {
+        case .mlxSwiftLm:
+            return 16_000
+        case .llamaCppGguf:
+            return 12_000
+        default:
+            return 14_000
+        }
+    }
 }
 
 enum AlphaPromptFocusPlanner {
