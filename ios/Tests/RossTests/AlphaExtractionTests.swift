@@ -4338,22 +4338,33 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(runtime, .mlxSwiftLm)
     }
 
-    func testPreferredAssistantRuntimeModeKeepsGGUFForQuickStartAndConstrainedPhones() {
+    func testPreferredAssistantRuntimeModePrefersMLXForQuickStartOnCapablePhone() {
         let quickStart = alphaPreferredAssistantRuntimeMode(
             for: .quickStart,
             isPhoneFormFactor: true,
             physicalMemoryBytes: 16 * 1_073_741_824,
             freeStorageGB: 32
         )
+
+        XCTAssertEqual(quickStart, .mlxSwiftLm)
+    }
+
+    func testPreferredAssistantRuntimeModeKeepsGGUFForConstrainedPhones() {
         let constrained = alphaPreferredAssistantRuntimeMode(
             for: .caseAssociate,
             isPhoneFormFactor: true,
             physicalMemoryBytes: 4 * 1_073_741_824,
             freeStorageGB: 6
         )
+        let constrainedQuickStart = alphaPreferredAssistantRuntimeMode(
+            for: .quickStart,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 4 * 1_073_741_824,
+            freeStorageGB: 6
+        )
 
-        XCTAssertEqual(quickStart, .llamaCppGguf)
         XCTAssertEqual(constrained, .llamaCppGguf)
+        XCTAssertEqual(constrainedQuickStart, .llamaCppGguf)
     }
 
     func testPreferredAssistantRuntimeModePreservesInstalledMLXRuntime() {
@@ -4366,6 +4377,44 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(runtime, .mlxSwiftLm)
+    }
+
+    func testAssistantCatalogDescriptorCompatibleOnlyPrefersRequestedQuickStartMLXPackWhenSupported() {
+        let manifest = AlphaBackendCatalogManifest(
+            packs: [
+                AlphaBackendCatalogPack(
+                    packId: "gemma-4-e4b-mlx",
+                    displayName: "Gemma 4 E4B MLX",
+                    tier: .quickStart,
+                    sizeBytes: 4_500_000_000,
+                    checksumSha256: String(repeating: "1", count: 64),
+                    artifactKind: "mlx_directory",
+                    runtimeMode: .mlxSwiftLm,
+                    developmentOnly: false
+                ),
+                AlphaBackendCatalogPack(
+                    packId: "gemma-4-e4b-gguf",
+                    displayName: "Gemma 4 E4B GGUF",
+                    tier: .quickStart,
+                    sizeBytes: 5_405_168_384,
+                    checksumSha256: String(repeating: "2", count: 64),
+                    artifactKind: "local_model_artifact",
+                    runtimeMode: .llamaCppGguf,
+                    developmentOnly: false
+                )
+            ]
+        )
+
+        let descriptor = alphaAssistantCatalogDescriptor(
+            for: .quickStart,
+            preferredRuntimeMode: .mlxSwiftLm,
+            compatibleOnly: true,
+            manifest: manifest
+        )
+
+        XCTAssertEqual(descriptor.packId, "gemma-4-e4b-mlx")
+        XCTAssertEqual(descriptor.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(descriptor.artifactKind, "mlx_directory")
     }
 
     func testAssistantUpdateCandidateIgnoresMLXArchiveChecksumStyleWhenPackIdMatches() {

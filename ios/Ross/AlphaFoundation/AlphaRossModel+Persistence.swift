@@ -708,11 +708,8 @@ func alphaPreferredAssistantRuntimeMode(
         return .mlxSwiftLm
     }
 
-    switch tier {
-    case .quickStart, .flash:
+    if tier == .flash {
         return .llamaCppGguf
-    case .caseAssociate, .seniorDraftingSupport:
-        break
     }
 
     guard isPhoneFormFactor else {
