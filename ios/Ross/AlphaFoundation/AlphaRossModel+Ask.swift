@@ -125,6 +125,27 @@ extension AlphaRossModel {
         return session.turns.reversed().map { askResult(from: $0, in: caseMatter, chatSessionID: session.id) }
     }
 
+    func alphaPreviousAskTurn(for scopeCaseID: UUID?, excluding turnID: UUID?) -> AlphaChatTurn? {
+        guard let session = activeChatSession(for: scopeCaseID) else { return nil }
+        return session.turns.first {
+            $0.kind == .userAsk &&
+            $0.id != turnID &&
+            (!$0.question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !$0.sourceRefs.isEmpty)
+        }
+    }
+
+    func alphaInheritedAskSourceRefsForFollowUp(
+        question: String,
+        scopeCaseID: UUID?,
+        excluding turnID: UUID?
+    ) -> [AlphaSourceRef] {
+        guard selectedAskDocumentIDs(for: scopeCaseID).isEmpty else { return [] }
+        guard alphaAskQuestionReferencesPriorSources(question) else { return [] }
+        guard let previousTurn = alphaPreviousAskTurn(for: scopeCaseID, excluding: turnID) else { return [] }
+        let preferredSourceRefs = previousTurn.sourceRefs.filter { $0.effectiveSourceCategory == .documentSource }
+        return preferredSourceRefs.isEmpty ? previousTurn.sourceRefs : preferredSourceRefs
+    }
+
     func chatSessions(for caseId: UUID) -> [AlphaChatSession] {
         guard let caseMatter = persisted.cases.first(where: { $0.id == caseId }) else { return [] }
         return caseMatter.chatSessions.sorted { $0.updatedAt > $1.updatedAt }
@@ -1068,6 +1089,11 @@ extension AlphaRossModel {
     ) {
         guard activePack != nil else { return }
         let selectedDocuments = selectedAskDocuments(for: scopeCaseID)
+        let inheritedFollowUpSourceRefs = alphaInheritedAskSourceRefsForFollowUp(
+            question: question,
+            scopeCaseID: scopeCaseID,
+            excluding: storedResult.chatTurnID
+        )
         let selectedDocumentIDs = Set(selectedDocuments.map(\.id))
         let pendingSelectedDocumentCount: Int = {
             guard !selectedDocumentIDs.isEmpty else { return 0 }
@@ -1107,7 +1133,8 @@ extension AlphaRossModel {
             ? askRuntimeSourcePack(
                 question: question,
                 scopeCaseID: scopeCaseID,
-                selectedDocuments: selectedDocuments
+                selectedDocuments: selectedDocuments,
+                preferredFollowUpSourceRefs: inheritedFollowUpSourceRefs
             )
             : []
         let hasDocumentSource = sourcePack.contains { $0.sourceRef.effectiveSourceCategory == .documentSource }
@@ -1540,9 +1567,11 @@ extension AlphaRossModel {
     func askRuntimeSourcePack(
         question: String,
         scopeCaseID: UUID?,
-        selectedDocuments: [AlphaAskDocumentOption]
+        selectedDocuments: [AlphaAskDocumentOption],
+        preferredFollowUpSourceRefs: [AlphaSourceRef] = []
     ) -> [AlphaSourceTextBlock] {
         let selectedIDs = Set(selectedDocuments.map(\.id))
+        let preferredFollowUpDocumentIDs = Set(preferredFollowUpSourceRefs.map(\.documentId))
         let queryTerms = alphaAskSearchTerms(from: question)
         let requestedTier = activePack?.tier ?? persisted.settings.activeTier ?? selectedTier
         let runtimeEnvironment = alphaLocalRuntimeEnvironment(
@@ -1606,6 +1635,12 @@ extension AlphaRossModel {
                         if lhsScoped != rhsScoped {
                             return lhsScoped && !rhsScoped
                         }
+                    }
+
+                    let lhsPreferred = preferredFollowUpDocumentIDs.contains(lhs.element.1.id)
+                    let rhsPreferred = preferredFollowUpDocumentIDs.contains(rhs.element.1.id)
+                    if lhsPreferred != rhsPreferred {
+                        return lhsPreferred && !rhsPreferred
                     }
 
                     let lhsScore = alphaAskCandidateDocumentRelevanceScore(
@@ -1676,6 +1711,11 @@ extension AlphaRossModel {
             rankedBlocks: rankedDocumentBlocks,
             selectedDocumentIDs: selectedIDs
         )
+        let prioritizedFollowUpBlocks = alphaPrioritizedFollowUpSourceBlocks(
+            documentBlocks,
+            rankedBlocks: rankedDocumentBlocks,
+            preferredSourceRefs: preferredFollowUpSourceRefs
+        )
         let balancedRankedDocumentBlocks = alphaBalancedRankedAskSourceBlocks(
             rankedDocumentBlocks,
             selectedDocumentIDs: selectedIDs
@@ -1683,6 +1723,9 @@ extension AlphaRossModel {
         if !selectedIDs.isEmpty {
             guard !prioritizedSelectedDocumentBlocks.isEmpty else { return [] }
             return Array(prioritizedSelectedDocumentBlocks.prefix(sourcePackPolicy.sourceBlockLimit))
+        }
+        if !prioritizedFollowUpBlocks.isEmpty {
+            return Array((matterBlocks + prioritizedFollowUpBlocks).prefix(sourcePackPolicy.sourceBlockLimit))
         }
         if !balancedRankedDocumentBlocks.isEmpty {
             return Array((matterBlocks + balancedRankedDocumentBlocks).prefix(sourcePackPolicy.sourceBlockLimit))
@@ -1961,6 +2004,70 @@ extension AlphaRossModel {
         return balanced
     }
 
+    func alphaPrioritizedFollowUpSourceBlocks(
+        _ blocks: [AlphaSourceTextBlock],
+        rankedBlocks: [AlphaSourceTextBlock],
+        preferredSourceRefs: [AlphaSourceRef]
+    ) -> [AlphaSourceTextBlock] {
+        guard !preferredSourceRefs.isEmpty else { return [] }
+
+        let groupedBlocks = Dictionary(grouping: blocks) { $0.sourceRef.documentId }
+        let groupedRankedBlocks = Dictionary(grouping: rankedBlocks) { $0.sourceRef.documentId }
+        var prioritized: [AlphaSourceTextBlock] = []
+        var seenBlockKeys = Set<String>()
+
+        func appendIfNeeded(_ block: AlphaSourceTextBlock?) {
+            guard let block else { return }
+            let key = alphaAskSourceBlockKey(block)
+            guard seenBlockKeys.insert(key).inserted else { return }
+            prioritized.append(block)
+        }
+
+        for sourceRef in preferredSourceRefs {
+            let documentBlocks = groupedBlocks[sourceRef.documentId] ?? []
+            let anchorBlock = alphaMatchingAskSourceBlock(for: sourceRef, in: documentBlocks) ??
+                groupedRankedBlocks[sourceRef.documentId]?.first
+            appendIfNeeded(anchorBlock)
+            if let anchorBlock {
+                for contextualBlock in alphaContextualAskSourceBlocks(
+                    around: anchorBlock,
+                    groupedBlocks: groupedBlocks
+                ) {
+                    appendIfNeeded(contextualBlock)
+                }
+            }
+        }
+
+        for rankedBlock in alphaBalancedRankedAskSourceBlocks(rankedBlocks, selectedDocumentIDs: []) {
+            appendIfNeeded(rankedBlock)
+        }
+
+        return prioritized
+    }
+
+    func alphaMatchingAskSourceBlock(
+        for sourceRef: AlphaSourceRef,
+        in blocks: [AlphaSourceTextBlock]
+    ) -> AlphaSourceTextBlock? {
+        guard !blocks.isEmpty else { return nil }
+
+        if let exactMatch = blocks.first(where: {
+            $0.sourceRef.documentId == sourceRef.documentId &&
+            $0.pageNumber == sourceRef.pageNumber &&
+            $0.sourceRef.paragraphRange == sourceRef.paragraphRange &&
+            $0.sourceRef.label == sourceRef.label
+        }) {
+            return exactMatch
+        }
+        if let pageMatch = blocks.first(where: {
+            $0.sourceRef.documentId == sourceRef.documentId &&
+            $0.pageNumber == sourceRef.pageNumber
+        }) {
+            return pageMatch
+        }
+        return blocks.first(where: { $0.sourceRef.documentId == sourceRef.documentId })
+    }
+
     func alphaPreferredSelectedDocumentFallbackBlocks(
         _ blocks: [AlphaSourceTextBlock]
     ) -> [AlphaSourceTextBlock] {
@@ -2142,6 +2249,50 @@ extension AlphaRossModel {
         ]
         return !tokens.isDisjoint(with: documentReferenceTerms) &&
             !tokens.isDisjoint(with: selectedDocumentIntentTerms)
+    }
+
+    func alphaAskQuestionReferencesPriorSources(_ question: String) -> Bool {
+        let normalizedTokens = alphaAskNormalizedQuestionTokens(from: question)
+        guard !normalizedTokens.isEmpty else { return false }
+
+        let lowered = normalizedTokens.joined(separator: " ")
+        let followUpPhrases = [
+            "which page",
+            "what page",
+            "where does it say",
+            "where do they say",
+            "where is that",
+            "where is this",
+            "show me the source",
+            "show the source",
+            "show me that source",
+            "cite that",
+            "cite this",
+            "quote that",
+            "quote this",
+            "which file",
+            "which document",
+            "what about that",
+            "what about those",
+            "what about it",
+            "and what about",
+            "where in that",
+            "where in those",
+            "where in it"
+        ]
+        if followUpPhrases.contains(where: { lowered.contains($0) }) {
+            return true
+        }
+
+        let tokens = Set(normalizedTokens)
+        let referentialTerms: Set<String> = ["that", "those", "it", "them", "this", "these"]
+        let sourceTerms: Set<String> = [
+            "page", "pages", "source", "sources", "cite", "citation", "citations",
+            "file", "files", "document", "documents", "quote", "quoted", "support"
+        ]
+        return normalizedTokens.count <= 14 &&
+            !tokens.isDisjoint(with: referentialTerms) &&
+            !tokens.isDisjoint(with: sourceTerms)
     }
 
     func alphaAskQuestionTargetsEvidence(questionTerms: [String]) -> Bool {

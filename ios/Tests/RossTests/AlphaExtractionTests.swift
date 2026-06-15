@@ -8019,6 +8019,27 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     @MainActor
+    func testFollowUpQuestionReferencesPriorSources() {
+        let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
+
+        XCTAssertTrue(
+            model.alphaAskQuestionReferencesPriorSources(
+                "Which page says that?"
+            )
+        )
+        XCTAssertTrue(
+            model.alphaAskQuestionReferencesPriorSources(
+                "Show me the source for that."
+            )
+        )
+        XCTAssertFalse(
+            model.alphaAskQuestionReferencesPriorSources(
+                "What is FMLA?"
+            )
+        )
+    }
+
+    @MainActor
     func testNaturalPluralSelectedDocumentQuestionPrefersTaggedFileSource() {
         let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
         let selectedDocumentID = UUID()

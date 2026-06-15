@@ -846,6 +846,110 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
     }
 
     @MainActor
+    func testFollowUpSourceQuestionInheritsPriorCitedFileContext() {
+        let caseID = UUID()
+        let citedDocumentID = UUID()
+        let recentNoiseDocumentID = UUID()
+        let citedSourceRef = AlphaSourceRef(
+            caseId: caseID,
+            documentId: citedDocumentID,
+            documentTitle: "Order bundle",
+            pageNumber: 4,
+            textSnippet: "The court listed the matter on 17 June 2026."
+        )
+        let citedDocument = AlphaCaseDocument(
+            id: citedDocumentID,
+            title: "Order bundle",
+            fileName: "order-bundle.txt",
+            kind: .text,
+            storedRelativePath: "docs/order-bundle.txt",
+            importedAt: .now.addingTimeInterval(-1_800),
+            pageCount: 2,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: "Page 4 says the matter is listed on 17 June 2026.\nPage 5 says written submissions are due before that.",
+            pages: [
+                AlphaDocumentPage(
+                    pageNumber: 4,
+                    snippet: "Matter listed on 17 June 2026.",
+                    extractedText: "Page 4 says the matter is listed on 17 June 2026."
+                ),
+                AlphaDocumentPage(
+                    pageNumber: 5,
+                    snippet: "Written submissions due before hearing.",
+                    extractedText: "Page 5 says written submissions are due before that."
+                )
+            ]
+        )
+        let recentNoiseDocument = AlphaCaseDocument(
+            id: recentNoiseDocumentID,
+            title: "Recent reminder",
+            fileName: "recent-reminder.txt",
+            kind: .text,
+            storedRelativePath: "docs/recent-reminder.txt",
+            importedAt: .now,
+            pageCount: 1,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: "Routine filing reminder with no hearing date.",
+            pages: [
+                AlphaDocumentPage(
+                    pageNumber: 1,
+                    snippet: "Routine filing reminder.",
+                    extractedText: "Routine filing reminder with no hearing date."
+                )
+            ]
+        )
+        let priorTurn = AlphaChatTurn(
+            askedAt: .now.addingTimeInterval(-120),
+            question: "What is the next hearing date?",
+            answerTitle: "Answered from your files",
+            answerSections: ["The matter is listed on 17 June 2026."],
+            sourceRefs: [citedSourceRef]
+        )
+
+        var state = AlphaPersistedState.seed()
+        state.cases = [
+            AlphaCaseMatter(
+                id: caseID,
+                title: "Follow-up context matter",
+                forum: "High Court",
+                stage: .arguments,
+                summary: "Short source follow-ups should reuse prior cited files.",
+                issueHighlights: [],
+                evidenceNotes: [],
+                draftTasks: [],
+                documents: [citedDocument, recentNoiseDocument],
+                sourceRefs: [],
+                chatSessions: [
+                    AlphaChatSession(
+                        turns: [priorTurn]
+                    )
+                ]
+            )
+        ]
+
+        let model = AlphaRossModel(previewState: state)
+        let inheritedSourceRefs = model.alphaInheritedAskSourceRefsForFollowUp(
+            question: "Which page says that?",
+            scopeCaseID: caseID,
+            excluding: nil
+        )
+        let sourcePack = model.askRuntimeSourcePack(
+            question: "Which page says that?",
+            scopeCaseID: caseID,
+            selectedDocuments: [],
+            preferredFollowUpSourceRefs: inheritedSourceRefs
+        )
+
+        XCTAssertEqual(inheritedSourceRefs.first?.documentId, citedDocumentID)
+        let documentSourceRefs = sourcePack.filter { $0.sourceRef.effectiveSourceCategory != .matterDetail }
+        XCTAssertFalse(documentSourceRefs.isEmpty)
+        XCTAssertEqual(documentSourceRefs.first?.sourceRef.documentId, citedDocumentID)
+        XCTAssertEqual(documentSourceRefs.first?.pageNumber, 4)
+    }
+
+    @MainActor
     func testSelectedFileWaitingResultUsesPlainLanguage() {
         let previousLanguageCode = rossSelectedLanguageCode()
         rossSaveLanguageSelection(code: "hi")
