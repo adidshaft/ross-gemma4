@@ -1059,6 +1059,10 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     func testPrivateAssistantTierCopyHidesTechnicalModelNames() {
+        XCTAssertEqual(
+            AlphaCapabilityTier.visibleAssistantTiers,
+            [.quickStart, .caseAssociate, .seniorDraftingSupport]
+        )
         XCTAssertEqual(AlphaCapabilityTier.flash.downloadSizeLabel, "3.0 GB")
         XCTAssertEqual(AlphaCapabilityTier.quickStart.downloadSizeLabel, "5.4 GB")
         XCTAssertEqual(AlphaCapabilityTier.caseAssociate.downloadSizeLabel, "7.4 GB")
@@ -1166,6 +1170,41 @@ final class AlphaExtractionTests: XCTestCase {
                 )
             }
         }
+    }
+
+    func testRecommendedOnDeviceTierMatchesCurrentThreeTierProductLineup() {
+        XCTAssertEqual(
+            alphaRecommendedOnDeviceTier(
+                freeStorageGB: 20,
+                physicalMemoryBytes: 18 * 1_073_741_824,
+                lowPowerMode: false
+            ),
+            .seniorDraftingSupport
+        )
+        XCTAssertEqual(
+            alphaRecommendedOnDeviceTier(
+                freeStorageGB: 10,
+                physicalMemoryBytes: 8 * 1_073_741_824,
+                lowPowerMode: false
+            ),
+            .caseAssociate
+        )
+        XCTAssertEqual(
+            alphaRecommendedOnDeviceTier(
+                freeStorageGB: 10,
+                physicalMemoryBytes: 8 * 1_073_741_824,
+                lowPowerMode: true
+            ),
+            .quickStart
+        )
+        XCTAssertEqual(
+            alphaRecommendedOnDeviceTier(
+                freeStorageGB: 6,
+                physicalMemoryBytes: 4 * 1_073_741_824,
+                lowPowerMode: false
+            ),
+            .quickStart
+        )
     }
 
     func testAnswerTuningCopyHidesTechnicalModelNames() {

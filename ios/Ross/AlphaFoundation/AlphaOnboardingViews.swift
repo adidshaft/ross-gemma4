@@ -94,9 +94,7 @@ struct AlphaOnboardingScreen: View {
     @State private var didChooseAssistantOption = false
 
     private var recommendedTier: AlphaCapabilityTier {
-        // First-run setup must be the fastest reliable path. Larger packs remain
-        // available explicitly from assistant settings after Ross is usable.
-        .flash
+        model.recommendedOnDeviceTier()
     }
 
     var body: some View {
@@ -227,7 +225,7 @@ struct AlphaOnboardingModelSelector: View {
                     .foregroundStyle(Color.rossAccent)
             }
 
-            ForEach(AlphaCapabilityTier.allCases, id: \.self) { tier in
+            ForEach(AlphaCapabilityTier.visibleAssistantTiers, id: \.self) { tier in
                 AlphaOnboardingModelChoiceRow(
                     tier: tier,
                     isSelected: tier == selectedTier,
@@ -622,7 +620,7 @@ struct AlphaModelPickerSheet: View {
                         }
                         .padding(.horizontal, 4)
 
-                        ForEach(AlphaCapabilityTier.allCases, id: \.self) { tier in
+                        ForEach(AlphaCapabilityTier.visibleAssistantTiers, id: \.self) { tier in
                             AlphaModelPickerRow(
                                 model: model,
                                 tier: tier,

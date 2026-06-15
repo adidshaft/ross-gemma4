@@ -235,6 +235,10 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
 
     var id: String { rawValue }
 
+    static var visibleAssistantTiers: [AlphaCapabilityTier] {
+        [.quickStart, .caseAssociate, .seniorDraftingSupport]
+    }
+
     var title: String {
         switch self {
         case .flash:

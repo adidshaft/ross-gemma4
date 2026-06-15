@@ -439,13 +439,20 @@ private func alphaCurrentLowPowerMode() -> Bool {
     #endif
 }
 
-private func alphaRecommendedOnDeviceTier(freeStorageGB: Int) -> AlphaCapabilityTier {
-    // Flash is the safe first-run baseline. It's the fastest to download,
-    // the lightest at inference, and the most reliable across devices.
-    // The user can opt into heavier tiers from Settings after onboarding.
-    // See docs/IOS_REMEDIATION_PLAN.md "Problem 1.5: First-Run Picked the Wrong Pack".
-    _ = freeStorageGB
-    return .flash
+func alphaRecommendedOnDeviceTier(
+    freeStorageGB: Int,
+    physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory,
+    lowPowerMode: Bool = alphaCurrentLowPowerMode()
+) -> AlphaCapabilityTier {
+    let memoryGB = max(2, Int(physicalMemoryBytes / 1_073_741_824))
+
+    if memoryGB >= 16, freeStorageGB >= 18, !lowPowerMode {
+        return .seniorDraftingSupport
+    }
+    if memoryGB >= 8, freeStorageGB >= 8 {
+        return lowPowerMode && memoryGB < 12 ? .quickStart : .caseAssociate
+    }
+    return .quickStart
 }
 
 private func alphaFreeDiskSpaceLabel() -> String {
@@ -1266,7 +1273,7 @@ extension AlphaRossModel {
     }
 
     func advanceOnboarding() {
-        selectedTier = .flash
+        selectedTier = recommendedOnDeviceTier()
         finishPackSetup()
     }
 
