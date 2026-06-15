@@ -3924,6 +3924,26 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(result.hasAnswerDetails)
     }
 
+    func testAskResultHasAnswerDetailsWhenInvocationHasSecondaryMetricsOnly() {
+        let invocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.appleFoundationModels.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.quickStart.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            status: .complete
+        )
+
+        var result = baseAskResult()
+        result.modelInvocation = invocation
+
+        XCTAssertTrue(result.hasAnswerDetails)
+    }
+
     @MainActor
     func testAnswerDetailMetricsEstimateTokenCountAndExposeFirstResponse() {
         let invocation = AlphaLocalModelInvocation(

@@ -2301,9 +2301,9 @@ extension AlphaAskResult {
             return true
         }
         guard let modelInvocation else { return false }
-        return modelInvocation.estimatedProcessedTokens != nil ||
-            modelInvocation.estimatedOutputTokensPerSecond != nil ||
-            modelInvocation.timeToFirstTokenMs != nil
+        guard modelInvocation.status != .running else { return false }
+        return !modelInvocation.answerDetailOverviewMetrics.isEmpty ||
+            !modelInvocation.answerDetailSecondaryMetrics.isEmpty
     }
 
     var answerContinuationContext: AlphaAnswerContinuationContext? {
