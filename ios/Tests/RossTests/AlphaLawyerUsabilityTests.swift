@@ -2009,11 +2009,64 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             let installedJob = snapshot.modelJobs.first { $0.tier == .caseAssociate }
 
             XCTAssertNotNil(installedPack)
-            if let runtimeMode = installedPack?.runtimeMode {
-                XCTAssertTrue([.appleFoundationModels, .deterministicDev].contains(runtimeMode))
-            }
+            XCTAssertEqual(installedPack?.runtimeMode, .deterministicDev)
             XCTAssertEqual(installedJob?.state, .installed)
             XCTAssertEqual(snapshot.settings.activeTier, .caseAssociate)
+        }
+    }
+
+    func testPrepareSystemAssistantPackInstallsSystemAssistantWhenAvailableOtherwiseQueuesDownload() async throws {
+        try await withRestoredStore { store in
+            let fallback = alphaDefaultAssistantDownloadDescriptor(for: .caseAssociate)
+            let job = AlphaModelDownloadJob(
+                sessionId: "system-assistant-preflight",
+                packId: fallback.packId,
+                tier: .caseAssociate,
+                state: .queued,
+                networkPolicy: .wifiOnly,
+                bytesDownloaded: 0,
+                totalBytes: fallback.sizeBytes,
+                checksumSha256: fallback.checksumSha256,
+                artifactKind: fallback.artifactKind,
+                runtimeMode: fallback.runtimeMode,
+                developmentOnly: fallback.developmentOnly
+            )
+            var state = AlphaPersistedState.seed()
+            state.installedPacks = []
+            state.modelJobs = [job]
+            state.settings.activeTier = nil
+            try await store.replace(with: state)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+
+            let finished = await MainActor.run {
+                model.prepareSystemAssistantPack(for: .caseAssociate, jobID: job.id)
+            }
+            let snapshot = await MainActor.run { model.persisted }
+            let preparedJob = snapshot.modelJobs.first { $0.id == job.id }
+            let systemHealth = AlphaLocalModelRuntime.runtimeHealth(
+                activePack: alphaSystemAssistantPack(for: .caseAssociate),
+                requestedTier: .caseAssociate
+            )
+
+            if systemHealth?.available == true {
+                XCTAssertTrue(finished)
+                XCTAssertEqual(snapshot.installedPacks.first { $0.tier == .caseAssociate }?.runtimeMode, .appleFoundationModels)
+                XCTAssertEqual(snapshot.installedPacks.first { $0.tier == .caseAssociate }?.installPath, "system://apple-foundation-models")
+                XCTAssertEqual(preparedJob?.state, .installed)
+                XCTAssertEqual(preparedJob?.bytesDownloaded, 0)
+                XCTAssertEqual(preparedJob?.totalBytes, 0)
+                XCTAssertEqual(snapshot.settings.activeTier, .caseAssociate)
+            } else {
+                XCTAssertFalse(finished)
+                XCTAssertNil(snapshot.installedPacks.first { $0.tier == .caseAssociate })
+                XCTAssertEqual(preparedJob?.state, .queued)
+                XCTAssertEqual(preparedJob?.runtimeMode, .appleFoundationModels)
+                XCTAssertEqual(preparedJob?.artifactKind, "system_model")
+            }
         }
     }
 

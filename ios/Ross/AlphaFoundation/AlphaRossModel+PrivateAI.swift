@@ -1112,6 +1112,11 @@ extension AlphaRossModel {
             persist()
         }
 
+        if !alphaAllowsDevelopmentModelArtifacts(),
+           prepareSystemAssistantPack(for: tier, jobID: job.id) {
+            return
+        }
+
         let preferredRuntime = persisted.installedPacks.first(where: { $0.tier == tier })?.runtimeMode
         let resolvedDownload: AlphaAssistantDownloadDescriptor
         do {
