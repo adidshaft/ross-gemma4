@@ -5035,6 +5035,25 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testForceDownloadBypassesInstalledAssistantPackReuse() {
+        let pack = installedPack(
+            .caseAssociate,
+            runtimeMode: .llamaCppGguf,
+            packId: "gemma-4-12b-q4",
+            installPath: "model-packs/case_associate/gemma-4-12B-it-Q4_K_M.gguf",
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+
+        XCTAssertFalse(
+            alphaShouldReuseInstalledAssistantPack(
+                pack,
+                preferredRuntimeMode: .llamaCppGguf,
+                forceDownload: true
+            )
+        )
+    }
+
     func testAssistantRuntimeChoiceLabelExplainsConstrainedIPhoneGGUFChoice() {
         let label = alphaAssistantRuntimeChoiceLabel(
             selectedRuntimeMode: .llamaCppGguf,

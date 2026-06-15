@@ -2939,6 +2939,70 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    func testStartAssistantModelUpdateBypassesInstalledPackReuseForExplicitUpdate() async throws {
+        rossSetBackendBaseURLOverride("http://127.0.0.1:9")
+        defer { rossSetBackendBaseURLOverride(nil) }
+
+        try await withRestoredStore { store in
+            await store.removeAllModelArtifacts()
+            let existingArtifact = try await store.writeDevPackArtifact(for: .caseAssociate)
+            var state = AlphaPersistedState.seed()
+            state.installedPacks = [
+                AlphaInstalledModelPack(
+                    packId: "case-associate-existing-gguf",
+                    tier: .caseAssociate,
+                    installPath: existingArtifact.relativePath,
+                    checksumSha256: existingArtifact.checksum,
+                    artifactKind: "test_only_tiny_artifact",
+                    runtimeMode: .llamaCppGguf,
+                    developmentOnly: true,
+                    checksumVerified: true,
+                    isActive: true
+                )
+            ]
+            state.modelJobs = []
+            state.settings.activeTier = .caseAssociate
+            try await store.replace(with: state)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+
+            await MainActor.run {
+                model.startAssistantModelUpdate(
+                    AlphaModelUpdateCandidate(
+                        tier: .caseAssociate,
+                        installedPackId: "case-associate-existing-gguf",
+                        availablePackId: "case-associate-new-pack",
+                        availableSizeBytes: 7_500_000_000
+                    ),
+                    mobileAllowed: true
+                )
+            }
+
+            try await eventually(timeoutNanoseconds: 2_000_000_000) {
+                await MainActor.run {
+                    model.persisted.installedPacks.first { $0.tier == .caseAssociate }?.runtimeMode == .deterministicDev
+                }
+            }
+
+            let snapshot = await MainActor.run { model.persisted }
+            let installedPack = snapshot.installedPacks.first { $0.tier == .caseAssociate }
+            let installedJob = snapshot.modelJobs.first { $0.tier == .caseAssociate }
+
+            XCTAssertEqual(installedPack?.runtimeMode, .deterministicDev)
+            XCTAssertNotEqual(installedPack?.packId, "case-associate-existing-gguf")
+            if let installedJob {
+                XCTAssertEqual(installedJob.state, .installed)
+                XCTAssertEqual(installedJob.runtimeMode, .deterministicDev)
+            }
+            XCTAssertEqual(snapshot.settings.activeTier, .caseAssociate)
+
+            await store.removeAllModelArtifacts()
+        }
+    }
+
     func testRetryAssistantSetupClearsStaleResumeProgressBeforeRestart() async throws {
         rossSetBackendBaseURLOverride("http://127.0.0.1:9")
         defer { rossSetBackendBaseURLOverride(nil) }

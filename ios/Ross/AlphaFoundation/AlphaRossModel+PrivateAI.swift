@@ -112,9 +112,11 @@ func alphaAssistantDownloadDescriptorSupportsCurrentInstaller(_ descriptor: Alph
 
 func alphaShouldReuseInstalledAssistantPack(
     _ pack: AlphaInstalledModelPack?,
-    preferredRuntimeMode: AlphaPackRuntimeMode
+    preferredRuntimeMode: AlphaPackRuntimeMode,
+    forceDownload: Bool = false
 ) -> Bool {
     guard let pack else { return false }
+    guard !forceDownload else { return false }
     return pack.runtimeMode == preferredRuntimeMode
 }
 
@@ -614,7 +616,11 @@ extension AlphaRossModel {
 
     func startAssistantModelUpdate(_ candidate: AlphaModelUpdateCandidate, mobileAllowed: Bool = false) {
         Task {
-            await startPackDownload(for: candidate.tier, mobileAllowed: mobileAllowed)
+            await startPackDownload(
+                for: candidate.tier,
+                mobileAllowed: mobileAllowed,
+                forceRefreshInstalledPack: true
+            )
         }
     }
 
@@ -1173,7 +1179,12 @@ extension AlphaRossModel {
         systemAssistantHealth(for: tier)?.available == true
     }
 
-    func startPackDownload(for tier: AlphaCapabilityTier, mobileAllowed: Bool, existingJobID: UUID?) async {
+    func startPackDownload(
+        for tier: AlphaCapabilityTier,
+        mobileAllowed: Bool,
+        existingJobID: UUID? = nil,
+        forceRefreshInstalledPack: Bool = false
+    ) async {
         let artifact = alphaAssistantModelArtifact(for: tier)
         let preferredRuntime = alphaPreferredAssistantRuntimeMode(
             for: tier,
@@ -1230,7 +1241,8 @@ extension AlphaRossModel {
         if let existingInstalled = persisted.installedPacks.first(where: { $0.tier == tier && installedModelPackFileIsUsable($0) }),
            alphaShouldReuseInstalledAssistantPack(
             existingInstalled,
-            preferredRuntimeMode: preferredRuntime
+            preferredRuntimeMode: preferredRuntime,
+            forceDownload: forceRefreshInstalledPack
            ) {
             activateInstalledPack(existingInstalled)
             return
