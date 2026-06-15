@@ -3693,6 +3693,69 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(candidate?.dismissedAt, existingDismissed.dismissedAt)
     }
 
+    func testAssistantDownloadDescriptorPrefersCompatibleBackendSessionArtifact() {
+        let session = AlphaBackendDownloadSessionPayload(
+            sessionId: "sess-mlx-or-gguf",
+            packId: "gemma-4-12b-q4-session",
+            artifact: AlphaBackendArtifact(
+                fileName: "gemma-4-12B-it-Q4_K_M.gguf",
+                sizeBytes: 7_400_000_000,
+                finalSha256: String(repeating: "a", count: 64),
+                artifactKind: "local_model_artifact",
+                runtimeMode: .llamaCppGguf,
+                developmentOnly: false,
+                downloadPath: "/artifacts/gemma-4-12b.gguf",
+                downloadUrl: "https://downloads.example.invalid/artifacts/gemma-4-12b.gguf",
+                segments: []
+            )
+        )
+
+        let descriptor = alphaAssistantDownloadDescriptor(
+            for: .caseAssociate,
+            session: session,
+            resolvedURLString: "https://ross.example/artifacts/gemma-4-12b.gguf"
+        )
+
+        XCTAssertEqual(descriptor.sessionId, "sess-mlx-or-gguf")
+        XCTAssertEqual(descriptor.packId, "gemma-4-12b-q4-session")
+        XCTAssertEqual(descriptor.fileName, "gemma-4-12B-it-Q4_K_M.gguf")
+        XCTAssertEqual(descriptor.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(descriptor.downloadURLString, "https://ross.example/artifacts/gemma-4-12b.gguf")
+        XCTAssertTrue(descriptor.verified)
+        XCTAssertTrue(descriptor.releaseReady)
+    }
+
+    func testAssistantDownloadDescriptorFallsBackWhenBackendArtifactIsUnsupported() {
+        let session = AlphaBackendDownloadSessionPayload(
+            sessionId: "sess-unsupported-mlx",
+            packId: "gemma-4-12b-mlx",
+            artifact: AlphaBackendArtifact(
+                fileName: "gemma-4-12b-mlx.zip",
+                sizeBytes: 6_200_000_000,
+                finalSha256: String(repeating: "b", count: 64),
+                artifactKind: "mlx_directory",
+                runtimeMode: .mlxSwiftLm,
+                developmentOnly: false,
+                downloadPath: "/artifacts/gemma-4-12b-mlx.zip",
+                downloadUrl: "https://downloads.example.invalid/artifacts/gemma-4-12b-mlx.zip",
+                segments: []
+            )
+        )
+
+        let descriptor = alphaAssistantDownloadDescriptor(
+            for: .caseAssociate,
+            session: session,
+            resolvedURLString: "https://ross.example/artifacts/gemma-4-12b-mlx.zip"
+        )
+        let pinned = alphaAssistantModelArtifact(for: .caseAssociate)
+
+        XCTAssertNil(descriptor.sessionId)
+        XCTAssertEqual(descriptor.packId, pinned.packId)
+        XCTAssertEqual(descriptor.fileName, pinned.fileName)
+        XCTAssertEqual(descriptor.runtimeMode, pinned.runtimeMode)
+        XCTAssertEqual(descriptor.downloadURLString, pinned.downloadURLString)
+    }
+
     func testAssistantDownloadPreflightRejectsWrongArtifactSize() throws {
         let response = try XCTUnwrap(HTTPURLResponse(
             url: URL(string: "https://huggingface.co/model.gguf")!,

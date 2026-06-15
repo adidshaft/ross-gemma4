@@ -54,6 +54,21 @@ struct AlphaAssistantCatalogDescriptor: Hashable, Sendable {
     let developmentOnly: Bool
 }
 
+struct AlphaAssistantDownloadDescriptor: Hashable, Sendable {
+    let sessionId: String?
+    let packId: String
+    let tier: AlphaCapabilityTier
+    let fileName: String
+    let sizeBytes: Int64
+    let checksumSha256: String
+    let artifactKind: String
+    let runtimeMode: AlphaPackRuntimeMode
+    let developmentOnly: Bool
+    let downloadURLString: String
+    let verified: Bool
+    let releaseReady: Bool
+}
+
 func alphaDefaultAssistantCatalogDescriptor(for tier: AlphaCapabilityTier) -> AlphaAssistantCatalogDescriptor {
     let artifact = alphaAssistantModelArtifact(for: tier)
     return AlphaAssistantCatalogDescriptor(
@@ -64,6 +79,24 @@ func alphaDefaultAssistantCatalogDescriptor(for tier: AlphaCapabilityTier) -> Al
         artifactKind: artifact.artifactKind,
         runtimeMode: artifact.runtimeMode,
         developmentOnly: artifact.developmentOnly
+    )
+}
+
+func alphaDefaultAssistantDownloadDescriptor(for tier: AlphaCapabilityTier) -> AlphaAssistantDownloadDescriptor {
+    let artifact = alphaAssistantModelArtifact(for: tier)
+    return AlphaAssistantDownloadDescriptor(
+        sessionId: nil,
+        packId: artifact.packId,
+        tier: artifact.tier,
+        fileName: artifact.fileName,
+        sizeBytes: artifact.sizeBytes,
+        checksumSha256: artifact.sha256,
+        artifactKind: artifact.artifactKind,
+        runtimeMode: artifact.runtimeMode,
+        developmentOnly: artifact.developmentOnly,
+        downloadURLString: artifact.downloadURLString,
+        verified: artifact.verified,
+        releaseReady: artifact.releaseReady
     )
 }
 
@@ -119,6 +152,43 @@ func alphaAssistantUpdateCandidate(
         availableSizeBytes: availableDescriptor.sizeBytes,
         requiresWifi: true,
         dismissedAt: existingDismissed?.dismissedAt
+    )
+}
+
+func alphaBackendArtifactSupportsCurrentInstaller(_ artifact: AlphaBackendArtifact) -> Bool {
+    guard artifact.runtimeMode == .llamaCppGguf,
+          artifact.developmentOnly == false,
+          artifact.sizeBytes > 0,
+          artifact.finalSha256.range(of: #"^[a-fA-F0-9]{64}$"#, options: .regularExpression) != nil else {
+        return false
+    }
+    return artifact.fileName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().hasSuffix(".gguf")
+}
+
+func alphaAssistantDownloadDescriptor(
+    for tier: AlphaCapabilityTier,
+    session: AlphaBackendDownloadSessionPayload?,
+    resolvedURLString: String?
+) -> AlphaAssistantDownloadDescriptor {
+    let fallback = alphaDefaultAssistantDownloadDescriptor(for: tier)
+    guard let session,
+          let resolvedURLString,
+          alphaBackendArtifactSupportsCurrentInstaller(session.artifact) else {
+        return fallback
+    }
+    return AlphaAssistantDownloadDescriptor(
+        sessionId: session.sessionId,
+        packId: session.packId,
+        tier: tier,
+        fileName: session.artifact.fileName,
+        sizeBytes: session.artifact.sizeBytes,
+        checksumSha256: session.artifact.finalSha256.lowercased(),
+        artifactKind: session.artifact.artifactKind,
+        runtimeMode: session.artifact.runtimeMode,
+        developmentOnly: session.artifact.developmentOnly,
+        downloadURLString: resolvedURLString,
+        verified: true,
+        releaseReady: true
     )
 }
 
@@ -654,14 +724,14 @@ extension AlphaRossModel {
         }
     }
 
-    func downloadAssistantModelArtifact(_ artifact: AlphaAssistantModelArtifact, tier: AlphaCapabilityTier, jobID: UUID) async throws -> URL {
+    func downloadAssistantModelArtifact(_ artifact: AlphaAssistantDownloadDescriptor, tier: AlphaCapabilityTier, jobID: UUID) async throws -> URL {
         alphaPurgeTemporaryAssistantDownloadFiles()
         let isRealMode = true
         if isRealMode && (artifact.downloadURLString.contains("__REPLACE_WITH_VERIFIED") || !artifact.verified || !artifact.releaseReady) {
             throw AlphaAssistantDownloadError.invalidURL
         }
 
-        guard let url = artifact.downloadURL else {
+        guard let url = URL(string: artifact.downloadURLString) else {
             throw AlphaAssistantDownloadError.invalidURL
         }
         var request = URLRequest(url: url)
@@ -779,8 +849,8 @@ extension AlphaRossModel {
         }
     }
 
-    func preflightAssistantModelArtifact(_ artifact: AlphaAssistantModelArtifact, jobID: UUID) async throws -> AlphaAssistantDownloadPreflight {
-        guard let url = artifact.downloadURL else {
+    func preflightAssistantModelArtifact(_ artifact: AlphaAssistantDownloadDescriptor, jobID: UUID) async throws -> AlphaAssistantDownloadPreflight {
+        guard let url = URL(string: artifact.downloadURLString) else {
             throw AlphaAssistantDownloadError.invalidURL
         }
         var request = URLRequest(url: url)
@@ -805,7 +875,7 @@ extension AlphaRossModel {
         let preflight = try AlphaAssistantDownloadPreflight.parse(response: http, expectedBytes: artifact.sizeBytes)
         updateJob(jobID) {
             $0.totalBytes = preflight.reportedBytes
-            if let checksum = artifact.sha256.isEmpty ? preflight.effectiveChecksumSha256 : artifact.sha256 {
+            if let checksum = artifact.checksumSha256.isEmpty ? preflight.effectiveChecksumSha256 : artifact.checksumSha256 {
                 $0.checksumSha256 = checksum
             }
             $0.updatedAt = .now
@@ -813,8 +883,8 @@ extension AlphaRossModel {
         return preflight
     }
 
-    func probeAssistantModelRange(_ artifact: AlphaAssistantModelArtifact, preflight: AlphaAssistantDownloadPreflight) async throws -> AlphaAssistantRangeProbe {
-        guard let url = artifact.downloadURL else {
+    func probeAssistantModelRange(_ artifact: AlphaAssistantDownloadDescriptor, preflight: AlphaAssistantDownloadPreflight) async throws -> AlphaAssistantRangeProbe {
+        guard let url = URL(string: artifact.downloadURLString) else {
             throw AlphaAssistantDownloadError.invalidURL
         }
         let probeLength = min(Int64(64 * 1024), preflight.reportedBytes)
@@ -886,14 +956,14 @@ extension AlphaRossModel {
 
     func verifiedExistingAssistantArtifact(
         for tier: AlphaCapabilityTier,
-        artifact: AlphaAssistantModelArtifact
+        artifact: AlphaAssistantDownloadDescriptor
     ) async -> (relativePath: String, checksum: String, bytes: Int64)? {
         let relativePath = "model-packs/\(tier.rawValue)/\(artifact.fileName)"
         let fileURL = alphaAbsoluteURL(for: relativePath)
         let expectedBytes = artifact.sizeBytes
-        let expectedChecksum = artifact.sha256
+        let expectedChecksum = artifact.checksumSha256
 
-        return await Task.detached(priority: .utility) {
+        return await Task.detached(priority: .utility) { () -> (relativePath: String, checksum: String, bytes: Int64)? in
             let path = fileURL.path()
             let attributes = try? FileManager.default.attributesOfItem(atPath: path)
             guard let bytes = (attributes?[.size] as? NSNumber)?.int64Value,
@@ -969,6 +1039,7 @@ extension AlphaRossModel {
 
     func startPackDownload(for tier: AlphaCapabilityTier, mobileAllowed: Bool, existingJobID: UUID?) async {
         let artifact = alphaAssistantModelArtifact(for: tier)
+        let fallbackDownload = alphaDefaultAssistantDownloadDescriptor(for: tier)
         let policy: AlphaDownloadPolicy = mobileAllowed ? .mobileAllowed : .wifiOnly
         if let existingInstalled = persisted.installedPacks.first(where: { $0.tier == tier && installedModelPackFileIsUsable($0) }) {
             activateInstalledPack(existingInstalled)
@@ -996,16 +1067,16 @@ extension AlphaRossModel {
             let sessionId = "hf-\(UUID().uuidString.prefix(8))"
             job = AlphaModelDownloadJob(
                 sessionId: sessionId,
-                packId: artifact.packId,
+                packId: fallbackDownload.packId,
                 tier: tier,
                 state: .queued,
                 networkPolicy: policy,
                 bytesDownloaded: 0,
-                totalBytes: artifact.sizeBytes,
-                checksumSha256: artifact.sha256,
-                artifactKind: artifact.artifactKind,
-                runtimeMode: artifact.runtimeMode,
-                developmentOnly: artifact.developmentOnly
+                totalBytes: fallbackDownload.sizeBytes,
+                checksumSha256: fallbackDownload.checksumSha256,
+                artifactKind: fallbackDownload.artifactKind,
+                runtimeMode: fallbackDownload.runtimeMode,
+                developmentOnly: fallbackDownload.developmentOnly
             )
             shouldRecordSelection = true
         }
@@ -1031,20 +1102,43 @@ extension AlphaRossModel {
             persist()
         }
 
+        let preferredRuntime = persisted.installedPacks.first(where: { $0.tier == tier })?.runtimeMode
+        let resolvedDownload: AlphaAssistantDownloadDescriptor
+        do {
+            let catalog = try await backend.fetchCatalog(for: tier)
+            let preferredCatalog = alphaAssistantCatalogDescriptor(
+                for: tier,
+                preferredRuntimeMode: preferredRuntime,
+                manifest: catalog
+            )
+            let session = try await backend.createDownloadSession(for: preferredCatalog.packId)
+            let resolvedURL = try await backend.resolveArtifactURL(for: session.artifact)
+            resolvedDownload = alphaAssistantDownloadDescriptor(
+                for: tier,
+                session: session,
+                resolvedURLString: resolvedURL.absoluteString
+            )
+        } catch {
+            resolvedDownload = fallbackDownload
+        }
+
         let isResumingPartialDownload = assistantDownloadTaskBoxes[job.id]?.resumeData != nil
 
         updateJob(job.id) {
-            $0.packId = artifact.packId
+            if let sessionId = resolvedDownload.sessionId {
+                $0.sessionId = sessionId
+            }
+            $0.packId = resolvedDownload.packId
             $0.networkPolicy = policy
-            $0.totalBytes = artifact.sizeBytes
+            $0.totalBytes = resolvedDownload.sizeBytes
             if !isResumingPartialDownload {
                 $0.bytesDownloaded = 0
                 $0.resumeDataRelativePath = nil
             }
-            $0.checksumSha256 = artifact.sha256
-            $0.artifactKind = artifact.artifactKind
-            $0.runtimeMode = artifact.runtimeMode
-            $0.developmentOnly = artifact.developmentOnly
+            $0.checksumSha256 = resolvedDownload.checksumSha256
+            $0.artifactKind = resolvedDownload.artifactKind
+            $0.runtimeMode = resolvedDownload.runtimeMode
+            $0.developmentOnly = resolvedDownload.developmentOnly
             $0.failureReason = nil
             $0.updatedAt = .now
         }
@@ -1062,15 +1156,15 @@ extension AlphaRossModel {
         }
         persist()
 
-        if let existingArtifact = await verifiedExistingAssistantArtifact(for: tier, artifact: artifact) {
+        if let existingArtifact = await verifiedExistingAssistantArtifact(for: tier, artifact: resolvedDownload) {
             let installed = AlphaInstalledModelPack(
-                packId: artifact.packId,
+                packId: resolvedDownload.packId,
                 tier: tier,
                 installPath: existingArtifact.relativePath,
                 checksumSha256: existingArtifact.checksum,
-                artifactKind: artifact.artifactKind,
-                runtimeMode: artifact.runtimeMode,
-                developmentOnly: artifact.developmentOnly,
+                artifactKind: resolvedDownload.artifactKind,
+                runtimeMode: resolvedDownload.runtimeMode,
+                developmentOnly: resolvedDownload.developmentOnly,
                 checksumVerified: true,
                 isActive: true
             )
@@ -1142,12 +1236,16 @@ extension AlphaRossModel {
         }
 
         let availableStorageGB = alphaAvailableStorageInGigabytes()
-        guard availableStorageGB >= artifact.requiredFreeSpaceGB else {
+        let requiredFreeSpaceGB = max(
+            artifact.requiredFreeSpaceGB,
+            Int(ceil(Double(resolvedDownload.sizeBytes) / 1_000_000_000)) + 1
+        )
+        guard availableStorageGB >= requiredFreeSpaceGB else {
             assistantDownloadTaskBoxes[job.id] = nil
             updateJob(job.id) {
                 $0.state = .pausedNoStorage
                 $0.failureReason = AlphaAssistantDownloadError.insufficientStorage(
-                    requiredGB: artifact.requiredFreeSpaceGB,
+                    requiredGB: requiredFreeSpaceGB,
                     availableGB: availableStorageGB
                 ).errorDescription
                 $0.updatedAt = .now
@@ -1157,9 +1255,9 @@ extension AlphaRossModel {
         }
 
         do {
-            let preflight = try await preflightAssistantModelArtifact(artifact, jobID: job.id)
-            let expectedChecksum = try preflight.expectedChecksum(catalogChecksum: artifact.sha256)
-            _ = try await probeAssistantModelRange(artifact, preflight: preflight)
+            let preflight = try await preflightAssistantModelArtifact(resolvedDownload, jobID: job.id)
+            let expectedChecksum = try preflight.expectedChecksum(catalogChecksum: resolvedDownload.checksumSha256)
+            _ = try await probeAssistantModelRange(resolvedDownload, preflight: preflight)
 
             updateJob(job.id) {
                 $0.state = .downloading
@@ -1181,7 +1279,7 @@ extension AlphaRossModel {
             )
             persist()
 
-            let downloadedFileURL = try await downloadAssistantModelArtifact(artifact, tier: tier, jobID: job.id)
+            let downloadedFileURL = try await downloadAssistantModelArtifact(resolvedDownload, tier: tier, jobID: job.id)
             let downloadedBytes = downloadedFileSize(at: downloadedFileURL)
 
             guard persisted.modelJobs.first(where: { $0.id == job.id })?.state != .pausedUser else {
@@ -1190,30 +1288,30 @@ extension AlphaRossModel {
 
             updateJob(job.id) {
                 $0.state = .verifying
-                $0.bytesDownloaded = downloadedBytes > 0 ? downloadedBytes : artifact.sizeBytes
+                $0.bytesDownloaded = downloadedBytes > 0 ? downloadedBytes : resolvedDownload.sizeBytes
                 $0.updatedAt = .now
             }
             persist()
 
             let installedArtifact = try await store.installDownloadedPackArtifact(
                 for: tier,
-                fileName: artifact.fileName,
+                fileName: resolvedDownload.fileName,
                 downloadedFileURL: downloadedFileURL,
                 expectedChecksum: expectedChecksum,
                 expectedBytes: preflight.reportedBytes,
-                packId: artifact.packId,
-                artifactKind: artifact.artifactKind,
-                runtimeMode: artifact.runtimeMode,
-                developmentOnly: artifact.developmentOnly
+                packId: resolvedDownload.packId,
+                artifactKind: resolvedDownload.artifactKind,
+                runtimeMode: resolvedDownload.runtimeMode,
+                developmentOnly: resolvedDownload.developmentOnly
             )
             let installed = AlphaInstalledModelPack(
-                packId: artifact.packId,
+                packId: resolvedDownload.packId,
                 tier: tier,
                 installPath: installedArtifact.relativePath,
                 checksumSha256: installedArtifact.checksum,
-                artifactKind: artifact.artifactKind,
-                runtimeMode: artifact.runtimeMode,
-                developmentOnly: artifact.developmentOnly,
+                artifactKind: resolvedDownload.artifactKind,
+                runtimeMode: resolvedDownload.runtimeMode,
+                developmentOnly: resolvedDownload.developmentOnly,
                 checksumVerified: true,
                 isActive: true
             )
