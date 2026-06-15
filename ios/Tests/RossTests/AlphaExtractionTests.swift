@@ -4416,6 +4416,67 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(completed.answerDetailAccelerationLabel, "Standard generation")
     }
 
+    func testModelInvocationCompletionKeepsDraftHeadReadinessForStandardGeneration() {
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "Selected Order",
+            pageNumber: 1,
+            textSnippet: "The matter is listed on 14 May 2026."
+        )
+        let input = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "What happened in the selected order?",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: sourceRef,
+                    text: "The matter is listed on 14 May 2026.",
+                    pageNumber: 1,
+                    languageHint: "en",
+                    ocrConfidence: 1
+                )
+            ],
+            expectedSchema: "plain_text",
+            maxOutputTokens: 128,
+            extractionMode: .quickStart
+        )
+        let invocation = AlphaModelInvocationStore.begin(
+            task: .matterQuestionAnswer,
+            runtimeMode: .llamaCppGguf,
+            capabilityTier: .quickStart,
+            caseId: sourceRef.caseId,
+            documentId: sourceRef.documentId,
+            extractionRunId: nil,
+            accelerationMode: .standard,
+            accelerationDraftTokens: 6,
+            accelerationDraftModelLabel: "mtp-gemma-4-12b-it.gguf",
+            input: input
+        )
+
+        let completed = AlphaModelInvocationStore.complete(
+            invocation,
+            output: AlphaLocalModelOutput(
+                rawText: "Answer from the selected order.",
+                parsedJson: nil,
+                schemaValid: true,
+                warnings: [],
+                sourceRefs: [sourceRef],
+                executionPathLabel: "Gemma GGUF via llama.cpp",
+                accelerationMode: .standard,
+                accelerationDraftTokens: 6,
+                accelerationDraftModelLabel: "mtp-gemma-4-12b-it.gguf"
+            )
+        )
+
+        XCTAssertEqual(completed.accelerationMode, .standard)
+        XCTAssertEqual(completed.accelerationDraftTokens, 6)
+        XCTAssertEqual(completed.accelerationDraftModelLabel, "mtp-gemma-4-12b-it.gguf")
+        XCTAssertEqual(
+            completed.answerDetailAccelerationLabel,
+            "Standard generation (draft head ready: mtp-gemma-4-12b-it.gguf)"
+        )
+    }
+
     func testLocalExtractionDetectsMixedLanguageProfile() async {
         let store = AlphaRossStore()
         let caseId = UUID()
@@ -5126,6 +5187,53 @@ final class AlphaExtractionTests: XCTestCase {
             alphaAbsoluteURL(for: "model-packs/case_associate/\(draftDescriptor.fileName)").path
         )
         XCTAssertNil(environment.draftModelTokens)
+    }
+
+    func testRuntimeHealthShowsStagedGGUFDraftHeadWhileRemainingStandard() throws {
+        let mainURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-gguf-main-\(UUID().uuidString)")
+            .appendingPathExtension("gguf")
+        let draftURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-gguf-draft-\(UUID().uuidString)")
+            .appendingPathExtension("gguf")
+        try Data("gguf-main-runtime".utf8).write(to: mainURL)
+        try Data("gguf-draft-runtime".utf8).write(to: draftURL)
+        defer {
+            try? FileManager.default.removeItem(at: mainURL)
+            try? FileManager.default.removeItem(at: draftURL)
+        }
+
+        AlphaLlamaCppProvider.modelLoadValidator = { _ in }
+        defer {
+            AlphaLlamaCppProvider.modelLoadValidator = { path in
+                _ = try LlamaContext.create_context(path: path)
+            }
+        }
+
+        let pack = installedPack(.caseAssociate, runtimeMode: .llamaCppGguf)
+        let health = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .llamaCppGguf,
+                modelPath: mainURL.path,
+                modelChecksum: String(repeating: "a", count: 64),
+                modelKind: "gguf",
+                draftModelPath: draftURL.path,
+                draftModelTokens: 6
+            )
+        )
+
+        XCTAssertEqual(health?.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(health?.available, true)
+        XCTAssertEqual(health?.accelerationMode, .standard)
+        XCTAssertEqual(health?.draftModelPathLabel, draftURL.lastPathComponent)
+        XCTAssertEqual(health?.accelerationDraftTokens, 6)
+        XCTAssertEqual(
+            alphaAssistantAccelerationLabel(runtimeHealth: try XCTUnwrap(health)),
+            "Standard generation (draft head ready: \(draftURL.lastPathComponent))"
+        )
     }
 
     func testAssistantCatalogDescriptorPrefersMatchingRuntimeFromBackendManifest() {

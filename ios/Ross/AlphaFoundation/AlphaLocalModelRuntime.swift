@@ -1995,7 +1995,9 @@ enum AlphaLocalModelRuntime {
                 capabilityTier: tier,
                 modelPathLabel: modelPathLabel,
                 modelPath: modelPath,
-                checksumVerified: checksumVerified
+                checksumVerified: checksumVerified,
+                draftModelPath: debug.draftModelPath,
+                draftModelTokens: debug.draftModelTokens
             )
         case .mlxSwiftLm:
             return AlphaMLXLocalProvider(

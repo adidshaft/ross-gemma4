@@ -199,10 +199,17 @@ enum AlphaModelInvocationStore {
             if let draftModelLabel = output.accelerationDraftModelLabel?.trimmingCharacters(in: .whitespacesAndNewlines),
                !draftModelLabel.isEmpty {
                 copy.accelerationDraftModelLabel = draftModelLabel
+            } else {
+                copy.accelerationDraftModelLabel = nil
             }
         } else if output.accelerationMode == .standard {
-            copy.accelerationDraftTokens = nil
-            copy.accelerationDraftModelLabel = nil
+            copy.accelerationDraftTokens = output.accelerationDraftTokens
+            if let draftModelLabel = output.accelerationDraftModelLabel?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !draftModelLabel.isEmpty {
+                copy.accelerationDraftModelLabel = draftModelLabel
+            } else {
+                copy.accelerationDraftModelLabel = nil
+            }
         }
         if let inputChars = output.inputChars {
             copy.inputChars = inputChars

@@ -535,21 +535,43 @@ func alphaAssistantInputBudgetLabel(chars: Int) -> String {
     "\(chars.formatted()) chars"
 }
 
-func alphaAssistantAccelerationLabel(runtimeHealth: AlphaLocalRuntimeHealth) -> String {
-    switch runtimeHealth.accelerationMode {
+func alphaAssistantAccelerationLabel(
+    mode: AlphaLocalRuntimeAccelerationMode?,
+    draftTokens: Int?,
+    draftLabel: String?,
+    emptyFallback: String? = nil
+) -> String? {
+    let cleanedDraftLabel = draftLabel?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+
+    switch mode {
     case .draftModelSpeculative:
-        if let tokens = runtimeHealth.accelerationDraftTokens, let draftLabel = runtimeHealth.draftModelPathLabel {
-            return "Draft model x\(tokens) (\(draftLabel))"
+        if let tokens = draftTokens, let cleanedDraftLabel {
+            return "Draft model x\(tokens) (\(cleanedDraftLabel))"
         }
-        if let tokens = runtimeHealth.accelerationDraftTokens {
+        if let tokens = draftTokens {
             return "Draft model x\(tokens)"
         }
         return "Draft model"
     case .standard:
+        if let cleanedDraftLabel {
+            return "Standard generation (draft head ready: \(cleanedDraftLabel))"
+        }
+        if draftTokens != nil {
+            return "Standard generation (draft head ready)"
+        }
         return "Standard generation"
     case nil:
-        return rossLocalized("none_yet")
+        return emptyFallback
     }
+}
+
+func alphaAssistantAccelerationLabel(runtimeHealth: AlphaLocalRuntimeHealth) -> String {
+    alphaAssistantAccelerationLabel(
+        mode: runtimeHealth.accelerationMode,
+        draftTokens: runtimeHealth.accelerationDraftTokens,
+        draftLabel: runtimeHealth.draftModelPathLabel,
+        emptyFallback: rossLocalized("none_yet")
+    ) ?? rossLocalized("none_yet")
 }
 
 struct AlphaPrivacyLedgerScreen: View {

@@ -866,21 +866,11 @@ extension AlphaLocalModelInvocation {
     }
 
     var answerDetailAccelerationLabel: String? {
-        switch accelerationMode {
-        case .draftModelSpeculative:
-            let cleanedLabel = accelerationDraftModelLabel?.trimmingCharacters(in: .whitespacesAndNewlines)
-            if let tokens = accelerationDraftTokens, let draftLabel = cleanedLabel, !draftLabel.isEmpty {
-                return "Draft model x\(tokens) (\(draftLabel))"
-            }
-            if let tokens = accelerationDraftTokens {
-                return "Draft model x\(tokens)"
-            }
-            return "Draft model"
-        case .standard:
-            return "Standard generation"
-        case nil:
-            return nil
-        }
+        alphaAssistantAccelerationLabel(
+            mode: accelerationMode,
+            draftTokens: accelerationDraftTokens,
+            draftLabel: accelerationDraftModelLabel
+        )
     }
 
     var answerDetailRuntimeChoiceLabel: String? {

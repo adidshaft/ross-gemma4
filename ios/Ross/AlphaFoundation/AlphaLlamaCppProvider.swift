@@ -221,17 +221,23 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     let modelPathLabel: String?
     let modelPath: String?
     let checksumVerified: Bool
+    let draftModelPath: String?
+    let draftModelTokens: Int?
     
     init(
         capabilityTier: AlphaCapabilityTier,
         modelPathLabel: String?,
         modelPath: String?,
-        checksumVerified: Bool
+        checksumVerified: Bool,
+        draftModelPath: String? = nil,
+        draftModelTokens: Int? = nil
     ) {
         self.capabilityTier = capabilityTier
         self.modelPathLabel = modelPathLabel
         self.modelPath = modelPath
         self.checksumVerified = checksumVerified
+        self.draftModelPath = draftModelPath
+        self.draftModelTokens = draftModelTokens
     }
     
     func isAvailable() -> Bool {
@@ -288,6 +294,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
     
     func runtimeHealth() -> AlphaLocalRuntimeHealth {
         let availability = runtimeAvailability()
+        let stagedDraft = stagedDraftMetadata()
         return AlphaLocalRuntimeHealth(
             runtimeMode: runtimeMode,
             available: availability.available,
@@ -298,6 +305,8 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             maxInputChars: maxInputChars(),
             estimatedContextTokens: contextWindowEstimate(),
             accelerationMode: .standard,
+            accelerationDraftTokens: stagedDraft?.tokens,
+            draftModelPathLabel: stagedDraft?.label,
             lastErrorCategory: availability.errorCategory,
             userFacingStatus: availability.status,
             explicitOptInEnabled: true
@@ -353,6 +362,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         _ taskInput: AlphaLocalModelInput,
         onPartial: (@Sendable (AlphaLocalModelOutput) -> Void)?
     ) async -> AlphaLocalModelOutput {
+        let stagedDraft = stagedDraftMetadata()
         let effectiveMaxInputChars = taskInput.promptBudgetOverrideChars ?? maxInputChars() ?? 7_000
         let pack = AlphaPromptPackBuilder(
             maxInputChars: effectiveMaxInputChars,
@@ -438,6 +448,9 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                             warnings: pack.truncated ? [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts] : [],
                             sourceRefs: pack.includedSourceRefs,
                             executionPathLabel: "Gemma GGUF via llama.cpp",
+                            accelerationMode: .standard,
+                            accelerationDraftTokens: stagedDraft?.tokens,
+                            accelerationDraftModelLabel: stagedDraft?.label,
                             inputChars: pack.inputChars
                         )
                         onPartial(partialOutput)
@@ -482,6 +495,9 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                 warnings: warnings,
                 sourceRefs: pack.includedSourceRefs,
                 executionPathLabel: "Gemma GGUF via llama.cpp",
+                accelerationMode: .standard,
+                accelerationDraftTokens: stagedDraft?.tokens,
+                accelerationDraftModelLabel: stagedDraft?.label,
                 inputChars: pack.inputChars,
                 inputTokenCount: promptTokenCount,
                 outputTokenCount: outputTokenCount,
@@ -646,5 +662,31 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
                 options: .regularExpression
             )
             .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func stagedDraftMetadata() -> (tokens: Int?, label: String?)? {
+        guard let draftPath = draftModelPath?.trimmingCharacters(in: .whitespacesAndNewlines),
+              draftPath.isEmpty == false else {
+            return nil
+        }
+
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: draftPath, isDirectory: &isDirectory),
+              isDirectory.boolValue == false else {
+            return nil
+        }
+
+        let bytes = ((try? FileManager.default.attributesOfItem(atPath: draftPath))?[.size] as? NSNumber)?.int64Value ?? 0
+        guard bytes > 0 else { return nil }
+
+        let draftLabel = URL(fileURLWithPath: draftPath)
+            .lastPathComponent
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanedDraftLabel = draftLabel.isEmpty ? nil : draftLabel
+
+        return (
+            tokens: draftModelTokens,
+            label: cleanedDraftLabel
+        )
     }
 }
