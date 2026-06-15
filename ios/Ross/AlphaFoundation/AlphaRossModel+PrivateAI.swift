@@ -541,6 +541,14 @@ func alphaAssistantCatalogRefreshTiers(installedPacks: [AlphaInstalledModelPack]
     return tiers
 }
 
+func alphaResolvedModelCatalogRefreshDate(
+    previousRefresh: Date?,
+    refreshedCatalogCount: Int,
+    now: Date = .now
+) -> Date? {
+    refreshedCatalogCount > 0 ? now : previousRefresh
+}
+
 func alphaBackendCatalogPackSupportsCurrentInstaller(_ pack: AlphaBackendCatalogPack) -> Bool {
     guard pack.developmentOnly == false,
           pack.sizeBytes > 0 else {
@@ -883,7 +891,6 @@ extension AlphaRossModel {
         }
 
         persisted.modelUpdateCandidates = fallbackCandidates
-        persisted.lastModelCatalogRefresh = .now
         if !fallbackCandidates.isEmpty {
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
@@ -956,7 +963,10 @@ extension AlphaRossModel {
                 }
                 self.persisted.cachedAssistantCatalogs = cachedCatalogs
                 self.persisted.modelUpdateCandidates = candidates
-                self.persisted.lastModelCatalogRefresh = .now
+                self.persisted.lastModelCatalogRefresh = alphaResolvedModelCatalogRefreshDate(
+                    previousRefresh: self.persisted.lastModelCatalogRefresh,
+                    refreshedCatalogCount: refreshedCatalogsByTier.count
+                )
                 if shouldRecordLedger {
                     self.persisted.ledgerEntries.insert(
                         AlphaPrivacyLedgerEntry(

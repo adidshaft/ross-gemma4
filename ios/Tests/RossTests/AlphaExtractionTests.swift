@@ -7141,6 +7141,35 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(tiers, AlphaCapabilityTier.visibleAssistantTiers)
     }
 
+    func testResolvedModelCatalogRefreshDateAdvancesOnlyAfterSuccessfulRefresh() {
+        let previous = Date(timeIntervalSinceReferenceDate: 100)
+        let now = Date(timeIntervalSinceReferenceDate: 200)
+
+        XCTAssertEqual(
+            alphaResolvedModelCatalogRefreshDate(
+                previousRefresh: previous,
+                refreshedCatalogCount: 0,
+                now: now
+            ),
+            previous
+        )
+        XCTAssertEqual(
+            alphaResolvedModelCatalogRefreshDate(
+                previousRefresh: previous,
+                refreshedCatalogCount: 2,
+                now: now
+            ),
+            now
+        )
+        XCTAssertNil(
+            alphaResolvedModelCatalogRefreshDate(
+                previousRefresh: nil,
+                refreshedCatalogCount: 0,
+                now: now
+            )
+        )
+    }
+
     func testPreferredAssistantDownloadFallbackIgnoresUnsupportedCachedMLXDescriptor() {
         let cached = AlphaAssistantDownloadDescriptor(
             sessionId: "sess-unsupported-mlx",
