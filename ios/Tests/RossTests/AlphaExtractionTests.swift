@@ -3579,6 +3579,120 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(alphaAssistantModelArtifact(for: .flash).tier, .quickStart)
     }
 
+    func testAssistantCatalogDescriptorPrefersMatchingRuntimeFromBackendManifest() {
+        let manifest = AlphaBackendCatalogManifest(
+            packs: [
+                AlphaBackendCatalogPack(
+                    packId: "gemma-4-12b-mlx",
+                    displayName: "Gemma 4 12B MLX",
+                    tier: .caseAssociate,
+                    sizeBytes: 6_200_000_000,
+                    checksumSha256: String(repeating: "a", count: 64),
+                    artifactKind: "mlx_directory",
+                    runtimeMode: .mlxSwiftLm,
+                    developmentOnly: false
+                ),
+                AlphaBackendCatalogPack(
+                    packId: "gemma-4-12b-gguf",
+                    displayName: "Gemma 4 12B GGUF",
+                    tier: .caseAssociate,
+                    sizeBytes: 7_381_382_048,
+                    checksumSha256: String(repeating: "b", count: 64),
+                    artifactKind: "local_model_artifact",
+                    runtimeMode: .llamaCppGguf,
+                    developmentOnly: false
+                )
+            ]
+        )
+
+        let preferredMLX = alphaAssistantCatalogDescriptor(
+            for: .caseAssociate,
+            preferredRuntimeMode: .mlxSwiftLm,
+            manifest: manifest
+        )
+        let preferredGGUF = alphaAssistantCatalogDescriptor(
+            for: .caseAssociate,
+            preferredRuntimeMode: .llamaCppGguf,
+            manifest: manifest
+        )
+
+        XCTAssertEqual(preferredMLX.packId, "gemma-4-12b-mlx")
+        XCTAssertEqual(preferredMLX.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(preferredMLX.artifactKind, "mlx_directory")
+        XCTAssertEqual(preferredGGUF.packId, "gemma-4-12b-gguf")
+        XCTAssertEqual(preferredGGUF.runtimeMode, .llamaCppGguf)
+    }
+
+    func testAssistantCatalogDescriptorFallsBackToPinnedArtifactWhenManifestMissingTier() {
+        let manifest = AlphaBackendCatalogManifest(
+            packs: [
+                AlphaBackendCatalogPack(
+                    packId: "other-tier-pack",
+                    displayName: "Other Tier",
+                    tier: .quickStart,
+                    sizeBytes: 1,
+                    checksumSha256: String(repeating: "c", count: 64),
+                    artifactKind: "local_model_artifact",
+                    runtimeMode: .llamaCppGguf,
+                    developmentOnly: false
+                )
+            ]
+        )
+
+        let descriptor = alphaAssistantCatalogDescriptor(
+            for: .caseAssociate,
+            preferredRuntimeMode: .mlxSwiftLm,
+            manifest: manifest
+        )
+        let pinned = alphaAssistantModelArtifact(for: .caseAssociate)
+
+        XCTAssertEqual(descriptor.packId, pinned.packId)
+        XCTAssertEqual(descriptor.sizeBytes, pinned.sizeBytes)
+        XCTAssertEqual(descriptor.checksumSha256, pinned.sha256)
+        XCTAssertEqual(descriptor.runtimeMode, pinned.runtimeMode)
+    }
+
+    func testAssistantUpdateCandidateUsesBackendDescriptorMetadata() {
+        let installedPack = AlphaInstalledModelPack(
+            packId: "gemma-4-12b-q4-old",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/current.gguf",
+            checksumSha256: String(repeating: "d", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+        let available = AlphaAssistantCatalogDescriptor(
+            tier: .caseAssociate,
+            packId: "gemma-4-12b-q4-new",
+            sizeBytes: 7_500_000_000,
+            checksumSha256: String(repeating: "e", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false
+        )
+        let existingDismissed = AlphaModelUpdateCandidate(
+            tier: .caseAssociate,
+            installedPackId: installedPack.packId,
+            availablePackId: available.packId,
+            availableSizeBytes: available.sizeBytes,
+            dismissedAt: Date(timeIntervalSinceReferenceDate: 1234)
+        )
+
+        let candidate = alphaAssistantUpdateCandidate(
+            installedPack: installedPack,
+            availableDescriptor: available,
+            existingDismissed: existingDismissed
+        )
+
+        XCTAssertEqual(candidate?.installedPackId, installedPack.packId)
+        XCTAssertEqual(candidate?.availablePackId, available.packId)
+        XCTAssertEqual(candidate?.availableSizeBytes, available.sizeBytes)
+        XCTAssertEqual(candidate?.dismissedAt, existingDismissed.dismissedAt)
+    }
+
     func testAssistantDownloadPreflightRejectsWrongArtifactSize() throws {
         let response = try XCTUnwrap(HTTPURLResponse(
             url: URL(string: "https://huggingface.co/model.gguf")!,

@@ -44,6 +44,84 @@ private func alphaPurgeTemporaryAssistantDownloadFiles() -> Int64 {
     alphaSweepTemporaryAssistantDownloads()
 }
 
+struct AlphaAssistantCatalogDescriptor: Hashable, Sendable {
+    let tier: AlphaCapabilityTier
+    let packId: String
+    let sizeBytes: Int64
+    let checksumSha256: String
+    let artifactKind: String
+    let runtimeMode: AlphaPackRuntimeMode
+    let developmentOnly: Bool
+}
+
+func alphaDefaultAssistantCatalogDescriptor(for tier: AlphaCapabilityTier) -> AlphaAssistantCatalogDescriptor {
+    let artifact = alphaAssistantModelArtifact(for: tier)
+    return AlphaAssistantCatalogDescriptor(
+        tier: artifact.tier,
+        packId: artifact.packId,
+        sizeBytes: artifact.sizeBytes,
+        checksumSha256: artifact.sha256,
+        artifactKind: artifact.artifactKind,
+        runtimeMode: artifact.runtimeMode,
+        developmentOnly: artifact.developmentOnly
+    )
+}
+
+func alphaAssistantCatalogDescriptor(
+    for tier: AlphaCapabilityTier,
+    preferredRuntimeMode: AlphaPackRuntimeMode? = nil,
+    manifest: AlphaBackendCatalogManifest?
+) -> AlphaAssistantCatalogDescriptor {
+    guard let manifest else {
+        return alphaDefaultAssistantCatalogDescriptor(for: tier)
+    }
+
+    let matchingTier = manifest.packs.filter {
+        AlphaCapabilityTier.normalizedAssistantSelection($0.tier) == AlphaCapabilityTier.normalizedAssistantSelection(tier)
+            && !$0.developmentOnly
+    }
+    guard let selected =
+            matchingTier.first(where: { preferredRuntimeMode != nil && $0.runtimeMode == preferredRuntimeMode }) ??
+            matchingTier.first else {
+        return alphaDefaultAssistantCatalogDescriptor(for: tier)
+    }
+
+    return AlphaAssistantCatalogDescriptor(
+        tier: AlphaCapabilityTier.normalizedAssistantSelection(selected.tier) ?? tier,
+        packId: selected.packId,
+        sizeBytes: selected.sizeBytes,
+        checksumSha256: selected.checksumSha256,
+        artifactKind: selected.artifactKind,
+        runtimeMode: selected.runtimeMode,
+        developmentOnly: selected.developmentOnly
+    )
+}
+
+func alphaAssistantUpdateCandidate(
+    installedPack: AlphaInstalledModelPack,
+    availableDescriptor: AlphaAssistantCatalogDescriptor,
+    existingDismissed: AlphaModelUpdateCandidate?
+) -> AlphaModelUpdateCandidate? {
+    guard !installedPack.developmentOnly,
+          !installedPack.installPath.hasPrefix("system://") else {
+        return nil
+    }
+
+    let changed = installedPack.packId != availableDescriptor.packId ||
+        (!availableDescriptor.checksumSha256.isEmpty &&
+         installedPack.checksumSha256.caseInsensitiveCompare(availableDescriptor.checksumSha256) != .orderedSame)
+    guard changed else { return nil }
+
+    return AlphaModelUpdateCandidate(
+        tier: installedPack.tier,
+        installedPackId: installedPack.packId,
+        availablePackId: availableDescriptor.packId,
+        availableSizeBytes: availableDescriptor.sizeBytes,
+        requiresWifi: true,
+        dismissedAt: existingDismissed?.dismissedAt
+    )
+}
+
 extension AlphaRossModel {
 
     func installedPack(for tier: AlphaCapabilityTier) -> AlphaInstalledModelPack? {
@@ -254,31 +332,25 @@ extension AlphaRossModel {
            Date().timeIntervalSince(lastRefresh) < 86_400 {
             return
         }
-
-        let candidates = persisted.installedPacks.compactMap { pack -> AlphaModelUpdateCandidate? in
-            guard !pack.developmentOnly,
-                  !pack.installPath.hasPrefix("system://") else { return nil }
-            let artifact = alphaAssistantModelArtifact(for: pack.tier)
-            let changed = pack.packId != artifact.packId ||
-                (!artifact.sha256.isEmpty && pack.checksumSha256.caseInsensitiveCompare(artifact.sha256) != .orderedSame)
-            guard changed else { return nil }
-            let existingDismissed = persisted.modelUpdateCandidates?.first {
+        let installedPacks = persisted.installedPacks.filter { !$0.developmentOnly && !$0.installPath.hasPrefix("system://") }
+        let dismissedCandidates = persisted.modelUpdateCandidates ?? []
+        let tiers = Array(Set(installedPacks.map(\.tier)))
+        let fallbackCandidates = installedPacks.compactMap { pack in
+            let dismissed = dismissedCandidates.first {
                 $0.tier == pack.tier &&
-                    $0.availablePackId == artifact.packId &&
+                    $0.availablePackId == alphaDefaultAssistantCatalogDescriptor(for: pack.tier).packId &&
                     $0.dismissedAt != nil
             }
-            return AlphaModelUpdateCandidate(
-                tier: pack.tier,
-                installedPackId: pack.packId,
-                availablePackId: artifact.packId,
-                availableSizeBytes: artifact.sizeBytes,
-                requiresWifi: true,
-                dismissedAt: existingDismissed?.dismissedAt
+            return alphaAssistantUpdateCandidate(
+                installedPack: pack,
+                availableDescriptor: alphaDefaultAssistantCatalogDescriptor(for: pack.tier),
+                existingDismissed: dismissed
             )
         }
-        persisted.modelUpdateCandidates = candidates
+
+        persisted.modelUpdateCandidates = fallbackCandidates
         persisted.lastModelCatalogRefresh = .now
-        if !candidates.isEmpty {
+        if !fallbackCandidates.isEmpty {
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
                     title: "Assistant update available",
@@ -292,6 +364,57 @@ extension AlphaRossModel {
             )
         }
         persist()
+
+        Task {
+            var descriptorsByTier: [AlphaCapabilityTier: AlphaAssistantCatalogDescriptor] = [:]
+            for tier in tiers {
+                let preferredRuntime = installedPacks.first(where: { $0.tier == tier })?.runtimeMode
+                do {
+                    let manifest = try await backend.fetchCatalog(for: tier)
+                    descriptorsByTier[tier] = alphaAssistantCatalogDescriptor(
+                        for: tier,
+                        preferredRuntimeMode: preferredRuntime,
+                        manifest: manifest
+                    )
+                } catch {
+                    descriptorsByTier[tier] = alphaDefaultAssistantCatalogDescriptor(for: tier)
+                }
+            }
+
+            let candidates = installedPacks.compactMap { pack in
+                let descriptor = descriptorsByTier[pack.tier] ?? alphaDefaultAssistantCatalogDescriptor(for: pack.tier)
+                let dismissed = dismissedCandidates.first {
+                    $0.tier == pack.tier &&
+                        $0.availablePackId == descriptor.packId &&
+                        $0.dismissedAt != nil
+                }
+                return alphaAssistantUpdateCandidate(
+                    installedPack: pack,
+                    availableDescriptor: descriptor,
+                    existingDismissed: dismissed
+                )
+            }
+
+            await MainActor.run {
+                let shouldRecordLedger = self.persisted.modelUpdateCandidates?.isEmpty != false && !candidates.isEmpty
+                self.persisted.modelUpdateCandidates = candidates
+                self.persisted.lastModelCatalogRefresh = .now
+                if shouldRecordLedger {
+                    self.persisted.ledgerEntries.insert(
+                        AlphaPrivacyLedgerEntry(
+                            title: "Assistant update available",
+                            detail: rossLocalized("privacy_ledger_assistant_update_available_detail"),
+                            purpose: .model_catalog,
+                            payloadClass: .no_case_data,
+                            endpointLabel: "device://model-update-check",
+                            success: true
+                        ),
+                        at: 0
+                    )
+                }
+                self.persist()
+            }
+        }
     }
 
     func dismissAssistantModelUpdate(_ candidate: AlphaModelUpdateCandidate) {
