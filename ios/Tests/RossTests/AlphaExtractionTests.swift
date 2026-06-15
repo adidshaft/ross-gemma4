@@ -7035,6 +7035,99 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(fallback.downloadURLString, cachedTarget.downloadURLString)
     }
 
+    func testMergedAssistantDownloadCacheKeepsAlternateRuntimeEntries() {
+        let cachedMLX = AlphaAssistantDownloadDescriptor(
+            sessionId: nil,
+            packId: "gemma-4-12b-mlx",
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-mlx.zip",
+            sizeBytes: 6_200_000_000,
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            downloadURLString: "https://ross.example/artifacts/gemma-4-12b-mlx.zip",
+            verified: true,
+            releaseReady: true
+        )
+        let cachedGGUF = AlphaAssistantDownloadDescriptor(
+            sessionId: nil,
+            packId: "gemma-4-12b-gguf",
+            tier: .caseAssociate,
+            fileName: "gemma-4-12B-it-UD-Q4_K_XL.gguf",
+            sizeBytes: 7_400_000_000,
+            checksumSha256: String(repeating: "b", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            downloadURLString: "https://ross.example/artifacts/gemma-4-12b.gguf",
+            verified: true,
+            releaseReady: true
+        )
+
+        let merged = alphaMergedAssistantDownloadCache(
+            existing: [cachedMLX],
+            appending: cachedGGUF
+        )
+
+        XCTAssertEqual(merged.map(\.packId), ["gemma-4-12b-mlx", "gemma-4-12b-gguf"])
+        XCTAssertEqual(merged.map(\.runtimeMode), [.mlxSwiftLm, .llamaCppGguf])
+    }
+
+    func testMergedAssistantDownloadCacheReplacesExistingRuntimeEntry() {
+        let staleGGUF = AlphaAssistantDownloadDescriptor(
+            sessionId: nil,
+            packId: "gemma-4-12b-gguf-old",
+            tier: .caseAssociate,
+            fileName: "gemma-4-12B-it-UD-Q4_K_XL.gguf",
+            sizeBytes: 7_350_000_000,
+            checksumSha256: String(repeating: "c", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            downloadURLString: "https://ross.example/artifacts/gemma-4-12b-old.gguf",
+            verified: true,
+            releaseReady: true
+        )
+        let freshGGUF = AlphaAssistantDownloadDescriptor(
+            sessionId: nil,
+            packId: "gemma-4-12b-gguf-new",
+            tier: .caseAssociate,
+            fileName: "gemma-4-12B-it-UD-Q4_K_XL.gguf",
+            sizeBytes: 7_400_000_000,
+            checksumSha256: String(repeating: "d", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            downloadURLString: "https://ross.example/artifacts/gemma-4-12b-new.gguf",
+            verified: true,
+            releaseReady: true
+        )
+        let cachedMLX = AlphaAssistantDownloadDescriptor(
+            sessionId: nil,
+            packId: "gemma-4-12b-mlx",
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-mlx.zip",
+            sizeBytes: 6_200_000_000,
+            checksumSha256: String(repeating: "e", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            downloadURLString: "https://ross.example/artifacts/gemma-4-12b-mlx.zip",
+            verified: true,
+            releaseReady: true
+        )
+
+        let merged = alphaMergedAssistantDownloadCache(
+            existing: [staleGGUF, cachedMLX],
+            appending: freshGGUF
+        )
+
+        XCTAssertEqual(merged.map(\.packId), ["gemma-4-12b-mlx", "gemma-4-12b-gguf-new"])
+        XCTAssertEqual(merged.map(\.runtimeMode), [.mlxSwiftLm, .llamaCppGguf])
+        XCTAssertFalse(merged.contains { $0.packId == staleGGUF.packId })
+    }
+
     func testPreferredAssistantCatalogFallbackUsesCachedCompatibleDescriptor() {
         let cached = AlphaAssistantCatalogDescriptor(
             tier: .caseAssociate,

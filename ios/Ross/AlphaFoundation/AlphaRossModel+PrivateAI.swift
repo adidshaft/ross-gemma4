@@ -299,6 +299,23 @@ func alphaPreferredAssistantDownloadFallback(
     return alphaDefaultAssistantDownloadDescriptor(for: tier)
 }
 
+func alphaMergedAssistantDownloadCache(
+    existing: [AlphaAssistantDownloadDescriptor],
+    appending descriptor: AlphaAssistantDownloadDescriptor
+) -> [AlphaAssistantDownloadDescriptor] {
+    let effectiveTier = AlphaCapabilityTier.normalizedAssistantSelection(descriptor.tier) ?? descriptor.tier
+    var merged = existing.filter {
+        let cachedTier = AlphaCapabilityTier.normalizedAssistantSelection($0.tier) ?? $0.tier
+        guard cachedTier == effectiveTier else { return true }
+        if $0.packId == descriptor.packId {
+            return false
+        }
+        return $0.runtimeMode != descriptor.runtimeMode
+    }
+    merged.append(descriptor)
+    return merged
+}
+
 func alphaDefaultAssistantCatalogDescriptor(for tier: AlphaCapabilityTier) -> AlphaAssistantCatalogDescriptor {
     let artifact = alphaAssistantModelArtifact(for: tier)
     return AlphaAssistantCatalogDescriptor(
@@ -1752,10 +1769,10 @@ extension AlphaRossModel {
         if resolvedDownload.sessionId != nil,
            alphaAssistantDownloadDescriptorSupportsCurrentInstaller(resolvedDownload) {
             let cachedDescriptor = alphaReusableAssistantDownloadDescriptor(resolvedDownload)
-            var cachedDownloads = persisted.cachedAssistantDownloads ?? []
-            cachedDownloads.removeAll { $0.tier == tier }
-            cachedDownloads.append(cachedDescriptor)
-            persisted.cachedAssistantDownloads = cachedDownloads
+            persisted.cachedAssistantDownloads = alphaMergedAssistantDownloadCache(
+                existing: persisted.cachedAssistantDownloads ?? [],
+                appending: cachedDescriptor
+            )
         }
 
         let isResumingPartialDownload = assistantDownloadTaskBoxes[job.id]?.resumeData != nil
