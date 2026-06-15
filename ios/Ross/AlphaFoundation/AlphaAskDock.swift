@@ -984,6 +984,10 @@ struct AlphaInlineAskResponseCard: View {
                                 .lineLimit(2)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
+
+                        if let continuationContext = result.answerContinuationContext {
+                            AlphaAnswerContinuationContextRow(context: continuationContext)
+                        }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     Spacer(minLength: 8)

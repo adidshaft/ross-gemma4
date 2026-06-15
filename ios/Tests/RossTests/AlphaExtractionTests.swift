@@ -8101,6 +8101,36 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testAskResultContinuationContextUsesFollowUpQuestionAndSourceLabel() {
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "Order bundle",
+            pageNumber: 5,
+            textSnippet: "Written submissions are due before the hearing."
+        )
+        let result = AlphaAskResult(
+            chatSessionID: nil,
+            chatTurnID: nil,
+            kind: .userAsk,
+            question: "Quote that exactly.",
+            scopeCaseID: nil,
+            scopeLabel: "All work",
+            selectedDocumentTitles: [],
+            answerTitle: "Quoted passage from the cited source",
+            answerSections: ["\"Written submissions are due before the hearing\" Source: Order bundle · p. 5."],
+            caseFileSources: [sourceRef],
+            publicLawPreview: nil,
+            publicLawResults: [],
+            statusNote: "Private assistant",
+            needsReviewWarning: nil
+        )
+
+        XCTAssertEqual(result.answerContinuationContext?.iconName, "text.quote")
+        XCTAssertTrue(result.answerContinuationContext?.label.contains("Order bundle") == true)
+        XCTAssertTrue(result.answerContinuationContext?.label.contains("p. 5") == true)
+    }
+
     @MainActor
     func testNaturalPluralSelectedDocumentQuestionPrefersTaggedFileSource() {
         let model = AlphaRossModel(previewState: AlphaPersistedState.seed())

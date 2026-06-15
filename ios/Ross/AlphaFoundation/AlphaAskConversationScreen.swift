@@ -642,6 +642,7 @@ struct AlphaFullScreenChatTurn: View {
                     if result.hasAnswerDetails {
                         AlphaCleanAnswerHeader<EmptyView>(
                             title: result.answerTitle,
+                            continuationContext: result.answerContinuationContext,
                             statusNote: deduplicatedStatusNote,
                             onCopy: copyAnswerAction,
                             onShowDetails: showAnswerDetailsAction
@@ -649,6 +650,7 @@ struct AlphaFullScreenChatTurn: View {
                     } else {
                         AlphaCleanAnswerHeader<EmptyView>(
                             title: result.answerTitle,
+                            continuationContext: result.answerContinuationContext,
                             statusNote: deduplicatedStatusNote,
                             onCopy: copyAnswerAction
                         )
@@ -1250,6 +1252,7 @@ struct AlphaAskTurnCard: View {
                 VStack(alignment: .leading, spacing: 14) {
                     AlphaCleanAnswerHeader(
                         title: result.answerTitle,
+                        continuationContext: result.answerContinuationContext,
                         statusNote: deduplicatedStatusNote,
                         onCopy: {
                             alphaCopyAskResultToPasteboard(result)
@@ -1541,6 +1544,7 @@ struct AlphaSectionLabel: View {
 
 struct AlphaCleanAnswerHeader<MenuContent: View>: View {
     let title: String
+    let continuationContext: AlphaAnswerContinuationContext?
     let statusNote: String?
     let onCopy: () -> Void
     let onShowDetails: (() -> Void)?
@@ -1549,12 +1553,14 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
 
     init(
         title: String,
+        continuationContext: AlphaAnswerContinuationContext? = nil,
         statusNote: String?,
         onCopy: @escaping () -> Void,
         onShowDetails: (() -> Void)? = nil,
         @ViewBuilder menu: @escaping () -> MenuContent
     ) {
         self.title = title
+        self.continuationContext = continuationContext
         self.statusNote = AlphaCleanAnswerHeader.cleanedStatusNote(statusNote)
         self.onCopy = onCopy
         self.onShowDetails = onShowDetails
@@ -1564,11 +1570,13 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
 
     init(
         title: String,
+        continuationContext: AlphaAnswerContinuationContext? = nil,
         statusNote: String?,
         onCopy: @escaping () -> Void,
         onShowDetails: (() -> Void)? = nil
     ) where MenuContent == EmptyView {
         self.title = title
+        self.continuationContext = continuationContext
         self.statusNote = AlphaCleanAnswerHeader.cleanedStatusNote(statusNote)
         self.onCopy = onCopy
         self.onShowDetails = onShowDetails
@@ -1616,7 +1624,34 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
             if let statusNote {
                 AlphaAnswerStatusPill(note: statusNote)
             }
+
+            if let continuationContext {
+                AlphaAnswerContinuationContextRow(context: continuationContext)
+            }
         }
+    }
+}
+
+struct AlphaAnswerContinuationContext: Equatable {
+    let iconName: String
+    let label: String
+}
+
+struct AlphaAnswerContinuationContextRow: View {
+    let context: AlphaAnswerContinuationContext
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: context.iconName)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(Color.rossInk.opacity(0.54))
+            Text(context.label)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(Color.rossInk.opacity(0.62))
+                .lineLimit(1)
+                .minimumScaleFactor(0.84)
+        }
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -2016,6 +2051,39 @@ extension AlphaAskResult {
         return modelInvocation.estimatedProcessedTokens != nil ||
             modelInvocation.estimatedOutputTokensPerSecond != nil ||
             modelInvocation.timeToFirstTokenMs != nil
+    }
+
+    var answerContinuationContext: AlphaAnswerContinuationContext? {
+        guard let sourceRef = caseFileSources.first(where: { $0.effectiveSourceCategory == .documentSource }) ?? caseFileSources.first else {
+            return nil
+        }
+        let normalizedQuestion = question.lowercased()
+        if normalizedQuestion.contains("next page") || normalizedQuestion.contains("following page") {
+            return AlphaAnswerContinuationContext(iconName: "arrow.down.right", label: sourceRef.label)
+        }
+        if normalizedQuestion.contains("previous page") ||
+            normalizedQuestion.contains("prior page") ||
+            normalizedQuestion.contains("page before") {
+            return AlphaAnswerContinuationContext(iconName: "arrow.up.left", label: sourceRef.label)
+        }
+        if normalizedQuestion.contains("exact quote") ||
+            normalizedQuestion.contains("quote exactly") ||
+            normalizedQuestion.contains("quote that") ||
+            normalizedQuestion.contains("quote this") {
+            return AlphaAnswerContinuationContext(iconName: "text.quote", label: sourceRef.label)
+        }
+        if normalizedQuestion.contains("which page") ||
+            normalizedQuestion.contains("what page") ||
+            normalizedQuestion.contains("where does it say") ||
+            normalizedQuestion.contains("show me the source") ||
+            normalizedQuestion.contains("show the source") ||
+            normalizedQuestion.contains("cite that") ||
+            normalizedQuestion.contains("cite this") ||
+            normalizedQuestion.contains("which file") ||
+            normalizedQuestion.contains("which document") {
+            return AlphaAnswerContinuationContext(iconName: "doc.text", label: sourceRef.label)
+        }
+        return nil
     }
 
     func answerSectionItems(limit: Int? = nil) -> [AlphaAnswerSectionItem] {
