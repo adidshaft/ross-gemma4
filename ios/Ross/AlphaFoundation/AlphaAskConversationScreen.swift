@@ -1837,7 +1837,7 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
         self.statusNote = AlphaCleanAnswerHeader.cleanedStatusNote(statusNote)
         self.onCopy = onCopy
         self.onShowDetails = onShowDetails
-        self.showsMenu = false
+        self.showsMenu = onShowDetails != nil
         self.menu = { EmptyView() }
     }
 
@@ -1861,6 +1861,11 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
 
                 if showsMenu {
                     Menu {
+                        if let onShowDetails {
+                            Button(action: onShowDetails) {
+                                Label(rossLocalized("answer_details"), systemImage: "info.circle")
+                            }
+                        }
                         menu()
                     } label: {
                         AlphaCleanAnswerMenuLabel()
