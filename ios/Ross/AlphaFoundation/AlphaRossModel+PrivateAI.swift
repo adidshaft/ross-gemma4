@@ -120,6 +120,13 @@ func alphaShouldReuseInstalledAssistantPack(
     return pack.runtimeMode == preferredRuntimeMode
 }
 
+func alphaClearedAssistantUpdateCandidates(
+    _ candidates: [AlphaModelUpdateCandidate]?,
+    for tier: AlphaCapabilityTier
+) -> [AlphaModelUpdateCandidate] {
+    (candidates ?? []).filter { $0.tier != tier }
+}
+
 func alphaPreferredAssistantDownloadFallback(
     for tier: AlphaCapabilityTier,
     preferredRuntimeMode: AlphaPackRuntimeMode,
@@ -767,6 +774,10 @@ extension AlphaRossModel {
         persisted.installedPacks.removeAll { $0.tier == tier }
         persisted.installedPacks.insert(installed, at: 0)
         persisted.settings.activeTier = tier
+        persisted.modelUpdateCandidates = alphaClearedAssistantUpdateCandidates(
+            persisted.modelUpdateCandidates,
+            for: tier
+        )
         updateJob(jobID) {
             $0.state = .installed
             $0.bytesDownloaded = 0
@@ -1386,6 +1397,10 @@ extension AlphaRossModel {
             persisted.installedPacks.removeAll { $0.tier == tier }
             persisted.installedPacks.insert(installed, at: 0)
             persisted.settings.activeTier = tier
+            persisted.modelUpdateCandidates = alphaClearedAssistantUpdateCandidates(
+                persisted.modelUpdateCandidates,
+                for: tier
+            )
             persisted.modelJobs.removeAll { $0.tier == tier && $0.state != .installed && $0.id != job.id }
             updateJob(job.id) {
                 $0.state = .installed
@@ -1511,6 +1526,10 @@ extension AlphaRossModel {
             persisted.installedPacks.removeAll { $0.tier == tier }
             persisted.installedPacks.insert(installed, at: 0)
             persisted.settings.activeTier = tier
+            persisted.modelUpdateCandidates = alphaClearedAssistantUpdateCandidates(
+                persisted.modelUpdateCandidates,
+                for: tier
+            )
             updateJob(job.id) {
                 $0.state = .installed
                 $0.bytesDownloaded = installedArtifact.bytes

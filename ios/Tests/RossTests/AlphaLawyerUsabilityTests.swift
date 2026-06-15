@@ -2910,6 +2910,14 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             ]
             state.modelJobs = []
             state.settings.activeTier = .caseAssociate
+            state.modelUpdateCandidates = [
+                AlphaModelUpdateCandidate(
+                    tier: .caseAssociate,
+                    installedPackId: "case-associate-existing-gguf",
+                    availablePackId: "case-associate-new-pack",
+                    availableSizeBytes: 7_500_000_000
+                )
+            ]
             try await store.replace(with: state)
 
             let model = await MainActor.run {
@@ -2998,6 +3006,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 XCTAssertEqual(installedJob.runtimeMode, .deterministicDev)
             }
             XCTAssertEqual(snapshot.settings.activeTier, .caseAssociate)
+            XCTAssertFalse((snapshot.modelUpdateCandidates ?? []).contains { $0.tier == .caseAssociate })
 
             await store.removeAllModelArtifacts()
         }
