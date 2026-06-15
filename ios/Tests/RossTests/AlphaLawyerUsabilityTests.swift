@@ -616,6 +616,83 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
     }
 
     @MainActor
+    func testAskRuntimeSourcePackKeepsSelectedDocumentCoverageForBroadQuestion() {
+        let caseID = UUID()
+        let firstDocumentID = UUID()
+        let secondDocumentID = UUID()
+        let firstDocument = AlphaCaseDocument(
+            id: firstDocumentID,
+            title: "Order sheet",
+            fileName: "order-sheet.txt",
+            kind: .text,
+            storedRelativePath: "docs/order-sheet.txt",
+            importedAt: .now,
+            pageCount: 1,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: "Written submissions must be filed before 17 June 2026. The advocate should confirm the annexure set before the next date.",
+            pages: [
+                AlphaDocumentPage(
+                    pageNumber: 1,
+                    snippet: "Written submissions before 17 June 2026.",
+                    extractedText: "Written submissions must be filed before 17 June 2026. The advocate should confirm the annexure set before the next date."
+                )
+            ]
+        )
+        let secondDocument = AlphaCaseDocument(
+            id: secondDocumentID,
+            title: "Affidavit note",
+            fileName: "affidavit-note.txt",
+            kind: .text,
+            storedRelativePath: "docs/affidavit-note.txt",
+            importedAt: .now.addingTimeInterval(-600),
+            pageCount: 1,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: "Affidavit corrections should be finalized and verified with the client before filing.",
+            pages: [
+                AlphaDocumentPage(
+                    pageNumber: 1,
+                    snippet: "Affidavit corrections before filing.",
+                    extractedText: "Affidavit corrections should be finalized and verified with the client before filing."
+                )
+            ]
+        )
+
+        var state = AlphaPersistedState.seed()
+        state.settings.activeTier = .caseAssociate
+        state.cases = [
+            AlphaCaseMatter(
+                id: caseID,
+                title: "Broad selected-file ask matter",
+                forum: "High Court",
+                stage: .arguments,
+                summary: "Matter summary should not displace explicitly selected files.",
+                issueHighlights: ["Interim stay"],
+                evidenceNotes: [],
+                draftTasks: [],
+                documents: [firstDocument, secondDocument],
+                sourceRefs: []
+            )
+        ]
+
+        let model = AlphaRossModel(previewState: state)
+        model.setSelectedAskDocumentIDs([firstDocumentID, secondDocumentID], for: caseID)
+
+        let sourcePack = model.askRuntimeSourcePack(
+            question: "What should I do next?",
+            scopeCaseID: caseID,
+            selectedDocuments: model.selectedAskDocuments(for: caseID)
+        )
+
+        XCTAssertFalse(sourcePack.isEmpty)
+        XCTAssertEqual(sourcePack.first?.sourceRef.documentId, firstDocumentID)
+        XCTAssertTrue(sourcePack.contains { $0.sourceRef.documentId == firstDocumentID })
+        XCTAssertTrue(sourcePack.contains { $0.sourceRef.documentId == secondDocumentID })
+        XCTAssertFalse(sourcePack.contains(where: { $0.sourceRef.effectiveSourceCategory == .matterDetail }))
+    }
+
+    @MainActor
     func testSelectedFileWaitingResultUsesPlainLanguage() {
         let previousLanguageCode = rossSelectedLanguageCode()
         rossSaveLanguageSelection(code: "hi")

@@ -1646,11 +1646,17 @@ extension AlphaRossModel {
             question: question,
             selectedDocumentIDs: selectedIDs
         )
+        let prioritizedSelectedDocumentBlocks = alphaPrioritizedSelectedDocumentSourceBlocks(
+            documentBlocks,
+            rankedBlocks: rankedDocumentBlocks,
+            selectedDocumentIDs: selectedIDs
+        )
+        if !selectedIDs.isEmpty {
+            guard !prioritizedSelectedDocumentBlocks.isEmpty else { return [] }
+            return Array(prioritizedSelectedDocumentBlocks.prefix(sourcePackPolicy.sourceBlockLimit))
+        }
         if !rankedDocumentBlocks.isEmpty {
             return Array((matterBlocks + rankedDocumentBlocks).prefix(sourcePackPolicy.sourceBlockLimit))
-        }
-        if !selectedIDs.isEmpty {
-            return []
         }
         return askRuntimeMatterMemorySourcePack(scopeCaseID: scopeCaseID)
     }
@@ -1740,6 +1746,78 @@ extension AlphaRossModel {
                 return $0.index < $1.index
             }
             .map(\.block)
+    }
+
+    func alphaPrioritizedSelectedDocumentSourceBlocks(
+        _ blocks: [AlphaSourceTextBlock],
+        rankedBlocks: [AlphaSourceTextBlock],
+        selectedDocumentIDs: Set<UUID>
+    ) -> [AlphaSourceTextBlock] {
+        guard !selectedDocumentIDs.isEmpty else { return rankedBlocks }
+
+        let groupedBlocks = Dictionary(grouping: blocks) { $0.sourceRef.documentId }
+        let groupedRankedBlocks = Dictionary(grouping: rankedBlocks) { $0.sourceRef.documentId }
+        var orderedDocumentIDs: [UUID] = []
+        var seenDocumentIDs = Set<UUID>()
+        for block in blocks where selectedDocumentIDs.contains(block.sourceRef.documentId) {
+            if seenDocumentIDs.insert(block.sourceRef.documentId).inserted {
+                orderedDocumentIDs.append(block.sourceRef.documentId)
+            }
+        }
+
+        var prioritized: [AlphaSourceTextBlock] = []
+        var seenBlockKeys = Set<String>()
+
+        func appendIfNeeded(_ block: AlphaSourceTextBlock) {
+            let key = alphaAskSourceBlockKey(block)
+            guard seenBlockKeys.insert(key).inserted else { return }
+            prioritized.append(block)
+        }
+
+        for documentID in orderedDocumentIDs {
+            if let rankedBlock = groupedRankedBlocks[documentID]?.first {
+                appendIfNeeded(rankedBlock)
+                continue
+            }
+            if let fallbackBlock = alphaPreferredSelectedDocumentFallbackBlock(
+                groupedBlocks[documentID] ?? []
+            ) {
+                appendIfNeeded(fallbackBlock)
+            }
+        }
+
+        for block in rankedBlocks {
+            appendIfNeeded(block)
+        }
+
+        return prioritized
+    }
+
+    func alphaPreferredSelectedDocumentFallbackBlock(
+        _ blocks: [AlphaSourceTextBlock]
+    ) -> AlphaSourceTextBlock? {
+        guard !blocks.isEmpty else { return nil }
+        if let confirmedDetails = blocks.first(where: { $0.sourceRef.paragraphRange == "confirmed details" }) {
+            return confirmedDetails
+        }
+        return blocks
+            .filter { $0.sourceRef.paragraphRange != "confirmed details" }
+            .sorted { lhs, rhs in
+                if lhs.pageNumber != rhs.pageNumber {
+                    return lhs.pageNumber < rhs.pageNumber
+                }
+                return lhs.sourceRef.label < rhs.sourceRef.label
+            }
+            .first ?? blocks.first
+    }
+
+    func alphaAskSourceBlockKey(_ block: AlphaSourceTextBlock) -> String {
+        [
+            block.sourceRef.documentId.uuidString,
+            String(block.pageNumber),
+            block.sourceRef.paragraphRange ?? "",
+            block.sourceRef.label
+        ].joined(separator: "|")
     }
 
     func alphaAskSearchTerms(from question: String) -> [String] {
