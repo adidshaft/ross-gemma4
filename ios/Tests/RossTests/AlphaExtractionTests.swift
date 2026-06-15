@@ -4077,7 +4077,7 @@ final class AlphaExtractionTests: XCTestCase {
                 AlphaSourceRef(caseId: UUID(), documentId: UUID(), documentTitle: "Order", pageNumber: 2),
                 AlphaSourceRef(caseId: UUID(), documentId: UUID(), documentTitle: "Order", pageNumber: 3)
             ],
-            assistantDisplayName: "Gemma 4 12B Q4_K_M",
+            assistantDisplayName: "Gemma 4 12B UD Q4_K_XL",
             preferredRuntimeMode: AlphaPackRuntimeMode.appleFoundationModels.rawValue,
             runtimeSelectionReason: "Built-in CoreAI model preferred",
             executionPathLabel: "Gemma GGUF via llama.cpp",
@@ -4110,7 +4110,7 @@ final class AlphaExtractionTests: XCTestCase {
                 AlphaAnswerDetailMetric(
                     key: "assistant_used",
                     label: "Assistant",
-                    value: "Gemma 4 12B Q4_K_M"
+                    value: "Gemma 4 12B UD Q4_K_XL"
                 ),
                 AlphaAnswerDetailMetric(
                     key: "runtime_used",
@@ -5015,9 +5015,9 @@ final class AlphaExtractionTests: XCTestCase {
             ),
             .quickStart: (
                 repository: "unsloth/gemma-4-E4B-it-GGUF",
-                fileName: "gemma-4-E4B-it-Q4_K_M.gguf",
-                sizeBytes: 4_977_169_568,
-                sha256: "519b9793ed6ce0ff530f1b7c96e848e08e49e7af4d57bb97f76215963a54146d",
+                fileName: "gemma-4-E4B-it-UD-Q4_K_XL.gguf",
+                sizeBytes: 5_126_304_928,
+                sha256: "30d1e7949597a3446726064e80b876fd1b5cba4aa6eec53d27afa420e731fb36",
                 draftFileName: "mtp-gemma-4-E4B-it.gguf",
                 draftSizeBytes: 98_653_248,
                 draftSha256: "b6a723115efa510d3b3215db1e26790dae84cd08c2134a764f3d194f1f0c3376",
@@ -5026,9 +5026,9 @@ final class AlphaExtractionTests: XCTestCase {
             ),
             .caseAssociate: (
                 repository: "unsloth/gemma-4-12b-it-GGUF",
-                fileName: "gemma-4-12b-it-Q4_K_M.gguf",
-                sizeBytes: 7_121_860_000,
-                sha256: "43fec98c5102b1c446b4ddd0a9439f1db3a2e1f2e0b8cd143ce1ea619a9403d6",
+                fileName: "gemma-4-12b-it-UD-Q4_K_XL.gguf",
+                sizeBytes: 7_366_421_920,
+                sha256: "ee33ab5be8e07aca1c269fc645eaed5f3298e089d52db29415839d8f29957020",
                 draftFileName: "mtp-gemma-4-12b-it.gguf",
                 draftSizeBytes: 465_109_248,
                 draftSha256: "145db9094bc0f85f1701e255a2ed216dcc9800fc8bc8631ad00905b456bd451b",
@@ -5100,7 +5100,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         let installed = try await store.installDownloadedPackArtifact(
             for: .caseAssociate,
-            fileName: "gemma-4-12b-it-Q4_K_M.gguf",
+            fileName: "gemma-4-12b-it-UD-Q4_K_XL.gguf",
             data: mainData,
             expectedChecksum: sha256Hex(mainData),
             packId: "gemma-4-12b-q4",
@@ -5149,7 +5149,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         let installed = try await store.installDownloadedPackArtifact(
             for: .caseAssociate,
-            fileName: "gemma-4-12b-it-Q4_K_M.gguf",
+            fileName: "gemma-4-12b-it-UD-Q4_K_XL.gguf",
             data: mainData,
             expectedChecksum: sha256Hex(mainData),
             packId: "gemma-4-12b-q4",
@@ -5187,7 +5187,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         let installed = try await store.installDownloadedPackArtifact(
             for: .caseAssociate,
-            fileName: "gemma-4-12b-it-Q4_K_M.gguf",
+            fileName: "gemma-4-12b-it-UD-Q4_K_XL.gguf",
             data: mainData,
             expectedChecksum: sha256Hex(mainData),
             packId: "gemma-4-12b-q4",
@@ -6238,6 +6238,19 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(label, "Built-in CoreAI model preferred")
     }
 
+    func testAssistantRuntimeChoiceLabelNamesCoreAIWhenAlreadySelected() {
+        let label = alphaAssistantRuntimeChoiceLabel(
+            selectedRuntimeMode: .appleFoundationModels,
+            tier: .caseAssociate,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24,
+            systemAssistantAvailable: false
+        )
+
+        XCTAssertEqual(label, "Built-in CoreAI model selected")
+    }
+
     func testAssistantRuntimeChoiceLabelExplainsKeepingFasterRecentGGUFRun() {
         let fastGGUFInvocation = AlphaLocalModelInvocation(
             task: .matterQuestionAnswer,
@@ -6317,7 +6330,7 @@ final class AlphaExtractionTests: XCTestCase {
             .caseAssociate,
             runtimeMode: .llamaCppGguf,
             packId: "gemma-4-12b-q4",
-            installPath: "model-packs/case_associate/gemma-4-12B-it-Q4_K_M.gguf",
+            installPath: "model-packs/case_associate/gemma-4-12B-it-UD-Q4_K_XL.gguf",
             artifactKind: "local_model_artifact",
             developmentOnly: false
         )
@@ -6344,7 +6357,7 @@ final class AlphaExtractionTests: XCTestCase {
             .caseAssociate,
             runtimeMode: .llamaCppGguf,
             packId: "gemma-4-12b-q4",
-            installPath: "model-packs/case_associate/gemma-4-12B-it-Q4_K_M.gguf",
+            installPath: "model-packs/case_associate/gemma-4-12B-it-UD-Q4_K_XL.gguf",
             artifactKind: "local_model_artifact",
             developmentOnly: false
         )
@@ -6363,7 +6376,7 @@ final class AlphaExtractionTests: XCTestCase {
             .caseAssociate,
             runtimeMode: .llamaCppGguf,
             packId: "gemma-4-12b-q4",
-            installPath: "model-packs/case_associate/gemma-4-12B-it-Q4_K_M.gguf",
+            installPath: "model-packs/case_associate/gemma-4-12B-it-UD-Q4_K_XL.gguf",
             checksum: String(repeating: "a", count: 64),
             artifactKind: "local_model_artifact",
             developmentOnly: false
@@ -6372,7 +6385,7 @@ final class AlphaExtractionTests: XCTestCase {
             sessionId: nil,
             packId: "gemma-4-12b-q4",
             tier: .caseAssociate,
-            fileName: "gemma-4-12B-it-Q4_K_M.gguf",
+            fileName: "gemma-4-12B-it-UD-Q4_K_XL.gguf",
             sizeBytes: 7_381_382_048,
             checksumSha256: String(repeating: "a", count: 64),
             artifactKind: "local_model_artifact",
@@ -6396,7 +6409,7 @@ final class AlphaExtractionTests: XCTestCase {
             .caseAssociate,
             runtimeMode: .llamaCppGguf,
             packId: "gemma-4-12b-q4",
-            installPath: "model-packs/case_associate/gemma-4-12B-it-Q4_K_M.gguf",
+            installPath: "model-packs/case_associate/gemma-4-12B-it-UD-Q4_K_XL.gguf",
             checksum: String(repeating: "a", count: 64),
             artifactKind: "local_model_artifact",
             developmentOnly: false
@@ -6432,7 +6445,7 @@ final class AlphaExtractionTests: XCTestCase {
         let mainData = Data("gguf-main-match".utf8)
         let installed = try await store.installDownloadedPackArtifact(
             for: .caseAssociate,
-            fileName: "gemma-4-12b-it-Q4_K_M.gguf",
+            fileName: "gemma-4-12b-it-UD-Q4_K_XL.gguf",
             data: mainData,
             expectedChecksum: sha256Hex(mainData),
             packId: "gemma-4-12b-q4",
@@ -6453,7 +6466,7 @@ final class AlphaExtractionTests: XCTestCase {
             sessionId: nil,
             packId: "gemma-4-12b-q4",
             tier: .caseAssociate,
-            fileName: "gemma-4-12b-it-Q4_K_M.gguf",
+            fileName: "gemma-4-12b-it-UD-Q4_K_XL.gguf",
             sizeBytes: Int64(mainData.count),
             checksumSha256: installed.checksum,
             artifactKind: "local_model_artifact",
@@ -6723,7 +6736,7 @@ final class AlphaExtractionTests: XCTestCase {
         let draftData = Data("gguf-draft-update".utf8)
         let installed = try await store.installDownloadedPackArtifact(
             for: .caseAssociate,
-            fileName: "gemma-4-12b-it-Q4_K_M.gguf",
+            fileName: "gemma-4-12b-it-UD-Q4_K_XL.gguf",
             data: mainData,
             expectedChecksum: sha256Hex(mainData),
             packId: "gemma-4-12b-q4",
@@ -6815,7 +6828,7 @@ final class AlphaExtractionTests: XCTestCase {
             sessionId: "sess-mlx-or-gguf",
             packId: "gemma-4-12b-q4-session",
             artifact: AlphaBackendArtifact(
-                fileName: "gemma-4-12B-it-Q4_K_M.gguf",
+                fileName: "gemma-4-12B-it-UD-Q4_K_XL.gguf",
                 sizeBytes: 7_400_000_000,
                 finalSha256: String(repeating: "a", count: 64),
                 artifactKind: "local_model_artifact",
@@ -6835,7 +6848,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(descriptor.sessionId, "sess-mlx-or-gguf")
         XCTAssertEqual(descriptor.packId, "gemma-4-12b-q4-session")
-        XCTAssertEqual(descriptor.fileName, "gemma-4-12B-it-Q4_K_M.gguf")
+        XCTAssertEqual(descriptor.fileName, "gemma-4-12B-it-UD-Q4_K_XL.gguf")
         XCTAssertEqual(descriptor.runtimeMode, .llamaCppGguf)
         XCTAssertEqual(descriptor.downloadURLString, "https://ross.example/artifacts/gemma-4-12b.gguf")
         XCTAssertTrue(descriptor.verified)
@@ -6952,7 +6965,7 @@ final class AlphaExtractionTests: XCTestCase {
             sessionId: "sess-target-gguf",
             packId: "gemma-4-12b-gguf-new",
             tier: .caseAssociate,
-            fileName: "gemma-4-12B-it-Q4_K_M.gguf",
+            fileName: "gemma-4-12B-it-UD-Q4_K_XL.gguf",
             sizeBytes: 7_400_000_000,
             checksumSha256: String(repeating: "e", count: 64),
             artifactKind: "local_model_artifact",
@@ -7974,21 +7987,21 @@ final class AlphaExtractionTests: XCTestCase {
     func testLlamaRuntimeProfileExpandsContextFor12BOnCapablePhones() {
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.contextWindowTokens(
-                forModelPath: "/tmp/gemma-4-12B-it-Q4_K_M.gguf",
+                forModelPath: "/tmp/gemma-4-12B-it-UD-Q4_K_XL.gguf",
                 physicalMemory: 8_000_000_000
             ),
             18_432
         )
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.contextWindowTokens(
-                forModelPath: "/tmp/gemma-4-12B-it-Q4_K_M.gguf",
+                forModelPath: "/tmp/gemma-4-12B-it-UD-Q4_K_XL.gguf",
                 physicalMemory: 12_000_000_000
             ),
             24_576
         )
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.contextWindowTokens(
-                forModelPath: "/tmp/gemma-4-12B-it-Q4_K_M.gguf",
+                forModelPath: "/tmp/gemma-4-12B-it-UD-Q4_K_XL.gguf",
                 physicalMemory: 16_000_000_000
             ),
             32_768
@@ -8083,14 +8096,14 @@ final class AlphaExtractionTests: XCTestCase {
     func testLlamaRuntimeProfileUsesModelAwareGPUOffload() {
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.gpuLayerCount(
-                forModelPath: "/tmp/google_gemma-4-E4B-it-Q4_K_M.gguf",
+                forModelPath: "/tmp/google_gemma-4-E4B-it-UD-Q4_K_XL.gguf",
                 physicalMemory: 7_000_000_000
             ),
             32
         )
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.gpuLayerCount(
-                forModelPath: "/tmp/gemma-4-12B-it-Q4_K_M.gguf",
+                forModelPath: "/tmp/gemma-4-12B-it-UD-Q4_K_XL.gguf",
                 physicalMemory: 9_000_000_000
             ),
             56
@@ -8107,14 +8120,14 @@ final class AlphaExtractionTests: XCTestCase {
     func testLlamaRuntimeProfileEnablesBroaderBatching() {
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.promptBatchTokens(
-                forModelPath: "/tmp/gemma-4-12B-it-Q4_K_M.gguf",
+                forModelPath: "/tmp/gemma-4-12B-it-UD-Q4_K_XL.gguf",
                 physicalMemory: 12_000_000_000
             ),
             1_536
         )
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.physicalBatchTokens(
-                forModelPath: "/tmp/gemma-4-12B-it-Q4_K_M.gguf",
+                forModelPath: "/tmp/gemma-4-12B-it-UD-Q4_K_XL.gguf",
                 physicalMemory: 12_000_000_000
             ),
             1_024

@@ -1003,7 +1003,7 @@ func alphaAssistantRuntimeChoiceLabel(
             ? "iPhone baseline kept GGUF"
             : "GGUF chosen for compatibility"
     case .appleFoundationModels:
-        return "Built-in Apple model selected"
+        return "Built-in CoreAI model selected"
     case .deterministicDev:
         return "Development runtime override"
     case .mediapipeLlm:

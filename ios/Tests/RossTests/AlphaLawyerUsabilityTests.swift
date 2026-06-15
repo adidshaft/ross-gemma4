@@ -671,7 +671,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         let ggufPack = AlphaInstalledModelPack(
             packId: "gemma-4-12b-gguf",
             tier: .caseAssociate,
-            installPath: "model-packs/case_associate/gemma-4-12B-it-Q4_K_M.gguf",
+            installPath: "model-packs/case_associate/gemma-4-12B-it-UD-Q4_K_XL.gguf",
             checksumSha256: String(repeating: "b", count: 64),
             artifactKind: "local_model_artifact",
             runtimeMode: .llamaCppGguf,
@@ -807,7 +807,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         let ggufPack = AlphaInstalledModelPack(
             packId: "gemma-4-12b-gguf",
             tier: .caseAssociate,
-            installPath: "model-packs/case_associate/gemma-4-12B-it-Q4_K_M.gguf",
+            installPath: "model-packs/case_associate/gemma-4-12B-it-UD-Q4_K_XL.gguf",
             checksumSha256: String(repeating: "b", count: 64),
             artifactKind: "local_model_artifact",
             runtimeMode: .llamaCppGguf,
@@ -1614,7 +1614,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         let activePack = AlphaInstalledModelPack(
             packId: "gemma-4-e4b-q4",
             tier: .quickStart,
-            installPath: "model-packs/quick_start/google_gemma-4-E4B-it-Q4_K_M.gguf",
+            installPath: "model-packs/quick_start/google_gemma-4-E4B-it-UD-Q4_K_XL.gguf",
             checksumSha256: String(repeating: "a", count: 64),
             artifactKind: "local_model_artifact",
             runtimeMode: .llamaCppGguf,
