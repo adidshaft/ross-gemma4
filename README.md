@@ -66,16 +66,17 @@ Ask in Hindi or Bengali and Ross keeps the answer in that language while still g
 
 ## Gemma 4 Capability Packs
 
-ROSS-Gemma4 is wired for real, quantized Gemma 4 GGUF models on-device. The current repo has catalog entries and download plumbing for community GGUF artifacts hosted on Hugging Face (`bartowski/google_gemma-4-*`). A simulator smoke run has proven the llama.cpp GGUF path with a local developer artifact, and live Hugging Face probes on June 2, 2026 confirmed that all configured assistant files resolve, advertise the pinned SHA-256 values through linked ETags, and accept one-byte range downloads. The full physical iPhone download, resume, verify, activate, and imported-file QA pass is still pending.
+ROSS-Gemma4 is wired for real, quantized Gemma 4 GGUF models on-device. The current repo has catalog entries and download plumbing for community GGUF artifacts hosted on Hugging Face (`bartowski/google_gemma-4-*`). The product-facing runtime path is currently GGUF via `llama.cpp` through `llama.swift`. An experimental MLX lane exists only as an opt-in developer path for local model directories and is not yet part of the normal in-app catalog. A simulator smoke run has proven the llama.cpp GGUF path with a local developer artifact, and live Hugging Face probes on June 2, 2026 confirmed that all configured assistant files resolve, advertise the pinned SHA-256 values through linked ETags, and accept one-byte range downloads. The full physical iPhone download, resume, verify, activate, and imported-file QA pass is still pending.
 
-There are four Gemma 4 capability packs available for download inside the app:
+There are three product-visible Gemma 4 capability packs available for download inside the app:
 
 | Tier | Pack | Base Model | Quantization | Size | Use Case | Target Device |
 | --- | --- | --- | --- | --- | --- | --- |
-| **Flash Setup** | `gemma-4-e2b-q2` | Gemma 4 E2B | `Q2_K` | ~3.0 GB | Ultra-fast flash setup, immediate short answers, basic review. | Ultra-Constrained Phones |
-| **Quick Associate** | `gemma-4-e2b-q4` | Gemma 4 E2B | `Q4_K_M` | ~3.5 GB | Instant setup, intake, short summaries, simple checklists. | Constrained Phones |
-| **Case Associate** | `gemma-4-e4b-q4` | Gemma 4 E4B | `Q4_K_M` | ~5.4 GB | Chronology building, issue extraction, missing-fact analysis. | Modern Phones/Tablets |
+| **Quick Start** | `gemma-4-e4b-q4` | Gemma 4 E4B | `Q4_K_M` | ~5.4 GB | Lighter setup, short legal Q&A, intake review, and smaller matter work. | Constrained Phones |
+| **Case Associate** | `gemma-4-12b-q4` | Gemma 4 12B | `Q4_K_M` | ~7.4 GB | Balanced chronology building, issue extraction, larger file handling, and everyday drafting support. | Modern Phones/Tablets |
 | **Senior Drafting Support**| `gemma-4-26b-a4b-q4` | Gemma 4 26B-A4B (MoE) | `Q4_K_M` | ~17.0 GB | Advanced drafting, clinic workstation mode, complex cross-referencing. | High-End Local Workstations |
+
+The older Flash setup tier remains in the codebase only for compatibility and recovery paths. It is no longer shown in normal onboarding or assistant selection.
 
 ### Multilingual Coverage
 
@@ -148,7 +149,7 @@ ROSS-Gemma4 is a workbench, not a practitioner. It adheres to the following safe
 
 ## 90-Second Demo Script
 
-1. **Setup (0:00-0:15)**: Open ROSS-Gemma4. Navigate to Settings -> Assistant. Tap "Install Quick Associate" to download the real Gemma 4 E2B Q4_K_M capability pack.
+1. **Setup (0:00-0:15)**: Open ROSS-Gemma4. Navigate to Settings -> Assistant. Tap "Install Case Associate" to download the real Gemma 4 12B Q4_K_M capability pack.
 2. **Import (0:15-0:30)**: Create a new matter "State v. Doe". Import three sample PDF statements into the case folder.
 3. **Analyze (0:30-0:60)**: Tap "Ask ROSS". Ask, "What are the timeline discrepancies between Witness A and Witness B?" The app retrieves context and generates a local response in seconds.
 4. **Draft (0:60-1:30)**: Select the highlighted discrepancies and tap "Draft Memo". ROSS-Gemma4 writes a formal memo detailing the contradictions. Tap "Save to Case Files".
@@ -179,7 +180,8 @@ ROSS-Gemma4 exemplifies how high-capability, open-weight models like Gemma 4 can
 
 ## Limitations
 
-- Heavy models (like the 26B-A4B tier) require significant RAM and may throttle or crash on older iOS devices. Devices with 16GB+ Unified Memory are highly recommended for the Senior Drafting tier.
+- The 12B pack is the current balanced quality target for capable iPhones and iPads, but it still needs honest physical-device QA across representative 8 GB and 12 GB devices.
+- Heavy models like the 26B-A4B tier require significant RAM and may throttle or crash on older iOS devices. Devices with 16GB+ Unified Memory are highly recommended for the Senior Drafting tier.
 - Generation speed is dependent on Apple Silicon GPU performance and thermal throttling.
 
 ## Roadmap
