@@ -110,6 +110,25 @@ enum AlphaMLXRuntimeProfile {
             return physicalMemory >= 12_000_000_000 ? 8 : 6
         }
     }
+
+    static func prefillStepSize(
+        for tier: AlphaCapabilityTier,
+        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory
+    ) -> Int {
+        switch tier {
+        case .flash:
+            return physicalMemory >= 8_000_000_000 ? 320 : 256
+        case .quickStart:
+            return physicalMemory >= 8_000_000_000 ? 384 : 256
+        case .caseAssociate:
+            if physicalMemory >= 16_000_000_000 {
+                return 512
+            }
+            return physicalMemory >= 12_000_000_000 ? 384 : 320
+        case .seniorDraftingSupport:
+            return physicalMemory >= 18_000_000_000 ? 512 : 384
+        }
+    }
 }
 
 private actor AlphaMLXModelContainerCache {
@@ -521,7 +540,10 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             topP: Float(max(0.0, min(sampler.topP, 1.0))),
             topK: max(0, sampler.topK),
             repetitionPenalty: sampler.repeatPenalty > 0 ? Float(sampler.repeatPenalty) : nil,
-            prefillStepSize: capabilityTier == .seniorDraftingSupport ? 384 : 256
+            prefillStepSize: AlphaMLXRuntimeProfile.prefillStepSize(
+                for: capabilityTier,
+                physicalMemory: ProcessInfo.processInfo.physicalMemory
+            )
         )
     }
 

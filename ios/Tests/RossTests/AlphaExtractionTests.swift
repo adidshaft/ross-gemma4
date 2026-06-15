@@ -5686,8 +5686,41 @@ final class AlphaExtractionTests: XCTestCase {
             ),
             52_000
         )
-        XCTAssertEqual(AlphaMLXRuntimeProfile.defaultDraftTokens(for: .caseAssociate), 6)
-        XCTAssertEqual(AlphaMLXRuntimeProfile.defaultDraftTokens(for: .seniorDraftingSupport), 8)
+        XCTAssertEqual(
+            AlphaMLXRuntimeProfile.defaultDraftTokens(
+                for: .caseAssociate,
+                physicalMemory: 12_000_000_000
+            ),
+            6
+        )
+        XCTAssertEqual(
+            AlphaMLXRuntimeProfile.defaultDraftTokens(
+                for: .seniorDraftingSupport,
+                physicalMemory: 12_000_000_000
+            ),
+            8
+        )
+        XCTAssertEqual(
+            AlphaMLXRuntimeProfile.prefillStepSize(
+                for: .quickStart,
+                physicalMemory: 8_000_000_000
+            ),
+            384
+        )
+        XCTAssertEqual(
+            AlphaMLXRuntimeProfile.prefillStepSize(
+                for: .caseAssociate,
+                physicalMemory: 12_000_000_000
+            ),
+            384
+        )
+        XCTAssertEqual(
+            AlphaMLXRuntimeProfile.prefillStepSize(
+                for: .caseAssociate,
+                physicalMemory: 16_000_000_000
+            ),
+            512
+        )
     }
 
     func testLlamaRuntimeProfileRaisesHighQualityInputBudgets() {
