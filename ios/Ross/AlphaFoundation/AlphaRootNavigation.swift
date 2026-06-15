@@ -98,6 +98,7 @@ struct AlphaRossRootView: View {
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             model.runMorningRoutineIfNeeded()
+            model.checkForAssistantModelUpdates()
         }
         .onOpenURL { url in
             model.queueIncomingDocumentURL(url)
