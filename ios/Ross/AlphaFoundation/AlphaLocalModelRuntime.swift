@@ -243,6 +243,25 @@ func alphaAskRuntimeSourcePackPolicy(
             )
         }
         return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 8)
+    case .appleFoundationModels:
+        if capabilityTier == .caseAssociate || capabilityTier == .seniorDraftingSupport {
+            if baseMaxInputChars >= 40_000 {
+                return AlphaAskRuntimeSourcePackPolicy(
+                    documentCandidateLimit: hasSelectedDocuments ? 4 : 6,
+                    sourceBlockLimit: hasSelectedDocuments ? 13 : 11
+                )
+            }
+            if baseMaxInputChars >= 28_000 {
+                return AlphaAskRuntimeSourcePackPolicy(
+                    documentCandidateLimit: hasSelectedDocuments ? 4 : 5,
+                    sourceBlockLimit: hasSelectedDocuments ? 11 : 9
+                )
+            }
+        }
+        return AlphaAskRuntimeSourcePackPolicy(
+            documentCandidateLimit: 4,
+            sourceBlockLimit: hasSelectedDocuments ? 9 : 8
+        )
     default:
         return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 8)
     }
@@ -458,6 +477,44 @@ enum AlphaLocalPromptBudgetPlanner {
                 cautionTokensPerSecond: 10,
                 slowTokensPerSecond: 6
             )
+        case .appleFoundationModels:
+            if baseMaxInputChars >= 40_000 {
+                return (
+                    minimumBudget: 8_600,
+                    largeFileBlockLimit: 9,
+                    largeFileExcerptChars: 1_550,
+                    cautionBlockLimit: 7,
+                    cautionExcerptChars: 1_200,
+                    slowBlockLimit: 5,
+                    slowExcerptChars: 900,
+                    cautionTokensPerSecond: 14,
+                    slowTokensPerSecond: 9
+                )
+            }
+            if baseMaxInputChars >= 28_000 {
+                return (
+                    minimumBudget: 7_400,
+                    largeFileBlockLimit: 8,
+                    largeFileExcerptChars: 1_350,
+                    cautionBlockLimit: 5,
+                    cautionExcerptChars: 1_050,
+                    slowBlockLimit: 3,
+                    slowExcerptChars: 820,
+                    cautionTokensPerSecond: 14,
+                    slowTokensPerSecond: 9
+                )
+            }
+            return (
+                minimumBudget: 7_000,
+                largeFileBlockLimit: 6,
+                largeFileExcerptChars: 1_200,
+                cautionBlockLimit: 4,
+                cautionExcerptChars: 980,
+                slowBlockLimit: 3,
+                slowExcerptChars: 780,
+                cautionTokensPerSecond: 14,
+                slowTokensPerSecond: 9
+            )
         default:
             return (
                 minimumBudget: max(baseFallbackBudget(for: runtimeMode) / 2, 4_800),
@@ -563,6 +620,44 @@ enum AlphaLocalPromptBudgetPlanner {
                 slowExcerptChars: 640,
                 cautionTokensPerSecond: 8,
                 slowTokensPerSecond: 5
+            )
+        case .appleFoundationModels:
+            if baseMaxInputChars >= 40_000 {
+                return (
+                    minimumBudget: 8_000,
+                    largeFileBlockLimit: 11,
+                    largeFileExcerptChars: 1_400,
+                    cautionBlockLimit: 8,
+                    cautionExcerptChars: 1_120,
+                    slowBlockLimit: 5,
+                    slowExcerptChars: 840,
+                    cautionTokensPerSecond: 12,
+                    slowTokensPerSecond: 8
+                )
+            }
+            if baseMaxInputChars >= 28_000 {
+                return (
+                    minimumBudget: 7_200,
+                    largeFileBlockLimit: 9,
+                    largeFileExcerptChars: 1_220,
+                    cautionBlockLimit: 6,
+                    cautionExcerptChars: 980,
+                    slowBlockLimit: 4,
+                    slowExcerptChars: 760,
+                    cautionTokensPerSecond: 12,
+                    slowTokensPerSecond: 8
+                )
+            }
+            return (
+                minimumBudget: 6_800,
+                largeFileBlockLimit: 7,
+                largeFileExcerptChars: 1_080,
+                cautionBlockLimit: 5,
+                cautionExcerptChars: 860,
+                slowBlockLimit: 3,
+                slowExcerptChars: 680,
+                cautionTokensPerSecond: 12,
+                slowTokensPerSecond: 8
             )
         default:
             return (

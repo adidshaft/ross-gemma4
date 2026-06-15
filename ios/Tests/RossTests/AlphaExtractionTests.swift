@@ -5241,6 +5241,20 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(plan.sourceExcerptChars, 1_650)
     }
 
+    func testMatterQuestionBudgetPlannerUsesExpandedFoundationBudgetsForCapableRuns() {
+        let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
+            runtimeMode: .appleFoundationModels,
+            baseMaxInputChars: 44_000,
+            sourceBlockCount: 11,
+            sourceCharCount: 39_000,
+            lastInvocation: nil
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 39_600)
+        XCTAssertEqual(plan.sourceBlockLimit, 9)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_550)
+    }
+
     func testStructuredDocumentBudgetPlannerTightensAfterSlowRun() {
         let slowInvocation = AlphaLocalModelInvocation(
             task: .legalFieldExtraction,
@@ -5298,6 +5312,20 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(plan.sourceExcerptChars, 1_450)
     }
 
+    func testStructuredDocumentBudgetPlannerUsesExpandedFoundationBudgetsForCapableRuns() {
+        let plan = AlphaLocalPromptBudgetPlanner.structuredDocumentPlan(
+            runtimeMode: .appleFoundationModels,
+            baseMaxInputChars: 44_000,
+            sourceBlockCount: 16,
+            sourceCharCount: 52_000,
+            lastInvocation: nil
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 38_720)
+        XCTAssertEqual(plan.sourceBlockLimit, 11)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_400)
+    }
+
     func testAskRuntimeSourcePackPolicyExpandsForCapableMLXAsks() {
         let policy = alphaAskRuntimeSourcePackPolicy(
             runtimeMode: .mlxSwiftLm,
@@ -5308,6 +5336,18 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(policy.documentCandidateLimit, 4)
         XCTAssertEqual(policy.sourceBlockLimit, 14)
+    }
+
+    func testAskRuntimeSourcePackPolicyExpandsForCapableFoundationAsks() {
+        let policy = alphaAskRuntimeSourcePackPolicy(
+            runtimeMode: .appleFoundationModels,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 44_000,
+            hasSelectedDocuments: true
+        )
+
+        XCTAssertEqual(policy.documentCandidateLimit, 4)
+        XCTAssertEqual(policy.sourceBlockLimit, 13)
     }
 
     func testAskRuntimeSourcePackPolicyKeepsFallbackBudgetsCompact() {
