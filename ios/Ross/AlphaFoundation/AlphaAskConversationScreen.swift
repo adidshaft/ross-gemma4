@@ -239,7 +239,7 @@ struct AlphaAskConversationScreen: View {
         ) {
             if let answerDetailsResult {
                 AlphaAnswerDetailsSheet(result: answerDetailsResult)
-                    .presentationDetents([.height(260), .medium])
+                    .presentationDetents([.height(320), .medium])
                     .presentationDragIndicator(.visible)
             }
         }
@@ -630,30 +630,27 @@ struct AlphaFullScreenChatTurn: View {
                 )
             } else {
                 VStack(alignment: .leading, spacing: 14) {
+                    let copyAnswerAction: () -> Void = {
+                        alphaCopyAskResultToPasteboard(result)
+                        alphaHaptic(.light)
+                    }
+                    let showAnswerDetailsAction: () -> Void = {
+                        alphaHaptic(.light)
+                        onShowDetails(result)
+                    }
+
                     if result.hasAnswerDetails {
-                        AlphaCleanAnswerHeader(
+                        AlphaCleanAnswerHeader<EmptyView>(
                             title: result.answerTitle,
                             statusNote: deduplicatedStatusNote,
-                            onCopy: {
-                                alphaCopyAskResultToPasteboard(result)
-                                alphaHaptic(.light)
-                            }
-                        ) {
-                            Button {
-                                alphaHaptic(.light)
-                                onShowDetails(result)
-                            } label: {
-                                Label(rossLocalized("answer_details"), systemImage: "info.circle")
-                            }
-                        }
+                            onCopy: copyAnswerAction,
+                            onShowDetails: showAnswerDetailsAction
+                        )
                     } else {
-                        AlphaCleanAnswerHeader(
+                        AlphaCleanAnswerHeader<EmptyView>(
                             title: result.answerTitle,
                             statusNote: deduplicatedStatusNote,
-                            onCopy: {
-                                alphaCopyAskResultToPasteboard(result)
-                                alphaHaptic(.light)
-                            }
+                            onCopy: copyAnswerAction
                         )
                     }
 
@@ -715,9 +712,12 @@ struct AlphaAnswerDetailsSheet: View {
         result.modelInvocation
     }
 
-    private var estimatedProcessedTokensLabel: String? {
-        guard let tokens = invocation?.estimatedProcessedTokens else { return nil }
-        return invocation?.usesMeasuredTokenCounts == true ? tokens.formatted() : "~\(tokens.formatted())"
+    private var overviewMetrics: [AlphaAnswerDetailMetric] {
+        invocation?.answerDetailOverviewMetrics ?? []
+    }
+
+    private var secondaryMetrics: [AlphaAnswerDetailMetric] {
+        invocation?.answerDetailSecondaryMetrics ?? []
     }
 
     var body: some View {
@@ -733,32 +733,113 @@ struct AlphaAnswerDetailsSheet: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                VStack(alignment: .leading, spacing: 12) {
-                    if let estimatedProcessedTokensLabel {
-                        AlphaAnswerDetailsRow(
-                            label: rossLocalized("tokens_processed"),
-                            value: estimatedProcessedTokensLabel
-                        )
+                if !overviewMetrics.isEmpty {
+                    LazyVGrid(
+                        columns: [
+                            GridItem(.adaptive(minimum: 140), spacing: 12, alignment: .top)
+                        ],
+                        spacing: 12
+                    ) {
+                        ForEach(overviewMetrics) { metric in
+                            AlphaAnswerDetailsOverviewCard(metric: metric)
+                        }
                     }
+                }
 
-                    if let tokenSpeed = invocation?.estimatedOutputTokensPerSecond {
-                        AlphaAnswerDetailsRow(
-                            label: rossLocalized("token_speed"),
-                            value: alphaAssistantTokenRateLabel(tokensPerSecond: tokenSpeed)
-                        )
-                    }
-
-                    if let firstTokenMs = invocation?.timeToFirstTokenMs {
-                        AlphaAnswerDetailsRow(
-                            label: rossLocalized("runtime_first_response"),
-                            value: alphaAssistantFirstResponseLabel(milliseconds: firstTokenMs)
-                        )
+                if !secondaryMetrics.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        ForEach(secondaryMetrics) { metric in
+                            AlphaAnswerDetailsRow(
+                                label: metric.label,
+                                value: metric.value
+                            )
+                        }
                     }
                 }
             }
             .padding(20)
         }
         .rossAppBackdrop()
+    }
+}
+
+struct AlphaAnswerDetailMetric: Equatable, Identifiable {
+    let key: String
+    let label: String
+    let value: String
+
+    var id: String { key }
+}
+
+extension AlphaLocalModelInvocation {
+    var answerDetailProcessedTokensLabel: String? {
+        guard let tokens = estimatedProcessedTokens else { return nil }
+        return usesMeasuredTokenCounts ? tokens.formatted() : "~\(tokens.formatted())"
+    }
+
+    var answerDetailOverviewMetrics: [AlphaAnswerDetailMetric] {
+        var metrics: [AlphaAnswerDetailMetric] = []
+
+        if let processedTokens = answerDetailProcessedTokensLabel {
+            metrics.append(
+                AlphaAnswerDetailMetric(
+                    key: "tokens_processed",
+                    label: rossLocalized("tokens_processed"),
+                    value: processedTokens
+                )
+            )
+        }
+
+        if let tokenSpeed = estimatedOutputTokensPerSecond {
+            metrics.append(
+                AlphaAnswerDetailMetric(
+                    key: "token_speed",
+                    label: rossLocalized("token_speed"),
+                    value: alphaAssistantTokenRateLabel(tokensPerSecond: tokenSpeed)
+                )
+            )
+        }
+
+        return metrics
+    }
+
+    var answerDetailSecondaryMetrics: [AlphaAnswerDetailMetric] {
+        guard let timeToFirstTokenMs else { return [] }
+        return [
+            AlphaAnswerDetailMetric(
+                key: "runtime_first_response",
+                label: rossLocalized("runtime_first_response"),
+                value: alphaAssistantFirstResponseLabel(milliseconds: timeToFirstTokenMs)
+            )
+        ]
+    }
+}
+
+private struct AlphaAnswerDetailsOverviewCard: View {
+    let metric: AlphaAnswerDetailMetric
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(metric.label)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.rossInk.opacity(0.62))
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(metric.value)
+                .font(.title3.monospacedDigit().weight(.semibold))
+                .foregroundStyle(Color.rossInk)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+        }
+        .frame(maxWidth: .infinity, minHeight: 84, alignment: .leading)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .rossNativeGlassSurface(
+            tint: Color.rossAccent.opacity(0.18),
+            shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
+            fallbackFillOpacity: 0.82,
+            fallbackStrokeOpacity: 0.42
+        )
     }
 }
 
@@ -1462,6 +1543,7 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
     let title: String
     let statusNote: String?
     let onCopy: () -> Void
+    let onShowDetails: (() -> Void)?
     let showsMenu: Bool
     @ViewBuilder var menu: () -> MenuContent
 
@@ -1469,11 +1551,13 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
         title: String,
         statusNote: String?,
         onCopy: @escaping () -> Void,
+        onShowDetails: (() -> Void)? = nil,
         @ViewBuilder menu: @escaping () -> MenuContent
     ) {
         self.title = title
         self.statusNote = AlphaCleanAnswerHeader.cleanedStatusNote(statusNote)
         self.onCopy = onCopy
+        self.onShowDetails = onShowDetails
         self.showsMenu = true
         self.menu = menu
     }
@@ -1481,11 +1565,13 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
     init(
         title: String,
         statusNote: String?,
-        onCopy: @escaping () -> Void
+        onCopy: @escaping () -> Void,
+        onShowDetails: (() -> Void)? = nil
     ) where MenuContent == EmptyView {
         self.title = title
         self.statusNote = AlphaCleanAnswerHeader.cleanedStatusNote(statusNote)
         self.onCopy = onCopy
+        self.onShowDetails = onShowDetails
         self.showsMenu = false
         self.menu = { EmptyView() }
     }
@@ -1508,6 +1594,14 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
 
                 AlphaCleanAnswerCopyButton(action: onCopy)
 
+                if let onShowDetails {
+                    AlphaAnswerAccessoryIconButton(
+                        systemImage: "info.circle",
+                        accessibilityLabel: rossLocalized("answer_details"),
+                        action: onShowDetails
+                    )
+                }
+
                 if showsMenu {
                     Menu {
                         menu()
@@ -1523,6 +1617,44 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
                 AlphaAnswerStatusPill(note: statusNote)
             }
         }
+    }
+}
+
+struct AlphaAnswerAccessoryIconButton: View {
+    let systemImage: String
+    let accessibilityLabel: String
+    let action: () -> Void
+
+    var body: some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            Button(action: action) {
+                icon(foregroundOpacity: 0.6)
+            }
+            .buttonStyle(.glass)
+            .tint(Color.rossAccent)
+            .accessibilityLabel(accessibilityLabel)
+        } else {
+            Button(action: action) {
+                icon(foregroundOpacity: 0.5)
+                    .rossNativeGlassSurface(
+                        tint: Color.rossAccent.opacity(0.08),
+                        shape: Circle(),
+                        interactive: true,
+                        fallbackFillOpacity: 0.82,
+                        fallbackStrokeOpacity: 0.42
+                    )
+                    .shadow(color: Color.rossShadow.opacity(0.03), radius: 3, y: 1)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(accessibilityLabel)
+        }
+    }
+
+    private func icon(foregroundOpacity: Double) -> some View {
+        Image(systemName: systemImage)
+            .font(.caption.weight(.bold))
+            .foregroundStyle(Color.rossInk.opacity(foregroundOpacity))
+            .frame(width: 32, height: 32)
     }
 }
 

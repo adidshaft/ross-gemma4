@@ -3769,6 +3769,82 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(result.hasAnswerDetails)
     }
 
+    @MainActor
+    func testAnswerDetailOverviewMetricsPreferMeasuredTokenCountLabel() {
+        let invocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            outputHash: "output",
+            inputChars: 480,
+            estimatedInputTokens: 118,
+            outputChars: 192,
+            estimatedOutputTokens: 46,
+            estimatedOutputTokensPerSecond: 21.5,
+            durationMs: 2200,
+            usesMeasuredTokenCounts: true,
+            status: .complete
+        )
+
+        XCTAssertEqual(invocation.answerDetailProcessedTokensLabel, "164")
+        XCTAssertEqual(
+            invocation.answerDetailOverviewMetrics,
+            [
+                AlphaAnswerDetailMetric(
+                    key: "tokens_processed",
+                    label: "Tokens processed",
+                    value: "164"
+                ),
+                AlphaAnswerDetailMetric(
+                    key: "token_speed",
+                    label: "Token speed",
+                    value: alphaAssistantTokenRateLabel(tokensPerSecond: 21.5)
+                )
+            ]
+        )
+    }
+
+    @MainActor
+    func testAnswerDetailMetricsEstimateTokenCountAndExposeFirstResponse() {
+        let invocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.quickStart.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            outputHash: "output",
+            inputChars: 480,
+            estimatedInputTokens: 120,
+            outputChars: 192,
+            estimatedOutputTokens: 48,
+            durationMs: 2200,
+            timeToFirstTokenMs: 430,
+            status: .complete
+        )
+
+        XCTAssertEqual(invocation.answerDetailProcessedTokensLabel, "~168")
+        XCTAssertEqual(
+            invocation.answerDetailSecondaryMetrics,
+            [
+                AlphaAnswerDetailMetric(
+                    key: "runtime_first_response",
+                    label: "First response",
+                    value: alphaAssistantFirstResponseLabel(milliseconds: 430)
+                )
+            ]
+        )
+    }
+
     func testModelInvocationCompletionPrefersMeasuredTokenMetrics() {
         let sourceRef = AlphaSourceRef(
             caseId: UUID(),
