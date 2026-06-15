@@ -1183,14 +1183,18 @@ extension AlphaRossModel {
         }
         Task {
             var streamedOutput: AlphaLocalModelOutput?
+            var trackedInvocation = invocation
             let streamingAnswerTitle = alphaAskStreamingAnswerTitle()
             if let stream = provider.runStreaming(input) {
                 var lastPartialUpdatedAt = Date.distantPast
                 for await partial in stream {
                     streamedOutput = partial
                     let cleaned = partial.rawText.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard cleaned.count >= 24 else { continue }
                     let now = Date()
+                    if !cleaned.isEmpty, trackedInvocation.timeToFirstTokenMs == nil {
+                        trackedInvocation = AlphaModelInvocationStore.recordFirstToken(trackedInvocation, at: now)
+                    }
+                    guard cleaned.count >= 24 else { continue }
                     guard now.timeIntervalSince(lastPartialUpdatedAt) >= 0.35 || partial.schemaValid else { continue }
                     lastPartialUpdatedAt = now
                     await MainActor.run {
@@ -1213,7 +1217,7 @@ extension AlphaRossModel {
                             turn.answerSections = displaySections
                             turn.sourceRefs = filteredSourceRefs
                             turn.statusNote = runningStatus
-                            turn.modelInvocation = invocation
+                            turn.modelInvocation = trackedInvocation
                         }
                         if var latest = self.latestAskResult, latest.chatTurnID == chatTurnID {
                             latest.answerTitle = streamingAnswerTitle
@@ -1231,7 +1235,7 @@ extension AlphaRossModel {
             } else {
                 output = await provider.run(input)
             }
-            let completedInvocation = AlphaModelInvocationStore.complete(invocation, output: output)
+            let completedInvocation = AlphaModelInvocationStore.complete(trackedInvocation, output: output)
             await MainActor.run {
                 let requestedLanguage = self.alphaAnswerLanguage(for: question)
                 let payload = self.displayableMatterAskPayload(

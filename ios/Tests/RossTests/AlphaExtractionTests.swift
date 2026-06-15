@@ -3730,6 +3730,67 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(environment.draftModelTokens, 4)
     }
 
+    func testModelInvocationStoreRecordsFirstTokenLatencyAndThroughput() {
+        let sourceRef = AlphaSourceRef(
+            caseId: UUID(),
+            documentId: UUID(),
+            documentTitle: "Record",
+            pageNumber: 1,
+            textSnippet: "Article 417"
+        )
+        let input = AlphaLocalModelInput(
+            task: .matterQuestionAnswer,
+            instruction: "Answer from the supplied source.",
+            sourcePack: [
+                AlphaSourceTextBlock(
+                    sourceRef: sourceRef,
+                    text: "Article 417 requires the advocate to verify citations before filing.",
+                    pageNumber: 1,
+                    languageHint: "en",
+                    ocrConfidence: 1
+                )
+            ],
+            expectedSchema: #"{"headline":"short string","sections":["one concise string"],"statusNote":"short string"}"#,
+            maxOutputTokens: 192,
+            languageProfile: nil,
+            documentClassification: nil,
+            extractionMode: .caseAssociate
+        )
+
+        var invocation = AlphaModelInvocationStore.begin(
+            task: .matterQuestionAnswer,
+            runtimeMode: .mlxSwiftLm,
+            capabilityTier: .caseAssociate,
+            caseId: sourceRef.caseId,
+            documentId: sourceRef.documentId,
+            extractionRunId: nil,
+            input: input
+        )
+        invocation.startedAt = Date(timeIntervalSinceReferenceDate: 123_456)
+        invocation = AlphaModelInvocationStore.recordFirstToken(
+            invocation,
+            at: invocation.startedAt.addingTimeInterval(0.4)
+        )
+
+        let completed = AlphaModelInvocationStore.complete(
+            invocation,
+            output: AlphaLocalModelOutput(
+                rawText: #"{"headline":"Verified","sections":["Article 417 requires citation checks before filing."],"statusNote":"Done"}"#,
+                parsedJson: nil,
+                schemaValid: true,
+                warnings: [],
+                sourceRefs: [sourceRef]
+            )
+        )
+
+        XCTAssertTrue((completed.timeToFirstTokenMs ?? -1) >= 399)
+        XCTAssertTrue((completed.timeToFirstTokenMs ?? -1) <= 400)
+        XCTAssertNotNil(completed.durationMs)
+        XCTAssertNotNil(completed.estimatedOutputTokens)
+        XCTAssertNotNil(completed.estimatedOutputTokensPerSecond)
+        XCTAssertGreaterThan(completed.estimatedOutputTokensPerSecond ?? 0, 0)
+    }
+
     func testRealRuntimeSelectionFailsClosedWhenUnavailable() async {
         let pack = installedPack(.caseAssociate, runtimeMode: .appleFoundationModels)
         let runtimeEnvironment = AlphaLocalRuntimeEnvironment(

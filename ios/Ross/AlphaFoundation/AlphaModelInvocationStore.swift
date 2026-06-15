@@ -17,7 +17,9 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
     var estimatedInputTokens: Int?
     var outputChars: Int?
     var estimatedOutputTokens: Int?
+    var estimatedOutputTokensPerSecond: Double?
     var durationMs: Int?
+    var timeToFirstTokenMs: Int?
     var startedAt: Date
     var completedAt: Date?
     var status: AlphaLocalModelInvocationStatus
@@ -40,7 +42,9 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
         estimatedInputTokens: Int? = nil,
         outputChars: Int? = nil,
         estimatedOutputTokens: Int? = nil,
+        estimatedOutputTokensPerSecond: Double? = nil,
         durationMs: Int? = nil,
+        timeToFirstTokenMs: Int? = nil,
         startedAt: Date = .now,
         completedAt: Date? = nil,
         status: AlphaLocalModelInvocationStatus,
@@ -62,7 +66,9 @@ struct AlphaLocalModelInvocation: Identifiable, Codable, Hashable, Sendable {
         self.estimatedInputTokens = estimatedInputTokens
         self.outputChars = outputChars
         self.estimatedOutputTokens = estimatedOutputTokens
+        self.estimatedOutputTokensPerSecond = estimatedOutputTokensPerSecond
         self.durationMs = durationMs
+        self.timeToFirstTokenMs = timeToFirstTokenMs
         self.startedAt = startedAt
         self.completedAt = completedAt
         self.status = status
@@ -114,11 +120,15 @@ enum AlphaModelInvocationStore {
         var copy = invocation
         let outputText = output.parsedJson ?? output.rawText
         let completedAt = Date.now
+        let outputTokens = outputText.isEmpty ? 0 : max(outputText.count / 4, 1)
         copy.outputHash = sha256Hex(outputText)
         copy.outputChars = outputText.isEmpty ? 0 : outputText.count
-        copy.estimatedOutputTokens = outputText.isEmpty ? 0 : max(outputText.count / 4, 1)
+        copy.estimatedOutputTokens = outputTokens
         copy.completedAt = completedAt
         copy.durationMs = max(Int(completedAt.timeIntervalSince(invocation.startedAt) * 1_000), 0)
+        if let durationMs = copy.durationMs, durationMs > 0, outputTokens > 0 {
+            copy.estimatedOutputTokensPerSecond = Double(outputTokens) / (Double(durationMs) / 1_000)
+        }
         copy.status = switch output.errorCategory {
         case "cancelled":
             .cancelled
@@ -141,6 +151,18 @@ enum AlphaModelInvocationStore {
         copy.durationMs = max(Int(completedAt.timeIntervalSince(invocation.startedAt) * 1_000), 0)
         copy.status = .failed
         copy.errorCategory = errorCategory
+        return copy
+    }
+
+    static func recordFirstToken(
+        _ invocation: AlphaLocalModelInvocation,
+        at recordedAt: Date = .now
+    ) -> AlphaLocalModelInvocation {
+        guard invocation.timeToFirstTokenMs == nil else {
+            return invocation
+        }
+        var copy = invocation
+        copy.timeToFirstTokenMs = max(Int(recordedAt.timeIntervalSince(invocation.startedAt) * 1_000), 0)
         return copy
     }
 

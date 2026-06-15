@@ -92,6 +92,9 @@ struct AlphaLocalInferenceSmokeReport: Hashable {
     var fieldsVerified: Int
     var fieldsNeedingReview: Int
     var unsupportedAccepted: Int
+    var durationMs: Int? = nil
+    var timeToFirstTokenMs: Int? = nil
+    var estimatedOutputTokensPerSecond: Double? = nil
     var exportRelativePath: String?
     var message: String
     var createdAt: Date = .now

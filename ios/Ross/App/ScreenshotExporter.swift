@@ -447,6 +447,7 @@ struct RossLocalModelSmokeView: View {
         stage: String,
         timeoutSeconds: TimeInterval
     ) async -> AlphaLocalModelOutput {
+        let startedAt = Date.now
         let timeoutOutput = AlphaLocalModelOutput(
             rawText: "",
             parsedJson: nil,
@@ -463,6 +464,10 @@ struct RossLocalModelSmokeView: View {
             let gate = RossLocalModelSmokeContinuationGate()
             Task {
                 let output = await providerTask.value
+                let durationMs = max(Int(Date.now.timeIntervalSince(startedAt) * 1_000), 0)
+                RossLocalModelSmokeView.log(
+                    "ROSS_LOCAL_MODEL_SMOKE_STAGE_DONE stage=\(stage) duration_ms=\(durationMs) schema_valid=\(output.schemaValid) error=\(output.errorCategory ?? "nil")"
+                )
                 _ = gate.resumeIfNeeded(continuation, output: output)
             }
             Task {

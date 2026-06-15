@@ -2562,6 +2562,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Acceleration பார்க்கவும்",
             "te": "Acceleration చూడండి"
         ],
+        "runtime_first_response": [
+            "en": "First response",
+            "hi": "First response देखें",
+            "bn": "First response দেখুন",
+            "ta": "First response பார்க்கவும்",
+            "te": "First response చూడండి"
+        ],
+        "runtime_output_speed": [
+            "en": "Output speed",
+            "hi": "Output speed देखें",
+            "bn": "Output speed দেখুন",
+            "ta": "Output speed பார்க்கவும்",
+            "te": "Output speed చూడండి"
+        ],
         "public_law_check": [
             "en": "Public-law check",
             "hi": "Public-law check देखें",

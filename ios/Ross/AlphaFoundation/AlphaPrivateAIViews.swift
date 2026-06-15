@@ -477,6 +477,12 @@ private struct AlphaPrivateAIInternalDiagnostics: View {
                     if let durationMs = lastInvocation.durationMs {
                         AlphaSettingsValueRow(label: rossLocalized("approx_time"), value: alphaAssistantDurationLabel(milliseconds: durationMs))
                     }
+                    if let firstTokenMs = lastInvocation.timeToFirstTokenMs {
+                        AlphaSettingsValueRow(label: rossLocalized("runtime_first_response"), value: alphaAssistantFirstResponseLabel(milliseconds: firstTokenMs))
+                    }
+                    if let outputSpeed = lastInvocation.estimatedOutputTokensPerSecond {
+                        AlphaSettingsValueRow(label: rossLocalized("runtime_output_speed"), value: alphaAssistantTokenRateLabel(tokensPerSecond: outputSpeed))
+                    }
                 } else {
                     AlphaSettingsValueRow(label: rossLocalized("last_answer_check"), value: rossLocalized("no_private_answer_recorded_yet"))
                 }
@@ -507,6 +513,18 @@ func alphaAssistantDurationLabel(milliseconds: Int) -> String {
         return String(format: "%.1f s", seconds)
     }
     return "\(Int(seconds.rounded())) s"
+}
+
+func alphaAssistantFirstResponseLabel(milliseconds: Int) -> String {
+    alphaAssistantDurationLabel(milliseconds: milliseconds)
+}
+
+func alphaAssistantTokenRateLabel(tokensPerSecond: Double) -> String {
+    let clamped = max(tokensPerSecond, 0)
+    if clamped >= 10 {
+        return String(format: "%.0f tok/s", clamped)
+    }
+    return String(format: "%.1f tok/s", clamped)
 }
 
 func alphaAssistantContextWindowLabel(tokens: Int) -> String {

@@ -1255,6 +1255,9 @@ extension AlphaRossModel {
                 fieldsVerified: result.extractedFields.filter { !$0.needsReview || $0.userCorrected }.count,
                 fieldsNeedingReview: result.extractedFields.filter { $0.needsReview && !$0.userCorrected }.count,
                 unsupportedAccepted: 0,
+                durationMs: result.modelInvocations.last?.durationMs,
+                timeToFirstTokenMs: result.modelInvocations.last?.timeToFirstTokenMs,
+                estimatedOutputTokensPerSecond: result.modelInvocations.last?.estimatedOutputTokensPerSecond,
                 exportRelativePath: export?.relativePath,
                 message: rossLocalized("private_assistant_sample_file_check_completed_private")
             )
