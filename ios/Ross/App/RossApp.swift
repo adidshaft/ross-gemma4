@@ -533,25 +533,25 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "te": "Flash - సులభమైనది, చాలా వేగవంతం"
         ],
         "tier_quick_start_setup_title": [
-            "en": "Basic - balanced everyday work",
-            "hi": "Basic - रोज़मर्रा के काम के लिए संतुलित",
-            "bn": "Basic - প্রতিদিনের কাজের জন্য সুষম",
-            "ta": "Basic - தினசரி வேலைக்கு சமநிலை",
-            "te": "Basic - రోజువారీ పనికి సమతుల్యం"
+            "en": "Quick Start - lighter everyday work",
+            "hi": "Quick Start - रोज़मर्रा के काम के लिए हल्का",
+            "bn": "Quick Start - প্রতিদিনের কাজের জন্য হালকা",
+            "ta": "Quick Start - தினசரி வேலைக்கு இலகு",
+            "te": "Quick Start - రోజువారీ పనికి తేలికైనది"
         ],
         "tier_case_associate_setup_title": [
-            "en": "Standard - most matters and larger files",
-            "hi": "Standard - ज़्यादातर मामलों और बड़े files के लिए",
-            "bn": "Standard - বেশিরভাগ মামলা ও বড় files-এর জন্য",
-            "ta": "Standard - பெரும்பாலான வழக்குகள் மற்றும் பெரிய files-க்கு",
-            "te": "Standard - ఎక్కువ కేసులు మరియు పెద్ద files కోసం"
+            "en": "Case Associate - most matters and larger files",
+            "hi": "Case Associate - ज़्यादातर मामलों और बड़े files के लिए",
+            "bn": "Case Associate - বেশিরভাগ মামলা ও বড় files-এর জন্য",
+            "ta": "Case Associate - பெரும்பாலான வழக்குகள் மற்றும் பெரிய files-க்கு",
+            "te": "Case Associate - ఎక్కువ కేసులు మరియు పెద్ద files కోసం"
         ],
         "tier_senior_drafting_setup_title": [
-            "en": "Advanced - larger bundles and drafting",
-            "hi": "Advanced - बड़े बंडल और ड्राफ्टिंग",
-            "bn": "Advanced - বড় বান্ডিল এবং খসড়া",
-            "ta": "Advanced - பெரிய தொகுப்புகள் மற்றும் வரைவு",
-            "te": "Advanced - పెద్ద బండిళ్లు మరియు డ్రాఫ్టింగ్"
+            "en": "Senior Drafting Support - larger bundles and drafting",
+            "hi": "Senior Drafting Support - बड़े बंडल और ड्राफ्टिंग",
+            "bn": "Senior Drafting Support - বড় বান্ডিল এবং খসড়া",
+            "ta": "Senior Drafting Support - பெரிய தொகுப்புகள் மற்றும் வரைவு",
+            "te": "Senior Drafting Support - పెద్ద బండిళ్లు మరియు డ్రాఫ్టింగ్"
         ],
         "tier_flash_storage_note": [
             "en": "Smallest footprint",
@@ -1240,11 +1240,11 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "te": "setup తర్వాత private assistant మీ files నుండి stronger document review, summaries, chronologies, మరియు answers ఇస్తుంది."
         ],
         "ask_assistant_setup_open_settings_detail": [
-            "en": "Open Settings, then My assistant, to choose Basic, Standard, or Advanced.",
-            "hi": "Basic, Standard, या Advanced चुनने के लिए Settings, फिर My assistant खोलें।",
-            "bn": "Basic, Standard, বা Advanced বেছে নিতে Settings, তারপর My assistant খুলুন।",
-            "ta": "Basic, Standard, அல்லது Advanced தேர்வுசெய்ய Settings, பிறகு My assistant திறக்கவும்.",
-            "te": "Basic, Standard, లేదా Advanced ఎంచుకోవడానికి Settings, తర్వాత My assistant తెరవండి."
+            "en": "Open Settings, then My assistant, to choose Quick Start, Case Associate, or Senior Drafting Support.",
+            "hi": "Quick Start, Case Associate, या Senior Drafting Support चुनने के लिए Settings, फिर My assistant खोलें।",
+            "bn": "Quick Start, Case Associate, বা Senior Drafting Support বেছে নিতে Settings, তারপর My assistant খুলুন।",
+            "ta": "Quick Start, Case Associate, அல்லது Senior Drafting Support தேர்வுசெய்ய Settings, பிறகு My assistant திறக்கவும்.",
+            "te": "Quick Start, Case Associate, లేదా Senior Drafting Support ఎంచుకోవడానికి Settings, తర్వాత My assistant తెరవండి."
         ],
         "ask_private_assistant_not_ready": [
             "en": "Private assistant not ready",
@@ -1352,11 +1352,11 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "te": "Private assistant setup అవసరం."
         ],
         "file_review_basic_too_long_warning": [
-            "en": "Basic is best for shorter files. Choose Standard or Advanced before Ross reviews this longer document with your private assistant.",
-            "hi": "Basic छोटी files के लिए बेहतर है। इस लंबे document को private assistant से review करने से पहले Standard या Advanced चुनें.",
-            "bn": "Basic ছোট files-এর জন্য ভালো। এই দীর্ঘ document private assistant দিয়ে review করার আগে Standard বা Advanced বেছে নিন.",
-            "ta": "Basic குறுகிய files-க்கு சிறந்தது. இந்த நீளமான document-ஐ private assistant மூலம் review செய்வதற்கு முன் Standard அல்லது Advanced தேர்வுசெய்க.",
-            "te": "Basic చిన్న files కు మంచిది. ఈ పొడవైన document ను private assistant తో review చేయడానికి ముందు Standard లేదా Advanced ఎంచుకోండి."
+            "en": "Quick Start is best for shorter files. Choose Case Associate or Senior Drafting Support before Ross reviews this longer document with your private assistant.",
+            "hi": "Quick Start छोटी files के लिए बेहतर है। इस लंबे document को private assistant से review करने से पहले Case Associate या Senior Drafting Support चुनें.",
+            "bn": "Quick Start ছোট files-এর জন্য ভালো। এই দীর্ঘ document private assistant দিয়ে review করার আগে Case Associate বা Senior Drafting Support বেছে নিন.",
+            "ta": "Quick Start குறுகிய files-க்கு சிறந்தது. இந்த நீளமான document-ஐ private assistant மூலம் review செய்வதற்கு முன் Case Associate அல்லது Senior Drafting Support தேர்வுசெய்க.",
+            "te": "Quick Start చిన్న files కు మంచిది. ఈ పొడవైన document ను private assistant తో review చేయడానికి ముందు Case Associate లేదా Senior Drafting Support ఎంచుకోండి."
         ],
         "import_error_missing_extension": [
             "en": "Files without an extension are not supported yet.",
@@ -3452,18 +3452,18 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "te": "Fields కనుగొంది: %d · Verified: %d · Confirm చేయండి: %d"
         ],
         "document_review_upgrade_standard": [
-            "en": "Better extraction is available with Standard.",
-            "hi": "Standard के साथ better extraction available है.",
-            "bn": "Standard দিয়ে better extraction available.",
-            "ta": "Standard-இல் better extraction available.",
-            "te": "Standard తో better extraction available."
+            "en": "Better extraction is available with Case Associate.",
+            "hi": "Case Associate के साथ better extraction available है.",
+            "bn": "Case Associate দিয়ে better extraction available.",
+            "ta": "Case Associate-இல் better extraction available.",
+            "te": "Case Associate తో better extraction available."
         ],
         "document_review_upgrade_advanced_scan": [
-            "en": "This scan has mixed language or unclear text. Advanced may improve review.",
-            "hi": "इस scan में mixed language या unclear text है। Advanced review बेहतर कर सकता है.",
-            "bn": "এই scan-এ mixed language বা unclear text আছে। Advanced review উন্নত করতে পারে.",
-            "ta": "இந்த scan-இல் mixed language அல்லது unclear text உள்ளது. Advanced review-ஐ மேம்படுத்தலாம்.",
-            "te": "ఈ scan లో mixed language లేదా unclear text ఉంది. Advanced review ను మెరుగుపరచవచ్చు."
+            "en": "This scan has mixed language or unclear text. Senior Drafting Support may improve review.",
+            "hi": "इस scan में mixed language या unclear text है। Senior Drafting Support review बेहतर कर सकता है.",
+            "bn": "এই scan-এ mixed language বা unclear text আছে। Senior Drafting Support review উন্নত করতে পারে.",
+            "ta": "இந்த scan-இல் mixed language அல்லது unclear text உள்ளது. Senior Drafting Support review-ஐ மேம்படுத்தலாம்.",
+            "te": "ఈ scan లో mixed language లేదా unclear text ఉంది. Senior Drafting Support review ను మెరుగుపరచవచ్చు."
         ],
         "document_run_better_extraction": [
             "en": "Run better extraction",

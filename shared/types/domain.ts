@@ -3,7 +3,10 @@ export type ModelCapabilityTierId =
   | "case_associate"
   | "senior_drafting_support";
 
-export type AssistantLevelDisplayName = "Basic" | "Standard" | "Advanced";
+export type AssistantLevelDisplayName =
+  | "Quick Start"
+  | "Case Associate"
+  | "Senior Drafting Support";
 
 export type AssistantDeviceSupportState =
   | "supported"

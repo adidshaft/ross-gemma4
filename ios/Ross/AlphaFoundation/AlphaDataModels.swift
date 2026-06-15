@@ -244,11 +244,11 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
         case .flash:
             "Flash"
         case .quickStart:
-            "Basic"
+            "Quick Start"
         case .caseAssociate:
-            "Standard"
+            "Case Associate"
         case .seniorDraftingSupport:
-            "Advanced"
+            "Senior Drafting Support"
         }
     }
 
@@ -450,9 +450,9 @@ struct AlphaPackOffer: Identifiable, Codable, Hashable, Sendable {
     var id: AlphaCapabilityTier { tier }
 
     static let catalog: [AlphaPackOffer] = [
-        AlphaPackOffer(tier: .quickStart, runtimeLabel: "Basic", supportsBilingualDrafting: false),
-        AlphaPackOffer(tier: .caseAssociate, runtimeLabel: "Standard", supportsBilingualDrafting: true),
-        AlphaPackOffer(tier: .seniorDraftingSupport, runtimeLabel: "Advanced", supportsBilingualDrafting: true)
+        AlphaPackOffer(tier: .quickStart, runtimeLabel: "Quick Start", supportsBilingualDrafting: false),
+        AlphaPackOffer(tier: .caseAssociate, runtimeLabel: "Case Associate", supportsBilingualDrafting: true),
+        AlphaPackOffer(tier: .seniorDraftingSupport, runtimeLabel: "Senior Drafting Support", supportsBilingualDrafting: true)
     ]
 }
 

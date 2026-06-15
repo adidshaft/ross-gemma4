@@ -75,7 +75,7 @@ export interface DirectDownloadArtifactDescriptor {
 export const DEV_MODEL_PACKS: ModelPack[] = [
   {
     packId: "quick-start-pack",
-    displayName: "Basic",
+    displayName: "Quick Start",
     tier: "quick_start",
     sizeBytes: 25_913,
     segmentSizeBytes: 8_192,
@@ -100,7 +100,7 @@ export const DEV_MODEL_PACKS: ModelPack[] = [
   },
   {
     packId: "case-associate-pack",
-    displayName: "Standard",
+    displayName: "Case Associate",
     tier: "case_associate",
     sizeBytes: 41_287,
     segmentSizeBytes: 8_192,
@@ -126,7 +126,7 @@ export const DEV_MODEL_PACKS: ModelPack[] = [
   },
   {
     packId: "senior-drafting-support-pack",
-    displayName: "Advanced",
+    displayName: "Senior Drafting Support",
     tier: "senior_drafting_support",
     sizeBytes: 58_633,
     segmentSizeBytes: 8_192,
@@ -134,7 +134,7 @@ export const DEV_MODEL_PACKS: ModelPack[] = [
     technicalModelName: "Gemma 4 26B-A4B Q4_K_M",
     repo: "bartowski/google_gemma-4-26B-A4B-it-GGUF",
     quantization: "Q4",
-    userFacingRole: "Advanced private assistant for deeper review and drafting",
+    userFacingRole: "Senior Drafting Support private assistant for deeper review and drafting",
     technicalRole: "advanced drafting, chronology refinement, issue extraction, deeper matter reasoning",
     artifactSeed: "ross-dev-senior-drafting-support-v1",
     artifactKind: "tiny_dev_artifact",
@@ -154,7 +154,7 @@ export const DEV_MODEL_PACKS: ModelPack[] = [
 export const PRODUCTION_METADATA_MODEL_PACKS: ModelPack[] = [
   {
     packId: "gemma-4-e4b-q4",
-    displayName: "Basic",
+    displayName: "Quick Start",
     tier: "quick_start",
     sizeBytes: 5_405_168_384,
     segmentSizeBytes: 5_405_168_384,
@@ -182,7 +182,7 @@ export const PRODUCTION_METADATA_MODEL_PACKS: ModelPack[] = [
   },
   {
     packId: "gemma-4-12b-q4",
-    displayName: "Standard",
+    displayName: "Case Associate",
     tier: "case_associate",
     sizeBytes: 7_381_382_048,
     segmentSizeBytes: 7_381_382_048,
@@ -211,7 +211,7 @@ export const PRODUCTION_METADATA_MODEL_PACKS: ModelPack[] = [
   },
   {
     packId: "gemma-4-26b-a4b-q4",
-    displayName: "Advanced",
+    displayName: "Senior Drafting Support",
     tier: "senior_drafting_support",
     sizeBytes: 17_035_038_112,
     segmentSizeBytes: 17_035_038_112,
@@ -219,7 +219,7 @@ export const PRODUCTION_METADATA_MODEL_PACKS: ModelPack[] = [
     technicalModelName: "Gemma 4 26B-A4B Q4_K_M",
     repo: "bartowski/google_gemma-4-26B-A4B-it-GGUF",
     quantization: "Q4",
-    userFacingRole: "Advanced private assistant for deeper review and drafting",
+    userFacingRole: "Senior Drafting Support private assistant for deeper review and drafting",
     technicalRole: "advanced drafting, chronology refinement, issue extraction, deeper matter reasoning",
     artifactSeed: "gemma4-26b-advanced-metadata-v1",
     artifactKind: "local_model_artifact",
@@ -244,7 +244,7 @@ export const PRODUCTION_IOS_MODEL_PACKS: ModelPack[] = PRODUCTION_METADATA_MODEL
 export const PRODUCTION_ANDROID_MODEL_PACKS: ModelPack[] = [
   {
     packId: "gemma3-quick-start-mediapipe-task",
-    displayName: "Basic",
+    displayName: "Quick Start",
     tier: "quick_start",
     sizeBytes: 303_950_933,
     segmentSizeBytes: 303_950_933,
@@ -273,7 +273,7 @@ export const PRODUCTION_ANDROID_MODEL_PACKS: ModelPack[] = [
   },
   {
     packId: "gemma3-case-associate-mediapipe-task",
-    displayName: "Standard",
+    displayName: "Case Associate",
     tier: "case_associate",
     sizeBytes: 554_661_246,
     segmentSizeBytes: 554_661_246,
@@ -302,7 +302,7 @@ export const PRODUCTION_ANDROID_MODEL_PACKS: ModelPack[] = [
   },
   {
     packId: "gemma3-senior-drafting-support-mediapipe-task",
-    displayName: "Advanced",
+    displayName: "Senior Drafting Support",
     tier: "senior_drafting_support",
     sizeBytes: 689_308_662,
     segmentSizeBytes: 689_308_662,
@@ -310,7 +310,7 @@ export const PRODUCTION_ANDROID_MODEL_PACKS: ModelPack[] = [
     technicalModelName: "Gemma 3 1B IT Q4 Block128 MediaPipe Task",
     repo: "litert-community/Gemma3-1B-IT",
     quantization: "Q4_BLOCK128",
-    userFacingRole: "Advanced private assistant for deeper review and drafting",
+    userFacingRole: "Senior Drafting Support private assistant for deeper review and drafting",
     technicalRole: "advanced drafting, chronology refinement, issue extraction, deeper matter reasoning",
     artifactSeed: "gemma3-senior-drafting-support-mediapipe-v1",
     artifactKind: "huggingface_gated_model_artifact",

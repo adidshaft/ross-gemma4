@@ -30,7 +30,7 @@
         "effectiveTierId": { "$ref": "#/definitions/modelCapabilityTierId" },
         "displayName": {
           "type": "string",
-          "enum": ["Basic", "Standard", "Advanced"]
+          "enum": ["Quick Start", "Case Associate", "Senior Drafting Support"]
         },
         "deviceSupportState": {
           "type": "string",

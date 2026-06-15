@@ -67,20 +67,20 @@ test("canonical private assistant registry maps tiers to the current three-pack 
   assert.ok(preferredRetrieval);
   assert.ok(fallbackRetrieval);
 
-  assert.equal(quickStart.displayName, "Basic");
+  assert.equal(quickStart.displayName, "Quick Start");
   assert.equal(quickStart.technicalModelName, "Gemma 4 E4B Q4_K_M");
   assert.equal(quickStart.repo, "bartowski/google_gemma-4-E4B-it-GGUF");
   assert.equal(quickStart.quantization, "Q4");
   assert.equal(quickStart.runtimeMode, "gemma_local_runtime");
   assert.equal(quickStart.approxDownloadSizeMb, 5405);
 
-  assert.equal(caseAssociate.displayName, "Standard");
+  assert.equal(caseAssociate.displayName, "Case Associate");
   assert.equal(caseAssociate.technicalModelName, "Gemma 4 12B Q4_K_M");
   assert.equal(caseAssociate.repo, "ggml-org/gemma-4-12B-it-GGUF");
   assert.equal(caseAssociate.alternateRepo, "bartowski/gemma-4-12B-it-GGUF");
   assert.equal(caseAssociate.quantization, "Q4");
 
-  assert.equal(seniorDrafting.displayName, "Advanced");
+  assert.equal(seniorDrafting.displayName, "Senior Drafting Support");
   assert.equal(seniorDrafting.technicalModelName, "Gemma 4 26B-A4B Q4_K_M");
   assert.equal(seniorDrafting.repo, "bartowski/google_gemma-4-26B-A4B-it-GGUF");
   assert.equal(seniorDrafting.alternateRepo, undefined);
@@ -134,7 +134,7 @@ test("production model catalog advertises platform runtime packs with real downl
 
   assert.deepEqual(
     androidBody.manifest.payload.packs.map((pack) => pack.displayName),
-    ["Basic", "Standard", "Advanced"]
+    ["Quick Start", "Case Associate", "Senior Drafting Support"]
   );
 
   const quickStart = androidBody.manifest.payload.packs.find((pack) => pack.tier === "quick_start");

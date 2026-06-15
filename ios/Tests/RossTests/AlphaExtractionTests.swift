@@ -105,7 +105,7 @@ final class AlphaExtractionTests: XCTestCase {
             ),
             AlphaPrivacyLedgerEntry(
                 title: "Assistant restored",
-                detail: "Ross found and verified existing assistant setup on this device: Basic.",
+                detail: "Ross found and verified existing assistant setup on this device: Quick Start.",
                 purpose: .model_verification,
                 payloadClass: .no_case_data,
                 endpointLabel: "device://model-verify",
@@ -1089,11 +1089,11 @@ final class AlphaExtractionTests: XCTestCase {
         )
         XCTAssertEqual(
             AlphaCapabilityTier.quickStart.setupTitle(languageCode: "hi"),
-            "Basic - रोज़मर्रा के काम के लिए संतुलित"
+            "Quick Start - रोज़मर्रा के काम के लिए हल्का"
         )
         XCTAssertEqual(
             AlphaCapabilityTier.seniorDraftingSupport.setupTitle(languageCode: "te-IN"),
-            "Advanced - పెద్ద బండిళ్లు మరియు డ్రాఫ్టింగ్"
+            "Senior Drafting Support - పెద్ద బండిళ్లు మరియు డ్రాఫ్టింగ్"
         )
         XCTAssertEqual(
             AlphaCapabilityTier.flash.storageNote(languageCode: "bn"),
@@ -2107,12 +2107,12 @@ final class AlphaExtractionTests: XCTestCase {
             "ఏ case file లేదా task text ఈ device ను వదిలి వెళ్లలేదు."
         )
         XCTAssertEqual(
-            alphaPendingLocalModelStatus("Standard assistant", languageCode: "hi"),
-            "Standard assistant private answer तैयार कर रहा है"
+            alphaPendingLocalModelStatus("Case Associate assistant", languageCode: "hi"),
+            "Case Associate assistant private answer तैयार कर रहा है"
         )
         XCTAssertEqual(
-            alphaPendingLocalModelLabel(from: "Standard assistant private answer तैयार कर रहा है"),
-            "Standard assistant"
+            alphaPendingLocalModelLabel(from: "Case Associate assistant private answer तैयार कर रहा है"),
+            "Case Associate assistant"
         )
         XCTAssertTrue(alphaAskQuestionTargetsAssistantSetup("What can I do before setting up the private assistant?"))
         XCTAssertEqual(
@@ -2445,8 +2445,8 @@ final class AlphaExtractionTests: XCTestCase {
             "3 সোর্স দেখান"
         )
         XCTAssertEqual(
-            alphaLocalModelRunningLabel("Standard", languageCode: "te-IN"),
-            "Standard ఈ iPhone లో నడుస్తోంది"
+            alphaLocalModelRunningLabel("Case Associate", languageCode: "te-IN"),
+            "Case Associate ఈ iPhone లో నడుస్తోంది"
         )
         XCTAssertEqual(
             alphaTaggedFilesLine(["Order", "Notice"], languageCode: "hi"),
@@ -2605,8 +2605,8 @@ final class AlphaExtractionTests: XCTestCase {
             "Order সরান"
         )
         XCTAssertEqual(
-            alphaAssistantUpdateAvailableLabel("Standard", languageCode: "ta"),
-            "Standard-க்கு புதிய assistant setup உள்ளது."
+            alphaAssistantUpdateAvailableLabel("Case Associate", languageCode: "ta"),
+            "Case Associate-க்கு புதிய assistant setup உள்ளது."
         )
         XCTAssertEqual(
             rossLocalized("assistant_delete_setup_files_detail", languageCode: "te-IN"),
@@ -2992,9 +2992,9 @@ final class AlphaExtractionTests: XCTestCase {
         var failedJob = preparingJob
         failedJob.state = .failed
 
-        XCTAssertEqual(alphaAssistantActivityTitle(for: preparingJob), "Basic is preparing")
-        XCTAssertEqual(alphaAssistantActivityTitle(for: preparingJob, languageCode: "hi"), "Basic तैयार हो रहा है")
-        XCTAssertEqual(alphaAssistantActivityTitle(for: pausedJob, languageCode: "ta"), "Basic setup paused உள்ளது")
+        XCTAssertEqual(alphaAssistantActivityTitle(for: preparingJob), "Quick Start is preparing")
+        XCTAssertEqual(alphaAssistantActivityTitle(for: preparingJob, languageCode: "hi"), "Quick Start तैयार हो रहा है")
+        XCTAssertEqual(alphaAssistantActivityTitle(for: pausedJob, languageCode: "ta"), "Quick Start setup paused உள்ளது")
         XCTAssertEqual(alphaAssistantActivityTitle(for: failedJob, languageCode: "te"), "Private assistant కు retry కావాలి")
     }
 
@@ -3073,7 +3073,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
         XCTAssertEqual(
             alphaFileReviewBasicTooLongWarning(languageCode: "te-IN"),
-            "Basic చిన్న files కు మంచిది. ఈ పొడవైన document ను private assistant తో review చేయడానికి ముందు Standard లేదా Advanced ఎంచుకోండి."
+            "Quick Start చిన్న files కు మంచిది. ఈ పొడవైన document ను private assistant తో review చేయడానికి ముందు Case Associate లేదా Senior Drafting Support ఎంచుకోండి."
         )
     }
 
@@ -3110,7 +3110,7 @@ final class AlphaExtractionTests: XCTestCase {
         let warningText = (result.extractionRun.warnings + result.findings.map(\.message)).joined(separator: "\n")
 
         XCTAssertTrue(warningText.contains(alphaFileReviewBasicTooLongWarning(languageCode: "te")))
-        XCTAssertFalse(warningText.localizedCaseInsensitiveContains("Basic is best for shorter files"), warningText)
+        XCTAssertFalse(warningText.localizedCaseInsensitiveContains("Quick Start is best for shorter files"), warningText)
         XCTAssertFalse(warningText.localizedCaseInsensitiveContains("longer document with your private assistant"), warningText)
     }
 
@@ -3279,7 +3279,7 @@ final class AlphaExtractionTests: XCTestCase {
         rossSaveLanguageSelection(code: "hi")
         let message = model.extractionUpgradeMessage(for: document)
 
-        XCTAssertEqual(message, "इस scan में mixed language या unclear text है। Advanced review बेहतर कर सकता है.")
+        XCTAssertEqual(message, "इस scan में mixed language या unclear text है। Senior Drafting Support review बेहतर कर सकता है.")
         XCTAssertEqual(document.lawyerStatusTitle, "कम confidence scan")
         XCTAssertFalse(message?.localizedCaseInsensitiveContains("OCR") == true, message ?? "")
         XCTAssertEqual(
@@ -3288,7 +3288,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
         XCTAssertEqual(
             alphaBetterExtractionStandardMessage(languageCode: "bn"),
-            "Standard দিয়ে better extraction available."
+            "Case Associate দিয়ে better extraction available."
         )
     }
 

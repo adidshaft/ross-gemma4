@@ -1,18 +1,18 @@
 {
   "assistantTiers": {
     "quick_start": {
-      "displayName": "Basic",
+      "displayName": "Quick Start",
       "technicalModelName": "Gemma 4 E4B Q4_K_M",
       "repo": "bartowski/google_gemma-4-E4B-it-GGUF",
       "quantization": "Q4",
       "runtimeMode": "gemma_local_runtime",
       "artifactKind": "local_model_artifact",
       "approxDownloadSizeMb": 5405,
-      "userFacingRole": "Balanced local assistant for short case Q&A, intake review, and lighter matter work",
+      "userFacingRole": "Quick Start private assistant for short case Q&A, intake review, and lighter matter work",
       "technicalRole": "short source-backed Ask Ross answers, lighter summaries, and quick matter review"
     },
     "case_associate": {
-      "displayName": "Standard",
+      "displayName": "Case Associate",
       "technicalModelName": "Gemma 4 12B Q4_K_M",
       "repo": "ggml-org/gemma-4-12B-it-GGUF",
       "alternateRepo": "bartowski/gemma-4-12B-it-GGUF",
@@ -20,18 +20,18 @@
       "runtimeMode": "gemma_local_runtime",
       "artifactKind": "local_model_artifact",
       "approxDownloadSizeMb": 7381,
-      "userFacingRole": "Recommended private assistant for richer matter review, larger files, and longer answers",
+      "userFacingRole": "Case Associate private assistant for richer matter review, larger files, and longer answers",
       "technicalRole": "default higher-quality legal assistant, deeper matter reasoning, and longer source-backed Ask Ross"
     },
     "senior_drafting_support": {
-      "displayName": "Advanced",
+      "displayName": "Senior Drafting Support",
       "technicalModelName": "Gemma 4 26B-A4B Q4_K_M",
       "repo": "bartowski/google_gemma-4-26B-A4B-it-GGUF",
       "quantization": "Q4",
       "runtimeMode": "gemma_local_runtime",
       "artifactKind": "local_model_artifact",
       "approxDownloadSizeMb": 17035,
-      "userFacingRole": "Advanced private assistant for deeper review and drafting",
+      "userFacingRole": "Senior Drafting Support private assistant for deeper review and drafting",
       "technicalRole": "advanced drafting, chronology refinement, issue extraction, deeper matter reasoning"
     }
   },
