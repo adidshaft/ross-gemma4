@@ -110,6 +110,14 @@ func alphaAssistantDownloadDescriptorSupportsCurrentInstaller(_ descriptor: Alph
     }
 }
 
+func alphaShouldReuseInstalledAssistantPack(
+    _ pack: AlphaInstalledModelPack?,
+    preferredRuntimeMode: AlphaPackRuntimeMode
+) -> Bool {
+    guard let pack else { return false }
+    return pack.runtimeMode == preferredRuntimeMode
+}
+
 func alphaPreferredAssistantDownloadFallback(
     for tier: AlphaCapabilityTier,
     preferredRuntimeMode: AlphaPackRuntimeMode,
@@ -1219,7 +1227,11 @@ extension AlphaRossModel {
             return
         }
 
-        if let existingInstalled = persisted.installedPacks.first(where: { $0.tier == tier && installedModelPackFileIsUsable($0) }) {
+        if let existingInstalled = persisted.installedPacks.first(where: { $0.tier == tier && installedModelPackFileIsUsable($0) }),
+           alphaShouldReuseInstalledAssistantPack(
+            existingInstalled,
+            preferredRuntimeMode: preferredRuntime
+           ) {
             activateInstalledPack(existingInstalled)
             return
         }

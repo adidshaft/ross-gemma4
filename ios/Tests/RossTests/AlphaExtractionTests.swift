@@ -4990,6 +4990,51 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(label, "Built-in Apple model preferred")
     }
 
+    func testReuseInstalledAssistantPackWhenRuntimeAlreadyMatchesPreference() {
+        let pack = installedPack(
+            .caseAssociate,
+            runtimeMode: .mlxSwiftLm,
+            packId: "gemma-4-12b-it-mlx",
+            installPath: "model-packs/case_associate/gemma-4-12b-it-mlx",
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+
+        XCTAssertTrue(
+            alphaShouldReuseInstalledAssistantPack(
+                pack,
+                preferredRuntimeMode: .mlxSwiftLm
+            )
+        )
+    }
+
+    func testDoNotReuseInstalledAssistantPackWhenCapablePhonePrefersMLXOverExistingGGUF() {
+        let pack = installedPack(
+            .caseAssociate,
+            runtimeMode: .llamaCppGguf,
+            packId: "gemma-4-12b-q4",
+            installPath: "model-packs/case_associate/gemma-4-12B-it-Q4_K_M.gguf",
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+        let preferredRuntime = alphaPreferredAssistantRuntimeMode(
+            for: .caseAssociate,
+            existingRuntimeMode: pack.runtimeMode,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24,
+            systemAssistantAvailable: false
+        )
+
+        XCTAssertEqual(preferredRuntime, .mlxSwiftLm)
+        XCTAssertFalse(
+            alphaShouldReuseInstalledAssistantPack(
+                pack,
+                preferredRuntimeMode: preferredRuntime
+            )
+        )
+    }
+
     func testAssistantRuntimeChoiceLabelExplainsConstrainedIPhoneGGUFChoice() {
         let label = alphaAssistantRuntimeChoiceLabel(
             selectedRuntimeMode: .llamaCppGguf,
