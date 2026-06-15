@@ -90,6 +90,10 @@ struct RossLocalModelSmokeView: View {
             return
         }
         RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE provider_ready runtime=\(provider.runtimeMode.rawValue)")
+        let providerHealth = provider.runtimeHealth()
+        RossLocalModelSmokeView.log(
+            "ROSS_LOCAL_MODEL_SMOKE_RUNTIME context_tokens=\(providerHealth.estimatedContextTokens.map(String.init) ?? "nil") max_input_chars=\(providerHealth.maxInputChars.map(String.init) ?? "nil") acceleration=\(providerHealth.accelerationMode?.rawValue ?? "nil") draft_tokens=\(providerHealth.accelerationDraftTokens.map(String.init) ?? "nil") draft_model=\(providerHealth.draftModelPathLabel ?? "nil")"
+        )
 
         let sourceRef = AlphaSourceRef(
             caseId: UUID(),

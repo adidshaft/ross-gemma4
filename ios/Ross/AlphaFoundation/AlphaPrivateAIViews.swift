@@ -461,6 +461,15 @@ private struct AlphaPrivateAIInternalDiagnostics: View {
                 AlphaSettingsValueRow(label: rossLocalized("status"), value: alphaAssistantSupportStatusDetail(runtimeHealth: runtimeHealth))
                 AlphaSettingsValueRow(label: rossLocalized("assistant_can_answer"), value: runtimeHealth.available ? rossLocalized("yes") : rossLocalized("no"))
                 AlphaSettingsValueRow(label: rossLocalized("setup_file_present"), value: runtimeHealth.modelPathPresent ? rossLocalized("yes") : rossLocalized("no"))
+                if let contextTokens = runtimeHealth.estimatedContextTokens {
+                    AlphaSettingsValueRow(label: rossLocalized("runtime_context_window"), value: alphaAssistantContextWindowLabel(tokens: contextTokens))
+                }
+                if let maxInputChars = runtimeHealth.maxInputChars {
+                    AlphaSettingsValueRow(label: rossLocalized("runtime_input_budget"), value: alphaAssistantInputBudgetLabel(chars: maxInputChars))
+                }
+                if runtimeHealth.accelerationMode != nil {
+                    AlphaSettingsValueRow(label: rossLocalized("runtime_acceleration"), value: alphaAssistantAccelerationLabel(runtimeHealth: runtimeHealth))
+                }
 
                 if let lastInvocation {
                     AlphaSettingsValueRow(label: rossLocalized("last_answer_check"), value: assistantLastUsedLabel)
@@ -498,6 +507,31 @@ func alphaAssistantDurationLabel(milliseconds: Int) -> String {
         return String(format: "%.1f s", seconds)
     }
     return "\(Int(seconds.rounded())) s"
+}
+
+func alphaAssistantContextWindowLabel(tokens: Int) -> String {
+    "\(tokens.formatted()) tokens"
+}
+
+func alphaAssistantInputBudgetLabel(chars: Int) -> String {
+    "\(chars.formatted()) chars"
+}
+
+func alphaAssistantAccelerationLabel(runtimeHealth: AlphaLocalRuntimeHealth) -> String {
+    switch runtimeHealth.accelerationMode {
+    case .draftModelSpeculative:
+        if let tokens = runtimeHealth.accelerationDraftTokens, let draftLabel = runtimeHealth.draftModelPathLabel {
+            return "Draft model x\(tokens) (\(draftLabel))"
+        }
+        if let tokens = runtimeHealth.accelerationDraftTokens {
+            return "Draft model x\(tokens)"
+        }
+        return "Draft model"
+    case .standard:
+        return "Standard generation"
+    case nil:
+        return rossLocalized("none_yet")
+    }
 }
 
 struct AlphaPrivacyLedgerScreen: View {

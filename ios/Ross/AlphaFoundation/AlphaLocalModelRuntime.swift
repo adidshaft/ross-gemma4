@@ -137,9 +137,17 @@ struct AlphaLocalRuntimeHealth: Codable, Hashable, Sendable {
     var supportedTasks: [AlphaLocalModelTask]
     var maxInputChars: Int?
     var estimatedContextTokens: Int?
+    var accelerationMode: AlphaLocalRuntimeAccelerationMode? = nil
+    var accelerationDraftTokens: Int? = nil
+    var draftModelPathLabel: String? = nil
     var lastErrorCategory: String?
     var userFacingStatus: String
     var explicitOptInEnabled: Bool = false
+}
+
+enum AlphaLocalRuntimeAccelerationMode: String, Codable, Hashable, Sendable {
+    case standard
+    case draftModelSpeculative
 }
 
 func alphaRuntimeHealthStatus(_ key: AlphaRuntimeHealthStatusKey, languageCode: String = rossSelectedLanguageCode()) -> String {

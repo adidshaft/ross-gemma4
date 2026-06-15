@@ -162,6 +162,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
             supportedTasks: Array(supportedTasks()),
             maxInputChars: maxInputChars(),
             estimatedContextTokens: contextWindowEstimate(),
+            accelerationMode: .standard,
             lastErrorCategory: availability.errorCategory,
             userFacingStatus: availability.status,
             explicitOptInEnabled: true

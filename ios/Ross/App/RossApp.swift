@@ -2541,6 +2541,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Approx time பார்க்கவும்",
             "te": "Approx time చూడండి"
         ],
+        "runtime_context_window": [
+            "en": "Context window",
+            "hi": "Context window देखें",
+            "bn": "Context window দেখুন",
+            "ta": "Context window பார்க்கவும்",
+            "te": "Context window చూడండి"
+        ],
+        "runtime_input_budget": [
+            "en": "Input budget",
+            "hi": "Input budget देखें",
+            "bn": "Input budget দেখুন",
+            "ta": "Input budget பார்க்கவும்",
+            "te": "Input budget చూడండి"
+        ],
+        "runtime_acceleration": [
+            "en": "Acceleration",
+            "hi": "Acceleration देखें",
+            "bn": "Acceleration দেখুন",
+            "ta": "Acceleration பார்க்கவும்",
+            "te": "Acceleration చూడండి"
+        ],
         "public_law_check": [
             "en": "Public-law check",
             "hi": "Public-law check देखें",

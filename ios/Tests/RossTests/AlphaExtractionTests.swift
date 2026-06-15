@@ -3842,6 +3842,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health?.available, true)
         XCTAssertEqual(health?.modelPathLabel, directory.lastPathComponent)
         XCTAssertEqual(health?.modelPathPresent, true)
+        XCTAssertEqual(health?.accelerationMode, .standard)
     }
 
     func testRuntimeHealthMarksMissingConfiguredAdapterPathUnavailable() {
@@ -4006,6 +4007,9 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(recordedMainPath, directory.path)
         XCTAssertEqual(recordedDraftPath, draftDirectory.path)
         XCTAssertEqual(recordedDraftTokens, 4)
+        XCTAssertEqual(provider?.runtimeHealth().accelerationMode, .draftModelSpeculative)
+        XCTAssertEqual(provider?.runtimeHealth().accelerationDraftTokens, 4)
+        XCTAssertEqual(provider?.runtimeHealth().draftModelPathLabel, draftDirectory.lastPathComponent)
         XCTAssertEqual(output?.rawText, "Draft accelerated answer")
     }
 

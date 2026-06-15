@@ -203,6 +203,9 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             supportedTasks: Array(supportedTasks()),
             maxInputChars: maxInputChars(),
             estimatedContextTokens: contextWindowEstimate(),
+            accelerationMode: draftAccelerationMode(),
+            accelerationDraftTokens: draftTokensForGeneration(),
+            draftModelPathLabel: resolvedDraftDirectoryURL()?.lastPathComponent,
             lastErrorCategory: availability.errorCategory,
             userFacingStatus: availability.status,
             explicitOptInEnabled: true
@@ -405,6 +408,10 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             return nil
         }
         return max(1, min(draftModelTokens ?? 2, 8))
+    }
+
+    private func draftAccelerationMode() -> AlphaLocalRuntimeAccelerationMode {
+        draftTokensForGeneration() == nil ? .standard : .draftModelSpeculative
     }
 
     private func extractJSON(from text: String) -> String? {
@@ -614,6 +621,9 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             supportedTasks: [],
             maxInputChars: nil,
             estimatedContextTokens: nil,
+            accelerationMode: draftModelPath == nil ? nil : .draftModelSpeculative,
+            accelerationDraftTokens: draftModelTokens,
+            draftModelPathLabel: draftModelPath.flatMap { URL(fileURLWithPath: $0).lastPathComponent.nilIfEmpty },
             lastErrorCategory: "runtime_dependency_unavailable",
             userFacingStatus: alphaRuntimeHealthStatus(.privateAssistantUnavailable),
             explicitOptInEnabled: true
