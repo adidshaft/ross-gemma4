@@ -23,11 +23,14 @@ enum AlphaMLXRuntimeProfile {
         case .flash:
             return physicalMemory >= 8_000_000_000 ? 8_192 : 6_144
         case .quickStart:
-            return physicalMemory >= 8_000_000_000 ? 12_288 : 8_192
+            return physicalMemory >= 8_000_000_000 ? 14_336 : 10_240
         case .caseAssociate:
-            return physicalMemory >= 12_000_000_000 ? 16_384 : 12_288
+            if physicalMemory >= 16_000_000_000 {
+                return 24_576
+            }
+            return physicalMemory >= 12_000_000_000 ? 20_480 : 16_384
         case .seniorDraftingSupport:
-            return physicalMemory >= 18_000_000_000 ? 24_576 : 16_384
+            return physicalMemory >= 18_000_000_000 ? 24_576 : 18_432
         }
     }
 
@@ -39,11 +42,14 @@ enum AlphaMLXRuntimeProfile {
         case .flash:
             return physicalMemory >= 8_000_000_000 ? 18_000 : 14_000
         case .quickStart:
-            return physicalMemory >= 8_000_000_000 ? 28_000 : 20_000
+            return physicalMemory >= 8_000_000_000 ? 30_000 : 22_000
         case .caseAssociate:
-            return physicalMemory >= 12_000_000_000 ? 40_000 : 32_000
+            if physicalMemory >= 16_000_000_000 {
+                return 48_000
+            }
+            return physicalMemory >= 12_000_000_000 ? 44_000 : 36_000
         case .seniorDraftingSupport:
-            return physicalMemory >= 18_000_000_000 ? 52_000 : 40_000
+            return physicalMemory >= 18_000_000_000 ? 56_000 : 44_000
         }
     }
 
@@ -84,6 +90,19 @@ enum AlphaMLXRuntimeProfile {
             return 8
         case .seniorDraftingSupport:
             return 10
+        }
+    }
+
+    static func defaultDraftTokens(for tier: AlphaCapabilityTier) -> Int {
+        switch tier {
+        case .flash:
+            return 2
+        case .quickStart:
+            return 3
+        case .caseAssociate:
+            return 4
+        case .seniorDraftingSupport:
+            return 6
         }
     }
 }
@@ -447,7 +466,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         guard resolvedDraftDirectoryURL() != nil else {
             return nil
         }
-        return max(1, min(draftModelTokens ?? 2, 8))
+        return max(1, min(draftModelTokens ?? AlphaMLXRuntimeProfile.defaultDraftTokens(for: capabilityTier), 8))
     }
 
     private func draftAccelerationMode(draftDirectoryURL: URL? = nil) -> AlphaLocalRuntimeAccelerationMode {

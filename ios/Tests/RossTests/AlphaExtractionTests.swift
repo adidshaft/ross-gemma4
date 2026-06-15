@@ -4050,6 +4050,20 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(plan.sourceExcerptChars, 1_300)
     }
 
+    func testMatterQuestionBudgetPlannerUsesExpandedMLXBudgetsFor12BClassRuns() {
+        let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
+            runtimeMode: .mlxSwiftLm,
+            baseMaxInputChars: 44_000,
+            sourceBlockCount: 11,
+            sourceCharCount: 39_000,
+            lastInvocation: nil
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 39_600)
+        XCTAssertEqual(plan.sourceBlockLimit, 7)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_400)
+    }
+
     func testStructuredDocumentBudgetPlannerTightensAfterSlowRun() {
         let slowInvocation = AlphaLocalModelInvocation(
             task: .legalFieldExtraction,
@@ -4093,6 +4107,20 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(plan.sourceExcerptChars, 1_350)
     }
 
+    func testStructuredDocumentBudgetPlannerUsesExpandedMLXBudgetsFor12BClassRuns() {
+        let plan = AlphaLocalPromptBudgetPlanner.structuredDocumentPlan(
+            runtimeMode: .mlxSwiftLm,
+            baseMaxInputChars: 44_000,
+            sourceBlockCount: 16,
+            sourceCharCount: 52_000,
+            lastInvocation: nil
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 38_720)
+        XCTAssertEqual(plan.sourceBlockLimit, 9)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_250)
+    }
+
     func testLlamaRuntimeProfileExpandsContextFor12BOnCapablePhones() {
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.contextWindowTokens(
@@ -4115,6 +4143,32 @@ final class AlphaExtractionTests: XCTestCase {
             ),
             24_576
         )
+    }
+
+    func testMLXRuntimeProfileRaisesIPhoneBudgets() {
+        XCTAssertEqual(
+            AlphaMLXRuntimeProfile.contextWindowTokens(
+                for: .caseAssociate,
+                physicalMemory: 12_000_000_000
+            ),
+            20_480
+        )
+        XCTAssertEqual(
+            AlphaMLXRuntimeProfile.maxInputChars(
+                for: .quickStart,
+                physicalMemory: 8_000_000_000
+            ),
+            30_000
+        )
+        XCTAssertEqual(
+            AlphaMLXRuntimeProfile.maxInputChars(
+                for: .caseAssociate,
+                physicalMemory: 12_000_000_000
+            ),
+            44_000
+        )
+        XCTAssertEqual(AlphaMLXRuntimeProfile.defaultDraftTokens(for: .caseAssociate), 4)
+        XCTAssertEqual(AlphaMLXRuntimeProfile.defaultDraftTokens(for: .seniorDraftingSupport), 6)
     }
 
     func testLlamaRuntimeProfileRaisesHighQualityInputBudgets() {
@@ -4591,6 +4645,88 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(provider?.runtimeHealth().accelerationDraftTokens, 4)
         XCTAssertEqual(provider?.runtimeHealth().draftModelPathLabel, draftDirectory.lastPathComponent)
         XCTAssertEqual(output?.rawText, "Draft accelerated answer")
+    }
+
+    func testExperimentalMLXProviderDefaultsDraftTokensByTier() async throws {
+        actor DraftCapture {
+            var draftTokens: Int?
+
+            func record(draftTokens: Int?) {
+                self.draftTokens = draftTokens
+            }
+        }
+
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-main-\(UUID().uuidString)", isDirectory: true)
+        let draftDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-draft-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: draftDirectory, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+            try? FileManager.default.removeItem(at: draftDirectory)
+        }
+        for folder in [directory, draftDirectory] {
+            try Data("{}".utf8).write(to: folder.appendingPathComponent("config.json"))
+            try Data("{}".utf8).write(to: folder.appendingPathComponent("tokenizer.json"))
+            try Data("weights".utf8).write(to: folder.appendingPathComponent("model.safetensors"))
+        }
+
+        let previousGenerator = AlphaMLXLocalProvider.streamGenerator
+        defer { AlphaMLXLocalProvider.streamGenerator = previousGenerator }
+
+        let capture = DraftCapture()
+        AlphaMLXLocalProvider.streamGenerator = { mainURL, draftURL, draftTokens, prompt, instructions, parameters, onChunk in
+            await capture.record(draftTokens: draftTokens)
+            return "Draft accelerated answer"
+        }
+
+        let pack = installedPack(.caseAssociate, runtimeMode: .mlxSwiftLm)
+        let provider = AlphaLocalModelRuntime.resolveProvider(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: directory.path,
+                modelChecksum: String(repeating: "f", count: 64),
+                modelKind: "mlx_directory",
+                draftModelPath: draftDirectory.path,
+                draftModelTokens: nil
+            )
+        ) { _ in
+            AlphaLocalModelOutput(rawText: "", parsedJson: nil, schemaValid: false, warnings: [], sourceRefs: [])
+        }
+
+        _ = await provider?.run(
+            AlphaLocalModelInput(
+                task: .matterQuestionAnswer,
+                instruction: "What happened in the selected order?",
+                sourcePack: [
+                    AlphaSourceTextBlock(
+                        sourceRef: AlphaSourceRef(
+                            caseId: UUID(),
+                            documentId: UUID(),
+                            documentTitle: "Selected Order",
+                            pageNumber: 1,
+                            textSnippet: "The matter is listed on 14 May 2026."
+                        ),
+                        text: "The matter is listed on 14 May 2026.",
+                        pageNumber: 1,
+                        languageHint: "en",
+                        ocrConfidence: 0.99
+                    )
+                ],
+                expectedSchema: "plain_text",
+                maxOutputTokens: 128,
+                extractionMode: .caseAssociate
+            )
+        )
+
+        let recordedDraftTokens = await capture.draftTokens
+
+        XCTAssertEqual(recordedDraftTokens, 4)
+        XCTAssertEqual(provider?.runtimeHealth().accelerationDraftTokens, 4)
     }
 
     func testLlamaValidationRejectsMissingModelPath() {

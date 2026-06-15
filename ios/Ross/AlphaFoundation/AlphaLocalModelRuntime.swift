@@ -333,6 +333,32 @@ enum AlphaLocalPromptBudgetPlanner {
     ) {
         switch runtimeMode {
         case .mlxSwiftLm:
+            if baseMaxInputChars >= 40_000 {
+                return (
+                    minimumBudget: 8_000,
+                    largeFileBlockLimit: 7,
+                    largeFileExcerptChars: 1_400,
+                    cautionBlockLimit: 6,
+                    cautionExcerptChars: 1_150,
+                    slowBlockLimit: 4,
+                    slowExcerptChars: 900,
+                    cautionTokensPerSecond: 12,
+                    slowTokensPerSecond: 8
+                )
+            }
+            if baseMaxInputChars >= 28_000 {
+                return (
+                    minimumBudget: 7_200,
+                    largeFileBlockLimit: 6,
+                    largeFileExcerptChars: 1_300,
+                    cautionBlockLimit: 5,
+                    cautionExcerptChars: 1_080,
+                    slowBlockLimit: 3,
+                    slowExcerptChars: 860,
+                    cautionTokensPerSecond: 12,
+                    slowTokensPerSecond: 8
+                )
+            }
             return (
                 minimumBudget: 7_200,
                 largeFileBlockLimit: 5,
@@ -413,6 +439,32 @@ enum AlphaLocalPromptBudgetPlanner {
     ) {
         switch runtimeMode {
         case .mlxSwiftLm:
+            if baseMaxInputChars >= 40_000 {
+                return (
+                    minimumBudget: 8_000,
+                    largeFileBlockLimit: 9,
+                    largeFileExcerptChars: 1_250,
+                    cautionBlockLimit: 7,
+                    cautionExcerptChars: 1_000,
+                    slowBlockLimit: 5,
+                    slowExcerptChars: 780,
+                    cautionTokensPerSecond: 10,
+                    slowTokensPerSecond: 7
+                )
+            }
+            if baseMaxInputChars >= 28_000 {
+                return (
+                    minimumBudget: 7_400,
+                    largeFileBlockLimit: 8,
+                    largeFileExcerptChars: 1_150,
+                    cautionBlockLimit: 6,
+                    cautionExcerptChars: 930,
+                    slowBlockLimit: 4,
+                    slowExcerptChars: 740,
+                    cautionTokensPerSecond: 10,
+                    slowTokensPerSecond: 7
+                )
+            }
             return (
                 minimumBudget: 7_600,
                 largeFileBlockLimit: 8,
