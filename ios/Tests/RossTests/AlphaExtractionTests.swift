@@ -5440,7 +5440,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(descriptor.artifactKind, "mlx_directory")
     }
 
-    func testAssistantUpdateCandidateIgnoresMLXArchiveChecksumStyleWhenPackIdMatches() {
+    func testAssistantUpdateCandidateUsesMLXArchiveChecksumWhenPackIdMatches() {
         let installedPack = AlphaInstalledModelPack(
             packId: "gemma-4-12b-mlx",
             tier: .caseAssociate,
@@ -5457,6 +5457,39 @@ final class AlphaExtractionTests: XCTestCase {
             packId: "gemma-4-12b-mlx",
             sizeBytes: 6_200_000_000,
             checksumSha256: String(repeating: "e", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false
+        )
+
+        let candidate = alphaAssistantUpdateCandidate(
+            installedPack: installedPack,
+            availableDescriptor: available,
+            existingDismissed: nil
+        )
+
+        XCTAssertEqual(candidate?.installedPackId, installedPack.packId)
+        XCTAssertEqual(candidate?.availablePackId, available.packId)
+        XCTAssertEqual(candidate?.availableSizeBytes, available.sizeBytes)
+    }
+
+    func testAssistantUpdateCandidateSkipsChecksumOnlyPromptWhenCatalogChecksumIsMissing() {
+        let installedPack = AlphaInstalledModelPack(
+            packId: "gemma-4-12b-mlx",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/gemma-4-12b-it-mlx",
+            checksumSha256: String(repeating: "d", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+        let available = AlphaAssistantCatalogDescriptor(
+            tier: .caseAssociate,
+            packId: "gemma-4-12b-mlx",
+            sizeBytes: 6_200_000_000,
+            checksumSha256: "",
             artifactKind: "mlx_directory",
             runtimeMode: .mlxSwiftLm,
             developmentOnly: false

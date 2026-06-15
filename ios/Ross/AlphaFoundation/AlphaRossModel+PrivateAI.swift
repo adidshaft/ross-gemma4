@@ -240,13 +240,8 @@ func alphaAssistantUpdateCandidate(
         return nil
     }
 
-    let usesComparableChecksum = !(
-        availableDescriptor.runtimeMode == .mlxSwiftLm &&
-            availableDescriptor.artifactKind == "mlx_directory"
-    )
     let changed = installedPack.packId != availableDescriptor.packId ||
-        (usesComparableChecksum &&
-         !availableDescriptor.checksumSha256.isEmpty &&
+        (!availableDescriptor.checksumSha256.isEmpty &&
          installedPack.checksumSha256.caseInsensitiveCompare(availableDescriptor.checksumSha256) != .orderedSame)
     guard changed else { return nil }
 
