@@ -5801,6 +5801,52 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(descriptor.runtimeMode, pinned.runtimeMode)
     }
 
+    func testAssistantCatalogCacheDescriptorsKeepAllCompatibleTierEntries() {
+        let manifest = AlphaBackendCatalogManifest(
+            packs: [
+                AlphaBackendCatalogPack(
+                    packId: "gemma-4-12b-mlx",
+                    displayName: "Gemma 4 12B MLX",
+                    tier: .caseAssociate,
+                    sizeBytes: 6_200_000_000,
+                    checksumSha256: String(repeating: "a", count: 64),
+                    artifactKind: "mlx_directory",
+                    runtimeMode: .mlxSwiftLm,
+                    developmentOnly: false
+                ),
+                AlphaBackendCatalogPack(
+                    packId: "gemma-4-12b-gguf",
+                    displayName: "Gemma 4 12B GGUF",
+                    tier: .caseAssociate,
+                    sizeBytes: 7_381_382_048,
+                    checksumSha256: String(repeating: "b", count: 64),
+                    artifactKind: "local_model_artifact",
+                    runtimeMode: .llamaCppGguf,
+                    developmentOnly: false
+                ),
+                AlphaBackendCatalogPack(
+                    packId: "gemma-4-12b-unsupported",
+                    displayName: "Gemma 4 12B Future",
+                    tier: .caseAssociate,
+                    sizeBytes: 7_500_000_000,
+                    checksumSha256: String(repeating: "c", count: 64),
+                    artifactKind: "future_model_artifact",
+                    runtimeMode: .mlxSwiftLm,
+                    developmentOnly: false
+                )
+            ]
+        )
+
+        let descriptors = alphaAssistantCatalogCacheDescriptors(
+            for: .caseAssociate,
+            compatibleOnly: true,
+            manifest: manifest
+        )
+
+        XCTAssertEqual(descriptors.map(\.packId), ["gemma-4-12b-mlx", "gemma-4-12b-gguf"])
+        XCTAssertEqual(descriptors.map(\.runtimeMode), [.mlxSwiftLm, .llamaCppGguf])
+    }
+
     func testPreferredAssistantRuntimeModePrefersMLXOnCapablePhoneForDeeperTiers() {
         let runtime = alphaPreferredAssistantRuntimeMode(
             for: .caseAssociate,

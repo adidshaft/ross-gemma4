@@ -494,6 +494,32 @@ func alphaAssistantCatalogDescriptor(
     )
 }
 
+func alphaAssistantCatalogCacheDescriptors(
+    for tier: AlphaCapabilityTier,
+    compatibleOnly: Bool = false,
+    manifest: AlphaBackendCatalogManifest?
+) -> [AlphaAssistantCatalogDescriptor] {
+    guard let manifest else { return [] }
+
+    return manifest.packs.compactMap { pack in
+        guard AlphaCapabilityTier.normalizedAssistantSelection(pack.tier) == AlphaCapabilityTier.normalizedAssistantSelection(tier),
+              !pack.developmentOnly,
+              (!compatibleOnly || alphaBackendCatalogPackSupportsCurrentInstaller(pack)) else {
+            return nil
+        }
+        return AlphaAssistantCatalogDescriptor(
+            tier: AlphaCapabilityTier.normalizedAssistantSelection(pack.tier) ?? tier,
+            packId: pack.packId,
+            sizeBytes: pack.sizeBytes,
+            checksumSha256: pack.checksumSha256,
+            artifactKind: pack.artifactKind,
+            runtimeMode: pack.runtimeMode,
+            developmentOnly: pack.developmentOnly,
+            draftArtifact: alphaAssistantCatalogDescriptorDraftArtifact(pack.draftArtifact)
+        )
+    }
+}
+
 func alphaAssistantUpdateCandidate(
     installedPack: AlphaInstalledModelPack,
     availableDescriptor: AlphaAssistantCatalogDescriptor,
@@ -908,7 +934,7 @@ extension AlphaRossModel {
 
         Task {
             var descriptorsByTier: [AlphaCapabilityTier: AlphaAssistantCatalogDescriptor] = [:]
-            var refreshedCatalogsByTier: [AlphaCapabilityTier: AlphaAssistantCatalogDescriptor] = [:]
+            var refreshedCatalogsByTier: [AlphaCapabilityTier: [AlphaAssistantCatalogDescriptor]] = [:]
             for tier in refreshTiers {
                 let preferredRuntime = alphaPreferredAssistantRuntimeMode(
                     for: tier,
@@ -919,6 +945,11 @@ extension AlphaRossModel {
                 )
                 do {
                     let manifest = try await backend.fetchCatalog(for: tier)
+                    let cachedDescriptors = alphaAssistantCatalogCacheDescriptors(
+                        for: tier,
+                        compatibleOnly: true,
+                        manifest: manifest
+                    )
                     let descriptor = alphaAssistantCatalogDescriptor(
                         for: tier,
                         preferredRuntimeMode: preferredRuntime,
@@ -926,7 +957,7 @@ extension AlphaRossModel {
                         manifest: manifest
                     )
                     descriptorsByTier[tier] = descriptor
-                    refreshedCatalogsByTier[tier] = descriptor
+                    refreshedCatalogsByTier[tier] = cachedDescriptors
                 } catch {
                     descriptorsByTier[tier] = alphaPreferredAssistantCatalogFallback(
                         for: tier,
@@ -954,18 +985,18 @@ extension AlphaRossModel {
             await MainActor.run {
                 let shouldRecordLedger = self.persisted.modelUpdateCandidates?.isEmpty != false && !candidates.isEmpty
                 var cachedCatalogs = self.persisted.cachedAssistantCatalogs ?? []
-                for (tier, descriptor) in refreshedCatalogsByTier {
+                for (tier, descriptors) in refreshedCatalogsByTier {
                     cachedCatalogs.removeAll {
                         AlphaCapabilityTier.normalizedAssistantSelection($0.tier) ==
                             AlphaCapabilityTier.normalizedAssistantSelection(tier)
                     }
-                    cachedCatalogs.append(descriptor)
+                    cachedCatalogs.append(contentsOf: descriptors)
                 }
                 self.persisted.cachedAssistantCatalogs = cachedCatalogs
                 self.persisted.modelUpdateCandidates = candidates
                 self.persisted.lastModelCatalogRefresh = alphaResolvedModelCatalogRefreshDate(
                     previousRefresh: self.persisted.lastModelCatalogRefresh,
-                    refreshedCatalogCount: refreshedCatalogsByTier.count
+                    refreshedCatalogCount: refreshedCatalogsByTier.values.reduce(0) { $0 + $1.count }
                 )
                 if shouldRecordLedger {
                     self.persisted.ledgerEntries.insert(
