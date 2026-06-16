@@ -8431,7 +8431,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
-    func testRecommendedAssistantSetupTierPrefersQuickStartForFreshCoreAICapableIPhone() {
+    func testRecommendedAssistantSetupTierKeepsCaseAssociateForFreshCoreAICapableIPhone() {
         XCTAssertEqual(
             alphaRecommendedAssistantSetupTier(
                 baselineTier: .caseAssociate,
@@ -8440,7 +8440,20 @@ final class AlphaExtractionTests: XCTestCase {
                 hasRecentInvocation: false,
                 isPhoneFormFactor: true
             ),
-            .quickStart
+            .caseAssociate
+        )
+    }
+
+    func testRecommendedAssistantSetupTierSoftensSeniorToCaseAssociateForFreshCoreAICapableIPhone() {
+        XCTAssertEqual(
+            alphaRecommendedAssistantSetupTier(
+                baselineTier: .seniorDraftingSupport,
+                systemAssistantAvailable: true,
+                hasExistingAssistantSetup: false,
+                hasRecentInvocation: false,
+                isPhoneFormFactor: true
+            ),
+            .caseAssociate
         )
     }
 

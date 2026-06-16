@@ -848,14 +848,20 @@ func alphaRecommendedAssistantSetupTier(
     hasRecentInvocation: Bool,
     isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor()
 ) -> AlphaCapabilityTier {
+    let normalizedBaseline = AlphaCapabilityTier.normalizedAssistantSelection(baselineTier) ?? baselineTier
     guard isPhoneFormFactor,
           systemAssistantAvailable,
           !hasExistingAssistantSetup,
-          !hasRecentInvocation,
-          baselineTier != .quickStart else {
-        return baselineTier
+          !hasRecentInvocation else {
+        return normalizedBaseline
     }
-    return .quickStart
+
+    switch normalizedBaseline {
+    case .seniorDraftingSupport:
+        return .caseAssociate
+    case .flash, .quickStart, .caseAssociate:
+        return normalizedBaseline
+    }
 }
 
 private func alphaExistingRuntimeMode(
