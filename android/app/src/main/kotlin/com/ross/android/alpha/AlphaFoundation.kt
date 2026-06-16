@@ -312,6 +312,13 @@ data class AlphaAskResult(
     val publicLawResults: List<AlphaPublicLawResult> = emptyList(),
     val statusNote: String? = null,
     val needsReviewWarning: String? = null,
+    val answerDetails: AlphaAskAnswerDetails? = null,
+)
+
+data class AlphaAskAnswerDetails(
+    val estimatedProcessedTokens: Int? = null,
+    val estimatedTokensPerSecond: Double? = null,
+    val usesMeasuredTokenCounts: Boolean = false,
 )
 
 data class AlphaMatterAskRuntimePayload(
@@ -327,6 +334,7 @@ data class AlphaChatTurn(
     val answerTitle: String,
     val answerSections: List<String>,
     val sourceRefs: List<AlphaSourceRef>,
+    val answerDetails: AlphaAskAnswerDetails? = null,
 )
 
 data class AlphaCaseMatter(
@@ -2141,6 +2149,7 @@ internal class AlphaRossController(
                     answerTitle = result.answerTitle,
                     answerSections = result.answerSections,
                     sourceRefs = result.caseFileSources,
+                    answerDetails = result.answerDetails,
                 )
                 case.copy(chatTurns = listOf(turn) + case.chatTurns, updatedAt = nowIso())
             } else case
@@ -2246,7 +2255,10 @@ internal class AlphaRossController(
                 detail = "Ross is checking local source text again before updating the response.",
             )
             try {
+                val estimate = provider.estimateCostOrResourceUse(input)
+                val startedAt = System.nanoTime()
                 val output = provider.run(input)
+                val durationMs = ((System.nanoTime() - startedAt) / 1_000_000).coerceAtLeast(1)
                 val payload = matterAskPayload(output, baseResult)
                     ?: AlphaMatterAskRuntimePayload(
                         headline = "Private assistant could not answer",
@@ -2257,19 +2269,26 @@ internal class AlphaRossController(
                         statusNote = "Needs retry",
                     )
                 val sourceRefs = output.sourceRefs.ifEmpty { baseResult.caseFileSources }.take(3)
+                val runtimeMetrics = alphaAskInferenceMetrics(
+                    estimate = estimate,
+                    output = output,
+                    durationMs = durationMs,
+                )
+                val answerDetails = runtimeMetrics
                 val update: (AlphaAskResult) -> AlphaAskResult = { result ->
                     result.copy(
                         answerTitle = payload.headline,
                         answerSections = payload.sections,
                         caseFileSources = sourceRefs,
                         statusNote = payload.statusNote ?: result.statusNote,
+                        answerDetails = answerDetails ?: result.answerDetails,
                     )
                 }
                 latestAskResult = latestAskResult?.let { current ->
                     if (current.scopeCaseId == scopeCaseId && current.question == question) update(current) else current
                 }
                 updateLatestAskHistory(scopeCaseId, question, update)
-                updateLatestStoredChatTurn(scopeCaseId, question, payload, sourceRefs)
+                updateLatestStoredChatTurn(scopeCaseId, question, payload, sourceRefs, answerDetails)
             } finally {
                 if (askWorkStatus?.question == question && askWorkStatus?.scopeCaseId == scopeCaseId) {
                     askWorkStatus = null
@@ -2509,6 +2528,7 @@ internal class AlphaRossController(
         question: String,
         payload: AlphaMatterAskRuntimePayload,
         sourceRefs: List<AlphaSourceRef>,
+        answerDetails: AlphaAskAnswerDetails? = null,
     ) {
         val storageCaseId = scopeCaseId ?: ALPHA_SHARED_WORKSPACE_ID
         persisted = persisted.copy(
@@ -2521,11 +2541,39 @@ internal class AlphaRossController(
                     answerTitle = payload.headline,
                     answerSections = payload.sections,
                     sourceRefs = sourceRefs,
+                    answerDetails = answerDetails ?: updatedTurns[turnIndex].answerDetails,
                 )
                 case.copy(chatTurns = updatedTurns, updatedAt = nowIso())
             }
         )
         save()
+    }
+
+    private fun alphaAskInferenceMetrics(
+        estimate: AlphaLocalModelResourceEstimate,
+        output: AlphaLocalModelOutput,
+        durationMs: Long,
+    ): AlphaAskAnswerDetails? {
+        val outputChars = output.rawText.ifBlank { output.parsedJson.orEmpty() }
+            .trim()
+            .length
+        val estimatedProcessedTokens = listOfNotNull(
+            estimate.estimatedTokens?.takeIf { it > 0 },
+            (outputChars / 4).takeIf { it > 0 },
+        ).sum().takeIf { it > 0 }
+        val estimatedTokensPerSecond = estimatedProcessedTokens
+            ?.takeIf { durationMs > 0 }
+            ?.toDouble()
+            ?.div(durationMs.toDouble() / 1_000.0)
+            ?.takeIf { it.isFinite() && it > 0.0 }
+        if (estimatedProcessedTokens == null && estimatedTokensPerSecond == null) {
+            return null
+        }
+        return AlphaAskAnswerDetails(
+            estimatedProcessedTokens = estimatedProcessedTokens,
+            estimatedTokensPerSecond = estimatedTokensPerSecond,
+            usesMeasuredTokenCounts = false,
+        )
     }
 
     private fun alphaAskCompactSnippet(value: String?): String? =
@@ -3742,6 +3790,7 @@ internal class AlphaRossController(
                     answerTitle = turn.answerTitle,
                     answerSections = turn.answerSections,
                     caseFileSources = turn.sourceRefs,
+                    answerDetails = turn.answerDetails,
                 )
             }
         }

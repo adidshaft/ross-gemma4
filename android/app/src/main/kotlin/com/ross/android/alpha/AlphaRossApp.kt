@@ -5365,6 +5365,7 @@ private fun AlphaAskTurnCard(
     var privacyExpanded by remember { mutableStateOf(false) }
     var sourcesExpanded by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
+    var showAnswerDetails by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val deduplicatedStatusNote = result.statusNote?.takeIf {
         it.trim().lowercase() != result.answerTitle.trim().lowercase()
@@ -5412,6 +5413,16 @@ private fun AlphaAskTurnCard(
                             tint = MaterialTheme.colorScheme.primary,
                         )
                         DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                            result.answerDetails?.let {
+                                DropdownMenuItem(
+                                    text = { Text("Answer details") },
+                                    onClick = {
+                                        showMenu = false
+                                        showAnswerDetails = true
+                                    },
+                                    leadingIcon = { Icon(Icons.Outlined.Info, contentDescription = null) },
+                                )
+                            }
                             DropdownMenuItem(
                                 text = { Text("Copy answer") },
                                 onClick = {
@@ -5589,10 +5600,71 @@ private fun AlphaAskTurnCard(
             }
         }
     }
+
+    if (showAnswerDetails && result.answerDetails != null) {
+        AlphaAskAnswerDetailsSheet(
+            result = result,
+            onDismiss = { showAnswerDetails = false },
+        )
+    }
 }
 
 private fun alphaCopyAskResultText(result: AlphaAskResult): String =
     (listOf(result.answerTitle) + result.answerSections).joinToString(separator = "\n\n")
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AlphaAskAnswerDetailsSheet(
+    result: AlphaAskResult,
+    onDismiss: () -> Unit,
+) {
+    val details = result.answerDetails ?: return
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        dragHandle = null,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Text("Answer details", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Text(
+                result.answerTitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            alphaAskAnswerDetailTokenLabel(details)?.let { tokenLabel ->
+                AlphaSettingsValueRow("Tokens processed", tokenLabel)
+            }
+            alphaAskAnswerDetailSpeedLabel(details)?.let { speedLabel ->
+                AlphaSettingsValueRow("Token speed", speedLabel)
+            }
+        }
+    }
+}
+
+private fun alphaAskAnswerDetailTokenLabel(details: AlphaAskAnswerDetails): String? {
+    val processedTokens = details.estimatedProcessedTokens ?: return null
+    return if (details.usesMeasuredTokenCounts) {
+        processedTokens.toString()
+    } else {
+        "~$processedTokens"
+    }
+}
+
+private fun alphaAskAnswerDetailSpeedLabel(details: AlphaAskAnswerDetails): String? {
+    val tokensPerSecond = details.estimatedTokensPerSecond ?: return null
+    val formatted = "${"%.1f".format(tokensPerSecond)} tok/s"
+    return if (details.usesMeasuredTokenCounts) {
+        formatted
+    } else {
+        "~$formatted"
+    }
+}
 
 private fun alphaCompactPrivacyLabel(result: AlphaAskResult): String {
     if (result.publicLawPreview != null && result.publicLawResults.isEmpty()) return "On-device · review pending"
