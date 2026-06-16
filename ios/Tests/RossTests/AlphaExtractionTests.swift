@@ -6600,12 +6600,56 @@ final class AlphaExtractionTests: XCTestCase {
                 )
             ],
             cachedDownloads: nil,
+            lastCatalogRefresh: Date(),
             isPhoneFormFactor: true,
             physicalMemoryBytes: 12 * 1_073_741_824,
             freeStorageGB: 24
         )
 
         XCTAssertFalse(shouldPrime)
+    }
+
+    func testShouldPrimeAssistantSetupCatalogsPrimesWhenPreferredCatalogIsStale() {
+        let shouldPrime = alphaShouldPrimeAssistantSetupCatalogs(
+            visibleTiers: [.caseAssociate],
+            installedPacks: [],
+            cachedCatalogs: [
+                AlphaAssistantCatalogDescriptor(
+                    tier: .caseAssociate,
+                    packId: "gemma-4-12b-mlx",
+                    sizeBytes: 6_200_000_000,
+                    checksumSha256: String(repeating: "a", count: 64),
+                    artifactKind: "mlx_directory",
+                    runtimeMode: .mlxSwiftLm,
+                    developmentOnly: false
+                )
+            ],
+            cachedDownloads: nil,
+            lastCatalogRefresh: Date().addingTimeInterval(-(86_400 + 60)),
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24
+        )
+
+        XCTAssertTrue(shouldPrime)
+    }
+
+    func testAssistantCatalogRefreshIsStaleWithoutRefreshDate() {
+        XCTAssertTrue(alphaAssistantCatalogRefreshIsStale(lastRefresh: nil))
+    }
+
+    func testAssistantCatalogRefreshIsStaleAfterOneDay() {
+        let now = Date(timeIntervalSinceReferenceDate: 200_000)
+        let stale = Date(timeIntervalSinceReferenceDate: 100_000)
+
+        XCTAssertTrue(alphaAssistantCatalogRefreshIsStale(lastRefresh: stale, now: now))
+    }
+
+    func testAssistantCatalogRefreshIsFreshWithinOneDay() {
+        let now = Date(timeIntervalSinceReferenceDate: 200_000)
+        let recent = now.addingTimeInterval(-3_600)
+
+        XCTAssertFalse(alphaAssistantCatalogRefreshIsStale(lastRefresh: recent, now: now))
     }
 
     func testShouldPrimeAssistantSetupCatalogsPrimesWhenOnlyPreferredMLXDownloadIsCached() {

@@ -950,17 +950,31 @@ func alphaAssistantSetupPresentation(
     )
 }
 
+private let alphaAssistantCatalogRefreshStaleInterval: TimeInterval = 86_400
+
+func alphaAssistantCatalogRefreshIsStale(
+    lastRefresh: Date?,
+    now: Date = .now
+) -> Bool {
+    guard let lastRefresh else { return true }
+    return now.timeIntervalSince(lastRefresh) >= alphaAssistantCatalogRefreshStaleInterval
+}
+
 func alphaShouldPrimeAssistantSetupCatalogs(
     visibleTiers: [AlphaCapabilityTier] = AlphaCapabilityTier.visibleAssistantTiers,
     installedPacks: [AlphaInstalledModelPack],
     cachedCatalogs: [AlphaAssistantCatalogDescriptor]? = nil,
     cachedDownloads: [AlphaAssistantDownloadDescriptor]? = nil,
+    lastCatalogRefresh: Date? = nil,
     isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
     physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory,
     freeStorageGB: Int = max(4, alphaAvailableStorageInGigabytes()),
     lastInvocation: AlphaLocalModelInvocation? = nil
 ) -> Bool {
     _ = cachedDownloads
+    if alphaAssistantCatalogRefreshIsStale(lastRefresh: lastCatalogRefresh) {
+        return true
+    }
     for tier in visibleTiers {
         let effectiveTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
         let preferredRuntime = alphaPreferredAssistantRuntimeMode(
@@ -1319,6 +1333,7 @@ extension AlphaRossModel {
             installedPacks: persisted.installedPacks,
             cachedCatalogs: persisted.cachedAssistantCatalogs,
             cachedDownloads: persisted.cachedAssistantDownloads,
+            lastCatalogRefresh: persisted.lastModelCatalogRefresh,
             lastInvocation: lastInvocation
         )
         guard shouldPrime else { return }
