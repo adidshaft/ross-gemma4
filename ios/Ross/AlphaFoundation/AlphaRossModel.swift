@@ -139,6 +139,7 @@ struct AlphaAskResult: Hashable {
     var statusNote: String?
     var needsReviewWarning: String?
     var modelInvocation: AlphaLocalModelInvocation? = nil
+    var upgradeTierHint: AlphaCapabilityTier? = nil
 }
 
 enum AlphaPublicLawSearchStatus: Hashable {

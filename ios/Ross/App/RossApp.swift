@@ -6804,6 +6804,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Ross local matter context கண்டது, ஆனால் private assistant output advocate review இல்லாமல் நம்பும் அளவுக்கு usable இல்லை.",
             "te": "Ross local matter context కనుగొంది, కానీ private assistant output advocate review లేకుండా ఆధారపడేంత usable కాదు."
         ],
+        "ask_upgrade_action_use_tier": [
+            "en": "Use %@",
+            "hi": "%@ उपयोग करें",
+            "bn": "%@ ব্যবহার করুন",
+            "ta": "%@ பயன்படுத்தவும்",
+            "te": "%@ ఉపయోగించండి"
+        ],
         "ask_local_answered_files_status": [
             "en": "Answered from your files",
             "hi": "आपकी files से जवाब",

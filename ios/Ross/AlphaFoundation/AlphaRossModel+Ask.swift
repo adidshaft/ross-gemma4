@@ -1123,6 +1123,13 @@ extension AlphaRossModel {
         persist(workspaceChanged: true)
     }
 
+    func openAskUpgradeSetup(for result: AlphaAskResult) {
+        if let upgradeTierHint = result.upgradeTierHint {
+            selectedTier = upgradeTierHint
+        }
+        path.append(.privateAISettings)
+    }
+
     func updateAskHistory(turnID: UUID?, mutate: (inout AlphaAskResult) -> Void) {
         guard let turnID, let index = askHistory.lastIndex(where: { $0.chatTurnID == turnID }) else {
             return
@@ -1587,6 +1594,13 @@ extension AlphaRossModel {
                     includedSourceCount: output.sourceRefs.count,
                     sourceBlockLimit: input.sourceBlockLimitOverride
                 )
+                let upgradeTierHint = alphaLocalAskUpgradeTierHint(
+                    runtimeWarnings: output.warnings,
+                    sourcePackCount: input.sourcePack.count,
+                    includedSourceCount: output.sourceRefs.count,
+                    sourceBlockLimit: input.sourceBlockLimitOverride,
+                    capabilityTier: AlphaCapabilityTier(rawValue: completedInvocation.capabilityTier)
+                )
                 let payload = self.displayableMatterAskPayload(
                     output: output,
                     baseResult: baseResult,
@@ -1608,6 +1622,7 @@ extension AlphaRossModel {
                             turn.statusNote = runtimeFailure.statusNote
                             turn.needsReviewWarning = runtimeFailure.needsReviewWarning
                             turn.modelInvocation = completedInvocation
+                            turn.upgradeTierHint = nil
                         }
                         if var latest = self.latestAskResult, latest.chatTurnID == chatTurnID {
                             latest.answerTitle = runtimeFailure.title
@@ -1615,6 +1630,7 @@ extension AlphaRossModel {
                             latest.statusNote = runtimeFailure.statusNote
                             latest.needsReviewWarning = runtimeFailure.needsReviewWarning
                             latest.modelInvocation = completedInvocation
+                            latest.upgradeTierHint = nil
                             self.latestAskResult = latest
                         }
                         return
@@ -1630,6 +1646,7 @@ extension AlphaRossModel {
                         turn.statusNote = unavailablePresentation.statusNote
                         turn.needsReviewWarning = unavailablePresentation.needsReviewWarning
                         turn.modelInvocation = completedInvocation
+                        turn.upgradeTierHint = nil
                     }
                     if var latest = self.latestAskResult, latest.chatTurnID == chatTurnID {
                         latest.answerTitle = unavailablePresentation.title
@@ -1637,6 +1654,7 @@ extension AlphaRossModel {
                         latest.statusNote = unavailablePresentation.statusNote
                         latest.needsReviewWarning = unavailablePresentation.needsReviewWarning
                         latest.modelInvocation = completedInvocation
+                        latest.upgradeTierHint = nil
                         self.latestAskResult = latest
                     }
                     return
@@ -1661,6 +1679,7 @@ extension AlphaRossModel {
                         needsReviewWarning
                     )
                     turn.modelInvocation = completedInvocation
+                    turn.upgradeTierHint = upgradeTierHint
                 }
                 if var latest = self.latestAskResult, latest.chatTurnID == chatTurnID {
                     latest.answerTitle = payload.headline
@@ -1676,6 +1695,7 @@ extension AlphaRossModel {
                         needsReviewWarning
                     )
                     latest.modelInvocation = completedInvocation
+                    latest.upgradeTierHint = upgradeTierHint
                     self.latestAskResult = latest
                 }
             }
@@ -3908,6 +3928,43 @@ func alphaLocalAskNeedsReviewWarning(
 
     guard !deduplicated.isEmpty else { return nil }
     return deduplicated.joined(separator: "\n")
+}
+
+func alphaLocalAskUpgradeTierHint(
+    runtimeWarnings: [String],
+    sourcePackCount: Int,
+    includedSourceCount: Int? = nil,
+    sourceBlockLimit: Int?,
+    capabilityTier: AlphaCapabilityTier?
+) -> AlphaCapabilityTier? {
+    let effectiveTier = AlphaCapabilityTier.normalizedAssistantSelection(capabilityTier) ?? capabilityTier
+    let effectiveIncludedCount = includedSourceCount ?? sourceBlockLimit
+    let constrainedByCoverage = effectiveIncludedCount.map { sourcePackCount > $0 } ?? false
+    let constrainedByRuntimeWarning = runtimeWarnings.contains(AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts)
+
+    guard constrainedByCoverage || constrainedByRuntimeWarning,
+          let effectiveTier else {
+        return nil
+    }
+
+    switch effectiveTier {
+    case .flash, .quickStart:
+        return .caseAssociate
+    case .caseAssociate:
+        return .seniorDraftingSupport
+    case .seniorDraftingSupport:
+        return nil
+    }
+}
+
+func alphaAskUpgradeActionTitle(
+    _ tier: AlphaCapabilityTier,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
+    String(
+        format: rossLocalized("ask_upgrade_action_use_tier", languageCode: languageCode),
+        tier.setupTitle(languageCode: languageCode)
+    )
 }
 
 func alphaCombinedAskWarnings(

@@ -8325,6 +8325,80 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testLocalAskUpgradeTierHintPromotesQuickStartToCaseAssociate() {
+        XCTAssertEqual(
+            alphaLocalAskUpgradeTierHint(
+                runtimeWarnings: [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts],
+                sourcePackCount: 9,
+                includedSourceCount: 4,
+                sourceBlockLimit: 4,
+                capabilityTier: .quickStart
+            ),
+            .caseAssociate
+        )
+    }
+
+    func testLocalAskUpgradeTierHintPromotesCaseAssociateToSenior() {
+        XCTAssertEqual(
+            alphaLocalAskUpgradeTierHint(
+                runtimeWarnings: [],
+                sourcePackCount: 9,
+                includedSourceCount: 3,
+                sourceBlockLimit: 3,
+                capabilityTier: .caseAssociate
+            ),
+            .seniorDraftingSupport
+        )
+    }
+
+    func testLocalAskUpgradeTierHintStaysNilWithoutCoveragePressure() {
+        XCTAssertNil(
+            alphaLocalAskUpgradeTierHint(
+                runtimeWarnings: [],
+                sourcePackCount: 3,
+                includedSourceCount: 3,
+                sourceBlockLimit: 3,
+                capabilityTier: .caseAssociate
+            )
+        )
+        XCTAssertNil(
+            alphaLocalAskUpgradeTierHint(
+                runtimeWarnings: [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts],
+                sourcePackCount: 9,
+                includedSourceCount: 3,
+                sourceBlockLimit: 3,
+                capabilityTier: .seniorDraftingSupport
+            )
+        )
+    }
+
+    @MainActor
+    func testOpenAskUpgradeSetupPreselectsUpgradeTier() {
+        let model = AlphaRossModel(previewState: .empty())
+        let result = AlphaAskResult(
+            kind: .userAsk,
+            question: "What is the hearing date?",
+            scopeCaseID: nil,
+            scopeLabel: "All work",
+            selectedDocumentTitles: [],
+            answerTitle: "Answered from your files",
+            answerSections: [],
+            caseFileSources: [],
+            publicLawPreview: nil,
+            publicLawResults: [],
+            statusNote: nil,
+            needsReviewWarning: "Focused sources",
+            modelInvocation: nil,
+            upgradeTierHint: .caseAssociate
+        )
+
+        model.selectedTier = .quickStart
+        model.openAskUpgradeSetup(for: result)
+
+        XCTAssertEqual(model.selectedTier, .caseAssociate)
+        XCTAssertEqual(model.path.last, .privateAISettings)
+    }
+
     func testAssistantOfferDoesNotPreferBuiltInActivationWhenMLXIsPreferred() {
         XCTAssertFalse(
             alphaAssistantOfferPrefersBuiltInActivation(

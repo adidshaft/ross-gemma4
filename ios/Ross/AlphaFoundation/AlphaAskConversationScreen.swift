@@ -159,6 +159,7 @@ struct AlphaAskConversationScreen: View {
                                     result: result,
                                     contextDocumentTitle: contextDocumentTitle,
                                     onOpenSource: model.openSourceRef,
+                                    onOpenUpgrade: { model.openAskUpgradeSetup(for: $0) },
                                     onShowDetails: { answerDetailsResult = $0 }
                                 )
                                 .id(result.stableIdentity)
@@ -577,6 +578,7 @@ struct AlphaFullScreenChatTurn: View {
     let result: AlphaAskResult
     let contextDocumentTitle: String?
     let onOpenSource: (AlphaSourceRef) -> Void
+    let onOpenUpgrade: (AlphaAskResult) -> Void
     let onShowDetails: (AlphaAskResult) -> Void
 
     private var deduplicatedStatusNote: String? {
@@ -1631,8 +1633,10 @@ struct AlphaAskTurnCard: View {
 
                     if result.publicLawPreview != nil || !result.publicLawResults.isEmpty || result.needsReviewWarning != nil {
                         AlphaPublicLawWarningsView(
+                            result: result,
                             needsReviewWarning: result.needsReviewWarning,
-                            includePublicLawWarnings: result.publicLawPreview != nil || !result.publicLawResults.isEmpty
+                            includePublicLawWarnings: result.publicLawPreview != nil || !result.publicLawResults.isEmpty,
+                            onOpenUpgrade: { _ in }
                         )
                     }
 
@@ -2154,8 +2158,10 @@ struct AlphaPublicLawResultCard: View {
 }
 
 struct AlphaPublicLawWarningsView: View {
+    let result: AlphaAskResult
     let needsReviewWarning: String?
     let includePublicLawWarnings: Bool
+    let onOpenUpgrade: (AlphaAskResult) -> Void
 
     var body: some View {
         if includePublicLawWarnings || needsReviewWarning != nil {
@@ -2167,6 +2173,15 @@ struct AlphaPublicLawWarningsView: View {
 
                 if let needsReviewWarning, !needsReviewWarning.isEmpty {
                     Text(needsReviewWarning)
+                }
+
+                if let upgradeTierHint = result.upgradeTierHint {
+                    Button(alphaAskUpgradeActionTitle(upgradeTierHint)) {
+                        onOpenUpgrade(result)
+                    }
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.rossAccent)
+                    .padding(.top, 4)
                 }
             }
             .font(.system(size: 13, weight: .regular))

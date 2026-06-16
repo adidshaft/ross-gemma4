@@ -1444,6 +1444,7 @@ struct AlphaChatTurn: Identifiable, Codable, Hashable, Sendable {
     var statusNote: String?
     var needsReviewWarning: String?
     var modelInvocation: AlphaLocalModelInvocation?
+    var upgradeTierHint: AlphaCapabilityTier?
 
     init(
         id: UUID = UUID(),
@@ -1458,7 +1459,8 @@ struct AlphaChatTurn: Identifiable, Codable, Hashable, Sendable {
         publicLawResults: [AlphaPublicLawResult] = [],
         statusNote: String? = nil,
         needsReviewWarning: String? = nil,
-        modelInvocation: AlphaLocalModelInvocation? = nil
+        modelInvocation: AlphaLocalModelInvocation? = nil,
+        upgradeTierHint: AlphaCapabilityTier? = nil
     ) {
         self.id = id
         self.kind = kind
@@ -1473,6 +1475,7 @@ struct AlphaChatTurn: Identifiable, Codable, Hashable, Sendable {
         self.statusNote = statusNote
         self.needsReviewWarning = needsReviewWarning
         self.modelInvocation = modelInvocation
+        self.upgradeTierHint = upgradeTierHint
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -1489,6 +1492,7 @@ struct AlphaChatTurn: Identifiable, Codable, Hashable, Sendable {
         case statusNote
         case needsReviewWarning
         case modelInvocation
+        case upgradeTierHint
     }
 
     init(from decoder: any Decoder) throws {
@@ -1506,6 +1510,7 @@ struct AlphaChatTurn: Identifiable, Codable, Hashable, Sendable {
         statusNote = try container.decodeIfPresent(String.self, forKey: .statusNote)
         needsReviewWarning = try container.decodeIfPresent(String.self, forKey: .needsReviewWarning)
         modelInvocation = try container.decodeIfPresent(AlphaLocalModelInvocation.self, forKey: .modelInvocation)
+        upgradeTierHint = try container.decodeIfPresent(AlphaCapabilityTier.self, forKey: .upgradeTierHint)
     }
 }
 
