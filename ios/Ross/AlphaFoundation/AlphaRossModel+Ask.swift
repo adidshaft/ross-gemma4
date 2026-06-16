@@ -2219,40 +2219,12 @@ extension AlphaRossModel {
         preferredChunkChars: Int = 1_700,
         overlapChars: Int = 260
     ) -> [String] {
-        let cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard allowsChunking, cleaned.count > preferredChunkChars + 400 else {
-            return cleaned.isEmpty ? [] : [cleaned]
-        }
-
-        let boundaryScalars = CharacterSet(charactersIn: ".!?\n")
-        var segments: [String] = []
-        var start = cleaned.startIndex
-
-        while start < cleaned.endIndex {
-            let hardEnd = cleaned.index(start, offsetBy: preferredChunkChars, limitedBy: cleaned.endIndex) ?? cleaned.endIndex
-            var end = hardEnd
-            if hardEnd < cleaned.endIndex {
-                let lowerSearchBound = cleaned.index(start, offsetBy: max(preferredChunkChars - 220, 0), limitedBy: cleaned.endIndex) ?? start
-                let searchSlice = cleaned[lowerSearchBound..<hardEnd]
-                if let boundary = searchSlice.lastIndex(where: { character in
-                    character.unicodeScalars.contains { boundaryScalars.contains($0) } || character.isWhitespace
-                }) {
-                    end = cleaned.index(after: boundary)
-                }
-            }
-
-            let segment = cleaned[start..<end].trimmingCharacters(in: .whitespacesAndNewlines)
-            if !segment.isEmpty {
-                segments.append(segment)
-            }
-            guard end < cleaned.endIndex else { break }
-
-            let rewindDistance = min(overlapChars, cleaned.distance(from: start, to: end) - 1)
-            let rewound = cleaned.index(end, offsetBy: -max(rewindDistance, 0))
-            start = cleaned[rewound..<cleaned.endIndex].firstIndex(where: { !$0.isWhitespace }) ?? end
-        }
-
-        return segments.isEmpty ? [cleaned] : segments
+        alphaChunkedSourceSegments(
+            from: text,
+            allowsChunking: allowsChunking,
+            preferredChunkChars: preferredChunkChars,
+            overlapChars: overlapChars
+        )
     }
 
     func alphaRankedAskSourceBlocks(

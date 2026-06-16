@@ -50,6 +50,48 @@ func alphaSourceLanguageHint(
     return profile.primaryLanguage.rawValue
 }
 
+func alphaChunkedSourceSegments(
+    from text: String,
+    allowsChunking: Bool,
+    preferredChunkChars: Int = 1_700,
+    overlapChars: Int = 260
+) -> [String] {
+    let cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard allowsChunking, cleaned.count > preferredChunkChars + 400 else {
+        return cleaned.isEmpty ? [] : [cleaned]
+    }
+
+    let boundaryScalars = CharacterSet(charactersIn: ".!?\n")
+    var segments: [String] = []
+    var start = cleaned.startIndex
+
+    while start < cleaned.endIndex {
+        let hardEnd = cleaned.index(start, offsetBy: preferredChunkChars, limitedBy: cleaned.endIndex) ?? cleaned.endIndex
+        var end = hardEnd
+        if hardEnd < cleaned.endIndex {
+            let lowerSearchBound = cleaned.index(start, offsetBy: max(preferredChunkChars - 220, 0), limitedBy: cleaned.endIndex) ?? start
+            let searchSlice = cleaned[lowerSearchBound..<hardEnd]
+            if let boundary = searchSlice.lastIndex(where: { character in
+                character.unicodeScalars.contains { boundaryScalars.contains($0) } || character.isWhitespace
+            }) {
+                end = cleaned.index(after: boundary)
+            }
+        }
+
+        let segment = cleaned[start..<end].trimmingCharacters(in: .whitespacesAndNewlines)
+        if !segment.isEmpty {
+            segments.append(segment)
+        }
+        guard end < cleaned.endIndex else { break }
+
+        let rewindDistance = min(overlapChars, cleaned.distance(from: start, to: end) - 1)
+        let rewound = cleaned.index(end, offsetBy: -max(rewindDistance, 0))
+        start = cleaned[rewound..<cleaned.endIndex].firstIndex(where: { !$0.isWhitespace }) ?? end
+    }
+
+    return segments.isEmpty ? [cleaned] : segments
+}
+
 struct AlphaLocalModelInput: Codable, Hashable, Sendable {
     var task: AlphaLocalModelTask
     var instruction: String
@@ -521,6 +563,55 @@ enum AlphaLocalPromptBudgetPlanner {
         )
     }
 
+    static func structuredDocumentBatchLimit(
+        runtimeMode: AlphaPackRuntimeMode,
+        capabilityTier: AlphaCapabilityTier? = nil,
+        task: AlphaLocalModelTask,
+        baseBatchLimit: Int,
+        baseMaxInputChars: Int,
+        lastInvocation: AlphaLocalModelInvocation?
+    ) -> Int {
+        let runtimeDefaults = defaultStructuredDocumentFocus(
+            for: runtimeMode,
+            baseMaxInputChars: baseMaxInputChars
+        )
+        let expandedLimit = max(
+            baseBatchLimit,
+            Int(
+                (
+                    Double(baseBatchLimit) * extractionBatchExpansionMultiplier(
+                        for: runtimeMode,
+                        task: task,
+                        baseMaxInputChars: baseMaxInputChars
+                    )
+                ).rounded(.down)
+            )
+        )
+
+        guard let lastInvocation,
+              lastInvocation.runtimeMode == runtimeMode.rawValue,
+              (capabilityTier == nil || lastInvocation.capabilityTier == capabilityTier?.rawValue),
+              lastInvocation.task != .matterQuestionAnswer else {
+            return expandedLimit
+        }
+
+        let firstTokenMs = lastInvocation.timeToFirstTokenMs ?? Int.max
+        let outputSpeed = lastInvocation.estimatedOutputTokensPerSecond ?? .greatestFiniteMagnitude
+
+        if firstTokenMs >= 6_000 || outputSpeed <= runtimeDefaults.slowTokensPerSecond {
+            return max(
+                Int((Double(baseBatchLimit) * 0.7).rounded(.down)),
+                minimumStructuredDocumentBatchLimit(for: task)
+            )
+        }
+
+        if firstTokenMs >= 4_000 || outputSpeed <= runtimeDefaults.cautionTokensPerSecond {
+            return baseBatchLimit
+        }
+
+        return expandedLimit
+    }
+
     private static func singleSelectedStructuredDocumentBlockLimit(
         runtimeMode: AlphaPackRuntimeMode,
         baseMaxInputChars: Int
@@ -543,6 +634,55 @@ enum AlphaLocalPromptBudgetPlanner {
             return baseMaxInputChars >= 28_000 ? 16 : nil
         default:
             return nil
+        }
+    }
+
+    private static func extractionBatchExpansionMultiplier(
+        for runtimeMode: AlphaPackRuntimeMode,
+        task: AlphaLocalModelTask,
+        baseMaxInputChars: Int
+    ) -> Double {
+        let prefersWiderBatches = task == .caseMemorySynthesis
+
+        switch runtimeMode {
+        case .mlxSwiftLm:
+            if baseMaxInputChars >= 56_000 {
+                return prefersWiderBatches ? 1.5 : 1.3
+            }
+            if baseMaxInputChars >= 40_000 {
+                return prefersWiderBatches ? 1.33 : 1.2
+            }
+        case .llamaCppGguf:
+            if baseMaxInputChars >= 48_000 {
+                return prefersWiderBatches ? 1.25 : 1.15
+            }
+            if baseMaxInputChars >= 40_000 {
+                return prefersWiderBatches ? 1.16 : 1.1
+            }
+        case .appleFoundationModels:
+            if baseMaxInputChars >= 40_000 {
+                return prefersWiderBatches ? 1.4 : 1.25
+            }
+            if baseMaxInputChars >= 28_000 {
+                return prefersWiderBatches ? 1.25 : 1.15
+            }
+        default:
+            break
+        }
+
+        return 1
+    }
+
+    private static func minimumStructuredDocumentBatchLimit(
+        for task: AlphaLocalModelTask
+    ) -> Int {
+        switch task {
+        case .caseMemorySynthesis:
+            return 10
+        case .legalFieldExtraction, .legalFieldVerification, .documentClassification, .issueExtraction:
+            return 8
+        default:
+            return 6
         }
     }
 
