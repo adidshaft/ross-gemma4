@@ -21,6 +21,18 @@ enum AlphaLocalModelTask: String, Codable, Hashable, Sendable {
     case publicLawQueryShaping = "public_law_query_shaping"
 }
 
+let alphaFoundationModelPlannedTasks: Set<AlphaLocalModelTask> = [
+    .documentClassification,
+    .legalFieldExtraction,
+    .legalFieldVerification,
+    .caseMemorySynthesis,
+    .chronologyGeneration,
+    .orderSummary,
+    .issueExtraction,
+    .matterQuestionAnswer,
+    .publicLawQueryShaping,
+]
+
 enum AlphaLocalModelInvocationStatus: String, Codable, Hashable, Sendable {
     case queued
     case running
@@ -1644,9 +1656,31 @@ struct AlphaUnavailableRealLocalModelProvider: AlphaRealLocalModelProvider {
         )
     }
 
-    func contextWindowEstimate() -> Int? { 4_096 }
+    func contextWindowEstimate() -> Int? {
+        switch runtimeMode {
+        case .appleFoundationModels:
+            return AlphaFoundationRuntimeProfile.contextWindowTokens(for: capabilityTier)
+        case .llamaCppGguf:
+            return Int(AlphaLlamaRuntimeProfile.contextWindowTokens(forModelPath: modelPathLabel))
+        case .mlxSwiftLm:
+            return AlphaMLXRuntimeProfile.contextWindowTokens(for: capabilityTier)
+        case .deterministicDev, .mediapipeLlm, .unavailable:
+            return 4_096
+        }
+    }
 
-    func maxInputChars() -> Int? { 14_000 }
+    func maxInputChars() -> Int? {
+        switch runtimeMode {
+        case .appleFoundationModels:
+            return AlphaFoundationRuntimeProfile.maxInputChars(for: capabilityTier)
+        case .llamaCppGguf:
+            return AlphaLlamaRuntimeProfile.maxInputChars(for: capabilityTier)
+        case .mlxSwiftLm:
+            return AlphaMLXRuntimeProfile.maxInputChars(for: capabilityTier)
+        case .deterministicDev, .mediapipeLlm, .unavailable:
+            return 14_000
+        }
+    }
 
     func run(_ taskInput: AlphaLocalModelInput) async -> AlphaLocalModelOutput {
         let pack = AlphaPromptPackBuilder(maxInputChars: maxInputChars() ?? 14_000).build(input: taskInput)
@@ -1801,17 +1835,7 @@ struct AlphaFoundationModelsLocalProvider: AlphaRealLocalModelProvider {
     let checksumVerified: Bool
     let runtimeMode: AlphaPackRuntimeMode = .appleFoundationModels
 
-    private let plannedTasks: Set<AlphaLocalModelTask> = [
-        .documentClassification,
-        .legalFieldExtraction,
-        .legalFieldVerification,
-        .caseMemorySynthesis,
-        .chronologyGeneration,
-        .orderSummary,
-        .issueExtraction,
-        .matterQuestionAnswer,
-        .publicLawQueryShaping,
-    ]
+    private let plannedTasks: Set<AlphaLocalModelTask> = alphaFoundationModelPlannedTasks
 
     func isAvailable() -> Bool {
         availabilityStatus().available
@@ -2271,7 +2295,7 @@ enum AlphaLocalModelRuntime {
                 modelPathLabel: modelPathLabel,
                 checksumVerified: checksumVerified,
                 statusMessage: alphaRuntimeHealthStatus(.foundationUnavailable),
-                plannedTasks: [.documentClassification, .legalFieldExtraction, .legalFieldVerification, .caseMemorySynthesis, .chronologyGeneration, .orderSummary],
+                plannedTasks: alphaFoundationModelPlannedTasks,
                 errorCategory: "unsupported_runtime",
                 explicitOptInEnabled: debug.enableRealInference
             )

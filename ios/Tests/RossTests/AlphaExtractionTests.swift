@@ -10373,6 +10373,62 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testUnavailableMLXRuntimeHealthPreservesHeuristicBudgetsAndTasks() {
+        let provider = AlphaMLXLocalProvider(
+            capabilityTier: .caseAssociate,
+            modelPathLabel: "case-associate",
+            modelPath: "/tmp/mlx-case-associate",
+            checksumVerified: false,
+            draftModelPath: "/tmp/mtp-gemma-4-12b-it",
+            draftModelTokens: 6
+        )
+
+        let health = provider.runtimeHealth()
+
+        XCTAssertFalse(health.available)
+        XCTAssertEqual(Set(health.supportedTasks), Set(AlphaLocalModelTask.allCases))
+        XCTAssertEqual(health.estimatedContextTokens, AlphaMLXRuntimeProfile.contextWindowTokens(for: .caseAssociate))
+        XCTAssertEqual(health.maxInputChars, AlphaMLXRuntimeProfile.maxInputChars(for: .caseAssociate))
+        XCTAssertEqual(health.accelerationMode, .draftModelSpeculative)
+        XCTAssertEqual(health.accelerationDraftTokens, 6)
+    }
+
+    func testFoundationPlannedTasksIncludeAskIssueAndPublicLawShaping() {
+        let expected: Set<AlphaLocalModelTask> = [
+            .documentClassification,
+            .legalFieldExtraction,
+            .legalFieldVerification,
+            .caseMemorySynthesis,
+            .chronologyGeneration,
+            .orderSummary,
+            .issueExtraction,
+            .matterQuestionAnswer,
+            .publicLawQueryShaping,
+        ]
+
+        XCTAssertEqual(alphaFoundationModelPlannedTasks, expected)
+    }
+
+    func testUnavailableFoundationRuntimeHealthUsesFoundationHeuristics() {
+        let provider = AlphaUnavailableRealLocalModelProvider(
+            capabilityTier: .seniorDraftingSupport,
+            runtimeMode: .appleFoundationModels,
+            modelPathLabel: "system-model",
+            checksumVerified: false,
+            statusMessage: "Unavailable",
+            plannedTasks: alphaFoundationModelPlannedTasks,
+            errorCategory: "unsupported_runtime",
+            explicitOptInEnabled: true
+        )
+
+        let health = provider.runtimeHealth()
+
+        XCTAssertFalse(health.available)
+        XCTAssertEqual(Set(health.supportedTasks), alphaFoundationModelPlannedTasks)
+        XCTAssertEqual(health.estimatedContextTokens, AlphaFoundationRuntimeProfile.contextWindowTokens(for: .seniorDraftingSupport))
+        XCTAssertEqual(health.maxInputChars, AlphaFoundationRuntimeProfile.maxInputChars(for: .seniorDraftingSupport))
+    }
+
     func testLlamaRuntimeProfileRaisesHighQualityInputBudgets() {
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.maxInputChars(

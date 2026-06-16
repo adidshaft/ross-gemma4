@@ -908,7 +908,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
 
     func isAvailable() -> Bool { false }
 
-    func supportedTasks() -> Set<AlphaLocalModelTask> { [] }
+    func supportedTasks() -> Set<AlphaLocalModelTask> { Set(AlphaLocalModelTask.allCases) }
 
     func runtimeHealth() -> AlphaLocalRuntimeHealth {
         AlphaLocalRuntimeHealth(
@@ -917,9 +917,9 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
             modelPathPresent: modelPath != nil,
             modelPathLabel: modelPathLabel,
             checksumVerified: checksumVerified,
-            supportedTasks: [],
-            maxInputChars: nil,
-            estimatedContextTokens: nil,
+            supportedTasks: Array(supportedTasks()),
+            maxInputChars: maxInputChars(),
+            estimatedContextTokens: contextWindowEstimate(),
             accelerationMode: draftModelPath == nil ? nil : .draftModelSpeculative,
             accelerationDraftTokens: draftModelTokens,
             draftModelPathLabel: draftModelPath.flatMap { URL(fileURLWithPath: $0).lastPathComponent.nilIfEmpty },
@@ -929,9 +929,13 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         )
     }
 
-    func contextWindowEstimate() -> Int? { nil }
+    func contextWindowEstimate() -> Int? {
+        AlphaMLXRuntimeProfile.contextWindowTokens(for: capabilityTier)
+    }
 
-    func maxInputChars() -> Int? { nil }
+    func maxInputChars() -> Int? {
+        AlphaMLXRuntimeProfile.maxInputChars(for: capabilityTier)
+    }
 
     func run(_ taskInput: AlphaLocalModelInput) async -> AlphaLocalModelOutput {
         AlphaLocalModelOutput(
