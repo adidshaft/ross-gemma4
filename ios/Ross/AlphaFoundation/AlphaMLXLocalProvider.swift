@@ -130,6 +130,75 @@ enum AlphaMLXRuntimeProfile {
         }
     }
 
+    static func estimatedAssistantTokensPerSecond(
+        for tier: AlphaCapabilityTier,
+        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory,
+        hasDraftCompanion: Bool
+    ) -> Double {
+        let baseSpeed: Double
+        switch tier {
+        case .flash:
+            baseSpeed = physicalMemory >= 8_000_000_000 ? 12.0 : 10.0
+        case .quickStart:
+            if physicalMemory >= 16_000_000_000 {
+                baseSpeed = 15.0
+            } else if physicalMemory >= 12_000_000_000 {
+                baseSpeed = 14.0
+            } else if physicalMemory >= 8_000_000_000 {
+                baseSpeed = 13.0
+            } else {
+                baseSpeed = 11.5
+            }
+        case .caseAssociate:
+            if physicalMemory >= 16_000_000_000 {
+                baseSpeed = 14.3
+            } else if physicalMemory >= 12_000_000_000 {
+                baseSpeed = 12.0
+            } else {
+                baseSpeed = 10.0
+            }
+        case .seniorDraftingSupport:
+            if physicalMemory >= 18_000_000_000 {
+                baseSpeed = 12.0
+            } else if physicalMemory >= 16_000_000_000 {
+                baseSpeed = 11.3
+            } else if physicalMemory >= 12_000_000_000 {
+                baseSpeed = 10.3
+            } else {
+                baseSpeed = 8.5
+            }
+        }
+
+        guard hasDraftCompanion else { return baseSpeed }
+
+        let draftTokens = defaultDraftTokens(for: tier, physicalMemory: physicalMemory)
+        let draftBonus: Double
+        switch draftTokens {
+        case 9...:
+            draftBonus = 1.5
+        case 8:
+            draftBonus = 1.0
+        case 6...7:
+            draftBonus = 0.8
+        case 4...5:
+            draftBonus = 0.5
+        default:
+            draftBonus = 0.25
+        }
+
+        let prefillBonus: Double
+        switch prefillStepSize(for: tier, physicalMemory: physicalMemory) {
+        case 640...:
+            prefillBonus = 0.5
+        case 448...:
+            prefillBonus = 0.25
+        default:
+            prefillBonus = 0
+        }
+
+        return baseSpeed + draftBonus + prefillBonus
+    }
+
     static func maximumSupportedDraftTokens(for tier: AlphaCapabilityTier) -> Int {
         switch tier {
         case .caseAssociate, .seniorDraftingSupport:

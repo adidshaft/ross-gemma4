@@ -10664,6 +10664,40 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.etaLabel, "about 9 min")
     }
 
+    func testAssistantSetupPresentationUsesHigherMLXSpeedEstimateOn16GBIPhone() {
+        let cachedMLX = AlphaAssistantCatalogDescriptor(
+            tier: .caseAssociate,
+            packId: "gemma-4-12b-mlx",
+            sizeBytes: 6_200_000_000,
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            draftArtifact: AlphaAssistantDraftArtifactDescriptor(
+                fileName: "gemma-4-e4b-it-mlx",
+                sizeBytes: 200_000_000,
+                checksumSha256: String(repeating: "b", count: 64),
+                artifactKind: "mlx_directory",
+                downloadURLString: "https://ross.example/drafts/gemma-4-e4b-it-mlx",
+                draftTokens: 6
+            )
+        )
+
+        let presentation = alphaAssistantSetupPresentation(
+            for: .caseAssociate,
+            existingRuntimeMode: .mlxSwiftLm,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 16 * 1_073_741_824,
+            freeStorageGB: 32,
+            systemAssistantAvailable: false,
+            cachedCatalogs: [cachedMLX]
+        )
+
+        XCTAssertEqual(presentation?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(presentation?.speedLabel, "~16 tok/s")
+        XCTAssertEqual(presentation?.contextLabel, "40,960 tokens")
+    }
+
     func testAssistantSetupPresentationUsesMeasuredSpeedForMatchingRecentRuntime() {
         let fastMLXInvocation = AlphaLocalModelInvocation(
             task: .matterQuestionAnswer,
@@ -14434,6 +14468,39 @@ final class AlphaExtractionTests: XCTestCase {
                 physicalMemory: 12_000_000_000
             ),
             8
+        )
+    }
+
+    func testMLXRuntimeProfileRaisesEstimatedAssistantSpeedOnCapablePhones() {
+        XCTAssertEqual(
+            alphaAssistantTokenRateLabel(
+                tokensPerSecond: AlphaMLXRuntimeProfile.estimatedAssistantTokensPerSecond(
+                    for: .caseAssociate,
+                    physicalMemory: 12_000_000_000,
+                    hasDraftCompanion: true
+                )
+            ),
+            "13 tok/s"
+        )
+        XCTAssertEqual(
+            alphaAssistantTokenRateLabel(
+                tokensPerSecond: AlphaMLXRuntimeProfile.estimatedAssistantTokensPerSecond(
+                    for: .caseAssociate,
+                    physicalMemory: 16_000_000_000,
+                    hasDraftCompanion: true
+                )
+            ),
+            "16 tok/s"
+        )
+        XCTAssertEqual(
+            alphaAssistantTokenRateLabel(
+                tokensPerSecond: AlphaMLXRuntimeProfile.estimatedAssistantTokensPerSecond(
+                    for: .quickStart,
+                    physicalMemory: 12_000_000_000,
+                    hasDraftCompanion: false
+                )
+            ),
+            "14 tok/s"
         )
     }
 

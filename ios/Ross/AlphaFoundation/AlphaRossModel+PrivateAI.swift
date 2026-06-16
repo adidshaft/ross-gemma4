@@ -936,16 +936,11 @@ private func alphaAssistantSetupSpeedLabel(
             memoryGB >= 16 ? 14 : 12
         }
     case .mlxSwiftLm:
-        switch effectiveTier {
-        case .flash:
-            13
-        case .quickStart:
-            memoryGB >= 12 ? 15 : 13
-        case .caseAssociate:
-            memoryGB >= 16 ? 14 : (memoryGB >= 12 ? 12 : 10)
-        case .seniorDraftingSupport:
-            memoryGB >= 16 ? 12 : 10
-        }
+        AlphaMLXRuntimeProfile.estimatedAssistantTokensPerSecond(
+            for: effectiveTier,
+            physicalMemory: physicalMemoryBytes,
+            hasDraftCompanion: hasDraftCompanion
+        )
     case .llamaCppGguf:
         switch effectiveTier {
         case .flash:
@@ -963,7 +958,7 @@ private func alphaAssistantSetupSpeedLabel(
 
     guard var baseSpeed else { return nil }
     if hasDraftCompanion,
-       runtimeMode == .llamaCppGguf || runtimeMode == .mlxSwiftLm {
+       runtimeMode == .llamaCppGguf {
         baseSpeed += 1
     }
     return "~\(alphaAssistantTokenRateLabel(tokensPerSecond: baseSpeed))"
