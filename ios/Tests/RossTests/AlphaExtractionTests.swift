@@ -8615,6 +8615,39 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(label, "MLX preferred on this iPhone for longer local context")
     }
 
+    func testAssistantRuntimeTradeoffHintExplainsCoreAIPhoneTradeoff() {
+        XCTAssertEqual(
+            alphaAssistantRuntimeTradeoffHint(
+                selectedRuntimeMode: .appleFoundationModels,
+                tier: .caseAssociate,
+                isPhoneFormFactor: true
+            ),
+            "Best when you want instant setup and quick local answers with no download."
+        )
+    }
+
+    func testAssistantRuntimeTradeoffHintExplainsMLXIPhoneTradeoff() {
+        XCTAssertEqual(
+            alphaAssistantRuntimeTradeoffHint(
+                selectedRuntimeMode: .mlxSwiftLm,
+                tier: .caseAssociate,
+                isPhoneFormFactor: true
+            ),
+            "Best for longer iPhone context and larger local file coverage."
+        )
+    }
+
+    func testAssistantRuntimeTradeoffHintExplainsSeniorGGUFIPhoneTradeoff() {
+        XCTAssertEqual(
+            alphaAssistantRuntimeTradeoffHint(
+                selectedRuntimeMode: .llamaCppGguf,
+                tier: .seniorDraftingSupport,
+                isPhoneFormFactor: true
+            ),
+            "Best for the deepest iPhone context on larger bundles and longer drafting."
+        )
+    }
+
     func testAssistantRuntimeChoiceLabelExplainsSystemAssistantPreferenceOnNonPhone() {
         let label = alphaAssistantRuntimeChoiceLabel(
             selectedRuntimeMode: .appleFoundationModels,

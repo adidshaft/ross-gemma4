@@ -762,6 +762,14 @@ struct AlphaPrivateAIOfferCard: View {
         return label.isEmpty ? nil : label
     }
 
+    private var runtimeTradeoffHint: String? {
+        guard let runtimeMode = setupPresentation?.runtimeMode else { return nil }
+        return alphaAssistantRuntimeTradeoffHint(
+            selectedRuntimeMode: runtimeMode,
+            tier: offer.tier
+        )
+    }
+
     private var builtInAlternativeHint: String? {
         alphaAssistantBuiltInAlternativeHint(
             selectedRuntimeMode: setupPresentation?.runtimeMode,
@@ -912,6 +920,13 @@ struct AlphaPrivateAIOfferCard: View {
                         .foregroundStyle(Color.rossInk.opacity(0.56))
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, 2)
+                }
+
+                if let runtimeTradeoffHint {
+                    Text(runtimeTradeoffHint)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(Color.rossInk.opacity(0.56))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 if let builtInAlternativeHint {

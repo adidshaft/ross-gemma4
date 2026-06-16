@@ -279,6 +279,14 @@ struct AlphaOnboardingModelSelector: View {
         return label.isEmpty ? nil : label
     }
 
+    private var selectedRuntimeTradeoffHint: String? {
+        guard let runtimeMode = selectedSetupPresentation?.runtimeMode else { return nil }
+        return alphaAssistantRuntimeTradeoffHint(
+            selectedRuntimeMode: runtimeMode,
+            tier: selectedTier
+        )
+    }
+
     private var selectedBuiltInHint: String? {
         alphaAssistantBuiltInAlternativeHint(
             selectedRuntimeMode: selectedSetupPresentation?.runtimeMode,
@@ -330,6 +338,13 @@ struct AlphaOnboardingModelSelector: View {
 
             if let selectedRuntimeChoiceLabel {
                 Text(selectedRuntimeChoiceLabel)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(Color.rossInk.opacity(0.56))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if let selectedRuntimeTradeoffHint {
+                Text(selectedRuntimeTradeoffHint)
                     .font(.caption2.weight(.medium))
                     .foregroundStyle(Color.rossInk.opacity(0.56))
                     .fixedSize(horizontal: false, vertical: true)
@@ -873,6 +888,14 @@ struct AlphaModelPickerRow: View {
         return label.isEmpty ? nil : label
     }
 
+    private var runtimeTradeoffHint: String? {
+        guard let runtimeMode = setupPresentation?.runtimeMode else { return nil }
+        return alphaAssistantRuntimeTradeoffHint(
+            selectedRuntimeMode: runtimeMode,
+            tier: tier
+        )
+    }
+
     private var builtInHint: String? {
         alphaAssistantBuiltInAlternativeHint(
             selectedRuntimeMode: setupPresentation?.runtimeMode,
@@ -950,6 +973,13 @@ struct AlphaModelPickerRow: View {
 
             if let runtimeChoiceLabel {
                 Text(runtimeChoiceLabel)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(Color.rossInk.opacity(0.56))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if let runtimeTradeoffHint {
+                Text(runtimeTradeoffHint)
                     .font(.caption2.weight(.medium))
                     .foregroundStyle(Color.rossInk.opacity(0.56))
                     .fixedSize(horizontal: false, vertical: true)

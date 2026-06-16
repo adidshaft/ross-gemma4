@@ -1596,6 +1596,38 @@ func alphaAssistantRuntimeChoiceLabel(
     }
 }
 
+func alphaAssistantRuntimeTradeoffHint(
+    selectedRuntimeMode: AlphaPackRuntimeMode,
+    tier: AlphaCapabilityTier,
+    isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor()
+) -> String? {
+    let normalizedTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
+
+    switch selectedRuntimeMode {
+    case .appleFoundationModels:
+        return isPhoneFormFactor
+            ? "Best when you want instant setup and quick local answers with no download."
+            : "Best when you want built-in local answers with no download."
+    case .mlxSwiftLm:
+        return isPhoneFormFactor
+            ? "Best for longer iPhone context and larger local file coverage."
+            : "Best for longer local context with the MLX runtime."
+    case .llamaCppGguf:
+        if isPhoneFormFactor, normalizedTier == .seniorDraftingSupport {
+            return "Best for the deepest iPhone context on larger bundles and longer drafting."
+        }
+        return isPhoneFormFactor
+            ? "Best for broader local context and larger file coverage."
+            : "Best for the broadest local context and larger file coverage."
+    case .deterministicDev:
+        return "Best for development-only runtime checks."
+    case .mediapipeLlm:
+        return "Best for MediaPipe-based local runtime flows."
+    case .unavailable:
+        return nil
+    }
+}
+
 func alphaAssistantUsesPhoneFormFactor() -> Bool {
     alphaCurrentDeviceModelIdentifier().lowercased().hasPrefix("iphone")
 }
