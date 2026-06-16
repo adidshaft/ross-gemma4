@@ -117,6 +117,25 @@ final class AlphaExtractionTests: XCTestCase {
         SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
+    @MainActor
+    private func eventually(
+        timeoutNanoseconds: UInt64 = 2_000_000_000,
+        intervalNanoseconds: UInt64 = 50_000_000,
+        file: StaticString = #filePath,
+        line: UInt = #line,
+        _ condition: @escaping @MainActor () async -> Bool
+    ) async throws {
+        let deadline = DispatchTime.now().uptimeNanoseconds + timeoutNanoseconds
+        while DispatchTime.now().uptimeNanoseconds < deadline {
+            if await condition() {
+                return
+            }
+            try await Task.sleep(nanoseconds: intervalNanoseconds)
+        }
+        let didSucceed = await condition()
+        XCTAssertTrue(didSucceed, "Condition not met before timeout", file: file, line: line)
+    }
+
     private func makeMLXZipFixture(
         named name: String = "ross-mlx-archive-\(UUID().uuidString)",
         archiveName: String = "gemma-4-12b-it-mlx.zip",
@@ -11021,6 +11040,46 @@ final class AlphaExtractionTests: XCTestCase {
 
         model.clearAssistantSetupRuntimeOverride(for: .caseAssociate)
         XCTAssertEqual(model.assistantSetupPresentation(for: .caseAssociate)?.runtimeMode, .mlxSwiftLm)
+    }
+
+    @MainActor
+    func testFinishPackSetupHonorsRuntimeOverrideForFreshCaseAssociateSetup() async throws {
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        let previousSimulatorIdentifier = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"]
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        setenv("SIMULATOR_MODEL_IDENTIFIER", "iPhone17,2", 1)
+        defer {
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+            if let previousSimulatorIdentifier {
+                setenv("SIMULATOR_MODEL_IDENTIFIER", previousSimulatorIdentifier, 1)
+            } else {
+                unsetenv("SIMULATOR_MODEL_IDENTIFIER")
+            }
+        }
+
+        let model = AlphaRossModel(previewState: .empty())
+        model.selectedTier = .caseAssociate
+        model.setAssistantSetupRuntimeOverride(.llamaCppGguf, for: .caseAssociate)
+
+        model.finishPackSetup()
+
+        try await eventually {
+            await MainActor.run {
+                model.persisted.modelJobs.first(where: { $0.tier == .caseAssociate })?.runtimeMode == .llamaCppGguf &&
+                    model.persisted.settings.activeTier == .caseAssociate &&
+                    model.assistantSetupRuntimeOverrideTier == nil &&
+                    model.assistantSetupRuntimeOverrideMode == nil
+            }
+        }
+
+        XCTAssertEqual(model.persisted.modelJobs.first(where: { $0.tier == .caseAssociate })?.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(model.persisted.settings.activeTier, .caseAssociate)
+        XCTAssertNil(model.assistantSetupRuntimeOverrideTier)
+        XCTAssertNil(model.assistantSetupRuntimeOverrideMode)
     }
 
     func testAssistantResolvedModelDetailsUsesPinnedGGUFMetadata() {

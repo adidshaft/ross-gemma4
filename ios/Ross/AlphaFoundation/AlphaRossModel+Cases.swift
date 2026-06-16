@@ -124,6 +124,17 @@ extension AlphaRossModel {
 
     func finishPackSetup() {
         let decision = assistantRuntimeDecision(selectedTier: selectedTier)
+        let requestedRuntimeMode: AlphaPackRuntimeMode? = if AlphaCapabilityTier.assistantSelectionsMatch(
+            assistantSetupRuntimeOverrideTier,
+            decision.effectiveTier
+        ) {
+            assistantSetupRuntimeOverrideMode
+        } else {
+            nil
+        }
+        if requestedRuntimeMode == nil {
+            clearAssistantSetupRuntimeOverride()
+        }
         selectedTier = decision.effectiveTier
         persisted.settings.activeTier = decision.effectiveTier
         persisted.onboardingStage = .completed
@@ -141,7 +152,13 @@ extension AlphaRossModel {
             )
         }
         persist()
-        Task { await startPackDownload(for: decision.effectiveTier, mobileAllowed: decision.effectiveTier == .quickStart) }
+        Task {
+            await startPackDownload(
+                for: decision.effectiveTier,
+                mobileAllowed: decision.effectiveTier == .quickStart,
+                requestedRuntimeMode: requestedRuntimeMode
+            )
+        }
     }
 
     func clearCaseDraft() {
