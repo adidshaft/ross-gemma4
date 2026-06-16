@@ -213,6 +213,50 @@ enum AlphaLlamaRuntimeProfile {
         }
     }
 
+    static func defaultDraftTokens(
+        for tier: AlphaCapabilityTier,
+        modelPath: String?,
+        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory
+    ) -> Int {
+        let suggestedTokens: Int
+        switch archiveProfile(forModelPath: modelPath) {
+        case .flash:
+            suggestedTokens = physicalMemory >= 8_000_000_000 ? 4 : 2
+        case .e4b:
+            suggestedTokens = physicalMemory >= 12_000_000_000 ? 6 : 4
+        case .gemma12b:
+            if physicalMemory >= 16_000_000_000 {
+                suggestedTokens = 8
+            } else {
+                suggestedTokens = physicalMemory >= 12_000_000_000 ? 6 : 4
+            }
+        case .gemma26bA4b:
+            if physicalMemory >= 20_000_000_000 {
+                suggestedTokens = 8
+            } else if physicalMemory >= 16_000_000_000 {
+                suggestedTokens = 6
+            } else {
+                suggestedTokens = 4
+            }
+        case .unknown:
+            switch tier {
+            case .flash:
+                suggestedTokens = 2
+            case .quickStart:
+                suggestedTokens = physicalMemory >= 12_000_000_000 ? 6 : 4
+            case .caseAssociate:
+                if physicalMemory >= 16_000_000_000 {
+                    suggestedTokens = 8
+                } else {
+                    suggestedTokens = physicalMemory >= 12_000_000_000 ? 6 : 4
+                }
+            case .seniorDraftingSupport:
+                suggestedTokens = physicalMemory >= 16_000_000_000 ? 6 : 4
+            }
+        }
+        return max(1, min(suggestedTokens, 8))
+    }
+
 }
 
 final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
@@ -345,7 +389,7 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
 
     private func contextCacheKey(path: String) -> String {
         let draftKey = draftModelPath?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let tokenKey = draftModelTokens.map(String.init) ?? ""
+        let tokenKey = effectiveDraftTokenCount().map(String.init) ?? ""
         return [path, draftKey, tokenKey].joined(separator: "|")
     }
 
@@ -360,10 +404,11 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
 
         AlphaLlamaCppProvider.cachedContext = nil
 
+        let draftTokens = effectiveDraftTokenCount()
         let newContext = try AlphaLlamaCppProvider.contextFactory(
             path,
             draftModelPath,
-            draftModelTokens
+            draftTokens
         )
         AlphaLlamaCppProvider.cachedContext = newContext
         AlphaLlamaCppProvider.cachedKey = cacheKey
@@ -751,7 +796,13 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         else {
             return nil
         }
-        return max(1, min(draftModelTokens ?? 4, 8))
+        if let draftModelTokens {
+            return max(1, min(draftModelTokens, 8))
+        }
+        return AlphaLlamaRuntimeProfile.defaultDraftTokens(
+            for: capabilityTier,
+            modelPath: modelPath
+        )
     }
 
     private func validatedDraftMetadata(runtimeAvailable: Bool) -> (tokens: Int?, label: String?)? {
@@ -765,10 +816,11 @@ final class AlphaLlamaCppProvider: AlphaRealLocalModelProvider {
         }
 
         do {
+            let draftTokens = effectiveDraftTokenCount()
             let supportsDraftAcceleration = try Self.draftAccelerationValidator(
                 modelPath,
                 draftPath,
-                draftModelTokens
+                draftTokens
             )
             return supportsDraftAcceleration ? stagedDraft : nil
         } catch {

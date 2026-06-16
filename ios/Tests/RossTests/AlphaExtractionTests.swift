@@ -5541,6 +5541,11 @@ final class AlphaExtractionTests: XCTestCase {
             draftModelPath: draftURL.path,
             draftModelTokens: nil
         )
+        let expectedDraftTokens = AlphaLlamaRuntimeProfile.defaultDraftTokens(
+            for: .caseAssociate,
+            modelPath: mainURL.path,
+            physicalMemory: ProcessInfo.processInfo.physicalMemory
+        )
 
         let output = await provider.run(
             AlphaLocalModelInput(
@@ -5567,12 +5572,12 @@ final class AlphaExtractionTests: XCTestCase {
             )
         )
 
-        XCTAssertNil(capture.draftTokens)
+        XCTAssertEqual(capture.draftTokens, expectedDraftTokens)
         XCTAssertEqual(provider.runtimeHealth().accelerationMode, .draftModelSpeculative)
-        XCTAssertEqual(provider.runtimeHealth().accelerationDraftTokens, 4)
+        XCTAssertEqual(provider.runtimeHealth().accelerationDraftTokens, expectedDraftTokens)
         XCTAssertEqual(provider.runtimeHealth().draftModelPathLabel, draftURL.lastPathComponent)
         XCTAssertEqual(output.accelerationMode, .draftModelSpeculative)
-        XCTAssertEqual(output.accelerationDraftTokens, 4)
+        XCTAssertEqual(output.accelerationDraftTokens, expectedDraftTokens)
         XCTAssertEqual(output.accelerationDraftModelLabel, draftURL.lastPathComponent)
     }
 
@@ -8938,6 +8943,33 @@ final class AlphaExtractionTests: XCTestCase {
                 physicalMemory: 12_000_000_000
             ),
             1_024
+        )
+    }
+
+    func testLlamaRuntimeProfileRaisesDraftTokensOnCapablePhones() {
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.defaultDraftTokens(
+                for: .quickStart,
+                modelPath: "/tmp/google_gemma-4-E4B-it-UD-Q4_K_XL.gguf",
+                physicalMemory: 12_000_000_000
+            ),
+            6
+        )
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.defaultDraftTokens(
+                for: .caseAssociate,
+                modelPath: "/tmp/gemma-4-12B-it-UD-Q4_K_XL.gguf",
+                physicalMemory: 16_000_000_000
+            ),
+            8
+        )
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.defaultDraftTokens(
+                for: .seniorDraftingSupport,
+                modelPath: "/tmp/google_gemma-4-26B-A4B-it-Q4_K_M.gguf",
+                physicalMemory: 16_000_000_000
+            ),
+            6
         )
     }
 
