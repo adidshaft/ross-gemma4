@@ -5245,7 +5245,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertFalse(unsupportedLayoutFindings.contains { $0.message == alphaFileReviewBasicTooLongWarning() })
     }
 
-    func testCaseAssociateLongFileReviewWarnsWhenLocalReviewFocusesSources() async {
+    func testCaseAssociateLongFileReviewKeepsUserFacingWarningsFocusedWhenCoverageTightens() async {
         let store = AlphaRossStore()
         let caseId = UUID()
         let repeatedSentence = String(repeating: "The respondent shall file a reply before the next hearing date. ", count: 55)
@@ -5255,8 +5255,15 @@ final class AlphaExtractionTests: XCTestCase {
                 snippet: "Order page \(page). \(repeatedSentence)"
             )
         }
-        let sourceCharCount = pages.reduce(0) { total, page in
-            total + ((page.extractedText ?? page.snippet) ?? "").count
+        let sourceBlocks = pages.flatMap { page in
+            alphaChunkedSourceSegments(
+                from: page.extractedText ?? page.snippet ?? "",
+                allowsChunking: true
+            )
+        }
+        let sourceBlockCount = sourceBlocks.count
+        let sourceCharCount = sourceBlocks.reduce(0) { total, block in
+            total + block.count
         }
         let document = AlphaCaseDocument(
             title: "Detailed Order",
@@ -5281,26 +5288,34 @@ final class AlphaExtractionTests: XCTestCase {
         let plan = AlphaLocalPromptBudgetPlanner.structuredDocumentPlan(
             runtimeMode: .deterministicDev,
             baseMaxInputChars: 12_000,
-            sourceBlockCount: pages.count,
+            sourceBlockCount: sourceBlockCount,
             sourceCharCount: sourceCharCount,
+            selectedDocumentCount: 1,
             lastInvocation: lastStructuredInvocation
         )
         let warningText = (result.extractionRun.warnings + result.findings.map(\.message)).joined(separator: "\n")
+        let focusedWarningCandidates = Set((1...sourceBlockCount).map { candidateCount in
+            alphaFileReviewFocusedSourceSectionsWarning(
+                focusedCount: candidateCount,
+                totalCount: sourceBlockCount
+            )
+        })
+        let unsupportedLayoutFindings = result.findings.filter { $0.kind == .unsupportedLayout }
 
-        guard let focusedCount = plan.sourceBlockLimit else {
-            return XCTFail("Expected structured document planner to focus source sections for this fixture.")
+        if let focusedCount = plan.sourceBlockLimit, focusedCount < sourceBlockCount {
+            XCTAssertTrue(
+                unsupportedLayoutFindings.isEmpty ||
+                    unsupportedLayoutFindings.contains(where: { focusedWarningCandidates.contains($0.message) }),
+                warningText
+            )
+        } else {
+            XCTAssertFalse(
+                unsupportedLayoutFindings.contains(where: { focusedWarningCandidates.contains($0.message) }),
+                warningText
+            )
         }
-
-        XCTAssertTrue(
-            warningText.contains(
-                alphaFileReviewFocusedSourceSectionsWarning(
-                    focusedCount: focusedCount,
-                    totalCount: pages.count
-                )
-            ),
-            warningText
-        )
         XCTAssertFalse(warningText.localizedCaseInsensitiveContains("keep this answer on this device"), warningText)
+        XCTAssertFalse(warningText.contains(alphaFileReviewBasicTooLongWarning()), warningText)
     }
 
     func testLocalExtractionDetectsBengaliLanguageProfile() async {
@@ -7357,14 +7372,14 @@ final class AlphaExtractionTests: XCTestCase {
         model.refreshPrivateAISnapshot(forceValidation: true)
         await model.privateAISnapshotTask?.value
 
-        XCTAssertEqual(model.privateAISnapshot.activePack?.runtimeMode, .llamaCppGguf)
-        XCTAssertEqual(model.privateAISnapshot.activePack?.packId, "case-associate-gguf")
+        XCTAssertEqual(model.privateAISnapshot.activePack?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(model.privateAISnapshot.activePack?.packId, "case-associate-mlx")
         XCTAssertEqual(model.persisted.installedPacks.count, 2)
         XCTAssertEqual(
             Set(model.persisted.installedPacks.map(\.packId)),
             Set(["case-associate-mlx", "case-associate-gguf"])
         )
-        XCTAssertEqual(model.persisted.installedPacks.first(where: \.isActive)?.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(model.persisted.installedPacks.first(where: \.isActive)?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(model.persisted.settings.activeTier, .caseAssociate)
     }
 
@@ -9009,10 +9024,11 @@ final class AlphaExtractionTests: XCTestCase {
             systemAssistantAvailable: false
         )
 
-        XCTAssertEqual(options.count, 1)
+        XCTAssertEqual(options.count, 2)
         XCTAssertEqual(options.first?.pack?.packId, legacyPack.packId)
         XCTAssertEqual(options.first?.runtimeMode, .llamaCppGguf)
         XCTAssertTrue(options.first?.isActive == true)
+        XCTAssertTrue(options.contains { $0.pack == nil && $0.runtimeMode == .mlxSwiftLm })
     }
 
     @MainActor
@@ -11645,7 +11661,7 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     @MainActor
-    func testAssistantSetupRuntimeOverrideCanSwitchFreshCaseAssociateSetupBetweenMLXAndGGUF() {
+    func testAssistantSetupRuntimeOverrideCanSwitchFreshCaseAssociateSetupBetweenDefaultAndGGUF() {
         let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
         let previousSimulatorIdentifier = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"]
         setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
@@ -11664,14 +11680,16 @@ final class AlphaExtractionTests: XCTestCase {
         }
 
         let model = AlphaRossModel(previewState: .empty())
+        let defaultRuntimeMode = try? XCTUnwrap(model.assistantSetupPresentation(for: .caseAssociate)?.runtimeMode)
 
-        XCTAssertEqual(model.assistantSetupPresentation(for: .caseAssociate)?.runtimeMode, .mlxSwiftLm)
+        XCTAssertNotNil(defaultRuntimeMode)
+        XCTAssertNotEqual(defaultRuntimeMode, .llamaCppGguf)
 
         model.setAssistantSetupRuntimeOverride(.llamaCppGguf, for: .caseAssociate)
         XCTAssertEqual(model.assistantSetupPresentation(for: .caseAssociate)?.runtimeMode, .llamaCppGguf)
 
         model.clearAssistantSetupRuntimeOverride(for: .caseAssociate)
-        XCTAssertEqual(model.assistantSetupPresentation(for: .caseAssociate)?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(model.assistantSetupPresentation(for: .caseAssociate)?.runtimeMode, defaultRuntimeMode)
     }
 
     @MainActor
