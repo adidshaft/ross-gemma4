@@ -812,7 +812,7 @@ private func alphaCachedPreferredAssistantSetupDescriptor(
     return nil
 }
 
-private func alphaPreferredAssistantSetupRuntimeMode(
+func alphaPreferredAssistantSetupRuntimeMode(
     for tier: AlphaCapabilityTier,
     existingRuntimeMode: AlphaPackRuntimeMode? = nil,
     isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
@@ -2675,7 +2675,7 @@ extension AlphaRossModel {
         cancelPrivateAISnapshotValidation()
         let artifact = alphaAssistantModelArtifact(for: tier)
         let lastInvocation = alphaLastModelInvocation(in: persisted)
-        let preferredRuntime = requestedRuntimeMode ?? alphaPreferredAssistantRuntimeMode(
+        let preferredRuntime = requestedRuntimeMode ?? alphaPreferredAssistantSetupRuntimeMode(
             for: tier,
             existingRuntimeMode: alphaExistingRuntimeMode(for: tier, installedPacks: persisted.installedPacks),
             lastInvocation: lastInvocation
