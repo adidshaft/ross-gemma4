@@ -1882,6 +1882,14 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
 
                 Spacer(minLength: 8)
 
+                if let onShowDetails {
+                    AlphaAnswerAccessoryIconButton(
+                        systemImage: "info.circle",
+                        accessibilityLabel: rossLocalized("answer_details"),
+                        action: onShowDetails
+                    )
+                }
+
                 AlphaCleanAnswerCopyButton(action: onCopy)
 
                 if showsMenu {
