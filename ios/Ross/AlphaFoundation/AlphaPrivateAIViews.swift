@@ -734,6 +734,17 @@ struct AlphaPrivateAIOfferCard: View {
         )
     }
 
+    private var runtimeChoiceLabel: String? {
+        guard let runtimeMode = setupPresentation?.runtimeMode else { return nil }
+        let label = alphaAssistantRuntimeChoiceLabel(
+            selectedRuntimeMode: runtimeMode,
+            tier: offer.tier,
+            systemAssistantAvailable: systemAssistantAvailable,
+            lastInvocation: model.lastModelInvocation
+        ).trimmingCharacters(in: .whitespacesAndNewlines)
+        return label.isEmpty ? nil : label
+    }
+
     private var isSettingUp: Bool {
         if installedPack != nil {
             return false
@@ -861,6 +872,14 @@ struct AlphaPrivateAIOfferCard: View {
                         font: .caption2.weight(.medium)
                     )
                     .padding(.top, 2)
+                }
+
+                if let runtimeChoiceLabel {
+                    Text(runtimeChoiceLabel)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(Color.rossInk.opacity(0.56))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 2)
                 }
 
                 if variantOptions.count > 1 {
