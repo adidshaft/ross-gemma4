@@ -349,6 +349,15 @@ func alphaAskRuntimeSourcePackPolicy(
         )
     case .llamaCppGguf:
         if capabilityTier == .caseAssociate || capabilityTier == .seniorDraftingSupport {
+            if baseMaxInputChars >= 52_000 {
+                if hasSingleSelectedDocument {
+                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 20)
+                }
+                return AlphaAskRuntimeSourcePackPolicy(
+                    documentCandidateLimit: hasSelectedDocuments ? 4 : 7,
+                    sourceBlockLimit: hasSelectedDocuments ? 15 : 12
+                )
+            }
             if baseMaxInputChars >= 48_000 {
                 if hasSingleSelectedDocument {
                     return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 18)

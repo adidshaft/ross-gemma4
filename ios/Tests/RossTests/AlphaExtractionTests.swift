@@ -11584,6 +11584,18 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(policy.sourceBlockLimit, 13)
     }
 
+    func testAskRuntimeSourcePackPolicyExpandsFurtherFor52KLlamaAsks() {
+        let policy = alphaAskRuntimeSourcePackPolicy(
+            runtimeMode: .llamaCppGguf,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 52_000,
+            hasSelectedDocuments: true
+        )
+
+        XCTAssertEqual(policy.documentCandidateLimit, 4)
+        XCTAssertEqual(policy.sourceBlockLimit, 15)
+    }
+
     func testAskRuntimeSourcePackPolicyExpandsFurtherForSingleSelectedLlamaAsk() {
         let policy = alphaAskRuntimeSourcePackPolicy(
             runtimeMode: .llamaCppGguf,
@@ -11595,6 +11607,19 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(policy.documentCandidateLimit, 4)
         XCTAssertEqual(policy.sourceBlockLimit, 18)
+    }
+
+    func testAskRuntimeSourcePackPolicyExpandsSingleSelected52KLlamaAsk() {
+        let policy = alphaAskRuntimeSourcePackPolicy(
+            runtimeMode: .llamaCppGguf,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 52_000,
+            hasSelectedDocuments: true,
+            selectedDocumentCount: 1
+        )
+
+        XCTAssertEqual(policy.documentCandidateLimit, 4)
+        XCTAssertEqual(policy.sourceBlockLimit, 20)
     }
 
     func testAskRuntimeSourcePackPolicyExpandsSingleSelectedLlamaAskAt40KBudget() {
@@ -11620,6 +11645,18 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(policy.documentCandidateLimit, 6)
         XCTAssertEqual(policy.sourceBlockLimit, 11)
+    }
+
+    func testAskRuntimeSourcePackPolicyExpands52KLlamaCandidateWindowWithoutSelections() {
+        let policy = alphaAskRuntimeSourcePackPolicy(
+            runtimeMode: .llamaCppGguf,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 52_000,
+            hasSelectedDocuments: false
+        )
+
+        XCTAssertEqual(policy.documentCandidateLimit, 7)
+        XCTAssertEqual(policy.sourceBlockLimit, 12)
     }
 
     func testAskRuntimeSourcePackPolicyExpandsForCapableFoundationAsks() {
