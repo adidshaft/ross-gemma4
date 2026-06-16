@@ -1004,13 +1004,6 @@ struct AlphaInlineAskResponseCard: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     Spacer(minLength: 8)
-                    if result.hasAnswerDetails {
-                        AlphaAnswerAccessoryIconButton(
-                            systemImage: "info.circle",
-                            accessibilityLabel: rossLocalized("answer_details"),
-                            action: { onShowDetails(result) }
-                        )
-                    }
                     Menu {
                         ForEach(responseActions, id: \.rawValue) { action in
                             inlineActionButton(action)
