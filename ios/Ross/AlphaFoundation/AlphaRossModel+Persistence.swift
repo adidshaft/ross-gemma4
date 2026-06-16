@@ -1300,6 +1300,15 @@ private func alphaSystemAssistantRuntimeAvailable(for tier: AlphaCapabilityTier)
     return health.available
 }
 
+private func alphaAssistantTierSupportsMLXRuntime(_ tier: AlphaCapabilityTier) -> Bool {
+    switch AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier {
+    case .quickStart, .caseAssociate:
+        return true
+    case .flash, .seniorDraftingSupport:
+        return false
+    }
+}
+
 func alphaPreferredAssistantRuntimeMode(
     for tier: AlphaCapabilityTier,
     existingRuntimeMode: AlphaPackRuntimeMode? = nil,
@@ -1311,6 +1320,7 @@ func alphaPreferredAssistantRuntimeMode(
 ) -> AlphaPackRuntimeMode {
     let prefersSystemAssistant = systemAssistantAvailable ?? alphaSystemAssistantRuntimeAvailable(for: tier)
     let recentSignal = alphaRecentRuntimeSelectionSignal(for: tier, lastInvocation: lastInvocation)
+    let supportsMLXRuntime = alphaAssistantTierSupportsMLXRuntime(tier)
     let shouldAvoidFoundationFromRecentSignal: Bool = {
         if case .avoidSlow(.appleFoundationModels) = recentSignal {
             return true
@@ -1323,6 +1333,9 @@ func alphaPreferredAssistantRuntimeMode(
         case .keepFast(.appleFoundationModels):
             return .appleFoundationModels
         case .keepFast(let runtime):
+            if runtime == .mlxSwiftLm && !supportsMLXRuntime {
+                break
+            }
             return runtime
         case .avoidSlow(.appleFoundationModels):
             break
@@ -1359,7 +1372,7 @@ func alphaPreferredAssistantRuntimeMode(
     }
 
     guard isPhoneFormFactor else {
-        if existingRuntimeMode == .mlxSwiftLm {
+        if existingRuntimeMode == .mlxSwiftLm && supportsMLXRuntime {
             return .mlxSwiftLm
         }
         return .llamaCppGguf
@@ -1374,11 +1387,14 @@ func alphaPreferredAssistantRuntimeMode(
     if let recentSignal {
         switch recentSignal {
         case .keepFast(let runtime):
+            if runtime == .mlxSwiftLm && !supportsMLXRuntime {
+                break
+            }
             return runtime
         case .avoidSlow(.mlxSwiftLm):
             return .llamaCppGguf
         case .avoidSlow(.llamaCppGguf):
-            if baselineTier != .quickStart {
+            if supportsMLXRuntime && baselineTier != .quickStart {
                 return .mlxSwiftLm
             }
         default:
@@ -1386,11 +1402,11 @@ func alphaPreferredAssistantRuntimeMode(
         }
     }
 
-    if existingRuntimeMode == .mlxSwiftLm {
+    if existingRuntimeMode == .mlxSwiftLm && supportsMLXRuntime {
         return .mlxSwiftLm
     }
 
-    return baselineTier == .quickStart ? .llamaCppGguf : .mlxSwiftLm
+    return baselineTier == .quickStart || !supportsMLXRuntime ? .llamaCppGguf : .mlxSwiftLm
 }
 
 func alphaAssistantRuntimeChoiceLabel(

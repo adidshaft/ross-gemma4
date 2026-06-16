@@ -6643,6 +6643,17 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(quickStart, .mlxSwiftLm)
     }
 
+    func testPreferredAssistantRuntimeModeKeepsGGUFForSeniorTierOnCapablePhone() {
+        let runtime = alphaPreferredAssistantRuntimeMode(
+            for: .seniorDraftingSupport,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 16 * 1_073_741_824,
+            freeStorageGB: 32
+        )
+
+        XCTAssertEqual(runtime, .llamaCppGguf)
+    }
+
     func testPreferredAssistantRuntimeModeKeepsGGUFForConstrainedPhones() {
         let constrained = alphaPreferredAssistantRuntimeMode(
             for: .caseAssociate,
@@ -6671,6 +6682,18 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(runtime, .mlxSwiftLm)
+    }
+
+    func testPreferredAssistantRuntimeModeDoesNotPreserveInstalledMLXForSeniorTier() {
+        let runtime = alphaPreferredAssistantRuntimeMode(
+            for: .seniorDraftingSupport,
+            existingRuntimeMode: .mlxSwiftLm,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 16 * 1_073_741_824,
+            freeStorageGB: 32
+        )
+
+        XCTAssertEqual(runtime, .llamaCppGguf)
     }
 
     func testPreferredAssistantRuntimeModeLetsSlowRecentMLXOverrideInstalledMLXOnPhone() {
@@ -9819,6 +9842,22 @@ final class AlphaExtractionTests: XCTestCase {
 
     func testPreferredAssistantDownloadFallbackIncludesBundledMLXDraftCompanion() {
         let fallback = alphaPreferredAssistantDownloadFallback(
+            for: .quickStart,
+            preferredRuntimeMode: .mlxSwiftLm,
+            cachedDownloads: nil
+        )
+
+        XCTAssertEqual(fallback.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(fallback.draftArtifact?.artifactKind, "mlx_directory")
+        XCTAssertEqual(fallback.draftArtifact?.fileName, "gemma-4-E4B-it-assistant-bf16")
+        XCTAssertEqual(
+            fallback.draftArtifact?.downloadURLString,
+            "https://huggingface.co/mlx-community/gemma-4-E4B-it-assistant-bf16"
+        )
+    }
+
+    func testPreferredAssistantDownloadFallbackIncludesBundledCaseAssociateMLXDraftCompanion() {
+        let fallback = alphaPreferredAssistantDownloadFallback(
             for: .caseAssociate,
             preferredRuntimeMode: .mlxSwiftLm,
             cachedDownloads: nil
@@ -9826,9 +9865,10 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(fallback.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(fallback.draftArtifact?.artifactKind, "mlx_directory")
+        XCTAssertEqual(fallback.draftArtifact?.fileName, "gemma-4-12B-it-assistant-4bit")
         XCTAssertEqual(
             fallback.draftArtifact?.downloadURLString,
-            "https://huggingface.co/unsloth/gemma-4-E4B-it-UD-MLX-4bit"
+            "https://huggingface.co/mlx-community/gemma-4-12B-it-assistant-4bit"
         )
     }
 
@@ -9881,11 +9921,11 @@ final class AlphaExtractionTests: XCTestCase {
             verified: true,
             releaseReady: true,
             draftArtifact: AlphaAssistantDraftArtifactDescriptor(
-                fileName: "gemma-4-E4B-it-UD-MLX-4bit",
-                sizeBytes: 6_607_285_383,
+                fileName: "gemma-4-12B-it-assistant-4bit",
+                sizeBytes: 270_075_161,
                 checksumSha256: String(repeating: "b", count: 64),
                 artifactKind: "mlx_directory",
-                downloadURLString: "https://huggingface.co/unsloth/gemma-4-E4B-it-UD-MLX-4bit",
+                downloadURLString: "https://huggingface.co/mlx-community/gemma-4-12B-it-assistant-4bit",
                 draftTokens: 6
             )
         )
@@ -9998,12 +10038,12 @@ final class AlphaExtractionTests: XCTestCase {
             downloadUrl: "https://huggingface.co/mlx-community/gemma-4-12B-it-4bit",
             segments: [],
             draftArtifact: AlphaBackendArtifactDraft(
-                fileName: "gemma-4-E4B-it-UD-MLX-4bit",
-                sizeBytes: 6_607_285_383,
+                fileName: "gemma-4-12B-it-assistant-4bit",
+                sizeBytes: 270_075_161,
                 finalSha256: String(repeating: "c", count: 64),
                 artifactKind: "mlx_directory",
                 downloadPath: nil,
-                downloadUrl: "https://huggingface.co/unsloth/gemma-4-E4B-it-UD-MLX-4bit",
+                downloadUrl: "https://huggingface.co/mlx-community/gemma-4-12B-it-assistant-4bit",
                 draftTokens: 6
             )
         )
@@ -10021,8 +10061,8 @@ final class AlphaExtractionTests: XCTestCase {
             runtimeMode: .mlxSwiftLm,
             developmentOnly: false,
             draftArtifact: AlphaAssistantDraftArtifactDescriptor(
-                fileName: "gemma-4-E4B-it-UD-MLX-4bit",
-                sizeBytes: 6_607_285_383,
+                fileName: "gemma-4-12B-it-assistant-4bit",
+                sizeBytes: 270_075_161,
                 checksumSha256: String(repeating: "e", count: 64),
                 artifactKind: "mlx_directory",
                 downloadURLString: "",
@@ -12055,7 +12095,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(provider?.runtimeHealth().modelPathLabel, directory.lastPathComponent)
     }
 
-    func testExperimentalMLXProviderIgnoresUnsupportedDraftArchive() async throws {
+    func testExperimentalMLXProviderUsesGemma4AssistantDraftArchive() async throws {
         actor DraftCapture {
             var draftPath: String?
 
@@ -12136,14 +12176,14 @@ final class AlphaExtractionTests: XCTestCase {
         let runtimeHealth = provider?.runtimeHealth()
         let recordedDraftPath = await capture.draftPath
 
-        XCTAssertEqual(recordedDraftPath, nil)
-        XCTAssertEqual(runtimeHealth?.accelerationMode, .standard)
-        XCTAssertEqual(runtimeHealth?.draftModelPathLabel, nil)
-        XCTAssertEqual(runtimeHealth?.accelerationDraftTokens, nil)
-        XCTAssertEqual(output?.accelerationMode, .standard)
-        XCTAssertNil(output?.accelerationDraftTokens)
-        XCTAssertNil(output?.accelerationDraftModelLabel)
-        XCTAssertEqual(output?.executionPathLabel, "MLX standard generation")
+        XCTAssertEqual(recordedDraftPath, draftDirectory.path)
+        XCTAssertEqual(runtimeHealth?.accelerationMode, .draftModelSpeculative)
+        XCTAssertEqual(runtimeHealth?.draftModelPathLabel, draftDirectory.lastPathComponent)
+        XCTAssertEqual(runtimeHealth?.accelerationDraftTokens, 4)
+        XCTAssertEqual(output?.accelerationMode, .draftModelSpeculative)
+        XCTAssertEqual(output?.accelerationDraftTokens, 4)
+        XCTAssertEqual(output?.accelerationDraftModelLabel, draftDirectory.lastPathComponent)
+        XCTAssertEqual(output?.executionPathLabel, "MLX with draft acceleration")
     }
 
     func testExperimentalMLXProviderPassesDraftModelConfigToGenerator() async throws {

@@ -602,7 +602,7 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         guard Self.localModelDirectoryLooksUsable(draftDirectoryURL) else {
             return nil
         }
-        guard Self.archiveCompatibility(for: draftDirectoryURL) == .supported else {
+        guard Self.archiveCanServeAsDraft(Self.archiveCompatibility(for: draftDirectoryURL)) else {
             return nil
         }
         return draftDirectoryURL
@@ -843,6 +843,15 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         }
 
         return .supported
+    }
+
+    private static func archiveCanServeAsDraft(_ compatibility: AlphaMLXArchiveCompatibility) -> Bool {
+        switch compatibility {
+        case .supported, .unsupportedGemma4Assistant:
+            return true
+        case .unsupportedGemma4MoE, .unsupportedGemma4Dense31B:
+            return false
+        }
     }
 
     private nonisolated static func extractiveMatterAnswer(
