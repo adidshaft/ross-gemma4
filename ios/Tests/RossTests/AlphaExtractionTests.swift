@@ -8670,6 +8670,53 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(options.first?.isBuiltIn, true)
     }
 
+    func testAssistantPreferredInstalledPackUsesPreferredRuntimeInsteadOfFirstStoredPack() {
+        let ggufPack = AlphaInstalledModelPack(
+            packId: "case-gguf",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/case-gguf.gguf",
+            checksumSha256: String(repeating: "d", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: false
+        )
+        let mlxPack = AlphaInstalledModelPack(
+            packId: "case-mlx",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/case-mlx",
+            checksumSha256: String(repeating: "e", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: false
+        )
+
+        let options = alphaAssistantVariantOptions(
+            for: .caseAssociate,
+            installedPacks: [ggufPack, mlxPack],
+            activePack: nil,
+            systemAssistantAvailable: false
+        )
+
+        XCTAssertEqual(
+            alphaAssistantPreferredInstalledPack(
+                variantOptions: options,
+                preferredRuntimeMode: .mlxSwiftLm
+            )?.packId,
+            "case-mlx"
+        )
+        XCTAssertEqual(
+            alphaAssistantPreferredInstalledPack(
+                variantOptions: options,
+                preferredRuntimeMode: .llamaCppGguf
+            )?.packId,
+            "case-gguf"
+        )
+    }
+
     func testAssistantUpdateCandidateUsesMLXArchiveChecksumWhenPackIdMatches() {
         let installedPack = AlphaInstalledModelPack(
             packId: "gemma-4-12b-mlx",

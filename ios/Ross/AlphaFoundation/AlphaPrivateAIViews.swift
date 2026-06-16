@@ -692,6 +692,13 @@ struct AlphaPrivateAIOfferCard: View {
         )
     }
 
+    private var preferredInstalledPack: AlphaInstalledModelPack? {
+        alphaAssistantPreferredInstalledPack(
+            variantOptions: variantOptions,
+            preferredRuntimeMode: setupPresentation?.runtimeMode
+        )
+    }
+
     private var systemAssistantAvailable: Bool {
         model.systemAssistantHealth(for: offer.tier)?.available == true
     }
@@ -929,8 +936,8 @@ struct AlphaPrivateAIOfferCard: View {
                             mobileAllowed: mobileAllowed,
                             requestedRuntimeMode: .appleFoundationModels
                         )
-                    } else if let installedPack {
-                        model.activateInstalledPack(installedPack)
+                    } else if let preferredInstalledPack {
+                        model.activateInstalledPack(preferredInstalledPack)
                     } else if let latestJob, canResume {
                         model.resumeJob(latestJob)
                     } else {
@@ -1030,6 +1037,20 @@ func alphaAssistantVariantOptions(
         }
         return lhs.id < rhs.id
     }
+}
+
+func alphaAssistantPreferredInstalledPack(
+    variantOptions: [AlphaAssistantVariantOption],
+    preferredRuntimeMode: AlphaPackRuntimeMode?
+) -> AlphaInstalledModelPack? {
+    let installedOptions = variantOptions.filter { !$0.isBuiltIn && $0.pack != nil }
+
+    if let preferredRuntimeMode,
+       let preferredMatch = installedOptions.first(where: { $0.runtimeMode == preferredRuntimeMode })?.pack {
+        return preferredMatch
+    }
+
+    return installedOptions.first?.pack
 }
 
 private struct AlphaAssistantVariantChip: View {
