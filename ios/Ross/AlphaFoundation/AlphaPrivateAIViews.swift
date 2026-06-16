@@ -460,10 +460,21 @@ private struct AlphaPrivateAIInternalDiagnostics: View {
                 let lastInvocation = model.lastModelInvocation
                 let lastPreview = model.persisted.publicLawPreview
                 let resetCount = model.privateAISnapshot.resetCount
+                let activePack = model.activePack
+                let resolvedModelDetails = activePack.flatMap(alphaAssistantResolvedModelDetails)
 
                 AlphaSettingsValueRow(label: rossLocalized("status"), value: alphaAssistantSupportStatusDetail(runtimeHealth: runtimeHealth))
                 AlphaSettingsValueRow(label: rossLocalized("assistant_can_answer"), value: runtimeHealth.available ? rossLocalized("yes") : rossLocalized("no"))
                 AlphaSettingsValueRow(label: rossLocalized("setup_file_present"), value: runtimeHealth.modelPathPresent ? rossLocalized("yes") : rossLocalized("no"))
+                if let resolvedModelDetails {
+                    AlphaSettingsValueRow(label: rossLocalized("assistant_model"), value: resolvedModelDetails.modelLabel)
+                    if let sourceLabel = resolvedModelDetails.sourceLabel {
+                        AlphaSettingsValueRow(label: rossLocalized("assistant_model_source"), value: sourceLabel)
+                    }
+                    if let draftCompanionLabel = resolvedModelDetails.draftCompanionLabel {
+                        AlphaSettingsValueRow(label: rossLocalized("assistant_mtp_companion"), value: draftCompanionLabel)
+                    }
+                }
                 if let contextTokens = runtimeHealth.estimatedContextTokens {
                     AlphaSettingsValueRow(label: rossLocalized("runtime_context_window"), value: alphaAssistantContextWindowLabel(tokens: contextTokens))
                 }

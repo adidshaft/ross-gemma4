@@ -2611,6 +2611,27 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Setup file உள்ளது",
             "te": "Setup file ఉంది"
         ],
+        "assistant_model": [
+            "en": "Model",
+            "hi": "Model",
+            "bn": "Model",
+            "ta": "Model",
+            "te": "Model"
+        ],
+        "assistant_model_source": [
+            "en": "Model source",
+            "hi": "Model source",
+            "bn": "Model source",
+            "ta": "Model source",
+            "te": "Model source"
+        ],
+        "assistant_mtp_companion": [
+            "en": "MTP companion",
+            "hi": "MTP companion",
+            "bn": "MTP companion",
+            "ta": "MTP companion",
+            "te": "MTP companion"
+        ],
         "last_answer_check": [
             "en": "Last answer check",
             "hi": "Last answer check देखें",

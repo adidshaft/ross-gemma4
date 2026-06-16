@@ -10713,6 +10713,56 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.contextLabel, "24,576 tokens")
     }
 
+    func testAssistantResolvedModelDetailsUsesPinnedGGUFMetadata() {
+        let pack = AlphaInstalledModelPack(
+            packId: "gemma-4-12b-q4",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/gemma-4-12b-it-UD-Q4_K_XL.gguf",
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+
+        let details = alphaAssistantResolvedModelDetails(for: pack)
+
+        XCTAssertEqual(details?.modelLabel, "Gemma 4 12B UD Q4_K_XL")
+        XCTAssertEqual(details?.sourceLabel, "Hugging Face · unsloth/gemma-4-12B-it-qat-GGUF")
+        XCTAssertEqual(details?.draftCompanionLabel, "mtp-gemma-4-12b-it.gguf")
+    }
+
+    func testAssistantResolvedModelDetailsUsesBundledMLXMetadata() {
+        let pack = AlphaInstalledModelPack(
+            packId: "gemma-4-12b-mlx",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/gemma-4-12b-it-mlx",
+            checksumSha256: String(repeating: "b", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+
+        let details = alphaAssistantResolvedModelDetails(for: pack)
+
+        XCTAssertEqual(details?.modelLabel, "Gemma 4 12B QAT 4-bit (MLX)")
+        XCTAssertEqual(details?.sourceLabel, "Hugging Face · mlx-community/gemma-4-12B-it-qat-4bit")
+        XCTAssertEqual(details?.draftCompanionLabel, "gemma-4-12B-it-qat-assistant-4bit")
+    }
+
+    func testAssistantResolvedModelDetailsUsesBuiltInCoreAILabel() {
+        let pack = alphaSystemAssistantPack(for: .caseAssociate)
+
+        let details = alphaAssistantResolvedModelDetails(for: pack)
+
+        XCTAssertEqual(details?.modelLabel, "Built-in CoreAI")
+        XCTAssertEqual(details?.sourceLabel, rossLocalized("assistant_meta_built_in"))
+        XCTAssertNil(details?.draftCompanionLabel)
+    }
+
     func testPreferredAssistantSetupRuntimeModeDefaultsToGGUFForFreshProductionCaseAssociateSetup() {
         let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
         let previousSimulatorIdentifier = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"]

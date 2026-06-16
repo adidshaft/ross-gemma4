@@ -850,6 +850,63 @@ struct AlphaAssistantSetupPresentation: Equatable, Sendable {
     let etaLabel: String?
 }
 
+struct AlphaAssistantResolvedModelDetails: Equatable, Sendable {
+    let modelLabel: String
+    let sourceLabel: String?
+    let draftCompanionLabel: String?
+}
+
+func alphaAssistantResolvedModelDetails(
+    for pack: AlphaInstalledModelPack
+) -> AlphaAssistantResolvedModelDetails? {
+    let effectiveTier = AlphaCapabilityTier.normalizedAssistantSelection(pack.tier) ?? pack.tier
+
+    if pack.runtimeMode == .appleFoundationModels || pack.artifactKind == "system_model" {
+        return AlphaAssistantResolvedModelDetails(
+            modelLabel: "Built-in CoreAI",
+            sourceLabel: rossLocalized("assistant_meta_built_in"),
+            draftCompanionLabel: nil
+        )
+    }
+
+    if pack.runtimeMode == .llamaCppGguf {
+        let artifact = alphaAssistantModelArtifact(for: effectiveTier)
+        let installedDraft = alphaExpectedDownloadedAssistantArtifact(for: pack)?.draftArtifact?.fileName
+        return AlphaAssistantResolvedModelDetails(
+            modelLabel: artifact.displayName,
+            sourceLabel: artifact.sourceLabel,
+            draftCompanionLabel: installedDraft ?? artifact.draftArtifact?.fileName
+        )
+    }
+
+    if pack.runtimeMode == .mlxSwiftLm,
+       let descriptor = alphaBundledAssistantDownloadDescriptor(
+        for: effectiveTier,
+        preferredRuntimeMode: .mlxSwiftLm,
+        targetPackId: pack.packId
+       ) {
+        let modelLabel: String = switch effectiveTier {
+        case .quickStart:
+            "Gemma 4 E4B QAT 4-bit (MLX)"
+        case .caseAssociate:
+            "Gemma 4 12B QAT 4-bit (MLX)"
+        case .seniorDraftingSupport:
+            "Gemma 4 26B-A4B QAT 4-bit (MLX)"
+        case .flash:
+            "Gemma 4 E4B QAT 4-bit (MLX)"
+        }
+        let sourceLabel = alphaDirectMLXRepositoryID(for: descriptor).map { "Hugging Face · \($0)" }
+        let installedDraft = alphaExpectedDownloadedAssistantArtifact(for: pack)?.draftArtifact?.fileName
+        return AlphaAssistantResolvedModelDetails(
+            modelLabel: modelLabel,
+            sourceLabel: sourceLabel,
+            draftCompanionLabel: installedDraft ?? descriptor.draftArtifact?.fileName
+        )
+    }
+
+    return nil
+}
+
 private func alphaAssistantSetupSpeedLabel(
     for tier: AlphaCapabilityTier,
     runtimeMode: AlphaPackRuntimeMode,
