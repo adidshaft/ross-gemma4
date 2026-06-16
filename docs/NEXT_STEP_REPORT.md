@@ -1,43 +1,70 @@
-# Ross Gemma 4 Quality Pass
+# Ross Pause Point
 
-## Branch Used
+This is the current safe handoff point for the Ross Gemma 4 runtime and product-quality pass as of June 17, 2026.
 
-- `gemma-4-gguf-model-strategy`
+## Current Stable State
 
-## What Changed
+- the exposed assistant lineup is still the intended 3-pack Gemma 4 ladder
+- one of those three packs is `gemma-4-12b-it-GGUF`, which remains the Case Associate default
+- the iOS GGUF runner is now pinned to `llama.swift` `2.9672.0`, which resolves upstream `llama.cpp` Apple XCFramework `b9672`
+- `mlx-swift` remains at `0.31.4`
+- `mlx-swift-lm` remains at `3.31.3`
+- CoreAI, MLX, and GGUF runtime selection logic is already present on iOS and has been improved further for modern iPhones
+- long-file ask handling on iOS now scales source chunk sizing with runtime budget instead of using only the old fixed chunk size
+- answer diagnostics stay hidden behind secondary actions instead of adding more up-front UI clutter
 
-- reduced the exposed lineup to three higher-quality packs
-- promoted Gemma 4 12B Q4_K_M into the default Standard tier
-- kept Gemma 4 E4B Q4_K_M as the lighter Basic tier
-- kept Gemma 4 26B-A4B Q4_K_M as the Advanced tier
-- updated backend and shared registry metadata with verified URLs, sizes, and SHA-256 values
-- widened iPhone context and input budgets for larger files and smoother on-device use
-- updated the iOS llama runtime package floor to `llama.swift` `2.9647.0`
-- resolved the newer `llama.cpp` XCFramework (`b9647`)
+## Visible Pack Mapping
 
-## Model Mapping
+- Quick Start -> `gemma-4-e4b-q4` -> `unsloth/gemma-4-E4B-it-GGUF`
+- Case Associate -> `gemma-4-12b-q4` -> `unsloth/gemma-4-12b-it-GGUF`
+- Senior Drafting Support -> `gemma-4-26b-a4b-q4` -> `unsloth/gemma-4-26B-A4B-it-GGUF`
+- Flash remains a legacy compatibility tier and is not part of the shipped visible ladder
 
-- Basic -> Gemma 4 E4B UD Q4_K_XL, about 5.2 GB
-- Standard -> Gemma 4 12B UD Q4_K_XL, about 7.8 GB
-- Advanced -> Gemma 4 26B-A4B UD Q4_K_XL, about 17.5 GB
-- Flash remains a legacy compatibility tier and is no longer shown in the normal setup catalog
+## Recent Progress
 
-## Current Truth
+Most recent commits that define this pause point:
 
-- The registry and catalog metadata now match the intended 3-pack product lineup.
-- The iOS runtime now derives context windows from the active model and device RAM instead of a fixed 4k or 8k cap.
-- Prompt chunking and batch sizing are tuned upward for longer local reads.
-- The backend still serves tiny deterministic artifacts by default in `dev` mode.
-- No model files are committed or bundled in the repository.
+- `7030227` `chore: bump ios llama runtime to 2.9672`
+- `2f4eff7` `feat: scale ios ask chunking with runtime budget`
+- `d925a35` `feat: declutter hidden answer details actions`
+- `eff4d55` `fix: reuse installed packaged ios mlx offline`
+- `542f69a` `fix: preserve assistant catalog state across resets`
+- `d7e7f02` `feat: prefer packaged ios mlx downloads`
+- `301b950` `feat: expand android ask runtime budgets`
+- `e7ed434` `feat: improve android ask source coverage`
 
-## Still Unimplemented
+## What Is Verified
 
-- production delivery of real Q4 files from a trusted distribution path
-- Android native Q4 inference and memory tuning
-- physical iPhone QA for the 12B pack on representative 8 GB and 12 GB devices
-- speculative decoding or MTP-specific runtime proof on iPhone
-- MLX-based iPhone pathfinding for cases where converted weights outperform GGUF on-device
+- backend production catalog still advertises only the intended 3 GGUF primary packs
+- iOS Swift package graph builds against `llama.swift` `2.9672.0`
+- focused iOS tests still pass for:
+  - higher-budget ask source-pack policy
+  - long-page source chunking
+  - override-driven chunk sizing
+  - llama runtime context and draft-token budget expectations
+- MLX and CoreAI decision paths are implemented in code and covered by unit tests
+- hidden answer details already include `Tokens processed` and `Token speed`
 
-## Exact Next Recommended Step
+## What Is Still Not Proven
 
-Finish a physical-device validation pass for the new Standard tier: prove download/resume/verify/activate, measure prompt latency on a long matter file, and capture whether the updated llama runtime is sufficient before investing in an MLX-specific iPhone path.
+- physical iPhone proof for the full GGUF and MLX setup lifecycle on representative 8 GB and 12 GB devices
+- final real-device comparison of CoreAI vs MLX vs GGUF on modern iPhones
+- production delivery proof for real multi-GB artifacts end to end
+- Android compile cleanliness in the current dirty worktree
+- Android native runtime validation beyond the recent retrieval and budget improvements
+
+## Why This Is A Good Pause Point
+
+- model selection is no longer in a churn state
+- the latest verified iOS llama runner bump is already in
+- large-file and context handling moved forward without opening a larger migration
+- the next remaining work is mostly validation and final product judgment, not urgent architecture repair
+
+## Exact Resume Step
+
+Resume with a focused real-device validation pass instead of more code changes:
+
+1. verify Case Associate on a physical iPhone using the current GGUF lane
+2. compare CoreAI, MLX, and GGUF latency and answer quality on a longer matter bundle
+3. decide whether the current 3-pack ladder should stay exactly as-is or swap any one pack after evidence
+4. only then return to Android cleanup and deeper runtime work there
