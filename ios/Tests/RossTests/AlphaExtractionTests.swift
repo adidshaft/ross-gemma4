@@ -13616,13 +13616,43 @@ final class AlphaExtractionTests: XCTestCase {
         )
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.maxInputChars(
+                for: .caseAssociate,
+                physicalMemory: 16_000_000_000
+            ),
+            72_000
+        )
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.maxInputChars(
                 for: .seniorDraftingSupport,
                 physicalMemory: 20_000_000_000
             ),
             72_000
         )
+        XCTAssertEqual(
+            AlphaLlamaRuntimeProfile.contextWindowTokens(
+                forModelPath: "/tmp/gemma-4-12B-it-UD-Q4_K_XL.gguf",
+                physicalMemory: 16_000_000_000
+            ),
+            40_960
+        )
         XCTAssertEqual(AlphaLlamaRuntimeProfile.sourceBlockLimit(for: .caseAssociate), 9)
         XCTAssertEqual(AlphaLlamaRuntimeProfile.sourceBlockLimit(for: .seniorDraftingSupport), 12)
+    }
+
+    func testMatterQuestionBudgetPlannerUsesHigherLlamaBudgetFor16GB12BPath() {
+        let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
+            runtimeMode: .llamaCppGguf,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 72_000,
+            sourceBlockCount: 18,
+            sourceCharCount: 58_000,
+            selectedDocumentCount: 1,
+            lastInvocation: nil
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 64_800)
+        XCTAssertEqual(plan.sourceBlockLimit, 18)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_700)
     }
 
     func testLlamaRuntimeProfileUsesModelAwareGPUOffload() {

@@ -47,7 +47,7 @@ enum AlphaLlamaRuntimeProfile {
             return physicalMemory >= 8_000_000_000 ? 18_432 : 10_240
         case .gemma12b:
             if physicalMemory >= 16_000_000_000 {
-                return 36_864
+                return 40_960
             }
             if physicalMemory >= 12_000_000_000 {
                 return 28_672
@@ -108,7 +108,7 @@ enum AlphaLlamaRuntimeProfile {
             return physicalMemory >= 8_000_000_000 ? 36_000 : 22_000
         case .caseAssociate:
             if physicalMemory >= 16_000_000_000 {
-                return 68_000
+                return 72_000
             }
             return physicalMemory >= 12_000_000_000 ? 56_000 : 40_000
         case .seniorDraftingSupport:
