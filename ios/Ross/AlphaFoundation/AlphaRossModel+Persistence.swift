@@ -20,13 +20,38 @@ private struct AlphaPrivateAISnapshotBuildResult: Sendable {
 }
 
 private let alphaPrivateAIStartupValidationStartedAtKey = "ross.private_ai.startup_validation_started_at"
+private let alphaPrivateAIStartupValidationSessionID = UUID().uuidString
+private let alphaPrivateAIStartupValidationSessionField = "session_id"
+private let alphaPrivateAIStartupValidationStartedAtField = "started_at"
 
 private func alphaHadUnfinishedPrivateAIStartupValidation() -> Bool {
-    UserDefaults.standard.object(forKey: alphaPrivateAIStartupValidationStartedAtKey) != nil
+    guard let marker = UserDefaults.standard.object(forKey: alphaPrivateAIStartupValidationStartedAtKey) else {
+        return false
+    }
+
+    if let number = marker as? NSNumber {
+        return number.doubleValue > 0
+    }
+
+    if let dictionary = marker as? [String: Any] {
+        if let sessionID = dictionary[alphaPrivateAIStartupValidationSessionField] as? String,
+           !sessionID.isEmpty {
+            return sessionID != alphaPrivateAIStartupValidationSessionID
+        }
+        return dictionary[alphaPrivateAIStartupValidationStartedAtField] != nil
+    }
+
+    return true
 }
 
 private func alphaMarkPrivateAIStartupValidationStarted() {
-    UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: alphaPrivateAIStartupValidationStartedAtKey)
+    UserDefaults.standard.set(
+        [
+            alphaPrivateAIStartupValidationStartedAtField: Date().timeIntervalSince1970,
+            alphaPrivateAIStartupValidationSessionField: alphaPrivateAIStartupValidationSessionID
+        ],
+        forKey: alphaPrivateAIStartupValidationStartedAtKey
+    )
 }
 
 private func alphaMarkPrivateAIStartupValidationFinished() {
@@ -1715,7 +1740,8 @@ private func alphaPrivateAISnapshotRefreshKey(for state: AlphaPersistedState) ->
 
 private func alphaBuildPrivateAISnapshot(
     from state: AlphaPersistedState,
-    allowDiskRecovery: Bool
+    allowDiskRecovery: Bool,
+    hadUnfinishedStartupValidation: Bool = false
 ) async -> AlphaPrivateAISnapshotBuildResult {
     await Task.detached(priority: .utility) {
         var recoveredState = state
@@ -1727,7 +1753,7 @@ private func alphaBuildPrivateAISnapshot(
             recoveredState.installedPacks.removeAll { invalidPackIDs.contains($0.id) }
             stateChangedByRecovery = !invalidPackIDs.isEmpty
         }
-        if alphaHadUnfinishedPrivateAIStartupValidation() {
+        if hadUnfinishedStartupValidation {
             alphaQuarantineActiveAssistantAfterStartupFailure(&recoveredState)
         }
         alphaQuarantineIncompleteInstalledAssistantJob(&recoveredState)
@@ -1886,12 +1912,17 @@ extension AlphaRossModel {
         privateAISnapshotRefreshKey = refreshKey
         let state = persisted
         let allowDiskRecovery = true
+        let hadUnfinishedStartupValidation = alphaHadUnfinishedPrivateAIStartupValidation()
         if forceValidation {
             alphaMarkPrivateAIStartupValidationStarted()
         }
         privateAISnapshotTask?.cancel()
         privateAISnapshotTask = Task {
-            let result = await alphaBuildPrivateAISnapshot(from: state, allowDiskRecovery: allowDiskRecovery)
+            let result = await alphaBuildPrivateAISnapshot(
+                from: state,
+                allowDiskRecovery: allowDiskRecovery,
+                hadUnfinishedStartupValidation: hadUnfinishedStartupValidation
+            )
             if forceValidation {
                 alphaMarkPrivateAIStartupValidationFinished()
             }

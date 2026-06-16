@@ -633,6 +633,16 @@ enum AlphaLocalPromptBudgetPlanner {
         let firstTokenMs = lastInvocation.timeToFirstTokenMs ?? Int.max
         let outputSpeed = lastInvocation.estimatedOutputTokensPerSecond ?? .greatestFiniteMagnitude
 
+        if runtimeMode == .mlxSwiftLm,
+           firstTokenMs <= 1_500,
+           outputSpeed >= 14 {
+            return expandedLimit + fastStructuredDocumentBatchBonus(
+                for: runtimeMode,
+                task: task,
+                baseMaxInputChars: baseMaxInputChars
+            )
+        }
+
         if firstTokenMs >= 6_000 || outputSpeed <= runtimeDefaults.slowTokensPerSecond {
             return max(
                 Int((Double(baseBatchLimit) * 0.7).rounded(.down)),
@@ -645,6 +655,23 @@ enum AlphaLocalPromptBudgetPlanner {
         }
 
         return expandedLimit
+    }
+
+    private static func fastStructuredDocumentBatchBonus(
+        for runtimeMode: AlphaPackRuntimeMode,
+        task: AlphaLocalModelTask,
+        baseMaxInputChars: Int
+    ) -> Int {
+        guard runtimeMode == .mlxSwiftLm else { return 0 }
+
+        let prefersWiderBatches = task == .caseMemorySynthesis
+        if baseMaxInputChars >= 52_000 {
+            return prefersWiderBatches ? 4 : 3
+        }
+        if baseMaxInputChars >= 40_000 {
+            return prefersWiderBatches ? 3 : 2
+        }
+        return 0
     }
 
     private static func singleSelectedStructuredDocumentBlockLimit(
