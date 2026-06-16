@@ -6014,6 +6014,64 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(runtime, .appleFoundationModels)
     }
 
+    func testPreferredAssistantRuntimeModeKeepsFastRecentGGUFEvenWhenSystemAssistantIsAvailable() {
+        let fastGGUFInvocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 18,
+            timeToFirstTokenMs: 1_050,
+            status: .complete
+        )
+
+        let runtime = alphaPreferredAssistantRuntimeMode(
+            for: .caseAssociate,
+            existingRuntimeMode: .appleFoundationModels,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24,
+            systemAssistantAvailable: true,
+            lastInvocation: fastGGUFInvocation
+        )
+
+        XCTAssertEqual(runtime, .llamaCppGguf)
+    }
+
+    func testPreferredAssistantRuntimeModeFallsBackFromSlowCoreAIToMLXOnCapablePhone() {
+        let slowFoundationInvocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.appleFoundationModels.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 6.5,
+            timeToFirstTokenMs: 4_800,
+            status: .complete
+        )
+
+        let runtime = alphaPreferredAssistantRuntimeMode(
+            for: .caseAssociate,
+            existingRuntimeMode: .appleFoundationModels,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24,
+            systemAssistantAvailable: true,
+            lastInvocation: slowFoundationInvocation
+        )
+
+        XCTAssertEqual(runtime, .mlxSwiftLm)
+    }
+
     func testPreferredAssistantRuntimeModePrefersMLXForQuickStartOnCapablePhone() {
         let quickStart = alphaPreferredAssistantRuntimeMode(
             for: .quickStart,
@@ -6911,6 +6969,34 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(label, "Built-in CoreAI model preferred")
+    }
+
+    func testAssistantRuntimeChoiceLabelExplainsSwitchAfterSlowCoreAIRun() {
+        let slowFoundationInvocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.appleFoundationModels.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 6.5,
+            timeToFirstTokenMs: 4_800,
+            status: .complete
+        )
+        let label = alphaAssistantRuntimeChoiceLabel(
+            selectedRuntimeMode: .mlxSwiftLm,
+            tier: .caseAssociate,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24,
+            systemAssistantAvailable: true,
+            lastInvocation: slowFoundationInvocation
+        )
+
+        XCTAssertEqual(label, "MLX selected after slower CoreAI run")
     }
 
     func testAssistantRuntimeChoiceLabelNamesCoreAIWhenAlreadySelected() {

@@ -875,7 +875,7 @@ private func alphaRecentRuntimeSelectionSignal(
           lastInvocation.status == .complete,
           lastInvocation.capabilityTier == tier.rawValue,
           let runtimeMode = AlphaPackRuntimeMode(rawValue: lastInvocation.runtimeMode),
-          runtimeMode == .mlxSwiftLm || runtimeMode == .llamaCppGguf,
+          runtimeMode == .appleFoundationModels || runtimeMode == .mlxSwiftLm || runtimeMode == .llamaCppGguf,
           let outputSpeed = lastInvocation.estimatedOutputTokensPerSecond,
           let firstTokenMs = lastInvocation.timeToFirstTokenMs else {
         return nil
@@ -1065,9 +1065,19 @@ func alphaPreferredAssistantRuntimeMode(
     lastInvocation: AlphaLocalModelInvocation? = nil
 ) -> AlphaPackRuntimeMode {
     let prefersSystemAssistant = systemAssistantAvailable ?? alphaSystemAssistantRuntimeAvailable(for: tier)
+    let recentSignal = alphaRecentRuntimeSelectionSignal(for: tier, lastInvocation: lastInvocation)
 
     if prefersSystemAssistant {
-        return .appleFoundationModels
+        switch recentSignal {
+        case .keepFast(.appleFoundationModels):
+            return .appleFoundationModels
+        case .keepFast(let runtime):
+            return runtime
+        case .avoidSlow(.appleFoundationModels):
+            break
+        default:
+            return .appleFoundationModels
+        }
     }
 
     if tier == .flash {
@@ -1091,7 +1101,7 @@ func alphaPreferredAssistantRuntimeMode(
         lowPowerMode: false
     )
 
-    if let recentSignal = alphaRecentRuntimeSelectionSignal(for: tier, lastInvocation: lastInvocation) {
+    if let recentSignal {
         switch recentSignal {
         case .keepFast(let runtime):
             return runtime
@@ -1123,19 +1133,29 @@ func alphaAssistantRuntimeChoiceLabel(
     lastInvocation: AlphaLocalModelInvocation? = nil
 ) -> String {
     let prefersSystemAssistant = systemAssistantAvailable ?? alphaSystemAssistantRuntimeAvailable(for: tier)
+    let recentSignal = alphaRecentRuntimeSelectionSignal(for: tier, lastInvocation: lastInvocation)
 
     if selectedRuntimeMode == .appleFoundationModels && prefersSystemAssistant {
-        return "Built-in CoreAI model preferred"
+        switch recentSignal {
+        case .keepFast(.appleFoundationModels), .none:
+            return "Built-in CoreAI model preferred"
+        case .avoidSlow(.appleFoundationModels):
+            break
+        default:
+            break
+        }
     }
 
     if tier == .flash && selectedRuntimeMode == .llamaCppGguf {
         return "Flash tier stays on GGUF"
     }
 
-    if let recentSignal = alphaRecentRuntimeSelectionSignal(for: tier, lastInvocation: lastInvocation) {
+    if let recentSignal {
         switch recentSignal {
         case .keepFast(let runtime) where selectedRuntimeMode == runtime:
             switch runtime {
+            case .appleFoundationModels:
+                return "CoreAI kept after faster recent run"
             case .mlxSwiftLm:
                 return "MLX kept after faster recent run"
             case .llamaCppGguf:
@@ -1144,6 +1164,12 @@ func alphaAssistantRuntimeChoiceLabel(
                 break
             }
         case .avoidSlow(let runtime):
+            if runtime == .appleFoundationModels && selectedRuntimeMode == .mlxSwiftLm {
+                return "MLX selected after slower CoreAI run"
+            }
+            if runtime == .appleFoundationModels && selectedRuntimeMode == .llamaCppGguf {
+                return "GGUF selected after slower CoreAI run"
+            }
             if runtime == .mlxSwiftLm && selectedRuntimeMode == .llamaCppGguf {
                 return "GGUF selected after slower MLX run"
             }
