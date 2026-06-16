@@ -1061,6 +1061,7 @@ private func alphaPreferredInstalledPack(
         let prefersAcceleratedMLX = systemAvailable && alphaShouldPreferAcceleratedMLXInstalledPack(
             for: tier,
             installedPacks: installedPacks,
+            existingRuntimeMode: existingRuntimeMode,
             lastInvocation: lastInvocation
         )
         preferredRuntime = if prefersAcceleratedMLX {
@@ -1068,7 +1069,12 @@ private func alphaPreferredInstalledPack(
         } else if systemAvailable {
             .appleFoundationModels
         } else {
-            alphaPreferredAssistantRuntimeMode(for: tier, existingRuntimeMode: nil)
+            alphaPreferredAssistantSetupRuntimeMode(
+                for: tier,
+                existingRuntimeMode: existingRuntimeMode,
+                systemAssistantAvailable: false,
+                lastInvocation: lastInvocation
+            )
         }
     }
     let recentSignal = alphaRecentRuntimeSelectionSignal(for: tier, lastInvocation: lastInvocation)
@@ -1128,12 +1134,31 @@ private func alphaPreferredInstalledPack(
 private func alphaShouldPreferAcceleratedMLXInstalledPack(
     for tier: AlphaCapabilityTier,
     installedPacks: [AlphaInstalledModelPack],
+    existingRuntimeMode: AlphaPackRuntimeMode? = nil,
     isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
     physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory,
     freeStorageGB: Int = max(4, alphaAvailableStorageInGigabytes()),
     lowPowerMode: Bool = alphaCurrentLowPowerMode(),
     lastInvocation: AlphaLocalModelInvocation? = nil
 ) -> Bool {
+    let hasInstalledGGUFCandidate = installedPacks.contains { pack in
+        guard pack.tier == tier,
+              pack.runtimeMode == .llamaCppGguf,
+              alphaInstalledAssistantPackPassesRuntimeValidation(pack) else {
+            return false
+        }
+        return true
+    }
+
+    if !alphaAllowsDevelopmentModelArtifacts() {
+        if existingRuntimeMode == .llamaCppGguf {
+            return false
+        }
+        if existingRuntimeMode == nil && hasInstalledGGUFCandidate {
+            return false
+        }
+    }
+
     guard alphaPreferredAssistantRuntimeMode(
         for: tier,
         existingRuntimeMode: .mlxSwiftLm,

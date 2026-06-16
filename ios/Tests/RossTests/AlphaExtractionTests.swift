@@ -78,6 +78,41 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    @MainActor
+    private func installGGUFPack(
+        with store: AlphaRossStore,
+        tier: AlphaCapabilityTier,
+        fileName: String,
+        packId: String,
+        mainData: Data = Data("gguf-main".utf8),
+        draftData: Data = Data("gguf-draft".utf8)
+    ) async throws -> AlphaInstalledModelPack {
+        _ = try await store.installDownloadedPackArtifact(
+            for: tier,
+            fileName: fileName,
+            data: mainData,
+            expectedChecksum: sha256Hex(mainData),
+            packId: packId,
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            draftArtifact: AlphaAssistantDraftArtifactDescriptor(
+                fileName: "mtp-gemma-4-12b-it.gguf",
+                sizeBytes: Int64(draftData.count),
+                checksumSha256: sha256Hex(draftData),
+                artifactKind: "local_model_artifact",
+                downloadURLString: "https://ross.example/mtp-gemma-4-12b-it.gguf",
+                draftTokens: nil
+            ),
+            draftArtifactData: draftData
+        )
+
+        let model = AlphaRossModel(previewState: .empty())
+        var recovered = try XCTUnwrap(model.recoveredInstalledPackFromDisk(tier: tier))
+        recovered.isActive = true
+        return recovered
+    }
+
     private func sha256Hex(_ data: Data) -> String {
         SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
@@ -8231,6 +8266,66 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(model.persisted.installedPacks.contains(where: { $0.packId == caseAssociatePack.packId }))
         XCTAssertTrue(model.persisted.installedPacks.contains(where: { $0.packId == quickStartPack.packId }))
         XCTAssertEqual(model.persisted.settings.activeTier, .caseAssociate)
+    }
+
+    @available(iOS 26.0, macOS 26.0, *)
+    @MainActor
+    func testRecoveredInstalledPackFromDiskPrefersProductionGGUFOverMLXWhenBuiltInIsUnavailable() async throws {
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        let previousSimulatorIdentifier = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"]
+        let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
+        let previousValidator = AlphaLlamaCppProvider.modelLoadValidator
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        setenv("SIMULATOR_MODEL_IDENTIFIER", "iPhone17,2", 1)
+        AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in false }
+        AlphaLlamaCppProvider.modelLoadValidator = { _ in }
+        defer {
+            AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
+            AlphaLlamaCppProvider.modelLoadValidator = previousValidator
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+            if let previousSimulatorIdentifier {
+                setenv("SIMULATOR_MODEL_IDENTIFIER", previousSimulatorIdentifier, 1)
+            } else {
+                unsetenv("SIMULATOR_MODEL_IDENTIFIER")
+            }
+        }
+
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+        defer { Task { await store.removeAllModelArtifacts() } }
+
+        _ = try await installMLXPack(
+            with: store,
+            tier: .quickStart,
+            fileName: "gemma-4-e4b-it-mlx",
+            packId: "gemma-4-e4b-it-mlx",
+            fixtureName: "ross-mlx-recover-gguf-local-quick-\(UUID().uuidString)"
+        )
+
+        _ = try await installMLXPack(
+            with: store,
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-it-mlx",
+            packId: "gemma-4-12b-it-mlx",
+            fixtureName: "ross-mlx-recover-gguf-local-case-\(UUID().uuidString)"
+        )
+
+        let ggufPack = try await installGGUFPack(
+            with: store,
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-it-UD-Q4_K_XL.gguf",
+            packId: "gemma-4-12b-q4"
+        )
+
+        let model = AlphaRossModel()
+        let preferred = try XCTUnwrap(model.recoveredInstalledPackFromDisk(tier: .caseAssociate))
+
+        XCTAssertEqual(preferred.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(preferred.packId, ggufPack.packId)
     }
 
     @available(iOS 26.0, macOS 26.0, *)
