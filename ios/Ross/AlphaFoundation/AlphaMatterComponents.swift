@@ -884,9 +884,15 @@ func alphaAssistantActivityTitle(
     case .pausedError, .failed:
         rossLocalized("assistant_activity_title_retry", languageCode: languageCode)
     case .pausedWaitingForWifi, .pausedUser, .pausedNoStorage:
-        String(format: rossLocalized("assistant_activity_title_paused", languageCode: languageCode), job.tier.title)
+        String(
+            format: rossLocalized("assistant_activity_title_paused", languageCode: languageCode),
+            job.tier.setupTitle(languageCode: languageCode)
+        )
     default:
-        String(format: rossLocalized("assistant_activity_title_preparing", languageCode: languageCode), job.tier.title)
+        String(
+            format: rossLocalized("assistant_activity_title_preparing", languageCode: languageCode),
+            job.tier.setupTitle(languageCode: languageCode)
+        )
     }
 }
 

@@ -1411,7 +1411,7 @@ struct AlphaPrivateAIInstalledPackCard: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(pack.tier.title)
+                    Text(pack.tier.setupTitle)
                         .font(.headline)
                         .foregroundStyle(Color.rossInk)
 

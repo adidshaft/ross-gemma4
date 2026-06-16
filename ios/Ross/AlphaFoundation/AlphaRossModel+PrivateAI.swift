@@ -1463,7 +1463,7 @@ extension AlphaRossModel {
         persisted.ledgerEntries.insert(
             AlphaPrivacyLedgerEntry(
                 title: "Assistant removed",
-                detail: "\(storedPack.tier.title) was removed from local storage.",
+                detail: "\(storedPack.tier.setupTitle) was removed from local storage.",
                 purpose: .model_verification,
                 payloadClass: .no_case_data,
                 endpointLabel: "device://model-remove",
@@ -2685,7 +2685,7 @@ extension AlphaRossModel {
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
                     title: "Assistant verified",
-                    detail: "\(tier.title) was already downloaded and passed local verification.",
+                    detail: "\(tier.setupTitle) was already downloaded and passed local verification.",
                     purpose: .model_verification,
                     payloadClass: .no_case_data,
                     endpointLabel: "device://model-verify",
@@ -2882,7 +2882,7 @@ extension AlphaRossModel {
             persisted.ledgerEntries.insert(
                 AlphaPrivacyLedgerEntry(
                     title: "Assistant verified",
-                    detail: "\(tier.title) finished downloading and passed local verification.",
+                    detail: "\(tier.setupTitle) finished downloading and passed local verification.",
                     purpose: .model_verification,
                     payloadClass: .no_case_data,
                     endpointLabel: "device://model-verify",

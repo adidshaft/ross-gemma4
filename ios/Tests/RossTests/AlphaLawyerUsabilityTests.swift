@@ -240,10 +240,12 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 baseResult: baseResult
             )
 
+            let flashAssistantLabel = "\(rossLocalized("tier_flash_setup_title", languageCode: "en")) assistant"
+
             XCTAssertEqual("Ross is answering...", pending.answerTitle)
-            XCTAssertEqual("Flash assistant is preparing a private answer", pending.statusNote)
+            XCTAssertEqual("\(flashAssistantLabel) is preparing a private answer", pending.statusNote)
             XCTAssertTrue(pending.isPendingLocalModelResponse)
-            XCTAssertEqual("Flash assistant", pending.pendingLocalModelLabel)
+            XCTAssertEqual(flashAssistantLabel, pending.pendingLocalModelLabel)
             XCTAssertTrue(
                 pending.answerSections.joined(separator: " ").contains("replace this with the private answer")
             )
@@ -271,10 +273,12 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 baseResult: baseResult
             )
 
+            let localizedFlashAssistantLabel = "\(rossLocalized("tier_flash_setup_title", languageCode: "hi")) assistant"
+
             XCTAssertEqual("Ross जवाब तैयार कर रहा है...", localizedPending.answerTitle)
-            XCTAssertEqual("Flash assistant private answer तैयार कर रहा है", localizedPending.statusNote)
+            XCTAssertEqual("\(localizedFlashAssistantLabel) private answer तैयार कर रहा है", localizedPending.statusNote)
             XCTAssertTrue(localizedPending.isPendingLocalModelResponse)
-            XCTAssertEqual("Flash assistant", localizedPending.pendingLocalModelLabel)
+            XCTAssertEqual(localizedFlashAssistantLabel, localizedPending.pendingLocalModelLabel)
         }
     }
 

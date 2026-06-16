@@ -165,7 +165,7 @@ final class AlphaExtractionTests: XCTestCase {
             ),
             AlphaPrivacyLedgerEntry(
                 title: "Assistant verified",
-                detail: "Quick start finished downloading and passed local verification.",
+                detail: "Quick Start - lighter everyday work finished downloading and passed local verification.",
                 purpose: .model_verification,
                 payloadClass: .no_case_data,
                 endpointLabel: "device://model-verify",
@@ -181,7 +181,7 @@ final class AlphaExtractionTests: XCTestCase {
             ),
             AlphaPrivacyLedgerEntry(
                 title: "Assistant restored",
-                detail: "Ross found and verified existing assistant setup on this device: Quick Start.",
+                detail: "Ross found and verified existing assistant setup on this device: Quick Start - lighter everyday work.",
                 purpose: .model_verification,
                 payloadClass: .no_case_data,
                 endpointLabel: "device://model-verify",
@@ -2405,13 +2405,14 @@ final class AlphaExtractionTests: XCTestCase {
             rossLocalized("ask_task_text_stayed_on_device", languageCode: "te-IN"),
             "ఏ case file లేదా task text ఈ device ను వదిలి వెళ్లలేదు."
         )
+        let localizedAssistantLabel = "\(rossLocalized("tier_case_associate_setup_title", languageCode: "hi")) assistant"
         XCTAssertEqual(
-            alphaPendingLocalModelStatus("Case Associate assistant", languageCode: "hi"),
-            "Case Associate assistant private answer तैयार कर रहा है"
+            alphaPendingLocalModelStatus(localizedAssistantLabel, languageCode: "hi"),
+            "\(localizedAssistantLabel) private answer तैयार कर रहा है"
         )
         XCTAssertEqual(
-            alphaPendingLocalModelLabel(from: "Case Associate assistant private answer तैयार कर रहा है"),
-            "Case Associate assistant"
+            alphaPendingLocalModelLabel(from: "\(localizedAssistantLabel) private answer तैयार कर रहा है"),
+            localizedAssistantLabel
         )
         XCTAssertTrue(alphaAskQuestionTargetsAssistantSetup("What can I do before setting up the private assistant?"))
         XCTAssertEqual(
@@ -3306,9 +3307,18 @@ final class AlphaExtractionTests: XCTestCase {
         var failedJob = preparingJob
         failedJob.state = .failed
 
-        XCTAssertEqual(alphaAssistantActivityTitle(for: preparingJob), "Quick Start is preparing")
-        XCTAssertEqual(alphaAssistantActivityTitle(for: preparingJob, languageCode: "hi"), "Quick Start तैयार हो रहा है")
-        XCTAssertEqual(alphaAssistantActivityTitle(for: pausedJob, languageCode: "ta"), "Quick Start setup paused உள்ளது")
+        XCTAssertEqual(
+            alphaAssistantActivityTitle(for: preparingJob),
+            "Quick Start - lighter everyday work is preparing"
+        )
+        XCTAssertEqual(
+            alphaAssistantActivityTitle(for: preparingJob, languageCode: "hi"),
+            "Quick Start - रोज़मर्रा के काम के लिए हल्का तैयार हो रहा है"
+        )
+        XCTAssertEqual(
+            alphaAssistantActivityTitle(for: pausedJob, languageCode: "ta"),
+            "Quick Start - தினசரி வேலைக்கு இலகு setup paused உள்ளது"
+        )
         XCTAssertEqual(alphaAssistantActivityTitle(for: failedJob, languageCode: "te"), "Private assistant కు retry కావాలి")
     }
 

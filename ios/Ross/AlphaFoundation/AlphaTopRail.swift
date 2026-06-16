@@ -497,7 +497,7 @@ private struct AlphaAssistantSetupProgressCard: View {
     var body: some View {
         RossSectionCard(title: rossLocalized("setting_up_ross"), subtitle: alphaAssistantStateLabel(job.state)) {
             VStack(alignment: .leading, spacing: 12) {
-                Text(alphaAssistantSetupPreparingLabel(job.tier.title))
+                Text(alphaAssistantSetupPreparingLabel(job.tier.setupTitle))
                     .font(.subheadline)
                     .foregroundStyle(Color.rossInk.opacity(0.72))
                     .fixedSize(horizontal: false, vertical: true)

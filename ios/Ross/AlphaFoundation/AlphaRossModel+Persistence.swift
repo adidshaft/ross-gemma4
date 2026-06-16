@@ -768,7 +768,7 @@ private func alphaRecoverDownloadedAssistantArtifacts(from state: inout AlphaPer
         recoveredTiers.contains(job.tier) && job.state != .installed
     }
 
-    let recoveredTitles = recoveredPacks.map(\.tier.title).joined(separator: ", ")
+    let recoveredTitles = recoveredPacks.map(\.tier.setupTitle).joined(separator: ", ")
     state.ledgerEntries.insert(
         AlphaPrivacyLedgerEntry(
             title: "Assistant restored",
