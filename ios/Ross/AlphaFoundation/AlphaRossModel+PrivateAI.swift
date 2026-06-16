@@ -812,6 +812,32 @@ private func alphaCachedPreferredAssistantSetupDescriptor(
     return nil
 }
 
+private func alphaPreferredAssistantSetupRuntimeMode(
+    for tier: AlphaCapabilityTier,
+    existingRuntimeMode: AlphaPackRuntimeMode? = nil,
+    isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
+    physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory,
+    freeStorageGB: Int = max(4, alphaAvailableStorageInGigabytes()),
+    systemAssistantAvailable: Bool? = nil,
+    lastInvocation: AlphaLocalModelInvocation? = nil
+) -> AlphaPackRuntimeMode {
+    let preferredRuntime = alphaPreferredAssistantRuntimeMode(
+        for: tier,
+        existingRuntimeMode: existingRuntimeMode,
+        isPhoneFormFactor: isPhoneFormFactor,
+        physicalMemoryBytes: physicalMemoryBytes,
+        freeStorageGB: freeStorageGB,
+        systemAssistantAvailable: systemAssistantAvailable,
+        lastInvocation: lastInvocation
+    )
+    guard existingRuntimeMode == nil,
+          !alphaAllowsDevelopmentModelArtifacts(),
+          preferredRuntime == .mlxSwiftLm else {
+        return preferredRuntime
+    }
+    return .llamaCppGguf
+}
+
 struct AlphaAssistantSetupPresentation: Equatable, Sendable {
     let runtimeMode: AlphaPackRuntimeMode
     let sizeLabel: String
@@ -990,7 +1016,7 @@ func alphaAssistantSetupPresentation(
     cachedCatalogs: [AlphaAssistantCatalogDescriptor]? = nil,
     cachedDownloads: [AlphaAssistantDownloadDescriptor]? = nil
 ) -> AlphaAssistantSetupPresentation? {
-    let preferredRuntime = alphaPreferredAssistantRuntimeMode(
+    let preferredRuntime = alphaPreferredAssistantSetupRuntimeMode(
         for: tier,
         existingRuntimeMode: existingRuntimeMode,
         isPhoneFormFactor: isPhoneFormFactor,
@@ -1056,7 +1082,7 @@ func alphaShouldPrimeAssistantSetupCatalogs(
     }
     for tier in visibleTiers {
         let effectiveTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
-        let preferredRuntime = alphaPreferredAssistantRuntimeMode(
+        let preferredRuntime = alphaPreferredAssistantSetupRuntimeMode(
             for: tier,
             existingRuntimeMode: alphaExistingRuntimeMode(for: tier, installedPacks: installedPacks),
             isPhoneFormFactor: isPhoneFormFactor,

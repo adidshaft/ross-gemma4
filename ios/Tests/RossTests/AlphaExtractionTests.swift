@@ -6810,6 +6810,40 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(shouldPrime)
     }
 
+    func testShouldPrimeAssistantSetupCatalogsIgnoresMLXOnlyCatalogForFreshProductionSetup() {
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        defer {
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+        }
+
+        let shouldPrime = alphaShouldPrimeAssistantSetupCatalogs(
+            visibleTiers: [.caseAssociate],
+            installedPacks: [],
+            cachedCatalogs: [
+                AlphaAssistantCatalogDescriptor(
+                    tier: .caseAssociate,
+                    packId: "gemma-4-12b-mlx",
+                    sizeBytes: 6_200_000_000,
+                    checksumSha256: String(repeating: "a", count: 64),
+                    artifactKind: "mlx_directory",
+                    runtimeMode: .mlxSwiftLm,
+                    developmentOnly: false
+                )
+            ],
+            lastCatalogRefresh: Date(),
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24
+        )
+
+        XCTAssertTrue(shouldPrime)
+    }
+
     func testPreferredAssistantRuntimeModePrefersMLXOnCapablePhoneForDeeperTiers() {
         let runtime = alphaPreferredAssistantRuntimeMode(
             for: .caseAssociate,
@@ -10314,6 +10348,60 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.etaLabel, "about 9 min")
     }
 
+    func testAssistantSetupPresentationDefaultsToGGUFForFreshProductionSetupOnCapableIPhone() {
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        defer {
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+        }
+
+        let cachedMLX = AlphaAssistantCatalogDescriptor(
+            tier: .caseAssociate,
+            packId: "gemma-4-12b-mlx",
+            sizeBytes: 6_200_000_000,
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            draftArtifact: AlphaAssistantDraftArtifactDescriptor(
+                fileName: "gemma-4-e4b-it-mlx",
+                sizeBytes: 200_000_000,
+                checksumSha256: String(repeating: "b", count: 64),
+                artifactKind: "mlx_directory",
+                downloadURLString: "https://ross.example/drafts/gemma-4-e4b-it-mlx",
+                draftTokens: 6
+            )
+        )
+        let cachedGGUF = AlphaAssistantCatalogDescriptor(
+            tier: .caseAssociate,
+            packId: "gemma-4-12b-gguf",
+            sizeBytes: 6_970_062_656,
+            checksumSha256: String(repeating: "c", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false
+        )
+
+        let presentation = alphaAssistantSetupPresentation(
+            for: .caseAssociate,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24,
+            systemAssistantAvailable: false,
+            cachedCatalogs: [cachedMLX, cachedGGUF]
+        )
+
+        XCTAssertEqual(presentation?.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(presentation?.totalDownloadBytes, 6_970_062_656)
+        XCTAssertEqual(presentation?.sizeLabel, "7.0 GB")
+        XCTAssertNil(presentation?.companionLabel)
+        XCTAssertEqual(presentation?.etaLabel, "about 10 min")
+    }
+
     func testAssistantSetupPresentationFallsBackToGGUFAfterSlowInstalledMLXRun() {
         let slowMLXInvocation = AlphaLocalModelInvocation(
             task: .matterQuestionAnswer,
@@ -10364,6 +10452,61 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.sizeLabel, "7.0 GB")
         XCTAssertNil(presentation?.companionLabel)
         XCTAssertEqual(presentation?.etaLabel, "about 10 min")
+    }
+
+    func testAssistantSetupPresentationPreservesInstalledMLXForProductionRefresh() {
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        defer {
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+        }
+
+        let cachedMLX = AlphaAssistantCatalogDescriptor(
+            tier: .caseAssociate,
+            packId: "gemma-4-12b-mlx",
+            sizeBytes: 6_200_000_000,
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            draftArtifact: AlphaAssistantDraftArtifactDescriptor(
+                fileName: "gemma-4-e4b-it-mlx",
+                sizeBytes: 200_000_000,
+                checksumSha256: String(repeating: "b", count: 64),
+                artifactKind: "mlx_directory",
+                downloadURLString: "https://ross.example/drafts/gemma-4-e4b-it-mlx",
+                draftTokens: 6
+            )
+        )
+        let cachedGGUF = AlphaAssistantCatalogDescriptor(
+            tier: .caseAssociate,
+            packId: "gemma-4-12b-gguf",
+            sizeBytes: 6_970_062_656,
+            checksumSha256: String(repeating: "c", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false
+        )
+
+        let presentation = alphaAssistantSetupPresentation(
+            for: .caseAssociate,
+            existingRuntimeMode: .mlxSwiftLm,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24,
+            systemAssistantAvailable: false,
+            cachedCatalogs: [cachedMLX, cachedGGUF]
+        )
+
+        XCTAssertEqual(presentation?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(presentation?.totalDownloadBytes, 6_400_000_000)
+        XCTAssertEqual(presentation?.sizeLabel, "6.4 GB")
+        XCTAssertEqual(presentation?.companionLabel, rossLocalized("assistant_meta_speed_companion"))
+        XCTAssertEqual(presentation?.etaLabel, "about 9 min")
     }
 
     func testAssistantSetupPresentationFallsBackToCachedDownloadWhenCatalogMissing() {
