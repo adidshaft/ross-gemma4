@@ -3557,10 +3557,14 @@ private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack
             }
             controller.persisted.installedPacks.forEach { pack ->
                 val runtimeHealth = controller.activeRuntimeHealth()
+                val askRuntimeHealth = controller.askRuntimeHealth()
+                val askRuntimePack = controller.askRuntimePack()
                 val isActivePack = controller.activePack()?.id == pack.id
+                val isAskFallbackPack = askRuntimeHealth?.fallbackActive == true && askRuntimePack?.id == pack.id
                 val status = when {
-                    isActivePack && runtimeHealth?.fallbackActive == true -> "Private assistant unavailable"
                     isActivePack && runtimeHealth?.available == false -> "Needs attention"
+                    isAskFallbackPack -> "Ask Ross will use this"
+                    isActivePack -> "Private assistant is ready"
                     else -> "Private assistant is ready"
                 }
                 AlphaCard(pack.tier.title, status) {
@@ -3592,6 +3596,8 @@ private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack
                 }
                 if (showTechnicalDiagnostics) {
                     controller.activeRuntimeHealth()?.let { health ->
+                        val askRuntimeHealth = controller.askRuntimeHealth()
+                        val askRuntimePack = controller.askRuntimePack()
                         val activePack = controller.activePack()
                         val artifact = activePack?.tier?.let(::alphaTechnicalModelArtifact)
                         val lastInvocation = controller.lastModelInvocation()
@@ -3603,6 +3609,12 @@ private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack
                         AlphaSettingsValueRow("Artifact kind", activePack?.artifactKind ?: "Missing")
                         AlphaSettingsValueRow("Checksum verified", if (health.checksumVerified) "yes" else "no")
                         AlphaSettingsValueRow("Runtime available", if (health.available && !health.fallbackActive) "yes" else "no")
+                        askRuntimePack?.let { AlphaSettingsValueRow("Ask runtime pack", it.tier.title) }
+                        askRuntimeHealth?.let {
+                            AlphaSettingsValueRow("Ask runtime mode", it.runtimeMode.wireValue)
+                            AlphaSettingsValueRow("Ask runtime available", if (it.available) "yes" else "no")
+                            AlphaSettingsValueRow("Ask runtime fallback", if (it.fallbackActive) "yes" else "no")
+                        }
                         AlphaSettingsValueRow("Model path", if (health.modelPathPresent) "Configured" else "Missing")
                         artifact?.let {
                             AlphaSettingsValueRow("Technical model", it.displayName)
@@ -3613,6 +3625,7 @@ private fun AlphaPrivateAiSettingsScreen(controller: AlphaRossController, onBack
                         }
                         health.modelPathLabel?.let { AlphaSettingsValueRow("Model file", it) }
                         health.lastErrorCategory?.let { AlphaSettingsValueRow("Last error category", it) }
+                        askRuntimeHealth?.takeIf { it.fallbackActive }?.let { AlphaSettingsValueRow("Ask runtime detail", it.userFacingStatus) }
                         controller.lastModelInvocationRuntimeMode()?.let { AlphaSettingsValueRow("Last invocation runtime", it) }
                         lastInvocation?.let {
                             AlphaSettingsValueRow("Last task", it.task.wireValue)
