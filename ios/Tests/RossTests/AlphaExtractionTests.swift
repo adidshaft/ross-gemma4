@@ -8868,7 +8868,7 @@ final class AlphaExtractionTests: XCTestCase {
             systemAssistantAvailable: true
         )
 
-        XCTAssertEqual(label, "MLX preferred on this iPhone for longer local context")
+        XCTAssertEqual(label, "MLX preferred on this iPhone for longer local context and companion acceleration")
     }
 
     func testAssistantRuntimeTradeoffHintExplainsCoreAIPhoneTradeoff() {
@@ -8889,7 +8889,7 @@ final class AlphaExtractionTests: XCTestCase {
                 tier: .caseAssociate,
                 isPhoneFormFactor: true
             ),
-            "Best for longer iPhone context and larger local file coverage."
+            "Best for longer iPhone context, larger local file coverage, and companion acceleration."
         )
     }
 
@@ -8900,7 +8900,7 @@ final class AlphaExtractionTests: XCTestCase {
                 tier: .seniorDraftingSupport,
                 isPhoneFormFactor: true
             ),
-            "Best for the deepest iPhone context on larger bundles and longer drafting."
+            "Best for the deepest iPhone context on larger bundles, longer drafting, and MTP acceleration."
         )
     }
 
@@ -11196,7 +11196,7 @@ final class AlphaExtractionTests: XCTestCase {
             lastInvocation: slowFoundationInvocation
         )
 
-        XCTAssertEqual(label, "MLX selected after slower CoreAI run")
+        XCTAssertEqual(label, "MLX selected after slower CoreAI run with companion acceleration")
     }
 
     func testAssistantRuntimeChoiceLabelNamesCoreAIWhenAlreadySelected() {
@@ -11237,7 +11237,7 @@ final class AlphaExtractionTests: XCTestCase {
             lastInvocation: fastGGUFInvocation
         )
 
-        XCTAssertEqual(label, "GGUF kept after faster recent run")
+        XCTAssertEqual(label, "GGUF kept after faster recent run with MTP acceleration")
     }
 
     func testAssistantRuntimeChoiceLabelExplainsFallbackAfterSlowMLXRun() {
@@ -11265,7 +11265,7 @@ final class AlphaExtractionTests: XCTestCase {
             lastInvocation: slowMLXInvocation
         )
 
-        XCTAssertEqual(label, "GGUF selected after slower MLX run")
+        XCTAssertEqual(label, "GGUF selected after slower MLX run with MTP acceleration")
     }
 
     func testAssistantRuntimeChoiceLabelExplainsKeepingInstalledGGUFOnHighMemoryPhone() {
@@ -11292,7 +11292,7 @@ final class AlphaExtractionTests: XCTestCase {
             systemAssistantAvailable: false
         )
 
-        XCTAssertEqual(label, "Senior Drafting Support stays on GGUF on iPhone for deeper local context")
+        XCTAssertEqual(label, "Senior Drafting Support stays on GGUF on iPhone for deeper local context and MTP acceleration")
     }
 
     func testReuseInstalledAssistantPackWhenRuntimeAlreadyMatchesPreference() {

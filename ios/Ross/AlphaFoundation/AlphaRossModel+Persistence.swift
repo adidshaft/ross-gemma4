@@ -1511,24 +1511,24 @@ func alphaAssistantRuntimeChoiceLabel(
             case .appleFoundationModels:
                 return "CoreAI kept after faster recent run"
             case .mlxSwiftLm:
-                return "MLX kept after faster recent run"
+                return "MLX kept after faster recent run with companion acceleration"
             case .llamaCppGguf:
-                return "GGUF kept after faster recent run"
+                return "GGUF kept after faster recent run with MTP acceleration"
             default:
                 break
             }
         case .avoidSlow(let runtime):
             if runtime == .appleFoundationModels && selectedRuntimeMode == .mlxSwiftLm {
-                return "MLX selected after slower CoreAI run"
+                return "MLX selected after slower CoreAI run with companion acceleration"
             }
             if runtime == .appleFoundationModels && selectedRuntimeMode == .llamaCppGguf {
-                return "GGUF selected after slower CoreAI run"
+                return "GGUF selected after slower CoreAI run with MTP acceleration"
             }
             if runtime == .mlxSwiftLm && selectedRuntimeMode == .llamaCppGguf {
-                return "GGUF selected after slower MLX run"
+                return "GGUF selected after slower MLX run with MTP acceleration"
             }
             if runtime == .llamaCppGguf && selectedRuntimeMode == .mlxSwiftLm {
-                return "MLX selected after slower GGUF run"
+                return "MLX selected after slower GGUF run with companion acceleration"
             }
         default:
             break
@@ -1548,15 +1548,15 @@ func alphaAssistantRuntimeChoiceLabel(
     if selectedRuntimeMode == .mlxSwiftLm,
        prefersSystemAssistant,
        alphaPreferredAssistantRuntimeMode(
-        for: tier,
-        existingRuntimeMode: nil,
-        isPhoneFormFactor: isPhoneFormFactor,
-        physicalMemoryBytes: physicalMemoryBytes,
-        freeStorageGB: freeStorageGB,
-        systemAssistantAvailable: true,
-        lastInvocation: lastInvocation
+           for: tier,
+           existingRuntimeMode: nil,
+           isPhoneFormFactor: isPhoneFormFactor,
+           physicalMemoryBytes: physicalMemoryBytes,
+           freeStorageGB: freeStorageGB,
+           systemAssistantAvailable: true,
+           lastInvocation: lastInvocation
        ) == .mlxSwiftLm {
-        return "MLX preferred on this iPhone for longer local context"
+        return "MLX preferred on this iPhone for longer local context and companion acceleration"
     }
 
     if !isPhoneFormFactor && selectedRuntimeMode == .llamaCppGguf {
@@ -1567,7 +1567,7 @@ func alphaAssistantRuntimeChoiceLabel(
        isPhoneFormFactor,
        normalizedTier == .seniorDraftingSupport,
        !alphaAssistantTierSupportsMLXRuntime(normalizedTier) {
-        return "Senior Drafting Support stays on GGUF on iPhone for deeper local context"
+        return "Senior Drafting Support stays on GGUF on iPhone for deeper local context and MTP acceleration"
     }
 
     let baselineTier = alphaRecommendedOnDeviceTier(
@@ -1579,12 +1579,12 @@ func alphaAssistantRuntimeChoiceLabel(
     switch selectedRuntimeMode {
     case .mlxSwiftLm:
         return baselineTier == .quickStart
-            ? "MLX kept for installed assistant"
-            : "MLX enabled for deeper local context"
+            ? "MLX kept for installed assistant with companion acceleration"
+            : "MLX enabled for deeper local context and companion acceleration"
     case .llamaCppGguf:
         return baselineTier == .quickStart
-            ? "GGUF kept as the iPhone baseline"
-            : "GGUF chosen for broader device compatibility"
+            ? "GGUF kept as the iPhone baseline with MTP acceleration"
+            : "GGUF chosen for broader device compatibility and MTP acceleration"
     case .appleFoundationModels:
         return "Built-in CoreAI model selected"
     case .deterministicDev:
@@ -1610,15 +1610,15 @@ func alphaAssistantRuntimeTradeoffHint(
             : "Best when you want built-in local answers with no download."
     case .mlxSwiftLm:
         return isPhoneFormFactor
-            ? "Best for longer iPhone context and larger local file coverage."
-            : "Best for longer local context with the MLX runtime."
+            ? "Best for longer iPhone context, larger local file coverage, and companion acceleration."
+            : "Best for longer local context with the MLX runtime and companion acceleration."
     case .llamaCppGguf:
         if isPhoneFormFactor, normalizedTier == .seniorDraftingSupport {
-            return "Best for the deepest iPhone context on larger bundles and longer drafting."
+            return "Best for the deepest iPhone context on larger bundles, longer drafting, and MTP acceleration."
         }
         return isPhoneFormFactor
-            ? "Best for broader local context and larger file coverage."
-            : "Best for the broadest local context and larger file coverage."
+            ? "Best for broader local context, larger file coverage, and MTP acceleration."
+            : "Best for the broadest local context, larger file coverage, and MTP acceleration."
     case .deterministicDev:
         return "Best for development-only runtime checks."
     case .mediapipeLlm:
