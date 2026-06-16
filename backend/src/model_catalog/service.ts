@@ -273,6 +273,28 @@ export const PRODUCTION_METADATA_MODEL_PACKS: ModelPack[] = [
 export const PRODUCTION_IOS_MODEL_PACKS: ModelPack[] = [
   ...PRODUCTION_METADATA_MODEL_PACKS,
   {
+    ...PRODUCTION_METADATA_MODEL_PACKS.find((pack) => pack.tier === "quick_start")!,
+    packId: "gemma-4-e4b-mlx",
+    sizeBytes: 6_830_818_938,
+    segmentSizeBytes: 6_830_818_938,
+    technicalModelName: "Gemma 4 E4B QAT 4-bit (MLX)",
+    repo: "mlx-community/gemma-4-E4B-it-qat-4bit",
+    artifactSeed: "gemma4-e4b-mlx-metadata-v1",
+    artifactKind: "mlx_directory",
+    runtimeMode: "mlx_swift_lm",
+    fileName: "gemma-4-E4B-it-qat-4bit",
+    downloadUrl: "https://huggingface.co/mlx-community/gemma-4-E4B-it-qat-4bit",
+    finalSha256: "f62f14fb4ab2795f9ed17f7d5cbf9d40672c34fbfde875c7b590ce04914eb25f",
+    draftArtifact: {
+      fileName: "gemma-4-E4B-it-qat-assistant-6bit",
+      sizeBytes: 97_064_255,
+      finalSha256: "6541d883bcf462e19640a309f6b540fb6a24898d451d796cb535c0d897fb41a1",
+      artifactKind: "mlx_directory",
+      downloadUrl: "https://huggingface.co/mlx-community/gemma-4-E4B-it-qat-assistant-6bit"
+    },
+    downloadSource: "direct"
+  },
+  {
     ...PRODUCTION_METADATA_MODEL_PACKS.find((pack) => pack.tier === "case_associate")!,
     packId: "gemma-4-12b-mlx",
     sizeBytes: 11_020_140_534,
@@ -291,6 +313,28 @@ export const PRODUCTION_IOS_MODEL_PACKS: ModelPack[] = [
       finalSha256: "9106d7a467fae26d231f71c617acb950bc0651917f3861cad89a4c67957f0a4f",
       artifactKind: "mlx_directory",
       downloadUrl: "https://huggingface.co/mlx-community/gemma-4-12B-it-qat-assistant-4bit"
+    },
+    downloadSource: "direct"
+  },
+  {
+    ...PRODUCTION_METADATA_MODEL_PACKS.find((pack) => pack.tier === "senior_drafting_support")!,
+    packId: "gemma-4-26b-a4b-mlx",
+    sizeBytes: 15_641_241_228,
+    segmentSizeBytes: 15_641_241_228,
+    technicalModelName: "Gemma 4 26B-A4B QAT 4-bit (MLX)",
+    repo: "mlx-community/gemma-4-26B-A4B-it-qat-4bit",
+    artifactSeed: "gemma4-26b-mlx-metadata-v1",
+    artifactKind: "mlx_directory",
+    runtimeMode: "mlx_swift_lm",
+    fileName: "gemma-4-26B-A4B-it-qat-4bit",
+    downloadUrl: "https://huggingface.co/mlx-community/gemma-4-26B-A4B-it-qat-4bit",
+    finalSha256: "853a863cb5f21d6bd677c869f76a5daead32bdf45a3a82775c9a1428764dd654",
+    draftArtifact: {
+      fileName: "gemma-4-26B-A4B-it-qat-assistant-4bit",
+      sizeBytes: 268_327_387,
+      finalSha256: "702b480752e77c1d069b08379f307b32a73af42320e1c6571809c6535c1e71c2",
+      artifactKind: "mlx_directory",
+      downloadUrl: "https://huggingface.co/mlx-community/gemma-4-26B-A4B-it-qat-assistant-4bit"
     },
     downloadSource: "direct"
   }

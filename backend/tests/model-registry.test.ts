@@ -535,3 +535,74 @@ test("ios production catalog includes the built-in mlx case associate variant wi
     /^[a-f0-9]{64}$/
   );
 });
+
+test("ios production catalog includes built-in mlx variants for every assistant tier", async (t) => {
+  const app = await buildApp({
+    env: buildTestEnv({ ROSS_MODEL_CATALOG_MODE: "production_metadata" }),
+    emitLogsToConsole: false
+  });
+
+  t.after(async () => {
+    await app.close();
+  });
+
+  const iosCatalog = await app.inject({
+    method: "GET",
+    url: "/model-catalog?platform=ios"
+  });
+
+  assert.equal(iosCatalog.statusCode, 200);
+  const iosBody = JSON.parse(iosCatalog.body) as {
+    manifest: {
+      payload: {
+        packs: Array<{
+          packId: string;
+          tier: string;
+          runtimeMode: string;
+          artifactKind: string;
+          technicalModelName: string;
+          draftArtifact?: {
+            fileName: string;
+          };
+        }>;
+      };
+    };
+  };
+
+  const packsByTier = new Map(
+    iosBody.manifest.payload.packs.map((pack) => [`${pack.tier}:${pack.runtimeMode}`, pack])
+  );
+
+  assert.equal(iosBody.manifest.payload.packs.length, 6);
+
+  assert.equal(
+    packsByTier.get("quick_start:mlx_swift_lm")?.packId,
+    "gemma-4-e4b-mlx"
+  );
+  assert.equal(
+    packsByTier.get("quick_start:mlx_swift_lm")?.technicalModelName,
+    "Gemma 4 E4B QAT 4-bit (MLX)"
+  );
+  assert.equal(
+    packsByTier.get("quick_start:mlx_swift_lm")?.draftArtifact?.fileName,
+    "gemma-4-E4B-it-qat-assistant-6bit"
+  );
+
+  assert.equal(
+    packsByTier.get("case_associate:mlx_swift_lm")?.packId,
+    "gemma-4-12b-mlx"
+  );
+
+  assert.equal(
+    packsByTier.get("senior_drafting_support:mlx_swift_lm")?.packId,
+    "gemma-4-26b-a4b-mlx"
+  );
+  assert.equal(
+    packsByTier.get("senior_drafting_support:mlx_swift_lm")?.technicalModelName,
+    "Gemma 4 26B-A4B QAT 4-bit (MLX)"
+  );
+  assert.equal(
+    packsByTier.get("senior_drafting_support:mlx_swift_lm")?.draftArtifact?.fileName,
+    "gemma-4-26B-A4B-it-qat-assistant-4bit"
+  );
+});
