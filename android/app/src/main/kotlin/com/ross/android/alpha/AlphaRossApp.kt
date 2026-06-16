@@ -6276,6 +6276,8 @@ private fun alphaPrivateAiStatus(controller: AlphaRossController): Pair<String, 
     val activePack = controller.activePack()
     val activeJob = controller.persisted.modelJobs.firstOrNull()
     val runtimeHealth = controller.activeRuntimeHealth()
+    val askRuntimeHealth = controller.askRuntimeHealth()
+    val askRuntimePack = controller.askRuntimePack()
 
     return when {
         activeJob?.state == AlphaDownloadState.Downloading || activeJob?.state == AlphaDownloadState.Queued || activeJob?.state == AlphaDownloadState.Verifying ->
@@ -6288,6 +6290,12 @@ private fun alphaPrivateAiStatus(controller: AlphaRossController): Pair<String, 
             "Private assistant needs attention" to "Free up space and try again."
         activeJob?.state == AlphaDownloadState.Failed || activeJob?.state == AlphaDownloadState.PausedError || activeJob?.state == AlphaDownloadState.Cancelled ->
             "Private assistant needs attention" to "Private assistant could not be set up. Open setup to retry."
+        askRuntimeHealth?.available == true && askRuntimeHealth.fallbackActive == true ->
+            "Private assistant is ready" to (
+                askRuntimePack?.tier?.title?.let { tierTitle ->
+                    "Ask Ross will use $tierTitle on this Android build when the active assistant cannot run locally."
+                } ?: askRuntimeHealth.userFacingStatus
+            )
         activePack != null && runtimeHealth?.fallbackActive == true ->
             "Private assistant unavailable" to "${activePack.tier.title} is installed, but Ross cannot use it right now."
         activePack != null && runtimeHealth?.available == true ->

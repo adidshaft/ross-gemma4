@@ -740,8 +740,27 @@ internal class AlphaRossController(
             appPrivateRoot = rootDir,
         )
 
+    fun askRuntimePack(): AlphaInstalledPack? = askRuntimeSelection()?.pack
+
+    fun askRuntimeHealth(): AlphaLocalRuntimeHealth? {
+        val selection = askRuntimeSelection() ?: return activeRuntimeHealth()
+        val health = selection.provider.runtimeHealth()
+        val activePack = activePack()
+        val usesFallbackPack = activePack != null && selection.pack.id != activePack.id
+        return if (!usesFallbackPack) {
+            health
+        } else {
+            health.copy(
+                fallbackActive = true,
+                userFacingStatus = "Ask Ross will use ${selection.pack.tier.title} on this Android build when the active assistant cannot run locally."
+            )
+        }
+    }
+
     fun onDeviceRemediationDiagnostics(): List<Pair<String, String>> {
         val health = activeRuntimeHealth()
+        val askRuntimeHealth = askRuntimeHealth()
+        val askRuntimePack = askRuntimePack()
         val activePack = activePack()
         val documents = persisted.cases.flatMap { it.documents }
         val staleAskTurns = persisted.cases
@@ -758,6 +777,13 @@ internal class AlphaRossController(
                 else -> "no active pack"
             },
             "Runtime detail" to (health?.userFacingStatus ?: "No runtime health yet."),
+            "Ask runtime available" to when {
+                askRuntimeHealth?.available == true && askRuntimeHealth.fallbackActive ->
+                    "pass via ${askRuntimePack?.tier?.title ?: "installed fallback"}"
+                askRuntimeHealth?.available == true -> "pass"
+                else -> "no local ask runtime"
+            },
+            "Ask runtime detail" to (askRuntimeHealth?.userFacingStatus ?: "No ask runtime health yet."),
             "Model path" to when {
                 health?.modelPathPresent == true -> health.modelPathLabel ?: "configured"
                 else -> "missing"
