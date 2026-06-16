@@ -910,7 +910,14 @@ private func alphaPreferredInstalledPack(
 
     guard !candidates.isEmpty else { return nil }
 
-    let preferredRuntime: AlphaPackRuntimeMode = if systemAvailable {
+    let prefersAcceleratedMLX = systemAvailable && alphaShouldPreferAcceleratedMLXInstalledPack(
+        for: tier,
+        installedPacks: installedPacks,
+        lastInvocation: lastInvocation
+    )
+    let preferredRuntime: AlphaPackRuntimeMode = if prefersAcceleratedMLX {
+        .mlxSwiftLm
+    } else if systemAvailable {
         .appleFoundationModels
     } else {
         alphaPreferredAssistantRuntimeMode(for: tier, existingRuntimeMode: nil)
@@ -966,6 +973,49 @@ private func alphaPreferredInstalledPack(
             return lhs.checksumVerified && !rhs.checksumVerified
         }
         return lhs.installedAt > rhs.installedAt
+    }
+}
+
+private func alphaShouldPreferAcceleratedMLXInstalledPack(
+    for tier: AlphaCapabilityTier,
+    installedPacks: [AlphaInstalledModelPack],
+    isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
+    physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory,
+    freeStorageGB: Int = max(4, alphaAvailableStorageInGigabytes()),
+    lowPowerMode: Bool = alphaCurrentLowPowerMode(),
+    lastInvocation: AlphaLocalModelInvocation? = nil
+) -> Bool {
+    guard alphaPreferredAssistantRuntimeMode(
+        for: tier,
+        existingRuntimeMode: .mlxSwiftLm,
+        isPhoneFormFactor: isPhoneFormFactor,
+        physicalMemoryBytes: physicalMemoryBytes,
+        freeStorageGB: freeStorageGB,
+        systemAssistantAvailable: false,
+        lastInvocation: lastInvocation
+    ) == .mlxSwiftLm else {
+        return false
+    }
+
+    return installedPacks.contains { pack in
+        guard pack.tier == tier,
+              pack.runtimeMode == .mlxSwiftLm,
+              alphaInstalledAssistantPackPassesRuntimeValidation(pack) else {
+            return false
+        }
+
+        let runtimeEnvironment = alphaLocalRuntimeEnvironment(
+            activePack: pack,
+            requestedTier: tier,
+            installedPacks: installedPacks,
+            physicalMemoryBytes: physicalMemoryBytes,
+            lowPowerMode: lowPowerMode,
+            lastInvocation: lastInvocation
+        )
+        guard let draftModelPath = runtimeEnvironment.draftModelPath else {
+            return false
+        }
+        return !draftModelPath.isEmpty
     }
 }
 

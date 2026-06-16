@@ -44,6 +44,40 @@ final class AlphaExtractionTests: XCTestCase {
         return directory
     }
 
+    @MainActor
+    private func installMLXPack(
+        with store: AlphaRossStore,
+        tier: AlphaCapabilityTier,
+        fileName: String,
+        packId: String,
+        fixtureName: String
+    ) async throws -> AlphaInstalledModelPack {
+        let sourceDirectory = try makeMLXDirectoryFixture(named: fixtureName)
+        defer { try? FileManager.default.removeItem(at: sourceDirectory) }
+
+        let expected = try XCTUnwrap(alphaModelArtifactVerification(at: sourceDirectory))
+        let installed = try await store.installDownloadedPackArtifact(
+            for: tier,
+            fileName: fileName,
+            downloadedFileURL: sourceDirectory,
+            expectedChecksum: expected.checksum,
+            expectedBytes: expected.bytes,
+            packId: packId,
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm
+        )
+
+        return installedPack(
+            tier,
+            runtimeMode: .mlxSwiftLm,
+            packId: packId,
+            installPath: installed.relativePath,
+            checksum: installed.checksum,
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+    }
+
     private func sha256Hex(_ data: Data) -> String {
         SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
@@ -6973,6 +7007,163 @@ final class AlphaExtractionTests: XCTestCase {
             XCTAssertEqual(model.persisted.installedPacks.first?.runtimeMode, .llamaCppGguf)
             XCTAssertEqual(model.persisted.installedPacks.first?.installPath, relativePath)
         }
+        XCTAssertEqual(model.persisted.settings.activeTier, .caseAssociate)
+    }
+
+    @available(iOS 26.0, macOS 26.0, *)
+    @MainActor
+    func testRefreshPrivateAISnapshotPrefersAcceleratedMLXOverSystemAssistantOnCapablePhone() async throws {
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        let previousSimulatorIdentifier = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"]
+        let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        setenv("SIMULATOR_MODEL_IDENTIFIER", "iPhone17,2", 1)
+        AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in true }
+        defer {
+            AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+            if let previousSimulatorIdentifier {
+                setenv("SIMULATOR_MODEL_IDENTIFIER", previousSimulatorIdentifier, 1)
+            } else {
+                unsetenv("SIMULATOR_MODEL_IDENTIFIER")
+            }
+        }
+
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+        defer { Task { await store.removeAllModelArtifacts() } }
+
+        var quickStartPack = try await installMLXPack(
+            with: store,
+            tier: .quickStart,
+            fileName: "gemma-4-e4b-it-mlx",
+            packId: "gemma-4-e4b-it-mlx",
+            fixtureName: "ross-mlx-runtime-pref-quick-\(UUID().uuidString)"
+        )
+        quickStartPack.isActive = false
+
+        let caseAssociatePack = try await installMLXPack(
+            with: store,
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-it-mlx",
+            packId: "gemma-4-12b-it-mlx",
+            fixtureName: "ross-mlx-runtime-pref-case-\(UUID().uuidString)"
+        )
+
+        var systemPack = alphaSystemAssistantPack(for: .caseAssociate)
+        systemPack.isActive = false
+
+        let model = AlphaRossModel()
+        var state = AlphaPersistedState.empty()
+        state.settings.activeTier = .caseAssociate
+        state.installedPacks = [systemPack, quickStartPack, caseAssociatePack]
+        model.persisted = state
+
+        model.refreshPrivateAISnapshot(forceRebuild: true)
+        await model.privateAISnapshotTask?.value
+
+        XCTAssertEqual(model.privateAISnapshot.activePack?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(model.privateAISnapshot.activePack?.packId, caseAssociatePack.packId)
+        XCTAssertEqual(model.persisted.installedPacks.first(where: \.isActive)?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(model.persisted.installedPacks.first(where: \.isActive)?.packId, caseAssociatePack.packId)
+        XCTAssertTrue(model.persisted.installedPacks.contains(where: { $0.runtimeMode == .appleFoundationModels }))
+        XCTAssertTrue(model.persisted.installedPacks.contains(where: { $0.packId == quickStartPack.packId }))
+        XCTAssertEqual(model.persisted.settings.activeTier, .caseAssociate)
+    }
+
+    @available(iOS 26.0, macOS 26.0, *)
+    @MainActor
+    func testRefreshPrivateAISnapshotKeepsSystemAssistantWhenRecentMLXWasSlow() async throws {
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        let previousSimulatorIdentifier = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"]
+        let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        setenv("SIMULATOR_MODEL_IDENTIFIER", "iPhone17,2", 1)
+        AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in true }
+        defer {
+            AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+            if let previousSimulatorIdentifier {
+                setenv("SIMULATOR_MODEL_IDENTIFIER", previousSimulatorIdentifier, 1)
+            } else {
+                unsetenv("SIMULATOR_MODEL_IDENTIFIER")
+            }
+        }
+
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+        defer { Task { await store.removeAllModelArtifacts() } }
+
+        var quickStartPack = try await installMLXPack(
+            with: store,
+            tier: .quickStart,
+            fileName: "gemma-4-e4b-it-mlx",
+            packId: "gemma-4-e4b-it-mlx",
+            fixtureName: "ross-mlx-runtime-slow-quick-\(UUID().uuidString)"
+        )
+        quickStartPack.isActive = false
+
+        let caseAssociatePack = try await installMLXPack(
+            with: store,
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-it-mlx",
+            packId: "gemma-4-12b-it-mlx",
+            fixtureName: "ross-mlx-runtime-slow-case-\(UUID().uuidString)"
+        )
+
+        var systemPack = alphaSystemAssistantPack(for: .caseAssociate)
+        systemPack.isActive = false
+
+        let slowMLXInvocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 7,
+            timeToFirstTokenMs: 3_600,
+            status: .complete
+        )
+        let session = AlphaChatSession(
+            turns: [
+                AlphaChatTurn(
+                    question: "Summarize the selected file",
+                    answerTitle: "Answer",
+                    answerSections: ["Section"],
+                    sourceRefs: [],
+                    modelInvocation: slowMLXInvocation
+                )
+            ]
+        )
+
+        let model = AlphaRossModel()
+        var state = AlphaPersistedState.empty()
+        state.settings.activeTier = .caseAssociate
+        state.installedPacks = [systemPack, quickStartPack, caseAssociatePack]
+        state.cases[0].chatSessions = [session]
+        state.cases[0].activeChatSessionID = session.id
+        model.persisted = state
+
+        model.refreshPrivateAISnapshot(forceRebuild: true)
+        await model.privateAISnapshotTask?.value
+
+        XCTAssertEqual(model.privateAISnapshot.activePack?.runtimeMode, .appleFoundationModels)
+        XCTAssertEqual(model.privateAISnapshot.activePack?.installPath, "system://apple-foundation-models")
+        XCTAssertEqual(model.persisted.installedPacks.first(where: \.isActive)?.runtimeMode, .appleFoundationModels)
+        XCTAssertTrue(model.persisted.installedPacks.contains(where: { $0.packId == caseAssociatePack.packId }))
+        XCTAssertTrue(model.persisted.installedPacks.contains(where: { $0.packId == quickStartPack.packId }))
         XCTAssertEqual(model.persisted.settings.activeTier, .caseAssociate)
     }
     #endif
