@@ -185,6 +185,42 @@ class AlphaLocalModelRuntimeTest {
     }
 
     @Test
+    fun `mediapipe runtime health reports larger budgets for higher tiers`() {
+        val root = Files.createTempDirectory("ross-mediapipe-runtime-budgets").toFile()
+        val caseAssociateFile = File(root, "case-associate.task").apply { writeText("developer supplied model bytes") }
+        val seniorFile = File(root, "senior.task").apply { writeText("developer supplied model bytes") }
+
+        val caseAssociateHealth = AlphaLocalModelRuntime.runtimeHealth(
+            activePack = installedPack(AlphaCapabilityTier.CaseAssociate).copy(
+                installRelativePath = caseAssociateFile.relativeTo(root).path,
+                runtimeMode = AlphaPackRuntimeMode.MediapipeLlm,
+                artifactKind = "huggingface_gated_model_artifact",
+                checksumVerified = true,
+            ),
+            requestedTier = AlphaCapabilityTier.CaseAssociate,
+            context = Application(),
+            appPrivateRoot = root,
+        )
+        val seniorHealth = AlphaLocalModelRuntime.runtimeHealth(
+            activePack = installedPack(AlphaCapabilityTier.SeniorDraftingSupport).copy(
+                installRelativePath = seniorFile.relativeTo(root).path,
+                runtimeMode = AlphaPackRuntimeMode.MediapipeLlm,
+                artifactKind = "huggingface_gated_model_artifact",
+                checksumVerified = true,
+            ),
+            requestedTier = AlphaCapabilityTier.SeniorDraftingSupport,
+            context = Application(),
+            appPrivateRoot = root,
+        )
+
+        assertEquals(2_048, caseAssociateHealth?.estimatedContextTokens)
+        assertEquals(14_000, caseAssociateHealth?.maxInputChars)
+        assertEquals(4_096, seniorHealth?.estimatedContextTokens)
+        assertEquals(18_000, seniorHealth?.maxInputChars)
+        assertTrue((seniorHealth?.maxInputChars ?: 0) > (caseAssociateHealth?.maxInputChars ?: 0))
+    }
+
+    @Test
     fun `invocation records keep hashes instead of raw prompt or source text`() {
         val sourceRef = AlphaSourceRef(
             caseId = "case-2",

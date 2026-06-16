@@ -310,6 +310,20 @@ class AlphaPromptPackBuilder(
     }
 }
 
+internal object AlphaMediaPipeRuntimeProfile {
+    fun contextWindowEstimate(tier: AlphaCapabilityTier): Int = when (tier) {
+        AlphaCapabilityTier.QuickStart -> 2_048
+        AlphaCapabilityTier.CaseAssociate -> 2_048
+        AlphaCapabilityTier.SeniorDraftingSupport -> 4_096
+    }
+
+    fun maxInputChars(tier: AlphaCapabilityTier): Int = when (tier) {
+        AlphaCapabilityTier.QuickStart -> 12_000
+        AlphaCapabilityTier.CaseAssociate -> 14_000
+        AlphaCapabilityTier.SeniorDraftingSupport -> 18_000
+    }
+}
+
 interface AlphaLocalModelProvider {
     val capabilityTier: AlphaCapabilityTier
     val runtimeMode: AlphaPackRuntimeMode
@@ -413,9 +427,9 @@ internal class AlphaUnavailableRealLocalModelProvider(
             explicitOptInEnabled = explicitOptInEnabled,
         )
 
-    override fun contextWindowEstimate(): Int? = 4_096
+    override fun contextWindowEstimate(): Int? = AlphaMediaPipeRuntimeProfile.contextWindowEstimate(capabilityTier)
 
-    override fun maxInputChars(): Int? = 14_000
+    override fun maxInputChars(): Int? = AlphaMediaPipeRuntimeProfile.maxInputChars(capabilityTier)
 
     override suspend fun run(taskInput: AlphaLocalModelInput): AlphaLocalModelOutput {
         val pack = promptBuilder.build(taskInput)
@@ -507,9 +521,9 @@ internal class AlphaMediaPipeLocalModelProvider(
             explicitOptInEnabled = explicitOptInEnabled,
         )
 
-    override fun contextWindowEstimate(): Int? = 4_096
+    override fun contextWindowEstimate(): Int? = AlphaMediaPipeRuntimeProfile.contextWindowEstimate(capabilityTier)
 
-    override fun maxInputChars(): Int? = 14_000
+    override fun maxInputChars(): Int? = AlphaMediaPipeRuntimeProfile.maxInputChars(capabilityTier)
 
     override suspend fun run(taskInput: AlphaLocalModelInput): AlphaLocalModelOutput = withContext(Dispatchers.Default) {
         currentCoroutineContext().ensureActive()

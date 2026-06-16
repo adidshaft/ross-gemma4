@@ -114,6 +114,27 @@ class AlphaAskRetrievalTest {
         assertTrue(sourcePack.any { it.sourceRef.documentId == secondary.id })
     }
 
+    @Test
+    fun `higher runtime budgets expand android ask source pack policy`() {
+        val quickStartPolicy = alphaAskSourcePackPolicy(
+            capabilityTier = AlphaCapabilityTier.QuickStart,
+            maxInputChars = 12_000,
+        )
+        val caseAssociatePolicy = alphaAskSourcePackPolicy(
+            capabilityTier = AlphaCapabilityTier.CaseAssociate,
+            maxInputChars = 14_000,
+        )
+        val seniorPolicy = alphaAskSourcePackPolicy(
+            capabilityTier = AlphaCapabilityTier.SeniorDraftingSupport,
+            maxInputChars = 18_000,
+        )
+
+        assertTrue(quickStartPolicy.sourceBlockLimit < caseAssociatePolicy.sourceBlockLimit)
+        assertTrue(caseAssociatePolicy.sourceBlockLimit < seniorPolicy.sourceBlockLimit)
+        assertTrue(caseAssociatePolicy.selectedDocumentPageLimit <= seniorPolicy.selectedDocumentPageLimit)
+        assertTrue(caseAssociatePolicy.preferredChunkChars <= seniorPolicy.preferredChunkChars)
+    }
+
     private fun caseMatter(id: String) = AlphaCaseMatter(
         id = id,
         title = "Matter $id",

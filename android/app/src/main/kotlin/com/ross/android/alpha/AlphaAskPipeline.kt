@@ -12,6 +12,43 @@ internal data class AlphaAskSourcePackPolicy(
     val overlapChars: Int = 260,
 )
 
+internal fun alphaAskSourcePackPolicy(
+    capabilityTier: AlphaCapabilityTier,
+    maxInputChars: Int?,
+): AlphaAskSourcePackPolicy {
+    val budget = maxInputChars ?: when (capabilityTier) {
+        AlphaCapabilityTier.QuickStart -> 12_000
+        AlphaCapabilityTier.CaseAssociate -> 14_000
+        AlphaCapabilityTier.SeniorDraftingSupport -> 18_000
+    }
+    return when {
+        budget >= 18_000 || capabilityTier == AlphaCapabilityTier.SeniorDraftingSupport ->
+            AlphaAskSourcePackPolicy(
+                sourceBlockLimit = 12,
+                selectedDocumentPageLimit = 5,
+                unselectedDocumentPageLimit = 3,
+                preferredChunkChars = 1_900,
+                overlapChars = 280,
+            )
+        budget >= 14_000 ->
+            AlphaAskSourcePackPolicy(
+                sourceBlockLimit = 9,
+                selectedDocumentPageLimit = 4,
+                unselectedDocumentPageLimit = 2,
+                preferredChunkChars = 1_700,
+                overlapChars = 260,
+            )
+        else ->
+            AlphaAskSourcePackPolicy(
+                sourceBlockLimit = 7,
+                selectedDocumentPageLimit = 3,
+                unselectedDocumentPageLimit = 2,
+                preferredChunkChars = 1_500,
+                overlapChars = 220,
+            )
+    }
+}
+
 internal object AlphaAskRetrieval {
     private val stopWords = setOf(
         "the", "and", "for", "with", "from", "that", "this", "what", "when",

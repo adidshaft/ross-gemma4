@@ -2224,9 +2224,9 @@ internal class AlphaRossController(
     ) {
         val runtimeSelection = askRuntimeSelection() ?: return
         val pack = runtimeSelection.pack
-        val selectedDocuments = selectedAskDocuments(scopeCaseId)
-        val sourcePack = askRuntimeSourcePack(question, scopeCaseId, selectedDocuments)
         val provider = runtimeSelection.provider
+        val selectedDocuments = selectedAskDocuments(scopeCaseId)
+        val sourcePack = askRuntimeSourcePack(question, scopeCaseId, selectedDocuments, provider)
         if (
             provider.runtimeMode == AlphaPackRuntimeMode.DeterministicDev ||
             !provider.isAvailable() ||
@@ -2343,6 +2343,7 @@ internal class AlphaRossController(
         question: String,
         scopeCaseId: String?,
         selectedDocuments: List<AlphaAskDocumentOption>,
+        provider: AlphaLocalModelProvider,
     ): List<AlphaSourceTextBlock> {
         val genericLegalDefinition = AlphaAskRetrieval.isGenericLegalDefinition(question)
         val selectedIds = if (genericLegalDefinition) {
@@ -2387,6 +2388,10 @@ internal class AlphaRossController(
             question = question,
             candidateDocuments = candidateDocuments,
             selectedDocumentIds = selectedIds,
+            policy = alphaAskSourcePackPolicy(
+                capabilityTier = provider.capabilityTier,
+                maxInputChars = provider.maxInputChars(),
+            ),
         )
     }
 
