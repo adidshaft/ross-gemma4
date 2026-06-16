@@ -501,16 +501,28 @@ private func alphaRecoveredInstalledPackFromDisk(tier: AlphaCapabilityTier) -> A
         includingPropertiesForKeys: nil,
         options: [.skipsHiddenFiles]
     ) {
-        for manifestURL in contents
-            .filter({ $0.lastPathComponent.hasSuffix(".manifest.json") })
-            .sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
-            guard let data = try? Data(contentsOf: manifestURL) else { continue }
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            guard let manifest = try? decoder.decode(AlphaModelArtifactManifest.self, from: data),
-                  manifest.tier == tier else {
-                continue
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let manifests = contents
+            .filter { $0.lastPathComponent.hasSuffix(".manifest.json") }
+            .compactMap { manifestURL -> (url: URL, manifest: AlphaModelArtifactManifest)? in
+                guard let data = try? Data(contentsOf: manifestURL),
+                      let manifest = try? decoder.decode(AlphaModelArtifactManifest.self, from: data),
+                      manifest.tier == tier else {
+                    return nil
+                }
+                return (manifestURL, manifest)
             }
+            .sorted { lhs, rhs in
+                if lhs.manifest.verifiedAt != rhs.manifest.verifiedAt {
+                    return lhs.manifest.verifiedAt > rhs.manifest.verifiedAt
+                }
+                return lhs.url.lastPathComponent < rhs.url.lastPathComponent
+            }
+
+        for candidate in manifests {
+            let manifestURL = candidate.url
+            let manifest = candidate.manifest
             let fileURL = alphaAbsoluteURL(for: manifest.relativePath)
             guard alphaModelArtifactManifestURL(forArtifactAt: fileURL).standardizedFileURL == manifestURL.standardizedFileURL else {
                 continue
@@ -618,8 +630,26 @@ private func alphaRecoverDownloadedAssistantArtifacts(from state: inout AlphaPer
 
     var recoveredPacks: [AlphaInstalledModelPack] = []
     let existingPackPaths = Set(state.installedPacks.map(\.installPath))
+    let retainedDownloadedTiers = Set(
+        state.installedPacks.compactMap { pack -> AlphaCapabilityTier? in
+            guard pack.runtimeMode != .appleFoundationModels,
+                  pack.artifactKind != "system_model" else {
+                return nil
+            }
+            return AlphaCapabilityTier.normalizedAssistantSelection(pack.tier) ?? pack.tier
+        }
+    )
+    let focusedRecoveryTiers: [AlphaCapabilityTier]
+    if let selectedTier = AlphaCapabilityTier.normalizedAssistantSelection(
+        state.installedPacks.first(where: \.isActive)?.tier ?? state.settings.activeTier
+    ) {
+        focusedRecoveryTiers = [selectedTier]
+    } else {
+        focusedRecoveryTiers = AlphaCapabilityTier.installableAssistantTiers
+    }
 
-    for tier in AlphaCapabilityTier.installableAssistantTiers {
+    for tier in focusedRecoveryTiers {
+        guard !retainedDownloadedTiers.contains(tier) else { continue }
         guard let recovered = alphaRecoveredInstalledPackFromDisk(tier: tier),
               !existingPackPaths.contains(recovered.installPath) else { continue }
         recoveredPacks.append(recovered)
@@ -1030,16 +1060,44 @@ private func alphaApplyPreferredInstalledRuntimeForSelectedTier(_ state: inout A
         return
     }
 
+    let existingPreferredIndex = state.installedPacks.firstIndex { pack in
+        pack.id == preferredPack.id ||
+            (
+                pack.packId == preferredPack.packId &&
+                    pack.runtimeMode == preferredPack.runtimeMode &&
+                    pack.artifactKind == preferredPack.artifactKind &&
+                    pack.installPath == preferredPack.installPath
+            )
+    }
     let currentPack = state.installedPacks.first { $0.tier == selectedTier && $0.isActive } ??
         alphaOptimisticActivePack(from: state)
-    guard currentPack?.id != preferredPack.id else {
+    let currentMatchesPreferred =
+        currentPack?.id == preferredPack.id ||
+        (
+            currentPack?.packId == preferredPack.packId &&
+                currentPack?.runtimeMode == preferredPack.runtimeMode &&
+                currentPack?.artifactKind == preferredPack.artifactKind &&
+                currentPack?.installPath == preferredPack.installPath
+        )
+    guard !currentMatchesPreferred else {
         return
     }
 
     state.installedPacks = state.installedPacks.map { pack in
         var copy = pack
-        copy.isActive = pack.id == preferredPack.id
+        if let existingPreferredIndex {
+            copy.isActive = state.installedPacks[existingPreferredIndex].id == pack.id
+        } else {
+            copy.isActive = false
+        }
         return copy
+    }
+    if existingPreferredIndex == nil {
+        var activatedPreferredPack = preferredPack
+        activatedPreferredPack.isActive = true
+        state.installedPacks.insert(activatedPreferredPack, at: 0)
+    } else if let existingPreferredIndex {
+        state.installedPacks[existingPreferredIndex].isActive = true
     }
     state.settings.activeTier = selectedTier
     if let jobIndex = state.modelJobs.firstIndex(where: {
@@ -1058,6 +1116,24 @@ private func alphaApplyPreferredInstalledRuntimeForSelectedTier(_ state: inout A
         state.modelJobs[jobIndex].totalBytes = preferredPack.runtimeMode == .appleFoundationModels ? 0 : state.modelJobs[jobIndex].totalBytes
         state.modelJobs[jobIndex].updatedAt = .now
         state.modelJobs[jobIndex].completedAt = state.modelJobs[jobIndex].completedAt ?? .now
+    } else if preferredPack.runtimeMode == .appleFoundationModels || preferredPack.artifactKind == "system_model" {
+        state.modelJobs.insert(
+            AlphaModelDownloadJob(
+                sessionId: "system-\(selectedTier.rawValue)",
+                packId: preferredPack.packId,
+                tier: selectedTier,
+                state: .installed,
+                networkPolicy: .wifiOnly,
+                bytesDownloaded: 0,
+                totalBytes: 0,
+                checksumSha256: preferredPack.checksumSha256,
+                artifactKind: preferredPack.artifactKind,
+                runtimeMode: preferredPack.runtimeMode,
+                developmentOnly: preferredPack.developmentOnly,
+                completedAt: .now
+            ),
+            at: 0
+        )
     }
 }
 

@@ -677,9 +677,6 @@ private func alphaCachedPreferredAssistantSetupDescriptor(
     if let preferredCatalog = catalogCandidates.first(where: { $0.runtimeMode == preferredRuntimeMode }) {
         return preferredCatalog
     }
-    if let fallbackCatalog = catalogCandidates.first {
-        return fallbackCatalog
-    }
 
     let downloadCandidates = (cachedDownloads ?? []).filter {
         AlphaCapabilityTier.normalizedAssistantSelection($0.tier) == effectiveTier &&
@@ -688,14 +685,19 @@ private func alphaCachedPreferredAssistantSetupDescriptor(
     if let preferredDownload = downloadCandidates.first(where: { $0.runtimeMode == preferredRuntimeMode }) {
         return alphaAssistantCatalogDescriptor(from: preferredDownload)
     }
+    if let bundledPreferred = alphaBundledAssistantCatalogDescriptor(
+        for: tier,
+        preferredRuntimeMode: preferredRuntimeMode
+    ) {
+        return bundledPreferred
+    }
+    if let fallbackCatalog = catalogCandidates.first {
+        return fallbackCatalog
+    }
     if let fallbackDownload = downloadCandidates.first {
         return alphaAssistantCatalogDescriptor(from: fallbackDownload)
     }
-
-    return alphaBundledAssistantCatalogDescriptor(
-        for: tier,
-        preferredRuntimeMode: preferredRuntimeMode
-    )
+    return nil
 }
 
 struct AlphaAssistantSetupPresentation: Equatable, Sendable {
