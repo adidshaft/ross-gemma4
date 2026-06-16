@@ -9196,6 +9196,52 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(alphaAssistantDownloadDescriptorSupportsCurrentInstaller(descriptor))
     }
 
+    func testAssistantDownloadDescriptorSupportsCurrentInstallerRejectsOptiQRepository() {
+        let descriptor = AlphaAssistantDownloadDescriptor(
+            sessionId: nil,
+            packId: "gemma-4-12b-optiq-mlx",
+            tier: .caseAssociate,
+            fileName: "gemma-4-12B-it-OptiQ-4bit",
+            sizeBytes: 6_773_371_194,
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            downloadURLString: "https://huggingface.co/mlx-community/gemma-4-12B-it-OptiQ-4bit",
+            verified: true,
+            releaseReady: true
+        )
+
+        XCTAssertFalse(alphaAssistantDownloadDescriptorSupportsCurrentInstaller(descriptor))
+    }
+
+    func testAssistantDownloadDescriptorSupportsCurrentInstallerRejectsOptiQDraftCompanion() {
+        let descriptor = AlphaAssistantDownloadDescriptor(
+            sessionId: nil,
+            packId: "gemma-4-12b-mlx",
+            tier: .caseAssociate,
+            fileName: "gemma-4-12B-it-4bit",
+            sizeBytes: 6_773_371_194,
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            downloadURLString: "https://huggingface.co/mlx-community/gemma-4-12B-it-4bit",
+            verified: true,
+            releaseReady: true,
+            draftArtifact: AlphaAssistantDraftArtifactDescriptor(
+                fileName: "gemma-4-E4B-it-OptiQ-4bit",
+                sizeBytes: 6_607_285_383,
+                checksumSha256: String(repeating: "b", count: 64),
+                artifactKind: "mlx_directory",
+                downloadURLString: "https://huggingface.co/mlx-community/gemma-4-e4b-it-OptiQ-4bit",
+                draftTokens: 6
+            )
+        )
+
+        XCTAssertFalse(alphaAssistantDownloadDescriptorSupportsCurrentInstaller(descriptor))
+    }
+
     func testBackendArtifactSupportsCurrentInstallerAllowsDirectMLXRepository() {
         let artifact = AlphaBackendArtifact(
             fileName: "gemma-4-12B-it-4bit",
@@ -9210,6 +9256,37 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertTrue(alphaBackendArtifactSupportsCurrentInstaller(artifact))
+    }
+
+    func testBackendCatalogPackSupportsCurrentInstallerRejectsOptiQPackID() {
+        let pack = AlphaBackendCatalogPack(
+            packId: "gemma-4-12b-optiq-mlx",
+            displayName: "Gemma 4 12B OptiQ",
+            tier: .caseAssociate,
+            sizeBytes: 6_773_371_194,
+            checksumSha256: String(repeating: "c", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false
+        )
+
+        XCTAssertFalse(alphaBackendCatalogPackSupportsCurrentInstaller(pack))
+    }
+
+    func testBackendArtifactSupportsCurrentInstallerRejectsOptiQRepository() {
+        let artifact = AlphaBackendArtifact(
+            fileName: "gemma-4-12B-it-OptiQ-4bit",
+            sizeBytes: 6_773_371_194,
+            finalSha256: String(repeating: "b", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            downloadPath: nil,
+            downloadUrl: "https://huggingface.co/mlx-community/gemma-4-12B-it-OptiQ-4bit",
+            segments: []
+        )
+
+        XCTAssertFalse(alphaBackendArtifactSupportsCurrentInstaller(artifact))
     }
 
     func testBackendArtifactSupportsCurrentInstallerAllowsMLXDraftCompanion() {
@@ -9257,6 +9334,42 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertTrue(alphaAssistantCatalogDescriptorSupportsCurrentInstaller(descriptor))
+    }
+
+    func testAssistantCatalogDescriptorSupportsCurrentInstallerRejectsOptiQPackID() {
+        let descriptor = AlphaAssistantCatalogDescriptor(
+            tier: .caseAssociate,
+            packId: "gemma-4-12b-optiq-mlx",
+            sizeBytes: 6_773_371_194,
+            checksumSha256: String(repeating: "d", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false
+        )
+
+        XCTAssertFalse(alphaAssistantCatalogDescriptorSupportsCurrentInstaller(descriptor))
+    }
+
+    func testAssistantCatalogDescriptorSupportsCurrentInstallerRejectsOptiQDraftCompanion() {
+        let descriptor = AlphaAssistantCatalogDescriptor(
+            tier: .caseAssociate,
+            packId: "gemma-4-12b-mlx",
+            sizeBytes: 6_773_371_194,
+            checksumSha256: String(repeating: "d", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            draftArtifact: AlphaAssistantDraftArtifactDescriptor(
+                fileName: "gemma-4-E4B-it-OptiQ-4bit",
+                sizeBytes: 6_607_285_383,
+                checksumSha256: String(repeating: "e", count: 64),
+                artifactKind: "mlx_directory",
+                downloadURLString: "",
+                draftTokens: 6
+            )
+        )
+
+        XCTAssertFalse(alphaAssistantCatalogDescriptorSupportsCurrentInstaller(descriptor))
     }
 
     func testAssistantDownloadPreflightRejectsWrongArtifactSize() throws {
