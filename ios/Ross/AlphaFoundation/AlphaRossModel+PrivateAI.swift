@@ -830,9 +830,11 @@ func alphaPreferredAssistantSetupRuntimeMode(
         systemAssistantAvailable: systemAssistantAvailable,
         lastInvocation: lastInvocation
     )
-    guard existingRuntimeMode == nil,
-          !alphaAllowsDevelopmentModelArtifacts(),
+    guard !alphaAllowsDevelopmentModelArtifacts(),
           preferredRuntime == .mlxSwiftLm else {
+        return preferredRuntime
+    }
+    if existingRuntimeMode == .mlxSwiftLm {
         return preferredRuntime
     }
     return .llamaCppGguf
@@ -994,7 +996,7 @@ private func alphaInstalledAssistantPacksForUpdateChecks(
         if alphaExistingRuntimeMode(for: tier, installedPacks: preferencePacks) == .appleFoundationModels {
             return nil
         }
-        let preferredRuntime = alphaPreferredAssistantRuntimeMode(
+        let preferredRuntime = alphaPreferredAssistantSetupRuntimeMode(
             for: tier,
             existingRuntimeMode: alphaExistingRuntimeMode(for: tier, installedPacks: preferencePacks),
             lastInvocation: lastInvocation
@@ -1223,7 +1225,7 @@ func alphaAssistantUpdateCandidate(
         return nil
     }
 
-    let preferredRuntime = preferredRuntimeMode ?? alphaPreferredAssistantRuntimeMode(
+    let preferredRuntime = preferredRuntimeMode ?? alphaPreferredAssistantSetupRuntimeMode(
         for: installedPack.tier,
         existingRuntimeMode: installedPack.runtimeMode,
         isPhoneFormFactor: isPhoneFormFactor,
@@ -1769,7 +1771,7 @@ extension AlphaRossModel {
         } else {
             fallbackCandidates = updateCheckPacks.compactMap { pack in
                 let resolvedTier = AlphaCapabilityTier.normalizedAssistantSelection(pack.tier) ?? pack.tier
-                let preferredRuntime = alphaPreferredAssistantRuntimeMode(
+                let preferredRuntime = alphaPreferredAssistantSetupRuntimeMode(
                     for: resolvedTier,
                     existingRuntimeMode: alphaExistingRuntimeMode(for: resolvedTier, installedPacks: allInstalledPacks),
                     lastInvocation: lastInvocation
@@ -1813,7 +1815,7 @@ extension AlphaRossModel {
             var descriptorsByTier: [AlphaCapabilityTier: AlphaAssistantCatalogDescriptor] = [:]
             var refreshedCatalogsByTier: [AlphaCapabilityTier: [AlphaAssistantCatalogDescriptor]] = [:]
             for tier in refreshTiers {
-                let preferredRuntime = alphaPreferredAssistantRuntimeMode(
+                let preferredRuntime = alphaPreferredAssistantSetupRuntimeMode(
                     for: tier,
                     existingRuntimeMode: alphaExistingRuntimeMode(for: tier, installedPacks: allInstalledPacks),
                     lastInvocation: lastInvocation

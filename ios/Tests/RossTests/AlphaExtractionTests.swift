@@ -9855,6 +9855,58 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(candidate?.availableSizeBytes, preferredMLXDescriptor.sizeBytes)
     }
 
+    func testAssistantUpdateCandidateKeepsProductionGGUFInstallOffMLXUpgradePath() {
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        let previousSimulatorIdentifier = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"]
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        setenv("SIMULATOR_MODEL_IDENTIFIER", "iPhone17,2", 1)
+        defer {
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+            if let previousSimulatorIdentifier {
+                setenv("SIMULATOR_MODEL_IDENTIFIER", previousSimulatorIdentifier, 1)
+            } else {
+                unsetenv("SIMULATOR_MODEL_IDENTIFIER")
+            }
+        }
+
+        let installedPack = AlphaInstalledModelPack(
+            packId: "gemma-4-12b-q4-old",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/current.gguf",
+            checksumSha256: String(repeating: "d", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+        let preferredMLXDescriptor = AlphaAssistantCatalogDescriptor(
+            tier: .caseAssociate,
+            packId: "gemma-4-12b-mlx",
+            sizeBytes: 6_200_000_000,
+            checksumSha256: String(repeating: "f", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false
+        )
+
+        XCTAssertNil(
+            alphaAssistantUpdateCandidate(
+                installedPack: installedPack,
+                availableDescriptor: preferredMLXDescriptor,
+                existingDismissed: nil,
+                systemAssistantAvailable: true,
+                isPhoneFormFactor: true,
+                physicalMemoryBytes: 12 * 1_073_741_824,
+                freeStorageGB: 24
+            )
+        )
+    }
+
     @MainActor
     func testAssistantUpdateCandidatePromptsWhenDraftArtifactChanges() async throws {
         let store = AlphaRossStore()
@@ -10560,6 +10612,36 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(runtime, .mlxSwiftLm)
+    }
+
+    func testPreferredAssistantSetupRuntimeModePreservesExistingGGUFForProductionCaseAssociateRefresh() {
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        let previousSimulatorIdentifier = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"]
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        setenv("SIMULATOR_MODEL_IDENTIFIER", "iPhone17,2", 1)
+        defer {
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+            if let previousSimulatorIdentifier {
+                setenv("SIMULATOR_MODEL_IDENTIFIER", previousSimulatorIdentifier, 1)
+            } else {
+                unsetenv("SIMULATOR_MODEL_IDENTIFIER")
+            }
+        }
+
+        let runtime = alphaPreferredAssistantSetupRuntimeMode(
+            for: .caseAssociate,
+            existingRuntimeMode: .llamaCppGguf,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24,
+            systemAssistantAvailable: false
+        )
+
+        XCTAssertEqual(runtime, .llamaCppGguf)
     }
 
     func testAssistantSetupPresentationFallsBackToCachedDownloadWhenCatalogMissing() {
