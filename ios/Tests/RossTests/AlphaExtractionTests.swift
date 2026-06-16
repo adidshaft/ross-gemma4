@@ -4424,6 +4424,11 @@ final class AlphaExtractionTests: XCTestCase {
                     key: "token_speed",
                     label: "Token speed",
                     value: alphaAssistantTokenRateLabel(tokensPerSecond: 21.5)
+                ),
+                AlphaAnswerDetailMetric(
+                    key: "prompt_size",
+                    label: "Prompt size",
+                    value: alphaAssistantInputBudgetLabel(chars: 480)
                 )
             ]
         )
@@ -4466,6 +4471,62 @@ final class AlphaExtractionTests: XCTestCase {
                     key: "token_speed",
                     label: "Token speed",
                     value: "~\(alphaAssistantTokenRateLabel(tokensPerSecond: 21.5))"
+                ),
+                AlphaAnswerDetailMetric(
+                    key: "prompt_size",
+                    label: "Prompt size",
+                    value: alphaAssistantInputBudgetLabel(chars: 480)
+                )
+            ]
+        )
+    }
+
+    @MainActor
+    func testAnswerDetailOverviewMetricsIncludeSourceCoverageWhenAvailable() {
+        let invocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [
+                AlphaSourceRef(caseId: UUID(), documentId: UUID(), documentTitle: "Order", pageNumber: 1),
+                AlphaSourceRef(caseId: UUID(), documentId: UUID(), documentTitle: "Order", pageNumber: 2),
+                AlphaSourceRef(caseId: UUID(), documentId: UUID(), documentTitle: "Order", pageNumber: 3)
+            ],
+            packedSourceCount: 2,
+            promptHash: "prompt",
+            inputHash: "input",
+            inputChars: 4_200,
+            estimatedInputTokens: 120,
+            estimatedOutputTokens: 48,
+            estimatedOutputTokensPerSecond: 13.4,
+            status: .complete
+        )
+
+        XCTAssertEqual(
+            invocation.answerDetailOverviewMetrics,
+            [
+                AlphaAnswerDetailMetric(
+                    key: "tokens_processed",
+                    label: "Tokens processed",
+                    value: "~168"
+                ),
+                AlphaAnswerDetailMetric(
+                    key: "token_speed",
+                    label: "Token speed",
+                    value: "~\(alphaAssistantTokenRateLabel(tokensPerSecond: 13.4))"
+                ),
+                AlphaAnswerDetailMetric(
+                    key: "prompt_size",
+                    label: "Prompt size",
+                    value: alphaAssistantInputBudgetLabel(chars: 4_200)
+                ),
+                AlphaAnswerDetailMetric(
+                    key: "source_coverage",
+                    label: "Source coverage",
+                    value: "2 / 3"
                 )
             ]
         )

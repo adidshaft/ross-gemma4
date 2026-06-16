@@ -1037,6 +1037,26 @@ extension AlphaLocalModelInvocation {
             )
         }
 
+        if let promptSize = answerDetailPromptSizeLabel {
+            metrics.append(
+                AlphaAnswerDetailMetric(
+                    key: "prompt_size",
+                    label: rossLocalized("prompt_size"),
+                    value: promptSize
+                )
+            )
+        }
+
+        if let sourceCoverage = answerDetailSourceCoverageLabel {
+            metrics.append(
+                AlphaAnswerDetailMetric(
+                    key: "source_coverage",
+                    label: rossLocalized("source_coverage"),
+                    value: sourceCoverage
+                )
+            )
+        }
+
         return metrics
     }
 
