@@ -2002,6 +2002,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "இந்த பதில் இந்த device-இல் இருக்க Ross %2$d source section-களில் %1$d பகுதிகளில் focus செய்தது. இந்த matter-இன் சிறிய பகுதியைப் பற்றி கேளுங்கள் அல்லது deeper pass-க்கு stronger assistant பயன்படுத்தவும்.",
             "te": "ఈ సమాధానం ఈ device లోనే ఉండేందుకు Ross %2$d source sectionల్లో %1$d భాగాలపై focus చేసింది. ఈ matter లో చిన్న భాగం గురించి అడగండి లేదా deeper pass కోసం stronger assistant ఉపయోగించండి."
         ],
+        "ask_private_assistant_focused_sources_runtime_warning": [
+            "en": "Ross focused on %1$d of %2$d source sections with the current runtime to keep this answer on this device. Switch this assistant runtime or narrow the selected files for a deeper pass.",
+            "hi": "Ross focused on %1$d of %2$d source sections with the current runtime to keep this answer on this device. Switch this assistant runtime or narrow the selected files for a deeper pass.",
+            "bn": "Ross focused on %1$d of %2$d source sections with the current runtime to keep this answer on this device. Switch this assistant runtime or narrow the selected files for a deeper pass.",
+            "ta": "Ross focused on %1$d of %2$d source sections with the current runtime to keep this answer on this device. Switch this assistant runtime or narrow the selected files for a deeper pass.",
+            "te": "Ross focused on %1$d of %2$d source sections with the current runtime to keep this answer on this device. Switch this assistant runtime or narrow the selected files for a deeper pass."
+        ],
+        "ask_private_assistant_focused_matter_runtime_warning": [
+            "en": "Ross focused on %1$d of %2$d source sections with the current runtime to keep this answer on this device. Switch this assistant runtime or ask about a smaller part of this matter for a deeper pass.",
+            "hi": "Ross focused on %1$d of %2$d source sections with the current runtime to keep this answer on this device. Switch this assistant runtime or ask about a smaller part of this matter for a deeper pass.",
+            "bn": "Ross focused on %1$d of %2$d source sections with the current runtime to keep this answer on this device. Switch this assistant runtime or ask about a smaller part of this matter for a deeper pass.",
+            "ta": "Ross focused on %1$d of %2$d source sections with the current runtime to keep this answer on this device. Switch this assistant runtime or ask about a smaller part of this matter for a deeper pass.",
+            "te": "Ross focused on %1$d of %2$d source sections with the current runtime to keep this answer on this device. Switch this assistant runtime or ask about a smaller part of this matter for a deeper pass."
+        ],
         "file_review_focused_source_sections_warning": [
             "en": "Ross focused on %1$d of %2$d source sections during local review. Split the file or use a stronger assistant for a deeper pass.",
             "hi": "Local review के दौरान Ross ने %2$d में से %1$d source sections पर focus किया। और गहरी review के लिए file को बाँटें या stronger assistant इस्तेमाल करें।",

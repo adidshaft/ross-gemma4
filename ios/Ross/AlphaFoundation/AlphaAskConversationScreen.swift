@@ -2222,7 +2222,8 @@ struct AlphaPublicLawWarningsView: View {
 
                     if let upgradeDetail = alphaAskUpgradeActionDetail(
                         result.upgradeTierHint,
-                        runtimeMode: result.upgradeRuntimeHint
+                        runtimeMode: result.upgradeRuntimeHint,
+                        hasSelectedDocuments: !result.selectedDocumentTitles.isEmpty
                     ) {
                         Text(upgradeDetail)
                             .font(.system(size: 12, weight: .medium))

@@ -584,7 +584,8 @@ extension AlphaRossModel {
             sourceBlockLimit: budgetPlan.sourceBlockLimit,
             capabilityTier: provider.capabilityTier,
             runtimeMode: provider.runtimeMode,
-            hasSelectedDocuments: !selectedDocuments.isEmpty
+            hasSelectedDocuments: !selectedDocuments.isEmpty,
+            selectedDocumentCount: selectedDocuments.count
         )
     }
 
@@ -1210,7 +1211,7 @@ extension AlphaRossModel {
 
     func openAskUpgradeSetup(for preflight: AlphaAskPreflightUpgradePresentation) {
         openAskUpgradeSetup(
-            tier: preflight.upgradeTierHint,
+            tier: preflight.targetTier,
             runtimeMode: preflight.upgradeRuntimeHint,
             returnRoute: path.last
         )
@@ -1772,21 +1773,39 @@ extension AlphaRossModel {
                     sourceBlockLimit: input.sourceBlockLimitOverride,
                     hasSelectedDocuments: !selectedDocuments.isEmpty
                 )
-                let upgradeTierHint = alphaLocalAskUpgradeTierHint(
-                    runtimeWarnings: output.warnings,
-                    sourcePackCount: input.sourcePack.count,
-                    includedSourceCount: output.sourceRefs.count,
-                    sourceBlockLimit: input.sourceBlockLimitOverride,
-                    capabilityTier: AlphaCapabilityTier(rawValue: completedInvocation.capabilityTier)
-                )
-                let upgradeRuntimeHint = alphaLocalAskUpgradeRuntimeHint(
+                let sameTierRuntimeHint = alphaLocalAskUpgradeRuntimeHint(
                     runtimeWarnings: output.warnings,
                     sourcePackCount: input.sourcePack.count,
                     includedSourceCount: output.sourceRefs.count,
                     sourceBlockLimit: input.sourceBlockLimitOverride,
                     capabilityTier: AlphaCapabilityTier(rawValue: completedInvocation.capabilityTier),
-                    runtimeMode: currentResolvedProvider.provider.runtimeMode
+                    runtimeMode: currentResolvedProvider.provider.runtimeMode,
+                    hasSelectedDocuments: !selectedDocuments.isEmpty,
+                    selectedDocumentCount: selectedDocuments.count
                 )
+                let runtimeUpgradeResolvesCoverage = alphaLocalAskUpgradeRuntimeResolvesCoverage(
+                    candidateRuntimeMode: sameTierRuntimeHint,
+                    sourcePackCount: input.sourcePack.count,
+                    capabilityTier: AlphaCapabilityTier(rawValue: completedInvocation.capabilityTier),
+                    hasSelectedDocuments: !selectedDocuments.isEmpty,
+                    selectedDocumentCount: selectedDocuments.count
+                )
+                let upgradeTierHint = runtimeUpgradeResolvesCoverage
+                    ? nil
+                    : alphaLocalAskUpgradeTierHint(
+                        runtimeWarnings: output.warnings,
+                        sourcePackCount: input.sourcePack.count,
+                        includedSourceCount: output.sourceRefs.count,
+                        sourceBlockLimit: input.sourceBlockLimitOverride,
+                        capabilityTier: AlphaCapabilityTier(rawValue: completedInvocation.capabilityTier)
+                    )
+                let upgradeRuntimeHint = if let upgradeTierHint {
+                    alphaPreferredAssistantSetupRuntimeMode(
+                        for: upgradeTierHint
+                    )
+                } else {
+                    sameTierRuntimeHint
+                }
                 let payload = self.displayableMatterAskPayload(
                     output: output,
                     baseResult: baseResult,
@@ -4091,6 +4110,24 @@ func alphaLocalAskFocusedSourcesWarning(
     )
 }
 
+func alphaLocalAskFocusedSourcesRuntimeWarning(
+    includedCount: Int,
+    totalCount: Int,
+    hasSelectedDocuments: Bool = true,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
+    String(
+        format: rossLocalized(
+            hasSelectedDocuments
+                ? "ask_private_assistant_focused_sources_runtime_warning"
+                : "ask_private_assistant_focused_matter_runtime_warning",
+            languageCode: languageCode
+        ),
+        includedCount,
+        totalCount
+    )
+}
+
 func alphaLocalAskNeedsReviewWarning(
     runtimeWarnings: [String],
     sourcePackCount: Int,
@@ -4165,6 +4202,8 @@ func alphaLocalAskUpgradeRuntimeHint(
     sourceBlockLimit: Int?,
     capabilityTier: AlphaCapabilityTier?,
     runtimeMode: AlphaPackRuntimeMode,
+    hasSelectedDocuments: Bool = true,
+    selectedDocumentCount: Int = 1,
     isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
     physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory,
     freeStorageGB: Int = max(4, alphaAvailableStorageInGigabytes()),
@@ -4209,12 +4248,16 @@ func alphaLocalAskUpgradeRuntimeHint(
         let lhsMetrics = alphaAssistantUpgradeRuntimeMetrics(
             runtimeMode: lhs,
             tier: effectiveTier,
-            physicalMemoryBytes: physicalMemoryBytes
+            physicalMemoryBytes: physicalMemoryBytes,
+            hasSelectedDocuments: hasSelectedDocuments,
+            selectedDocumentCount: selectedDocumentCount
         )
         let rhsMetrics = alphaAssistantUpgradeRuntimeMetrics(
             runtimeMode: rhs,
             tier: effectiveTier,
-            physicalMemoryBytes: physicalMemoryBytes
+            physicalMemoryBytes: physicalMemoryBytes,
+            hasSelectedDocuments: hasSelectedDocuments,
+            selectedDocumentCount: selectedDocumentCount
         )
 
         if lhsMetrics.coverageLimit != rhsMetrics.coverageLimit {
@@ -4237,7 +4280,9 @@ func alphaLocalAskUpgradeRuntimeHint(
         let candidateMetrics = alphaAssistantUpgradeRuntimeMetrics(
             runtimeMode: candidate,
             tier: effectiveTier,
-            physicalMemoryBytes: physicalMemoryBytes
+            physicalMemoryBytes: physicalMemoryBytes,
+            hasSelectedDocuments: hasSelectedDocuments,
+            selectedDocumentCount: selectedDocumentCount
         )
         let improvesCoverage = candidateMetrics.coverageLimit > currentCoverageLimit
         let improvesInputBudget = candidateMetrics.inputBudget > currentInputBudget
@@ -4246,10 +4291,35 @@ func alphaLocalAskUpgradeRuntimeHint(
     }
 }
 
+private func alphaLocalAskUpgradeRuntimeResolvesCoverage(
+    candidateRuntimeMode: AlphaPackRuntimeMode?,
+    sourcePackCount: Int,
+    capabilityTier: AlphaCapabilityTier?,
+    hasSelectedDocuments: Bool,
+    selectedDocumentCount: Int,
+    physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory
+) -> Bool {
+    guard let candidateRuntimeMode,
+          let effectiveTier = AlphaCapabilityTier.normalizedAssistantSelection(capabilityTier) ?? capabilityTier else {
+        return false
+    }
+
+    let candidateMetrics = alphaAssistantUpgradeRuntimeMetrics(
+        runtimeMode: candidateRuntimeMode,
+        tier: effectiveTier,
+        physicalMemoryBytes: physicalMemoryBytes,
+        hasSelectedDocuments: hasSelectedDocuments,
+        selectedDocumentCount: selectedDocumentCount
+    )
+    return candidateMetrics.coverageLimit >= sourcePackCount
+}
+
 private func alphaAssistantUpgradeRuntimeMetrics(
     runtimeMode: AlphaPackRuntimeMode,
     tier: AlphaCapabilityTier,
-    physicalMemoryBytes: UInt64
+    physicalMemoryBytes: UInt64,
+    hasSelectedDocuments: Bool,
+    selectedDocumentCount: Int
 ) -> (coverageLimit: Int, inputBudget: Int, contextTokens: Int) {
     let inputBudget = alphaAssistantUpgradeRuntimeInputBudget(
         runtimeMode: runtimeMode,
@@ -4261,22 +4331,16 @@ private func alphaAssistantUpgradeRuntimeMetrics(
         runtimeMode: runtimeMode,
         physicalMemoryBytes: physicalMemoryBytes
     ) ?? 0
-    let selectedCoverage = alphaAskRuntimeSourcePackPolicy(
+    let coverageLimit = alphaAskRuntimeSourcePackPolicy(
         runtimeMode: runtimeMode,
         capabilityTier: tier,
         baseMaxInputChars: max(inputBudget, 12_000),
-        hasSelectedDocuments: true,
-        selectedDocumentCount: 1
-    ).sourceBlockLimit
-    let broadCoverage = alphaAskRuntimeSourcePackPolicy(
-        runtimeMode: runtimeMode,
-        capabilityTier: tier,
-        baseMaxInputChars: max(inputBudget, 12_000),
-        hasSelectedDocuments: false
+        hasSelectedDocuments: hasSelectedDocuments,
+        selectedDocumentCount: selectedDocumentCount
     ).sourceBlockLimit
 
     return (
-        coverageLimit: max(selectedCoverage, broadCoverage),
+        coverageLimit: coverageLimit,
         inputBudget: inputBudget,
         contextTokens: contextTokens
     )
@@ -4330,7 +4394,8 @@ func alphaAskUpgradeActionTitle(
 
 func alphaAskUpgradeActionDetail(
     _ tier: AlphaCapabilityTier?,
-    runtimeMode: AlphaPackRuntimeMode? = nil
+    runtimeMode: AlphaPackRuntimeMode? = nil,
+    hasSelectedDocuments: Bool = true
 ) -> String? {
     let normalizedTier = AlphaCapabilityTier.normalizedAssistantSelection(tier)
 
@@ -4339,7 +4404,7 @@ func alphaAskUpgradeActionDetail(
         case .appleFoundationModels:
             return "This keeps the ask local with no extra download."
         case .mlxSwiftLm:
-            if normalizedTier == .caseAssociate {
+            if normalizedTier == .caseAssociate && hasSelectedDocuments {
                 return "MLX can keep more of the selected files in local iPhone context."
             }
             return "MLX can keep more of this ask in local iPhone context."
@@ -4347,7 +4412,9 @@ func alphaAskUpgradeActionDetail(
             if normalizedTier == .seniorDraftingSupport {
                 return "Senior Drafting Support with GGUF can review larger bundles with deeper local context."
             }
-            return "GGUF can keep more of the selected files and longer context on device."
+            return hasSelectedDocuments
+                ? "GGUF can keep more of the selected files and longer context on device."
+                : "GGUF can keep more of this ask and longer context on device."
         case .deterministicDev:
             return "This uses the development runtime for the same ask."
         case .mediapipeLlm:
@@ -4372,13 +4439,16 @@ func alphaAskUpgradeActionDetail(
 
 struct AlphaAskPreflightUpgradePresentation: Hashable {
     let warningText: String
-    let upgradeTierHint: AlphaCapabilityTier
+    let targetTier: AlphaCapabilityTier
+    let hasSelectedDocuments: Bool
+    let upgradeTierHint: AlphaCapabilityTier?
     let upgradeRuntimeHint: AlphaPackRuntimeMode?
 
     func messageText(languageCode: String = rossSelectedLanguageCode()) -> String {
         if let upgradeDetail = alphaAskUpgradeActionDetail(
-            upgradeTierHint,
-            runtimeMode: upgradeRuntimeHint
+            upgradeTierHint ?? targetTier,
+            runtimeMode: upgradeRuntimeHint,
+            hasSelectedDocuments: hasSelectedDocuments
         ) {
             return "\(warningText)\n\n\(upgradeDetail)"
         }
@@ -4392,6 +4462,7 @@ func alphaAskPreflightUpgradePresentation(
     capabilityTier: AlphaCapabilityTier?,
     runtimeMode: AlphaPackRuntimeMode,
     hasSelectedDocuments: Bool = true,
+    selectedDocumentCount: Int = 0,
     isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
     physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory,
     freeStorageGB: Int = max(4, alphaAvailableStorageInGigabytes()),
@@ -4402,34 +4473,68 @@ func alphaAskPreflightUpgradePresentation(
         return nil
     }
 
-    let upgradeTierHint = alphaLocalAskUpgradeTierHint(
-        runtimeWarnings: [],
-        sourcePackCount: sourcePackCount,
-        includedSourceCount: sourceBlockLimit,
-        sourceBlockLimit: sourceBlockLimit,
-        capabilityTier: capabilityTier
-    )
-    guard let upgradeTierHint else { return nil }
-
-    let upgradeRuntimeHint = alphaLocalAskUpgradeRuntimeHint(
+    let effectiveTier = AlphaCapabilityTier.normalizedAssistantSelection(capabilityTier) ?? capabilityTier
+    let sameTierRuntimeHint = alphaLocalAskUpgradeRuntimeHint(
         runtimeWarnings: [],
         sourcePackCount: sourcePackCount,
         includedSourceCount: sourceBlockLimit,
         sourceBlockLimit: sourceBlockLimit,
         capabilityTier: capabilityTier,
         runtimeMode: runtimeMode,
+        hasSelectedDocuments: hasSelectedDocuments,
+        selectedDocumentCount: selectedDocumentCount,
         isPhoneFormFactor: isPhoneFormFactor,
         physicalMemoryBytes: physicalMemoryBytes,
         freeStorageGB: freeStorageGB
     )
+    let runtimeUpgradeResolvesCoverage = alphaLocalAskUpgradeRuntimeResolvesCoverage(
+        candidateRuntimeMode: sameTierRuntimeHint,
+        sourcePackCount: sourcePackCount,
+        capabilityTier: capabilityTier,
+        hasSelectedDocuments: hasSelectedDocuments,
+        selectedDocumentCount: selectedDocumentCount,
+        physicalMemoryBytes: physicalMemoryBytes
+    )
+    let upgradeTierHint = runtimeUpgradeResolvesCoverage
+        ? nil
+        : alphaLocalAskUpgradeTierHint(
+        runtimeWarnings: [],
+        sourcePackCount: sourcePackCount,
+        includedSourceCount: sourceBlockLimit,
+        sourceBlockLimit: sourceBlockLimit,
+        capabilityTier: capabilityTier
+    )
+    let upgradeRuntimeHint = if let upgradeTierHint {
+        alphaPreferredAssistantSetupRuntimeMode(
+            for: upgradeTierHint,
+            isPhoneFormFactor: isPhoneFormFactor,
+            physicalMemoryBytes: physicalMemoryBytes,
+            freeStorageGB: freeStorageGB
+        )
+    } else {
+        sameTierRuntimeHint
+    }
+    guard let targetTier = upgradeTierHint ?? effectiveTier,
+          upgradeTierHint != nil || upgradeRuntimeHint != nil else {
+        return nil
+    }
 
     return AlphaAskPreflightUpgradePresentation(
-        warningText: alphaLocalAskFocusedSourcesWarning(
+        warningText: (runtimeUpgradeResolvesCoverage
+            ? alphaLocalAskFocusedSourcesRuntimeWarning(
+                includedCount: sourceBlockLimit,
+                totalCount: sourcePackCount,
+                hasSelectedDocuments: hasSelectedDocuments,
+                languageCode: languageCode
+            )
+            : alphaLocalAskFocusedSourcesWarning(
             includedCount: sourceBlockLimit,
             totalCount: sourcePackCount,
             hasSelectedDocuments: hasSelectedDocuments,
             languageCode: languageCode
-        ),
+            )),
+        targetTier: targetTier,
+        hasSelectedDocuments: hasSelectedDocuments,
         upgradeTierHint: upgradeTierHint,
         upgradeRuntimeHint: upgradeRuntimeHint
     )

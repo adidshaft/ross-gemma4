@@ -9295,6 +9295,17 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testAskUpgradeActionDetailUsesMatterScopedMLXCopyWithoutSelectedDocuments() {
+        XCTAssertEqual(
+            alphaAskUpgradeActionDetail(
+                .caseAssociate,
+                runtimeMode: .mlxSwiftLm,
+                hasSelectedDocuments: false
+            ),
+            "MLX can keep more of this ask in local iPhone context."
+        )
+    }
+
     func testAskUpgradeActionDetailExplainsSeniorGGUFBundleBenefit() {
         XCTAssertEqual(
             alphaAskUpgradeActionDetail(.seniorDraftingSupport, runtimeMode: .llamaCppGguf),
@@ -9304,7 +9315,7 @@ final class AlphaExtractionTests: XCTestCase {
 
     func testAskPreflightUpgradePresentationSuggestsDeeperAssistantForConstrainedSelectedFiles() {
         let presentation = alphaAskPreflightUpgradePresentation(
-            sourcePackCount: 9,
+            sourcePackCount: 19,
             sourceBlockLimit: 4,
             capabilityTier: .caseAssociate,
             runtimeMode: .appleFoundationModels,
@@ -9316,13 +9327,14 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(
             presentation?.warningText,
-            "Ross focused on 4 of 9 source sections to keep this answer on this device. Narrow the selected files or use a stronger assistant for a deeper pass."
+            "Ross focused on 4 of 19 source sections to keep this answer on this device. Narrow the selected files or use a stronger assistant for a deeper pass."
         )
+        XCTAssertEqual(presentation?.targetTier, .seniorDraftingSupport)
         XCTAssertEqual(presentation?.upgradeTierHint, .seniorDraftingSupport)
         XCTAssertEqual(
             presentation?.messageText(languageCode: "en"),
             """
-            Ross focused on 4 of 9 source sections to keep this answer on this device. Narrow the selected files or use a stronger assistant for a deeper pass.
+            Ross focused on 4 of 19 source sections to keep this answer on this device. Narrow the selected files or use a stronger assistant for a deeper pass.
 
             Senior Drafting Support with GGUF can review larger bundles with deeper local context.
             """
@@ -9331,7 +9343,7 @@ final class AlphaExtractionTests: XCTestCase {
 
     func testAskPreflightUpgradePresentationUsesMatterScopedWarningWithoutSelectedDocuments() {
         let presentation = alphaAskPreflightUpgradePresentation(
-            sourcePackCount: 9,
+            sourcePackCount: 11,
             sourceBlockLimit: 4,
             capabilityTier: .caseAssociate,
             runtimeMode: .appleFoundationModels,
@@ -9344,7 +9356,38 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(
             presentation?.warningText,
-            "Ross focused on 4 of 9 source sections to keep this answer on this device. Ask about a smaller part of this matter or use a stronger assistant for a deeper pass."
+            "Ross focused on 4 of 11 source sections to keep this answer on this device. Ask about a smaller part of this matter or use a stronger assistant for a deeper pass."
+        )
+    }
+
+    func testAskPreflightUpgradePresentationPrefersRuntimeSwitchWhenItAvoidsMatterTrim() {
+        let presentation = alphaAskPreflightUpgradePresentation(
+            sourcePackCount: 16,
+            sourceBlockLimit: 15,
+            capabilityTier: .caseAssociate,
+            runtimeMode: .appleFoundationModels,
+            hasSelectedDocuments: false,
+            selectedDocumentCount: 0,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 16 * 1_000_000_000,
+            freeStorageGB: 24,
+            languageCode: "en"
+        )
+
+        XCTAssertEqual(
+            presentation?.warningText,
+            "Ross focused on 15 of 16 source sections with the current runtime to keep this answer on this device. Switch this assistant runtime or ask about a smaller part of this matter for a deeper pass."
+        )
+        XCTAssertEqual(presentation?.targetTier, .caseAssociate)
+        XCTAssertNil(presentation?.upgradeTierHint)
+        XCTAssertEqual(presentation?.upgradeRuntimeHint, .mlxSwiftLm)
+        XCTAssertEqual(
+            presentation?.messageText(languageCode: "en"),
+            """
+            Ross focused on 15 of 16 source sections with the current runtime to keep this answer on this device. Switch this assistant runtime or ask about a smaller part of this matter for a deeper pass.
+
+            MLX can keep more of this ask in local iPhone context.
+            """
         )
     }
 
