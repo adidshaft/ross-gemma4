@@ -5367,6 +5367,19 @@ private fun AlphaAskTurnCard(
     var showMenu by remember { mutableStateOf(false) }
     var showAnswerDetails by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val haptics = LocalHapticFeedback.current
+    val hasAnswerDetails = result.answerDetails != null
+    val answerSummaryModifier = if (hasAnswerDetails) {
+        Modifier.combinedClickable(
+            onClick = {},
+            onLongClick = {
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                showAnswerDetails = true
+            },
+        )
+    } else {
+        Modifier
+    }
     val deduplicatedStatusNote = result.statusNote?.takeIf {
         it.trim().lowercase() != result.answerTitle.trim().lowercase()
     }
@@ -5392,78 +5405,105 @@ private fun AlphaAskTurnCard(
             colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f)),
         ) {
             Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        result.answerTitle,
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Box {
-                        Icon(
-                            Icons.Outlined.MoreVert,
-                            contentDescription = "Answer actions",
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clickable { showMenu = true },
-                            tint = MaterialTheme.colorScheme.primary,
+                Column(modifier = answerSummaryModifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            result.answerTitle,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
                         )
-                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                            result.answerDetails?.let {
-                                DropdownMenuItem(
-                                    text = { Text("Answer details") },
-                                    onClick = {
-                                        showMenu = false
-                                        showAnswerDetails = true
-                                    },
-                                    leadingIcon = { Icon(Icons.Outlined.Info, contentDescription = null) },
-                                )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            if (hasAnswerDetails) {
+                                OutlinedCard(
+                                    modifier = Modifier.size(32.dp),
+                                    shape = RoundedCornerShape(999.dp),
+                                    colors = CardDefaults.outlinedCardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.26f),
+                                    ),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, alphaChromeStrokeColor()),
+                                    onClick = { showAnswerDetails = true },
+                                ) {
+                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            Icons.Outlined.Info,
+                                            contentDescription = "Answer details",
+                                            modifier = Modifier.size(16.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
                             }
-                            DropdownMenuItem(
-                                text = { Text("Copy answer") },
-                                onClick = {
-                                    (context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)
-                                        ?.setPrimaryClip(ClipData.newPlainText("Ross answer", alphaCopyAskResultText(result)))
-                                    showMenu = false
-                                },
-                                leadingIcon = { Icon(Icons.Outlined.ContentCopy, contentDescription = null) },
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Report answer") },
-                                onClick = { showMenu = false; onReport() },
-                                leadingIcon = { Icon(Icons.Outlined.Flag, contentDescription = null) },
-                            )
+                            Box {
+                                Icon(
+                                    Icons.Outlined.MoreVert,
+                                    contentDescription = "Answer actions",
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clickable { showMenu = true },
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                                DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                                    result.answerDetails?.let {
+                                        DropdownMenuItem(
+                                            text = { Text("Answer details") },
+                                            onClick = {
+                                                showMenu = false
+                                                showAnswerDetails = true
+                                            },
+                                            leadingIcon = { Icon(Icons.Outlined.Info, contentDescription = null) },
+                                        )
+                                    }
+                                    DropdownMenuItem(
+                                        text = { Text("Copy answer") },
+                                        onClick = {
+                                            (context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)
+                                                ?.setPrimaryClip(ClipData.newPlainText("Ross answer", alphaCopyAskResultText(result)))
+                                            showMenu = false
+                                        },
+                                        leadingIcon = { Icon(Icons.Outlined.ContentCopy, contentDescription = null) },
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Report answer") },
+                                        onClick = { showMenu = false; onReport() },
+                                        leadingIcon = { Icon(Icons.Outlined.Flag, contentDescription = null) },
+                                    )
+                                }
+                            }
                         }
                     }
-                }
-                result.answerSections.forEach { section ->
-                    AlphaFormattedAnswerText(section)
-                }
-                deduplicatedStatusNote?.let { note ->
-                    Text(note, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.secondary)
-                }
-                if (result.selectedDocumentTitles.isNotEmpty() && contextDocumentTitle == null) {
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        result.selectedDocumentTitles.forEach { title ->
-                            OutlinedCard(
-                                shape = RoundedCornerShape(999.dp),
-                                colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
-                                border = androidx.compose.foundation.BorderStroke(0.dp, Color.Transparent),
-                            ) {
-                                Text(
-                                    title,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                    result.answerSections.forEach { section ->
+                        AlphaFormattedAnswerText(section)
+                    }
+                    deduplicatedStatusNote?.let { note ->
+                        Text(note, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.secondary)
+                    }
+                    if (result.selectedDocumentTitles.isNotEmpty() && contextDocumentTitle == null) {
+                        Row(
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            result.selectedDocumentTitles.forEach { title ->
+                                OutlinedCard(
+                                    shape = RoundedCornerShape(999.dp),
+                                    colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                                    border = androidx.compose.foundation.BorderStroke(0.dp, Color.Transparent),
+                                ) {
+                                    Text(
+                                        title,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
                             }
                         }
                     }
