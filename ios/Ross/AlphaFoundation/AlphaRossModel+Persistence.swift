@@ -1281,23 +1281,49 @@ private func alphaAutomaticMLXDraftPack(
 
 private func alphaAutomaticMLXDraftTokens(
     for activePack: AlphaInstalledModelPack?,
-    physicalMemoryBytes: UInt64
+    physicalMemoryBytes: UInt64,
+    lastInvocation: AlphaLocalModelInvocation? = nil
 ) -> Int? {
     guard let activePack, activePack.runtimeMode == .mlxSwiftLm else { return nil }
+    let baseTokens: Int?
     switch activePack.tier {
     case .quickStart, .flash:
-        return nil
+        baseTokens = nil
     case .caseAssociate:
-        return AlphaMLXRuntimeProfile.defaultDraftTokens(
+        baseTokens = AlphaMLXRuntimeProfile.defaultDraftTokens(
             for: .caseAssociate,
             physicalMemory: physicalMemoryBytes
         )
     case .seniorDraftingSupport:
-        return AlphaMLXRuntimeProfile.defaultDraftTokens(
+        baseTokens = AlphaMLXRuntimeProfile.defaultDraftTokens(
             for: .seniorDraftingSupport,
             physicalMemory: physicalMemoryBytes
         )
     }
+
+    guard let baseTokens else {
+        return nil
+    }
+
+    guard let lastInvocation,
+          lastInvocation.task == .matterQuestionAnswer,
+          lastInvocation.status == .complete,
+          lastInvocation.capabilityTier == activePack.tier.rawValue,
+          lastInvocation.runtimeMode == AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+          let outputSpeed = lastInvocation.estimatedOutputTokensPerSecond,
+          let firstTokenMs = lastInvocation.timeToFirstTokenMs else {
+        return baseTokens
+    }
+
+    if outputSpeed >= 18, firstTokenMs <= 1_000 {
+        return min(baseTokens + 1, 8)
+    }
+
+    if outputSpeed <= 8 || firstTokenMs >= 3_000 {
+        return max(baseTokens - 2, 4)
+    }
+
+    return baseTokens
 }
 
 private func alphaInstalledGGUFDraftArtifact(
@@ -1333,7 +1359,8 @@ func alphaLocalRuntimeEnvironment(
     installedPacks: [AlphaInstalledModelPack],
     baseEnvironment: AlphaLocalRuntimeEnvironment = .fromEnvironment(ProcessInfo.processInfo.environment),
     physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory,
-    lowPowerMode: Bool = alphaCurrentLowPowerMode()
+    lowPowerMode: Bool = alphaCurrentLowPowerMode(),
+    lastInvocation: AlphaLocalModelInvocation? = nil
 ) -> AlphaLocalRuntimeEnvironment {
     if baseEnvironment.draftModelPath != nil {
         return baseEnvironment
@@ -1367,7 +1394,8 @@ func alphaLocalRuntimeEnvironment(
                 mlxDraftArtifact.draftTokens ??
                 alphaAutomaticMLXDraftTokens(
                     for: activePack,
-                    physicalMemoryBytes: physicalMemoryBytes
+                    physicalMemoryBytes: physicalMemoryBytes,
+                    lastInvocation: lastInvocation
                 )
         )
     }
@@ -1392,7 +1420,8 @@ func alphaLocalRuntimeEnvironment(
         draftModelPath: alphaAbsoluteURL(for: draftPack.installPath).path,
         draftModelTokens: baseEnvironment.draftModelTokens ?? alphaAutomaticMLXDraftTokens(
             for: activePack,
-            physicalMemoryBytes: physicalMemoryBytes
+            physicalMemoryBytes: physicalMemoryBytes,
+            lastInvocation: lastInvocation
         )
     )
 }
@@ -1470,10 +1499,12 @@ private func alphaBuildPrivateAISnapshot(
 
         let freeStorageGB = max(4, alphaAvailableStorageInGigabytes())
         let requestedTier = activePack?.tier ?? recoveredState.settings.activeTier
+        let lastInvocation = alphaLastModelInvocation(in: recoveredState)
         let runtimeEnvironment = alphaLocalRuntimeEnvironment(
             activePack: activePack,
             requestedTier: requestedTier,
-            installedPacks: recoveredState.installedPacks
+            installedPacks: recoveredState.installedPacks,
+            lastInvocation: lastInvocation
         )
         let snapshot = AlphaPrivateAISnapshot(
             installedPacks: recoveredState.installedPacks,
@@ -1485,7 +1516,7 @@ private func alphaBuildPrivateAISnapshot(
             ),
             recommendedTier: alphaRecommendedOnDeviceTier(freeStorageGB: freeStorageGB),
             freeDiskSpaceLabel: alphaFreeDiskSpaceLabel(),
-            lastModelInvocation: alphaLastModelInvocation(in: recoveredState),
+            lastModelInvocation: lastInvocation,
             resetCount: recoveredState.ledgerEntries.filter { $0.title.localizedCaseInsensitiveContains("reset") }.count
         )
 
@@ -1533,7 +1564,8 @@ extension AlphaRossModel {
             let runtimeEnvironment = alphaLocalRuntimeEnvironment(
                 activePack: optimisticActivePack,
                 requestedTier: requestedTier,
-                installedPacks: persisted.installedPacks
+                installedPacks: persisted.installedPacks,
+                lastInvocation: alphaLastModelInvocation(in: persisted)
             )
             privateAISnapshot.activeRuntimeHealth = AlphaLocalModelRuntime.runtimeHealth(
                 activePack: optimisticActivePack,
@@ -2206,7 +2238,8 @@ extension AlphaRossModel {
                 runtimeEnvironment: alphaLocalRuntimeEnvironment(
                     activePack: activePack,
                     requestedTier: activePack?.tier ?? persisted.settings.activeTier ?? selectedTier,
-                    installedPacks: persisted.installedPacks
+                    installedPacks: persisted.installedPacks,
+                    lastInvocation: alphaLastModelInvocation(in: persisted)
                 )
             )
 

@@ -85,7 +85,8 @@ extension AlphaRossModel {
         let runtimeEnvironment = alphaLocalRuntimeEnvironment(
             activePack: activePack,
             requestedTier: requestedTier,
-            installedPacks: persisted.installedPacks
+            installedPacks: persisted.installedPacks,
+            lastInvocation: alphaLastModelInvocation(in: persisted)
         )
         let result = await store.runLocalExtraction(
             caseId: caseId,

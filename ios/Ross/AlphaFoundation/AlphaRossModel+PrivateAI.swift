@@ -1159,7 +1159,8 @@ extension AlphaRossModel {
                 runtimeEnvironment: alphaLocalRuntimeEnvironment(
                     activePack: fallbackPack,
                     requestedTier: fallbackPack.tier,
-                    installedPacks: persisted.installedPacks
+                    installedPacks: persisted.installedPacks,
+                    lastInvocation: alphaLastModelInvocation(in: persisted)
                 )
             )
         }

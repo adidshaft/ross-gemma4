@@ -198,7 +198,8 @@ extension AlphaRossModel {
             let runtimeEnvironment = alphaLocalRuntimeEnvironment(
                 activePack: pack,
                 requestedTier: requestedTier,
-                installedPacks: persisted.installedPacks
+                installedPacks: persisted.installedPacks,
+                lastInvocation: alphaLastModelInvocation(in: persisted)
             )
             guard let provider = AlphaLocalModelRuntime.resolveProvider(
                 activePack: pack,
@@ -1904,7 +1905,8 @@ extension AlphaRossModel {
         let runtimeEnvironment = alphaLocalRuntimeEnvironment(
             activePack: activePack,
             requestedTier: requestedTier,
-            installedPacks: persisted.installedPacks
+            installedPacks: persisted.installedPacks,
+            lastInvocation: alphaLastModelInvocation(in: persisted)
         )
         let sourcePackPolicy: AlphaAskRuntimeSourcePackPolicy = {
             guard let provider = AlphaLocalModelRuntime.resolveProvider(
