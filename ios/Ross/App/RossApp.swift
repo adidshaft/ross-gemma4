@@ -1995,6 +1995,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "இந்த பதில் இந்த device-இல் இருக்க Ross %2$d source section-களில் %1$d பகுதிகளில் focus செய்தது. இன்னும் ஆழமான review-க்கு selected files-ஐ குறைக்கவும் அல்லது stronger assistant பயன்படுத்தவும்.",
             "te": "ఈ సమాధానం ఈ device లోనే ఉండేందుకు Ross %2$d source sectionల్లో %1$d భాగాలపై focus చేసింది. ఇంకా లోతైన review కోసం selected files ను తగ్గించండి లేదా stronger assistant ఉపయోగించండి."
         ],
+        "ask_private_assistant_focused_matter_warning": [
+            "en": "Ross focused on %1$d of %2$d source sections to keep this answer on this device. Ask about a smaller part of this matter or use a stronger assistant for a deeper pass.",
+            "hi": "Ross ने इस जवाब को इसी device पर रखने के लिए %2$d में से %1$d source sections पर focus किया। इस matter के छोटे हिस्से के बारे में पूछें या deeper pass के लिए stronger assistant इस्तेमाल करें।",
+            "bn": "এই উত্তরটি এই device-এ রাখতে Ross %2$dটির মধ্যে %1$dটি source section-এ focus করেছে। এই matter-এর ছোট অংশ সম্পর্কে জিজ্ঞাসা করুন বা deeper pass-এর জন্য stronger assistant ব্যবহার করুন।",
+            "ta": "இந்த பதில் இந்த device-இல் இருக்க Ross %2$d source section-களில் %1$d பகுதிகளில் focus செய்தது. இந்த matter-இன் சிறிய பகுதியைப் பற்றி கேளுங்கள் அல்லது deeper pass-க்கு stronger assistant பயன்படுத்தவும்.",
+            "te": "ఈ సమాధానం ఈ device లోనే ఉండేందుకు Ross %2$d source sectionల్లో %1$d భాగాలపై focus చేసింది. ఈ matter లో చిన్న భాగం గురించి అడగండి లేదా deeper pass కోసం stronger assistant ఉపయోగించండి."
+        ],
         "file_review_focused_source_sections_warning": [
             "en": "Ross focused on %1$d of %2$d source sections during local review. Split the file or use a stronger assistant for a deeper pass.",
             "hi": "Local review के दौरान Ross ने %2$d में से %1$d source sections पर focus किया। और गहरी review के लिए file को बाँटें या stronger assistant इस्तेमाल करें।",

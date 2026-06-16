@@ -3207,6 +3207,21 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNotEqual(warning, AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts)
     }
 
+    func testLocalAskNeedsReviewWarningUsesMatterScopedCopyWhenNoSelectedDocuments() {
+        let warning = alphaLocalAskNeedsReviewWarning(
+            runtimeWarnings: [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts],
+            sourcePackCount: 9,
+            sourceBlockLimit: 4,
+            hasSelectedDocuments: false,
+            languageCode: "en"
+        )
+
+        XCTAssertEqual(
+            warning,
+            "Ross focused on 4 of 9 source sections to keep this answer on this device. Ask about a smaller part of this matter or use a stronger assistant for a deeper pass."
+        )
+    }
+
     func testLocalAskNeedsReviewWarningPrefersActualIncludedSourceCount() {
         let warning = alphaLocalAskNeedsReviewWarning(
             runtimeWarnings: [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts],
@@ -9281,6 +9296,25 @@ final class AlphaExtractionTests: XCTestCase {
 
             Senior Drafting Support with GGUF can review larger bundles with deeper local context.
             """
+        )
+    }
+
+    func testAskPreflightUpgradePresentationUsesMatterScopedWarningWithoutSelectedDocuments() {
+        let presentation = alphaAskPreflightUpgradePresentation(
+            sourcePackCount: 9,
+            sourceBlockLimit: 4,
+            capabilityTier: .caseAssociate,
+            runtimeMode: .appleFoundationModels,
+            hasSelectedDocuments: false,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 8 * 1_000_000_000,
+            freeStorageGB: 24,
+            languageCode: "en"
+        )
+
+        XCTAssertEqual(
+            presentation?.warningText,
+            "Ross focused on 4 of 9 source sections to keep this answer on this device. Ask about a smaller part of this matter or use a stronger assistant for a deeper pass."
         )
     }
 

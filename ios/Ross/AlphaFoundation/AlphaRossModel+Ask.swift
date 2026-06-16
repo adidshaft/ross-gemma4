@@ -532,7 +532,6 @@ extension AlphaRossModel {
         }
 
         let selectedDocuments = selectedAskDocuments(for: scopeCaseID)
-        guard !selectedDocuments.isEmpty else { return nil }
 
         let expectsMatterSources = shouldUseMatterSourcesForAsk(
             question: cleaned,
@@ -584,7 +583,8 @@ extension AlphaRossModel {
             sourcePackCount: sourcePack.count,
             sourceBlockLimit: budgetPlan.sourceBlockLimit,
             capabilityTier: provider.capabilityTier,
-            runtimeMode: provider.runtimeMode
+            runtimeMode: provider.runtimeMode,
+            hasSelectedDocuments: !selectedDocuments.isEmpty
         )
     }
 
@@ -1769,7 +1769,8 @@ extension AlphaRossModel {
                     runtimeWarnings: output.warnings,
                     sourcePackCount: input.sourcePack.count,
                     includedSourceCount: output.sourceRefs.count,
-                    sourceBlockLimit: input.sourceBlockLimitOverride
+                    sourceBlockLimit: input.sourceBlockLimitOverride,
+                    hasSelectedDocuments: !selectedDocuments.isEmpty
                 )
                 let upgradeTierHint = alphaLocalAskUpgradeTierHint(
                     runtimeWarnings: output.warnings,
@@ -4075,10 +4076,16 @@ func alphaAskRuntimeRepairDetail(
 func alphaLocalAskFocusedSourcesWarning(
     includedCount: Int,
     totalCount: Int,
+    hasSelectedDocuments: Bool = true,
     languageCode: String = rossSelectedLanguageCode()
 ) -> String {
     String(
-        format: rossLocalized("ask_private_assistant_focused_sources_warning", languageCode: languageCode),
+        format: rossLocalized(
+            hasSelectedDocuments
+                ? "ask_private_assistant_focused_sources_warning"
+                : "ask_private_assistant_focused_matter_warning",
+            languageCode: languageCode
+        ),
         includedCount,
         totalCount
     )
@@ -4089,6 +4096,7 @@ func alphaLocalAskNeedsReviewWarning(
     sourcePackCount: Int,
     includedSourceCount: Int? = nil,
     sourceBlockLimit: Int?,
+    hasSelectedDocuments: Bool = true,
     languageCode: String = rossSelectedLanguageCode()
 ) -> String? {
     var warnings = runtimeWarnings
@@ -4100,6 +4108,7 @@ func alphaLocalAskNeedsReviewWarning(
         let focusedWarning = alphaLocalAskFocusedSourcesWarning(
             includedCount: effectiveIncludedCount,
             totalCount: sourcePackCount,
+            hasSelectedDocuments: hasSelectedDocuments,
             languageCode: languageCode
         )
         if let focusIndex = warnings.firstIndex(of: AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts) {
@@ -4291,6 +4300,7 @@ func alphaAskPreflightUpgradePresentation(
     sourceBlockLimit: Int?,
     capabilityTier: AlphaCapabilityTier?,
     runtimeMode: AlphaPackRuntimeMode,
+    hasSelectedDocuments: Bool = true,
     isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
     physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory,
     freeStorageGB: Int = max(4, alphaAvailableStorageInGigabytes()),
@@ -4326,6 +4336,7 @@ func alphaAskPreflightUpgradePresentation(
         warningText: alphaLocalAskFocusedSourcesWarning(
             includedCount: sourceBlockLimit,
             totalCount: sourcePackCount,
+            hasSelectedDocuments: hasSelectedDocuments,
             languageCode: languageCode
         ),
         upgradeTierHint: upgradeTierHint,
