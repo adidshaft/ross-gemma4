@@ -10725,20 +10725,40 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
-    func testPreferredAssistantDownloadFallbackIncludesBundledSeniorMLXDraftCompanion() {
+    func testPreferredAssistantDownloadFallbackFallsBackToSeniorGGUFWhenMLXIsRequested() {
         let fallback = alphaPreferredAssistantDownloadFallback(
             for: .seniorDraftingSupport,
             preferredRuntimeMode: .mlxSwiftLm,
             cachedDownloads: nil
         )
 
-        XCTAssertEqual(fallback.runtimeMode, .mlxSwiftLm)
-        XCTAssertEqual(fallback.draftArtifact?.artifactKind, "mlx_directory")
-        XCTAssertEqual(fallback.draftArtifact?.fileName, "gemma-4-26B-A4B-it-qat-assistant-4bit")
+        XCTAssertEqual(fallback.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(fallback.fileName, "gemma-4-26B-A4B-it-UD-Q4_K_XL.gguf")
+        XCTAssertEqual(fallback.draftArtifact?.artifactKind, "local_model_artifact")
+        XCTAssertEqual(fallback.draftArtifact?.fileName, "mtp-gemma-4-26B-A4B-it.gguf")
         XCTAssertEqual(
             fallback.draftArtifact?.downloadURLString,
-            "https://huggingface.co/mlx-community/gemma-4-26B-A4B-it-qat-assistant-4bit"
+            "https://huggingface.co/unsloth/gemma-4-26B-A4B-it-qat-GGUF/resolve/main/mtp-gemma-4-26B-A4B-it.gguf"
         )
+    }
+
+    func testAssistantDownloadDescriptorSupportsCurrentInstallerRejectsUnsupportedSeniorMLXDescriptor() {
+        let descriptor = AlphaAssistantDownloadDescriptor(
+            sessionId: nil,
+            packId: "gemma-4-26b-a4b-mlx",
+            tier: .seniorDraftingSupport,
+            fileName: "gemma-4-26B-A4B-it-qat-4bit",
+            sizeBytes: 15_641_241_228,
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            downloadURLString: "https://huggingface.co/mlx-community/gemma-4-26B-A4B-it-qat-4bit",
+            verified: true,
+            releaseReady: true
+        )
+
+        XCTAssertFalse(alphaAssistantDownloadDescriptorSupportsCurrentInstaller(descriptor))
     }
 
     func testAssistantDownloadDescriptorSupportsCurrentInstallerAllowsDirectMLXRepository() {

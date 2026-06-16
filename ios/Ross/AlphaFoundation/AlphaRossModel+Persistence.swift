@@ -1300,7 +1300,7 @@ private func alphaSystemAssistantRuntimeAvailable(for tier: AlphaCapabilityTier)
     return health.available
 }
 
-private func alphaAssistantTierSupportsMLXRuntime(_ tier: AlphaCapabilityTier) -> Bool {
+func alphaAssistantTierSupportsMLXRuntime(_ tier: AlphaCapabilityTier) -> Bool {
     switch AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier {
     case .quickStart, .caseAssociate:
         return true

@@ -271,7 +271,8 @@ private func alphaBundledAssistantDownloadDescriptor(
     targetPackId: String? = nil
 ) -> AlphaAssistantDownloadDescriptor? {
     guard preferredRuntimeMode == .mlxSwiftLm,
-          let bundled = alphaBundledMLXAssistantDownloadDescriptors[tier] else {
+          let bundled = alphaBundledMLXAssistantDownloadDescriptors[tier],
+          alphaAssistantTierSupportsInstallerRuntime(bundled.tier, runtimeMode: bundled.runtimeMode) else {
         return nil
     }
     if let targetPackId,
@@ -479,10 +480,25 @@ private func alphaAssistantCatalogDraftArtifactSupportsCurrentInstaller(
     }
 }
 
+private func alphaAssistantTierSupportsInstallerRuntime(
+    _ tier: AlphaCapabilityTier,
+    runtimeMode: AlphaPackRuntimeMode
+) -> Bool {
+    switch runtimeMode {
+    case .mlxSwiftLm:
+        return alphaAssistantTierSupportsMLXRuntime(tier)
+    case .llamaCppGguf:
+        return true
+    case .deterministicDev, .mediapipeLlm, .appleFoundationModels, .unavailable:
+        return false
+    }
+}
+
 func alphaAssistantDownloadDescriptorSupportsCurrentInstaller(_ descriptor: AlphaAssistantDownloadDescriptor) -> Bool {
     guard !descriptor.developmentOnly,
           descriptor.sizeBytes > 0,
           descriptor.checksumSha256.range(of: #"^[a-fA-F0-9]{64}$"#, options: .regularExpression) != nil,
+          alphaAssistantTierSupportsInstallerRuntime(descriptor.tier, runtimeMode: descriptor.runtimeMode),
           !descriptor.downloadURLString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
         return false
     }
@@ -520,7 +536,8 @@ func alphaAssistantDownloadDescriptorSupportsCurrentInstaller(_ descriptor: Alph
 func alphaAssistantCatalogDescriptorSupportsCurrentInstaller(_ descriptor: AlphaAssistantCatalogDescriptor) -> Bool {
     guard !descriptor.developmentOnly,
           descriptor.sizeBytes > 0,
-          descriptor.checksumSha256.range(of: #"^[a-fA-F0-9]{64}$"#, options: .regularExpression) != nil else {
+          descriptor.checksumSha256.range(of: #"^[a-fA-F0-9]{64}$"#, options: .regularExpression) != nil,
+          alphaAssistantTierSupportsInstallerRuntime(descriptor.tier, runtimeMode: descriptor.runtimeMode) else {
         return false
     }
     if let draftArtifact = descriptor.draftArtifact,
@@ -1233,7 +1250,8 @@ func alphaResolvedModelCatalogRefreshDate(
 
 func alphaBackendCatalogPackSupportsCurrentInstaller(_ pack: AlphaBackendCatalogPack) -> Bool {
     guard pack.developmentOnly == false,
-          pack.sizeBytes > 0 else {
+          pack.sizeBytes > 0,
+          alphaAssistantTierSupportsInstallerRuntime(pack.tier, runtimeMode: pack.runtimeMode) else {
         return false
     }
     if let draftArtifact = pack.draftArtifact,
