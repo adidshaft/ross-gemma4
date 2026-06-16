@@ -430,6 +430,7 @@ enum AlphaLocalPromptBudgetPlanner {
             for: runtimeMode,
             baseMaxInputChars: baseMaxInputChars
         )
+        var maximumBudget = baseMaxInputChars
         var maxInputChars = baseMaxInputChars
         var sourceBlockLimit: Int? = nil
         var sourceExcerptChars: Int? = nil
@@ -469,7 +470,12 @@ enum AlphaLocalPromptBudgetPlanner {
             firstTokenMs: firstTokenMs,
             outputSpeed: outputSpeed
         ) {
-            maxInputChars = baseMaxInputChars
+            maximumBudget = fastMLXLargeFileInputBudget(
+                runtimeMode: runtimeMode,
+                baseMaxInputChars: baseMaxInputChars,
+                usesStructuredThresholds: false
+            )
+            maxInputChars = maximumBudget
         }
 
         if firstTokenMs >= 4_500 || outputSpeed <= runtimeDefaults.slowTokensPerSecond {
@@ -483,7 +489,7 @@ enum AlphaLocalPromptBudgetPlanner {
         }
 
         return AlphaLocalPromptBudgetPlan(
-            maxInputChars: min(maxInputChars, baseMaxInputChars),
+            maxInputChars: min(maxInputChars, maximumBudget),
             sourceBlockLimit: sourceBlockLimit,
             sourceExcerptChars: sourceExcerptChars
         )
@@ -538,6 +544,7 @@ enum AlphaLocalPromptBudgetPlanner {
             for: runtimeMode,
             baseMaxInputChars: baseMaxInputChars
         )
+        var maximumBudget = baseMaxInputChars
         var maxInputChars = baseMaxInputChars
         var sourceBlockLimit: Int? = nil
         var sourceExcerptChars: Int? = nil
@@ -578,7 +585,12 @@ enum AlphaLocalPromptBudgetPlanner {
             outputSpeed: outputSpeed,
             usesStructuredThresholds: true
         ) {
-            maxInputChars = baseMaxInputChars
+            maximumBudget = fastMLXLargeFileInputBudget(
+                runtimeMode: runtimeMode,
+                baseMaxInputChars: baseMaxInputChars,
+                usesStructuredThresholds: true
+            )
+            maxInputChars = maximumBudget
         }
 
         if firstTokenMs >= 6_000 || outputSpeed <= runtimeDefaults.slowTokensPerSecond {
@@ -592,7 +604,7 @@ enum AlphaLocalPromptBudgetPlanner {
         }
 
         return AlphaLocalPromptBudgetPlan(
-            maxInputChars: min(maxInputChars, baseMaxInputChars),
+            maxInputChars: min(maxInputChars, maximumBudget),
             sourceBlockLimit: sourceBlockLimit,
             sourceExcerptChars: sourceExcerptChars
         )
@@ -672,6 +684,22 @@ enum AlphaLocalPromptBudgetPlanner {
             return prefersWiderBatches ? 3 : 2
         }
         return 0
+    }
+
+    private static func fastMLXLargeFileInputBudget(
+        runtimeMode: AlphaPackRuntimeMode,
+        baseMaxInputChars: Int,
+        usesStructuredThresholds: Bool
+    ) -> Int {
+        guard runtimeMode == .mlxSwiftLm else {
+            return baseMaxInputChars
+        }
+        guard baseMaxInputChars >= 40_000 else {
+            return baseMaxInputChars
+        }
+
+        let multiplier = usesStructuredThresholds ? 1.07 : 1.08
+        return Int((Double(baseMaxInputChars) * multiplier).rounded(.down))
     }
 
     private static func singleSelectedStructuredDocumentBlockLimit(

@@ -10003,7 +10003,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNil(plan.sourceExcerptChars)
     }
 
-    func testMatterQuestionBudgetPlannerKeepsExpandedLargeFileMLXBudgetAfterFastRun() {
+    func testMatterQuestionBudgetPlannerWidensLargeFileMLXBudgetAfterFastRun() {
         let fastInvocation = AlphaLocalModelInvocation(
             task: .matterQuestionAnswer,
             runtimeMode: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
@@ -10028,7 +10028,7 @@ final class AlphaExtractionTests: XCTestCase {
             lastInvocation: fastInvocation
         )
 
-        XCTAssertEqual(plan.maxInputChars, 56_000)
+        XCTAssertEqual(plan.maxInputChars, 60_480)
         XCTAssertEqual(plan.sourceBlockLimit, 12)
         XCTAssertEqual(plan.sourceExcerptChars, 1_850)
     }
@@ -10194,7 +10194,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(plan.sourceExcerptChars, 760)
     }
 
-    func testStructuredDocumentBudgetPlannerKeepsExpandedLargeFileMLXBudgetAfterFastRun() {
+    func testStructuredDocumentBudgetPlannerWidensLargeFileMLXBudgetAfterFastRun() {
         let fastInvocation = AlphaLocalModelInvocation(
             task: .legalFieldExtraction,
             runtimeMode: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
@@ -10219,7 +10219,7 @@ final class AlphaExtractionTests: XCTestCase {
             lastInvocation: fastInvocation
         )
 
-        XCTAssertEqual(plan.maxInputChars, 56_000)
+        XCTAssertEqual(plan.maxInputChars, 59_920)
         XCTAssertEqual(plan.sourceBlockLimit, 15)
         XCTAssertEqual(plan.sourceExcerptChars, 1_650)
     }
