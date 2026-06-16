@@ -495,6 +495,32 @@ private func alphaInstalledModelPackFileIsUsable(_ pack: AlphaInstalledModelPack
 
 private func alphaRecoveredInstalledPackFromDisk(tier: AlphaCapabilityTier) -> AlphaInstalledModelPack? {
     guard tier != .flash else { return nil }
+    typealias RecoveredCandidate = (pack: AlphaInstalledModelPack, verifiedAt: Date)
+
+    func preferredRecoveredCandidate(from candidates: [RecoveredCandidate]) -> AlphaInstalledModelPack? {
+        guard !candidates.isEmpty else { return nil }
+        let preferredPack = alphaPreferredInstalledPack(
+            for: tier,
+            installedPacks: candidates.map(\.pack),
+            lastInvocation: nil
+        )
+        return candidates.min { lhs, rhs in
+            let lhsMatchesPreferred = lhs.pack.id == preferredPack?.id
+            let rhsMatchesPreferred = rhs.pack.id == preferredPack?.id
+            if lhsMatchesPreferred != rhsMatchesPreferred {
+                return lhsMatchesPreferred && !rhsMatchesPreferred
+            }
+            if lhs.pack.checksumVerified != rhs.pack.checksumVerified {
+                return lhs.pack.checksumVerified && !rhs.pack.checksumVerified
+            }
+            if lhs.verifiedAt != rhs.verifiedAt {
+                return lhs.verifiedAt > rhs.verifiedAt
+            }
+            return lhs.pack.installPath < rhs.pack.installPath
+        }?.pack
+    }
+
+    var recoveredCandidates: [RecoveredCandidate] = []
     let tierFolder = alphaAbsoluteURL(for: "model-packs/\(tier.rawValue)")
     if let contents = try? FileManager.default.contentsOfDirectory(
         at: tierFolder,
@@ -546,80 +572,69 @@ private func alphaRecoveredInstalledPackFromDisk(tier: AlphaCapabilityTier) -> A
                 runtimeMode: manifest.runtimeMode,
                 developmentOnly: manifest.developmentOnly,
                 checksumVerified: true,
+                installedAt: manifest.verifiedAt,
                 isActive: true
             )
             guard alphaDownloadedAssistantArtifactPassesRuntimeValidation(recovered) else {
                 continue
             }
-            return recovered
+            recoveredCandidates.append((recovered, manifest.verifiedAt))
         }
     }
 
     let artifact = alphaAssistantModelArtifact(for: tier)
-    guard artifact.runtimeMode == .llamaCppGguf else { return nil }
-    let relativePath = "model-packs/\(tier.rawValue)/\(artifact.fileName)"
-    let fileURL = alphaAbsoluteURL(for: relativePath)
-    guard alphaModelFileByteCount(at: fileURL) == artifact.sizeBytes else { return nil }
-    let manifest = alphaModelArtifactManifest(forFileAt: fileURL)
-    let recoveredChecksum = manifest?.checksumSha256.trimmingCharacters(in: .whitespacesAndNewlines)
-    if let manifest,
-       manifest.fileName != artifact.fileName || manifest.bytes != artifact.sizeBytes {
-        return nil
-    }
-    guard !artifact.sha256.isEmpty else {
-        guard manifest != nil else { return nil }
-        let checksum: String
-        if alphaModelLooksLikeSHA256(recoveredChecksum) {
-            checksum = recoveredChecksum!
-        } else if let verifiedChecksum = alphaModelSHA256Hex(forFileAt: fileURL),
-                  alphaModelLooksLikeSHA256(verifiedChecksum) {
-            checksum = verifiedChecksum
-        } else {
-            return nil
+    if artifact.runtimeMode == .llamaCppGguf {
+        let relativePath = "model-packs/\(tier.rawValue)/\(artifact.fileName)"
+        let fileURL = alphaAbsoluteURL(for: relativePath)
+        if alphaModelFileByteCount(at: fileURL) == artifact.sizeBytes {
+            let manifest = alphaModelArtifactManifest(forFileAt: fileURL)
+            let recoveredChecksum = manifest?.checksumSha256.trimmingCharacters(in: .whitespacesAndNewlines)
+            let manifestMatchesPinnedArtifact = manifest == nil ||
+                (manifest?.fileName == artifact.fileName && manifest?.bytes == artifact.sizeBytes)
+
+            if manifestMatchesPinnedArtifact {
+                let checksum: String?
+                if artifact.sha256.isEmpty {
+                    if alphaModelLooksLikeSHA256(recoveredChecksum) {
+                        checksum = recoveredChecksum
+                    } else if let verifiedChecksum = alphaModelSHA256Hex(forFileAt: fileURL),
+                              alphaModelLooksLikeSHA256(verifiedChecksum) {
+                        checksum = verifiedChecksum
+                    } else {
+                        checksum = nil
+                    }
+                } else if let recoveredChecksum, !recoveredChecksum.isEmpty,
+                          alphaModelAssistantChecksumMatches(expected: artifact.sha256, actual: recoveredChecksum) {
+                    checksum = recoveredChecksum
+                } else if let verifiedChecksum = alphaModelSHA256Hex(forFileAt: fileURL),
+                          alphaModelAssistantChecksumMatches(expected: artifact.sha256, actual: verifiedChecksum) {
+                    checksum = verifiedChecksum
+                } else {
+                    checksum = nil
+                }
+
+                if let checksum {
+                    let recovered = AlphaInstalledModelPack(
+                        packId: artifact.packId,
+                        tier: tier,
+                        installPath: relativePath,
+                        checksumSha256: checksum,
+                        artifactKind: artifact.artifactKind,
+                        runtimeMode: artifact.runtimeMode,
+                        developmentOnly: artifact.developmentOnly,
+                        checksumVerified: true,
+                        installedAt: manifest?.verifiedAt ?? .distantPast,
+                        isActive: true
+                    )
+                    if alphaDownloadedAssistantArtifactPassesRuntimeValidation(recovered) {
+                        recoveredCandidates.append((recovered, manifest?.verifiedAt ?? .distantPast))
+                    }
+                }
+            }
         }
-        let recovered = AlphaInstalledModelPack(
-            packId: artifact.packId,
-            tier: tier,
-            installPath: relativePath,
-            checksumSha256: checksum,
-            artifactKind: artifact.artifactKind,
-            runtimeMode: artifact.runtimeMode,
-            developmentOnly: artifact.developmentOnly,
-            checksumVerified: true,
-            isActive: true
-        )
-        guard alphaDownloadedAssistantArtifactPassesRuntimeValidation(recovered) else {
-            return nil
-        }
-        return recovered
     }
-    let checksum: String
-    if let recoveredChecksum, !recoveredChecksum.isEmpty {
-        guard alphaModelAssistantChecksumMatches(expected: artifact.sha256, actual: recoveredChecksum) else {
-            return nil
-        }
-        checksum = recoveredChecksum
-    } else if let verifiedChecksum = alphaModelSHA256Hex(forFileAt: fileURL),
-              alphaModelAssistantChecksumMatches(expected: artifact.sha256, actual: verifiedChecksum) {
-        checksum = verifiedChecksum
-    } else {
-        return nil
-    }
-    let recovered = AlphaInstalledModelPack(
-        packId: artifact.packId,
-        tier: tier,
-        installPath: relativePath,
-        checksumSha256: checksum,
-        artifactKind: artifact.artifactKind,
-        runtimeMode: artifact.runtimeMode,
-        developmentOnly: artifact.developmentOnly,
-        checksumVerified: true,
-        isActive: true
-    )
-    guard alphaDownloadedAssistantArtifactPassesRuntimeValidation(recovered) else {
-        return nil
-    }
-    return recovered
+
+    return preferredRecoveredCandidate(from: recoveredCandidates)
 }
 
 private func alphaRecoverDownloadedAssistantArtifacts(from state: inout AlphaPersistedState) -> Bool {

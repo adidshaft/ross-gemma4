@@ -522,14 +522,16 @@ extension AlphaRossModel {
         let cleaned = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleaned.isEmpty else { return }
 
-        let hasRealLocalAsk = canRunRealLocalAsk(question: cleaned, scopeCaseID: scopeCaseID)
-        let localResult = buildLocalAskResult(question: cleaned, scopeCaseID: scopeCaseID)
         let asksAboutAssistantSetup = alphaAskQuestionTargetsAssistantSetup(cleaned)
+        let hasRealLocalAsk = asksAboutAssistantSetup
+            ? false
+            : canRunRealLocalAsk(question: cleaned, scopeCaseID: scopeCaseID)
+        let localResult = buildLocalAskResult(question: cleaned, scopeCaseID: scopeCaseID)
         let initialResult: AlphaAskResult
-        if hasRealLocalAsk {
-            initialResult = buildPendingLocalModelAskResult(question: cleaned, scopeCaseID: scopeCaseID, baseResult: localResult)
-        } else if asksAboutAssistantSetup {
+        if asksAboutAssistantSetup {
             initialResult = localResult
+        } else if hasRealLocalAsk {
+            initialResult = buildPendingLocalModelAskResult(question: cleaned, scopeCaseID: scopeCaseID, baseResult: localResult)
         } else {
             initialResult = buildLocalModelRequiredAskResult(question: cleaned, scopeCaseID: scopeCaseID)
         }
@@ -584,12 +586,14 @@ extension AlphaRossModel {
             }
         }
 
-        scheduleAskRuntimeUpgrade(
-            question: cleaned,
-            scopeCaseID: scopeCaseID,
-            storedResult: storedResult,
-            baseResult: localResult
-        )
+        if !asksAboutAssistantSetup {
+            scheduleAskRuntimeUpgrade(
+                question: cleaned,
+                scopeCaseID: scopeCaseID,
+                storedResult: storedResult,
+                baseResult: localResult
+            )
+        }
     }
 
     func canRunRealLocalAsk(question: String, scopeCaseID: UUID?) -> Bool {

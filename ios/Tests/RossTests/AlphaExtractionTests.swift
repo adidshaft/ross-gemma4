@@ -7034,6 +7034,71 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(model.persisted.installedPacks.contains(where: { $0.runtimeMode == .appleFoundationModels }))
         XCTAssertTrue(model.persisted.installedPacks.contains(where: { $0.packId == downloadedPack.packId }))
     }
+
+    @available(iOS 26.0, macOS 26.0, *)
+    @MainActor
+    func testSubmitAskForAssistantSetupSkipsRuntimeResolutionAndKeepsGuidanceFlow() async throws {
+        final class ProbeBox: @unchecked Sendable {
+            var didProbeFoundation = false
+            var didValidateLlama = false
+        }
+
+        let probeBox = ProbeBox()
+        let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
+        let previousModelValidator = AlphaLlamaCppProvider.modelLoadValidator
+        AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in
+            probeBox.didProbeFoundation = true
+            return false
+        }
+        AlphaLlamaCppProvider.modelLoadValidator = { _ in
+            probeBox.didValidateLlama = true
+        }
+        defer {
+            AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
+            AlphaLlamaCppProvider.modelLoadValidator = previousModelValidator
+        }
+
+        let model = AlphaRossModel()
+        var state = AlphaPersistedState.empty()
+        let systemPack = alphaSystemAssistantPack(for: .caseAssociate)
+        state.settings.activeTier = .caseAssociate
+        state.installedPacks = [systemPack]
+        state.modelJobs = [
+            AlphaModelDownloadJob(
+                sessionId: "system-case-associate",
+                packId: systemPack.packId,
+                tier: systemPack.tier,
+                state: .installed,
+                networkPolicy: .wifiOnly,
+                bytesDownloaded: 0,
+                totalBytes: 0,
+                checksumSha256: systemPack.checksumSha256,
+                artifactKind: systemPack.artifactKind,
+                runtimeMode: systemPack.runtimeMode,
+                developmentOnly: systemPack.developmentOnly,
+                completedAt: .now
+            )
+        ]
+        model.persisted = state
+        let installedPackIDsBeforeAsk = model.persisted.installedPacks.map(\.id)
+        probeBox.didProbeFoundation = false
+        probeBox.didValidateLlama = false
+
+        model.submitAsk(
+            question: "What can I do before setting up the private assistant?",
+            scopeCaseID: nil,
+            webEnabled: false
+        )
+
+        XCTAssertEqual(model.latestAskResult?.answerTitle, "Private assistant setup")
+        XCTAssertEqual(model.latestAskResult?.statusNote, "Private assistant")
+        XCTAssertTrue(
+            model.latestAskResult?.answerSections.joined(separator: " ").contains("organize matters") == true
+        )
+        XCTAssertFalse(probeBox.didValidateLlama)
+        XCTAssertEqual(model.persisted.installedPacks.map(\.id), installedPackIDsBeforeAsk)
+        XCTAssertFalse(model.persisted.ledgerEntries.contains { $0.title == "Assistant fallback enabled" })
+    }
     #endif
 
     #if canImport(FoundationModels)
