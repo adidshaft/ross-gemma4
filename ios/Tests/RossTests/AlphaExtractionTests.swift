@@ -7136,6 +7136,72 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(candidate?.dismissedAt, existingDismissed.dismissedAt)
     }
 
+    func testAssistantUpdateCandidateSkipsStaleRuntimeFallbackWhenMLXIsPreferred() {
+        let installedPack = AlphaInstalledModelPack(
+            packId: "gemma-4-12b-q4-old",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/current.gguf",
+            checksumSha256: String(repeating: "d", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+        let staleGGUFDescriptor = AlphaAssistantCatalogDescriptor(
+            tier: .caseAssociate,
+            packId: "gemma-4-12b-q4-new",
+            sizeBytes: 7_500_000_000,
+            checksumSha256: String(repeating: "e", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false
+        )
+
+        XCTAssertNil(
+            alphaAssistantUpdateCandidate(
+                installedPack: installedPack,
+                availableDescriptor: staleGGUFDescriptor,
+                existingDismissed: nil,
+                preferredRuntimeMode: .mlxSwiftLm
+            )
+        )
+    }
+
+    func testAssistantUpdateCandidatePromptsWhenPreferredMLXDescriptorIsAvailable() {
+        let installedPack = AlphaInstalledModelPack(
+            packId: "gemma-4-12b-q4-old",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/current.gguf",
+            checksumSha256: String(repeating: "d", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+        let preferredMLXDescriptor = AlphaAssistantCatalogDescriptor(
+            tier: .caseAssociate,
+            packId: "gemma-4-12b-mlx",
+            sizeBytes: 6_200_000_000,
+            checksumSha256: String(repeating: "f", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false
+        )
+
+        let candidate = alphaAssistantUpdateCandidate(
+            installedPack: installedPack,
+            availableDescriptor: preferredMLXDescriptor,
+            existingDismissed: nil,
+            preferredRuntimeMode: .mlxSwiftLm
+        )
+
+        XCTAssertEqual(candidate?.installedPackId, installedPack.packId)
+        XCTAssertEqual(candidate?.availablePackId, preferredMLXDescriptor.packId)
+        XCTAssertEqual(candidate?.availableSizeBytes, preferredMLXDescriptor.sizeBytes)
+    }
+
     @MainActor
     func testAssistantUpdateCandidatePromptsWhenDraftArtifactChanges() async throws {
         let store = AlphaRossStore()
