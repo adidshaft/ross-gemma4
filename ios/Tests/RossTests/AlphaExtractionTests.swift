@@ -3314,6 +3314,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(alphaAssistantOfferBadge(.active, languageCode: "en"), "Active")
         XCTAssertEqual(alphaAssistantOfferBadge(.settingUp, languageCode: "ta"), "அமைக்கப்படுகிறது")
         XCTAssertEqual(alphaAssistantOfferAction(.setUpOption, languageCode: "en"), "Set up this option")
+        XCTAssertEqual(alphaAssistantOfferAction(.useForThisAsk, languageCode: "en"), "Use this for the current ask")
         XCTAssertEqual(alphaAssistantOfferAction(.resumeSetup, languageCode: "te-IN"), "సెటప్‌ను కొనసాగించండి")
         XCTAssertEqual(alphaAssistantJobAction(.pause, languageCode: "en"), "Pause")
         XCTAssertEqual(alphaAssistantJobAction(.retry, languageCode: "ta"), "மீண்டும் முயற்சி")
@@ -9283,6 +9284,72 @@ final class AlphaExtractionTests: XCTestCase {
                 overrideTier: .caseAssociate,
                 overrideMode: .mlxSwiftLm,
                 selectedRuntimeMode: .mlxSwiftLm,
+                currentRoute: .privateAISettings
+            )
+        )
+    }
+
+    func testAssistantOfferTargetsCurrentAskUpgradeWhenMatchingOfferIsSelected() {
+        let result = AlphaAskResult(
+            kind: .userAsk,
+            question: "What changed?",
+            scopeCaseID: nil,
+            scopeLabel: "All work",
+            selectedDocumentTitles: [],
+            answerTitle: "Focused answer",
+            answerSections: [],
+            caseFileSources: [],
+            publicLawPreview: nil,
+            publicLawResults: [],
+            statusNote: nil,
+            needsReviewWarning: "Focused sources",
+            modelInvocation: nil,
+            upgradeTierHint: .caseAssociate,
+            upgradeRuntimeHint: .llamaCppGguf
+        )
+
+        XCTAssertTrue(
+            alphaAssistantOfferTargetsCurrentAskUpgrade(
+                result: result,
+                offerTier: .caseAssociate,
+                selectedTier: .caseAssociate,
+                overrideTier: .caseAssociate,
+                overrideMode: .llamaCppGguf,
+                selectedRuntimeMode: .llamaCppGguf,
+                offerRuntimeMode: .llamaCppGguf,
+                currentRoute: .privateAISettings
+            )
+        )
+    }
+
+    func testAssistantOfferDoesNotTargetCurrentAskUpgradeWhenOfferRuntimeDiffers() {
+        let result = AlphaAskResult(
+            kind: .userAsk,
+            question: "What changed?",
+            scopeCaseID: nil,
+            scopeLabel: "All work",
+            selectedDocumentTitles: [],
+            answerTitle: "Focused answer",
+            answerSections: [],
+            caseFileSources: [],
+            publicLawPreview: nil,
+            publicLawResults: [],
+            statusNote: nil,
+            needsReviewWarning: "Focused sources",
+            modelInvocation: nil,
+            upgradeTierHint: .caseAssociate,
+            upgradeRuntimeHint: .llamaCppGguf
+        )
+
+        XCTAssertFalse(
+            alphaAssistantOfferTargetsCurrentAskUpgrade(
+                result: result,
+                offerTier: .caseAssociate,
+                selectedTier: .caseAssociate,
+                overrideTier: .caseAssociate,
+                overrideMode: .llamaCppGguf,
+                selectedRuntimeMode: .llamaCppGguf,
+                offerRuntimeMode: .mlxSwiftLm,
                 currentRoute: .privateAISettings
             )
         )

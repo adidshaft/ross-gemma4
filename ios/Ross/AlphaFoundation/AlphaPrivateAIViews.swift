@@ -853,6 +853,9 @@ struct AlphaPrivateAIOfferCard: View {
         if activeButRuntimeUnavailable {
             return alphaAssistantOfferAction(.repair)
         }
+        if targetsCurrentAskUpgrade {
+            return alphaAssistantOfferAction(.useForThisAsk)
+        }
         if prefersBuiltInActivation {
             return alphaAssistantOfferAction(.useOnThisIPhone)
         }
@@ -866,6 +869,19 @@ struct AlphaPrivateAIOfferCard: View {
             return alphaAssistantOfferAction(.resumeSetup)
         }
         return alphaAssistantOfferAction(.setUpOption)
+    }
+
+    private var targetsCurrentAskUpgrade: Bool {
+        alphaAssistantOfferTargetsCurrentAskUpgrade(
+            result: model.latestAskResult,
+            offerTier: offer.tier,
+            selectedTier: model.selectedTier,
+            overrideTier: model.assistantSetupRuntimeOverrideTier,
+            overrideMode: model.assistantSetupRuntimeOverrideMode,
+            selectedRuntimeMode: model.assistantSetupPresentation(for: model.selectedTier)?.runtimeMode,
+            offerRuntimeMode: setupPresentation?.runtimeMode,
+            currentRoute: model.path.last
+        )
     }
 
     private var actionDisabled: Bool {
@@ -1058,6 +1074,33 @@ func alphaAssistantOfferPrefersBuiltInActivation(
         return false
     }
     return preferredRuntimeMode == .appleFoundationModels
+}
+
+func alphaAssistantOfferTargetsCurrentAskUpgrade(
+    result: AlphaAskResult?,
+    offerTier: AlphaCapabilityTier,
+    selectedTier: AlphaCapabilityTier,
+    overrideTier: AlphaCapabilityTier?,
+    overrideMode: AlphaPackRuntimeMode?,
+    selectedRuntimeMode: AlphaPackRuntimeMode?,
+    offerRuntimeMode: AlphaPackRuntimeMode?,
+    currentRoute: AlphaRoute?
+) -> Bool {
+    guard alphaAskUpgradeSetupSummary(
+        result: result,
+        selectedTier: selectedTier,
+        overrideTier: overrideTier,
+        overrideMode: overrideMode,
+        selectedRuntimeMode: selectedRuntimeMode,
+        currentRoute: currentRoute
+    ) != nil else {
+        return false
+    }
+    guard AlphaCapabilityTier.assistantSelectionsMatch(offerTier, selectedTier),
+          let offerRuntimeMode else {
+        return false
+    }
+    return offerRuntimeMode == overrideMode
 }
 
 struct AlphaAssistantVariantOption: Identifiable, Hashable, Sendable {
@@ -1824,6 +1867,7 @@ func alphaAssistantOfferBadge(
 
 enum AlphaAssistantOfferActionKind {
     case using
+    case useForThisAsk
     case useOnThisIPhone
     case repair
     case use
@@ -1838,6 +1882,8 @@ func alphaAssistantOfferAction(
     switch kind {
     case .using:
         return rossLocalized("assistant_action_using", languageCode: languageCode)
+    case .useForThisAsk:
+        return "Use this for the current ask"
     case .useOnThisIPhone:
         return rossLocalized("assistant_action_use_on_this_iphone", languageCode: languageCode)
     case .repair:
