@@ -5079,6 +5079,72 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    @MainActor
+    func testExtractionUpgradeMessageStaysHiddenForCleanQuickStartReview() {
+        let activePack = installedPack(.quickStart)
+        let model = AlphaRossModel(previewState: .empty())
+        model.privateAISnapshot.activePack = activePack
+        model.privateAISnapshot.installedPacks = [activePack]
+
+        let document = AlphaCaseDocument(
+            title: "Clean Order",
+            fileName: "clean-order.pdf",
+            kind: .pdf,
+            storedRelativePath: "tests/clean-order.pdf",
+            importedAt: .now,
+            pageCount: 2,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: "Clear order text",
+            dominantSourceSnippet: nil,
+            lastIndexedAt: .now,
+            pages: [
+                AlphaDocumentPage(pageNumber: 1, snippet: "Clear order text", ocrConfidence: 0.98),
+                AlphaDocumentPage(pageNumber: 2, snippet: "Directions continue", ocrConfidence: 0.98)
+            ]
+        )
+
+        XCTAssertNil(model.extractionUpgradeMessage(for: document))
+    }
+
+    @MainActor
+    func testExtractionUpgradeMessageKeepsQuickStartUpgradeForCoverageLimits() {
+        let caseId = UUID()
+        let documentId = UUID()
+        let activePack = installedPack(.quickStart)
+        let model = AlphaRossModel(previewState: .empty())
+        model.privateAISnapshot.activePack = activePack
+        model.privateAISnapshot.installedPacks = [activePack]
+
+        var document = AlphaCaseDocument(
+            id: documentId,
+            title: "Long Order",
+            fileName: "long-order.pdf",
+            kind: .pdf,
+            storedRelativePath: "tests/long-order.pdf",
+            importedAt: .now,
+            pageCount: 13,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: "Long order text",
+            dominantSourceSnippet: nil,
+            lastIndexedAt: .now,
+            pages: (1...13).map { AlphaDocumentPage(pageNumber: $0, snippet: "Order page \($0)", ocrConfidence: 0.97) }
+        )
+        document.extractionFindings = [
+            AlphaExtractionFinding(
+                caseId: caseId,
+                documentId: documentId,
+                kind: .unsupportedLayout,
+                message: alphaFileReviewBasicTooLongWarning(),
+                sourceRefs: [],
+                severity: .warning
+            )
+        ]
+
+        XCTAssertEqual(model.extractionUpgradeMessage(for: document), alphaBetterExtractionStandardMessage())
+    }
+
     func testExtractedFieldsAlwaysRetainSourceRefs() async {
         let store = AlphaRossStore()
         let caseId = UUID()

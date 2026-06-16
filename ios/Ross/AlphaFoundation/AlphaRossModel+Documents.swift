@@ -368,18 +368,23 @@ extension AlphaRossModel {
 
     func extractionUpgradeMessage(for document: AlphaCaseDocument) -> String? {
         let mode = activeExtractionMode
+        let unresolvedFindings = document.extractionFindings.filter { !$0.resolved }
+        let hasQualityWarnings = unresolvedFindings.contains {
+            $0.kind == .lowConfidenceOcr || $0.kind == .languageUncertain
+        }
+        let hasStructuredCoverageLimit = unresolvedFindings.contains { $0.kind == .unsupportedLayout }
         if mode == .basic {
             return alphaBetterExtractionStandardMessage()
         }
         if mode == .quickStart,
-           document.languageProfile?.primaryLanguage == .mixed || document.extractionFindings.contains(where: { $0.kind == .lowConfidenceOcr || $0.kind == .languageUncertain }) {
+           document.languageProfile?.primaryLanguage == .mixed || hasQualityWarnings {
             return alphaBetterExtractionAdvancedMessage()
         }
-        if mode == .quickStart {
+        if mode == .quickStart, hasStructuredCoverageLimit {
             return alphaBetterExtractionStandardMessage()
         }
         if mode == .caseAssociate,
-           document.extractionFindings.contains(where: { $0.kind == .lowConfidenceOcr || $0.kind == .languageUncertain }) {
+           hasQualityWarnings {
             return alphaBetterExtractionAdvancedMessage()
         }
         return nil
