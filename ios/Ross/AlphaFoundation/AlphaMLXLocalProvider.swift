@@ -42,21 +42,33 @@ enum AlphaMLXRuntimeProfile {
 
     static func maxInputChars(
         for tier: AlphaCapabilityTier,
-        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory
+        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory,
+        deviceModelIdentifier: String = alphaCurrentDeviceModelIdentifier()
     ) -> Int {
+        let baseMaxInputChars: Int
         switch tier {
         case .flash:
-            return physicalMemory >= 8_000_000_000 ? 18_000 : 14_000
+            baseMaxInputChars = physicalMemory >= 8_000_000_000 ? 18_000 : 14_000
         case .quickStart:
-            return physicalMemory >= 8_000_000_000 ? 40_000 : 24_000
+            baseMaxInputChars = physicalMemory >= 8_000_000_000 ? 40_000 : 24_000
         case .caseAssociate:
             if physicalMemory >= 16_000_000_000 {
-                return 72_000
+                baseMaxInputChars = 72_000
+            } else {
+                baseMaxInputChars = physicalMemory >= 12_000_000_000 ? 56_000 : 40_000
             }
-            return physicalMemory >= 12_000_000_000 ? 56_000 : 40_000
         case .seniorDraftingSupport:
-            return physicalMemory >= 18_000_000_000 ? 72_000 : 56_000
+            baseMaxInputChars = physicalMemory >= 18_000_000_000 ? 72_000 : 56_000
         }
+
+        let multiplier = iPhoneInputBudgetMultiplier(
+            physicalMemory: physicalMemory,
+            deviceModelIdentifier: deviceModelIdentifier
+        )
+        guard multiplier > 1 else {
+            return baseMaxInputChars
+        }
+        return Int((Double(baseMaxInputChars) * multiplier).rounded())
     }
 
     static func maxNewTokens(for tier: AlphaCapabilityTier, task: AlphaLocalModelTask) -> Int {
@@ -293,6 +305,29 @@ enum AlphaMLXRuntimeProfile {
             case .seniorDraftingSupport:
                 return 0.95
             }
+        }
+    }
+
+    private static func iPhoneInputBudgetMultiplier(
+        physicalMemory: UInt64,
+        deviceModelIdentifier: String
+    ) -> Double {
+        guard let performanceClass = iPhonePerformanceClass(
+            for: deviceModelIdentifier,
+            physicalMemory: physicalMemory
+        ) else {
+            return 1
+        }
+
+        switch performanceClass {
+        case .baseline:
+            return 1.02
+        case .recent:
+            return 1.06
+        case .recentPro:
+            return 1.10
+        case .latest:
+            return 1.14
         }
     }
 

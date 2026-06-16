@@ -14220,6 +14220,38 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(health.maxInputChars, AlphaMLXRuntimeProfile.maxInputChars(for: .caseAssociate))
     }
 
+    func testUnavailableMLXRuntimeHealthUsesDeviceAwareIPhoneInputBudget() {
+        let previousSimulatorIdentifier = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"]
+        setenv("SIMULATOR_MODEL_IDENTIFIER", "iPhone17,2", 1)
+        defer {
+            if let previousSimulatorIdentifier {
+                setenv("SIMULATOR_MODEL_IDENTIFIER", previousSimulatorIdentifier, 1)
+            } else {
+                unsetenv("SIMULATOR_MODEL_IDENTIFIER")
+            }
+        }
+
+        let provider = AlphaMLXLocalProvider(
+            capabilityTier: .caseAssociate,
+            modelPathLabel: "case-associate",
+            modelPath: "/tmp/mlx-case-associate",
+            checksumVerified: false,
+            draftModelPath: "/tmp/mtp-gemma-4-12b-it",
+            draftModelTokens: 6
+        )
+
+        let health = provider.runtimeHealth()
+
+        XCTAssertEqual(
+            health.maxInputChars,
+            AlphaMLXRuntimeProfile.maxInputChars(
+                for: .caseAssociate,
+                physicalMemory: ProcessInfo.processInfo.physicalMemory,
+                deviceModelIdentifier: "iPhone17,2"
+            )
+        )
+    }
+
     func testFoundationPlannedTasksIncludeAskIssueAndPublicLawShaping() {
         let expected: Set<AlphaLocalModelTask> = [
             .documentClassification,
@@ -15144,6 +15176,25 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(alphaAssistantTokenRateLabel(tokensPerSecond: macEstimatedSpeed), "13 tok/s")
         XCTAssertEqual(alphaAssistantTokenRateLabel(tokensPerSecond: recentIPhoneEstimatedSpeed), "14 tok/s")
         XCTAssertGreaterThan(recentIPhoneEstimatedSpeed, macEstimatedSpeed)
+    }
+
+    func testMLXRuntimeProfileRaisesInputBudgetOnRecentIPhone() {
+        XCTAssertEqual(
+            AlphaMLXRuntimeProfile.maxInputChars(
+                for: .caseAssociate,
+                physicalMemory: 12_000_000_000,
+                deviceModelIdentifier: "Mac16,1"
+            ),
+            56_000
+        )
+        XCTAssertEqual(
+            AlphaMLXRuntimeProfile.maxInputChars(
+                for: .caseAssociate,
+                physicalMemory: 12_000_000_000,
+                deviceModelIdentifier: "iPhone17,2"
+            ),
+            61_600
+        )
     }
 
     func testLlamaValidationRejectsMissingModelPath() {
