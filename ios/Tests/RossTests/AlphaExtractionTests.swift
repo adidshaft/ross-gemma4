@@ -13197,6 +13197,50 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(plan.sourceExcerptChars, 1_800)
     }
 
+    func testMatterQuestionBudgetPlannerUsesResolvedHighBudgetFoundationBranch() {
+        let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
+            runtimeMode: .appleFoundationModels,
+            baseMaxInputChars: 64_736,
+            sourceBlockCount: 14,
+            sourceCharCount: 52_000,
+            lastInvocation: nil
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 58_262)
+        XCTAssertEqual(plan.sourceBlockLimit, 12)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_900)
+    }
+
+    func testMatterQuestionBudgetPlannerWidensResolvedHighBudgetFoundationBranchAfterFastRun() {
+        let fastInvocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.appleFoundationModels.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 16.8,
+            timeToFirstTokenMs: 980,
+            status: .complete
+        )
+
+        let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
+            runtimeMode: .appleFoundationModels,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 64_736,
+            sourceBlockCount: 18,
+            sourceCharCount: 58_000,
+            lastInvocation: fastInvocation
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 69_914)
+        XCTAssertEqual(plan.sourceBlockLimit, 14)
+        XCTAssertEqual(plan.sourceExcerptChars, 2_040)
+    }
+
     func testMatterQuestionBudgetPlannerKeepsMoreSingleSelectedFoundationContext() {
         let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
             runtimeMode: .appleFoundationModels,
@@ -13210,6 +13254,21 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(plan.maxInputChars, 39_600)
         XCTAssertEqual(plan.sourceBlockLimit, 18)
         XCTAssertEqual(plan.sourceExcerptChars, 1_700)
+    }
+
+    func testMatterQuestionBudgetPlannerKeepsMoreSingleSelectedHighBudgetFoundationContext() {
+        let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
+            runtimeMode: .appleFoundationModels,
+            baseMaxInputChars: 64_736,
+            sourceBlockCount: 24,
+            sourceCharCount: 52_000,
+            selectedDocumentCount: 1,
+            lastInvocation: nil
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 58_262)
+        XCTAssertEqual(plan.sourceBlockLimit, 22)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_900)
     }
 
     func testStructuredDocumentBudgetPlannerTightensAfterSlowRun() {
@@ -13522,6 +13581,50 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(plan.sourceExcerptChars, 1_650)
     }
 
+    func testStructuredDocumentBudgetPlannerUsesResolvedHighBudgetFoundationBranch() {
+        let plan = AlphaLocalPromptBudgetPlanner.structuredDocumentPlan(
+            runtimeMode: .appleFoundationModels,
+            baseMaxInputChars: 64_736,
+            sourceBlockCount: 18,
+            sourceCharCount: 52_000,
+            lastInvocation: nil
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 56_967)
+        XCTAssertEqual(plan.sourceBlockLimit, 15)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_720)
+    }
+
+    func testStructuredDocumentBudgetPlannerWidensResolvedHighBudgetFoundationBranchAfterFastRun() {
+        let fastInvocation = AlphaLocalModelInvocation(
+            task: .legalFieldExtraction,
+            runtimeMode: AlphaPackRuntimeMode.appleFoundationModels.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 16.8,
+            timeToFirstTokenMs: 980,
+            status: .complete
+        )
+
+        let plan = AlphaLocalPromptBudgetPlanner.structuredDocumentPlan(
+            runtimeMode: .appleFoundationModels,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 64_736,
+            sourceBlockCount: 22,
+            sourceCharCount: 58_000,
+            lastInvocation: fastInvocation
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 69_267)
+        XCTAssertEqual(plan.sourceBlockLimit, 17)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_760)
+    }
+
     func testStructuredDocumentBudgetPlannerKeepsMoreSingleSelectedFoundationContext() {
         let plan = AlphaLocalPromptBudgetPlanner.structuredDocumentPlan(
             runtimeMode: .appleFoundationModels,
@@ -13535,6 +13638,21 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(plan.maxInputChars, 38_720)
         XCTAssertEqual(plan.sourceBlockLimit, 18)
         XCTAssertEqual(plan.sourceExcerptChars, 1_520)
+    }
+
+    func testStructuredDocumentBudgetPlannerKeepsMoreSingleSelectedHighBudgetFoundationContext() {
+        let plan = AlphaLocalPromptBudgetPlanner.structuredDocumentPlan(
+            runtimeMode: .appleFoundationModels,
+            baseMaxInputChars: 64_736,
+            sourceBlockCount: 24,
+            sourceCharCount: 52_000,
+            selectedDocumentCount: 1,
+            lastInvocation: nil
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 56_967)
+        XCTAssertEqual(plan.sourceBlockLimit, 22)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_720)
     }
 
     func testStructuredDocumentBatchLimitExpandsForCapableMLXExtractionRuns() {
@@ -13753,6 +13871,47 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(batchLimit, 23)
+    }
+
+    func testStructuredDocumentBatchLimitUsesResolvedHighBudgetFoundationBranch() {
+        let batchLimit = AlphaLocalPromptBudgetPlanner.structuredDocumentBatchLimit(
+            runtimeMode: .appleFoundationModels,
+            capabilityTier: .caseAssociate,
+            task: .legalFieldExtraction,
+            baseBatchLimit: 18,
+            baseMaxInputChars: 64_736,
+            lastInvocation: nil
+        )
+
+        XCTAssertEqual(batchLimit, 24)
+    }
+
+    func testStructuredDocumentBatchLimitWidensFurtherAfterFastHighBudgetFoundationRun() {
+        let fastInvocation = AlphaLocalModelInvocation(
+            task: .legalFieldExtraction,
+            runtimeMode: AlphaPackRuntimeMode.appleFoundationModels.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 16.8,
+            timeToFirstTokenMs: 980,
+            status: .complete
+        )
+
+        let batchLimit = AlphaLocalPromptBudgetPlanner.structuredDocumentBatchLimit(
+            runtimeMode: .appleFoundationModels,
+            capabilityTier: .caseAssociate,
+            task: .legalFieldExtraction,
+            baseBatchLimit: 18,
+            baseMaxInputChars: 64_736,
+            lastInvocation: fastInvocation
+        )
+
+        XCTAssertEqual(batchLimit, 27)
     }
 
     func testStructuredDocumentBatchLimitWidensFurtherAfterFastLlamaRun() {
@@ -14208,6 +14367,18 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(policy.sourceBlockLimit, 16)
     }
 
+    func testAskRuntimeSourcePackPolicyUsesResolvedHighBudgetFoundationBand() {
+        let policy = alphaAskRuntimeSourcePackPolicy(
+            runtimeMode: .appleFoundationModels,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 64_736,
+            hasSelectedDocuments: true
+        )
+
+        XCTAssertEqual(policy.documentCandidateLimit, 4)
+        XCTAssertEqual(policy.sourceBlockLimit, 17)
+    }
+
     func testAskRuntimeSourcePackPolicyExpandsFurtherForSingleSelectedFoundationAsk() {
         let policy = alphaAskRuntimeSourcePackPolicy(
             runtimeMode: .appleFoundationModels,
@@ -14234,6 +14405,19 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(policy.sourceBlockLimit, 20)
     }
 
+    func testAskRuntimeSourcePackPolicyUsesResolvedHighBudgetSingleSelectedFoundationBand() {
+        let policy = alphaAskRuntimeSourcePackPolicy(
+            runtimeMode: .appleFoundationModels,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 64_736,
+            hasSelectedDocuments: true,
+            selectedDocumentCount: 1
+        )
+
+        XCTAssertEqual(policy.documentCandidateLimit, 4)
+        XCTAssertEqual(policy.sourceBlockLimit, 22)
+    }
+
     func testAskRuntimeSourcePackPolicyExpandsFoundationCandidateWindowWithoutSelections() {
         let policy = alphaAskRuntimeSourcePackPolicy(
             runtimeMode: .appleFoundationModels,
@@ -14256,6 +14440,18 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(policy.documentCandidateLimit, 7)
         XCTAssertEqual(policy.sourceBlockLimit, 14)
+    }
+
+    func testAskRuntimeSourcePackPolicyUsesResolvedHighBudgetFoundationCandidateWindow() {
+        let policy = alphaAskRuntimeSourcePackPolicy(
+            runtimeMode: .appleFoundationModels,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 64_736,
+            hasSelectedDocuments: false
+        )
+
+        XCTAssertEqual(policy.documentCandidateLimit, 7)
+        XCTAssertEqual(policy.sourceBlockLimit, 15)
     }
 
     func testAskRuntimeSourcePackPolicyKeepsFallbackBudgetsCompact() {

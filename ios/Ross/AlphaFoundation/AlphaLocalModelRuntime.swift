@@ -433,6 +433,15 @@ func alphaAskRuntimeSourcePackPolicy(
         return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 8)
     case .appleFoundationModels:
         if capabilityTier == .caseAssociate || capabilityTier == .seniorDraftingSupport {
+            if baseMaxInputChars >= 60_000 {
+                if hasSingleSelectedDocument {
+                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 22)
+                }
+                return AlphaAskRuntimeSourcePackPolicy(
+                    documentCandidateLimit: hasSelectedDocuments ? 4 : 7,
+                    sourceBlockLimit: hasSelectedDocuments ? 17 : 15
+                )
+            }
             if baseMaxInputChars >= 52_000 {
                 if hasSingleSelectedDocument {
                     return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 20)
@@ -603,6 +612,9 @@ enum AlphaLocalPromptBudgetPlanner {
             }
             return baseMaxInputChars >= 40_000 ? 16 : nil
         case .appleFoundationModels:
+            if baseMaxInputChars >= 60_000 {
+                return 22
+            }
             if baseMaxInputChars >= 40_000 {
                 return 18
             }
@@ -812,6 +824,9 @@ enum AlphaLocalPromptBudgetPlanner {
             }
             return 0
         case .appleFoundationModels:
+            if baseMaxInputChars >= 60_000 {
+                return prefersWiderBatches ? 4 : 3
+            }
             if baseMaxInputChars >= 52_000 {
                 return prefersWiderBatches ? 3 : 2
             }
@@ -863,6 +878,10 @@ enum AlphaLocalPromptBudgetPlanner {
         case .llamaCppGguf:
             multiplier = 1.05
         case .appleFoundationModels:
+            if baseMaxInputChars >= 60_000 {
+                multiplier = usesStructuredThresholds ? 1.07 : 1.08
+                break
+            }
             multiplier = usesStructuredThresholds ? 1.04 : 1.05
         default:
             return baseMaxInputChars
@@ -937,6 +956,9 @@ enum AlphaLocalPromptBudgetPlanner {
             return nil
         case .appleFoundationModels:
             if usesStructuredThresholds {
+                if baseMaxInputChars >= 60_000 {
+                    return 17
+                }
                 if baseMaxInputChars >= 52_000 {
                     return 16
                 }
@@ -944,6 +966,9 @@ enum AlphaLocalPromptBudgetPlanner {
                     return 15
                 }
             } else {
+                if baseMaxInputChars >= 60_000 {
+                    return 14
+                }
                 if baseMaxInputChars >= 52_000 {
                     return 13
                 }
@@ -1023,6 +1048,9 @@ enum AlphaLocalPromptBudgetPlanner {
             return nil
         case .appleFoundationModels:
             if usesStructuredThresholds {
+                if baseMaxInputChars >= 60_000 {
+                    return 1_760
+                }
                 if baseMaxInputChars >= 52_000 {
                     return 1_650
                 }
@@ -1030,6 +1058,9 @@ enum AlphaLocalPromptBudgetPlanner {
                     return 1_580
                 }
             } else {
+                if baseMaxInputChars >= 60_000 {
+                    return 2_040
+                }
                 if baseMaxInputChars >= 52_000 {
                     return 1_900
                 }
@@ -1071,6 +1102,9 @@ enum AlphaLocalPromptBudgetPlanner {
             }
             return baseMaxInputChars >= 40_000 ? 16 : nil
         case .appleFoundationModels:
+            if baseMaxInputChars >= 60_000 {
+                return 22
+            }
             if baseMaxInputChars >= 40_000 {
                 return 18
             }
@@ -1115,6 +1149,9 @@ enum AlphaLocalPromptBudgetPlanner {
                 return prefersWiderBatches ? 1.16 : 1.1
             }
         case .appleFoundationModels:
+            if baseMaxInputChars >= 60_000 {
+                return prefersWiderBatches ? 1.56 : 1.34
+            }
             if baseMaxInputChars >= 52_000 {
                 return prefersWiderBatches ? 1.5 : 1.3
             }
@@ -1337,6 +1374,19 @@ enum AlphaLocalPromptBudgetPlanner {
                 slowTokensPerSecond: 6
             )
         case .appleFoundationModels:
+            if baseMaxInputChars >= 60_000 {
+                return (
+                    minimumBudget: 9_800,
+                    largeFileBlockLimit: 12,
+                    largeFileExcerptChars: 1_900,
+                    cautionBlockLimit: 9,
+                    cautionExcerptChars: 1_360,
+                    slowBlockLimit: 6,
+                    slowExcerptChars: 980,
+                    cautionTokensPerSecond: 14,
+                    slowTokensPerSecond: 9
+                )
+            }
             if baseMaxInputChars >= 52_000 {
                 return (
                     minimumBudget: 9_400,
@@ -1559,6 +1609,19 @@ enum AlphaLocalPromptBudgetPlanner {
                 slowTokensPerSecond: 5
             )
         case .appleFoundationModels:
+            if baseMaxInputChars >= 60_000 {
+                return (
+                    minimumBudget: 8_800,
+                    largeFileBlockLimit: 15,
+                    largeFileExcerptChars: 1_720,
+                    cautionBlockLimit: 11,
+                    cautionExcerptChars: 1_260,
+                    slowBlockLimit: 7,
+                    slowExcerptChars: 920,
+                    cautionTokensPerSecond: 12,
+                    slowTokensPerSecond: 8
+                )
+            }
             if baseMaxInputChars >= 52_000 {
                 return (
                     minimumBudget: 8_400,
