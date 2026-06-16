@@ -6716,6 +6716,142 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(model.persisted.ledgerEntries.contains { $0.title == "Assistant fallback enabled" })
     }
 
+    @MainActor
+    func testRunLocalExtractionWithAssistantFallbackUsesRetainedRuntimeWhenSystemAssistantUnavailable() async {
+        let caseId = UUID()
+        let document = AlphaCaseDocument(
+            title: "Fallback Review Order",
+            fileName: "fallback-review-order.txt",
+            kind: .text,
+            storedRelativePath: "tests/fallback-review-order.txt",
+            importedAt: .now,
+            pageCount: 1,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: "IN THE HIGH COURT OF DELHI\nCS No. 45/2026\nNext date 12/05/2026.",
+            dominantSourceSnippet: "CS No. 45/2026 listed on 12/05/2026.",
+            lastIndexedAt: .now,
+            pages: [
+                AlphaDocumentPage(
+                    pageNumber: 1,
+                    snippet: "CS No. 45/2026 listed on 12/05/2026.",
+                    extractedText: "IN THE HIGH COURT OF DELHI\nCS No. 45/2026\nNext date 12/05/2026.",
+                    anchorText: "CS No. 45/2026 listed on 12/05/2026."
+                )
+            ]
+        )
+        let matter = AlphaCaseMatter(
+            id: caseId,
+            title: "Fallback matter",
+            forum: "Delhi High Court",
+            stage: .preFiling,
+            summary: "Fallback extraction smoke.",
+            issueHighlights: [],
+            evidenceNotes: [],
+            draftTasks: [],
+            documents: [document],
+            sourceRefs: []
+        )
+
+        let model = AlphaRossModel(previewState: .empty())
+        let systemPack = alphaSystemAssistantPack(for: .caseAssociate)
+        var fallbackPack = installedPack(
+            .caseAssociate,
+            runtimeMode: .deterministicDev,
+            packId: "case-associate-deterministic-fallback",
+            installPath: "model-packs/case_associate/pack.dev",
+            artifactKind: "tiny_dev_artifact",
+            developmentOnly: true
+        )
+        fallbackPack.isActive = false
+
+        var state = AlphaPersistedState.empty()
+        state.settings.activeTier = .caseAssociate
+        state.cases = [matter]
+        state.installedPacks = [systemPack, fallbackPack]
+        model.persisted = state
+
+        let result = await model.runLocalExtractionWithAssistantFallback(
+            caseId: caseId,
+            document: document,
+            requestedTier: .caseAssociate,
+            currentPack: systemPack
+        )
+
+        XCTAssertFalse(result.modelInvocations.isEmpty)
+        XCTAssertTrue(result.modelInvocations.allSatisfy { $0.runtimeMode == AlphaPackRuntimeMode.deterministicDev.rawValue })
+        XCTAssertEqual(model.persisted.installedPacks.first(where: \.isActive)?.packId, fallbackPack.packId)
+        XCTAssertTrue(model.persisted.ledgerEntries.contains { $0.title == "Assistant fallback enabled" })
+    }
+
+    @MainActor
+    func testRerunReviewUsesFallbackRuntimeWhenActiveRuntimeUnavailable() async {
+        let caseId = UUID()
+        let documentId = UUID()
+        let document = AlphaCaseDocument(
+            id: documentId,
+            title: "Review Fallback Order",
+            fileName: "review-fallback-order.txt",
+            kind: .text,
+            storedRelativePath: "tests/review-fallback-order.txt",
+            importedAt: .now,
+            pageCount: 1,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: "IN THE HIGH COURT OF DELHI\nReply be filed within two weeks.\nNext date 12/05/2026.",
+            dominantSourceSnippet: "Reply within two weeks. Next date 12/05/2026.",
+            lastIndexedAt: .now,
+            pages: [
+                AlphaDocumentPage(
+                    pageNumber: 1,
+                    snippet: "Reply within two weeks. Next date 12/05/2026.",
+                    extractedText: "IN THE HIGH COURT OF DELHI\nReply be filed within two weeks.\nNext date 12/05/2026.",
+                    anchorText: "Reply within two weeks. Next date 12/05/2026."
+                )
+            ]
+        )
+        let matter = AlphaCaseMatter(
+            id: caseId,
+            title: "Review fallback matter",
+            forum: "Delhi High Court",
+            stage: .preFiling,
+            summary: "Review fallback smoke.",
+            issueHighlights: [],
+            evidenceNotes: [],
+            draftTasks: [],
+            documents: [document],
+            sourceRefs: []
+        )
+
+        let model = AlphaRossModel(previewState: .empty())
+        let systemPack = alphaSystemAssistantPack(for: .caseAssociate)
+        var fallbackPack = installedPack(
+            .caseAssociate,
+            runtimeMode: .deterministicDev,
+            packId: "case-associate-review-fallback",
+            installPath: "model-packs/case_associate/pack.dev",
+            artifactKind: "tiny_dev_artifact",
+            developmentOnly: true
+        )
+        fallbackPack.isActive = false
+
+        var state = AlphaPersistedState.empty()
+        state.settings.activeTier = .caseAssociate
+        state.cases = [matter]
+        state.installedPacks = [systemPack, fallbackPack]
+        model.persisted = state
+        model.privateAISnapshot.activePack = systemPack
+
+        await model.rerunReview(caseId: caseId, documentId: documentId)
+
+        let updatedDocument = model.persisted.cases.first?.documents.first
+        XCTAssertEqual(model.persisted.installedPacks.first(where: \.isActive)?.packId, fallbackPack.packId)
+        XCTAssertFalse(updatedDocument?.modelInvocations.isEmpty ?? true)
+        XCTAssertTrue(updatedDocument?.modelInvocations.allSatisfy { $0.runtimeMode == AlphaPackRuntimeMode.deterministicDev.rawValue } == true)
+        XCTAssertFalse(updatedDocument?.extractedFields.isEmpty ?? true)
+        XCTAssertTrue(model.persisted.ledgerEntries.contains { $0.title == "Assistant fallback enabled" })
+    }
+
     #if canImport(FoundationModels)
     @available(iOS 26.0, macOS 26.0, *)
     @MainActor

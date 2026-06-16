@@ -40,7 +40,7 @@ extension AlphaRossModel {
         }
     }
 
-    private func activatedAssistantExecutionFallback(
+    func activatedAssistantExecutionFallback(
         for tier: AlphaCapabilityTier,
         currentPack: AlphaInstalledModelPack?
     ) -> AlphaInstalledModelPack? {

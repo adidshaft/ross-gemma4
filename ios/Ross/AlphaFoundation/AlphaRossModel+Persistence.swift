@@ -2307,16 +2307,11 @@ extension AlphaRossModel {
                 ]
             )
 
-            let result = await store.runLocalExtraction(
+            let result = await runLocalExtractionWithAssistantFallback(
                 caseId: smokeCaseID,
                 document: smokeDocument,
-                activePack: activePack,
-                runtimeEnvironment: alphaLocalRuntimeEnvironment(
-                    activePack: activePack,
-                    requestedTier: activePack?.tier ?? persisted.settings.activeTier ?? selectedTier,
-                    installedPacks: persisted.installedPacks,
-                    lastInvocation: alphaLastModelInvocation(in: persisted)
-                )
+                requestedTier: activePack?.tier ?? persisted.settings.activeTier ?? selectedTier,
+                currentPack: activePack
             )
 
             let export: AlphaExportedReport?

@@ -77,22 +77,117 @@ func alphaBetterExtractionAdvancedMessage(languageCode: String = rossSelectedLan
 
 extension AlphaRossModel {
 
-    func rerunReview(caseId: UUID, documentId: UUID) async {
-        guard let document = persisted.cases.first(where: { $0.id == caseId })?.documents.first(where: { $0.id == documentId }) else {
-            return
-        }
-        let requestedTier = activePack?.tier ?? persisted.settings.activeTier ?? selectedTier
-        let runtimeEnvironment = alphaLocalRuntimeEnvironment(
+    private func localExtractionRuntimeEnvironment(
+        activePack: AlphaInstalledModelPack?,
+        requestedTier: AlphaCapabilityTier?
+    ) -> AlphaLocalRuntimeEnvironment {
+        alphaLocalRuntimeEnvironment(
             activePack: activePack,
             requestedTier: requestedTier,
             installedPacks: persisted.installedPacks,
             lastInvocation: alphaLastModelInvocation(in: persisted)
         )
-        let result = await store.runLocalExtraction(
+    }
+
+    private func shouldRetryLocalExtractionWithAssistantFallback(
+        _ result: AlphaLocalExtractionResult,
+        currentPack: AlphaInstalledModelPack?,
+        requestedTier: AlphaCapabilityTier?
+    ) -> Bool {
+        guard let requestedTier else { return false }
+        let retryableCategories: Set<String> = [
+            "unsupported_runtime",
+            "unknown_runtime_error",
+            "runtime_dependency_unavailable",
+            "model_path_missing",
+            "inference_failed"
+        ]
+        let hasRetryableStructuredFailure = result.modelInvocations.contains { invocation in
+            invocation.task != .matterQuestionAnswer &&
+                invocation.status == .failed &&
+                invocation.errorCategory.map(retryableCategories.contains) == true
+        }
+        guard hasRetryableStructuredFailure,
+              let fallbackPack = alphaRecoveredAssistantExecutionFallback(
+                from: persisted,
+                selectedTier: requestedTier,
+                currentPack: currentPack
+              ) else {
+            return false
+        }
+        return fallbackPack.id != currentPack?.id
+    }
+
+    func runLocalExtractionWithAssistantFallback(
+        caseId: UUID,
+        document: AlphaCaseDocument,
+        requestedTier: AlphaCapabilityTier? = nil,
+        currentPack: AlphaInstalledModelPack? = nil
+    ) async -> AlphaLocalExtractionResult {
+        let resolvedTier = AlphaCapabilityTier.normalizedAssistantSelection(
+            currentPack?.tier ?? requestedTier ?? activePack?.tier ?? persisted.settings.activeTier ?? selectedTier
+        ) ?? requestedTier ?? currentPack?.tier ?? activePack?.tier ?? persisted.settings.activeTier ?? selectedTier
+
+        var extractionPack = currentPack
+        if let currentPack,
+           let resolvedTier,
+           AlphaLocalModelRuntime.runtimeHealth(
+            activePack: currentPack,
+            requestedTier: resolvedTier,
+            runtimeEnvironment: localExtractionRuntimeEnvironment(
+                activePack: currentPack,
+                requestedTier: resolvedTier
+            )
+           )?.available != true,
+           let fallbackPack = activatedAssistantExecutionFallback(
+            for: resolvedTier,
+            currentPack: currentPack
+           ) {
+            extractionPack = fallbackPack
+        }
+
+        let initialResult = await store.runLocalExtraction(
             caseId: caseId,
             document: document,
-            activePack: activePack,
-            runtimeEnvironment: runtimeEnvironment
+            activePack: extractionPack,
+            runtimeEnvironment: localExtractionRuntimeEnvironment(
+                activePack: extractionPack,
+                requestedTier: resolvedTier
+            )
+        )
+
+        guard shouldRetryLocalExtractionWithAssistantFallback(
+            initialResult,
+            currentPack: extractionPack,
+            requestedTier: resolvedTier
+        ), let resolvedTier,
+              let fallbackPack = activatedAssistantExecutionFallback(
+                for: resolvedTier,
+                currentPack: extractionPack
+              ) else {
+            return initialResult
+        }
+
+        return await store.runLocalExtraction(
+            caseId: caseId,
+            document: document,
+            activePack: fallbackPack,
+            runtimeEnvironment: localExtractionRuntimeEnvironment(
+                activePack: fallbackPack,
+                requestedTier: resolvedTier
+            )
+        )
+    }
+
+    func rerunReview(caseId: UUID, documentId: UUID) async {
+        guard let document = persisted.cases.first(where: { $0.id == caseId })?.documents.first(where: { $0.id == documentId }) else {
+            return
+        }
+        let result = await runLocalExtractionWithAssistantFallback(
+            caseId: caseId,
+            document: document,
+            requestedTier: activePack?.tier ?? persisted.settings.activeTier ?? selectedTier,
+            currentPack: activePack
         )
         applyExtractionResult(result, caseId: caseId, documentId: documentId)
     }
