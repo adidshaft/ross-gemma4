@@ -324,6 +324,15 @@ func alphaAskRuntimeSourcePackPolicy(
     switch runtimeMode {
     case .mlxSwiftLm:
         if capabilityTier == .caseAssociate || capabilityTier == .seniorDraftingSupport {
+            if baseMaxInputChars >= 68_000 {
+                if hasSingleSelectedDocument {
+                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 26)
+                }
+                return AlphaAskRuntimeSourcePackPolicy(
+                    documentCandidateLimit: hasSelectedDocuments ? 4 : 7,
+                    sourceBlockLimit: hasSelectedDocuments ? 18 : 16
+                )
+            }
             if baseMaxInputChars >= 52_000 {
                 if hasSingleSelectedDocument {
                     return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 24)
@@ -534,6 +543,9 @@ enum AlphaLocalPromptBudgetPlanner {
     ) -> Int? {
         switch runtimeMode {
         case .mlxSwiftLm:
+            if baseMaxInputChars >= 68_000 {
+                return 26
+            }
             if baseMaxInputChars >= 52_000 {
                 return 24
             }
@@ -731,6 +743,9 @@ enum AlphaLocalPromptBudgetPlanner {
         let prefersWiderBatches = task == .caseMemorySynthesis
         switch runtimeMode {
         case .mlxSwiftLm:
+            if baseMaxInputChars >= 68_000 {
+                return prefersWiderBatches ? 6 : 5
+            }
             if baseMaxInputChars >= 52_000 {
                 return prefersWiderBatches ? 5 : 4
             }
@@ -789,6 +804,10 @@ enum AlphaLocalPromptBudgetPlanner {
         let multiplier: Double
         switch runtimeMode {
         case .mlxSwiftLm:
+            if baseMaxInputChars >= 68_000 {
+                multiplier = 1.12
+                break
+            }
             multiplier = 1.1
         case .llamaCppGguf:
             multiplier = 1.05
@@ -809,6 +828,9 @@ enum AlphaLocalPromptBudgetPlanner {
         switch runtimeMode {
         case .mlxSwiftLm:
             if usesStructuredThresholds {
+                if baseMaxInputChars >= 68_000 {
+                    return 22
+                }
                 if baseMaxInputChars >= 52_000 {
                     return 20
                 }
@@ -816,6 +838,9 @@ enum AlphaLocalPromptBudgetPlanner {
                     return 16
                 }
             } else {
+                if baseMaxInputChars >= 68_000 {
+                    return 16
+                }
                 if baseMaxInputChars >= 52_000 {
                     return 15
                 }
@@ -877,6 +902,9 @@ enum AlphaLocalPromptBudgetPlanner {
         switch runtimeMode {
         case .mlxSwiftLm:
             if usesStructuredThresholds {
+                if baseMaxInputChars >= 68_000 {
+                    return 2_100
+                }
                 if baseMaxInputChars >= 52_000 {
                     return 1_950
                 }
@@ -884,6 +912,9 @@ enum AlphaLocalPromptBudgetPlanner {
                     return 1_760
                 }
             } else {
+                if baseMaxInputChars >= 68_000 {
+                    return 2_350
+                }
                 if baseMaxInputChars >= 52_000 {
                     return 2_200
                 }
@@ -943,6 +974,9 @@ enum AlphaLocalPromptBudgetPlanner {
     ) -> Int? {
         switch runtimeMode {
         case .mlxSwiftLm:
+            if baseMaxInputChars >= 68_000 {
+                return 26
+            }
             if baseMaxInputChars >= 52_000 {
                 return 24
             }
@@ -974,6 +1008,9 @@ enum AlphaLocalPromptBudgetPlanner {
 
         switch runtimeMode {
         case .mlxSwiftLm:
+            if baseMaxInputChars >= 68_000 {
+                return prefersWiderBatches ? 1.58 : 1.38
+            }
             if baseMaxInputChars >= 52_000 {
                 return prefersWiderBatches ? 1.5 : 1.3
             }
@@ -1069,6 +1106,19 @@ enum AlphaLocalPromptBudgetPlanner {
     ) {
         switch runtimeMode {
         case .mlxSwiftLm:
+            if baseMaxInputChars >= 68_000 {
+                return (
+                    minimumBudget: 9_600,
+                    largeFileBlockLimit: 13,
+                    largeFileExcerptChars: 1_950,
+                    cautionBlockLimit: 10,
+                    cautionExcerptChars: 1_400,
+                    slowBlockLimit: 7,
+                    slowExcerptChars: 980,
+                    cautionTokensPerSecond: 12,
+                    slowTokensPerSecond: 8
+                )
+            }
             if baseMaxInputChars >= 52_000 {
                 return (
                     minimumBudget: 8_800,
@@ -1239,6 +1289,19 @@ enum AlphaLocalPromptBudgetPlanner {
     ) {
         switch runtimeMode {
         case .mlxSwiftLm:
+            if baseMaxInputChars >= 68_000 {
+                return (
+                    minimumBudget: 8_800,
+                    largeFileBlockLimit: 16,
+                    largeFileExcerptChars: 1_760,
+                    cautionBlockLimit: 11,
+                    cautionExcerptChars: 1_280,
+                    slowBlockLimit: 7,
+                    slowExcerptChars: 940,
+                    cautionTokensPerSecond: 10,
+                    slowTokensPerSecond: 7
+                )
+            }
             if baseMaxInputChars >= 52_000 {
                 return (
                     minimumBudget: 8_000,

@@ -3740,7 +3740,94 @@ final class AlphaExtractionTests: XCTestCase {
             lowPowerMode: false
         )
 
-        XCTAssertEqual(runtimeEnvironment.draftModelTokens, 8)
+        XCTAssertEqual(runtimeEnvironment.draftModelTokens, 9)
+    }
+
+    @MainActor
+    func testAutomaticMLXDraftEnvironmentRaisesDraftTokensFurtherAfterFastRecentMLXRunOnCapablePhone() async throws {
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+
+        let quickStartSource = try makeMLXDirectoryFixture(named: "ross-mlx-quickstart-hi-fast-\(UUID().uuidString)")
+        let caseAssociateSource = try makeMLXDirectoryFixture(named: "ross-mlx-caseassociate-hi-fast-\(UUID().uuidString)")
+        defer {
+            try? FileManager.default.removeItem(at: quickStartSource)
+            try? FileManager.default.removeItem(at: caseAssociateSource)
+        }
+
+        let quickStartExpected = try XCTUnwrap(alphaModelArtifactVerification(at: quickStartSource))
+        let quickStartInstalled = try await store.installDownloadedPackArtifact(
+            for: .quickStart,
+            fileName: "gemma-4-e4b-it-mlx",
+            downloadedFileURL: quickStartSource,
+            expectedChecksum: quickStartExpected.checksum,
+            expectedBytes: quickStartExpected.bytes,
+            packId: "gemma-4-e4b-it-mlx",
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm
+        )
+        let caseAssociateExpected = try XCTUnwrap(alphaModelArtifactVerification(at: caseAssociateSource))
+        let caseAssociateInstalled = try await store.installDownloadedPackArtifact(
+            for: .caseAssociate,
+            fileName: "gemma-4-12b-it-mlx",
+            downloadedFileURL: caseAssociateSource,
+            expectedChecksum: caseAssociateExpected.checksum,
+            expectedBytes: caseAssociateExpected.bytes,
+            packId: "gemma-4-12b-it-mlx",
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm
+        )
+
+        let quickStartPack = installedPack(
+            .quickStart,
+            runtimeMode: .mlxSwiftLm,
+            packId: "gemma-4-e4b-it-mlx",
+            installPath: quickStartInstalled.relativePath,
+            checksum: quickStartInstalled.checksum,
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+        let caseAssociatePack = installedPack(
+            .caseAssociate,
+            runtimeMode: .mlxSwiftLm,
+            packId: "gemma-4-12b-it-mlx",
+            installPath: caseAssociateInstalled.relativePath,
+            checksum: caseAssociateInstalled.checksum,
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+        let fastInvocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 19.5,
+            timeToFirstTokenMs: 760,
+            status: .complete
+        )
+
+        let runtimeEnvironment = alphaLocalRuntimeEnvironment(
+            activePack: caseAssociatePack,
+            requestedTier: caseAssociatePack.tier,
+            installedPacks: [quickStartPack, caseAssociatePack],
+            baseEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: alphaAbsoluteURL(for: caseAssociateInstalled.relativePath).path,
+                modelChecksum: caseAssociateInstalled.checksum,
+                modelKind: "mlx_directory"
+            ),
+            physicalMemoryBytes: 16 * 1_073_741_824,
+            lowPowerMode: false,
+            lastInvocation: fastInvocation
+        )
+
+        XCTAssertEqual(runtimeEnvironment.draftModelTokens, 10)
     }
 
     @MainActor
@@ -10834,6 +10921,25 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(plan.pass(for: .caseMemorySynthesis)?.maxPagesPerBatch, 28)
     }
 
+    func testPipelinePlanExpandsBatchingFurtherForHighMemoryMLXRuntime() {
+        let pack = installedPack(
+            .caseAssociate,
+            runtimeMode: .mlxSwiftLm,
+            packId: "gemma-4-12b-it-mlx",
+            installPath: "model-packs/case_associate/gemma-4-12b-it-mlx",
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+
+        let plan = AlphaExtractionPipelinePlanner.plan(
+            for: pack,
+            physicalMemory: 16_000_000_000
+        )
+
+        XCTAssertEqual(plan.pass(for: .legalFieldExtraction)?.maxPagesPerBatch, 24)
+        XCTAssertEqual(plan.pass(for: .caseMemorySynthesis)?.maxPagesPerBatch, 30)
+    }
+
     func testPipelinePlanExpandsBatchingForCapableCoreAIRuntime() {
         let pack = installedPack(
             .caseAssociate,
@@ -11387,6 +11493,20 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(plan.sourceExcerptChars, 1_850)
     }
 
+    func testMatterQuestionBudgetPlannerUsesExpandedMLXBudgetsForHighMemoryRuns() {
+        let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
+            runtimeMode: .mlxSwiftLm,
+            baseMaxInputChars: 72_000,
+            sourceBlockCount: 14,
+            sourceCharCount: 52_000,
+            lastInvocation: nil
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 64_800)
+        XCTAssertEqual(plan.sourceBlockLimit, 13)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_950)
+    }
+
     func testMatterQuestionBudgetPlannerKeepsMoreSingleSelectedMLXContext() {
         let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
             runtimeMode: .mlxSwiftLm,
@@ -11726,6 +11846,19 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(batchLimit, 23)
     }
 
+    func testStructuredDocumentBatchLimitUsesHighBudgetMLXBranch() {
+        let batchLimit = AlphaLocalPromptBudgetPlanner.structuredDocumentBatchLimit(
+            runtimeMode: .mlxSwiftLm,
+            capabilityTier: .caseAssociate,
+            task: .legalFieldExtraction,
+            baseBatchLimit: 18,
+            baseMaxInputChars: 72_000,
+            lastInvocation: nil
+        )
+
+        XCTAssertEqual(batchLimit, 24)
+    }
+
     func testStructuredDocumentBatchLimitWidensCaseMemoryPassesForCapableFoundationRuns() {
         let batchLimit = AlphaLocalPromptBudgetPlanner.structuredDocumentBatchLimit(
             runtimeMode: .appleFoundationModels,
@@ -11819,6 +11952,34 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(batchLimit, 27)
+    }
+
+    func testStructuredDocumentBatchLimitWidensFurtherAfterFastHighBudgetMLXRun() {
+        let fastInvocation = AlphaLocalModelInvocation(
+            task: .legalFieldExtraction,
+            runtimeMode: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 18.4,
+            timeToFirstTokenMs: 1_050,
+            status: .complete
+        )
+
+        let batchLimit = AlphaLocalPromptBudgetPlanner.structuredDocumentBatchLimit(
+            runtimeMode: .mlxSwiftLm,
+            capabilityTier: .caseAssociate,
+            task: .legalFieldExtraction,
+            baseBatchLimit: 18,
+            baseMaxInputChars: 72_000,
+            lastInvocation: fastInvocation
+        )
+
+        XCTAssertEqual(batchLimit, 29)
     }
 
     func testStructuredDocumentBatchLimitWidensFurtherAfterFastFoundationRun() {
@@ -12027,6 +12188,31 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(policy.sourceBlockLimit, 24)
     }
 
+    func testAskRuntimeSourcePackPolicyExpandsFurtherForHighBudgetMLXAsk() {
+        let policy = alphaAskRuntimeSourcePackPolicy(
+            runtimeMode: .mlxSwiftLm,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 72_000,
+            hasSelectedDocuments: true
+        )
+
+        XCTAssertEqual(policy.documentCandidateLimit, 4)
+        XCTAssertEqual(policy.sourceBlockLimit, 18)
+    }
+
+    func testAskRuntimeSourcePackPolicyExpandsFurtherForHighBudgetSingleSelectedMLXAsk() {
+        let policy = alphaAskRuntimeSourcePackPolicy(
+            runtimeMode: .mlxSwiftLm,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 72_000,
+            hasSelectedDocuments: true,
+            selectedDocumentCount: 1
+        )
+
+        XCTAssertEqual(policy.documentCandidateLimit, 4)
+        XCTAssertEqual(policy.sourceBlockLimit, 26)
+    }
+
     func testAskRuntimeSourcePackPolicyExpandsSingleSelectedMLXAskAt40KBudget() {
         let policy = alphaAskRuntimeSourcePackPolicy(
             runtimeMode: .mlxSwiftLm,
@@ -12050,6 +12236,18 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(policy.documentCandidateLimit, 7)
         XCTAssertEqual(policy.sourceBlockLimit, 14)
+    }
+
+    func testAskRuntimeSourcePackPolicyExpandsHighBudgetMLXCandidateWindowWithoutSelections() {
+        let policy = alphaAskRuntimeSourcePackPolicy(
+            runtimeMode: .mlxSwiftLm,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 72_000,
+            hasSelectedDocuments: false
+        )
+
+        XCTAssertEqual(policy.documentCandidateLimit, 7)
+        XCTAssertEqual(policy.sourceBlockLimit, 16)
     }
 
     func testAskRuntimeSourcePackPolicyExpandsForCapableLlamaAsks() {
@@ -12276,14 +12474,14 @@ final class AlphaExtractionTests: XCTestCase {
                 for: .caseAssociate,
                 physicalMemory: 16_000_000_000
             ),
-            36_864
+            40_960
         )
         XCTAssertEqual(
             AlphaMLXRuntimeProfile.maxInputChars(
                 for: .caseAssociate,
                 physicalMemory: 16_000_000_000
             ),
-            68_000
+            72_000
         )
         XCTAssertEqual(
             AlphaMLXRuntimeProfile.defaultDraftTokens(
@@ -12318,7 +12516,7 @@ final class AlphaExtractionTests: XCTestCase {
                 for: .caseAssociate,
                 physicalMemory: 16_000_000_000
             ),
-            576
+            640
         )
     }
 
@@ -13109,6 +13307,88 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(provider?.runtimeHealth().accelerationDraftTokens, expectedDraftTokens)
     }
 
+    func testExperimentalMLXProviderHonorsExplicitHighDraftOverride() async throws {
+        actor DraftCapture {
+            var draftTokens: Int?
+
+            func record(draftTokens: Int?) {
+                self.draftTokens = draftTokens
+            }
+        }
+
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-main-explicit-\(UUID().uuidString)", isDirectory: true)
+        let draftDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-mlx-draft-explicit-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: draftDirectory, withIntermediateDirectories: true)
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+            try? FileManager.default.removeItem(at: draftDirectory)
+        }
+        for folder in [directory, draftDirectory] {
+            try Data("{}".utf8).write(to: folder.appendingPathComponent("config.json"))
+            try Data("{}".utf8).write(to: folder.appendingPathComponent("tokenizer.json"))
+            try Data("weights".utf8).write(to: folder.appendingPathComponent("model.safetensors"))
+        }
+
+        let previousGenerator = AlphaMLXLocalProvider.streamGenerator
+        defer { AlphaMLXLocalProvider.streamGenerator = previousGenerator }
+
+        let capture = DraftCapture()
+        AlphaMLXLocalProvider.streamGenerator = { _, _, draftTokens, _, _, _, _ in
+            await capture.record(draftTokens: draftTokens)
+            return AlphaMLXGenerationSnapshot(text: "Explicit draft answer")
+        }
+
+        let pack = installedPack(.caseAssociate, runtimeMode: .mlxSwiftLm)
+        let provider = AlphaLocalModelRuntime.resolveProvider(
+            activePack: pack,
+            requestedTier: pack.tier,
+            runtimeEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: directory.path,
+                modelChecksum: String(repeating: "f", count: 64),
+                modelKind: "mlx_directory",
+                draftModelPath: draftDirectory.path,
+                draftModelTokens: 9
+            )
+        ) { _ in
+            AlphaLocalModelOutput(rawText: "", parsedJson: nil, schemaValid: false, warnings: [], sourceRefs: [])
+        }
+
+        _ = await provider?.run(
+            AlphaLocalModelInput(
+                task: .matterQuestionAnswer,
+                instruction: "What happened in the selected order?",
+                sourcePack: [
+                    AlphaSourceTextBlock(
+                        sourceRef: AlphaSourceRef(
+                            caseId: UUID(),
+                            documentId: UUID(),
+                            documentTitle: "Selected Order",
+                            pageNumber: 1,
+                            textSnippet: "The matter is listed on 14 May 2026."
+                        ),
+                        text: "The matter is listed on 14 May 2026.",
+                        pageNumber: 1,
+                        languageHint: "en",
+                        ocrConfidence: 0.99
+                    )
+                ],
+                expectedSchema: "plain_text",
+                maxOutputTokens: 128,
+                extractionMode: .caseAssociate
+            )
+        )
+
+        let recordedDraftTokens = await capture.draftTokens
+
+        XCTAssertEqual(recordedDraftTokens, 9)
+        XCTAssertEqual(provider?.runtimeHealth().accelerationDraftTokens, 9)
+    }
+
     func testMLXRuntimeProfileRaisesDraftTokensOnCapablePhones() {
         XCTAssertEqual(
             AlphaMLXRuntimeProfile.defaultDraftTokens(
@@ -13122,7 +13402,7 @@ final class AlphaExtractionTests: XCTestCase {
                 for: .caseAssociate,
                 physicalMemory: 16_000_000_000
             ),
-            8
+            9
         )
         XCTAssertEqual(
             AlphaMLXRuntimeProfile.defaultDraftTokens(

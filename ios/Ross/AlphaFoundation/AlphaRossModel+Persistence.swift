@@ -1666,7 +1666,13 @@ private func alphaAutomaticMLXDraftTokens(
     }
 
     if outputSpeed >= 18, firstTokenMs <= 1_000 {
-        return min(baseTokens + 1, 8)
+        return min(
+            baseTokens + 1,
+            AlphaMLXRuntimeProfile.maximumAutomaticDraftTokens(
+                for: activePack.tier,
+                physicalMemory: physicalMemoryBytes
+            )
+        )
     }
 
     if outputSpeed <= 8 || firstTokenMs >= 3_000 {

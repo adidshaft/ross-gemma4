@@ -25,7 +25,7 @@ enum AlphaMLXRuntimeProfile {
             return physicalMemory >= 8_000_000_000 ? 16_384 : 12_288
         case .caseAssociate:
             if physicalMemory >= 16_000_000_000 {
-                return 36_864
+                return 40_960
             }
             return physicalMemory >= 12_000_000_000 ? 24_576 : 20_480
         case .seniorDraftingSupport:
@@ -44,7 +44,7 @@ enum AlphaMLXRuntimeProfile {
             return physicalMemory >= 8_000_000_000 ? 40_000 : 24_000
         case .caseAssociate:
             if physicalMemory >= 16_000_000_000 {
-                return 68_000
+                return 72_000
             }
             return physicalMemory >= 12_000_000_000 ? 56_000 : 40_000
         case .seniorDraftingSupport:
@@ -103,7 +103,7 @@ enum AlphaMLXRuntimeProfile {
             return physicalMemory >= 12_000_000_000 ? 6 : 4
         case .caseAssociate:
             if physicalMemory >= 16_000_000_000 {
-                return 8
+                return 9
             }
             return physicalMemory >= 12_000_000_000 ? 6 : 4
         case .seniorDraftingSupport:
@@ -122,11 +122,34 @@ enum AlphaMLXRuntimeProfile {
             return physicalMemory >= 8_000_000_000 ? 448 : 256
         case .caseAssociate:
             if physicalMemory >= 16_000_000_000 {
-                return 576
+                return 640
             }
             return physicalMemory >= 12_000_000_000 ? 384 : 320
         case .seniorDraftingSupport:
             return physicalMemory >= 18_000_000_000 ? 512 : 384
+        }
+    }
+
+    static func maximumSupportedDraftTokens(for tier: AlphaCapabilityTier) -> Int {
+        switch tier {
+        case .caseAssociate, .seniorDraftingSupport:
+            return 10
+        case .flash, .quickStart:
+            return 8
+        }
+    }
+
+    static func maximumAutomaticDraftTokens(
+        for tier: AlphaCapabilityTier,
+        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory
+    ) -> Int {
+        switch tier {
+        case .caseAssociate:
+            return physicalMemory >= 16_000_000_000 ? 10 : 8
+        case .seniorDraftingSupport:
+            return physicalMemory >= 16_000_000_000 ? 10 : 8
+        case .flash, .quickStart:
+            return 8
         }
     }
 }
@@ -612,14 +635,24 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
         guard resolvedDraftDirectoryURL() != nil else {
             return nil
         }
+        let physicalMemory = ProcessInfo.processInfo.physicalMemory
+        let maximumDraftTokens: Int
+        if draftModelTokens != nil {
+            maximumDraftTokens = AlphaMLXRuntimeProfile.maximumSupportedDraftTokens(for: capabilityTier)
+        } else {
+            maximumDraftTokens = AlphaMLXRuntimeProfile.maximumAutomaticDraftTokens(
+                for: capabilityTier,
+                physicalMemory: physicalMemory
+            )
+        }
         return max(
             1,
             min(
                 draftModelTokens ?? AlphaMLXRuntimeProfile.defaultDraftTokens(
                     for: capabilityTier,
-                    physicalMemory: ProcessInfo.processInfo.physicalMemory
+                    physicalMemory: physicalMemory
                 ),
-                8
+                maximumDraftTokens
             )
         )
     }
