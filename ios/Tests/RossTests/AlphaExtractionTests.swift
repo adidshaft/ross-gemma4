@@ -13423,7 +13423,7 @@ final class AlphaExtractionTests: XCTestCase {
                 forModelPath: "/tmp/gemma-4-12B-it-UD-Q4_K_XL.gguf",
                 physicalMemory: 16_000_000_000
             ),
-            36_864
+            40_960
         )
     }
 
