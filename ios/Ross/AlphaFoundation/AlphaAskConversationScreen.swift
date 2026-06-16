@@ -1805,6 +1805,7 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
     let statusNote: String?
     let onCopy: () -> Void
     let onShowDetails: (() -> Void)?
+    let showsDetailsButton: Bool
     let showsMenu: Bool
     @ViewBuilder var menu: () -> MenuContent
 
@@ -1821,6 +1822,7 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
         self.statusNote = AlphaCleanAnswerHeader.cleanedStatusNote(statusNote)
         self.onCopy = onCopy
         self.onShowDetails = onShowDetails
+        self.showsDetailsButton = onShowDetails != nil
         self.showsMenu = true
         self.menu = menu
     }
@@ -1837,7 +1839,8 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
         self.statusNote = AlphaCleanAnswerHeader.cleanedStatusNote(statusNote)
         self.onCopy = onCopy
         self.onShowDetails = onShowDetails
-        self.showsMenu = onShowDetails != nil
+        self.showsDetailsButton = onShowDetails != nil
+        self.showsMenu = false
         self.menu = { EmptyView() }
     }
 
@@ -1859,13 +1862,16 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
 
                 AlphaCleanAnswerCopyButton(action: onCopy)
 
+                if showsDetailsButton, let onShowDetails {
+                    AlphaAnswerAccessoryIconButton(
+                        systemImage: "info.circle",
+                        accessibilityLabel: rossLocalized("answer_details"),
+                        action: onShowDetails
+                    )
+                }
+
                 if showsMenu {
                     Menu {
-                        if let onShowDetails {
-                            Button(action: onShowDetails) {
-                                Label(rossLocalized("answer_details"), systemImage: "info.circle")
-                            }
-                        }
                         menu()
                     } label: {
                         AlphaCleanAnswerMenuLabel()
