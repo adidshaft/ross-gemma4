@@ -126,7 +126,7 @@ graph LR
 
 ## iOS Runtime Status & Inference
 
-The iOS project integrates with a `llama.cpp` wrapper (`AlphaLlamaCppEngine`) for GGUF inference and is currently pinned to `llama.swift` `2.9664.0` as of June 16, 2026, which pulls the newer upstream `llama.cpp` Apple XCFramework build `b9664`. Supported iPhone runtime selection can also choose MLX for the E4B and 12B tiers or built-in CoreAI when the device and recent performance signal make that the better local path. The current verified run is a June 2, 2026 simulator smoke using a local GGUF developer artifact. Physical iPhone proof with a downloaded configured pack, storage pressure, and imported user files has not been completed yet.
+The iOS project integrates with a `llama.cpp` wrapper (`AlphaLlamaCppEngine`) for GGUF inference and is currently pinned to `llama.swift` `2.9670.0` as of June 16, 2026, which pulls the newer upstream `llama.cpp` Apple XCFramework build `b9670`. Supported iPhone runtime selection can also choose MLX for the E4B and 12B tiers or built-in CoreAI when the device and recent performance signal make that the better local path. The current verified run is a June 2, 2026 simulator smoke using a local GGUF developer artifact. Physical iPhone proof with a downloaded configured pack, storage pressure, and imported user files has not been completed yet.
 
 ## Model Artifact Status
 
