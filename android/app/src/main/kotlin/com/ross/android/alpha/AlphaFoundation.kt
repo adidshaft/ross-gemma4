@@ -89,36 +89,36 @@ enum class AlphaAppearanceMode(val label: String) {
     Light("Light"),
 }
 enum class AlphaCapabilityTier(val tierId: String, val title: String, val summary: String, val downloadSizeLabel: String, val installedSizeLabel: String) {
-    QuickStart("quick_start", "Basic", "Lighter setup for short orders, quick summaries, and simple private Ask Ross actions.", "about 304 MB", "about 304 MB"),
-    CaseAssociate("case_associate", "Standard", "Recommended for everyday matters, document review, chronology work, and answers from your files.", "about 555 MB", "about 555 MB"),
-    SeniorDraftingSupport("senior_drafting_support", "Advanced", "Best for longer bundles, deeper review, and heavier drafting on this phone.", "about 690 MB", "about 690 MB");
+    QuickStart("quick_start", "Quick Start", "Lighter setup for shorter files, quick summaries, and simple private Ask Ross actions.", "about 304 MB", "about 304 MB"),
+    CaseAssociate("case_associate", "Case Associate", "Recommended for most matters, document review, chronology work, and answers from your files.", "about 555 MB", "about 555 MB"),
+    SeniorDraftingSupport("senior_drafting_support", "Senior Drafting Support", "Best for larger bundles, deeper review, and heavier drafting on this phone.", "about 690 MB", "about 690 MB");
 
     val setupTitle: String
         get() = when (this) {
-            QuickStart -> "Basic - short orders only"
-            CaseAssociate -> "Standard - most matters"
-            SeniorDraftingSupport -> "Advanced - long bundles and drafting"
+            QuickStart -> "Quick Start - shorter files and lighter review"
+            CaseAssociate -> "Case Associate - most matters"
+            SeniorDraftingSupport -> "Senior Drafting Support - larger bundles and drafting"
         }
 
     val compactSetupSummary: String
         get() = when (this) {
-            QuickStart -> "Short orders"
+            QuickStart -> "Shorter files"
             CaseAssociate -> "Most matters"
-            SeniorDraftingSupport -> "Long bundles"
+            SeniorDraftingSupport -> "Larger bundles"
         }
 
     val storageNote: String
         get() = when (this) {
-            QuickStart -> "Light footprint"
+            QuickStart -> "Lightest of the three downloads"
             CaseAssociate -> "Balanced footprint"
             SeniorDraftingSupport -> "Largest footprint"
         }
 
     val bestFor: String
         get() = when (this) {
-            QuickStart -> "Fast intake, smaller devices, and short document Q&A after the model is installed."
-            CaseAssociate -> "Most advocates who need document review, next dates, chronologies, notes, and answers from your files on-device."
-            SeniorDraftingSupport -> "Longer bundles, deeper review, hearing preparation, and more detailed drafting support."
+            QuickStart -> "Faster intake, smaller devices, and shorter document Q&A after the model is installed."
+            CaseAssociate -> "Most advocates who need document review, next dates, chronologies, notes, and answers from files on-device."
+            SeniorDraftingSupport -> "Larger bundles, deeper review, hearing preparation, and more detailed drafting support."
         }
 
     val setupWarning: String
@@ -137,9 +137,9 @@ enum class AlphaCapabilityTier(val tierId: String, val title: String, val summar
 
     val extractionQuality: String
         get() = when (this) {
-            QuickStart -> "Standard"
-            CaseAssociate -> "Advanced"
-            SeniorDraftingSupport -> "Advanced"
+            QuickStart -> "Lighter"
+            CaseAssociate -> "Deeper"
+            SeniorDraftingSupport -> "Deepest"
         }
 
     val rank: Int
@@ -3205,13 +3205,13 @@ internal class AlphaRossController(
     fun strongerPackMessageFor(document: AlphaCaseDocument): String? {
         val mode = activeExtractionMode()
         return when {
-            mode == AlphaExtractionMode.Basic -> "Better extraction is available with Standard."
+            mode == AlphaExtractionMode.Basic -> "Better extraction is available with Case Associate."
             mode == AlphaExtractionMode.QuickStart && (document.languageProfile?.primaryLanguage == AlphaDocumentLanguage.Mixed ||
                 document.extractionFindings.any { it.kind == AlphaExtractionFindingKind.LowConfidenceOcr || it.kind == AlphaExtractionFindingKind.LanguageUncertain }) ->
-                "This scan has mixed language or low OCR confidence. Advanced may improve review."
-            mode == AlphaExtractionMode.QuickStart -> "Better extraction is available with Standard."
+                "This scan has mixed language or low OCR confidence. Senior Drafting Support may improve review."
+            mode == AlphaExtractionMode.QuickStart -> "Better extraction is available with Case Associate."
             mode == AlphaExtractionMode.CaseAssociate && document.extractionFindings.any { it.kind == AlphaExtractionFindingKind.LowConfidenceOcr || it.kind == AlphaExtractionFindingKind.LanguageUncertain } ->
-                "This scan has mixed language or low OCR confidence. Advanced may improve review."
+                "This scan has mixed language or low OCR confidence. Senior Drafting Support may improve review."
             else -> null
         }
     }

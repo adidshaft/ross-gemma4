@@ -414,7 +414,7 @@ class AlphaLocalExtractionOrchestrator(private val context: Context) {
                         caseId = caseId,
                         documentId = document.id,
                         kind = AlphaExtractionFindingKind.UnsupportedLayout,
-                        message = "Basic is best for shorter files. Choose Standard or Advanced before Ross reviews this longer document with a local LLM.",
+                        message = "Quick Start is best for shorter files. Choose Case Associate or Senior Drafting Support before Ross reviews this longer document with your private assistant.",
                         sourceRefs = cleanedPages.take(2).map { page ->
                             AlphaSourceRef(
                                 caseId = caseId,

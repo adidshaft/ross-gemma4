@@ -15,9 +15,18 @@ class AlphaModelPacksTest {
         assertEquals(554_661_246L, AlphaModelPackManager.totalBytesFor(AlphaCapabilityTier.CaseAssociate))
         assertEquals(689_308_662L, AlphaModelPackManager.totalBytesFor(AlphaCapabilityTier.SeniorDraftingSupport))
 
+        assertEquals("Quick Start", AlphaCapabilityTier.QuickStart.title)
+        assertEquals("Case Associate", AlphaCapabilityTier.CaseAssociate.title)
+        assertEquals("Senior Drafting Support", AlphaCapabilityTier.SeniorDraftingSupport.title)
+        assertEquals("Quick Start - shorter files and lighter review", AlphaCapabilityTier.QuickStart.setupTitle)
+        assertEquals("Case Associate - most matters", AlphaCapabilityTier.CaseAssociate.setupTitle)
+        assertEquals("Senior Drafting Support - larger bundles and drafting", AlphaCapabilityTier.SeniorDraftingSupport.setupTitle)
         assertEquals("about 304 MB", AlphaCapabilityTier.QuickStart.downloadSizeLabel)
         assertEquals("about 555 MB", AlphaCapabilityTier.CaseAssociate.downloadSizeLabel)
         assertEquals("about 690 MB", AlphaCapabilityTier.SeniorDraftingSupport.downloadSizeLabel)
+        assertEquals("Lighter", AlphaCapabilityTier.QuickStart.extractionQuality)
+        assertEquals("Deeper", AlphaCapabilityTier.CaseAssociate.extractionQuality)
+        assertEquals("Deepest", AlphaCapabilityTier.SeniorDraftingSupport.extractionQuality)
 
         val forbidden = Regex("ChatGPT|Q4|Q4|gemma_local_runtime|EmbeddingGemma|LiteRT|checksum|artifact|deterministic_dev|mediapipe_llm", RegexOption.IGNORE_CASE)
         AlphaCapabilityTier.values().forEach { tier ->
