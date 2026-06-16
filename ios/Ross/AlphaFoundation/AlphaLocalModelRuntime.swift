@@ -431,7 +431,7 @@ enum AlphaLocalPromptBudgetPlanner {
         switch runtimeMode {
         case .mlxSwiftLm:
             if baseMaxInputChars >= 52_000 {
-                return 18
+                return 20
             }
             return baseMaxInputChars >= 40_000 ? 16 : nil
         case .llamaCppGguf:
@@ -525,7 +525,7 @@ enum AlphaLocalPromptBudgetPlanner {
         switch runtimeMode {
         case .mlxSwiftLm:
             if baseMaxInputChars >= 52_000 {
-                return 18
+                return 20
             }
             return baseMaxInputChars >= 40_000 ? 16 : nil
         case .llamaCppGguf:
@@ -562,12 +562,12 @@ enum AlphaLocalPromptBudgetPlanner {
             if baseMaxInputChars >= 52_000 {
                 return (
                     minimumBudget: 8_800,
-                    largeFileBlockLimit: 11,
-                    largeFileExcerptChars: 1_750,
-                    cautionBlockLimit: 8,
-                    cautionExcerptChars: 1_250,
-                    slowBlockLimit: 5,
-                    slowExcerptChars: 900,
+                    largeFileBlockLimit: 12,
+                    largeFileExcerptChars: 1_850,
+                    cautionBlockLimit: 9,
+                    cautionExcerptChars: 1_320,
+                    slowBlockLimit: 6,
+                    slowExcerptChars: 960,
                     cautionTokensPerSecond: 12,
                     slowTokensPerSecond: 8
                 )
@@ -719,12 +719,12 @@ enum AlphaLocalPromptBudgetPlanner {
             if baseMaxInputChars >= 52_000 {
                 return (
                     minimumBudget: 8_000,
-                    largeFileBlockLimit: 13,
-                    largeFileExcerptChars: 1_550,
-                    cautionBlockLimit: 9,
-                    cautionExcerptChars: 1_150,
-                    slowBlockLimit: 6,
-                    slowExcerptChars: 860,
+                    largeFileBlockLimit: 15,
+                    largeFileExcerptChars: 1_650,
+                    cautionBlockLimit: 10,
+                    cautionExcerptChars: 1_220,
+                    slowBlockLimit: 7,
+                    slowExcerptChars: 920,
                     cautionTokensPerSecond: 10,
                     slowTokensPerSecond: 7
                 )
