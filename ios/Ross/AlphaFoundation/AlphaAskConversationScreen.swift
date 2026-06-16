@@ -888,6 +888,12 @@ extension AlphaLocalModelInvocation {
         return usesMeasuredTokenCounts ? tokens.formatted() : "~\(tokens.formatted())"
     }
 
+    var answerDetailTokenSpeedLabel: String? {
+        guard let tokenSpeed = estimatedOutputTokensPerSecond else { return nil }
+        let formatted = alphaAssistantTokenRateLabel(tokensPerSecond: tokenSpeed)
+        return usesMeasuredTokenCounts ? formatted : "~\(formatted)"
+    }
+
     var answerDetailPromptSizeLabel: String? {
         guard let inputChars else { return nil }
         if let promptBudgetChars, promptBudgetChars > 0 {
@@ -943,12 +949,12 @@ extension AlphaLocalModelInvocation {
             )
         }
 
-        if let tokenSpeed = estimatedOutputTokensPerSecond {
+        if let tokenSpeed = answerDetailTokenSpeedLabel {
             metrics.append(
                 AlphaAnswerDetailMetric(
                     key: "token_speed",
                     label: rossLocalized("token_speed"),
-                    value: alphaAssistantTokenRateLabel(tokensPerSecond: tokenSpeed)
+                    value: tokenSpeed
                 )
             )
         }

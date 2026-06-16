@@ -4296,6 +4296,48 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    @MainActor
+    func testAnswerDetailOverviewMetricsMarkEstimatedTokenSpeedAsApproximate() {
+        let invocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.appleFoundationModels.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            outputHash: "output",
+            inputChars: 480,
+            estimatedInputTokens: 118,
+            outputChars: 192,
+            estimatedOutputTokens: 46,
+            estimatedOutputTokensPerSecond: 21.5,
+            durationMs: 2200,
+            usesMeasuredTokenCounts: false,
+            status: .complete
+        )
+
+        XCTAssertEqual(invocation.answerDetailProcessedTokensLabel, "~164")
+        XCTAssertEqual(invocation.answerDetailTokenSpeedLabel, "~\(alphaAssistantTokenRateLabel(tokensPerSecond: 21.5))")
+        XCTAssertEqual(
+            invocation.answerDetailOverviewMetrics,
+            [
+                AlphaAnswerDetailMetric(
+                    key: "tokens_processed",
+                    label: "Tokens processed",
+                    value: "~164"
+                ),
+                AlphaAnswerDetailMetric(
+                    key: "token_speed",
+                    label: "Token speed",
+                    value: "~\(alphaAssistantTokenRateLabel(tokensPerSecond: 21.5))"
+                )
+            ]
+        )
+    }
+
     func testAskResultHasAnswerDetailsWhenOnlySourcesArePresent() {
         let sourceRef = AlphaSourceRef(
             caseId: UUID(),
