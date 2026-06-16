@@ -5691,7 +5691,154 @@ final class AlphaExtractionTests: XCTestCase {
             environment.draftModelPath,
             alphaAbsoluteURL(for: "model-packs/case_associate/\(draftDescriptor.fileName)").path
         )
-        XCTAssertNil(environment.draftModelTokens)
+        XCTAssertEqual(
+            environment.draftModelTokens,
+            AlphaLlamaRuntimeProfile.defaultDraftTokens(
+                for: .caseAssociate,
+                modelPath: alphaAbsoluteURL(for: installed.relativePath).path,
+                physicalMemory: ProcessInfo.processInfo.physicalMemory
+            )
+        )
+    }
+
+    @MainActor
+    func testLocalRuntimeEnvironmentWidensInstalledGGUFDraftTokensAfterFastRun() async throws {
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+
+        let mainData = Data("gguf-main-fast".utf8)
+        let draftData = Data("gguf-draft-fast".utf8)
+        let draftDescriptor = AlphaAssistantDraftArtifactDescriptor(
+            fileName: "mtp-gemma-4-12b-it.gguf",
+            sizeBytes: Int64(draftData.count),
+            checksumSha256: sha256Hex(draftData),
+            artifactKind: "local_model_artifact",
+            downloadURLString: "https://ross.example/mtp-gemma-4-12b-it.gguf",
+            draftTokens: nil
+        )
+
+        let installed = try await store.installDownloadedPackArtifact(
+            for: .caseAssociate,
+            fileName: "gemma-4-12b-it-UD-Q4_K_XL.gguf",
+            data: mainData,
+            expectedChecksum: sha256Hex(mainData),
+            packId: "gemma-4-12b-q4-fast",
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            draftArtifact: draftDescriptor,
+            draftArtifactData: draftData
+        )
+        let activePack = installedPack(
+            .caseAssociate,
+            runtimeMode: .llamaCppGguf,
+            packId: "gemma-4-12b-q4-fast",
+            installPath: installed.relativePath,
+            checksum: installed.checksum,
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+        let fastInvocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 14.6,
+            timeToFirstTokenMs: 1_300,
+            status: .complete
+        )
+
+        let environment = alphaLocalRuntimeEnvironment(
+            activePack: activePack,
+            requestedTier: activePack.tier,
+            installedPacks: [activePack],
+            baseEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .llamaCppGguf,
+                modelPath: alphaAbsoluteURL(for: installed.relativePath).path,
+                modelChecksum: installed.checksum,
+                modelKind: "gguf"
+            ),
+            physicalMemoryBytes: 16_000_000_000,
+            lastInvocation: fastInvocation
+        )
+
+        XCTAssertEqual(environment.draftModelTokens, 8)
+    }
+
+    @MainActor
+    func testLocalRuntimeEnvironmentTightensInstalledGGUFDraftTokensAfterSlowRun() async throws {
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+
+        let mainData = Data("gguf-main-slow".utf8)
+        let draftData = Data("gguf-draft-slow".utf8)
+        let draftDescriptor = AlphaAssistantDraftArtifactDescriptor(
+            fileName: "mtp-gemma-4-12b-it.gguf",
+            sizeBytes: Int64(draftData.count),
+            checksumSha256: sha256Hex(draftData),
+            artifactKind: "local_model_artifact",
+            downloadURLString: "https://ross.example/mtp-gemma-4-12b-it.gguf",
+            draftTokens: nil
+        )
+
+        let installed = try await store.installDownloadedPackArtifact(
+            for: .caseAssociate,
+            fileName: "gemma-4-12b-it-UD-Q4_K_XL.gguf",
+            data: mainData,
+            expectedChecksum: sha256Hex(mainData),
+            packId: "gemma-4-12b-q4-slow",
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            draftArtifact: draftDescriptor,
+            draftArtifactData: draftData
+        )
+        let activePack = installedPack(
+            .caseAssociate,
+            runtimeMode: .llamaCppGguf,
+            packId: "gemma-4-12b-q4-slow",
+            installPath: installed.relativePath,
+            checksum: installed.checksum,
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+        let slowInvocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 6.2,
+            timeToFirstTokenMs: 3_400,
+            status: .complete
+        )
+
+        let environment = alphaLocalRuntimeEnvironment(
+            activePack: activePack,
+            requestedTier: activePack.tier,
+            installedPacks: [activePack],
+            baseEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .llamaCppGguf,
+                modelPath: alphaAbsoluteURL(for: installed.relativePath).path,
+                modelChecksum: installed.checksum,
+                modelKind: "gguf"
+            ),
+            physicalMemoryBytes: 16_000_000_000,
+            lastInvocation: slowInvocation
+        )
+
+        XCTAssertEqual(environment.draftModelTokens, 6)
     }
 
     func testRuntimeHealthShowsConfiguredGGUFDraftAcceleration() throws {

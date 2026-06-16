@@ -1610,6 +1610,47 @@ private func alphaAutomaticMLXDraftTokens(
     return baseTokens
 }
 
+private func alphaAutomaticGGUFDraftTokens(
+    for activePack: AlphaInstalledModelPack?,
+    physicalMemoryBytes: UInt64,
+    lastInvocation: AlphaLocalModelInvocation? = nil
+) -> Int? {
+    guard let activePack, activePack.runtimeMode == .llamaCppGguf else { return nil }
+
+    let baseTokens = AlphaLlamaRuntimeProfile.defaultDraftTokens(
+        for: activePack.tier,
+        modelPath: alphaAbsoluteURL(for: activePack.installPath).path,
+        physicalMemory: physicalMemoryBytes
+    )
+
+    guard let lastInvocation,
+          lastInvocation.task == .matterQuestionAnswer,
+          lastInvocation.status == .complete,
+          lastInvocation.capabilityTier == activePack.tier.rawValue,
+          lastInvocation.runtimeMode == AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+          let outputSpeed = lastInvocation.estimatedOutputTokensPerSecond,
+          let firstTokenMs = lastInvocation.timeToFirstTokenMs else {
+        return baseTokens
+    }
+
+    if outputSpeed >= 14, firstTokenMs <= 1_500 {
+        return min(baseTokens + 1, 8)
+    }
+
+    let minimumTokens = switch activePack.tier {
+    case .flash, .quickStart:
+        2
+    case .caseAssociate, .seniorDraftingSupport:
+        4
+    }
+
+    if outputSpeed <= 8 || firstTokenMs >= 3_000 {
+        return max(baseTokens - 2, minimumTokens)
+    }
+
+    return baseTokens
+}
+
 private func alphaInstalledGGUFDraftArtifact(
     for activePack: AlphaInstalledModelPack?
 ) -> AlphaInstalledAssistantDraftArtifact? {
@@ -1660,7 +1701,13 @@ func alphaLocalRuntimeEnvironment(
             modelChecksum: baseEnvironment.modelChecksum,
             modelKind: baseEnvironment.modelKind,
             draftModelPath: alphaAbsoluteURL(for: ggufDraftArtifact.relativePath).path,
-            draftModelTokens: baseEnvironment.draftModelTokens ?? ggufDraftArtifact.draftTokens
+            draftModelTokens: baseEnvironment.draftModelTokens ??
+                ggufDraftArtifact.draftTokens ??
+                alphaAutomaticGGUFDraftTokens(
+                    for: activePack,
+                    physicalMemoryBytes: physicalMemoryBytes,
+                    lastInvocation: lastInvocation
+                )
         )
     }
 
