@@ -126,7 +126,7 @@ enum AlphaExtractionPipelinePlanner {
                     return task == .caseMemorySynthesis ? max(base, 28) : max(base, 22)
                 }
                 guard physicalMemory >= 12_000_000_000 else { return base }
-                return task == .caseMemorySynthesis ? max(base, 26) : max(base, 20)
+                return task == .caseMemorySynthesis ? max(base, 28) : max(base, 22)
             case .seniorDraftingSupport:
                 guard physicalMemory >= 16_000_000_000 else { return base }
                 return task == .caseMemorySynthesis ? max(base, 34) : max(base, 26)

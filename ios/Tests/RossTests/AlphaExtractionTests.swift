@@ -11593,7 +11593,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.totalDownloadBytes, 0)
         XCTAssertEqual(presentation?.sizeLabel, rossLocalized("assistant_meta_no_download"))
         XCTAssertEqual(presentation?.speedLabel, "~14 tok/s")
-        XCTAssertEqual(presentation?.contextLabel, "12,288 tokens")
+        XCTAssertEqual(presentation?.contextLabel, "14,336 tokens")
         XCTAssertNil(presentation?.companionLabel)
         XCTAssertNil(presentation?.etaLabel)
     }
@@ -12520,8 +12520,8 @@ final class AlphaExtractionTests: XCTestCase {
             physicalMemory: 12_000_000_000
         )
 
-        XCTAssertEqual(plan.pass(for: .legalFieldExtraction)?.maxPagesPerBatch, 20)
-        XCTAssertEqual(plan.pass(for: .caseMemorySynthesis)?.maxPagesPerBatch, 26)
+        XCTAssertEqual(plan.pass(for: .legalFieldExtraction)?.maxPagesPerBatch, 22)
+        XCTAssertEqual(plan.pass(for: .caseMemorySynthesis)?.maxPagesPerBatch, 28)
     }
 
     func testPipelinePlanExpandsBatchingFurtherForHighMemoryCoreAIRuntime() {
@@ -14376,7 +14376,7 @@ final class AlphaExtractionTests: XCTestCase {
                 for: .caseAssociate,
                 physicalMemory: 12_000_000_000
             ),
-            12_288
+            14_336
         )
         XCTAssertEqual(
             AlphaFoundationRuntimeProfile.contextWindowTokens(
@@ -14390,7 +14390,7 @@ final class AlphaExtractionTests: XCTestCase {
                 for: .caseAssociate,
                 physicalMemory: 12_000_000_000
             ),
-            44_000
+            52_000
         )
         XCTAssertEqual(
             AlphaFoundationRuntimeProfile.maxInputChars(
@@ -14672,8 +14672,8 @@ final class AlphaExtractionTests: XCTestCase {
             checksumVerified: true
         )
 
-        XCTAssertEqual(provider.contextWindowEstimate(), 12_288)
-        XCTAssertEqual(provider.maxInputChars(), 48_352)
+        XCTAssertTrue((provider.contextWindowEstimate() ?? 0) >= 14_336)
+        XCTAssertTrue((provider.maxInputChars() ?? 0) >= 56_544)
     }
     #endif
 

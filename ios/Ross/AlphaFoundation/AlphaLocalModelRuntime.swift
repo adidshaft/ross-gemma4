@@ -282,7 +282,7 @@ enum AlphaFoundationRuntimeProfile {
             if physicalMemory >= 16_000_000_000 {
                 return 16_384
             }
-            return physicalMemory >= 12_000_000_000 ? 12_288 : 10_240
+            return physicalMemory >= 12_000_000_000 ? 14_336 : 10_240
         case .seniorDraftingSupport:
             return physicalMemory >= 16_000_000_000 ? 16_384 : 12_288
         }
@@ -301,7 +301,7 @@ enum AlphaFoundationRuntimeProfile {
             if physicalMemory >= 16_000_000_000 {
                 return 56_000
             }
-            return physicalMemory >= 12_000_000_000 ? 44_000 : 36_000
+            return physicalMemory >= 12_000_000_000 ? 52_000 : 36_000
         case .seniorDraftingSupport:
             return physicalMemory >= 16_000_000_000 ? 56_000 : 44_000
         }
