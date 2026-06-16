@@ -16168,6 +16168,8 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(policy.documentCandidateLimit, 4)
         XCTAssertEqual(policy.sourceBlockLimit, 26)
+        XCTAssertEqual(policy.preferredChunkChars, 2_200)
+        XCTAssertEqual(policy.overlapChars, 220)
     }
 
     func testAskRuntimeSourcePackPolicyUsesMidHighBudgetSingleSelectedMLXBand() {
@@ -16465,6 +16467,8 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(policy.documentCandidateLimit, 7)
         XCTAssertEqual(policy.sourceBlockLimit, 15)
+        XCTAssertEqual(policy.preferredChunkChars, 1_760)
+        XCTAssertEqual(policy.overlapChars, 220)
     }
 
     func testAskRuntimeSourcePackPolicyKeepsFallbackBudgetsCompact() {
@@ -19453,6 +19457,78 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertGreaterThan(pageBlocks.count, 1)
         XCTAssertTrue(pageBlocks.contains { $0.sourceRef.paragraphRange?.contains("chunk") == true })
         XCTAssertTrue(pageBlocks.contains { $0.text.contains("indemnity clause") })
+    }
+
+    @MainActor
+    func testAskRuntimeSourcePackHonorsChunkSizingFromOverridePolicy() {
+        let caseID = UUID()
+        let documentID = UUID()
+        let longPageText = String(repeating: "Background facts and chronology details. ", count: 55) +
+            "The indemnity clause still appears near the end of this tagged page."
+        let document = AlphaCaseDocument(
+            id: documentID,
+            title: "Long tagged page",
+            fileName: "long-tagged-page.pdf",
+            kind: .pdf,
+            storedRelativePath: "tests/long-tagged-page.pdf",
+            importedAt: .now,
+            pageCount: 1,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: longPageText,
+            dominantSourceSnippet: nil,
+            lastIndexedAt: .now,
+            pages: [
+                AlphaDocumentPage(
+                    pageNumber: 1,
+                    snippet: "Background facts and chronology details.",
+                    extractedText: longPageText,
+                    anchorText: "Background facts and chronology details."
+                )
+            ]
+        )
+        let caseMatter = AlphaCaseMatter(
+            id: caseID,
+            title: "Acme v. Beta",
+            forum: "Delhi High Court",
+            stage: .pleadings,
+            summary: "Commercial dispute",
+            issueHighlights: [],
+            evidenceNotes: [],
+            draftTasks: [],
+            documents: [document],
+            sourceRefs: []
+        )
+        let selectedDocument = AlphaAskDocumentOption(
+            id: documentID,
+            caseId: caseID,
+            caseTitle: caseMatter.title,
+            title: document.title,
+            fileName: document.fileName,
+            kind: document.kind,
+            isShared: false
+        )
+
+        var state = AlphaPersistedState.empty()
+        state.cases = [caseMatter]
+        let model = AlphaRossModel(previewState: state)
+
+        let sourcePack = model.askRuntimeSourcePack(
+            question: "Where is the indemnity clause in the tagged file?",
+            scopeCaseID: caseID,
+            selectedDocuments: [selectedDocument],
+            sourcePackPolicyOverride: AlphaAskRuntimeSourcePackPolicy(
+                documentCandidateLimit: 4,
+                sourceBlockLimit: 8,
+                preferredChunkChars: 3_200,
+                overlapChars: 120
+            )
+        )
+
+        let pageBlocks = sourcePack.filter { $0.sourceRef.documentId == documentID && $0.pageNumber == 1 }
+        XCTAssertEqual(pageBlocks.count, 1)
+        XCTAssertNil(pageBlocks.first?.sourceRef.paragraphRange)
+        XCTAssertTrue(pageBlocks.first?.text.contains("indemnity clause") == true)
     }
 
     @MainActor

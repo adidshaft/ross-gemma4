@@ -317,6 +317,13 @@ struct AlphaLocalPromptBudgetPlan: Hashable, Sendable {
 struct AlphaAskRuntimeSourcePackPolicy: Hashable, Sendable {
     var documentCandidateLimit: Int
     var sourceBlockLimit: Int
+    var preferredChunkChars: Int = 1_700
+    var overlapChars: Int = 260
+}
+
+private struct AlphaAskRuntimeChunkingPolicy: Hashable, Sendable {
+    let preferredChunkChars: Int
+    let overlapChars: Int
 }
 
 func alphaAskRuntimeSourcePackPolicy(
@@ -327,155 +334,267 @@ func alphaAskRuntimeSourcePackPolicy(
     selectedDocumentCount: Int = 0
 ) -> AlphaAskRuntimeSourcePackPolicy {
     let hasSingleSelectedDocument = hasSelectedDocuments && selectedDocumentCount == 1
+    func chunkingPolicy() -> AlphaAskRuntimeChunkingPolicy {
+        switch runtimeMode {
+        case .mlxSwiftLm:
+            if hasSingleSelectedDocument {
+                if baseMaxInputChars >= 68_000 {
+                    return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 2_200, overlapChars: 220)
+                }
+                if baseMaxInputChars >= 60_000 {
+                    return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 2_050, overlapChars: 220)
+                }
+                if baseMaxInputChars >= 52_000 {
+                    return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_950, overlapChars: 240)
+                }
+                if baseMaxInputChars >= 40_000 {
+                    return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_800, overlapChars: 240)
+                }
+                return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_650, overlapChars: 260)
+            }
+            if hasSelectedDocuments {
+                if baseMaxInputChars >= 68_000 {
+                    return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_950, overlapChars: 220)
+                }
+                if baseMaxInputChars >= 60_000 {
+                    return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_850, overlapChars: 220)
+                }
+                if baseMaxInputChars >= 52_000 {
+                    return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_750, overlapChars: 240)
+                }
+                if baseMaxInputChars >= 40_000 {
+                    return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_650, overlapChars: 250)
+                }
+                return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_550, overlapChars: 260)
+            }
+            if baseMaxInputChars >= 68_000 {
+                return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_800, overlapChars: 220)
+            }
+            if baseMaxInputChars >= 60_000 {
+                return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_720, overlapChars: 240)
+            }
+            if baseMaxInputChars >= 52_000 {
+                return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_650, overlapChars: 240)
+            }
+            if baseMaxInputChars >= 40_000 {
+                return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_550, overlapChars: 250)
+            }
+            return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_500, overlapChars: 260)
+        case .llamaCppGguf:
+            if hasSingleSelectedDocument {
+                if baseMaxInputChars >= 72_000 {
+                    return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 2_050, overlapChars: 220)
+                }
+                if baseMaxInputChars >= 60_000 {
+                    return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_920, overlapChars: 230)
+                }
+                if baseMaxInputChars >= 52_000 {
+                    return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_820, overlapChars: 240)
+                }
+                if baseMaxInputChars >= 48_000 {
+                    return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_760, overlapChars: 240)
+                }
+                if baseMaxInputChars >= 40_000 {
+                    return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_650, overlapChars: 250)
+                }
+                return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_550, overlapChars: 260)
+            }
+            if hasSelectedDocuments {
+                if baseMaxInputChars >= 72_000 {
+                    return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_900, overlapChars: 220)
+                }
+                if baseMaxInputChars >= 60_000 {
+                    return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_820, overlapChars: 230)
+                }
+                if baseMaxInputChars >= 52_000 {
+                    return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_740, overlapChars: 240)
+                }
+                if baseMaxInputChars >= 48_000 {
+                    return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_680, overlapChars: 240)
+                }
+                if baseMaxInputChars >= 40_000 {
+                    return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_600, overlapChars: 250)
+                }
+                return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_520, overlapChars: 260)
+            }
+            if baseMaxInputChars >= 72_000 {
+                return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_760, overlapChars: 220)
+            }
+            if baseMaxInputChars >= 60_000 {
+                return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_700, overlapChars: 230)
+            }
+            if baseMaxInputChars >= 52_000 {
+                return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_620, overlapChars: 240)
+            }
+            if baseMaxInputChars >= 48_000 {
+                return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_560, overlapChars: 240)
+            }
+            if baseMaxInputChars >= 40_000 {
+                return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_500, overlapChars: 250)
+            }
+            return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_440, overlapChars: 260)
+        case .appleFoundationModels:
+            if hasSingleSelectedDocument {
+                if baseMaxInputChars >= 60_000 {
+                    return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 2_000, overlapChars: 220)
+                }
+                if baseMaxInputChars >= 52_000 {
+                    return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_880, overlapChars: 230)
+                }
+                if baseMaxInputChars >= 40_000 {
+                    return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_760, overlapChars: 240)
+                }
+                if baseMaxInputChars >= 28_000 {
+                    return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_650, overlapChars: 250)
+                }
+                return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_560, overlapChars: 260)
+            }
+            if hasSelectedDocuments {
+                if baseMaxInputChars >= 60_000 {
+                    return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_860, overlapChars: 220)
+                }
+                if baseMaxInputChars >= 52_000 {
+                    return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_760, overlapChars: 230)
+                }
+                if baseMaxInputChars >= 40_000 {
+                    return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_680, overlapChars: 240)
+                }
+                if baseMaxInputChars >= 28_000 {
+                    return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_600, overlapChars: 250)
+                }
+                return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_520, overlapChars: 260)
+            }
+            if baseMaxInputChars >= 60_000 {
+                return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_760, overlapChars: 220)
+            }
+            if baseMaxInputChars >= 52_000 {
+                return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_680, overlapChars: 230)
+            }
+            if baseMaxInputChars >= 40_000 {
+                return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_620, overlapChars: 240)
+            }
+            if baseMaxInputChars >= 28_000 {
+                return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_520, overlapChars: 250)
+            }
+            return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_460, overlapChars: 260)
+        default:
+            return AlphaAskRuntimeChunkingPolicy(preferredChunkChars: 1_700, overlapChars: 260)
+        }
+    }
+
+    func policy(
+        documentCandidateLimit: Int,
+        sourceBlockLimit: Int
+    ) -> AlphaAskRuntimeSourcePackPolicy {
+        let chunkPolicy = chunkingPolicy()
+        return AlphaAskRuntimeSourcePackPolicy(
+            documentCandidateLimit: documentCandidateLimit,
+            sourceBlockLimit: sourceBlockLimit,
+            preferredChunkChars: chunkPolicy.preferredChunkChars,
+            overlapChars: chunkPolicy.overlapChars
+        )
+    }
     switch runtimeMode {
     case .mlxSwiftLm:
         if capabilityTier == .caseAssociate || capabilityTier == .seniorDraftingSupport {
             if baseMaxInputChars >= 68_000 {
                 if hasSingleSelectedDocument {
-                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 26)
+                    return policy(documentCandidateLimit: 4, sourceBlockLimit: 26)
                 }
-                return AlphaAskRuntimeSourcePackPolicy(
-                    documentCandidateLimit: hasSelectedDocuments ? 4 : 7,
-                    sourceBlockLimit: hasSelectedDocuments ? 18 : 16
-                )
+                return policy(documentCandidateLimit: hasSelectedDocuments ? 4 : 7, sourceBlockLimit: hasSelectedDocuments ? 18 : 16)
             }
             if baseMaxInputChars >= 60_000 {
                 if hasSingleSelectedDocument {
-                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 25)
+                    return policy(documentCandidateLimit: 4, sourceBlockLimit: 25)
                 }
-                return AlphaAskRuntimeSourcePackPolicy(
-                    documentCandidateLimit: hasSelectedDocuments ? 4 : 7,
-                    sourceBlockLimit: hasSelectedDocuments ? 17 : 15
-                )
+                return policy(documentCandidateLimit: hasSelectedDocuments ? 4 : 7, sourceBlockLimit: hasSelectedDocuments ? 17 : 15)
             }
             if baseMaxInputChars >= 52_000 {
                 if hasSingleSelectedDocument {
-                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 24)
+                    return policy(documentCandidateLimit: 4, sourceBlockLimit: 24)
                 }
-                return AlphaAskRuntimeSourcePackPolicy(
-                    documentCandidateLimit: hasSelectedDocuments ? 4 : 7,
-                    sourceBlockLimit: hasSelectedDocuments ? 16 : 14
-                )
+                return policy(documentCandidateLimit: hasSelectedDocuments ? 4 : 7, sourceBlockLimit: hasSelectedDocuments ? 16 : 14)
             }
             if baseMaxInputChars >= 40_000 {
                 if hasSingleSelectedDocument {
-                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 18)
+                    return policy(documentCandidateLimit: 4, sourceBlockLimit: 18)
                 }
-                return AlphaAskRuntimeSourcePackPolicy(
-                    documentCandidateLimit: hasSelectedDocuments ? 4 : 5,
-                    sourceBlockLimit: hasSelectedDocuments ? 12 : 10
-                )
+                return policy(documentCandidateLimit: hasSelectedDocuments ? 4 : 5, sourceBlockLimit: hasSelectedDocuments ? 12 : 10)
             }
         }
-        return AlphaAskRuntimeSourcePackPolicy(
-            documentCandidateLimit: 4,
-            sourceBlockLimit: hasSelectedDocuments ? 9 : 8
-        )
+        return policy(documentCandidateLimit: 4, sourceBlockLimit: hasSelectedDocuments ? 9 : 8)
     case .llamaCppGguf:
         if capabilityTier == .caseAssociate || capabilityTier == .seniorDraftingSupport {
             if baseMaxInputChars >= 72_000 {
                 if hasSingleSelectedDocument {
-                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 24)
+                    return policy(documentCandidateLimit: 4, sourceBlockLimit: 24)
                 }
-                return AlphaAskRuntimeSourcePackPolicy(
-                    documentCandidateLimit: hasSelectedDocuments ? 4 : 7,
-                    sourceBlockLimit: hasSelectedDocuments ? 18 : 16
-                )
+                return policy(documentCandidateLimit: hasSelectedDocuments ? 4 : 7, sourceBlockLimit: hasSelectedDocuments ? 18 : 16)
             }
         }
         if capabilityTier == .caseAssociate || capabilityTier == .seniorDraftingSupport {
             if baseMaxInputChars >= 60_000 {
                 if hasSingleSelectedDocument {
-                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 22)
+                    return policy(documentCandidateLimit: 4, sourceBlockLimit: 22)
                 }
-                return AlphaAskRuntimeSourcePackPolicy(
-                    documentCandidateLimit: hasSelectedDocuments ? 4 : 7,
-                    sourceBlockLimit: hasSelectedDocuments ? 16 : 14
-                )
+                return policy(documentCandidateLimit: hasSelectedDocuments ? 4 : 7, sourceBlockLimit: hasSelectedDocuments ? 16 : 14)
             }
             if baseMaxInputChars >= 52_000 {
                 if hasSingleSelectedDocument {
-                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 20)
+                    return policy(documentCandidateLimit: 4, sourceBlockLimit: 20)
                 }
-                return AlphaAskRuntimeSourcePackPolicy(
-                    documentCandidateLimit: hasSelectedDocuments ? 4 : 7,
-                    sourceBlockLimit: hasSelectedDocuments ? 15 : 12
-                )
+                return policy(documentCandidateLimit: hasSelectedDocuments ? 4 : 7, sourceBlockLimit: hasSelectedDocuments ? 15 : 12)
             }
             if baseMaxInputChars >= 48_000 {
                 if hasSingleSelectedDocument {
-                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 18)
+                    return policy(documentCandidateLimit: 4, sourceBlockLimit: 18)
                 }
-                return AlphaAskRuntimeSourcePackPolicy(
-                    documentCandidateLimit: hasSelectedDocuments ? 4 : 6,
-                    sourceBlockLimit: hasSelectedDocuments ? 13 : 11
-                )
+                return policy(documentCandidateLimit: hasSelectedDocuments ? 4 : 6, sourceBlockLimit: hasSelectedDocuments ? 13 : 11)
             }
             if baseMaxInputChars >= 40_000 {
                 if hasSingleSelectedDocument {
-                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 16)
+                    return policy(documentCandidateLimit: 4, sourceBlockLimit: 16)
                 }
-                return AlphaAskRuntimeSourcePackPolicy(
-                    documentCandidateLimit: hasSelectedDocuments ? 4 : 5,
-                    sourceBlockLimit: hasSelectedDocuments ? 11 : 9
-                )
+                return policy(documentCandidateLimit: hasSelectedDocuments ? 4 : 5, sourceBlockLimit: hasSelectedDocuments ? 11 : 9)
             }
         }
         if baseMaxInputChars >= 40_000 {
             if hasSingleSelectedDocument {
-                return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 16)
+                return policy(documentCandidateLimit: 4, sourceBlockLimit: 16)
             }
-            return AlphaAskRuntimeSourcePackPolicy(
-                documentCandidateLimit: hasSelectedDocuments ? 4 : 5,
-                sourceBlockLimit: hasSelectedDocuments ? 10 : 9
-            )
+            return policy(documentCandidateLimit: hasSelectedDocuments ? 4 : 5, sourceBlockLimit: hasSelectedDocuments ? 10 : 9)
         }
-        return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 8)
+        return policy(documentCandidateLimit: 4, sourceBlockLimit: 8)
     case .appleFoundationModels:
         if capabilityTier == .caseAssociate || capabilityTier == .seniorDraftingSupport {
             if baseMaxInputChars >= 60_000 {
                 if hasSingleSelectedDocument {
-                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 22)
+                    return policy(documentCandidateLimit: 4, sourceBlockLimit: 22)
                 }
-                return AlphaAskRuntimeSourcePackPolicy(
-                    documentCandidateLimit: hasSelectedDocuments ? 4 : 7,
-                    sourceBlockLimit: hasSelectedDocuments ? 17 : 15
-                )
+                return policy(documentCandidateLimit: hasSelectedDocuments ? 4 : 7, sourceBlockLimit: hasSelectedDocuments ? 17 : 15)
             }
             if baseMaxInputChars >= 52_000 {
                 if hasSingleSelectedDocument {
-                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 20)
+                    return policy(documentCandidateLimit: 4, sourceBlockLimit: 20)
                 }
-                return AlphaAskRuntimeSourcePackPolicy(
-                    documentCandidateLimit: hasSelectedDocuments ? 4 : 7,
-                    sourceBlockLimit: hasSelectedDocuments ? 16 : 14
-                )
+                return policy(documentCandidateLimit: hasSelectedDocuments ? 4 : 7, sourceBlockLimit: hasSelectedDocuments ? 16 : 14)
             }
             if baseMaxInputChars >= 40_000 {
                 if hasSingleSelectedDocument {
-                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 18)
+                    return policy(documentCandidateLimit: 4, sourceBlockLimit: 18)
                 }
-                return AlphaAskRuntimeSourcePackPolicy(
-                    documentCandidateLimit: hasSelectedDocuments ? 4 : 7,
-                    sourceBlockLimit: hasSelectedDocuments ? 15 : 12
-                )
+                return policy(documentCandidateLimit: hasSelectedDocuments ? 4 : 7, sourceBlockLimit: hasSelectedDocuments ? 15 : 12)
             }
             if baseMaxInputChars >= 28_000 {
                 if hasSingleSelectedDocument {
-                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 16)
+                    return policy(documentCandidateLimit: 4, sourceBlockLimit: 16)
                 }
-                return AlphaAskRuntimeSourcePackPolicy(
-                    documentCandidateLimit: hasSelectedDocuments ? 4 : 6,
-                    sourceBlockLimit: hasSelectedDocuments ? 12 : 10
-                )
+                return policy(documentCandidateLimit: hasSelectedDocuments ? 4 : 6, sourceBlockLimit: hasSelectedDocuments ? 12 : 10)
             }
         }
-        return AlphaAskRuntimeSourcePackPolicy(
-            documentCandidateLimit: 4,
-            sourceBlockLimit: hasSelectedDocuments ? 9 : 8
-        )
+        return policy(documentCandidateLimit: 4, sourceBlockLimit: hasSelectedDocuments ? 9 : 8)
     default:
-        return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 8)
+        return policy(documentCandidateLimit: 4, sourceBlockLimit: 8)
     }
 }
 

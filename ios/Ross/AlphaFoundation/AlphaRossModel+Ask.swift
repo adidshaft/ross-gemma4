@@ -2699,7 +2699,9 @@ extension AlphaRossModel {
                     document: document,
                     page: page,
                     cleanedText: cleanedText,
-                    allowsChunking: allowsChunking
+                    allowsChunking: allowsChunking,
+                    preferredChunkChars: sourcePackPolicy.preferredChunkChars,
+                    overlapChars: sourcePackPolicy.overlapChars
                 )
                 documentBlocks.append(contentsOf: chunkedBlocks)
             }
