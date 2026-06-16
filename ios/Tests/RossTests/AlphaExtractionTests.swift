@@ -8646,7 +8646,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(policy.documentCandidateLimit, 4)
-        XCTAssertEqual(policy.sourceBlockLimit, 15)
+        XCTAssertEqual(policy.sourceBlockLimit, 16)
     }
 
     func testAskRuntimeSourcePackPolicyExpandsFurtherForSingleSelectedMLXAsk() {
@@ -8659,7 +8659,19 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(policy.documentCandidateLimit, 4)
-        XCTAssertEqual(policy.sourceBlockLimit, 18)
+        XCTAssertEqual(policy.sourceBlockLimit, 20)
+    }
+
+    func testAskRuntimeSourcePackPolicyExpandsMLXCandidateWindowWithoutSelections() {
+        let policy = alphaAskRuntimeSourcePackPolicy(
+            runtimeMode: .mlxSwiftLm,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 52_000,
+            hasSelectedDocuments: false
+        )
+
+        XCTAssertEqual(policy.documentCandidateLimit, 7)
+        XCTAssertEqual(policy.sourceBlockLimit, 14)
     }
 
     func testAskRuntimeSourcePackPolicyExpandsForCapableLlamaAsks() {
