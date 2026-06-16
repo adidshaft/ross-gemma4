@@ -808,8 +808,9 @@ func alphaNextActionDate(for caseMatter: AlphaCaseMatter, model: AlphaRossModel)
 
 @MainActor
 func alphaActiveSetupJob(_ model: AlphaRossModel) -> AlphaModelDownloadJob? {
+    let eligibleStates: [AlphaModelDownloadJob]
     if model.activeRuntimeHealth?.available == true {
-        return model.persisted.modelJobs.first {
+        eligibleStates = model.persisted.modelJobs.filter {
             switch $0.state {
             case .queued, .downloading, .pausedWaitingForWifi, .verifying:
                 return true
@@ -817,15 +818,35 @@ func alphaActiveSetupJob(_ model: AlphaRossModel) -> AlphaModelDownloadJob? {
                 return false
             }
         }
-    }
-    return model.persisted.modelJobs.first {
-        switch $0.state {
-        case .queued, .downloading, .pausedWaitingForWifi, .pausedUser, .pausedNoStorage, .pausedError, .verifying, .failed:
-            true
-        case .notStarted, .installed, .cancelled:
-            false
+    } else {
+        eligibleStates = model.persisted.modelJobs.filter {
+            switch $0.state {
+            case .queued, .downloading, .pausedWaitingForWifi, .pausedUser, .pausedNoStorage, .pausedError, .verifying, .failed:
+                true
+            case .notStarted, .installed, .cancelled:
+                false
+            }
         }
     }
+
+    var prioritizedTiers: [AlphaCapabilityTier] = []
+    for candidate in [model.selectedTier, model.persisted.settings.activeTier, model.activePack?.tier] {
+        guard let normalized = AlphaCapabilityTier.normalizedAssistantSelection(candidate),
+              !prioritizedTiers.contains(normalized) else {
+            continue
+        }
+        prioritizedTiers.append(normalized)
+    }
+
+    for tier in prioritizedTiers {
+        if let matchingJob = eligibleStates.first(where: {
+            AlphaCapabilityTier.assistantSelectionsMatch($0.tier, tier)
+        }) {
+            return matchingJob
+        }
+    }
+
+    return eligibleStates.first
 }
 
 func alphaAssistantActivityDetail(

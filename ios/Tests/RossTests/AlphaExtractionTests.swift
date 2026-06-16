@@ -8725,6 +8725,37 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     @MainActor
+    func testActiveSetupJobPrefersSelectedTierJobOverEarlierOtherTierJob() {
+        let model = AlphaRossModel(previewState: .empty())
+        model.selectedTier = .quickStart
+        model.persisted.settings.activeTier = .caseAssociate
+        model.persisted.modelJobs = [
+            AlphaModelDownloadJob(
+                sessionId: "case-job",
+                packId: "case-pack",
+                tier: .caseAssociate,
+                state: .queued,
+                networkPolicy: .wifiOnly,
+                bytesDownloaded: 0,
+                totalBytes: 20,
+                checksumSha256: ""
+            ),
+            AlphaModelDownloadJob(
+                sessionId: "quick-job",
+                packId: "quick-pack",
+                tier: .quickStart,
+                state: .downloading,
+                networkPolicy: .wifiOnly,
+                bytesDownloaded: 5,
+                totalBytes: 20,
+                checksumSha256: ""
+            )
+        ]
+
+        XCTAssertEqual(alphaActiveSetupJob(model)?.packId, "quick-pack")
+    }
+
+    @MainActor
     func testUpsertJobReusesLegacyFlashEntryForQuickStart() {
         let model = AlphaRossModel(previewState: .empty())
         let legacyJob = AlphaModelDownloadJob(
