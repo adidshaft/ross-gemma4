@@ -849,6 +849,7 @@ struct AlphaPrivateAIOfferCard: View {
                         sizeLabel: setupPresentation?.sizeLabel ?? rossLocalized("assistant_state_checking"),
                         runtimeLabel: setupPresentation?.runtimeMode.displayLabel,
                         companionLabel: setupPresentation?.companionLabel,
+                        etaLabel: setupPresentation?.etaLabel,
                         freeSpaceLabel: model.freeDiskSpaceLabel,
                         font: .caption2.weight(.medium)
                     )

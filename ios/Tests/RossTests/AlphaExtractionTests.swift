@@ -9331,6 +9331,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.totalDownloadBytes, 6_400_000_000)
         XCTAssertEqual(presentation?.sizeLabel, "6.4 GB")
         XCTAssertEqual(presentation?.companionLabel, rossLocalized("assistant_meta_speed_companion"))
+        XCTAssertEqual(presentation?.etaLabel, "about 9 min")
     }
 
     func testAssistantSetupPresentationFallsBackToGGUFAfterSlowInstalledMLXRun() {
@@ -9382,6 +9383,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.totalDownloadBytes, 7_400_000_000)
         XCTAssertEqual(presentation?.sizeLabel, "7.4 GB")
         XCTAssertNil(presentation?.companionLabel)
+        XCTAssertEqual(presentation?.etaLabel, "about 11 min")
     }
 
     func testAssistantSetupPresentationFallsBackToCachedDownloadWhenCatalogMissing() {
@@ -9412,6 +9414,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(presentation?.sizeLabel, "6.2 GB")
         XCTAssertNil(presentation?.companionLabel)
+        XCTAssertEqual(presentation?.etaLabel, "about 9 min")
     }
 
     func testAssistantSetupPresentationUsesBundledMLXWhenPreferredMetadataIsMissing() {
@@ -9427,6 +9430,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.totalDownloadBytes, 13_380_656_577)
         XCTAssertEqual(presentation?.sizeLabel, alphaAssistantStorageSizeLabel(13_380_656_577))
         XCTAssertEqual(presentation?.companionLabel, rossLocalized("assistant_meta_speed_companion"))
+        XCTAssertEqual(presentation?.etaLabel, "about 19 min")
     }
 
     func testAssistantSetupPresentationUsesMLXWhenSystemAssistantIsAvailableOnCapablePhone() {
@@ -9442,6 +9446,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.totalDownloadBytes, 13_380_656_577)
         XCTAssertEqual(presentation?.sizeLabel, alphaAssistantStorageSizeLabel(13_380_656_577))
         XCTAssertEqual(presentation?.companionLabel, rossLocalized("assistant_meta_speed_companion"))
+        XCTAssertEqual(presentation?.etaLabel, "about 19 min")
     }
 
     func testAssistantSetupPresentationUsesBuiltInCoreAIWhenAvailableOnNonPhone() {
@@ -9457,6 +9462,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.totalDownloadBytes, 0)
         XCTAssertEqual(presentation?.sizeLabel, rossLocalized("assistant_meta_no_download"))
         XCTAssertNil(presentation?.companionLabel)
+        XCTAssertNil(presentation?.etaLabel)
     }
 
     #if canImport(FoundationModels)
@@ -9511,6 +9517,19 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.totalDownloadBytes, 0)
         XCTAssertEqual(presentation?.sizeLabel, rossLocalized("assistant_meta_no_download"))
         XCTAssertNil(presentation?.companionLabel)
+        XCTAssertNil(presentation?.etaLabel)
+    }
+
+    func testAssistantSetupEtaLabelOmitsNoDownloadAndRoundsUpEstimate() {
+        XCTAssertNil(alphaAssistantSetupEtaLabel(totalDownloadBytes: 0, languageCode: "en"))
+        XCTAssertEqual(
+            alphaAssistantSetupEtaLabel(totalDownloadBytes: 720_000_000, languageCode: "en"),
+            "about 1 min"
+        )
+        XCTAssertEqual(
+            alphaAssistantSetupEtaLabel(totalDownloadBytes: 13_380_656_577, languageCode: "en"),
+            "about 19 min"
+        )
     }
 
     @available(iOS 26.0, macOS 26.0, *)

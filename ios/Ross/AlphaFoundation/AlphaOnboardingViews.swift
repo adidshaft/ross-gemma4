@@ -451,12 +451,7 @@ struct AlphaOnboardingDownloadCard: View {
     var compact = false
 
     private var etaLabel: String {
-        switch tier {
-        case .flash:              return "~1 min"
-        case .quickStart:         return "~3 min"
-        case .caseAssociate:      return "~10 min"
-        case .seniorDraftingSupport: return "~30 min"
-        }
+        tier.setupTimeLabel
     }
 
     private var tierIcon: String {
@@ -679,15 +674,6 @@ struct AlphaModelPickerRow: View {
     let isRecommended: Bool
     let onSelect: () -> Void
 
-    private var etaLabel: String {
-        switch tier {
-        case .flash:                 return "~1 min"
-        case .quickStart:            return "~3 min"
-        case .caseAssociate:         return "~10 min"
-        case .seniorDraftingSupport: return "~30 min"
-        }
-    }
-
     private var tierIcon: String {
         switch tier {
         case .flash:                 return "paperplane.fill"
@@ -743,7 +729,7 @@ struct AlphaModelPickerRow: View {
                                 sizeLabel: setupPresentation.sizeLabel,
                                 runtimeLabel: setupPresentation.runtimeMode.displayLabel,
                                 companionLabel: setupPresentation.companionLabel,
-                                etaLabel: etaLabel,
+                                etaLabel: setupPresentation.etaLabel,
                                 freeSpaceLabel: model.freeDiskSpaceLabel,
                                 font: .caption.weight(.medium)
                             )

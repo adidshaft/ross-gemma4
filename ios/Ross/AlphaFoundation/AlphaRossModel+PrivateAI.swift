@@ -752,6 +752,20 @@ struct AlphaAssistantSetupPresentation: Equatable, Sendable {
     let sizeLabel: String
     let totalDownloadBytes: Int64
     let companionLabel: String?
+    let etaLabel: String?
+}
+
+func alphaAssistantSetupEtaLabel(
+    totalDownloadBytes: Int64,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String? {
+    guard totalDownloadBytes > 0 else { return nil }
+    let assumedBytesPerSecond = 12_000_000.0 // Conservative 12 MB/s Wi-Fi estimate.
+    let minutes = max(1, Int(ceil(Double(totalDownloadBytes) / assumedBytesPerSecond / 60)))
+    return String(
+        format: rossLocalized("assistant_setup_time_about_minutes", languageCode: languageCode),
+        minutes
+    )
 }
 
 private func alphaExistingRuntimeMode(
@@ -821,7 +835,8 @@ func alphaAssistantSetupPresentation(
             runtimeMode: .appleFoundationModels,
             sizeLabel: rossLocalized("assistant_meta_no_download"),
             totalDownloadBytes: 0,
-            companionLabel: nil
+            companionLabel: nil,
+            etaLabel: nil
         )
     }
 
@@ -840,7 +855,8 @@ func alphaAssistantSetupPresentation(
         runtimeMode: descriptor.runtimeMode,
         sizeLabel: alphaAssistantStorageSizeLabel(totalDownloadBytes),
         totalDownloadBytes: totalDownloadBytes,
-        companionLabel: descriptor.draftArtifact == nil ? nil : rossLocalized("assistant_meta_speed_companion")
+        companionLabel: descriptor.draftArtifact == nil ? nil : rossLocalized("assistant_meta_speed_companion"),
+        etaLabel: alphaAssistantSetupEtaLabel(totalDownloadBytes: totalDownloadBytes)
     )
 }
 
