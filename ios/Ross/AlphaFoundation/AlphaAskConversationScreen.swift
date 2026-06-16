@@ -638,12 +638,28 @@ struct AlphaFullScreenChatTurn: View {
                         alphaCopyAskResultToPasteboard(result)
                         alphaHaptic(.light)
                     }
-                    AlphaCleanAnswerHeader<EmptyView>(
-                        title: result.answerTitle,
-                        continuationContext: result.answerContinuationContext,
-                        statusNote: deduplicatedStatusNote,
-                        onCopy: copyAnswerAction
-                    )
+                    if result.hasAnswerDetails {
+                        AlphaCleanAnswerHeader(
+                            title: result.answerTitle,
+                            continuationContext: result.answerContinuationContext,
+                            statusNote: deduplicatedStatusNote,
+                            onCopy: copyAnswerAction,
+                            menu: {
+                                Button {
+                                    onShowDetails(result)
+                                } label: {
+                                    Label(rossLocalized("answer_details"), systemImage: "info.circle")
+                                }
+                            }
+                        )
+                    } else {
+                        AlphaCleanAnswerHeader<EmptyView>(
+                            title: result.answerTitle,
+                            continuationContext: result.answerContinuationContext,
+                            statusNote: deduplicatedStatusNote,
+                            onCopy: copyAnswerAction
+                        )
+                    }
 
                     ForEach(Array(answerItems.enumerated()), id: \.element.id) { index, section in
                         VStack(alignment: .leading, spacing: 10) {
@@ -689,6 +705,16 @@ struct AlphaFullScreenChatTurn: View {
                         alphaCopyAskResultToPasteboard(result)
                     } label: {
                         Label(rossLocalized("copy_answer"), systemImage: "doc.on.doc")
+                    }
+                }
+                .accessibilityActions {
+                    if result.hasAnswerDetails {
+                        Button(rossLocalized("answer_details")) {
+                            onShowDetails(result)
+                        }
+                    }
+                    Button(rossLocalized("copy_answer")) {
+                        alphaCopyAskResultToPasteboard(result)
                     }
                 }
             }

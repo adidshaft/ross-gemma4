@@ -1055,6 +1055,16 @@ struct AlphaInlineAskResponseCard: View {
                 Label(rossLocalized("copy_answer"), systemImage: "doc.on.doc")
             }
         }
+        .accessibilityActions {
+            if result.hasAnswerDetails {
+                Button(rossLocalized("answer_details")) {
+                    onShowDetails(result)
+                }
+            }
+            Button(rossLocalized("copy_answer")) {
+                alphaCopyAskResultToPasteboard(result)
+            }
+        }
         .gesture(
             DragGesture(minimumDistance: 20, coordinateSpace: .local)
                 .onEnded { value in
