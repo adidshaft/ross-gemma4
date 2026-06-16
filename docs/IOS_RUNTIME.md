@@ -7,7 +7,7 @@ Ross no longer uses the old `Gemma4DemoRuntime`-only path described in earlier n
 | Lane | Code path | Status |
 | --- | --- | --- |
 | Deterministic development runtime | `AlphaLocalModelRuntime` deterministic provider | Used by tests and local CI-style validation. It must not be claimed as real model execution. |
-| GGUF llama.cpp runtime | `AlphaLlamaCppEngine` and `AlphaLlamaCppProvider` | Simulator smoke passed on June 2, 2026 with a local GGUF developer artifact. The project is currently pinned to `llama.swift` `2.9661.0`, and the GGUF lane now exposes speculative draft acceleration for Gemma 4 MTP companions while the visible 3-pack ladder points at the newer Unsloth QAT GGUF repos. |
+| GGUF llama.cpp runtime | `AlphaLlamaCppEngine` and `AlphaLlamaCppProvider` | Simulator smoke passed on June 2, 2026 with a local GGUF developer artifact. The project is currently pinned to `llama.swift` `2.9664.0` as of June 16, 2026, which resolves the newer upstream `llama.cpp` Apple XCFramework build `b9664`, and the GGUF lane now exposes speculative draft acceleration for Gemma 4 MTP companions while the visible 3-pack ladder points at the newer Unsloth QAT GGUF repos. |
 | MLX local-directory runtime | `AlphaMLXLocalProvider` with `mlx-swift-lm` | Supported as an iPhone/macOS path for MLX model directories. The installer can unpack ZIP-packaged MLX directories, and the E4B / 12B MLX tiers now accept official Gemma 4 assistant draft companions for speculative decoding. Physical iPhone validation is still pending. |
 | Apple on-device assistant path | `apple_foundation_models` pack mode | Available only when the OS/device supports it and explicit runtime checks pass. |
 

@@ -81,9 +81,9 @@ Embedding model:
 
 ## iPhone Runtime Notes
 
-- `ios/Package.swift` now pins `llama.swift` with `.upToNextMajor(from: "2.9661.0")`.
+- `ios/Package.swift` now pins `llama.swift` with `.upToNextMajor(from: "2.9664.0")`.
 - The visible GGUF ladder now points at the newer Unsloth QAT repos while keeping MTP draft heads enabled.
-- `ios/Package.resolved` currently resolves commit `98d472463b5d3bf6de1340f41da91b702b841713`.
+- `ios/Package.resolved` currently resolves commit `52b4f0de9fc8d7c105172e570e35b5b4dc40976b`.
 - Context windows now scale by pack and device RAM:
   - Basic: about 10k to 20k tokens
   - Standard: about 18k to 32k tokens
