@@ -67,9 +67,9 @@ Legacy compatibility note:
 - package URL: `https://github.com/mattt/llama.swift`
 - status: active and currently pinned in Ross
 - chosen: yes
-- current Ross package floor: `2.9670.0`
-- current resolved revision: `9018836a615e1076bbde40c287099d06a95c397d`
-- current upstream binary lane: `llama.cpp` Apple XCFramework `b9670`
+- current Ross package floor: `2.9672.0`
+- current resolved revision: `c3e6e06277638dc253c1e2f0ea52aab225343548`
+- current upstream binary lane: `llama.cpp` Apple XCFramework `b9672`
 - role in Ross: default GGUF path, including speculative draft companions for the visible 3-pack ladder
 
 ### MLX Swift lane
