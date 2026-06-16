@@ -969,6 +969,10 @@ struct AlphaInlineAskResponseCard: View {
     let onOpenConversation: () -> Void
     let onClose: () -> Void
 
+    private var responseActions: [AlphaInlineAskResponseAction] {
+        result.inlineResponseActions()
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             if result.isPendingLocalModelResponse {
@@ -1000,20 +1004,14 @@ struct AlphaInlineAskResponseCard: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     Spacer(minLength: 8)
-                    HStack(spacing: 8) {
-                        if result.hasAnswerDetails {
-                            AlphaInlineAskResponseAccessoryButton(
-                                systemImage: "info.circle",
-                                accessibilityLabel: rossLocalized("answer_details"),
-                                action: { onShowDetails(result) }
-                            )
+                    Menu {
+                        ForEach(responseActions, id: \.rawValue) { action in
+                            inlineActionButton(action)
                         }
-                        AlphaInlineAskResponseAccessoryButton(
-                            systemImage: "xmark",
-                            accessibilityLabel: rossLocalized("dismiss"),
-                            action: onClose
-                        )
+                    } label: {
+                        AlphaInlineAskResponseAccessoryLabel(systemImage: "ellipsis")
                     }
+                    .accessibilityLabel(rossLocalized("more_answer_actions"))
                 }
 
                 ForEach(result.answerSectionItems(limit: 2)) { section in
@@ -1049,27 +1047,15 @@ struct AlphaInlineAskResponseCard: View {
         )
         .shadow(color: Color.rossShadow.opacity(0.035), radius: 5, y: 1)
         .contextMenu {
-            if result.hasAnswerDetails {
-                Button {
-                    onShowDetails(result)
-                } label: {
-                    Label(rossLocalized("answer_details"), systemImage: "info.circle")
-                }
-            }
-            Button {
-                alphaCopyAskResultToPasteboard(result)
-            } label: {
-                Label(rossLocalized("copy_answer"), systemImage: "doc.on.doc")
+            ForEach(responseActions, id: \.rawValue) { action in
+                inlineActionButton(action)
             }
         }
         .accessibilityActions {
-            if result.hasAnswerDetails {
-                Button(rossLocalized("answer_details")) {
-                    onShowDetails(result)
+            ForEach(responseActions, id: \.rawValue) { action in
+                Button(accessibilityTitle(for: action)) {
+                    perform(action)
                 }
-            }
-            Button(rossLocalized("copy_answer")) {
-                alphaCopyAskResultToPasteboard(result)
             }
         }
         .gesture(
@@ -1083,6 +1069,98 @@ struct AlphaInlineAskResponseCard: View {
                 }
         )
     }
+
+    private func perform(_ action: AlphaInlineAskResponseAction) {
+        switch action {
+        case .answerDetails:
+            onShowDetails(result)
+        case .copyAnswer:
+            alphaCopyAskResultToPasteboard(result)
+        case .dismiss:
+            onClose()
+        }
+    }
+
+    @ViewBuilder
+    private func inlineActionButton(_ action: AlphaInlineAskResponseAction) -> some View {
+        switch action {
+        case .answerDetails:
+            Button {
+                perform(.answerDetails)
+            } label: {
+                Label(rossLocalized("answer_details"), systemImage: "info.circle")
+            }
+        case .copyAnswer:
+            Button {
+                perform(.copyAnswer)
+            } label: {
+                Label(rossLocalized("copy_answer"), systemImage: "doc.on.doc")
+            }
+        case .dismiss:
+            Button(role: .destructive) {
+                perform(.dismiss)
+            } label: {
+                Label(rossLocalized("dismiss"), systemImage: "xmark")
+            }
+        }
+    }
+
+    private func accessibilityTitle(for action: AlphaInlineAskResponseAction) -> String {
+        switch action {
+        case .answerDetails:
+            rossLocalized("answer_details")
+        case .copyAnswer:
+            rossLocalized("copy_answer")
+        case .dismiss:
+            rossLocalized("dismiss")
+        }
+    }
+}
+
+enum AlphaInlineAskResponseAction: String {
+    case answerDetails
+    case copyAnswer
+    case dismiss
+}
+
+extension AlphaAskResult {
+    func inlineResponseActions() -> [AlphaInlineAskResponseAction] {
+        var actions: [AlphaInlineAskResponseAction] = []
+        if hasAnswerDetails {
+            actions.append(.answerDetails)
+        }
+        actions.append(.copyAnswer)
+        actions.append(.dismiss)
+        return actions
+    }
+}
+
+private struct AlphaInlineAskResponseAccessoryLabel: View {
+    let systemImage: String
+
+    var body: some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            icon(foregroundOpacity: 0.62)
+                .glassEffect(.regular.interactive())
+                .tint(Color.rossHighlight)
+        } else {
+            icon(foregroundOpacity: 0.45)
+                .rossNativeGlassSurface(
+                    tint: Color.rossHighlight,
+                    shape: Circle(),
+                    interactive: true,
+                    fallbackFillOpacity: 0.68,
+                    fallbackStrokeOpacity: 0.36
+                )
+        }
+    }
+
+    private func icon(foregroundOpacity: Double) -> some View {
+        Image(systemName: systemImage)
+            .font(.caption.weight(.bold))
+            .foregroundStyle(Color.rossInk.opacity(foregroundOpacity))
+            .frame(width: 32, height: 32)
+    }
 }
 
 private struct AlphaInlineAskResponseAccessoryButton: View {
@@ -1093,32 +1171,17 @@ private struct AlphaInlineAskResponseAccessoryButton: View {
     var body: some View {
         if #available(iOS 26.0, macOS 26.0, *) {
             Button(action: action) {
-                icon(foregroundOpacity: 0.62)
+                AlphaInlineAskResponseAccessoryLabel(systemImage: systemImage)
             }
-            .buttonStyle(.glass)
-            .tint(Color.rossHighlight)
+            .buttonStyle(.plain)
             .accessibilityLabel(accessibilityLabel)
         } else {
             Button(action: action) {
-                icon(foregroundOpacity: 0.45)
-                    .rossNativeGlassSurface(
-                        tint: Color.rossHighlight,
-                        shape: Circle(),
-                        interactive: true,
-                        fallbackFillOpacity: 0.68,
-                        fallbackStrokeOpacity: 0.36
-                    )
+                AlphaInlineAskResponseAccessoryLabel(systemImage: systemImage)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(accessibilityLabel)
         }
-    }
-
-    private func icon(foregroundOpacity: Double) -> some View {
-        Image(systemName: systemImage)
-            .font(.caption.weight(.bold))
-            .foregroundStyle(Color.rossInk.opacity(foregroundOpacity))
-            .frame(width: 32, height: 32)
     }
 }
 

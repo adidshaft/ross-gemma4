@@ -4247,6 +4247,52 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(result.hasAnswerDetails)
     }
 
+    func testInlineResponseActionsIncludeHiddenAnswerDetailsWhenAvailable() {
+        let invocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.appleFoundationModels.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.quickStart.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            status: .complete
+        )
+        var result = baseAskResult()
+        result.modelInvocation = invocation
+
+        XCTAssertEqual(
+            result.inlineResponseActions(),
+            [.answerDetails, .copyAnswer, .dismiss]
+        )
+    }
+
+    func testInlineResponseActionsHideAnswerDetailsWhenUnavailable() {
+        let result = AlphaAskResult(
+            chatSessionID: nil,
+            chatTurnID: nil,
+            kind: .userAsk,
+            question: "Any update?",
+            scopeCaseID: nil,
+            scopeLabel: "All work",
+            selectedDocumentTitles: [],
+            answerTitle: "No answer details",
+            answerSections: ["Nothing extra here."],
+            caseFileSources: [],
+            publicLawPreview: nil,
+            publicLawResults: [],
+            statusNote: nil,
+            needsReviewWarning: nil
+        )
+
+        XCTAssertEqual(
+            result.inlineResponseActions(),
+            [.copyAnswer, .dismiss]
+        )
+    }
+
     func testAnswerDetailReviewedSourceSectionsLabelIgnoresMatterMemoryBlocks() {
         let invocation = AlphaLocalModelInvocation(
             task: .matterQuestionAnswer,
