@@ -1049,6 +1049,13 @@ struct AlphaInlineAskResponseCard: View {
         result.inlineResponseActions(canRetryUpgrade: canRetryUpgrade)
     }
 
+    private var menuResponseActions: [AlphaInlineAskResponseAction] {
+        if result.hasAnswerDetails {
+            return responseActions.filter { $0 != .answerDetails }
+        }
+        return responseActions
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             if result.isPendingLocalModelResponse {
@@ -1080,8 +1087,17 @@ struct AlphaInlineAskResponseCard: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     Spacer(minLength: 8)
+                    if result.hasAnswerDetails {
+                        Button {
+                            onShowDetails(result)
+                        } label: {
+                            AlphaInlineAskResponseAccessoryLabel(systemImage: "info.circle")
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(rossLocalized("answer_details"))
+                    }
                     Menu {
-                        ForEach(responseActions, id: \.rawValue) { action in
+                        ForEach(menuResponseActions, id: \.rawValue) { action in
                             inlineActionButton(action)
                         }
                     } label: {

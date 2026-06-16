@@ -693,6 +693,9 @@ struct AlphaFullScreenChatTurn: View {
                             title: result.answerTitle,
                             continuationContext: result.answerContinuationContext,
                             statusNote: deduplicatedStatusNote,
+                            onShowDetails: {
+                                onShowDetails(result)
+                            },
                             onCopy: copyAnswerAction,
                             menu: {
                                 if canRetryUpgrade {
@@ -707,11 +710,6 @@ struct AlphaFullScreenChatTurn: View {
                                             systemImage: "arrow.clockwise"
                                         )
                                     }
-                                }
-                                Button {
-                                    onShowDetails(result)
-                                } label: {
-                                    Label(rossLocalized("answer_details"), systemImage: "info.circle")
                                 }
                             }
                         )
@@ -1910,6 +1908,7 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
     let title: String
     let continuationContext: AlphaAnswerContinuationContext?
     let statusNote: String?
+    let onShowDetails: (() -> Void)?
     let onCopy: () -> Void
     let showsMenu: Bool
     @ViewBuilder var menu: () -> MenuContent
@@ -1918,12 +1917,14 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
         title: String,
         continuationContext: AlphaAnswerContinuationContext? = nil,
         statusNote: String?,
+        onShowDetails: (() -> Void)? = nil,
         onCopy: @escaping () -> Void,
         @ViewBuilder menu: @escaping () -> MenuContent
     ) {
         self.title = title
         self.continuationContext = continuationContext
         self.statusNote = AlphaCleanAnswerHeader.cleanedStatusNote(statusNote)
+        self.onShowDetails = onShowDetails
         self.onCopy = onCopy
         self.showsMenu = true
         self.menu = menu
@@ -1938,6 +1939,7 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
         self.title = title
         self.continuationContext = continuationContext
         self.statusNote = AlphaCleanAnswerHeader.cleanedStatusNote(statusNote)
+        self.onShowDetails = nil
         self.onCopy = onCopy
         self.showsMenu = false
         self.menu = { EmptyView() }
@@ -1958,6 +1960,14 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
                     .fixedSize(horizontal: false, vertical: true)
 
                 Spacer(minLength: 8)
+
+                if let onShowDetails {
+                    AlphaAnswerAccessoryIconButton(
+                        systemImage: "info.circle",
+                        accessibilityLabel: rossLocalized("answer_details"),
+                        action: onShowDetails
+                    )
+                }
 
                 AlphaCleanAnswerCopyButton(action: onCopy)
 
