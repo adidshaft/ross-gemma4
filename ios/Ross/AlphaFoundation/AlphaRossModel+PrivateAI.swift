@@ -191,6 +191,13 @@ func alphaShouldReuseInstalledAssistantPack(
         return false
     }
 
+    let hasExplicitTargetPack = !(targetPackId?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+    if !hasExplicitTargetPack,
+       let preferredDescriptor,
+       preferredDescriptor.runtimeMode != preferredRuntimeMode {
+        return false
+    }
+
     if let preferredDescriptor {
         return alphaInstalledAssistantPackMatchesDownloadDescriptor(pack, descriptor: preferredDescriptor)
     }

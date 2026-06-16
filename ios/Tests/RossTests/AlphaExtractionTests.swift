@@ -6746,6 +6746,40 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testDoNotReuseInstalledAssistantPackWhenFallbackDescriptorUsesStaleRuntime() {
+        let pack = installedPack(
+            .caseAssociate,
+            runtimeMode: .llamaCppGguf,
+            packId: "gemma-4-12b-gguf",
+            installPath: "model-packs/case_associate/gemma-4-12B-it-UD-Q4_K_XL.gguf",
+            checksum: String(repeating: "a", count: 64),
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+        let staleFallback = AlphaAssistantDownloadDescriptor(
+            sessionId: nil,
+            packId: "gemma-4-12b-gguf",
+            tier: .caseAssociate,
+            fileName: "gemma-4-12B-it-UD-Q4_K_XL.gguf",
+            sizeBytes: 7_381_382_048,
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            downloadURLString: "https://ross.example/artifacts/gemma-4-12b-it.gguf",
+            verified: true,
+            releaseReady: true
+        )
+
+        XCTAssertFalse(
+            alphaShouldReuseInstalledAssistantPack(
+                pack,
+                preferredRuntimeMode: .mlxSwiftLm,
+                preferredDescriptor: staleFallback
+            )
+        )
+    }
+
     func testInstalledAssistantPackMatchesResolvedDownloadDescriptor() {
         let pack = installedPack(
             .caseAssociate,
