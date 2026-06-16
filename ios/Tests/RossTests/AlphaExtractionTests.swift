@@ -10491,6 +10491,8 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(presentation?.totalDownloadBytes, 6_400_000_000)
         XCTAssertEqual(presentation?.sizeLabel, "6.4 GB")
+        XCTAssertEqual(presentation?.speedLabel, "~13 tok/s")
+        XCTAssertEqual(presentation?.contextLabel, "24,576 tokens")
         XCTAssertEqual(presentation?.companionLabel, rossLocalized("assistant_meta_speed_companion"))
         XCTAssertEqual(presentation?.etaLabel, "about 9 min")
     }
@@ -10545,6 +10547,8 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.runtimeMode, .llamaCppGguf)
         XCTAssertEqual(presentation?.totalDownloadBytes, 6_970_062_656)
         XCTAssertEqual(presentation?.sizeLabel, "7.0 GB")
+        XCTAssertEqual(presentation?.speedLabel, "~10 tok/s")
+        XCTAssertEqual(presentation?.contextLabel, "28,672 tokens")
         XCTAssertNil(presentation?.companionLabel)
         XCTAssertEqual(presentation?.etaLabel, "about 10 min")
     }
@@ -10597,6 +10601,8 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.runtimeMode, .llamaCppGguf)
         XCTAssertEqual(presentation?.totalDownloadBytes, 6_970_062_656)
         XCTAssertEqual(presentation?.sizeLabel, "7.0 GB")
+        XCTAssertEqual(presentation?.speedLabel, "~10 tok/s")
+        XCTAssertEqual(presentation?.contextLabel, "28,672 tokens")
         XCTAssertNil(presentation?.companionLabel)
         XCTAssertEqual(presentation?.etaLabel, "about 10 min")
     }
@@ -10652,8 +10658,59 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(presentation?.totalDownloadBytes, 6_400_000_000)
         XCTAssertEqual(presentation?.sizeLabel, "6.4 GB")
+        XCTAssertEqual(presentation?.speedLabel, "~13 tok/s")
+        XCTAssertEqual(presentation?.contextLabel, "24,576 tokens")
         XCTAssertEqual(presentation?.companionLabel, rossLocalized("assistant_meta_speed_companion"))
         XCTAssertEqual(presentation?.etaLabel, "about 9 min")
+    }
+
+    func testAssistantSetupPresentationUsesMeasuredSpeedForMatchingRecentRuntime() {
+        let fastMLXInvocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 13.4,
+            timeToFirstTokenMs: 1_450,
+            status: .complete
+        )
+        let cachedMLX = AlphaAssistantCatalogDescriptor(
+            tier: .caseAssociate,
+            packId: "gemma-4-12b-mlx",
+            sizeBytes: 6_200_000_000,
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            draftArtifact: AlphaAssistantDraftArtifactDescriptor(
+                fileName: "gemma-4-e4b-it-mlx",
+                sizeBytes: 200_000_000,
+                checksumSha256: String(repeating: "b", count: 64),
+                artifactKind: "mlx_directory",
+                downloadURLString: "https://ross.example/drafts/gemma-4-e4b-it-mlx",
+                draftTokens: 6
+            )
+        )
+
+        let presentation = alphaAssistantSetupPresentation(
+            for: .caseAssociate,
+            existingRuntimeMode: .mlxSwiftLm,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24,
+            systemAssistantAvailable: false,
+            lastInvocation: fastMLXInvocation,
+            cachedCatalogs: [cachedMLX]
+        )
+
+        XCTAssertEqual(presentation?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(presentation?.speedLabel, "13 tok/s")
+        XCTAssertEqual(presentation?.contextLabel, "24,576 tokens")
     }
 
     func testPreferredAssistantSetupRuntimeModeDefaultsToGGUFForFreshProductionCaseAssociateSetup() {
@@ -10782,6 +10839,8 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(presentation?.totalDownloadBytes, 11_290_237_578)
         XCTAssertEqual(presentation?.sizeLabel, alphaAssistantStorageSizeLabel(11_290_237_578))
+        XCTAssertEqual(presentation?.speedLabel, "~13 tok/s")
+        XCTAssertEqual(presentation?.contextLabel, "24,576 tokens")
         XCTAssertEqual(presentation?.companionLabel, rossLocalized("assistant_meta_speed_companion"))
         XCTAssertEqual(presentation?.etaLabel, "about 16 min")
     }
@@ -10798,6 +10857,8 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(presentation?.totalDownloadBytes, 11_290_237_578)
         XCTAssertEqual(presentation?.sizeLabel, alphaAssistantStorageSizeLabel(11_290_237_578))
+        XCTAssertEqual(presentation?.speedLabel, "~13 tok/s")
+        XCTAssertEqual(presentation?.contextLabel, "24,576 tokens")
         XCTAssertEqual(presentation?.companionLabel, rossLocalized("assistant_meta_speed_companion"))
         XCTAssertEqual(presentation?.etaLabel, "about 16 min")
     }
@@ -10814,6 +10875,8 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.runtimeMode, .appleFoundationModels)
         XCTAssertEqual(presentation?.totalDownloadBytes, 0)
         XCTAssertEqual(presentation?.sizeLabel, rossLocalized("assistant_meta_no_download"))
+        XCTAssertEqual(presentation?.speedLabel, "~16 tok/s")
+        XCTAssertEqual(presentation?.contextLabel, "8,192 tokens")
         XCTAssertNil(presentation?.companionLabel)
         XCTAssertNil(presentation?.etaLabel)
     }
@@ -10830,6 +10893,8 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.runtimeMode, .appleFoundationModels)
         XCTAssertEqual(presentation?.totalDownloadBytes, 0)
         XCTAssertEqual(presentation?.sizeLabel, rossLocalized("assistant_meta_no_download"))
+        XCTAssertEqual(presentation?.speedLabel, "~14 tok/s")
+        XCTAssertEqual(presentation?.contextLabel, "12,288 tokens")
         XCTAssertNil(presentation?.companionLabel)
         XCTAssertNil(presentation?.etaLabel)
     }
@@ -10885,6 +10950,8 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.runtimeMode, .appleFoundationModels)
         XCTAssertEqual(presentation?.totalDownloadBytes, 0)
         XCTAssertEqual(presentation?.sizeLabel, rossLocalized("assistant_meta_no_download"))
+        XCTAssertEqual(presentation?.speedLabel, "~16 tok/s")
+        XCTAssertEqual(presentation?.contextLabel, "16,384 tokens")
         XCTAssertNil(presentation?.companionLabel)
         XCTAssertNil(presentation?.etaLabel)
     }
@@ -10906,6 +10973,8 @@ final class AlphaExtractionTests: XCTestCase {
             runtimeMode: .mlxSwiftLm,
             sizeLabel: "13.4 GB",
             totalDownloadBytes: 13_380_656_577,
+            speedLabel: "~13 tok/s",
+            contextLabel: "24,576 tokens",
             companionLabel: rossLocalized("assistant_meta_speed_companion"),
             etaLabel: "about 19 min"
         )
@@ -10918,6 +10987,8 @@ final class AlphaExtractionTests: XCTestCase {
             runtimeMode: .appleFoundationModels,
             sizeLabel: rossLocalized("assistant_meta_no_download"),
             totalDownloadBytes: 0,
+            speedLabel: "~14 tok/s",
+            contextLabel: "12,288 tokens",
             companionLabel: nil,
             etaLabel: nil
         )

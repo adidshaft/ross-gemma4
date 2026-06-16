@@ -844,8 +844,103 @@ struct AlphaAssistantSetupPresentation: Equatable, Sendable {
     let runtimeMode: AlphaPackRuntimeMode
     let sizeLabel: String
     let totalDownloadBytes: Int64
+    let speedLabel: String?
+    let contextLabel: String?
     let companionLabel: String?
     let etaLabel: String?
+}
+
+private func alphaAssistantSetupSpeedLabel(
+    for tier: AlphaCapabilityTier,
+    runtimeMode: AlphaPackRuntimeMode,
+    physicalMemoryBytes: UInt64,
+    hasDraftCompanion: Bool,
+    lastInvocation: AlphaLocalModelInvocation? = nil
+) -> String? {
+    let effectiveTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
+    if let lastInvocation,
+       lastInvocation.capabilityTier == effectiveTier.rawValue,
+       lastInvocation.runtimeMode == runtimeMode.rawValue,
+       let measuredSpeed = lastInvocation.estimatedOutputTokensPerSecond {
+        return alphaAssistantTokenRateLabel(tokensPerSecond: measuredSpeed)
+    }
+
+    let memoryGB = max(2, Int(physicalMemoryBytes / 1_073_741_824))
+    let baseSpeed: Double? = switch runtimeMode {
+    case .appleFoundationModels:
+        switch effectiveTier {
+        case .flash:
+            16
+        case .quickStart:
+            memoryGB >= 8 ? 16 : 14
+        case .caseAssociate:
+            memoryGB >= 16 ? 16 : 14
+        case .seniorDraftingSupport:
+            memoryGB >= 16 ? 14 : 12
+        }
+    case .mlxSwiftLm:
+        switch effectiveTier {
+        case .flash:
+            13
+        case .quickStart:
+            memoryGB >= 12 ? 15 : 13
+        case .caseAssociate:
+            memoryGB >= 16 ? 14 : (memoryGB >= 12 ? 12 : 10)
+        case .seniorDraftingSupport:
+            memoryGB >= 16 ? 12 : 10
+        }
+    case .llamaCppGguf:
+        switch effectiveTier {
+        case .flash:
+            memoryGB >= 8 ? 12 : 10
+        case .quickStart:
+            memoryGB >= 12 ? 11 : 9
+        case .caseAssociate:
+            memoryGB >= 16 ? 12 : (memoryGB >= 12 ? 10 : 8)
+        case .seniorDraftingSupport:
+            memoryGB >= 16 ? 10 : 8
+        }
+    case .deterministicDev, .mediapipeLlm, .unavailable:
+        nil
+    }
+
+    guard var baseSpeed else { return nil }
+    if hasDraftCompanion,
+       runtimeMode == .llamaCppGguf || runtimeMode == .mlxSwiftLm {
+        baseSpeed += 1
+    }
+    return "~\(alphaAssistantTokenRateLabel(tokensPerSecond: baseSpeed))"
+}
+
+private func alphaAssistantSetupContextLabel(
+    for tier: AlphaCapabilityTier,
+    runtimeMode: AlphaPackRuntimeMode,
+    physicalMemoryBytes: UInt64
+) -> String? {
+    let effectiveTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
+    let contextTokens: Int? = switch runtimeMode {
+    case .appleFoundationModels:
+        AlphaFoundationRuntimeProfile.contextWindowTokens(
+            for: effectiveTier,
+            physicalMemory: physicalMemoryBytes
+        )
+    case .mlxSwiftLm:
+        AlphaMLXRuntimeProfile.contextWindowTokens(
+            for: effectiveTier,
+            physicalMemory: physicalMemoryBytes
+        )
+    case .llamaCppGguf:
+        Int(
+            AlphaLlamaRuntimeProfile.contextWindowTokens(
+                forModelPath: alphaDefaultAssistantDownloadDescriptor(for: effectiveTier).fileName,
+                physicalMemory: physicalMemoryBytes
+            )
+        )
+    case .deterministicDev, .mediapipeLlm, .unavailable:
+        nil
+    }
+    guard let contextTokens else { return nil }
+    return alphaAssistantContextWindowLabel(tokens: contextTokens)
 }
 
 func alphaAssistantSetupEtaLabel(
@@ -1032,6 +1127,18 @@ func alphaAssistantSetupPresentation(
             runtimeMode: .appleFoundationModels,
             sizeLabel: rossLocalized("assistant_meta_no_download"),
             totalDownloadBytes: 0,
+            speedLabel: alphaAssistantSetupSpeedLabel(
+                for: tier,
+                runtimeMode: .appleFoundationModels,
+                physicalMemoryBytes: physicalMemoryBytes,
+                hasDraftCompanion: false,
+                lastInvocation: lastInvocation
+            ),
+            contextLabel: alphaAssistantSetupContextLabel(
+                for: tier,
+                runtimeMode: .appleFoundationModels,
+                physicalMemoryBytes: physicalMemoryBytes
+            ),
             companionLabel: nil,
             etaLabel: nil
         )
@@ -1052,6 +1159,18 @@ func alphaAssistantSetupPresentation(
         runtimeMode: descriptor.runtimeMode,
         sizeLabel: alphaAssistantStorageSizeLabel(totalDownloadBytes),
         totalDownloadBytes: totalDownloadBytes,
+        speedLabel: alphaAssistantSetupSpeedLabel(
+            for: tier,
+            runtimeMode: descriptor.runtimeMode,
+            physicalMemoryBytes: physicalMemoryBytes,
+            hasDraftCompanion: descriptor.draftArtifact != nil,
+            lastInvocation: lastInvocation
+        ),
+        contextLabel: alphaAssistantSetupContextLabel(
+            for: tier,
+            runtimeMode: descriptor.runtimeMode,
+            physicalMemoryBytes: physicalMemoryBytes
+        ),
         companionLabel: descriptor.draftArtifact == nil ? nil : rossLocalized("assistant_meta_speed_companion"),
         etaLabel: alphaAssistantSetupEtaLabel(totalDownloadBytes: totalDownloadBytes)
     )

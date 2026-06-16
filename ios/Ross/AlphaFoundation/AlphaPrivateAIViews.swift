@@ -871,12 +871,18 @@ struct AlphaPrivateAIOfferCard: View {
                     .fixedSize(horizontal: false, vertical: true)
 
                 if prefersBuiltInActivation {
-                    AlphaAssistantBuiltInMetaLabels(font: .caption2.weight(.medium))
+                    AlphaAssistantBuiltInMetaLabels(
+                        speedLabel: setupPresentation?.speedLabel,
+                        contextLabel: setupPresentation?.contextLabel,
+                        font: .caption2.weight(.medium)
+                    )
                         .padding(.top, 2)
                 } else {
                     AlphaAssistantSetupMetaLabels(
                         sizeLabel: setupPresentation?.sizeLabel ?? rossLocalized("assistant_state_checking"),
                         runtimeLabel: setupPresentation?.runtimeMode.displayLabel,
+                        speedLabel: setupPresentation?.speedLabel,
+                        contextLabel: setupPresentation?.contextLabel,
                         companionLabel: setupPresentation?.companionLabel,
                         etaLabel: setupPresentation?.etaLabel,
                         freeSpaceLabel: model.freeDiskSpaceLabel,
@@ -1166,6 +1172,8 @@ private struct AlphaPrivateAIOfferSurface: ViewModifier {
 }
 
 struct AlphaAssistantBuiltInMetaLabels: View {
+    var speedLabel: String? = nil
+    var contextLabel: String? = nil
     var font: Font = .caption.weight(.medium)
 
     var body: some View {
@@ -1173,11 +1181,23 @@ struct AlphaAssistantBuiltInMetaLabels: View {
             HStack(spacing: 10) {
                 metaLabel(rossLocalized("assistant_meta_no_download"), systemImage: "checkmark.circle")
                 metaLabel(rossLocalized("assistant_meta_built_in"), systemImage: "iphone")
+                if let speedLabel {
+                    metaLabel(speedLabel, systemImage: "speedometer")
+                }
+                if let contextLabel {
+                    metaLabel(contextLabel, systemImage: "square.stack.3d.up")
+                }
             }
 
             VStack(alignment: .leading, spacing: 4) {
                 metaLabel(rossLocalized("assistant_meta_no_download"), systemImage: "checkmark.circle")
                 metaLabel(rossLocalized("assistant_meta_built_in"), systemImage: "iphone")
+                if let speedLabel {
+                    metaLabel(speedLabel, systemImage: "speedometer")
+                }
+                if let contextLabel {
+                    metaLabel(contextLabel, systemImage: "square.stack.3d.up")
+                }
             }
         }
         .font(font)

@@ -230,6 +230,14 @@ struct AlphaOnboardingModelSelector: View {
         model.assistantSetupPresentation(for: selectedTier)?.etaLabel
     }
 
+    private var selectedSpeedLabel: String? {
+        model.assistantSetupPresentation(for: selectedTier)?.speedLabel
+    }
+
+    private var selectedContextLabel: String? {
+        model.assistantSetupPresentation(for: selectedTier)?.contextLabel
+    }
+
     private var selectedCompanionLabel: String? {
         model.assistantSetupPresentation(for: selectedTier)?.companionLabel
     }
@@ -274,6 +282,8 @@ struct AlphaOnboardingModelSelector: View {
             AlphaAssistantSetupMetaLabels(
                 sizeLabel: selectedSizeLabel,
                 runtimeLabel: selectedRuntimeLabel,
+                speedLabel: selectedSpeedLabel,
+                contextLabel: selectedContextLabel,
                 companionLabel: selectedCompanionLabel,
                 etaLabel: selectedEtaLabel,
                 freeSpaceLabel: model.freeDiskSpaceLabel,
@@ -322,6 +332,14 @@ struct AlphaOnboardingModelChoiceRow: View {
 
     private var etaLabel: String? {
         model.assistantSetupPresentation(for: tier)?.etaLabel
+    }
+
+    private var speedLabel: String? {
+        model.assistantSetupPresentation(for: tier)?.speedLabel
+    }
+
+    private var contextLabel: String? {
+        model.assistantSetupPresentation(for: tier)?.contextLabel
     }
 
     private var companionLabel: String? {
@@ -380,6 +398,8 @@ struct AlphaOnboardingModelChoiceRow: View {
                     AlphaAssistantSetupMetaLabels(
                         sizeLabel: sizeLabel,
                         runtimeLabel: runtimeLabel,
+                        speedLabel: speedLabel,
+                        contextLabel: contextLabel,
                         companionLabel: companionLabel,
                         etaLabel: etaLabel,
                         freeSpaceLabel: model.freeDiskSpaceLabel,
@@ -857,6 +877,8 @@ private struct AlphaModelPickerRowSurface: ViewModifier {
 struct AlphaAssistantSetupMetaLabels: View {
     let sizeLabel: String
     var runtimeLabel: String?
+    var speedLabel: String? = nil
+    var contextLabel: String? = nil
     var companionLabel: String? = nil
     var etaLabel: String?
     let freeSpaceLabel: String
@@ -868,6 +890,12 @@ struct AlphaAssistantSetupMetaLabels: View {
                 metaLabel(sizeLabel, systemImage: "arrow.down.circle")
                 if let runtimeLabel {
                     metaLabel(runtimeLabel, systemImage: "cpu")
+                }
+                if let speedLabel {
+                    metaLabel(speedLabel, systemImage: "speedometer")
+                }
+                if let contextLabel {
+                    metaLabel(contextLabel, systemImage: "square.stack.3d.up")
                 }
                 if let companionLabel {
                     metaLabel(companionLabel, systemImage: "bolt.circle")
@@ -882,6 +910,12 @@ struct AlphaAssistantSetupMetaLabels: View {
                 metaLabel(sizeLabel, systemImage: "arrow.down.circle")
                 if let runtimeLabel {
                     metaLabel(runtimeLabel, systemImage: "cpu")
+                }
+                if let speedLabel {
+                    metaLabel(speedLabel, systemImage: "speedometer")
+                }
+                if let contextLabel {
+                    metaLabel(contextLabel, systemImage: "square.stack.3d.up")
                 }
                 if let companionLabel {
                     metaLabel(companionLabel, systemImage: "bolt.circle")
