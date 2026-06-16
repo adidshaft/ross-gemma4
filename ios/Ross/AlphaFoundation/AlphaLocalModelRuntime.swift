@@ -270,9 +270,9 @@ func alphaAskRuntimeSourcePackPolicy(
     switch runtimeMode {
     case .mlxSwiftLm:
         if capabilityTier == .caseAssociate || capabilityTier == .seniorDraftingSupport {
-            if baseMaxInputChars >= 52_000 {
+            if baseMaxInputChars >= 56_000 {
                 if hasSingleSelectedDocument {
-                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 20)
+                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 24)
                 }
                 return AlphaAskRuntimeSourcePackPolicy(
                     documentCandidateLimit: hasSelectedDocuments ? 4 : 7,
@@ -297,7 +297,7 @@ func alphaAskRuntimeSourcePackPolicy(
         if capabilityTier == .caseAssociate || capabilityTier == .seniorDraftingSupport {
             if baseMaxInputChars >= 48_000 {
                 if hasSingleSelectedDocument {
-                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 16)
+                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 18)
                 }
                 return AlphaAskRuntimeSourcePackPolicy(
                     documentCandidateLimit: hasSelectedDocuments ? 4 : 6,
@@ -328,7 +328,7 @@ func alphaAskRuntimeSourcePackPolicy(
         if capabilityTier == .caseAssociate || capabilityTier == .seniorDraftingSupport {
             if baseMaxInputChars >= 40_000 {
                 if hasSingleSelectedDocument {
-                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 16)
+                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 18)
                 }
                 return AlphaAskRuntimeSourcePackPolicy(
                     documentCandidateLimit: hasSelectedDocuments ? 4 : 7,
@@ -337,7 +337,7 @@ func alphaAskRuntimeSourcePackPolicy(
             }
             if baseMaxInputChars >= 28_000 {
                 if hasSingleSelectedDocument {
-                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 14)
+                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 16)
                 }
                 return AlphaAskRuntimeSourcePackPolicy(
                     documentCandidateLimit: hasSelectedDocuments ? 4 : 6,
@@ -430,20 +430,23 @@ enum AlphaLocalPromptBudgetPlanner {
     ) -> Int? {
         switch runtimeMode {
         case .mlxSwiftLm:
-            if baseMaxInputChars >= 52_000 {
-                return 20
+            if baseMaxInputChars >= 56_000 {
+                return 24
             }
-            return baseMaxInputChars >= 40_000 ? 16 : nil
+            if baseMaxInputChars >= 40_000 {
+                return 18
+            }
+            return nil
         case .llamaCppGguf:
             if baseMaxInputChars >= 48_000 {
-                return 16
+                return 18
             }
-            return baseMaxInputChars >= 40_000 ? 14 : nil
+            return baseMaxInputChars >= 40_000 ? 16 : nil
         case .appleFoundationModels:
             if baseMaxInputChars >= 40_000 {
-                return 16
+                return 18
             }
-            return baseMaxInputChars >= 28_000 ? 14 : nil
+            return baseMaxInputChars >= 28_000 ? 16 : nil
         default:
             return nil
         }

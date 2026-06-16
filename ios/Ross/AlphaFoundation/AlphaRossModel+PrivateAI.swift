@@ -89,6 +89,43 @@ struct AlphaAssistantDownloadDescriptor: Codable, Hashable, Sendable {
     var draftArtifact: AlphaAssistantDraftArtifactDescriptor? = nil
 }
 
+func alphaAssistantDraftArtifactRuntimeMode(
+    _ artifact: AlphaAssistantDraftArtifactDescriptor
+) -> AlphaPackRuntimeMode? {
+    if artifact.fileName.lowercased().hasSuffix(".gguf"),
+       artifact.artifactKind.localizedCaseInsensitiveContains("local_model_artifact") {
+        return .llamaCppGguf
+    }
+    if artifact.artifactKind == "mlx_directory" {
+        return .mlxSwiftLm
+    }
+    return nil
+}
+
+private func alphaAssistantDraftDownloadDescriptor(
+    from resolvedDownload: AlphaAssistantDownloadDescriptor,
+    draftArtifact: AlphaAssistantDraftArtifactDescriptor
+) -> AlphaAssistantDownloadDescriptor? {
+    guard let runtimeMode = alphaAssistantDraftArtifactRuntimeMode(draftArtifact) else {
+        return nil
+    }
+    return AlphaAssistantDownloadDescriptor(
+        sessionId: resolvedDownload.sessionId,
+        packId: resolvedDownload.packId,
+        tier: resolvedDownload.tier,
+        fileName: draftArtifact.fileName,
+        sizeBytes: draftArtifact.sizeBytes,
+        checksumSha256: draftArtifact.checksumSha256,
+        artifactKind: draftArtifact.artifactKind,
+        runtimeMode: runtimeMode,
+        developmentOnly: resolvedDownload.developmentOnly,
+        downloadURLString: draftArtifact.downloadURLString,
+        verified: resolvedDownload.verified,
+        releaseReady: resolvedDownload.releaseReady,
+        draftArtifact: nil
+    )
+}
+
 private func alphaReusableAssistantDownloadDescriptor(
     _ descriptor: AlphaAssistantDownloadDescriptor
 ) -> AlphaAssistantDownloadDescriptor {
@@ -109,49 +146,75 @@ private func alphaReusableAssistantDownloadDescriptor(
     )
 }
 
-private let alphaBundledMLXAssistantDownloadDescriptors: [AlphaCapabilityTier: AlphaAssistantDownloadDescriptor] = [
-    .quickStart: AlphaAssistantDownloadDescriptor(
-        sessionId: nil,
-        packId: "gemma-4-e4b-mlx",
-        tier: .quickStart,
-        fileName: "gemma-4-E4B-it-UD-MLX-4bit",
-        sizeBytes: 6_607_285_383,
-        checksumSha256: "1cbbb7a35d205bec7399d08789924d9468fedd3cb7a1d69cef6692bb6c52ee4a",
-        artifactKind: "mlx_directory",
-        runtimeMode: .mlxSwiftLm,
-        developmentOnly: false,
-        downloadURLString: "https://huggingface.co/unsloth/gemma-4-E4B-it-UD-MLX-4bit",
-        verified: true,
-        releaseReady: true
-    ),
-    .caseAssociate: AlphaAssistantDownloadDescriptor(
-        sessionId: nil,
-        packId: "gemma-4-12b-mlx",
-        tier: .caseAssociate,
-        fileName: "gemma-4-12B-it-4bit",
-        sizeBytes: 6_773_371_194,
-        checksumSha256: "d9fc0ba3bda46b9e055304345960a0c2f2894ed880d3e92fa3150cd96daaf7d3",
-        artifactKind: "mlx_directory",
-        runtimeMode: .mlxSwiftLm,
-        developmentOnly: false,
-        downloadURLString: "https://huggingface.co/mlx-community/gemma-4-12B-it-4bit",
-        verified: true,
-        releaseReady: true
-    ),
-    .seniorDraftingSupport: AlphaAssistantDownloadDescriptor(
-        sessionId: nil,
-        packId: "gemma-4-26b-a4b-mlx",
-        tier: .seniorDraftingSupport,
-        fileName: "gemma-4-26b-a4b-it-4bit",
-        sizeBytes: 15_641_238_917,
-        checksumSha256: "c55dd3aa3d278722835c83810a90016923471c49ce99d64e19203a62ec7ec755",
-        artifactKind: "mlx_directory",
-        runtimeMode: .mlxSwiftLm,
-        developmentOnly: false,
-        downloadURLString: "https://huggingface.co/mlx-community/gemma-4-26b-a4b-it-4bit",
-        verified: true,
-        releaseReady: true
+private func alphaBundledMLXDraftArtifact(
+    from descriptor: AlphaAssistantDownloadDescriptor,
+    draftTokens: Int? = nil
+) -> AlphaAssistantDraftArtifactDescriptor {
+    AlphaAssistantDraftArtifactDescriptor(
+        fileName: descriptor.fileName,
+        sizeBytes: descriptor.sizeBytes,
+        checksumSha256: descriptor.checksumSha256,
+        artifactKind: descriptor.artifactKind,
+        downloadURLString: descriptor.downloadURLString,
+        draftTokens: draftTokens
     )
+}
+
+private let alphaBundledMLXQuickStartAssistantDownloadDescriptor = AlphaAssistantDownloadDescriptor(
+    sessionId: nil,
+    packId: "gemma-4-e4b-mlx",
+    tier: .quickStart,
+    fileName: "gemma-4-E4B-it-UD-MLX-4bit",
+    sizeBytes: 6_607_285_383,
+    checksumSha256: "1cbbb7a35d205bec7399d08789924d9468fedd3cb7a1d69cef6692bb6c52ee4a",
+    artifactKind: "mlx_directory",
+    runtimeMode: .mlxSwiftLm,
+    developmentOnly: false,
+    downloadURLString: "https://huggingface.co/unsloth/gemma-4-E4B-it-UD-MLX-4bit",
+    verified: true,
+    releaseReady: true
+)
+
+private let alphaBundledMLXCaseAssociateAssistantDownloadDescriptor = AlphaAssistantDownloadDescriptor(
+    sessionId: nil,
+    packId: "gemma-4-12b-mlx",
+    tier: .caseAssociate,
+    fileName: "gemma-4-12B-it-4bit",
+    sizeBytes: 6_773_371_194,
+    checksumSha256: "d9fc0ba3bda46b9e055304345960a0c2f2894ed880d3e92fa3150cd96daaf7d3",
+    artifactKind: "mlx_directory",
+    runtimeMode: .mlxSwiftLm,
+    developmentOnly: false,
+    downloadURLString: "https://huggingface.co/mlx-community/gemma-4-12B-it-4bit",
+    verified: true,
+    releaseReady: true,
+    draftArtifact: alphaBundledMLXDraftArtifact(
+        from: alphaBundledMLXQuickStartAssistantDownloadDescriptor
+    )
+)
+
+private let alphaBundledMLXSeniorAssistantDownloadDescriptor = AlphaAssistantDownloadDescriptor(
+    sessionId: nil,
+    packId: "gemma-4-26b-a4b-mlx",
+    tier: .seniorDraftingSupport,
+    fileName: "gemma-4-26b-a4b-it-4bit",
+    sizeBytes: 15_641_238_917,
+    checksumSha256: "c55dd3aa3d278722835c83810a90016923471c49ce99d64e19203a62ec7ec755",
+    artifactKind: "mlx_directory",
+    runtimeMode: .mlxSwiftLm,
+    developmentOnly: false,
+    downloadURLString: "https://huggingface.co/mlx-community/gemma-4-26b-a4b-it-4bit",
+    verified: true,
+    releaseReady: true,
+    draftArtifact: alphaBundledMLXDraftArtifact(
+        from: alphaBundledMLXCaseAssociateAssistantDownloadDescriptor
+    )
+)
+
+private let alphaBundledMLXAssistantDownloadDescriptors: [AlphaCapabilityTier: AlphaAssistantDownloadDescriptor] = [
+    .quickStart: alphaBundledMLXQuickStartAssistantDownloadDescriptor,
+    .caseAssociate: alphaBundledMLXCaseAssociateAssistantDownloadDescriptor,
+    .seniorDraftingSupport: alphaBundledMLXSeniorAssistantDownloadDescriptor
 ]
 
 private func alphaBundledAssistantDownloadDescriptor(
@@ -293,17 +356,42 @@ func alphaAssistantDraftArtifactSupportsCurrentInstaller(_ artifact: AlphaAssist
           !artifact.downloadURLString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
         return false
     }
-    return artifact.fileName.lowercased().hasSuffix(".gguf") &&
-        artifact.artifactKind.localizedCaseInsensitiveContains("local_model_artifact")
+    switch alphaAssistantDraftArtifactRuntimeMode(artifact) {
+    case .llamaCppGguf:
+        return artifact.fileName.lowercased().hasSuffix(".gguf") &&
+            artifact.artifactKind.localizedCaseInsensitiveContains("local_model_artifact")
+    case .mlxSwiftLm:
+        return alphaPackagedMLXArchiveArtifact(
+            fileName: artifact.fileName,
+            artifactKind: artifact.artifactKind,
+            runtimeMode: .mlxSwiftLm
+        ) || alphaDirectMLXRepositoryArtifact(
+            fileName: artifact.fileName,
+            artifactKind: artifact.artifactKind,
+            runtimeMode: .mlxSwiftLm,
+            downloadURLString: artifact.downloadURLString
+        )
+    case .deterministicDev, .mediapipeLlm, .appleFoundationModels, .unavailable, nil:
+        return false
+    }
 }
 
 private func alphaAssistantCatalogDraftArtifactSupportsCurrentInstaller(
     _ artifact: AlphaAssistantDraftArtifactDescriptor
 ) -> Bool {
-    artifact.sizeBytes > 0 &&
-        artifact.checksumSha256.range(of: #"^[a-fA-F0-9]{64}$"#, options: .regularExpression) != nil &&
-        artifact.fileName.lowercased().hasSuffix(".gguf") &&
-        artifact.artifactKind.localizedCaseInsensitiveContains("local_model_artifact")
+    guard artifact.sizeBytes > 0,
+          artifact.checksumSha256.range(of: #"^[a-fA-F0-9]{64}$"#, options: .regularExpression) != nil else {
+        return false
+    }
+    switch alphaAssistantDraftArtifactRuntimeMode(artifact) {
+    case .llamaCppGguf:
+        return artifact.fileName.lowercased().hasSuffix(".gguf") &&
+            artifact.artifactKind.localizedCaseInsensitiveContains("local_model_artifact")
+    case .mlxSwiftLm:
+        return artifact.artifactKind == "mlx_directory"
+    case .deterministicDev, .mediapipeLlm, .appleFoundationModels, .unavailable, nil:
+        return false
+    }
 }
 
 func alphaAssistantDownloadDescriptorSupportsCurrentInstaller(_ descriptor: AlphaAssistantDownloadDescriptor) -> Bool {
@@ -2485,28 +2573,31 @@ extension AlphaRossModel {
             }
             let draftPreflight: AlphaAssistantDownloadPreflight?
             if let draftArtifact = resolvedDownload.draftArtifact {
-                let draftDescriptor = AlphaAssistantDownloadDescriptor(
-                    sessionId: resolvedDownload.sessionId,
-                    packId: resolvedDownload.packId,
-                    tier: resolvedDownload.tier,
-                    fileName: draftArtifact.fileName,
-                    sizeBytes: draftArtifact.sizeBytes,
-                    checksumSha256: draftArtifact.checksumSha256,
-                    artifactKind: draftArtifact.artifactKind,
-                    runtimeMode: .llamaCppGguf,
-                    developmentOnly: resolvedDownload.developmentOnly,
-                    downloadURLString: draftArtifact.downloadURLString,
-                    verified: resolvedDownload.verified,
-                    releaseReady: resolvedDownload.releaseReady,
-                    draftArtifact: nil
-                )
-                let verifiedDraftPreflight = try await preflightAssistantModelArtifact(draftDescriptor, jobID: job.id)
-                _ = try await probeAssistantModelRange(draftDescriptor, preflight: verifiedDraftPreflight)
-                draftPreflight = verifiedDraftPreflight
+                guard let draftDescriptor = alphaAssistantDraftDownloadDescriptor(
+                    from: resolvedDownload,
+                    draftArtifact: draftArtifact
+                ) else {
+                    throw AlphaAssistantDownloadError.invalidURL
+                }
+                if alphaDirectMLXRepositoryID(for: draftDescriptor) != nil {
+                    draftPreflight = nil
+                } else {
+                    let verifiedDraftPreflight = try await preflightAssistantModelArtifact(
+                        draftDescriptor,
+                        jobID: job.id
+                    )
+                    _ = try await probeAssistantModelRange(
+                        draftDescriptor,
+                        preflight: verifiedDraftPreflight
+                    )
+                    draftPreflight = verifiedDraftPreflight
+                }
             } else {
                 draftPreflight = nil
             }
-            let combinedExpectedBytes = (preflight?.reportedBytes ?? resolvedDownload.sizeBytes) + (draftPreflight?.reportedBytes ?? 0)
+            let combinedExpectedBytes =
+                (preflight?.reportedBytes ?? resolvedDownload.sizeBytes) +
+                (draftPreflight?.reportedBytes ?? resolvedDownload.draftArtifact?.sizeBytes ?? 0)
 
             updateJob(job.id) {
                 $0.state = .downloading
@@ -2539,21 +2630,12 @@ extension AlphaRossModel {
             let draftDownloadedFileURL: URL?
             let downloadedDraftBytes: Int64
             if let draftArtifact = resolvedDownload.draftArtifact {
-                let draftDescriptor = AlphaAssistantDownloadDescriptor(
-                    sessionId: resolvedDownload.sessionId,
-                    packId: resolvedDownload.packId,
-                    tier: resolvedDownload.tier,
-                    fileName: draftArtifact.fileName,
-                    sizeBytes: draftArtifact.sizeBytes,
-                    checksumSha256: draftArtifact.checksumSha256,
-                    artifactKind: draftArtifact.artifactKind,
-                    runtimeMode: .llamaCppGguf,
-                    developmentOnly: resolvedDownload.developmentOnly,
-                    downloadURLString: draftArtifact.downloadURLString,
-                    verified: resolvedDownload.verified,
-                    releaseReady: resolvedDownload.releaseReady,
-                    draftArtifact: nil
-                )
+                guard let draftDescriptor = alphaAssistantDraftDownloadDescriptor(
+                    from: resolvedDownload,
+                    draftArtifact: draftArtifact
+                ) else {
+                    throw AlphaAssistantDownloadError.invalidURL
+                }
                 draftDownloadedFileURL = try await downloadAssistantModelArtifact(
                     draftDescriptor,
                     tier: tier,
@@ -2577,7 +2659,11 @@ extension AlphaRossModel {
                 let verifiedMainBytes = downloadedBytes > 0 ? downloadedBytes : resolvedDownload.sizeBytes
                 let verifiedDraftBytes = resolvedDownload.draftArtifact == nil
                     ? 0
-                    : (downloadedDraftBytes > 0 ? downloadedDraftBytes : (draftPreflight?.reportedBytes ?? 0))
+                    : (
+                        downloadedDraftBytes > 0
+                            ? downloadedDraftBytes
+                            : (draftPreflight?.reportedBytes ?? resolvedDownload.draftArtifact?.sizeBytes ?? 0)
+                    )
                 $0.bytesDownloaded = verifiedMainBytes + verifiedDraftBytes
                 $0.totalBytes = combinedExpectedBytes
                 $0.updatedAt = .now

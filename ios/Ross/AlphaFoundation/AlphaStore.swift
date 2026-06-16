@@ -660,13 +660,16 @@ actor AlphaRossStore {
             guard let draftDownloadedFileURL else {
                 throw NSError(domain: "RossAlphaPack", code: 2, userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."])
             }
+            guard let draftRuntimeMode = alphaAssistantDraftArtifactRuntimeMode(draftArtifact) else {
+                throw NSError(domain: "RossAlphaPack", code: 2, userInfo: [NSLocalizedDescriptionKey: "Checksum verification failed."])
+            }
             let draftVerification = try verifiedDownloadedArtifact(
                 fileName: draftArtifact.fileName,
                 downloadedFileURL: draftDownloadedFileURL,
                 expectedChecksum: draftArtifact.checksumSha256,
                 expectedBytes: draftArtifact.sizeBytes,
                 artifactKind: draftArtifact.artifactKind,
-                runtimeMode: .llamaCppGguf
+                runtimeMode: draftRuntimeMode
             )
             verifiedDraft = (
                 descriptor: draftArtifact,

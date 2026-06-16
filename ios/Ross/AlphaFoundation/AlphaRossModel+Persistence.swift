@@ -1287,6 +1287,20 @@ private func alphaInstalledGGUFDraftArtifact(
     return draftArtifact
 }
 
+private func alphaInstalledMLXDraftArtifact(
+    for activePack: AlphaInstalledModelPack?
+) -> AlphaInstalledAssistantDraftArtifact? {
+    guard let activePack,
+          activePack.runtimeMode == .mlxSwiftLm,
+          let expectedArtifact = alphaExpectedDownloadedAssistantArtifact(for: activePack),
+          let draftArtifact = expectedArtifact.draftArtifact,
+          draftArtifact.artifactKind == "mlx_directory",
+          alphaInstalledDraftArtifactIsUsable(draftArtifact) else {
+        return nil
+    }
+    return draftArtifact
+}
+
 func alphaLocalRuntimeEnvironment(
     activePack: AlphaInstalledModelPack?,
     requestedTier: AlphaCapabilityTier?,
@@ -1310,6 +1324,25 @@ func alphaLocalRuntimeEnvironment(
             modelKind: baseEnvironment.modelKind,
             draftModelPath: alphaAbsoluteURL(for: ggufDraftArtifact.relativePath).path,
             draftModelTokens: baseEnvironment.draftModelTokens ?? ggufDraftArtifact.draftTokens
+        )
+    }
+
+    if let activePack,
+       activePack.tier == (requestedTier ?? activePack.tier) || requestedTier == nil,
+       let mlxDraftArtifact = alphaInstalledMLXDraftArtifact(for: activePack) {
+        return AlphaLocalRuntimeEnvironment(
+            enableRealInference: baseEnvironment.enableRealInference,
+            runtimeModeOverride: baseEnvironment.runtimeModeOverride,
+            modelPath: baseEnvironment.modelPath,
+            modelChecksum: baseEnvironment.modelChecksum,
+            modelKind: baseEnvironment.modelKind,
+            draftModelPath: alphaAbsoluteURL(for: mlxDraftArtifact.relativePath).path,
+            draftModelTokens: baseEnvironment.draftModelTokens ??
+                mlxDraftArtifact.draftTokens ??
+                alphaAutomaticMLXDraftTokens(
+                    for: activePack,
+                    physicalMemoryBytes: physicalMemoryBytes
+                )
         )
     }
 

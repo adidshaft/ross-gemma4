@@ -3809,6 +3809,96 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     @MainActor
+    func testLocalRuntimeEnvironmentPrefersInstalledMLXDraftArtifactOverAlternatePack() async throws {
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+
+        let mainDirectory = try makeMLXDirectoryFixture(named: "ross-mlx-main-\(UUID().uuidString)")
+        let draftDirectory = try makeMLXDirectoryFixture(named: "ross-mlx-draft-\(UUID().uuidString)")
+        let alternateDirectory = try makeMLXDirectoryFixture(named: "ross-mlx-alt-\(UUID().uuidString)")
+        defer {
+            try? FileManager.default.removeItem(at: mainDirectory)
+            try? FileManager.default.removeItem(at: draftDirectory)
+            try? FileManager.default.removeItem(at: alternateDirectory)
+        }
+
+        let expectedMain = try XCTUnwrap(alphaModelArtifactVerification(at: mainDirectory))
+        let expectedDraft = try XCTUnwrap(alphaModelArtifactVerification(at: draftDirectory))
+        let expectedAlternate = try XCTUnwrap(alphaModelArtifactVerification(at: alternateDirectory))
+
+        let installed = try await store.installDownloadedPackArtifact(
+            for: .seniorDraftingSupport,
+            fileName: "gemma-4-26b-a4b-it-4bit",
+            downloadedFileURL: mainDirectory,
+            expectedChecksum: expectedMain.checksum,
+            expectedBytes: expectedMain.bytes,
+            packId: "gemma-4-26b-a4b-mlx",
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            draftArtifact: AlphaAssistantDraftArtifactDescriptor(
+                fileName: "gemma-4-12B-it-4bit",
+                sizeBytes: expectedDraft.bytes,
+                checksumSha256: expectedDraft.checksum,
+                artifactKind: "mlx_directory",
+                downloadURLString: "https://huggingface.co/mlx-community/gemma-4-12B-it-4bit",
+                draftTokens: 7
+            ),
+            draftDownloadedFileURL: draftDirectory
+        )
+        let alternateInstalled = try await store.installDownloadedPackArtifact(
+            for: .caseAssociate,
+            fileName: "gemma-4-12B-it-4bit",
+            downloadedFileURL: alternateDirectory,
+            expectedChecksum: expectedAlternate.checksum,
+            expectedBytes: expectedAlternate.bytes,
+            packId: "gemma-4-12b-mlx",
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false
+        )
+        let activePack = installedPack(
+            .seniorDraftingSupport,
+            runtimeMode: .mlxSwiftLm,
+            packId: "gemma-4-26b-a4b-mlx",
+            installPath: installed.relativePath,
+            checksum: installed.checksum,
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+        let alternatePack = installedPack(
+            .caseAssociate,
+            runtimeMode: .mlxSwiftLm,
+            packId: "gemma-4-12b-mlx",
+            installPath: alternateInstalled.relativePath,
+            checksum: alternateInstalled.checksum,
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+
+        let runtimeEnvironment = alphaLocalRuntimeEnvironment(
+            activePack: activePack,
+            requestedTier: activePack.tier,
+            installedPacks: [activePack, alternatePack],
+            baseEnvironment: AlphaLocalRuntimeEnvironment(
+                enableRealInference: true,
+                runtimeModeOverride: .mlxSwiftLm,
+                modelPath: alphaAbsoluteURL(for: installed.relativePath).path,
+                modelChecksum: installed.checksum,
+                modelKind: "mlx_directory"
+            ),
+            physicalMemoryBytes: 18_000_000_000,
+            lowPowerMode: false
+        )
+
+        XCTAssertEqual(
+            runtimeEnvironment.draftModelPath,
+            alphaAbsoluteURL(for: "model-packs/senior_drafting_support/gemma-4-12B-it-4bit").path
+        )
+        XCTAssertEqual(runtimeEnvironment.draftModelTokens, 7)
+    }
+
+    @MainActor
     func testAskResultPreservesModelInvocationForAnswerDetails() {
         let invocation = AlphaLocalModelInvocation(
             task: .matterQuestionAnswer,
@@ -8157,6 +8247,36 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(fallback.downloadURLString, "https://huggingface.co/mlx-community/gemma-4-12B-it-4bit")
     }
 
+    func testPreferredAssistantDownloadFallbackIncludesBundledMLXDraftCompanion() {
+        let fallback = alphaPreferredAssistantDownloadFallback(
+            for: .caseAssociate,
+            preferredRuntimeMode: .mlxSwiftLm,
+            cachedDownloads: nil
+        )
+
+        XCTAssertEqual(fallback.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(fallback.draftArtifact?.artifactKind, "mlx_directory")
+        XCTAssertEqual(
+            fallback.draftArtifact?.downloadURLString,
+            "https://huggingface.co/unsloth/gemma-4-E4B-it-UD-MLX-4bit"
+        )
+    }
+
+    func testPreferredAssistantDownloadFallbackIncludesBundledSeniorMLXDraftCompanion() {
+        let fallback = alphaPreferredAssistantDownloadFallback(
+            for: .seniorDraftingSupport,
+            preferredRuntimeMode: .mlxSwiftLm,
+            cachedDownloads: nil
+        )
+
+        XCTAssertEqual(fallback.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(fallback.draftArtifact?.artifactKind, "mlx_directory")
+        XCTAssertEqual(
+            fallback.draftArtifact?.downloadURLString,
+            "https://huggingface.co/mlx-community/gemma-4-12B-it-4bit"
+        )
+    }
+
     func testAssistantDownloadDescriptorSupportsCurrentInstallerAllowsDirectMLXRepository() {
         let descriptor = AlphaAssistantDownloadDescriptor(
             sessionId: nil,
@@ -8176,6 +8296,33 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(alphaAssistantDownloadDescriptorSupportsCurrentInstaller(descriptor))
     }
 
+    func testAssistantDownloadDescriptorSupportsCurrentInstallerAllowsMLXDraftCompanion() {
+        let descriptor = AlphaAssistantDownloadDescriptor(
+            sessionId: nil,
+            packId: "gemma-4-12b-mlx",
+            tier: .caseAssociate,
+            fileName: "gemma-4-12B-it-4bit",
+            sizeBytes: 6_773_371_194,
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            downloadURLString: "https://huggingface.co/mlx-community/gemma-4-12B-it-4bit",
+            verified: true,
+            releaseReady: true,
+            draftArtifact: AlphaAssistantDraftArtifactDescriptor(
+                fileName: "gemma-4-E4B-it-UD-MLX-4bit",
+                sizeBytes: 6_607_285_383,
+                checksumSha256: String(repeating: "b", count: 64),
+                artifactKind: "mlx_directory",
+                downloadURLString: "https://huggingface.co/unsloth/gemma-4-E4B-it-UD-MLX-4bit",
+                draftTokens: 6
+            )
+        )
+
+        XCTAssertTrue(alphaAssistantDownloadDescriptorSupportsCurrentInstaller(descriptor))
+    }
+
     func testBackendArtifactSupportsCurrentInstallerAllowsDirectMLXRepository() {
         let artifact = AlphaBackendArtifact(
             fileName: "gemma-4-12B-it-4bit",
@@ -8190,6 +8337,53 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertTrue(alphaBackendArtifactSupportsCurrentInstaller(artifact))
+    }
+
+    func testBackendArtifactSupportsCurrentInstallerAllowsMLXDraftCompanion() {
+        let artifact = AlphaBackendArtifact(
+            fileName: "gemma-4-12B-it-4bit",
+            sizeBytes: 6_773_371_194,
+            finalSha256: String(repeating: "b", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            downloadPath: nil,
+            downloadUrl: "https://huggingface.co/mlx-community/gemma-4-12B-it-4bit",
+            segments: [],
+            draftArtifact: AlphaBackendArtifactDraft(
+                fileName: "gemma-4-E4B-it-UD-MLX-4bit",
+                sizeBytes: 6_607_285_383,
+                finalSha256: String(repeating: "c", count: 64),
+                artifactKind: "mlx_directory",
+                downloadPath: nil,
+                downloadUrl: "https://huggingface.co/unsloth/gemma-4-E4B-it-UD-MLX-4bit",
+                draftTokens: 6
+            )
+        )
+
+        XCTAssertTrue(alphaBackendArtifactSupportsCurrentInstaller(artifact))
+    }
+
+    func testAssistantCatalogDescriptorSupportsCurrentInstallerAllowsMLXDraftCompanion() {
+        let descriptor = AlphaAssistantCatalogDescriptor(
+            tier: .caseAssociate,
+            packId: "gemma-4-12b-mlx",
+            sizeBytes: 6_773_371_194,
+            checksumSha256: String(repeating: "d", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            draftArtifact: AlphaAssistantDraftArtifactDescriptor(
+                fileName: "gemma-4-E4B-it-UD-MLX-4bit",
+                sizeBytes: 6_607_285_383,
+                checksumSha256: String(repeating: "e", count: 64),
+                artifactKind: "mlx_directory",
+                downloadURLString: "",
+                draftTokens: 6
+            )
+        )
+
+        XCTAssertTrue(alphaAssistantCatalogDescriptorSupportsCurrentInstaller(descriptor))
     }
 
     func testAssistantDownloadPreflightRejectsWrongArtifactSize() throws {
@@ -8863,14 +9057,14 @@ final class AlphaExtractionTests: XCTestCase {
         let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
             runtimeMode: .mlxSwiftLm,
             baseMaxInputChars: 56_000,
-            sourceBlockCount: 20,
+            sourceBlockCount: 24,
             sourceCharCount: 52_000,
             selectedDocumentCount: 1,
             lastInvocation: nil
         )
 
         XCTAssertEqual(plan.maxInputChars, 50_400)
-        XCTAssertEqual(plan.sourceBlockLimit, 20)
+        XCTAssertEqual(plan.sourceBlockLimit, 24)
         XCTAssertEqual(plan.sourceExcerptChars, 1_850)
     }
 
@@ -8892,14 +9086,14 @@ final class AlphaExtractionTests: XCTestCase {
         let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
             runtimeMode: .appleFoundationModels,
             baseMaxInputChars: 44_000,
-            sourceBlockCount: 16,
+            sourceBlockCount: 18,
             sourceCharCount: 39_000,
             selectedDocumentCount: 1,
             lastInvocation: nil
         )
 
         XCTAssertEqual(plan.maxInputChars, 39_600)
-        XCTAssertEqual(plan.sourceBlockLimit, 16)
+        XCTAssertEqual(plan.sourceBlockLimit, 18)
         XCTAssertEqual(plan.sourceExcerptChars, 1_700)
     }
 
@@ -9065,13 +9259,13 @@ final class AlphaExtractionTests: XCTestCase {
         let policy = alphaAskRuntimeSourcePackPolicy(
             runtimeMode: .mlxSwiftLm,
             capabilityTier: .caseAssociate,
-            baseMaxInputChars: 52_000,
+            baseMaxInputChars: 56_000,
             hasSelectedDocuments: true,
             selectedDocumentCount: 1
         )
 
         XCTAssertEqual(policy.documentCandidateLimit, 4)
-        XCTAssertEqual(policy.sourceBlockLimit, 20)
+        XCTAssertEqual(policy.sourceBlockLimit, 24)
     }
 
     func testAskRuntimeSourcePackPolicyExpandsMLXCandidateWindowWithoutSelections() {
@@ -9108,7 +9302,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(policy.documentCandidateLimit, 4)
-        XCTAssertEqual(policy.sourceBlockLimit, 16)
+        XCTAssertEqual(policy.sourceBlockLimit, 18)
     }
 
     func testAskRuntimeSourcePackPolicyExpandsLlamaCandidateWindowWithoutSelections() {
@@ -9145,7 +9339,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(policy.documentCandidateLimit, 4)
-        XCTAssertEqual(policy.sourceBlockLimit, 16)
+        XCTAssertEqual(policy.sourceBlockLimit, 18)
     }
 
     func testAskRuntimeSourcePackPolicyExpandsFoundationCandidateWindowWithoutSelections() {
