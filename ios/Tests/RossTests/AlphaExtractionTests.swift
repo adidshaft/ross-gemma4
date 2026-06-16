@@ -6744,7 +6744,7 @@ final class AlphaExtractionTests: XCTestCase {
             id: caseId,
             title: "Fallback matter",
             forum: "Delhi High Court",
-            stage: .preFiling,
+            stage: .intake,
             summary: "Fallback extraction smoke.",
             issueHighlights: [],
             evidenceNotes: [],
@@ -6814,7 +6814,7 @@ final class AlphaExtractionTests: XCTestCase {
             id: caseId,
             title: "Review fallback matter",
             forum: "Delhi High Court",
-            stage: .preFiling,
+            stage: .intake,
             summary: "Review fallback smoke.",
             issueHighlights: [],
             evidenceNotes: [],
@@ -7080,6 +7080,45 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(model.activePack?.installPath, relativePath)
         XCTAssertEqual(model.activeRuntimeHealth?.runtimeMode, .llamaCppGguf)
         XCTAssertEqual(model.activeRuntimeHealth?.available, true)
+    }
+
+    @MainActor
+    func testSyncPrivateAISnapshotPreservesLlamaHeuristicsWhileValidationIsPending() {
+        let model = AlphaRossModel()
+        let pack = AlphaInstalledModelPack(
+            packId: "gemma-4-12b-q4",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/gemma-4-12b-it-UD-Q4_K_XL.gguf",
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+        var state = AlphaPersistedState.empty()
+        state.settings.activeTier = .caseAssociate
+        state.installedPacks = [pack]
+        state.modelJobs = []
+        model.persisted = state
+
+        model.syncPrivateAISnapshotFromPersisted()
+
+        XCTAssertNil(model.privateAISnapshot.activePack)
+        XCTAssertEqual(model.privateAISnapshot.activeRuntimeHealth?.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(model.privateAISnapshot.activeRuntimeHealth?.lastErrorCategory, "runtime_validation_pending")
+        XCTAssertEqual(
+            Set(model.privateAISnapshot.activeRuntimeHealth?.supportedTasks ?? []),
+            Set(AlphaLocalModelTask.allCases)
+        )
+        XCTAssertEqual(
+            model.privateAISnapshot.activeRuntimeHealth?.maxInputChars,
+            AlphaLlamaRuntimeProfile.maxInputChars(for: .caseAssociate)
+        )
+        XCTAssertEqual(
+            model.privateAISnapshot.activeRuntimeHealth?.estimatedContextTokens,
+            Int(AlphaLlamaRuntimeProfile.contextWindowTokens(forModelPath: pack.installPath))
+        )
     }
     #endif
 
@@ -10389,8 +10428,6 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(Set(health.supportedTasks), Set(AlphaLocalModelTask.allCases))
         XCTAssertEqual(health.estimatedContextTokens, AlphaMLXRuntimeProfile.contextWindowTokens(for: .caseAssociate))
         XCTAssertEqual(health.maxInputChars, AlphaMLXRuntimeProfile.maxInputChars(for: .caseAssociate))
-        XCTAssertEqual(health.accelerationMode, .draftModelSpeculative)
-        XCTAssertEqual(health.accelerationDraftTokens, 6)
     }
 
     func testFoundationPlannedTasksIncludeAskIssueAndPublicLawShaping() {

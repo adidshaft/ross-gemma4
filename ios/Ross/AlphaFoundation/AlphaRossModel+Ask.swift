@@ -1413,13 +1413,14 @@ extension AlphaRossModel {
         input.promptBudgetOverrideChars = budgetPlan.maxInputChars
         input.sourceBlockLimitOverride = budgetPlan.sourceBlockLimit
         input.sourceExcerptCharsOverride = budgetPlan.sourceExcerptChars
+        let taskInput = input
         let chatSessionID = storedResult.chatSessionID
         let chatTurnID = storedResult.chatTurnID
         let invocation = beginMatterQuestionInvocation(
             provider: provider,
             activePack: activePack,
             requestedTier: requestedTier,
-            input: input,
+            input: taskInput,
             scopeCaseID: scopeCaseID,
             selectedDocumentID: selectedDocuments.first?.id
         )
@@ -1443,7 +1444,7 @@ extension AlphaRossModel {
             ) async -> (output: AlphaLocalModelOutput, completedInvocation: AlphaLocalModelInvocation) {
                 var streamedOutput: AlphaLocalModelOutput?
                 var trackedInvocation = seedInvocation
-                if let stream = resolvedProvider.provider.runStreaming(input) {
+                if let stream = resolvedProvider.provider.runStreaming(taskInput) {
                     var lastPartialUpdatedAt = Date.distantPast
                     var lastPublishedText: String?
                     for await partial in stream {
@@ -1499,7 +1500,7 @@ extension AlphaRossModel {
                 if let streamedOutput {
                     output = streamedOutput
                 } else {
-                    output = await resolvedProvider.provider.run(input)
+                    output = await resolvedProvider.provider.run(taskInput)
                 }
                 return (
                     output,
@@ -1539,7 +1540,7 @@ extension AlphaRossModel {
                         provider: fallbackResolvedProvider.provider,
                         activePack: fallbackResolvedProvider.activePack ?? fallbackPack,
                         requestedTier: requestedTier,
-                        input: input,
+                        input: taskInput,
                         scopeCaseID: scopeCaseID,
                         selectedDocumentID: selectedDocuments.first?.id
                     )
@@ -2958,7 +2959,7 @@ extension AlphaRossModel {
         return questionTerms.contains { evidenceTerms.contains($0) }
     }
 
-    func alphaShouldPublishStreamingPartial(
+    nonisolated func alphaShouldPublishStreamingPartial(
         cleanedText: String,
         lastPublishedText: String?,
         elapsedSinceLastPublish: TimeInterval,

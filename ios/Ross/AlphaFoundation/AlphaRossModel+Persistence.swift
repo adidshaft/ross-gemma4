@@ -1620,16 +1620,19 @@ extension AlphaRossModel {
         } else if let optimisticActivePack,
                   optimisticActivePack.runtimeMode == .llamaCppGguf,
                   !optimisticActivePack.developmentOnly {
+            let runtimeLabel = URL(fileURLWithPath: optimisticActivePack.installPath).lastPathComponent
             privateAISnapshot.activePack = nil
             privateAISnapshot.activeRuntimeHealth = AlphaLocalRuntimeHealth(
                 runtimeMode: .llamaCppGguf,
                 available: false,
                 modelPathPresent: installedModelPackFileIsUsable(optimisticActivePack),
-                modelPathLabel: URL(fileURLWithPath: optimisticActivePack.installPath).lastPathComponent,
+                modelPathLabel: runtimeLabel,
                 checksumVerified: optimisticActivePack.checksumVerified,
-                supportedTasks: [],
-                maxInputChars: nil,
-                estimatedContextTokens: nil,
+                supportedTasks: Array(Set(AlphaLocalModelTask.allCases)),
+                maxInputChars: AlphaLlamaRuntimeProfile.maxInputChars(for: optimisticActivePack.tier),
+                estimatedContextTokens: Int(
+                    AlphaLlamaRuntimeProfile.contextWindowTokens(forModelPath: runtimeLabel)
+                ),
                 lastErrorCategory: "runtime_validation_pending",
                 userFacingStatus: "Ross is checking assistant setup before enabling private answers.",
                 explicitOptInEnabled: true

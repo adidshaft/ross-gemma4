@@ -130,7 +130,6 @@ extension AlphaRossModel {
 
         var extractionPack = currentPack
         if let currentPack,
-           let resolvedTier,
            AlphaLocalModelRuntime.runtimeHealth(
             activePack: currentPack,
             requestedTier: resolvedTier,
@@ -160,7 +159,7 @@ extension AlphaRossModel {
             initialResult,
             currentPack: extractionPack,
             requestedTier: resolvedTier
-        ), let resolvedTier,
+        ),
               let fallbackPack = activatedAssistantExecutionFallback(
                 for: resolvedTier,
                 currentPack: extractionPack
