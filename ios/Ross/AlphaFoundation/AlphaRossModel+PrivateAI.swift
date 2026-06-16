@@ -447,12 +447,16 @@ func alphaAssistantSetupPresentation(
         return nil
     }
 
+    let defaultDescriptor = alphaDefaultAssistantCatalogDescriptor(for: tier)
     let descriptor = alphaCachedPreferredAssistantSetupDescriptor(
         for: tier,
         preferredRuntimeMode: preferredRuntime,
         cachedCatalogs: cachedCatalogs,
         cachedDownloads: cachedDownloads
-    ) ?? alphaDefaultAssistantCatalogDescriptor(for: tier)
+    ) ?? (defaultDescriptor.runtimeMode == preferredRuntime ? defaultDescriptor : nil)
+    guard let descriptor, descriptor.runtimeMode == preferredRuntime else {
+        return nil
+    }
     let totalDownloadBytes = descriptor.sizeBytes + Int64(descriptor.draftArtifact?.sizeBytes ?? 0)
     return AlphaAssistantSetupPresentation(
         runtimeMode: descriptor.runtimeMode,

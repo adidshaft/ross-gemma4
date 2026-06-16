@@ -7682,6 +7682,18 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.sizeLabel, "6.2 GB")
     }
 
+    func testAssistantSetupPresentationReturnsNilWhenPreferredMLXMetadataIsMissing() {
+        let presentation = alphaAssistantSetupPresentation(
+            for: .caseAssociate,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24,
+            systemAssistantAvailable: false
+        )
+
+        XCTAssertNil(presentation)
+    }
+
     func testAssistantSetupPresentationReturnsNilWhenBuiltInCoreAIIsAvailable() {
         let presentation = alphaAssistantSetupPresentation(
             for: .caseAssociate,

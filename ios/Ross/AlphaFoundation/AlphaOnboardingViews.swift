@@ -217,7 +217,7 @@ struct AlphaOnboardingModelSelector: View {
 
     private var selectedSetupSizeLabel: String {
         model.assistantSetupPresentation(for: selectedTier)?.sizeLabel ??
-            rossLocalized("assistant_meta_no_download")
+            rossLocalized("assistant_state_checking")
     }
 
     var body: some View {
@@ -267,7 +267,7 @@ struct AlphaOnboardingModelChoiceRow: View {
 
     private var setupSizeLabel: String {
         model.assistantSetupPresentation(for: tier)?.sizeLabel ??
-            rossLocalized("assistant_meta_no_download")
+            rossLocalized("assistant_state_checking")
     }
 
     var body: some View {

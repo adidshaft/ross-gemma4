@@ -811,7 +811,7 @@ struct AlphaPrivateAIOfferCard: View {
                 } else {
                     let setupPresentation = model.assistantSetupPresentation(for: offer.tier)
                     AlphaAssistantSetupMetaLabels(
-                        sizeLabel: setupPresentation?.sizeLabel ?? offer.tier.downloadSizeLabel,
+                        sizeLabel: setupPresentation?.sizeLabel ?? rossLocalized("assistant_state_checking"),
                         runtimeLabel: setupPresentation?.runtimeMode.displayLabel,
                         freeSpaceLabel: model.freeDiskSpaceLabel,
                         font: .caption2.weight(.medium)
