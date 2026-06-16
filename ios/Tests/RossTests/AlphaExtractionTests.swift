@@ -13079,6 +13079,50 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(plan.sourceExcerptChars, 1_950)
     }
 
+    func testMatterQuestionBudgetPlannerUsesMidHighMLXBudgetsForRecentIPhones() {
+        let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
+            runtimeMode: .mlxSwiftLm,
+            baseMaxInputChars: 61_600,
+            sourceBlockCount: 14,
+            sourceCharCount: 52_000,
+            lastInvocation: nil
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 55_440)
+        XCTAssertEqual(plan.sourceBlockLimit, 13)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_900)
+    }
+
+    func testMatterQuestionBudgetPlannerWidensMidHighMLXBudgetAfterFastRun() {
+        let fastInvocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 18,
+            timeToFirstTokenMs: 1_200,
+            status: .complete
+        )
+
+        let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
+            runtimeMode: .mlxSwiftLm,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 61_600,
+            sourceBlockCount: 18,
+            sourceCharCount: 58_000,
+            lastInvocation: fastInvocation
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 68_376)
+        XCTAssertEqual(plan.sourceBlockLimit, 16)
+        XCTAssertEqual(plan.sourceExcerptChars, 2_280)
+    }
+
     func testMatterQuestionBudgetPlannerKeepsMoreSingleSelectedMLXContext() {
         let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
             runtimeMode: .mlxSwiftLm,
@@ -13358,6 +13402,50 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(plan.maxInputChars, 49_280)
         XCTAssertEqual(plan.sourceBlockLimit, 15)
         XCTAssertEqual(plan.sourceExcerptChars, 1_650)
+    }
+
+    func testStructuredDocumentBudgetPlannerUsesMidHighMLXBudgetsForRecentIPhones() {
+        let plan = AlphaLocalPromptBudgetPlanner.structuredDocumentPlan(
+            runtimeMode: .mlxSwiftLm,
+            baseMaxInputChars: 61_600,
+            sourceBlockCount: 18,
+            sourceCharCount: 52_000,
+            lastInvocation: nil
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 54_208)
+        XCTAssertEqual(plan.sourceBlockLimit, 16)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_700)
+    }
+
+    func testStructuredDocumentBudgetPlannerWidensMidHighMLXBudgetAfterFastRun() {
+        let fastInvocation = AlphaLocalModelInvocation(
+            task: .legalFieldExtraction,
+            runtimeMode: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 18,
+            timeToFirstTokenMs: 1_200,
+            status: .complete
+        )
+
+        let plan = AlphaLocalPromptBudgetPlanner.structuredDocumentPlan(
+            runtimeMode: .mlxSwiftLm,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 61_600,
+            sourceBlockCount: 22,
+            sourceCharCount: 58_000,
+            lastInvocation: fastInvocation
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 68_376)
+        XCTAssertEqual(plan.sourceBlockLimit, 21)
+        XCTAssertEqual(plan.sourceExcerptChars, 2_020)
     }
 
     func testStructuredDocumentBudgetPlannerKeepsMoreSingleSelectedMLXContext() {
@@ -13800,6 +13888,18 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(policy.sourceBlockLimit, 18)
     }
 
+    func testAskRuntimeSourcePackPolicyUsesMidHighBudgetMLXBand() {
+        let policy = alphaAskRuntimeSourcePackPolicy(
+            runtimeMode: .mlxSwiftLm,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 61_600,
+            hasSelectedDocuments: true
+        )
+
+        XCTAssertEqual(policy.documentCandidateLimit, 4)
+        XCTAssertEqual(policy.sourceBlockLimit, 17)
+    }
+
     func testAskRuntimeSourcePackPolicyExpandsFurtherForHighBudgetSingleSelectedMLXAsk() {
         let policy = alphaAskRuntimeSourcePackPolicy(
             runtimeMode: .mlxSwiftLm,
@@ -13811,6 +13911,19 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(policy.documentCandidateLimit, 4)
         XCTAssertEqual(policy.sourceBlockLimit, 26)
+    }
+
+    func testAskRuntimeSourcePackPolicyUsesMidHighBudgetSingleSelectedMLXBand() {
+        let policy = alphaAskRuntimeSourcePackPolicy(
+            runtimeMode: .mlxSwiftLm,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 61_600,
+            hasSelectedDocuments: true,
+            selectedDocumentCount: 1
+        )
+
+        XCTAssertEqual(policy.documentCandidateLimit, 4)
+        XCTAssertEqual(policy.sourceBlockLimit, 25)
     }
 
     func testAskRuntimeSourcePackPolicyExpandsSingleSelectedMLXAskAt40KBudget() {
@@ -13848,6 +13961,18 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(policy.documentCandidateLimit, 7)
         XCTAssertEqual(policy.sourceBlockLimit, 16)
+    }
+
+    func testAskRuntimeSourcePackPolicyUsesMidHighBudgetMLXCandidateWindowWithoutSelections() {
+        let policy = alphaAskRuntimeSourcePackPolicy(
+            runtimeMode: .mlxSwiftLm,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 61_600,
+            hasSelectedDocuments: false
+        )
+
+        XCTAssertEqual(policy.documentCandidateLimit, 7)
+        XCTAssertEqual(policy.sourceBlockLimit, 15)
     }
 
     func testAskRuntimeSourcePackPolicyExpandsForCapableLlamaAsks() {

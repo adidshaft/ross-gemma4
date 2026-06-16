@@ -339,6 +339,15 @@ func alphaAskRuntimeSourcePackPolicy(
                     sourceBlockLimit: hasSelectedDocuments ? 18 : 16
                 )
             }
+            if baseMaxInputChars >= 60_000 {
+                if hasSingleSelectedDocument {
+                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 25)
+                }
+                return AlphaAskRuntimeSourcePackPolicy(
+                    documentCandidateLimit: hasSelectedDocuments ? 4 : 7,
+                    sourceBlockLimit: hasSelectedDocuments ? 17 : 15
+                )
+            }
             if baseMaxInputChars >= 52_000 {
                 if hasSingleSelectedDocument {
                     return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 24)
@@ -571,6 +580,9 @@ enum AlphaLocalPromptBudgetPlanner {
         case .mlxSwiftLm:
             if baseMaxInputChars >= 68_000 {
                 return 26
+            }
+            if baseMaxInputChars >= 60_000 {
+                return 25
             }
             if baseMaxInputChars >= 52_000 {
                 return 24
@@ -840,6 +852,10 @@ enum AlphaLocalPromptBudgetPlanner {
                 multiplier = 1.12
                 break
             }
+            if baseMaxInputChars >= 60_000 {
+                multiplier = 1.11
+                break
+            }
             multiplier = 1.1
         case .llamaCppGguf:
             multiplier = 1.05
@@ -863,6 +879,9 @@ enum AlphaLocalPromptBudgetPlanner {
                 if baseMaxInputChars >= 68_000 {
                     return 22
                 }
+                if baseMaxInputChars >= 60_000 {
+                    return 21
+                }
                 if baseMaxInputChars >= 52_000 {
                     return 20
                 }
@@ -871,6 +890,9 @@ enum AlphaLocalPromptBudgetPlanner {
                 }
             } else {
                 if baseMaxInputChars >= 68_000 {
+                    return 16
+                }
+                if baseMaxInputChars >= 60_000 {
                     return 16
                 }
                 if baseMaxInputChars >= 52_000 {
@@ -943,6 +965,9 @@ enum AlphaLocalPromptBudgetPlanner {
                 if baseMaxInputChars >= 68_000 {
                     return 2_100
                 }
+                if baseMaxInputChars >= 60_000 {
+                    return 2_020
+                }
                 if baseMaxInputChars >= 52_000 {
                     return 1_950
                 }
@@ -952,6 +977,9 @@ enum AlphaLocalPromptBudgetPlanner {
             } else {
                 if baseMaxInputChars >= 68_000 {
                     return 2_350
+                }
+                if baseMaxInputChars >= 60_000 {
+                    return 2_280
                 }
                 if baseMaxInputChars >= 52_000 {
                     return 2_200
@@ -1020,6 +1048,9 @@ enum AlphaLocalPromptBudgetPlanner {
         case .mlxSwiftLm:
             if baseMaxInputChars >= 68_000 {
                 return 26
+            }
+            if baseMaxInputChars >= 60_000 {
+                return 25
             }
             if baseMaxInputChars >= 52_000 {
                 return 24
@@ -1168,6 +1199,19 @@ enum AlphaLocalPromptBudgetPlanner {
                     cautionExcerptChars: 1_400,
                     slowBlockLimit: 7,
                     slowExcerptChars: 980,
+                    cautionTokensPerSecond: 12,
+                    slowTokensPerSecond: 8
+                )
+            }
+            if baseMaxInputChars >= 60_000 {
+                return (
+                    minimumBudget: 9_200,
+                    largeFileBlockLimit: 13,
+                    largeFileExcerptChars: 1_900,
+                    cautionBlockLimit: 10,
+                    cautionExcerptChars: 1_360,
+                    slowBlockLimit: 7,
+                    slowExcerptChars: 970,
                     cautionTokensPerSecond: 12,
                     slowTokensPerSecond: 8
                 )
@@ -1377,6 +1421,19 @@ enum AlphaLocalPromptBudgetPlanner {
                     cautionExcerptChars: 1_280,
                     slowBlockLimit: 7,
                     slowExcerptChars: 940,
+                    cautionTokensPerSecond: 10,
+                    slowTokensPerSecond: 7
+                )
+            }
+            if baseMaxInputChars >= 60_000 {
+                return (
+                    minimumBudget: 8_400,
+                    largeFileBlockLimit: 16,
+                    largeFileExcerptChars: 1_700,
+                    cautionBlockLimit: 10,
+                    cautionExcerptChars: 1_240,
+                    slowBlockLimit: 7,
+                    slowExcerptChars: 930,
                     cautionTokensPerSecond: 10,
                     slowTokensPerSecond: 7
                 )
