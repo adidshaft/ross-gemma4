@@ -797,7 +797,7 @@ struct AlphaPrivateAIOfferCard: View {
         if canResume {
             return (alphaAssistantStateLabel(.failed), .orange)
         }
-        if offer.tier == model.recommendedOnDeviceTier() {
+        if offer.tier == model.recommendedAssistantSetupTier() {
             return (rossLocalized("recommended"), Color.rossAccent)
         }
         return nil

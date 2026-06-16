@@ -826,6 +826,23 @@ func alphaAssistantBuiltInAlternativeHint(
     return rossLocalized("assistant_built_in_alternative_hint", languageCode: languageCode)
 }
 
+func alphaRecommendedAssistantSetupTier(
+    baselineTier: AlphaCapabilityTier,
+    systemAssistantAvailable: Bool,
+    hasExistingAssistantSetup: Bool,
+    hasRecentInvocation: Bool,
+    isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor()
+) -> AlphaCapabilityTier {
+    guard isPhoneFormFactor,
+          systemAssistantAvailable,
+          !hasExistingAssistantSetup,
+          !hasRecentInvocation,
+          baselineTier != .quickStart else {
+        return baselineTier
+    }
+    return .quickStart
+}
+
 private func alphaExistingRuntimeMode(
     for tier: AlphaCapabilityTier,
     installedPacks: [AlphaInstalledModelPack]
@@ -1227,6 +1244,24 @@ func alphaAssistantDownloadDescriptor(
 }
 
 extension AlphaRossModel {
+    func recommendedAssistantSetupTier() -> AlphaCapabilityTier {
+        let baselineTier = recommendedOnDeviceTier()
+        let hasExistingAssistantSetup =
+            persisted.settings.activeTier != nil ||
+            persisted.installedPacks.contains(where: { !$0.developmentOnly }) ||
+            persisted.modelJobs.contains(where: {
+                !$0.developmentOnly &&
+                    $0.state != .notStarted &&
+                    $0.state != .cancelled
+            })
+        let hasRecentInvocation = alphaLastModelInvocation(in: persisted) != nil
+        return alphaRecommendedAssistantSetupTier(
+            baselineTier: baselineTier,
+            systemAssistantAvailable: systemAssistantHealth(for: .quickStart)?.available == true,
+            hasExistingAssistantSetup: hasExistingAssistantSetup,
+            hasRecentInvocation: hasRecentInvocation
+        )
+    }
 
     private func upsertInstalledPack(
         _ pack: AlphaInstalledModelPack,

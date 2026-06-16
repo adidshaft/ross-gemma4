@@ -94,7 +94,7 @@ struct AlphaOnboardingScreen: View {
     @State private var didChooseAssistantOption = false
 
     private var recommendedTier: AlphaCapabilityTier {
-        model.recommendedOnDeviceTier()
+        model.recommendedAssistantSetupTier()
     }
 
     var body: some View {
@@ -709,7 +709,7 @@ struct AlphaModelPickerSheet: View {
                             AlphaModelPickerRow(
                                 model: model,
                                 tier: tier,
-                                isRecommended: tier == model.recommendedOnDeviceTier()
+                                isRecommended: tier == model.recommendedAssistantSetupTier()
                             ) {
                                 model.selectedTier = tier
                                 model.finishPackSetup()

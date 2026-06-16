@@ -8187,6 +8187,65 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testRecommendedAssistantSetupTierPrefersQuickStartForFreshCoreAICapableIPhone() {
+        XCTAssertEqual(
+            alphaRecommendedAssistantSetupTier(
+                baselineTier: .caseAssociate,
+                systemAssistantAvailable: true,
+                hasExistingAssistantSetup: false,
+                hasRecentInvocation: false,
+                isPhoneFormFactor: true
+            ),
+            .quickStart
+        )
+    }
+
+    func testRecommendedAssistantSetupTierKeepsBaselineWhenAssistantAlreadyExists() {
+        XCTAssertEqual(
+            alphaRecommendedAssistantSetupTier(
+                baselineTier: .caseAssociate,
+                systemAssistantAvailable: true,
+                hasExistingAssistantSetup: true,
+                hasRecentInvocation: false,
+                isPhoneFormFactor: true
+            ),
+            .caseAssociate
+        )
+    }
+
+    func testRecommendedAssistantSetupTierKeepsBaselineWithoutFreshInstantStartConditions() {
+        XCTAssertEqual(
+            alphaRecommendedAssistantSetupTier(
+                baselineTier: .seniorDraftingSupport,
+                systemAssistantAvailable: false,
+                hasExistingAssistantSetup: false,
+                hasRecentInvocation: false,
+                isPhoneFormFactor: true
+            ),
+            .seniorDraftingSupport
+        )
+        XCTAssertEqual(
+            alphaRecommendedAssistantSetupTier(
+                baselineTier: .caseAssociate,
+                systemAssistantAvailable: true,
+                hasExistingAssistantSetup: false,
+                hasRecentInvocation: true,
+                isPhoneFormFactor: true
+            ),
+            .caseAssociate
+        )
+        XCTAssertEqual(
+            alphaRecommendedAssistantSetupTier(
+                baselineTier: .caseAssociate,
+                systemAssistantAvailable: true,
+                hasExistingAssistantSetup: false,
+                hasRecentInvocation: false,
+                isPhoneFormFactor: false
+            ),
+            .caseAssociate
+        )
+    }
+
     func testAssistantOfferDoesNotPreferBuiltInActivationWhenMLXIsPreferred() {
         XCTAssertFalse(
             alphaAssistantOfferPrefersBuiltInActivation(
