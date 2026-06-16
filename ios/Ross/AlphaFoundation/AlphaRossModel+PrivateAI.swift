@@ -2282,6 +2282,36 @@ extension AlphaRossModel {
         persist()
     }
 
+    func activateAssistantRuntimeIfAvailable(
+        for tier: AlphaCapabilityTier,
+        runtimeMode: AlphaPackRuntimeMode
+    ) -> Bool {
+        if let installed = persisted.installedPacks.first(where: {
+            AlphaCapabilityTier.assistantSelectionsMatch($0.tier, tier) &&
+                $0.runtimeMode == runtimeMode
+        }) {
+            guard installedPackPassesRuntimeValidation(installed) else {
+                return false
+            }
+            activateInstalledPack(installed)
+            return true
+        }
+
+        guard runtimeMode == .appleFoundationModels,
+              systemAssistantReadyForActivation(for: tier) else {
+            return false
+        }
+
+        clearAssistantSetupRuntimeOverride(for: tier)
+        upsertInstalledPack(alphaSystemAssistantPack(for: tier), activate: true)
+        persisted.modelUpdateCandidates = alphaClearedAssistantUpdateCandidates(
+            persisted.modelUpdateCandidates,
+            for: tier
+        )
+        persist(workspaceChanged: true)
+        return true
+    }
+
     func installedPackPassesRuntimeValidation(_ pack: AlphaInstalledModelPack) -> Bool {
         alphaInstalledAssistantPackPassesRuntimeValidation(pack)
     }

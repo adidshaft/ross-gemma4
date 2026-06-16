@@ -1225,6 +1225,14 @@ extension AlphaRossModel {
         pendingAskUpgradeReturnRoute = returnRoute
         pendingAskUpgradeExpectedTier = tier
         pendingAskUpgradeExpectedRuntimeMode = runtimeMode
+
+        if let runtimeMode,
+           activateAssistantRuntimeIfAvailable(for: tier, runtimeMode: runtimeMode) {
+            selectedTier = tier
+            completePendingAskUpgradeNavigation(to: resolvedPendingAskUpgradeReturnRoute())
+            return
+        }
+
         selectedTier = tier
         setAssistantSetupRuntimeOverride(runtimeMode, for: tier)
         if path.last != .privateAISettings {
@@ -1252,8 +1260,10 @@ extension AlphaRossModel {
             return
         }
 
-        let targetRoute = resolvedPendingAskUpgradeReturnRoute()
+        completePendingAskUpgradeNavigation(to: resolvedPendingAskUpgradeReturnRoute())
+    }
 
+    private func completePendingAskUpgradeNavigation(to targetRoute: AlphaRoute?) {
         clearPendingAskUpgrade()
         path.removeAll { $0 == .privateAISettings }
         guard let targetRoute else { return }

@@ -9243,6 +9243,66 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     @MainActor
+    func testOpenAskUpgradeSetupActivatesAvailableRuntimeWithoutLeavingAskFlow() async throws {
+        let store = AlphaRossStore()
+        var availableMLXPack = try await installMLXPack(
+            with: store,
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-it-qat-4bit",
+            packId: "case-mlx",
+            fixtureName: "ask-upgrade-mlx"
+        )
+        availableMLXPack.isActive = false
+
+        var state = AlphaPersistedState.seed()
+        state.installedPacks = [
+            installedPack(.quickStart),
+            availableMLXPack
+        ]
+        let model = AlphaRossModel(previewState: state, previewPath: [.askRoss])
+        let result = AlphaAskResult(
+            kind: .userAsk,
+            question: "Can you review the larger matter bundle?",
+            scopeCaseID: nil,
+            scopeLabel: "All work",
+            selectedDocumentTitles: [],
+            answerTitle: "Focused answer",
+            answerSections: [],
+            caseFileSources: [],
+            publicLawPreview: nil,
+            publicLawResults: [],
+            statusNote: nil,
+            needsReviewWarning: "Focused sources",
+            modelInvocation: AlphaLocalModelInvocation(
+                task: .matterQuestionAnswer,
+                runtimeMode: AlphaPackRuntimeMode.appleFoundationModels.rawValue,
+                caseId: nil,
+                documentId: nil,
+                extractionRunId: nil,
+                capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+                inputSourceRefs: [],
+                promptHash: "prompt",
+                inputHash: "input",
+                status: .complete
+            ),
+            upgradeTierHint: nil,
+            upgradeRuntimeHint: .mlxSwiftLm
+        )
+
+        model.selectedTier = .quickStart
+        model.openAskUpgradeSetup(for: result)
+
+        XCTAssertEqual(model.selectedTier, .caseAssociate)
+        XCTAssertEqual(model.path.last, .askRoss)
+        XCTAssertFalse(model.path.contains(.privateAISettings))
+        XCTAssertNil(model.pendingAskUpgradeReturnRoute)
+        XCTAssertNil(model.pendingAskUpgradeExpectedTier)
+        XCTAssertNil(model.pendingAskUpgradeExpectedRuntimeMode)
+        XCTAssertEqual(model.persisted.installedPacks.first(where: \.isActive)?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(model.privateAISnapshot.activePack?.runtimeMode, .mlxSwiftLm)
+    }
+
+    @MainActor
     func testOpenAskUpgradeSetupCapturesCaseScopedReturnRoute() {
         let caseID = UUID()
         let model = AlphaRossModel(previewState: .empty(), previewPath: [.askCase(caseID)])
