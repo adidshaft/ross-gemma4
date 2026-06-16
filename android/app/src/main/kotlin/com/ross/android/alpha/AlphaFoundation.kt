@@ -322,6 +322,8 @@ data class AlphaAskAnswerDetails(
     val usedSourceCount: Int? = null,
     val reviewedSourceCount: Int? = null,
     val runtimeMode: String? = null,
+    val preferredRuntimeMode: String? = null,
+    val runtimeFallbackReason: String? = null,
     val usesMeasuredTokenCounts: Boolean = false,
 )
 
@@ -579,6 +581,8 @@ internal class AlphaRossController(
     private data class AlphaAskRuntimeSelection(
         val pack: AlphaInstalledPack,
         val provider: AlphaLocalModelProvider,
+        val preferredRuntimeMode: AlphaPackRuntimeMode?,
+        val runtimeFallbackReason: String? = null,
     )
 
     private val gson: Gson = GsonBuilder().setPrettyPrinting().create()
@@ -2268,6 +2272,8 @@ internal class AlphaRossController(
                     durationMs = durationMs,
                     sourcePack = sourcePack,
                     runtimeMode = provider.runtimeMode,
+                    preferredRuntimeMode = runtimeSelection.preferredRuntimeMode,
+                    runtimeFallbackReason = runtimeSelection.runtimeFallbackReason,
                 )
                 val answerDetails = runtimeMetrics
                 val update: (AlphaAskResult) -> AlphaAskResult = { result ->
@@ -2550,6 +2556,8 @@ internal class AlphaRossController(
         durationMs: Long,
         sourcePack: List<AlphaSourceTextBlock>,
         runtimeMode: AlphaPackRuntimeMode,
+        preferredRuntimeMode: AlphaPackRuntimeMode?,
+        runtimeFallbackReason: String?,
     ): AlphaAskAnswerDetails? {
         val outputChars = output.rawText.ifBlank { output.parsedJson.orEmpty() }
             .trim()
@@ -2573,13 +2581,18 @@ internal class AlphaRossController(
             else -> null
         }
         val runtimeModeValue = runtimeMode.wireValue.takeIf { runtimeMode != AlphaPackRuntimeMode.Unavailable }
+        val preferredRuntimeModeValue = preferredRuntimeMode
+            ?.wireValue
+            ?.takeIf { it != runtimeModeValue }
         if (
             estimatedProcessedTokens == null &&
             estimatedTokensPerSecond == null &&
             promptChars == null &&
             reviewedSourceCountValue == null &&
             usedSourceCountValue == null &&
-            runtimeModeValue == null
+            runtimeModeValue == null &&
+            preferredRuntimeModeValue == null &&
+            runtimeFallbackReason == null
         ) {
             return null
         }
@@ -2590,6 +2603,8 @@ internal class AlphaRossController(
             usedSourceCount = usedSourceCountValue,
             reviewedSourceCount = reviewedSourceCountValue,
             runtimeMode = runtimeModeValue,
+            preferredRuntimeMode = preferredRuntimeModeValue,
+            runtimeFallbackReason = runtimeFallbackReason,
             usesMeasuredTokenCounts = false,
         )
     }
@@ -3190,6 +3205,12 @@ internal class AlphaRossController(
                 return AlphaAskRuntimeSelection(
                     pack = pack,
                     provider = provider,
+                    preferredRuntimeMode = preferredPack?.runtimeMode,
+                    runtimeFallbackReason = if (preferredPack != null && preferredPack.id != pack.id) {
+                        "Using an available installed runtime instead"
+                    } else {
+                        null
+                    },
                 )
             }
         }

@@ -5686,6 +5686,12 @@ private fun AlphaAskAnswerDetailsSheet(
             alphaAskAnswerDetailRuntimeLabel(details)?.let { runtimeLabel ->
                 AlphaSettingsValueRow("Runtime used", runtimeLabel)
             }
+            alphaAskAnswerDetailPreferredRuntimeLabel(details)?.let { preferredRuntimeLabel ->
+                AlphaSettingsValueRow("Preferred runtime", preferredRuntimeLabel)
+            }
+            details.runtimeFallbackReason?.let { fallbackReason ->
+                AlphaSettingsValueRow("Fallback", fallbackReason)
+            }
             alphaAskAnswerDetailPromptSizeLabel(details)?.let { promptSizeLabel ->
                 AlphaSettingsValueRow("Prompt size", promptSizeLabel)
             }
@@ -5715,18 +5721,24 @@ private fun alphaAskAnswerDetailSpeedLabel(details: AlphaAskAnswerDetails): Stri
     }
 }
 
-private fun alphaAskAnswerDetailRuntimeLabel(details: AlphaAskAnswerDetails): String? =
-    when (details.runtimeMode) {
+private fun alphaAskRuntimeModeLabel(runtimeMode: String?): String? =
+    when (runtimeMode) {
         AlphaPackRuntimeMode.GemmaLocalRuntime.wireValue -> "Gemma GGUF"
         AlphaPackRuntimeMode.AppleFoundationModels.wireValue -> "Built-in CoreAI"
         AlphaPackRuntimeMode.MediapipeLlm.wireValue -> "MediaPipe"
         AlphaPackRuntimeMode.DeterministicDev.wireValue -> "Development runtime"
         AlphaPackRuntimeMode.Unavailable.wireValue, null -> null
-        else -> details.runtimeMode
+        else -> runtimeMode
             .replace("_", " ")
             .split(" ")
             .joinToString(" ") { token -> token.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() } }
     }
+
+private fun alphaAskAnswerDetailRuntimeLabel(details: AlphaAskAnswerDetails): String? =
+    alphaAskRuntimeModeLabel(details.runtimeMode)
+
+private fun alphaAskAnswerDetailPreferredRuntimeLabel(details: AlphaAskAnswerDetails): String? =
+    alphaAskRuntimeModeLabel(details.preferredRuntimeMode)
 
 private fun alphaAskAnswerDetailPromptSizeLabel(details: AlphaAskAnswerDetails): String? =
     details.promptChars
