@@ -9204,6 +9204,27 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testAskUpgradeActionDetailExplainsGGUFContextBenefit() {
+        XCTAssertEqual(
+            alphaAskUpgradeActionDetail(.caseAssociate, runtimeMode: .llamaCppGguf),
+            "GGUF can keep more of the selected files and longer context on device."
+        )
+    }
+
+    func testAskUpgradeActionDetailExplainsMLXIPhoneContextBenefit() {
+        XCTAssertEqual(
+            alphaAskUpgradeActionDetail(.caseAssociate, runtimeMode: .mlxSwiftLm),
+            "MLX can keep more of the selected files in local iPhone context."
+        )
+    }
+
+    func testAskUpgradeActionDetailExplainsSeniorGGUFBundleBenefit() {
+        XCTAssertEqual(
+            alphaAskUpgradeActionDetail(.seniorDraftingSupport, runtimeMode: .llamaCppGguf),
+            "Senior Drafting Support with GGUF can review larger bundles with deeper local context."
+        )
+    }
+
     func testAssistantOfferDoesNotPreferBuiltInActivationWhenMLXIsPreferred() {
         XCTAssertFalse(
             alphaAssistantOfferPrefersBuiltInActivation(

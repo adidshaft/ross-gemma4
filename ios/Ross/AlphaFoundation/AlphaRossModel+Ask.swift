@@ -4056,6 +4056,48 @@ func alphaAskUpgradeActionTitle(
     )
 }
 
+func alphaAskUpgradeActionDetail(
+    _ tier: AlphaCapabilityTier?,
+    runtimeMode: AlphaPackRuntimeMode? = nil
+) -> String? {
+    let normalizedTier = AlphaCapabilityTier.normalizedAssistantSelection(tier)
+
+    if let runtimeMode {
+        switch runtimeMode {
+        case .appleFoundationModels:
+            return "This keeps the ask local with no extra download."
+        case .mlxSwiftLm:
+            if normalizedTier == .caseAssociate {
+                return "MLX can keep more of the selected files in local iPhone context."
+            }
+            return "MLX can keep more of this ask in local iPhone context."
+        case .llamaCppGguf:
+            if normalizedTier == .seniorDraftingSupport {
+                return "Senior Drafting Support with GGUF can review larger bundles with deeper local context."
+            }
+            return "GGUF can keep more of the selected files and longer context on device."
+        case .deterministicDev:
+            return "This uses the development runtime for the same ask."
+        case .mediapipeLlm:
+            return "This uses the MediaPipe runtime for the same ask."
+        case .unavailable:
+            return nil
+        }
+    }
+
+    guard let normalizedTier else { return nil }
+    switch normalizedTier {
+    case .quickStart:
+        return "This tier is better for lighter local asks."
+    case .caseAssociate:
+        return "This tier can review larger files with a longer local source window."
+    case .seniorDraftingSupport:
+        return "This tier can review larger bundles and keep more drafting context local."
+    case .flash:
+        return "This tier is better for lighter local asks."
+    }
+}
+
 func alphaCombinedAskWarnings(
     _ warnings: String?...
 ) -> String? {

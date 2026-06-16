@@ -2175,6 +2175,16 @@ struct AlphaPublicLawWarningsView: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color.rossAccent)
                     .padding(.top, 4)
+
+                    if let upgradeDetail = alphaAskUpgradeActionDetail(
+                        result.upgradeTierHint,
+                        runtimeMode: result.upgradeRuntimeHint
+                    ) {
+                        Text(upgradeDetail)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Color.rossInk.opacity(0.56))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
             }
             .font(.system(size: 13, weight: .regular))
