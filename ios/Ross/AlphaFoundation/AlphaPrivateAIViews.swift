@@ -1715,6 +1715,14 @@ struct AlphaPrivateAIInstalledPackCard: View {
         !runtimeUnavailable && (!pack.developmentOnly || developmentPackIsUsable)
     }
 
+    private var runtimeSummaryLabel: String? {
+        alphaAssistantInstalledPackRuntimeSummaryLabel(
+            for: pack,
+            physicalMemoryBytes: ProcessInfo.processInfo.physicalMemory,
+            lastInvocation: model.lastModelInvocation
+        )
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 12) {
@@ -1740,6 +1748,13 @@ struct AlphaPrivateAIInstalledPackCard: View {
                 ))
                     .font(.caption)
                     .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if let runtimeSummaryLabel {
+                Text(runtimeSummaryLabel)
+                    .font(.caption)
+                    .foregroundStyle(Color.rossInk.opacity(0.7))
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -1779,6 +1794,52 @@ private struct AlphaPrivateAIInstalledPackSurface: ViewModifier {
             )
             .shadow(color: Color.rossShadow.opacity(0.08), radius: 8, y: 3)
     }
+}
+
+func alphaAssistantInstalledPackRuntimeSummaryLabel(
+    for pack: AlphaInstalledModelPack,
+    physicalMemoryBytes: UInt64,
+    deviceModelIdentifier: String = alphaCurrentDeviceModelIdentifier(),
+    lastInvocation: AlphaLocalModelInvocation? = nil
+) -> String? {
+    let hasDraftCompanion = switch pack.runtimeMode {
+    case .mlxSwiftLm:
+        true
+    case .llamaCppGguf:
+        alphaExpectedDownloadedAssistantArtifact(for: pack)?.draftArtifact != nil
+    case .appleFoundationModels, .deterministicDev, .mediapipeLlm, .unavailable:
+        false
+    }
+
+    let speedLabel = alphaAssistantSetupSpeedLabel(
+        for: pack.tier,
+        runtimeMode: pack.runtimeMode,
+        physicalMemoryBytes: physicalMemoryBytes,
+        deviceModelIdentifier: deviceModelIdentifier,
+        hasDraftCompanion: hasDraftCompanion,
+        lastInvocation: lastInvocation
+    )
+    let contextLabel = alphaAssistantSetupContextLabel(
+        for: pack.tier,
+        runtimeMode: pack.runtimeMode,
+        physicalMemoryBytes: physicalMemoryBytes,
+        deviceModelIdentifier: deviceModelIdentifier
+    )
+
+    let rawSummaryParts: [String?] = [
+        pack.runtimeMode.displayLabel,
+        speedLabel,
+        contextLabel
+    ]
+    let summaryParts: [String] = rawSummaryParts.compactMap { value -> String? in
+        guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmed.isEmpty else {
+            return nil
+        }
+        return trimmed
+    }
+
+    return summaryParts.isEmpty ? nil : summaryParts.joined(separator: " · ")
 }
 
 struct AlphaPrivateAIInlineBadge: View {

@@ -12709,6 +12709,80 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNil(details?.draftCompanionLabel)
     }
 
+    func testInstalledPackRuntimeSummaryUsesMeasuredMLXSpeedOnRecentIPhone() {
+        let pack = AlphaInstalledModelPack(
+            packId: "gemma-4-12b-mlx",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/gemma-4-12b-it-mlx",
+            checksumSha256: String(repeating: "b", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+        let lastInvocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 13.4,
+            timeToFirstTokenMs: 1_450,
+            status: .complete
+        )
+
+        XCTAssertEqual(
+            alphaAssistantInstalledPackRuntimeSummaryLabel(
+                for: pack,
+                physicalMemoryBytes: 12 * 1_073_741_824,
+                deviceModelIdentifier: "iPhone17,2",
+                lastInvocation: lastInvocation
+            ),
+            "MLX · 13 tok/s · 28,672 tokens"
+        )
+    }
+
+    func testInstalledPackRuntimeSummaryUsesEstimatedGGUFSpeedWhenNoRecentRun() {
+        let pack = AlphaInstalledModelPack(
+            packId: "gemma-4-12b-q4",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/gemma-4-12b-it-UD-Q4_K_XL.gguf",
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+
+        XCTAssertEqual(
+            alphaAssistantInstalledPackRuntimeSummaryLabel(
+                for: pack,
+                physicalMemoryBytes: 12 * 1_073_741_824,
+                deviceModelIdentifier: "iPhone17,2"
+            ),
+            "Gemma GGUF · ~10 tok/s · 28,672 tokens"
+        )
+    }
+
+    func testInstalledPackRuntimeSummaryUsesCoreAISpeedAndContextOnCapableIPhone() {
+        let pack = alphaSystemAssistantPack(for: .caseAssociate)
+
+        XCTAssertEqual(
+            alphaAssistantInstalledPackRuntimeSummaryLabel(
+                for: pack,
+                physicalMemoryBytes: 12 * 1_073_741_824,
+                deviceModelIdentifier: "iPhone17,2"
+            ),
+            "CoreAI · ~14 tok/s · 14,336 tokens"
+        )
+    }
+
     func testPreferredAssistantSetupRuntimeModeDefaultsToMLXForFreshProductionCaseAssociateSetup() {
         let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
         let previousSimulatorIdentifier = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"]
