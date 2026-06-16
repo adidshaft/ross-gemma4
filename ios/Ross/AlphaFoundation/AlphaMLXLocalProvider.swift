@@ -14,6 +14,13 @@ private final class AlphaUnsafeSendableBox<Value>: @unchecked Sendable {
 }
 
 enum AlphaMLXRuntimeProfile {
+    private enum IPhonePerformanceClass {
+        case baseline
+        case recent
+        case recentPro
+        case latest
+    }
+
     static func contextWindowTokens(
         for tier: AlphaCapabilityTier,
         physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory
@@ -133,6 +140,7 @@ enum AlphaMLXRuntimeProfile {
     static func estimatedAssistantTokensPerSecond(
         for tier: AlphaCapabilityTier,
         physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory,
+        deviceModelIdentifier: String = alphaCurrentDeviceModelIdentifier(),
         hasDraftCompanion: Bool
     ) -> Double {
         let baseSpeed: Double
@@ -169,7 +177,13 @@ enum AlphaMLXRuntimeProfile {
             }
         }
 
-        guard hasDraftCompanion else { return baseSpeed }
+        let deviceAdjustedBaseSpeed = baseSpeed + iPhoneBaseSpeedBonus(
+            for: tier,
+            physicalMemory: physicalMemory,
+            deviceModelIdentifier: deviceModelIdentifier
+        )
+
+        guard hasDraftCompanion else { return deviceAdjustedBaseSpeed }
 
         let draftTokens = defaultDraftTokens(for: tier, physicalMemory: physicalMemory)
         let draftBonus: Double
@@ -196,7 +210,7 @@ enum AlphaMLXRuntimeProfile {
             prefillBonus = 0
         }
 
-        return baseSpeed + draftBonus + prefillBonus
+        return deviceAdjustedBaseSpeed + draftBonus + prefillBonus
     }
 
     static func maximumSupportedDraftTokens(for tier: AlphaCapabilityTier) -> Int {
@@ -219,6 +233,98 @@ enum AlphaMLXRuntimeProfile {
             return physicalMemory >= 16_000_000_000 ? 10 : 8
         case .flash, .quickStart:
             return 8
+        }
+    }
+
+    private static func iPhoneBaseSpeedBonus(
+        for tier: AlphaCapabilityTier,
+        physicalMemory: UInt64,
+        deviceModelIdentifier: String
+    ) -> Double {
+        guard let performanceClass = iPhonePerformanceClass(
+            for: deviceModelIdentifier,
+            physicalMemory: physicalMemory
+        ) else {
+            return 0
+        }
+
+        switch performanceClass {
+        case .baseline:
+            switch tier {
+            case .flash:
+                return 0.2
+            case .quickStart:
+                return 0.3
+            case .caseAssociate:
+                return 0.35
+            case .seniorDraftingSupport:
+                return 0.25
+            }
+        case .recent:
+            switch tier {
+            case .flash:
+                return 0.3
+            case .quickStart:
+                return 0.5
+            case .caseAssociate:
+                return 0.6
+            case .seniorDraftingSupport:
+                return 0.45
+            }
+        case .recentPro:
+            switch tier {
+            case .flash:
+                return 0.45
+            case .quickStart:
+                return 0.8
+            case .caseAssociate:
+                return 0.9
+            case .seniorDraftingSupport:
+                return 0.75
+            }
+        case .latest:
+            switch tier {
+            case .flash:
+                return 0.6
+            case .quickStart:
+                return 1.0
+            case .caseAssociate:
+                return 1.2
+            case .seniorDraftingSupport:
+                return 0.95
+            }
+        }
+    }
+
+    private static func iPhonePerformanceClass(
+        for deviceModelIdentifier: String,
+        physicalMemory: UInt64
+    ) -> IPhonePerformanceClass? {
+        let normalizedIdentifier = deviceModelIdentifier.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard normalizedIdentifier.lowercased().hasPrefix("iphone") else {
+            return nil
+        }
+
+        let majorMinor = normalizedIdentifier.dropFirst("iPhone".count).split(separator: ",", maxSplits: 1)
+        guard let majorComponent = majorMinor.first,
+              let major = Int(majorComponent) else {
+            return physicalMemory >= 12_000_000_000 ? .recent : .baseline
+        }
+        let minor = majorMinor.count == 2 ? Int(majorMinor[1]) ?? 0 : 0
+
+        switch (major, minor) {
+        case (18..., _):
+            return .latest
+        case (17..., 1...2):
+            return .recentPro
+        case (17..., _):
+            return .recent
+        case (16..., 1...2):
+            return physicalMemory >= 12_000_000_000 ? .recentPro : .recent
+        case (16..., _):
+            return .recent
+        default:
+            return physicalMemory >= 12_000_000_000 ? .recent : .baseline
         }
     }
 }

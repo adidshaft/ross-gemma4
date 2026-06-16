@@ -11535,6 +11535,21 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.etaLabel, "about 16 min")
     }
 
+    func testAssistantSetupPresentationUsesDeviceAwareMLXSpeedOnRecentIPhone() {
+        let presentation = alphaAssistantSetupPresentation(
+            for: .caseAssociate,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            deviceModelIdentifier: "iPhone17,2",
+            freeStorageGB: 24,
+            systemAssistantAvailable: false
+        )
+
+        XCTAssertEqual(presentation?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(presentation?.speedLabel, "~14 tok/s")
+        XCTAssertEqual(presentation?.contextLabel, "24,576 tokens")
+    }
+
     func testAssistantSetupPresentationUsesBuiltInCoreAIForQuickStartWhenAvailableOnCapablePhone() {
         let presentation = alphaAssistantSetupPresentation(
             for: .quickStart,
@@ -15110,6 +15125,25 @@ final class AlphaExtractionTests: XCTestCase {
             ),
             "14 tok/s"
         )
+    }
+
+    func testMLXRuntimeProfileUsesNewerIPhoneIdentifiersForFasterSpeedEstimates() {
+        let macEstimatedSpeed = AlphaMLXRuntimeProfile.estimatedAssistantTokensPerSecond(
+            for: .caseAssociate,
+            physicalMemory: 12_000_000_000,
+            deviceModelIdentifier: "Mac16,1",
+            hasDraftCompanion: true
+        )
+        let recentIPhoneEstimatedSpeed = AlphaMLXRuntimeProfile.estimatedAssistantTokensPerSecond(
+            for: .caseAssociate,
+            physicalMemory: 12_000_000_000,
+            deviceModelIdentifier: "iPhone17,2",
+            hasDraftCompanion: true
+        )
+
+        XCTAssertEqual(alphaAssistantTokenRateLabel(tokensPerSecond: macEstimatedSpeed), "13 tok/s")
+        XCTAssertEqual(alphaAssistantTokenRateLabel(tokensPerSecond: recentIPhoneEstimatedSpeed), "14 tok/s")
+        XCTAssertGreaterThan(recentIPhoneEstimatedSpeed, macEstimatedSpeed)
     }
 
     func testLlamaValidationRejectsMissingModelPath() {

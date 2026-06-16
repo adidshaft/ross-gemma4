@@ -917,6 +917,7 @@ func alphaAssistantSetupSpeedLabel(
     for tier: AlphaCapabilityTier,
     runtimeMode: AlphaPackRuntimeMode,
     physicalMemoryBytes: UInt64,
+    deviceModelIdentifier: String = alphaCurrentDeviceModelIdentifier(),
     hasDraftCompanion: Bool,
     lastInvocation: AlphaLocalModelInvocation? = nil
 ) -> String? {
@@ -945,6 +946,7 @@ func alphaAssistantSetupSpeedLabel(
         AlphaMLXRuntimeProfile.estimatedAssistantTokensPerSecond(
             for: effectiveTier,
             physicalMemory: physicalMemoryBytes,
+            deviceModelIdentifier: deviceModelIdentifier,
             hasDraftCompanion: hasDraftCompanion
         )
     case .llamaCppGguf:
@@ -1192,6 +1194,7 @@ func alphaAssistantSetupPresentation(
     preferredRuntimeMode: AlphaPackRuntimeMode? = nil,
     isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
     physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory,
+    deviceModelIdentifier: String = alphaCurrentDeviceModelIdentifier(),
     freeStorageGB: Int = max(4, alphaAvailableStorageInGigabytes()),
     systemAssistantAvailable: Bool? = nil,
     lastInvocation: AlphaLocalModelInvocation? = nil,
@@ -1223,6 +1226,7 @@ func alphaAssistantSetupPresentation(
                 for: tier,
                 runtimeMode: .appleFoundationModels,
                 physicalMemoryBytes: physicalMemoryBytes,
+                deviceModelIdentifier: deviceModelIdentifier,
                 hasDraftCompanion: false,
                 lastInvocation: lastInvocation
             ),
@@ -1255,6 +1259,7 @@ func alphaAssistantSetupPresentation(
             for: tier,
             runtimeMode: descriptor.runtimeMode,
             physicalMemoryBytes: physicalMemoryBytes,
+            deviceModelIdentifier: deviceModelIdentifier,
             hasDraftCompanion: descriptor.draftArtifact != nil,
             lastInvocation: lastInvocation
         ),
