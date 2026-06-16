@@ -11736,6 +11736,90 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     @MainActor
+    func testAskSourceSegmentsSplitLongSelectedPageIntoOverlappingChunks() {
+        let model = AlphaRossModel(previewState: .empty())
+        let longText = String(repeating: "Background facts and chronology details. ", count: 80) +
+            "Critical indemnity clause appears near the end of this long selected page."
+
+        let segments = model.alphaAskSourceSegments(
+            from: longText,
+            allowsChunking: true,
+            preferredChunkChars: 520,
+            overlapChars: 80
+        )
+
+        XCTAssertGreaterThan(segments.count, 1)
+        XCTAssertTrue(segments.last?.contains("Critical indemnity clause") == true)
+        XCTAssertTrue(segments.dropFirst().contains { $0.contains("chronology details") })
+    }
+
+    @MainActor
+    func testAskRuntimeSourcePackChunksLongTaggedPageIntoMultipleBlocks() {
+        let caseID = UUID()
+        let documentID = UUID()
+        let longPageText = String(repeating: "Background facts and chronology details. ", count: 90) +
+            "The indemnity clause appears near the end of the tagged page."
+        let document = AlphaCaseDocument(
+            id: documentID,
+            title: "Long tagged page",
+            fileName: "long-tagged-page.pdf",
+            kind: .pdf,
+            storedRelativePath: "tests/long-tagged-page.pdf",
+            importedAt: .now,
+            pageCount: 1,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: longPageText,
+            dominantSourceSnippet: nil,
+            lastIndexedAt: .now,
+            pages: [
+                AlphaDocumentPage(
+                    pageNumber: 1,
+                    snippet: "Background facts and chronology details.",
+                    extractedText: longPageText,
+                    anchorText: "Background facts and chronology details."
+                )
+            ]
+        )
+        let caseMatter = AlphaCaseMatter(
+            id: caseID,
+            title: "Acme v. Beta",
+            forum: "Delhi High Court",
+            stage: .pleadings,
+            summary: "Commercial dispute",
+            issueHighlights: [],
+            evidenceNotes: [],
+            draftTasks: [],
+            documents: [document],
+            sourceRefs: []
+        )
+        let selectedDocument = AlphaAskDocumentOption(
+            id: documentID,
+            caseId: caseID,
+            caseTitle: caseMatter.title,
+            title: document.title,
+            fileName: document.fileName,
+            kind: document.kind,
+            isShared: false
+        )
+
+        var state = AlphaPersistedState.empty()
+        state.cases = [caseMatter]
+        let model = AlphaRossModel(previewState: state)
+
+        let sourcePack = model.askRuntimeSourcePack(
+            question: "Where is the indemnity clause in the tagged file?",
+            scopeCaseID: caseID,
+            selectedDocuments: [selectedDocument]
+        )
+
+        let pageBlocks = sourcePack.filter { $0.sourceRef.documentId == documentID && $0.pageNumber == 1 }
+        XCTAssertGreaterThan(pageBlocks.count, 1)
+        XCTAssertTrue(pageBlocks.contains { $0.sourceRef.paragraphRange?.contains("chunk") == true })
+        XCTAssertTrue(pageBlocks.contains { $0.text.contains("indemnity clause") })
+    }
+
+    @MainActor
     func testUntaggedRankedAskSourceBlocksKeepNeighboringPagesForContext() {
         let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
         let caseID = UUID()

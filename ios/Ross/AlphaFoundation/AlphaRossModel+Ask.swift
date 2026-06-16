@@ -2006,26 +2006,18 @@ extension AlphaRossModel {
                 let text = page.extractedText ?? page.anchorText ?? document.dominantSourceSnippet ?? document.extractedText ?? ""
                 let cleanedText = text.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
                 guard !cleanedText.isEmpty else { continue }
-                let sourceRef = AlphaSourceRef(
-                    caseId: caseMatter.id,
-                    documentId: document.id,
-                    documentTitle: document.title,
-                    pageNumber: page.pageNumber,
-                    textSnippet: page.anchorText ?? page.snippet ?? alphaAskCompactSnippet(from: cleanedText),
-                    ocrConfidence: page.ocrConfidence
+                let allowsChunking =
+                    selectedIDs.contains(document.id) ||
+                    (selectedIDs.count == 1 && candidateDocuments.count == 1) ||
+                    sourcePackPolicy.sourceBlockLimit >= 12
+                let chunkedBlocks = alphaChunkedAskSourceBlocks(
+                    caseMatter: caseMatter,
+                    document: document,
+                    page: page,
+                    cleanedText: cleanedText,
+                    allowsChunking: allowsChunking
                 )
-                documentBlocks.append(
-                    AlphaSourceTextBlock(
-                        sourceRef: sourceRef,
-                        text: cleanedText,
-                        pageNumber: page.pageNumber,
-                        languageHint: alphaSourceLanguageHint(
-                            profile: document.languageProfile,
-                            pageNumber: page.pageNumber
-                        ),
-                        ocrConfidence: page.ocrConfidence
-                    )
-                )
+                documentBlocks.append(contentsOf: chunkedBlocks)
             }
         }
 
@@ -2179,6 +2171,88 @@ extension AlphaRossModel {
             ),
             ocrConfidence: nil
         )
+    }
+
+    func alphaChunkedAskSourceBlocks(
+        caseMatter: AlphaCaseMatter,
+        document: AlphaCaseDocument,
+        page: AlphaDocumentPage,
+        cleanedText: String,
+        allowsChunking: Bool,
+        preferredChunkChars: Int = 1_700,
+        overlapChars: Int = 260
+    ) -> [AlphaSourceTextBlock] {
+        let segments = alphaAskSourceSegments(
+            from: cleanedText,
+            allowsChunking: allowsChunking,
+            preferredChunkChars: preferredChunkChars,
+            overlapChars: overlapChars
+        )
+
+        return segments.enumerated().map { index, segment in
+            let paragraphRange: String? = segments.count > 1 ? "chunk \(index + 1)/\(segments.count)" : nil
+            let sourceRef = AlphaSourceRef(
+                caseId: caseMatter.id,
+                documentId: document.id,
+                documentTitle: document.title,
+                pageNumber: page.pageNumber,
+                paragraphRange: paragraphRange,
+                textSnippet: page.anchorText ?? page.snippet ?? alphaAskCompactSnippet(from: segment),
+                ocrConfidence: page.ocrConfidence
+            )
+            return AlphaSourceTextBlock(
+                sourceRef: sourceRef,
+                text: segment,
+                pageNumber: page.pageNumber,
+                languageHint: alphaSourceLanguageHint(
+                    profile: document.languageProfile,
+                    pageNumber: page.pageNumber
+                ),
+                ocrConfidence: page.ocrConfidence
+            )
+        }
+    }
+
+    func alphaAskSourceSegments(
+        from text: String,
+        allowsChunking: Bool,
+        preferredChunkChars: Int = 1_700,
+        overlapChars: Int = 260
+    ) -> [String] {
+        let cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard allowsChunking, cleaned.count > preferredChunkChars + 400 else {
+            return cleaned.isEmpty ? [] : [cleaned]
+        }
+
+        let boundaryScalars = CharacterSet(charactersIn: ".!?\n")
+        var segments: [String] = []
+        var start = cleaned.startIndex
+
+        while start < cleaned.endIndex {
+            let hardEnd = cleaned.index(start, offsetBy: preferredChunkChars, limitedBy: cleaned.endIndex) ?? cleaned.endIndex
+            var end = hardEnd
+            if hardEnd < cleaned.endIndex {
+                let lowerSearchBound = cleaned.index(start, offsetBy: max(preferredChunkChars - 220, 0), limitedBy: cleaned.endIndex) ?? start
+                let searchSlice = cleaned[lowerSearchBound..<hardEnd]
+                if let boundary = searchSlice.lastIndex(where: { character in
+                    character.unicodeScalars.contains { boundaryScalars.contains($0) } || character.isWhitespace
+                }) {
+                    end = cleaned.index(after: boundary)
+                }
+            }
+
+            let segment = cleaned[start..<end].trimmingCharacters(in: .whitespacesAndNewlines)
+            if !segment.isEmpty {
+                segments.append(segment)
+            }
+            guard end < cleaned.endIndex else { break }
+
+            let rewindDistance = min(overlapChars, cleaned.distance(from: start, to: end) - 1)
+            let rewound = cleaned.index(end, offsetBy: -max(rewindDistance, 0))
+            start = cleaned[rewound..<cleaned.endIndex].firstIndex(where: { !$0.isWhitespace }) ?? end
+        }
+
+        return segments.isEmpty ? [cleaned] : segments
     }
 
     func alphaRankedAskSourceBlocks(
