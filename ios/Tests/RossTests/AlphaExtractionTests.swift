@@ -12746,6 +12746,36 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(fallback.artifactKind, "local_model_artifact")
     }
 
+    func testPreferredCachedAssistantInstalledReuseCatalogDescriptorPrefersMatchingRuntime() {
+        let cachedMLX = AlphaAssistantCatalogDescriptor(
+            tier: .caseAssociate,
+            packId: "gemma-4-12b-it-mlx-packaged",
+            sizeBytes: 6_200_000_000,
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false
+        )
+        let cachedGGUF = AlphaAssistantCatalogDescriptor(
+            tier: .caseAssociate,
+            packId: "gemma-4-12b-gguf-new",
+            sizeBytes: 7_366_421_920,
+            checksumSha256: String(repeating: "b", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false
+        )
+
+        let descriptor = alphaPreferredCachedAssistantInstalledReuseCatalogDescriptor(
+            for: .caseAssociate,
+            preferredRuntimeMode: .mlxSwiftLm,
+            cachedCatalogs: [cachedGGUF, cachedMLX]
+        )
+
+        XCTAssertEqual(descriptor?.packId, cachedMLX.packId)
+        XCTAssertEqual(descriptor?.runtimeMode, .mlxSwiftLm)
+    }
+
     func testAssistantSetupPresentationUsesCachedPreferredMLXCatalogOnCapableIPhone() {
         let cachedMLX = AlphaAssistantCatalogDescriptor(
             tier: .caseAssociate,
@@ -13683,6 +13713,54 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(model.persisted.settings.activeTier, .caseAssociate)
     }
     #endif
+
+    @MainActor
+    func testStartPackDownloadReusesInstalledPackagedMLXWhenBackendResolveHintFailsOffline() async throws {
+        rossSetBackendBaseURLOverride("http://127.0.0.1:9")
+        defer { rossSetBackendBaseURLOverride(nil) }
+
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+        registerModelArtifactCleanup(for: store)
+
+        var packagedMLXPack = try await installMLXPack(
+            with: store,
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-it-mlx",
+            packId: "gemma-4-12b-it-mlx-packaged",
+            fixtureName: "ross-mlx-offline-packaged-reuse-\(UUID().uuidString)"
+        )
+        packagedMLXPack.isActive = false
+
+        let model = AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+        var state = AlphaPersistedState.empty()
+        state.installedPacks = [packagedMLXPack]
+        state.cachedAssistantCatalogs = [
+            AlphaAssistantCatalogDescriptor(
+                tier: .caseAssociate,
+                packId: packagedMLXPack.packId,
+                sizeBytes: 6_200_000_000,
+                checksumSha256: packagedMLXPack.checksumSha256,
+                artifactKind: "mlx_directory",
+                runtimeMode: .mlxSwiftLm,
+                developmentOnly: false
+            )
+        ]
+        model.persisted = state
+
+        await model.startPackDownload(
+            for: .caseAssociate,
+            mobileAllowed: true,
+            requestedRuntimeMode: .mlxSwiftLm
+        )
+
+        XCTAssertEqual(model.persisted.installedPacks.count, 1)
+        XCTAssertEqual(model.persisted.installedPacks.first(where: \.isActive)?.packId, packagedMLXPack.packId)
+        XCTAssertEqual(model.persisted.installedPacks.first(where: \.isActive)?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(model.privateAISnapshot.activePack?.packId, packagedMLXPack.packId)
+        XCTAssertEqual(model.persisted.settings.activeTier, .caseAssociate)
+        XCTAssertTrue(model.persisted.modelJobs.isEmpty)
+    }
 
     func testAssistantCatalogRefreshTiersIncludeVisibleOptionsWithoutInstalledPacks() {
         XCTAssertEqual(

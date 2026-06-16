@@ -589,6 +589,28 @@ func alphaInstalledAssistantPackMatchesDownloadDescriptor(
         )
 }
 
+func alphaInstalledAssistantPackMatchesCatalogDescriptor(
+    _ pack: AlphaInstalledModelPack?,
+    descriptor: AlphaAssistantCatalogDescriptor,
+    forceDownload: Bool = false
+) -> Bool {
+    guard let pack else { return false }
+    guard !forceDownload else { return false }
+    guard pack.tier == descriptor.tier,
+          pack.packId == descriptor.packId,
+          pack.artifactKind == descriptor.artifactKind,
+          pack.runtimeMode == descriptor.runtimeMode,
+          pack.developmentOnly == descriptor.developmentOnly else {
+        return false
+    }
+    if !descriptor.checksumSha256.isEmpty {
+        guard pack.checksumSha256.caseInsensitiveCompare(descriptor.checksumSha256) == .orderedSame else {
+            return false
+        }
+    }
+    return alphaAssistantCatalogDraftArtifactMatchesInstalledPack(pack, descriptor: descriptor)
+}
+
 private func alphaAssistantDownloadDescriptorDraftArtifact(
     _ artifact: AlphaBackendArtifactDraft?
 ) -> AlphaAssistantDraftArtifactDescriptor? {
@@ -1379,6 +1401,24 @@ func alphaPreferredAssistantCatalogFallback(
         return fallbackCached
     }
     return alphaDefaultAssistantCatalogDescriptor(for: tier)
+}
+
+func alphaPreferredCachedAssistantInstalledReuseCatalogDescriptor(
+    for tier: AlphaCapabilityTier,
+    preferredRuntimeMode: AlphaPackRuntimeMode,
+    targetPackId: String? = nil,
+    cachedCatalogs: [AlphaAssistantCatalogDescriptor]?
+) -> AlphaAssistantCatalogDescriptor? {
+    let effectiveTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
+    let cachedCandidates = (cachedCatalogs ?? []).filter {
+        AlphaCapabilityTier.normalizedAssistantSelection($0.tier) == effectiveTier &&
+            alphaAssistantCatalogDescriptorSupportsCurrentInstaller($0)
+    }
+    if let targetPackId,
+       let targetedCached = cachedCandidates.first(where: { $0.packId == targetPackId }) {
+        return targetedCached
+    }
+    return cachedCandidates.first(where: { $0.runtimeMode == preferredRuntimeMode })
 }
 
 func alphaShouldResolveAssistantDownloadFromBackend(
@@ -3052,6 +3092,12 @@ extension AlphaRossModel {
             targetPackId: targetPackId,
             cachedDownloads: persisted.cachedAssistantDownloads
         )
+        let cachedReuseCatalog = alphaPreferredCachedAssistantInstalledReuseCatalogDescriptor(
+            for: tier,
+            preferredRuntimeMode: preferredRuntime,
+            targetPackId: targetPackId,
+            cachedCatalogs: persisted.cachedAssistantCatalogs
+        )
         let policy: AlphaDownloadPolicy = mobileAllowed ? .mobileAllowed : .wifiOnly
         let existingJob = existingJobID.flatMap { requestedID in
             persisted.modelJobs.first { $0.id == requestedID }
@@ -3122,12 +3168,21 @@ extension AlphaRossModel {
         if let existingInstalled = persisted.installedPacks.first(where: { pack in
             AlphaCapabilityTier.assistantSelectionsMatch(pack.tier, tier) &&
                 installedModelPackFileIsUsable(pack) &&
-                alphaShouldReuseInstalledAssistantPack(
-                    pack,
-                    preferredRuntimeMode: preferredRuntime,
-                    targetPackId: targetPackId,
-                    preferredDescriptor: fallbackDownload,
-                    forceDownload: forceRefreshInstalledPack
+                (
+                    alphaShouldReuseInstalledAssistantPack(
+                        pack,
+                        preferredRuntimeMode: preferredRuntime,
+                        targetPackId: targetPackId,
+                        preferredDescriptor: fallbackDownload,
+                        forceDownload: forceRefreshInstalledPack
+                    ) ||
+                    cachedReuseCatalog.map {
+                        alphaInstalledAssistantPackMatchesCatalogDescriptor(
+                            pack,
+                            descriptor: $0,
+                            forceDownload: forceRefreshInstalledPack
+                        )
+                    } ?? false
                 )
         }) {
             activateInstalledPack(existingInstalled)
