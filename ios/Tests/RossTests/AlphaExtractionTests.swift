@@ -6724,6 +6724,43 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(descriptors.map(\.runtimeMode), [.mlxSwiftLm, .llamaCppGguf])
     }
 
+    func testAssistantCatalogCacheDescriptorsPreserveMLXDraftCompanionFromBackendManifest() {
+        let manifest = AlphaBackendCatalogManifest(
+            packs: [
+                AlphaBackendCatalogPack(
+                    packId: "gemma-4-12b-mlx",
+                    displayName: "Gemma 4 12B MLX",
+                    tier: .caseAssociate,
+                    sizeBytes: 11_020_140_534,
+                    checksumSha256: "21978d82c01abd20e40f3ea6fe638831f9d7a77db39617181ba9a9fe880125fc",
+                    artifactKind: "mlx_directory",
+                    runtimeMode: .mlxSwiftLm,
+                    developmentOnly: false,
+                    draftArtifact: AlphaBackendCatalogDraftArtifact(
+                        fileName: "gemma-4-12B-it-qat-assistant-4bit",
+                        sizeBytes: 270_097_044,
+                        checksumSha256: "9106d7a467fae26d231f71c617acb950bc0651917f3861cad89a4c67957f0a4f",
+                        artifactKind: "mlx_directory",
+                        draftTokens: 6
+                    )
+                )
+            ]
+        )
+
+        let descriptors = alphaAssistantCatalogCacheDescriptors(
+            for: .caseAssociate,
+            compatibleOnly: true,
+            manifest: manifest
+        )
+
+        XCTAssertEqual(descriptors.count, 1)
+        XCTAssertEqual(descriptors.first?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(descriptors.first?.draftArtifact?.fileName, "gemma-4-12B-it-qat-assistant-4bit")
+        XCTAssertEqual(descriptors.first?.draftArtifact?.sizeBytes, 270_097_044)
+        XCTAssertEqual(descriptors.first?.draftArtifact?.checksumSha256, "9106d7a467fae26d231f71c617acb950bc0651917f3861cad89a4c67957f0a4f")
+        XCTAssertEqual(descriptors.first?.draftArtifact?.draftTokens, 6)
+    }
+
     func testShouldPrimeAssistantSetupCatalogsPrimesWhenOnlyBundledPreferredMLXDescriptorIsAvailable() {
         let shouldPrime = alphaShouldPrimeAssistantSetupCatalogs(
             visibleTiers: [.caseAssociate],
@@ -10311,6 +10348,48 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(descriptor.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(descriptor.artifactKind, "mlx_directory")
         XCTAssertEqual(descriptor.downloadURLString, "https://ross.example/artifacts/gemma-4-12b-mlx.zip")
+    }
+
+    func testAssistantDownloadDescriptorPreservesMLXDraftCompanionFromSessionArtifact() {
+        let session = AlphaBackendDownloadSessionPayload(
+            sessionId: "sess-supported-mlx",
+            packId: "gemma-4-12b-mlx",
+            artifact: AlphaBackendArtifact(
+                fileName: "gemma-4-12B-it-qat-4bit",
+                sizeBytes: 11_020_140_534,
+                finalSha256: "21978d82c01abd20e40f3ea6fe638831f9d7a77db39617181ba9a9fe880125fc",
+                artifactKind: "mlx_directory",
+                runtimeMode: .mlxSwiftLm,
+                developmentOnly: false,
+                downloadPath: "/artifacts/gemma-4-12B-it-qat-4bit",
+                downloadUrl: "https://huggingface.co/mlx-community/gemma-4-12B-it-qat-4bit",
+                segments: [],
+                draftArtifact: AlphaBackendArtifactDraft(
+                    fileName: "gemma-4-12B-it-qat-assistant-4bit",
+                    sizeBytes: 270_097_044,
+                    finalSha256: "9106d7a467fae26d231f71c617acb950bc0651917f3861cad89a4c67957f0a4f",
+                    artifactKind: "mlx_directory",
+                    downloadPath: nil,
+                    downloadUrl: "https://huggingface.co/mlx-community/gemma-4-12B-it-qat-assistant-4bit",
+                    draftTokens: 6
+                )
+            )
+        )
+
+        let descriptor = alphaAssistantDownloadDescriptor(
+            for: .caseAssociate,
+            session: session,
+            resolvedURLString: "https://huggingface.co/mlx-community/gemma-4-12B-it-qat-4bit"
+        )
+
+        XCTAssertEqual(descriptor.packId, "gemma-4-12b-mlx")
+        XCTAssertEqual(descriptor.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(descriptor.draftArtifact?.fileName, "gemma-4-12B-it-qat-assistant-4bit")
+        XCTAssertEqual(
+            descriptor.draftArtifact?.downloadURLString,
+            "https://huggingface.co/mlx-community/gemma-4-12B-it-qat-assistant-4bit"
+        )
+        XCTAssertEqual(descriptor.draftArtifact?.draftTokens, 6)
     }
 
     func testAssistantDownloadDescriptorFallsBackWhenBackendMLXArchiveIsUnsupported() {
