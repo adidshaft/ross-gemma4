@@ -9478,6 +9478,19 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(policy.sourceBlockLimit, 24)
     }
 
+    func testAskRuntimeSourcePackPolicyExpandsSingleSelectedMLXAskAt40KBudget() {
+        let policy = alphaAskRuntimeSourcePackPolicy(
+            runtimeMode: .mlxSwiftLm,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 40_000,
+            hasSelectedDocuments: true,
+            selectedDocumentCount: 1
+        )
+
+        XCTAssertEqual(policy.documentCandidateLimit, 4)
+        XCTAssertEqual(policy.sourceBlockLimit, 18)
+    }
+
     func testAskRuntimeSourcePackPolicyExpandsMLXCandidateWindowWithoutSelections() {
         let policy = alphaAskRuntimeSourcePackPolicy(
             runtimeMode: .mlxSwiftLm,
@@ -9513,6 +9526,19 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(policy.documentCandidateLimit, 4)
         XCTAssertEqual(policy.sourceBlockLimit, 18)
+    }
+
+    func testAskRuntimeSourcePackPolicyExpandsSingleSelectedLlamaAskAt40KBudget() {
+        let policy = alphaAskRuntimeSourcePackPolicy(
+            runtimeMode: .llamaCppGguf,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 40_000,
+            hasSelectedDocuments: true,
+            selectedDocumentCount: 1
+        )
+
+        XCTAssertEqual(policy.documentCandidateLimit, 4)
+        XCTAssertEqual(policy.sourceBlockLimit, 16)
     }
 
     func testAskRuntimeSourcePackPolicyExpandsLlamaCandidateWindowWithoutSelections() {
@@ -12224,6 +12250,84 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     @MainActor
+    func testAskRuntimeSourcePackKeepsLateRelevantUnselectedDocumentBeyondOldWindow() {
+        let caseID = UUID()
+        let targetDocumentID = UUID()
+        let genericDocuments = (1...7).map { index in
+            AlphaCaseDocument(
+                title: "General note \(index)",
+                fileName: "general-note-\(index).pdf",
+                kind: .pdf,
+                storedRelativePath: "tests/general-note-\(index).pdf",
+                importedAt: .now,
+                pageCount: 7,
+                ocrStatus: .nativeText,
+                indexingStatus: .indexed,
+                pages: (1...7).map { page in
+                    AlphaDocumentPage(
+                        pageNumber: page,
+                        snippet: "Routine hearing background \(index)-\(page).",
+                        extractedText: "Routine hearing background \(index)-\(page).",
+                        anchorText: "Routine hearing background \(index)-\(page)."
+                    )
+                }
+            )
+        }
+        let targetDocument = AlphaCaseDocument(
+            id: targetDocumentID,
+            title: "Targeted bundle",
+            fileName: "targeted-bundle.pdf",
+            kind: .pdf,
+            storedRelativePath: "tests/targeted-bundle.pdf",
+            importedAt: .now,
+            pageCount: 7,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            pages: (1...7).map { page in
+                let snippet = page == 7
+                    ? "The indemnity clause appears near the end."
+                    : "Routine chronology background target-\(page)."
+                return AlphaDocumentPage(
+                    pageNumber: page,
+                    snippet: snippet,
+                    extractedText: snippet,
+                    anchorText: snippet
+                )
+            }
+        )
+        let caseMatter = AlphaCaseMatter(
+            id: caseID,
+            title: "Acme v. Beta",
+            forum: "Delhi High Court",
+            stage: .pleadings,
+            summary: "Commercial dispute",
+            issueHighlights: [],
+            evidenceNotes: [],
+            draftTasks: [],
+            documents: genericDocuments + [targetDocument],
+            sourceRefs: []
+        )
+
+        var state = AlphaPersistedState.empty()
+        state.cases = [caseMatter]
+        let model = AlphaRossModel(previewState: state)
+
+        let sourcePack = model.askRuntimeSourcePack(
+            question: "Where is the indemnity clause?",
+            scopeCaseID: caseID,
+            selectedDocuments: []
+        )
+
+        XCTAssertTrue(
+            sourcePack.contains { block in
+                block.sourceRef.documentId == targetDocumentID &&
+                block.pageNumber == 7 &&
+                block.text.localizedCaseInsensitiveContains("indemnity clause")
+            }
+        )
+    }
+
+    @MainActor
     func testUntaggedRankedAskSourceBlocksKeepNeighboringPagesForContext() {
         let model = AlphaRossModel(previewState: AlphaPersistedState.seed())
         let caseID = UUID()
@@ -12275,6 +12379,21 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(ranked.map(\.pageNumber), [4, 3, 5])
+    }
+
+    @MainActor
+    func testExpandedAskCandidateDocumentLimitUsesSourceBlockBudgetWhenNothingIsSelected() {
+        let model = AlphaRossModel(previewState: .empty())
+
+        let limit = model.alphaExpandedAskCandidateDocumentLimit(
+            sourcePackPolicy: AlphaAskRuntimeSourcePackPolicy(
+                documentCandidateLimit: 7,
+                sourceBlockLimit: 14
+            ),
+            hasSelectedDocuments: false
+        )
+
+        XCTAssertEqual(limit, 14)
     }
 
     @MainActor

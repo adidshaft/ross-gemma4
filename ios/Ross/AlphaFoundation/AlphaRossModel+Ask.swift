@@ -1987,8 +1987,15 @@ extension AlphaRossModel {
                     }
                     return lhs.offset < rhs.offset
                 }
-                .prefix(sourcePackPolicy.documentCandidateLimit)
                 .map(\.element)
+            candidateDocuments = Array(
+                candidateDocuments.prefix(
+                    alphaExpandedAskCandidateDocumentLimit(
+                        sourcePackPolicy: sourcePackPolicy,
+                        hasSelectedDocuments: false
+                    )
+                )
+            )
         }
 
         let matterBlocks = askRuntimeMatterMemorySourcePack(scopeCaseID: scopeCaseID)
@@ -2079,6 +2086,19 @@ extension AlphaRossModel {
             return Array((matterBlocks + balancedRankedDocumentBlocks).prefix(sourcePackPolicy.sourceBlockLimit))
         }
         return askRuntimeMatterMemorySourcePack(scopeCaseID: scopeCaseID)
+    }
+
+    func alphaExpandedAskCandidateDocumentLimit(
+        sourcePackPolicy: AlphaAskRuntimeSourcePackPolicy,
+        hasSelectedDocuments: Bool
+    ) -> Int {
+        guard !hasSelectedDocuments else {
+            return sourcePackPolicy.documentCandidateLimit
+        }
+        return max(
+            sourcePackPolicy.documentCandidateLimit,
+            sourcePackPolicy.sourceBlockLimit
+        )
     }
 
     func alphaAskCandidateDocumentRelevanceScore(

@@ -323,7 +323,7 @@ func alphaAskRuntimeSourcePackPolicy(
             }
             if baseMaxInputChars >= 40_000 {
                 if hasSingleSelectedDocument {
-                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 16)
+                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 18)
                 }
                 return AlphaAskRuntimeSourcePackPolicy(
                     documentCandidateLimit: hasSelectedDocuments ? 4 : 5,
@@ -348,7 +348,7 @@ func alphaAskRuntimeSourcePackPolicy(
             }
             if baseMaxInputChars >= 40_000 {
                 if hasSingleSelectedDocument {
-                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 14)
+                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 16)
                 }
                 return AlphaAskRuntimeSourcePackPolicy(
                     documentCandidateLimit: hasSelectedDocuments ? 4 : 5,
@@ -358,7 +358,7 @@ func alphaAskRuntimeSourcePackPolicy(
         }
         if baseMaxInputChars >= 40_000 {
             if hasSingleSelectedDocument {
-                return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 14)
+                return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 16)
             }
             return AlphaAskRuntimeSourcePackPolicy(
                 documentCandidateLimit: hasSelectedDocuments ? 4 : 5,
