@@ -845,78 +845,157 @@ struct AlphaModelPickerRow: View {
         model.assistantSetupPresentation(for: tier)
     }
 
+    private var systemAssistantAvailable: Bool {
+        model.systemAssistantHealth(for: tier)?.available == true
+    }
+
+    private var variantOptions: [AlphaAssistantVariantOption] {
+        alphaAssistantVariantOptions(
+            for: tier,
+            installedPacks: model.privateAISnapshot.installedPacks,
+            activePack: model.activePack,
+            systemAssistantAvailable: systemAssistantAvailable,
+            preferredRuntimeMode: setupPresentation?.runtimeMode,
+            cachedCatalogs: model.persisted.cachedAssistantCatalogs,
+            cachedDownloads: model.persisted.cachedAssistantDownloads
+        )
+    }
+
+    private var runtimeChoiceLabel: String? {
+        guard let runtimeMode = setupPresentation?.runtimeMode else { return nil }
+        let label = alphaAssistantRuntimeChoiceLabel(
+            selectedRuntimeMode: runtimeMode,
+            tier: tier,
+            existingRuntimeMode: model.installedPack(for: tier)?.runtimeMode,
+            systemAssistantAvailable: systemAssistantAvailable,
+            lastInvocation: model.lastModelInvocation
+        ).trimmingCharacters(in: .whitespacesAndNewlines)
+        return label.isEmpty ? nil : label
+    }
+
+    private var builtInHint: String? {
+        alphaAssistantBuiltInAlternativeHint(
+            selectedRuntimeMode: setupPresentation?.runtimeMode,
+            systemAssistantAvailable: systemAssistantAvailable
+        )
+    }
+
+    private func selectRuntime(_ option: AlphaAssistantVariantOption) {
+        guard !option.isSelected else { return }
+        model.setAssistantSetupRuntimeOverride(option.runtimeMode, for: tier)
+    }
+
     var body: some View {
-        Button(action: onSelect) {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 12) {
-                    Image(systemName: tierIcon)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.rossAccent)
-                        .frame(width: 36, height: 36)
-                        .rossNativeGlassSurface(
-                            tint: Color.rossAccent,
-                            shape: RoundedRectangle(cornerRadius: 10, style: .continuous),
-                            fallbackFillOpacity: 0.84,
-                            fallbackStrokeOpacity: 0.42
-                        )
-                        .shadow(color: Color.rossShadow.opacity(0.05), radius: 5, y: 1)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 12) {
+                Image(systemName: tierIcon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.rossAccent)
+                    .frame(width: 36, height: 36)
+                    .rossNativeGlassSurface(
+                        tint: Color.rossAccent,
+                        shape: RoundedRectangle(cornerRadius: 10, style: .continuous),
+                        fallbackFillOpacity: 0.84,
+                        fallbackStrokeOpacity: 0.42
+                    )
+                    .shadow(color: Color.rossShadow.opacity(0.05), radius: 5, y: 1)
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack(spacing: 6) {
-                            Text(tier.setupTitle)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(Color.rossInk)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(tier.setupTitle)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.rossInk)
 
-                            if isRecommended {
-                                Text(rossLocalized("recommended"))
-                                    .font(.caption2.weight(.bold))
-                                    .foregroundStyle(Color.rossAccent)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 3)
-                                    .rossNativeGlassSurface(
-                                        tint: Color.rossAccent,
-                                        shape: Capsule(),
-                                        fallbackFillOpacity: 0.68,
-                                        fallbackStrokeOpacity: 0.36
-                                    )
-                            }
-                        }
-
-                        if let setupPresentation {
-                            AlphaAssistantSetupMetaLabels(
-                                sizeLabel: setupPresentation.sizeLabel,
-                                runtimeLabel: setupPresentation.runtimeMode.displayLabel,
-                                companionLabel: setupPresentation.companionLabel,
-                                etaLabel: setupPresentation.etaLabel,
-                                freeSpaceLabel: model.freeDiskSpaceLabel,
-                                font: .caption.weight(.medium)
-                            )
-                        } else {
-                            AlphaAssistantSetupMetaLabels(
-                                sizeLabel: rossLocalized("assistant_state_checking"),
-                                freeSpaceLabel: model.freeDiskSpaceLabel,
-                                font: .caption.weight(.medium)
-                            )
+                        if isRecommended {
+                            Text(rossLocalized("recommended"))
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(Color.rossAccent)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3)
+                                .rossNativeGlassSurface(
+                                    tint: Color.rossAccent,
+                                    shape: Capsule(),
+                                    fallbackFillOpacity: 0.68,
+                                    fallbackStrokeOpacity: 0.36
+                                )
                         }
                     }
 
-                    Spacer(minLength: 0)
-
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(Color.rossInk.opacity(0.24))
+                    if let setupPresentation {
+                        AlphaAssistantSetupMetaLabels(
+                            sizeLabel: setupPresentation.sizeLabel,
+                            runtimeLabel: setupPresentation.runtimeMode.displayLabel,
+                            companionLabel: setupPresentation.companionLabel,
+                            etaLabel: setupPresentation.etaLabel,
+                            freeSpaceLabel: model.freeDiskSpaceLabel,
+                            font: .caption.weight(.medium)
+                        )
+                    } else {
+                        AlphaAssistantSetupMetaLabels(
+                            sizeLabel: rossLocalized("assistant_state_checking"),
+                            freeSpaceLabel: model.freeDiskSpaceLabel,
+                            font: .caption.weight(.medium)
+                        )
+                    }
                 }
 
-                Text(tier.summary)
-                    .font(.caption)
-                    .foregroundStyle(Color.rossInk.opacity(0.60))
-                    .fixedSize(horizontal: false, vertical: true)
-                    .lineSpacing(2.5)
+                Spacer(minLength: 0)
             }
-            .padding(16)
-            .modifier(AlphaModelPickerRowSurface(isRecommended: isRecommended))
+
+            Text(tier.summary)
+                .font(.caption)
+                .foregroundStyle(Color.rossInk.opacity(0.60))
+                .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(2.5)
+
+            if let runtimeChoiceLabel {
+                Text(runtimeChoiceLabel)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(Color.rossInk.opacity(0.56))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if variantOptions.count > 1 {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(rossLocalized("assistant_available_runtimes"))
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(Color.rossInk.opacity(0.60))
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(variantOptions) { option in
+                                AlphaAssistantVariantChip(
+                                    option: option,
+                                    action: { selectRuntime(option) }
+                                )
+                            }
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+            }
+
+            if let builtInHint {
+                Text(builtInHint)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(Color.rossInk.opacity(0.56))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Button(action: onSelect) {
+                HStack(spacing: 8) {
+                    Text(rossLocalized("setup_assistant"))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Image(systemName: "arrow.up.right")
+                        .font(.caption.weight(.bold))
+                }
+            }
+            .buttonStyle(RossPrimaryButtonStyle())
+            .controlSize(.small)
         }
-        .buttonStyle(.plain)
+        .padding(16)
+        .modifier(AlphaModelPickerRowSurface(isRecommended: isRecommended))
     }
 }
 
