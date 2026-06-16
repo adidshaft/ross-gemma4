@@ -964,34 +964,47 @@ func alphaAssistantSetupSpeedLabel(
     return "~\(alphaAssistantTokenRateLabel(tokensPerSecond: baseSpeed))"
 }
 
-func alphaAssistantSetupContextLabel(
+func alphaAssistantSetupContextTokens(
     for tier: AlphaCapabilityTier,
     runtimeMode: AlphaPackRuntimeMode,
     physicalMemoryBytes: UInt64
-) -> String? {
+) -> Int? {
     let effectiveTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
-    let contextTokens: Int? = switch runtimeMode {
+    switch runtimeMode {
     case .appleFoundationModels:
-        AlphaFoundationRuntimeProfile.contextWindowTokens(
+        return AlphaFoundationRuntimeProfile.contextWindowTokens(
             for: effectiveTier,
             physicalMemory: physicalMemoryBytes
         )
     case .mlxSwiftLm:
-        AlphaMLXRuntimeProfile.contextWindowTokens(
+        return AlphaMLXRuntimeProfile.contextWindowTokens(
             for: effectiveTier,
             physicalMemory: physicalMemoryBytes
         )
     case .llamaCppGguf:
-        Int(
+        return Int(
             AlphaLlamaRuntimeProfile.contextWindowTokens(
                 forModelPath: alphaDefaultAssistantDownloadDescriptor(for: effectiveTier).fileName,
                 physicalMemory: physicalMemoryBytes
             )
         )
     case .deterministicDev, .mediapipeLlm, .unavailable:
-        nil
+        return nil
     }
-    guard let contextTokens else { return nil }
+}
+
+func alphaAssistantSetupContextLabel(
+    for tier: AlphaCapabilityTier,
+    runtimeMode: AlphaPackRuntimeMode,
+    physicalMemoryBytes: UInt64
+) -> String? {
+    guard let contextTokens = alphaAssistantSetupContextTokens(
+        for: tier,
+        runtimeMode: runtimeMode,
+        physicalMemoryBytes: physicalMemoryBytes
+    ) else {
+        return nil
+    }
     return alphaAssistantContextWindowLabel(tokens: contextTokens)
 }
 

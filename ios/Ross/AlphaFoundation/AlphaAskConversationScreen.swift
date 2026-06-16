@@ -2177,8 +2177,8 @@ struct AlphaPublicLawWarningsView: View {
                     Text(needsReviewWarning)
                 }
 
-                if let upgradeTierHint = result.upgradeTierHint {
-                    Button(alphaAskUpgradeActionTitle(upgradeTierHint)) {
+                if result.upgradeTierHint != nil || result.upgradeRuntimeHint != nil {
+                    Button(alphaAskUpgradeActionTitle(result.upgradeTierHint, runtimeMode: result.upgradeRuntimeHint)) {
                         onOpenUpgrade(result)
                     }
                     .font(.system(size: 13, weight: .semibold))

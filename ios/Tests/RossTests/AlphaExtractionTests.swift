@@ -8984,6 +8984,76 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testLocalAskUpgradeRuntimeHintPrefersGGUFWhenCoreAIHitsContextPressure() {
+        XCTAssertEqual(
+            alphaLocalAskUpgradeRuntimeHint(
+                runtimeWarnings: [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts],
+                sourcePackCount: 9,
+                includedSourceCount: 3,
+                sourceBlockLimit: 3,
+                capabilityTier: .caseAssociate,
+                runtimeMode: .appleFoundationModels,
+                isPhoneFormFactor: true,
+                physicalMemoryBytes: 12 * 1_073_741_824,
+                freeStorageGB: 24,
+                systemAssistantAvailable: true
+            ),
+            .llamaCppGguf
+        )
+    }
+
+    func testLocalAskUpgradeRuntimeHintStaysNilWhenCoreAIIsNotConstrained() {
+        XCTAssertNil(
+            alphaLocalAskUpgradeRuntimeHint(
+                runtimeWarnings: [],
+                sourcePackCount: 3,
+                includedSourceCount: 3,
+                sourceBlockLimit: 3,
+                capabilityTier: .caseAssociate,
+                runtimeMode: .appleFoundationModels,
+                isPhoneFormFactor: true,
+                physicalMemoryBytes: 12 * 1_073_741_824,
+                freeStorageGB: 24,
+                systemAssistantAvailable: true
+            )
+        )
+    }
+
+    func testLocalAskUpgradeRuntimeHintStaysNilForNonCoreAIRuntimes() {
+        XCTAssertNil(
+            alphaLocalAskUpgradeRuntimeHint(
+                runtimeWarnings: [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts],
+                sourcePackCount: 9,
+                includedSourceCount: 3,
+                sourceBlockLimit: 3,
+                capabilityTier: .caseAssociate,
+                runtimeMode: .mlxSwiftLm,
+                isPhoneFormFactor: true,
+                physicalMemoryBytes: 12 * 1_073_741_824,
+                freeStorageGB: 24,
+                systemAssistantAvailable: true
+            )
+        )
+    }
+
+    func testLocalAskUpgradeRuntimeHintBreaksEqualContextTiesTowardMLX() {
+        XCTAssertEqual(
+            alphaLocalAskUpgradeRuntimeHint(
+                runtimeWarnings: [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts],
+                sourcePackCount: 10,
+                includedSourceCount: 4,
+                sourceBlockLimit: 4,
+                capabilityTier: .caseAssociate,
+                runtimeMode: .appleFoundationModels,
+                isPhoneFormFactor: true,
+                physicalMemoryBytes: 16 * 1_073_741_824,
+                freeStorageGB: 32,
+                systemAssistantAvailable: true
+            ),
+            .mlxSwiftLm
+        )
+    }
+
     func testLocalAskUpgradeTierHintStaysNilWithoutCoveragePressure() {
         XCTAssertNil(
             alphaLocalAskUpgradeTierHint(
@@ -9030,6 +9100,17 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(model.selectedTier, .caseAssociate)
         XCTAssertEqual(model.path.last, .privateAISettings)
+    }
+
+    func testAskUpgradeActionTitleIncludesRuntimeWhenHintIsPresent() {
+        XCTAssertEqual(
+            alphaAskUpgradeActionTitle(.caseAssociate, runtimeMode: .llamaCppGguf, languageCode: "en"),
+            "Use \(AlphaCapabilityTier.caseAssociate.setupTitle(languageCode: "en")) with GGUF"
+        )
+        XCTAssertEqual(
+            alphaAskUpgradeActionTitle(nil, runtimeMode: .mlxSwiftLm, languageCode: "en"),
+            "Use MLX for this ask"
+        )
     }
 
     func testAssistantOfferDoesNotPreferBuiltInActivationWhenMLXIsPreferred() {

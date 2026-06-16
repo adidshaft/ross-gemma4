@@ -1601,6 +1601,14 @@ extension AlphaRossModel {
                     sourceBlockLimit: input.sourceBlockLimitOverride,
                     capabilityTier: AlphaCapabilityTier(rawValue: completedInvocation.capabilityTier)
                 )
+                let upgradeRuntimeHint = alphaLocalAskUpgradeRuntimeHint(
+                    runtimeWarnings: output.warnings,
+                    sourcePackCount: input.sourcePack.count,
+                    includedSourceCount: output.sourceRefs.count,
+                    sourceBlockLimit: input.sourceBlockLimitOverride,
+                    capabilityTier: AlphaCapabilityTier(rawValue: completedInvocation.capabilityTier),
+                    runtimeMode: currentResolvedProvider.provider.runtimeMode
+                )
                 let payload = self.displayableMatterAskPayload(
                     output: output,
                     baseResult: baseResult,
@@ -1623,6 +1631,7 @@ extension AlphaRossModel {
                             turn.needsReviewWarning = runtimeFailure.needsReviewWarning
                             turn.modelInvocation = completedInvocation
                             turn.upgradeTierHint = nil
+                            turn.upgradeRuntimeHint = nil
                         }
                         if var latest = self.latestAskResult, latest.chatTurnID == chatTurnID {
                             latest.answerTitle = runtimeFailure.title
@@ -1631,6 +1640,7 @@ extension AlphaRossModel {
                             latest.needsReviewWarning = runtimeFailure.needsReviewWarning
                             latest.modelInvocation = completedInvocation
                             latest.upgradeTierHint = nil
+                            latest.upgradeRuntimeHint = nil
                             self.latestAskResult = latest
                         }
                         return
@@ -1647,6 +1657,7 @@ extension AlphaRossModel {
                         turn.needsReviewWarning = unavailablePresentation.needsReviewWarning
                         turn.modelInvocation = completedInvocation
                         turn.upgradeTierHint = nil
+                        turn.upgradeRuntimeHint = nil
                     }
                     if var latest = self.latestAskResult, latest.chatTurnID == chatTurnID {
                         latest.answerTitle = unavailablePresentation.title
@@ -1655,6 +1666,7 @@ extension AlphaRossModel {
                         latest.needsReviewWarning = unavailablePresentation.needsReviewWarning
                         latest.modelInvocation = completedInvocation
                         latest.upgradeTierHint = nil
+                        latest.upgradeRuntimeHint = nil
                         self.latestAskResult = latest
                     }
                     return
@@ -1680,6 +1692,7 @@ extension AlphaRossModel {
                     )
                     turn.modelInvocation = completedInvocation
                     turn.upgradeTierHint = upgradeTierHint
+                    turn.upgradeRuntimeHint = upgradeRuntimeHint
                 }
                 if var latest = self.latestAskResult, latest.chatTurnID == chatTurnID {
                     latest.answerTitle = payload.headline
@@ -1696,6 +1709,7 @@ extension AlphaRossModel {
                     )
                     latest.modelInvocation = completedInvocation
                     latest.upgradeTierHint = upgradeTierHint
+                    latest.upgradeRuntimeHint = upgradeRuntimeHint
                     self.latestAskResult = latest
                 }
             }
@@ -3958,11 +3972,80 @@ func alphaLocalAskUpgradeTierHint(
     }
 }
 
+func alphaLocalAskUpgradeRuntimeHint(
+    runtimeWarnings: [String],
+    sourcePackCount: Int,
+    includedSourceCount: Int? = nil,
+    sourceBlockLimit: Int?,
+    capabilityTier: AlphaCapabilityTier?,
+    runtimeMode: AlphaPackRuntimeMode,
+    isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
+    physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory,
+    freeStorageGB: Int = max(4, alphaAvailableStorageInGigabytes()),
+    systemAssistantAvailable: Bool = true
+) -> AlphaPackRuntimeMode? {
+    let effectiveTier = AlphaCapabilityTier.normalizedAssistantSelection(capabilityTier) ?? capabilityTier
+    let effectiveIncludedCount = includedSourceCount ?? sourceBlockLimit
+    let constrainedByCoverage = effectiveIncludedCount.map { sourcePackCount > $0 } ?? false
+    let constrainedByRuntimeWarning = runtimeWarnings.contains(AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts)
+
+    guard constrainedByCoverage || constrainedByRuntimeWarning,
+          runtimeMode == .appleFoundationModels,
+          let effectiveTier else {
+        return nil
+    }
+
+    let preferredRuntime = alphaPreferredAssistantRuntimeMode(
+        for: effectiveTier,
+        existingRuntimeMode: nil,
+        isPhoneFormFactor: isPhoneFormFactor,
+        physicalMemoryBytes: physicalMemoryBytes,
+        freeStorageGB: freeStorageGB,
+        systemAssistantAvailable: false
+    )
+    let candidateRuntimes: [AlphaPackRuntimeMode] = alphaAssistantTierSupportsMLXRuntime(effectiveTier)
+        ? [.llamaCppGguf, .mlxSwiftLm]
+        : [.llamaCppGguf]
+
+    return candidateRuntimes.max { lhs, rhs in
+        let lhsTokens = alphaAssistantSetupContextTokens(
+            for: effectiveTier,
+            runtimeMode: lhs,
+            physicalMemoryBytes: physicalMemoryBytes
+        ) ?? 0
+        let rhsTokens = alphaAssistantSetupContextTokens(
+            for: effectiveTier,
+            runtimeMode: rhs,
+            physicalMemoryBytes: physicalMemoryBytes
+        ) ?? 0
+        if lhsTokens != rhsTokens {
+            return lhsTokens < rhsTokens
+        }
+        if lhs == preferredRuntime {
+            return false
+        }
+        if rhs == preferredRuntime {
+            return true
+        }
+        return lhs.rawValue < rhs.rawValue
+    }
+}
+
 func alphaAskUpgradeActionTitle(
-    _ tier: AlphaCapabilityTier,
+    _ tier: AlphaCapabilityTier?,
+    runtimeMode: AlphaPackRuntimeMode? = nil,
     languageCode: String = rossSelectedLanguageCode()
 ) -> String {
-    String(
+    if let tier, let runtimeMode {
+        return "Use \(tier.setupTitle(languageCode: languageCode)) with \(runtimeMode.upgradeActionLabel)"
+    }
+    if let runtimeMode {
+        return "Use \(runtimeMode.upgradeActionLabel) for this ask"
+    }
+    guard let tier else {
+        return rossLocalized("private_assistant", languageCode: languageCode)
+    }
+    return String(
         format: rossLocalized("ask_upgrade_action_use_tier", languageCode: languageCode),
         tier.setupTitle(languageCode: languageCode)
     )

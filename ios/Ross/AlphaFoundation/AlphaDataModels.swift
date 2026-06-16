@@ -1453,6 +1453,7 @@ struct AlphaChatTurn: Identifiable, Codable, Hashable, Sendable {
     var needsReviewWarning: String?
     var modelInvocation: AlphaLocalModelInvocation?
     var upgradeTierHint: AlphaCapabilityTier?
+    var upgradeRuntimeHint: AlphaPackRuntimeMode?
 
     init(
         id: UUID = UUID(),
@@ -1468,7 +1469,8 @@ struct AlphaChatTurn: Identifiable, Codable, Hashable, Sendable {
         statusNote: String? = nil,
         needsReviewWarning: String? = nil,
         modelInvocation: AlphaLocalModelInvocation? = nil,
-        upgradeTierHint: AlphaCapabilityTier? = nil
+        upgradeTierHint: AlphaCapabilityTier? = nil,
+        upgradeRuntimeHint: AlphaPackRuntimeMode? = nil
     ) {
         self.id = id
         self.kind = kind
@@ -1484,6 +1486,7 @@ struct AlphaChatTurn: Identifiable, Codable, Hashable, Sendable {
         self.needsReviewWarning = needsReviewWarning
         self.modelInvocation = modelInvocation
         self.upgradeTierHint = upgradeTierHint
+        self.upgradeRuntimeHint = upgradeRuntimeHint
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -1501,6 +1504,7 @@ struct AlphaChatTurn: Identifiable, Codable, Hashable, Sendable {
         case needsReviewWarning
         case modelInvocation
         case upgradeTierHint
+        case upgradeRuntimeHint
     }
 
     init(from decoder: any Decoder) throws {
@@ -1519,6 +1523,7 @@ struct AlphaChatTurn: Identifiable, Codable, Hashable, Sendable {
         needsReviewWarning = try container.decodeIfPresent(String.self, forKey: .needsReviewWarning)
         modelInvocation = try container.decodeIfPresent(AlphaLocalModelInvocation.self, forKey: .modelInvocation)
         upgradeTierHint = try container.decodeIfPresent(AlphaCapabilityTier.self, forKey: .upgradeTierHint)
+        upgradeRuntimeHint = try container.decodeIfPresent(AlphaPackRuntimeMode.self, forKey: .upgradeRuntimeHint)
     }
 }
 
@@ -1876,6 +1881,15 @@ extension AlphaPackRuntimeMode {
             return "Development"
         case .unavailable:
             return "Unavailable"
+        }
+    }
+
+    var upgradeActionLabel: String {
+        switch self {
+        case .llamaCppGguf:
+            return "GGUF"
+        default:
+            return displayLabel
         }
     }
 }
