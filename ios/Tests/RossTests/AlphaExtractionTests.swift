@@ -10029,8 +10029,8 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(plan.maxInputChars, 60_480)
-        XCTAssertEqual(plan.sourceBlockLimit, 12)
-        XCTAssertEqual(plan.sourceExcerptChars, 1_850)
+        XCTAssertEqual(plan.sourceBlockLimit, 14)
+        XCTAssertEqual(plan.sourceExcerptChars, 2_050)
     }
 
     func testMatterQuestionBudgetPlannerIgnoresSlowHistoryFromDifferentTier() {
@@ -10220,8 +10220,8 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(plan.maxInputChars, 59_920)
-        XCTAssertEqual(plan.sourceBlockLimit, 15)
-        XCTAssertEqual(plan.sourceExcerptChars, 1_650)
+        XCTAssertEqual(plan.sourceBlockLimit, 18)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_820)
     }
 
     func testStructuredDocumentBudgetPlannerIgnoresSlowHistoryFromDifferentTier() {
