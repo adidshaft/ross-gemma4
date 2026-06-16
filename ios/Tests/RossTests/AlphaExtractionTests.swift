@@ -9892,6 +9892,21 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(plan.sourceExcerptChars, 1_850)
     }
 
+    func testMatterQuestionBudgetPlannerKeepsMoreSingleSelectedMLXContextAt52KBudget() {
+        let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
+            runtimeMode: .mlxSwiftLm,
+            baseMaxInputChars: 52_000,
+            sourceBlockCount: 24,
+            sourceCharCount: 52_000,
+            selectedDocumentCount: 1,
+            lastInvocation: nil
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 46_800)
+        XCTAssertEqual(plan.sourceBlockLimit, 24)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_850)
+    }
+
     func testMatterQuestionBudgetPlannerUsesExpandedFoundationBudgetsForCapableRuns() {
         let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
             runtimeMode: .appleFoundationModels,
@@ -10034,6 +10049,21 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(plan.maxInputChars, 49_280)
+        XCTAssertEqual(plan.sourceBlockLimit, 24)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_650)
+    }
+
+    func testStructuredDocumentBudgetPlannerKeepsMoreSingleSelectedMLXContextAt52KBudget() {
+        let plan = AlphaLocalPromptBudgetPlanner.structuredDocumentPlan(
+            runtimeMode: .mlxSwiftLm,
+            baseMaxInputChars: 52_000,
+            sourceBlockCount: 24,
+            sourceCharCount: 52_000,
+            selectedDocumentCount: 1,
+            lastInvocation: nil
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 45_760)
         XCTAssertEqual(plan.sourceBlockLimit, 24)
         XCTAssertEqual(plan.sourceExcerptChars, 1_650)
     }

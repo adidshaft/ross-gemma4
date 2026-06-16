@@ -324,7 +324,7 @@ func alphaAskRuntimeSourcePackPolicy(
     switch runtimeMode {
     case .mlxSwiftLm:
         if capabilityTier == .caseAssociate || capabilityTier == .seniorDraftingSupport {
-            if baseMaxInputChars >= 56_000 {
+            if baseMaxInputChars >= 52_000 {
                 if hasSingleSelectedDocument {
                     return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 24)
                 }
@@ -484,7 +484,7 @@ enum AlphaLocalPromptBudgetPlanner {
     ) -> Int? {
         switch runtimeMode {
         case .mlxSwiftLm:
-            if baseMaxInputChars >= 56_000 {
+            if baseMaxInputChars >= 52_000 {
                 return 24
             }
             if baseMaxInputChars >= 40_000 {
@@ -630,7 +630,7 @@ enum AlphaLocalPromptBudgetPlanner {
     ) -> Int? {
         switch runtimeMode {
         case .mlxSwiftLm:
-            if baseMaxInputChars >= 56_000 {
+            if baseMaxInputChars >= 52_000 {
                 return 24
             }
             return baseMaxInputChars >= 40_000 ? 18 : nil
@@ -658,7 +658,7 @@ enum AlphaLocalPromptBudgetPlanner {
 
         switch runtimeMode {
         case .mlxSwiftLm:
-            if baseMaxInputChars >= 56_000 {
+            if baseMaxInputChars >= 52_000 {
                 return prefersWiderBatches ? 1.5 : 1.3
             }
             if baseMaxInputChars >= 40_000 {

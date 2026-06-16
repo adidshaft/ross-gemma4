@@ -1116,6 +1116,12 @@ func alphaPreferredAssistantRuntimeMode(
 ) -> AlphaPackRuntimeMode {
     let prefersSystemAssistant = systemAssistantAvailable ?? alphaSystemAssistantRuntimeAvailable(for: tier)
     let recentSignal = alphaRecentRuntimeSelectionSignal(for: tier, lastInvocation: lastInvocation)
+    let shouldAvoidFoundationFromRecentSignal: Bool = {
+        if case .avoidSlow(.appleFoundationModels) = recentSignal {
+            return true
+        }
+        return false
+    }()
 
     if prefersSystemAssistant {
         switch recentSignal {
@@ -1126,6 +1132,9 @@ func alphaPreferredAssistantRuntimeMode(
         case .avoidSlow(.appleFoundationModels):
             break
         default:
+            if !isPhoneFormFactor {
+                return .appleFoundationModels
+            }
             let localPreferred = alphaPreferredAssistantRuntimeMode(
                 for: tier,
                 existingRuntimeMode: existingRuntimeMode == .appleFoundationModels ? nil : existingRuntimeMode,
@@ -1146,7 +1155,7 @@ func alphaPreferredAssistantRuntimeMode(
         return .llamaCppGguf
     }
 
-    if existingRuntimeMode == .appleFoundationModels {
+    if existingRuntimeMode == .appleFoundationModels, !shouldAvoidFoundationFromRecentSignal {
         return .appleFoundationModels
     }
 
