@@ -541,6 +541,11 @@ enum AlphaLocalPromptBudgetPlanner {
             sourceCharCount: sourceCharCount,
             firstTokenMs: firstTokenMs,
             outputSpeed: outputSpeed
+        ),
+        alphaInvocationLooksComparableForLargeFileExpansion(
+            lastInvocation,
+            sourceBlockCount: sourceBlockCount,
+            sourceCharCount: sourceCharCount
         ) {
             maximumBudget = fastLargeFileInputBudget(
                 runtimeMode: runtimeMode,
@@ -686,6 +691,11 @@ enum AlphaLocalPromptBudgetPlanner {
             firstTokenMs: firstTokenMs,
             outputSpeed: outputSpeed,
             usesStructuredThresholds: true
+        ),
+        alphaInvocationLooksComparableForLargeFileExpansion(
+            lastInvocation,
+            sourceBlockCount: sourceBlockCount,
+            sourceCharCount: sourceCharCount
         ) {
             maximumBudget = fastLargeFileInputBudget(
                 runtimeMode: runtimeMode,

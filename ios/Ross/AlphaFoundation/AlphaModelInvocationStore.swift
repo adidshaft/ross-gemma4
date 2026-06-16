@@ -325,3 +325,28 @@ func alphaInvocationHasSubstantivePerformanceSample(_ invocation: AlphaLocalMode
 
     return true
 }
+
+func alphaInvocationLooksComparableForLargeFileExpansion(
+    _ invocation: AlphaLocalModelInvocation,
+    sourceBlockCount: Int,
+    sourceCharCount: Int
+) -> Bool {
+    let reviewedSourceCount = invocation.reviewedSourceCount ?? invocation.packedSourceCount
+    let inputChars = invocation.inputChars
+
+    if reviewedSourceCount == nil && inputChars == nil {
+        return true
+    }
+
+    let minimumComparableSourceCount = max(4, Int((Double(sourceBlockCount) * 0.5).rounded(.down)))
+    let minimumComparableInputChars = max(12_000, Int((Double(sourceCharCount) * 0.45).rounded(.down)))
+
+    if let reviewedSourceCount, reviewedSourceCount >= minimumComparableSourceCount {
+        return true
+    }
+    if let inputChars, inputChars >= minimumComparableInputChars {
+        return true
+    }
+
+    return false
+}

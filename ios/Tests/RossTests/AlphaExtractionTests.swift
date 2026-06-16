@@ -14001,6 +14001,39 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(plan.sourceExcerptChars, 2_200)
     }
 
+    func testMatterQuestionBudgetPlannerDoesNotWidenLargeFileMLXBudgetAfterFastButMuchSmallerRun() {
+        let fastSmallInvocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            reviewedSourceCount: 3,
+            packedSourceCount: 3,
+            promptHash: "prompt",
+            inputHash: "input",
+            inputChars: 9_600,
+            estimatedOutputTokensPerSecond: 18,
+            timeToFirstTokenMs: 1_200,
+            status: .complete
+        )
+
+        let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
+            runtimeMode: .mlxSwiftLm,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 56_000,
+            sourceBlockCount: 14,
+            sourceCharCount: 52_000,
+            lastInvocation: fastSmallInvocation
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 50_400)
+        XCTAssertEqual(plan.sourceBlockLimit, 12)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_850)
+    }
+
     func testMatterQuestionBudgetPlannerWidensLargeFileFoundationBudgetAfterFastRun() {
         let fastInvocation = AlphaLocalModelInvocation(
             task: .matterQuestionAnswer,
@@ -14430,6 +14463,39 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(plan.maxInputChars, 61_600)
         XCTAssertEqual(plan.sourceBlockLimit, 18)
         XCTAssertEqual(plan.sourceExcerptChars, 1_950)
+    }
+
+    func testStructuredDocumentBudgetPlannerDoesNotWidenLargeFileMLXBudgetAfterFastButMuchSmallerRun() {
+        let fastSmallInvocation = AlphaLocalModelInvocation(
+            task: .legalFieldExtraction,
+            runtimeMode: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            reviewedSourceCount: 3,
+            packedSourceCount: 3,
+            promptHash: "prompt",
+            inputHash: "input",
+            inputChars: 9_600,
+            estimatedOutputTokensPerSecond: 18,
+            timeToFirstTokenMs: 1_200,
+            status: .complete
+        )
+
+        let plan = AlphaLocalPromptBudgetPlanner.structuredDocumentPlan(
+            runtimeMode: .mlxSwiftLm,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 56_000,
+            sourceBlockCount: 18,
+            sourceCharCount: 52_000,
+            lastInvocation: fastSmallInvocation
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 49_280)
+        XCTAssertEqual(plan.sourceBlockLimit, 15)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_650)
     }
 
     func testStructuredDocumentBudgetPlannerWidensLargeFileFoundationBudgetAfterFastRun() {
