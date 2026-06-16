@@ -1127,6 +1127,11 @@ extension AlphaRossModel {
         if let upgradeTierHint = result.upgradeTierHint {
             selectedTier = upgradeTierHint
         }
+        let runtimeOverrideTier =
+            result.upgradeTierHint ??
+            result.modelInvocation.flatMap { AlphaCapabilityTier(rawValue: $0.capabilityTier) } ??
+            selectedTier
+        setAssistantSetupRuntimeOverride(result.upgradeRuntimeHint, for: runtimeOverrideTier)
         path.append(.privateAISettings)
     }
 

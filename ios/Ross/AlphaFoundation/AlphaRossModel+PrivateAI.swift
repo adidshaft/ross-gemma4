@@ -1170,6 +1170,7 @@ private func alphaInstalledAssistantPacksForUpdateChecks(
 func alphaAssistantSetupPresentation(
     for tier: AlphaCapabilityTier,
     existingRuntimeMode: AlphaPackRuntimeMode? = nil,
+    preferredRuntimeMode: AlphaPackRuntimeMode? = nil,
     isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
     physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory,
     freeStorageGB: Int = max(4, alphaAvailableStorageInGigabytes()),
@@ -1178,15 +1179,22 @@ func alphaAssistantSetupPresentation(
     cachedCatalogs: [AlphaAssistantCatalogDescriptor]? = nil,
     cachedDownloads: [AlphaAssistantDownloadDescriptor]? = nil
 ) -> AlphaAssistantSetupPresentation? {
-    let preferredRuntime = alphaPreferredAssistantSetupRuntimeMode(
-        for: tier,
-        existingRuntimeMode: existingRuntimeMode,
-        isPhoneFormFactor: isPhoneFormFactor,
-        physicalMemoryBytes: physicalMemoryBytes,
-        freeStorageGB: freeStorageGB,
-        systemAssistantAvailable: systemAssistantAvailable,
-        lastInvocation: lastInvocation
-    )
+    let preferredRuntime: AlphaPackRuntimeMode
+    if let preferredRuntimeMode,
+       preferredRuntimeMode == .appleFoundationModels ||
+        alphaAssistantTierSupportsInstallerRuntime(tier, runtimeMode: preferredRuntimeMode) {
+        preferredRuntime = preferredRuntimeMode
+    } else {
+        preferredRuntime = alphaPreferredAssistantSetupRuntimeMode(
+            for: tier,
+            existingRuntimeMode: existingRuntimeMode,
+            isPhoneFormFactor: isPhoneFormFactor,
+            physicalMemoryBytes: physicalMemoryBytes,
+            freeStorageGB: freeStorageGB,
+            systemAssistantAvailable: systemAssistantAvailable,
+            lastInvocation: lastInvocation
+        )
+    }
     if preferredRuntime == .appleFoundationModels {
         return AlphaAssistantSetupPresentation(
             runtimeMode: .appleFoundationModels,
@@ -1689,14 +1697,45 @@ extension AlphaRossModel {
     }
 
     func assistantSetupPresentation(for tier: AlphaCapabilityTier) -> AlphaAssistantSetupPresentation? {
-        alphaAssistantSetupPresentation(
+        let normalizedTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
+        let preferredRuntimeMode: AlphaPackRuntimeMode? = if AlphaCapabilityTier.assistantSelectionsMatch(
+            assistantSetupRuntimeOverrideTier,
+            normalizedTier
+        ) {
+            assistantSetupRuntimeOverrideMode
+        } else {
+            nil
+        }
+        return alphaAssistantSetupPresentation(
             for: tier,
             existingRuntimeMode: alphaExistingRuntimeMode(for: tier, installedPacks: persisted.installedPacks),
+            preferredRuntimeMode: preferredRuntimeMode,
             systemAssistantAvailable: systemAssistantHealth(for: tier)?.available == true,
             lastInvocation: alphaLastModelInvocation(in: persisted),
             cachedCatalogs: persisted.cachedAssistantCatalogs,
             cachedDownloads: persisted.cachedAssistantDownloads
         )
+    }
+
+    func setAssistantSetupRuntimeOverride(
+        _ runtimeMode: AlphaPackRuntimeMode?,
+        for tier: AlphaCapabilityTier?
+    ) {
+        assistantSetupRuntimeOverrideTier = tier
+        assistantSetupRuntimeOverrideMode = runtimeMode
+    }
+
+    func clearAssistantSetupRuntimeOverride(for tier: AlphaCapabilityTier? = nil) {
+        guard let tier else {
+            assistantSetupRuntimeOverrideTier = nil
+            assistantSetupRuntimeOverrideMode = nil
+            return
+        }
+        guard AlphaCapabilityTier.assistantSelectionsMatch(assistantSetupRuntimeOverrideTier, tier) else {
+            return
+        }
+        assistantSetupRuntimeOverrideTier = nil
+        assistantSetupRuntimeOverrideMode = nil
     }
 
     var activeRuntimeHealth: AlphaLocalRuntimeHealth? {
@@ -2123,6 +2162,7 @@ extension AlphaRossModel {
     }
 
     func activateInstalledPack(_ pack: AlphaInstalledModelPack) {
+        clearAssistantSetupRuntimeOverride(for: pack.tier)
         guard installedPackPassesRuntimeValidation(pack) else {
             let message = AlphaLocalModelRuntime.runtimeHealth(
                 activePack: pack,
@@ -2866,6 +2906,7 @@ extension AlphaRossModel {
             existingRuntimeMode: alphaExistingRuntimeMode(for: tier, installedPacks: persisted.installedPacks),
             lastInvocation: lastInvocation
         )
+        clearAssistantSetupRuntimeOverride(for: tier)
         let fallbackDownload = alphaPreferredAssistantDownloadFallback(
             for: tier,
             preferredRuntimeMode: preferredRuntime,

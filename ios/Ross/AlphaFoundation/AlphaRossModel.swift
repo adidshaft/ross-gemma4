@@ -789,6 +789,8 @@ final class AlphaRossModel {
     var path: [AlphaRoute] = []
     var selectedCaseID: UUID?
     var selectedTier: AlphaCapabilityTier = .caseAssociate
+    var assistantSetupRuntimeOverrideTier: AlphaCapabilityTier?
+    var assistantSetupRuntimeOverrideMode: AlphaPackRuntimeMode?
     var caseDraftTitle = ""
     var askDrafts: [UUID: String] = [:]
     var globalAskDraft = ""

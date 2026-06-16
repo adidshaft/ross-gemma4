@@ -9076,7 +9076,7 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     @MainActor
-    func testOpenAskUpgradeSetupPreselectsUpgradeTier() {
+    func testOpenAskUpgradeSetupPreselectsUpgradeTierAndRuntime() {
         let model = AlphaRossModel(previewState: .empty())
         let result = AlphaAskResult(
             kind: .userAsk,
@@ -9092,13 +9092,15 @@ final class AlphaExtractionTests: XCTestCase {
             statusNote: nil,
             needsReviewWarning: "Focused sources",
             modelInvocation: nil,
-            upgradeTierHint: .caseAssociate
+            upgradeTierHint: .caseAssociate,
+            upgradeRuntimeHint: .llamaCppGguf
         )
 
         model.selectedTier = .quickStart
         model.openAskUpgradeSetup(for: result)
 
         XCTAssertEqual(model.selectedTier, .caseAssociate)
+        XCTAssertEqual(model.assistantSetupPresentation(for: .caseAssociate)?.runtimeMode, .llamaCppGguf)
         XCTAssertEqual(model.path.last, .privateAISettings)
     }
 

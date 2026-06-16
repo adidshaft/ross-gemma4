@@ -997,7 +997,8 @@ struct AlphaPrivateAIOfferCard: View {
                     } else {
                         await model.startPackDownload(
                             for: offer.tier,
-                            mobileAllowed: mobileAllowed
+                            mobileAllowed: mobileAllowed,
+                            requestedRuntimeMode: setupPresentation?.runtimeMode
                         )
                     }
                 }
