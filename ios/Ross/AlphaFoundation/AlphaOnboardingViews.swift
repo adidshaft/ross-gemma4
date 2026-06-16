@@ -216,42 +216,79 @@ struct AlphaOnboardingModelSelector: View {
     let onSelect: (AlphaCapabilityTier) -> Void
 
     private var selectedSetupSummaryLabel: String {
-        if let setupPresentation = model.assistantSetupPresentation(for: selectedTier) {
+        if let setupPresentation = selectedSetupPresentation {
             return alphaAssistantSetupCompactSummaryLabel(setupPresentation)
         }
         return rossLocalized("assistant_state_checking")
     }
 
+    private var selectedSetupPresentation: AlphaAssistantSetupPresentation? {
+        model.assistantSetupPresentation(for: selectedTier)
+    }
+
     private var selectedRuntimeLabel: String? {
-        model.assistantSetupPresentation(for: selectedTier)?.runtimeMode.displayLabel
+        selectedSetupPresentation?.runtimeMode.displayLabel
     }
 
     private var selectedEtaLabel: String? {
-        model.assistantSetupPresentation(for: selectedTier)?.etaLabel
+        selectedSetupPresentation?.etaLabel
     }
 
     private var selectedSpeedLabel: String? {
-        model.assistantSetupPresentation(for: selectedTier)?.speedLabel
+        selectedSetupPresentation?.speedLabel
     }
 
     private var selectedContextLabel: String? {
-        model.assistantSetupPresentation(for: selectedTier)?.contextLabel
+        selectedSetupPresentation?.contextLabel
     }
 
     private var selectedCompanionLabel: String? {
-        model.assistantSetupPresentation(for: selectedTier)?.companionLabel
+        selectedSetupPresentation?.companionLabel
     }
 
     private var selectedSizeLabel: String {
-        model.assistantSetupPresentation(for: selectedTier)?.sizeLabel ??
+        selectedSetupPresentation?.sizeLabel ??
             rossLocalized("assistant_state_checking")
+    }
+
+    private var selectedSystemAssistantAvailable: Bool {
+        model.systemAssistantHealth(for: selectedTier)?.available == true
+    }
+
+    private var selectedVariantOptions: [AlphaAssistantVariantOption] {
+        alphaAssistantVariantOptions(
+            for: selectedTier,
+            installedPacks: model.privateAISnapshot.installedPacks,
+            activePack: model.activePack,
+            systemAssistantAvailable: selectedSystemAssistantAvailable,
+            preferredRuntimeMode: selectedSetupPresentation?.runtimeMode,
+            cachedCatalogs: model.persisted.cachedAssistantCatalogs,
+            cachedDownloads: model.persisted.cachedAssistantDownloads
+        )
+    }
+
+    private var selectedRuntimeChoiceLabel: String? {
+        guard let runtimeMode = selectedSetupPresentation?.runtimeMode else { return nil }
+        let label = alphaAssistantRuntimeChoiceLabel(
+            selectedRuntimeMode: runtimeMode,
+            tier: selectedTier,
+            existingRuntimeMode: model.installedPack(for: selectedTier)?.runtimeMode,
+            systemAssistantAvailable: selectedSystemAssistantAvailable,
+            lastInvocation: model.lastModelInvocation
+        ).trimmingCharacters(in: .whitespacesAndNewlines)
+        return label.isEmpty ? nil : label
     }
 
     private var selectedBuiltInHint: String? {
         alphaAssistantBuiltInAlternativeHint(
-            selectedRuntimeMode: model.assistantSetupPresentation(for: selectedTier)?.runtimeMode,
-            systemAssistantAvailable: model.systemAssistantHealth(for: selectedTier)?.available == true
+            selectedRuntimeMode: selectedSetupPresentation?.runtimeMode,
+            systemAssistantAvailable: selectedSystemAssistantAvailable
         )
+    }
+
+    private func selectRuntime(_ option: AlphaAssistantVariantOption) {
+        guard !option.isSelected else { return }
+        model.setAssistantSetupRuntimeOverride(option.runtimeMode, for: selectedTier)
     }
 
     var body: some View {
@@ -290,6 +327,34 @@ struct AlphaOnboardingModelSelector: View {
                 font: (compact ? Font.caption2 : Font.caption).weight(.medium)
             )
             .padding(.top, 2)
+
+            if let selectedRuntimeChoiceLabel {
+                Text(selectedRuntimeChoiceLabel)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(Color.rossInk.opacity(0.56))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if selectedVariantOptions.count > 1 {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(rossLocalized("assistant_available_runtimes"))
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(Color.rossInk.opacity(0.60))
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(selectedVariantOptions) { option in
+                                AlphaAssistantVariantChip(
+                                    option: option,
+                                    action: { selectRuntime(option) }
+                                )
+                            }
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+                .padding(.top, 2)
+            }
 
             if let selectedBuiltInHint {
                 Text(selectedBuiltInHint)

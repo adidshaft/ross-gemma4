@@ -10993,6 +10993,36 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.contextLabel, "24,576 tokens")
     }
 
+    @MainActor
+    func testAssistantSetupRuntimeOverrideCanSwitchFreshCaseAssociateSetupBetweenMLXAndGGUF() {
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        let previousSimulatorIdentifier = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"]
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        setenv("SIMULATOR_MODEL_IDENTIFIER", "iPhone17,2", 1)
+        defer {
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+            if let previousSimulatorIdentifier {
+                setenv("SIMULATOR_MODEL_IDENTIFIER", previousSimulatorIdentifier, 1)
+            } else {
+                unsetenv("SIMULATOR_MODEL_IDENTIFIER")
+            }
+        }
+
+        let model = AlphaRossModel(previewState: .empty())
+
+        XCTAssertEqual(model.assistantSetupPresentation(for: .caseAssociate)?.runtimeMode, .mlxSwiftLm)
+
+        model.setAssistantSetupRuntimeOverride(.llamaCppGguf, for: .caseAssociate)
+        XCTAssertEqual(model.assistantSetupPresentation(for: .caseAssociate)?.runtimeMode, .llamaCppGguf)
+
+        model.clearAssistantSetupRuntimeOverride(for: .caseAssociate)
+        XCTAssertEqual(model.assistantSetupPresentation(for: .caseAssociate)?.runtimeMode, .mlxSwiftLm)
+    }
+
     func testAssistantResolvedModelDetailsUsesPinnedGGUFMetadata() {
         let pack = AlphaInstalledModelPack(
             packId: "gemma-4-12b-q4",

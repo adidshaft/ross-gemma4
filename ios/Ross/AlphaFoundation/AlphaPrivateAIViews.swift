@@ -1228,7 +1228,7 @@ func alphaAssistantPreferredInstalledPack(
     return installedOptions.first?.pack
 }
 
-private struct AlphaAssistantVariantChip: View {
+struct AlphaAssistantVariantChip: View {
     let option: AlphaAssistantVariantOption
     let action: () -> Void
 
