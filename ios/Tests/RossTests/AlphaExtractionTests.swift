@@ -7498,6 +7498,36 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(label, "Built-in CoreAI model preferred")
     }
 
+    func testAssistantOfferDoesNotPreferBuiltInActivationWhenMLXIsPreferred() {
+        XCTAssertFalse(
+            alphaAssistantOfferPrefersBuiltInActivation(
+                preferredRuntimeMode: .mlxSwiftLm,
+                systemAssistantAvailable: true,
+                isActive: false,
+                activeButRuntimeUnavailable: false
+            )
+        )
+    }
+
+    func testAssistantOfferPrefersBuiltInActivationOnlyWhenCoreAIIsResolvedChoice() {
+        XCTAssertTrue(
+            alphaAssistantOfferPrefersBuiltInActivation(
+                preferredRuntimeMode: .appleFoundationModels,
+                systemAssistantAvailable: true,
+                isActive: false,
+                activeButRuntimeUnavailable: false
+            )
+        )
+        XCTAssertFalse(
+            alphaAssistantOfferPrefersBuiltInActivation(
+                preferredRuntimeMode: .appleFoundationModels,
+                systemAssistantAvailable: true,
+                isActive: true,
+                activeButRuntimeUnavailable: false
+            )
+        )
+    }
+
     func testAssistantRuntimeChoiceLabelExplainsSwitchAfterSlowCoreAIRun() {
         let slowFoundationInvocation = AlphaLocalModelInvocation(
             task: .matterQuestionAnswer,

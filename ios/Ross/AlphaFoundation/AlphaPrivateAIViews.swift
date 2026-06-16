@@ -696,6 +696,10 @@ struct AlphaPrivateAIOfferCard: View {
         model.systemAssistantHealth(for: offer.tier)?.available == true
     }
 
+    private var setupPresentation: AlphaAssistantSetupPresentation? {
+        model.assistantSetupPresentation(for: offer.tier)
+    }
+
     private var isActive: Bool {
         guard let activePack = model.activePack else { return false }
         return activePack.tier == offer.tier &&
@@ -715,8 +719,12 @@ struct AlphaPrivateAIOfferCard: View {
     }
 
     private var prefersBuiltInActivation: Bool {
-        guard systemAssistantAvailable, !isActive, !activeButRuntimeUnavailable else { return false }
-        return installedPack?.runtimeMode != .appleFoundationModels
+        alphaAssistantOfferPrefersBuiltInActivation(
+            preferredRuntimeMode: setupPresentation?.runtimeMode,
+            systemAssistantAvailable: systemAssistantAvailable,
+            isActive: isActive,
+            activeButRuntimeUnavailable: activeButRuntimeUnavailable
+        )
     }
 
     private var isSettingUp: Bool {
@@ -836,7 +844,6 @@ struct AlphaPrivateAIOfferCard: View {
                     AlphaAssistantBuiltInMetaLabels(font: .caption2.weight(.medium))
                         .padding(.top, 2)
                 } else {
-                    let setupPresentation = model.assistantSetupPresentation(for: offer.tier)
                     AlphaAssistantSetupMetaLabels(
                         sizeLabel: setupPresentation?.sizeLabel ?? rossLocalized("assistant_state_checking"),
                         runtimeLabel: setupPresentation?.runtimeMode.displayLabel,
@@ -937,6 +944,18 @@ struct AlphaPrivateAIOfferCard: View {
         .padding(10)
         .modifier(AlphaPrivateAIOfferSurface(isActive: isActive))
     }
+}
+
+func alphaAssistantOfferPrefersBuiltInActivation(
+    preferredRuntimeMode: AlphaPackRuntimeMode?,
+    systemAssistantAvailable: Bool,
+    isActive: Bool,
+    activeButRuntimeUnavailable: Bool
+) -> Bool {
+    guard systemAssistantAvailable, !isActive, !activeButRuntimeUnavailable else {
+        return false
+    }
+    return preferredRuntimeMode == .appleFoundationModels
 }
 
 struct AlphaAssistantVariantOption: Identifiable, Hashable, Sendable {
