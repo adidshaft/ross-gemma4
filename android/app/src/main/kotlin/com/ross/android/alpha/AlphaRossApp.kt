@@ -5385,6 +5385,7 @@ private fun AlphaAskTurnCard(
     val answerSummaryModifier = if (hasAnswerDetails) {
         Modifier.combinedClickable(
             onClick = {},
+            onLongClickLabel = "Answer details",
             onLongClick = {
                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                 showAnswerDetails = true
@@ -5434,26 +5435,6 @@ private fun AlphaAskTurnCard(
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            if (hasAnswerDetails) {
-                                OutlinedCard(
-                                    modifier = Modifier.size(32.dp),
-                                    shape = RoundedCornerShape(999.dp),
-                                    colors = CardDefaults.outlinedCardColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.26f),
-                                    ),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, alphaChromeStrokeColor()),
-                                    onClick = { showAnswerDetails = true },
-                                ) {
-                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            Icons.Outlined.Info,
-                                            contentDescription = "Answer details",
-                                            modifier = Modifier.size(16.dp),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                }
-                            }
                             Box {
                                 Icon(
                                     Icons.Outlined.MoreVert,
