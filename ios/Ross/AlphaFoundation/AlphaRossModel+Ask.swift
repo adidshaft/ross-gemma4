@@ -469,6 +469,37 @@ extension AlphaRossModel {
             return false
         }
 
+        func candidateMaintainsCoverageForPreferredRuntime(
+            _ candidatePlan: (
+                requestedTier: AlphaCapabilityTier,
+                resolvedProvider: AlphaResolvedLocalAskProvider,
+                sourcePack: [AlphaSourceTextBlock],
+                budgetPlan: AlphaLocalPromptBudgetPlan
+            ),
+            over currentPlan: (
+                requestedTier: AlphaCapabilityTier,
+                resolvedProvider: AlphaResolvedLocalAskProvider,
+                sourcePack: [AlphaSourceTextBlock],
+                budgetPlan: AlphaLocalPromptBudgetPlan
+            )
+        ) -> Bool {
+            let currentPromptPack = coveragePromptPack(for: currentPlan)
+            let candidatePromptPack = coveragePromptPack(for: candidatePlan)
+
+            guard candidatePromptPack.includedSourceRefs.count >= currentPromptPack.includedSourceRefs.count,
+                  candidatePromptPack.omittedSourceRefs.count <= currentPromptPack.omittedSourceRefs.count else {
+                return false
+            }
+
+            if currentPromptPack.truncated != candidatePromptPack.truncated,
+               currentPromptPack.truncated == false {
+                return false
+            }
+
+            let allowedPromptRegression = max(400, Int((Double(max(currentPromptPack.inputChars, 1)) * 0.02).rounded()))
+            return candidatePromptPack.inputChars + allowedPromptRegression >= currentPromptPack.inputChars
+        }
+
         guard var selectedPlan = evaluatePlan(requestedTier: requestedTier) else {
             return nil
         }
@@ -524,6 +555,22 @@ extension AlphaRossModel {
                 continue
             }
             selectedPlan = candidatePlan
+        }
+
+        let recentInvocation = alphaLastModelInvocation(in: persisted)
+        let systemAssistantAvailable = canActivateAssistantRuntimeImmediately(
+            for: requestedTier,
+            runtimeMode: .appleFoundationModels
+        )
+        let preferredRuntimeMode = alphaPreferredAssistantRuntimeMode(
+            for: requestedTier,
+            existingRuntimeMode: selectedPlan.resolvedProvider.provider.runtimeMode,
+            systemAssistantAvailable: systemAssistantAvailable,
+            lastInvocation: recentInvocation
+        )
+        if let preferredCandidatePlan = candidatePlans[preferredRuntimeMode],
+           candidateMaintainsCoverageForPreferredRuntime(preferredCandidatePlan, over: selectedPlan) {
+            selectedPlan = preferredCandidatePlan
         }
 
         let currentSourceBlockLimit = selectedPlan.budgetPlan.sourceBlockLimit ?? selectedPlan.sourcePack.count

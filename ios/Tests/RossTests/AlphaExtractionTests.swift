@@ -10011,6 +10011,128 @@ final class AlphaExtractionTests: XCTestCase {
 
     @available(iOS 26.0, macOS 26.0, *)
     @MainActor
+    func testSubmitAskUsesInstalledMLXWhenSlowCoreAIHasComparableMatterCoverage() async throws {
+        final class RuntimeProbeBox: @unchecked Sendable {
+            var usedFoundation = false
+            var usedMLX = false
+        }
+
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        let previousSimulatorIdentifier = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"]
+        let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
+        let previousFoundationGenerator = AlphaFoundationModelsLocalProvider.streamGenerator
+        let previousMLXGenerator = AlphaMLXLocalProvider.streamGenerator
+        let probeBox = RuntimeProbeBox()
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        setenv("SIMULATOR_MODEL_IDENTIFIER", "iPhone17,2", 1)
+        AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in true }
+        AlphaFoundationModelsLocalProvider.streamGenerator = { _, _, _, _, _ in
+            probeBox.usedFoundation = true
+            return AlphaFoundationModelsGenerationSnapshot(
+                text: "Foundation answer\n- This should not run first.",
+                inputTokenCount: 280,
+                outputTokenCount: 16,
+                outputTokensPerSecond: 6.5,
+                timeToFirstTokenMs: 4_800,
+                usesMeasuredTokenCounts: true
+            )
+        }
+        AlphaMLXLocalProvider.streamGenerator = { _, _, _, _, _, _, onChunk in
+            probeBox.usedMLX = true
+            onChunk?("Selected order")
+            return AlphaMLXGenerationSnapshot(text: "Selected order\n- MLX handled the same matter coverage more quickly.")
+        }
+        defer {
+            AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
+            AlphaFoundationModelsLocalProvider.streamGenerator = previousFoundationGenerator
+            AlphaMLXLocalProvider.streamGenerator = previousMLXGenerator
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+            if let previousSimulatorIdentifier {
+                setenv("SIMULATOR_MODEL_IDENTIFIER", previousSimulatorIdentifier, 1)
+            } else {
+                unsetenv("SIMULATOR_MODEL_IDENTIFIER")
+            }
+        }
+
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+        registerModelArtifactCleanup(for: store)
+
+        var availableMLXPack = try await installMLXPack(
+            with: store,
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-it-mlx",
+            packId: "case-mlx",
+            fixtureName: "ask-runtime-prefer-mlx-\(UUID().uuidString)"
+        )
+        availableMLXPack.isActive = false
+        var systemPack = alphaSystemAssistantPack(for: .caseAssociate)
+        systemPack.isActive = true
+
+        let caseID = UUID()
+        let documents = makeMatterAskDocuments(count: 10)
+        let slowFoundationInvocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.appleFoundationModels.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 6.5,
+            timeToFirstTokenMs: 4_800,
+            status: .complete
+        )
+        var matter = AlphaCaseMatter(
+            id: caseID,
+            title: "Comparable matter",
+            forum: "High Court",
+            stage: .arguments,
+            folderTint: .emerald,
+            localNotice: "Review selected filing",
+            summary: "Matter where CoreAI and MLX can cover the same local text",
+            issueHighlights: [],
+            evidenceNotes: [],
+            draftTasks: [],
+            documents: documents,
+            sourceRefs: []
+        )
+        matter.documents[0].modelInvocations = [slowFoundationInvocation]
+
+        var state = AlphaPersistedState.empty()
+        state.settings.activeTier = .caseAssociate
+        state.installedPacks = [systemPack, availableMLXPack]
+        state.cases = [matter]
+
+        let model = AlphaRossModel()
+        model.persisted = state
+
+        model.submitAsk(
+            question: "What are the main directions in this matter bundle?",
+            scopeCaseID: caseID,
+            webEnabled: false
+        )
+
+        try await eventually {
+            model.latestAskResult?.modelInvocation?.status == .complete
+        }
+
+        XCTAssertTrue(probeBox.usedMLX)
+        XCTAssertFalse(probeBox.usedFoundation)
+        XCTAssertEqual(
+            model.latestAskResult?.modelInvocation?.runtimeMode,
+            AlphaPackRuntimeMode.mlxSwiftLm.rawValue
+        )
+    }
+
+    @available(iOS 26.0, macOS 26.0, *)
+    @MainActor
     func testSubmitAskUsesInstalledMLXForLargeMatterBundleBeforeCoreAIRun() async throws {
         final class RuntimeProbeBox: @unchecked Sendable {
             var usedFoundation = false
