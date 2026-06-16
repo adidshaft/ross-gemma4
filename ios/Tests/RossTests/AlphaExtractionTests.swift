@@ -12290,16 +12290,16 @@ final class AlphaExtractionTests: XCTestCase {
         let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
             runtimeMode: .llamaCppGguf,
             capabilityTier: .caseAssociate,
-            baseMaxInputChars: 68_000,
+            baseMaxInputChars: 72_000,
             sourceBlockCount: 18,
             sourceCharCount: 58_000,
             selectedDocumentCount: 1,
             lastInvocation: nil
         )
 
-        XCTAssertEqual(plan.maxInputChars, 61_200)
+        XCTAssertEqual(plan.maxInputChars, 64_800)
         XCTAssertEqual(plan.sourceBlockLimit, 18)
-        XCTAssertEqual(plan.sourceExcerptChars, 1_700)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_800)
     }
 
     func testMatterQuestionBudgetPlannerIgnoresSlowHistoryFromDifferentTier() {
@@ -12618,16 +12618,16 @@ final class AlphaExtractionTests: XCTestCase {
         let plan = AlphaLocalPromptBudgetPlanner.structuredDocumentPlan(
             runtimeMode: .llamaCppGguf,
             capabilityTier: .caseAssociate,
-            baseMaxInputChars: 68_000,
+            baseMaxInputChars: 72_000,
             sourceBlockCount: 22,
             sourceCharCount: 58_000,
             selectedDocumentCount: 1,
             lastInvocation: nil
         )
 
-        XCTAssertEqual(plan.maxInputChars, 59_840)
-        XCTAssertEqual(plan.sourceBlockLimit, 20)
-        XCTAssertEqual(plan.sourceExcerptChars, 1_680)
+        XCTAssertEqual(plan.maxInputChars, 63_360)
+        XCTAssertEqual(plan.sourceBlockLimit, 22)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_760)
     }
 
     func testStructuredDocumentBudgetPlannerIgnoresSlowHistoryFromDifferentTier() {
@@ -12987,11 +12987,11 @@ final class AlphaExtractionTests: XCTestCase {
             capabilityTier: .caseAssociate,
             task: .caseMemorySynthesis,
             baseBatchLimit: 24,
-            baseMaxInputChars: 68_000,
+            baseMaxInputChars: 72_000,
             lastInvocation: nil
         )
 
-        XCTAssertEqual(batchLimit, 31)
+        XCTAssertEqual(batchLimit, 33)
     }
 
     func testStructuredDocumentBatchLimitWidensCaseMemoryAfterFastMLXRun() {
@@ -13221,12 +13221,12 @@ final class AlphaExtractionTests: XCTestCase {
         let policy = alphaAskRuntimeSourcePackPolicy(
             runtimeMode: .llamaCppGguf,
             capabilityTier: .caseAssociate,
-            baseMaxInputChars: 68_000,
+            baseMaxInputChars: 72_000,
             hasSelectedDocuments: true
         )
 
         XCTAssertEqual(policy.documentCandidateLimit, 4)
-        XCTAssertEqual(policy.sourceBlockLimit, 16)
+        XCTAssertEqual(policy.sourceBlockLimit, 18)
     }
 
     func testAskRuntimeSourcePackPolicyExpandsFurtherForSingleSelectedLlamaAsk() {
@@ -13259,13 +13259,13 @@ final class AlphaExtractionTests: XCTestCase {
         let policy = alphaAskRuntimeSourcePackPolicy(
             runtimeMode: .llamaCppGguf,
             capabilityTier: .caseAssociate,
-            baseMaxInputChars: 68_000,
+            baseMaxInputChars: 72_000,
             hasSelectedDocuments: true,
             selectedDocumentCount: 1
         )
 
         XCTAssertEqual(policy.documentCandidateLimit, 4)
-        XCTAssertEqual(policy.sourceBlockLimit, 22)
+        XCTAssertEqual(policy.sourceBlockLimit, 24)
     }
 
     func testAskRuntimeSourcePackPolicyExpandsSingleSelectedLlamaAskAt40KBudget() {
@@ -13309,12 +13309,12 @@ final class AlphaExtractionTests: XCTestCase {
         let policy = alphaAskRuntimeSourcePackPolicy(
             runtimeMode: .llamaCppGguf,
             capabilityTier: .caseAssociate,
-            baseMaxInputChars: 68_000,
+            baseMaxInputChars: 72_000,
             hasSelectedDocuments: false
         )
 
         XCTAssertEqual(policy.documentCandidateLimit, 7)
-        XCTAssertEqual(policy.sourceBlockLimit, 14)
+        XCTAssertEqual(policy.sourceBlockLimit, 16)
     }
 
     func testAskRuntimeSourcePackPolicyExpandsForCapableFoundationAsks() {
@@ -13652,7 +13652,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(plan.maxInputChars, 64_800)
         XCTAssertEqual(plan.sourceBlockLimit, 18)
-        XCTAssertEqual(plan.sourceExcerptChars, 1_700)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_800)
     }
 
     func testLlamaRuntimeProfileUsesModelAwareGPUOffload() {
