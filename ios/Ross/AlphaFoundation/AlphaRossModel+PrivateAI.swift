@@ -754,6 +754,19 @@ struct AlphaAssistantSetupPresentation: Equatable, Sendable {
     let companionLabel: String?
 }
 
+private func alphaExistingRuntimeMode(
+    for tier: AlphaCapabilityTier,
+    installedPacks: [AlphaInstalledModelPack]
+) -> AlphaPackRuntimeMode? {
+    let effectiveTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
+    return installedPacks.first(where: {
+        (AlphaCapabilityTier.normalizedAssistantSelection($0.tier) ?? $0.tier) == effectiveTier &&
+            $0.isActive
+    })?.runtimeMode ?? installedPacks.first(where: {
+        (AlphaCapabilityTier.normalizedAssistantSelection($0.tier) ?? $0.tier) == effectiveTier
+    })?.runtimeMode
+}
+
 func alphaAssistantSetupPresentation(
     for tier: AlphaCapabilityTier,
     existingRuntimeMode: AlphaPackRuntimeMode? = nil,
@@ -815,9 +828,7 @@ func alphaShouldPrimeAssistantSetupCatalogs(
     for tier in visibleTiers {
         let preferredRuntime = alphaPreferredAssistantRuntimeMode(
             for: tier,
-            existingRuntimeMode: installedPacks.first(where: {
-                (AlphaCapabilityTier.normalizedAssistantSelection($0.tier) ?? $0.tier) == tier
-            })?.runtimeMode,
+            existingRuntimeMode: alphaExistingRuntimeMode(for: tier, installedPacks: installedPacks),
             isPhoneFormFactor: isPhoneFormFactor,
             physicalMemoryBytes: physicalMemoryBytes,
             freeStorageGB: freeStorageGB,
@@ -1205,7 +1216,7 @@ extension AlphaRossModel {
     func assistantSetupPresentation(for tier: AlphaCapabilityTier) -> AlphaAssistantSetupPresentation? {
         alphaAssistantSetupPresentation(
             for: tier,
-            existingRuntimeMode: persisted.installedPacks.first(where: { $0.tier == tier })?.runtimeMode,
+            existingRuntimeMode: alphaExistingRuntimeMode(for: tier, installedPacks: persisted.installedPacks),
             systemAssistantAvailable: systemAssistantHealth(for: tier)?.available == true,
             lastInvocation: alphaLastModelInvocation(in: persisted),
             cachedCatalogs: persisted.cachedAssistantCatalogs,
@@ -1502,9 +1513,7 @@ extension AlphaRossModel {
             for tier in refreshTiers {
                 let preferredRuntime = alphaPreferredAssistantRuntimeMode(
                     for: tier,
-                    existingRuntimeMode: installedPacks.first(where: {
-                        (AlphaCapabilityTier.normalizedAssistantSelection($0.tier) ?? $0.tier) == tier
-                    })?.runtimeMode,
+                    existingRuntimeMode: alphaExistingRuntimeMode(for: tier, installedPacks: installedPacks),
                     lastInvocation: lastInvocation
                 )
                 do {
@@ -2360,7 +2369,7 @@ extension AlphaRossModel {
         let lastInvocation = alphaLastModelInvocation(in: persisted)
         let preferredRuntime = requestedRuntimeMode ?? alphaPreferredAssistantRuntimeMode(
             for: tier,
-            existingRuntimeMode: persisted.installedPacks.first(where: { $0.tier == tier })?.runtimeMode,
+            existingRuntimeMode: alphaExistingRuntimeMode(for: tier, installedPacks: persisted.installedPacks),
             lastInvocation: lastInvocation
         )
         let fallbackDownload = alphaPreferredAssistantDownloadFallback(

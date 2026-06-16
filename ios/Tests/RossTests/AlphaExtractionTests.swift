@@ -9146,6 +9146,59 @@ final class AlphaExtractionTests: XCTestCase {
     #if canImport(FoundationModels)
     @available(iOS 26.0, macOS 26.0, *)
     @MainActor
+    func testAssistantSetupPresentationPrefersActiveFoundationRuntimeOverEarlierInstalledMLXVariantOnCapablePhone() async throws {
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        let previousSimulatorIdentifier = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"]
+        let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        setenv("SIMULATOR_MODEL_IDENTIFIER", "iPhone17,2", 1)
+        AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in true }
+        defer {
+            AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+            if let previousSimulatorIdentifier {
+                setenv("SIMULATOR_MODEL_IDENTIFIER", previousSimulatorIdentifier, 1)
+            } else {
+                unsetenv("SIMULATOR_MODEL_IDENTIFIER")
+            }
+        }
+
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+        defer { Task { await store.removeAllModelArtifacts() } }
+
+        var mlxPack = try await installMLXPack(
+            with: store,
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-it-mlx",
+            packId: "gemma-4-12b-it-mlx",
+            fixtureName: "ross-mlx-setup-foundation-first-\(UUID().uuidString)"
+        )
+        mlxPack.isActive = false
+
+        var systemPack = alphaSystemAssistantPack(for: .caseAssociate)
+        systemPack.isActive = true
+
+        let model = AlphaRossModel()
+        var state = AlphaPersistedState.empty()
+        state.settings.activeTier = .caseAssociate
+        state.installedPacks = [mlxPack, systemPack]
+        model.persisted = state
+
+        let presentation = model.assistantSetupPresentation(for: .caseAssociate)
+
+        XCTAssertEqual(presentation?.runtimeMode, .appleFoundationModels)
+        XCTAssertEqual(presentation?.totalDownloadBytes, 0)
+        XCTAssertEqual(presentation?.sizeLabel, rossLocalized("assistant_meta_no_download"))
+        XCTAssertNil(presentation?.companionLabel)
+    }
+
+    @available(iOS 26.0, macOS 26.0, *)
+    @MainActor
     func testStartPackDownloadHonorsExplicitBuiltInRuntimeSelectionOnCapablePhone() async throws {
         let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
         let previousSimulatorIdentifier = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"]
@@ -9181,6 +9234,59 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(model.persisted.installedPacks.first?.runtimeMode, .appleFoundationModels)
         XCTAssertEqual(model.persisted.installedPacks.first?.installPath, "system://apple-foundation-models")
         XCTAssertEqual(model.persisted.modelJobs.first?.runtimeMode, .appleFoundationModels)
+        XCTAssertEqual(model.persisted.settings.activeTier, .caseAssociate)
+    }
+
+    @available(iOS 26.0, macOS 26.0, *)
+    @MainActor
+    func testStartPackDownloadPrefersActiveFoundationRuntimeOverEarlierInstalledMLXVariantOnCapablePhone() async throws {
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        let previousSimulatorIdentifier = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"]
+        let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        setenv("SIMULATOR_MODEL_IDENTIFIER", "iPhone17,2", 1)
+        AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in true }
+        defer {
+            AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+            if let previousSimulatorIdentifier {
+                setenv("SIMULATOR_MODEL_IDENTIFIER", previousSimulatorIdentifier, 1)
+            } else {
+                unsetenv("SIMULATOR_MODEL_IDENTIFIER")
+            }
+        }
+
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+        defer { Task { await store.removeAllModelArtifacts() } }
+
+        var mlxPack = try await installMLXPack(
+            with: store,
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-it-mlx",
+            packId: "gemma-4-12b-it-mlx",
+            fixtureName: "ross-mlx-download-foundation-first-\(UUID().uuidString)"
+        )
+        mlxPack.isActive = false
+
+        var systemPack = alphaSystemAssistantPack(for: .caseAssociate)
+        systemPack.isActive = true
+
+        let model = AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+        var state = AlphaPersistedState.empty()
+        state.settings.activeTier = .caseAssociate
+        state.installedPacks = [mlxPack, systemPack]
+        model.persisted = state
+
+        await model.startPackDownload(for: .caseAssociate, mobileAllowed: true)
+
+        XCTAssertEqual(model.persisted.installedPacks.first(where: \.isActive)?.runtimeMode, .appleFoundationModels)
+        XCTAssertEqual(model.persisted.installedPacks.first(where: \.isActive)?.installPath, "system://apple-foundation-models")
+        XCTAssertEqual(model.persisted.modelJobs.first { $0.tier == .caseAssociate }?.runtimeMode, .appleFoundationModels)
         XCTAssertEqual(model.persisted.settings.activeTier, .caseAssociate)
     }
     #endif
