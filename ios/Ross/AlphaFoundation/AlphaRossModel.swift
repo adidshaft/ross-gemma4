@@ -815,6 +815,7 @@ final class AlphaRossModel {
     @ObservationIgnored var privateAISnapshotRefreshKey: AlphaPrivateAISnapshotRefreshKey?
     @ObservationIgnored var pendingPersistTask: Task<Void, Never>?
     @ObservationIgnored var debouncedSnapshotRefreshTask: Task<Void, Never>?
+    @ObservationIgnored var assistantSetupCatalogRefreshTask: Task<Void, Never>?
 
     init(
         store: AlphaRossStore = AlphaRossStore(),

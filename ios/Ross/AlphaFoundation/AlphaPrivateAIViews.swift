@@ -312,6 +312,9 @@ struct AlphaPrivateAISettingsScreen: View {
         }
         .navigationTitle(rossLocalized("my_assistant"))
         .rossInlineNavigationTitle()
+        .task {
+            model.primeAssistantSetupCatalogsIfNeeded()
+        }
     }
 }
 

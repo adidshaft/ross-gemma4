@@ -5847,6 +5847,54 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(descriptors.map(\.runtimeMode), [.mlxSwiftLm, .llamaCppGguf])
     }
 
+    func testShouldPrimeAssistantSetupCatalogsWhenPreferredMLXDescriptorIsMissing() {
+        let shouldPrime = alphaShouldPrimeAssistantSetupCatalogs(
+            visibleTiers: [.caseAssociate],
+            installedPacks: [],
+            cachedCatalogs: [
+                AlphaAssistantCatalogDescriptor(
+                    tier: .caseAssociate,
+                    packId: "gemma-4-12b-gguf",
+                    sizeBytes: 7_381_382_048,
+                    checksumSha256: String(repeating: "b", count: 64),
+                    artifactKind: "local_model_artifact",
+                    runtimeMode: .llamaCppGguf,
+                    developmentOnly: false
+                )
+            ],
+            cachedDownloads: nil,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24
+        )
+
+        XCTAssertTrue(shouldPrime)
+    }
+
+    func testShouldPrimeAssistantSetupCatalogsSkipsWhenPreferredMLXDescriptorIsCached() {
+        let shouldPrime = alphaShouldPrimeAssistantSetupCatalogs(
+            visibleTiers: [.caseAssociate],
+            installedPacks: [],
+            cachedCatalogs: [
+                AlphaAssistantCatalogDescriptor(
+                    tier: .caseAssociate,
+                    packId: "gemma-4-12b-mlx",
+                    sizeBytes: 6_200_000_000,
+                    checksumSha256: String(repeating: "a", count: 64),
+                    artifactKind: "mlx_directory",
+                    runtimeMode: .mlxSwiftLm,
+                    developmentOnly: false
+                )
+            ],
+            cachedDownloads: nil,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24
+        )
+
+        XCTAssertFalse(shouldPrime)
+    }
+
     func testPreferredAssistantRuntimeModePrefersMLXOnCapablePhoneForDeeperTiers() {
         let runtime = alphaPreferredAssistantRuntimeMode(
             for: .caseAssociate,

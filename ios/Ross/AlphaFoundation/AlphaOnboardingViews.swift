@@ -251,6 +251,9 @@ struct AlphaOnboardingModelSelector: View {
             fallbackFillOpacity: 0.84,
             fallbackStrokeOpacity: 0.62
         )
+        .task {
+            model.primeAssistantSetupCatalogsIfNeeded()
+        }
     }
 }
 

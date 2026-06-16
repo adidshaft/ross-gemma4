@@ -440,6 +440,40 @@ func alphaAssistantSetupPresentation(
     )
 }
 
+func alphaShouldPrimeAssistantSetupCatalogs(
+    visibleTiers: [AlphaCapabilityTier] = AlphaCapabilityTier.visibleAssistantTiers,
+    installedPacks: [AlphaInstalledModelPack],
+    cachedCatalogs: [AlphaAssistantCatalogDescriptor]? = nil,
+    cachedDownloads: [AlphaAssistantDownloadDescriptor]? = nil,
+    isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
+    physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory,
+    freeStorageGB: Int = max(4, alphaAvailableStorageInGigabytes()),
+    lastInvocation: AlphaLocalModelInvocation? = nil
+) -> Bool {
+    for tier in visibleTiers {
+        let preferredRuntime = alphaPreferredAssistantRuntimeMode(
+            for: tier,
+            existingRuntimeMode: installedPacks.first(where: {
+                (AlphaCapabilityTier.normalizedAssistantSelection($0.tier) ?? $0.tier) == tier
+            })?.runtimeMode,
+            isPhoneFormFactor: isPhoneFormFactor,
+            physicalMemoryBytes: physicalMemoryBytes,
+            freeStorageGB: freeStorageGB,
+            lastInvocation: lastInvocation
+        )
+        guard preferredRuntime != .appleFoundationModels else { continue }
+        guard let descriptor = alphaCachedPreferredAssistantSetupDescriptor(
+            for: tier,
+            preferredRuntimeMode: preferredRuntime,
+            cachedCatalogs: cachedCatalogs,
+            cachedDownloads: cachedDownloads
+        ), descriptor.runtimeMode == preferredRuntime else {
+            return true
+        }
+    }
+    return false
+}
+
 func alphaPreferredAssistantCatalogFallback(
     for tier: AlphaCapabilityTier,
     preferredRuntimeMode: AlphaPackRuntimeMode,
@@ -684,6 +718,62 @@ func alphaAssistantDownloadDescriptor(
 }
 
 extension AlphaRossModel {
+
+    func primeAssistantSetupCatalogsIfNeeded(force: Bool = false) {
+        if !force,
+           assistantSetupCatalogRefreshTask != nil {
+            return
+        }
+
+        let lastInvocation = alphaLastModelInvocation(in: persisted)
+        let shouldPrime = force || alphaShouldPrimeAssistantSetupCatalogs(
+            installedPacks: persisted.installedPacks,
+            cachedCatalogs: persisted.cachedAssistantCatalogs,
+            cachedDownloads: persisted.cachedAssistantDownloads,
+            lastInvocation: lastInvocation
+        )
+        guard shouldPrime else { return }
+
+        assistantSetupCatalogRefreshTask?.cancel()
+        assistantSetupCatalogRefreshTask = Task {
+            var refreshedCatalogsByTier: [AlphaCapabilityTier: [AlphaAssistantCatalogDescriptor]] = [:]
+            for tier in AlphaCapabilityTier.visibleAssistantTiers {
+                do {
+                    let manifest = try await backend.fetchCatalog(for: tier)
+                    let cachedDescriptors = alphaAssistantCatalogCacheDescriptors(
+                        for: tier,
+                        compatibleOnly: true,
+                        manifest: manifest
+                    )
+                    if !cachedDescriptors.isEmpty {
+                        refreshedCatalogsByTier[tier] = cachedDescriptors
+                    }
+                } catch {
+                    continue
+                }
+            }
+
+            await MainActor.run {
+                defer { self.assistantSetupCatalogRefreshTask = nil }
+                guard !Task.isCancelled, !refreshedCatalogsByTier.isEmpty else { return }
+
+                var cachedCatalogs = self.persisted.cachedAssistantCatalogs ?? []
+                for (tier, descriptors) in refreshedCatalogsByTier {
+                    cachedCatalogs.removeAll {
+                        AlphaCapabilityTier.normalizedAssistantSelection($0.tier) ==
+                            AlphaCapabilityTier.normalizedAssistantSelection(tier)
+                    }
+                    cachedCatalogs.append(contentsOf: descriptors)
+                }
+                self.persisted.cachedAssistantCatalogs = cachedCatalogs
+                self.persisted.lastModelCatalogRefresh = alphaResolvedModelCatalogRefreshDate(
+                    previousRefresh: self.persisted.lastModelCatalogRefresh,
+                    refreshedCatalogCount: refreshedCatalogsByTier.values.reduce(0) { $0 + $1.count }
+                )
+                self.persist()
+            }
+        }
+    }
 
     func installedPack(for tier: AlphaCapabilityTier) -> AlphaInstalledModelPack? {
         privateAISnapshot.installedPack(for: tier)
