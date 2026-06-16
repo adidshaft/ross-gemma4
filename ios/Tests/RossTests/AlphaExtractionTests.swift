@@ -10437,6 +10437,25 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(plan.pass(for: .caseMemorySynthesis)?.maxPagesPerBatch, 26)
     }
 
+    func testPipelinePlanExpandsBatchingForCapableLlamaRuntime() {
+        let pack = installedPack(
+            .caseAssociate,
+            runtimeMode: .llamaCppGguf,
+            packId: "gemma-4-12b-it-gguf",
+            installPath: "model-packs/case_associate/gemma-4-12b-it-UD-Q4_K_XL.gguf",
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+
+        let plan = AlphaExtractionPipelinePlanner.plan(
+            for: pack,
+            physicalMemory: 12_000_000_000
+        )
+
+        XCTAssertEqual(plan.pass(for: .legalFieldExtraction)?.maxPagesPerBatch, 20)
+        XCTAssertEqual(plan.pass(for: .caseMemorySynthesis)?.maxPagesPerBatch, 26)
+    }
+
     func testPipelinePlanKeepsBaselineBatchingForConstrainedMLXRuntime() {
         let pack = installedPack(
             .caseAssociate,

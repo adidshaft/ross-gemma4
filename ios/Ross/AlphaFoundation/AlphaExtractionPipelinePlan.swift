@@ -127,7 +127,21 @@ enum AlphaExtractionPipelinePlanner {
             case .flash:
                 return base
             }
-        case .deterministicDev, .mediapipeLlm, .llamaCppGguf, .unavailable:
+        case .llamaCppGguf:
+            switch pack.tier {
+            case .quickStart:
+                guard physicalMemory >= 8_000_000_000 else { return base }
+                return max(base, 12)
+            case .caseAssociate:
+                guard physicalMemory >= 12_000_000_000 else { return base }
+                return task == .caseMemorySynthesis ? max(base, 26) : max(base, 20)
+            case .seniorDraftingSupport:
+                guard physicalMemory >= 16_000_000_000 else { return base }
+                return task == .caseMemorySynthesis ? max(base, 34) : max(base, 26)
+            case .flash:
+                return base
+            }
+        case .deterministicDev, .mediapipeLlm, .unavailable:
             return base
         }
     }
