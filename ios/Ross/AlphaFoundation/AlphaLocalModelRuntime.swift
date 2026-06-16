@@ -279,6 +279,9 @@ enum AlphaFoundationRuntimeProfile {
         case .quickStart:
             return physicalMemory >= 8_000_000_000 ? 8_192 : 6_144
         case .caseAssociate:
+            if physicalMemory >= 16_000_000_000 {
+                return 16_384
+            }
             return physicalMemory >= 12_000_000_000 ? 12_288 : 10_240
         case .seniorDraftingSupport:
             return physicalMemory >= 16_000_000_000 ? 16_384 : 12_288
@@ -295,6 +298,9 @@ enum AlphaFoundationRuntimeProfile {
         case .quickStart:
             return physicalMemory >= 8_000_000_000 ? 32_000 : 24_000
         case .caseAssociate:
+            if physicalMemory >= 16_000_000_000 {
+                return 56_000
+            }
             return physicalMemory >= 12_000_000_000 ? 44_000 : 36_000
         case .seniorDraftingSupport:
             return physicalMemory >= 16_000_000_000 ? 56_000 : 44_000
@@ -407,6 +413,15 @@ func alphaAskRuntimeSourcePackPolicy(
         return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 8)
     case .appleFoundationModels:
         if capabilityTier == .caseAssociate || capabilityTier == .seniorDraftingSupport {
+            if baseMaxInputChars >= 52_000 {
+                if hasSingleSelectedDocument {
+                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 20)
+                }
+                return AlphaAskRuntimeSourcePackPolicy(
+                    documentCandidateLimit: hasSelectedDocuments ? 4 : 7,
+                    sourceBlockLimit: hasSelectedDocuments ? 16 : 14
+                )
+            }
             if baseMaxInputChars >= 40_000 {
                 if hasSingleSelectedDocument {
                     return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 18)
@@ -1028,6 +1043,9 @@ enum AlphaLocalPromptBudgetPlanner {
                 return prefersWiderBatches ? 1.16 : 1.1
             }
         case .appleFoundationModels:
+            if baseMaxInputChars >= 52_000 {
+                return prefersWiderBatches ? 1.5 : 1.3
+            }
             if baseMaxInputChars >= 40_000 {
                 return prefersWiderBatches ? 1.4 : 1.25
             }
@@ -1221,6 +1239,19 @@ enum AlphaLocalPromptBudgetPlanner {
                 slowTokensPerSecond: 6
             )
         case .appleFoundationModels:
+            if baseMaxInputChars >= 52_000 {
+                return (
+                    minimumBudget: 9_400,
+                    largeFileBlockLimit: 11,
+                    largeFileExcerptChars: 1_800,
+                    cautionBlockLimit: 8,
+                    cautionExcerptChars: 1_320,
+                    slowBlockLimit: 5,
+                    slowExcerptChars: 940,
+                    cautionTokensPerSecond: 14,
+                    slowTokensPerSecond: 9
+                )
+            }
             if baseMaxInputChars >= 40_000 {
                 return (
                     minimumBudget: 9_000,
@@ -1404,6 +1435,19 @@ enum AlphaLocalPromptBudgetPlanner {
                 slowTokensPerSecond: 5
             )
         case .appleFoundationModels:
+            if baseMaxInputChars >= 52_000 {
+                return (
+                    minimumBudget: 8_400,
+                    largeFileBlockLimit: 14,
+                    largeFileExcerptChars: 1_650,
+                    cautionBlockLimit: 10,
+                    cautionExcerptChars: 1_220,
+                    slowBlockLimit: 6,
+                    slowExcerptChars: 900,
+                    cautionTokensPerSecond: 12,
+                    slowTokensPerSecond: 8
+                )
+            }
             if baseMaxInputChars >= 40_000 {
                 return (
                     minimumBudget: 8_400,
