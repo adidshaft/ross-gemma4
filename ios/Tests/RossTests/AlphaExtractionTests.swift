@@ -9532,6 +9532,32 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testAssistantSetupCompactSummaryLabelIncludesRuntimeAndSize() {
+        let downloadPresentation = AlphaAssistantSetupPresentation(
+            runtimeMode: .mlxSwiftLm,
+            sizeLabel: "13.4 GB",
+            totalDownloadBytes: 13_380_656_577,
+            companionLabel: rossLocalized("assistant_meta_speed_companion"),
+            etaLabel: "about 19 min"
+        )
+        XCTAssertEqual(
+            alphaAssistantSetupCompactSummaryLabel(downloadPresentation),
+            "MLX · 13.4 GB"
+        )
+
+        let builtInPresentation = AlphaAssistantSetupPresentation(
+            runtimeMode: .appleFoundationModels,
+            sizeLabel: rossLocalized("assistant_meta_no_download"),
+            totalDownloadBytes: 0,
+            companionLabel: nil,
+            etaLabel: nil
+        )
+        XCTAssertEqual(
+            alphaAssistantSetupCompactSummaryLabel(builtInPresentation),
+            "CoreAI · No download"
+        )
+    }
+
     @available(iOS 26.0, macOS 26.0, *)
     @MainActor
     func testStartPackDownloadHonorsExplicitBuiltInRuntimeSelectionOnCapablePhone() async throws {

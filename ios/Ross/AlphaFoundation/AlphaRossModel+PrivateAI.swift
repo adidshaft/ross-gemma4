@@ -768,6 +768,18 @@ func alphaAssistantSetupEtaLabel(
     )
 }
 
+func alphaAssistantSetupCompactSummaryLabel(
+    _ presentation: AlphaAssistantSetupPresentation
+) -> String {
+    let runtimeLabel = presentation.runtimeMode.displayLabel
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    let sizeLabel = presentation.sizeLabel.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    if runtimeLabel.isEmpty { return sizeLabel }
+    if sizeLabel.isEmpty { return runtimeLabel }
+    return "\(runtimeLabel) · \(sizeLabel)"
+}
+
 private func alphaExistingRuntimeMode(
     for tier: AlphaCapabilityTier,
     installedPacks: [AlphaInstalledModelPack]

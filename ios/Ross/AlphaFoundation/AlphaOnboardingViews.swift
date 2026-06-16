@@ -215,7 +215,26 @@ struct AlphaOnboardingModelSelector: View {
     let compact: Bool
     let onSelect: (AlphaCapabilityTier) -> Void
 
-    private var selectedSetupSizeLabel: String {
+    private var selectedSetupSummaryLabel: String {
+        if let setupPresentation = model.assistantSetupPresentation(for: selectedTier) {
+            return alphaAssistantSetupCompactSummaryLabel(setupPresentation)
+        }
+        return rossLocalized("assistant_state_checking")
+    }
+
+    private var selectedRuntimeLabel: String? {
+        model.assistantSetupPresentation(for: selectedTier)?.runtimeMode.displayLabel
+    }
+
+    private var selectedEtaLabel: String? {
+        model.assistantSetupPresentation(for: selectedTier)?.etaLabel
+    }
+
+    private var selectedCompanionLabel: String? {
+        model.assistantSetupPresentation(for: selectedTier)?.companionLabel
+    }
+
+    private var selectedSizeLabel: String {
         model.assistantSetupPresentation(for: selectedTier)?.sizeLabel ??
             rossLocalized("assistant_state_checking")
     }
@@ -227,9 +246,10 @@ struct AlphaOnboardingModelSelector: View {
                     .font(.system(size: compact ? 13 : 15, weight: .bold))
                     .foregroundStyle(Color.rossInk)
                 Spacer(minLength: 0)
-                Text(selectedSetupSizeLabel)
+                Text(selectedSetupSummaryLabel)
                     .font(.system(size: compact ? 11 : 12, weight: .bold))
                     .foregroundStyle(Color.rossAccent)
+                    .multilineTextAlignment(.trailing)
             }
 
             ForEach(AlphaCapabilityTier.visibleAssistantTiers, id: \.self) { tier in
@@ -243,6 +263,16 @@ struct AlphaOnboardingModelSelector: View {
                     onSelect(tier)
                 }
             }
+
+            AlphaAssistantSetupMetaLabels(
+                sizeLabel: selectedSizeLabel,
+                runtimeLabel: selectedRuntimeLabel,
+                companionLabel: selectedCompanionLabel,
+                etaLabel: selectedEtaLabel,
+                freeSpaceLabel: model.freeDiskSpaceLabel,
+                font: (compact ? Font.caption2 : Font.caption).weight(.medium)
+            )
+            .padding(.top, 2)
         }
         .padding(compact ? 9 : 11)
         .rossNativeGlassSurface(
@@ -265,7 +295,26 @@ struct AlphaOnboardingModelChoiceRow: View {
     let compact: Bool
     let onSelect: () -> Void
 
-    private var setupSizeLabel: String {
+    private var setupSummaryLabel: String {
+        if let setupPresentation = model.assistantSetupPresentation(for: tier) {
+            return alphaAssistantSetupCompactSummaryLabel(setupPresentation)
+        }
+        return rossLocalized("assistant_state_checking")
+    }
+
+    private var runtimeLabel: String? {
+        model.assistantSetupPresentation(for: tier)?.runtimeMode.displayLabel
+    }
+
+    private var etaLabel: String? {
+        model.assistantSetupPresentation(for: tier)?.etaLabel
+    }
+
+    private var companionLabel: String? {
+        model.assistantSetupPresentation(for: tier)?.companionLabel
+    }
+
+    private var sizeLabel: String {
         model.assistantSetupPresentation(for: tier)?.sizeLabel ??
             rossLocalized("assistant_state_checking")
     }
@@ -281,15 +330,16 @@ struct AlphaOnboardingModelChoiceRow: View {
 
                 VStack(alignment: .leading, spacing: compact ? 2 : 3) {
                     HStack(spacing: 6) {
-                        Text(tier.title)
+                        Text(tier.setupTitle)
                             .font(.system(size: compact ? 11 : 13, weight: .bold))
                             .foregroundStyle(Color.rossInk)
                             .lineLimit(1)
 
-                        Text(setupSizeLabel)
+                        Text(setupSummaryLabel)
                             .font(.system(size: compact ? 9 : 11, weight: .semibold))
                             .foregroundStyle(Color.rossInk.opacity(0.56))
                             .lineLimit(1)
+                            .minimumScaleFactor(0.72)
 
                         if isRecommended {
                             Text(rossLocalized("recommended"))
@@ -312,6 +362,15 @@ struct AlphaOnboardingModelChoiceRow: View {
                         .lineLimit(2)
                         .minimumScaleFactor(0.78)
                         .fixedSize(horizontal: false, vertical: true)
+
+                    AlphaAssistantSetupMetaLabels(
+                        sizeLabel: sizeLabel,
+                        runtimeLabel: runtimeLabel,
+                        companionLabel: companionLabel,
+                        etaLabel: etaLabel,
+                        freeSpaceLabel: model.freeDiskSpaceLabel,
+                        font: .caption2.weight(.medium)
+                    )
                 }
 
                 Spacer(minLength: 0)
