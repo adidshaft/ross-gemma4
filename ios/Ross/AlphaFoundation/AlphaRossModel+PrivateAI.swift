@@ -177,11 +177,25 @@ func alphaAssistantCatalogDescriptorSupportsCurrentInstaller(_ descriptor: Alpha
 func alphaShouldReuseInstalledAssistantPack(
     _ pack: AlphaInstalledModelPack?,
     preferredRuntimeMode: AlphaPackRuntimeMode,
+    targetPackId: String? = nil,
+    preferredDescriptor: AlphaAssistantDownloadDescriptor? = nil,
     forceDownload: Bool = false
 ) -> Bool {
     guard let pack else { return false }
     guard !forceDownload else { return false }
-    return pack.runtimeMode == preferredRuntimeMode
+    guard pack.runtimeMode == preferredRuntimeMode else { return false }
+
+    if let targetPackId,
+       !targetPackId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+       pack.packId != targetPackId {
+        return false
+    }
+
+    if let preferredDescriptor {
+        return alphaInstalledAssistantPackMatchesDownloadDescriptor(pack, descriptor: preferredDescriptor)
+    }
+
+    return true
 }
 
 func alphaInstalledAssistantPackMatchesDownloadDescriptor(
@@ -1819,6 +1833,8 @@ extension AlphaRossModel {
            alphaShouldReuseInstalledAssistantPack(
             existingInstalled,
             preferredRuntimeMode: preferredRuntime,
+            targetPackId: targetPackId,
+            preferredDescriptor: fallbackDownload,
             forceDownload: forceRefreshInstalledPack
            ) {
             activateInstalledPack(existingInstalled)

@@ -6693,6 +6693,59 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testDoNotReuseInstalledAssistantPackWhenTargetPackIDDiffers() {
+        let pack = installedPack(
+            .caseAssociate,
+            runtimeMode: .mlxSwiftLm,
+            packId: "gemma-4-12b-mlx-current",
+            installPath: "model-packs/case_associate/gemma-4-12b-it-mlx-current",
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+
+        XCTAssertFalse(
+            alphaShouldReuseInstalledAssistantPack(
+                pack,
+                preferredRuntimeMode: .mlxSwiftLm,
+                targetPackId: "gemma-4-12b-mlx-next"
+            )
+        )
+    }
+
+    func testDoNotReuseInstalledAssistantPackWhenPreferredDescriptorDiffers() {
+        let pack = installedPack(
+            .caseAssociate,
+            runtimeMode: .mlxSwiftLm,
+            packId: "gemma-4-12b-mlx",
+            installPath: "model-packs/case_associate/gemma-4-12b-it-mlx",
+            checksum: String(repeating: "a", count: 64),
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+        let descriptor = AlphaAssistantDownloadDescriptor(
+            sessionId: nil,
+            packId: "gemma-4-12b-mlx",
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-it-mlx.zip",
+            sizeBytes: 6_200_000_000,
+            checksumSha256: String(repeating: "b", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            downloadURLString: "https://ross.example/artifacts/gemma-4-12b-it-mlx.zip",
+            verified: true,
+            releaseReady: true
+        )
+
+        XCTAssertFalse(
+            alphaShouldReuseInstalledAssistantPack(
+                pack,
+                preferredRuntimeMode: .mlxSwiftLm,
+                preferredDescriptor: descriptor
+            )
+        )
+    }
+
     func testInstalledAssistantPackMatchesResolvedDownloadDescriptor() {
         let pack = installedPack(
             .caseAssociate,
