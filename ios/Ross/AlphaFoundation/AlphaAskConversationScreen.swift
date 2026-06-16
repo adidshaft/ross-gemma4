@@ -638,27 +638,12 @@ struct AlphaFullScreenChatTurn: View {
                         alphaCopyAskResultToPasteboard(result)
                         alphaHaptic(.light)
                     }
-                    let showAnswerDetailsAction: () -> Void = {
-                        alphaHaptic(.light)
-                        onShowDetails(result)
-                    }
-
-                    if result.hasAnswerDetails {
-                        AlphaCleanAnswerHeader<EmptyView>(
-                            title: result.answerTitle,
-                            continuationContext: result.answerContinuationContext,
-                            statusNote: deduplicatedStatusNote,
-                            onCopy: copyAnswerAction,
-                            onShowDetails: showAnswerDetailsAction
-                        )
-                    } else {
-                        AlphaCleanAnswerHeader<EmptyView>(
-                            title: result.answerTitle,
-                            continuationContext: result.answerContinuationContext,
-                            statusNote: deduplicatedStatusNote,
-                            onCopy: copyAnswerAction
-                        )
-                    }
+                    AlphaCleanAnswerHeader<EmptyView>(
+                        title: result.answerTitle,
+                        continuationContext: result.answerContinuationContext,
+                        statusNote: deduplicatedStatusNote,
+                        onCopy: copyAnswerAction
+                    )
 
                     ForEach(Array(answerItems.enumerated()), id: \.element.id) { index, section in
                         VStack(alignment: .leading, spacing: 10) {
@@ -1804,8 +1789,6 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
     let continuationContext: AlphaAnswerContinuationContext?
     let statusNote: String?
     let onCopy: () -> Void
-    let onShowDetails: (() -> Void)?
-    let showsDetailsButton: Bool
     let showsMenu: Bool
     @ViewBuilder var menu: () -> MenuContent
 
@@ -1814,15 +1797,12 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
         continuationContext: AlphaAnswerContinuationContext? = nil,
         statusNote: String?,
         onCopy: @escaping () -> Void,
-        onShowDetails: (() -> Void)? = nil,
         @ViewBuilder menu: @escaping () -> MenuContent
     ) {
         self.title = title
         self.continuationContext = continuationContext
         self.statusNote = AlphaCleanAnswerHeader.cleanedStatusNote(statusNote)
         self.onCopy = onCopy
-        self.onShowDetails = onShowDetails
-        self.showsDetailsButton = onShowDetails != nil
         self.showsMenu = true
         self.menu = menu
     }
@@ -1831,15 +1811,12 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
         title: String,
         continuationContext: AlphaAnswerContinuationContext? = nil,
         statusNote: String?,
-        onCopy: @escaping () -> Void,
-        onShowDetails: (() -> Void)? = nil
+        onCopy: @escaping () -> Void
     ) where MenuContent == EmptyView {
         self.title = title
         self.continuationContext = continuationContext
         self.statusNote = AlphaCleanAnswerHeader.cleanedStatusNote(statusNote)
         self.onCopy = onCopy
-        self.onShowDetails = onShowDetails
-        self.showsDetailsButton = onShowDetails != nil
         self.showsMenu = false
         self.menu = { EmptyView() }
     }
@@ -1861,14 +1838,6 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
                 Spacer(minLength: 8)
 
                 AlphaCleanAnswerCopyButton(action: onCopy)
-
-                if showsDetailsButton, let onShowDetails {
-                    AlphaAnswerAccessoryIconButton(
-                        systemImage: "info.circle",
-                        accessibilityLabel: rossLocalized("answer_details"),
-                        action: onShowDetails
-                    )
-                }
 
                 if showsMenu {
                     Menu {
