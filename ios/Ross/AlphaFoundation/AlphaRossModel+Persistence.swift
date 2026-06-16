@@ -1319,6 +1319,10 @@ func alphaPreferredAssistantRuntimeMode(
             if !isPhoneFormFactor {
                 return .appleFoundationModels
             }
+            if existingRuntimeMode == .appleFoundationModels,
+               !shouldAvoidFoundationFromRecentSignal {
+                return .appleFoundationModels
+            }
             let localPreferred = alphaPreferredAssistantRuntimeMode(
                 for: tier,
                 existingRuntimeMode: existingRuntimeMode == .appleFoundationModels ? nil : existingRuntimeMode,
@@ -1440,7 +1444,7 @@ func alphaAssistantRuntimeChoiceLabel(
        prefersSystemAssistant,
        alphaPreferredAssistantRuntimeMode(
         for: tier,
-        existingRuntimeMode: .appleFoundationModels,
+        existingRuntimeMode: nil,
         isPhoneFormFactor: isPhoneFormFactor,
         physicalMemoryBytes: physicalMemoryBytes,
         freeStorageGB: freeStorageGB,
