@@ -536,7 +536,7 @@ test("ios production catalog includes the built-in mlx case associate variant wi
   );
 });
 
-test("ios production catalog includes built-in mlx variants for every assistant tier", async (t) => {
+test("ios production catalog keeps mlx variants limited to supported iphone assistant tiers", async (t) => {
   const app = await buildApp({
     env: buildTestEnv({ ROSS_MODEL_CATALOG_MODE: "production_metadata" }),
     emitLogsToConsole: false
@@ -573,7 +573,7 @@ test("ios production catalog includes built-in mlx variants for every assistant 
     iosBody.manifest.payload.packs.map((pack) => [`${pack.tier}:${pack.runtimeMode}`, pack])
   );
 
-  assert.equal(iosBody.manifest.payload.packs.length, 6);
+  assert.equal(iosBody.manifest.payload.packs.length, 5);
 
   assert.equal(
     packsByTier.get("quick_start:mlx_swift_lm")?.packId,
@@ -594,15 +594,8 @@ test("ios production catalog includes built-in mlx variants for every assistant 
   );
 
   assert.equal(
-    packsByTier.get("senior_drafting_support:mlx_swift_lm")?.packId,
-    "gemma-4-26b-a4b-mlx"
+    packsByTier.get("senior_drafting_support:gemma_local_runtime")?.packId,
+    "gemma-4-26b-a4b-q4"
   );
-  assert.equal(
-    packsByTier.get("senior_drafting_support:mlx_swift_lm")?.technicalModelName,
-    "Gemma 4 26B-A4B QAT 4-bit (MLX)"
-  );
-  assert.equal(
-    packsByTier.get("senior_drafting_support:mlx_swift_lm")?.draftArtifact?.fileName,
-    "gemma-4-26B-A4B-it-qat-assistant-4bit"
-  );
+  assert.equal(packsByTier.get("senior_drafting_support:mlx_swift_lm"), undefined);
 });
