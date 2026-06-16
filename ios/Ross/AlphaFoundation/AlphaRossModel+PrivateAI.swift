@@ -1021,6 +1021,19 @@ func alphaAssistantSetupEtaLabel(
     )
 }
 
+func alphaAssistantSetupCompanionLabel(
+    for runtimeMode: AlphaPackRuntimeMode
+) -> String? {
+    switch runtimeMode {
+    case .mlxSwiftLm:
+        return "Assistant companion included"
+    case .llamaCppGguf:
+        return "MTP draft acceleration"
+    case .appleFoundationModels, .deterministicDev, .mediapipeLlm, .unavailable:
+        return nil
+    }
+}
+
 func alphaAssistantSetupCompactSummaryLabel(
     _ presentation: AlphaAssistantSetupPresentation
 ) -> String {
@@ -1244,7 +1257,7 @@ func alphaAssistantSetupPresentation(
             runtimeMode: descriptor.runtimeMode,
             physicalMemoryBytes: physicalMemoryBytes
         ),
-        companionLabel: descriptor.draftArtifact == nil ? nil : rossLocalized("assistant_meta_speed_companion"),
+        companionLabel: descriptor.draftArtifact == nil ? nil : alphaAssistantSetupCompanionLabel(for: descriptor.runtimeMode),
         etaLabel: alphaAssistantSetupEtaLabel(totalDownloadBytes: totalDownloadBytes)
     )
 }
