@@ -676,7 +676,9 @@ struct AlphaPrivateAIOfferCard: View {
     }
 
     private var latestJob: AlphaModelDownloadJob? {
-        model.persisted.modelJobs.first { $0.tier == offer.tier }
+        model.persisted.modelJobs.first {
+            AlphaCapabilityTier.assistantSelectionsMatch($0.tier, offer.tier)
+        }
     }
 
     private var installedPack: AlphaInstalledModelPack? {
@@ -710,14 +712,14 @@ struct AlphaPrivateAIOfferCard: View {
 
     private var isActive: Bool {
         guard let activePack = model.activePack else { return false }
-        return activePack.tier == offer.tier &&
+        return AlphaCapabilityTier.assistantSelectionsMatch(activePack.tier, offer.tier) &&
             (!activePack.developmentOnly || alphaAllowsDevelopmentModelArtifacts()) &&
             model.activeRuntimeHealth?.available == true
     }
 
     private var activeButRuntimeUnavailable: Bool {
         guard let activePack = model.activePack else { return false }
-        return activePack.tier == offer.tier &&
+        return AlphaCapabilityTier.assistantSelectionsMatch(activePack.tier, offer.tier) &&
             (!activePack.developmentOnly || !alphaAllowsDevelopmentModelArtifacts()) &&
             model.activeRuntimeHealth?.available != true
     }
@@ -1025,7 +1027,7 @@ func alphaAssistantVariantOptions(
     preferredRuntimeMode: AlphaPackRuntimeMode? = nil
 ) -> [AlphaAssistantVariantOption] {
     var options = installedPacks
-        .filter { $0.tier == tier }
+        .filter { AlphaCapabilityTier.assistantSelectionsMatch($0.tier, tier) }
         .map { pack in
             AlphaAssistantVariantOption(
                 pack: pack,
@@ -1041,7 +1043,8 @@ func alphaAssistantVariantOptions(
             AlphaAssistantVariantOption(
                 pack: nil,
                 runtimeMode: .appleFoundationModels,
-                isActive: activePack?.runtimeMode == .appleFoundationModels && activePack?.tier == tier,
+                isActive: activePack?.runtimeMode == .appleFoundationModels &&
+                    AlphaCapabilityTier.assistantSelectionsMatch(activePack?.tier, tier),
                 isBuiltIn: true
             )
         )

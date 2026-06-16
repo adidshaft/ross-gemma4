@@ -110,8 +110,11 @@ struct AlphaPrivateAISnapshot: Hashable, Sendable {
     var resetCount = 0
 
     func installedPack(for tier: AlphaCapabilityTier) -> AlphaInstalledModelPack? {
-        installedPacks.first { $0.tier == tier && $0.isActive } ??
-            installedPacks.first { $0.tier == tier }
+        installedPacks.first {
+            AlphaCapabilityTier.assistantSelectionsMatch($0.tier, tier) && $0.isActive
+        } ?? installedPacks.first {
+            AlphaCapabilityTier.assistantSelectionsMatch($0.tier, tier)
+        }
     }
 }
 

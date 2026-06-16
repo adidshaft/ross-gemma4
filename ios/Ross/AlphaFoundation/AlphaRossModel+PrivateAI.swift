@@ -3306,10 +3306,10 @@ extension AlphaRossModel {
         let recommended = AlphaCapabilityTier.normalizedAssistantSelection(recommendedOnDeviceTier()) ?? .quickStart
         let effective = selected.rank > recommended.rank ? recommended : selected
         let activeJob = persisted.modelJobs.first {
-            AlphaCapabilityTier.normalizedAssistantSelection($0.tier) == effective
+            AlphaCapabilityTier.assistantSelectionsMatch($0.tier, effective)
         }
         let installed = persisted.installedPacks.contains {
-            AlphaCapabilityTier.normalizedAssistantSelection($0.tier) == effective && $0.isActive
+            AlphaCapabilityTier.assistantSelectionsMatch($0.tier, effective) && $0.isActive
         }
         let installState: AlphaAssistantInstallState
         if installed {

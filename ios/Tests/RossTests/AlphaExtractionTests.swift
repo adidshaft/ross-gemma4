@@ -8701,6 +8701,29 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(decision.installState, .installed)
     }
 
+    func testPrivateAISnapshotInstalledPackNormalizesLegacyFlashTier() {
+        let legacyPack = installedPack(.flash, developmentOnly: false)
+        let snapshot = AlphaPrivateAISnapshot(installedPacks: [legacyPack])
+
+        XCTAssertEqual(snapshot.installedPack(for: .quickStart)?.packId, legacyPack.packId)
+    }
+
+    func testAssistantVariantOptionsIncludeLegacyFlashPackUnderQuickStart() {
+        let legacyPack = installedPack(.flash, runtimeMode: .llamaCppGguf, developmentOnly: false)
+
+        let options = alphaAssistantVariantOptions(
+            for: .quickStart,
+            installedPacks: [legacyPack],
+            activePack: legacyPack,
+            systemAssistantAvailable: false
+        )
+
+        XCTAssertEqual(options.count, 1)
+        XCTAssertEqual(options.first?.pack?.packId, legacyPack.packId)
+        XCTAssertEqual(options.first?.runtimeMode, .llamaCppGguf)
+        XCTAssertTrue(options.first?.isActive == true)
+    }
+
     func testLocalAskUpgradeTierHintPromotesQuickStartToCaseAssociate() {
         XCTAssertEqual(
             alphaLocalAskUpgradeTierHint(

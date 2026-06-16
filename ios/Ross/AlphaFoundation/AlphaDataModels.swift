@@ -248,6 +248,14 @@ enum AlphaCapabilityTier: String, Codable, CaseIterable, Identifiable, Hashable,
         return tier == .flash ? .quickStart : tier
     }
 
+    static func assistantSelectionsMatch(_ lhs: AlphaCapabilityTier?, _ rhs: AlphaCapabilityTier?) -> Bool {
+        guard let normalizedLHS = normalizedAssistantSelection(lhs),
+              let normalizedRHS = normalizedAssistantSelection(rhs) else {
+            return false
+        }
+        return normalizedLHS == normalizedRHS
+    }
+
     var title: String {
         switch self {
         case .flash:
