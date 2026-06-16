@@ -11124,6 +11124,22 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(plan.sourceExcerptChars, 1_950)
     }
 
+    func testMatterQuestionBudgetPlannerUsesHighBudgetLlamaBranchForCapablePhones() {
+        let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
+            runtimeMode: .llamaCppGguf,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 68_000,
+            sourceBlockCount: 18,
+            sourceCharCount: 58_000,
+            selectedDocumentCount: 1,
+            lastInvocation: nil
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 61_200)
+        XCTAssertEqual(plan.sourceBlockLimit, 20)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_700)
+    }
+
     func testMatterQuestionBudgetPlannerIgnoresSlowHistoryFromDifferentTier() {
         let slowInvocation = AlphaLocalModelInvocation(
             task: .matterQuestionAnswer,
@@ -11406,6 +11422,22 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(plan.maxInputChars, 54_600)
         XCTAssertEqual(plan.sourceBlockLimit, 16)
         XCTAssertEqual(plan.sourceExcerptChars, 1_760)
+    }
+
+    func testStructuredDocumentBudgetPlannerUsesHighBudgetLlamaBranchForCapablePhones() {
+        let plan = AlphaLocalPromptBudgetPlanner.structuredDocumentPlan(
+            runtimeMode: .llamaCppGguf,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 68_000,
+            sourceBlockCount: 22,
+            sourceCharCount: 58_000,
+            selectedDocumentCount: 1,
+            lastInvocation: nil
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 59_840)
+        XCTAssertEqual(plan.sourceBlockLimit, 20)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_680)
     }
 
     func testStructuredDocumentBudgetPlannerIgnoresSlowHistoryFromDifferentTier() {
@@ -11704,6 +11736,19 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(batchLimit, 22)
     }
 
+    func testStructuredDocumentBatchLimitUsesHighBudgetLlamaBranch() {
+        let batchLimit = AlphaLocalPromptBudgetPlanner.structuredDocumentBatchLimit(
+            runtimeMode: .llamaCppGguf,
+            capabilityTier: .caseAssociate,
+            task: .caseMemorySynthesis,
+            baseBatchLimit: 24,
+            baseMaxInputChars: 68_000,
+            lastInvocation: nil
+        )
+
+        XCTAssertEqual(batchLimit, 31)
+    }
+
     func testStructuredDocumentBatchLimitWidensCaseMemoryAfterFastMLXRun() {
         let fastInvocation = AlphaLocalModelInvocation(
             task: .caseMemorySynthesis,
@@ -11890,6 +11935,18 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(policy.sourceBlockLimit, 15)
     }
 
+    func testAskRuntimeSourcePackPolicyExpandsFurtherForHighBudgetLlamaAsks() {
+        let policy = alphaAskRuntimeSourcePackPolicy(
+            runtimeMode: .llamaCppGguf,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 68_000,
+            hasSelectedDocuments: true
+        )
+
+        XCTAssertEqual(policy.documentCandidateLimit, 4)
+        XCTAssertEqual(policy.sourceBlockLimit, 16)
+    }
+
     func testAskRuntimeSourcePackPolicyExpandsFurtherForSingleSelectedLlamaAsk() {
         let policy = alphaAskRuntimeSourcePackPolicy(
             runtimeMode: .llamaCppGguf,
@@ -11914,6 +11971,19 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(policy.documentCandidateLimit, 4)
         XCTAssertEqual(policy.sourceBlockLimit, 20)
+    }
+
+    func testAskRuntimeSourcePackPolicyExpandsSingleSelectedHighBudgetLlamaAsk() {
+        let policy = alphaAskRuntimeSourcePackPolicy(
+            runtimeMode: .llamaCppGguf,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 68_000,
+            hasSelectedDocuments: true,
+            selectedDocumentCount: 1
+        )
+
+        XCTAssertEqual(policy.documentCandidateLimit, 4)
+        XCTAssertEqual(policy.sourceBlockLimit, 22)
     }
 
     func testAskRuntimeSourcePackPolicyExpandsSingleSelectedLlamaAskAt40KBudget() {
@@ -11951,6 +12021,18 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(policy.documentCandidateLimit, 7)
         XCTAssertEqual(policy.sourceBlockLimit, 12)
+    }
+
+    func testAskRuntimeSourcePackPolicyExpandsHighBudgetLlamaCandidateWindowWithoutSelections() {
+        let policy = alphaAskRuntimeSourcePackPolicy(
+            runtimeMode: .llamaCppGguf,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 68_000,
+            hasSelectedDocuments: false
+        )
+
+        XCTAssertEqual(policy.documentCandidateLimit, 7)
+        XCTAssertEqual(policy.sourceBlockLimit, 14)
     }
 
     func testAskRuntimeSourcePackPolicyExpandsForCapableFoundationAsks() {
@@ -12008,21 +12090,21 @@ final class AlphaExtractionTests: XCTestCase {
                 forModelPath: "/tmp/gemma-4-12B-it-UD-Q4_K_XL.gguf",
                 physicalMemory: 8_000_000_000
             ),
-            18_432
+            20_480
         )
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.contextWindowTokens(
                 forModelPath: "/tmp/gemma-4-12B-it-UD-Q4_K_XL.gguf",
                 physicalMemory: 12_000_000_000
             ),
-            24_576
+            28_672
         )
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.contextWindowTokens(
                 forModelPath: "/tmp/gemma-4-12B-it-UD-Q4_K_XL.gguf",
                 physicalMemory: 16_000_000_000
             ),
-            32_768
+            36_864
         )
     }
 
@@ -12190,21 +12272,21 @@ final class AlphaExtractionTests: XCTestCase {
                 for: .quickStart,
                 physicalMemory: 8_000_000_000
             ),
-            32_000
+            36_000
         )
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.maxInputChars(
                 for: .caseAssociate,
                 physicalMemory: 12_000_000_000
             ),
-            52_000
+            56_000
         )
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.maxInputChars(
                 for: .seniorDraftingSupport,
                 physicalMemory: 20_000_000_000
             ),
-            64_000
+            72_000
         )
         XCTAssertEqual(AlphaLlamaRuntimeProfile.sourceBlockLimit(for: .caseAssociate), 9)
         XCTAssertEqual(AlphaLlamaRuntimeProfile.sourceBlockLimit(for: .seniorDraftingSupport), 12)
@@ -12240,14 +12322,14 @@ final class AlphaExtractionTests: XCTestCase {
                 forModelPath: "/tmp/gemma-4-12B-it-UD-Q4_K_XL.gguf",
                 physicalMemory: 12_000_000_000
             ),
-            1_536
+            2_048
         )
         XCTAssertEqual(
             AlphaLlamaRuntimeProfile.physicalBatchTokens(
                 forModelPath: "/tmp/gemma-4-12B-it-UD-Q4_K_XL.gguf",
                 physicalMemory: 12_000_000_000
             ),
-            1_024
+            1_536
         )
     }
 

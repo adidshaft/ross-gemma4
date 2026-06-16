@@ -349,6 +349,15 @@ func alphaAskRuntimeSourcePackPolicy(
         )
     case .llamaCppGguf:
         if capabilityTier == .caseAssociate || capabilityTier == .seniorDraftingSupport {
+            if baseMaxInputChars >= 60_000 {
+                if hasSingleSelectedDocument {
+                    return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 22)
+                }
+                return AlphaAskRuntimeSourcePackPolicy(
+                    documentCandidateLimit: hasSelectedDocuments ? 4 : 7,
+                    sourceBlockLimit: hasSelectedDocuments ? 16 : 14
+                )
+            }
             if baseMaxInputChars >= 52_000 {
                 if hasSingleSelectedDocument {
                     return AlphaAskRuntimeSourcePackPolicy(documentCandidateLimit: 4, sourceBlockLimit: 20)
@@ -533,6 +542,9 @@ enum AlphaLocalPromptBudgetPlanner {
             }
             return nil
         case .llamaCppGguf:
+            if baseMaxInputChars >= 60_000 {
+                return 20
+            }
             if baseMaxInputChars >= 48_000 {
                 return 18
             }
@@ -727,6 +739,9 @@ enum AlphaLocalPromptBudgetPlanner {
             }
             return 0
         case .llamaCppGguf:
+            if baseMaxInputChars >= 60_000 {
+                return prefersWiderBatches ? 4 : 3
+            }
             if baseMaxInputChars >= 48_000 {
                 return prefersWiderBatches ? 3 : 2
             }
@@ -811,6 +826,9 @@ enum AlphaLocalPromptBudgetPlanner {
             return nil
         case .llamaCppGguf:
             if usesStructuredThresholds {
+                if baseMaxInputChars >= 60_000 {
+                    return 18
+                }
                 if baseMaxInputChars >= 48_000 {
                     return 16
                 }
@@ -818,6 +836,9 @@ enum AlphaLocalPromptBudgetPlanner {
                     return 13
                 }
             } else {
+                if baseMaxInputChars >= 60_000 {
+                    return 14
+                }
                 if baseMaxInputChars >= 48_000 {
                     return 12
                 }
@@ -873,6 +894,9 @@ enum AlphaLocalPromptBudgetPlanner {
             return nil
         case .llamaCppGguf:
             if usesStructuredThresholds {
+                if baseMaxInputChars >= 60_000 {
+                    return 1_900
+                }
                 if baseMaxInputChars >= 48_000 {
                     return 1_760
                 }
@@ -880,6 +904,9 @@ enum AlphaLocalPromptBudgetPlanner {
                     return 1_520
                 }
             } else {
+                if baseMaxInputChars >= 60_000 {
+                    return 2_100
+                }
                 if baseMaxInputChars >= 48_000 {
                     return 1_950
                 }
@@ -921,6 +948,9 @@ enum AlphaLocalPromptBudgetPlanner {
             }
             return baseMaxInputChars >= 40_000 ? 18 : nil
         case .llamaCppGguf:
+            if baseMaxInputChars >= 60_000 {
+                return 20
+            }
             if baseMaxInputChars >= 48_000 {
                 return 18
             }
@@ -951,6 +981,9 @@ enum AlphaLocalPromptBudgetPlanner {
                 return prefersWiderBatches ? 1.33 : 1.2
             }
         case .llamaCppGguf:
+            if baseMaxInputChars >= 60_000 {
+                return prefersWiderBatches ? 1.33 : 1.2
+            }
             if baseMaxInputChars >= 48_000 {
                 return prefersWiderBatches ? 1.25 : 1.15
             }
@@ -1087,6 +1120,19 @@ enum AlphaLocalPromptBudgetPlanner {
                 slowTokensPerSecond: 8
             )
         case .llamaCppGguf:
+            if baseMaxInputChars >= 60_000 {
+                return (
+                    minimumBudget: 8_800,
+                    largeFileBlockLimit: 10,
+                    largeFileExcerptChars: 1_700,
+                    cautionBlockLimit: 7,
+                    cautionExcerptChars: 1_250,
+                    slowBlockLimit: 4,
+                    slowExcerptChars: 980,
+                    cautionTokensPerSecond: 11,
+                    slowTokensPerSecond: 7
+                )
+            }
             if baseMaxInputChars >= 48_000 {
                 return (
                     minimumBudget: 8_400,
@@ -1244,6 +1290,19 @@ enum AlphaLocalPromptBudgetPlanner {
                 slowTokensPerSecond: 7
             )
         case .llamaCppGguf:
+            if baseMaxInputChars >= 60_000 {
+                return (
+                    minimumBudget: 9_000,
+                    largeFileBlockLimit: 14,
+                    largeFileExcerptChars: 1_680,
+                    cautionBlockLimit: 11,
+                    cautionExcerptChars: 1_380,
+                    slowBlockLimit: 7,
+                    slowExcerptChars: 1_060,
+                    cautionTokensPerSecond: 11,
+                    slowTokensPerSecond: 7
+                )
+            }
             if baseMaxInputChars >= 48_000 {
                 return (
                     minimumBudget: 8_200,

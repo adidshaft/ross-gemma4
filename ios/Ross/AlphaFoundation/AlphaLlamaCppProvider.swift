@@ -42,22 +42,22 @@ enum AlphaLlamaRuntimeProfile {
             return physicalMemory >= 8_000_000_000 ? 8_192 : 6_144
         case .e4b:
             if physicalMemory >= 12_000_000_000 {
-                return 20_480
+                return 24_576
             }
-            return physicalMemory >= 8_000_000_000 ? 16_384 : 10_240
+            return physicalMemory >= 8_000_000_000 ? 18_432 : 10_240
         case .gemma12b:
             if physicalMemory >= 16_000_000_000 {
-                return 32_768
+                return 36_864
             }
             if physicalMemory >= 12_000_000_000 {
-                return 24_576
+                return 28_672
             }
-            return 18_432
+            return 20_480
         case .gemma26bA4b:
             if physicalMemory >= 20_000_000_000 {
-                return 24_576
+                return 28_672
             }
-            return physicalMemory >= 16_000_000_000 ? 16_384 : 10_240
+            return physicalMemory >= 16_000_000_000 ? 20_480 : 12_288
         case .unknown:
             return physicalMemory >= 10_000_000_000 ? 14_336 : 10_240
         }
@@ -105,17 +105,17 @@ enum AlphaLlamaRuntimeProfile {
         case .flash:
             return 12_000
         case .quickStart:
-            return physicalMemory >= 8_000_000_000 ? 32_000 : 22_000
+            return physicalMemory >= 8_000_000_000 ? 36_000 : 22_000
         case .caseAssociate:
             if physicalMemory >= 16_000_000_000 {
-                return 60_000
+                return 68_000
             }
-            return physicalMemory >= 12_000_000_000 ? 52_000 : 38_000
+            return physicalMemory >= 12_000_000_000 ? 56_000 : 40_000
         case .seniorDraftingSupport:
             if physicalMemory >= 20_000_000_000 {
-                return 64_000
+                return 72_000
             }
-            return physicalMemory >= 16_000_000_000 ? 56_000 : 40_000
+            return physicalMemory >= 16_000_000_000 ? 60_000 : 44_000
         }
     }
 
@@ -173,14 +173,14 @@ enum AlphaLlamaRuntimeProfile {
             return physicalMemory >= 8_000_000_000 ? 1_536 : 1_024
         case .gemma12b:
             if physicalMemory >= 16_000_000_000 {
-                return 2_048
+                return 2_560
             }
-            return physicalMemory >= 12_000_000_000 ? 1_536 : 1_024
+            return physicalMemory >= 12_000_000_000 ? 2_048 : 1_280
         case .gemma26bA4b:
             if physicalMemory >= 20_000_000_000 {
-                return 1_536
+                return 1_792
             }
-            return physicalMemory >= 16_000_000_000 ? 1_024 : 768
+            return physicalMemory >= 16_000_000_000 ? 1_280 : 896
         case .unknown:
             return physicalMemory >= 10_000_000_000 ? 1_536 : 1_024
         }
@@ -200,14 +200,14 @@ enum AlphaLlamaRuntimeProfile {
             return physicalMemory >= 8_000_000_000 ? 1_024 : 768
         case .gemma12b:
             if physicalMemory >= 16_000_000_000 {
-                return 1_536
+                return 2_048
             }
-            return physicalMemory >= 12_000_000_000 ? 1_024 : 768
+            return physicalMemory >= 12_000_000_000 ? 1_536 : 1_024
         case .gemma26bA4b:
             if physicalMemory >= 20_000_000_000 {
-                return 1_024
+                return 1_280
             }
-            return physicalMemory >= 16_000_000_000 ? 768 : 512
+            return physicalMemory >= 16_000_000_000 ? 1_024 : 640
         case .unknown:
             return physicalMemory >= 10_000_000_000 ? 1_024 : 768
         }
