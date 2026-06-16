@@ -9312,6 +9312,19 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(label, "Installed GGUF kept for larger on-device context")
     }
 
+    func testAssistantRuntimeChoiceLabelExplainsSeniorIPhoneGGUFChoice() {
+        let label = alphaAssistantRuntimeChoiceLabel(
+            selectedRuntimeMode: .llamaCppGguf,
+            tier: .seniorDraftingSupport,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 16 * 1_073_741_824,
+            freeStorageGB: 32,
+            systemAssistantAvailable: false
+        )
+
+        XCTAssertEqual(label, "Senior Drafting Support stays on GGUF on iPhone for deeper local context")
+    }
+
     func testReuseInstalledAssistantPackWhenRuntimeAlreadyMatchesPreference() {
         let pack = installedPack(
             .caseAssociate,
@@ -11316,6 +11329,21 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.contextLabel, "12,288 tokens")
         XCTAssertNil(presentation?.companionLabel)
         XCTAssertNil(presentation?.etaLabel)
+    }
+
+    func testAssistantSetupPresentationKeepsSeniorTierOnGGUFOnIPhone() {
+        let presentation = alphaAssistantSetupPresentation(
+            for: .seniorDraftingSupport,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 16 * 1_073_741_824,
+            freeStorageGB: 32,
+            systemAssistantAvailable: false
+        )
+
+        XCTAssertEqual(presentation?.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(presentation?.speedLabel, "~11 tok/s")
+        XCTAssertEqual(presentation?.contextLabel, "20,480 tokens")
+        XCTAssertEqual(presentation?.companionLabel, alphaAssistantSetupCompanionLabel(for: .llamaCppGguf))
     }
 
     #if canImport(FoundationModels)

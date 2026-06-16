@@ -1483,6 +1483,7 @@ func alphaAssistantRuntimeChoiceLabel(
     systemAssistantAvailable: Bool? = nil,
     lastInvocation: AlphaLocalModelInvocation? = nil
 ) -> String {
+    let normalizedTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
     let prefersSystemAssistant = systemAssistantAvailable ?? alphaSystemAssistantRuntimeAvailable(for: tier)
     let recentSignal = alphaRecentRuntimeSelectionSignal(for: tier, lastInvocation: lastInvocation)
 
@@ -1560,6 +1561,13 @@ func alphaAssistantRuntimeChoiceLabel(
 
     if !isPhoneFormFactor && selectedRuntimeMode == .llamaCppGguf {
         return "Larger devices default to GGUF for broader local context"
+    }
+
+    if selectedRuntimeMode == .llamaCppGguf,
+       isPhoneFormFactor,
+       normalizedTier == .seniorDraftingSupport,
+       !alphaAssistantTierSupportsMLXRuntime(normalizedTier) {
+        return "Senior Drafting Support stays on GGUF on iPhone for deeper local context"
     }
 
     let baselineTier = alphaRecommendedOnDeviceTier(
