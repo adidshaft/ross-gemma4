@@ -37,6 +37,19 @@ private func alphaIsRunningTests() -> Bool {
     return Bundle.allBundles.contains { $0.bundlePath.hasSuffix(".xctest") }
 }
 
+func alphaRemoveDownloadedPackArtifact(relativePath: String?, fileManager: FileManager = .default) {
+    guard let relativePath, !relativePath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+    let artifactURL = alphaAbsoluteURL(for: relativePath)
+    let manifest = alphaModelArtifactManifest(forFileAt: artifactURL)
+    if let draftArtifact = manifest?.draftArtifact {
+        try? fileManager.removeItem(at: alphaAbsoluteURL(for: draftArtifact.relativePath))
+    }
+    try? fileManager.removeItem(at: artifactURL)
+    try? fileManager.removeItem(
+        at: alphaModelArtifactManifestURL(forArtifactAt: artifactURL, fileManager: fileManager)
+    )
+}
+
 func alphaAbsoluteURL(for relativePath: String) -> URL {
     alphaSupportRootURL().appendingPathComponent(relativePath)
 }
@@ -776,14 +789,7 @@ actor AlphaRossStore {
     }
 
     func removeDownloadedPackArtifact(relativePath: String?) {
-        guard let relativePath, !relativePath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        let artifactURL = alphaAbsoluteURL(for: relativePath)
-        let manifest = alphaModelArtifactManifest(forFileAt: artifactURL)
-        if let draftArtifact = manifest?.draftArtifact {
-            try? fileManager.removeItem(at: alphaAbsoluteURL(for: draftArtifact.relativePath))
-        }
-        try? fileManager.removeItem(at: artifactURL)
-        try? fileManager.removeItem(at: alphaModelArtifactManifestURL(forArtifactAt: artifactURL, fileManager: fileManager))
+        alphaRemoveDownloadedPackArtifact(relativePath: relativePath, fileManager: fileManager)
     }
 
     @discardableResult

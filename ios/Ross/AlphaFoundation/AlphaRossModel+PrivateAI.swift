@@ -1309,15 +1309,14 @@ extension AlphaRossModel {
     }
 
     func removeInstalledPack(_ pack: AlphaInstalledModelPack) {
-        if !pack.installPath.hasPrefix("system://") {
-            Task {
-                await store.removeDownloadedPackArtifact(relativePath: pack.installPath)
-            }
+        let storedPack = persisted.installedPacks.first(where: { $0.id == pack.id }) ?? pack
+        if !storedPack.installPath.hasPrefix("system://") {
+            alphaRemoveDownloadedPackArtifact(relativePath: storedPack.installPath)
         }
-        let removedWasActive = pack.isActive
-        persisted.installedPacks.removeAll { $0.id == pack.id }
+        let removedWasActive = storedPack.isActive
+        persisted.installedPacks.removeAll { $0.id == storedPack.id }
         if removedWasActive {
-            if let sameTierReplacement = persisted.installedPacks.first(where: { $0.tier == pack.tier }) {
+            if let sameTierReplacement = persisted.installedPacks.first(where: { $0.tier == storedPack.tier }) {
                 persisted.installedPacks = persisted.installedPacks.map {
                     var copy = $0
                     copy.isActive = copy.id == sameTierReplacement.id
@@ -1340,7 +1339,7 @@ extension AlphaRossModel {
         persisted.ledgerEntries.insert(
             AlphaPrivacyLedgerEntry(
                 title: "Assistant removed",
-                detail: "\(pack.tier.title) was removed from local storage.",
+                detail: "\(storedPack.tier.title) was removed from local storage.",
                 purpose: .model_verification,
                 payloadClass: .no_case_data,
                 endpointLabel: "device://model-remove",
@@ -2297,6 +2296,7 @@ extension AlphaRossModel {
         targetPackId: String? = nil,
         requestedRuntimeMode: AlphaPackRuntimeMode? = nil
     ) async {
+        cancelPrivateAISnapshotValidation()
         let artifact = alphaAssistantModelArtifact(for: tier)
         let lastInvocation = alphaLastModelInvocation(in: persisted)
         let preferredRuntime = requestedRuntimeMode ?? alphaPreferredAssistantRuntimeMode(

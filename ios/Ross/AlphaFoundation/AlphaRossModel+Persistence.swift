@@ -34,45 +34,94 @@ private func alphaMarkPrivateAIStartupValidationFinished() {
 }
 
 private func alphaQuarantineActiveAssistantAfterStartupFailure(_ state: inout AlphaPersistedState) {
-    guard let activePack = alphaOptimisticActivePack(from: state),
-          activePack.runtimeMode == .llamaCppGguf,
-          !activePack.developmentOnly else {
-        return
-    }
+    let selectedTier = AlphaCapabilityTier.normalizedAssistantSelection(state.settings.activeTier)
+    let affectedTier = selectedTier ?? state.installedPacks.first(where: {
+        $0.isActive &&
+            $0.runtimeMode == .llamaCppGguf &&
+            !$0.developmentOnly
+    })?.tier
+    guard let affectedTier else { return }
 
     state.installedPacks = state.installedPacks.map { pack in
         var copy = pack
-        if copy.id == activePack.id {
+        if copy.tier == affectedTier {
             copy.isActive = false
         }
         return copy
     }
-    state.settings.activeTier = activePack.tier
+    state.settings.activeTier = nil
     state.modelJobs = state.modelJobs.map { job in
         var copy = job
-        if copy.tier == activePack.tier, copy.state == .installed {
+        if copy.tier == affectedTier, copy.state == .installed {
             copy.failureReason = "Ross paused this assistant after the previous launch did not finish setup validation. Open My assistant to re-check setup or use Repair setup."
             copy.updatedAt = .now
         }
         return copy
     }
-    state.ledgerEntries.insert(
-        AlphaPrivacyLedgerEntry(
-            title: "Assistant paused",
-            detail: "Ross kept the assistant setup file on this device, but stopped auto-selecting it after startup validation did not finish on the previous launch. Open My assistant to re-check setup or use Repair setup.",
-            purpose: .model_verification,
-            payloadClass: .no_case_data,
-            endpointLabel: "device://model-startup-recovery",
-            success: false
-        ),
-        at: 0
+    if !state.ledgerEntries.contains(where: {
+        $0.title == "Assistant paused" && $0.endpointLabel == "device://model-startup-recovery"
+    }) {
+        state.ledgerEntries.insert(
+            AlphaPrivacyLedgerEntry(
+                title: "Assistant paused",
+                detail: "Ross kept the assistant setup file on this device, but stopped auto-selecting it after startup validation did not finish on the previous launch. Open My assistant to re-check setup or use Repair setup.",
+                purpose: .model_verification,
+                payloadClass: .no_case_data,
+                endpointLabel: "device://model-startup-recovery",
+                success: false
+            ),
+            at: 0
+        )
+    }
+}
+
+private func alphaSelectedDownloadedAssistantPack(in state: AlphaPersistedState) -> AlphaInstalledModelPack? {
+    let selectedTier = AlphaCapabilityTier.normalizedAssistantSelection(
+        state.installedPacks.first(where: \.isActive)?.tier ?? state.settings.activeTier
     )
+    let matchingPacks = state.installedPacks.filter { pack in
+        pack.runtimeMode == .llamaCppGguf &&
+            !pack.developmentOnly &&
+            (selectedTier == nil || pack.tier == selectedTier)
+    }
+
+    return matchingPacks.sorted { lhs, rhs in
+        if lhs.isActive != rhs.isActive {
+            return lhs.isActive && !rhs.isActive
+        }
+        if lhs.checksumVerified != rhs.checksumVerified {
+            return lhs.checksumVerified && !rhs.checksumVerified
+        }
+        return lhs.installedAt > rhs.installedAt
+    }.first
+}
+
+private func alphaShouldPauseDownloadedAssistantAfterLaunch(_ state: AlphaPersistedState) -> Bool {
+    if alphaHadUnfinishedPrivateAIStartupValidation(),
+       alphaSelectedDownloadedAssistantPack(in: state) != nil {
+        return true
+    }
+
+    guard let activePack = alphaSelectedDownloadedAssistantPack(in: state) else {
+        return false
+    }
+    if !alphaInstalledModelPackFileIsUsable(activePack) {
+        return true
+    }
+    guard let installedJob = state.modelJobs.first(where: {
+        $0.tier == activePack.tier && $0.state == .installed
+    }) else {
+        return false
+    }
+
+    let expectedBytes = alphaAssistantModelArtifact(for: activePack.tier).sizeBytes
+    return installedJob.totalBytes <= 1 ||
+        installedJob.bytesDownloaded <= 1 ||
+        (expectedBytes > 0 && installedJob.totalBytes != expectedBytes)
 }
 
 private func alphaQuarantineUnusableActiveDownloadedAssistant(_ state: inout AlphaPersistedState) {
-    guard let activePack = alphaOptimisticActivePack(from: state),
-          activePack.runtimeMode == .llamaCppGguf,
-          !activePack.developmentOnly,
+    guard let activePack = alphaSelectedDownloadedAssistantPack(in: state),
           !alphaInstalledModelPackFileIsUsable(activePack) else {
         return
     }
@@ -80,9 +129,7 @@ private func alphaQuarantineUnusableActiveDownloadedAssistant(_ state: inout Alp
 }
 
 private func alphaQuarantineIncompleteInstalledAssistantJob(_ state: inout AlphaPersistedState) {
-    guard let activePack = alphaOptimisticActivePack(from: state),
-          activePack.runtimeMode == .llamaCppGguf,
-          !activePack.developmentOnly,
+    guard let activePack = alphaSelectedDownloadedAssistantPack(in: state),
           let installedJob = state.modelJobs.first(where: { $0.tier == activePack.tier && $0.state == .installed }) else {
         return
     }
@@ -1875,6 +1922,12 @@ extension AlphaRossModel {
         }
     }
 
+    func cancelPrivateAISnapshotValidation() {
+        privateAISnapshotTask?.cancel()
+        privateAISnapshotTask = nil
+        alphaMarkPrivateAIStartupValidationFinished()
+    }
+
     func loadIfNeeded() async {
         guard !loaded else { return }
         do {
@@ -2729,6 +2782,8 @@ extension AlphaRossModel {
     func normalizeLoadedState(_ state: AlphaPersistedState) -> AlphaPersistedState {
         var normalized = state
         let originalInstalledPacks = state.installedPacks
+        let shouldPauseDownloadedAssistantAfterLaunch = alphaShouldPauseDownloadedAssistantAfterLaunch(state)
+        let pausedDownloadedAssistantPack = alphaSelectedDownloadedAssistantPack(in: state)
         normalized.settings.activeTier = AlphaCapabilityTier.normalizedAssistantSelection(normalized.settings.activeTier)
         normalized.modelJobs.removeAll { $0.tier == .flash }
         normalized.installedPacks.removeAll { $0.tier == .flash }
@@ -2753,6 +2808,26 @@ extension AlphaRossModel {
         _ = alphaPurgeAbandonedAssistantDownloadsFromDisk()
         purgeDevelopmentModelArtifactsFromDisk()
         _ = recoverDownloadedAssistantArtifacts(from: &normalized)
+        if shouldPauseDownloadedAssistantAfterLaunch {
+            alphaQuarantineActiveAssistantAfterStartupFailure(&normalized)
+            if let pausedDownloadedAssistantPack,
+               !normalized.installedPacks.contains(where: {
+                   $0.packId == pausedDownloadedAssistantPack.packId &&
+                       $0.runtimeMode == pausedDownloadedAssistantPack.runtimeMode &&
+                       $0.artifactKind == pausedDownloadedAssistantPack.artifactKind &&
+                       $0.installPath == pausedDownloadedAssistantPack.installPath
+               }) {
+                var pausedPack = pausedDownloadedAssistantPack
+                pausedPack.isActive = false
+                normalized.installedPacks.insert(pausedPack, at: 0)
+            }
+        } else {
+            if alphaHadUnfinishedPrivateAIStartupValidation() {
+                alphaQuarantineActiveAssistantAfterStartupFailure(&normalized)
+            }
+            alphaQuarantineIncompleteInstalledAssistantJob(&normalized)
+            alphaQuarantineUnusableActiveDownloadedAssistant(&normalized)
+        }
         alphaConvergeInstalledAssistantCatalog(&normalized)
         alphaConvergeAssistantUpdateCandidates(&normalized)
         alphaApplyPreferredInstalledRuntimeForSelectedTier(&normalized)
@@ -2760,11 +2835,6 @@ extension AlphaRossModel {
             installedPacks: normalized.installedPacks,
             lastInvocation: alphaLastModelInvocation(in: normalized)
         )
-        if alphaHadUnfinishedPrivateAIStartupValidation() {
-            alphaQuarantineActiveAssistantAfterStartupFailure(&normalized)
-        }
-        alphaQuarantineIncompleteInstalledAssistantJob(&normalized)
-        alphaQuarantineUnusableActiveDownloadedAssistant(&normalized)
         if shouldRestoreAssistantSetupFlow(for: normalized) {
             normalized.onboardingStage = looksLikePristineWorkspace(normalized) ? .onboarding : .privateAIPack
         }
