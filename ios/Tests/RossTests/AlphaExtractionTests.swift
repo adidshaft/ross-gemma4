@@ -9225,6 +9225,69 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testAskUpgradeSetupSummaryAppearsForMatchingPreselectedUpgrade() {
+        let result = AlphaAskResult(
+            kind: .userAsk,
+            question: "What changed?",
+            scopeCaseID: nil,
+            scopeLabel: "All work",
+            selectedDocumentTitles: [],
+            answerTitle: "Focused answer",
+            answerSections: [],
+            caseFileSources: [],
+            publicLawPreview: nil,
+            publicLawResults: [],
+            statusNote: nil,
+            needsReviewWarning: "Focused sources",
+            modelInvocation: nil,
+            upgradeTierHint: .caseAssociate,
+            upgradeRuntimeHint: .llamaCppGguf
+        )
+
+        let summary = alphaAskUpgradeSetupSummary(
+            result: result,
+            selectedTier: .caseAssociate,
+            overrideTier: .caseAssociate,
+            overrideMode: .llamaCppGguf,
+            selectedRuntimeMode: .llamaCppGguf,
+            currentRoute: .privateAISettings
+        )
+
+        XCTAssertEqual(summary?.title, "Prepared Case Associate with GGUF for this ask")
+        XCTAssertEqual(summary?.detail, "GGUF can keep more of the selected files and longer context on device.")
+    }
+
+    func testAskUpgradeSetupSummaryHidesWhenOverrideNoLongerMatchesSelection() {
+        let result = AlphaAskResult(
+            kind: .userAsk,
+            question: "What changed?",
+            scopeCaseID: nil,
+            scopeLabel: "All work",
+            selectedDocumentTitles: [],
+            answerTitle: "Focused answer",
+            answerSections: [],
+            caseFileSources: [],
+            publicLawPreview: nil,
+            publicLawResults: [],
+            statusNote: nil,
+            needsReviewWarning: "Focused sources",
+            modelInvocation: nil,
+            upgradeTierHint: .caseAssociate,
+            upgradeRuntimeHint: .llamaCppGguf
+        )
+
+        XCTAssertNil(
+            alphaAskUpgradeSetupSummary(
+                result: result,
+                selectedTier: .caseAssociate,
+                overrideTier: .caseAssociate,
+                overrideMode: .mlxSwiftLm,
+                selectedRuntimeMode: .mlxSwiftLm,
+                currentRoute: .privateAISettings
+            )
+        )
+    }
+
     func testAssistantOfferDoesNotPreferBuiltInActivationWhenMLXIsPreferred() {
         XCTAssertFalse(
             alphaAssistantOfferPrefersBuiltInActivation(

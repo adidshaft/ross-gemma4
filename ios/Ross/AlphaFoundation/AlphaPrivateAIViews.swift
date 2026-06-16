@@ -150,6 +150,17 @@ struct AlphaPrivateAISettingsScreen: View {
         )
     }
 
+    private var askUpgradeSummary: (title: String, detail: String?)? {
+        alphaAskUpgradeSetupSummary(
+            result: model.latestAskResult,
+            selectedTier: model.selectedTier,
+            overrideTier: model.assistantSetupRuntimeOverrideTier,
+            overrideMode: model.assistantSetupRuntimeOverrideMode,
+            selectedRuntimeMode: model.assistantSetupPresentation(for: model.selectedTier)?.runtimeMode,
+            currentRoute: model.path.last
+        )
+    }
+
     var body: some View {
         let assistantStatus = alphaAssistantStatusSnapshot(model)
 
@@ -188,6 +199,13 @@ struct AlphaPrivateAISettingsScreen: View {
                     subtitle: rossLocalized("assistant_choose_option_files")
                 ) {
                     VStack(alignment: .leading, spacing: 8) {
+                        if let askUpgradeSummary {
+                            AlphaAssistantUpgradeSummaryRow(
+                                title: askUpgradeSummary.title,
+                                detail: askUpgradeSummary.detail
+                            )
+                        }
+
                         ForEach(AlphaPackOffer.catalog) { offer in
                             AlphaPrivateAIOfferCard(model: model, offer: offer)
                         }
@@ -1375,6 +1393,37 @@ struct AlphaPrivateAIRecoveryHintRow: View {
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(Color.rossInk.opacity(0.66))
                 .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .modifier(AlphaPrivateAIRecoveryHintSurface())
+    }
+}
+
+struct AlphaAssistantUpgradeSummaryRow: View {
+    let title: String
+    let detail: String?
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "arrow.up.right.circle.fill")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Color.rossAccent)
+                .padding(.top, 1)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.rossInk)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let detail, !detail.isEmpty {
+                    Text(detail)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(Color.rossInk.opacity(0.64))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)

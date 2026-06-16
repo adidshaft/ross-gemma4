@@ -4098,6 +4098,59 @@ func alphaAskUpgradeActionDetail(
     }
 }
 
+func alphaAskUpgradeSetupSummaryTitle(
+    _ tier: AlphaCapabilityTier,
+    runtimeMode: AlphaPackRuntimeMode? = nil,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
+    if let runtimeMode {
+        return "Prepared \(tier.setupTitle(languageCode: languageCode)) with \(runtimeMode.upgradeActionLabel) for this ask"
+    }
+    return "Prepared \(tier.setupTitle(languageCode: languageCode)) for this ask"
+}
+
+func alphaAskUpgradeSetupSummary(
+    result: AlphaAskResult?,
+    selectedTier: AlphaCapabilityTier,
+    overrideTier: AlphaCapabilityTier?,
+    overrideMode: AlphaPackRuntimeMode?,
+    selectedRuntimeMode: AlphaPackRuntimeMode?,
+    currentRoute: AlphaRoute?
+) -> (title: String, detail: String?)? {
+    guard currentRoute == .privateAISettings,
+          let result,
+          result.upgradeTierHint != nil || result.upgradeRuntimeHint != nil else {
+        return nil
+    }
+
+    let expectedTier =
+        result.upgradeTierHint ??
+        result.modelInvocation.flatMap { AlphaCapabilityTier(rawValue: $0.capabilityTier) } ??
+        selectedTier
+    guard AlphaCapabilityTier.assistantSelectionsMatch(selectedTier, expectedTier),
+          AlphaCapabilityTier.assistantSelectionsMatch(overrideTier, expectedTier) else {
+        return nil
+    }
+
+    if let runtimeHint = result.upgradeRuntimeHint {
+        guard overrideMode == runtimeHint,
+              selectedRuntimeMode == runtimeHint else {
+            return nil
+        }
+    }
+
+    return (
+        title: alphaAskUpgradeSetupSummaryTitle(
+            expectedTier,
+            runtimeMode: result.upgradeRuntimeHint
+        ),
+        detail: alphaAskUpgradeActionDetail(
+            result.upgradeTierHint ?? expectedTier,
+            runtimeMode: result.upgradeRuntimeHint
+        )
+    )
+}
+
 func alphaCombinedAskWarnings(
     _ warnings: String?...
 ) -> String? {
