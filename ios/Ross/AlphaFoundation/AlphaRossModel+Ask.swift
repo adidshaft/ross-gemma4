@@ -473,10 +473,14 @@ extension AlphaRossModel {
             return nil
         }
 
-        let candidateRuntimes = (alphaAssistantTierSupportsMLXRuntime(selectedPlan.resolvedProvider.provider.capabilityTier)
-            ? [AlphaPackRuntimeMode.mlxSwiftLm, .llamaCppGguf]
-            : [AlphaPackRuntimeMode.llamaCppGguf])
-            .filter { $0 != selectedPlan.resolvedProvider.provider.runtimeMode }
+        let candidateRuntimes = alphaLargeFileRuntimeCandidates(
+            for: selectedPlan.resolvedProvider.provider.capabilityTier,
+            currentRuntimeMode: selectedPlan.resolvedProvider.provider.runtimeMode,
+            systemAssistantAvailable: canActivateAssistantRuntimeImmediately(
+                for: selectedPlan.resolvedProvider.provider.capabilityTier,
+                runtimeMode: .appleFoundationModels
+            )
+        )
 
         var candidatePlans: [AlphaPackRuntimeMode: (
             requestedTier: AlphaCapabilityTier,
@@ -4637,10 +4641,11 @@ func alphaLocalAskUpgradeRuntimeHint(
         freeStorageGB: freeStorageGB,
         systemAssistantAvailable: false
     )
-    let candidateRuntimes = (alphaAssistantTierSupportsMLXRuntime(effectiveTier)
-        ? [AlphaPackRuntimeMode.llamaCppGguf, .mlxSwiftLm]
-        : [AlphaPackRuntimeMode.llamaCppGguf])
-        .filter { $0 != runtimeMode }
+    let candidateRuntimes = alphaLargeFileRuntimeCandidates(
+        for: effectiveTier,
+        currentRuntimeMode: runtimeMode,
+        systemAssistantAvailable: systemAssistantAvailable
+    )
     guard !candidateRuntimes.isEmpty else {
         return nil
     }
@@ -4702,6 +4707,25 @@ func alphaLocalAskUpgradeRuntimeHint(
         let improvesContext = candidateMetrics.contextTokens > currentContextTokens
         return (improvesCoverage || improvesInputBudget || improvesContext) ? candidate : nil
     }
+}
+
+private func alphaLargeFileRuntimeCandidates(
+    for tier: AlphaCapabilityTier,
+    currentRuntimeMode: AlphaPackRuntimeMode,
+    systemAssistantAvailable: Bool
+) -> [AlphaPackRuntimeMode] {
+    let effectiveTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
+    var candidates: [AlphaPackRuntimeMode] = []
+
+    if systemAssistantAvailable {
+        candidates.append(.appleFoundationModels)
+    }
+    if alphaAssistantTierSupportsMLXRuntime(effectiveTier) {
+        candidates.append(.mlxSwiftLm)
+    }
+    candidates.append(.llamaCppGguf)
+
+    return candidates.filter { $0 != currentRuntimeMode }
 }
 
 private func alphaLocalAskUpgradeRuntimeResolvesCoverage(

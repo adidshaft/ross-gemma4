@@ -9336,6 +9336,24 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testLocalAskUpgradeRuntimeHintPrefersCoreAIOverGGUFWhenItKeepsMoreSeniorAskCoverage() {
+        XCTAssertEqual(
+            alphaLocalAskUpgradeRuntimeHint(
+                runtimeWarnings: [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts],
+                sourcePackCount: 12,
+                includedSourceCount: 9,
+                sourceBlockLimit: 9,
+                capabilityTier: .seniorDraftingSupport,
+                runtimeMode: .llamaCppGguf,
+                isPhoneFormFactor: true,
+                physicalMemoryBytes: 12 * 1_073_741_824,
+                freeStorageGB: 24,
+                systemAssistantAvailable: true
+            ),
+            .appleFoundationModels
+        )
+    }
+
     func testLocalAskUpgradeRuntimeHintBreaksEqualContextTiesTowardMLX() {
         XCTAssertEqual(
             alphaLocalAskUpgradeRuntimeHint(
@@ -10294,6 +10312,142 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(
             model.latestAskResult?.modelInvocation?.runtimeMode,
             AlphaPackRuntimeMode.mlxSwiftLm.rawValue
+        )
+    }
+
+    @available(iOS 26.0, macOS 26.0, *)
+    @MainActor
+    func testSubmitAskUsesBuiltInCoreAIForLargeMatterBundleBeforeGGUFRun() async throws {
+        final class RuntimeProbeBox: @unchecked Sendable {
+            var usedFoundation = false
+            var usedGGUF = false
+        }
+
+        actor StubLlamaContext: AlphaLlamaCompletionContext {
+            func clear() {}
+            func completionInit(
+                text: String,
+                maxNewTokens requestedMaxNewTokens: Int32?,
+                samplerSettings requestedSamplerSettings: AlphaLlamaSamplerSettings?
+            ) throws {}
+            func completionLoop() -> String { "" }
+            func isDone() -> Bool { true }
+            func promptTokenCount() -> Int { 320 }
+            func generatedTokenCount() -> Int { 0 }
+            func accelerationMode() -> AlphaLocalRuntimeAccelerationMode { .standard }
+            func executionPathLabel() -> String { "GGUF should not run" }
+        }
+
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        let previousSimulatorIdentifier = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"]
+        let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
+        let previousFoundationGenerator = AlphaFoundationModelsLocalProvider.streamGenerator
+        let previousContextFactory = AlphaLlamaCppProvider.contextFactory
+        let previousModelValidator = AlphaLlamaCppProvider.modelLoadValidator
+        let probeBox = RuntimeProbeBox()
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        setenv("SIMULATOR_MODEL_IDENTIFIER", "iPhone17,2", 1)
+        AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in true }
+        AlphaFoundationModelsLocalProvider.streamGenerator = { _, _, _, _, _ in
+            probeBox.usedFoundation = true
+            return AlphaFoundationModelsGenerationSnapshot(
+                text: "Built-in answer\n- CoreAI reviewed more of the matter bundle.",
+                inputTokenCount: 320,
+                outputTokenCount: 22,
+                outputTokensPerSecond: 14.4,
+                timeToFirstTokenMs: 410,
+                usesMeasuredTokenCounts: true
+            )
+        }
+        AlphaLlamaCppProvider.contextFactory = { _, _, _ in
+            probeBox.usedGGUF = true
+            return StubLlamaContext()
+        }
+        AlphaLlamaCppProvider.modelLoadValidator = { _ in }
+        defer {
+            AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
+            AlphaFoundationModelsLocalProvider.streamGenerator = previousFoundationGenerator
+            AlphaLlamaCppProvider.contextFactory = previousContextFactory
+            AlphaLlamaCppProvider.modelLoadValidator = previousModelValidator
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+            if let previousSimulatorIdentifier {
+                setenv("SIMULATOR_MODEL_IDENTIFIER", previousSimulatorIdentifier, 1)
+            } else {
+                unsetenv("SIMULATOR_MODEL_IDENTIFIER")
+            }
+        }
+
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+        registerModelArtifactCleanup(for: store)
+
+        let ggufData = Data("GGUF fixture".utf8)
+        let installedGGUF = try await store.installDownloadedPackArtifact(
+            for: .seniorDraftingSupport,
+            fileName: "gemma-4-12B-it-UD-Q4_K_XL.gguf",
+            data: ggufData,
+            expectedChecksum: sha256Hex(ggufData),
+            packId: "senior-gguf",
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false
+        )
+        var activeGGUFPack = installedPack(
+            .seniorDraftingSupport,
+            runtimeMode: .llamaCppGguf,
+            packId: "senior-gguf",
+            installPath: installedGGUF.relativePath,
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+        activeGGUFPack.isActive = true
+        var systemPack = alphaSystemAssistantPack(for: .seniorDraftingSupport)
+        systemPack.isActive = false
+
+        let caseID = UUID()
+        let documents = makeMatterAskDocuments(count: 12)
+        let matter = AlphaCaseMatter(
+            id: caseID,
+            title: "Large file matter",
+            forum: "High Court",
+            stage: .arguments,
+            folderTint: .emerald,
+            localNotice: "Review selected filing",
+            summary: "Matter with a larger local bundle",
+            issueHighlights: [],
+            evidenceNotes: [],
+            draftTasks: [],
+            documents: documents,
+            sourceRefs: []
+        )
+
+        var state = AlphaPersistedState.empty()
+        state.settings.activeTier = .seniorDraftingSupport
+        state.installedPacks = [activeGGUFPack, systemPack]
+        state.cases = [matter]
+
+        let model = AlphaRossModel()
+        model.persisted = state
+
+        model.submitAsk(
+            question: "What are the main directions in this matter bundle?",
+            scopeCaseID: caseID,
+            webEnabled: false
+        )
+
+        try await eventually {
+            model.latestAskResult?.modelInvocation?.status == .complete
+        }
+
+        XCTAssertTrue(probeBox.usedFoundation)
+        XCTAssertFalse(probeBox.usedGGUF)
+        XCTAssertEqual(
+            model.latestAskResult?.modelInvocation?.runtimeMode,
+            AlphaPackRuntimeMode.appleFoundationModels.rawValue
         )
     }
 
