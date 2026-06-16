@@ -96,6 +96,61 @@ test("canonical private assistant registry maps tiers to the current three-pack 
   assert.equal(fallbackRetrieval.runtimeMode, "gemma_local_runtime");
 });
 
+test("development model catalog keeps the latest GGUF naming even for tiny dev artifacts", async (t) => {
+  const app = await buildApp({
+    env: buildTestEnv({ ROSS_MODEL_CATALOG_MODE: "dev" }),
+    emitLogsToConsole: false
+  });
+
+  t.after(async () => {
+    await app.close();
+  });
+
+  const iosCatalog = await app.inject({
+    method: "GET",
+    url: "/model-catalog?platform=ios"
+  });
+
+  assert.equal(iosCatalog.statusCode, 200);
+  const iosBody = JSON.parse(iosCatalog.body) as {
+    manifest: {
+      payload: {
+        packs: Array<{
+          tier: string;
+          technicalModelName: string;
+          repo?: string;
+          quantization?: string;
+          runtimeMode: string;
+          artifactKind: string;
+          developmentOnly: boolean;
+        }>;
+      };
+    };
+  };
+
+  const quickStart = iosBody.manifest.payload.packs.find((pack) => pack.tier === "quick_start");
+  const caseAssociate = iosBody.manifest.payload.packs.find((pack) => pack.tier === "case_associate");
+  const senior = iosBody.manifest.payload.packs.find((pack) => pack.tier === "senior_drafting_support");
+
+  assert.equal(quickStart?.technicalModelName, "Gemma 4 E4B UD Q4_K_XL");
+  assert.equal(quickStart?.repo, "unsloth/gemma-4-E4B-it-qat-GGUF");
+  assert.equal(quickStart?.quantization, "UD-Q4_K_XL");
+
+  assert.equal(caseAssociate?.technicalModelName, "Gemma 4 12B UD Q4_K_XL");
+  assert.equal(caseAssociate?.repo, "unsloth/gemma-4-12B-it-qat-GGUF");
+  assert.equal(caseAssociate?.quantization, "UD-Q4_K_XL");
+
+  assert.equal(senior?.technicalModelName, "Gemma 4 26B-A4B UD Q4_K_XL");
+  assert.equal(senior?.repo, "unsloth/gemma-4-26B-A4B-it-qat-GGUF");
+  assert.equal(senior?.quantization, "UD-Q4_K_XL");
+
+  for (const pack of [quickStart, caseAssociate, senior]) {
+    assert.equal(pack?.runtimeMode, "deterministic_dev");
+    assert.equal(pack?.artifactKind, "tiny_dev_artifact");
+    assert.equal(pack?.developmentOnly, true);
+  }
+});
+
 test("production model catalog advertises platform runtime packs with real download descriptors", async (t) => {
   const app = await buildApp({
     env: buildTestEnv({ ROSS_MODEL_CATALOG_MODE: "production_metadata" }),
