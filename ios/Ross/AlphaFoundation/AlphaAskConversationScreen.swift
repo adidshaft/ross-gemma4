@@ -1041,6 +1041,26 @@ extension AlphaLocalModelInvocation {
             )
         }
 
+        if let acceleration = answerDetailAccelerationLabel {
+            metrics.append(
+                AlphaAnswerDetailMetric(
+                    key: "runtime_acceleration",
+                    label: rossLocalized("runtime_acceleration"),
+                    value: acceleration
+                )
+            )
+        }
+
+        if let timeToFirstTokenMs {
+            metrics.append(
+                AlphaAnswerDetailMetric(
+                    key: "runtime_first_response",
+                    label: rossLocalized("runtime_first_response"),
+                    value: alphaAssistantFirstResponseLabel(milliseconds: timeToFirstTokenMs)
+                )
+            )
+        }
+
         if let promptSize = answerDetailPromptSizeLabel {
             metrics.append(
                 AlphaAnswerDetailMetric(
@@ -1084,16 +1104,6 @@ extension AlphaLocalModelInvocation {
                 value: answerDetailRuntimeLabel
             )
         )
-
-        if let acceleration = answerDetailAccelerationLabel {
-            metrics.append(
-                AlphaAnswerDetailMetric(
-                    key: "runtime_acceleration",
-                    label: rossLocalized("runtime_acceleration"),
-                    value: acceleration
-                )
-            )
-        }
 
         if let runtimeChoice = answerDetailRuntimeChoiceLabel {
             metrics.append(
@@ -1155,42 +1165,12 @@ extension AlphaLocalModelInvocation {
             )
         }
 
-        if let promptSize = answerDetailPromptSizeLabel {
-            metrics.append(
-                AlphaAnswerDetailMetric(
-                    key: "prompt_size",
-                    label: rossLocalized("prompt_size"),
-                    value: promptSize
-                )
-            )
-        }
-
-        if let sourceCoverage = answerDetailSourceCoverageLabel {
-            metrics.append(
-                AlphaAnswerDetailMetric(
-                    key: "source_coverage",
-                    label: rossLocalized("source_coverage"),
-                    value: sourceCoverage
-                )
-            )
-        }
-
         if let omittedSourceSections = answerDetailOmittedSourceSectionsLabel {
             metrics.append(
                 AlphaAnswerDetailMetric(
                     key: "source_sections_skipped",
                     label: rossLocalized("source_sections_skipped"),
                     value: omittedSourceSections
-                )
-            )
-        }
-
-        if let timeToFirstTokenMs {
-            metrics.append(
-                AlphaAnswerDetailMetric(
-                    key: "runtime_first_response",
-                    label: rossLocalized("runtime_first_response"),
-                    value: alphaAssistantFirstResponseLabel(milliseconds: timeToFirstTokenMs)
                 )
             )
         }

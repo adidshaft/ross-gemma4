@@ -4407,6 +4407,7 @@ final class AlphaExtractionTests: XCTestCase {
             estimatedOutputTokens: 46,
             estimatedOutputTokensPerSecond: 21.5,
             durationMs: 2200,
+            timeToFirstTokenMs: 430,
             usesMeasuredTokenCounts: true,
             status: .complete
         )
@@ -4424,6 +4425,11 @@ final class AlphaExtractionTests: XCTestCase {
                     key: "token_speed",
                     label: "Token speed",
                     value: alphaAssistantTokenRateLabel(tokensPerSecond: 21.5)
+                ),
+                AlphaAnswerDetailMetric(
+                    key: "runtime_first_response",
+                    label: "First response",
+                    value: alphaAssistantFirstResponseLabel(milliseconds: 430)
                 ),
                 AlphaAnswerDetailMetric(
                     key: "prompt_size",
@@ -4453,6 +4459,7 @@ final class AlphaExtractionTests: XCTestCase {
             estimatedOutputTokens: 46,
             estimatedOutputTokensPerSecond: 21.5,
             durationMs: 2200,
+            timeToFirstTokenMs: 430,
             usesMeasuredTokenCounts: false,
             status: .complete
         )
@@ -4471,6 +4478,11 @@ final class AlphaExtractionTests: XCTestCase {
                     key: "token_speed",
                     label: "Token speed",
                     value: "~\(alphaAssistantTokenRateLabel(tokensPerSecond: 21.5))"
+                ),
+                AlphaAnswerDetailMetric(
+                    key: "runtime_first_response",
+                    label: "First response",
+                    value: alphaAssistantFirstResponseLabel(milliseconds: 430)
                 ),
                 AlphaAnswerDetailMetric(
                     key: "prompt_size",
@@ -4502,6 +4514,7 @@ final class AlphaExtractionTests: XCTestCase {
             estimatedInputTokens: 120,
             estimatedOutputTokens: 48,
             estimatedOutputTokensPerSecond: 13.4,
+            timeToFirstTokenMs: 1_450,
             status: .complete
         )
 
@@ -4517,6 +4530,11 @@ final class AlphaExtractionTests: XCTestCase {
                     key: "token_speed",
                     label: "Token speed",
                     value: "~\(alphaAssistantTokenRateLabel(tokensPerSecond: 13.4))"
+                ),
+                AlphaAnswerDetailMetric(
+                    key: "runtime_first_response",
+                    label: "First response",
+                    value: alphaAssistantFirstResponseLabel(milliseconds: 1_450)
                 ),
                 AlphaAnswerDetailMetric(
                     key: "prompt_size",
@@ -4818,11 +4836,6 @@ final class AlphaExtractionTests: XCTestCase {
                     value: "Gemma GGUF"
                 ),
                 AlphaAnswerDetailMetric(
-                    key: "runtime_acceleration",
-                    label: "Acceleration",
-                    value: "Draft model x6 (gemma-4-e4b-draft)"
-                ),
-                AlphaAnswerDetailMetric(
                     key: "runtime_choice",
                     label: "Why this runtime",
                     value: "Built-in CoreAI model preferred"
@@ -4853,24 +4866,75 @@ final class AlphaExtractionTests: XCTestCase {
                     value: alphaAssistantInputBudgetLabel(chars: 52_000)
                 ),
                 AlphaAnswerDetailMetric(
-                    key: "prompt_size",
-                    label: "Prompt size",
-                    value: "480 / 700 chars"
-                ),
-                AlphaAnswerDetailMetric(
-                    key: "source_coverage",
-                    label: "Source coverage",
-                    value: "2 / 3"
-                ),
-                AlphaAnswerDetailMetric(
                     key: "source_sections_skipped",
                     label: "Skipped sections",
                     value: "Order · p. 3"
+                )
+            ]
+        )
+    }
+
+    @MainActor
+    func testAnswerDetailOverviewMetricsPromoteAccelerationAndFirstResponse() {
+        let invocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [
+                AlphaSourceRef(caseId: UUID(), documentId: UUID(), documentTitle: "Order", pageNumber: 1),
+                AlphaSourceRef(caseId: UUID(), documentId: UUID(), documentTitle: "Order", pageNumber: 2),
+                AlphaSourceRef(caseId: UUID(), documentId: UUID(), documentTitle: "Order", pageNumber: 3)
+            ],
+            packedSourceCount: 2,
+            accelerationMode: .draftModelSpeculative,
+            accelerationDraftTokens: 6,
+            accelerationDraftModelLabel: "gemma-4-e4b-draft",
+            promptHash: "prompt",
+            inputHash: "input",
+            inputChars: 480,
+            estimatedInputTokens: 120,
+            outputChars: 192,
+            estimatedOutputTokens: 48,
+            estimatedOutputTokensPerSecond: 13.4,
+            timeToFirstTokenMs: 430,
+            status: .complete
+        )
+
+        XCTAssertEqual(
+            invocation.answerDetailOverviewMetrics,
+            [
+                AlphaAnswerDetailMetric(
+                    key: "tokens_processed",
+                    label: "Tokens processed",
+                    value: "~168"
+                ),
+                AlphaAnswerDetailMetric(
+                    key: "token_speed",
+                    label: "Token speed",
+                    value: "~\(alphaAssistantTokenRateLabel(tokensPerSecond: 13.4))"
+                ),
+                AlphaAnswerDetailMetric(
+                    key: "runtime_acceleration",
+                    label: "Acceleration",
+                    value: "Draft model x6 (gemma-4-e4b-draft)"
                 ),
                 AlphaAnswerDetailMetric(
                     key: "runtime_first_response",
                     label: "First response",
                     value: alphaAssistantFirstResponseLabel(milliseconds: 430)
+                ),
+                AlphaAnswerDetailMetric(
+                    key: "prompt_size",
+                    label: "Prompt size",
+                    value: alphaAssistantInputBudgetLabel(chars: 480)
+                ),
+                AlphaAnswerDetailMetric(
+                    key: "source_coverage",
+                    label: "Source coverage",
+                    value: "2 / 3"
                 )
             ]
         )
