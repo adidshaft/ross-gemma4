@@ -8556,7 +8556,7 @@ final class AlphaExtractionTests: XCTestCase {
             systemAssistantAvailable: true
         )
 
-        XCTAssertEqual(label, "Accelerated MLX preferred on this iPhone")
+        XCTAssertEqual(label, "MLX preferred on this iPhone for longer local context")
     }
 
     func testAssistantRuntimeChoiceLabelExplainsSystemAssistantPreferenceOnNonPhone() {
@@ -8570,6 +8570,19 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(label, "Built-in CoreAI model preferred")
+    }
+
+    func testAssistantRuntimeChoiceLabelExplainsSystemAssistantPreferenceOnPhone() {
+        let label = alphaAssistantRuntimeChoiceLabel(
+            selectedRuntimeMode: .appleFoundationModels,
+            tier: .caseAssociate,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24,
+            systemAssistantAvailable: true
+        )
+
+        XCTAssertEqual(label, "Built-in CoreAI preferred for instant setup with no download")
     }
 
     func testAssistantBuiltInAlternativeHintAppearsWhenDownloadRuntimeIsSelected() {
@@ -9496,7 +9509,7 @@ final class AlphaExtractionTests: XCTestCase {
             systemAssistantAvailable: false
         )
 
-        XCTAssertEqual(label, "iPhone baseline kept GGUF")
+        XCTAssertEqual(label, "GGUF kept as the iPhone baseline")
     }
 
     func testAssistantCatalogDescriptorCompatibleOnlyPrefersRequestedQuickStartMLXPackWhenSupported() {

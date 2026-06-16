@@ -1489,7 +1489,9 @@ func alphaAssistantRuntimeChoiceLabel(
     if selectedRuntimeMode == .appleFoundationModels && prefersSystemAssistant {
         switch recentSignal {
         case .keepFast(.appleFoundationModels), .none:
-            return "Built-in CoreAI model preferred"
+            return isPhoneFormFactor
+                ? "Built-in CoreAI preferred for instant setup with no download"
+                : "Built-in CoreAI model preferred"
         case .avoidSlow(.appleFoundationModels):
             break
         default:
@@ -1553,11 +1555,11 @@ func alphaAssistantRuntimeChoiceLabel(
         systemAssistantAvailable: true,
         lastInvocation: lastInvocation
        ) == .mlxSwiftLm {
-        return "Accelerated MLX preferred on this iPhone"
+        return "MLX preferred on this iPhone for longer local context"
     }
 
     if !isPhoneFormFactor && selectedRuntimeMode == .llamaCppGguf {
-        return "Larger devices default to GGUF"
+        return "Larger devices default to GGUF for broader local context"
     }
 
     let baselineTier = alphaRecommendedOnDeviceTier(
@@ -1570,11 +1572,11 @@ func alphaAssistantRuntimeChoiceLabel(
     case .mlxSwiftLm:
         return baselineTier == .quickStart
             ? "MLX kept for installed assistant"
-            : "MLX enabled for deeper context"
+            : "MLX enabled for deeper local context"
     case .llamaCppGguf:
         return baselineTier == .quickStart
-            ? "iPhone baseline kept GGUF"
-            : "GGUF chosen for compatibility"
+            ? "GGUF kept as the iPhone baseline"
+            : "GGUF chosen for broader device compatibility"
     case .appleFoundationModels:
         return "Built-in CoreAI model selected"
     case .deterministicDev:
