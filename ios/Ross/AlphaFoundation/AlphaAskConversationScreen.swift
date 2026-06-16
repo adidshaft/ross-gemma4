@@ -644,7 +644,13 @@ struct AlphaFullScreenChatTurn: View {
                             continuationContext: result.answerContinuationContext,
                             statusNote: deduplicatedStatusNote,
                             onCopy: copyAnswerAction,
-                            onShowDetails: { onShowDetails(result) }
+                            menu: {
+                                Button {
+                                    onShowDetails(result)
+                                } label: {
+                                    Label(rossLocalized("answer_details"), systemImage: "info.circle")
+                                }
+                            }
                         )
                     } else {
                         AlphaCleanAnswerHeader<EmptyView>(
