@@ -8663,6 +8663,44 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    @MainActor
+    func testAssistantRuntimeDecisionTreatsLegacyFlashJobAsQuickStartSetup() {
+        let model = AlphaRossModel(previewState: .empty())
+        model.persisted.installedPacks = []
+        model.persisted.modelJobs = [
+            AlphaModelDownloadJob(
+                sessionId: "legacy-flash-job",
+                packId: "flash-pack",
+                tier: .flash,
+                state: .queued,
+                networkPolicy: .wifiOnly,
+                bytesDownloaded: 0,
+                totalBytes: 10,
+                checksumSha256: ""
+            )
+        ]
+
+        let decision = model.assistantRuntimeDecision(selectedTier: .flash)
+
+        XCTAssertEqual(decision.selectedTier, .quickStart)
+        XCTAssertEqual(decision.effectiveTier, .quickStart)
+        XCTAssertEqual(decision.installState, .queued)
+    }
+
+    @MainActor
+    func testAssistantRuntimeDecisionTreatsLegacyFlashInstallAsQuickStartInstalled() {
+        let model = AlphaRossModel(previewState: .empty())
+        model.persisted.installedPacks = [
+            installedPack(.flash, developmentOnly: false)
+        ]
+
+        let decision = model.assistantRuntimeDecision(selectedTier: .flash)
+
+        XCTAssertEqual(decision.selectedTier, .quickStart)
+        XCTAssertEqual(decision.effectiveTier, .quickStart)
+        XCTAssertEqual(decision.installState, .installed)
+    }
+
     func testLocalAskUpgradeTierHintPromotesQuickStartToCaseAssociate() {
         XCTAssertEqual(
             alphaLocalAskUpgradeTierHint(
