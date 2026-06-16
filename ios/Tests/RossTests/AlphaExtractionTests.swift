@@ -12671,6 +12671,49 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(fallback.artifactKind, "mlx_directory")
     }
 
+    func testShouldResolveAssistantDownloadFromBackendWhenCachedCatalogAdvertisesPackagedMLX() {
+        let bundledDirectMLX = alphaPreferredAssistantDownloadFallback(
+            for: .caseAssociate,
+            preferredRuntimeMode: .mlxSwiftLm,
+            cachedDownloads: nil
+        )
+        let cachedPackagedMLX = AlphaAssistantCatalogDescriptor(
+            tier: .caseAssociate,
+            packId: "gemma-4-12b-it-mlx-packaged",
+            sizeBytes: 6_200_000_000,
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false
+        )
+
+        XCTAssertTrue(
+            alphaShouldResolveAssistantDownloadFromBackend(
+                fallbackDownload: bundledDirectMLX,
+                for: .caseAssociate,
+                preferredRuntimeMode: .mlxSwiftLm,
+                cachedCatalogs: [cachedPackagedMLX]
+            )
+        )
+    }
+
+    func testShouldResolveAssistantDownloadFromBackendStaysDirectWithoutCachedCatalogHint() {
+        let bundledDirectMLX = alphaPreferredAssistantDownloadFallback(
+            for: .caseAssociate,
+            preferredRuntimeMode: .mlxSwiftLm,
+            cachedDownloads: nil
+        )
+
+        XCTAssertFalse(
+            alphaShouldResolveAssistantDownloadFromBackend(
+                fallbackDownload: bundledDirectMLX,
+                for: .caseAssociate,
+                preferredRuntimeMode: .mlxSwiftLm,
+                cachedCatalogs: nil
+            )
+        )
+    }
+
     func testPreferredAssistantCatalogFallbackHonorsTargetPackId() {
         let cachedPreferred = AlphaAssistantCatalogDescriptor(
             tier: .caseAssociate,

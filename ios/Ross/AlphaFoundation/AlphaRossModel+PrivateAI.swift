@@ -1381,6 +1381,32 @@ func alphaPreferredAssistantCatalogFallback(
     return alphaDefaultAssistantCatalogDescriptor(for: tier)
 }
 
+func alphaShouldResolveAssistantDownloadFromBackend(
+    fallbackDownload: AlphaAssistantDownloadDescriptor,
+    for tier: AlphaCapabilityTier,
+    preferredRuntimeMode: AlphaPackRuntimeMode,
+    targetPackId: String? = nil,
+    cachedCatalogs: [AlphaAssistantCatalogDescriptor]?
+) -> Bool {
+    let effectiveTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
+    let cachedCandidates = (cachedCatalogs ?? []).filter {
+        AlphaCapabilityTier.normalizedAssistantSelection($0.tier) == effectiveTier &&
+            alphaAssistantCatalogDescriptorSupportsCurrentInstaller($0)
+    }
+    if let targetPackId,
+       cachedCandidates.contains(where: { $0.packId == targetPackId }) {
+        return true
+    }
+    guard fallbackDownload.runtimeMode == preferredRuntimeMode,
+          alphaDirectMLXRepositoryID(for: fallbackDownload) != nil else {
+        return false
+    }
+    return cachedCandidates.contains {
+        $0.runtimeMode == preferredRuntimeMode &&
+            $0.packId != fallbackDownload.packId
+    }
+}
+
 func alphaAssistantCatalogDescriptor(
     for tier: AlphaCapabilityTier,
     preferredRuntimeMode: AlphaPackRuntimeMode? = nil,
@@ -3135,7 +3161,14 @@ extension AlphaRossModel {
         }
 
         let resolvedDownload: AlphaAssistantDownloadDescriptor
-        if alphaDirectMLXRepositoryID(for: fallbackDownload) != nil {
+        if alphaDirectMLXRepositoryID(for: fallbackDownload) != nil,
+           !alphaShouldResolveAssistantDownloadFromBackend(
+            fallbackDownload: fallbackDownload,
+            for: tier,
+            preferredRuntimeMode: preferredRuntime,
+            targetPackId: targetPackId,
+            cachedCatalogs: persisted.cachedAssistantCatalogs
+           ) {
             resolvedDownload = fallbackDownload
         } else {
             do {
