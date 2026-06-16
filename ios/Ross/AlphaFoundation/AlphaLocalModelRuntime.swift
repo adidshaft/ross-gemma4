@@ -527,20 +527,20 @@ enum AlphaLocalPromptBudgetPlanner {
     ) -> Int? {
         switch runtimeMode {
         case .mlxSwiftLm:
-            if baseMaxInputChars >= 52_000 {
-                return 20
+            if baseMaxInputChars >= 56_000 {
+                return 24
             }
-            return baseMaxInputChars >= 40_000 ? 16 : nil
+            return baseMaxInputChars >= 40_000 ? 18 : nil
         case .llamaCppGguf:
             if baseMaxInputChars >= 48_000 {
-                return 16
+                return 18
             }
-            return baseMaxInputChars >= 40_000 ? 14 : nil
+            return baseMaxInputChars >= 40_000 ? 16 : nil
         case .appleFoundationModels:
             if baseMaxInputChars >= 40_000 {
-                return 16
+                return 18
             }
-            return baseMaxInputChars >= 28_000 ? 14 : nil
+            return baseMaxInputChars >= 28_000 ? 16 : nil
         default:
             return nil
         }

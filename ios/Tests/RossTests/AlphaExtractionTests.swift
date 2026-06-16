@@ -9265,14 +9265,14 @@ final class AlphaExtractionTests: XCTestCase {
         let plan = AlphaLocalPromptBudgetPlanner.structuredDocumentPlan(
             runtimeMode: .llamaCppGguf,
             baseMaxInputChars: 52_000,
-            sourceBlockCount: 16,
+            sourceBlockCount: 18,
             sourceCharCount: 52_000,
             selectedDocumentCount: 1,
             lastInvocation: nil
         )
 
         XCTAssertEqual(plan.maxInputChars, 45_760)
-        XCTAssertEqual(plan.sourceBlockLimit, 16)
+        XCTAssertEqual(plan.sourceBlockLimit, 18)
         XCTAssertEqual(plan.sourceExcerptChars, 1_600)
     }
 
@@ -9294,14 +9294,14 @@ final class AlphaExtractionTests: XCTestCase {
         let plan = AlphaLocalPromptBudgetPlanner.structuredDocumentPlan(
             runtimeMode: .mlxSwiftLm,
             baseMaxInputChars: 56_000,
-            sourceBlockCount: 20,
+            sourceBlockCount: 24,
             sourceCharCount: 52_000,
             selectedDocumentCount: 1,
             lastInvocation: nil
         )
 
         XCTAssertEqual(plan.maxInputChars, 49_280)
-        XCTAssertEqual(plan.sourceBlockLimit, 20)
+        XCTAssertEqual(plan.sourceBlockLimit, 24)
         XCTAssertEqual(plan.sourceExcerptChars, 1_650)
     }
 
@@ -9323,14 +9323,14 @@ final class AlphaExtractionTests: XCTestCase {
         let plan = AlphaLocalPromptBudgetPlanner.structuredDocumentPlan(
             runtimeMode: .appleFoundationModels,
             baseMaxInputChars: 44_000,
-            sourceBlockCount: 16,
+            sourceBlockCount: 18,
             sourceCharCount: 52_000,
             selectedDocumentCount: 1,
             lastInvocation: nil
         )
 
         XCTAssertEqual(plan.maxInputChars, 38_720)
-        XCTAssertEqual(plan.sourceBlockLimit, 16)
+        XCTAssertEqual(plan.sourceBlockLimit, 18)
         XCTAssertEqual(plan.sourceExcerptChars, 1_520)
     }
 
