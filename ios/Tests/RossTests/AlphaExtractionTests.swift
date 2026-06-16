@@ -5505,8 +5505,8 @@ final class AlphaExtractionTests: XCTestCase {
         )
         let pack = ModelPack(
             tier: .caseAssociate,
-            downloadSize: "7.4 GB",
-            installedFootprint: "7.4 GB",
+            downloadSize: "7.0 GB",
+            installedFootprint: "7.0 GB",
             recommendedFor: "Document review",
             technicalDetails: []
         )
@@ -5550,6 +5550,7 @@ final class AlphaExtractionTests: XCTestCase {
         let expected: [AlphaCapabilityTier: (
             repository: String,
             fileName: String,
+            remoteFileName: String,
             sizeBytes: Int64,
             sha256: String,
             draftFileName: String?,
@@ -5561,6 +5562,7 @@ final class AlphaExtractionTests: XCTestCase {
             .flash: (
                 repository: "bartowski/google_gemma-4-E2B-it-GGUF",
                 fileName: "google_gemma-4-E2B-it-Q2_K.gguf",
+                remoteFileName: "google_gemma-4-E2B-it-Q2_K.gguf",
                 sizeBytes: 3_020_052_224,
                 sha256: "a7cfc9f9b305b54a4ba2a681ff8795f594eafbe8c2c9df25d2f030a64d97bda6",
                 draftFileName: nil,
@@ -5570,35 +5572,38 @@ final class AlphaExtractionTests: XCTestCase {
                 isActiveTier: false
             ),
             .quickStart: (
-                repository: "unsloth/gemma-4-E4B-it-GGUF",
+                repository: "unsloth/gemma-4-E4B-it-qat-GGUF",
                 fileName: "gemma-4-E4B-it-UD-Q4_K_XL.gguf",
-                sizeBytes: 5_126_304_928,
-                sha256: "30d1e7949597a3446726064e80b876fd1b5cba4aa6eec53d27afa420e731fb36",
+                remoteFileName: "gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf",
+                sizeBytes: 4_215_693_760,
+                sha256: "b3052f962d6449b4eb2075733c068bdec1c51eadb7b237e6c3157bfbb7b1dae0",
                 draftFileName: "mtp-gemma-4-E4B-it.gguf",
-                draftSizeBytes: 98_653_248,
-                draftSha256: "b6a723115efa510d3b3215db1e26790dae84cd08c2134a764f3d194f1f0c3376",
+                draftSizeBytes: 59_676_544,
+                draftSha256: "b0005dc39d47ede950c3ec413cb20e832f15b216126eae368d9f572676153cb6",
                 releaseReady: true,
                 isActiveTier: true
             ),
             .caseAssociate: (
-                repository: "unsloth/gemma-4-12b-it-GGUF",
+                repository: "unsloth/gemma-4-12B-it-qat-GGUF",
                 fileName: "gemma-4-12b-it-UD-Q4_K_XL.gguf",
-                sizeBytes: 7_366_421_920,
-                sha256: "ee33ab5be8e07aca1c269fc645eaed5f3298e089d52db29415839d8f29957020",
+                remoteFileName: "gemma-4-12B-it-qat-UD-Q4_K_XL.gguf",
+                sizeBytes: 6_716_355_328,
+                sha256: "cc9ff072e0a8203429ed854e6662c17a6c2bc1e5dca5b475dd4736caaacbc165",
                 draftFileName: "mtp-gemma-4-12b-it.gguf",
-                draftSizeBytes: 465_109_248,
-                draftSha256: "145db9094bc0f85f1701e255a2ed216dcc9800fc8bc8631ad00905b456bd451b",
+                draftSizeBytes: 253_707_328,
+                draftSha256: "c50c91c35f04903815b2e8930cbb8c8c5bee0e1aa00748c30a7b8ff05d2310b4",
                 releaseReady: true,
                 isActiveTier: true
             ),
             .seniorDraftingSupport: (
-                repository: "unsloth/gemma-4-26B-A4B-it-GGUF",
+                repository: "unsloth/gemma-4-26B-A4B-it-qat-GGUF",
                 fileName: "gemma-4-26B-A4B-it-UD-Q4_K_XL.gguf",
-                sizeBytes: 17_010_978_592,
-                sha256: "453cf049ba87a29b9ed5739087b84b7fa0265a4f2b11eefa2c77683dec6a8020",
+                remoteFileName: "gemma-4-26B-A4B-it-qat-UD-Q4_K_XL.gguf",
+                sizeBytes: 14_249_045_120,
+                sha256: "dcf179a91153e3a7ece792e48ef872180d9d6ef9b7677f0a0bd3e83cfe624d5e",
                 draftFileName: "mtp-gemma-4-26B-A4B-it.gguf",
-                draftSizeBytes: 461_766_816,
-                draftSha256: "6326fb9f5e487aa8dcdd313a091e3c67724cb2a666ec3b7d2895b5b26d93ed1b",
+                draftSizeBytes: 251_937_728,
+                draftSha256: "62bd3af7f66c9308de9a5454233852f8c7324c93767e8dfb824ed45b9179864a",
                 releaseReady: true,
                 isActiveTier: true
             )
@@ -5628,7 +5633,7 @@ final class AlphaExtractionTests: XCTestCase {
             XCTAssertNotNil(artifact.downloadURL, "Missing download URL for \(tier.rawValue)")
             XCTAssertEqual(
                 artifact.downloadURL?.absoluteString,
-                "https://huggingface.co/\(pinned.repository)/resolve/main/\(pinned.fileName)"
+                "https://huggingface.co/\(pinned.repository)/resolve/main/\(pinned.remoteFileName)"
             )
             XCTAssertTrue(
                 artifact.sha256.range(of: #"^[a-fA-F0-9]{64}$"#, options: .regularExpression) != nil,
@@ -9349,7 +9354,7 @@ final class AlphaExtractionTests: XCTestCase {
             packId: "gemma-4-12b-q4-session",
             artifact: AlphaBackendArtifact(
                 fileName: "gemma-4-12B-it-UD-Q4_K_XL.gguf",
-                sizeBytes: 7_400_000_000,
+                sizeBytes: 6_970_062_656,
                 finalSha256: String(repeating: "a", count: 64),
                 artifactKind: "local_model_artifact",
                 runtimeMode: .llamaCppGguf,
@@ -9486,7 +9491,7 @@ final class AlphaExtractionTests: XCTestCase {
             packId: "gemma-4-12b-gguf-new",
             tier: .caseAssociate,
             fileName: "gemma-4-12B-it-UD-Q4_K_XL.gguf",
-            sizeBytes: 7_400_000_000,
+            sizeBytes: 6_970_062_656,
             checksumSha256: String(repeating: "e", count: 64),
             artifactKind: "local_model_artifact",
             runtimeMode: .llamaCppGguf,
@@ -9529,7 +9534,7 @@ final class AlphaExtractionTests: XCTestCase {
             packId: "gemma-4-12b-gguf",
             tier: .caseAssociate,
             fileName: "gemma-4-12B-it-UD-Q4_K_XL.gguf",
-            sizeBytes: 7_400_000_000,
+            sizeBytes: 6_970_062_656,
             checksumSha256: String(repeating: "b", count: 64),
             artifactKind: "local_model_artifact",
             runtimeMode: .llamaCppGguf,
@@ -9568,7 +9573,7 @@ final class AlphaExtractionTests: XCTestCase {
             packId: "gemma-4-12b-gguf-new",
             tier: .caseAssociate,
             fileName: "gemma-4-12B-it-UD-Q4_K_XL.gguf",
-            sizeBytes: 7_400_000_000,
+            sizeBytes: 6_970_062_656,
             checksumSha256: String(repeating: "d", count: 64),
             artifactKind: "local_model_artifact",
             runtimeMode: .llamaCppGguf,
@@ -9637,7 +9642,7 @@ final class AlphaExtractionTests: XCTestCase {
         let cachedTarget = AlphaAssistantCatalogDescriptor(
             tier: .caseAssociate,
             packId: "gemma-4-12b-gguf-new",
-            sizeBytes: 7_400_000_000,
+            sizeBytes: 6_970_062_656,
             checksumSha256: String(repeating: "b", count: 64),
             artifactKind: "local_model_artifact",
             runtimeMode: .llamaCppGguf,
@@ -9677,7 +9682,7 @@ final class AlphaExtractionTests: XCTestCase {
         let cachedGGUF = AlphaAssistantCatalogDescriptor(
             tier: .caseAssociate,
             packId: "gemma-4-12b-gguf",
-            sizeBytes: 7_400_000_000,
+            sizeBytes: 6_970_062_656,
             checksumSha256: String(repeating: "c", count: 64),
             artifactKind: "local_model_artifact",
             runtimeMode: .llamaCppGguf,
@@ -9727,7 +9732,7 @@ final class AlphaExtractionTests: XCTestCase {
         let cachedGGUF = AlphaAssistantCatalogDescriptor(
             tier: .caseAssociate,
             packId: "gemma-4-12b-gguf",
-            sizeBytes: 7_400_000_000,
+            sizeBytes: 6_970_062_656,
             checksumSha256: String(repeating: "c", count: 64),
             artifactKind: "local_model_artifact",
             runtimeMode: .llamaCppGguf,
@@ -9746,10 +9751,10 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(presentation?.runtimeMode, .llamaCppGguf)
-        XCTAssertEqual(presentation?.totalDownloadBytes, 7_400_000_000)
-        XCTAssertEqual(presentation?.sizeLabel, "7.4 GB")
+        XCTAssertEqual(presentation?.totalDownloadBytes, 6_970_062_656)
+        XCTAssertEqual(presentation?.sizeLabel, "7.0 GB")
         XCTAssertNil(presentation?.companionLabel)
-        XCTAssertEqual(presentation?.etaLabel, "about 11 min")
+        XCTAssertEqual(presentation?.etaLabel, "about 10 min")
     }
 
     func testAssistantSetupPresentationFallsBackToCachedDownloadWhenCatalogMissing() {
@@ -9793,10 +9798,10 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(presentation?.runtimeMode, .mlxSwiftLm)
-        XCTAssertEqual(presentation?.totalDownloadBytes, 13_380_656_577)
-        XCTAssertEqual(presentation?.sizeLabel, alphaAssistantStorageSizeLabel(13_380_656_577))
+        XCTAssertEqual(presentation?.totalDownloadBytes, 7_043_446_355)
+        XCTAssertEqual(presentation?.sizeLabel, alphaAssistantStorageSizeLabel(7_043_446_355))
         XCTAssertEqual(presentation?.companionLabel, rossLocalized("assistant_meta_speed_companion"))
-        XCTAssertEqual(presentation?.etaLabel, "about 19 min")
+        XCTAssertEqual(presentation?.etaLabel, "about 10 min")
     }
 
     func testAssistantSetupPresentationUsesMLXWhenSystemAssistantIsAvailableOnCapablePhone() {

@@ -15,9 +15,9 @@ Normal product UI shows assistant levels, not model names. Technical names, repo
 
 | User tier | Technical model | Repo | Runtime | Download |
 | --- | --- | --- | --- | --- |
-| Basic | Gemma 4 E4B UD Q4_K_XL | `unsloth/gemma-4-E4B-it-GGUF` | `llama_cpp_gguf` | about 5.1 GB |
-| Standard | Gemma 4 12B UD Q4_K_XL | `unsloth/gemma-4-12b-it-GGUF` | `llama_cpp_gguf` | about 7.4 GB |
-| Advanced | Gemma 4 26B-A4B UD Q4_K_XL | `unsloth/gemma-4-26B-A4B-it-GGUF` | `llama_cpp_gguf` | about 17.0 GB |
+| Basic | Gemma 4 E4B UD Q4_K_XL | `unsloth/gemma-4-E4B-it-qat-GGUF` | `llama_cpp_gguf` | about 4.3 GB |
+| Standard | Gemma 4 12B UD Q4_K_XL | `unsloth/gemma-4-12B-it-qat-GGUF` | `llama_cpp_gguf` | about 7.0 GB |
+| Advanced | Gemma 4 26B-A4B UD Q4_K_XL | `unsloth/gemma-4-26B-A4B-it-qat-GGUF` | `llama_cpp_gguf` | about 14.5 GB |
 
 Quick Start / Standard GGUF packs also carry official MTP draft companions in the configured lineup.
 
@@ -59,13 +59,13 @@ Standard:
 
 - minimum: 6-8 GB RAM
 - recommended: 8-12 GB RAM
-- download: about 7.4 GB
+- download: about 7.0 GB
 
 Advanced:
 
 - minimum: 8-12 GB RAM
 - recommended: 12-18 GB RAM
-- download: about 17.0 GB
+- download: about 14.5 GB
 
 Embedding model:
 
@@ -82,6 +82,7 @@ Embedding model:
 ## iPhone Runtime Notes
 
 - `ios/Package.swift` now pins `llama.swift` with `.upToNextMajor(from: "2.9661.0")`.
+- The visible GGUF ladder now points at the newer Unsloth QAT repos while keeping MTP draft heads enabled.
 - `ios/Package.resolved` currently resolves commit `98d472463b5d3bf6de1340f41da91b702b841713`.
 - Context windows now scale by pack and device RAM:
   - Basic: about 10k to 20k tokens

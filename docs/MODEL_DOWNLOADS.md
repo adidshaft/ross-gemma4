@@ -3,12 +3,12 @@
 To operate in full production mode, ROSS-Gemma4 requires secure, offline inference artifacts for the active Gemma 4 capability packs.
 
 ## Active Capability Tiers
-1. **Quick Start**: `gemma-4-e4b-q4` (`bartowski/google_gemma-4-E4B-it-GGUF`, Q4_K_M)
-2. **Case Associate**: `gemma-4-12b-q4` (`ggml-org/gemma-4-12B-it-GGUF`, Q4_K_M)
-3. **Senior Drafting Support**: `gemma-4-26b-a4b-q4` (`bartowski/google_gemma-4-26B-A4B-it-GGUF`, Q4_K_M)
+1. **Quick Start**: `gemma-4-e4b-q4` (`unsloth/gemma-4-E4B-it-qat-GGUF`, UD-Q4_K_XL)
+2. **Case Associate**: `gemma-4-12b-q4` (`unsloth/gemma-4-12B-it-qat-GGUF`, UD-Q4_K_XL)
+3. **Senior Drafting Support**: `gemma-4-26b-a4b-q4` (`unsloth/gemma-4-26B-A4B-it-qat-GGUF`, UD-Q4_K_XL)
 
 ## Desired Format
-The desired artifact format for mobile/local inference is `GGUF`. The product-visible tiers use `Q4_K_M`. The older Flash pack remains only as a compatibility and recovery path.
+The desired artifact format for mobile/local inference is `GGUF`. The product-visible tiers use `UD-Q4_K_XL`. The older Flash pack remains only as a compatibility and recovery path.
 
 ## Download & Verification Process
 The iOS registry now uses direct Hugging Face GGUF URLs. Catalog SHA-256 values may be empty when the upstream provider exposes the digest during preflight; Ross stores that provider checksum after HEAD/range validation and validates the GGUF can open before activating it.
