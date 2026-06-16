@@ -6832,6 +6832,20 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "%@ பயன்படுத்தவும்",
             "te": "%@ ఉపయోగించండి"
         ],
+        "ask_preflight_upgrade_title": [
+            "en": "Larger local context is available",
+            "hi": "Larger local context is available",
+            "bn": "Larger local context is available",
+            "ta": "Larger local context is available",
+            "te": "Larger local context is available"
+        ],
+        "ask_preflight_continue_local": [
+            "en": "Continue with this assistant",
+            "hi": "Continue with this assistant",
+            "bn": "Continue with this assistant",
+            "ta": "Continue with this assistant",
+            "te": "Continue with this assistant"
+        ],
         "ask_local_answered_files_status": [
             "en": "Answered from your files",
             "hi": "आपकी files से जवाब",

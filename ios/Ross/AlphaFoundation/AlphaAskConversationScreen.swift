@@ -21,6 +21,7 @@ struct AlphaAskConversationScreen: View {
     @State private var showingTools = false
     @State private var pendingImportKind: AlphaDockImportKind?
     @State private var answerDetailsResult: AlphaAskResult?
+    @State private var askPreflightUpgrade: AlphaAskPreflightUpgradePresentation?
     @State private var composerResetToken = UUID()
     @FocusState private var composerFocused: Bool
 
@@ -83,10 +84,7 @@ struct AlphaAskConversationScreen: View {
         composerFocused = true
     }
 
-    private func send() {
-        let scopeCaseID = activeScopeCaseID
-        let question = draftText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !question.isEmpty else { return }
+    private func performSend(question: String, scopeCaseID: UUID?) {
         alphaHaptic(.light)
         composerFocused = false
         model.setAskDraft("", for: scopeCaseID)
@@ -96,6 +94,23 @@ struct AlphaAskConversationScreen: View {
             model.setAskDraft("", for: scopeCaseID)
             composerResetToken = UUID()
         }
+    }
+
+    private func send(skipPreflight: Bool = false) {
+        let scopeCaseID = activeScopeCaseID
+        let question = draftText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !question.isEmpty else { return }
+        if !skipPreflight,
+           let preflight = model.localAskPreflightUpgrade(
+            question: question,
+            scopeCaseID: scopeCaseID,
+            webEnabled: model.askWebEnabled
+           ) {
+            composerFocused = false
+            askPreflightUpgrade = preflight
+            return
+        }
+        performSend(question: question, scopeCaseID: scopeCaseID)
     }
 
     private func selectThread(_ session: AlphaChatSession, scopeCaseID: UUID?) {
@@ -197,7 +212,7 @@ struct AlphaAskConversationScreen: View {
                 onShowTools: { showingTools = true },
                 onRemoveDocumentSelection: removeDocumentSelection,
                 onSelectMention: applyMention,
-                onSend: send
+                onSend: { send() }
             )
         }
         .rossAppBackdrop()
@@ -257,6 +272,35 @@ struct AlphaAskConversationScreen: View {
             allowsMultipleSelection: true,
             onCompletion: handleImport
         )
+        .alert(
+            rossLocalized("ask_preflight_upgrade_title"),
+            isPresented: Binding(
+                get: { askPreflightUpgrade != nil },
+                set: { if !$0 { askPreflightUpgrade = nil } }
+            )
+        ) {
+            Button(rossLocalized("ask_preflight_continue_local")) {
+                askPreflightUpgrade = nil
+                send(skipPreflight: true)
+            }
+            if let askPreflightUpgrade {
+                Button(alphaAskUpgradeActionTitle(
+                    askPreflightUpgrade.upgradeTierHint,
+                    runtimeMode: askPreflightUpgrade.upgradeRuntimeHint
+                )) {
+                    let preflight = askPreflightUpgrade
+                    self.askPreflightUpgrade = nil
+                    model.openAskUpgradeSetup(for: preflight)
+                }
+            }
+            Button(rossLocalized("cancel"), role: .cancel) {
+                askPreflightUpgrade = nil
+            }
+        } message: {
+            if let askPreflightUpgrade {
+                Text(askPreflightUpgrade.messageText())
+            }
+        }
     }
 }
 

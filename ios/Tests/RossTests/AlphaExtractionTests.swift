@@ -9257,6 +9257,33 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testAskPreflightUpgradePresentationSuggestsDeeperAssistantForConstrainedSelectedFiles() {
+        let presentation = alphaAskPreflightUpgradePresentation(
+            sourcePackCount: 9,
+            sourceBlockLimit: 4,
+            capabilityTier: .caseAssociate,
+            runtimeMode: .appleFoundationModels,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 8 * 1_000_000_000,
+            freeStorageGB: 24,
+            languageCode: "en"
+        )
+
+        XCTAssertEqual(
+            presentation?.warningText,
+            "Ross focused on 4 of 9 source sections to keep this answer on this device. Narrow the selected files or use a stronger assistant for a deeper pass."
+        )
+        XCTAssertEqual(presentation?.upgradeTierHint, .seniorDraftingSupport)
+        XCTAssertEqual(
+            presentation?.messageText(languageCode: "en"),
+            """
+            Ross focused on 4 of 9 source sections to keep this answer on this device. Narrow the selected files or use a stronger assistant for a deeper pass.
+
+            Senior Drafting Support with GGUF can review larger bundles with deeper local context.
+            """
+        )
+    }
+
     func testAskUpgradeSetupSummaryAppearsForPendingUpgradeHandoff() {
         let summary = alphaAskUpgradeSetupSummary(
             expectedTier: .caseAssociate,
@@ -9324,6 +9351,30 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNil(model.pendingAskUpgradeReturnRoute)
         XCTAssertNil(model.pendingAskUpgradeExpectedTier)
         XCTAssertNil(model.pendingAskUpgradeExpectedRuntimeMode)
+    }
+
+    @MainActor
+    func testResumePendingAskUpgradeIfReadyReturnsToCapturedWorkspaceRoute() {
+        let state = AlphaPersistedState.seed()
+        guard let caseID = state.cases.first(where: { $0.id != alphaSharedWorkspaceID })?.id else {
+            return XCTFail("Expected a non-shared case in the seeded state")
+        }
+        let model = AlphaRossModel(
+            previewState: state,
+            previewPath: [.caseWorkspace(caseID), .privateAISettings]
+        )
+        model.pendingAskUpgradeReturnRoute = .caseWorkspace(caseID)
+        model.pendingAskUpgradeExpectedTier = .caseAssociate
+        model.pendingAskUpgradeExpectedRuntimeMode = .llamaCppGguf
+
+        model.resumePendingAskUpgradeIfReady(
+            activeTier: .caseAssociate,
+            activeRuntimeMode: .llamaCppGguf
+        )
+
+        XCTAssertEqual(model.path.last, .caseWorkspace(caseID))
+        XCTAssertEqual(model.path.filter { $0 == .privateAISettings }.count, 0)
+        XCTAssertNil(model.pendingAskUpgradeReturnRoute)
     }
 
     func testAssistantOfferDoesNotPreferBuiltInActivationWhenMLXIsPreferred() {

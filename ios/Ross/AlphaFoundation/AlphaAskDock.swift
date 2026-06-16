@@ -127,6 +127,8 @@ struct AlphaRootAskDock: View {
     @State private var composerResetToken = UUID()
     @State private var editingPublicLawQuery = false
     @State private var answerDetailsResult: AlphaAskResult?
+    @State private var askPreflightUpgrade: AlphaAskPreflightUpgradePresentation?
+    @State private var askPreflightDismissesExpandedComposer = false
     @FocusState private var dockComposerFocused: Bool
 
     init(
@@ -292,16 +294,14 @@ struct AlphaRootAskDock: View {
         }
     }
 
-    private func send(dismissingExpandedComposer: Bool = false) {
-        let scopeCaseID = activeScopeCaseID
-        let webEnabled = model.askWebEnabled
-        let question = draftText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !question.isEmpty else { return }
+    private func performSend(
+        question: String,
+        scopeCaseID: UUID?,
+        webEnabled: Bool,
+        dismissingExpandedComposer: Bool
+    ) {
         alphaHaptic(.light)
         dockComposerFocused = false
-        if !fixedDocumentIDs.isEmpty {
-            model.setSelectedAskDocumentIDs(fixedDocumentIDs, for: scopeCaseID)
-        }
         dismissedInlineQuestion = nil
         pendingCollapseQuestion = question
         model.setAskDraft("", for: scopeCaseID)
@@ -321,6 +321,33 @@ struct AlphaRootAskDock: View {
             model.setAskDraft("", for: scopeCaseID)
             composerResetToken = UUID()
         }
+    }
+
+    private func send(dismissingExpandedComposer: Bool = false, skipPreflight: Bool = false) {
+        let scopeCaseID = activeScopeCaseID
+        let webEnabled = model.askWebEnabled
+        let question = draftText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !question.isEmpty else { return }
+        if !fixedDocumentIDs.isEmpty {
+            model.setSelectedAskDocumentIDs(fixedDocumentIDs, for: scopeCaseID)
+        }
+        if !skipPreflight,
+           let preflight = model.localAskPreflightUpgrade(
+            question: question,
+            scopeCaseID: scopeCaseID,
+            webEnabled: webEnabled
+           ) {
+            dockComposerFocused = false
+            askPreflightUpgrade = preflight
+            askPreflightDismissesExpandedComposer = dismissingExpandedComposer
+            return
+        }
+        performSend(
+            question: question,
+            scopeCaseID: scopeCaseID,
+            webEnabled: webEnabled,
+            dismissingExpandedComposer: dismissingExpandedComposer
+        )
     }
 
     private func removeDocumentSelection(_ documentID: UUID) {
@@ -721,6 +748,51 @@ struct AlphaRootAskDock: View {
                 }
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.hidden)
+            }
+        }
+        .alert(
+            rossLocalized("ask_preflight_upgrade_title"),
+            isPresented: Binding(
+                get: { askPreflightUpgrade != nil },
+                set: {
+                    if !$0 {
+                        askPreflightUpgrade = nil
+                        askPreflightDismissesExpandedComposer = false
+                    }
+                }
+            )
+        ) {
+            Button(rossLocalized("ask_preflight_continue_local")) {
+                let dismissesExpandedComposer = askPreflightDismissesExpandedComposer
+                askPreflightUpgrade = nil
+                askPreflightDismissesExpandedComposer = false
+                send(
+                    dismissingExpandedComposer: dismissesExpandedComposer,
+                    skipPreflight: true
+                )
+            }
+            if let askPreflightUpgrade {
+                Button(alphaAskUpgradeActionTitle(
+                    askPreflightUpgrade.upgradeTierHint,
+                    runtimeMode: askPreflightUpgrade.upgradeRuntimeHint
+                )) {
+                    let preflight = askPreflightUpgrade
+                    let dismissesExpandedComposer = askPreflightDismissesExpandedComposer
+                    self.askPreflightUpgrade = nil
+                    askPreflightDismissesExpandedComposer = false
+                    if dismissesExpandedComposer {
+                        showingExpandedComposer = false
+                    }
+                    model.openAskUpgradeSetup(for: preflight)
+                }
+            }
+            Button(rossLocalized("cancel"), role: .cancel) {
+                askPreflightUpgrade = nil
+                askPreflightDismissesExpandedComposer = false
+            }
+        } message: {
+            if let askPreflightUpgrade {
+                Text(askPreflightUpgrade.messageText())
             }
         }
         .onChange(of: draftText) { _, newValue in

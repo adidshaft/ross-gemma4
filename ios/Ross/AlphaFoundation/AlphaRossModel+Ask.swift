@@ -518,6 +518,76 @@ extension AlphaRossModel {
         )
     }
 
+    func localAskPreflightUpgrade(
+        question: String,
+        scopeCaseID: UUID?,
+        webEnabled: Bool
+    ) -> AlphaAskPreflightUpgradePresentation? {
+        let cleaned = question.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleaned.isEmpty,
+              !webEnabled,
+              !alphaAskQuestionTargetsAssistantSetup(cleaned),
+              canRunRealLocalAsk(question: cleaned, scopeCaseID: scopeCaseID) else {
+            return nil
+        }
+
+        let selectedDocuments = selectedAskDocuments(for: scopeCaseID)
+        guard !selectedDocuments.isEmpty else { return nil }
+
+        let expectsMatterSources = shouldUseMatterSourcesForAsk(
+            question: cleaned,
+            scopeCaseID: scopeCaseID,
+            selectedDocuments: selectedDocuments
+        )
+        guard expectsMatterSources else { return nil }
+
+        let sourcePack = askRuntimeSourcePack(
+            question: cleaned,
+            scopeCaseID: scopeCaseID,
+            selectedDocuments: selectedDocuments,
+            preferredFollowUpSourceRefs: []
+        )
+        guard !sourcePack.isEmpty else { return nil }
+
+        let requestedTier = activePack?.tier ?? persisted.settings.activeTier ?? selectedTier
+        let askExecutor: @Sendable (AlphaLocalModelInput) async -> AlphaLocalModelOutput = { _ in
+            AlphaLocalModelOutput(
+                rawText: "",
+                parsedJson: nil,
+                schemaValid: false,
+                warnings: [],
+                sourceRefs: []
+            )
+        }
+        guard let resolvedProvider = resolvedLocalAskProvider(
+            requestedTier: requestedTier,
+            task: .matterQuestionAnswer,
+            executor: askExecutor
+        ) else {
+            return nil
+        }
+
+        let provider = resolvedProvider.provider
+        let baseMaxInputChars = provider.maxInputChars() ?? (provider.runtimeMode == .mlxSwiftLm ? 16_000 : 12_000)
+        let sourceCharCount = sourcePack.reduce(0) { $0 + $1.text.count }
+        let budgetPlan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
+            runtimeMode: provider.runtimeMode,
+            capabilityTier: provider.capabilityTier,
+            baseMaxInputChars: baseMaxInputChars,
+            sourceBlockCount: sourcePack.count,
+            sourceCharCount: sourceCharCount,
+            selectedDocumentCount: selectedDocuments.count,
+            lastInvocation: alphaLastModelInvocation(in: persisted)
+        )
+
+        return alphaAskPreflightUpgradePresentation(
+            sourcePackCount: sourcePack.count,
+            sourceBlockLimit: budgetPlan.sourceBlockLimit,
+            capabilityTier: provider.capabilityTier,
+            runtimeMode: provider.runtimeMode
+        )
+    }
+
     func submitAsk(question: String, scopeCaseID: UUID?, webEnabled: Bool) {
         let cleaned = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleaned.isEmpty else { return }
@@ -1128,15 +1198,37 @@ extension AlphaRossModel {
             result.upgradeTierHint ??
             result.modelInvocation.flatMap { AlphaCapabilityTier(rawValue: $0.capabilityTier) } ??
             selectedTier
-        pendingAskUpgradeReturnRoute = alphaAskUpgradeReturnRoute(
-            for: result,
-            currentRoute: path.last
+        openAskUpgradeSetup(
+            tier: runtimeOverrideTier,
+            runtimeMode: result.upgradeRuntimeHint,
+            returnRoute: alphaAskUpgradeReturnRoute(
+                for: result,
+                currentRoute: path.last
+            )
         )
-        pendingAskUpgradeExpectedTier = runtimeOverrideTier
-        pendingAskUpgradeExpectedRuntimeMode = result.upgradeRuntimeHint
-        selectedTier = runtimeOverrideTier
-        setAssistantSetupRuntimeOverride(result.upgradeRuntimeHint, for: runtimeOverrideTier)
-        path.append(.privateAISettings)
+    }
+
+    func openAskUpgradeSetup(for preflight: AlphaAskPreflightUpgradePresentation) {
+        openAskUpgradeSetup(
+            tier: preflight.upgradeTierHint,
+            runtimeMode: preflight.upgradeRuntimeHint,
+            returnRoute: path.last
+        )
+    }
+
+    func openAskUpgradeSetup(
+        tier: AlphaCapabilityTier,
+        runtimeMode: AlphaPackRuntimeMode?,
+        returnRoute: AlphaRoute?
+    ) {
+        pendingAskUpgradeReturnRoute = returnRoute
+        pendingAskUpgradeExpectedTier = tier
+        pendingAskUpgradeExpectedRuntimeMode = runtimeMode
+        selectedTier = tier
+        setAssistantSetupRuntimeOverride(runtimeMode, for: tier)
+        if path.last != .privateAISettings {
+            path.append(.privateAISettings)
+        }
     }
 
     func clearPendingAskUpgrade() {
@@ -1159,31 +1251,60 @@ extension AlphaRossModel {
             return
         }
 
-        let targetRoute: AlphaRoute
-        if case .askCase(let caseID) = pendingAskUpgradeReturnRoute,
-           persisted.cases.contains(where: { $0.id == caseID }) {
-            targetRoute = .askCase(caseID)
-        } else if pendingAskUpgradeReturnRoute == .askRoss {
-            targetRoute = .askRoss
-        } else if let caseID = latestAskResult?.scopeCaseID,
-                  persisted.cases.contains(where: { $0.id == caseID }) {
-            targetRoute = .askCase(caseID)
-        } else {
-            targetRoute = .askRoss
-        }
+        let targetRoute = resolvedPendingAskUpgradeReturnRoute()
 
         clearPendingAskUpgrade()
-        path.removeAll { $0 == .privateAISettings || $0.isAskRoute }
-        switch targetRoute {
-        case .askRoss:
-            askSelectedScopeCaseID = nil
-        case .askCase(let caseID):
-            selectedCaseID = caseID
-            askSelectedScopeCaseID = caseID
-        default:
-            break
+        path.removeAll { $0 == .privateAISettings }
+        guard let targetRoute else { return }
+        if targetRoute.isAskRoute {
+            path.removeAll { $0.isAskRoute }
+            switch targetRoute {
+            case .askRoss:
+                askSelectedScopeCaseID = nil
+            case .askCase(let caseID):
+                selectedCaseID = caseID
+                askSelectedScopeCaseID = caseID
+            default:
+                break
+            }
+            path.append(targetRoute)
+        } else if path.last != targetRoute {
+            path.append(targetRoute)
         }
-        path.append(targetRoute)
+    }
+
+    private func resolvedPendingAskUpgradeReturnRoute() -> AlphaRoute? {
+        if let pendingAskUpgradeReturnRoute {
+            switch pendingAskUpgradeReturnRoute {
+            case .askCase(let caseID):
+                guard persisted.cases.contains(where: { $0.id == caseID }) else { return nil }
+                return .askCase(caseID)
+            case .caseWorkspace(let caseID):
+                guard persisted.cases.contains(where: { $0.id == caseID }) else { return nil }
+                return .caseWorkspace(caseID)
+            case .documentList(let caseID):
+                guard persisted.cases.contains(where: { $0.id == caseID }) else { return nil }
+                return .documentList(caseID)
+            case .documentViewer(let caseID, let documentID, let page):
+                guard persisted.cases.contains(where: { $0.id == caseID }) else { return nil }
+                return .documentViewer(caseID, documentID, page)
+            case .exports(let caseID):
+                guard caseID == nil || persisted.cases.contains(where: { $0.id == caseID }) else {
+                    return nil
+                }
+                return .exports(caseID)
+            case .privateAISettings:
+                break
+            default:
+                return pendingAskUpgradeReturnRoute
+            }
+        }
+
+        if let caseID = latestAskResult?.scopeCaseID,
+           persisted.cases.contains(where: { $0.id == caseID }) {
+            return .askCase(caseID)
+        }
+        return latestAskResult == nil ? nil : .askRoss
     }
 
     func updateAskHistory(turnID: UUID?, mutate: (inout AlphaAskResult) -> Void) {
@@ -4149,6 +4270,69 @@ func alphaAskUpgradeActionDetail(
     }
 }
 
+struct AlphaAskPreflightUpgradePresentation: Hashable {
+    let warningText: String
+    let upgradeTierHint: AlphaCapabilityTier
+    let upgradeRuntimeHint: AlphaPackRuntimeMode?
+
+    func messageText(languageCode: String = rossSelectedLanguageCode()) -> String {
+        if let upgradeDetail = alphaAskUpgradeActionDetail(
+            upgradeTierHint,
+            runtimeMode: upgradeRuntimeHint
+        ) {
+            return "\(warningText)\n\n\(upgradeDetail)"
+        }
+        return warningText
+    }
+}
+
+func alphaAskPreflightUpgradePresentation(
+    sourcePackCount: Int,
+    sourceBlockLimit: Int?,
+    capabilityTier: AlphaCapabilityTier?,
+    runtimeMode: AlphaPackRuntimeMode,
+    isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
+    physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory,
+    freeStorageGB: Int = max(4, alphaAvailableStorageInGigabytes()),
+    languageCode: String = rossSelectedLanguageCode()
+) -> AlphaAskPreflightUpgradePresentation? {
+    guard let sourceBlockLimit,
+          sourcePackCount > sourceBlockLimit else {
+        return nil
+    }
+
+    let upgradeTierHint = alphaLocalAskUpgradeTierHint(
+        runtimeWarnings: [],
+        sourcePackCount: sourcePackCount,
+        includedSourceCount: sourceBlockLimit,
+        sourceBlockLimit: sourceBlockLimit,
+        capabilityTier: capabilityTier
+    )
+    guard let upgradeTierHint else { return nil }
+
+    let upgradeRuntimeHint = alphaLocalAskUpgradeRuntimeHint(
+        runtimeWarnings: [],
+        sourcePackCount: sourcePackCount,
+        includedSourceCount: sourceBlockLimit,
+        sourceBlockLimit: sourceBlockLimit,
+        capabilityTier: capabilityTier,
+        runtimeMode: runtimeMode,
+        isPhoneFormFactor: isPhoneFormFactor,
+        physicalMemoryBytes: physicalMemoryBytes,
+        freeStorageGB: freeStorageGB
+    )
+
+    return AlphaAskPreflightUpgradePresentation(
+        warningText: alphaLocalAskFocusedSourcesWarning(
+            includedCount: sourceBlockLimit,
+            totalCount: sourcePackCount,
+            languageCode: languageCode
+        ),
+        upgradeTierHint: upgradeTierHint,
+        upgradeRuntimeHint: upgradeRuntimeHint
+    )
+}
+
 func alphaAskUpgradeSetupSummaryTitle(
     _ tier: AlphaCapabilityTier,
     runtimeMode: AlphaPackRuntimeMode? = nil,
@@ -4164,7 +4348,7 @@ func alphaAskUpgradeReturnRoute(
     for result: AlphaAskResult,
     currentRoute: AlphaRoute?
 ) -> AlphaRoute {
-    if let currentRoute, currentRoute.isAskRoute {
+    if let currentRoute, currentRoute != .privateAISettings {
         return currentRoute
     }
     if let scopeCaseID = result.scopeCaseID {
