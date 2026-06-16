@@ -10069,7 +10069,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(options.contains(where: { $0.runtimeMode == .llamaCppGguf && !$0.isBuiltIn }))
         XCTAssertTrue(options.contains(where: { $0.runtimeMode == .llamaCppGguf && $0.detailLabel == "~11 tok/s · 28,672 tokens" }))
         XCTAssertTrue(options.contains(where: { $0.runtimeMode == .appleFoundationModels && $0.isBuiltIn }))
-        XCTAssertTrue(options.contains(where: { $0.runtimeMode == .appleFoundationModels && $0.detailLabel == "No download · 12,288 tokens" }))
+        XCTAssertTrue(options.contains(where: { $0.runtimeMode == .appleFoundationModels && $0.detailLabel == "No download · 14,336 tokens" }))
     }
 
     func testAssistantVariantOptionsAvoidDuplicateBuiltInWhenAlreadyInstalled() {
@@ -10094,11 +10094,15 @@ final class AlphaExtractionTests: XCTestCase {
             physicalMemoryBytes: 12 * 1_073_741_824
         )
 
-        XCTAssertEqual(options.count, 1)
+        XCTAssertEqual(options.count, 3)
         XCTAssertEqual(options.first?.runtimeMode, .appleFoundationModels)
         XCTAssertEqual(options.first?.isActive, true)
         XCTAssertEqual(options.first?.isBuiltIn, true)
-        XCTAssertEqual(options.first?.detailLabel, "No download · 12,288 tokens")
+        XCTAssertEqual(options.first?.detailLabel, "No download · 14,336 tokens")
+        XCTAssertEqual(options.dropFirst().first?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(options.dropFirst().first?.detailLabel, "~13 tok/s · 24,576 tokens")
+        XCTAssertEqual(options.last?.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(options.last?.detailLabel, "~11 tok/s · 28,672 tokens")
     }
 
     func testAssistantVariantOptionsPreferMLXOverBuiltInWhenRuntimePreferenceIsMLX() {
@@ -10130,7 +10134,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(options.first?.detailLabel, "~13 tok/s · 24,576 tokens")
         XCTAssertEqual(options.dropFirst().first?.runtimeMode, .appleFoundationModels)
         XCTAssertEqual(options.dropFirst().first?.isBuiltIn, true)
-        XCTAssertEqual(options.dropFirst().first?.detailLabel, "No download · 12,288 tokens")
+        XCTAssertEqual(options.dropFirst().first?.detailLabel, "No download · 14,336 tokens")
         XCTAssertEqual(options.last?.runtimeMode, .llamaCppGguf)
         XCTAssertEqual(options.last?.isBuiltIn, false)
         XCTAssertEqual(options.last?.detailLabel, "~11 tok/s · 28,672 tokens")
@@ -10162,7 +10166,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(options.count, 3)
         XCTAssertEqual(options.first?.runtimeMode, .appleFoundationModels)
         XCTAssertEqual(options.first?.isBuiltIn, true)
-        XCTAssertEqual(options.first?.detailLabel, "No download · 12,288 tokens")
+        XCTAssertEqual(options.first?.detailLabel, "No download · 14,336 tokens")
         XCTAssertEqual(options.dropFirst().first?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(options.dropFirst().first?.isBuiltIn, false)
         XCTAssertEqual(options.dropFirst().first?.detailLabel, "~13 tok/s · 24,576 tokens")
@@ -11707,7 +11711,7 @@ final class AlphaExtractionTests: XCTestCase {
             sizeLabel: rossLocalized("assistant_meta_no_download"),
             totalDownloadBytes: 0,
             speedLabel: "~14 tok/s",
-            contextLabel: "12,288 tokens",
+            contextLabel: "14,336 tokens",
             companionLabel: nil,
             etaLabel: nil
         )
