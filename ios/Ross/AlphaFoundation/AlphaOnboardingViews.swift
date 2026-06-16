@@ -742,6 +742,7 @@ struct AlphaModelPickerRow: View {
                             AlphaAssistantSetupMetaLabels(
                                 sizeLabel: setupPresentation.sizeLabel,
                                 runtimeLabel: setupPresentation.runtimeMode.displayLabel,
+                                companionLabel: setupPresentation.companionLabel,
                                 etaLabel: etaLabel,
                                 freeSpaceLabel: model.freeDiskSpaceLabel,
                                 font: .caption.weight(.medium)
@@ -797,6 +798,7 @@ private struct AlphaModelPickerRowSurface: ViewModifier {
 struct AlphaAssistantSetupMetaLabels: View {
     let sizeLabel: String
     var runtimeLabel: String?
+    var companionLabel: String? = nil
     var etaLabel: String?
     let freeSpaceLabel: String
     var font: Font = .caption.weight(.medium)
@@ -808,6 +810,9 @@ struct AlphaAssistantSetupMetaLabels: View {
                 if let runtimeLabel {
                     metaLabel(runtimeLabel, systemImage: "cpu")
                 }
+                if let companionLabel {
+                    metaLabel(companionLabel, systemImage: "bolt.circle")
+                }
                 if let etaLabel {
                     metaLabel(etaLabel, systemImage: "wifi")
                 }
@@ -818,6 +823,9 @@ struct AlphaAssistantSetupMetaLabels: View {
                 metaLabel(sizeLabel, systemImage: "arrow.down.circle")
                 if let runtimeLabel {
                     metaLabel(runtimeLabel, systemImage: "cpu")
+                }
+                if let companionLabel {
+                    metaLabel(companionLabel, systemImage: "bolt.circle")
                 }
                 if let etaLabel {
                     metaLabel(etaLabel, systemImage: "wifi")

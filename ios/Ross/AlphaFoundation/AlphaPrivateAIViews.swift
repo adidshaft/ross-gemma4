@@ -840,6 +840,7 @@ struct AlphaPrivateAIOfferCard: View {
                     AlphaAssistantSetupMetaLabels(
                         sizeLabel: setupPresentation?.sizeLabel ?? rossLocalized("assistant_state_checking"),
                         runtimeLabel: setupPresentation?.runtimeMode.displayLabel,
+                        companionLabel: setupPresentation?.companionLabel,
                         freeSpaceLabel: model.freeDiskSpaceLabel,
                         font: .caption2.weight(.medium)
                     )

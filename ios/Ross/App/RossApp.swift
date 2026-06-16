@@ -2380,6 +2380,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Built in on this iPhone",
             "te": "Built in on this iPhone"
         ],
+        "assistant_meta_speed_companion": [
+            "en": "Speed companion included",
+            "hi": "Speed companion included",
+            "bn": "Speed companion included",
+            "ta": "Speed companion included",
+            "te": "Speed companion included"
+        ],
         "assistant_verification_no_setup": [
             "en": "No assistant setup is active yet.",
             "hi": "अभी कोई assistant setup active नहीं है।",

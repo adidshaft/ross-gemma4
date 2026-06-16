@@ -702,6 +702,7 @@ struct AlphaAssistantSetupPresentation: Equatable, Sendable {
     let runtimeMode: AlphaPackRuntimeMode
     let sizeLabel: String
     let totalDownloadBytes: Int64
+    let companionLabel: String?
 }
 
 func alphaAssistantSetupPresentation(
@@ -728,7 +729,8 @@ func alphaAssistantSetupPresentation(
         return AlphaAssistantSetupPresentation(
             runtimeMode: .appleFoundationModels,
             sizeLabel: rossLocalized("assistant_meta_no_download"),
-            totalDownloadBytes: 0
+            totalDownloadBytes: 0,
+            companionLabel: nil
         )
     }
 
@@ -746,7 +748,8 @@ func alphaAssistantSetupPresentation(
     return AlphaAssistantSetupPresentation(
         runtimeMode: descriptor.runtimeMode,
         sizeLabel: alphaAssistantStorageSizeLabel(totalDownloadBytes),
-        totalDownloadBytes: totalDownloadBytes
+        totalDownloadBytes: totalDownloadBytes,
+        companionLabel: descriptor.draftArtifact == nil ? nil : rossLocalized("assistant_meta_speed_companion")
     )
 }
 

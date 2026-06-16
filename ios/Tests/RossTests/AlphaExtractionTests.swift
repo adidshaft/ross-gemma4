@@ -8035,12 +8035,12 @@ final class AlphaExtractionTests: XCTestCase {
             runtimeMode: .mlxSwiftLm,
             developmentOnly: false,
             draftArtifact: AlphaAssistantDraftArtifactDescriptor(
-                fileName: "mtp-gemma-4-12b-it.gguf",
+                fileName: "gemma-4-e4b-it-mlx",
                 sizeBytes: 200_000_000,
                 checksumSha256: String(repeating: "b", count: 64),
-                artifactKind: "local_model_artifact",
-                downloadURLString: "https://ross.example/drafts/mtp-gemma-4-12b-it.gguf",
-                draftTokens: 64
+                artifactKind: "mlx_directory",
+                downloadURLString: "https://ross.example/drafts/gemma-4-e4b-it-mlx",
+                draftTokens: 6
             )
         )
         let cachedGGUF = AlphaAssistantCatalogDescriptor(
@@ -8065,6 +8065,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(presentation?.totalDownloadBytes, 6_400_000_000)
         XCTAssertEqual(presentation?.sizeLabel, "6.4 GB")
+        XCTAssertEqual(presentation?.companionLabel, rossLocalized("assistant_meta_speed_companion"))
     }
 
     func testAssistantSetupPresentationFallsBackToGGUFAfterSlowInstalledMLXRun() {
@@ -8115,6 +8116,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.runtimeMode, .llamaCppGguf)
         XCTAssertEqual(presentation?.totalDownloadBytes, 7_400_000_000)
         XCTAssertEqual(presentation?.sizeLabel, "7.4 GB")
+        XCTAssertNil(presentation?.companionLabel)
     }
 
     func testAssistantSetupPresentationFallsBackToCachedDownloadWhenCatalogMissing() {
@@ -8144,6 +8146,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(presentation?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(presentation?.sizeLabel, "6.2 GB")
+        XCTAssertNil(presentation?.companionLabel)
     }
 
     func testAssistantSetupPresentationUsesBundledMLXWhenPreferredMetadataIsMissing() {
@@ -8156,8 +8159,9 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(presentation?.runtimeMode, .mlxSwiftLm)
-        XCTAssertEqual(presentation?.totalDownloadBytes, 6_773_371_194)
-        XCTAssertEqual(presentation?.sizeLabel, alphaAssistantStorageSizeLabel(6_773_371_194))
+        XCTAssertEqual(presentation?.totalDownloadBytes, 13_380_656_577)
+        XCTAssertEqual(presentation?.sizeLabel, alphaAssistantStorageSizeLabel(13_380_656_577))
+        XCTAssertEqual(presentation?.companionLabel, rossLocalized("assistant_meta_speed_companion"))
     }
 
     func testAssistantSetupPresentationUsesBuiltInCoreAIWhenAvailable() {
@@ -8169,6 +8173,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.runtimeMode, .appleFoundationModels)
         XCTAssertEqual(presentation?.totalDownloadBytes, 0)
         XCTAssertEqual(presentation?.sizeLabel, rossLocalized("assistant_meta_no_download"))
+        XCTAssertNil(presentation?.companionLabel)
     }
 
     func testAssistantCatalogRefreshTiersIncludeVisibleOptionsWithoutInstalledPacks() {
