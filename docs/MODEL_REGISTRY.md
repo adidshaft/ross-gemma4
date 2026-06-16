@@ -14,9 +14,9 @@ Ross shows advocate-friendly assistant levels in normal UI. Technical model name
 
 Visible generative assistant tiers are Gemma 4-first:
 
-- Quick Start -> `gemma-4-e4b-q4`, `unsloth/gemma-4-E4B-it-qat-GGUF`
-- Case Associate -> `gemma-4-12b-q4`, `unsloth/gemma-4-12B-it-qat-GGUF`
-- Senior Drafting Support -> `gemma-4-26b-a4b-q4`, `unsloth/gemma-4-26B-A4B-it-qat-GGUF`
+- Quick Start -> `gemma-4-e4b-q4`, `unsloth/gemma-4-E4B-it-GGUF`
+- Case Associate -> `gemma-4-12b-q4`, `unsloth/gemma-4-12b-it-GGUF`
+- Senior Drafting Support -> `gemma-4-26b-a4b-q4`, `unsloth/gemma-4-26B-A4B-it-GGUF`
 
 Retrieval is separate:
 
@@ -34,20 +34,20 @@ Gemma/Gemma 3n generative paths are optional future or experimental paths, not R
 
 ### Quick Start
 
-- download: about 4.3 GB in the current iOS catalog
+- download: about 5.2 GB in the current iOS catalog
 - role: lighter everyday work, short summaries, and quicker local matter Q&A
 - runtime priority: GGUF on all supported platforms, with MLX and CoreAI eligible on supported iPhones
 
 ### Case Associate
 
 - recommended
-- download: about 7.0 GB in the current iOS catalog
+- download: about 7.8 GB in the current iOS catalog
 - role: most matters, larger files, chronology work, hearing notes, and source-backed Ask Ross answers
 - runtime priority: GGUF by default, with MLX preferred on supported iPhones when it remains the faster lane
 
 ### Senior Drafting Support
 
-- download: about 14.5 GB in the current iOS catalog
+- download: about 17.5 GB in the current iOS catalog
 - role: larger bundles, deeper review, longer local reasoning, chronology refinement, and drafting support
 - runtime priority: GGUF first, with CoreAI eligible where instant built-in setup is preferred
 

@@ -3,9 +3,9 @@
 To operate in full production mode, ROSS-Gemma4 requires secure, offline inference artifacts for the active Gemma 4 capability packs.
 
 ## Active Capability Tiers
-1. **Quick Start**: `gemma-4-e4b-q4` (`unsloth/gemma-4-E4B-it-qat-GGUF`, UD-Q4_K_XL)
-2. **Case Associate**: `gemma-4-12b-q4` (`unsloth/gemma-4-12B-it-qat-GGUF`, UD-Q4_K_XL)
-3. **Senior Drafting Support**: `gemma-4-26b-a4b-q4` (`unsloth/gemma-4-26B-A4B-it-qat-GGUF`, UD-Q4_K_XL)
+1. **Quick Start**: `gemma-4-e4b-q4` (`unsloth/gemma-4-E4B-it-GGUF`, UD-Q4_K_XL)
+2. **Case Associate**: `gemma-4-12b-q4` (`unsloth/gemma-4-12b-it-GGUF`, UD-Q4_K_XL)
+3. **Senior Drafting Support**: `gemma-4-26b-a4b-q4` (`unsloth/gemma-4-26B-A4B-it-GGUF`, UD-Q4_K_XL)
 
 ## Desired Format
 The desired artifact format for mobile/local inference is `GGUF`. The product-visible tiers use `UD-Q4_K_XL`. The older Flash pack remains only as a compatibility and recovery path.
@@ -17,7 +17,7 @@ Current proof:
 
 1. `--local-model-smoke` ran real simulator GGUF inference on 2026-06-02.
 2. The smoke passed English source grounding, Bengali Bangla-script grounding, Hindi Devanagari grounding, and a general cautious answer.
-3. Live Hugging Face probes on 2026-06-02 confirmed the configured assistant URLs resolve, expose linked ETags matching the pinned SHA-256 values, advertise range support, and return `206 Partial Content` for one-byte range GETs.
+3. Live Hugging Face probes on 2026-06-16 confirmed the configured assistant URLs resolve, expose linked ETags matching the pinned SHA-256 values, advertise range support, and return `206 Partial Content` for one-byte range GETs.
 4. Swift tests cover preflight parsing, range probes, checksum/provider digest handling, startup recovery, repair, and artifact removal.
 
 Still required before claiming physical-device production readiness:

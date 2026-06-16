@@ -8,14 +8,14 @@
 | product tier | Quick Start |
 | active model id | `gemma-4-e4b-q4` |
 | upstream identity | `google/gemma-4-E4B-it` |
-| shipping repo | `unsloth/gemma-4-E4B-it-qat-GGUF` |
+| shipping repo | `unsloth/gemma-4-E4B-it-GGUF` |
 | artifact format | GGUF UD-Q4_K_XL |
 | file name | `gemma-4-E4B-it-UD-Q4_K_XL.gguf` |
-| sizeBytes | `4215693760` |
-| checksumSha256 | `b3052f962d6449b4eb2075733c068bdec1c51eadb7b237e6c3157bfbb7b1dae0` |
+| sizeBytes | `5126304928` |
+| checksumSha256 | `724f9a1e6966e36586c70f4c5fa08a8bdafbc39676469481ce98683a0366e8bf` |
 | draft companion | `mtp-gemma-4-E4B-it.gguf` |
-| draftSizeBytes | `59676544` |
-| draftChecksumSha256 | `b0005dc39d47ede950c3ec413cb20e832f15b216126eae368d9f572676153cb6` |
+| draftSizeBytes | `98653248` |
+| draftChecksumSha256 | `c41954b43f5e2de1ff5128d5c2abb4195aea72ee7ed5e36405be9b02fa687e77` |
 | verified | true |
 | releaseReady | true |
 | notes | Lighter visible pack for everyday work and faster short-turn review. |
@@ -26,14 +26,14 @@
 | product tier | Case Associate |
 | active model id | `gemma-4-12b-q4` |
 | upstream identity | `google/gemma-4-12B-it` |
-| shipping repo | `unsloth/gemma-4-12B-it-qat-GGUF` |
+| shipping repo | `unsloth/gemma-4-12b-it-GGUF` |
 | artifact format | GGUF UD-Q4_K_XL |
 | file name | `gemma-4-12b-it-UD-Q4_K_XL.gguf` |
-| sizeBytes | `6716355328` |
-| checksumSha256 | `cc9ff072e0a8203429ed854e6662c17a6c2bc1e5dca5b475dd4736caaacbc165` |
+| sizeBytes | `7366421920` |
+| checksumSha256 | `2f76adb77c0cbce35bf0f14c8a9d57f5a8c08528acf2edf3684b1eb38b075637` |
 | draft companion | `mtp-gemma-4-12b-it.gguf` |
-| draftSizeBytes | `253707328` |
-| draftChecksumSha256 | `c50c91c35f04903815b2e8930cbb8c8c5bee0e1aa00748c30a7b8ff05d2310b4` |
+| draftSizeBytes | `465109248` |
+| draftChecksumSha256 | `aed49e55a3d0123a8a13b47667eb8d8198f4237f5e8c7c57829b531c26b34200` |
 | verified | true |
 | releaseReady | true |
 | notes | Current recommended quality target for most matters and larger files. |
@@ -44,14 +44,14 @@
 | product tier | Senior Drafting Support |
 | active model id | `gemma-4-26b-a4b-q4` |
 | upstream identity | `google/gemma-4-26B-A4B-it` |
-| shipping repo | `unsloth/gemma-4-26B-A4B-it-qat-GGUF` |
+| shipping repo | `unsloth/gemma-4-26B-A4B-it-GGUF` |
 | artifact format | GGUF UD-Q4_K_XL |
 | file name | `gemma-4-26B-A4B-it-UD-Q4_K_XL.gguf` |
-| sizeBytes | `14249045120` |
-| checksumSha256 | `dcf179a91153e3a7ece792e48ef872180d9d6ef9b7677f0a0bd3e83cfe624d5e` |
+| sizeBytes | `17010978592` |
+| checksumSha256 | `7e9c7880585fbf09ab31f3c042bd4c2c20d1c8036441163cdd839fd16670736d` |
 | draft companion | `mtp-gemma-4-26B-A4B-it.gguf` |
-| draftSizeBytes | `251937728` |
-| draftChecksumSha256 | `62bd3af7f66c9308de9a5454233852f8c7324c93767e8dfb824ed45b9179864a` |
+| draftSizeBytes | `461766816` |
+| draftChecksumSha256 | `fb7a81da9da6f2287b5c8b357e9e854d0dfaca4d24eac7d69ab564ad5514e525` |
 | verified | true |
 | releaseReady | true |
 | notes | Highest-quality visible pack. Best reserved for larger-memory devices and drafting-heavy workflows. |

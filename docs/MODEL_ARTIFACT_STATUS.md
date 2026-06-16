@@ -4,9 +4,9 @@ The current status of model artifacts for ROSS-Gemma4.
 
 | Tier | Active Model ID | Upstream Identity | Desired Format | Status | Catalog URL configured | `releaseReady` |
 | --- | --- | --- | --- | --- | --- | --- |
-| Quick Start | `gemma-4-e4b-q4` | `unsloth/gemma-4-E4B-it-qat-GGUF` | GGUF UD-Q4_K_XL | Configured direct Hugging Face URL; simulator GGUF smoke proved local runtime with a developer artifact; physical-device proof pending | `true` | `true` |
-| Case Associate | `gemma-4-12b-q4` | `unsloth/gemma-4-12B-it-qat-GGUF` | GGUF UD-Q4_K_XL | Configured direct Hugging Face URL; physical-device download proof still pending | `true` | `true` |
-| Senior Drafting Support | `gemma-4-26b-a4b-q4` | `unsloth/gemma-4-26B-A4B-it-qat-GGUF` | GGUF UD-Q4_K_XL | Configured direct Hugging Face URL; physical-device download proof still pending | `true` | `true` |
+| Quick Start | `gemma-4-e4b-q4` | `unsloth/gemma-4-E4B-it-GGUF` | GGUF UD-Q4_K_XL | Configured direct Hugging Face URL for the latest plain GGUF release; simulator GGUF smoke proved local runtime with a developer artifact; physical-device proof pending | `true` | `true` |
+| Case Associate | `gemma-4-12b-q4` | `unsloth/gemma-4-12b-it-GGUF` | GGUF UD-Q4_K_XL | Configured direct Hugging Face URL for the latest plain GGUF release; physical-device download proof still pending | `true` | `true` |
+| Senior Drafting Support | `gemma-4-26b-a4b-q4` | `unsloth/gemma-4-26B-A4B-it-GGUF` | GGUF UD-Q4_K_XL | Configured direct Hugging Face URL for the latest plain GGUF release; physical-device download proof still pending | `true` | `true` |
 
 The legacy Flash pack remains in the registry only for compatibility and recovery flows. It is no longer a product-visible assistant tier.
 

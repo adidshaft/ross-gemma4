@@ -17,9 +17,9 @@
 
 ## Model Mapping
 
-- Basic -> Gemma 4 E4B Q4_K_M, about 5.4 GB
-- Standard -> Gemma 4 12B Q4_K_M, about 7.4 GB
-- Advanced -> Gemma 4 26B-A4B Q4_K_M, about 17.0 GB
+- Basic -> Gemma 4 E4B UD Q4_K_XL, about 5.2 GB
+- Standard -> Gemma 4 12B UD Q4_K_XL, about 7.8 GB
+- Advanced -> Gemma 4 26B-A4B UD Q4_K_XL, about 17.5 GB
 - Flash remains a legacy compatibility tier and is no longer shown in the normal setup catalog
 
 ## Current Truth

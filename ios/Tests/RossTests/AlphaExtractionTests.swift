@@ -1417,16 +1417,16 @@ final class AlphaExtractionTests: XCTestCase {
             [.quickStart, .caseAssociate, .seniorDraftingSupport]
         )
         XCTAssertEqual(AlphaCapabilityTier.flash.downloadSizeLabel, "3.0 GB")
-        XCTAssertEqual(AlphaCapabilityTier.quickStart.downloadSizeLabel, "4.3 GB")
-        XCTAssertEqual(AlphaCapabilityTier.caseAssociate.downloadSizeLabel, "7.0 GB")
-        XCTAssertEqual(AlphaCapabilityTier.seniorDraftingSupport.downloadSizeLabel, "14.5 GB")
+        XCTAssertEqual(AlphaCapabilityTier.quickStart.downloadSizeLabel, "5.2 GB")
+        XCTAssertEqual(AlphaCapabilityTier.caseAssociate.downloadSizeLabel, "7.8 GB")
+        XCTAssertEqual(AlphaCapabilityTier.seniorDraftingSupport.downloadSizeLabel, "17.5 GB")
         XCTAssertEqual(
             AlphaCapabilityTier.flash.setupWarning(languageCode: "en"),
             "Download about 3.0 GB before you begin. Wi-Fi is still the safest option."
         )
         XCTAssertTrue(
             AlphaCapabilityTier.caseAssociate.setupWarning(languageCode: "ta")
-                .contains("7.0 GB")
+                .contains("7.8 GB")
         )
         XCTAssertTrue(
             AlphaCapabilityTier.caseAssociate.setupWarning(languageCode: "ta")
@@ -1434,7 +1434,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
         XCTAssertTrue(
             AlphaCapabilityTier.seniorDraftingSupport.setupWarning(languageCode: "te-IN")
-                .contains("14.5 GB")
+                .contains("17.5 GB")
         )
         XCTAssertTrue(
             AlphaCapabilityTier.seniorDraftingSupport.setupWarning(languageCode: "te-IN")
@@ -5736,8 +5736,8 @@ final class AlphaExtractionTests: XCTestCase {
         )
         let pack = ModelPack(
             tier: .caseAssociate,
-            downloadSize: "7.0 GB",
-            installedFootprint: "7.0 GB",
+            downloadSize: "7.8 GB",
+            installedFootprint: "7.8 GB",
             recommendedFor: "Document review",
             technicalDetails: []
         )
@@ -5815,38 +5815,38 @@ final class AlphaExtractionTests: XCTestCase {
                 isActiveTier: false
             ),
             .quickStart: (
-                repository: "unsloth/gemma-4-E4B-it-qat-GGUF",
+                repository: "unsloth/gemma-4-E4B-it-GGUF",
                 fileName: "gemma-4-E4B-it-UD-Q4_K_XL.gguf",
-                remoteFileName: "gemma-4-E4B-it-qat-UD-Q4_K_XL.gguf",
-                sizeBytes: 4_215_693_760,
-                sha256: "b3052f962d6449b4eb2075733c068bdec1c51eadb7b237e6c3157bfbb7b1dae0",
+                remoteFileName: "gemma-4-E4B-it-UD-Q4_K_XL.gguf",
+                sizeBytes: 5_126_304_928,
+                sha256: "724f9a1e6966e36586c70f4c5fa08a8bdafbc39676469481ce98683a0366e8bf",
                 draftFileName: "mtp-gemma-4-E4B-it.gguf",
-                draftSizeBytes: 59_676_544,
-                draftSha256: "b0005dc39d47ede950c3ec413cb20e832f15b216126eae368d9f572676153cb6",
+                draftSizeBytes: 98_653_248,
+                draftSha256: "c41954b43f5e2de1ff5128d5c2abb4195aea72ee7ed5e36405be9b02fa687e77",
                 releaseReady: true,
                 isActiveTier: true
             ),
             .caseAssociate: (
-                repository: "unsloth/gemma-4-12B-it-qat-GGUF",
+                repository: "unsloth/gemma-4-12b-it-GGUF",
                 fileName: "gemma-4-12b-it-UD-Q4_K_XL.gguf",
-                remoteFileName: "gemma-4-12B-it-qat-UD-Q4_K_XL.gguf",
-                sizeBytes: 6_716_355_328,
-                sha256: "cc9ff072e0a8203429ed854e6662c17a6c2bc1e5dca5b475dd4736caaacbc165",
+                remoteFileName: "gemma-4-12b-it-UD-Q4_K_XL.gguf",
+                sizeBytes: 7_366_421_920,
+                sha256: "2f76adb77c0cbce35bf0f14c8a9d57f5a8c08528acf2edf3684b1eb38b075637",
                 draftFileName: "mtp-gemma-4-12b-it.gguf",
-                draftSizeBytes: 253_707_328,
-                draftSha256: "c50c91c35f04903815b2e8930cbb8c8c5bee0e1aa00748c30a7b8ff05d2310b4",
+                draftSizeBytes: 465_109_248,
+                draftSha256: "aed49e55a3d0123a8a13b47667eb8d8198f4237f5e8c7c57829b531c26b34200",
                 releaseReady: true,
                 isActiveTier: true
             ),
             .seniorDraftingSupport: (
-                repository: "unsloth/gemma-4-26B-A4B-it-qat-GGUF",
+                repository: "unsloth/gemma-4-26B-A4B-it-GGUF",
                 fileName: "gemma-4-26B-A4B-it-UD-Q4_K_XL.gguf",
-                remoteFileName: "gemma-4-26B-A4B-it-qat-UD-Q4_K_XL.gguf",
-                sizeBytes: 14_249_045_120,
-                sha256: "dcf179a91153e3a7ece792e48ef872180d9d6ef9b7677f0a0bd3e83cfe624d5e",
+                remoteFileName: "gemma-4-26B-A4B-it-UD-Q4_K_XL.gguf",
+                sizeBytes: 17_010_978_592,
+                sha256: "7e9c7880585fbf09ab31f3c042bd4c2c20d1c8036441163cdd839fd16670736d",
                 draftFileName: "mtp-gemma-4-26B-A4B-it.gguf",
-                draftSizeBytes: 251_937_728,
-                draftSha256: "62bd3af7f66c9308de9a5454233852f8c7324c93767e8dfb824ed45b9179864a",
+                draftSizeBytes: 461_766_816,
+                draftSha256: "fb7a81da9da6f2287b5c8b357e9e854d0dfaca4d24eac7d69ab564ad5514e525",
                 releaseReady: true,
                 isActiveTier: true
             )
@@ -10967,7 +10967,7 @@ final class AlphaExtractionTests: XCTestCase {
             packId: "gemma-4-12b-q4-session",
             artifact: AlphaBackendArtifact(
                 fileName: "gemma-4-12B-it-UD-Q4_K_XL.gguf",
-                sizeBytes: 6_970_062_656,
+                sizeBytes: 7_366_421_920,
                 finalSha256: String(repeating: "a", count: 64),
                 artifactKind: "local_model_artifact",
                 runtimeMode: .llamaCppGguf,
@@ -11146,7 +11146,7 @@ final class AlphaExtractionTests: XCTestCase {
             packId: "gemma-4-12b-gguf-new",
             tier: .caseAssociate,
             fileName: "gemma-4-12B-it-UD-Q4_K_XL.gguf",
-            sizeBytes: 6_970_062_656,
+            sizeBytes: 7_366_421_920,
             checksumSha256: String(repeating: "e", count: 64),
             artifactKind: "local_model_artifact",
             runtimeMode: .llamaCppGguf,
@@ -11189,7 +11189,7 @@ final class AlphaExtractionTests: XCTestCase {
             packId: "gemma-4-12b-gguf",
             tier: .caseAssociate,
             fileName: "gemma-4-12B-it-UD-Q4_K_XL.gguf",
-            sizeBytes: 6_970_062_656,
+            sizeBytes: 7_366_421_920,
             checksumSha256: String(repeating: "b", count: 64),
             artifactKind: "local_model_artifact",
             runtimeMode: .llamaCppGguf,
@@ -11228,7 +11228,7 @@ final class AlphaExtractionTests: XCTestCase {
             packId: "gemma-4-12b-gguf-new",
             tier: .caseAssociate,
             fileName: "gemma-4-12B-it-UD-Q4_K_XL.gguf",
-            sizeBytes: 6_970_062_656,
+            sizeBytes: 7_366_421_920,
             checksumSha256: String(repeating: "d", count: 64),
             artifactKind: "local_model_artifact",
             runtimeMode: .llamaCppGguf,
@@ -11297,7 +11297,7 @@ final class AlphaExtractionTests: XCTestCase {
         let cachedTarget = AlphaAssistantCatalogDescriptor(
             tier: .caseAssociate,
             packId: "gemma-4-12b-gguf-new",
-            sizeBytes: 6_970_062_656,
+            sizeBytes: 7_366_421_920,
             checksumSha256: String(repeating: "b", count: 64),
             artifactKind: "local_model_artifact",
             runtimeMode: .llamaCppGguf,
@@ -11337,11 +11337,19 @@ final class AlphaExtractionTests: XCTestCase {
         let cachedGGUF = AlphaAssistantCatalogDescriptor(
             tier: .caseAssociate,
             packId: "gemma-4-12b-gguf",
-            sizeBytes: 6_970_062_656,
+            sizeBytes: 7_366_421_920,
             checksumSha256: String(repeating: "c", count: 64),
             artifactKind: "local_model_artifact",
             runtimeMode: .llamaCppGguf,
-            developmentOnly: false
+            developmentOnly: false,
+            draftArtifact: AlphaAssistantDraftArtifactDescriptor(
+                fileName: "mtp-gemma-4-12b-it.gguf",
+                sizeBytes: 465_109_248,
+                checksumSha256: String(repeating: "d", count: 64),
+                artifactKind: "local_model_artifact",
+                downloadURLString: "https://ross.example/drafts/mtp-gemma-4-12b-it.gguf",
+                draftTokens: nil
+            )
         )
 
         let presentation = alphaAssistantSetupPresentation(
@@ -11393,11 +11401,19 @@ final class AlphaExtractionTests: XCTestCase {
         let cachedGGUF = AlphaAssistantCatalogDescriptor(
             tier: .caseAssociate,
             packId: "gemma-4-12b-gguf",
-            sizeBytes: 6_970_062_656,
+            sizeBytes: 7_366_421_920,
             checksumSha256: String(repeating: "c", count: 64),
             artifactKind: "local_model_artifact",
             runtimeMode: .llamaCppGguf,
-            developmentOnly: false
+            developmentOnly: false,
+            draftArtifact: AlphaAssistantDraftArtifactDescriptor(
+                fileName: "mtp-gemma-4-12b-it.gguf",
+                sizeBytes: 465_109_248,
+                checksumSha256: String(repeating: "d", count: 64),
+                artifactKind: "local_model_artifact",
+                downloadURLString: "https://ross.example/drafts/mtp-gemma-4-12b-it.gguf",
+                draftTokens: nil
+            )
         )
 
         let presentation = alphaAssistantSetupPresentation(
@@ -11445,11 +11461,19 @@ final class AlphaExtractionTests: XCTestCase {
         let cachedGGUF = AlphaAssistantCatalogDescriptor(
             tier: .caseAssociate,
             packId: "gemma-4-12b-gguf",
-            sizeBytes: 6_970_062_656,
+            sizeBytes: 7_366_421_920,
             checksumSha256: String(repeating: "c", count: 64),
             artifactKind: "local_model_artifact",
             runtimeMode: .llamaCppGguf,
-            developmentOnly: false
+            developmentOnly: false,
+            draftArtifact: AlphaAssistantDraftArtifactDescriptor(
+                fileName: "mtp-gemma-4-12b-it.gguf",
+                sizeBytes: 465_109_248,
+                checksumSha256: String(repeating: "d", count: 64),
+                artifactKind: "local_model_artifact",
+                downloadURLString: "https://ross.example/drafts/mtp-gemma-4-12b-it.gguf",
+                draftTokens: nil
+            )
         )
 
         let presentation = alphaAssistantSetupPresentation(
@@ -11464,12 +11488,12 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(presentation?.runtimeMode, .llamaCppGguf)
-        XCTAssertEqual(presentation?.totalDownloadBytes, 6_970_062_656)
-        XCTAssertEqual(presentation?.sizeLabel, "7.0 GB")
-        XCTAssertEqual(presentation?.speedLabel, "~10 tok/s")
+        XCTAssertEqual(presentation?.totalDownloadBytes, 7_831_531_168)
+        XCTAssertEqual(presentation?.sizeLabel, "7.8 GB")
+        XCTAssertEqual(presentation?.speedLabel, "~11 tok/s")
         XCTAssertEqual(presentation?.contextLabel, "28,672 tokens")
-        XCTAssertNil(presentation?.companionLabel)
-        XCTAssertEqual(presentation?.etaLabel, "about 10 min")
+        XCTAssertEqual(presentation?.companionLabel, alphaAssistantSetupCompanionLabel(for: .llamaCppGguf))
+        XCTAssertEqual(presentation?.etaLabel, "about 11 min")
     }
 
     func testAssistantSetupPresentationPreservesInstalledMLXForProductionRefresh() {
@@ -11503,11 +11527,19 @@ final class AlphaExtractionTests: XCTestCase {
         let cachedGGUF = AlphaAssistantCatalogDescriptor(
             tier: .caseAssociate,
             packId: "gemma-4-12b-gguf",
-            sizeBytes: 6_970_062_656,
+            sizeBytes: 7_366_421_920,
             checksumSha256: String(repeating: "c", count: 64),
             artifactKind: "local_model_artifact",
             runtimeMode: .llamaCppGguf,
-            developmentOnly: false
+            developmentOnly: false,
+            draftArtifact: AlphaAssistantDraftArtifactDescriptor(
+                fileName: "mtp-gemma-4-12b-it.gguf",
+                sizeBytes: 465_109_248,
+                checksumSha256: String(repeating: "d", count: 64),
+                artifactKind: "local_model_artifact",
+                downloadURLString: "https://ross.example/drafts/mtp-gemma-4-12b-it.gguf",
+                draftTokens: nil
+            )
         )
 
         let presentation = alphaAssistantSetupPresentation(
@@ -11698,7 +11730,7 @@ final class AlphaExtractionTests: XCTestCase {
         let details = alphaAssistantResolvedModelDetails(for: pack)
 
         XCTAssertEqual(details?.modelLabel, "Gemma 4 12B UD Q4_K_XL")
-        XCTAssertEqual(details?.sourceLabel, "Hugging Face · unsloth/gemma-4-12B-it-qat-GGUF")
+        XCTAssertEqual(details?.sourceLabel, "Hugging Face · unsloth/gemma-4-12b-it-GGUF")
         XCTAssertEqual(details?.draftCompanionLabel, "mtp-gemma-4-12b-it.gguf")
     }
 
@@ -12267,7 +12299,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(fallback.draftArtifact?.fileName, "mtp-gemma-4-26B-A4B-it.gguf")
         XCTAssertEqual(
             fallback.draftArtifact?.downloadURLString,
-            "https://huggingface.co/unsloth/gemma-4-26B-A4B-it-qat-GGUF/resolve/main/mtp-gemma-4-26B-A4B-it.gguf"
+            "https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF/resolve/main/mtp-gemma-4-26B-A4B-it.gguf"
         )
     }
 

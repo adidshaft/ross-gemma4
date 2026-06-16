@@ -15,9 +15,9 @@ Normal product UI shows assistant levels, not model names. Technical names, repo
 
 | User tier | Technical model | Repo | Runtime | Download |
 | --- | --- | --- | --- | --- |
-| Quick Start | Gemma 4 E4B UD Q4_K_XL | `unsloth/gemma-4-E4B-it-qat-GGUF` | `gemma_local_runtime` | about 4.3 GB |
-| Case Associate | Gemma 4 12B UD Q4_K_XL | `unsloth/gemma-4-12B-it-qat-GGUF` | `gemma_local_runtime` | about 7.0 GB |
-| Senior Drafting Support | Gemma 4 26B-A4B UD Q4_K_XL | `unsloth/gemma-4-26B-A4B-it-qat-GGUF` | `gemma_local_runtime` | about 14.5 GB |
+| Quick Start | Gemma 4 E4B UD Q4_K_XL | `unsloth/gemma-4-E4B-it-GGUF` | `gemma_local_runtime` | about 5.2 GB |
+| Case Associate | Gemma 4 12B UD Q4_K_XL | `unsloth/gemma-4-12b-it-GGUF` | `gemma_local_runtime` | about 7.8 GB |
+| Senior Drafting Support | Gemma 4 26B-A4B UD Q4_K_XL | `unsloth/gemma-4-26B-A4B-it-GGUF` | `gemma_local_runtime` | about 17.5 GB |
 
 Quick Start and Case Associate GGUF packs also carry official MTP draft companions in the configured lineup. Senior Drafting Support also keeps an MTP draft companion, but it is still treated as the heaviest local path.
 
@@ -53,19 +53,19 @@ Quick Start:
 
 - minimum: 4-6 GB RAM phone
 - recommended: 6-8 GB RAM
-- download: about 4.3 GB
+- download: about 5.2 GB
 
 Case Associate:
 
 - minimum: 6-8 GB RAM
 - recommended: 8-12 GB RAM
-- download: about 7.0 GB
+- download: about 7.8 GB
 
 Senior Drafting Support:
 
 - minimum: 8-12 GB RAM
 - recommended: 12-18 GB RAM
-- download: about 14.5 GB
+- download: about 17.5 GB
 
 Embedding model:
 

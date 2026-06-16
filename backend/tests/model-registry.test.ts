@@ -69,20 +69,20 @@ test("canonical private assistant registry maps tiers to the current three-pack 
 
   assert.equal(quickStart.displayName, "Quick Start");
   assert.equal(quickStart.technicalModelName, "Gemma 4 E4B UD Q4_K_XL");
-  assert.equal(quickStart.repo, "unsloth/gemma-4-E4B-it-qat-GGUF");
+  assert.equal(quickStart.repo, "unsloth/gemma-4-E4B-it-GGUF");
   assert.equal(quickStart.quantization, "UD-Q4_K_XL");
   assert.equal(quickStart.runtimeMode, "gemma_local_runtime");
-  assert.equal(quickStart.approxDownloadSizeMb, 4215);
+  assert.equal(quickStart.approxDownloadSizeMb, 5224);
 
   assert.equal(caseAssociate.displayName, "Case Associate");
   assert.equal(caseAssociate.technicalModelName, "Gemma 4 12B UD Q4_K_XL");
-  assert.equal(caseAssociate.repo, "unsloth/gemma-4-12B-it-qat-GGUF");
+  assert.equal(caseAssociate.repo, "unsloth/gemma-4-12b-it-GGUF");
   assert.equal(caseAssociate.alternateRepo, undefined);
   assert.equal(caseAssociate.quantization, "UD-Q4_K_XL");
 
   assert.equal(seniorDrafting.displayName, "Senior Drafting Support");
   assert.equal(seniorDrafting.technicalModelName, "Gemma 4 26B-A4B UD Q4_K_XL");
-  assert.equal(seniorDrafting.repo, "unsloth/gemma-4-26B-A4B-it-qat-GGUF");
+  assert.equal(seniorDrafting.repo, "unsloth/gemma-4-26B-A4B-it-GGUF");
   assert.equal(seniorDrafting.alternateRepo, undefined);
   assert.equal(seniorDrafting.quantization, "UD-Q4_K_XL");
 
@@ -133,15 +133,15 @@ test("development model catalog keeps the latest GGUF naming even for tiny dev a
   const senior = iosBody.manifest.payload.packs.find((pack) => pack.tier === "senior_drafting_support");
 
   assert.equal(quickStart?.technicalModelName, "Gemma 4 E4B UD Q4_K_XL");
-  assert.equal(quickStart?.repo, "unsloth/gemma-4-E4B-it-qat-GGUF");
+  assert.equal(quickStart?.repo, "unsloth/gemma-4-E4B-it-GGUF");
   assert.equal(quickStart?.quantization, "UD-Q4_K_XL");
 
   assert.equal(caseAssociate?.technicalModelName, "Gemma 4 12B UD Q4_K_XL");
-  assert.equal(caseAssociate?.repo, "unsloth/gemma-4-12B-it-qat-GGUF");
+  assert.equal(caseAssociate?.repo, "unsloth/gemma-4-12b-it-GGUF");
   assert.equal(caseAssociate?.quantization, "UD-Q4_K_XL");
 
   assert.equal(senior?.technicalModelName, "Gemma 4 26B-A4B UD Q4_K_XL");
-  assert.equal(senior?.repo, "unsloth/gemma-4-26B-A4B-it-qat-GGUF");
+  assert.equal(senior?.repo, "unsloth/gemma-4-26B-A4B-it-GGUF");
   assert.equal(senior?.quantization, "UD-Q4_K_XL");
 
   for (const pack of [quickStart, caseAssociate, senior]) {

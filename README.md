@@ -66,15 +66,15 @@ Ask in Hindi or Bengali and Ross keeps the answer in that language while still g
 
 ## Gemma 4 Capability Packs
 
-ROSS-Gemma4 is wired for real, quantized Gemma 4 packs on-device. The visible lineup is now a 3-pack Gemma 4 ladder, with GGUF packs delivered through `llama.cpp` via `llama.swift` and supported iPhone paths able to prefer MLX or built-in CoreAI at runtime when that is the better local choice. The current pinned GGUF artifacts come from the newer `unsloth/gemma-4-*-it-qat-GGUF` repos, the iOS installer supports packaged MLX directory artifacts, and capable iPhone MLX setups now use smaller official assistant draft companions for speculative decoding on the E4B and 12B tiers. A simulator smoke run has proven the GGUF lane with a local developer artifact, and live Hugging Face probes on June 16, 2026 confirmed that the configured assistant files resolve and support byte-range checks. The full physical iPhone download, resume, verify, activate, and imported-file QA pass is still pending.
+ROSS-Gemma4 is wired for real, quantized Gemma 4 packs on-device. The visible lineup is now a 3-pack Gemma 4 ladder, with GGUF packs delivered through `llama.cpp` via `llama.swift` and supported iPhone paths able to prefer MLX or built-in CoreAI at runtime when that is the better local choice. The current pinned GGUF artifacts now track the latest plain `unsloth/gemma-4-*-it-GGUF` repos, the iOS installer supports packaged MLX directory artifacts, and capable iPhone MLX setups now use official assistant draft companions for speculative decoding on all three visible GGUF tiers. A simulator smoke run has proven the GGUF lane with a local developer artifact, and live Hugging Face probes on June 16, 2026 confirmed that the configured assistant files resolve and support byte-range checks. The full physical iPhone download, resume, verify, activate, and imported-file QA pass is still pending.
 
 There are three product-visible Gemma 4 capability packs available for download inside the app:
 
 | Tier | Pack | Base Model | Quantization | Size | Use Case | Target Device |
 | --- | --- | --- | --- | --- | --- | --- |
-| **Quick Start** | `gemma-4-e4b-q4` | Gemma 4 E4B | `UD-Q4_K_XL` | ~4.3 GB | Lighter setup, short legal Q&A, intake review, and smaller matter work. | Constrained Phones |
-| **Case Associate** | `gemma-4-12b-q4` | Gemma 4 12B | `UD-Q4_K_XL` | ~7.0 GB | Balanced chronology building, issue extraction, larger file handling, and everyday drafting support. | Modern Phones/Tablets |
-| **Senior Drafting Support**| `gemma-4-26b-a4b-q4` | Gemma 4 26B-A4B | `UD-Q4_K_XL` | ~14.5 GB | Advanced drafting, clinic workstation mode, complex cross-referencing. | High-End Local Workstations |
+| **Quick Start** | `gemma-4-e4b-q4` | Gemma 4 E4B | `UD-Q4_K_XL` | ~5.2 GB | Lighter setup, short legal Q&A, intake review, and smaller matter work. | Constrained Phones |
+| **Case Associate** | `gemma-4-12b-q4` | Gemma 4 12B | `UD-Q4_K_XL` | ~7.8 GB | Balanced chronology building, issue extraction, larger file handling, and everyday drafting support. | Modern Phones/Tablets |
+| **Senior Drafting Support**| `gemma-4-26b-a4b-q4` | Gemma 4 26B-A4B | `UD-Q4_K_XL` | ~17.5 GB | Advanced drafting, clinic workstation mode, complex cross-referencing. | High-End Local Workstations |
 
 The older Flash setup tier remains in the codebase only for compatibility and recovery paths. It is no longer shown in normal onboarding or assistant selection.
 
@@ -130,7 +130,7 @@ The iOS project integrates with a `llama.cpp` wrapper (`AlphaLlamaCppEngine`) fo
 
 ## Model Artifact Status
 
-Model downloads are mapped to the newer Gemma 4 QAT GGUF URLs hosted on Hugging Face (`unsloth/gemma-4-*-it-qat-GGUF`). The app includes foreground download, resume-data, size/checksum, activation, repair, and cleanup plumbing. Live URL/range probes on June 16, 2026 verified the configured remote files without downloading the multi-GB bodies. The end-to-end physical-device download proof is still required before treating the packs as release-ready.
+Model downloads are mapped to the latest plain Gemma 4 GGUF URLs hosted on Hugging Face (`unsloth/gemma-4-*-it-GGUF`). The app includes foreground download, resume-data, size/checksum, activation, repair, and cleanup plumbing. Live URL/range probes on June 16, 2026 verified the configured remote files without downloading the multi-GB bodies. The end-to-end physical-device download proof is still required before treating the packs as release-ready.
 
 ## Model Download and Verification
 
