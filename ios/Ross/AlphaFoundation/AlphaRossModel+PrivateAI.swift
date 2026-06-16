@@ -813,6 +813,19 @@ func alphaAssistantSetupCompactSummaryLabel(
     return "\(runtimeLabel) · \(sizeLabel)"
 }
 
+func alphaAssistantBuiltInAlternativeHint(
+    selectedRuntimeMode: AlphaPackRuntimeMode?,
+    systemAssistantAvailable: Bool,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String? {
+    guard systemAssistantAvailable,
+          let selectedRuntimeMode,
+          selectedRuntimeMode != .appleFoundationModels else {
+        return nil
+    }
+    return rossLocalized("assistant_built_in_alternative_hint", languageCode: languageCode)
+}
+
 private func alphaExistingRuntimeMode(
     for tier: AlphaCapabilityTier,
     installedPacks: [AlphaInstalledModelPack]

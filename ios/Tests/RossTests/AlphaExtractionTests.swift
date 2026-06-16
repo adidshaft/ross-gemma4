@@ -8157,6 +8157,36 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(label, "Built-in CoreAI model preferred")
     }
 
+    func testAssistantBuiltInAlternativeHintAppearsWhenDownloadRuntimeIsSelected() {
+        let hint = alphaAssistantBuiltInAlternativeHint(
+            selectedRuntimeMode: .mlxSwiftLm,
+            systemAssistantAvailable: true,
+            languageCode: "en"
+        )
+
+        XCTAssertEqual(
+            hint,
+            "Built-in CoreAI is also available on this iPhone without a download."
+        )
+    }
+
+    func testAssistantBuiltInAlternativeHintStaysHiddenWhenBuiltInIsAlreadySelected() {
+        XCTAssertNil(
+            alphaAssistantBuiltInAlternativeHint(
+                selectedRuntimeMode: .appleFoundationModels,
+                systemAssistantAvailable: true,
+                languageCode: "en"
+            )
+        )
+        XCTAssertNil(
+            alphaAssistantBuiltInAlternativeHint(
+                selectedRuntimeMode: .llamaCppGguf,
+                systemAssistantAvailable: false,
+                languageCode: "en"
+            )
+        )
+    }
+
     func testAssistantOfferDoesNotPreferBuiltInActivationWhenMLXIsPreferred() {
         XCTAssertFalse(
             alphaAssistantOfferPrefersBuiltInActivation(

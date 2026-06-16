@@ -745,6 +745,13 @@ struct AlphaPrivateAIOfferCard: View {
         return label.isEmpty ? nil : label
     }
 
+    private var builtInAlternativeHint: String? {
+        alphaAssistantBuiltInAlternativeHint(
+            selectedRuntimeMode: setupPresentation?.runtimeMode,
+            systemAssistantAvailable: systemAssistantAvailable
+        )
+    }
+
     private var isSettingUp: Bool {
         if installedPack != nil {
             return false
@@ -880,6 +887,13 @@ struct AlphaPrivateAIOfferCard: View {
                         .foregroundStyle(Color.rossInk.opacity(0.56))
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.top, 2)
+                }
+
+                if let builtInAlternativeHint {
+                    Text(builtInAlternativeHint)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(Color.rossInk.opacity(0.56))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 if variantOptions.count > 1 {

@@ -2359,6 +2359,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "இந்த விருப்பம் assistant files download செய்யாமல் இந்த iPhone-இல் தொடங்க முடியும்.",
             "te": "ఈ ఎంపిక assistant files download చేయకుండా ఈ iPhone లో ప్రారంభమవుతుంది."
         ],
+        "assistant_built_in_alternative_hint": [
+            "en": "Built-in CoreAI is also available on this iPhone without a download.",
+            "hi": "Built-in CoreAI भी इस iPhone पर बिना download के उपलब्ध है।",
+            "bn": "Built-in CoreAI-ও এই iPhone-এ download ছাড়াই available আছে।",
+            "ta": "Built-in CoreAI-யும் இந்த iPhone-இல் download இல்லாமல் கிடைக்கும்.",
+            "te": "Built-in CoreAI కూడా ఈ iPhone లో download లేకుండా అందుబాటులో ఉంది."
+        ],
         "assistant_available_runtimes": [
             "en": "Available runtimes",
             "hi": "Available runtimes",

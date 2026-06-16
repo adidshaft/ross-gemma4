@@ -239,6 +239,13 @@ struct AlphaOnboardingModelSelector: View {
             rossLocalized("assistant_state_checking")
     }
 
+    private var selectedBuiltInHint: String? {
+        alphaAssistantBuiltInAlternativeHint(
+            selectedRuntimeMode: model.assistantSetupPresentation(for: selectedTier)?.runtimeMode,
+            systemAssistantAvailable: model.systemAssistantHealth(for: selectedTier)?.available == true
+        )
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: compact ? 6 : 8) {
             HStack {
@@ -273,6 +280,13 @@ struct AlphaOnboardingModelSelector: View {
                 font: (compact ? Font.caption2 : Font.caption).weight(.medium)
             )
             .padding(.top, 2)
+
+            if let selectedBuiltInHint {
+                Text(selectedBuiltInHint)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(Color.rossInk.opacity(0.56))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .padding(compact ? 9 : 11)
         .rossNativeGlassSurface(
