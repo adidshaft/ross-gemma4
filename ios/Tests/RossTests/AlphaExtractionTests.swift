@@ -11203,7 +11203,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(plan.maxInputChars, 61_200)
-        XCTAssertEqual(plan.sourceBlockLimit, 20)
+        XCTAssertEqual(plan.sourceBlockLimit, 18)
         XCTAssertEqual(plan.sourceExcerptChars, 1_700)
     }
 
