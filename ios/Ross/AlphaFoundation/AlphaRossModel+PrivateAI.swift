@@ -1628,9 +1628,10 @@ extension AlphaRossModel {
 
     func checkForAssistantModelUpdates(force: Bool = false) {
         guard persisted.settings.autoModelUpdateChecksEnabled || force else { return }
-        if !force,
-           let lastRefresh = persisted.lastModelCatalogRefresh,
-           Date().timeIntervalSince(lastRefresh) < 86_400 {
+        let cachedCatalogIsStale = alphaAssistantCatalogRefreshIsStale(
+            lastRefresh: persisted.lastModelCatalogRefresh
+        )
+        if !force, !cachedCatalogIsStale {
             return
         }
         let allInstalledPacks = persisted.installedPacks.filter { !$0.developmentOnly }
@@ -1643,29 +1644,34 @@ extension AlphaRossModel {
             preferredAgainst: allInstalledPacks,
             lastInvocation: lastInvocation
         )
-        let fallbackCandidates = updateCheckPacks.compactMap { pack in
-            let resolvedTier = AlphaCapabilityTier.normalizedAssistantSelection(pack.tier) ?? pack.tier
-            let preferredRuntime = alphaPreferredAssistantRuntimeMode(
-                for: resolvedTier,
-                existingRuntimeMode: alphaExistingRuntimeMode(for: resolvedTier, installedPacks: allInstalledPacks),
-                lastInvocation: lastInvocation
-            )
-            let fallbackDescriptor = alphaPreferredAssistantCatalogFallback(
-                for: resolvedTier,
-                preferredRuntimeMode: preferredRuntime,
-                cachedCatalogs: persisted.cachedAssistantCatalogs
-            )
-            let dismissed = dismissedCandidates.first {
-                $0.tier == pack.tier &&
-                    $0.availablePackId == fallbackDescriptor.packId &&
-                    $0.dismissedAt != nil
+        let fallbackCandidates: [AlphaModelUpdateCandidate]
+        if cachedCatalogIsStale {
+            fallbackCandidates = []
+        } else {
+            fallbackCandidates = updateCheckPacks.compactMap { pack in
+                let resolvedTier = AlphaCapabilityTier.normalizedAssistantSelection(pack.tier) ?? pack.tier
+                let preferredRuntime = alphaPreferredAssistantRuntimeMode(
+                    for: resolvedTier,
+                    existingRuntimeMode: alphaExistingRuntimeMode(for: resolvedTier, installedPacks: allInstalledPacks),
+                    lastInvocation: lastInvocation
+                )
+                let fallbackDescriptor = alphaPreferredAssistantCatalogFallback(
+                    for: resolvedTier,
+                    preferredRuntimeMode: preferredRuntime,
+                    cachedCatalogs: persisted.cachedAssistantCatalogs
+                )
+                let dismissed = dismissedCandidates.first {
+                    $0.tier == pack.tier &&
+                        $0.availablePackId == fallbackDescriptor.packId &&
+                        $0.dismissedAt != nil
+                }
+                return alphaAssistantUpdateCandidate(
+                    installedPack: pack,
+                    availableDescriptor: fallbackDescriptor,
+                    existingDismissed: dismissed,
+                    lastInvocation: lastInvocation
+                )
             }
-            return alphaAssistantUpdateCandidate(
-                installedPack: pack,
-                availableDescriptor: fallbackDescriptor,
-                existingDismissed: dismissed,
-                lastInvocation: lastInvocation
-            )
         }
 
         persisted.modelUpdateCandidates = fallbackCandidates
