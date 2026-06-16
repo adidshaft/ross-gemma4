@@ -28,45 +28,74 @@ extension AlphaRossModel {
         runtimeEnvironment: AlphaLocalRuntimeEnvironment
     )
 
-    private func activatedRecoveredAssistantFallback(for tier: AlphaCapabilityTier) -> AlphaInstalledModelPack? {
-        let resolvedTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
-        guard let recoveredFallback = recoveredInstalledPackFromDisk(tier: resolvedTier),
-              recoveredFallback.runtimeMode != .appleFoundationModels,
-              recoveredFallback.artifactKind != "system_model",
-              alphaInstalledAssistantPackPassesRuntimeValidation(recoveredFallback) else {
+    private func matchingInstalledPack(for pack: AlphaInstalledModelPack) -> AlphaInstalledModelPack? {
+        persisted.installedPacks.first {
+            $0.id == pack.id ||
+                (
+                    $0.packId == pack.packId &&
+                        $0.runtimeMode == pack.runtimeMode &&
+                        $0.artifactKind == pack.artifactKind &&
+                        $0.installPath == pack.installPath
+                )
+        }
+    }
+
+    private func activatedAssistantExecutionFallback(
+        for tier: AlphaCapabilityTier,
+        currentPack: AlphaInstalledModelPack?
+    ) -> AlphaInstalledModelPack? {
+        let resolvedTier = AlphaCapabilityTier.normalizedAssistantSelection(currentPack?.tier ?? tier) ?? tier
+        guard let fallbackPack = alphaRecoveredAssistantExecutionFallback(
+            from: persisted,
+            selectedTier: resolvedTier,
+            currentPack: currentPack
+        ) else {
             return nil
         }
 
         let activatedFallback = AlphaInstalledModelPack(
-            id: recoveredFallback.id,
-            packId: recoveredFallback.packId,
-            tier: recoveredFallback.tier,
-            installPath: recoveredFallback.installPath,
-            checksumSha256: recoveredFallback.checksumSha256,
-            artifactKind: recoveredFallback.artifactKind,
-            runtimeMode: recoveredFallback.runtimeMode,
-            developmentOnly: recoveredFallback.developmentOnly,
-            checksumVerified: recoveredFallback.checksumVerified,
-            minimumAppVersion: recoveredFallback.minimumAppVersion,
-            installedAt: recoveredFallback.installedAt,
+            id: fallbackPack.id,
+            packId: fallbackPack.packId,
+            tier: fallbackPack.tier,
+            installPath: fallbackPack.installPath,
+            checksumSha256: fallbackPack.checksumSha256,
+            artifactKind: fallbackPack.artifactKind,
+            runtimeMode: fallbackPack.runtimeMode,
+            developmentOnly: fallbackPack.developmentOnly,
+            checksumVerified: fallbackPack.checksumVerified,
+            minimumAppVersion: fallbackPack.minimumAppVersion,
+            installedAt: fallbackPack.installedAt,
             isActive: true
         )
 
         var nextState = persisted
         nextState.installedPacks = nextState.installedPacks.map { pack in
             var copy = pack
-            copy.isActive = false
+            copy.isActive = matchingInstalledPack(for: activatedFallback)?.id == copy.id
             return copy
         }
-        nextState.installedPacks.removeAll {
-            (AlphaCapabilityTier.normalizedAssistantSelection($0.tier) ?? $0.tier) == resolvedTier
+        if !nextState.installedPacks.contains(where: {
+            $0.id == activatedFallback.id ||
+                (
+                    $0.packId == activatedFallback.packId &&
+                        $0.runtimeMode == activatedFallback.runtimeMode &&
+                        $0.artifactKind == activatedFallback.artifactKind &&
+                        $0.installPath == activatedFallback.installPath
+                )
+        }) {
+            nextState.installedPacks.insert(activatedFallback, at: 0)
         }
-        nextState.installedPacks.insert(activatedFallback, at: 0)
         nextState.settings.activeTier = resolvedTier
 
-        let installedBytes = alphaExpectedDownloadedAssistantArtifact(for: activatedFallback)?.bytes ?? 0
+        let installedBytes: Int64 = if activatedFallback.runtimeMode == .appleFoundationModels || activatedFallback.artifactKind == "system_model" {
+            0
+        } else {
+            alphaExpectedDownloadedAssistantArtifact(for: activatedFallback)?.bytes ?? 0
+        }
         if let jobIndex = nextState.modelJobs.firstIndex(where: {
-            (AlphaCapabilityTier.normalizedAssistantSelection($0.tier) ?? $0.tier) == resolvedTier
+            $0.packId == activatedFallback.packId &&
+                $0.runtimeMode == activatedFallback.runtimeMode &&
+                $0.artifactKind == activatedFallback.artifactKind
         }) {
             nextState.modelJobs[jobIndex].packId = activatedFallback.packId
             nextState.modelJobs[jobIndex].state = .installed
@@ -102,7 +131,10 @@ extension AlphaRossModel {
         nextState.ledgerEntries.insert(
             AlphaPrivacyLedgerEntry(
                 title: "Assistant fallback enabled",
-                detail: "Ross switched back to the downloaded private assistant for this tier because the built-in CoreAI model was not available right now. Case files stayed on this device.",
+                detail: assistantFallbackLedgerDetail(
+                    previousPack: currentPack,
+                    fallbackPack: activatedFallback
+                ),
                 purpose: .model_verification,
                 payloadClass: .no_case_data,
                 endpointLabel: "device://private-assistant-fallback",
@@ -113,6 +145,48 @@ extension AlphaRossModel {
         persisted = nextState
         persist()
         return activatedFallback
+    }
+
+    private func assistantFallbackLedgerDetail(
+        previousPack: AlphaInstalledModelPack?,
+        fallbackPack: AlphaInstalledModelPack
+    ) -> String {
+        if let previousPack,
+           previousPack.runtimeMode != fallbackPack.runtimeMode {
+            return "Ross switched from \(previousPack.runtimeMode.displayLabel) to \(fallbackPack.runtimeMode.displayLabel) for this tier because the earlier runtime was not available right now. Case files stayed on this device."
+        }
+        return "Ross switched to another available private assistant runtime for this tier because the earlier runtime was not available right now. Case files stayed on this device."
+    }
+
+    private func shouldRetryMatterAskWithAssistantFallback(
+        output: AlphaLocalModelOutput,
+        currentPack: AlphaInstalledModelPack?
+    ) -> Bool {
+        guard let errorCategory = output.errorCategory?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !errorCategory.isEmpty else {
+            return false
+        }
+        guard output.rawText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return false
+        }
+        let retryableCategories: Set<String> = [
+            "unsupported_runtime",
+            "unknown_runtime_error",
+            "runtime_dependency_unavailable",
+            "model_path_missing",
+            "inference_failed"
+        ]
+        guard retryableCategories.contains(errorCategory) else {
+            return false
+        }
+        guard let fallbackPack = alphaRecoveredAssistantExecutionFallback(
+            from: persisted,
+            selectedTier: currentPack?.tier ?? persisted.settings.activeTier ?? selectedTier,
+            currentPack: currentPack
+        ) else {
+            return false
+        }
+        return fallbackPack.id != currentPack?.id
     }
 
     private func resolvedLocalAskProvider(
@@ -148,10 +222,10 @@ extension AlphaRossModel {
             return resolved
         }
 
-        guard currentPack?.runtimeMode == .appleFoundationModels || currentPack?.artifactKind == "system_model" else {
-            return nil
-        }
-        guard let fallbackPack = activatedRecoveredAssistantFallback(for: requestedTier) else {
+        guard let fallbackPack = activatedAssistantExecutionFallback(
+            for: requestedTier,
+            currentPack: currentPack
+        ) else {
             return nil
         }
         return resolve(for: fallbackPack)
@@ -1305,19 +1379,20 @@ extension AlphaRossModel {
             samplerSettings: persisted.settings.llamaSamplerSettings
         )
         let requestedTier = activePack?.tier ?? persisted.settings.activeTier ?? selectedTier
+        let askExecutor: @Sendable (AlphaLocalModelInput) async -> AlphaLocalModelOutput = { _ in
+            AlphaLocalModelOutput(
+                rawText: "",
+                parsedJson: nil,
+                schemaValid: false,
+                warnings: ["Development local ask output is disabled."],
+                sourceRefs: [],
+                errorCategory: "development_artifact_blocked"
+            )
+        }
         guard let resolvedProvider = resolvedLocalAskProvider(
             requestedTier: requestedTier,
             task: .matterQuestionAnswer,
-            executor: { _ in
-                AlphaLocalModelOutput(
-                    rawText: "",
-                    parsedJson: nil,
-                    schemaValid: false,
-                    warnings: ["Development local ask output is disabled."],
-                    sourceRefs: [],
-                    errorCategory: "development_artifact_blocked"
-                )
-            }
+            executor: askExecutor
         ) else {
             return
         }
@@ -1337,45 +1412,15 @@ extension AlphaRossModel {
         input.promptBudgetOverrideChars = budgetPlan.maxInputChars
         input.sourceBlockLimitOverride = budgetPlan.sourceBlockLimit
         input.sourceExcerptCharsOverride = budgetPlan.sourceExcerptChars
-        let runtimeHealth = provider.runtimeHealth()
-        let assistantDisplayName: String? = {
-            if provider.runtimeMode == .appleFoundationModels {
-                return alphaFoundationRuntimeDisplayLabel()
-            }
-            guard let activePack else { return nil }
-            return alphaAssistantModelArtifacts[activePack.tier]?.displayName
-        }()
-        let runtimeSelectionReason = alphaAssistantRuntimeChoiceLabel(
-            selectedRuntimeMode: provider.runtimeMode,
-            tier: requestedTier,
-            systemAssistantAvailable: provider.runtimeMode == .appleFoundationModels ? runtimeHealth.available : nil,
-            lastInvocation: lastModelInvocation
-        )
-        let preferredRuntimeMode = alphaPreferredAssistantRuntimeMode(
-            for: requestedTier,
-            existingRuntimeMode: nil,
-            systemAssistantAvailable: provider.runtimeMode == .appleFoundationModels ? runtimeHealth.available : nil,
-            lastInvocation: lastModelInvocation
-        )
-
         let chatSessionID = storedResult.chatSessionID
         let chatTurnID = storedResult.chatTurnID
-        let invocation = AlphaModelInvocationStore.begin(
-            task: .matterQuestionAnswer,
-            runtimeMode: provider.runtimeMode,
-            capabilityTier: provider.capabilityTier,
-            caseId: scopeCaseID,
-            documentId: selectedDocuments.first?.id,
-            extractionRunId: nil,
-            assistantDisplayName: assistantDisplayName,
-            preferredRuntimeMode: preferredRuntimeMode,
-            runtimeSelectionReason: runtimeSelectionReason,
-            runtimeContextTokens: runtimeHealth.estimatedContextTokens,
-            runtimeInputBudgetChars: runtimeHealth.maxInputChars,
-            accelerationMode: runtimeHealth.accelerationMode,
-            accelerationDraftTokens: runtimeHealth.accelerationDraftTokens,
-            accelerationDraftModelLabel: runtimeHealth.draftModelPathLabel,
-            input: input
+        let invocation = beginMatterQuestionInvocation(
+            provider: provider,
+            activePack: activePack,
+            requestedTier: requestedTier,
+            input: input,
+            scopeCaseID: scopeCaseID,
+            selectedDocumentID: selectedDocuments.first?.id
         )
         // Precompute outside the mutate closure: `activeLocalModelRunningStatus`
         // ultimately reads `persisted`, which would trigger an exclusive-access
@@ -1390,67 +1435,144 @@ extension AlphaRossModel {
             turn.modelInvocation = invocation
         }
         Task {
-            var streamedOutput: AlphaLocalModelOutput?
-            var trackedInvocation = invocation
             let streamingAnswerTitle = alphaAskStreamingAnswerTitle()
-            if let stream = provider.runStreaming(input) {
-                var lastPartialUpdatedAt = Date.distantPast
-                var lastPublishedText: String?
-                for await partial in stream {
-                    streamedOutput = partial
-                    let cleaned = partial.rawText.trimmingCharacters(in: .whitespacesAndNewlines)
-                    let now = Date()
-                    if !cleaned.isEmpty, trackedInvocation.timeToFirstTokenMs == nil {
-                        trackedInvocation = AlphaModelInvocationStore.recordFirstToken(trackedInvocation, at: now)
-                    }
-                    guard alphaShouldPublishStreamingPartial(
-                        cleanedText: cleaned,
-                        lastPublishedText: lastPublishedText,
-                        elapsedSinceLastPublish: now.timeIntervalSince(lastPartialUpdatedAt),
-                        schemaValid: partial.schemaValid
-                    ) else { continue }
-                    lastPartialUpdatedAt = now
-                    lastPublishedText = cleaned
-                    await MainActor.run {
-                        let sections = AlphaMatterAskPayloadParser.displaySections(from: [cleaned])
-                        let displaySections = sections.isEmpty ? [cleaned] : sections
-                        // Pre-compute filtered source refs BEFORE entering the mutation
-                        // closure. Reading `persisted` (via sourceRefPointsToDocument)
-                        // while we hold an inout reference to a path inside `persisted`
-                        // triggers Swift's exclusive-access runtime check and crashes.
-                        let filteredSourceRefs = partial.sourceRefs.filter {
-                            self.sourceRefPointsToDocument($0)
+            func runAttempt(
+                with resolvedProvider: AlphaResolvedLocalAskProvider,
+                seedInvocation: AlphaLocalModelInvocation
+            ) async -> (output: AlphaLocalModelOutput, completedInvocation: AlphaLocalModelInvocation) {
+                var streamedOutput: AlphaLocalModelOutput?
+                var trackedInvocation = seedInvocation
+                if let stream = resolvedProvider.provider.runStreaming(input) {
+                    var lastPartialUpdatedAt = Date.distantPast
+                    var lastPublishedText: String?
+                    for await partial in stream {
+                        streamedOutput = partial
+                        let cleaned = partial.rawText.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let now = Date()
+                        if !cleaned.isEmpty, trackedInvocation.timeToFirstTokenMs == nil {
+                            trackedInvocation = AlphaModelInvocationStore.recordFirstToken(trackedInvocation, at: now)
                         }
-                        let runningStatus = self.activeLocalModelRunningStatus()
-                        self.updateStoredAskTurn(
-                            scopeCaseID: scopeCaseID,
-                            sessionID: chatSessionID,
-                            turnID: chatTurnID
-                        ) { turn in
-                            turn.answerTitle = streamingAnswerTitle
-                            turn.answerSections = displaySections
-                            turn.sourceRefs = filteredSourceRefs
-                            turn.statusNote = runningStatus
-                            turn.modelInvocation = trackedInvocation
-                        }
-                        if var latest = self.latestAskResult, latest.chatTurnID == chatTurnID {
-                            latest.answerTitle = streamingAnswerTitle
-                            latest.answerSections = displaySections
-                            latest.caseFileSources = filteredSourceRefs
-                            latest.statusNote = runningStatus
-                            latest.modelInvocation = trackedInvocation
-                            self.latestAskResult = latest
+                        guard alphaShouldPublishStreamingPartial(
+                            cleanedText: cleaned,
+                            lastPublishedText: lastPublishedText,
+                            elapsedSinceLastPublish: now.timeIntervalSince(lastPartialUpdatedAt),
+                            schemaValid: partial.schemaValid
+                        ) else { continue }
+                        lastPartialUpdatedAt = now
+                        lastPublishedText = cleaned
+                        await MainActor.run {
+                            let sections = AlphaMatterAskPayloadParser.displaySections(from: [cleaned])
+                            let displaySections = sections.isEmpty ? [cleaned] : sections
+                            // Pre-compute filtered source refs BEFORE entering the mutation
+                            // closure. Reading `persisted` (via sourceRefPointsToDocument)
+                            // while we hold an inout reference to a path inside `persisted`
+                            // triggers Swift's exclusive-access runtime check and crashes.
+                            let filteredSourceRefs = partial.sourceRefs.filter {
+                                self.sourceRefPointsToDocument($0)
+                            }
+                            let runningStatus = self.activeLocalModelRunningStatus()
+                            self.updateStoredAskTurn(
+                                scopeCaseID: scopeCaseID,
+                                sessionID: chatSessionID,
+                                turnID: chatTurnID
+                            ) { turn in
+                                turn.answerTitle = streamingAnswerTitle
+                                turn.answerSections = displaySections
+                                turn.sourceRefs = filteredSourceRefs
+                                turn.statusNote = runningStatus
+                                turn.modelInvocation = trackedInvocation
+                            }
+                            if var latest = self.latestAskResult, latest.chatTurnID == chatTurnID {
+                                latest.answerTitle = streamingAnswerTitle
+                                latest.answerSections = displaySections
+                                latest.caseFileSources = filteredSourceRefs
+                                latest.statusNote = runningStatus
+                                latest.modelInvocation = trackedInvocation
+                                self.latestAskResult = latest
+                            }
                         }
                     }
                 }
+
+                let output: AlphaLocalModelOutput
+                if let streamedOutput {
+                    output = streamedOutput
+                } else {
+                    output = await resolvedProvider.provider.run(input)
+                }
+                return (
+                    output,
+                    AlphaModelInvocationStore.complete(trackedInvocation, output: output)
+                )
             }
-            let output: AlphaLocalModelOutput
-            if let streamedOutput {
-                output = streamedOutput
-            } else {
-                output = await provider.run(input)
+
+            var currentResolvedProvider = resolvedProvider
+            var attempt = await runAttempt(
+                with: currentResolvedProvider,
+                seedInvocation: invocation
+            )
+
+            if shouldRetryMatterAskWithAssistantFallback(
+                output: attempt.output,
+                currentPack: currentResolvedProvider.activePack
+            ),
+               let fallbackPack = await MainActor.run(body: {
+                   self.activatedAssistantExecutionFallback(
+                    for: requestedTier,
+                    currentPack: currentResolvedProvider.activePack
+                   )
+               }),
+               let fallbackResolvedProvider = await MainActor.run(body: {
+                   self.resolvedLocalAskProvider(
+                    requestedTier: requestedTier,
+                    task: .matterQuestionAnswer,
+                    executor: askExecutor
+                   )
+               }),
+               (
+                fallbackResolvedProvider.activePack?.id != currentResolvedProvider.activePack?.id ||
+                    fallbackResolvedProvider.provider.runtimeMode != currentResolvedProvider.provider.runtimeMode
+               ) {
+                let fallbackInvocation = await MainActor.run {
+                    let fallbackInvocation = self.beginMatterQuestionInvocation(
+                        provider: fallbackResolvedProvider.provider,
+                        activePack: fallbackResolvedProvider.activePack ?? fallbackPack,
+                        requestedTier: requestedTier,
+                        input: input,
+                        scopeCaseID: scopeCaseID,
+                        selectedDocumentID: selectedDocuments.first?.id
+                    )
+                    let runningStatus = self.activeLocalModelRunningStatus()
+                    self.updateStoredAskTurn(
+                        scopeCaseID: scopeCaseID,
+                        sessionID: chatSessionID,
+                        turnID: chatTurnID
+                    ) { turn in
+                        turn.answerTitle = streamingAnswerTitle
+                        turn.answerSections = []
+                        turn.sourceRefs = []
+                        turn.statusNote = runningStatus
+                        turn.modelInvocation = fallbackInvocation
+                    }
+                    if var latest = self.latestAskResult, latest.chatTurnID == chatTurnID {
+                        latest.answerTitle = streamingAnswerTitle
+                        latest.answerSections = []
+                        latest.caseFileSources = []
+                        latest.statusNote = runningStatus
+                        latest.modelInvocation = fallbackInvocation
+                        self.latestAskResult = latest
+                    }
+                    return fallbackInvocation
+                }
+                currentResolvedProvider = fallbackResolvedProvider
+                attempt = await runAttempt(
+                    with: currentResolvedProvider,
+                    seedInvocation: fallbackInvocation
+                )
             }
-            let completedInvocation = AlphaModelInvocationStore.complete(trackedInvocation, output: output)
+
+            let output = attempt.output
+            let completedInvocation = attempt.completedInvocation
             await MainActor.run {
                 let requestedLanguage = self.alphaAnswerLanguage(for: question)
                 let needsReviewWarning = alphaLocalAskNeedsReviewWarning(
@@ -1465,7 +1587,7 @@ extension AlphaRossModel {
                     question: question,
                     scopeCaseID: scopeCaseID,
                     sourcePack: sourcePack,
-                    providerRuntimeMode: provider.runtimeMode,
+                    providerRuntimeMode: currentResolvedProvider.provider.runtimeMode,
                     requestedLanguage: requestedLanguage
                 )
                 guard let payload else {
@@ -1580,6 +1702,53 @@ extension AlphaRossModel {
             ],
             statusNote: rossLocalized("ask_private_assistant_answer_unavailable"),
             needsReviewWarning: rossLocalized("ask_private_assistant_answer_unavailable_warning")
+        )
+    }
+
+    func beginMatterQuestionInvocation(
+        provider: any AlphaLocalModelProvider,
+        activePack: AlphaInstalledModelPack?,
+        requestedTier: AlphaCapabilityTier,
+        input: AlphaLocalModelInput,
+        scopeCaseID: UUID?,
+        selectedDocumentID: UUID?
+    ) -> AlphaLocalModelInvocation {
+        let runtimeHealth = provider.runtimeHealth()
+        let assistantDisplayName: String? = {
+            if provider.runtimeMode == .appleFoundationModels {
+                return alphaFoundationRuntimeDisplayLabel()
+            }
+            guard let activePack else { return nil }
+            return alphaAssistantModelArtifacts[activePack.tier]?.displayName
+        }()
+        let runtimeSelectionReason = alphaAssistantRuntimeChoiceLabel(
+            selectedRuntimeMode: provider.runtimeMode,
+            tier: requestedTier,
+            systemAssistantAvailable: provider.runtimeMode == .appleFoundationModels ? runtimeHealth.available : nil,
+            lastInvocation: lastModelInvocation
+        )
+        let preferredRuntimeMode = alphaPreferredAssistantRuntimeMode(
+            for: requestedTier,
+            existingRuntimeMode: nil,
+            systemAssistantAvailable: provider.runtimeMode == .appleFoundationModels ? runtimeHealth.available : nil,
+            lastInvocation: lastModelInvocation
+        )
+        return AlphaModelInvocationStore.begin(
+            task: .matterQuestionAnswer,
+            runtimeMode: provider.runtimeMode,
+            capabilityTier: provider.capabilityTier,
+            caseId: scopeCaseID,
+            documentId: selectedDocumentID,
+            extractionRunId: nil,
+            assistantDisplayName: assistantDisplayName,
+            preferredRuntimeMode: preferredRuntimeMode,
+            runtimeSelectionReason: runtimeSelectionReason,
+            runtimeContextTokens: runtimeHealth.estimatedContextTokens,
+            runtimeInputBudgetChars: runtimeHealth.maxInputChars,
+            accelerationMode: runtimeHealth.accelerationMode,
+            accelerationDraftTokens: runtimeHealth.accelerationDraftTokens,
+            accelerationDraftModelLabel: runtimeHealth.draftModelPathLabel,
+            input: input
         )
     }
 

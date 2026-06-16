@@ -6242,6 +6242,111 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(model.persisted.settings.activeTier, .caseAssociate)
     }
 
+    @MainActor
+    func testCanRunRealLocalAskFallsBackToRetainedAlternateInstalledRuntime() throws {
+        let previousModelValidator = AlphaLlamaCppProvider.modelLoadValidator
+        defer { AlphaLlamaCppProvider.modelLoadValidator = previousModelValidator }
+
+        let brokenData = Data("broken ask runtime".utf8)
+        let brokenChecksum = sha256Hex(brokenData)
+        let brokenRelativePath = "model-packs/case_associate/retained-broken-runtime.gguf"
+        let brokenArtifactURL = alphaAbsoluteURL(for: brokenRelativePath)
+        let brokenManifestURL = alphaModelArtifactManifestURL(forArtifactAt: brokenArtifactURL)
+
+        let fallbackData = Data("fallback ask runtime".utf8)
+        let fallbackChecksum = sha256Hex(fallbackData)
+        let fallbackRelativePath = "model-packs/case_associate/retained-fallback-runtime.gguf"
+        let fallbackArtifactURL = alphaAbsoluteURL(for: fallbackRelativePath)
+        let fallbackManifestURL = alphaModelArtifactManifestURL(forArtifactAt: fallbackArtifactURL)
+
+        try FileManager.default.createDirectory(
+            at: brokenArtifactURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try brokenData.write(to: brokenArtifactURL)
+        try fallbackData.write(to: fallbackArtifactURL)
+        defer {
+            try? FileManager.default.removeItem(at: brokenArtifactURL)
+            try? FileManager.default.removeItem(at: brokenManifestURL)
+            try? FileManager.default.removeItem(at: fallbackArtifactURL)
+            try? FileManager.default.removeItem(at: fallbackManifestURL)
+        }
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let brokenManifest = AlphaModelArtifactManifest(
+            packId: "retained-broken-runtime",
+            tier: .caseAssociate,
+            fileName: brokenArtifactURL.lastPathComponent,
+            relativePath: brokenRelativePath,
+            checksumSha256: brokenChecksum,
+            bytes: Int64(brokenData.count),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            verifiedAt: .now
+        )
+        let fallbackManifest = AlphaModelArtifactManifest(
+            packId: "retained-fallback-runtime",
+            tier: .caseAssociate,
+            fileName: fallbackArtifactURL.lastPathComponent,
+            relativePath: fallbackRelativePath,
+            checksumSha256: fallbackChecksum,
+            bytes: Int64(fallbackData.count),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            verifiedAt: .now
+        )
+        try encoder.encode(brokenManifest).write(to: brokenManifestURL, options: .atomic)
+        try encoder.encode(fallbackManifest).write(to: fallbackManifestURL, options: .atomic)
+
+        AlphaLlamaCppProvider.modelLoadValidator = { path in
+            if path == brokenArtifactURL.path() {
+                throw NSError(
+                    domain: "RossAskFallbackTests",
+                    code: 77,
+                    userInfo: [NSLocalizedDescriptionKey: "broken retained runtime"]
+                )
+            }
+        }
+
+        let brokenPack = AlphaInstalledModelPack(
+            packId: brokenManifest.packId,
+            tier: .caseAssociate,
+            installPath: brokenRelativePath,
+            checksumSha256: brokenChecksum,
+            artifactKind: brokenManifest.artifactKind,
+            runtimeMode: brokenManifest.runtimeMode,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+        let fallbackPack = AlphaInstalledModelPack(
+            packId: fallbackManifest.packId,
+            tier: .caseAssociate,
+            installPath: fallbackRelativePath,
+            checksumSha256: fallbackChecksum,
+            artifactKind: fallbackManifest.artifactKind,
+            runtimeMode: fallbackManifest.runtimeMode,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: false
+        )
+
+        let model = AlphaRossModel()
+        var state = AlphaPersistedState.empty()
+        state.settings.activeTier = .caseAssociate
+        state.installedPacks = [brokenPack, fallbackPack]
+        model.persisted = state
+
+        XCTAssertTrue(model.canRunRealLocalAsk(question: "What does the selected file say?", scopeCaseID: nil))
+        XCTAssertEqual(model.persisted.installedPacks.count, 2)
+        XCTAssertEqual(model.persisted.installedPacks.first(where: \.isActive)?.packId, fallbackPack.packId)
+        XCTAssertTrue(model.persisted.installedPacks.contains(where: { $0.packId == brokenPack.packId }))
+        XCTAssertTrue(model.persisted.ledgerEntries.contains { $0.title == "Assistant fallback enabled" })
+    }
+
     #if canImport(FoundationModels)
     @available(iOS 26.0, macOS 26.0, *)
     @MainActor
@@ -6324,6 +6429,84 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(model.persisted.installedPacks.first?.installPath, relativePath)
         XCTAssertEqual(model.activePack?.runtimeMode, .llamaCppGguf)
         XCTAssertTrue(model.persisted.ledgerEntries.contains { $0.title == "Assistant fallback enabled" })
+    }
+
+    @available(iOS 26.0, macOS 26.0, *)
+    @MainActor
+    func testCanRunRealLocalAskFallsBackFromUnavailableSystemAssistantWithoutDroppingRetainedDownload() async throws {
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        defer {
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+        }
+
+        let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
+        let previousModelValidator = AlphaLlamaCppProvider.modelLoadValidator
+        AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in false }
+        AlphaLlamaCppProvider.modelLoadValidator = { _ in }
+        defer {
+            AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
+            AlphaLlamaCppProvider.modelLoadValidator = previousModelValidator
+        }
+
+        let data = Data("retained downloaded fallback".utf8)
+        let checksum = sha256Hex(data)
+        let relativePath = "model-packs/case_associate/retained-downloaded-fallback.gguf"
+        let artifactURL = alphaAbsoluteURL(for: relativePath)
+        let manifestURL = alphaModelArtifactManifestURL(forArtifactAt: artifactURL)
+        try FileManager.default.createDirectory(
+            at: artifactURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try data.write(to: artifactURL)
+        defer {
+            try? FileManager.default.removeItem(at: artifactURL)
+            try? FileManager.default.removeItem(at: manifestURL)
+        }
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let manifest = AlphaModelArtifactManifest(
+            packId: "retained-downloaded-fallback",
+            tier: .caseAssociate,
+            fileName: artifactURL.lastPathComponent,
+            relativePath: relativePath,
+            checksumSha256: checksum,
+            bytes: Int64(data.count),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            verifiedAt: .now
+        )
+        try encoder.encode(manifest).write(to: manifestURL, options: .atomic)
+
+        let model = AlphaRossModel()
+        var state = AlphaPersistedState.empty()
+        let systemPack = alphaSystemAssistantPack(for: .caseAssociate)
+        let downloadedPack = AlphaInstalledModelPack(
+            packId: manifest.packId,
+            tier: .caseAssociate,
+            installPath: relativePath,
+            checksumSha256: checksum,
+            artifactKind: manifest.artifactKind,
+            runtimeMode: manifest.runtimeMode,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: false
+        )
+        state.settings.activeTier = .caseAssociate
+        state.installedPacks = [systemPack, downloadedPack]
+        model.persisted = state
+
+        XCTAssertTrue(model.canRunRealLocalAsk(question: "What does the selected file say?", scopeCaseID: nil))
+        XCTAssertEqual(model.persisted.installedPacks.count, 2)
+        XCTAssertEqual(model.persisted.installedPacks.first(where: \.isActive)?.packId, downloadedPack.packId)
+        XCTAssertTrue(model.persisted.installedPacks.contains(where: { $0.runtimeMode == .appleFoundationModels }))
+        XCTAssertTrue(model.persisted.installedPacks.contains(where: { $0.packId == downloadedPack.packId }))
     }
     #endif
 

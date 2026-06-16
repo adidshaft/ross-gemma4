@@ -687,14 +687,31 @@ func alphaRecoveredAssistantExecutionFallback(
     currentPack: AlphaInstalledModelPack?
 ) -> AlphaInstalledModelPack? {
     let resolvedTier = AlphaCapabilityTier.normalizedAssistantSelection(currentPack?.tier ?? selectedTier) ?? selectedTier
-    guard let currentPack,
-          currentPack.runtimeMode == .appleFoundationModels || currentPack.artifactKind == "system_model",
-          let requestedTier = resolvedTier,
-          AlphaLocalModelRuntime.runtimeHealth(
-            activePack: currentPack,
+    guard let requestedTier = resolvedTier else {
+        return nil
+    }
+
+    let currentPackAvailable = currentPack.flatMap {
+        AlphaLocalModelRuntime.runtimeHealth(
+            activePack: $0,
             requestedTier: requestedTier
-          )?.available != true,
-          let recoveredFallback = alphaRecoveredInstalledPackFromDisk(tier: requestedTier),
+        )?.available
+    } == true
+
+    if let currentPack, alphaInstalledAssistantPackPassesRuntimeValidation(currentPack), currentPackAvailable {
+        return nil
+    }
+
+    if let preferredFallback = alphaPreferredInstalledPack(
+        for: requestedTier,
+        installedPacks: state.installedPacks,
+        lastInvocation: alphaLastModelInvocation(in: state)
+    ), preferredFallback.id != currentPack?.id {
+        return preferredFallback
+    }
+
+    guard let recoveredFallback = alphaRecoveredInstalledPackFromDisk(tier: requestedTier),
+          recoveredFallback.id != currentPack?.id,
           recoveredFallback.runtimeMode != .appleFoundationModels,
           recoveredFallback.artifactKind != "system_model",
           alphaInstalledAssistantPackPassesRuntimeValidation(recoveredFallback) else {
