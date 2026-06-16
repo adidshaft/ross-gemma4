@@ -152,11 +152,8 @@ struct AlphaPrivateAISettingsScreen: View {
 
     private var askUpgradeSummary: (title: String, detail: String?)? {
         alphaAskUpgradeSetupSummary(
-            result: model.latestAskResult,
-            selectedTier: model.selectedTier,
-            overrideTier: model.assistantSetupRuntimeOverrideTier,
-            overrideMode: model.assistantSetupRuntimeOverrideMode,
-            selectedRuntimeMode: model.assistantSetupPresentation(for: model.selectedTier)?.runtimeMode,
+            expectedTier: model.pendingAskUpgradeExpectedTier,
+            expectedRuntimeMode: model.pendingAskUpgradeExpectedRuntimeMode,
             currentRoute: model.path.last
         )
     }
@@ -873,12 +870,9 @@ struct AlphaPrivateAIOfferCard: View {
 
     private var targetsCurrentAskUpgrade: Bool {
         alphaAssistantOfferTargetsCurrentAskUpgrade(
-            result: model.latestAskResult,
+            expectedTier: model.pendingAskUpgradeExpectedTier,
+            expectedRuntimeMode: model.pendingAskUpgradeExpectedRuntimeMode,
             offerTier: offer.tier,
-            selectedTier: model.selectedTier,
-            overrideTier: model.assistantSetupRuntimeOverrideTier,
-            overrideMode: model.assistantSetupRuntimeOverrideMode,
-            selectedRuntimeMode: model.assistantSetupPresentation(for: model.selectedTier)?.runtimeMode,
             offerRuntimeMode: setupPresentation?.runtimeMode,
             currentRoute: model.path.last
         )
@@ -1077,30 +1071,28 @@ func alphaAssistantOfferPrefersBuiltInActivation(
 }
 
 func alphaAssistantOfferTargetsCurrentAskUpgrade(
-    result: AlphaAskResult?,
+    expectedTier: AlphaCapabilityTier?,
+    expectedRuntimeMode: AlphaPackRuntimeMode?,
     offerTier: AlphaCapabilityTier,
-    selectedTier: AlphaCapabilityTier,
-    overrideTier: AlphaCapabilityTier?,
-    overrideMode: AlphaPackRuntimeMode?,
-    selectedRuntimeMode: AlphaPackRuntimeMode?,
     offerRuntimeMode: AlphaPackRuntimeMode?,
     currentRoute: AlphaRoute?
 ) -> Bool {
     guard alphaAskUpgradeSetupSummary(
-        result: result,
-        selectedTier: selectedTier,
-        overrideTier: overrideTier,
-        overrideMode: overrideMode,
-        selectedRuntimeMode: selectedRuntimeMode,
+        expectedTier: expectedTier,
+        expectedRuntimeMode: expectedRuntimeMode,
         currentRoute: currentRoute
     ) != nil else {
         return false
     }
-    guard AlphaCapabilityTier.assistantSelectionsMatch(offerTier, selectedTier),
+    guard let expectedTier,
+          AlphaCapabilityTier.assistantSelectionsMatch(offerTier, expectedTier),
           let offerRuntimeMode else {
         return false
     }
-    return offerRuntimeMode == overrideMode
+    if let expectedRuntimeMode {
+        return offerRuntimeMode == expectedRuntimeMode
+    }
+    return true
 }
 
 struct AlphaAssistantVariantOption: Identifiable, Hashable, Sendable {

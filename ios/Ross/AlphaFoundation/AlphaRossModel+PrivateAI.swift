@@ -1684,10 +1684,18 @@ extension AlphaRossModel {
         persisted.installedPacks.insert(retainedPack, at: 0)
         if activate {
             persisted.settings.activeTier = pack.tier
+            resumePendingAskUpgradeIfReady(
+                activeTier: pack.tier,
+                activeRuntimeMode: pack.runtimeMode
+            )
         } else if !persisted.installedPacks.contains(where: \.isActive) {
             retainedPack.isActive = true
             persisted.installedPacks[0] = retainedPack
             persisted.settings.activeTier = pack.tier
+            resumePendingAskUpgradeIfReady(
+                activeTier: pack.tier,
+                activeRuntimeMode: pack.runtimeMode
+            )
         }
     }
 
@@ -2262,6 +2270,10 @@ extension AlphaRossModel {
             AlphaCapabilityTier.assistantSelectionsMatch(job.tier, pack.tier) && job.state != .installed
         }
         persisted.settings.activeTier = pack.tier
+        resumePendingAskUpgradeIfReady(
+            activeTier: pack.tier,
+            activeRuntimeMode: pack.runtimeMode
+        )
         persist()
     }
 
@@ -2392,6 +2404,10 @@ extension AlphaRossModel {
             }
             persisted.installedPacks.insert(installed, at: 0)
             persisted.settings.activeTier = tier
+            resumePendingAskUpgradeIfReady(
+                activeTier: tier,
+                activeRuntimeMode: .deterministicDev
+            )
             updateJob(jobID) {
                 $0.state = .installed
                 $0.packId = installed.packId

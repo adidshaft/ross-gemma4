@@ -791,6 +791,9 @@ final class AlphaRossModel {
     var selectedTier: AlphaCapabilityTier = .caseAssociate
     var assistantSetupRuntimeOverrideTier: AlphaCapabilityTier?
     var assistantSetupRuntimeOverrideMode: AlphaPackRuntimeMode?
+    var pendingAskUpgradeReturnRoute: AlphaRoute?
+    var pendingAskUpgradeExpectedTier: AlphaCapabilityTier?
+    var pendingAskUpgradeExpectedRuntimeMode: AlphaPackRuntimeMode?
     var caseDraftTitle = ""
     var askDrafts: [UUID: String] = [:]
     var globalAskDraft = ""

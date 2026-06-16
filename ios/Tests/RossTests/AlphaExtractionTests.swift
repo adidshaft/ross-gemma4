@@ -9167,7 +9167,7 @@ final class AlphaExtractionTests: XCTestCase {
 
     @MainActor
     func testOpenAskUpgradeSetupPreselectsUpgradeTierAndRuntime() {
-        let model = AlphaRossModel(previewState: .empty())
+        let model = AlphaRossModel(previewState: .empty(), previewPath: [.askRoss])
         let result = AlphaAskResult(
             kind: .userAsk,
             question: "What is the hearing date?",
@@ -9191,6 +9191,37 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(model.selectedTier, .caseAssociate)
         XCTAssertEqual(model.assistantSetupPresentation(for: .caseAssociate)?.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(model.pendingAskUpgradeReturnRoute, .askRoss)
+        XCTAssertEqual(model.pendingAskUpgradeExpectedTier, .caseAssociate)
+        XCTAssertEqual(model.pendingAskUpgradeExpectedRuntimeMode, .llamaCppGguf)
+        XCTAssertEqual(model.path.last, .privateAISettings)
+    }
+
+    @MainActor
+    func testOpenAskUpgradeSetupCapturesCaseScopedReturnRoute() {
+        let caseID = UUID()
+        let model = AlphaRossModel(previewState: .empty(), previewPath: [.askCase(caseID)])
+        let result = AlphaAskResult(
+            kind: .userAsk,
+            question: "What changed in this matter?",
+            scopeCaseID: caseID,
+            scopeLabel: "Matter",
+            selectedDocumentTitles: [],
+            answerTitle: "Focused answer",
+            answerSections: [],
+            caseFileSources: [],
+            publicLawPreview: nil,
+            publicLawResults: [],
+            statusNote: nil,
+            needsReviewWarning: "Focused sources",
+            modelInvocation: nil,
+            upgradeTierHint: .caseAssociate,
+            upgradeRuntimeHint: .llamaCppGguf
+        )
+
+        model.openAskUpgradeSetup(for: result)
+
+        XCTAssertEqual(model.pendingAskUpgradeReturnRoute, .askCase(caseID))
         XCTAssertEqual(model.path.last, .privateAISettings)
     }
 
@@ -9226,96 +9257,37 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
-    func testAskUpgradeSetupSummaryAppearsForMatchingPreselectedUpgrade() {
-        let result = AlphaAskResult(
-            kind: .userAsk,
-            question: "What changed?",
-            scopeCaseID: nil,
-            scopeLabel: "All work",
-            selectedDocumentTitles: [],
-            answerTitle: "Focused answer",
-            answerSections: [],
-            caseFileSources: [],
-            publicLawPreview: nil,
-            publicLawResults: [],
-            statusNote: nil,
-            needsReviewWarning: "Focused sources",
-            modelInvocation: nil,
-            upgradeTierHint: .caseAssociate,
-            upgradeRuntimeHint: .llamaCppGguf
-        )
-
+    func testAskUpgradeSetupSummaryAppearsForPendingUpgradeHandoff() {
         let summary = alphaAskUpgradeSetupSummary(
-            result: result,
-            selectedTier: .caseAssociate,
-            overrideTier: .caseAssociate,
-            overrideMode: .llamaCppGguf,
-            selectedRuntimeMode: .llamaCppGguf,
+            expectedTier: .caseAssociate,
+            expectedRuntimeMode: .llamaCppGguf,
             currentRoute: .privateAISettings
         )
 
-        XCTAssertEqual(summary?.title, "Prepared Case Associate with GGUF for this ask")
+        XCTAssertEqual(
+            summary?.title,
+            alphaAskUpgradeSetupSummaryTitle(
+                .caseAssociate,
+                runtimeMode: .llamaCppGguf
+            )
+        )
         XCTAssertEqual(summary?.detail, "GGUF can keep more of the selected files and longer context on device.")
     }
 
-    func testAskUpgradeSetupSummaryHidesWhenOverrideNoLongerMatchesSelection() {
-        let result = AlphaAskResult(
-            kind: .userAsk,
-            question: "What changed?",
-            scopeCaseID: nil,
-            scopeLabel: "All work",
-            selectedDocumentTitles: [],
-            answerTitle: "Focused answer",
-            answerSections: [],
-            caseFileSources: [],
-            publicLawPreview: nil,
-            publicLawResults: [],
-            statusNote: nil,
-            needsReviewWarning: "Focused sources",
-            modelInvocation: nil,
-            upgradeTierHint: .caseAssociate,
-            upgradeRuntimeHint: .llamaCppGguf
-        )
-
-        XCTAssertNil(
-            alphaAskUpgradeSetupSummary(
-                result: result,
-                selectedTier: .caseAssociate,
-                overrideTier: .caseAssociate,
-                overrideMode: .mlxSwiftLm,
-                selectedRuntimeMode: .mlxSwiftLm,
-                currentRoute: .privateAISettings
-            )
-        )
+    func testAskUpgradeSetupSummaryHidesWithoutPendingExpectedTier() {
+        XCTAssertNil(alphaAskUpgradeSetupSummary(
+            expectedTier: nil,
+            expectedRuntimeMode: .llamaCppGguf,
+            currentRoute: .privateAISettings
+        ))
     }
 
     func testAssistantOfferTargetsCurrentAskUpgradeWhenMatchingOfferIsSelected() {
-        let result = AlphaAskResult(
-            kind: .userAsk,
-            question: "What changed?",
-            scopeCaseID: nil,
-            scopeLabel: "All work",
-            selectedDocumentTitles: [],
-            answerTitle: "Focused answer",
-            answerSections: [],
-            caseFileSources: [],
-            publicLawPreview: nil,
-            publicLawResults: [],
-            statusNote: nil,
-            needsReviewWarning: "Focused sources",
-            modelInvocation: nil,
-            upgradeTierHint: .caseAssociate,
-            upgradeRuntimeHint: .llamaCppGguf
-        )
-
         XCTAssertTrue(
             alphaAssistantOfferTargetsCurrentAskUpgrade(
-                result: result,
+                expectedTier: .caseAssociate,
+                expectedRuntimeMode: .llamaCppGguf,
                 offerTier: .caseAssociate,
-                selectedTier: .caseAssociate,
-                overrideTier: .caseAssociate,
-                overrideMode: .llamaCppGguf,
-                selectedRuntimeMode: .llamaCppGguf,
                 offerRuntimeMode: .llamaCppGguf,
                 currentRoute: .privateAISettings
             )
@@ -9323,36 +9295,35 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     func testAssistantOfferDoesNotTargetCurrentAskUpgradeWhenOfferRuntimeDiffers() {
-        let result = AlphaAskResult(
-            kind: .userAsk,
-            question: "What changed?",
-            scopeCaseID: nil,
-            scopeLabel: "All work",
-            selectedDocumentTitles: [],
-            answerTitle: "Focused answer",
-            answerSections: [],
-            caseFileSources: [],
-            publicLawPreview: nil,
-            publicLawResults: [],
-            statusNote: nil,
-            needsReviewWarning: "Focused sources",
-            modelInvocation: nil,
-            upgradeTierHint: .caseAssociate,
-            upgradeRuntimeHint: .llamaCppGguf
-        )
-
         XCTAssertFalse(
             alphaAssistantOfferTargetsCurrentAskUpgrade(
-                result: result,
+                expectedTier: .caseAssociate,
+                expectedRuntimeMode: .llamaCppGguf,
                 offerTier: .caseAssociate,
-                selectedTier: .caseAssociate,
-                overrideTier: .caseAssociate,
-                overrideMode: .llamaCppGguf,
-                selectedRuntimeMode: .llamaCppGguf,
                 offerRuntimeMode: .mlxSwiftLm,
                 currentRoute: .privateAISettings
             )
         )
+    }
+
+    @MainActor
+    func testResumePendingAskUpgradeIfReadyReturnsToCapturedAskRoute() {
+        let caseID = alphaSharedWorkspaceID
+        let model = AlphaRossModel(previewState: .empty(), previewPath: [.askCase(caseID), .privateAISettings])
+        model.pendingAskUpgradeReturnRoute = .askCase(caseID)
+        model.pendingAskUpgradeExpectedTier = .caseAssociate
+        model.pendingAskUpgradeExpectedRuntimeMode = .llamaCppGguf
+
+        model.resumePendingAskUpgradeIfReady(
+            activeTier: .caseAssociate,
+            activeRuntimeMode: .llamaCppGguf
+        )
+
+        XCTAssertEqual(model.path.last, .askCase(caseID))
+        XCTAssertEqual(model.askSelectedScopeCaseID, caseID)
+        XCTAssertNil(model.pendingAskUpgradeReturnRoute)
+        XCTAssertNil(model.pendingAskUpgradeExpectedTier)
+        XCTAssertNil(model.pendingAskUpgradeExpectedRuntimeMode)
     }
 
     func testAssistantOfferDoesNotPreferBuiltInActivationWhenMLXIsPreferred() {

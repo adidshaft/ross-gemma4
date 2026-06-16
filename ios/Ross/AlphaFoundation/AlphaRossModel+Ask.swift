@@ -1124,15 +1124,66 @@ extension AlphaRossModel {
     }
 
     func openAskUpgradeSetup(for result: AlphaAskResult) {
-        if let upgradeTierHint = result.upgradeTierHint {
-            selectedTier = upgradeTierHint
-        }
         let runtimeOverrideTier =
             result.upgradeTierHint ??
             result.modelInvocation.flatMap { AlphaCapabilityTier(rawValue: $0.capabilityTier) } ??
             selectedTier
+        pendingAskUpgradeReturnRoute = alphaAskUpgradeReturnRoute(
+            for: result,
+            currentRoute: path.last
+        )
+        pendingAskUpgradeExpectedTier = runtimeOverrideTier
+        pendingAskUpgradeExpectedRuntimeMode = result.upgradeRuntimeHint
+        selectedTier = runtimeOverrideTier
         setAssistantSetupRuntimeOverride(result.upgradeRuntimeHint, for: runtimeOverrideTier)
         path.append(.privateAISettings)
+    }
+
+    func clearPendingAskUpgrade() {
+        pendingAskUpgradeReturnRoute = nil
+        pendingAskUpgradeExpectedTier = nil
+        pendingAskUpgradeExpectedRuntimeMode = nil
+    }
+
+    func resumePendingAskUpgradeIfReady(
+        activeTier: AlphaCapabilityTier,
+        activeRuntimeMode: AlphaPackRuntimeMode
+    ) {
+        guard path.last == .privateAISettings,
+              let expectedTier = pendingAskUpgradeExpectedTier,
+              AlphaCapabilityTier.assistantSelectionsMatch(expectedTier, activeTier) else {
+            return
+        }
+        if let expectedRuntimeMode = pendingAskUpgradeExpectedRuntimeMode,
+           expectedRuntimeMode != activeRuntimeMode {
+            return
+        }
+
+        let targetRoute: AlphaRoute
+        if case .askCase(let caseID) = pendingAskUpgradeReturnRoute,
+           persisted.cases.contains(where: { $0.id == caseID }) {
+            targetRoute = .askCase(caseID)
+        } else if pendingAskUpgradeReturnRoute == .askRoss {
+            targetRoute = .askRoss
+        } else if let caseID = latestAskResult?.scopeCaseID,
+                  persisted.cases.contains(where: { $0.id == caseID }) {
+            targetRoute = .askCase(caseID)
+        } else {
+            targetRoute = .askRoss
+        }
+
+        clearPendingAskUpgrade()
+        path.removeAll { $0 == .privateAISettings || $0.isAskRoute }
+        switch targetRoute {
+        case .askRoss:
+            askSelectedScopeCaseID = nil
+        case .askCase(let caseID):
+            selectedCaseID = caseID
+            askSelectedScopeCaseID = caseID
+        default:
+            break
+        }
+        path.append(targetRoute)
     }
 
     func updateAskHistory(turnID: UUID?, mutate: (inout AlphaAskResult) -> Void) {
@@ -4109,44 +4160,37 @@ func alphaAskUpgradeSetupSummaryTitle(
     return "Prepared \(tier.setupTitle(languageCode: languageCode)) for this ask"
 }
 
+func alphaAskUpgradeReturnRoute(
+    for result: AlphaAskResult,
+    currentRoute: AlphaRoute?
+) -> AlphaRoute {
+    if let currentRoute, currentRoute.isAskRoute {
+        return currentRoute
+    }
+    if let scopeCaseID = result.scopeCaseID {
+        return .askCase(scopeCaseID)
+    }
+    return .askRoss
+}
+
 func alphaAskUpgradeSetupSummary(
-    result: AlphaAskResult?,
-    selectedTier: AlphaCapabilityTier,
-    overrideTier: AlphaCapabilityTier?,
-    overrideMode: AlphaPackRuntimeMode?,
-    selectedRuntimeMode: AlphaPackRuntimeMode?,
+    expectedTier: AlphaCapabilityTier?,
+    expectedRuntimeMode: AlphaPackRuntimeMode?,
     currentRoute: AlphaRoute?
 ) -> (title: String, detail: String?)? {
     guard currentRoute == .privateAISettings,
-          let result,
-          result.upgradeTierHint != nil || result.upgradeRuntimeHint != nil else {
+          let expectedTier else {
         return nil
-    }
-
-    let expectedTier =
-        result.upgradeTierHint ??
-        result.modelInvocation.flatMap { AlphaCapabilityTier(rawValue: $0.capabilityTier) } ??
-        selectedTier
-    guard AlphaCapabilityTier.assistantSelectionsMatch(selectedTier, expectedTier),
-          AlphaCapabilityTier.assistantSelectionsMatch(overrideTier, expectedTier) else {
-        return nil
-    }
-
-    if let runtimeHint = result.upgradeRuntimeHint {
-        guard overrideMode == runtimeHint,
-              selectedRuntimeMode == runtimeHint else {
-            return nil
-        }
     }
 
     return (
         title: alphaAskUpgradeSetupSummaryTitle(
             expectedTier,
-            runtimeMode: result.upgradeRuntimeHint
+            runtimeMode: expectedRuntimeMode
         ),
         detail: alphaAskUpgradeActionDetail(
-            result.upgradeTierHint ?? expectedTier,
-            runtimeMode: result.upgradeRuntimeHint
+            expectedTier,
+            runtimeMode: expectedRuntimeMode
         )
     )
 }
