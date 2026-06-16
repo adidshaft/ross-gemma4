@@ -9240,18 +9240,36 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
-    func testLocalAskUpgradeRuntimeHintStaysNilForNonCoreAIRuntimes() {
-        XCTAssertNil(
+    func testLocalAskUpgradeRuntimeHintPrefersMLXOverGGUFWhenItKeepsMoreSelectedFileCoverage() {
+        XCTAssertEqual(
             alphaLocalAskUpgradeRuntimeHint(
                 runtimeWarnings: [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts],
-                sourcePackCount: 9,
-                includedSourceCount: 3,
-                sourceBlockLimit: 3,
+                sourcePackCount: 16,
+                includedSourceCount: 12,
+                sourceBlockLimit: 12,
                 capabilityTier: .caseAssociate,
-                runtimeMode: .mlxSwiftLm,
+                runtimeMode: .llamaCppGguf,
                 isPhoneFormFactor: true,
                 physicalMemoryBytes: 12 * 1_073_741_824,
                 freeStorageGB: 24,
+                systemAssistantAvailable: true
+            ),
+            .mlxSwiftLm
+        )
+    }
+
+    func testLocalAskUpgradeRuntimeHintStaysNilWhenTierHasNoAlternateRuntime() {
+        XCTAssertNil(
+            alphaLocalAskUpgradeRuntimeHint(
+                runtimeWarnings: [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts],
+                sourcePackCount: 18,
+                includedSourceCount: 10,
+                sourceBlockLimit: 10,
+                capabilityTier: .seniorDraftingSupport,
+                runtimeMode: .llamaCppGguf,
+                isPhoneFormFactor: true,
+                physicalMemoryBytes: 16 * 1_073_741_824,
+                freeStorageGB: 32,
                 systemAssistantAvailable: true
             )
         )
@@ -9909,6 +9927,205 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertTrue(probeBox.usedMLX)
         XCTAssertFalse(probeBox.usedFoundation)
+        XCTAssertEqual(
+            model.latestAskResult?.modelInvocation?.runtimeMode,
+            AlphaPackRuntimeMode.mlxSwiftLm.rawValue
+        )
+    }
+
+    @available(iOS 26.0, macOS 26.0, *)
+    @MainActor
+    func testLocalAskPreflightUpgradeUsesInstalledMLXBeforeSuggestingDeeperGGUFPass() async throws {
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        let previousSimulatorIdentifier = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"]
+        let previousModelValidator = AlphaLlamaCppProvider.modelLoadValidator
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        setenv("SIMULATOR_MODEL_IDENTIFIER", "iPhone17,2", 1)
+        AlphaLlamaCppProvider.modelLoadValidator = { _ in }
+        defer {
+            AlphaLlamaCppProvider.modelLoadValidator = previousModelValidator
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+            if let previousSimulatorIdentifier {
+                setenv("SIMULATOR_MODEL_IDENTIFIER", previousSimulatorIdentifier, 1)
+            } else {
+                unsetenv("SIMULATOR_MODEL_IDENTIFIER")
+            }
+        }
+
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+        registerModelArtifactCleanup(for: store)
+
+        var activeGGUFPack = try await installGGUFPack(
+            with: store,
+            tier: .caseAssociate,
+            fileName: "gemma-4-12B-it-UD-Q4_K_XL.gguf",
+            packId: "case-gguf"
+        )
+        activeGGUFPack.isActive = true
+        var availableMLXPack = try await installMLXPack(
+            with: store,
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-it-mlx",
+            packId: "case-mlx",
+            fixtureName: "ask-preflight-gguf-to-mlx-\(UUID().uuidString)"
+        )
+        availableMLXPack.isActive = false
+
+        let caseID = UUID()
+        let documents = makeMatterAskDocuments(count: 16)
+        let matter = AlphaCaseMatter(
+            id: caseID,
+            title: "Large file matter",
+            forum: "High Court",
+            stage: .arguments,
+            folderTint: .emerald,
+            localNotice: "Review selected filing",
+            summary: "Matter with a larger local bundle",
+            issueHighlights: [],
+            evidenceNotes: [],
+            draftTasks: [],
+            documents: documents,
+            sourceRefs: []
+        )
+
+        var state = AlphaPersistedState.empty()
+        state.settings.activeTier = .caseAssociate
+        state.installedPacks = [activeGGUFPack, availableMLXPack]
+        state.cases = [matter]
+
+        let model = AlphaRossModel()
+        model.persisted = state
+
+        let preflight = model.localAskPreflightUpgrade(
+            question: "What are the main directions in this matter bundle?",
+            scopeCaseID: caseID,
+            webEnabled: false
+        )
+
+        XCTAssertEqual(preflight?.targetTier, .caseAssociate)
+        XCTAssertNil(preflight?.upgradeTierHint)
+        XCTAssertEqual(preflight?.upgradeRuntimeHint, .llamaCppGguf)
+    }
+
+    @available(iOS 26.0, macOS 26.0, *)
+    @MainActor
+    func testSubmitAskUsesInstalledMLXForLargeMatterBundleBeforeGGUFRun() async throws {
+        final class RuntimeProbeBox: @unchecked Sendable {
+            var usedMLX = false
+            var usedGGUF = false
+        }
+
+        actor StubLlamaContext: AlphaLlamaCompletionContext {
+            func clear() {}
+            func completionInit(
+                text: String,
+                maxNewTokens requestedMaxNewTokens: Int32?,
+                samplerSettings requestedSamplerSettings: AlphaLlamaSamplerSettings?
+            ) throws {}
+            func completionLoop() -> String { "" }
+            func isDone() -> Bool { true }
+            func promptTokenCount() -> Int { 320 }
+            func generatedTokenCount() -> Int { 0 }
+            func accelerationMode() -> AlphaLocalRuntimeAccelerationMode { .standard }
+            func executionPathLabel() -> String { "GGUF should not run" }
+        }
+
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        let previousSimulatorIdentifier = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"]
+        let previousMLXGenerator = AlphaMLXLocalProvider.streamGenerator
+        let previousContextFactory = AlphaLlamaCppProvider.contextFactory
+        let previousModelValidator = AlphaLlamaCppProvider.modelLoadValidator
+        let probeBox = RuntimeProbeBox()
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        setenv("SIMULATOR_MODEL_IDENTIFIER", "iPhone17,2", 1)
+        AlphaMLXLocalProvider.streamGenerator = { _, _, _, _, _, _, onChunk in
+            probeBox.usedMLX = true
+            onChunk?("Selected order")
+            return AlphaMLXGenerationSnapshot(text: "Selected order\n- MLX reviewed the full selected order.")
+        }
+        AlphaLlamaCppProvider.contextFactory = { _, _, _ in
+            probeBox.usedGGUF = true
+            return StubLlamaContext()
+        }
+        AlphaLlamaCppProvider.modelLoadValidator = { _ in }
+        defer {
+            AlphaMLXLocalProvider.streamGenerator = previousMLXGenerator
+            AlphaLlamaCppProvider.contextFactory = previousContextFactory
+            AlphaLlamaCppProvider.modelLoadValidator = previousModelValidator
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+            if let previousSimulatorIdentifier {
+                setenv("SIMULATOR_MODEL_IDENTIFIER", previousSimulatorIdentifier, 1)
+            } else {
+                unsetenv("SIMULATOR_MODEL_IDENTIFIER")
+            }
+        }
+
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+        registerModelArtifactCleanup(for: store)
+
+        var activeGGUFPack = try await installGGUFPack(
+            with: store,
+            tier: .caseAssociate,
+            fileName: "gemma-4-12B-it-UD-Q4_K_XL.gguf",
+            packId: "case-gguf"
+        )
+        activeGGUFPack.isActive = true
+        var availableMLXPack = try await installMLXPack(
+            with: store,
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-it-mlx",
+            packId: "case-mlx",
+            fixtureName: "ask-runtime-gguf-to-mlx-\(UUID().uuidString)"
+        )
+        availableMLXPack.isActive = false
+
+        let caseID = UUID()
+        let documents = makeMatterAskDocuments(count: 16)
+        let matter = AlphaCaseMatter(
+            id: caseID,
+            title: "Large file matter",
+            forum: "High Court",
+            stage: .arguments,
+            folderTint: .emerald,
+            localNotice: "Review selected filing",
+            summary: "Matter with a larger local bundle",
+            issueHighlights: [],
+            evidenceNotes: [],
+            draftTasks: [],
+            documents: documents,
+            sourceRefs: []
+        )
+
+        var state = AlphaPersistedState.empty()
+        state.settings.activeTier = .caseAssociate
+        state.installedPacks = [activeGGUFPack, availableMLXPack]
+        state.cases = [matter]
+
+        let model = AlphaRossModel()
+        model.persisted = state
+
+        model.submitAsk(
+            question: "What are the main directions in this matter bundle?",
+            scopeCaseID: caseID,
+            webEnabled: false
+        )
+
+        try await eventually {
+            model.latestAskResult?.modelInvocation?.status == .complete
+        }
+
+        XCTAssertTrue(probeBox.usedMLX)
+        XCTAssertFalse(probeBox.usedGGUF)
         XCTAssertEqual(
             model.latestAskResult?.modelInvocation?.runtimeMode,
             AlphaPackRuntimeMode.mlxSwiftLm.rawValue

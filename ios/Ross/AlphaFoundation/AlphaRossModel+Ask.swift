@@ -377,46 +377,45 @@ extension AlphaRossModel {
             return nil
         }
 
-        if selectedPlan.resolvedProvider.provider.runtimeMode == .appleFoundationModels {
-            let candidateRuntimes: [AlphaPackRuntimeMode] = alphaAssistantTierSupportsMLXRuntime(selectedPlan.resolvedProvider.provider.capabilityTier)
-                ? [.mlxSwiftLm, .llamaCppGguf]
-                : [.llamaCppGguf]
+        let candidateRuntimes = (alphaAssistantTierSupportsMLXRuntime(selectedPlan.resolvedProvider.provider.capabilityTier)
+            ? [AlphaPackRuntimeMode.mlxSwiftLm, .llamaCppGguf]
+            : [AlphaPackRuntimeMode.llamaCppGguf])
+            .filter { $0 != selectedPlan.resolvedProvider.provider.runtimeMode }
 
-            var candidatePlans: [AlphaPackRuntimeMode: (
-                requestedTier: AlphaCapabilityTier,
-                resolvedProvider: AlphaResolvedLocalAskProvider,
-                sourcePack: [AlphaSourceTextBlock],
-                budgetPlan: AlphaLocalPromptBudgetPlan
-            )] = [:]
-            var expandedSourcePackCount = selectedPlan.sourcePack.count
+        var candidatePlans: [AlphaPackRuntimeMode: (
+            requestedTier: AlphaCapabilityTier,
+            resolvedProvider: AlphaResolvedLocalAskProvider,
+            sourcePack: [AlphaSourceTextBlock],
+            budgetPlan: AlphaLocalPromptBudgetPlan
+        )] = [:]
+        var expandedSourcePackCount = selectedPlan.sourcePack.count
 
-            for runtimeMode in candidateRuntimes {
-                guard let candidatePlan = evaluatePlan(
-                    requestedTier: requestedTier,
-                    preferredRuntimeMode: runtimeMode
-                ),
-                candidatePlan.resolvedProvider.provider.runtimeMode == runtimeMode else {
-                    continue
-                }
-                candidatePlans[runtimeMode] = candidatePlan
-                expandedSourcePackCount = max(expandedSourcePackCount, candidatePlan.sourcePack.count)
+        for runtimeMode in candidateRuntimes {
+            guard let candidatePlan = evaluatePlan(
+                requestedTier: requestedTier,
+                preferredRuntimeMode: runtimeMode
+            ),
+            candidatePlan.resolvedProvider.provider.runtimeMode == runtimeMode else {
+                continue
             }
+            candidatePlans[runtimeMode] = candidatePlan
+            expandedSourcePackCount = max(expandedSourcePackCount, candidatePlan.sourcePack.count)
+        }
 
-            if expandedSourcePackCount > (selectedPlan.budgetPlan.sourceBlockLimit ?? selectedPlan.sourcePack.count),
-               let runtimeHint = alphaLocalAskUpgradeRuntimeHint(
-                runtimeWarnings: [],
-                sourcePackCount: expandedSourcePackCount,
-                includedSourceCount: selectedPlan.budgetPlan.sourceBlockLimit ?? selectedPlan.sourcePack.count,
-                sourceBlockLimit: selectedPlan.budgetPlan.sourceBlockLimit,
-                capabilityTier: selectedPlan.resolvedProvider.provider.capabilityTier,
-                runtimeMode: selectedPlan.resolvedProvider.provider.runtimeMode,
-                hasSelectedDocuments: !selectedDocuments.isEmpty,
-                selectedDocumentCount: selectedDocuments.count
-               ),
-               let candidatePlan = candidatePlans[runtimeHint],
-               candidatePlan.sourcePack.count >= selectedPlan.sourcePack.count {
-                selectedPlan = candidatePlan
-            }
+        if expandedSourcePackCount > (selectedPlan.budgetPlan.sourceBlockLimit ?? selectedPlan.sourcePack.count),
+           let runtimeHint = alphaLocalAskUpgradeRuntimeHint(
+            runtimeWarnings: [],
+            sourcePackCount: expandedSourcePackCount,
+            includedSourceCount: selectedPlan.budgetPlan.sourceBlockLimit ?? selectedPlan.sourcePack.count,
+            sourceBlockLimit: selectedPlan.budgetPlan.sourceBlockLimit,
+            capabilityTier: selectedPlan.resolvedProvider.provider.capabilityTier,
+            runtimeMode: selectedPlan.resolvedProvider.provider.runtimeMode,
+            hasSelectedDocuments: !selectedDocuments.isEmpty,
+            selectedDocumentCount: selectedDocuments.count
+           ),
+           let candidatePlan = candidatePlans[runtimeHint],
+           candidatePlan.sourcePack.count >= selectedPlan.sourcePack.count {
+            selectedPlan = candidatePlan
         }
 
         let currentSourceBlockLimit = selectedPlan.budgetPlan.sourceBlockLimit ?? selectedPlan.sourcePack.count
@@ -4460,7 +4459,6 @@ func alphaLocalAskUpgradeRuntimeHint(
     let constrainedByRuntimeWarning = runtimeWarnings.contains(AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts)
 
     guard constrainedByCoverage || constrainedByRuntimeWarning,
-          runtimeMode == .appleFoundationModels,
           let effectiveTier else {
         return nil
     }
@@ -4473,9 +4471,13 @@ func alphaLocalAskUpgradeRuntimeHint(
         freeStorageGB: freeStorageGB,
         systemAssistantAvailable: false
     )
-    let candidateRuntimes: [AlphaPackRuntimeMode] = alphaAssistantTierSupportsMLXRuntime(effectiveTier)
-        ? [.llamaCppGguf, .mlxSwiftLm]
-        : [.llamaCppGguf]
+    let candidateRuntimes = (alphaAssistantTierSupportsMLXRuntime(effectiveTier)
+        ? [AlphaPackRuntimeMode.llamaCppGguf, .mlxSwiftLm]
+        : [AlphaPackRuntimeMode.llamaCppGguf])
+        .filter { $0 != runtimeMode }
+    guard !candidateRuntimes.isEmpty else {
+        return nil
+    }
 
     let currentCoverageLimit = sourceBlockLimit ?? effectiveIncludedCount ?? 0
     let currentInputBudget = alphaAssistantUpgradeRuntimeInputBudget(
