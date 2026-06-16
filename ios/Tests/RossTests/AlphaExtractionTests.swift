@@ -5965,6 +5965,35 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(runtime, .mlxSwiftLm)
     }
 
+    func testPreferredAssistantRuntimeModeLetsSlowRecentMLXOverrideInstalledMLXOnPhone() {
+        let slowMLXInvocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 7,
+            timeToFirstTokenMs: 3_600,
+            status: .complete
+        )
+
+        let runtime = alphaPreferredAssistantRuntimeMode(
+            for: .caseAssociate,
+            existingRuntimeMode: .mlxSwiftLm,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24,
+            systemAssistantAvailable: false,
+            lastInvocation: slowMLXInvocation
+        )
+
+        XCTAssertEqual(runtime, .llamaCppGguf)
+    }
+
     func testPreferredAssistantRuntimeModePreservesInstalledFoundationRuntime() {
         let runtime = alphaPreferredAssistantRuntimeMode(
             for: .caseAssociate,
@@ -7656,6 +7685,56 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(presentation?.totalDownloadBytes, 6_400_000_000)
         XCTAssertEqual(presentation?.sizeLabel, "6.4 GB")
+    }
+
+    func testAssistantSetupPresentationFallsBackToGGUFAfterSlowInstalledMLXRun() {
+        let slowMLXInvocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 7,
+            timeToFirstTokenMs: 3_600,
+            status: .complete
+        )
+        let cachedMLX = AlphaAssistantCatalogDescriptor(
+            tier: .caseAssociate,
+            packId: "gemma-4-12b-mlx",
+            sizeBytes: 6_200_000_000,
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false
+        )
+        let cachedGGUF = AlphaAssistantCatalogDescriptor(
+            tier: .caseAssociate,
+            packId: "gemma-4-12b-gguf",
+            sizeBytes: 7_400_000_000,
+            checksumSha256: String(repeating: "c", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false
+        )
+
+        let presentation = alphaAssistantSetupPresentation(
+            for: .caseAssociate,
+            existingRuntimeMode: .mlxSwiftLm,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24,
+            systemAssistantAvailable: false,
+            lastInvocation: slowMLXInvocation,
+            cachedCatalogs: [cachedMLX, cachedGGUF]
+        )
+
+        XCTAssertEqual(presentation?.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(presentation?.totalDownloadBytes, 7_400_000_000)
+        XCTAssertEqual(presentation?.sizeLabel, "7.4 GB")
     }
 
     func testAssistantSetupPresentationFallsBackToCachedDownloadWhenCatalogMissing() {

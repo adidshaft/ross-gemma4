@@ -1041,11 +1041,10 @@ func alphaPreferredAssistantRuntimeMode(
         return .appleFoundationModels
     }
 
-    if existingRuntimeMode == .mlxSwiftLm {
-        return .mlxSwiftLm
-    }
-
     guard isPhoneFormFactor else {
+        if existingRuntimeMode == .mlxSwiftLm {
+            return .mlxSwiftLm
+        }
         return .llamaCppGguf
     }
 
@@ -1068,6 +1067,10 @@ func alphaPreferredAssistantRuntimeMode(
         default:
             break
         }
+    }
+
+    if existingRuntimeMode == .mlxSwiftLm {
+        return .mlxSwiftLm
     }
 
     return baselineTier == .quickStart ? .llamaCppGguf : .mlxSwiftLm
