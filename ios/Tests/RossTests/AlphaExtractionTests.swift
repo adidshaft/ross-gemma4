@@ -8531,6 +8531,20 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(label, "GGUF selected after slower MLX run")
     }
 
+    func testAssistantRuntimeChoiceLabelExplainsKeepingInstalledGGUFOnHighMemoryPhone() {
+        let label = alphaAssistantRuntimeChoiceLabel(
+            selectedRuntimeMode: .llamaCppGguf,
+            tier: .caseAssociate,
+            existingRuntimeMode: .llamaCppGguf,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 16 * 1_073_741_824,
+            freeStorageGB: 32,
+            systemAssistantAvailable: true
+        )
+
+        XCTAssertEqual(label, "Installed GGUF kept for larger on-device context")
+    }
+
     func testReuseInstalledAssistantPackWhenRuntimeAlreadyMatchesPreference() {
         let pack = installedPack(
             .caseAssociate,

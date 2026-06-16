@@ -1751,6 +1751,7 @@ extension AlphaRossModel {
         let runtimeSelectionReason = alphaAssistantRuntimeChoiceLabel(
             selectedRuntimeMode: provider.runtimeMode,
             tier: requestedTier,
+            existingRuntimeMode: activePack?.runtimeMode,
             systemAssistantAvailable: systemAssistantAvailable,
             lastInvocation: lastModelInvocation
         )

@@ -739,6 +739,7 @@ struct AlphaPrivateAIOfferCard: View {
         let label = alphaAssistantRuntimeChoiceLabel(
             selectedRuntimeMode: runtimeMode,
             tier: offer.tier,
+            existingRuntimeMode: installedPack?.runtimeMode,
             systemAssistantAvailable: systemAssistantAvailable,
             lastInvocation: model.lastModelInvocation
         ).trimmingCharacters(in: .whitespacesAndNewlines)

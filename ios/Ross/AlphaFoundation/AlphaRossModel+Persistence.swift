@@ -1451,6 +1451,7 @@ func alphaPreferredAssistantRuntimeMode(
 func alphaAssistantRuntimeChoiceLabel(
     selectedRuntimeMode: AlphaPackRuntimeMode,
     tier: AlphaCapabilityTier,
+    existingRuntimeMode: AlphaPackRuntimeMode? = nil,
     isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
     physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory,
     freeStorageGB: Int = max(4, alphaAvailableStorageInGigabytes()),
@@ -1504,6 +1505,16 @@ func alphaAssistantRuntimeChoiceLabel(
         default:
             break
         }
+    }
+
+    if selectedRuntimeMode == .llamaCppGguf,
+       alphaShouldPreserveInstalledGGUFOnCapablePhone(
+        tier: tier,
+        existingRuntimeMode: existingRuntimeMode,
+        isPhoneFormFactor: isPhoneFormFactor,
+        physicalMemoryBytes: physicalMemoryBytes
+       ) {
+        return "Installed GGUF kept for larger on-device context"
     }
 
     if selectedRuntimeMode == .mlxSwiftLm,
