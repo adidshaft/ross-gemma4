@@ -2282,6 +2282,21 @@ extension AlphaRossModel {
         persist()
     }
 
+    func canActivateAssistantRuntimeImmediately(
+        for tier: AlphaCapabilityTier,
+        runtimeMode: AlphaPackRuntimeMode
+    ) -> Bool {
+        if let installed = persisted.installedPacks.first(where: {
+            AlphaCapabilityTier.assistantSelectionsMatch($0.tier, tier) &&
+                $0.runtimeMode == runtimeMode
+        }) {
+            return installedPackPassesRuntimeValidation(installed)
+        }
+
+        return runtimeMode == .appleFoundationModels &&
+            systemAssistantReadyForActivation(for: tier)
+    }
+
     func activateAssistantRuntimeIfAvailable(
         for tier: AlphaCapabilityTier,
         runtimeMode: AlphaPackRuntimeMode
@@ -2290,15 +2305,14 @@ extension AlphaRossModel {
             AlphaCapabilityTier.assistantSelectionsMatch($0.tier, tier) &&
                 $0.runtimeMode == runtimeMode
         }) {
-            guard installedPackPassesRuntimeValidation(installed) else {
+            guard canActivateAssistantRuntimeImmediately(for: tier, runtimeMode: runtimeMode) else {
                 return false
             }
             activateInstalledPack(installed)
             return true
         }
 
-        guard runtimeMode == .appleFoundationModels,
-              systemAssistantReadyForActivation(for: tier) else {
+        guard canActivateAssistantRuntimeImmediately(for: tier, runtimeMode: runtimeMode) else {
             return false
         }
 

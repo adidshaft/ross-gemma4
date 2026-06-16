@@ -28,6 +28,15 @@ extension AlphaRossModel {
         runtimeEnvironment: AlphaLocalRuntimeEnvironment
     )
 
+    private func askUpgradeTarget(for result: AlphaAskResult) -> (tier: AlphaCapabilityTier, runtimeMode: AlphaPackRuntimeMode?) {
+        (
+            result.upgradeTierHint ??
+                result.modelInvocation.flatMap { AlphaCapabilityTier(rawValue: $0.capabilityTier) } ??
+                selectedTier,
+            result.upgradeRuntimeHint
+        )
+    }
+
     private func matchingInstalledPack(for pack: AlphaInstalledModelPack) -> AlphaInstalledModelPack? {
         persisted.installedPacks.first {
             $0.id == pack.id ||
@@ -1195,13 +1204,10 @@ extension AlphaRossModel {
     }
 
     func openAskUpgradeSetup(for result: AlphaAskResult) {
-        let runtimeOverrideTier =
-            result.upgradeTierHint ??
-            result.modelInvocation.flatMap { AlphaCapabilityTier(rawValue: $0.capabilityTier) } ??
-            selectedTier
+        let target = askUpgradeTarget(for: result)
         openAskUpgradeSetup(
-            tier: runtimeOverrideTier,
-            runtimeMode: result.upgradeRuntimeHint,
+            tier: target.tier,
+            runtimeMode: target.runtimeMode,
             returnRoute: alphaAskUpgradeReturnRoute(
                 for: result,
                 currentRoute: path.last
@@ -1244,6 +1250,35 @@ extension AlphaRossModel {
         pendingAskUpgradeReturnRoute = nil
         pendingAskUpgradeExpectedTier = nil
         pendingAskUpgradeExpectedRuntimeMode = nil
+    }
+
+    func canRetryAskWithUpgrade(_ result: AlphaAskResult) -> Bool {
+        guard !result.question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return false
+        }
+        let target = askUpgradeTarget(for: result)
+        guard let runtimeMode = target.runtimeMode else { return false }
+        return canActivateAssistantRuntimeImmediately(for: target.tier, runtimeMode: runtimeMode)
+    }
+
+    func retryAskWithUpgrade(_ result: AlphaAskResult) {
+        let target = askUpgradeTarget(for: result)
+        if let runtimeMode = target.runtimeMode,
+           activateAssistantRuntimeIfAvailable(for: target.tier, runtimeMode: runtimeMode) {
+            selectedTier = target.tier
+            clearPendingAskUpgrade()
+            submitAsk(question: result.question, scopeCaseID: result.scopeCaseID, webEnabled: false)
+            return
+        }
+
+        openAskUpgradeSetup(
+            tier: target.tier,
+            runtimeMode: target.runtimeMode,
+            returnRoute: alphaAskUpgradeReturnRoute(
+                for: result,
+                currentRoute: path.last
+            )
+        )
     }
 
     func resumePendingAskUpgradeIfReady(
@@ -4400,6 +4435,23 @@ func alphaAskUpgradeActionTitle(
         format: rossLocalized("ask_upgrade_action_use_tier", languageCode: languageCode),
         tier.setupTitle(languageCode: languageCode)
     )
+}
+
+func alphaAskRetryUpgradeActionTitle(
+    _ tier: AlphaCapabilityTier?,
+    runtimeMode: AlphaPackRuntimeMode? = nil,
+    languageCode: String = rossSelectedLanguageCode()
+) -> String {
+    if let tier, let runtimeMode {
+        return "Retry with \(tier.setupTitle(languageCode: languageCode)) + \(runtimeMode.upgradeActionLabel)"
+    }
+    if let runtimeMode {
+        return "Retry with \(runtimeMode.upgradeActionLabel)"
+    }
+    if let tier {
+        return "Retry with \(tier.setupTitle(languageCode: languageCode))"
+    }
+    return rossLocalized("assistant_action_retry", languageCode: languageCode)
 }
 
 func alphaAskUpgradeActionDetail(

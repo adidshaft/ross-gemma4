@@ -575,6 +575,8 @@ struct AlphaRootAskDock: View {
                     contextDocumentTitle: fixedDocumentIDs.count == 1 ? activeSelectedDocuments.first?.title : nil,
                     onOpenSource: model.openSourceRef,
                     onShowDetails: { answerDetailsResult = $0 },
+                    onRetryUpgrade: { model.retryAskWithUpgrade($0) },
+                    canRetryUpgrade: model.canRetryAskWithUpgrade(inlineResult),
                     onOpenConversation: {
                         if fixedDocumentIDs.count == 1, let documentID = fixedDocumentIDs.first {
                             model.openAsk(scopeCaseID: activeScopeCaseID, documentID: documentID)
@@ -1038,11 +1040,13 @@ struct AlphaInlineAskResponseCard: View {
     let contextDocumentTitle: String?
     let onOpenSource: (AlphaSourceRef) -> Void
     let onShowDetails: (AlphaAskResult) -> Void
+    let onRetryUpgrade: (AlphaAskResult) -> Void
+    let canRetryUpgrade: Bool
     let onOpenConversation: () -> Void
     let onClose: () -> Void
 
     private var responseActions: [AlphaInlineAskResponseAction] {
-        result.inlineResponseActions()
+        result.inlineResponseActions(canRetryUpgrade: canRetryUpgrade)
     }
 
     var body: some View {
@@ -1144,6 +1148,8 @@ struct AlphaInlineAskResponseCard: View {
 
     private func perform(_ action: AlphaInlineAskResponseAction) {
         switch action {
+        case .retryUpgrade:
+            onRetryUpgrade(result)
         case .answerDetails:
             onShowDetails(result)
         case .copyAnswer:
@@ -1156,6 +1162,18 @@ struct AlphaInlineAskResponseCard: View {
     @ViewBuilder
     private func inlineActionButton(_ action: AlphaInlineAskResponseAction) -> some View {
         switch action {
+        case .retryUpgrade:
+            Button {
+                perform(.retryUpgrade)
+            } label: {
+                Label(
+                    alphaAskRetryUpgradeActionTitle(
+                        result.upgradeTierHint,
+                        runtimeMode: result.upgradeRuntimeHint
+                    ),
+                    systemImage: "arrow.clockwise"
+                )
+            }
         case .answerDetails:
             Button {
                 perform(.answerDetails)
@@ -1179,6 +1197,11 @@ struct AlphaInlineAskResponseCard: View {
 
     private func accessibilityTitle(for action: AlphaInlineAskResponseAction) -> String {
         switch action {
+        case .retryUpgrade:
+            alphaAskRetryUpgradeActionTitle(
+                result.upgradeTierHint,
+                runtimeMode: result.upgradeRuntimeHint
+            )
         case .answerDetails:
             rossLocalized("answer_details")
         case .copyAnswer:
@@ -1190,14 +1213,18 @@ struct AlphaInlineAskResponseCard: View {
 }
 
 enum AlphaInlineAskResponseAction: String {
+    case retryUpgrade
     case answerDetails
     case copyAnswer
     case dismiss
 }
 
 extension AlphaAskResult {
-    func inlineResponseActions() -> [AlphaInlineAskResponseAction] {
+    func inlineResponseActions(canRetryUpgrade: Bool = false) -> [AlphaInlineAskResponseAction] {
         var actions: [AlphaInlineAskResponseAction] = []
+        if canRetryUpgrade {
+            actions.append(.retryUpgrade)
+        }
         if hasAnswerDetails {
             actions.append(.answerDetails)
         }

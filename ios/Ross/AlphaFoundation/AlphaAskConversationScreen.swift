@@ -175,6 +175,8 @@ struct AlphaAskConversationScreen: View {
                                     contextDocumentTitle: contextDocumentTitle,
                                     onOpenSource: model.openSourceRef,
                                     onOpenUpgrade: { model.openAskUpgradeSetup(for: $0) },
+                                    onRetryUpgrade: { model.retryAskWithUpgrade($0) },
+                                    canRetryUpgrade: model.canRetryAskWithUpgrade(result),
                                     onShowDetails: { answerDetailsResult = $0 }
                                 )
                                 .id(result.stableIdentity)
@@ -623,6 +625,8 @@ struct AlphaFullScreenChatTurn: View {
     let contextDocumentTitle: String?
     let onOpenSource: (AlphaSourceRef) -> Void
     let onOpenUpgrade: (AlphaAskResult) -> Void
+    let onRetryUpgrade: (AlphaAskResult) -> Void
+    let canRetryUpgrade: Bool
     let onShowDetails: (AlphaAskResult) -> Void
 
     private var deduplicatedStatusNote: String? {
@@ -691,6 +695,19 @@ struct AlphaFullScreenChatTurn: View {
                             statusNote: deduplicatedStatusNote,
                             onCopy: copyAnswerAction,
                             menu: {
+                                if canRetryUpgrade {
+                                    Button {
+                                        onRetryUpgrade(result)
+                                    } label: {
+                                        Label(
+                                            alphaAskRetryUpgradeActionTitle(
+                                                result.upgradeTierHint,
+                                                runtimeMode: result.upgradeRuntimeHint
+                                            ),
+                                            systemImage: "arrow.clockwise"
+                                        )
+                                    }
+                                }
                                 Button {
                                     onShowDetails(result)
                                 } label: {
@@ -740,6 +757,19 @@ struct AlphaFullScreenChatTurn: View {
                     fallbackStrokeOpacity: 0.56
                 )
                 .contextMenu {
+                    if canRetryUpgrade {
+                        Button {
+                            onRetryUpgrade(result)
+                        } label: {
+                            Label(
+                                alphaAskRetryUpgradeActionTitle(
+                                    result.upgradeTierHint,
+                                    runtimeMode: result.upgradeRuntimeHint
+                                ),
+                                systemImage: "arrow.clockwise"
+                            )
+                        }
+                    }
                     if result.hasAnswerDetails {
                         Button {
                             onShowDetails(result)
@@ -754,6 +784,16 @@ struct AlphaFullScreenChatTurn: View {
                     }
                 }
                 .accessibilityActions {
+                    if canRetryUpgrade {
+                        Button(
+                            alphaAskRetryUpgradeActionTitle(
+                                result.upgradeTierHint,
+                                runtimeMode: result.upgradeRuntimeHint
+                            )
+                        ) {
+                            onRetryUpgrade(result)
+                        }
+                    }
                     if result.hasAnswerDetails {
                         Button(rossLocalized("answer_details")) {
                             onShowDetails(result)
@@ -1686,7 +1726,9 @@ struct AlphaAskTurnCard: View {
                             result: result,
                             needsReviewWarning: result.needsReviewWarning,
                             includePublicLawWarnings: result.publicLawPreview != nil || !result.publicLawResults.isEmpty,
-                            onOpenUpgrade: { _ in }
+                            canRetryUpgrade: false,
+                            onOpenUpgrade: { _ in },
+                            onRetryUpgrade: { _ in }
                         )
                     }
 
@@ -2198,7 +2240,9 @@ struct AlphaPublicLawWarningsView: View {
     let result: AlphaAskResult
     let needsReviewWarning: String?
     let includePublicLawWarnings: Bool
+    let canRetryUpgrade: Bool
     let onOpenUpgrade: (AlphaAskResult) -> Void
+    let onRetryUpgrade: (AlphaAskResult) -> Void
 
     var body: some View {
         if includePublicLawWarnings || needsReviewWarning != nil {
@@ -2213,8 +2257,22 @@ struct AlphaPublicLawWarningsView: View {
                 }
 
                 if result.upgradeTierHint != nil || result.upgradeRuntimeHint != nil {
-                    Button(alphaAskUpgradeActionTitle(result.upgradeTierHint, runtimeMode: result.upgradeRuntimeHint)) {
-                        onOpenUpgrade(result)
+                    Button(
+                        canRetryUpgrade
+                            ? alphaAskRetryUpgradeActionTitle(
+                                result.upgradeTierHint,
+                                runtimeMode: result.upgradeRuntimeHint
+                            )
+                            : alphaAskUpgradeActionTitle(
+                                result.upgradeTierHint,
+                                runtimeMode: result.upgradeRuntimeHint
+                            )
+                    ) {
+                        if canRetryUpgrade {
+                            onRetryUpgrade(result)
+                        } else {
+                            onOpenUpgrade(result)
+                        }
                     }
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color.rossAccent)

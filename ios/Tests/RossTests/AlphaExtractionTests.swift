@@ -4478,6 +4478,29 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testInlineResponseActionsIncludeRetryUpgradeWhenAvailable() {
+        let invocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.appleFoundationModels.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            status: .complete
+        )
+        var result = baseAskResult()
+        result.modelInvocation = invocation
+        result.upgradeRuntimeHint = .mlxSwiftLm
+
+        XCTAssertEqual(
+            result.inlineResponseActions(canRetryUpgrade: true),
+            [.retryUpgrade, .answerDetails, .copyAnswer, .dismiss]
+        )
+    }
+
     func testInlineResponseActionsHideAnswerDetailsWhenUnavailable() {
         let result = AlphaAskResult(
             chatSessionID: nil,
@@ -9300,6 +9323,108 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNil(model.pendingAskUpgradeExpectedRuntimeMode)
         XCTAssertEqual(model.persisted.installedPacks.first(where: \.isActive)?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(model.privateAISnapshot.activePack?.runtimeMode, .mlxSwiftLm)
+    }
+
+    @MainActor
+    func testCanRetryAskWithUpgradeReturnsTrueWhenHintRuntimeIsAlreadyInstalled() async throws {
+        let store = AlphaRossStore()
+        var availableMLXPack = try await installMLXPack(
+            with: store,
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-it-qat-4bit",
+            packId: "case-mlx",
+            fixtureName: "ask-retry-mlx"
+        )
+        availableMLXPack.isActive = false
+
+        var state = AlphaPersistedState.seed()
+        state.installedPacks = [installedPack(.quickStart), availableMLXPack]
+        let model = AlphaRossModel(previewState: state, previewPath: [.askRoss])
+        let result = AlphaAskResult(
+            kind: .userAsk,
+            question: "Review this larger matter bundle",
+            scopeCaseID: nil,
+            scopeLabel: "All work",
+            selectedDocumentTitles: [],
+            answerTitle: "Focused answer",
+            answerSections: [],
+            caseFileSources: [],
+            publicLawPreview: nil,
+            publicLawResults: [],
+            statusNote: nil,
+            needsReviewWarning: "Focused sources",
+            modelInvocation: AlphaLocalModelInvocation(
+                task: .matterQuestionAnswer,
+                runtimeMode: AlphaPackRuntimeMode.appleFoundationModels.rawValue,
+                caseId: nil,
+                documentId: nil,
+                extractionRunId: nil,
+                capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+                inputSourceRefs: [],
+                promptHash: "prompt",
+                inputHash: "input",
+                status: .complete
+            ),
+            upgradeTierHint: nil,
+            upgradeRuntimeHint: .mlxSwiftLm
+        )
+
+        XCTAssertTrue(model.canRetryAskWithUpgrade(result))
+    }
+
+    @MainActor
+    func testRetryAskWithUpgradeSubmitsFreshAskWhenRuntimeIsAvailable() async throws {
+        let store = AlphaRossStore()
+        var availableMLXPack = try await installMLXPack(
+            with: store,
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-it-qat-4bit",
+            packId: "case-mlx",
+            fixtureName: "ask-retry-submit-mlx"
+        )
+        availableMLXPack.isActive = false
+
+        var state = AlphaPersistedState.seed()
+        state.installedPacks = [installedPack(.quickStart), availableMLXPack]
+        let model = AlphaRossModel(previewState: state, previewPath: [.askRoss])
+        let result = AlphaAskResult(
+            kind: .userAsk,
+            question: "Review this larger matter bundle",
+            scopeCaseID: nil,
+            scopeLabel: "All work",
+            selectedDocumentTitles: [],
+            answerTitle: "Focused answer",
+            answerSections: [],
+            caseFileSources: [],
+            publicLawPreview: nil,
+            publicLawResults: [],
+            statusNote: nil,
+            needsReviewWarning: "Focused sources",
+            modelInvocation: AlphaLocalModelInvocation(
+                task: .matterQuestionAnswer,
+                runtimeMode: AlphaPackRuntimeMode.appleFoundationModels.rawValue,
+                caseId: nil,
+                documentId: nil,
+                extractionRunId: nil,
+                capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+                inputSourceRefs: [],
+                promptHash: "prompt",
+                inputHash: "input",
+                status: .complete
+            ),
+            upgradeTierHint: nil,
+            upgradeRuntimeHint: .mlxSwiftLm
+        )
+
+        let initialAskHistoryCount = model.askHistory.count
+        model.retryAskWithUpgrade(result)
+
+        XCTAssertEqual(model.selectedTier, .caseAssociate)
+        XCTAssertEqual(model.path.last, .askRoss)
+        XCTAssertEqual(model.persisted.installedPacks.first(where: \.isActive)?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(model.privateAISnapshot.activePack?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(model.askHistory.count, initialAskHistoryCount + 1)
+        XCTAssertEqual(model.latestAskResult?.question, "Review this larger matter bundle")
     }
 
     @MainActor
