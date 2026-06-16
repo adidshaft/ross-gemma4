@@ -864,6 +864,62 @@ func alphaRecommendedAssistantSetupTier(
     }
 }
 
+func alphaPreferredSelectedAssistantTier(
+    activeTier: AlphaCapabilityTier?,
+    installedPacks: [AlphaInstalledModelPack],
+    modelJobs: [AlphaModelDownloadJob],
+    baselineTier: AlphaCapabilityTier,
+    systemAssistantAvailable: Bool,
+    hasRecentInvocation: Bool,
+    isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor()
+) -> AlphaCapabilityTier {
+    if let normalizedActiveTier = AlphaCapabilityTier.normalizedAssistantSelection(activeTier) {
+        return normalizedActiveTier
+    }
+
+    let normalizedInstalledTier = installedPacks
+        .sorted(by: { lhs, rhs in
+            if lhs.isActive != rhs.isActive {
+                return lhs.isActive && !rhs.isActive
+            }
+            if lhs.checksumVerified != rhs.checksumVerified {
+                return lhs.checksumVerified && !rhs.checksumVerified
+            }
+            return lhs.installedAt > rhs.installedAt
+        })
+        .compactMap { pack -> AlphaCapabilityTier? in
+            guard !pack.developmentOnly else { return nil }
+            return AlphaCapabilityTier.normalizedAssistantSelection(pack.tier)
+        }
+        .first
+    if let normalizedInstalledTier {
+        return normalizedInstalledTier
+    }
+
+    let normalizedJobTier = modelJobs
+        .filter { job in
+            !job.developmentOnly &&
+                job.state != .notStarted &&
+                job.state != .cancelled
+        }
+        .sorted(by: { $0.updatedAt > $1.updatedAt })
+        .compactMap { job -> AlphaCapabilityTier? in
+            AlphaCapabilityTier.normalizedAssistantSelection(job.tier)
+        }
+        .first
+    if let normalizedJobTier {
+        return normalizedJobTier
+    }
+
+    return alphaRecommendedAssistantSetupTier(
+        baselineTier: baselineTier,
+        systemAssistantAvailable: systemAssistantAvailable,
+        hasExistingAssistantSetup: false,
+        hasRecentInvocation: hasRecentInvocation,
+        isPhoneFormFactor: isPhoneFormFactor
+    )
+}
+
 private func alphaExistingRuntimeMode(
     for tier: AlphaCapabilityTier,
     installedPacks: [AlphaInstalledModelPack]
@@ -1281,6 +1337,19 @@ func alphaAssistantDownloadDescriptor(
 }
 
 extension AlphaRossModel {
+    func preferredSelectedAssistantTier(
+        fallbackSelectedTier: AlphaCapabilityTier? = nil
+    ) -> AlphaCapabilityTier {
+        alphaPreferredSelectedAssistantTier(
+            activeTier: persisted.settings.activeTier ?? fallbackSelectedTier,
+            installedPacks: persisted.installedPacks,
+            modelJobs: persisted.modelJobs,
+            baselineTier: recommendedOnDeviceTier(),
+            systemAssistantAvailable: systemAssistantHealth(for: .quickStart)?.available == true,
+            hasRecentInvocation: alphaLastModelInvocation(in: persisted) != nil
+        )
+    }
+
     func recommendedAssistantSetupTier() -> AlphaCapabilityTier {
         let baselineTier = recommendedOnDeviceTier()
         let hasExistingAssistantSetup =

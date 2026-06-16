@@ -2168,7 +2168,7 @@ extension AlphaRossModel {
 
     func syncDerivedStateFromPersisted() {
         selectedCaseID = cases.first?.id
-        selectedTier = persisted.settings.activeTier ?? recommendedOnDeviceTier()
+        selectedTier = preferredSelectedAssistantTier()
         publicLawDraft = persisted.publicLawDraft ?? publicLawDraft
         publicLawPreview = persisted.publicLawPreview
         publicLawResults = persisted.publicLawResults ?? []
@@ -2209,7 +2209,7 @@ extension AlphaRossModel {
         persisted.installedPacks = preserved.installedPacks
         persisted.lastModelCatalogRefresh = preserved.lastModelCatalogRefresh
         persisted.cachedAssistantDownloads = preserved.cachedAssistantDownloads
-        selectedTier = persisted.settings.activeTier ?? recommendedOnDeviceTier()
+        selectedTier = preferredSelectedAssistantTier()
         publicLawDraft = persisted.publicLawDraft ?? publicLawDraft
         publicLawPreview = persisted.publicLawPreview
         publicLawResults = persisted.publicLawResults ?? []
@@ -2737,7 +2737,7 @@ extension AlphaRossModel {
     }
 
     func advanceOnboarding() {
-        selectedTier = recommendedOnDeviceTier()
+        selectedTier = preferredSelectedAssistantTier(fallbackSelectedTier: selectedTier)
         finishPackSetup()
     }
 

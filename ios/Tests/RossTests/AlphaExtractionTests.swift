@@ -8512,6 +8512,124 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testPreferredSelectedAssistantTierSoftensFreshSeniorBaselineToCaseAssociate() {
+        XCTAssertEqual(
+            alphaPreferredSelectedAssistantTier(
+                activeTier: nil,
+                installedPacks: [],
+                modelJobs: [],
+                baselineTier: .seniorDraftingSupport,
+                systemAssistantAvailable: true,
+                hasRecentInvocation: false,
+                isPhoneFormFactor: true
+            ),
+            .caseAssociate
+        )
+    }
+
+    func testPreferredSelectedAssistantTierHonorsPersistedActiveTier() {
+        XCTAssertEqual(
+            alphaPreferredSelectedAssistantTier(
+                activeTier: .quickStart,
+                installedPacks: [installedPack(.caseAssociate, developmentOnly: false)],
+                modelJobs: [
+                    AlphaModelDownloadJob(
+                        sessionId: "preferred-active-tier",
+                        packId: "gemma-4-12b-it-gguf",
+                        tier: .seniorDraftingSupport,
+                        state: .downloading,
+                        networkPolicy: .wifiOnly,
+                        bytesDownloaded: 1,
+                        totalBytes: 10,
+                        checksumSha256: ""
+                    )
+                ],
+                baselineTier: .seniorDraftingSupport,
+                systemAssistantAvailable: true,
+                hasRecentInvocation: false,
+                isPhoneFormFactor: true
+            ),
+            .quickStart
+        )
+    }
+
+    func testPreferredSelectedAssistantTierPrefersInstalledPackOverSoftenedBaseline() {
+        XCTAssertEqual(
+            alphaPreferredSelectedAssistantTier(
+                activeTier: nil,
+                installedPacks: [installedPack(.seniorDraftingSupport, developmentOnly: false)],
+                modelJobs: [],
+                baselineTier: .seniorDraftingSupport,
+                systemAssistantAvailable: true,
+                hasRecentInvocation: false,
+                isPhoneFormFactor: true
+            ),
+            .seniorDraftingSupport
+        )
+    }
+
+    func testPreferredSelectedAssistantTierPrefersStartedJobOverSoftenedBaseline() {
+        XCTAssertEqual(
+            alphaPreferredSelectedAssistantTier(
+                activeTier: nil,
+                installedPacks: [],
+                modelJobs: [
+                    AlphaModelDownloadJob(
+                        sessionId: "preferred-job-tier",
+                        packId: "gemma-4-12b-it-gguf",
+                        tier: .seniorDraftingSupport,
+                        state: .queued,
+                        networkPolicy: .wifiOnly,
+                        bytesDownloaded: 0,
+                        totalBytes: 10,
+                        checksumSha256: ""
+                    )
+                ],
+                baselineTier: .seniorDraftingSupport,
+                systemAssistantAvailable: true,
+                hasRecentInvocation: false,
+                isPhoneFormFactor: true
+            ),
+            .seniorDraftingSupport
+        )
+    }
+
+    #if canImport(FoundationModels)
+    @available(iOS 26.0, macOS 26.0, *)
+    @MainActor
+    func testSyncDerivedStateFromPersistedSoftensFreshCapableIPhoneSelection() {
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        let previousSimulatorIdentifier = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"]
+        let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        setenv("SIMULATOR_MODEL_IDENTIFIER", "iPhone17,2", 1)
+        AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in true }
+        defer {
+            AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+            if let previousSimulatorIdentifier {
+                setenv("SIMULATOR_MODEL_IDENTIFIER", previousSimulatorIdentifier, 1)
+            } else {
+                unsetenv("SIMULATOR_MODEL_IDENTIFIER")
+            }
+        }
+
+        let model = AlphaRossModel(previewState: .empty())
+        model.privateAISnapshot.recommendedTier = .seniorDraftingSupport
+        model.persisted.settings.activeTier = nil
+        model.persisted.installedPacks = []
+        model.persisted.modelJobs = []
+
+        model.syncDerivedStateFromPersisted()
+
+        XCTAssertEqual(model.selectedTier, .caseAssociate)
+    }
+    #endif
+
     func testRecommendedAssistantSetupTierKeepsBaselineWithoutFreshInstantStartConditions() {
         XCTAssertEqual(
             alphaRecommendedAssistantSetupTier(
