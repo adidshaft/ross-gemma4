@@ -6560,7 +6560,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(descriptors.map(\.runtimeMode), [.mlxSwiftLm, .llamaCppGguf])
     }
 
-    func testShouldPrimeAssistantSetupCatalogsSkipsWhenBundledPreferredMLXDescriptorIsAvailable() {
+    func testShouldPrimeAssistantSetupCatalogsPrimesWhenOnlyBundledPreferredMLXDescriptorIsAvailable() {
         let shouldPrime = alphaShouldPrimeAssistantSetupCatalogs(
             visibleTiers: [.caseAssociate],
             installedPacks: [],
@@ -6581,7 +6581,7 @@ final class AlphaExtractionTests: XCTestCase {
             freeStorageGB: 24
         )
 
-        XCTAssertFalse(shouldPrime)
+        XCTAssertTrue(shouldPrime)
     }
 
     func testShouldPrimeAssistantSetupCatalogsSkipsWhenPreferredMLXDescriptorIsCached() {
@@ -6606,6 +6606,35 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertFalse(shouldPrime)
+    }
+
+    func testShouldPrimeAssistantSetupCatalogsPrimesWhenOnlyPreferredMLXDownloadIsCached() {
+        let shouldPrime = alphaShouldPrimeAssistantSetupCatalogs(
+            visibleTiers: [.caseAssociate],
+            installedPacks: [],
+            cachedCatalogs: nil,
+            cachedDownloads: [
+                AlphaAssistantDownloadDescriptor(
+                    sessionId: "sess-supported-mlx",
+                    packId: "gemma-4-12b-mlx",
+                    tier: .caseAssociate,
+                    fileName: "gemma-4-12b-mlx.zip",
+                    sizeBytes: 6_200_000_000,
+                    checksumSha256: String(repeating: "a", count: 64),
+                    artifactKind: "mlx_directory",
+                    runtimeMode: .mlxSwiftLm,
+                    developmentOnly: false,
+                    downloadURLString: "https://ross.example/artifacts/gemma-4-12b-mlx.zip",
+                    verified: true,
+                    releaseReady: true
+                )
+            ],
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24
+        )
+
+        XCTAssertTrue(shouldPrime)
     }
 
     func testPreferredAssistantRuntimeModePrefersMLXOnCapablePhoneForDeeperTiers() {
