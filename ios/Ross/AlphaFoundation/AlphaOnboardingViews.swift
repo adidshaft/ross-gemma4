@@ -747,7 +747,11 @@ struct AlphaModelPickerRow: View {
                                 font: .caption.weight(.medium)
                             )
                         } else {
-                            AlphaAssistantBuiltInMetaLabels(font: .caption.weight(.medium))
+                            AlphaAssistantSetupMetaLabels(
+                                sizeLabel: rossLocalized("assistant_state_checking"),
+                                freeSpaceLabel: model.freeDiskSpaceLabel,
+                                font: .caption.weight(.medium)
+                            )
                         }
                     }
 
