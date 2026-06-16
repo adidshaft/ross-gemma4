@@ -717,6 +717,14 @@ enum AlphaLocalPromptBudgetPlanner {
                 return prefersWiderBatches ? 4 : 3
             }
             return 0
+        case .llamaCppGguf:
+            if baseMaxInputChars >= 48_000 {
+                return prefersWiderBatches ? 3 : 2
+            }
+            if baseMaxInputChars >= 40_000 {
+                return prefersWiderBatches ? 2 : 1
+            }
+            return 0
         case .appleFoundationModels:
             if baseMaxInputChars >= 52_000 {
                 return prefersWiderBatches ? 3 : 2
@@ -735,10 +743,14 @@ enum AlphaLocalPromptBudgetPlanner {
         firstTokenMs: Int,
         outputSpeed: Double
     ) -> Bool {
-        guard runtimeMode == .mlxSwiftLm || runtimeMode == .appleFoundationModels else {
+        switch runtimeMode {
+        case .mlxSwiftLm, .appleFoundationModels:
+            return firstTokenMs <= 1_500 && outputSpeed >= 14
+        case .llamaCppGguf:
+            return firstTokenMs <= 1_800 && outputSpeed >= 11
+        default:
             return false
         }
-        return firstTokenMs <= 1_500 && outputSpeed >= 14
     }
 
     private static func fastLargeFileInputBudget(
@@ -754,6 +766,8 @@ enum AlphaLocalPromptBudgetPlanner {
         switch runtimeMode {
         case .mlxSwiftLm:
             multiplier = 1.1
+        case .llamaCppGguf:
+            multiplier = 1.05
         case .appleFoundationModels:
             multiplier = usesStructuredThresholds ? 1.04 : 1.05
         default:
@@ -783,6 +797,23 @@ enum AlphaLocalPromptBudgetPlanner {
                 }
                 if baseMaxInputChars >= 40_000 {
                     return 13
+                }
+            }
+            return nil
+        case .llamaCppGguf:
+            if usesStructuredThresholds {
+                if baseMaxInputChars >= 48_000 {
+                    return 16
+                }
+                if baseMaxInputChars >= 40_000 {
+                    return 13
+                }
+            } else {
+                if baseMaxInputChars >= 48_000 {
+                    return 12
+                }
+                if baseMaxInputChars >= 40_000 {
+                    return 10
                 }
             }
             return nil
@@ -828,6 +859,23 @@ enum AlphaLocalPromptBudgetPlanner {
                 }
                 if baseMaxInputChars >= 40_000 {
                     return 1_980
+                }
+            }
+            return nil
+        case .llamaCppGguf:
+            if usesStructuredThresholds {
+                if baseMaxInputChars >= 48_000 {
+                    return 1_760
+                }
+                if baseMaxInputChars >= 40_000 {
+                    return 1_520
+                }
+            } else {
+                if baseMaxInputChars >= 48_000 {
+                    return 1_950
+                }
+                if baseMaxInputChars >= 40_000 {
+                    return 1_700
                 }
             }
             return nil
@@ -923,8 +971,16 @@ enum AlphaLocalPromptBudgetPlanner {
         outputSpeed: Double,
         usesStructuredThresholds: Bool = false
     ) -> Bool {
-        guard runtimeMode == .mlxSwiftLm || runtimeMode == .appleFoundationModels else { return false }
-        guard baseMaxInputChars >= 40_000 else { return false }
+        let minimumBudget: Int
+        switch runtimeMode {
+        case .mlxSwiftLm, .appleFoundationModels:
+            minimumBudget = 40_000
+        case .llamaCppGguf:
+            minimumBudget = 48_000
+        default:
+            return false
+        }
+        guard baseMaxInputChars >= minimumBudget else { return false }
 
         let largeFileBlockThreshold = usesStructuredThresholds ? 12 : 8
         let largeFileCharThreshold = usesStructuredThresholds ? 36_000 : 24_000
@@ -932,7 +988,14 @@ enum AlphaLocalPromptBudgetPlanner {
             return false
         }
 
-        return firstTokenMs <= 1_500 && outputSpeed >= 14
+        switch runtimeMode {
+        case .mlxSwiftLm, .appleFoundationModels:
+            return firstTokenMs <= 1_500 && outputSpeed >= 14
+        case .llamaCppGguf:
+            return firstTokenMs <= 1_800 && outputSpeed >= 11
+        default:
+            return false
+        }
     }
 
     private static func minimumStructuredDocumentBatchLimit(

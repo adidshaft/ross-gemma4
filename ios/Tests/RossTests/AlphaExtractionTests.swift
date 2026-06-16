@@ -10800,6 +10800,36 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(plan.sourceExcerptChars, 1_800)
     }
 
+    func testMatterQuestionBudgetPlannerWidensLargeFileLlamaBudgetAfterFastRun() {
+        let fastInvocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 12.4,
+            timeToFirstTokenMs: 1_550,
+            status: .complete
+        )
+
+        let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
+            runtimeMode: .llamaCppGguf,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 52_000,
+            sourceBlockCount: 14,
+            sourceCharCount: 52_000,
+            lastInvocation: fastInvocation
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 54_600)
+        XCTAssertEqual(plan.sourceBlockLimit, 12)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_950)
+    }
+
     func testMatterQuestionBudgetPlannerIgnoresSlowHistoryFromDifferentTier() {
         let slowInvocation = AlphaLocalModelInvocation(
             task: .matterQuestionAnswer,
@@ -11052,6 +11082,36 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(plan.maxInputChars, 45_760)
         XCTAssertEqual(plan.sourceBlockLimit, 15)
         XCTAssertEqual(plan.sourceExcerptChars, 1_580)
+    }
+
+    func testStructuredDocumentBudgetPlannerWidensLargeFileLlamaBudgetAfterFastRun() {
+        let fastInvocation = AlphaLocalModelInvocation(
+            task: .legalFieldExtraction,
+            runtimeMode: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 12.8,
+            timeToFirstTokenMs: 1_500,
+            status: .complete
+        )
+
+        let plan = AlphaLocalPromptBudgetPlanner.structuredDocumentPlan(
+            runtimeMode: .llamaCppGguf,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 52_000,
+            sourceBlockCount: 18,
+            sourceCharCount: 52_000,
+            lastInvocation: fastInvocation
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 54_600)
+        XCTAssertEqual(plan.sourceBlockLimit, 16)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_760)
     }
 
     func testStructuredDocumentBudgetPlannerIgnoresSlowHistoryFromDifferentTier() {
@@ -11322,6 +11382,34 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(batchLimit, 23)
     }
 
+    func testStructuredDocumentBatchLimitWidensFurtherAfterFastLlamaRun() {
+        let fastInvocation = AlphaLocalModelInvocation(
+            task: .legalFieldExtraction,
+            runtimeMode: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 12.3,
+            timeToFirstTokenMs: 1_600,
+            status: .complete
+        )
+
+        let batchLimit = AlphaLocalPromptBudgetPlanner.structuredDocumentBatchLimit(
+            runtimeMode: .llamaCppGguf,
+            capabilityTier: .caseAssociate,
+            task: .legalFieldExtraction,
+            baseBatchLimit: 18,
+            baseMaxInputChars: 52_000,
+            lastInvocation: fastInvocation
+        )
+
+        XCTAssertEqual(batchLimit, 22)
+    }
+
     func testStructuredDocumentBatchLimitWidensCaseMemoryAfterFastMLXRun() {
         let fastInvocation = AlphaLocalModelInvocation(
             task: .caseMemorySynthesis,
@@ -11376,6 +11464,34 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(batchLimit, 35)
+    }
+
+    func testStructuredDocumentBatchLimitWidensCaseMemoryAfterFastLlamaRun() {
+        let fastInvocation = AlphaLocalModelInvocation(
+            task: .caseMemorySynthesis,
+            runtimeMode: AlphaPackRuntimeMode.llamaCppGguf.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 12.9,
+            timeToFirstTokenMs: 1_550,
+            status: .complete
+        )
+
+        let batchLimit = AlphaLocalPromptBudgetPlanner.structuredDocumentBatchLimit(
+            runtimeMode: .llamaCppGguf,
+            capabilityTier: .caseAssociate,
+            task: .caseMemorySynthesis,
+            baseBatchLimit: 24,
+            baseMaxInputChars: 52_000,
+            lastInvocation: fastInvocation
+        )
+
+        XCTAssertEqual(batchLimit, 33)
     }
 
     func testStructuredDocumentBatchLimitTightensAfterSlowRun() {
