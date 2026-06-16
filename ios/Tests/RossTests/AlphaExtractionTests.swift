@@ -137,6 +137,34 @@ final class AlphaExtractionTests: XCTestCase {
         SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
+    private func makeMatterAskDocuments(
+        count: Int,
+        importedAt: Date = .now
+    ) -> [AlphaCaseDocument] {
+        (1...count).map { index in
+            AlphaCaseDocument(
+                title: "Matter order \(index)",
+                fileName: "matter-order-\(index).pdf",
+                kind: .pdf,
+                storedRelativePath: "tests/\(UUID().uuidString)-matter-order-\(index).pdf",
+                importedAt: importedAt.addingTimeInterval(TimeInterval(-index * 60)),
+                pageCount: 1,
+                ocrStatus: .nativeText,
+                indexingStatus: .indexed,
+                extractedText: "Direction \(index): keep the filing bundle ready for the next hearing and track the compliance note locally.",
+                dominantSourceSnippet: "Direction \(index) for the matter bundle.",
+                lastIndexedAt: importedAt,
+                pages: [
+                    AlphaDocumentPage(
+                        pageNumber: 1,
+                        snippet: "Matter order \(index)",
+                        extractedText: "Direction \(index): keep the filing bundle ready for the next hearing and track the compliance note locally."
+                    )
+                ]
+            )
+        }
+    }
+
     private func registerModelArtifactCleanup(for store: AlphaRossStore) {
         addTeardownBlock {
             await store.removeAllModelArtifacts()
@@ -9702,6 +9730,189 @@ final class AlphaExtractionTests: XCTestCase {
             """
         )
     }
+
+    #if canImport(FoundationModels)
+    @available(iOS 26.0, macOS 26.0, *)
+    @MainActor
+    func testLocalAskPreflightUpgradeUsesInstalledMLXBeforeSuggestingSeniorTierUpgrade() async throws {
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        let previousSimulatorIdentifier = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"]
+        let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        setenv("SIMULATOR_MODEL_IDENTIFIER", "iPhone17,2", 1)
+        AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in true }
+        defer {
+            AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+            if let previousSimulatorIdentifier {
+                setenv("SIMULATOR_MODEL_IDENTIFIER", previousSimulatorIdentifier, 1)
+            } else {
+                unsetenv("SIMULATOR_MODEL_IDENTIFIER")
+            }
+        }
+
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+        registerModelArtifactCleanup(for: store)
+
+        var availableMLXPack = try await installMLXPack(
+            with: store,
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-it-mlx",
+            packId: "case-mlx",
+            fixtureName: "ask-preflight-large-file-mlx-\(UUID().uuidString)"
+        )
+        availableMLXPack.isActive = false
+        var systemPack = alphaSystemAssistantPack(for: .caseAssociate)
+        systemPack.isActive = true
+
+        let caseID = UUID()
+        let documents = makeMatterAskDocuments(count: 16)
+        let matter = AlphaCaseMatter(
+            id: caseID,
+            title: "Large file matter",
+            forum: "High Court",
+            stage: .arguments,
+            folderTint: .emerald,
+            localNotice: "Review selected filing",
+            summary: "Matter with a larger local bundle",
+            issueHighlights: [],
+            evidenceNotes: [],
+            draftTasks: [],
+            documents: documents,
+            sourceRefs: []
+        )
+
+        var state = AlphaPersistedState.empty()
+        state.settings.activeTier = .caseAssociate
+        state.installedPacks = [systemPack, availableMLXPack]
+        state.cases = [matter]
+
+        let model = AlphaRossModel()
+        model.persisted = state
+
+        let preflight = model.localAskPreflightUpgrade(
+            question: "What are the main directions in this matter bundle?",
+            scopeCaseID: caseID,
+            webEnabled: false
+        )
+
+        XCTAssertEqual(preflight?.targetTier, .seniorDraftingSupport)
+        XCTAssertEqual(preflight?.upgradeTierHint, .seniorDraftingSupport)
+        XCTAssertEqual(preflight?.upgradeRuntimeHint, .llamaCppGguf)
+    }
+
+    @available(iOS 26.0, macOS 26.0, *)
+    @MainActor
+    func testSubmitAskUsesInstalledMLXForLargeMatterBundleBeforeCoreAIRun() async throws {
+        final class RuntimeProbeBox: @unchecked Sendable {
+            var usedFoundation = false
+            var usedMLX = false
+        }
+
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        let previousSimulatorIdentifier = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"]
+        let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
+        let previousFoundationGenerator = AlphaFoundationModelsLocalProvider.streamGenerator
+        let previousMLXGenerator = AlphaMLXLocalProvider.streamGenerator
+        let probeBox = RuntimeProbeBox()
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        setenv("SIMULATOR_MODEL_IDENTIFIER", "iPhone17,2", 1)
+        AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in true }
+        AlphaFoundationModelsLocalProvider.streamGenerator = { _, _, _, _, _ in
+            probeBox.usedFoundation = true
+            return AlphaFoundationModelsGenerationSnapshot(
+                text: "Foundation answer\n- This should not run first.",
+                inputTokenCount: 320,
+                outputTokenCount: 18,
+                outputTokensPerSecond: 13.2,
+                timeToFirstTokenMs: 420,
+                usesMeasuredTokenCounts: true
+            )
+        }
+        AlphaMLXLocalProvider.streamGenerator = { _, _, _, _, _, _, onChunk in
+            probeBox.usedMLX = true
+            onChunk?("Selected order")
+            return AlphaMLXGenerationSnapshot(text: "Selected order\n- MLX reviewed the full selected order.")
+        }
+        defer {
+            AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
+            AlphaFoundationModelsLocalProvider.streamGenerator = previousFoundationGenerator
+            AlphaMLXLocalProvider.streamGenerator = previousMLXGenerator
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+            if let previousSimulatorIdentifier {
+                setenv("SIMULATOR_MODEL_IDENTIFIER", previousSimulatorIdentifier, 1)
+            } else {
+                unsetenv("SIMULATOR_MODEL_IDENTIFIER")
+            }
+        }
+
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+        registerModelArtifactCleanup(for: store)
+
+        var availableMLXPack = try await installMLXPack(
+            with: store,
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-it-mlx",
+            packId: "case-mlx",
+            fixtureName: "ask-runtime-large-file-mlx-\(UUID().uuidString)"
+        )
+        availableMLXPack.isActive = false
+        var systemPack = alphaSystemAssistantPack(for: .caseAssociate)
+        systemPack.isActive = true
+
+        let caseID = UUID()
+        let documents = makeMatterAskDocuments(count: 16)
+        let matter = AlphaCaseMatter(
+            id: caseID,
+            title: "Large file matter",
+            forum: "High Court",
+            stage: .arguments,
+            folderTint: .emerald,
+            localNotice: "Review selected filing",
+            summary: "Matter with a larger local bundle",
+            issueHighlights: [],
+            evidenceNotes: [],
+            draftTasks: [],
+            documents: documents,
+            sourceRefs: []
+        )
+
+        var state = AlphaPersistedState.empty()
+        state.settings.activeTier = .caseAssociate
+        state.installedPacks = [systemPack, availableMLXPack]
+        state.cases = [matter]
+
+        let model = AlphaRossModel()
+        model.persisted = state
+
+        model.submitAsk(
+            question: "What are the main directions in this matter bundle?",
+            scopeCaseID: caseID,
+            webEnabled: false
+        )
+
+        try await eventually {
+            model.latestAskResult?.modelInvocation?.status == .complete
+        }
+
+        XCTAssertTrue(probeBox.usedMLX)
+        XCTAssertFalse(probeBox.usedFoundation)
+        XCTAssertEqual(
+            model.latestAskResult?.modelInvocation?.runtimeMode,
+            AlphaPackRuntimeMode.mlxSwiftLm.rawValue
+        )
+    }
+    #endif
 
     func testAskUpgradeSetupSummaryAppearsForPendingUpgradeHandoff() {
         let summary = alphaAskUpgradeSetupSummary(
