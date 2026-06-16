@@ -5683,6 +5683,15 @@ private fun AlphaAskAnswerDetailsSheet(
             alphaAskAnswerDetailSpeedLabel(details)?.let { speedLabel ->
                 AlphaSettingsValueRow("Token speed", speedLabel)
             }
+            alphaAskAnswerDetailRuntimeLabel(details)?.let { runtimeLabel ->
+                AlphaSettingsValueRow("Runtime used", runtimeLabel)
+            }
+            alphaAskAnswerDetailPromptSizeLabel(details)?.let { promptSizeLabel ->
+                AlphaSettingsValueRow("Prompt size", promptSizeLabel)
+            }
+            alphaAskAnswerDetailSourceCoverageLabel(details)?.let { sourceCoverageLabel ->
+                AlphaSettingsValueRow("Source coverage", sourceCoverageLabel)
+            }
         }
     }
 }
@@ -5703,6 +5712,34 @@ private fun alphaAskAnswerDetailSpeedLabel(details: AlphaAskAnswerDetails): Stri
         formatted
     } else {
         "~$formatted"
+    }
+}
+
+private fun alphaAskAnswerDetailRuntimeLabel(details: AlphaAskAnswerDetails): String? =
+    when (details.runtimeMode) {
+        AlphaPackRuntimeMode.GemmaLocalRuntime.wireValue -> "Gemma GGUF"
+        AlphaPackRuntimeMode.AppleFoundationModels.wireValue -> "Built-in CoreAI"
+        AlphaPackRuntimeMode.MediapipeLlm.wireValue -> "MediaPipe"
+        AlphaPackRuntimeMode.DeterministicDev.wireValue -> "Development runtime"
+        AlphaPackRuntimeMode.Unavailable.wireValue, null -> null
+        else -> details.runtimeMode
+            .replace("_", " ")
+            .split(" ")
+            .joinToString(" ") { token -> token.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() } }
+    }
+
+private fun alphaAskAnswerDetailPromptSizeLabel(details: AlphaAskAnswerDetails): String? =
+    details.promptChars
+        ?.takeIf { it > 0 }
+        ?.let { "${String.format(Locale.getDefault(), "%,d", it)} chars" }
+
+private fun alphaAskAnswerDetailSourceCoverageLabel(details: AlphaAskAnswerDetails): String? {
+    val usedSourceCount = details.usedSourceCount ?: return null
+    val reviewedSourceCount = details.reviewedSourceCount?.takeIf { it > 0 } ?: return usedSourceCount.toString()
+    return if (usedSourceCount < reviewedSourceCount) {
+        "${String.format(Locale.getDefault(), "%,d", usedSourceCount)} / ${String.format(Locale.getDefault(), "%,d", reviewedSourceCount)}"
+    } else {
+        String.format(Locale.getDefault(), "%,d", usedSourceCount)
     }
 }
 

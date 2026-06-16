@@ -318,6 +318,10 @@ data class AlphaAskResult(
 data class AlphaAskAnswerDetails(
     val estimatedProcessedTokens: Int? = null,
     val estimatedTokensPerSecond: Double? = null,
+    val promptChars: Int? = null,
+    val usedSourceCount: Int? = null,
+    val reviewedSourceCount: Int? = null,
+    val runtimeMode: String? = null,
     val usesMeasuredTokenCounts: Boolean = false,
 )
 
@@ -2273,6 +2277,8 @@ internal class AlphaRossController(
                     estimate = estimate,
                     output = output,
                     durationMs = durationMs,
+                    sourcePack = sourcePack,
+                    runtimeMode = provider.runtimeMode,
                 )
                 val answerDetails = runtimeMetrics
                 val update: (AlphaAskResult) -> AlphaAskResult = { result ->
@@ -2553,6 +2559,8 @@ internal class AlphaRossController(
         estimate: AlphaLocalModelResourceEstimate,
         output: AlphaLocalModelOutput,
         durationMs: Long,
+        sourcePack: List<AlphaSourceTextBlock>,
+        runtimeMode: AlphaPackRuntimeMode,
     ): AlphaAskAnswerDetails? {
         val outputChars = output.rawText.ifBlank { output.parsedJson.orEmpty() }
             .trim()
@@ -2566,15 +2574,49 @@ internal class AlphaRossController(
             ?.toDouble()
             ?.div(durationMs.toDouble() / 1_000.0)
             ?.takeIf { it.isFinite() && it > 0.0 }
-        if (estimatedProcessedTokens == null && estimatedTokensPerSecond == null) {
+        val promptChars = estimate.inputChars.takeIf { it > 0 }
+        val reviewedSourceCount = alphaAskDistinctSourceCount(sourcePack.map { it.sourceRef })
+        val usedSourceCount = alphaAskDistinctSourceCount(output.sourceRefs)
+        val reviewedSourceCountValue = reviewedSourceCount.takeIf { it > 0 }
+        val usedSourceCountValue = when {
+            usedSourceCount > 0 -> usedSourceCount
+            reviewedSourceCount > 0 -> 0
+            else -> null
+        }
+        val runtimeModeValue = runtimeMode.wireValue.takeIf { runtimeMode != AlphaPackRuntimeMode.Unavailable }
+        if (
+            estimatedProcessedTokens == null &&
+            estimatedTokensPerSecond == null &&
+            promptChars == null &&
+            reviewedSourceCountValue == null &&
+            usedSourceCountValue == null &&
+            runtimeModeValue == null
+        ) {
             return null
         }
         return AlphaAskAnswerDetails(
             estimatedProcessedTokens = estimatedProcessedTokens,
             estimatedTokensPerSecond = estimatedTokensPerSecond,
+            promptChars = promptChars,
+            usedSourceCount = usedSourceCountValue,
+            reviewedSourceCount = reviewedSourceCountValue,
+            runtimeMode = runtimeModeValue,
             usesMeasuredTokenCounts = false,
         )
     }
+
+    private fun alphaAskDistinctSourceCount(sourceRefs: List<AlphaSourceRef>): Int =
+        sourceRefs
+            .map { sourceRef ->
+                listOf(
+                    sourceRef.documentId,
+                    sourceRef.pageNumber.toString(),
+                    sourceRef.paragraphRange.orEmpty(),
+                    sourceRef.label,
+                ).joinToString("|")
+            }
+            .toSet()
+            .size
 
     private fun alphaAskCompactSnippet(value: String?): String? =
         value
