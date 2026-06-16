@@ -66,15 +66,15 @@ Ask in Hindi or Bengali and Ross keeps the answer in that language while still g
 
 ## Gemma 4 Capability Packs
 
-ROSS-Gemma4 is wired for real, quantized Gemma 4 GGUF models on-device. The current repo has catalog entries and download plumbing for community GGUF artifacts hosted on Hugging Face (`bartowski/google_gemma-4-*`). The product-facing runtime path is currently GGUF via `llama.cpp` through `llama.swift`. The iOS installer now also supports packaged MLX directory artifacts delivered as ZIP archives, but the production catalog still defaults to GGUF packs today while the MLX lane remains an experimental iPhone/macOS path. A simulator smoke run has proven the llama.cpp GGUF path with a local developer artifact, and live Hugging Face probes on June 2, 2026 confirmed that all configured assistant files resolve, advertise the pinned SHA-256 values through linked ETags, and accept one-byte range downloads. The full physical iPhone download, resume, verify, activate, and imported-file QA pass is still pending.
+ROSS-Gemma4 is wired for real, quantized Gemma 4 packs on-device. The visible lineup is now a 3-pack Gemma 4 ladder, with GGUF packs delivered through `llama.cpp` via `llama.swift` and supported iPhone paths able to prefer MLX or built-in CoreAI at runtime when that is the better local choice. The current pinned GGUF artifacts come from `unsloth/gemma-4-*-it-GGUF`, the iOS installer supports packaged MLX directory artifacts, and capable iPhone MLX setups now use smaller official assistant draft companions for speculative decoding on the E4B and 12B tiers. A simulator smoke run has proven the GGUF lane with a local developer artifact, and live Hugging Face probes on June 2, 2026 confirmed that the configured assistant files resolve and support byte-range checks. The full physical iPhone download, resume, verify, activate, and imported-file QA pass is still pending.
 
 There are three product-visible Gemma 4 capability packs available for download inside the app:
 
 | Tier | Pack | Base Model | Quantization | Size | Use Case | Target Device |
 | --- | --- | --- | --- | --- | --- | --- |
-| **Quick Start** | `gemma-4-e4b-q4` | Gemma 4 E4B | `Q4_K_M` | ~5.4 GB | Lighter setup, short legal Q&A, intake review, and smaller matter work. | Constrained Phones |
-| **Case Associate** | `gemma-4-12b-q4` | Gemma 4 12B | `Q4_K_M` | ~7.4 GB | Balanced chronology building, issue extraction, larger file handling, and everyday drafting support. | Modern Phones/Tablets |
-| **Senior Drafting Support**| `gemma-4-26b-a4b-q4` | Gemma 4 26B-A4B (MoE) | `Q4_K_M` | ~17.0 GB | Advanced drafting, clinic workstation mode, complex cross-referencing. | High-End Local Workstations |
+| **Quick Start** | `gemma-4-e4b-q4` | Gemma 4 E4B | `UD-Q4_K_XL` | ~5.1 GB | Lighter setup, short legal Q&A, intake review, and smaller matter work. | Constrained Phones |
+| **Case Associate** | `gemma-4-12b-q4` | Gemma 4 12B | `UD-Q4_K_XL` | ~7.4 GB | Balanced chronology building, issue extraction, larger file handling, and everyday drafting support. | Modern Phones/Tablets |
+| **Senior Drafting Support**| `gemma-4-26b-a4b-q4` | Gemma 4 26B-A4B | `UD-Q4_K_XL` | ~17.0 GB | Advanced drafting, clinic workstation mode, complex cross-referencing. | High-End Local Workstations |
 
 The older Flash setup tier remains in the codebase only for compatibility and recovery paths. It is no longer shown in normal onboarding or assistant selection.
 
@@ -126,7 +126,7 @@ graph LR
 
 ## iOS Runtime Status & Inference
 
-The iOS project integrates with a `llama.cpp` wrapper (`AlphaLlamaCppEngine`) for GGUF inference. The current verified run is a June 2, 2026 simulator smoke using a local GGUF developer artifact. Physical iPhone proof with a downloaded configured pack, storage pressure, and imported user files has not been completed yet.
+The iOS project integrates with a `llama.cpp` wrapper (`AlphaLlamaCppEngine`) for GGUF inference and is currently pinned to `llama.swift` `2.9661.0`. Supported iPhone runtime selection can also choose MLX for the E4B and 12B tiers or built-in CoreAI when the device and recent performance signal make that the better local path. The current verified run is a June 2, 2026 simulator smoke using a local GGUF developer artifact. Physical iPhone proof with a downloaded configured pack, storage pressure, and imported user files has not been completed yet.
 
 ## Model Artifact Status
 

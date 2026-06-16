@@ -15,13 +15,11 @@ Normal product UI shows assistant levels, not model names. Technical names, repo
 
 | User tier | Technical model | Repo | Runtime | Download |
 | --- | --- | --- | --- | --- |
-| Basic | Gemma 4 E4B Q4_K_M | `bartowski/google_gemma-4-E4B-it-GGUF` | `llama_cpp_gguf` | about 5.4 GB |
-| Standard | Gemma 4 12B Q4_K_M | `ggml-org/gemma-4-12B-it-GGUF` | `llama_cpp_gguf` | about 7.4 GB |
-| Advanced | Gemma 4 26B-A4B Q4_K_M | `bartowski/google_gemma-4-26B-A4B-it-GGUF` | `llama_cpp_gguf` | about 17.0 GB |
+| Basic | Gemma 4 E4B UD Q4_K_XL | `unsloth/gemma-4-E4B-it-GGUF` | `llama_cpp_gguf` | about 5.1 GB |
+| Standard | Gemma 4 12B UD Q4_K_XL | `unsloth/gemma-4-12b-it-GGUF` | `llama_cpp_gguf` | about 7.4 GB |
+| Advanced | Gemma 4 26B-A4B UD Q4_K_XL | `unsloth/gemma-4-26B-A4B-it-GGUF` | `llama_cpp_gguf` | about 17.0 GB |
 
-Standard alternate repo: `bartowski/gemma-4-12B-it-GGUF`.
-
-Advanced alternate official repo: `google/gemma-4-26B-A4B-it`.
+Quick Start / Standard GGUF packs also carry official MTP draft companions in the configured lineup.
 
 Legacy compatibility tier:
 
@@ -83,13 +81,15 @@ Embedding model:
 
 ## iPhone Runtime Notes
 
-- `ios/Package.swift` now pins `llama.swift` with `.upToNextMajor(from: "2.9647.0")`.
-- `ios/Package.resolved` currently resolves commit `d17244eaa9562942a0f07881ee54fab988cd510e`.
+- `ios/Package.swift` now pins `llama.swift` with `.upToNextMajor(from: "2.9661.0")`.
+- `ios/Package.resolved` currently resolves commit `98d472463b5d3bf6de1340f41da91b702b841713`.
 - Context windows now scale by pack and device RAM:
-  - Basic: 8k to 12k tokens
-  - Standard: 12k to 16k tokens
-  - Advanced: 8k to 12k tokens
+  - Basic: about 10k to 20k tokens
+  - Standard: about 18k to 32k tokens
+  - Advanced: about 10k to 24k tokens
 - Input budgets are widened per tier so longer matter files can stay on-device instead of being truncated to the old fixed limits.
+- Supported iPhone runtime selection can choose GGUF, MLX, or built-in CoreAI depending on device support and recent runtime performance.
+- MLX is currently supported only for the visible Quick Start and Case Associate tiers; Senior Drafting Support remains GGUF/CoreAI-only because the current 26B-A4B MLX main archive is still blocked.
 
 ## Not Implemented Yet
 
@@ -98,6 +98,6 @@ Embedding model:
 - Android native Q4 inference.
 - full physical-iPhone download/resume/verify/activate and imported-file QA with the 12B pack.
 - Hardware proof of the full Gemma 4 stack on target devices.
-- MLX-native iPhone experiments for cases where converted Gemma 4 weights may outperform GGUF.
+- Full physical-iPhone proof for the MLX and CoreAI runtime lanes.
 
 No model files are committed, bundled, or downloaded into the repository.
