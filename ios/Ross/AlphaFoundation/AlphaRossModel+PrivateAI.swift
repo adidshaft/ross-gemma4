@@ -957,6 +957,34 @@ func alphaAssistantDownloadDescriptor(
 
 extension AlphaRossModel {
 
+    private func upsertInstalledPack(
+        _ pack: AlphaInstalledModelPack,
+        activate: Bool
+    ) {
+        persisted.installedPacks.removeAll {
+            $0.id == pack.id ||
+                $0.packId == pack.packId ||
+                $0.installPath == pack.installPath
+        }
+        if activate {
+            persisted.installedPacks = persisted.installedPacks.map {
+                var copy = $0
+                copy.isActive = false
+                return copy
+            }
+        }
+        var retainedPack = pack
+        retainedPack.isActive = activate
+        persisted.installedPacks.insert(retainedPack, at: 0)
+        if activate {
+            persisted.settings.activeTier = pack.tier
+        } else if !persisted.installedPacks.contains(where: \.isActive) {
+            retainedPack.isActive = true
+            persisted.installedPacks[0] = retainedPack
+            persisted.settings.activeTier = pack.tier
+        }
+    }
+
     func primeAssistantSetupCatalogsIfNeeded(force: Bool = false) {
         if !force,
            assistantSetupCatalogRefreshTask != nil {
@@ -1184,11 +1212,27 @@ extension AlphaRossModel {
                 await store.removeDownloadedPackArtifact(relativePath: pack.installPath)
             }
         }
+        let removedWasActive = pack.isActive
         persisted.installedPacks.removeAll { $0.id == pack.id }
-        if persisted.settings.activeTier == pack.tier {
-            persisted.settings.activeTier = persisted.installedPacks.first?.tier
-        }
-        if !persisted.installedPacks.contains(where: \.isActive), !persisted.installedPacks.isEmpty {
+        if removedWasActive {
+            if let sameTierReplacement = persisted.installedPacks.first(where: { $0.tier == pack.tier }) {
+                persisted.installedPacks = persisted.installedPacks.map {
+                    var copy = $0
+                    copy.isActive = copy.id == sameTierReplacement.id
+                    return copy
+                }
+                persisted.settings.activeTier = sameTierReplacement.tier
+            } else if !persisted.installedPacks.isEmpty {
+                persisted.installedPacks = persisted.installedPacks.enumerated().map { index, retainedPack in
+                    var copy = retainedPack
+                    copy.isActive = index == 0
+                    return copy
+                }
+                persisted.settings.activeTier = persisted.installedPacks.first?.tier
+            } else {
+                persisted.settings.activeTier = nil
+            }
+        } else if !persisted.installedPacks.contains(where: \.isActive), !persisted.installedPacks.isEmpty {
             persisted.installedPacks[0].isActive = true
         }
         persisted.ledgerEntries.insert(
@@ -1401,11 +1445,17 @@ extension AlphaRossModel {
     }
 
     func repairAssistantPack(for tier: AlphaCapabilityTier, mobileAllowed: Bool = false) async {
-        if let pack = persisted.installedPacks.first(where: { $0.tier == tier }) {
+        if let pack = persisted.installedPacks.first(where: { $0.tier == tier && $0.isActive }) ??
+            persisted.installedPacks.first(where: { $0.tier == tier }) {
             removeInstalledPack(pack)
-        }
-        persisted.modelJobs.removeAll { job in
-            job.tier == tier && (job.state == .installed || job.state == .failed || job.state == .cancelled)
+            persisted.modelJobs.removeAll { job in
+                job.packId == pack.packId &&
+                    (job.state == .installed || job.state == .failed || job.state == .cancelled)
+            }
+        } else {
+            persisted.modelJobs.removeAll { job in
+                job.tier == tier && (job.state == .installed || job.state == .failed || job.state == .cancelled)
+            }
         }
         persisted.settings.activeTier = persisted.installedPacks.first(where: \.isActive)?.tier
         persist(workspaceChanged: true)
@@ -1535,14 +1585,7 @@ extension AlphaRossModel {
             return true
         }
 
-        persisted.installedPacks = persisted.installedPacks.map {
-            var copy = $0
-            copy.isActive = false
-            return copy
-        }
-        persisted.installedPacks.removeAll { $0.tier == tier }
-        persisted.installedPacks.insert(installed, at: 0)
-        persisted.settings.activeTier = tier
+        upsertInstalledPack(installed, activate: true)
         persisted.modelUpdateCandidates = alphaClearedAssistantUpdateCandidates(
             persisted.modelUpdateCandidates,
             for: tier
@@ -2158,6 +2201,7 @@ extension AlphaRossModel {
             persisted.modelJobs.first { $0.id == requestedID }
         } ?? persisted.modelJobs.first { job in
             job.tier == tier &&
+                (targetPackId == nil || job.packId == targetPackId) &&
                 (job.state == .queued ||
                  job.state == .downloading ||
                  job.state == .verifying ||
@@ -2196,14 +2240,17 @@ extension AlphaRossModel {
             return
         }
 
-        if let existingInstalled = persisted.installedPacks.first(where: { $0.tier == tier && installedModelPackFileIsUsable($0) }),
-           alphaShouldReuseInstalledAssistantPack(
-            existingInstalled,
-            preferredRuntimeMode: preferredRuntime,
-            targetPackId: targetPackId,
-            preferredDescriptor: fallbackDownload,
-            forceDownload: forceRefreshInstalledPack
-           ) {
+        if let existingInstalled = persisted.installedPacks.first(where: { pack in
+            pack.tier == tier &&
+                installedModelPackFileIsUsable(pack) &&
+                alphaShouldReuseInstalledAssistantPack(
+                    pack,
+                    preferredRuntimeMode: preferredRuntime,
+                    targetPackId: targetPackId,
+                    preferredDescriptor: fallbackDownload,
+                    forceDownload: forceRefreshInstalledPack
+                )
+        }) {
             activateInstalledPack(existingInstalled)
             return
         }
@@ -2294,12 +2341,15 @@ extension AlphaRossModel {
             return
         }
 
-        if let existingInstalled = persisted.installedPacks.first(where: { $0.tier == tier && installedModelPackFileIsUsable($0) }),
-           alphaInstalledAssistantPackMatchesDownloadDescriptor(
-            existingInstalled,
-            descriptor: resolvedDownload,
-            forceDownload: forceRefreshInstalledPack
-           ) {
+        if let existingInstalled = persisted.installedPacks.first(where: { pack in
+            pack.tier == tier &&
+                installedModelPackFileIsUsable(pack) &&
+                alphaInstalledAssistantPackMatchesDownloadDescriptor(
+                    pack,
+                    descriptor: resolvedDownload,
+                    forceDownload: forceRefreshInstalledPack
+                )
+        }) {
             activateInstalledPack(existingInstalled)
             updateJob(job.id) {
                 $0.state = .installed
@@ -2366,14 +2416,7 @@ extension AlphaRossModel {
                 persist()
                 return
             }
-            persisted.installedPacks = persisted.installedPacks.map {
-                var copy = $0
-                copy.isActive = false
-                return copy
-            }
-            persisted.installedPacks.removeAll { $0.tier == tier }
-            persisted.installedPacks.insert(installed, at: 0)
-            persisted.settings.activeTier = tier
+            upsertInstalledPack(installed, activate: true)
             persisted.modelUpdateCandidates = alphaClearedAssistantUpdateCandidates(
                 persisted.modelUpdateCandidates,
                 for: tier
@@ -2573,14 +2616,7 @@ extension AlphaRossModel {
                 )
             }
 
-            persisted.installedPacks = persisted.installedPacks.map {
-                var copy = $0
-                copy.isActive = false
-                return copy
-            }
-            persisted.installedPacks.removeAll { $0.tier == tier }
-            persisted.installedPacks.insert(installed, at: 0)
-            persisted.settings.activeTier = tier
+            upsertInstalledPack(installed, activate: true)
             persisted.modelUpdateCandidates = alphaClearedAssistantUpdateCandidates(
                 persisted.modelUpdateCandidates,
                 for: tier

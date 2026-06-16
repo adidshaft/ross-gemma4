@@ -671,7 +671,11 @@ func alphaOptimisticActivePack(from state: AlphaPersistedState) -> AlphaInstalle
         return active
     }
     if let preferredTier = state.settings.activeTier,
-       let preferred = state.installedPacks.first(where: { $0.tier == preferredTier }) {
+       let preferred = alphaPreferredInstalledPack(
+        for: preferredTier,
+        installedPacks: state.installedPacks,
+        lastInvocation: alphaLastModelInvocation(in: state)
+       ) ?? state.installedPacks.first(where: { $0.tier == preferredTier }) {
         return preferred
     }
     return nil
@@ -705,7 +709,13 @@ private func alphaValidatedActivePack(from state: AlphaPersistedState) -> AlphaI
         return active
     }
     if let preferredTier = state.settings.activeTier,
-       let preferred = state.installedPacks.first(where: { $0.tier == preferredTier && alphaInstalledAssistantPackPassesRuntimeValidation($0) }) {
+       let preferred = alphaPreferredInstalledPack(
+        for: preferredTier,
+        installedPacks: state.installedPacks,
+        lastInvocation: alphaLastModelInvocation(in: state)
+       ) ?? state.installedPacks.first(where: {
+           $0.tier == preferredTier && alphaInstalledAssistantPackPassesRuntimeValidation($0)
+       }) {
         return preferred
     }
     return nil
@@ -723,57 +733,72 @@ private func alphaNormalizedInstalledPacks(
 }
 
 private func alphaConvergeInstalledAssistantCatalog(_ state: inout AlphaPersistedState) {
-    let lastInvocation = alphaLastModelInvocation(in: state)
-    var retainedPackIDs = Set<UUID>()
-    var retainedPacksByTier: [AlphaCapabilityTier: AlphaInstalledModelPack] = [:]
-
-    for tier in AlphaCapabilityTier.installableAssistantTiers {
-        guard let preferredPack = alphaPreferredInstalledPack(
-            for: tier,
-            installedPacks: state.installedPacks,
-            lastInvocation: lastInvocation
-        ) else {
-            continue
+    var retainedPacksByIdentity: [String: AlphaInstalledModelPack] = [:]
+    for pack in state.installedPacks {
+        let identity = [
+            pack.tier.rawValue,
+            pack.packId,
+            pack.runtimeMode.rawValue,
+            pack.installPath,
+            pack.artifactKind
+        ].joined(separator: "|")
+        if let existing = retainedPacksByIdentity[identity] {
+            let shouldReplace: Bool
+            if existing.isActive != pack.isActive {
+                shouldReplace = pack.isActive
+            } else if existing.checksumVerified != pack.checksumVerified {
+                shouldReplace = pack.checksumVerified
+            } else {
+                shouldReplace = pack.installedAt >= existing.installedAt
+            }
+            if shouldReplace {
+                retainedPacksByIdentity[identity] = pack
+            }
+        } else {
+            retainedPacksByIdentity[identity] = pack
         }
-        retainedPackIDs.insert(preferredPack.id)
-        retainedPacksByTier[tier] = preferredPack
+    }
+    state.installedPacks = retainedPacksByIdentity.values.sorted { lhs, rhs in
+        if lhs.isActive != rhs.isActive {
+            return lhs.isActive && !rhs.isActive
+        }
+        if lhs.tier != rhs.tier {
+            return lhs.tier.rawValue < rhs.tier.rawValue
+        }
+        if lhs.installedAt != rhs.installedAt {
+            return lhs.installedAt > rhs.installedAt
+        }
+        return lhs.packId < rhs.packId
     }
 
-    state.installedPacks.removeAll { pack in
-        AlphaCapabilityTier.installableAssistantTiers.contains(pack.tier) &&
-            !retainedPackIDs.contains(pack.id)
+    let retainedPackKeys = Set(state.installedPacks.map {
+        [$0.tier.rawValue, $0.packId, $0.runtimeMode.rawValue, $0.artifactKind].joined(separator: "|")
+    })
+    var keptInstalledJobIDs = Set<UUID>()
+    let installedJobsByKey = Dictionary(
+        grouping: state.modelJobs.enumerated().filter { entry in
+            entry.element.state == .installed
+        }
+    ) { entry in
+        let job = entry.element
+        return [job.tier.rawValue, job.packId, job.runtimeMode.rawValue, job.artifactKind].joined(separator: "|")
     }
 
-    for tier in AlphaCapabilityTier.installableAssistantTiers {
-        guard let retainedPack = retainedPacksByTier[tier] else { continue }
-        var keptInstalledJobID: UUID?
-        let installedJobs = state.modelJobs.enumerated().filter { _, job in
-            job.tier == tier && job.state == .installed
-        }
-        if let matchingInstalledJob = installedJobs
-            .sorted(by: { lhs, rhs in
-                let lhsDate = lhs.element.completedAt ?? lhs.element.updatedAt
-                let rhsDate = rhs.element.completedAt ?? rhs.element.updatedAt
-                return lhsDate > rhsDate
-            })
-            .first(where: { _, job in
-                job.packId == retainedPack.packId &&
-                    job.runtimeMode == retainedPack.runtimeMode &&
-                    job.artifactKind == retainedPack.artifactKind
-            }) {
-            keptInstalledJobID = matchingInstalledJob.element.id
-        } else if let fallbackInstalledJob = installedJobs.max(by: { lhs, rhs in
+    for key in retainedPackKeys {
+        guard let jobs = installedJobsByKey[key] else { continue }
+        if let kept = jobs.max(by: { lhs, rhs in
             let lhsDate = lhs.element.completedAt ?? lhs.element.updatedAt
             let rhsDate = rhs.element.completedAt ?? rhs.element.updatedAt
             return lhsDate < rhsDate
         }) {
-            keptInstalledJobID = fallbackInstalledJob.element.id
+            keptInstalledJobIDs.insert(kept.element.id)
         }
+    }
 
-        state.modelJobs.removeAll { job in
-            guard job.tier == tier, job.state == .installed else { return false }
-            return keptInstalledJobID == nil || job.id != keptInstalledJobID
-        }
+    state.modelJobs.removeAll { job in
+        guard job.state == .installed else { return false }
+        let key = [job.tier.rawValue, job.packId, job.runtimeMode.rawValue, job.artifactKind].joined(separator: "|")
+        return !retainedPackKeys.contains(key) || !keptInstalledJobIDs.contains(job.id)
     }
 }
 
@@ -783,16 +808,21 @@ private func alphaConvergeAssistantUpdateCandidates(_ state: inout AlphaPersiste
         return
     }
 
-    let retainedPackIDsByTier = Dictionary(
-        uniqueKeysWithValues: state.installedPacks.map { ($0.tier, $0.packId) }
-    )
+    let lastInvocation = alphaLastModelInvocation(in: state)
     var converged: [AlphaModelUpdateCandidate] = []
 
     for tier in AlphaCapabilityTier.installableAssistantTiers {
+        guard let retainedPackID = alphaPreferredInstalledPack(
+            for: tier,
+            installedPacks: state.installedPacks,
+            lastInvocation: lastInvocation
+        )?.packId else {
+            continue
+        }
         let tierCandidates = candidates
             .filter { candidate in
                 candidate.tier == tier &&
-                    retainedPackIDsByTier[tier] == candidate.installedPackId
+                    retainedPackID == candidate.installedPackId
             }
             .sorted { lhs, rhs in
                 let lhsDismissed = lhs.dismissedAt != nil
@@ -934,41 +964,31 @@ private func alphaApplyPreferredInstalledRuntimeForSelectedTier(_ state: inout A
     }
 
     let currentPack = state.installedPacks.first { $0.tier == selectedTier && $0.isActive } ??
-        state.installedPacks.first { $0.tier == selectedTier }
-    guard currentPack?.packId != preferredPack.packId ||
-            currentPack?.runtimeMode != preferredPack.runtimeMode ||
-            currentPack?.installPath != preferredPack.installPath else {
+        alphaOptimisticActivePack(from: state)
+    guard currentPack?.id != preferredPack.id else {
         return
     }
 
-    let migratedPack = AlphaInstalledModelPack(
-        id: currentPack?.id ?? preferredPack.id,
-        packId: preferredPack.packId,
-        tier: preferredPack.tier,
-        installPath: preferredPack.installPath,
-        checksumSha256: preferredPack.checksumSha256,
-        artifactKind: preferredPack.artifactKind,
-        runtimeMode: preferredPack.runtimeMode,
-        developmentOnly: preferredPack.developmentOnly,
-        checksumVerified: preferredPack.checksumVerified,
-        minimumAppVersion: preferredPack.minimumAppVersion,
-        installedAt: currentPack?.installedAt ?? preferredPack.installedAt,
-        isActive: true
-    )
-
-    state.installedPacks.removeAll { $0.tier == selectedTier }
-    state.installedPacks.insert(migratedPack, at: 0)
+    state.installedPacks = state.installedPacks.map { pack in
+        var copy = pack
+        copy.isActive = pack.id == preferredPack.id
+        return copy
+    }
     state.settings.activeTier = selectedTier
-    if let jobIndex = state.modelJobs.firstIndex(where: { $0.tier == selectedTier }) {
-        state.modelJobs[jobIndex].packId = migratedPack.packId
+    if let jobIndex = state.modelJobs.firstIndex(where: {
+        $0.tier == selectedTier &&
+            $0.packId == preferredPack.packId &&
+            $0.runtimeMode == preferredPack.runtimeMode &&
+            $0.artifactKind == preferredPack.artifactKind
+    }) {
         state.modelJobs[jobIndex].state = .installed
-        state.modelJobs[jobIndex].checksumSha256 = migratedPack.checksumSha256
-        state.modelJobs[jobIndex].artifactKind = migratedPack.artifactKind
-        state.modelJobs[jobIndex].runtimeMode = migratedPack.runtimeMode
-        state.modelJobs[jobIndex].developmentOnly = migratedPack.developmentOnly
+        state.modelJobs[jobIndex].checksumSha256 = preferredPack.checksumSha256
+        state.modelJobs[jobIndex].artifactKind = preferredPack.artifactKind
+        state.modelJobs[jobIndex].runtimeMode = preferredPack.runtimeMode
+        state.modelJobs[jobIndex].developmentOnly = preferredPack.developmentOnly
         state.modelJobs[jobIndex].failureReason = nil
-        state.modelJobs[jobIndex].bytesDownloaded = migratedPack.runtimeMode == .appleFoundationModels ? 0 : state.modelJobs[jobIndex].bytesDownloaded
-        state.modelJobs[jobIndex].totalBytes = migratedPack.runtimeMode == .appleFoundationModels ? 0 : state.modelJobs[jobIndex].totalBytes
+        state.modelJobs[jobIndex].bytesDownloaded = preferredPack.runtimeMode == .appleFoundationModels ? 0 : state.modelJobs[jobIndex].bytesDownloaded
+        state.modelJobs[jobIndex].totalBytes = preferredPack.runtimeMode == .appleFoundationModels ? 0 : state.modelJobs[jobIndex].totalBytes
         state.modelJobs[jobIndex].updatedAt = .now
         state.modelJobs[jobIndex].completedAt = state.modelJobs[jobIndex].completedAt ?? .now
     }

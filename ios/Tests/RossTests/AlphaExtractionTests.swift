@@ -6113,8 +6113,47 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(model.privateAISnapshot.activePack?.runtimeMode, .llamaCppGguf)
         XCTAssertEqual(model.privateAISnapshot.activePack?.packId, "case-associate-gguf")
+        XCTAssertEqual(model.persisted.installedPacks.count, 2)
+        XCTAssertEqual(
+            Set(model.persisted.installedPacks.map(\.packId)),
+            Set(["case-associate-mlx", "case-associate-gguf"])
+        )
+        XCTAssertEqual(model.persisted.installedPacks.first(where: \.isActive)?.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(model.persisted.settings.activeTier, .caseAssociate)
+    }
+
+    @MainActor
+    func testRemoveInstalledPackPromotesAlternateSameTierVariant() {
+        let model = AlphaRossModel()
+        let activePack = installedPack(
+            .caseAssociate,
+            runtimeMode: .llamaCppGguf,
+            packId: "case-associate-gguf",
+            installPath: "model-packs/case_associate/active-gguf.dev",
+            artifactKind: "local_model_artifact",
+            developmentOnly: true
+        )
+        let alternatePack = AlphaInstalledModelPack(
+            packId: "case-associate-mlx",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/alternate-mlx.dev",
+            checksumSha256: String(repeating: "b", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: true,
+            checksumVerified: true,
+            isActive: false
+        )
+
+        model.persisted = AlphaPersistedState.empty()
+        model.persisted.settings.activeTier = .caseAssociate
+        model.persisted.installedPacks = [activePack, alternatePack]
+
+        model.removeInstalledPack(activePack)
+
         XCTAssertEqual(model.persisted.installedPacks.count, 1)
-        XCTAssertEqual(model.persisted.installedPacks.first?.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(model.persisted.installedPacks.first?.packId, "case-associate-mlx")
+        XCTAssertEqual(model.persisted.installedPacks.first?.isActive, true)
         XCTAssertEqual(model.persisted.settings.activeTier, .caseAssociate)
     }
 
@@ -6195,6 +6234,11 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(model.privateAISnapshot.activePack?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(model.privateAISnapshot.activePack?.packId, "case-associate-fast-mlx")
+        XCTAssertEqual(model.persisted.installedPacks.count, 2)
+        XCTAssertEqual(
+            Set(model.persisted.installedPacks.map(\.packId)),
+            Set(["case-associate-fast-mlx", "case-associate-fast-gguf"])
+        )
         XCTAssertEqual(model.persisted.settings.activeTier, .caseAssociate)
     }
 
@@ -6414,8 +6458,10 @@ final class AlphaExtractionTests: XCTestCase {
         if systemHealth?.available == true {
             XCTAssertEqual(model.privateAISnapshot.activePack?.runtimeMode, .appleFoundationModels)
             XCTAssertEqual(model.privateAISnapshot.activePack?.installPath, "system://apple-foundation-models")
-            XCTAssertEqual(model.persisted.installedPacks.first?.runtimeMode, .appleFoundationModels)
-            XCTAssertEqual(model.persisted.installedPacks.first?.installPath, "system://apple-foundation-models")
+            XCTAssertEqual(model.persisted.installedPacks.first(where: \.isActive)?.runtimeMode, .appleFoundationModels)
+            XCTAssertEqual(model.persisted.installedPacks.first(where: \.isActive)?.installPath, "system://apple-foundation-models")
+            XCTAssertEqual(model.persisted.installedPacks.count, 2)
+            XCTAssertTrue(model.persisted.installedPacks.contains(where: { $0.runtimeMode == .llamaCppGguf && $0.installPath == relativePath }))
         } else {
             XCTAssertEqual(model.privateAISnapshot.activePack?.runtimeMode, .llamaCppGguf)
             XCTAssertEqual(model.privateAISnapshot.activePack?.installPath, relativePath)
@@ -6427,7 +6473,7 @@ final class AlphaExtractionTests: XCTestCase {
     #endif
 
     @MainActor
-    func testNormalizeLoadedStateKeepsOnlyOneInstalledPackPerVisibleTier() {
+    func testNormalizeLoadedStateKeepsAlternateInstalledPacksPerVisibleTier() {
         let fileManager = FileManager.default
         let packPaths = [
             "model-packs/quick_start/quick-gguf.dev",
@@ -6496,10 +6542,10 @@ final class AlphaExtractionTests: XCTestCase {
         let normalized = model.normalizeLoadedState(state)
         let retainedTiers = normalized.installedPacks.map(\.tier)
 
-        XCTAssertEqual(normalized.installedPacks.count, 3)
+        XCTAssertEqual(normalized.installedPacks.count, 5)
         XCTAssertEqual(Set(retainedTiers), Set(AlphaCapabilityTier.visibleAssistantTiers))
-        XCTAssertEqual(normalized.installedPacks.filter { $0.tier == .quickStart }.count, 1)
-        XCTAssertEqual(normalized.installedPacks.filter { $0.tier == .caseAssociate }.count, 1)
+        XCTAssertEqual(normalized.installedPacks.filter { $0.tier == .quickStart }.count, 2)
+        XCTAssertEqual(normalized.installedPacks.filter { $0.tier == .caseAssociate }.count, 2)
         XCTAssertEqual(normalized.installedPacks.filter { $0.tier == .seniorDraftingSupport }.count, 1)
     }
 
