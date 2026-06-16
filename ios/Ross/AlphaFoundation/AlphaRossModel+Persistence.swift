@@ -2636,6 +2636,7 @@ extension AlphaRossModel {
             question: turn.question,
             scopeCaseID: isSharedWorkspace ? nil : caseMatter.id,
             scopeLabel: isSharedWorkspace ? rossLocalized("all_work") : caseMatter.title,
+            selectedDocumentIDs: turn.selectedDocumentIDs ?? [],
             selectedDocumentTitles: turn.selectedDocumentTitles ?? [],
             answerTitle: turn.answerTitle,
             answerSections: turn.answerSections,
@@ -2645,7 +2646,8 @@ extension AlphaRossModel {
             statusNote: turn.statusNote,
             needsReviewWarning: turn.needsReviewWarning,
             modelInvocation: turn.modelInvocation,
-            upgradeTierHint: turn.upgradeTierHint
+            upgradeTierHint: turn.upgradeTierHint,
+            upgradeRuntimeHint: turn.upgradeRuntimeHint
         )
     }
 

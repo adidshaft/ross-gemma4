@@ -133,6 +133,7 @@ struct AlphaAskResult: Hashable {
     var question: String
     var scopeCaseID: UUID?
     var scopeLabel: String
+    var selectedDocumentIDs: [UUID] = []
     var selectedDocumentTitles: [String]
     var answerTitle: String
     var answerSections: [String]

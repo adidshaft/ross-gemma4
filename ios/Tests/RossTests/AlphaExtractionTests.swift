@@ -9374,6 +9374,13 @@ final class AlphaExtractionTests: XCTestCase {
 
     @MainActor
     func testRetryAskWithUpgradeSubmitsFreshAskWhenRuntimeIsAvailable() async throws {
+        let previousGenerator = AlphaMLXLocalProvider.streamGenerator
+        defer { AlphaMLXLocalProvider.streamGenerator = previousGenerator }
+        AlphaMLXLocalProvider.streamGenerator = { _, _, _, _, _, _, onChunk in
+            onChunk?("Retried answer")
+            return AlphaMLXGenerationSnapshot(text: "Retried answer")
+        }
+
         let store = AlphaRossStore()
         var availableMLXPack = try await installMLXPack(
             with: store,
@@ -9425,6 +9432,75 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(model.privateAISnapshot.activePack?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(model.askHistory.count, initialAskHistoryCount + 1)
         XCTAssertEqual(model.latestAskResult?.question, "Review this larger matter bundle")
+    }
+
+    @MainActor
+    func testRetryAskWithUpgradeRestoresOriginalSelectedDocuments() async throws {
+        let previousGenerator = AlphaMLXLocalProvider.streamGenerator
+        defer { AlphaMLXLocalProvider.streamGenerator = previousGenerator }
+        AlphaMLXLocalProvider.streamGenerator = { _, _, _, _, _, _, onChunk in
+            onChunk?("Retried selected-doc answer")
+            return AlphaMLXGenerationSnapshot(text: "Retried selected-doc answer")
+        }
+
+        let state = AlphaPersistedState.seed()
+        guard let caseMatter = state.cases.first(where: { $0.id != alphaSharedWorkspaceID }),
+              caseMatter.documents.count >= 2 else {
+            return XCTFail("Expected at least one non-shared case with two documents")
+        }
+
+        let store = AlphaRossStore()
+        var availableMLXPack = try await installMLXPack(
+            with: store,
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-it-qat-4bit",
+            packId: "case-mlx",
+            fixtureName: "ask-retry-selected-docs-mlx"
+        )
+        availableMLXPack.isActive = false
+
+        var previewState = state
+        previewState.installedPacks = [installedPack(.quickStart), availableMLXPack]
+        let model = AlphaRossModel(previewState: previewState, previewPath: [.askCase(caseMatter.id)])
+        let originalDocument = caseMatter.documents[0]
+        let currentDifferentDocument = caseMatter.documents[1]
+        model.setSelectedAskDocumentIDs([currentDifferentDocument.id], for: caseMatter.id)
+
+        let result = AlphaAskResult(
+            kind: .userAsk,
+            question: "Review only the tagged order",
+            scopeCaseID: caseMatter.id,
+            scopeLabel: caseMatter.title,
+            selectedDocumentIDs: [originalDocument.id],
+            selectedDocumentTitles: [originalDocument.title],
+            answerTitle: "Focused answer",
+            answerSections: [],
+            caseFileSources: [],
+            publicLawPreview: nil,
+            publicLawResults: [],
+            statusNote: nil,
+            needsReviewWarning: "Focused sources",
+            modelInvocation: AlphaLocalModelInvocation(
+                task: .matterQuestionAnswer,
+                runtimeMode: AlphaPackRuntimeMode.appleFoundationModels.rawValue,
+                caseId: nil,
+                documentId: nil,
+                extractionRunId: nil,
+                capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+                inputSourceRefs: [],
+                promptHash: "prompt",
+                inputHash: "input",
+                status: .complete
+            ),
+            upgradeTierHint: nil,
+            upgradeRuntimeHint: .mlxSwiftLm
+        )
+
+        model.retryAskWithUpgrade(result)
+
+        XCTAssertEqual(model.selectedAskDocumentIDs(for: caseMatter.id), [originalDocument.id] as Set<UUID>)
+        XCTAssertEqual(model.latestAskResult?.selectedDocumentIDs, [originalDocument.id])
+        XCTAssertEqual(model.latestAskResult?.selectedDocumentTitles, [originalDocument.title])
     }
 
     @MainActor

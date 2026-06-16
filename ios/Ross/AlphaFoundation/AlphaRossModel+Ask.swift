@@ -37,6 +37,16 @@ extension AlphaRossModel {
         )
     }
 
+    private func resultApplyingSelectedDocuments(
+        _ result: AlphaAskResult,
+        selectedDocuments: [AlphaAskDocumentOption]
+    ) -> AlphaAskResult {
+        var copy = result
+        copy.selectedDocumentIDs = selectedDocuments.map(\.id)
+        copy.selectedDocumentTitles = selectedDocuments.map(\.title)
+        return copy
+    }
+
     private func matchingInstalledPack(for pack: AlphaInstalledModelPack) -> AlphaInstalledModelPack? {
         persisted.installedPacks.first {
             $0.id == pack.id ||
@@ -606,14 +616,24 @@ extension AlphaRossModel {
         let hasRealLocalAsk = asksAboutAssistantSetup
             ? false
             : canRunRealLocalAsk(question: cleaned, scopeCaseID: scopeCaseID)
-        let localResult = buildLocalAskResult(question: cleaned, scopeCaseID: scopeCaseID)
+        let selectedDocuments = selectedAskDocuments(for: scopeCaseID)
+        let localResult = resultApplyingSelectedDocuments(
+            buildLocalAskResult(question: cleaned, scopeCaseID: scopeCaseID),
+            selectedDocuments: selectedDocuments
+        )
         let initialResult: AlphaAskResult
         if asksAboutAssistantSetup {
             initialResult = localResult
         } else if hasRealLocalAsk {
-            initialResult = buildPendingLocalModelAskResult(question: cleaned, scopeCaseID: scopeCaseID, baseResult: localResult)
+            initialResult = resultApplyingSelectedDocuments(
+                buildPendingLocalModelAskResult(question: cleaned, scopeCaseID: scopeCaseID, baseResult: localResult),
+                selectedDocuments: selectedDocuments
+            )
         } else {
-            initialResult = buildLocalModelRequiredAskResult(question: cleaned, scopeCaseID: scopeCaseID)
+            initialResult = resultApplyingSelectedDocuments(
+                buildLocalModelRequiredAskResult(question: cleaned, scopeCaseID: scopeCaseID),
+                selectedDocuments: selectedDocuments
+            )
         }
         let storedResult = appendAskResult(initialResult, persistToCase: scopeCaseID)
         latestAskResult = storedResult
@@ -1193,6 +1213,7 @@ extension AlphaRossModel {
             answerTitle: title,
             answerSections: sections,
             sourceRefs: sourceRefs,
+            selectedDocumentIDs: selectedDocumentIDs.isEmpty ? nil : Array(selectedDocumentIDs),
             selectedDocumentTitles: selectedDocumentTitles.isEmpty ? nil : selectedDocumentTitles,
             publicLawPreview: nil,
             publicLawResults: [],
@@ -1266,6 +1287,7 @@ extension AlphaRossModel {
         if let runtimeMode = target.runtimeMode,
            activateAssistantRuntimeIfAvailable(for: target.tier, runtimeMode: runtimeMode) {
             selectedTier = target.tier
+            setSelectedAskDocumentIDs(Set(result.selectedDocumentIDs), for: result.scopeCaseID)
             clearPendingAskUpgrade()
             submitAsk(question: result.question, scopeCaseID: result.scopeCaseID, webEnabled: false)
             return

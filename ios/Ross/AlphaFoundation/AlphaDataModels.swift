@@ -1446,6 +1446,7 @@ struct AlphaChatTurn: Identifiable, Codable, Hashable, Sendable {
     var answerTitle: String
     var answerSections: [String]
     var sourceRefs: [AlphaSourceRef]
+    var selectedDocumentIDs: [UUID]?
     var selectedDocumentTitles: [String]?
     var publicLawPreview: AlphaPublicLawPreview?
     var publicLawResults: [AlphaPublicLawResult]
@@ -1463,6 +1464,7 @@ struct AlphaChatTurn: Identifiable, Codable, Hashable, Sendable {
         answerTitle: String,
         answerSections: [String],
         sourceRefs: [AlphaSourceRef],
+        selectedDocumentIDs: [UUID]? = nil,
         selectedDocumentTitles: [String]? = nil,
         publicLawPreview: AlphaPublicLawPreview? = nil,
         publicLawResults: [AlphaPublicLawResult] = [],
@@ -1479,6 +1481,7 @@ struct AlphaChatTurn: Identifiable, Codable, Hashable, Sendable {
         self.answerTitle = answerTitle
         self.answerSections = answerSections
         self.sourceRefs = sourceRefs
+        self.selectedDocumentIDs = selectedDocumentIDs
         self.selectedDocumentTitles = selectedDocumentTitles
         self.publicLawPreview = publicLawPreview
         self.publicLawResults = publicLawResults
@@ -1497,6 +1500,7 @@ struct AlphaChatTurn: Identifiable, Codable, Hashable, Sendable {
         case answerTitle
         case answerSections
         case sourceRefs
+        case selectedDocumentIDs
         case selectedDocumentTitles
         case publicLawPreview
         case publicLawResults
@@ -1516,6 +1520,7 @@ struct AlphaChatTurn: Identifiable, Codable, Hashable, Sendable {
         answerTitle = try container.decode(String.self, forKey: .answerTitle)
         answerSections = try container.decode([String].self, forKey: .answerSections)
         sourceRefs = try container.decodeIfPresent([AlphaSourceRef].self, forKey: .sourceRefs) ?? []
+        selectedDocumentIDs = try container.decodeIfPresent([UUID].self, forKey: .selectedDocumentIDs)
         selectedDocumentTitles = try container.decodeIfPresent([String].self, forKey: .selectedDocumentTitles)
         publicLawPreview = try container.decodeIfPresent(AlphaPublicLawPreview.self, forKey: .publicLawPreview)
         publicLawResults = try container.decodeIfPresent([AlphaPublicLawResult].self, forKey: .publicLawResults) ?? []

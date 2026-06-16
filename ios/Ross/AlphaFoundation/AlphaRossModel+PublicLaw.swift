@@ -144,13 +144,18 @@ extension AlphaRossModel {
         includeReviewLedger: Bool = true
     ) -> AlphaAskResult {
         let storageCaseID = caseID ?? alphaSharedWorkspaceID
-        let contextDocumentIDs = selectedAskDocumentIDs(for: caseID)
+        let contextDocumentIDs = if result.selectedDocumentIDs.isEmpty {
+            selectedAskDocumentIDs(for: caseID)
+        } else {
+            Set(result.selectedDocumentIDs)
+        }
         let turn = AlphaChatTurn(
             kind: result.kind,
             question: result.question,
             answerTitle: result.answerTitle,
             answerSections: result.answerSections,
             sourceRefs: result.caseFileSources,
+            selectedDocumentIDs: result.selectedDocumentIDs.isEmpty ? nil : result.selectedDocumentIDs,
             selectedDocumentTitles: result.selectedDocumentTitles.isEmpty ? nil : result.selectedDocumentTitles,
             publicLawPreview: result.publicLawPreview,
             publicLawResults: result.publicLawResults,
