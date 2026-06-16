@@ -2257,6 +2257,7 @@ extension AlphaRossModel {
         var modelJobs: [AlphaModelDownloadJob]
         var installedPacks: [AlphaInstalledModelPack]
         var lastModelCatalogRefresh: Date?
+        var cachedAssistantCatalogs: [AlphaAssistantCatalogDescriptor]?
         var cachedAssistantDownloads: [AlphaAssistantDownloadDescriptor]?
     }
 
@@ -2266,6 +2267,7 @@ extension AlphaRossModel {
             modelJobs: persisted.modelJobs,
             installedPacks: persisted.installedPacks,
             lastModelCatalogRefresh: persisted.lastModelCatalogRefresh,
+            cachedAssistantCatalogs: persisted.cachedAssistantCatalogs,
             cachedAssistantDownloads: persisted.cachedAssistantDownloads
         )
     }
@@ -2275,6 +2277,7 @@ extension AlphaRossModel {
         persisted.modelJobs = preserved.modelJobs
         persisted.installedPacks = preserved.installedPacks
         persisted.lastModelCatalogRefresh = preserved.lastModelCatalogRefresh
+        persisted.cachedAssistantCatalogs = preserved.cachedAssistantCatalogs
         persisted.cachedAssistantDownloads = preserved.cachedAssistantDownloads
         selectedTier = preferredSelectedAssistantTier()
         publicLawDraft = persisted.publicLawDraft ?? publicLawDraft

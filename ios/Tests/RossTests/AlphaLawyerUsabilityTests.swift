@@ -4242,6 +4242,47 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    @MainActor
+    func testPreservedWorkspaceConfigurationKeepsCachedAssistantCatalogsAcrossReset() {
+        let model = AlphaRossModel()
+        var state = AlphaPersistedState.empty()
+        state.cachedAssistantCatalogs = [
+            AlphaAssistantCatalogDescriptor(
+                tier: .caseAssociate,
+                packId: "gemma-4-12b-it-mlx-packaged",
+                sizeBytes: 6_200_000_000,
+                checksumSha256: String(repeating: "a", count: 64),
+                artifactKind: "mlx_directory",
+                runtimeMode: .mlxSwiftLm,
+                developmentOnly: false
+            )
+        ]
+        state.cachedAssistantDownloads = [
+            AlphaAssistantDownloadDescriptor(
+                sessionId: nil,
+                packId: "gemma-4-12b-it-mlx-packaged",
+                tier: .caseAssociate,
+                fileName: "gemma-4-12b-it-mlx.zip",
+                sizeBytes: 6_200_000_000,
+                checksumSha256: String(repeating: "b", count: 64),
+                artifactKind: "mlx_directory",
+                runtimeMode: .mlxSwiftLm,
+                developmentOnly: false,
+                downloadURLString: "https://models.ross.example/ios/gemma-4-12b-it-mlx.zip",
+                verified: true,
+                releaseReady: true
+            )
+        ]
+        model.persisted = state
+
+        let preserved = model.preservedWorkspaceConfiguration()
+        model.persisted = AlphaPersistedState.demoSeed(profileSubject: "local_demo_preservation")
+        model.applyPreservedWorkspaceConfiguration(preserved)
+
+        XCTAssertEqual(model.persisted.cachedAssistantCatalogs?.first?.packId, "gemma-4-12b-it-mlx-packaged")
+        XCTAssertEqual(model.persisted.cachedAssistantDownloads?.first?.packId, "gemma-4-12b-it-mlx-packaged")
+    }
+
     func testRecoveredDownloadedPackRestoresManifestBackedAlternatePack() async throws {
         try await withRestoredStore { store in
             await store.removeAllModelArtifacts()
