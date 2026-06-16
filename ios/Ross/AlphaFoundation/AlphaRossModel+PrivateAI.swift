@@ -941,7 +941,8 @@ func alphaAssistantSetupSpeedLabel(
 func alphaAssistantSetupContextTokens(
     for tier: AlphaCapabilityTier,
     runtimeMode: AlphaPackRuntimeMode,
-    physicalMemoryBytes: UInt64
+    physicalMemoryBytes: UInt64,
+    deviceModelIdentifier: String = alphaCurrentDeviceModelIdentifier()
 ) -> Int? {
     let effectiveTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
     switch runtimeMode {
@@ -953,7 +954,8 @@ func alphaAssistantSetupContextTokens(
     case .mlxSwiftLm:
         return AlphaMLXRuntimeProfile.contextWindowTokens(
             for: effectiveTier,
-            physicalMemory: physicalMemoryBytes
+            physicalMemory: physicalMemoryBytes,
+            deviceModelIdentifier: deviceModelIdentifier
         )
     case .llamaCppGguf:
         return Int(
@@ -970,12 +972,14 @@ func alphaAssistantSetupContextTokens(
 func alphaAssistantSetupContextLabel(
     for tier: AlphaCapabilityTier,
     runtimeMode: AlphaPackRuntimeMode,
-    physicalMemoryBytes: UInt64
+    physicalMemoryBytes: UInt64,
+    deviceModelIdentifier: String = alphaCurrentDeviceModelIdentifier()
 ) -> String? {
     guard let contextTokens = alphaAssistantSetupContextTokens(
         for: tier,
         runtimeMode: runtimeMode,
-        physicalMemoryBytes: physicalMemoryBytes
+        physicalMemoryBytes: physicalMemoryBytes,
+        deviceModelIdentifier: deviceModelIdentifier
     ) else {
         return nil
     }
@@ -1199,7 +1203,8 @@ func alphaAssistantSetupPresentation(
             contextLabel: alphaAssistantSetupContextLabel(
                 for: tier,
                 runtimeMode: .appleFoundationModels,
-                physicalMemoryBytes: physicalMemoryBytes
+                physicalMemoryBytes: physicalMemoryBytes,
+                deviceModelIdentifier: deviceModelIdentifier
             ),
             companionLabel: nil,
             etaLabel: nil
@@ -1232,7 +1237,8 @@ func alphaAssistantSetupPresentation(
         contextLabel: alphaAssistantSetupContextLabel(
             for: tier,
             runtimeMode: descriptor.runtimeMode,
-            physicalMemoryBytes: physicalMemoryBytes
+            physicalMemoryBytes: physicalMemoryBytes,
+            deviceModelIdentifier: deviceModelIdentifier
         ),
         companionLabel: descriptor.draftArtifact == nil ? nil : alphaAssistantSetupCompanionLabel(for: descriptor.runtimeMode),
         etaLabel: alphaAssistantSetupEtaLabel(totalDownloadBytes: totalDownloadBytes)

@@ -23,20 +23,72 @@ enum AlphaMLXRuntimeProfile {
 
     static func contextWindowTokens(
         for tier: AlphaCapabilityTier,
-        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory
+        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory,
+        deviceModelIdentifier: String = alphaCurrentDeviceModelIdentifier()
     ) -> Int {
-        switch tier {
+        let baseContextWindowTokens: Int = switch tier {
         case .flash:
-            return physicalMemory >= 8_000_000_000 ? 8_192 : 6_144
+            physicalMemory >= 8_000_000_000 ? 8_192 : 6_144
         case .quickStart:
-            return physicalMemory >= 8_000_000_000 ? 16_384 : 12_288
+            physicalMemory >= 8_000_000_000 ? 16_384 : 12_288
         case .caseAssociate:
             if physicalMemory >= 16_000_000_000 {
-                return 40_960
+                40_960
+            } else {
+                physicalMemory >= 12_000_000_000 ? 24_576 : 20_480
             }
-            return physicalMemory >= 12_000_000_000 ? 24_576 : 20_480
         case .seniorDraftingSupport:
-            return physicalMemory >= 18_000_000_000 ? 28_672 : 24_576
+            physicalMemory >= 18_000_000_000 ? 28_672 : 24_576
+        }
+
+        guard let performanceClass = iPhonePerformanceClass(
+            for: deviceModelIdentifier,
+            physicalMemory: physicalMemory
+        ) else {
+            return baseContextWindowTokens
+        }
+
+        switch tier {
+        case .quickStart:
+            guard physicalMemory >= 8_000_000_000 else { return baseContextWindowTokens }
+            switch performanceClass {
+            case .latest:
+                return baseContextWindowTokens + 3_072
+            case .recentPro:
+                return baseContextWindowTokens + 2_048
+            case .recent:
+                return baseContextWindowTokens + 1_024
+            case .baseline:
+                return baseContextWindowTokens
+            }
+        case .caseAssociate:
+            if physicalMemory >= 16_000_000_000 {
+                switch performanceClass {
+                case .latest:
+                    return baseContextWindowTokens + 8_192
+                case .recentPro:
+                    return baseContextWindowTokens + 4_096
+                case .recent:
+                    return baseContextWindowTokens + 2_048
+                case .baseline:
+                    return baseContextWindowTokens
+                }
+            }
+            if physicalMemory >= 12_000_000_000 {
+                switch performanceClass {
+                case .latest:
+                    return baseContextWindowTokens + 6_144
+                case .recentPro:
+                    return baseContextWindowTokens + 4_096
+                case .recent:
+                    return baseContextWindowTokens + 2_048
+                case .baseline:
+                    return baseContextWindowTokens
+                }
+            }
+            return baseContextWindowTokens
+        case .flash, .seniorDraftingSupport:
+            return baseContextWindowTokens
         }
     }
 
@@ -113,18 +165,39 @@ enum AlphaMLXRuntimeProfile {
 
     static func defaultDraftTokens(
         for tier: AlphaCapabilityTier,
-        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory
+        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory,
+        deviceModelIdentifier: String = alphaCurrentDeviceModelIdentifier()
     ) -> Int {
+        let performanceClass = iPhonePerformanceClass(
+            for: deviceModelIdentifier,
+            physicalMemory: physicalMemory
+        )
         switch tier {
         case .flash:
             return 2
         case .quickStart:
+            if physicalMemory >= 12_000_000_000,
+               let performanceClass,
+               performanceClass == .recentPro || performanceClass == .latest {
+                return 7
+            }
             return physicalMemory >= 12_000_000_000 ? 6 : 4
         case .caseAssociate:
             if physicalMemory >= 16_000_000_000 {
+                if let performanceClass,
+                   performanceClass == .recentPro || performanceClass == .latest {
+                    return 10
+                }
                 return 9
             }
-            return physicalMemory >= 12_000_000_000 ? 6 : 4
+            if physicalMemory >= 12_000_000_000 {
+                if let performanceClass,
+                   performanceClass == .recent || performanceClass == .recentPro || performanceClass == .latest {
+                    return 7
+                }
+                return 6
+            }
+            return 4
         case .seniorDraftingSupport:
             return physicalMemory >= 12_000_000_000 ? 8 : 6
         }
@@ -132,18 +205,39 @@ enum AlphaMLXRuntimeProfile {
 
     static func prefillStepSize(
         for tier: AlphaCapabilityTier,
-        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory
+        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory,
+        deviceModelIdentifier: String = alphaCurrentDeviceModelIdentifier()
     ) -> Int {
+        let performanceClass = iPhonePerformanceClass(
+            for: deviceModelIdentifier,
+            physicalMemory: physicalMemory
+        )
         switch tier {
         case .flash:
             return physicalMemory >= 8_000_000_000 ? 320 : 256
         case .quickStart:
+            if physicalMemory >= 8_000_000_000,
+               let performanceClass,
+               performanceClass == .recentPro || performanceClass == .latest {
+                return 512
+            }
             return physicalMemory >= 8_000_000_000 ? 448 : 256
         case .caseAssociate:
             if physicalMemory >= 16_000_000_000 {
+                if let performanceClass,
+                   performanceClass == .recentPro || performanceClass == .latest {
+                    return 768
+                }
                 return 640
             }
-            return physicalMemory >= 12_000_000_000 ? 384 : 320
+            if physicalMemory >= 12_000_000_000 {
+                if let performanceClass,
+                   performanceClass == .recentPro || performanceClass == .latest {
+                    return 448
+                }
+                return 384
+            }
+            return 320
         case .seniorDraftingSupport:
             return physicalMemory >= 18_000_000_000 ? 512 : 384
         }
@@ -197,7 +291,11 @@ enum AlphaMLXRuntimeProfile {
 
         guard hasDraftCompanion else { return deviceAdjustedBaseSpeed }
 
-        let draftTokens = defaultDraftTokens(for: tier, physicalMemory: physicalMemory)
+        let draftTokens = defaultDraftTokens(
+            for: tier,
+            physicalMemory: physicalMemory,
+            deviceModelIdentifier: deviceModelIdentifier
+        )
         let draftBonus: Double
         switch draftTokens {
         case 9...:
@@ -213,7 +311,11 @@ enum AlphaMLXRuntimeProfile {
         }
 
         let prefillBonus: Double
-        switch prefillStepSize(for: tier, physicalMemory: physicalMemory) {
+        switch prefillStepSize(
+            for: tier,
+            physicalMemory: physicalMemory,
+            deviceModelIdentifier: deviceModelIdentifier
+        ) {
         case 640...:
             prefillBonus = 0.5
         case 448...:
@@ -236,12 +338,27 @@ enum AlphaMLXRuntimeProfile {
 
     static func maximumAutomaticDraftTokens(
         for tier: AlphaCapabilityTier,
-        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory
+        physicalMemory: UInt64 = ProcessInfo.processInfo.physicalMemory,
+        deviceModelIdentifier: String = alphaCurrentDeviceModelIdentifier()
     ) -> Int {
+        let performanceClass = iPhonePerformanceClass(
+            for: deviceModelIdentifier,
+            physicalMemory: physicalMemory
+        )
         switch tier {
         case .caseAssociate:
+            if physicalMemory >= 12_000_000_000,
+               let performanceClass,
+               performanceClass == .recentPro || performanceClass == .latest {
+                return physicalMemory >= 16_000_000_000 ? 10 : 9
+            }
             return physicalMemory >= 16_000_000_000 ? 10 : 8
         case .seniorDraftingSupport:
+            if physicalMemory >= 12_000_000_000,
+               let performanceClass,
+               performanceClass == .recentPro || performanceClass == .latest {
+                return physicalMemory >= 16_000_000_000 ? 10 : 9
+            }
             return physicalMemory >= 16_000_000_000 ? 10 : 8
         case .flash, .quickStart:
             return 8
@@ -323,11 +440,11 @@ enum AlphaMLXRuntimeProfile {
         case .baseline:
             return 1.02
         case .recent:
-            return 1.06
-        case .recentPro:
             return 1.10
+        case .recentPro:
+            return 1.16
         case .latest:
-            return 1.14
+            return 1.20
         }
     }
 

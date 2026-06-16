@@ -11970,7 +11970,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(presentation?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(presentation?.speedLabel, "~14 tok/s")
-        XCTAssertEqual(presentation?.contextLabel, "24,576 tokens")
+        XCTAssertEqual(presentation?.contextLabel, "28,672 tokens")
     }
 
     func testAssistantSetupPresentationUsesBuiltInCoreAIForQuickStartWhenAvailableOnCapablePhone() {
@@ -13505,13 +13505,13 @@ final class AlphaExtractionTests: XCTestCase {
     func testMatterQuestionBudgetPlannerUsesMidHighMLXBudgetsForRecentIPhones() {
         let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
             runtimeMode: .mlxSwiftLm,
-            baseMaxInputChars: 61_600,
+            baseMaxInputChars: 64_960,
             sourceBlockCount: 14,
             sourceCharCount: 52_000,
             lastInvocation: nil
         )
 
-        XCTAssertEqual(plan.maxInputChars, 55_440)
+        XCTAssertEqual(plan.maxInputChars, 58_464)
         XCTAssertEqual(plan.sourceBlockLimit, 13)
         XCTAssertEqual(plan.sourceExcerptChars, 1_900)
     }
@@ -13535,13 +13535,13 @@ final class AlphaExtractionTests: XCTestCase {
         let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
             runtimeMode: .mlxSwiftLm,
             capabilityTier: .caseAssociate,
-            baseMaxInputChars: 61_600,
+            baseMaxInputChars: 64_960,
             sourceBlockCount: 18,
             sourceCharCount: 58_000,
             lastInvocation: fastInvocation
         )
 
-        XCTAssertEqual(plan.maxInputChars, 68_376)
+        XCTAssertEqual(plan.maxInputChars, 72_105)
         XCTAssertEqual(plan.sourceBlockLimit, 16)
         XCTAssertEqual(plan.sourceExcerptChars, 2_280)
     }
@@ -13889,13 +13889,13 @@ final class AlphaExtractionTests: XCTestCase {
     func testStructuredDocumentBudgetPlannerUsesMidHighMLXBudgetsForRecentIPhones() {
         let plan = AlphaLocalPromptBudgetPlanner.structuredDocumentPlan(
             runtimeMode: .mlxSwiftLm,
-            baseMaxInputChars: 61_600,
+            baseMaxInputChars: 64_960,
             sourceBlockCount: 18,
             sourceCharCount: 52_000,
             lastInvocation: nil
         )
 
-        XCTAssertEqual(plan.maxInputChars, 54_208)
+        XCTAssertEqual(plan.maxInputChars, 57_164)
         XCTAssertEqual(plan.sourceBlockLimit, 16)
         XCTAssertEqual(plan.sourceExcerptChars, 1_700)
     }
@@ -13919,13 +13919,13 @@ final class AlphaExtractionTests: XCTestCase {
         let plan = AlphaLocalPromptBudgetPlanner.structuredDocumentPlan(
             runtimeMode: .mlxSwiftLm,
             capabilityTier: .caseAssociate,
-            baseMaxInputChars: 61_600,
+            baseMaxInputChars: 64_960,
             sourceBlockCount: 22,
             sourceCharCount: 58_000,
             lastInvocation: fastInvocation
         )
 
-        XCTAssertEqual(plan.maxInputChars, 68_376)
+        XCTAssertEqual(plan.maxInputChars, 72_105)
         XCTAssertEqual(plan.sourceBlockLimit, 21)
         XCTAssertEqual(plan.sourceExcerptChars, 2_020)
     }
@@ -14094,7 +14094,7 @@ final class AlphaExtractionTests: XCTestCase {
             capabilityTier: .caseAssociate,
             task: .legalFieldExtraction,
             baseBatchLimit: 18,
-            baseMaxInputChars: 61_600,
+            baseMaxInputChars: 64_960,
             lastInvocation: nil
         )
 
@@ -14245,7 +14245,7 @@ final class AlphaExtractionTests: XCTestCase {
             capabilityTier: .caseAssociate,
             task: .legalFieldExtraction,
             baseBatchLimit: 18,
-            baseMaxInputChars: 61_600,
+            baseMaxInputChars: 64_960,
             lastInvocation: fastInvocation
         )
 
@@ -14411,7 +14411,7 @@ final class AlphaExtractionTests: XCTestCase {
             capabilityTier: .caseAssociate,
             task: .caseMemorySynthesis,
             baseBatchLimit: 24,
-            baseMaxInputChars: 61_600,
+            baseMaxInputChars: 64_960,
             lastInvocation: fastInvocation
         )
 
@@ -14543,7 +14543,7 @@ final class AlphaExtractionTests: XCTestCase {
         let policy = alphaAskRuntimeSourcePackPolicy(
             runtimeMode: .mlxSwiftLm,
             capabilityTier: .caseAssociate,
-            baseMaxInputChars: 61_600,
+            baseMaxInputChars: 64_960,
             hasSelectedDocuments: true
         )
 
@@ -14568,7 +14568,7 @@ final class AlphaExtractionTests: XCTestCase {
         let policy = alphaAskRuntimeSourcePackPolicy(
             runtimeMode: .mlxSwiftLm,
             capabilityTier: .caseAssociate,
-            baseMaxInputChars: 61_600,
+            baseMaxInputChars: 64_960,
             hasSelectedDocuments: true,
             selectedDocumentCount: 1
         )
@@ -14618,7 +14618,7 @@ final class AlphaExtractionTests: XCTestCase {
         let policy = alphaAskRuntimeSourcePackPolicy(
             runtimeMode: .mlxSwiftLm,
             capabilityTier: .caseAssociate,
-            baseMaxInputChars: 61_600,
+            baseMaxInputChars: 64_960,
             hasSelectedDocuments: false
         )
 
@@ -14968,6 +14968,30 @@ final class AlphaExtractionTests: XCTestCase {
             ),
             640
         )
+        XCTAssertEqual(
+            AlphaMLXRuntimeProfile.contextWindowTokens(
+                for: .caseAssociate,
+                physicalMemory: 12_000_000_000,
+                deviceModelIdentifier: "iPhone17,2"
+            ),
+            28_672
+        )
+        XCTAssertEqual(
+            AlphaMLXRuntimeProfile.defaultDraftTokens(
+                for: .caseAssociate,
+                physicalMemory: 12_000_000_000,
+                deviceModelIdentifier: "iPhone17,2"
+            ),
+            7
+        )
+        XCTAssertEqual(
+            AlphaMLXRuntimeProfile.prefillStepSize(
+                for: .caseAssociate,
+                physicalMemory: 12_000_000_000,
+                deviceModelIdentifier: "iPhone17,2"
+            ),
+            448
+        )
     }
 
     func testFoundationRuntimeProfileRaisesHighContextBudgets() {
@@ -15058,6 +15082,14 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(
             health.maxInputChars,
             AlphaMLXRuntimeProfile.maxInputChars(
+                for: .caseAssociate,
+                physicalMemory: ProcessInfo.processInfo.physicalMemory,
+                deviceModelIdentifier: "iPhone17,2"
+            )
+        )
+        XCTAssertEqual(
+            health.estimatedContextTokens,
+            AlphaMLXRuntimeProfile.contextWindowTokens(
                 for: .caseAssociate,
                 physicalMemory: ProcessInfo.processInfo.physicalMemory,
                 deviceModelIdentifier: "iPhone17,2"
@@ -16006,7 +16038,7 @@ final class AlphaExtractionTests: XCTestCase {
                 physicalMemory: 12_000_000_000,
                 deviceModelIdentifier: "iPhone17,2"
             ),
-            61_600
+            64_960
         )
     }
 
