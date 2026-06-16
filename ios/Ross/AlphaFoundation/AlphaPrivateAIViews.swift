@@ -810,7 +810,8 @@ struct AlphaPrivateAIOfferCard: View {
             Task {
                 await model.startPackDownload(
                     for: offer.tier,
-                    mobileAllowed: mobileAllowed
+                    mobileAllowed: mobileAllowed,
+                    requestedRuntimeMode: .appleFoundationModels
                 )
             }
         } else if let pack = option.pack {
@@ -924,7 +925,8 @@ struct AlphaPrivateAIOfferCard: View {
                     } else if prefersBuiltInActivation {
                         await model.startPackDownload(
                             for: offer.tier,
-                            mobileAllowed: mobileAllowed
+                            mobileAllowed: mobileAllowed,
+                            requestedRuntimeMode: .appleFoundationModels
                         )
                     } else if let installedPack {
                         model.activateInstalledPack(installedPack)

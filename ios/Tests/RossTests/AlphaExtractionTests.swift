@@ -8877,6 +8877,48 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNil(presentation?.companionLabel)
     }
 
+    #if canImport(FoundationModels)
+    @available(iOS 26.0, macOS 26.0, *)
+    @MainActor
+    func testStartPackDownloadHonorsExplicitBuiltInRuntimeSelectionOnCapablePhone() async throws {
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        let previousSimulatorIdentifier = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"]
+        let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        setenv("SIMULATOR_MODEL_IDENTIFIER", "iPhone17,2", 1)
+        AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in true }
+        defer {
+            AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+            if let previousSimulatorIdentifier {
+                setenv("SIMULATOR_MODEL_IDENTIFIER", previousSimulatorIdentifier, 1)
+            } else {
+                unsetenv("SIMULATOR_MODEL_IDENTIFIER")
+            }
+        }
+
+        let model = AlphaRossModel()
+        var state = AlphaPersistedState.empty()
+        state.settings.activeTier = .caseAssociate
+        model.persisted = state
+
+        await model.startPackDownload(
+            for: .caseAssociate,
+            mobileAllowed: true,
+            requestedRuntimeMode: .appleFoundationModels
+        )
+
+        XCTAssertEqual(model.persisted.installedPacks.first?.runtimeMode, .appleFoundationModels)
+        XCTAssertEqual(model.persisted.installedPacks.first?.installPath, "system://apple-foundation-models")
+        XCTAssertEqual(model.persisted.modelJobs.first?.runtimeMode, .appleFoundationModels)
+        XCTAssertEqual(model.persisted.settings.activeTier, .caseAssociate)
+    }
+    #endif
+
     func testAssistantCatalogRefreshTiersIncludeVisibleOptionsWithoutInstalledPacks() {
         XCTAssertEqual(
             alphaAssistantCatalogRefreshTiers(installedPacks: []),

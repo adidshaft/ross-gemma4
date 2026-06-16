@@ -2258,8 +2258,17 @@ extension AlphaRossModel {
         }
     }
 
-    func startPackDownload(for tier: AlphaCapabilityTier, mobileAllowed: Bool) async {
-        await startPackDownload(for: tier, mobileAllowed: mobileAllowed, existingJobID: nil)
+    func startPackDownload(
+        for tier: AlphaCapabilityTier,
+        mobileAllowed: Bool,
+        requestedRuntimeMode: AlphaPackRuntimeMode? = nil
+    ) async {
+        await startPackDownload(
+            for: tier,
+            mobileAllowed: mobileAllowed,
+            existingJobID: nil,
+            requestedRuntimeMode: requestedRuntimeMode
+        )
     }
 
     func systemAssistantHealth(for tier: AlphaCapabilityTier) -> AlphaLocalRuntimeHealth? {
@@ -2283,11 +2292,12 @@ extension AlphaRossModel {
         mobileAllowed: Bool,
         existingJobID: UUID? = nil,
         forceRefreshInstalledPack: Bool = false,
-        targetPackId: String? = nil
+        targetPackId: String? = nil,
+        requestedRuntimeMode: AlphaPackRuntimeMode? = nil
     ) async {
         let artifact = alphaAssistantModelArtifact(for: tier)
         let lastInvocation = alphaLastModelInvocation(in: persisted)
-        let preferredRuntime = alphaPreferredAssistantRuntimeMode(
+        let preferredRuntime = requestedRuntimeMode ?? alphaPreferredAssistantRuntimeMode(
             for: tier,
             existingRuntimeMode: persisted.installedPacks.first(where: { $0.tier == tier })?.runtimeMode,
             lastInvocation: lastInvocation
