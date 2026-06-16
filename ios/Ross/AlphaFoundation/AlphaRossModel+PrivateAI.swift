@@ -109,6 +109,184 @@ private func alphaReusableAssistantDownloadDescriptor(
     )
 }
 
+private let alphaBundledMLXAssistantDownloadDescriptors: [AlphaCapabilityTier: AlphaAssistantDownloadDescriptor] = [
+    .quickStart: AlphaAssistantDownloadDescriptor(
+        sessionId: nil,
+        packId: "gemma-4-e4b-mlx",
+        tier: .quickStart,
+        fileName: "gemma-4-E4B-it-UD-MLX-4bit",
+        sizeBytes: 6_607_285_383,
+        checksumSha256: "1cbbb7a35d205bec7399d08789924d9468fedd3cb7a1d69cef6692bb6c52ee4a",
+        artifactKind: "mlx_directory",
+        runtimeMode: .mlxSwiftLm,
+        developmentOnly: false,
+        downloadURLString: "https://huggingface.co/unsloth/gemma-4-E4B-it-UD-MLX-4bit",
+        verified: true,
+        releaseReady: true
+    ),
+    .caseAssociate: AlphaAssistantDownloadDescriptor(
+        sessionId: nil,
+        packId: "gemma-4-12b-mlx",
+        tier: .caseAssociate,
+        fileName: "gemma-4-12B-it-4bit",
+        sizeBytes: 6_773_371_194,
+        checksumSha256: "d9fc0ba3bda46b9e055304345960a0c2f2894ed880d3e92fa3150cd96daaf7d3",
+        artifactKind: "mlx_directory",
+        runtimeMode: .mlxSwiftLm,
+        developmentOnly: false,
+        downloadURLString: "https://huggingface.co/mlx-community/gemma-4-12B-it-4bit",
+        verified: true,
+        releaseReady: true
+    ),
+    .seniorDraftingSupport: AlphaAssistantDownloadDescriptor(
+        sessionId: nil,
+        packId: "gemma-4-26b-a4b-mlx",
+        tier: .seniorDraftingSupport,
+        fileName: "gemma-4-26b-a4b-it-4bit",
+        sizeBytes: 15_641_238_917,
+        checksumSha256: "c55dd3aa3d278722835c83810a90016923471c49ce99d64e19203a62ec7ec755",
+        artifactKind: "mlx_directory",
+        runtimeMode: .mlxSwiftLm,
+        developmentOnly: false,
+        downloadURLString: "https://huggingface.co/mlx-community/gemma-4-26b-a4b-it-4bit",
+        verified: true,
+        releaseReady: true
+    )
+]
+
+private func alphaBundledAssistantDownloadDescriptor(
+    for tier: AlphaCapabilityTier,
+    preferredRuntimeMode: AlphaPackRuntimeMode,
+    targetPackId: String? = nil
+) -> AlphaAssistantDownloadDescriptor? {
+    guard preferredRuntimeMode == .mlxSwiftLm,
+          let bundled = alphaBundledMLXAssistantDownloadDescriptors[tier] else {
+        return nil
+    }
+    if let targetPackId,
+       !targetPackId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+       bundled.packId != targetPackId {
+        return nil
+    }
+    return bundled
+}
+
+private func alphaBundledAssistantCatalogDescriptor(
+    for tier: AlphaCapabilityTier,
+    preferredRuntimeMode: AlphaPackRuntimeMode,
+    targetPackId: String? = nil
+) -> AlphaAssistantCatalogDescriptor? {
+    guard let descriptor = alphaBundledAssistantDownloadDescriptor(
+        for: tier,
+        preferredRuntimeMode: preferredRuntimeMode,
+        targetPackId: targetPackId
+    ) else {
+        return nil
+    }
+    return AlphaAssistantCatalogDescriptor(
+        tier: descriptor.tier,
+        packId: descriptor.packId,
+        sizeBytes: descriptor.sizeBytes,
+        checksumSha256: descriptor.checksumSha256,
+        artifactKind: descriptor.artifactKind,
+        runtimeMode: descriptor.runtimeMode,
+        developmentOnly: descriptor.developmentOnly,
+        draftArtifact: descriptor.draftArtifact
+    )
+}
+
+private func alphaDirectMLXRepositoryArtifact(
+    fileName: String,
+    artifactKind: String,
+    runtimeMode: AlphaPackRuntimeMode,
+    downloadURLString: String
+) -> Bool {
+    guard runtimeMode == .mlxSwiftLm,
+          artifactKind == "mlx_directory",
+          !alphaPackagedMLXArchiveArtifact(
+            fileName: fileName,
+            artifactKind: artifactKind,
+            runtimeMode: runtimeMode
+          ),
+          let url = URL(string: downloadURLString),
+          let host = url.host?.lowercased(),
+          host == "huggingface.co" else {
+        return false
+    }
+    let components = url.pathComponents.filter { $0 != "/" && !$0.isEmpty }
+    return components.count == 2
+}
+
+private func alphaDirectMLXRepositoryID(
+    for descriptor: AlphaAssistantDownloadDescriptor
+) -> String? {
+    guard alphaDirectMLXRepositoryArtifact(
+        fileName: descriptor.fileName,
+        artifactKind: descriptor.artifactKind,
+        runtimeMode: descriptor.runtimeMode,
+        downloadURLString: descriptor.downloadURLString
+    ), let url = URL(string: descriptor.downloadURLString) else {
+        return nil
+    }
+    let components = url.pathComponents.filter { $0 != "/" && !$0.isEmpty }
+    guard components.count == 2 else { return nil }
+    return components.joined(separator: "/")
+}
+
+private struct AlphaHuggingFaceRepositoryTreeEntry: Decodable, Hashable, Sendable {
+    let path: String
+    let size: Int64?
+    let type: String?
+}
+
+private func alphaIncludedDirectMLXRepositoryEntries(
+    from entries: [AlphaHuggingFaceRepositoryTreeEntry]
+) -> [AlphaHuggingFaceRepositoryTreeEntry] {
+    entries
+        .filter { entry in
+            let trimmedPath = entry.path.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmedPath.isEmpty,
+                  entry.type?.localizedCaseInsensitiveCompare("directory") != .orderedSame else {
+                return false
+            }
+            let lastComponent = (trimmedPath as NSString).lastPathComponent.lowercased()
+            return lastComponent != ".gitattributes" && lastComponent != "readme.md"
+        }
+        .sorted { $0.path.localizedStandardCompare($1.path) == .orderedAscending }
+}
+
+private func alphaHuggingFaceRepositoryTreeURL(repoID: String) -> URL? {
+    let components = repoID
+        .split(separator: "/", omittingEmptySubsequences: true)
+        .map(String.init)
+    guard components.count == 2 else { return nil }
+    var urlComponents = URLComponents()
+    urlComponents.scheme = "https"
+    urlComponents.host = "huggingface.co"
+    urlComponents.path = "/api/models/\(components[0])/\(components[1])/tree/main"
+    urlComponents.queryItems = [
+        URLQueryItem(name: "recursive", value: "1"),
+        URLQueryItem(name: "expand", value: "1")
+    ]
+    return urlComponents.url
+}
+
+private func alphaHuggingFaceRepositoryResolveURL(repoID: String, path: String) -> URL? {
+    let repoComponents = repoID
+        .split(separator: "/", omittingEmptySubsequences: true)
+        .map(String.init)
+    guard repoComponents.count == 2 else { return nil }
+    let encodedPath = path
+        .split(separator: "/", omittingEmptySubsequences: false)
+        .map { component in
+            String(component).addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? String(component)
+        }
+        .joined(separator: "/")
+    return URL(
+        string: "https://huggingface.co/\(repoComponents[0])/\(repoComponents[1])/resolve/main/\(encodedPath)"
+    )
+}
+
 func alphaAssistantDraftArtifactSupportsCurrentInstaller(_ artifact: AlphaAssistantDraftArtifactDescriptor) -> Bool {
     guard artifact.sizeBytes > 0,
           artifact.checksumSha256.range(of: #"^[a-fA-F0-9]{64}$"#, options: .regularExpression) != nil,
@@ -148,6 +326,11 @@ func alphaAssistantDownloadDescriptorSupportsCurrentInstaller(_ descriptor: Alph
             fileName: descriptor.fileName,
             artifactKind: descriptor.artifactKind,
             runtimeMode: descriptor.runtimeMode
+        ) || alphaDirectMLXRepositoryArtifact(
+            fileName: descriptor.fileName,
+            artifactKind: descriptor.artifactKind,
+            runtimeMode: descriptor.runtimeMode,
+            downloadURLString: descriptor.downloadURLString
         )
     case .deterministicDev, .mediapipeLlm, .appleFoundationModels, .unavailable:
         return false
@@ -311,6 +494,13 @@ func alphaPreferredAssistantDownloadFallback(
        let targetedCached = cachedCandidates.first(where: { $0.packId == targetPackId }) {
         return alphaReusableAssistantDownloadDescriptor(targetedCached)
     }
+    if let bundledPreferred = alphaBundledAssistantDownloadDescriptor(
+        for: tier,
+        preferredRuntimeMode: preferredRuntimeMode,
+        targetPackId: targetPackId
+    ) {
+        return bundledPreferred
+    }
     if let preferredCached = cachedCandidates.first(where: { $0.runtimeMode == preferredRuntimeMode }) {
         return alphaReusableAssistantDownloadDescriptor(preferredCached)
     }
@@ -414,7 +604,10 @@ private func alphaCachedPreferredAssistantSetupDescriptor(
         return alphaAssistantCatalogDescriptor(from: fallbackDownload)
     }
 
-    return nil
+    return alphaBundledAssistantCatalogDescriptor(
+        for: tier,
+        preferredRuntimeMode: preferredRuntimeMode
+    )
 }
 
 struct AlphaAssistantSetupPresentation: Equatable, Sendable {
@@ -517,6 +710,13 @@ func alphaPreferredAssistantCatalogFallback(
     if let targetPackId,
        let targetedCached = cachedCandidates.first(where: { $0.packId == targetPackId }) {
         return targetedCached
+    }
+    if let bundledPreferred = alphaBundledAssistantCatalogDescriptor(
+        for: tier,
+        preferredRuntimeMode: preferredRuntimeMode,
+        targetPackId: targetPackId
+    ) {
+        return bundledPreferred
     }
     if let preferredCached = cachedCandidates.first(where: { $0.runtimeMode == preferredRuntimeMode }) {
         return preferredCached
@@ -716,6 +916,11 @@ func alphaBackendArtifactSupportsCurrentInstaller(_ artifact: AlphaBackendArtifa
             fileName: fileName,
             artifactKind: artifact.artifactKind,
             runtimeMode: artifact.runtimeMode
+        ) || alphaDirectMLXRepositoryArtifact(
+            fileName: fileName,
+            artifactKind: artifact.artifactKind,
+            runtimeMode: artifact.runtimeMode,
+            downloadURLString: artifact.downloadUrl
         )
     case .deterministicDev, .mediapipeLlm, .appleFoundationModels, .unavailable:
         return false
@@ -856,6 +1061,7 @@ extension AlphaRossModel {
         if let taskBox = assistantDownloadTaskBoxes[job.id] {
             taskBox.pausedByUser = true
             taskBox.progressTask?.cancel()
+            taskBox.session?.invalidateAndCancel()
             AlphaBackgroundModelDownloadCenter.shared.cancel(jobID: job.id) { [weak self] resumeData in
                 Task { @MainActor [weak self] in
                     guard let self else { return }
@@ -1003,6 +1209,7 @@ extension AlphaRossModel {
         for (jobID, taskBox) in assistantDownloadTaskBoxes {
             taskBox.pausedByUser = true
             taskBox.progressTask?.cancel()
+            taskBox.session?.invalidateAndCancel()
             AlphaBackgroundModelDownloadCenter.shared.cancel(jobID: jobID) { _ in }
         }
         assistantDownloadTaskBoxes.removeAll()
@@ -1428,6 +1635,17 @@ extension AlphaRossModel {
             throw AlphaAssistantDownloadError.invalidURL
         }
 
+        if let directMLXRepositoryID = alphaDirectMLXRepositoryID(for: artifact) {
+            return try await downloadDirectMLXRepositoryArtifact(
+                artifact,
+                repoID: directMLXRepositoryID,
+                tier: tier,
+                jobID: jobID,
+                progressOffsetBytes: progressOffsetBytes,
+                progressTotalBytes: progressTotalBytes
+            )
+        }
+
         guard let url = URL(string: artifact.downloadURLString) else {
             throw AlphaAssistantDownloadError.invalidURL
         }
@@ -1558,6 +1776,136 @@ extension AlphaRossModel {
             taskBox.task?.cancel()
             AlphaBackgroundModelDownloadCenter.shared.cancel(jobID: jobID) { _ in }
             _ = alphaSweepTemporaryAssistantDownloads()
+        }
+    }
+
+    private func directMLXRepositoryEntries(
+        repoID: String,
+        expectedBytes: Int64
+    ) async throws -> [AlphaHuggingFaceRepositoryTreeEntry] {
+        guard let url = alphaHuggingFaceRepositoryTreeURL(repoID: repoID) else {
+            throw AlphaAssistantDownloadError.invalidURL
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 120
+        request.setValue("Ross-iOS/0.1 model-downloader", forHTTPHeaderField: "User-Agent")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw AlphaAssistantDownloadError.invalidURL
+        }
+        guard (200...299).contains(http.statusCode) else {
+            throw AlphaAssistantDownloadError.httpStatus(http.statusCode)
+        }
+
+        let entries = try JSONDecoder().decode([AlphaHuggingFaceRepositoryTreeEntry].self, from: data)
+        let includedEntries = alphaIncludedDirectMLXRepositoryEntries(from: entries)
+        let reportedBytes = includedEntries.reduce(into: Int64(0)) { total, entry in
+            total += max(entry.size ?? 0, 0)
+        }
+        guard !includedEntries.isEmpty, reportedBytes > 0 else {
+            throw AlphaAssistantDownloadError.preflightMissingSize
+        }
+        guard expectedBytes <= 0 || reportedBytes == expectedBytes else {
+            throw AlphaAssistantDownloadError.preflightSizeMismatch(expected: expectedBytes, reported: reportedBytes)
+        }
+        return includedEntries
+    }
+
+    private func downloadDirectMLXRepositoryArtifact(
+        _ artifact: AlphaAssistantDownloadDescriptor,
+        repoID: String,
+        tier: AlphaCapabilityTier,
+        jobID: UUID,
+        progressOffsetBytes: Int64 = 0,
+        progressTotalBytes: Int64? = nil
+    ) async throws -> URL {
+        let entries = try await directMLXRepositoryEntries(repoID: repoID, expectedBytes: artifact.sizeBytes)
+        let taskBox = assistantDownloadTaskBoxes[jobID] ?? {
+            let created = AlphaAssistantDownloadTaskBox()
+            assistantDownloadTaskBoxes[jobID] = created
+            return created
+        }()
+        taskBox.pausedByUser = false
+        taskBox.supportsResumePersistence = false
+        taskBox.resumeData = nil
+        taskBox.lastPublishedProgressBytes = 0
+        taskBox.lastPublishedProgressAt = .distantPast
+
+        let safeBaseName = artifact.fileName
+            .replacingOccurrences(of: #"[^A-Za-z0-9._-]+"#, with: "-", options: .regularExpression)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
+        let destinationDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross-pending-\(tier.rawValue)-\(safeBaseName.isEmpty ? artifact.packId : safeBaseName)", isDirectory: true)
+        try? FileManager.default.removeItem(at: destinationDirectory)
+        try FileManager.default.createDirectory(at: destinationDirectory, withIntermediateDirectories: true)
+
+        let session = URLSession(configuration: .ephemeral)
+        taskBox.session = session
+
+        do {
+            let expectedTotalBytes = progressTotalBytes ?? artifact.sizeBytes
+            var combinedReceived = progressOffsetBytes
+            for entry in entries {
+                try Task.checkCancellation()
+                guard let fileURL = alphaHuggingFaceRepositoryResolveURL(repoID: repoID, path: entry.path) else {
+                    throw AlphaAssistantDownloadError.invalidURL
+                }
+                var request = URLRequest(url: fileURL)
+                request.httpMethod = "GET"
+                request.timeoutInterval = 10_800
+                request.setValue("Ross-iOS/0.1 model-downloader", forHTTPHeaderField: "User-Agent")
+                request.setValue("application/octet-stream", forHTTPHeaderField: "Accept")
+                request.setValue("identity", forHTTPHeaderField: "Accept-Encoding")
+
+                let localFileURL = destinationDirectory.appendingPathComponent(entry.path)
+                try FileManager.default.createDirectory(
+                    at: localFileURL.deletingLastPathComponent(),
+                    withIntermediateDirectories: true
+                )
+
+                let (temporaryURL, response) = try await session.download(for: request)
+                guard let http = response as? HTTPURLResponse else {
+                    throw AlphaAssistantDownloadError.invalidURL
+                }
+                guard (200...299).contains(http.statusCode) else {
+                    try? FileManager.default.removeItem(at: temporaryURL)
+                    throw AlphaAssistantDownloadError.httpStatus(http.statusCode)
+                }
+
+                let downloadedBytes = downloadedFileSize(at: temporaryURL)
+                let expectedFileBytes = max(entry.size ?? 0, 0)
+                guard expectedFileBytes <= 0 || downloadedBytes == expectedFileBytes else {
+                    try? FileManager.default.removeItem(at: temporaryURL)
+                    throw AlphaAssistantDownloadError.preflightSizeMismatch(expected: expectedFileBytes, reported: downloadedBytes)
+                }
+
+                try? FileManager.default.removeItem(at: localFileURL)
+                try FileManager.default.moveItem(at: temporaryURL, to: localFileURL)
+
+                combinedReceived += downloadedBytes
+                updateJob(jobID) {
+                    $0.bytesDownloaded = combinedReceived
+                    $0.totalBytes = expectedTotalBytes
+                    $0.updatedAt = .now
+                }
+            }
+            taskBox.session = nil
+            session.finishTasksAndInvalidate()
+            return destinationDirectory
+        } catch {
+            taskBox.session = nil
+            session.invalidateAndCancel()
+            try? FileManager.default.removeItem(at: destinationDirectory)
+            let nsError = error as NSError
+            if nsError.domain == NSURLErrorDomain,
+               nsError.code == NSURLErrorCancelled,
+               taskBox.pausedByUser {
+                throw AlphaAssistantDownloadError.pausedByUser
+            }
+            throw error
         }
     }
 
@@ -1886,24 +2234,28 @@ extension AlphaRossModel {
         }
 
         let resolvedDownload: AlphaAssistantDownloadDescriptor
-        do {
-            let catalog = try await backend.fetchCatalog(for: tier)
-            let preferredCatalog = alphaAssistantCatalogDescriptor(
-                for: tier,
-                preferredRuntimeMode: preferredRuntime,
-                targetPackId: targetPackId,
-                compatibleOnly: true,
-                manifest: catalog
-            )
-            let session = try await backend.createDownloadSession(for: preferredCatalog.packId)
-            let resolvedURL = try await backend.resolveArtifactURL(for: session.artifact)
-            resolvedDownload = alphaAssistantDownloadDescriptor(
-                for: tier,
-                session: session,
-                resolvedURLString: resolvedURL.absoluteString
-            )
-        } catch {
+        if alphaDirectMLXRepositoryID(for: fallbackDownload) != nil {
             resolvedDownload = fallbackDownload
+        } else {
+            do {
+                let catalog = try await backend.fetchCatalog(for: tier)
+                let preferredCatalog = alphaAssistantCatalogDescriptor(
+                    for: tier,
+                    preferredRuntimeMode: preferredRuntime,
+                    targetPackId: targetPackId,
+                    compatibleOnly: true,
+                    manifest: catalog
+                )
+                let session = try await backend.createDownloadSession(for: preferredCatalog.packId)
+                let resolvedURL = try await backend.resolveArtifactURL(for: session.artifact)
+                resolvedDownload = alphaAssistantDownloadDescriptor(
+                    for: tier,
+                    session: session,
+                    resolvedURLString: resolvedURL.absoluteString
+                )
+            } catch {
+                resolvedDownload = fallbackDownload
+            }
         }
 
         if resolvedDownload.sessionId != nil,
@@ -2076,9 +2428,18 @@ extension AlphaRossModel {
         }
 
         do {
-            let preflight = try await preflightAssistantModelArtifact(resolvedDownload, jobID: job.id)
-            let expectedChecksum = try preflight.expectedChecksum(catalogChecksum: resolvedDownload.checksumSha256)
-            _ = try await probeAssistantModelRange(resolvedDownload, preflight: preflight)
+            let isDirectMLXRepository = alphaDirectMLXRepositoryID(for: resolvedDownload) != nil
+            let preflight: AlphaAssistantDownloadPreflight?
+            let expectedChecksum: String
+            if isDirectMLXRepository {
+                preflight = nil
+                expectedChecksum = resolvedDownload.checksumSha256
+            } else {
+                let verifiedPreflight = try await preflightAssistantModelArtifact(resolvedDownload, jobID: job.id)
+                expectedChecksum = try verifiedPreflight.expectedChecksum(catalogChecksum: resolvedDownload.checksumSha256)
+                _ = try await probeAssistantModelRange(resolvedDownload, preflight: verifiedPreflight)
+                preflight = verifiedPreflight
+            }
             let draftPreflight: AlphaAssistantDownloadPreflight?
             if let draftArtifact = resolvedDownload.draftArtifact {
                 let draftDescriptor = AlphaAssistantDownloadDescriptor(
@@ -2102,7 +2463,7 @@ extension AlphaRossModel {
             } else {
                 draftPreflight = nil
             }
-            let combinedExpectedBytes = preflight.reportedBytes + (draftPreflight?.reportedBytes ?? 0)
+            let combinedExpectedBytes = (preflight?.reportedBytes ?? resolvedDownload.sizeBytes) + (draftPreflight?.reportedBytes ?? 0)
 
             updateJob(job.id) {
                 $0.state = .downloading
@@ -2185,7 +2546,7 @@ extension AlphaRossModel {
                 fileName: resolvedDownload.fileName,
                 downloadedFileURL: downloadedFileURL,
                 expectedChecksum: expectedChecksum,
-                expectedBytes: preflight.reportedBytes,
+                expectedBytes: preflight?.reportedBytes ?? resolvedDownload.sizeBytes,
                 packId: resolvedDownload.packId,
                 artifactKind: resolvedDownload.artifactKind,
                 runtimeMode: resolvedDownload.runtimeMode,

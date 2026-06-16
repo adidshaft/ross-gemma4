@@ -5852,7 +5852,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(descriptors.map(\.runtimeMode), [.mlxSwiftLm, .llamaCppGguf])
     }
 
-    func testShouldPrimeAssistantSetupCatalogsWhenPreferredMLXDescriptorIsMissing() {
+    func testShouldPrimeAssistantSetupCatalogsSkipsWhenBundledPreferredMLXDescriptorIsAvailable() {
         let shouldPrime = alphaShouldPrimeAssistantSetupCatalogs(
             visibleTiers: [.caseAssociate],
             installedPacks: [],
@@ -5873,7 +5873,7 @@ final class AlphaExtractionTests: XCTestCase {
             freeStorageGB: 24
         )
 
-        XCTAssertTrue(shouldPrime)
+        XCTAssertFalse(shouldPrime)
     }
 
     func testShouldPrimeAssistantSetupCatalogsSkipsWhenPreferredMLXDescriptorIsCached() {
@@ -7766,7 +7766,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.sizeLabel, "6.2 GB")
     }
 
-    func testAssistantSetupPresentationReturnsNilWhenPreferredMLXMetadataIsMissing() {
+    func testAssistantSetupPresentationUsesBundledMLXWhenPreferredMetadataIsMissing() {
         let presentation = alphaAssistantSetupPresentation(
             for: .caseAssociate,
             isPhoneFormFactor: true,
@@ -7775,7 +7775,9 @@ final class AlphaExtractionTests: XCTestCase {
             systemAssistantAvailable: false
         )
 
-        XCTAssertNil(presentation)
+        XCTAssertEqual(presentation?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(presentation?.totalDownloadBytes, 6_773_371_194)
+        XCTAssertEqual(presentation?.sizeLabel, alphaAssistantStorageSizeLabel(6_773_371_194))
     }
 
     func testAssistantSetupPresentationUsesBuiltInCoreAIWhenAvailable() {
@@ -7857,13 +7859,47 @@ final class AlphaExtractionTests: XCTestCase {
             preferredRuntimeMode: .mlxSwiftLm,
             cachedDownloads: [cached]
         )
-        let pinned = alphaAssistantModelArtifact(for: .caseAssociate)
 
         XCTAssertNil(fallback.sessionId)
-        XCTAssertEqual(fallback.packId, pinned.packId)
-        XCTAssertEqual(fallback.fileName, pinned.fileName)
-        XCTAssertEqual(fallback.runtimeMode, pinned.runtimeMode)
-        XCTAssertEqual(fallback.downloadURLString, pinned.downloadURLString)
+        XCTAssertEqual(fallback.packId, "gemma-4-12b-mlx")
+        XCTAssertEqual(fallback.fileName, "gemma-4-12B-it-4bit")
+        XCTAssertEqual(fallback.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(fallback.downloadURLString, "https://huggingface.co/mlx-community/gemma-4-12B-it-4bit")
+    }
+
+    func testAssistantDownloadDescriptorSupportsCurrentInstallerAllowsDirectMLXRepository() {
+        let descriptor = AlphaAssistantDownloadDescriptor(
+            sessionId: nil,
+            packId: "gemma-4-12b-mlx",
+            tier: .caseAssociate,
+            fileName: "gemma-4-12B-it-4bit",
+            sizeBytes: 6_773_371_194,
+            checksumSha256: String(repeating: "a", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            downloadURLString: "https://huggingface.co/mlx-community/gemma-4-12B-it-4bit",
+            verified: true,
+            releaseReady: true
+        )
+
+        XCTAssertTrue(alphaAssistantDownloadDescriptorSupportsCurrentInstaller(descriptor))
+    }
+
+    func testBackendArtifactSupportsCurrentInstallerAllowsDirectMLXRepository() {
+        let artifact = AlphaBackendArtifact(
+            fileName: "gemma-4-12B-it-4bit",
+            sizeBytes: 6_773_371_194,
+            finalSha256: String(repeating: "b", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            downloadPath: nil,
+            downloadUrl: "https://huggingface.co/mlx-community/gemma-4-12B-it-4bit",
+            segments: []
+        )
+
+        XCTAssertTrue(alphaBackendArtifactSupportsCurrentInstaller(artifact))
     }
 
     func testAssistantDownloadPreflightRejectsWrongArtifactSize() throws {
