@@ -989,8 +989,8 @@ private func alphaRecentRuntimeSelectionSignal(
 ) -> AlphaRecentRuntimeSelectionSignal? {
     guard let lastInvocation,
           lastInvocation.task == .matterQuestionAnswer,
-          lastInvocation.status == .complete,
           lastInvocation.capabilityTier == tier.rawValue,
+          alphaInvocationHasAdaptivePerformanceMetrics(lastInvocation),
           let runtimeMode = AlphaPackRuntimeMode(rawValue: lastInvocation.runtimeMode),
           runtimeMode == .appleFoundationModels || runtimeMode == .mlxSwiftLm || runtimeMode == .llamaCppGguf,
           let outputSpeed = lastInvocation.estimatedOutputTokensPerSecond,
@@ -1591,8 +1591,8 @@ private func alphaAutomaticMLXDraftTokens(
 
     guard let lastInvocation,
           lastInvocation.task == .matterQuestionAnswer,
-          lastInvocation.status == .complete,
           lastInvocation.capabilityTier == activePack.tier.rawValue,
+          alphaInvocationHasAdaptivePerformanceMetrics(lastInvocation),
           lastInvocation.runtimeMode == AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
           let outputSpeed = lastInvocation.estimatedOutputTokensPerSecond,
           let firstTokenMs = lastInvocation.timeToFirstTokenMs else {
@@ -1625,8 +1625,8 @@ private func alphaAutomaticGGUFDraftTokens(
 
     guard let lastInvocation,
           lastInvocation.task == .matterQuestionAnswer,
-          lastInvocation.status == .complete,
           lastInvocation.capabilityTier == activePack.tier.rawValue,
+          alphaInvocationHasAdaptivePerformanceMetrics(lastInvocation),
           lastInvocation.runtimeMode == AlphaPackRuntimeMode.llamaCppGguf.rawValue,
           let outputSpeed = lastInvocation.estimatedOutputTokensPerSecond,
           let firstTokenMs = lastInvocation.timeToFirstTokenMs else {

@@ -6771,6 +6771,38 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(runtime, .llamaCppGguf)
     }
 
+    func testPreferredAssistantRuntimeModeIgnoresSlowTinyMLXRunOnCapablePhone() {
+        let slowTinyInvocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            inputChars: 3_200,
+            estimatedOutputTokens: 72,
+            estimatedOutputTokensPerSecond: 6.5,
+            durationMs: 1_400,
+            timeToFirstTokenMs: 4_800,
+            status: .complete
+        )
+
+        let runtime = alphaPreferredAssistantRuntimeMode(
+            for: .caseAssociate,
+            existingRuntimeMode: .mlxSwiftLm,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24,
+            systemAssistantAvailable: false,
+            lastInvocation: slowTinyInvocation
+        )
+
+        XCTAssertEqual(runtime, .mlxSwiftLm)
+    }
+
     @MainActor
     func testRefreshPrivateAISnapshotReappliesPreferredInstalledRuntimeSelection() async throws {
         let model = AlphaRossModel()
@@ -10758,6 +10790,39 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(plan.sourceExcerptChars, 1_750)
     }
 
+    func testMatterQuestionBudgetPlannerIgnoresSlowTinyHistory() {
+        let slowTinyInvocation = AlphaLocalModelInvocation(
+            task: .matterQuestionAnswer,
+            runtimeMode: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            inputChars: 4_200,
+            estimatedOutputTokens: 84,
+            estimatedOutputTokensPerSecond: 6.5,
+            durationMs: 1_300,
+            timeToFirstTokenMs: 4_800,
+            status: .complete
+        )
+
+        let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
+            runtimeMode: .mlxSwiftLm,
+            capabilityTier: .caseAssociate,
+            baseMaxInputChars: 44_000,
+            sourceBlockCount: 11,
+            sourceCharCount: 39_000,
+            lastInvocation: slowTinyInvocation
+        )
+
+        XCTAssertEqual(plan.maxInputChars, 39_600)
+        XCTAssertEqual(plan.sourceBlockLimit, 11)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_750)
+    }
+
     func testMatterQuestionBudgetPlannerUsesExpandedLlamaBudgetsFor12BClassRuns() {
         let plan = AlphaLocalPromptBudgetPlanner.matterQuestionPlan(
             runtimeMode: .llamaCppGguf,
@@ -11133,6 +11198,32 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(batchLimit, 20)
+    }
+
+    func testStructuredDocumentBatchLimitIgnoresIncompleteInvocationWithoutMetrics() {
+        let incompleteInvocation = AlphaLocalModelInvocation(
+            task: .legalFieldExtraction,
+            runtimeMode: AlphaPackRuntimeMode.appleFoundationModels.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            status: .running
+        )
+
+        let batchLimit = AlphaLocalPromptBudgetPlanner.structuredDocumentBatchLimit(
+            runtimeMode: .appleFoundationModels,
+            capabilityTier: .caseAssociate,
+            task: .legalFieldExtraction,
+            baseBatchLimit: 18,
+            baseMaxInputChars: 44_000,
+            lastInvocation: incompleteInvocation
+        )
+
+        XCTAssertEqual(batchLimit, 22)
     }
 
     func testStructuredDocumentBatchLimitWidensFurtherAfterFastMLXRun() {

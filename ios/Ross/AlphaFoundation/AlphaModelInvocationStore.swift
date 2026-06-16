@@ -294,3 +294,34 @@ enum AlphaModelInvocationStore {
         SHA256.hash(data: Data(string.utf8)).map { String(format: "%02x", $0) }.joined()
     }
 }
+
+func alphaInvocationHasAdaptivePerformanceMetrics(_ invocation: AlphaLocalModelInvocation) -> Bool {
+    guard invocation.status == .complete,
+          invocation.timeToFirstTokenMs != nil,
+          invocation.estimatedOutputTokensPerSecond != nil else {
+        return false
+    }
+    return alphaInvocationHasSubstantivePerformanceSample(invocation)
+}
+
+func alphaInvocationHasSubstantivePerformanceSample(_ invocation: AlphaLocalModelInvocation) -> Bool {
+    let inputChars = invocation.inputChars
+    let outputTokens = invocation.estimatedOutputTokens
+    let durationMs = invocation.durationMs
+    let reviewedSourceCount = invocation.reviewedSourceCount ?? invocation.packedSourceCount
+
+    guard inputChars != nil || outputTokens != nil || durationMs != nil || reviewedSourceCount != nil else {
+        return true
+    }
+
+    let promptLooksSmall = inputChars.map { $0 < 8_000 } ?? false
+    let answerLooksSmall = outputTokens.map { $0 < 160 } ?? false
+    let runWasShort = durationMs.map { $0 < 2_500 } ?? false
+    let sourceSetWasNarrow = reviewedSourceCount.map { $0 <= 2 } ?? false
+
+    if promptLooksSmall && answerLooksSmall && (runWasShort || sourceSetWasNarrow) {
+        return false
+    }
+
+    return true
+}

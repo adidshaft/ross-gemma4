@@ -451,7 +451,8 @@ enum AlphaLocalPromptBudgetPlanner {
         guard let lastInvocation,
               lastInvocation.runtimeMode == runtimeMode.rawValue,
               (capabilityTier == nil || lastInvocation.capabilityTier == capabilityTier?.rawValue),
-              lastInvocation.task == .matterQuestionAnswer else {
+              lastInvocation.task == .matterQuestionAnswer,
+              alphaInvocationHasAdaptivePerformanceMetrics(lastInvocation) else {
             return AlphaLocalPromptBudgetPlan(
                 maxInputChars: maxInputChars,
                 sourceBlockLimit: sourceBlockLimit,
@@ -579,7 +580,8 @@ enum AlphaLocalPromptBudgetPlanner {
         guard let lastInvocation,
               lastInvocation.runtimeMode == runtimeMode.rawValue,
               (capabilityTier == nil || lastInvocation.capabilityTier == capabilityTier?.rawValue),
-              lastInvocation.task != .matterQuestionAnswer else {
+              lastInvocation.task != .matterQuestionAnswer,
+              alphaInvocationHasAdaptivePerformanceMetrics(lastInvocation) else {
             return AlphaLocalPromptBudgetPlan(
                 maxInputChars: maxInputChars,
                 sourceBlockLimit: sourceBlockLimit,
@@ -666,7 +668,8 @@ enum AlphaLocalPromptBudgetPlanner {
         guard let lastInvocation,
               lastInvocation.runtimeMode == runtimeMode.rawValue,
               (capabilityTier == nil || lastInvocation.capabilityTier == capabilityTier?.rawValue),
-              lastInvocation.task != .matterQuestionAnswer else {
+              lastInvocation.task != .matterQuestionAnswer,
+              alphaInvocationHasAdaptivePerformanceMetrics(lastInvocation) else {
             return expandedLimit
         }
 
