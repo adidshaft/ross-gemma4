@@ -461,6 +461,17 @@ enum AlphaLocalPromptBudgetPlanner {
         let firstTokenMs = lastInvocation.timeToFirstTokenMs ?? Int.max
         let outputSpeed = lastInvocation.estimatedOutputTokensPerSecond ?? .greatestFiniteMagnitude
 
+        if shouldKeepExpandedLargeFileBudget(
+            runtimeMode: runtimeMode,
+            baseMaxInputChars: baseMaxInputChars,
+            sourceBlockCount: sourceBlockCount,
+            sourceCharCount: sourceCharCount,
+            firstTokenMs: firstTokenMs,
+            outputSpeed: outputSpeed
+        ) {
+            maxInputChars = baseMaxInputChars
+        }
+
         if firstTokenMs >= 4_500 || outputSpeed <= runtimeDefaults.slowTokensPerSecond {
             maxInputChars = max(Int(Double(maxInputChars) * 0.72), runtimeDefaults.minimumBudget)
             sourceBlockLimit = min(sourceBlockLimit ?? runtimeDefaults.slowBlockLimit, runtimeDefaults.slowBlockLimit)
@@ -557,6 +568,18 @@ enum AlphaLocalPromptBudgetPlanner {
 
         let firstTokenMs = lastInvocation.timeToFirstTokenMs ?? Int.max
         let outputSpeed = lastInvocation.estimatedOutputTokensPerSecond ?? .greatestFiniteMagnitude
+
+        if shouldKeepExpandedLargeFileBudget(
+            runtimeMode: runtimeMode,
+            baseMaxInputChars: baseMaxInputChars,
+            sourceBlockCount: sourceBlockCount,
+            sourceCharCount: sourceCharCount,
+            firstTokenMs: firstTokenMs,
+            outputSpeed: outputSpeed,
+            usesStructuredThresholds: true
+        ) {
+            maxInputChars = baseMaxInputChars
+        }
 
         if firstTokenMs >= 6_000 || outputSpeed <= runtimeDefaults.slowTokensPerSecond {
             maxInputChars = max(Int(Double(maxInputChars) * 0.68), runtimeDefaults.minimumBudget)
@@ -683,6 +706,27 @@ enum AlphaLocalPromptBudgetPlanner {
         }
 
         return 1
+    }
+
+    private static func shouldKeepExpandedLargeFileBudget(
+        runtimeMode: AlphaPackRuntimeMode,
+        baseMaxInputChars: Int,
+        sourceBlockCount: Int,
+        sourceCharCount: Int,
+        firstTokenMs: Int,
+        outputSpeed: Double,
+        usesStructuredThresholds: Bool = false
+    ) -> Bool {
+        guard runtimeMode == .mlxSwiftLm else { return false }
+        guard baseMaxInputChars >= 40_000 else { return false }
+
+        let largeFileBlockThreshold = usesStructuredThresholds ? 12 : 8
+        let largeFileCharThreshold = usesStructuredThresholds ? 36_000 : 24_000
+        guard sourceBlockCount >= largeFileBlockThreshold || sourceCharCount >= largeFileCharThreshold else {
+            return false
+        }
+
+        return firstTokenMs <= 1_500 && outputSpeed >= 14
     }
 
     private static func minimumStructuredDocumentBatchLimit(
