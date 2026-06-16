@@ -68,23 +68,23 @@ test("canonical private assistant registry maps tiers to the current three-pack 
   assert.ok(fallbackRetrieval);
 
   assert.equal(quickStart.displayName, "Quick Start");
-  assert.equal(quickStart.technicalModelName, "Gemma 4 E4B Q4_K_M");
-  assert.equal(quickStart.repo, "bartowski/google_gemma-4-E4B-it-GGUF");
-  assert.equal(quickStart.quantization, "Q4");
+  assert.equal(quickStart.technicalModelName, "Gemma 4 E4B UD Q4_K_XL");
+  assert.equal(quickStart.repo, "unsloth/gemma-4-E4B-it-qat-GGUF");
+  assert.equal(quickStart.quantization, "UD-Q4_K_XL");
   assert.equal(quickStart.runtimeMode, "gemma_local_runtime");
-  assert.equal(quickStart.approxDownloadSizeMb, 5405);
+  assert.equal(quickStart.approxDownloadSizeMb, 4215);
 
   assert.equal(caseAssociate.displayName, "Case Associate");
-  assert.equal(caseAssociate.technicalModelName, "Gemma 4 12B Q4_K_M");
-  assert.equal(caseAssociate.repo, "ggml-org/gemma-4-12B-it-GGUF");
-  assert.equal(caseAssociate.alternateRepo, "bartowski/gemma-4-12B-it-GGUF");
-  assert.equal(caseAssociate.quantization, "Q4");
+  assert.equal(caseAssociate.technicalModelName, "Gemma 4 12B UD Q4_K_XL");
+  assert.equal(caseAssociate.repo, "unsloth/gemma-4-12B-it-qat-GGUF");
+  assert.equal(caseAssociate.alternateRepo, undefined);
+  assert.equal(caseAssociate.quantization, "UD-Q4_K_XL");
 
   assert.equal(seniorDrafting.displayName, "Senior Drafting Support");
-  assert.equal(seniorDrafting.technicalModelName, "Gemma 4 26B-A4B Q4_K_M");
-  assert.equal(seniorDrafting.repo, "bartowski/google_gemma-4-26B-A4B-it-GGUF");
+  assert.equal(seniorDrafting.technicalModelName, "Gemma 4 26B-A4B UD Q4_K_XL");
+  assert.equal(seniorDrafting.repo, "unsloth/gemma-4-26B-A4B-it-qat-GGUF");
   assert.equal(seniorDrafting.alternateRepo, undefined);
-  assert.equal(seniorDrafting.quantization, "Q4");
+  assert.equal(seniorDrafting.quantization, "UD-Q4_K_XL");
 
   assert.equal(preferredRetrieval.displayName, "Matter Search");
   assert.equal(preferredRetrieval.technicalModelName, "EmbeddingGemma 300M");
@@ -271,7 +271,7 @@ test("production model catalog advertises platform runtime packs with real downl
   assert.equal(iosCatalog.statusCode, 200);
   const iosBody = JSON.parse(iosCatalog.body) as typeof androidBody;
   const iosQuickStart = iosBody.manifest.payload.packs.find((pack) => pack.tier === "quick_start");
-  assert.equal(iosQuickStart?.technicalModelName, "Gemma 4 E4B Q4_K_M");
+  assert.equal(iosQuickStart?.technicalModelName, "Gemma 4 E4B UD Q4_K_XL");
   assert.equal(iosQuickStart?.runtimeMode, "gemma_local_runtime");
   assert.equal(iosQuickStart?.artifactKind, "local_model_artifact");
 });
@@ -317,6 +317,10 @@ test("production model catalog can append configured iOS MLX packs for capable c
           runtimeMode: string;
           checksumSha256: string;
           sizeBytes: number;
+          draftArtifact?: {
+            fileName: string;
+            checksumSha256: string;
+          };
         }>;
       };
     };
@@ -329,6 +333,9 @@ test("production model catalog can append configured iOS MLX packs for capable c
 
   assert.ok(ggufPack);
   assert.ok(mlxPack);
+  assert.equal(ggufPack?.technicalModelName, "Gemma 4 12B UD Q4_K_XL");
+  assert.equal(ggufPack?.draftArtifact?.fileName, "mtp-gemma-4-12b-it.gguf");
+  assert.match(ggufPack?.draftArtifact?.checksumSha256 ?? "", /^[a-f0-9]{64}$/);
   assert.equal(mlxPack?.artifactKind, "mlx_directory");
   assert.equal(mlxPack?.runtimeMode, "mlx_swift_lm");
   assert.equal(mlxPack?.checksumSha256, mlxPackSha);

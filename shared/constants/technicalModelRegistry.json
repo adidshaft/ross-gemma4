@@ -1,10 +1,10 @@
 [
   {
-    "id": "Gemma 4-e4b-q4_k_m-gguf",
-    "displayName": "Gemma 4 E4B Q4_K_M",
+    "id": "Gemma 4-e4b-ud-q4_k_xl-gguf",
+    "displayName": "Gemma 4 E4B UD Q4_K_XL",
     "family": "Gemma 4",
-    "repo": "bartowski/google_gemma-4-E4B-it-GGUF",
-    "quantization": "Q4",
+    "repo": "unsloth/gemma-4-E4B-it-qat-GGUF",
+    "quantization": "UD-Q4_K_XL",
     "runtimeMode": "gemma_local_runtime",
     "runtimeCandidates": [
       "gemma_local_runtime"
@@ -24,12 +24,11 @@
     "onboardingVisible": false
   },
   {
-    "id": "Gemma 4-12b-q4_k_m-gguf",
-    "displayName": "Gemma 4 12B Q4_K_M",
+    "id": "Gemma 4-12b-ud-q4_k_xl-gguf",
+    "displayName": "Gemma 4 12B UD Q4_K_XL",
     "family": "Gemma 4",
-    "repo": "ggml-org/gemma-4-12B-it-GGUF",
-    "alternateRepo": "bartowski/gemma-4-12B-it-GGUF",
-    "quantization": "Q4",
+    "repo": "unsloth/gemma-4-12B-it-qat-GGUF",
+    "quantization": "UD-Q4_K_XL",
     "runtimeMode": "gemma_local_runtime",
     "runtimeCandidates": [
       "gemma_local_runtime"
@@ -49,11 +48,11 @@
     "onboardingVisible": false
   },
   {
-    "id": "Gemma 4-26b-a4b-q4_k_m-gguf",
-    "displayName": "Gemma 4 26B-A4B Q4_K_M",
+    "id": "Gemma 4-26b-a4b-ud-q4_k_xl-gguf",
+    "displayName": "Gemma 4 26B-A4B UD Q4_K_XL",
     "family": "Gemma 4",
-    "repo": "bartowski/google_gemma-4-26B-A4B-it-GGUF",
-    "quantization": "Q4",
+    "repo": "unsloth/gemma-4-26B-A4B-it-qat-GGUF",
+    "quantization": "UD-Q4_K_XL",
     "runtimeMode": "gemma_local_runtime",
     "runtimeCandidates": [
       "gemma_local_runtime"

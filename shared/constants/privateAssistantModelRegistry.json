@@ -2,35 +2,34 @@
   "assistantTiers": {
     "quick_start": {
       "displayName": "Quick Start",
-      "technicalModelName": "Gemma 4 E4B Q4_K_M",
-      "repo": "bartowski/google_gemma-4-E4B-it-GGUF",
-      "quantization": "Q4",
+      "technicalModelName": "Gemma 4 E4B UD Q4_K_XL",
+      "repo": "unsloth/gemma-4-E4B-it-qat-GGUF",
+      "quantization": "UD-Q4_K_XL",
       "runtimeMode": "gemma_local_runtime",
       "artifactKind": "local_model_artifact",
-      "approxDownloadSizeMb": 5405,
+      "approxDownloadSizeMb": 4215,
       "userFacingRole": "Quick Start private assistant for short case Q&A, intake review, and lighter matter work",
       "technicalRole": "short source-backed Ask Ross answers, lighter summaries, and quick matter review"
     },
     "case_associate": {
       "displayName": "Case Associate",
-      "technicalModelName": "Gemma 4 12B Q4_K_M",
-      "repo": "ggml-org/gemma-4-12B-it-GGUF",
-      "alternateRepo": "bartowski/gemma-4-12B-it-GGUF",
-      "quantization": "Q4",
+      "technicalModelName": "Gemma 4 12B UD Q4_K_XL",
+      "repo": "unsloth/gemma-4-12B-it-qat-GGUF",
+      "quantization": "UD-Q4_K_XL",
       "runtimeMode": "gemma_local_runtime",
       "artifactKind": "local_model_artifact",
-      "approxDownloadSizeMb": 7381,
+      "approxDownloadSizeMb": 6716,
       "userFacingRole": "Case Associate private assistant for richer matter review, larger files, and longer answers",
       "technicalRole": "default higher-quality legal assistant, deeper matter reasoning, and longer source-backed Ask Ross"
     },
     "senior_drafting_support": {
       "displayName": "Senior Drafting Support",
-      "technicalModelName": "Gemma 4 26B-A4B Q4_K_M",
-      "repo": "bartowski/google_gemma-4-26B-A4B-it-GGUF",
-      "quantization": "Q4",
+      "technicalModelName": "Gemma 4 26B-A4B UD Q4_K_XL",
+      "repo": "unsloth/gemma-4-26B-A4B-it-qat-GGUF",
+      "quantization": "UD-Q4_K_XL",
       "runtimeMode": "gemma_local_runtime",
       "artifactKind": "local_model_artifact",
-      "approxDownloadSizeMb": 17035,
+      "approxDownloadSizeMb": 14249,
       "userFacingRole": "Senior Drafting Support private assistant for deeper review and drafting",
       "technicalRole": "advanced drafting, chronology refinement, issue extraction, deeper matter reasoning"
     }
