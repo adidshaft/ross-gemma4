@@ -1027,6 +1027,7 @@ struct AlphaAssistantVariantOption: Identifiable, Hashable, Sendable {
     let runtimeMode: AlphaPackRuntimeMode
     let isActive: Bool
     let isBuiltIn: Bool
+    let detailLabel: String?
 
     var id: String {
         if let pack {
@@ -1041,7 +1042,9 @@ func alphaAssistantVariantOptions(
     installedPacks: [AlphaInstalledModelPack],
     activePack: AlphaInstalledModelPack?,
     systemAssistantAvailable: Bool,
-    preferredRuntimeMode: AlphaPackRuntimeMode? = nil
+    preferredRuntimeMode: AlphaPackRuntimeMode? = nil,
+    isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
+    physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory
 ) -> [AlphaAssistantVariantOption] {
     var options = installedPacks
         .filter { AlphaCapabilityTier.assistantSelectionsMatch($0.tier, tier) }
@@ -1050,7 +1053,13 @@ func alphaAssistantVariantOptions(
                 pack: pack,
                 runtimeMode: pack.runtimeMode,
                 isActive: activePack?.id == pack.id,
-                isBuiltIn: pack.runtimeMode == .appleFoundationModels || pack.artifactKind == "system_model"
+                isBuiltIn: pack.runtimeMode == .appleFoundationModels || pack.artifactKind == "system_model",
+                detailLabel: alphaAssistantVariantDetailLabel(
+                    runtimeMode: pack.runtimeMode,
+                    tier: tier,
+                    isPhoneFormFactor: isPhoneFormFactor,
+                    physicalMemoryBytes: physicalMemoryBytes
+                )
             )
         }
 
@@ -1062,7 +1071,13 @@ func alphaAssistantVariantOptions(
                 runtimeMode: .appleFoundationModels,
                 isActive: activePack?.runtimeMode == .appleFoundationModels &&
                     AlphaCapabilityTier.assistantSelectionsMatch(activePack?.tier, tier),
-                isBuiltIn: true
+                isBuiltIn: true,
+                detailLabel: alphaAssistantVariantDetailLabel(
+                    runtimeMode: .appleFoundationModels,
+                    tier: tier,
+                    isPhoneFormFactor: isPhoneFormFactor,
+                    physicalMemoryBytes: physicalMemoryBytes
+                )
             )
         )
     }
@@ -1100,6 +1115,42 @@ func alphaAssistantVariantOptions(
     }
 }
 
+private func alphaAssistantVariantDetailLabel(
+    runtimeMode: AlphaPackRuntimeMode,
+    tier: AlphaCapabilityTier,
+    isPhoneFormFactor: Bool,
+    physicalMemoryBytes: UInt64
+) -> String? {
+    switch runtimeMode {
+    case .appleFoundationModels:
+        return rossLocalized("assistant_meta_no_download")
+    case .mlxSwiftLm:
+        let contextTokens = AlphaMLXRuntimeProfile.contextWindowTokens(
+            for: tier,
+            physicalMemory: physicalMemoryBytes
+        )
+        if contextTokens >= 24_576 {
+            return "Longer local context"
+        }
+        return isPhoneFormFactor ? "Fast on-device replies" : "Local MLX runtime"
+    case .llamaCppGguf:
+        let contextTokens = AlphaLlamaRuntimeProfile.contextWindowTokens(
+            forModelPath: alphaDefaultAssistantDownloadDescriptor(for: tier).fileName,
+            physicalMemory: physicalMemoryBytes
+        )
+        if contextTokens >= 28_672 {
+            return "Largest local context"
+        }
+        return "Broader device compatibility"
+    case .deterministicDev:
+        return "Developer runtime"
+    case .mediapipeLlm:
+        return "MediaPipe runtime"
+    case .unavailable:
+        return nil
+    }
+}
+
 func alphaAssistantPreferredInstalledPack(
     variantOptions: [AlphaAssistantVariantOption],
     preferredRuntimeMode: AlphaPackRuntimeMode?
@@ -1134,14 +1185,24 @@ private struct AlphaAssistantVariantChip: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 6) {
+            HStack(alignment: .center, spacing: 6) {
                 Image(systemName: iconName)
                     .font(.caption2.weight(.semibold))
-                Text(option.runtimeMode.displayLabel)
-                    .font(.caption2.weight(.semibold))
-                if option.isActive {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.caption2.weight(.bold))
+                VStack(alignment: .leading, spacing: 1) {
+                    HStack(spacing: 5) {
+                        Text(option.runtimeMode.displayLabel)
+                            .font(.caption2.weight(.semibold))
+                        if option.isActive {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.caption2.weight(.bold))
+                        }
+                    }
+                    if let detailLabel = option.detailLabel {
+                        Text(detailLabel)
+                            .font(.system(size: 10, weight: .medium, design: .rounded))
+                            .foregroundStyle(Color.rossInk.opacity(option.isActive ? 0.62 : 0.50))
+                            .lineLimit(1)
+                    }
                 }
             }
             .foregroundStyle(option.isActive ? Color.rossAccent : Color.rossInk.opacity(0.70))

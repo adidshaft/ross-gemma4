@@ -9659,8 +9659,11 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(options.count, 3)
         XCTAssertEqual(options.first?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(options.first?.isActive, true)
+        XCTAssertEqual(options.first?.detailLabel, "Longer local context")
         XCTAssertTrue(options.contains(where: { $0.runtimeMode == .llamaCppGguf && !$0.isBuiltIn }))
+        XCTAssertTrue(options.contains(where: { $0.runtimeMode == .llamaCppGguf && $0.detailLabel == "Largest local context" }))
         XCTAssertTrue(options.contains(where: { $0.runtimeMode == .appleFoundationModels && $0.isBuiltIn }))
+        XCTAssertTrue(options.contains(where: { $0.runtimeMode == .appleFoundationModels && $0.detailLabel == "No download" }))
     }
 
     func testAssistantVariantOptionsAvoidDuplicateBuiltInWhenAlreadyInstalled() {
@@ -9687,6 +9690,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(options.first?.runtimeMode, .appleFoundationModels)
         XCTAssertEqual(options.first?.isActive, true)
         XCTAssertEqual(options.first?.isBuiltIn, true)
+        XCTAssertEqual(options.first?.detailLabel, "No download")
     }
 
     func testAssistantVariantOptionsPreferMLXOverBuiltInWhenRuntimePreferenceIsMLX() {
@@ -9713,8 +9717,10 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(options.count, 2)
         XCTAssertEqual(options.first?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(options.first?.isBuiltIn, false)
+        XCTAssertEqual(options.first?.detailLabel, "Longer local context")
         XCTAssertEqual(options.last?.runtimeMode, .appleFoundationModels)
         XCTAssertEqual(options.last?.isBuiltIn, true)
+        XCTAssertEqual(options.last?.detailLabel, "No download")
     }
 
     func testAssistantVariantOptionsPreferBuiltInWhenRuntimePreferenceIsCoreAI() {
@@ -9741,8 +9747,10 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(options.count, 2)
         XCTAssertEqual(options.first?.runtimeMode, .appleFoundationModels)
         XCTAssertEqual(options.first?.isBuiltIn, true)
+        XCTAssertEqual(options.first?.detailLabel, "No download")
         XCTAssertEqual(options.last?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(options.last?.isBuiltIn, false)
+        XCTAssertEqual(options.last?.detailLabel, "Longer local context")
     }
 
     func testAssistantPreferredInstalledPackUsesPreferredRuntimeInsteadOfFirstStoredPack() {
