@@ -2016,6 +2016,34 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Ross focused on %1$d of %2$d source sections with the current runtime to keep this answer on this device. Switch this assistant runtime or ask about a smaller part of this matter for a deeper pass.",
             "te": "Ross focused on %1$d of %2$d source sections with the current runtime to keep this answer on this device. Switch this assistant runtime or ask about a smaller part of this matter for a deeper pass."
         ],
+        "ask_private_assistant_focused_text_warning": [
+            "en": "Ross focused the selected file text to keep this answer on this device. Narrow the selected files or use a stronger assistant for a deeper pass.",
+            "hi": "Ross ने इस जवाब को इसी device पर रखने के लिए selected file text के सबसे relevant हिस्सों पर focus किया। और गहरी review के लिए selected files कम करें या stronger assistant इस्तेमाल करें।",
+            "bn": "এই উত্তরটি এই device-এ রাখতে Ross selected file text-এর সবচেয়ে relevant অংশে focus করেছে। আরও গভীর review-এর জন্য selected files কমান বা stronger assistant ব্যবহার করুন।",
+            "ta": "இந்த பதில் இந்த device-இல் இருக்க Ross selected file text-இன் மிகவும் relevant பகுதிகளில் focus செய்தது. இன்னும் ஆழமான review-க்கு selected files-ஐ குறைக்கவும் அல்லது stronger assistant பயன்படுத்தவும்.",
+            "te": "ఈ సమాధానం ఈ device లోనే ఉండేందుకు Ross selected file text లో అత్యంత relevant భాగాలపై focus చేసింది. ఇంకా లోతైన review కోసం selected files ను తగ్గించండి లేదా stronger assistant ఉపయోగించండి."
+        ],
+        "ask_private_assistant_focused_matter_text_warning": [
+            "en": "Ross focused the matter text to keep this answer on this device. Ask about a smaller part of this matter or use a stronger assistant for a deeper pass.",
+            "hi": "Ross ने इस जवाब को इसी device पर रखने के लिए matter text के सबसे relevant हिस्सों पर focus किया। इस matter के छोटे हिस्से के बारे में पूछें या deeper pass के लिए stronger assistant इस्तेमाल करें।",
+            "bn": "এই উত্তরটি এই device-এ রাখতে Ross matter text-এর সবচেয়ে relevant অংশে focus করেছে। এই matter-এর ছোট অংশ সম্পর্কে জিজ্ঞাসা করুন বা deeper pass-এর জন্য stronger assistant ব্যবহার করুন।",
+            "ta": "இந்த பதில் இந்த device-இல் இருக்க Ross matter text-இன் மிகவும் relevant பகுதிகளில் focus செய்தது. இந்த matter-இன் சிறிய பகுதியைப் பற்றி கேளுங்கள் அல்லது deeper pass-க்கு stronger assistant பயன்படுத்தவும்.",
+            "te": "ఈ సమాధానం ఈ device లోనే ఉండేందుకు Ross matter text లో అత్యంత relevant భాగాలపై focus చేసింది. ఈ matter లో చిన్న భాగం గురించి అడగండి లేదా deeper pass కోసం stronger assistant ఉపయోగించండి."
+        ],
+        "ask_private_assistant_focused_text_runtime_warning": [
+            "en": "Ross focused the selected file text with the current runtime to keep this answer on this device. Switch this assistant runtime or narrow the selected files for a deeper pass.",
+            "hi": "Ross ने इस जवाब को इसी device पर रखने के लिए current runtime के साथ selected file text को focus किया। deeper pass के लिए इस assistant runtime को switch करें या selected files कम करें।",
+            "bn": "এই উত্তরটি এই device-এ রাখতে Ross current runtime-এর সঙ্গে selected file text-এ focus করেছে। deeper pass-এর জন্য এই assistant runtime switch করুন বা selected files কমান।",
+            "ta": "இந்த பதில் இந்த device-இல் இருக்க Ross current runtime-இன் மூலம் selected file text-இல் focus செய்தது. deeper pass-க்கு இந்த assistant runtime-ஐ switch செய்யவும் அல்லது selected files-ஐ குறைக்கவும்.",
+            "te": "ఈ సమాధానం ఈ device లోనే ఉండేందుకు Ross current runtime తో selected file text పై focus చేసింది. deeper pass కోసం ఈ assistant runtime ను switch చేయండి లేదా selected files ను తగ్గించండి."
+        ],
+        "ask_private_assistant_focused_matter_text_runtime_warning": [
+            "en": "Ross focused the matter text with the current runtime to keep this answer on this device. Switch this assistant runtime or ask about a smaller part of this matter for a deeper pass.",
+            "hi": "Ross ने इस जवाब को इसी device पर रखने के लिए current runtime के साथ matter text को focus किया। deeper pass के लिए इस assistant runtime को switch करें या इस matter के छोटे हिस्से के बारे में पूछें।",
+            "bn": "এই উত্তরটি এই device-এ রাখতে Ross current runtime-এর সঙ্গে matter text-এ focus করেছে। deeper pass-এর জন্য এই assistant runtime switch করুন বা এই matter-এর ছোট অংশ সম্পর্কে জিজ্ঞাসা করুন।",
+            "ta": "இந்த பதில் இந்த device-இல் இருக்க Ross current runtime-இன் மூலம் matter text-இல் focus செய்தது. deeper pass-க்கு இந்த assistant runtime-ஐ switch செய்யவும் அல்லது இந்த matter-இன் சிறிய பகுதியைப் பற்றி கேளுங்கள்.",
+            "te": "ఈ సమాధానం ఈ device లోనే ఉండేందుకు Ross current runtime తో matter text పై focus చేసింది. deeper pass కోసం ఈ assistant runtime ను switch చేయండి లేదా ఈ matter లో చిన్న భాగం గురించి అడగండి."
+        ],
         "file_review_focused_source_sections_warning": [
             "en": "Ross focused on %1$d of %2$d source sections during local review. Split the file or use a stronger assistant for a deeper pass.",
             "hi": "Local review के दौरान Ross ने %2$d में से %1$d source sections पर focus किया। और गहरी review के लिए file को बाँटें या stronger assistant इस्तेमाल करें।",

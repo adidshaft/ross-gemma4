@@ -9812,6 +9812,62 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testAskPreflightUpgradePresentationUsesRuntimeWarningForFocusedMatterText() {
+        let presentation = alphaAskPreflightUpgradePresentation(
+            sourcePackCount: 10,
+            sourceBlockLimit: 10,
+            capabilityTier: .caseAssociate,
+            runtimeMode: .llamaCppGguf,
+            runtimeWarnings: [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts],
+            hasSelectedDocuments: false,
+            selectedDocumentCount: 0,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_000_000_000,
+            freeStorageGB: 24,
+            languageCode: "en"
+        )
+
+        XCTAssertEqual(
+            presentation?.warningText,
+            "Ross focused the matter text with the current runtime to keep this answer on this device. Switch this assistant runtime or ask about a smaller part of this matter for a deeper pass."
+        )
+        XCTAssertEqual(presentation?.targetTier, .caseAssociate)
+        XCTAssertNil(presentation?.upgradeTierHint)
+        XCTAssertEqual(presentation?.upgradeRuntimeHint, .mlxSwiftLm)
+        XCTAssertEqual(
+            presentation?.messageText(languageCode: "en"),
+            """
+            Ross focused the matter text with the current runtime to keep this answer on this device. Switch this assistant runtime or ask about a smaller part of this matter for a deeper pass.
+
+            MLX can keep more of this ask in local iPhone context.
+            """
+        )
+    }
+
+    func testAskPreflightUpgradePresentationUsesTextWarningWhenStrongerTierIsNeeded() {
+        let presentation = alphaAskPreflightUpgradePresentation(
+            sourcePackCount: 22,
+            sourceBlockLimit: 22,
+            capabilityTier: .caseAssociate,
+            runtimeMode: .mlxSwiftLm,
+            runtimeWarnings: [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts],
+            hasSelectedDocuments: false,
+            selectedDocumentCount: 0,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_000_000_000,
+            freeStorageGB: 24,
+            languageCode: "en"
+        )
+
+        XCTAssertEqual(
+            presentation?.warningText,
+            "Ross focused the matter text to keep this answer on this device. Ask about a smaller part of this matter or use a stronger assistant for a deeper pass."
+        )
+        XCTAssertEqual(presentation?.targetTier, .seniorDraftingSupport)
+        XCTAssertEqual(presentation?.upgradeTierHint, .seniorDraftingSupport)
+        XCTAssertEqual(presentation?.upgradeRuntimeHint, .llamaCppGguf)
+    }
+
     #if canImport(FoundationModels)
     @available(iOS 26.0, macOS 26.0, *)
     @MainActor
