@@ -47,7 +47,7 @@ private func alphaQuarantineActiveAssistantAfterStartupFailure(_ state: inout Al
         }
         return copy
     }
-    state.settings.activeTier = nil
+    state.settings.activeTier = activePack.tier
     state.modelJobs = state.modelJobs.map { job in
         var copy = job
         if copy.tier == activePack.tier, copy.state == .installed {
@@ -927,14 +927,35 @@ private func alphaPreferredInstalledPack(
     installedPacks: [AlphaInstalledModelPack],
     lastInvocation: AlphaLocalModelInvocation? = nil
 ) -> AlphaInstalledModelPack? {
-    var candidates = installedPacks.filter {
-        $0.tier == tier && alphaInstalledAssistantPackPassesRuntimeValidation($0)
+    func systemRuntimeAvailable(_ pack: AlphaInstalledModelPack) -> Bool {
+        AlphaLocalModelRuntime.runtimeHealth(
+            activePack: pack,
+            requestedTier: tier
+        )?.available == true
+    }
+
+    var candidates = installedPacks.filter { pack in
+        guard pack.tier == tier,
+              alphaInstalledAssistantPackPassesRuntimeValidation(pack) else {
+            return false
+        }
+        if pack.runtimeMode == .appleFoundationModels || pack.artifactKind == "system_model" {
+            return systemRuntimeAvailable(pack)
+        }
+        return true
     }
 
     let systemPack = alphaSystemAssistantPack(for: tier)
     let systemAvailable = !alphaAllowsDevelopmentModelArtifacts() &&
-        alphaInstalledAssistantPackPassesRuntimeValidation(systemPack)
-    if systemAvailable {
+        alphaInstalledAssistantPackPassesRuntimeValidation(systemPack) &&
+        systemRuntimeAvailable(systemPack)
+    if systemAvailable,
+       !candidates.contains(where: {
+           $0.packId == systemPack.packId &&
+               $0.runtimeMode == systemPack.runtimeMode &&
+               $0.artifactKind == systemPack.artifactKind &&
+               $0.installPath == systemPack.installPath
+       }) {
         candidates.append(systemPack)
     }
 
@@ -1653,6 +1674,43 @@ private func alphaBuildPrivateAISnapshot(
         alphaConvergeAssistantUpdateCandidates(&recoveredState)
         alphaApplyPreferredInstalledRuntimeForSelectedTier(&recoveredState)
         let activePack = alphaValidatedActivePack(from: recoveredState)
+        if let activePack,
+           (activePack.runtimeMode == .appleFoundationModels || activePack.artifactKind == "system_model"),
+           !recoveredState.installedPacks.contains(where: {
+               $0.packId == activePack.packId &&
+                   $0.runtimeMode == activePack.runtimeMode &&
+                   $0.artifactKind == activePack.artifactKind &&
+                   $0.installPath == activePack.installPath
+           }) {
+            var insertedActivePack = activePack
+            insertedActivePack.isActive = true
+            recoveredState.installedPacks.insert(insertedActivePack, at: 0)
+            if !recoveredState.modelJobs.contains(where: {
+                $0.tier == insertedActivePack.tier &&
+                    $0.packId == insertedActivePack.packId &&
+                    $0.runtimeMode == insertedActivePack.runtimeMode &&
+                    $0.artifactKind == insertedActivePack.artifactKind &&
+                    $0.state == .installed
+            }) {
+                recoveredState.modelJobs.insert(
+                    AlphaModelDownloadJob(
+                        sessionId: "system-\(insertedActivePack.tier.rawValue)",
+                        packId: insertedActivePack.packId,
+                        tier: insertedActivePack.tier,
+                        state: .installed,
+                        networkPolicy: .wifiOnly,
+                        bytesDownloaded: 0,
+                        totalBytes: 0,
+                        checksumSha256: insertedActivePack.checksumSha256,
+                        artifactKind: insertedActivePack.artifactKind,
+                        runtimeMode: insertedActivePack.runtimeMode,
+                        developmentOnly: insertedActivePack.developmentOnly,
+                        completedAt: .now
+                    ),
+                    at: 0
+                )
+            }
+        }
         recoveredState.installedPacks = alphaNormalizedInstalledPacks(from: recoveredState, activePack: activePack)
         if let activePack, recoveredState.settings.activeTier != activePack.tier {
             recoveredState.settings.activeTier = activePack.tier

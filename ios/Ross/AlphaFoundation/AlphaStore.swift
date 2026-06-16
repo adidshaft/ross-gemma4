@@ -869,7 +869,14 @@ actor AlphaRossStore {
         artifactKind: String,
         runtimeMode: AlphaPackRuntimeMode
     ) throws -> (installSourceURL: URL, verification: (checksum: String, bytes: Int64)) {
-        if alphaPackagedMLXArchiveArtifact(fileName: fileName, artifactKind: artifactKind, runtimeMode: runtimeMode) {
+        var downloadedIsDirectory: ObjCBool = false
+        let downloadedExists = fileManager.fileExists(
+            atPath: downloadedFileURL.path,
+            isDirectory: &downloadedIsDirectory
+        )
+
+        if alphaPackagedMLXArchiveArtifact(fileName: fileName, artifactKind: artifactKind, runtimeMode: runtimeMode),
+           !(downloadedExists && downloadedIsDirectory.boolValue) {
             guard let archiveVerification = alphaModelArtifactVerification(
                 at: downloadedFileURL,
                 fileManager: fileManager

@@ -6778,10 +6778,21 @@ final class AlphaExtractionTests: XCTestCase {
             currentPack: systemPack
         )
 
+        let systemHealth = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: systemPack,
+            requestedTier: .caseAssociate
+        )
+
         XCTAssertFalse(result.modelInvocations.isEmpty)
-        XCTAssertTrue(result.modelInvocations.allSatisfy { $0.runtimeMode == AlphaPackRuntimeMode.deterministicDev.rawValue })
-        XCTAssertEqual(model.persisted.installedPacks.first(where: \.isActive)?.packId, fallbackPack.packId)
-        XCTAssertTrue(model.persisted.ledgerEntries.contains { $0.title == "Assistant fallback enabled" })
+        if systemHealth?.available == true {
+            XCTAssertTrue(result.modelInvocations.allSatisfy { $0.runtimeMode == AlphaPackRuntimeMode.appleFoundationModels.rawValue })
+            XCTAssertEqual(model.persisted.installedPacks.first(where: \.isActive)?.packId, systemPack.packId)
+            XCTAssertFalse(model.persisted.ledgerEntries.contains { $0.title == "Assistant fallback enabled" })
+        } else {
+            XCTAssertTrue(result.modelInvocations.allSatisfy { $0.runtimeMode == AlphaPackRuntimeMode.deterministicDev.rawValue })
+            XCTAssertEqual(model.persisted.installedPacks.first(where: \.isActive)?.packId, fallbackPack.packId)
+            XCTAssertTrue(model.persisted.ledgerEntries.contains { $0.title == "Assistant fallback enabled" })
+        }
     }
 
     @MainActor
@@ -6845,11 +6856,21 @@ final class AlphaExtractionTests: XCTestCase {
         await model.rerunReview(caseId: caseId, documentId: documentId)
 
         let updatedDocument = model.persisted.cases.first?.documents.first
-        XCTAssertEqual(model.persisted.installedPacks.first(where: \.isActive)?.packId, fallbackPack.packId)
         XCTAssertFalse(updatedDocument?.modelInvocations.isEmpty ?? true)
-        XCTAssertTrue(updatedDocument?.modelInvocations.allSatisfy { $0.runtimeMode == AlphaPackRuntimeMode.deterministicDev.rawValue } == true)
         XCTAssertFalse(updatedDocument?.extractedFields.isEmpty ?? true)
-        XCTAssertTrue(model.persisted.ledgerEntries.contains { $0.title == "Assistant fallback enabled" })
+        let systemHealth = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: systemPack,
+            requestedTier: .caseAssociate
+        )
+        if systemHealth?.available == true {
+            XCTAssertEqual(model.persisted.installedPacks.first(where: \.isActive)?.packId, systemPack.packId)
+            XCTAssertTrue(updatedDocument?.modelInvocations.allSatisfy { $0.runtimeMode == AlphaPackRuntimeMode.appleFoundationModels.rawValue } == true)
+            XCTAssertFalse(model.persisted.ledgerEntries.contains { $0.title == "Assistant fallback enabled" })
+        } else {
+            XCTAssertEqual(model.persisted.installedPacks.first(where: \.isActive)?.packId, fallbackPack.packId)
+            XCTAssertTrue(updatedDocument?.modelInvocations.allSatisfy { $0.runtimeMode == AlphaPackRuntimeMode.deterministicDev.rawValue } == true)
+            XCTAssertTrue(model.persisted.ledgerEntries.contains { $0.title == "Assistant fallback enabled" })
+        }
     }
 
     #if canImport(FoundationModels)
