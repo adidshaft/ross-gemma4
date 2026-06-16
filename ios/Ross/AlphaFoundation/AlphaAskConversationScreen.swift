@@ -292,7 +292,11 @@ struct AlphaAskConversationScreen: View {
                 )) {
                     let preflight = askPreflightUpgrade
                     self.askPreflightUpgrade = nil
-                    model.openAskUpgradeSetup(for: preflight)
+                    if model.applyAskPreflightUpgradeIfAvailable(preflight) {
+                        send(skipPreflight: true)
+                    } else {
+                        model.openAskUpgradeSetup(for: preflight)
+                    }
                 }
             }
             Button(rossLocalized("cancel"), role: .cancel) {

@@ -1554,6 +1554,16 @@ extension AlphaRossModel {
         )
     }
 
+    func applyAskPreflightUpgradeIfAvailable(_ preflight: AlphaAskPreflightUpgradePresentation) -> Bool {
+        guard let runtimeMode = preflight.upgradeRuntimeHint,
+              activateAssistantRuntimeIfAvailable(for: preflight.targetTier, runtimeMode: runtimeMode) else {
+            return false
+        }
+        selectedTier = preflight.targetTier
+        clearPendingAskUpgrade()
+        return true
+    }
+
     func openAskUpgradeSetup(
         tier: AlphaCapabilityTier,
         runtimeMode: AlphaPackRuntimeMode?,

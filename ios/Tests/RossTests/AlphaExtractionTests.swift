@@ -9486,6 +9486,54 @@ final class AlphaExtractionTests: XCTestCase {
     }
 
     @MainActor
+    func testApplyAskPreflightUpgradeIfAvailableActivatesRuntimeImmediately() async throws {
+        let store = AlphaRossStore()
+        var availableMLXPack = try await installMLXPack(
+            with: store,
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-it-qat-4bit",
+            packId: "case-mlx",
+            fixtureName: "ask-preflight-apply-mlx"
+        )
+        availableMLXPack.isActive = false
+
+        var state = AlphaPersistedState.seed()
+        state.installedPacks = [installedPack(.quickStart), availableMLXPack]
+        let model = AlphaRossModel(previewState: state, previewPath: [.askRoss])
+        let preflight = AlphaAskPreflightUpgradePresentation(
+            warningText: "Switch to MLX",
+            targetTier: .caseAssociate,
+            hasSelectedDocuments: false,
+            upgradeTierHint: nil,
+            upgradeRuntimeHint: .mlxSwiftLm
+        )
+
+        XCTAssertTrue(model.applyAskPreflightUpgradeIfAvailable(preflight))
+        XCTAssertEqual(model.selectedTier, .caseAssociate)
+        XCTAssertEqual(model.persisted.installedPacks.first(where: \.isActive)?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(model.privateAISnapshot.activePack?.runtimeMode, .mlxSwiftLm)
+        XCTAssertNil(model.pendingAskUpgradeReturnRoute)
+        XCTAssertNil(model.pendingAskUpgradeExpectedTier)
+        XCTAssertNil(model.pendingAskUpgradeExpectedRuntimeMode)
+    }
+
+    @MainActor
+    func testApplyAskPreflightUpgradeIfAvailableReturnsFalseWhenRuntimeNeedsSetup() {
+        let model = AlphaRossModel(previewState: .seed(), previewPath: [.askRoss])
+        model.selectedTier = .quickStart
+        let preflight = AlphaAskPreflightUpgradePresentation(
+            warningText: "Switch to GGUF",
+            targetTier: .seniorDraftingSupport,
+            hasSelectedDocuments: false,
+            upgradeTierHint: .seniorDraftingSupport,
+            upgradeRuntimeHint: .llamaCppGguf
+        )
+
+        XCTAssertFalse(model.applyAskPreflightUpgradeIfAvailable(preflight))
+        XCTAssertEqual(model.selectedTier, .quickStart)
+    }
+
+    @MainActor
     func testCanRetryAskWithUpgradeReturnsTrueWhenHintRuntimeIsAlreadyInstalled() async throws {
         let store = AlphaRossStore()
         var availableMLXPack = try await installMLXPack(

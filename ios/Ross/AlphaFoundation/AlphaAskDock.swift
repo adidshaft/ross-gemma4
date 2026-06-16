@@ -785,7 +785,14 @@ struct AlphaRootAskDock: View {
                     if dismissesExpandedComposer {
                         showingExpandedComposer = false
                     }
-                    model.openAskUpgradeSetup(for: preflight)
+                    if model.applyAskPreflightUpgradeIfAvailable(preflight) {
+                        send(
+                            dismissingExpandedComposer: dismissesExpandedComposer,
+                            skipPreflight: true
+                        )
+                    } else {
+                        model.openAskUpgradeSetup(for: preflight)
+                    }
                 }
             }
             Button(rossLocalized("cancel"), role: .cancel) {
