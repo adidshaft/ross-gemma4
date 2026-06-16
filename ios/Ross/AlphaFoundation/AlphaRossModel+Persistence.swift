@@ -1309,6 +1309,24 @@ private func alphaAssistantTierSupportsMLXRuntime(_ tier: AlphaCapabilityTier) -
     }
 }
 
+private func alphaShouldPreserveInstalledGGUFOnCapablePhone(
+    tier: AlphaCapabilityTier,
+    existingRuntimeMode: AlphaPackRuntimeMode?,
+    isPhoneFormFactor: Bool,
+    physicalMemoryBytes: UInt64
+) -> Bool {
+    guard existingRuntimeMode == .llamaCppGguf, isPhoneFormFactor else {
+        return false
+    }
+
+    let normalizedTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
+    guard normalizedTier == .caseAssociate || normalizedTier == .seniorDraftingSupport else {
+        return false
+    }
+
+    return physicalMemoryBytes >= 16 * 1_073_741_824
+}
+
 func alphaPreferredAssistantRuntimeMode(
     for tier: AlphaCapabilityTier,
     existingRuntimeMode: AlphaPackRuntimeMode? = nil,
@@ -1350,6 +1368,14 @@ func alphaPreferredAssistantRuntimeMode(
             if (AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier) == .quickStart,
                existingRuntimeMode == nil {
                 return .appleFoundationModels
+            }
+            if alphaShouldPreserveInstalledGGUFOnCapablePhone(
+                tier: tier,
+                existingRuntimeMode: existingRuntimeMode,
+                isPhoneFormFactor: isPhoneFormFactor,
+                physicalMemoryBytes: physicalMemoryBytes
+            ) {
+                return .llamaCppGguf
             }
             let localPreferred = alphaPreferredAssistantRuntimeMode(
                 for: tier,
@@ -1404,6 +1430,15 @@ func alphaPreferredAssistantRuntimeMode(
         default:
             break
         }
+    }
+
+    if alphaShouldPreserveInstalledGGUFOnCapablePhone(
+        tier: tier,
+        existingRuntimeMode: existingRuntimeMode,
+        isPhoneFormFactor: isPhoneFormFactor,
+        physicalMemoryBytes: physicalMemoryBytes
+    ) {
+        return .llamaCppGguf
     }
 
     if existingRuntimeMode == .mlxSwiftLm && supportsMLXRuntime {

@@ -8576,6 +8576,59 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
+    func testPreferredAssistantRuntimeModePreservesInstalledGGUFOnHighMemoryPhone() {
+        let runtime = alphaPreferredAssistantRuntimeMode(
+            for: .caseAssociate,
+            existingRuntimeMode: .llamaCppGguf,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 16 * 1_073_741_824,
+            freeStorageGB: 32,
+            systemAssistantAvailable: false
+        )
+
+        XCTAssertEqual(runtime, .llamaCppGguf)
+    }
+
+    func testPreferredAssistantRuntimeModePreservesInstalledGGUFOnHighMemoryPhoneWhenSystemAssistantIsAvailable() {
+        let runtime = alphaPreferredAssistantRuntimeMode(
+            for: .caseAssociate,
+            existingRuntimeMode: .llamaCppGguf,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 16 * 1_073_741_824,
+            freeStorageGB: 32,
+            systemAssistantAvailable: true
+        )
+
+        XCTAssertEqual(runtime, .llamaCppGguf)
+    }
+
+    func testReuseInstalledAssistantPackWhenHighMemoryPhoneKeepsExistingGGUF() {
+        let pack = installedPack(
+            .caseAssociate,
+            runtimeMode: .llamaCppGguf,
+            packId: "gemma-4-12b-q4",
+            installPath: "model-packs/case_associate/gemma-4-12B-it-UD-Q4_K_XL.gguf",
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+        let preferredRuntime = alphaPreferredAssistantRuntimeMode(
+            for: .caseAssociate,
+            existingRuntimeMode: pack.runtimeMode,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 16 * 1_073_741_824,
+            freeStorageGB: 32,
+            systemAssistantAvailable: false
+        )
+
+        XCTAssertEqual(preferredRuntime, .llamaCppGguf)
+        XCTAssertTrue(
+            alphaShouldReuseInstalledAssistantPack(
+                pack,
+                preferredRuntimeMode: preferredRuntime
+            )
+        )
+    }
+
     func testForceDownloadBypassesInstalledAssistantPackReuse() {
         let pack = installedPack(
             .caseAssociate,
