@@ -1000,11 +1000,21 @@ struct AlphaInlineAskResponseCard: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     Spacer(minLength: 8)
-                    AlphaInlineAskResponseAccessoryButton(
-                        systemImage: "xmark",
-                        accessibilityLabel: rossLocalized("dismiss"),
-                        action: onClose
-                    )
+                    HStack(spacing: 8) {
+                        if result.hasAnswerDetails {
+                            AlphaInlineAskResponseAccessoryButton(
+                                systemImage: "info.circle",
+                                accessibilityLabel: rossLocalized("answer_details"),
+                                action: { onShowDetails(result) }
+                            )
+                        }
+
+                        AlphaInlineAskResponseAccessoryButton(
+                            systemImage: "xmark",
+                            accessibilityLabel: rossLocalized("dismiss"),
+                            action: onClose
+                        )
+                    }
                 }
 
                 ForEach(result.answerSectionItems(limit: 2)) { section in
