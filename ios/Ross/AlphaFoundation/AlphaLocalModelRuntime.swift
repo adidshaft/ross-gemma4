@@ -462,7 +462,7 @@ enum AlphaLocalPromptBudgetPlanner {
         let firstTokenMs = lastInvocation.timeToFirstTokenMs ?? Int.max
         let outputSpeed = lastInvocation.estimatedOutputTokensPerSecond ?? .greatestFiniteMagnitude
 
-        if shouldKeepExpandedLargeFileBudget(
+        if shouldKeepFastLargeFileBudget(
             runtimeMode: runtimeMode,
             baseMaxInputChars: baseMaxInputChars,
             sourceBlockCount: sourceBlockCount,
@@ -470,20 +470,20 @@ enum AlphaLocalPromptBudgetPlanner {
             firstTokenMs: firstTokenMs,
             outputSpeed: outputSpeed
         ) {
-            maximumBudget = fastMLXLargeFileInputBudget(
+            maximumBudget = fastLargeFileInputBudget(
                 runtimeMode: runtimeMode,
                 baseMaxInputChars: baseMaxInputChars,
                 usesStructuredThresholds: false
             )
             maxInputChars = maximumBudget
-            if let widenedBlockLimit = fastMLXLargeFileBlockLimit(
+            if let widenedBlockLimit = fastLargeFileBlockLimit(
                 runtimeMode: runtimeMode,
                 baseMaxInputChars: baseMaxInputChars,
                 usesStructuredThresholds: false
             ) {
                 sourceBlockLimit = min(sourceBlockCount, max(sourceBlockLimit ?? 0, widenedBlockLimit))
             }
-            if let widenedExcerptChars = fastMLXLargeFileExcerptChars(
+            if let widenedExcerptChars = fastLargeFileExcerptChars(
                 runtimeMode: runtimeMode,
                 baseMaxInputChars: baseMaxInputChars,
                 usesStructuredThresholds: false
@@ -590,7 +590,7 @@ enum AlphaLocalPromptBudgetPlanner {
         let firstTokenMs = lastInvocation.timeToFirstTokenMs ?? Int.max
         let outputSpeed = lastInvocation.estimatedOutputTokensPerSecond ?? .greatestFiniteMagnitude
 
-        if shouldKeepExpandedLargeFileBudget(
+        if shouldKeepFastLargeFileBudget(
             runtimeMode: runtimeMode,
             baseMaxInputChars: baseMaxInputChars,
             sourceBlockCount: sourceBlockCount,
@@ -599,20 +599,20 @@ enum AlphaLocalPromptBudgetPlanner {
             outputSpeed: outputSpeed,
             usesStructuredThresholds: true
         ) {
-            maximumBudget = fastMLXLargeFileInputBudget(
+            maximumBudget = fastLargeFileInputBudget(
                 runtimeMode: runtimeMode,
                 baseMaxInputChars: baseMaxInputChars,
                 usesStructuredThresholds: true
             )
             maxInputChars = maximumBudget
-            if let widenedBlockLimit = fastMLXLargeFileBlockLimit(
+            if let widenedBlockLimit = fastLargeFileBlockLimit(
                 runtimeMode: runtimeMode,
                 baseMaxInputChars: baseMaxInputChars,
                 usesStructuredThresholds: true
             ) {
                 sourceBlockLimit = min(sourceBlockCount, max(sourceBlockLimit ?? 0, widenedBlockLimit))
             }
-            if let widenedExcerptChars = fastMLXLargeFileExcerptChars(
+            if let widenedExcerptChars = fastLargeFileExcerptChars(
                 runtimeMode: runtimeMode,
                 baseMaxInputChars: baseMaxInputChars,
                 usesStructuredThresholds: true
@@ -714,76 +714,116 @@ enum AlphaLocalPromptBudgetPlanner {
         return 0
     }
 
-    private static func fastMLXLargeFileInputBudget(
+    private static func fastLargeFileInputBudget(
         runtimeMode: AlphaPackRuntimeMode,
         baseMaxInputChars: Int,
         usesStructuredThresholds: Bool
     ) -> Int {
-        guard runtimeMode == .mlxSwiftLm else {
-            return baseMaxInputChars
-        }
         guard baseMaxInputChars >= 40_000 else {
             return baseMaxInputChars
         }
 
-        let multiplier = usesStructuredThresholds ? 1.07 : 1.08
+        let multiplier: Double
+        switch runtimeMode {
+        case .mlxSwiftLm:
+            multiplier = usesStructuredThresholds ? 1.07 : 1.08
+        case .appleFoundationModels:
+            multiplier = usesStructuredThresholds ? 1.04 : 1.05
+        default:
+            return baseMaxInputChars
+        }
+
         return Int((Double(baseMaxInputChars) * multiplier).rounded(.down))
     }
 
-    private static func fastMLXLargeFileBlockLimit(
+    private static func fastLargeFileBlockLimit(
         runtimeMode: AlphaPackRuntimeMode,
         baseMaxInputChars: Int,
         usesStructuredThresholds: Bool
     ) -> Int? {
-        guard runtimeMode == .mlxSwiftLm else {
+        switch runtimeMode {
+        case .mlxSwiftLm:
+            if usesStructuredThresholds {
+                if baseMaxInputChars >= 52_000 {
+                    return 18
+                }
+                if baseMaxInputChars >= 40_000 {
+                    return 15
+                }
+            } else {
+                if baseMaxInputChars >= 52_000 {
+                    return 14
+                }
+                if baseMaxInputChars >= 40_000 {
+                    return 12
+                }
+            }
+            return nil
+        case .appleFoundationModels:
+            if usesStructuredThresholds {
+                if baseMaxInputChars >= 52_000 {
+                    return 16
+                }
+                if baseMaxInputChars >= 40_000 {
+                    return 15
+                }
+            } else {
+                if baseMaxInputChars >= 52_000 {
+                    return 13
+                }
+                if baseMaxInputChars >= 40_000 {
+                    return 12
+                }
+            }
+            return nil
+        default:
             return nil
         }
-
-        if usesStructuredThresholds {
-            if baseMaxInputChars >= 52_000 {
-                return 18
-            }
-            if baseMaxInputChars >= 40_000 {
-                return 15
-            }
-        } else {
-            if baseMaxInputChars >= 52_000 {
-                return 14
-            }
-            if baseMaxInputChars >= 40_000 {
-                return 12
-            }
-        }
-
-        return nil
     }
 
-    private static func fastMLXLargeFileExcerptChars(
+    private static func fastLargeFileExcerptChars(
         runtimeMode: AlphaPackRuntimeMode,
         baseMaxInputChars: Int,
         usesStructuredThresholds: Bool
     ) -> Int? {
-        guard runtimeMode == .mlxSwiftLm else {
+        switch runtimeMode {
+        case .mlxSwiftLm:
+            if usesStructuredThresholds {
+                if baseMaxInputChars >= 52_000 {
+                    return 1_820
+                }
+                if baseMaxInputChars >= 40_000 {
+                    return 1_700
+                }
+            } else {
+                if baseMaxInputChars >= 52_000 {
+                    return 2_050
+                }
+                if baseMaxInputChars >= 40_000 {
+                    return 1_900
+                }
+            }
+            return nil
+        case .appleFoundationModels:
+            if usesStructuredThresholds {
+                if baseMaxInputChars >= 52_000 {
+                    return 1_650
+                }
+                if baseMaxInputChars >= 40_000 {
+                    return 1_580
+                }
+            } else {
+                if baseMaxInputChars >= 52_000 {
+                    return 1_900
+                }
+                if baseMaxInputChars >= 40_000 {
+                    return 1_800
+                }
+            }
+            return nil
+        default:
             return nil
         }
-
-        if usesStructuredThresholds {
-            if baseMaxInputChars >= 52_000 {
-                return 1_820
-            }
-            if baseMaxInputChars >= 40_000 {
-                return 1_700
-            }
-        } else {
-            if baseMaxInputChars >= 52_000 {
-                return 2_050
-            }
-            if baseMaxInputChars >= 40_000 {
-                return 1_900
-            }
-        }
-
-        return nil
     }
 
     private static func singleSelectedStructuredDocumentBlockLimit(
@@ -847,7 +887,7 @@ enum AlphaLocalPromptBudgetPlanner {
         return 1
     }
 
-    private static func shouldKeepExpandedLargeFileBudget(
+    private static func shouldKeepFastLargeFileBudget(
         runtimeMode: AlphaPackRuntimeMode,
         baseMaxInputChars: Int,
         sourceBlockCount: Int,
@@ -856,7 +896,7 @@ enum AlphaLocalPromptBudgetPlanner {
         outputSpeed: Double,
         usesStructuredThresholds: Bool = false
     ) -> Bool {
-        guard runtimeMode == .mlxSwiftLm else { return false }
+        guard runtimeMode == .mlxSwiftLm || runtimeMode == .appleFoundationModels else { return false }
         guard baseMaxInputChars >= 40_000 else { return false }
 
         let largeFileBlockThreshold = usesStructuredThresholds ? 12 : 8
