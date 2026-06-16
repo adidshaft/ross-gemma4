@@ -1417,16 +1417,16 @@ final class AlphaExtractionTests: XCTestCase {
             [.quickStart, .caseAssociate, .seniorDraftingSupport]
         )
         XCTAssertEqual(AlphaCapabilityTier.flash.downloadSizeLabel, "3.0 GB")
-        XCTAssertEqual(AlphaCapabilityTier.quickStart.downloadSizeLabel, "5.2 GB")
-        XCTAssertEqual(AlphaCapabilityTier.caseAssociate.downloadSizeLabel, "7.8 GB")
-        XCTAssertEqual(AlphaCapabilityTier.seniorDraftingSupport.downloadSizeLabel, "17.5 GB")
+        XCTAssertEqual(AlphaCapabilityTier.quickStart.downloadSizeLabel, "4.3 GB")
+        XCTAssertEqual(AlphaCapabilityTier.caseAssociate.downloadSizeLabel, "7.0 GB")
+        XCTAssertEqual(AlphaCapabilityTier.seniorDraftingSupport.downloadSizeLabel, "14.5 GB")
         XCTAssertEqual(
             AlphaCapabilityTier.flash.setupWarning(languageCode: "en"),
             "Download about 3.0 GB before you begin. Wi-Fi is still the safest option."
         )
         XCTAssertTrue(
             AlphaCapabilityTier.caseAssociate.setupWarning(languageCode: "ta")
-                .contains("7.8 GB")
+                .contains("7.0 GB")
         )
         XCTAssertTrue(
             AlphaCapabilityTier.caseAssociate.setupWarning(languageCode: "ta")
@@ -1434,7 +1434,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
         XCTAssertTrue(
             AlphaCapabilityTier.seniorDraftingSupport.setupWarning(languageCode: "te-IN")
-                .contains("17.5 GB")
+                .contains("14.5 GB")
         )
         XCTAssertTrue(
             AlphaCapabilityTier.seniorDraftingSupport.setupWarning(languageCode: "te-IN")
@@ -5717,6 +5717,18 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(service.jobs.first?.progress, 0)
         XCTAssertTrue(service.jobs.first?.deliveryNote.contains("Open My assistant") == true)
         XCTAssertEqual(ledger.entries.first?.title, "Old assistant download blocked")
+    }
+
+    func testLegacyCapabilityTierCopyMatchesCurrentThreePackNames() {
+        XCTAssertEqual(CapabilityTier.quickStart.title, "Quick Start")
+        XCTAssertEqual(CapabilityTier.caseAssociate.title, "Case Associate")
+        XCTAssertEqual(CapabilityTier.seniorDraftingSupport.title, "Senior Drafting Support")
+
+        XCTAssertTrue(CapabilityTier.quickStart.summary.contains("quick local review"))
+        XCTAssertTrue(CapabilityTier.caseAssociate.summary.contains("most matters"))
+        XCTAssertTrue(CapabilityTier.seniorDraftingSupport.summary.contains("drafting support"))
+
+        XCTAssertEqual(DeviceCapability.placeholder.recommendedTier.title, "Case Associate")
     }
 
     func testAssistantDownloadPreflightParsesProviderSizeAndChecksum() throws {

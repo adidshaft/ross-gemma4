@@ -10,53 +10,53 @@ enum CapabilityTier: String, CaseIterable, Codable, Hashable, Identifiable, Send
     var title: String {
         switch self {
         case .quickStart:
-            "Basic"
+            "Quick Start"
         case .caseAssociate:
-            "Standard"
+            "Case Associate"
         case .seniorDraftingSupport:
-            "Advanced"
+            "Senior Drafting Support"
         }
     }
 
     var summary: String {
         switch self {
         case .quickStart:
-            "Best for basic local review, short summaries, and simple Ask Ross actions while keeping the install light."
+            "Lighter private assistant for quick local review, short summaries, and faster short-turn Ask Ross work."
         case .caseAssociate:
-            "Recommended private assistant for document review, chronologies, hearing notes, and source-backed Ask Ross answers."
+            "Recommended private assistant for most matters, larger files, chronologies, and source-backed Ask Ross answers."
         case .seniorDraftingSupport:
-            "Advanced private assistant for deeper review, longer matter reasoning, and drafting support."
+            "Highest-capability private assistant for larger bundles, deeper review, and drafting support."
         }
     }
 
     var focusAreas: [String] {
         switch self {
         case .quickStart:
-            ["Quick capture review", "Short summaries", "Quick responses for short prompts"]
+            ["Quick capture review", "Short summaries", "Faster responses for shorter prompts"]
         case .caseAssociate:
-            ["Source-backed case Q&A", "Chronologies and issues", "Order and evidence review"]
+            ["Source-backed case Q&A", "Chronologies and issue review", "Orders, notices, and evidence review"]
         case .seniorDraftingSupport:
-            ["Longer-document drafting", "Hearing notes", "Richer bilingual drafting support"]
+            ["Larger-bundle drafting", "Hearing notes", "Deeper bilingual drafting support"]
         }
     }
 
     var storageGuidance: String {
         switch self {
         case .quickStart:
-            "Lightest download footprint"
+            "Lightest of the three assistant downloads"
         case .caseAssociate:
             "Balanced storage and capability"
         case .seniorDraftingSupport:
-            "Largest local footprint"
+            "Largest local download and footprint"
         }
     }
 
     var instantModeSummary: String {
         switch self {
         case .quickStart:
-            "Runs short local prompts for immediate review."
+            "Keeps short local prompts responsive for immediate review."
         case .caseAssociate:
-            "Keeps short case questions responsive while preserving source-backed output."
+            "Keeps short case questions responsive while preserving source-backed answers."
         case .seniorDraftingSupport:
             "Prioritizes deeper drafting tasks over the fastest short-turn review."
         }

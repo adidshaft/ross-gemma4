@@ -12,11 +12,11 @@ Ross shows advocate-friendly assistant levels in normal UI. Technical model name
 
 ## Recommended Stack
 
-Generative assistant tiers are Gemma 4-first:
+Visible generative assistant tiers are Gemma 4-first:
 
-- Quick Start -> Gemma 4 E2B Q4, `google/gemma-4-E2B-it`
-- Case Associate -> Gemma 4 E4B Q4, `google/gemma-4-E4B-it`
-- Senior Drafting Support -> Gemma 4 26B-A4B Q4, `google/gemma-4-26B-A4B-it`
+- Quick Start -> `gemma-4-e4b-q4`, `unsloth/gemma-4-E4B-it-qat-GGUF`
+- Case Associate -> `gemma-4-12b-q4`, `unsloth/gemma-4-12B-it-qat-GGUF`
+- Senior Drafting Support -> `gemma-4-26b-a4b-q4`, `unsloth/gemma-4-26B-A4B-it-qat-GGUF`
 
 Retrieval is separate:
 
@@ -27,31 +27,35 @@ Gemma/Gemma 3n generative paths are optional future or experimental paths, not R
 
 ## User-Facing Packs
 
-### Basic
+### No assistant installed
 
 - available with no Private AI Pack installed
 - uses local acquisition, OCR where available, heuristics, and deterministic extraction
 
-### Flash
-
-- download: about 3.0 GB
-- role: fastest setup, immediate short answers, basic review
-
 ### Quick Start
 
-- download: about 3.5 GB
-- role: command routing, simple Ask Ross actions, short summaries, basic local matter Q&A
+- download: about 4.3 GB in the current iOS catalog
+- role: lighter everyday work, short summaries, and quicker local matter Q&A
+- runtime priority: GGUF on all supported platforms, with MLX and CoreAI eligible on supported iPhones
 
 ### Case Associate
 
 - recommended
-- download: about 5.4 GB
-- role: document review, next-date extraction, order directions, matter summaries, hearing notes, chronology, source-backed Ask Ross answers
+- download: about 7.0 GB in the current iOS catalog
+- role: most matters, larger files, chronology work, hearing notes, and source-backed Ask Ross answers
+- runtime priority: GGUF by default, with MLX preferred on supported iPhones when it remains the faster lane
 
 ### Senior Drafting Support
 
-- download: about 17.0 GB
-- role: advanced drafting, deeper review, longer matter reasoning, chronology refinement, issue extraction, hearing preparation
+- download: about 14.5 GB in the current iOS catalog
+- role: larger bundles, deeper review, longer local reasoning, chronology refinement, and drafting support
+- runtime priority: GGUF first, with CoreAI eligible where instant built-in setup is preferred
+
+### Legacy compatibility tier
+
+- Flash remains decodable for older state and tests
+- it is not shown in the normal setup catalog
+- it is not part of the shipped visible 3-pack ladder
 
 ## Runtime And Artifact Values
 
@@ -60,15 +64,15 @@ Supported runtime-mode values:
 - `deterministic_dev`
 - `mediapipe_llm`
 - `gemma_local_runtime`
+- `mlx_swift_lm`
 - `apple_foundation_models`
-- `litert`
 - `unavailable`
 
 Supported artifact-kind values:
 
 - `tiny_dev_artifact`
 - `local_model_artifact`
-- `local_embedding_model`
+- `mlx_directory`
 - `system_model`
 - `external_debug_model`
 
@@ -84,7 +88,7 @@ Supported artifact-kind values:
 
 - advertises Gemma 4 tier metadata
 - uses `local_model_artifact`
-- uses `gemma_local_runtime`
+- uses the current GGUF runner slot (`gemma_local_runtime`)
 - does not provide real download URLs or segments
 - rejects model download sessions until a real delivery path is configured
 
@@ -95,4 +99,5 @@ Supported artifact-kind values:
 - normal UI uses assistant levels, not model names
 - private matter data never goes to cloud AI
 - deterministic dev remains available for tests and fallback
+- iPhone runtime selection may choose GGUF, MLX, or built-in CoreAI depending on support and recent performance
 - source-backed answers require the separate retrieval model path

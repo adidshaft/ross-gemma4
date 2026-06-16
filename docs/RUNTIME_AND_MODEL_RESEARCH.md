@@ -1,111 +1,119 @@
 # Runtime and Model Research Tracker
 
-## Part 1 — Models needed
+## Part 1 — Shipped visible model ladder
 
-### Gemma 4 E4B Instruct
+### Quick Start
 | Property | Value |
 | --- | --- |
-| product tier | Basic |
-| active model id | gemma-4-e4b-q4 |
-| upstream identity | google/gemma-4-E4B-it |
-| desired artifact format | GGUF Q4_K_M |
-| candidate Hugging Face repo URL | `https://huggingface.co/bartowski/google_gemma-4-E4B-it-GGUF` |
-| direct file URL | `https://huggingface.co/bartowski/google_gemma-4-E4B-it-GGUF/resolve/main/google_gemma-4-E4B-it-Q4_K_M.gguf?download=1` |
-| file name | `google_gemma-4-E4B-it-Q4_K_M.gguf` |
-| sizeBytes | `5405168384` |
-| checksumSha256 | `51865750adafd22de56994a343d5a887cc1a589b9bae41d62b748c8bd0ca9c76` |
+| product tier | Quick Start |
+| active model id | `gemma-4-e4b-q4` |
+| upstream identity | `google/gemma-4-E4B-it` |
+| shipping repo | `unsloth/gemma-4-E4B-it-qat-GGUF` |
+| artifact format | GGUF UD-Q4_K_XL |
+| file name | `gemma-4-E4B-it-UD-Q4_K_XL.gguf` |
+| sizeBytes | `4215693760` |
+| checksumSha256 | `b3052f962d6449b4eb2075733c068bdec1c51eadb7b237e6c3157bfbb7b1dae0` |
+| draft companion | `mtp-gemma-4-E4B-it.gguf` |
+| draftSizeBytes | `59676544` |
+| draftChecksumSha256 | `b0005dc39d47ede950c3ec413cb20e832f15b216126eae368d9f572676153cb6` |
 | verified | true |
 | releaseReady | true |
-| notes | Current lighter visible pack for iPhone-first setups. |
+| notes | Lighter visible pack for everyday work and faster short-turn review. |
 
-### Gemma 4 12B Instruct
+### Case Associate
 | Property | Value |
 | --- | --- |
-| product tier | Standard |
-| active model id | gemma-4-12b-q4 |
-| upstream identity | google/gemma-4-12B-it |
-| desired artifact format | GGUF Q4_K_M |
-| candidate Hugging Face repo URL | `https://huggingface.co/ggml-org/gemma-4-12B-it-GGUF` |
-| direct file URL | `https://huggingface.co/ggml-org/gemma-4-12B-it-GGUF/resolve/main/gemma-4-12B-it-Q4_K_M.gguf?download=1` |
-| file name | `gemma-4-12B-it-Q4_K_M.gguf` |
-| sizeBytes | `7381382048` |
-| checksumSha256 | `1278394b693672ac2799eadc9a83fd98259a6a88a40acfb1dcaa6c6fc895a606` |
+| product tier | Case Associate |
+| active model id | `gemma-4-12b-q4` |
+| upstream identity | `google/gemma-4-12B-it` |
+| shipping repo | `unsloth/gemma-4-12B-it-qat-GGUF` |
+| artifact format | GGUF UD-Q4_K_XL |
+| file name | `gemma-4-12b-it-UD-Q4_K_XL.gguf` |
+| sizeBytes | `6716355328` |
+| checksumSha256 | `cc9ff072e0a8203429ed854e6662c17a6c2bc1e5dca5b475dd4736caaacbc165` |
+| draft companion | `mtp-gemma-4-12b-it.gguf` |
+| draftSizeBytes | `253707328` |
+| draftChecksumSha256 | `c50c91c35f04903815b2e8930cbb8c8c5bee0e1aa00748c30a7b8ff05d2310b4` |
 | verified | true |
 | releaseReady | true |
-| notes | New default quality target for most matters. Alternate repo: `bartowski/gemma-4-12B-it-GGUF`. |
+| notes | Current recommended quality target for most matters and larger files. |
 
-### Gemma 4 26B-A4B Instruct
+### Senior Drafting Support
 | Property | Value |
 | --- | --- |
-| product tier | Advanced |
-| active model id | gemma-4-26b-a4b-q4 |
-| upstream identity | google/gemma-4-26B-A4B-it |
-| desired artifact format | GGUF Q4_K_M |
-| candidate Hugging Face repo URL | `https://huggingface.co/bartowski/google_gemma-4-26B-A4B-it-GGUF` |
-| direct file URL | `https://huggingface.co/bartowski/google_gemma-4-26B-A4B-it-GGUF/resolve/main/google_gemma-4-26B-A4B-it-Q4_K_M.gguf?download=1` |
-| file name | `google_gemma-4-26B-A4B-it-Q4_K_M.gguf` |
-| sizeBytes | `17035038112` |
-| checksumSha256 | `e718536fe9b4bd505b07d44ded8f1595053a5d5407315bccf555ce592f33c140` |
+| product tier | Senior Drafting Support |
+| active model id | `gemma-4-26b-a4b-q4` |
+| upstream identity | `google/gemma-4-26B-A4B-it` |
+| shipping repo | `unsloth/gemma-4-26B-A4B-it-qat-GGUF` |
+| artifact format | GGUF UD-Q4_K_XL |
+| file name | `gemma-4-26B-A4B-it-UD-Q4_K_XL.gguf` |
+| sizeBytes | `14249045120` |
+| checksumSha256 | `dcf179a91153e3a7ece792e48ef872180d9d6ef9b7677f0a0bd3e83cfe624d5e` |
+| draft companion | `mtp-gemma-4-26B-A4B-it.gguf` |
+| draftSizeBytes | `251937728` |
+| draftChecksumSha256 | `62bd3af7f66c9308de9a5454233852f8c7324c93767e8dfb824ed45b9179864a` |
 | verified | true |
 | releaseReady | true |
-| notes | Highest quality visible pack. Best reserved for larger-memory devices. |
+| notes | Highest-quality visible pack. Best reserved for larger-memory devices and drafting-heavy workflows. |
 
----
+Legacy compatibility note:
 
-## Part 2 — Runtime needed
+- `flash` still decodes older state and test fixtures.
+- It is not part of the normal setup ladder.
 
-### llama.cpp Swift/iOS GGUF runtime candidate
+## Part 2 — Runtime status
+
+### GGUF iOS runner
 - package URL: `https://github.com/mattt/llama.swift`
-- package status: Active / Maintained
-- supports iOS: Yes
-- supports GGUF: Yes
-- supports Gemma-family models: Yes
-- integration complexity: Medium
-- license notes: MIT
-- chosen/not chosen: chosen
-- reason: Current Ross iPhone path. Verified package release `2.9647.0`, resolved to `llama.cpp` XCFramework `b9647`.
+- status: active and currently pinned in Ross
+- chosen: yes
+- current Ross package floor: `2.9670.0`
+- current resolved revision: `9018836a615e1076bbde40c287099d06a95c397d`
+- current upstream binary lane: `llama.cpp` Apple XCFramework `b9670`
+- role in Ross: default GGUF path, including speculative draft companions for the visible 3-pack ladder
 
-### MLX Swift candidate
-- package URL: `https://github.com/ml-explore/mlx-swift.git`
-- package status: Active / Maintained by Apple
-- supports iOS: Partial pathfinding only
-- supports GGUF: No (requires MLX conversion)
-- supports Gemma-family models: Yes
-- integration complexity: High (requires model format conversion)
-- license notes: MIT
-- chosen/not chosen: not chosen for default runtime
-- reason: Worth exploring for iPhone speed, but it breaks the direct GGUF artifact workflow and current public research still shows moving pieces around Gemma 4 MTP and drafter support.
+### MLX Swift lane
+- package URLs:
+  - `https://github.com/ml-explore/mlx-swift`
+  - `https://github.com/ml-explore/mlx-swift-lm`
+- status: active secondary runtime lane
+- chosen: yes, but not as the only delivery path
+- role in Ross: iPhone/macOS runtime option for MLX model directories, with packaged MLX companions for Quick Start and Case Associate and iPhone-specific speed heuristics
+- limitation: it requires MLX-native model directories instead of direct GGUF execution
 
-### Local abstraction fallback
-- chosen runtime for submission demo: `Gemma4DemoRuntime`
-- production runtime: `llama_cpp_gguf`
+### Built-in CoreAI lane
+- runtime raw value: `apple_foundation_models`
+- status: active fallback/instant-setup lane on supported devices
+- role in Ross: lets supported iPhones prefer the built-in model when no download or faster recent runs make that the better UX choice
 
 ## Part 3 — Current iPhone tuning
 
-- `AlphaLlamaRuntimeProfile` now scales context windows by pack and RAM instead of fixed global caps.
-- `Basic` targets 8k to 12k context tokens.
-- `Standard` targets 12k to 16k context tokens.
-- `Advanced` targets 8k to 12k context tokens.
-- Input budgets now scale by tier so longer matter files and larger source sets stay on-device.
-- `llama_batch_init` was raised from `512` to `1024`, and prompt chunking now uses the same larger threshold.
+- `AlphaLlamaRuntimeProfile` now scales context windows and input budgets by model class and RAM instead of fixed caps.
+- Verified GGUF examples from tests:
+  - 12B at 8 GB RAM -> `20,480` context tokens
+  - 12B at 12 GB RAM -> `28,672` context tokens
+  - 12B at 16 GB RAM -> `40,960` context tokens
+  - 12B max input chars at 12 GB RAM -> `56,000`
+  - 12B max input chars at 16 GB RAM -> `72,000`
+- `llama_batch_init` and prompt batching were widened so capable iPhones can prefill larger prompts more efficiently.
+- `AlphaMLXRuntimeProfile` now carries iPhone-aware context, input-budget, prefill, draft-token, and speed heuristics.
+- Verified MLX examples from tests:
+  - Case Associate at 12 GB RAM -> `24,576` context tokens and `56,000` input chars
+  - Case Associate at 16 GB RAM -> `40,960` context tokens and `72,000` input chars
+  - Quick Start at 8 GB RAM -> `40,000` input chars
+- `AlphaFoundationRuntimeProfile` also raises CoreAI budgets on larger-memory devices so the built-in lane is less cramped for longer asks.
 
-## Part 4 — Next validation focus
+## Part 4 — Current Ross implementation result
 
-- Run physical iPhone QA on the Standard 12B pack.
-- Record latency, memory pressure, and long-file behavior after the new context tuning.
-- Reassess whether an MLX branch is justified only after the current GGUF path is measured on device.
+- The visible setup ladder is already the intended 3-pack lineup: Quick Start, Case Associate, and Senior Drafting Support.
+- `gemma-4-12b-q4` is the middle visible tier and current recommended quality target.
+- GGUF remains the most stable cross-platform delivery path.
+- MLX is now a real runtime lane for supported iPhones instead of a future-only idea.
+- CoreAI is now a real runtime lane for supported devices instead of only a brainstorm.
+- The answer-details UX for `Tokens processed` and `Token speed` already exists behind hidden response actions instead of adding noise to the main answer body.
 
-## Part 5 — Current upstream runtime evidence
+## Part 5 — Next validation focus
 
-- `llama.cpp` officially documents speculative decoding support in `docs/speculative.md`, including draft-model and related server-side implementations.
-- As of May 27, 2026, the Apple Silicon Metal report in `ggml-org/llama.cpp` issue `#23752` shows MTP speculative decoding underperforming the non-MTP baseline on that hardware, so Ross should not assume an iPhone speedup from enabling MTP blindly.
-- `mlx-swift` and `mlx-swift-examples` both document iOS-capable example apps, and `mlx-swift-lm` is the current reusable LLM package for MLX Swift.
-- That MLX path is promising for iPhone-native inference experiments, but it is a separate integration track from Ross's current GGUF delivery path because it requires MLX-specific model and tokenizer loading instead of direct GGUF execution.
-
-## Part 6 — Current Ross implementation result
-
-- Ross now includes an experimental `mlx_swift_lm` runtime mode for iPhone/macOS developer testing.
-- The implementation is intentionally narrow: it is opt-in through local runtime overrides and expects a developer-supplied local MLX model directory containing config, tokenizer, and safetensor files.
-- Ross also now has an experimental env-gated speculative decoding hook for the MLX lane using a separate developer-supplied draft model directory, because upstream `mlx-swift-lm` already exposes that API while the current Ross `llama.swift` integration still does not expose an equivalent high-level draft-model path in the surface Ross uses today.
-- The normal download/install catalog remains GGUF-first. This keeps the user-facing product path stable while giving Ross a concrete MLX lane for future iPhone performance comparison work.
-- Full physical-device proof still needs to answer the product question that matters: whether MLX is actually smoother or faster than the upgraded GGUF lane on representative iPhones and long private matter files.
+- Run physical iPhone QA on the 12B GGUF and MLX lanes.
+- Compare smoother long-file behavior and measured token speed across GGUF, MLX, and CoreAI on representative iPhones.
+- Confirm whether the 26B tier should stay GGUF/CoreAI-only on iPhone until the MLX main archive story is fully reliable.

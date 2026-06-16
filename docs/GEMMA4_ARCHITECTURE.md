@@ -15,11 +15,11 @@ Normal product UI shows assistant levels, not model names. Technical names, repo
 
 | User tier | Technical model | Repo | Runtime | Download |
 | --- | --- | --- | --- | --- |
-| Basic | Gemma 4 E4B UD Q4_K_XL | `unsloth/gemma-4-E4B-it-qat-GGUF` | `llama_cpp_gguf` | about 4.3 GB |
-| Standard | Gemma 4 12B UD Q4_K_XL | `unsloth/gemma-4-12B-it-qat-GGUF` | `llama_cpp_gguf` | about 7.0 GB |
-| Advanced | Gemma 4 26B-A4B UD Q4_K_XL | `unsloth/gemma-4-26B-A4B-it-qat-GGUF` | `llama_cpp_gguf` | about 14.5 GB |
+| Quick Start | Gemma 4 E4B UD Q4_K_XL | `unsloth/gemma-4-E4B-it-qat-GGUF` | `gemma_local_runtime` | about 4.3 GB |
+| Case Associate | Gemma 4 12B UD Q4_K_XL | `unsloth/gemma-4-12B-it-qat-GGUF` | `gemma_local_runtime` | about 7.0 GB |
+| Senior Drafting Support | Gemma 4 26B-A4B UD Q4_K_XL | `unsloth/gemma-4-26B-A4B-it-qat-GGUF` | `gemma_local_runtime` | about 14.5 GB |
 
-Quick Start / Standard GGUF packs also carry official MTP draft companions in the configured lineup.
+Quick Start and Case Associate GGUF packs also carry official MTP draft companions in the configured lineup. Senior Drafting Support also keeps an MTP draft companion, but it is still treated as the heaviest local path.
 
 Legacy compatibility tier:
 
@@ -49,19 +49,19 @@ Single-runtime fallback:
 
 ## Hardware Estimates
 
-Basic:
+Quick Start:
 
 - minimum: 4-6 GB RAM phone
 - recommended: 6-8 GB RAM
-- download: about 5.4 GB
+- download: about 4.3 GB
 
-Standard:
+Case Associate:
 
 - minimum: 6-8 GB RAM
 - recommended: 8-12 GB RAM
 - download: about 7.0 GB
 
-Advanced:
+Senior Drafting Support:
 
 - minimum: 8-12 GB RAM
 - recommended: 12-18 GB RAM
@@ -85,9 +85,9 @@ Embedding model:
 - The visible GGUF ladder now points at the newer Unsloth QAT repos while keeping MTP draft heads enabled.
 - `ios/Package.resolved` currently resolves commit `9018836a615e1076bbde40c287099d06a95c397d`.
 - Context windows now scale by pack and device RAM:
-  - Basic: about 10k to 20k tokens
-  - Standard: about 18k to 32k tokens
-  - Advanced: about 10k to 24k tokens
+  - Quick Start: about 10k to 20k tokens
+  - Case Associate: about 20k to 40k tokens on capable iPhones
+  - Senior Drafting Support: about 10k to 24k tokens
 - Input budgets are widened per tier so longer matter files can stay on-device instead of being truncated to the old fixed limits.
 - Supported iPhone runtime selection can choose GGUF, MLX, or built-in CoreAI depending on device support and recent runtime performance.
 - MLX is currently supported only for the visible Quick Start and Case Associate tiers; Senior Drafting Support remains GGUF/CoreAI-only because the current 26B-A4B MLX main archive is still blocked.
