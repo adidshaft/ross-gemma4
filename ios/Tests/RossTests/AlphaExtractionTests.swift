@@ -9234,6 +9234,62 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(options.first?.isBuiltIn, true)
     }
 
+    func testAssistantVariantOptionsPreferMLXOverBuiltInWhenRuntimePreferenceIsMLX() {
+        let mlxPack = AlphaInstalledModelPack(
+            packId: "case-mlx",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/case-mlx",
+            checksumSha256: String(repeating: "d", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: false
+        )
+
+        let options = alphaAssistantVariantOptions(
+            for: .caseAssociate,
+            installedPacks: [mlxPack],
+            activePack: nil,
+            systemAssistantAvailable: true,
+            preferredRuntimeMode: .mlxSwiftLm
+        )
+
+        XCTAssertEqual(options.count, 2)
+        XCTAssertEqual(options.first?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(options.first?.isBuiltIn, false)
+        XCTAssertEqual(options.last?.runtimeMode, .appleFoundationModels)
+        XCTAssertEqual(options.last?.isBuiltIn, true)
+    }
+
+    func testAssistantVariantOptionsPreferBuiltInWhenRuntimePreferenceIsCoreAI() {
+        let mlxPack = AlphaInstalledModelPack(
+            packId: "case-mlx",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/case-mlx",
+            checksumSha256: String(repeating: "e", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: false
+        )
+
+        let options = alphaAssistantVariantOptions(
+            for: .caseAssociate,
+            installedPacks: [mlxPack],
+            activePack: nil,
+            systemAssistantAvailable: true,
+            preferredRuntimeMode: .appleFoundationModels
+        )
+
+        XCTAssertEqual(options.count, 2)
+        XCTAssertEqual(options.first?.runtimeMode, .appleFoundationModels)
+        XCTAssertEqual(options.first?.isBuiltIn, true)
+        XCTAssertEqual(options.last?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(options.last?.isBuiltIn, false)
+    }
+
     func testAssistantPreferredInstalledPackUsesPreferredRuntimeInsteadOfFirstStoredPack() {
         let ggufPack = AlphaInstalledModelPack(
             packId: "case-gguf",

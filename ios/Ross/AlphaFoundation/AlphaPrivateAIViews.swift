@@ -688,7 +688,8 @@ struct AlphaPrivateAIOfferCard: View {
             for: offer.tier,
             installedPacks: model.privateAISnapshot.installedPacks,
             activePack: model.activePack,
-            systemAssistantAvailable: systemAssistantAvailable
+            systemAssistantAvailable: systemAssistantAvailable,
+            preferredRuntimeMode: setupPresentation?.runtimeMode
         )
     }
 
@@ -1020,7 +1021,8 @@ func alphaAssistantVariantOptions(
     for tier: AlphaCapabilityTier,
     installedPacks: [AlphaInstalledModelPack],
     activePack: AlphaInstalledModelPack?,
-    systemAssistantAvailable: Bool
+    systemAssistantAvailable: Bool,
+    preferredRuntimeMode: AlphaPackRuntimeMode? = nil
 ) -> [AlphaAssistantVariantOption] {
     var options = installedPacks
         .filter { $0.tier == tier }
@@ -1063,6 +1065,11 @@ func alphaAssistantVariantOptions(
     return options.sorted { lhs, rhs in
         if lhs.isActive != rhs.isActive {
             return lhs.isActive && !rhs.isActive
+        }
+        let lhsMatchesPreferred = preferredRuntimeMode == lhs.runtimeMode
+        let rhsMatchesPreferred = preferredRuntimeMode == rhs.runtimeMode
+        if lhsMatchesPreferred != rhsMatchesPreferred {
+            return lhsMatchesPreferred && !rhsMatchesPreferred
         }
         let lhsRank = runtimeRank(lhs.runtimeMode)
         let rhsRank = runtimeRank(rhs.runtimeMode)
