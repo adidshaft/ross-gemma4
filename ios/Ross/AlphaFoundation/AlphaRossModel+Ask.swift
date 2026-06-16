@@ -336,7 +336,14 @@ extension AlphaRossModel {
         resolvedProvider: AlphaResolvedLocalAskProvider,
         sourcePack: [AlphaSourceTextBlock],
         budgetPlan: AlphaLocalPromptBudgetPlan
-    )? {
+        )? {
+        let taskInstruction = askRuntimeInstruction(
+            question: question,
+            scopeCaseID: scopeCaseID,
+            selectedDocuments: selectedDocuments,
+            hasLocalSources: true
+        )
+
         func evaluatePlan(
             requestedTier: AlphaCapabilityTier,
             preferredRuntimeMode: AlphaPackRuntimeMode? = nil
@@ -371,6 +378,95 @@ extension AlphaRossModel {
                 selectedDocumentCount: selectedDocuments.count
             )
             return (requestedTier, resolvedProvider, sourcePack, budgetPlan)
+        }
+
+        func coveragePromptPack(
+            for plan: (
+                requestedTier: AlphaCapabilityTier,
+                resolvedProvider: AlphaResolvedLocalAskProvider,
+                sourcePack: [AlphaSourceTextBlock],
+                budgetPlan: AlphaLocalPromptBudgetPlan
+            )
+        ) -> AlphaLocalPromptPack {
+            let input = AlphaLocalModelInput(
+                task: .matterQuestionAnswer,
+                instruction: taskInstruction,
+                sourcePack: plan.sourcePack,
+                expectedSchema: "plain_text",
+                maxOutputTokens: 384,
+                languageProfile: nil,
+                documentClassification: nil,
+                extractionMode: AlphaExtractionMode.fromTier(plan.requestedTier),
+                requireSourceRefs: !plan.sourcePack.isEmpty,
+                samplerSettings: persisted.settings.llamaSamplerSettings,
+                promptBudgetOverrideChars: plan.budgetPlan.maxInputChars,
+                sourceBlockLimitOverride: plan.budgetPlan.sourceBlockLimit,
+                sourceExcerptCharsOverride: plan.budgetPlan.sourceExcerptChars
+            )
+            return AlphaPromptPackBuilder(
+                maxInputChars: plan.budgetPlan.maxInputChars,
+                sourceBlockLimit: plan.budgetPlan.sourceBlockLimit,
+                sourceExcerptChars: plan.budgetPlan.sourceExcerptChars
+            ).build(input: input)
+        }
+
+        func candidateImprovesLargeFileCoverage(
+            _ candidatePlan: (
+                requestedTier: AlphaCapabilityTier,
+                resolvedProvider: AlphaResolvedLocalAskProvider,
+                sourcePack: [AlphaSourceTextBlock],
+                budgetPlan: AlphaLocalPromptBudgetPlan
+            ),
+            over currentPlan: (
+                requestedTier: AlphaCapabilityTier,
+                resolvedProvider: AlphaResolvedLocalAskProvider,
+                sourcePack: [AlphaSourceTextBlock],
+                budgetPlan: AlphaLocalPromptBudgetPlan
+            )
+        ) -> Bool {
+            guard candidatePlan.resolvedProvider.provider.runtimeMode != currentPlan.resolvedProvider.provider.runtimeMode,
+                  candidatePlan.sourcePack.count >= currentPlan.sourcePack.count else {
+                return false
+            }
+
+            let currentPromptPack = coveragePromptPack(for: currentPlan)
+            let candidatePromptPack = coveragePromptPack(for: candidatePlan)
+
+            if candidatePromptPack.includedSourceRefs.count != currentPromptPack.includedSourceRefs.count {
+                return candidatePromptPack.includedSourceRefs.count > currentPromptPack.includedSourceRefs.count
+            }
+
+            if candidatePromptPack.omittedSourceRefs.count != currentPromptPack.omittedSourceRefs.count {
+                return candidatePromptPack.omittedSourceRefs.count < currentPromptPack.omittedSourceRefs.count
+            }
+
+            let currentNeedsDeeperCoverage = currentPromptPack.truncated || currentPlan.budgetPlan.sourceExcerptChars != nil
+            guard currentNeedsDeeperCoverage else {
+                return false
+            }
+
+            if currentPromptPack.truncated != candidatePromptPack.truncated {
+                return currentPromptPack.truncated && !candidatePromptPack.truncated
+            }
+
+            let promptCharGain = candidatePromptPack.inputChars - currentPromptPack.inputChars
+            let meaningfulPromptGain = max(1_200, Int((Double(max(currentPromptPack.inputChars, 1)) * 0.08).rounded()))
+            if promptCharGain >= meaningfulPromptGain {
+                return true
+            }
+
+            let currentExcerptChars = currentPlan.budgetPlan.sourceExcerptChars ?? 0
+            let candidateExcerptChars = candidatePlan.budgetPlan.sourceExcerptChars ?? Int.max
+            if currentExcerptChars > 0 {
+                if candidateExcerptChars == Int.max {
+                    return true
+                }
+                if candidateExcerptChars >= currentExcerptChars + 140 {
+                    return true
+                }
+            }
+
+            return false
         }
 
         guard var selectedPlan = evaluatePlan(requestedTier: requestedTier) else {
@@ -415,6 +511,14 @@ extension AlphaRossModel {
            ),
            let candidatePlan = candidatePlans[runtimeHint],
            candidatePlan.sourcePack.count >= selectedPlan.sourcePack.count {
+            selectedPlan = candidatePlan
+        }
+
+        for runtimeMode in candidateRuntimes {
+            guard let candidatePlan = candidatePlans[runtimeMode],
+                  candidateImprovesLargeFileCoverage(candidatePlan, over: selectedPlan) else {
+                continue
+            }
             selectedPlan = candidatePlan
         }
 
