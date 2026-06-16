@@ -673,9 +673,11 @@ enum AlphaLocalPromptBudgetPlanner {
         let firstTokenMs = lastInvocation.timeToFirstTokenMs ?? Int.max
         let outputSpeed = lastInvocation.estimatedOutputTokensPerSecond ?? .greatestFiniteMagnitude
 
-        if runtimeMode == .mlxSwiftLm,
-           firstTokenMs <= 1_500,
-           outputSpeed >= 14 {
+        if shouldUseFastStructuredDocumentBatchBonus(
+            runtimeMode: runtimeMode,
+            firstTokenMs: firstTokenMs,
+            outputSpeed: outputSpeed
+        ) {
             return expandedLimit + fastStructuredDocumentBatchBonus(
                 for: runtimeMode,
                 task: task,
@@ -702,16 +704,38 @@ enum AlphaLocalPromptBudgetPlanner {
         task: AlphaLocalModelTask,
         baseMaxInputChars: Int
     ) -> Int {
-        guard runtimeMode == .mlxSwiftLm else { return 0 }
-
         let prefersWiderBatches = task == .caseMemorySynthesis
-        if baseMaxInputChars >= 52_000 {
-            return prefersWiderBatches ? 4 : 3
+        switch runtimeMode {
+        case .mlxSwiftLm:
+            if baseMaxInputChars >= 52_000 {
+                return prefersWiderBatches ? 4 : 3
+            }
+            if baseMaxInputChars >= 40_000 {
+                return prefersWiderBatches ? 3 : 2
+            }
+            return 0
+        case .appleFoundationModels:
+            if baseMaxInputChars >= 52_000 {
+                return prefersWiderBatches ? 3 : 2
+            }
+            if baseMaxInputChars >= 40_000 {
+                return prefersWiderBatches ? 2 : 1
+            }
+            return 0
+        default:
+            return 0
         }
-        if baseMaxInputChars >= 40_000 {
-            return prefersWiderBatches ? 3 : 2
+    }
+
+    private static func shouldUseFastStructuredDocumentBatchBonus(
+        runtimeMode: AlphaPackRuntimeMode,
+        firstTokenMs: Int,
+        outputSpeed: Double
+    ) -> Bool {
+        guard runtimeMode == .mlxSwiftLm || runtimeMode == .appleFoundationModels else {
+            return false
         }
-        return 0
+        return firstTokenMs <= 1_500 && outputSpeed >= 14
     }
 
     private static func fastLargeFileInputBudget(
