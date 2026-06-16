@@ -5335,9 +5335,9 @@ final class AlphaExtractionTests: XCTestCase {
             ),
             .seniorDraftingSupport: (
                 repository: "unsloth/gemma-4-26B-A4B-it-GGUF",
-                fileName: "gemma-4-26B-A4B-it-UD-Q4_K_M.gguf",
-                sizeBytes: 16_947_539_744,
-                sha256: "34c746b1d50ab813e29cd46c4796e3f43c741901a582f93a67b55b9fc9687b35",
+                fileName: "gemma-4-26B-A4B-it-UD-Q4_K_XL.gguf",
+                sizeBytes: 17_010_978_592,
+                sha256: "453cf049ba87a29b9ed5739087b84b7fa0265a4f2b11eefa2c77683dec6a8020",
                 draftFileName: "mtp-gemma-4-26B-A4B-it.gguf",
                 draftSizeBytes: 461_766_816,
                 draftSha256: "6326fb9f5e487aa8dcdd313a091e3c67724cb2a666ec3b7d2895b5b26d93ed1b",
