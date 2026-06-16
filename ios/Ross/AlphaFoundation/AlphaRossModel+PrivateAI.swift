@@ -582,15 +582,15 @@ func alphaPreferredAssistantDownloadFallback(
        let targetedCached = cachedCandidates.first(where: { $0.packId == targetPackId }) {
         return alphaReusableAssistantDownloadDescriptor(targetedCached)
     }
+    if let preferredCached = cachedCandidates.first(where: { $0.runtimeMode == preferredRuntimeMode }) {
+        return alphaReusableAssistantDownloadDescriptor(preferredCached)
+    }
     if let bundledPreferred = alphaBundledAssistantDownloadDescriptor(
         for: tier,
         preferredRuntimeMode: preferredRuntimeMode,
         targetPackId: targetPackId
     ) {
         return bundledPreferred
-    }
-    if let preferredCached = cachedCandidates.first(where: { $0.runtimeMode == preferredRuntimeMode }) {
-        return alphaReusableAssistantDownloadDescriptor(preferredCached)
     }
     if let fallbackCached = cachedCandidates.first {
         return alphaReusableAssistantDownloadDescriptor(fallbackCached)
@@ -802,15 +802,15 @@ func alphaPreferredAssistantCatalogFallback(
        let targetedCached = cachedCandidates.first(where: { $0.packId == targetPackId }) {
         return targetedCached
     }
+    if let preferredCached = cachedCandidates.first(where: { $0.runtimeMode == preferredRuntimeMode }) {
+        return preferredCached
+    }
     if let bundledPreferred = alphaBundledAssistantCatalogDescriptor(
         for: tier,
         preferredRuntimeMode: preferredRuntimeMode,
         targetPackId: targetPackId
     ) {
         return bundledPreferred
-    }
-    if let preferredCached = cachedCandidates.first(where: { $0.runtimeMode == preferredRuntimeMode }) {
-        return preferredCached
     }
     if let fallbackCached = cachedCandidates.first {
         return fallbackCached
