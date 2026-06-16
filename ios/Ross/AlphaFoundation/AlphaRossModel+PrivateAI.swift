@@ -837,6 +837,12 @@ func alphaPreferredAssistantSetupRuntimeMode(
     if existingRuntimeMode == .mlxSwiftLm {
         return preferredRuntime
     }
+    let normalizedTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
+    if normalizedTier == .caseAssociate,
+       existingRuntimeMode == nil,
+       isPhoneFormFactor {
+        return preferredRuntime
+    }
     return .llamaCppGguf
 }
 

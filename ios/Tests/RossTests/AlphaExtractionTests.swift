@@ -6882,7 +6882,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(shouldPrime)
     }
 
-    func testShouldPrimeAssistantSetupCatalogsIgnoresMLXOnlyCatalogForFreshProductionSetup() {
+    func testShouldPrimeAssistantSetupCatalogsAcceptsMLXOnlyCatalogForFreshProductionCaseAssociateSetup() {
         let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
         setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
         defer {
@@ -6913,7 +6913,7 @@ final class AlphaExtractionTests: XCTestCase {
             freeStorageGB: 24
         )
 
-        XCTAssertTrue(shouldPrime)
+        XCTAssertFalse(shouldPrime)
     }
 
     func testPreferredAssistantRuntimeModePrefersMLXOnCapablePhoneForDeeperTiers() {
@@ -10688,7 +10688,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.etaLabel, "about 9 min")
     }
 
-    func testAssistantSetupPresentationDefaultsToGGUFForFreshProductionSetupOnCapableIPhone() {
+    func testAssistantSetupPresentationDefaultsToMLXForFreshProductionCaseAssociateSetupOnCapableIPhone() {
         let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
         setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
         defer {
@@ -10735,13 +10735,13 @@ final class AlphaExtractionTests: XCTestCase {
             cachedCatalogs: [cachedMLX, cachedGGUF]
         )
 
-        XCTAssertEqual(presentation?.runtimeMode, .llamaCppGguf)
-        XCTAssertEqual(presentation?.totalDownloadBytes, 6_970_062_656)
-        XCTAssertEqual(presentation?.sizeLabel, "7.0 GB")
-        XCTAssertEqual(presentation?.speedLabel, "~10 tok/s")
-        XCTAssertEqual(presentation?.contextLabel, "28,672 tokens")
-        XCTAssertNil(presentation?.companionLabel)
-        XCTAssertEqual(presentation?.etaLabel, "about 10 min")
+        XCTAssertEqual(presentation?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(presentation?.totalDownloadBytes, 6_400_000_000)
+        XCTAssertEqual(presentation?.sizeLabel, "6.4 GB")
+        XCTAssertEqual(presentation?.speedLabel, "~13 tok/s")
+        XCTAssertEqual(presentation?.contextLabel, "24,576 tokens")
+        XCTAssertEqual(presentation?.companionLabel, alphaAssistantSetupCompanionLabel(for: .mlxSwiftLm))
+        XCTAssertEqual(presentation?.etaLabel, "about 9 min")
     }
 
     func testAssistantSetupPresentationFallsBackToGGUFAfterSlowInstalledMLXRun() {
@@ -10988,7 +10988,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNil(details?.draftCompanionLabel)
     }
 
-    func testPreferredAssistantSetupRuntimeModeDefaultsToGGUFForFreshProductionCaseAssociateSetup() {
+    func testPreferredAssistantSetupRuntimeModeDefaultsToMLXForFreshProductionCaseAssociateSetup() {
         let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
         let previousSimulatorIdentifier = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"]
         setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
@@ -11008,7 +11008,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         let runtime = alphaPreferredAssistantSetupRuntimeMode(for: .caseAssociate)
 
-        XCTAssertEqual(runtime, .llamaCppGguf)
+        XCTAssertEqual(runtime, .mlxSwiftLm)
     }
 
     func testPreferredAssistantSetupRuntimeModePreservesInstalledMLXForProductionCaseAssociateRefresh() {
