@@ -640,12 +640,16 @@ struct AlphaFullScreenChatTurn: View {
                         alphaCopyAskResultToPasteboard(result)
                         alphaHaptic(.light)
                     }
+                    let showAnswerDetailsAction: (() -> Void)? = result.hasAnswerDetails
+                        ? { onShowDetails(result) }
+                        : nil
                     if result.hasAnswerDetails {
                         AlphaCleanAnswerHeader(
                             title: result.answerTitle,
                             continuationContext: result.answerContinuationContext,
                             statusNote: deduplicatedStatusNote,
                             onCopy: copyAnswerAction,
+                            onShowDetails: showAnswerDetailsAction,
                             menu: {
                                 Button {
                                     onShowDetails(result)
