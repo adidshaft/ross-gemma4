@@ -1287,12 +1287,17 @@ private func alphaAssistantVariantDetailLabel(
         runtimeMode: runtimeMode,
         physicalMemoryBytes: physicalMemoryBytes
     )
+    let compactCompanionLabel = alphaAssistantSetupCompanionCompactLabel(for: runtimeMode)
 
-    if let speedLabel, let contextLabel {
-        return "\(speedLabel) · \(contextLabel)"
-    }
-    if let contextLabel {
-        return contextLabel
+    let detailParts = [
+        speedLabel,
+        contextLabel,
+        compactCompanionLabel
+    ]
+        .map { $0?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "" }
+        .filter { !$0.isEmpty }
+    if !detailParts.isEmpty {
+        return detailParts.joined(separator: " · ")
     }
 
     switch runtimeMode {
@@ -1829,7 +1834,8 @@ func alphaAssistantInstalledPackRuntimeSummaryLabel(
     let rawSummaryParts: [String?] = [
         pack.runtimeMode.displayLabel,
         speedLabel,
-        contextLabel
+        contextLabel,
+        alphaAssistantSetupCompanionCompactLabel(for: pack.runtimeMode)
     ]
     let summaryParts: [String] = rawSummaryParts.compactMap { value -> String? in
         guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),

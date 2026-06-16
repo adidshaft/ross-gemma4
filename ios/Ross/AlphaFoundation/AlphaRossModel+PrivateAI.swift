@@ -1012,16 +1012,31 @@ func alphaAssistantSetupCompanionLabel(
     }
 }
 
+func alphaAssistantSetupCompanionCompactLabel(
+    for runtimeMode: AlphaPackRuntimeMode
+) -> String? {
+    switch runtimeMode {
+    case .mlxSwiftLm:
+        return "Companion"
+    case .llamaCppGguf:
+        return "MTP"
+    case .appleFoundationModels, .deterministicDev, .mediapipeLlm, .unavailable:
+        return nil
+    }
+}
+
 func alphaAssistantSetupCompactSummaryLabel(
     _ presentation: AlphaAssistantSetupPresentation
 ) -> String {
-    let runtimeLabel = presentation.runtimeMode.displayLabel
-        .trimmingCharacters(in: .whitespacesAndNewlines)
-    let sizeLabel = presentation.sizeLabel.trimmingCharacters(in: .whitespacesAndNewlines)
+    let summaryParts = [
+        presentation.runtimeMode.displayLabel,
+        presentation.sizeLabel,
+        alphaAssistantSetupCompanionCompactLabel(for: presentation.runtimeMode)
+    ]
+        .map { $0?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "" }
+        .filter { !$0.isEmpty }
 
-    if runtimeLabel.isEmpty { return sizeLabel }
-    if sizeLabel.isEmpty { return runtimeLabel }
-    return "\(runtimeLabel) · \(sizeLabel)"
+    return summaryParts.joined(separator: " · ")
 }
 
 func alphaAssistantBuiltInAlternativeHint(
