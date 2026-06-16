@@ -7453,6 +7453,134 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(model.persisted.installedPacks.contains(where: { $0.packId == quickStartPack.packId }))
         XCTAssertEqual(model.persisted.settings.activeTier, .caseAssociate)
     }
+
+    @available(iOS 26.0, macOS 26.0, *)
+    @MainActor
+    func testRefreshPrivateAISnapshotPreservesActiveFoundationOnCapablePhoneWhenMLXAlsoInstalled() async throws {
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        let previousSimulatorIdentifier = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"]
+        let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        setenv("SIMULATOR_MODEL_IDENTIFIER", "iPhone17,2", 1)
+        AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in true }
+        defer {
+            AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+            if let previousSimulatorIdentifier {
+                setenv("SIMULATOR_MODEL_IDENTIFIER", previousSimulatorIdentifier, 1)
+            } else {
+                unsetenv("SIMULATOR_MODEL_IDENTIFIER")
+            }
+        }
+
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+        defer { Task { await store.removeAllModelArtifacts() } }
+
+        var quickStartPack = try await installMLXPack(
+            with: store,
+            tier: .quickStart,
+            fileName: "gemma-4-e4b-it-mlx",
+            packId: "gemma-4-e4b-it-mlx",
+            fixtureName: "ross-mlx-runtime-keep-foundation-quick-\(UUID().uuidString)"
+        )
+        quickStartPack.isActive = false
+
+        var caseAssociatePack = try await installMLXPack(
+            with: store,
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-it-mlx",
+            packId: "gemma-4-12b-it-mlx",
+            fixtureName: "ross-mlx-runtime-keep-foundation-case-\(UUID().uuidString)"
+        )
+        caseAssociatePack.isActive = false
+
+        var systemPack = alphaSystemAssistantPack(for: .caseAssociate)
+        systemPack.isActive = true
+
+        let model = AlphaRossModel()
+        var state = AlphaPersistedState.empty()
+        state.settings.activeTier = .caseAssociate
+        state.installedPacks = [systemPack, quickStartPack, caseAssociatePack]
+        model.persisted = state
+
+        model.refreshPrivateAISnapshot(forceRebuild: true)
+        await model.privateAISnapshotTask?.value
+
+        XCTAssertEqual(model.privateAISnapshot.activePack?.runtimeMode, .appleFoundationModels)
+        XCTAssertEqual(model.privateAISnapshot.activePack?.installPath, "system://apple-foundation-models")
+        XCTAssertEqual(model.persisted.installedPacks.first(where: \.isActive)?.runtimeMode, .appleFoundationModels)
+        XCTAssertEqual(model.persisted.installedPacks.first(where: \.isActive)?.installPath, "system://apple-foundation-models")
+        XCTAssertTrue(model.persisted.installedPacks.contains(where: { $0.packId == caseAssociatePack.packId }))
+        XCTAssertTrue(model.persisted.installedPacks.contains(where: { $0.packId == quickStartPack.packId }))
+        XCTAssertEqual(model.persisted.settings.activeTier, .caseAssociate)
+    }
+
+    @available(iOS 26.0, macOS 26.0, *)
+    @MainActor
+    func testNormalizeLoadedStatePreservesActiveFoundationOnCapablePhoneWhenMLXAlsoInstalled() async throws {
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        let previousSimulatorIdentifier = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"]
+        let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        setenv("SIMULATOR_MODEL_IDENTIFIER", "iPhone17,2", 1)
+        AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in true }
+        defer {
+            AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+            if let previousSimulatorIdentifier {
+                setenv("SIMULATOR_MODEL_IDENTIFIER", previousSimulatorIdentifier, 1)
+            } else {
+                unsetenv("SIMULATOR_MODEL_IDENTIFIER")
+            }
+        }
+
+        let store = AlphaRossStore()
+        await store.removeAllModelArtifacts()
+        defer { Task { await store.removeAllModelArtifacts() } }
+
+        var quickStartPack = try await installMLXPack(
+            with: store,
+            tier: .quickStart,
+            fileName: "gemma-4-e4b-it-mlx",
+            packId: "gemma-4-e4b-it-mlx",
+            fixtureName: "ross-mlx-normalize-keep-foundation-quick-\(UUID().uuidString)"
+        )
+        quickStartPack.isActive = false
+
+        var caseAssociatePack = try await installMLXPack(
+            with: store,
+            tier: .caseAssociate,
+            fileName: "gemma-4-12b-it-mlx",
+            packId: "gemma-4-12b-it-mlx",
+            fixtureName: "ross-mlx-normalize-keep-foundation-case-\(UUID().uuidString)"
+        )
+        caseAssociatePack.isActive = false
+
+        var systemPack = alphaSystemAssistantPack(for: .caseAssociate)
+        systemPack.isActive = true
+
+        let model = AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+        var state = AlphaPersistedState.empty()
+        state.settings.activeTier = .caseAssociate
+        state.installedPacks = [systemPack, quickStartPack, caseAssociatePack]
+
+        let normalized = model.normalizeLoadedState(state)
+
+        XCTAssertEqual(normalized.installedPacks.first(where: \.isActive)?.runtimeMode, .appleFoundationModels)
+        XCTAssertEqual(normalized.installedPacks.first(where: \.isActive)?.installPath, "system://apple-foundation-models")
+        XCTAssertTrue(normalized.installedPacks.contains(where: { $0.packId == caseAssociatePack.packId }))
+        XCTAssertTrue(normalized.installedPacks.contains(where: { $0.packId == quickStartPack.packId }))
+        XCTAssertEqual(normalized.settings.activeTier, .caseAssociate)
+    }
     #endif
 
     @MainActor

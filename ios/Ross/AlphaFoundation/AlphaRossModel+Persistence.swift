@@ -1048,17 +1048,28 @@ private func alphaPreferredInstalledPack(
 
     guard !candidates.isEmpty else { return nil }
 
-    let prefersAcceleratedMLX = systemAvailable && alphaShouldPreferAcceleratedMLXInstalledPack(
-        for: tier,
-        installedPacks: installedPacks,
-        lastInvocation: lastInvocation
-    )
-    let preferredRuntime: AlphaPackRuntimeMode = if prefersAcceleratedMLX {
-        .mlxSwiftLm
-    } else if systemAvailable {
-        .appleFoundationModels
+    let existingRuntimeMode = candidates.first(where: \.isActive)?.runtimeMode
+    let preferredRuntime: AlphaPackRuntimeMode
+    if existingRuntimeMode == .appleFoundationModels {
+        preferredRuntime = alphaPreferredAssistantRuntimeMode(
+            for: tier,
+            existingRuntimeMode: .appleFoundationModels,
+            systemAssistantAvailable: systemAvailable,
+            lastInvocation: lastInvocation
+        )
     } else {
-        alphaPreferredAssistantRuntimeMode(for: tier, existingRuntimeMode: nil)
+        let prefersAcceleratedMLX = systemAvailable && alphaShouldPreferAcceleratedMLXInstalledPack(
+            for: tier,
+            installedPacks: installedPacks,
+            lastInvocation: lastInvocation
+        )
+        preferredRuntime = if prefersAcceleratedMLX {
+            .mlxSwiftLm
+        } else if systemAvailable {
+            .appleFoundationModels
+        } else {
+            alphaPreferredAssistantRuntimeMode(for: tier, existingRuntimeMode: nil)
+        }
     }
     let recentSignal = alphaRecentRuntimeSelectionSignal(for: tier, lastInvocation: lastInvocation)
     let candidateRuntimeModes = Set(candidates.map(\.runtimeMode))
