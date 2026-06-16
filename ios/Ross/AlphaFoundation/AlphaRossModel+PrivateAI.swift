@@ -164,13 +164,13 @@ private let alphaBundledMLXQuickStartAssistantDownloadDescriptor = AlphaAssistan
     sessionId: nil,
     packId: "gemma-4-e4b-mlx",
     tier: .quickStart,
-    fileName: "gemma-4-E4B-it-UD-MLX-4bit",
-    sizeBytes: 6_607_285_383,
-    checksumSha256: "1cbbb7a35d205bec7399d08789924d9468fedd3cb7a1d69cef6692bb6c52ee4a",
+    fileName: "gemma-4-E4B-it-qat-4bit",
+    sizeBytes: 6_830_818_938,
+    checksumSha256: "f62f14fb4ab2795f9ed17f7d5cbf9d40672c34fbfde875c7b590ce04914eb25f",
     artifactKind: "mlx_directory",
     runtimeMode: .mlxSwiftLm,
     developmentOnly: false,
-    downloadURLString: "https://huggingface.co/unsloth/gemma-4-E4B-it-UD-MLX-4bit",
+    downloadURLString: "https://huggingface.co/mlx-community/gemma-4-E4B-it-qat-4bit",
     verified: true,
     releaseReady: true,
     draftArtifact: alphaBundledMLXDraftArtifact(
@@ -182,13 +182,13 @@ private let alphaBundledMLXQuickStartAssistantDraftDownloadDescriptor = AlphaAss
     sessionId: nil,
     packId: "gemma-4-e4b-mlx-assistant",
     tier: .quickStart,
-    fileName: "gemma-4-E4B-it-assistant-bf16",
-    sizeBytes: 191_311_092,
-    checksumSha256: "494520b93c8c0be6e1e5704dc49c5de251343204d93040e18400007339760565",
+    fileName: "gemma-4-E4B-it-qat-assistant-6bit",
+    sizeBytes: 97_064_255,
+    checksumSha256: "6541d883bcf462e19640a309f6b540fb6a24898d451d796cb535c0d897fb41a1",
     artifactKind: "mlx_directory",
     runtimeMode: .mlxSwiftLm,
     developmentOnly: false,
-    downloadURLString: "https://huggingface.co/mlx-community/gemma-4-E4B-it-assistant-bf16",
+    downloadURLString: "https://huggingface.co/mlx-community/gemma-4-E4B-it-qat-assistant-6bit",
     verified: true,
     releaseReady: true
 )
@@ -197,13 +197,13 @@ private let alphaBundledMLXCaseAssociateAssistantDraftDownloadDescriptor = Alpha
     sessionId: nil,
     packId: "gemma-4-12b-mlx-assistant",
     tier: .caseAssociate,
-    fileName: "gemma-4-12B-it-assistant-4bit",
-    sizeBytes: 270_075_161,
-    checksumSha256: "41956b074554ffc9a7494a6d6fa831a01745ae1d8d9528c512c482b324ac7276",
+    fileName: "gemma-4-12B-it-qat-assistant-4bit",
+    sizeBytes: 270_097_044,
+    checksumSha256: "9106d7a467fae26d231f71c617acb950bc0651917f3861cad89a4c67957f0a4f",
     artifactKind: "mlx_directory",
     runtimeMode: .mlxSwiftLm,
     developmentOnly: false,
-    downloadURLString: "https://huggingface.co/mlx-community/gemma-4-12B-it-assistant-4bit",
+    downloadURLString: "https://huggingface.co/mlx-community/gemma-4-12B-it-qat-assistant-4bit",
     verified: true,
     releaseReady: true
 )
@@ -212,13 +212,13 @@ private let alphaBundledMLXCaseAssociateAssistantDownloadDescriptor = AlphaAssis
     sessionId: nil,
     packId: "gemma-4-12b-mlx",
     tier: .caseAssociate,
-    fileName: "gemma-4-12B-it-4bit",
-    sizeBytes: 6_773_371_194,
-    checksumSha256: "d9fc0ba3bda46b9e055304345960a0c2f2894ed880d3e92fa3150cd96daaf7d3",
+    fileName: "gemma-4-12B-it-qat-4bit",
+    sizeBytes: 11_020_140_534,
+    checksumSha256: "21978d82c01abd20e40f3ea6fe638831f9d7a77db39617181ba9a9fe880125fc",
     artifactKind: "mlx_directory",
     runtimeMode: .mlxSwiftLm,
     developmentOnly: false,
-    downloadURLString: "https://huggingface.co/mlx-community/gemma-4-12B-it-4bit",
+    downloadURLString: "https://huggingface.co/mlx-community/gemma-4-12B-it-qat-4bit",
     verified: true,
     releaseReady: true,
     draftArtifact: alphaBundledMLXDraftArtifact(
@@ -226,21 +226,36 @@ private let alphaBundledMLXCaseAssociateAssistantDownloadDescriptor = AlphaAssis
     )
 )
 
+private let alphaBundledMLXSeniorAssistantDraftDownloadDescriptor = AlphaAssistantDownloadDescriptor(
+    sessionId: nil,
+    packId: "gemma-4-26b-a4b-mlx-assistant",
+    tier: .seniorDraftingSupport,
+    fileName: "gemma-4-26B-A4B-it-qat-assistant-4bit",
+    sizeBytes: 268_327_387,
+    checksumSha256: "702b480752e77c1d069b08379f307b32a73af42320e1c6571809c6535c1e71c2",
+    artifactKind: "mlx_directory",
+    runtimeMode: .mlxSwiftLm,
+    developmentOnly: false,
+    downloadURLString: "https://huggingface.co/mlx-community/gemma-4-26B-A4B-it-qat-assistant-4bit",
+    verified: true,
+    releaseReady: true
+)
+
 private let alphaBundledMLXSeniorAssistantDownloadDescriptor = AlphaAssistantDownloadDescriptor(
     sessionId: nil,
     packId: "gemma-4-26b-a4b-mlx",
     tier: .seniorDraftingSupport,
-    fileName: "gemma-4-26b-a4b-it-4bit",
-    sizeBytes: 15_641_238_917,
-    checksumSha256: "c55dd3aa3d278722835c83810a90016923471c49ce99d64e19203a62ec7ec755",
+    fileName: "gemma-4-26B-A4B-it-qat-4bit",
+    sizeBytes: 15_641_241_228,
+    checksumSha256: "853a863cb5f21d6bd677c869f76a5daead32bdf45a3a82775c9a1428764dd654",
     artifactKind: "mlx_directory",
     runtimeMode: .mlxSwiftLm,
     developmentOnly: false,
-    downloadURLString: "https://huggingface.co/mlx-community/gemma-4-26b-a4b-it-4bit",
+    downloadURLString: "https://huggingface.co/mlx-community/gemma-4-26B-A4B-it-qat-4bit",
     verified: true,
     releaseReady: true,
     draftArtifact: alphaBundledMLXDraftArtifact(
-        from: alphaBundledMLXCaseAssociateAssistantDownloadDescriptor
+        from: alphaBundledMLXSeniorAssistantDraftDownloadDescriptor
     )
 )
 

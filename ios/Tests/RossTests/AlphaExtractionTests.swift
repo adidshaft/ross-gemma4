@@ -4046,7 +4046,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         let installed = try await store.installDownloadedPackArtifact(
             for: .seniorDraftingSupport,
-            fileName: "gemma-4-26b-a4b-it-4bit",
+            fileName: "gemma-4-26B-A4B-it-qat-4bit",
             downloadedFileURL: mainDirectory,
             expectedChecksum: expectedMain.checksum,
             expectedBytes: expectedMain.bytes,
@@ -4055,18 +4055,18 @@ final class AlphaExtractionTests: XCTestCase {
             runtimeMode: .mlxSwiftLm,
             developmentOnly: false,
             draftArtifact: AlphaAssistantDraftArtifactDescriptor(
-                fileName: "gemma-4-12B-it-4bit",
+                fileName: "gemma-4-26B-A4B-it-qat-assistant-4bit",
                 sizeBytes: expectedDraft.bytes,
                 checksumSha256: expectedDraft.checksum,
                 artifactKind: "mlx_directory",
-                downloadURLString: "https://huggingface.co/mlx-community/gemma-4-12B-it-4bit",
+                downloadURLString: "https://huggingface.co/mlx-community/gemma-4-26B-A4B-it-qat-assistant-4bit",
                 draftTokens: 7
             ),
             draftDownloadedFileURL: draftDirectory
         )
         let alternateInstalled = try await store.installDownloadedPackArtifact(
             for: .caseAssociate,
-            fileName: "gemma-4-12B-it-4bit",
+            fileName: "gemma-4-12B-it-qat-4bit",
             downloadedFileURL: alternateDirectory,
             expectedChecksum: expectedAlternate.checksum,
             expectedBytes: expectedAlternate.bytes,
@@ -4111,7 +4111,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(
             runtimeEnvironment.draftModelPath,
-            alphaAbsoluteURL(for: "model-packs/senior_drafting_support/gemma-4-12B-it-4bit").path
+            alphaAbsoluteURL(for: "model-packs/senior_drafting_support/gemma-4-26B-A4B-it-qat-assistant-4bit").path
         )
         XCTAssertEqual(runtimeEnvironment.draftModelTokens, 7)
     }
@@ -9865,10 +9865,10 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(presentation?.runtimeMode, .mlxSwiftLm)
-        XCTAssertEqual(presentation?.totalDownloadBytes, 7_043_446_355)
-        XCTAssertEqual(presentation?.sizeLabel, alphaAssistantStorageSizeLabel(7_043_446_355))
+        XCTAssertEqual(presentation?.totalDownloadBytes, 11_290_237_578)
+        XCTAssertEqual(presentation?.sizeLabel, alphaAssistantStorageSizeLabel(11_290_237_578))
         XCTAssertEqual(presentation?.companionLabel, rossLocalized("assistant_meta_speed_companion"))
-        XCTAssertEqual(presentation?.etaLabel, "about 10 min")
+        XCTAssertEqual(presentation?.etaLabel, "about 16 min")
     }
 
     func testAssistantSetupPresentationUsesMLXWhenSystemAssistantIsAvailableOnCapablePhone() {
@@ -9881,10 +9881,10 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(presentation?.runtimeMode, .mlxSwiftLm)
-        XCTAssertEqual(presentation?.totalDownloadBytes, 7_043_446_355)
-        XCTAssertEqual(presentation?.sizeLabel, alphaAssistantStorageSizeLabel(7_043_446_355))
+        XCTAssertEqual(presentation?.totalDownloadBytes, 11_290_237_578)
+        XCTAssertEqual(presentation?.sizeLabel, alphaAssistantStorageSizeLabel(11_290_237_578))
         XCTAssertEqual(presentation?.companionLabel, rossLocalized("assistant_meta_speed_companion"))
-        XCTAssertEqual(presentation?.etaLabel, "about 10 min")
+        XCTAssertEqual(presentation?.etaLabel, "about 16 min")
     }
 
     func testAssistantSetupPresentationUsesBuiltInCoreAIForQuickStartWhenAvailableOnCapablePhone() {
@@ -10177,9 +10177,9 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertNil(fallback.sessionId)
         XCTAssertEqual(fallback.packId, "gemma-4-12b-mlx")
-        XCTAssertEqual(fallback.fileName, "gemma-4-12B-it-4bit")
+        XCTAssertEqual(fallback.fileName, "gemma-4-12B-it-qat-4bit")
         XCTAssertEqual(fallback.runtimeMode, .mlxSwiftLm)
-        XCTAssertEqual(fallback.downloadURLString, "https://huggingface.co/mlx-community/gemma-4-12B-it-4bit")
+        XCTAssertEqual(fallback.downloadURLString, "https://huggingface.co/mlx-community/gemma-4-12B-it-qat-4bit")
     }
 
     func testPreferredAssistantDownloadFallbackIncludesBundledMLXDraftCompanion() {
@@ -10191,10 +10191,10 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(fallback.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(fallback.draftArtifact?.artifactKind, "mlx_directory")
-        XCTAssertEqual(fallback.draftArtifact?.fileName, "gemma-4-E4B-it-assistant-bf16")
+        XCTAssertEqual(fallback.draftArtifact?.fileName, "gemma-4-E4B-it-qat-assistant-6bit")
         XCTAssertEqual(
             fallback.draftArtifact?.downloadURLString,
-            "https://huggingface.co/mlx-community/gemma-4-E4B-it-assistant-bf16"
+            "https://huggingface.co/mlx-community/gemma-4-E4B-it-qat-assistant-6bit"
         )
     }
 
@@ -10207,10 +10207,10 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(fallback.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(fallback.draftArtifact?.artifactKind, "mlx_directory")
-        XCTAssertEqual(fallback.draftArtifact?.fileName, "gemma-4-12B-it-assistant-4bit")
+        XCTAssertEqual(fallback.draftArtifact?.fileName, "gemma-4-12B-it-qat-assistant-4bit")
         XCTAssertEqual(
             fallback.draftArtifact?.downloadURLString,
-            "https://huggingface.co/mlx-community/gemma-4-12B-it-assistant-4bit"
+            "https://huggingface.co/mlx-community/gemma-4-12B-it-qat-assistant-4bit"
         )
     }
 
@@ -10223,9 +10223,10 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(fallback.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(fallback.draftArtifact?.artifactKind, "mlx_directory")
+        XCTAssertEqual(fallback.draftArtifact?.fileName, "gemma-4-26B-A4B-it-qat-assistant-4bit")
         XCTAssertEqual(
             fallback.draftArtifact?.downloadURLString,
-            "https://huggingface.co/mlx-community/gemma-4-12B-it-4bit"
+            "https://huggingface.co/mlx-community/gemma-4-26B-A4B-it-qat-assistant-4bit"
         )
     }
 
@@ -10234,13 +10235,13 @@ final class AlphaExtractionTests: XCTestCase {
             sessionId: nil,
             packId: "gemma-4-12b-mlx",
             tier: .caseAssociate,
-            fileName: "gemma-4-12B-it-4bit",
-            sizeBytes: 6_773_371_194,
+            fileName: "gemma-4-12B-it-qat-4bit",
+            sizeBytes: 11_020_140_534,
             checksumSha256: String(repeating: "a", count: 64),
             artifactKind: "mlx_directory",
             runtimeMode: .mlxSwiftLm,
             developmentOnly: false,
-            downloadURLString: "https://huggingface.co/mlx-community/gemma-4-12B-it-4bit",
+            downloadURLString: "https://huggingface.co/mlx-community/gemma-4-12B-it-qat-4bit",
             verified: true,
             releaseReady: true
         )
@@ -10253,21 +10254,21 @@ final class AlphaExtractionTests: XCTestCase {
             sessionId: nil,
             packId: "gemma-4-12b-mlx",
             tier: .caseAssociate,
-            fileName: "gemma-4-12B-it-4bit",
-            sizeBytes: 6_773_371_194,
+            fileName: "gemma-4-12B-it-qat-4bit",
+            sizeBytes: 11_020_140_534,
             checksumSha256: String(repeating: "a", count: 64),
             artifactKind: "mlx_directory",
             runtimeMode: .mlxSwiftLm,
             developmentOnly: false,
-            downloadURLString: "https://huggingface.co/mlx-community/gemma-4-12B-it-4bit",
+            downloadURLString: "https://huggingface.co/mlx-community/gemma-4-12B-it-qat-4bit",
             verified: true,
             releaseReady: true,
             draftArtifact: AlphaAssistantDraftArtifactDescriptor(
-                fileName: "gemma-4-12B-it-assistant-4bit",
-                sizeBytes: 270_075_161,
+                fileName: "gemma-4-12B-it-qat-assistant-4bit",
+                sizeBytes: 270_097_044,
                 checksumSha256: String(repeating: "b", count: 64),
                 artifactKind: "mlx_directory",
-                downloadURLString: "https://huggingface.co/mlx-community/gemma-4-12B-it-assistant-4bit",
+                downloadURLString: "https://huggingface.co/mlx-community/gemma-4-12B-it-qat-assistant-4bit",
                 draftTokens: 6
             )
         )
@@ -10299,13 +10300,13 @@ final class AlphaExtractionTests: XCTestCase {
             sessionId: nil,
             packId: "gemma-4-12b-mlx",
             tier: .caseAssociate,
-            fileName: "gemma-4-12B-it-4bit",
-            sizeBytes: 6_773_371_194,
+            fileName: "gemma-4-12B-it-qat-4bit",
+            sizeBytes: 11_020_140_534,
             checksumSha256: String(repeating: "a", count: 64),
             artifactKind: "mlx_directory",
             runtimeMode: .mlxSwiftLm,
             developmentOnly: false,
-            downloadURLString: "https://huggingface.co/mlx-community/gemma-4-12B-it-4bit",
+            downloadURLString: "https://huggingface.co/mlx-community/gemma-4-12B-it-qat-4bit",
             verified: true,
             releaseReady: true,
             draftArtifact: AlphaAssistantDraftArtifactDescriptor(
@@ -10323,14 +10324,14 @@ final class AlphaExtractionTests: XCTestCase {
 
     func testBackendArtifactSupportsCurrentInstallerAllowsDirectMLXRepository() {
         let artifact = AlphaBackendArtifact(
-            fileName: "gemma-4-12B-it-4bit",
-            sizeBytes: 6_773_371_194,
+            fileName: "gemma-4-12B-it-qat-4bit",
+            sizeBytes: 11_020_140_534,
             finalSha256: String(repeating: "b", count: 64),
             artifactKind: "mlx_directory",
             runtimeMode: .mlxSwiftLm,
             developmentOnly: false,
             downloadPath: nil,
-            downloadUrl: "https://huggingface.co/mlx-community/gemma-4-12B-it-4bit",
+            downloadUrl: "https://huggingface.co/mlx-community/gemma-4-12B-it-qat-4bit",
             segments: []
         )
 
@@ -10370,22 +10371,22 @@ final class AlphaExtractionTests: XCTestCase {
 
     func testBackendArtifactSupportsCurrentInstallerAllowsMLXDraftCompanion() {
         let artifact = AlphaBackendArtifact(
-            fileName: "gemma-4-12B-it-4bit",
-            sizeBytes: 6_773_371_194,
+            fileName: "gemma-4-12B-it-qat-4bit",
+            sizeBytes: 11_020_140_534,
             finalSha256: String(repeating: "b", count: 64),
             artifactKind: "mlx_directory",
             runtimeMode: .mlxSwiftLm,
             developmentOnly: false,
             downloadPath: nil,
-            downloadUrl: "https://huggingface.co/mlx-community/gemma-4-12B-it-4bit",
+            downloadUrl: "https://huggingface.co/mlx-community/gemma-4-12B-it-qat-4bit",
             segments: [],
             draftArtifact: AlphaBackendArtifactDraft(
-                fileName: "gemma-4-12B-it-assistant-4bit",
-                sizeBytes: 270_075_161,
+                fileName: "gemma-4-12B-it-qat-assistant-4bit",
+                sizeBytes: 270_097_044,
                 finalSha256: String(repeating: "c", count: 64),
                 artifactKind: "mlx_directory",
                 downloadPath: nil,
-                downloadUrl: "https://huggingface.co/mlx-community/gemma-4-12B-it-assistant-4bit",
+                downloadUrl: "https://huggingface.co/mlx-community/gemma-4-12B-it-qat-assistant-4bit",
                 draftTokens: 6
             )
         )
@@ -10397,14 +10398,14 @@ final class AlphaExtractionTests: XCTestCase {
         let descriptor = AlphaAssistantCatalogDescriptor(
             tier: .caseAssociate,
             packId: "gemma-4-12b-mlx",
-            sizeBytes: 6_773_371_194,
+            sizeBytes: 11_020_140_534,
             checksumSha256: String(repeating: "d", count: 64),
             artifactKind: "mlx_directory",
             runtimeMode: .mlxSwiftLm,
             developmentOnly: false,
             draftArtifact: AlphaAssistantDraftArtifactDescriptor(
-                fileName: "gemma-4-12B-it-assistant-4bit",
-                sizeBytes: 270_075_161,
+                fileName: "gemma-4-12B-it-qat-assistant-4bit",
+                sizeBytes: 270_097_044,
                 checksumSha256: String(repeating: "e", count: 64),
                 artifactKind: "mlx_directory",
                 downloadURLString: "",
