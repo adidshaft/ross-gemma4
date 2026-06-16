@@ -666,7 +666,7 @@ private func alphaRecoverDownloadedAssistantArtifacts(from state: inout AlphaPer
     return true
 }
 
-private func alphaOptimisticActivePack(from state: AlphaPersistedState) -> AlphaInstalledModelPack? {
+func alphaOptimisticActivePack(from state: AlphaPersistedState) -> AlphaInstalledModelPack? {
     if let active = state.installedPacks.first(where: \.isActive) {
         return active
     }
@@ -675,6 +675,28 @@ private func alphaOptimisticActivePack(from state: AlphaPersistedState) -> Alpha
         return preferred
     }
     return nil
+}
+
+func alphaRecoveredAssistantExecutionFallback(
+    from state: AlphaPersistedState,
+    selectedTier: AlphaCapabilityTier?,
+    currentPack: AlphaInstalledModelPack?
+) -> AlphaInstalledModelPack? {
+    let resolvedTier = AlphaCapabilityTier.normalizedAssistantSelection(currentPack?.tier ?? selectedTier) ?? selectedTier
+    guard let currentPack,
+          currentPack.runtimeMode == .appleFoundationModels || currentPack.artifactKind == "system_model",
+          let requestedTier = resolvedTier,
+          AlphaLocalModelRuntime.runtimeHealth(
+            activePack: currentPack,
+            requestedTier: requestedTier
+          )?.available != true,
+          let recoveredFallback = alphaRecoveredInstalledPackFromDisk(tier: requestedTier),
+          recoveredFallback.runtimeMode != .appleFoundationModels,
+          recoveredFallback.artifactKind != "system_model",
+          alphaInstalledAssistantPackPassesRuntimeValidation(recoveredFallback) else {
+        return nil
+    }
+    return recoveredFallback
 }
 
 private func alphaValidatedActivePack(from state: AlphaPersistedState) -> AlphaInstalledModelPack? {
@@ -1985,10 +2007,19 @@ extension AlphaRossModel {
     }
 
     var activePack: AlphaInstalledModelPack? {
-        if let activePack = privateAISnapshot.activePack ?? alphaOptimisticActivePack(from: persisted) {
+        let selectedTier = persisted.settings.activeTier ?? self.selectedTier
+        let currentPack = privateAISnapshot.activePack ?? alphaOptimisticActivePack(from: persisted)
+        if let fallbackPack = alphaRecoveredAssistantExecutionFallback(
+            from: persisted,
+            selectedTier: selectedTier,
+            currentPack: currentPack
+        ) {
+            return fallbackPack
+        }
+        if let activePack = currentPack {
             return activePack
         }
-        if let recovered = alphaRecoveredInstalledPackFromDisk(tier: persisted.settings.activeTier ?? selectedTier) {
+        if let recovered = alphaRecoveredInstalledPackFromDisk(tier: selectedTier) {
             return recovered
         }
         return AlphaCapabilityTier.installableAssistantTiers.lazy.compactMap { alphaRecoveredInstalledPackFromDisk(tier: $0) }.first

@@ -143,7 +143,7 @@ extension AlphaRossModel {
             return (pack, provider, runtimeEnvironment)
         }
 
-        let currentPack = activePack
+        let currentPack = privateAISnapshot.activePack ?? alphaOptimisticActivePack(from: persisted) ?? activePack
         if let resolved = resolve(for: currentPack) {
             return resolved
         }

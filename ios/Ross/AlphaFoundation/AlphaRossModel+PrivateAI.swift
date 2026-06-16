@@ -701,7 +701,22 @@ extension AlphaRossModel {
     }
 
     var activeRuntimeHealth: AlphaLocalRuntimeHealth? {
-        privateAISnapshot.activeRuntimeHealth
+        if let fallbackPack = alphaRecoveredAssistantExecutionFallback(
+            from: persisted,
+            selectedTier: persisted.settings.activeTier ?? selectedTier,
+            currentPack: privateAISnapshot.activePack ?? alphaOptimisticActivePack(from: persisted)
+        ) {
+            return AlphaLocalModelRuntime.runtimeHealth(
+                activePack: fallbackPack,
+                requestedTier: fallbackPack.tier,
+                runtimeEnvironment: alphaLocalRuntimeEnvironment(
+                    activePack: fallbackPack,
+                    requestedTier: fallbackPack.tier,
+                    installedPacks: persisted.installedPacks
+                )
+            )
+        }
+        return privateAISnapshot.activeRuntimeHealth
     }
 
     var lastModelInvocationRuntimeMode: String? {
