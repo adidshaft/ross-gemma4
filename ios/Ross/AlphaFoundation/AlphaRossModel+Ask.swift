@@ -4193,19 +4193,38 @@ func alphaLocalAskUpgradeRuntimeHint(
         ? [.llamaCppGguf, .mlxSwiftLm]
         : [.llamaCppGguf]
 
+    let currentCoverageLimit = sourceBlockLimit ?? effectiveIncludedCount ?? 0
+    let currentInputBudget = alphaAssistantUpgradeRuntimeInputBudget(
+        runtimeMode: runtimeMode,
+        tier: effectiveTier,
+        physicalMemoryBytes: physicalMemoryBytes
+    ) ?? 0
+    let currentContextTokens = alphaAssistantSetupContextTokens(
+        for: effectiveTier,
+        runtimeMode: runtimeMode,
+        physicalMemoryBytes: physicalMemoryBytes
+    ) ?? 0
+
     return candidateRuntimes.max { lhs, rhs in
-        let lhsTokens = alphaAssistantSetupContextTokens(
-            for: effectiveTier,
+        let lhsMetrics = alphaAssistantUpgradeRuntimeMetrics(
             runtimeMode: lhs,
+            tier: effectiveTier,
             physicalMemoryBytes: physicalMemoryBytes
-        ) ?? 0
-        let rhsTokens = alphaAssistantSetupContextTokens(
-            for: effectiveTier,
+        )
+        let rhsMetrics = alphaAssistantUpgradeRuntimeMetrics(
             runtimeMode: rhs,
+            tier: effectiveTier,
             physicalMemoryBytes: physicalMemoryBytes
-        ) ?? 0
-        if lhsTokens != rhsTokens {
-            return lhsTokens < rhsTokens
+        )
+
+        if lhsMetrics.coverageLimit != rhsMetrics.coverageLimit {
+            return lhsMetrics.coverageLimit < rhsMetrics.coverageLimit
+        }
+        if lhsMetrics.inputBudget != rhsMetrics.inputBudget {
+            return lhsMetrics.inputBudget < rhsMetrics.inputBudget
+        }
+        if lhsMetrics.contextTokens != rhsMetrics.contextTokens {
+            return lhsMetrics.contextTokens < rhsMetrics.contextTokens
         }
         if lhs == preferredRuntime {
             return false
@@ -4214,6 +4233,78 @@ func alphaLocalAskUpgradeRuntimeHint(
             return true
         }
         return lhs.rawValue < rhs.rawValue
+    }.flatMap { candidate in
+        let candidateMetrics = alphaAssistantUpgradeRuntimeMetrics(
+            runtimeMode: candidate,
+            tier: effectiveTier,
+            physicalMemoryBytes: physicalMemoryBytes
+        )
+        let improvesCoverage = candidateMetrics.coverageLimit > currentCoverageLimit
+        let improvesInputBudget = candidateMetrics.inputBudget > currentInputBudget
+        let improvesContext = candidateMetrics.contextTokens > currentContextTokens
+        return (improvesCoverage || improvesInputBudget || improvesContext) ? candidate : nil
+    }
+}
+
+private func alphaAssistantUpgradeRuntimeMetrics(
+    runtimeMode: AlphaPackRuntimeMode,
+    tier: AlphaCapabilityTier,
+    physicalMemoryBytes: UInt64
+) -> (coverageLimit: Int, inputBudget: Int, contextTokens: Int) {
+    let inputBudget = alphaAssistantUpgradeRuntimeInputBudget(
+        runtimeMode: runtimeMode,
+        tier: tier,
+        physicalMemoryBytes: physicalMemoryBytes
+    ) ?? 0
+    let contextTokens = alphaAssistantSetupContextTokens(
+        for: tier,
+        runtimeMode: runtimeMode,
+        physicalMemoryBytes: physicalMemoryBytes
+    ) ?? 0
+    let selectedCoverage = alphaAskRuntimeSourcePackPolicy(
+        runtimeMode: runtimeMode,
+        capabilityTier: tier,
+        baseMaxInputChars: max(inputBudget, 12_000),
+        hasSelectedDocuments: true,
+        selectedDocumentCount: 1
+    ).sourceBlockLimit
+    let broadCoverage = alphaAskRuntimeSourcePackPolicy(
+        runtimeMode: runtimeMode,
+        capabilityTier: tier,
+        baseMaxInputChars: max(inputBudget, 12_000),
+        hasSelectedDocuments: false
+    ).sourceBlockLimit
+
+    return (
+        coverageLimit: max(selectedCoverage, broadCoverage),
+        inputBudget: inputBudget,
+        contextTokens: contextTokens
+    )
+}
+
+private func alphaAssistantUpgradeRuntimeInputBudget(
+    runtimeMode: AlphaPackRuntimeMode,
+    tier: AlphaCapabilityTier,
+    physicalMemoryBytes: UInt64
+) -> Int? {
+    switch runtimeMode {
+    case .appleFoundationModels:
+        return AlphaFoundationRuntimeProfile.maxInputChars(
+            for: tier,
+            physicalMemory: physicalMemoryBytes
+        )
+    case .mlxSwiftLm:
+        return AlphaMLXRuntimeProfile.maxInputChars(
+            for: tier,
+            physicalMemory: physicalMemoryBytes
+        )
+    case .llamaCppGguf:
+        return AlphaLlamaRuntimeProfile.maxInputChars(
+            for: tier,
+            physicalMemory: physicalMemoryBytes
+        )
+    case .deterministicDev, .mediapipeLlm, .unavailable:
+        return nil
     }
 }
 

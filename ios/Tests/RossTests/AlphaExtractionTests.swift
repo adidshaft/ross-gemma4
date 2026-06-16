@@ -9101,7 +9101,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
-    func testLocalAskUpgradeRuntimeHintPrefersGGUFWhenCoreAIHitsContextPressure() {
+    func testLocalAskUpgradeRuntimeHintPrefersMLXWhenItKeepsMoreAskCoverageOnIPhone() {
         XCTAssertEqual(
             alphaLocalAskUpgradeRuntimeHint(
                 runtimeWarnings: [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts],
@@ -9115,7 +9115,7 @@ final class AlphaExtractionTests: XCTestCase {
                 freeStorageGB: 24,
                 systemAssistantAvailable: true
             ),
-            .llamaCppGguf
+            .mlxSwiftLm
         )
     }
 
@@ -9165,6 +9165,24 @@ final class AlphaExtractionTests: XCTestCase {
                 isPhoneFormFactor: true,
                 physicalMemoryBytes: 16 * 1_073_741_824,
                 freeStorageGB: 32,
+                systemAssistantAvailable: true
+            ),
+            .mlxSwiftLm
+        )
+    }
+
+    func testLocalAskUpgradeRuntimeHintUsesMLXForQuickStartWhenItImprovesBudget() {
+        XCTAssertEqual(
+            alphaLocalAskUpgradeRuntimeHint(
+                runtimeWarnings: [AlphaLocalModelWarningCopy.inputFocusedOnRelevantParts],
+                sourcePackCount: 9,
+                includedSourceCount: 4,
+                sourceBlockLimit: 4,
+                capabilityTier: .quickStart,
+                runtimeMode: .appleFoundationModels,
+                isPhoneFormFactor: true,
+                physicalMemoryBytes: 8 * 1_073_741_824,
+                freeStorageGB: 12,
                 systemAssistantAvailable: true
             ),
             .mlxSwiftLm
