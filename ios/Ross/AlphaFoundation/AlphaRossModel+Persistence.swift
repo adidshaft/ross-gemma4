@@ -1347,6 +1347,10 @@ func alphaPreferredAssistantRuntimeMode(
                !shouldAvoidFoundationFromRecentSignal {
                 return .appleFoundationModels
             }
+            if (AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier) == .quickStart,
+               existingRuntimeMode == nil {
+                return .appleFoundationModels
+            }
             let localPreferred = alphaPreferredAssistantRuntimeMode(
                 for: tier,
                 existingRuntimeMode: existingRuntimeMode == .appleFoundationModels ? nil : existingRuntimeMode,

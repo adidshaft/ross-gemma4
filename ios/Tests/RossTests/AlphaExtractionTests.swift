@@ -6643,6 +6643,18 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(quickStart, .mlxSwiftLm)
     }
 
+    func testPreferredAssistantRuntimeModePrefersFoundationForQuickStartWhenSystemAssistantIsAvailableOnCapablePhone() {
+        let runtime = alphaPreferredAssistantRuntimeMode(
+            for: .quickStart,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 16 * 1_073_741_824,
+            freeStorageGB: 32,
+            systemAssistantAvailable: true
+        )
+
+        XCTAssertEqual(runtime, .appleFoundationModels)
+    }
+
     func testPreferredAssistantRuntimeModeKeepsGGUFForSeniorTierOnCapablePhone() {
         let runtime = alphaPreferredAssistantRuntimeMode(
             for: .seniorDraftingSupport,
@@ -9555,10 +9567,26 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(presentation?.runtimeMode, .mlxSwiftLm)
-        XCTAssertEqual(presentation?.totalDownloadBytes, 13_380_656_577)
-        XCTAssertEqual(presentation?.sizeLabel, alphaAssistantStorageSizeLabel(13_380_656_577))
+        XCTAssertEqual(presentation?.totalDownloadBytes, 7_043_446_355)
+        XCTAssertEqual(presentation?.sizeLabel, alphaAssistantStorageSizeLabel(7_043_446_355))
         XCTAssertEqual(presentation?.companionLabel, rossLocalized("assistant_meta_speed_companion"))
-        XCTAssertEqual(presentation?.etaLabel, "about 19 min")
+        XCTAssertEqual(presentation?.etaLabel, "about 10 min")
+    }
+
+    func testAssistantSetupPresentationUsesBuiltInCoreAIForQuickStartWhenAvailableOnCapablePhone() {
+        let presentation = alphaAssistantSetupPresentation(
+            for: .quickStart,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24,
+            systemAssistantAvailable: true
+        )
+
+        XCTAssertEqual(presentation?.runtimeMode, .appleFoundationModels)
+        XCTAssertEqual(presentation?.totalDownloadBytes, 0)
+        XCTAssertEqual(presentation?.sizeLabel, rossLocalized("assistant_meta_no_download"))
+        XCTAssertNil(presentation?.companionLabel)
+        XCTAssertNil(presentation?.etaLabel)
     }
 
     func testAssistantSetupPresentationUsesBuiltInCoreAIWhenAvailableOnNonPhone() {
