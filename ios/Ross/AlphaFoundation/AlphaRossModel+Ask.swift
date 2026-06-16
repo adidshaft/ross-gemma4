@@ -332,110 +332,117 @@ extension AlphaRossModel {
         requestedTier: AlphaCapabilityTier,
         executor: @escaping @Sendable (AlphaLocalModelInput) async -> AlphaLocalModelOutput
     ) -> (
+        requestedTier: AlphaCapabilityTier,
         resolvedProvider: AlphaResolvedLocalAskProvider,
         sourcePack: [AlphaSourceTextBlock],
         budgetPlan: AlphaLocalPromptBudgetPlan
     )? {
-        var sourcePack = askRuntimeSourcePack(
-            question: question,
-            scopeCaseID: scopeCaseID,
-            selectedDocuments: selectedDocuments,
-            preferredFollowUpSourceRefs: preferredFollowUpSourceRefs
-        )
-        guard let resolvedProvider = resolvedLocalAskProvider(
-            requestedTier: requestedTier,
-            task: .matterQuestionAnswer,
-            executor: executor
-        ) else {
-            return nil
-        }
-
-        var selectedProvider = resolvedProvider
-        var budgetPlan = askMatterQuestionBudgetPlan(
-            for: resolvedProvider.provider,
-            sourcePack: sourcePack,
-            selectedDocumentCount: selectedDocuments.count
-        )
-
-        guard resolvedProvider.provider.runtimeMode == .appleFoundationModels else {
-            return (selectedProvider, sourcePack, budgetPlan)
-        }
-
-        let candidateRuntimes: [AlphaPackRuntimeMode] = alphaAssistantTierSupportsMLXRuntime(resolvedProvider.provider.capabilityTier)
-            ? [.mlxSwiftLm, .llamaCppGguf]
-            : [.llamaCppGguf]
-
-        var candidateSourcePacks: [AlphaPackRuntimeMode: [AlphaSourceTextBlock]] = [:]
-        var expandedSourcePackCount = sourcePack.count
-
-        for runtimeMode in candidateRuntimes {
-            guard let candidateProvider = resolvedLocalAskProvider(
+        func evaluatePlan(
+            requestedTier: AlphaCapabilityTier,
+            preferredRuntimeMode: AlphaPackRuntimeMode? = nil
+        ) -> (
+            requestedTier: AlphaCapabilityTier,
+            resolvedProvider: AlphaResolvedLocalAskProvider,
+            sourcePack: [AlphaSourceTextBlock],
+            budgetPlan: AlphaLocalPromptBudgetPlan
+        )? {
+            guard let resolvedProvider = resolvedLocalAskProvider(
                 requestedTier: requestedTier,
                 task: .matterQuestionAnswer,
-                preferredRuntimeMode: runtimeMode,
+                preferredRuntimeMode: preferredRuntimeMode,
                 executor: executor
-            ),
-            candidateProvider.provider.runtimeMode == runtimeMode else {
-                continue
+            ) else {
+                return nil
             }
 
-            let candidateSourcePack = askRuntimeSourcePack(
+            let sourcePack = askRuntimeSourcePack(
                 question: question,
                 scopeCaseID: scopeCaseID,
                 selectedDocuments: selectedDocuments,
                 preferredFollowUpSourceRefs: preferredFollowUpSourceRefs,
                 sourcePackPolicyOverride: askRuntimeSourcePackPolicy(
-                    for: candidateProvider.provider,
+                    for: resolvedProvider.provider,
                     selectedDocumentCount: selectedDocuments.count
                 )
             )
-            candidateSourcePacks[runtimeMode] = candidateSourcePack
-            expandedSourcePackCount = max(expandedSourcePackCount, candidateSourcePack.count)
-        }
-
-        guard expandedSourcePackCount > (budgetPlan.sourceBlockLimit ?? sourcePack.count),
-              let runtimeHint = alphaLocalAskUpgradeRuntimeHint(
-                runtimeWarnings: [],
-                sourcePackCount: expandedSourcePackCount,
-                includedSourceCount: budgetPlan.sourceBlockLimit ?? sourcePack.count,
-                sourceBlockLimit: budgetPlan.sourceBlockLimit,
-                capabilityTier: resolvedProvider.provider.capabilityTier,
-                runtimeMode: resolvedProvider.provider.runtimeMode,
-                hasSelectedDocuments: !selectedDocuments.isEmpty,
-                selectedDocumentCount: selectedDocuments.count
-              ),
-              let upgradedProvider = resolvedLocalAskProvider(
-                requestedTier: requestedTier,
-                task: .matterQuestionAnswer,
-                preferredRuntimeMode: runtimeHint,
-                executor: executor
-              ),
-              upgradedProvider.provider.runtimeMode == runtimeHint else {
-            return (selectedProvider, sourcePack, budgetPlan)
-        }
-
-        let upgradedSourcePack = candidateSourcePacks[runtimeHint] ?? askRuntimeSourcePack(
-            question: question,
-            scopeCaseID: scopeCaseID,
-            selectedDocuments: selectedDocuments,
-            preferredFollowUpSourceRefs: preferredFollowUpSourceRefs,
-            sourcePackPolicyOverride: askRuntimeSourcePackPolicy(
-                for: upgradedProvider.provider,
+            let budgetPlan = askMatterQuestionBudgetPlan(
+                for: resolvedProvider.provider,
+                sourcePack: sourcePack,
                 selectedDocumentCount: selectedDocuments.count
             )
-        )
-        guard upgradedSourcePack.count >= sourcePack.count else {
-            return (selectedProvider, sourcePack, budgetPlan)
+            return (requestedTier, resolvedProvider, sourcePack, budgetPlan)
         }
 
-        selectedProvider = upgradedProvider
-        sourcePack = upgradedSourcePack
-        budgetPlan = askMatterQuestionBudgetPlan(
-            for: upgradedProvider.provider,
-            sourcePack: upgradedSourcePack,
-            selectedDocumentCount: selectedDocuments.count
-        )
-        return (selectedProvider, sourcePack, budgetPlan)
+        guard var selectedPlan = evaluatePlan(requestedTier: requestedTier) else {
+            return nil
+        }
+
+        if selectedPlan.resolvedProvider.provider.runtimeMode == .appleFoundationModels {
+            let candidateRuntimes: [AlphaPackRuntimeMode] = alphaAssistantTierSupportsMLXRuntime(selectedPlan.resolvedProvider.provider.capabilityTier)
+                ? [.mlxSwiftLm, .llamaCppGguf]
+                : [.llamaCppGguf]
+
+            var candidatePlans: [AlphaPackRuntimeMode: (
+                requestedTier: AlphaCapabilityTier,
+                resolvedProvider: AlphaResolvedLocalAskProvider,
+                sourcePack: [AlphaSourceTextBlock],
+                budgetPlan: AlphaLocalPromptBudgetPlan
+            )] = [:]
+            var expandedSourcePackCount = selectedPlan.sourcePack.count
+
+            for runtimeMode in candidateRuntimes {
+                guard let candidatePlan = evaluatePlan(
+                    requestedTier: requestedTier,
+                    preferredRuntimeMode: runtimeMode
+                ),
+                candidatePlan.resolvedProvider.provider.runtimeMode == runtimeMode else {
+                    continue
+                }
+                candidatePlans[runtimeMode] = candidatePlan
+                expandedSourcePackCount = max(expandedSourcePackCount, candidatePlan.sourcePack.count)
+            }
+
+            if expandedSourcePackCount > (selectedPlan.budgetPlan.sourceBlockLimit ?? selectedPlan.sourcePack.count),
+               let runtimeHint = alphaLocalAskUpgradeRuntimeHint(
+                runtimeWarnings: [],
+                sourcePackCount: expandedSourcePackCount,
+                includedSourceCount: selectedPlan.budgetPlan.sourceBlockLimit ?? selectedPlan.sourcePack.count,
+                sourceBlockLimit: selectedPlan.budgetPlan.sourceBlockLimit,
+                capabilityTier: selectedPlan.resolvedProvider.provider.capabilityTier,
+                runtimeMode: selectedPlan.resolvedProvider.provider.runtimeMode,
+                hasSelectedDocuments: !selectedDocuments.isEmpty,
+                selectedDocumentCount: selectedDocuments.count
+               ),
+               let candidatePlan = candidatePlans[runtimeHint],
+               candidatePlan.sourcePack.count >= selectedPlan.sourcePack.count {
+                selectedPlan = candidatePlan
+            }
+        }
+
+        let currentSourceBlockLimit = selectedPlan.budgetPlan.sourceBlockLimit ?? selectedPlan.sourcePack.count
+        let effectiveTier = AlphaCapabilityTier.normalizedAssistantSelection(
+            selectedPlan.resolvedProvider.provider.capabilityTier
+        ) ?? selectedPlan.resolvedProvider.provider.capabilityTier
+        if let upgradeTierHint = alphaLocalAskUpgradeTierHint(
+            runtimeWarnings: [],
+            sourcePackCount: selectedPlan.sourcePack.count,
+            includedSourceCount: currentSourceBlockLimit,
+            sourceBlockLimit: selectedPlan.budgetPlan.sourceBlockLimit,
+            capabilityTier: effectiveTier
+        ) {
+            let preferredRuntimeMode = alphaPreferredAssistantSetupRuntimeMode(
+                for: upgradeTierHint
+            )
+            if let upgradedTierPlan = evaluatePlan(
+                requestedTier: upgradeTierHint,
+                preferredRuntimeMode: preferredRuntimeMode
+            ),
+            upgradedTierPlan.sourcePack.count >= selectedPlan.sourcePack.count {
+                selectedPlan = upgradedTierPlan
+            }
+        }
+
+        return selectedPlan
     }
 
     func setAskDraft(_ value: String, for scopeCaseID: UUID?) {
@@ -1812,6 +1819,7 @@ extension AlphaRossModel {
             return
         }
         let resolvedProvider = runtimePlan.resolvedProvider
+        let effectiveRequestedTier = runtimePlan.requestedTier
         let activePack = resolvedProvider.activePack
         let provider = resolvedProvider.provider
         var input = AlphaLocalModelInput(
@@ -1827,7 +1835,7 @@ extension AlphaRossModel {
             maxOutputTokens: 384,
             languageProfile: nil,
             documentClassification: nil,
-            extractionMode: activeExtractionMode,
+            extractionMode: AlphaExtractionMode.fromTier(effectiveRequestedTier),
             requireSourceRefs: !runtimePlan.sourcePack.isEmpty,
             samplerSettings: persisted.settings.llamaSamplerSettings
         )
@@ -1841,7 +1849,7 @@ extension AlphaRossModel {
         let invocation = beginMatterQuestionInvocation(
             provider: provider,
             activePack: activePack,
-            requestedTier: requestedTier,
+            requestedTier: effectiveRequestedTier,
             input: taskInput,
             scopeCaseID: scopeCaseID,
             selectedDocumentID: selectedDocuments.first?.id
