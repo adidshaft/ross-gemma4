@@ -8724,6 +8724,67 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertTrue(options.first?.isActive == true)
     }
 
+    @MainActor
+    func testUpsertJobReusesLegacyFlashEntryForQuickStart() {
+        let model = AlphaRossModel(previewState: .empty())
+        let legacyJob = AlphaModelDownloadJob(
+            sessionId: "legacy-flash-job",
+            packId: "flash-pack",
+            tier: .flash,
+            state: .queued,
+            networkPolicy: .wifiOnly,
+            bytesDownloaded: 1,
+            totalBytes: 10,
+            checksumSha256: "legacy"
+        )
+        model.persisted.modelJobs = [legacyJob]
+
+        let replacementJob = AlphaModelDownloadJob(
+            sessionId: "quick-start-job",
+            packId: "quick-pack",
+            tier: .quickStart,
+            state: .downloading,
+            networkPolicy: .mobileAllowed,
+            bytesDownloaded: 2,
+            totalBytes: 20,
+            checksumSha256: "next"
+        )
+        model.upsertJob(replacementJob)
+
+        XCTAssertEqual(model.persisted.modelJobs.count, 1)
+        XCTAssertEqual(model.persisted.modelJobs.first?.id, replacementJob.id)
+        XCTAssertEqual(model.persisted.modelJobs.first?.tier, .quickStart)
+        XCTAssertEqual(model.persisted.modelJobs.first?.packId, "quick-pack")
+    }
+
+    @MainActor
+    func testStartPackDownloadReusesLegacyFlashQueuedJobForQuickStart() async {
+        rossSetBackendBaseURLOverride("http://127.0.0.1:9")
+        defer { rossSetBackendBaseURLOverride(nil) }
+
+        let model = AlphaRossModel(previewState: .empty())
+        let legacyJob = AlphaModelDownloadJob(
+            sessionId: "legacy-flash-job",
+            packId: "flash-pack",
+            tier: .flash,
+            state: .queued,
+            networkPolicy: .wifiOnly,
+            bytesDownloaded: 0,
+            totalBytes: 10,
+            checksumSha256: "legacy"
+        )
+        model.persisted.modelJobs = [legacyJob]
+        model.persisted.installedPacks = []
+        model.persisted.settings.activeTier = nil
+
+        await model.startPackDownload(for: .quickStart, mobileAllowed: true)
+
+        XCTAssertEqual(model.persisted.modelJobs.count, 1)
+        XCTAssertEqual(model.persisted.modelJobs.first?.id, legacyJob.id)
+        XCTAssertEqual(model.persisted.modelJobs.first?.tier, .quickStart)
+        XCTAssertEqual(model.persisted.settings.activeTier, .quickStart)
+    }
+
     func testLocalAskUpgradeTierHintPromotesQuickStartToCaseAssociate() {
         XCTAssertEqual(
             alphaLocalAskUpgradeTierHint(

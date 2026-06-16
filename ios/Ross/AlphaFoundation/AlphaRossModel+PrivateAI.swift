@@ -1871,8 +1871,11 @@ extension AlphaRossModel {
     }
 
     func repairAssistantPack(for tier: AlphaCapabilityTier, mobileAllowed: Bool = false) async {
-        if let pack = persisted.installedPacks.first(where: { $0.tier == tier && $0.isActive }) ??
-            persisted.installedPacks.first(where: { $0.tier == tier }) {
+        if let pack = persisted.installedPacks.first(where: {
+            AlphaCapabilityTier.assistantSelectionsMatch($0.tier, tier) && $0.isActive
+        }) ?? persisted.installedPacks.first(where: {
+            AlphaCapabilityTier.assistantSelectionsMatch($0.tier, tier)
+        }) {
             removeInstalledPack(pack)
             persisted.modelJobs.removeAll { job in
                 job.packId == pack.packId &&
@@ -1880,7 +1883,8 @@ extension AlphaRossModel {
             }
         } else {
             persisted.modelJobs.removeAll { job in
-                job.tier == tier && (job.state == .installed || job.state == .failed || job.state == .cancelled)
+                AlphaCapabilityTier.assistantSelectionsMatch(job.tier, tier) &&
+                    (job.state == .installed || job.state == .failed || job.state == .cancelled)
             }
         }
         persisted.settings.activeTier = persisted.installedPacks.first(where: \.isActive)?.tier
@@ -1896,7 +1900,7 @@ extension AlphaRossModel {
             )?.userFacingStatus ?? rossLocalized("runtime_health_llama_needs_repair")
             persisted.modelJobs = persisted.modelJobs.map { job in
                 var copy = job
-                if job.tier == pack.tier, job.state == .installed {
+                if AlphaCapabilityTier.assistantSelectionsMatch(job.tier, pack.tier), job.state == .installed {
                     copy.state = .failed
                     copy.failureReason = message
                     copy.updatedAt = .now
@@ -1929,7 +1933,7 @@ extension AlphaRossModel {
             return copy
         }
         persisted.modelJobs.removeAll { job in
-            job.tier == pack.tier && job.state != .installed
+            AlphaCapabilityTier.assistantSelectionsMatch(job.tier, pack.tier) && job.state != .installed
         }
         persisted.settings.activeTier = pack.tier
         persist()
@@ -2057,7 +2061,9 @@ extension AlphaRossModel {
                 copy.isActive = false
                 return copy
             }
-            persisted.installedPacks.removeAll { $0.tier == tier }
+            persisted.installedPacks.removeAll {
+                AlphaCapabilityTier.assistantSelectionsMatch($0.tier, tier)
+            }
             persisted.installedPacks.insert(installed, at: 0)
             persisted.settings.activeTier = tier
             updateJob(jobID) {
@@ -2640,7 +2646,7 @@ extension AlphaRossModel {
         let existingJob = existingJobID.flatMap { requestedID in
             persisted.modelJobs.first { $0.id == requestedID }
         } ?? persisted.modelJobs.first { job in
-            job.tier == tier &&
+            AlphaCapabilityTier.assistantSelectionsMatch(job.tier, tier) &&
                 (targetPackId == nil || job.packId == targetPackId) &&
                 (job.state == .queued ||
                  job.state == .downloading ||
@@ -2654,7 +2660,29 @@ extension AlphaRossModel {
         let job: AlphaModelDownloadJob
         let shouldRecordSelection: Bool
         if let existingJob {
-            job = existingJob
+            var reusedJob = existingJob
+            let requiresReset =
+                !AlphaCapabilityTier.assistantSelectionsMatch(existingJob.tier, tier) ||
+                existingJob.packId != fallbackDownload.packId ||
+                existingJob.runtimeMode != fallbackDownload.runtimeMode ||
+                existingJob.artifactKind != fallbackDownload.artifactKind
+            reusedJob.tier = tier
+            reusedJob.packId = fallbackDownload.packId
+            reusedJob.networkPolicy = policy
+            reusedJob.totalBytes = fallbackDownload.sizeBytes
+            reusedJob.checksumSha256 = fallbackDownload.checksumSha256
+            reusedJob.artifactKind = fallbackDownload.artifactKind
+            reusedJob.runtimeMode = fallbackDownload.runtimeMode
+            reusedJob.developmentOnly = fallbackDownload.developmentOnly
+            reusedJob.updatedAt = .now
+            if requiresReset {
+                reusedJob.state = .queued
+                reusedJob.bytesDownloaded = 0
+                reusedJob.failureReason = nil
+                reusedJob.resumeDataRelativePath = nil
+                reusedJob.completedAt = nil
+            }
+            job = reusedJob
             shouldRecordSelection = false
         } else {
             let sessionId = "hf-\(UUID().uuidString.prefix(8))"
@@ -2682,7 +2710,7 @@ extension AlphaRossModel {
         }
 
         if let existingInstalled = persisted.installedPacks.first(where: { pack in
-            pack.tier == tier &&
+            AlphaCapabilityTier.assistantSelectionsMatch(pack.tier, tier) &&
                 installedModelPackFileIsUsable(pack) &&
                 alphaShouldReuseInstalledAssistantPack(
                     pack,
@@ -2863,7 +2891,11 @@ extension AlphaRossModel {
                 persisted.modelUpdateCandidates,
                 for: tier
             )
-            persisted.modelJobs.removeAll { $0.tier == tier && $0.state != .installed && $0.id != job.id }
+            persisted.modelJobs.removeAll {
+                AlphaCapabilityTier.assistantSelectionsMatch($0.tier, tier) &&
+                    $0.state != .installed &&
+                    $0.id != job.id
+            }
             updateJob(job.id) {
                 $0.state = .installed
                 $0.bytesDownloaded = existingArtifact.bytes

@@ -317,7 +317,9 @@ extension AlphaRossModel {
     func upsertJob(_ job: AlphaModelDownloadJob) {
         if let index = persisted.modelJobs.firstIndex(where: { $0.id == job.id }) {
             persisted.modelJobs[index] = job
-        } else if let index = persisted.modelJobs.firstIndex(where: { $0.tier == job.tier && $0.state != .installed }) {
+        } else if let index = persisted.modelJobs.firstIndex(where: {
+            AlphaCapabilityTier.assistantSelectionsMatch($0.tier, job.tier) && $0.state != .installed
+        }) {
             persisted.modelJobs[index] = job
         } else {
             persisted.modelJobs.insert(job, at: 0)
