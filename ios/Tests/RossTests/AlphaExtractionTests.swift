@@ -12543,8 +12543,8 @@ final class AlphaExtractionTests: XCTestCase {
             physicalMemory: 16_000_000_000
         )
 
-        XCTAssertEqual(plan.pass(for: .legalFieldExtraction)?.maxPagesPerBatch, 22)
-        XCTAssertEqual(plan.pass(for: .caseMemorySynthesis)?.maxPagesPerBatch, 28)
+        XCTAssertEqual(plan.pass(for: .legalFieldExtraction)?.maxPagesPerBatch, 24)
+        XCTAssertEqual(plan.pass(for: .caseMemorySynthesis)?.maxPagesPerBatch, 30)
     }
 
     func testPipelinePlanExpandsBatchingForCapableLlamaRuntime() {
