@@ -25,7 +25,7 @@ enum AlphaMLXRuntimeProfile {
             return physicalMemory >= 8_000_000_000 ? 16_384 : 12_288
         case .caseAssociate:
             if physicalMemory >= 16_000_000_000 {
-                return 32_768
+                return 36_864
             }
             return physicalMemory >= 12_000_000_000 ? 24_576 : 20_480
         case .seniorDraftingSupport:
@@ -41,10 +41,10 @@ enum AlphaMLXRuntimeProfile {
         case .flash:
             return physicalMemory >= 8_000_000_000 ? 18_000 : 14_000
         case .quickStart:
-            return physicalMemory >= 8_000_000_000 ? 36_000 : 24_000
+            return physicalMemory >= 8_000_000_000 ? 40_000 : 24_000
         case .caseAssociate:
             if physicalMemory >= 16_000_000_000 {
-                return 64_000
+                return 68_000
             }
             return physicalMemory >= 12_000_000_000 ? 56_000 : 40_000
         case .seniorDraftingSupport:
@@ -119,10 +119,10 @@ enum AlphaMLXRuntimeProfile {
         case .flash:
             return physicalMemory >= 8_000_000_000 ? 320 : 256
         case .quickStart:
-            return physicalMemory >= 8_000_000_000 ? 384 : 256
+            return physicalMemory >= 8_000_000_000 ? 448 : 256
         case .caseAssociate:
             if physicalMemory >= 16_000_000_000 {
-                return 512
+                return 576
             }
             return physicalMemory >= 12_000_000_000 ? 384 : 320
         case .seniorDraftingSupport:

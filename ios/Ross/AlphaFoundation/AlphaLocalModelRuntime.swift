@@ -708,10 +708,10 @@ enum AlphaLocalPromptBudgetPlanner {
         switch runtimeMode {
         case .mlxSwiftLm:
             if baseMaxInputChars >= 52_000 {
-                return prefersWiderBatches ? 4 : 3
+                return prefersWiderBatches ? 5 : 4
             }
             if baseMaxInputChars >= 40_000 {
-                return prefersWiderBatches ? 3 : 2
+                return prefersWiderBatches ? 4 : 3
             }
             return 0
         case .appleFoundationModels:
@@ -750,7 +750,7 @@ enum AlphaLocalPromptBudgetPlanner {
         let multiplier: Double
         switch runtimeMode {
         case .mlxSwiftLm:
-            multiplier = usesStructuredThresholds ? 1.07 : 1.08
+            multiplier = 1.1
         case .appleFoundationModels:
             multiplier = usesStructuredThresholds ? 1.04 : 1.05
         default:
@@ -769,17 +769,17 @@ enum AlphaLocalPromptBudgetPlanner {
         case .mlxSwiftLm:
             if usesStructuredThresholds {
                 if baseMaxInputChars >= 52_000 {
-                    return 18
+                    return 20
                 }
                 if baseMaxInputChars >= 40_000 {
-                    return 15
+                    return 16
                 }
             } else {
                 if baseMaxInputChars >= 52_000 {
-                    return 14
+                    return 15
                 }
                 if baseMaxInputChars >= 40_000 {
-                    return 12
+                    return 13
                 }
             }
             return nil
@@ -814,17 +814,17 @@ enum AlphaLocalPromptBudgetPlanner {
         case .mlxSwiftLm:
             if usesStructuredThresholds {
                 if baseMaxInputChars >= 52_000 {
-                    return 1_820
+                    return 1_950
                 }
                 if baseMaxInputChars >= 40_000 {
-                    return 1_700
+                    return 1_760
                 }
             } else {
                 if baseMaxInputChars >= 52_000 {
-                    return 2_050
+                    return 2_200
                 }
                 if baseMaxInputChars >= 40_000 {
-                    return 1_900
+                    return 1_980
                 }
             }
             return nil

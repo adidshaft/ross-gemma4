@@ -10591,9 +10591,9 @@ final class AlphaExtractionTests: XCTestCase {
             lastInvocation: fastInvocation
         )
 
-        XCTAssertEqual(plan.maxInputChars, 60_480)
+        XCTAssertEqual(plan.maxInputChars, 61_600)
         XCTAssertEqual(plan.sourceBlockLimit, 14)
-        XCTAssertEqual(plan.sourceExcerptChars, 2_050)
+        XCTAssertEqual(plan.sourceExcerptChars, 2_200)
     }
 
     func testMatterQuestionBudgetPlannerWidensLargeFileFoundationBudgetAfterFastRun() {
@@ -10812,9 +10812,9 @@ final class AlphaExtractionTests: XCTestCase {
             lastInvocation: fastInvocation
         )
 
-        XCTAssertEqual(plan.maxInputChars, 59_920)
+        XCTAssertEqual(plan.maxInputChars, 61_600)
         XCTAssertEqual(plan.sourceBlockLimit, 18)
-        XCTAssertEqual(plan.sourceExcerptChars, 1_820)
+        XCTAssertEqual(plan.sourceExcerptChars, 1_950)
     }
 
     func testStructuredDocumentBudgetPlannerWidensLargeFileFoundationBudgetAfterFastRun() {
@@ -11058,7 +11058,7 @@ final class AlphaExtractionTests: XCTestCase {
             lastInvocation: fastInvocation
         )
 
-        XCTAssertEqual(batchLimit, 26)
+        XCTAssertEqual(batchLimit, 27)
     }
 
     func testStructuredDocumentBatchLimitWidensFurtherAfterFastFoundationRun() {
@@ -11114,7 +11114,7 @@ final class AlphaExtractionTests: XCTestCase {
             lastInvocation: fastInvocation
         )
 
-        XCTAssertEqual(batchLimit, 40)
+        XCTAssertEqual(batchLimit, 41)
     }
 
     func testStructuredDocumentBatchLimitWidensCaseMemoryAfterFastFoundationRun() {
@@ -11359,7 +11359,7 @@ final class AlphaExtractionTests: XCTestCase {
                 for: .quickStart,
                 physicalMemory: 8_000_000_000
             ),
-            36_000
+            40_000
         )
         XCTAssertEqual(
             AlphaMLXRuntimeProfile.maxInputChars(
@@ -11367,6 +11367,20 @@ final class AlphaExtractionTests: XCTestCase {
                 physicalMemory: 12_000_000_000
             ),
             56_000
+        )
+        XCTAssertEqual(
+            AlphaMLXRuntimeProfile.contextWindowTokens(
+                for: .caseAssociate,
+                physicalMemory: 16_000_000_000
+            ),
+            36_864
+        )
+        XCTAssertEqual(
+            AlphaMLXRuntimeProfile.maxInputChars(
+                for: .caseAssociate,
+                physicalMemory: 16_000_000_000
+            ),
+            68_000
         )
         XCTAssertEqual(
             AlphaMLXRuntimeProfile.defaultDraftTokens(
@@ -11387,7 +11401,7 @@ final class AlphaExtractionTests: XCTestCase {
                 for: .quickStart,
                 physicalMemory: 8_000_000_000
             ),
-            384
+            448
         )
         XCTAssertEqual(
             AlphaMLXRuntimeProfile.prefillStepSize(
@@ -11401,7 +11415,7 @@ final class AlphaExtractionTests: XCTestCase {
                 for: .caseAssociate,
                 physicalMemory: 16_000_000_000
             ),
-            512
+            576
         )
     }
 
