@@ -4862,7 +4862,7 @@ final class AlphaExtractionTests: XCTestCase {
         )
     }
 
-    func testQuickStartLongFileReviewWarningUsesSelectedLanguage() async {
+    func testQuickStartLongFileReviewWarningUsesSelectedLanguage() async throws {
         let previousLanguageCode = rossSelectedLanguageCode()
         rossSaveLanguageSelection(code: "te")
         defer { rossSaveLanguageSelection(code: previousLanguageCode) }
@@ -4892,13 +4892,70 @@ final class AlphaExtractionTests: XCTestCase {
             document: document,
             activePack: installedPack(.quickStart)
         )
+        let sourceBlockCount = pages.count
+        let sourceCharCount = pages.reduce(0) { total, page in
+            total + ((page.extractedText ?? page.snippet) ?? "").count
+        }
+        let lastStructuredInvocation = result.modelInvocations.last {
+            $0.runtimeMode == AlphaPackRuntimeMode.deterministicDev.rawValue && $0.task != .matterQuestionAnswer
+        }
+        let budgetPlan = AlphaLocalPromptBudgetPlanner.structuredDocumentPlan(
+            runtimeMode: .deterministicDev,
+            baseMaxInputChars: 12_000,
+            sourceBlockCount: sourceBlockCount,
+            sourceCharCount: sourceCharCount,
+            selectedDocumentCount: 1,
+            lastInvocation: lastStructuredInvocation
+        )
+        let expectedFocusedCount = try XCTUnwrap(budgetPlan.sourceBlockLimit)
         let warningText = (result.extractionRun.warnings + result.findings.map(\.message)).joined(separator: "\n")
 
-        XCTAssertTrue(warningText.contains(alphaFileReviewBasicTooLongWarning(languageCode: "te")))
+        XCTAssertTrue(
+            warningText.contains(
+                alphaFileReviewFocusedSourceSectionsWarning(
+                    focusedCount: expectedFocusedCount,
+                    totalCount: sourceBlockCount,
+                    languageCode: "te"
+                )
+            )
+        )
         XCTAssertFalse(warningText.localizedCaseInsensitiveContains("Quick Start is best for shorter files"), warningText)
         XCTAssertFalse(warningText.localizedCaseInsensitiveContains("longer document with your private assistant"), warningText)
+        XCTAssertFalse(warningText.localizedCaseInsensitiveContains("Ross reviewed only"), warningText)
         XCTAssertFalse(result.modelInvocations.isEmpty)
         XCTAssertTrue(result.modelInvocations.contains { $0.runtimeMode == AlphaPackRuntimeMode.deterministicDev.rawValue })
+    }
+
+    func testQuickStartLongFileReviewUsesSingleStructuredCoverageWarning() async {
+        let store = AlphaRossStore()
+        let caseId = UUID()
+        let pages = (1...13).map { page in
+            AlphaDocumentPage(
+                pageNumber: page,
+                snippet: "Order page \(page). The respondent shall file a reply before the next hearing."
+            )
+        }
+        let document = AlphaCaseDocument(
+            title: "Long Order",
+            fileName: "long-order.pdf",
+            kind: .pdf,
+            storedRelativePath: "tests/long-order.pdf",
+            importedAt: .now,
+            pageCount: pages.count,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            pages: pages
+        )
+
+        let result = await store.runLocalExtraction(
+            caseId: caseId,
+            document: document,
+            activePack: installedPack(.quickStart)
+        )
+        let unsupportedLayoutFindings = result.findings.filter { $0.kind == .unsupportedLayout }
+
+        XCTAssertEqual(unsupportedLayoutFindings.count, 1)
+        XCTAssertFalse(unsupportedLayoutFindings.contains { $0.message == alphaFileReviewBasicTooLongWarning() })
     }
 
     func testCaseAssociateLongFileReviewWarnsWhenLocalReviewFocusesSources() async {
@@ -5136,7 +5193,7 @@ final class AlphaExtractionTests: XCTestCase {
                 caseId: caseId,
                 documentId: documentId,
                 kind: .unsupportedLayout,
-                message: alphaFileReviewBasicTooLongWarning(),
+                message: alphaFileReviewFocusedSourceSectionsWarning(focusedCount: 6, totalCount: 13),
                 sourceRefs: [],
                 severity: .warning
             )

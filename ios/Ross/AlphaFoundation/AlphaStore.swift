@@ -1878,7 +1878,6 @@ private struct AlphaLocalExtractionOrchestrator {
                 highlightRects: page.highlightRects
             )
         }
-        let quickStartNeedsUpgradeWarning = mode == .quickStart && pages.count > 12
         let provider = AlphaLocalModelRuntime.resolveProvider(
             activePack: activePack,
             requestedTier: activePack?.tier,
@@ -2037,27 +2036,6 @@ private struct AlphaLocalExtractionOrchestrator {
             priorInvocations: modelInvocations
         ) {
             findings.append(focusedReviewFinding)
-        }
-        if quickStartNeedsUpgradeWarning {
-            findings.append(
-                AlphaExtractionFinding(
-                    caseId: caseId,
-                    documentId: document.id,
-                    kind: .unsupportedLayout,
-                    message: alphaFileReviewBasicTooLongWarning(),
-                    sourceRefs: cleanedPages.prefix(2).map { page in
-                        AlphaSourceRef(
-                            caseId: caseId,
-                            documentId: document.id,
-                            documentTitle: document.title,
-                            pageNumber: page.pageNumber,
-                            textSnippet: page.snippet,
-                            ocrConfidence: page.ocrConfidence
-                        )
-                    },
-                    severity: .warning
-                )
-            )
         }
         let caseMemory = await runCaseMemoryPass(
             provider: provider,
