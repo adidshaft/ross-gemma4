@@ -644,13 +644,7 @@ struct AlphaFullScreenChatTurn: View {
                             continuationContext: result.answerContinuationContext,
                             statusNote: deduplicatedStatusNote,
                             onCopy: copyAnswerAction,
-                            menu: {
-                                Button {
-                                    onShowDetails(result)
-                                } label: {
-                                    Label(rossLocalized("answer_details"), systemImage: "info.circle")
-                                }
-                            }
+                            onShowDetails: { onShowDetails(result) }
                         )
                     } else {
                         AlphaCleanAnswerHeader<EmptyView>(
@@ -1815,6 +1809,7 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
     let continuationContext: AlphaAnswerContinuationContext?
     let statusNote: String?
     let onCopy: () -> Void
+    let onShowDetails: (() -> Void)?
     let showsMenu: Bool
     @ViewBuilder var menu: () -> MenuContent
 
@@ -1823,12 +1818,14 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
         continuationContext: AlphaAnswerContinuationContext? = nil,
         statusNote: String?,
         onCopy: @escaping () -> Void,
+        onShowDetails: (() -> Void)? = nil,
         @ViewBuilder menu: @escaping () -> MenuContent
     ) {
         self.title = title
         self.continuationContext = continuationContext
         self.statusNote = AlphaCleanAnswerHeader.cleanedStatusNote(statusNote)
         self.onCopy = onCopy
+        self.onShowDetails = onShowDetails
         self.showsMenu = true
         self.menu = menu
     }
@@ -1837,12 +1834,14 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
         title: String,
         continuationContext: AlphaAnswerContinuationContext? = nil,
         statusNote: String?,
-        onCopy: @escaping () -> Void
+        onCopy: @escaping () -> Void,
+        onShowDetails: (() -> Void)? = nil
     ) where MenuContent == EmptyView {
         self.title = title
         self.continuationContext = continuationContext
         self.statusNote = AlphaCleanAnswerHeader.cleanedStatusNote(statusNote)
         self.onCopy = onCopy
+        self.onShowDetails = onShowDetails
         self.showsMenu = false
         self.menu = { EmptyView() }
     }
@@ -1864,6 +1863,14 @@ struct AlphaCleanAnswerHeader<MenuContent: View>: View {
                 Spacer(minLength: 8)
 
                 AlphaCleanAnswerCopyButton(action: onCopy)
+
+                if let onShowDetails {
+                    AlphaAnswerAccessoryIconButton(
+                        systemImage: "info.circle",
+                        accessibilityLabel: rossLocalized("answer_details"),
+                        action: onShowDetails
+                    )
+                }
 
                 if showsMenu {
                     Menu {
