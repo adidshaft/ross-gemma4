@@ -226,43 +226,9 @@ private let alphaBundledMLXCaseAssociateAssistantDownloadDescriptor = AlphaAssis
     )
 )
 
-private let alphaBundledMLXSeniorAssistantDraftDownloadDescriptor = AlphaAssistantDownloadDescriptor(
-    sessionId: nil,
-    packId: "gemma-4-26b-a4b-mlx-assistant",
-    tier: .seniorDraftingSupport,
-    fileName: "gemma-4-26B-A4B-it-qat-assistant-4bit",
-    sizeBytes: 268_323_860,
-    checksumSha256: "df6dbf8d5e3dc5c106d0fa9e6d5f31900c0347729120eb244244ca2523973031",
-    artifactKind: "mlx_directory",
-    runtimeMode: .mlxSwiftLm,
-    developmentOnly: false,
-    downloadURLString: "https://huggingface.co/mlx-community/gemma-4-26B-A4B-it-qat-assistant-4bit",
-    verified: true,
-    releaseReady: true
-)
-
-private let alphaBundledMLXSeniorAssistantDownloadDescriptor = AlphaAssistantDownloadDescriptor(
-    sessionId: nil,
-    packId: "gemma-4-26b-a4b-mlx",
-    tier: .seniorDraftingSupport,
-    fileName: "gemma-4-26B-A4B-it-qat-4bit",
-    sizeBytes: 15_641_239_295,
-    checksumSha256: "097f39e7c0ed601a7437187e4f81b6670e47ca5926cc9729d5f95c3577b86706",
-    artifactKind: "mlx_directory",
-    runtimeMode: .mlxSwiftLm,
-    developmentOnly: false,
-    downloadURLString: "https://huggingface.co/mlx-community/gemma-4-26B-A4B-it-qat-4bit",
-    verified: true,
-    releaseReady: true,
-    draftArtifact: alphaBundledMLXDraftArtifact(
-        from: alphaBundledMLXSeniorAssistantDraftDownloadDescriptor
-    )
-)
-
 private let alphaBundledMLXAssistantDownloadDescriptors: [AlphaCapabilityTier: AlphaAssistantDownloadDescriptor] = [
     .quickStart: alphaBundledMLXQuickStartAssistantDownloadDescriptor,
-    .caseAssociate: alphaBundledMLXCaseAssociateAssistantDownloadDescriptor,
-    .seniorDraftingSupport: alphaBundledMLXSeniorAssistantDownloadDescriptor
+    .caseAssociate: alphaBundledMLXCaseAssociateAssistantDownloadDescriptor
 ]
 
 private func alphaBundledAssistantDownloadDescriptor(
