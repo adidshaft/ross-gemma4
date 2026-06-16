@@ -20,6 +20,15 @@ export type LocalRuntimeMode =
   | "apple_foundation_models"
   | "unavailable";
 
+export interface ModelPackDraftArtifact {
+  fileName: string;
+  sizeBytes: number;
+  finalSha256: string;
+  artifactKind: ModelArtifactKind;
+  downloadUrl: string;
+  draftTokens?: number | undefined;
+}
+
 export interface ModelPack {
   packId: string;
   displayName: string;
@@ -42,6 +51,7 @@ export interface ModelPack {
   fileName?: string;
   downloadUrl?: string;
   finalSha256?: string;
+  draftArtifact?: ModelPackDraftArtifact | undefined;
   requiresBackendProxy?: boolean;
   verified: boolean;
   releaseReady: boolean;
@@ -241,7 +251,31 @@ export const PRODUCTION_METADATA_MODEL_PACKS: ModelPack[] = [
   }
 ];
 
-export const PRODUCTION_IOS_MODEL_PACKS: ModelPack[] = PRODUCTION_METADATA_MODEL_PACKS;
+export const PRODUCTION_IOS_MODEL_PACKS: ModelPack[] = [
+  ...PRODUCTION_METADATA_MODEL_PACKS,
+  {
+    ...PRODUCTION_METADATA_MODEL_PACKS.find((pack) => pack.tier === "case_associate")!,
+    packId: "gemma-4-12b-mlx",
+    sizeBytes: 11_020_140_534,
+    segmentSizeBytes: 11_020_140_534,
+    technicalModelName: "Gemma 4 12B QAT 4-bit (MLX)",
+    repo: "mlx-community/gemma-4-12B-it-qat-4bit",
+    artifactSeed: "gemma4-12b-mlx-metadata-v1",
+    artifactKind: "mlx_directory",
+    runtimeMode: "mlx_swift_lm",
+    fileName: "gemma-4-12B-it-qat-4bit",
+    downloadUrl: "https://huggingface.co/mlx-community/gemma-4-12B-it-qat-4bit",
+    finalSha256: "21978d82c01abd20e40f3ea6fe638831f9d7a77db39617181ba9a9fe880125fc",
+    draftArtifact: {
+      fileName: "gemma-4-12B-it-qat-assistant-4bit",
+      sizeBytes: 270_097_044,
+      finalSha256: "9106d7a467fae26d231f71c617acb950bc0651917f3861cad89a4c67957f0a4f",
+      artifactKind: "mlx_directory",
+      downloadUrl: "https://huggingface.co/mlx-community/gemma-4-12B-it-qat-assistant-4bit"
+    },
+    downloadSource: "direct"
+  }
+];
 
 export const PRODUCTION_ANDROID_MODEL_PACKS: ModelPack[] = [
   {
@@ -578,6 +612,15 @@ export class ModelCatalogService {
           runtimeMode: pack.runtimeMode,
           developmentOnly: pack.developmentOnly,
           minimumAppVersion: pack.minimumAppVersion,
+          draftArtifact: pack.draftArtifact
+            ? {
+                fileName: pack.draftArtifact.fileName,
+                sizeBytes: pack.draftArtifact.sizeBytes,
+                checksumSha256: pack.draftArtifact.finalSha256,
+                artifactKind: pack.draftArtifact.artifactKind,
+                draftTokens: pack.draftArtifact.draftTokens
+              }
+            : undefined,
           downloadConfigured: pack.downloadConfigured,
           resumable: true,
           deliveryBoundary: "no_case_data"

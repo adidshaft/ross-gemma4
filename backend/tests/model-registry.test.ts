@@ -379,3 +379,97 @@ test("production model catalog can append configured iOS MLX packs for capable c
   assert.equal(downloadBody.downloadSession.payload.artifact.artifactKind, "mlx_directory");
   assert.equal(downloadBody.downloadSession.payload.artifact.runtimeMode, "mlx_swift_lm");
 });
+
+test("ios production catalog includes the built-in mlx case associate variant with draft companion", async (t) => {
+  const app = await buildApp({
+    env: buildTestEnv({ ROSS_MODEL_CATALOG_MODE: "production_metadata" }),
+    emitLogsToConsole: false
+  });
+
+  t.after(async () => {
+    await app.close();
+  });
+
+  const iosCatalog = await app.inject({
+    method: "GET",
+    url: "/model-catalog?platform=ios&tier=case_associate"
+  });
+
+  assert.equal(iosCatalog.statusCode, 200);
+  const iosBody = JSON.parse(iosCatalog.body) as {
+    manifest: {
+      payload: {
+        packs: Array<{
+          packId: string;
+          runtimeMode: string;
+          artifactKind: string;
+          technicalModelName: string;
+          draftArtifact?: {
+            fileName: string;
+            checksumSha256: string;
+          };
+        }>;
+      };
+    };
+  };
+
+  const ggufPack = iosBody.manifest.payload.packs.find((pack) => pack.runtimeMode === "gemma_local_runtime");
+  const mlxPack = iosBody.manifest.payload.packs.find((pack) => pack.runtimeMode === "mlx_swift_lm");
+
+  assert.ok(ggufPack);
+  assert.ok(mlxPack);
+  assert.equal(mlxPack?.packId, "gemma-4-12b-mlx");
+  assert.equal(mlxPack?.artifactKind, "mlx_directory");
+  assert.equal(mlxPack?.technicalModelName, "Gemma 4 12B QAT 4-bit (MLX)");
+  assert.equal(mlxPack?.draftArtifact?.fileName, "gemma-4-12B-it-qat-assistant-4bit");
+  assert.match(mlxPack?.draftArtifact?.checksumSha256 ?? "", /^[a-f0-9]{64}$/);
+
+  const download = await app.inject({
+    method: "POST",
+    url: "/model-download/session",
+    payload: {
+      accountToken: "acct_test_token_1234567890",
+      packId: "gemma-4-12b-mlx",
+      platform: "ios",
+      appVersion: "1.0.0",
+      deviceIdHash: "a1b2c3d4e5f6a7b8"
+    }
+  });
+
+  assert.equal(download.statusCode, 200);
+  const downloadBody = JSON.parse(download.body) as {
+    downloadSession: {
+      payload: {
+        artifact: {
+          artifactKind: string;
+          runtimeMode: string;
+          downloadUrl: string;
+          draftArtifact?: {
+            fileName: string;
+            downloadUrl: string;
+            finalSha256: string;
+          };
+        };
+      };
+    };
+  };
+
+  assert.equal(downloadBody.downloadSession.payload.artifact.artifactKind, "mlx_directory");
+  assert.equal(downloadBody.downloadSession.payload.artifact.runtimeMode, "mlx_swift_lm");
+  assert.match(
+    downloadBody.downloadSession.payload.artifact.downloadUrl,
+    /^https:\/\/huggingface\.co\/mlx-community\/gemma-4-12B-it-qat-4bit/
+  );
+  assert.equal(
+    downloadBody.downloadSession.payload.artifact.draftArtifact?.fileName,
+    "gemma-4-12B-it-qat-assistant-4bit"
+  );
+  assert.match(
+    downloadBody.downloadSession.payload.artifact.draftArtifact?.downloadUrl ?? "",
+    /^https:\/\/huggingface\.co\/mlx-community\/gemma-4-12B-it-qat-assistant-4bit/
+  );
+  assert.match(
+    downloadBody.downloadSession.payload.artifact.draftArtifact?.finalSha256 ?? "",
+    /^[a-f0-9]{64}$/
+  );
+});

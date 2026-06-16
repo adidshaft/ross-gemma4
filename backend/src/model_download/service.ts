@@ -76,6 +76,16 @@ export class ModelDownloadService {
           "path" in artifact
             ? `https://downloads.example.invalid${artifact.path}`
             : artifact.downloadUrl,
+        draftArtifact: pack.draftArtifact
+          ? {
+              fileName: pack.draftArtifact.fileName,
+              sizeBytes: pack.draftArtifact.sizeBytes,
+              finalSha256: pack.draftArtifact.finalSha256,
+              artifactKind: pack.draftArtifact.artifactKind,
+              downloadUrl: pack.draftArtifact.downloadUrl,
+              draftTokens: pack.draftArtifact.draftTokens
+            }
+          : undefined,
         rangeUnit: "bytes",
         resumeStrategy: "range_request_segments",
         segments: artifact.segments
