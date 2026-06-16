@@ -2359,6 +2359,13 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "இந்த விருப்பம் assistant files download செய்யாமல் இந்த iPhone-இல் தொடங்க முடியும்.",
             "te": "ఈ ఎంపిక assistant files download చేయకుండా ఈ iPhone లో ప్రారంభమవుతుంది."
         ],
+        "assistant_available_runtimes": [
+            "en": "Available runtimes",
+            "hi": "Available runtimes",
+            "bn": "Available runtimes",
+            "ta": "Available runtimes",
+            "te": "Available runtimes"
+        ],
         "assistant_meta_no_download": [
             "en": "No download",
             "hi": "No download",

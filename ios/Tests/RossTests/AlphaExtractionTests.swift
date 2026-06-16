@@ -7111,6 +7111,67 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(descriptor.artifactKind, "mlx_directory")
     }
 
+    func testAssistantVariantOptionsIncludeInstalledAlternatesAndBuiltIn() {
+        let activePack = installedPack(
+            .caseAssociate,
+            runtimeMode: .mlxSwiftLm,
+            packId: "case-mlx",
+            installPath: "model-packs/case_associate/case-mlx",
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+        let ggufPack = AlphaInstalledModelPack(
+            packId: "case-gguf",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/case-gguf",
+            checksumSha256: String(repeating: "b", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: false
+        )
+
+        let options = alphaAssistantVariantOptions(
+            for: .caseAssociate,
+            installedPacks: [activePack, ggufPack],
+            activePack: activePack,
+            systemAssistantAvailable: true
+        )
+
+        XCTAssertEqual(options.count, 3)
+        XCTAssertEqual(options.first?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(options.first?.isActive, true)
+        XCTAssertTrue(options.contains(where: { $0.runtimeMode == .llamaCppGguf && !$0.isBuiltIn }))
+        XCTAssertTrue(options.contains(where: { $0.runtimeMode == .appleFoundationModels && $0.isBuiltIn }))
+    }
+
+    func testAssistantVariantOptionsAvoidDuplicateBuiltInWhenAlreadyInstalled() {
+        let systemPack = AlphaInstalledModelPack(
+            packId: "apple-foundation-models-case_associate",
+            tier: .caseAssociate,
+            installPath: "system://apple-foundation-models",
+            checksumSha256: String(repeating: "c", count: 64),
+            artifactKind: "system_model",
+            runtimeMode: .appleFoundationModels,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+
+        let options = alphaAssistantVariantOptions(
+            for: .caseAssociate,
+            installedPacks: [systemPack],
+            activePack: systemPack,
+            systemAssistantAvailable: true
+        )
+
+        XCTAssertEqual(options.count, 1)
+        XCTAssertEqual(options.first?.runtimeMode, .appleFoundationModels)
+        XCTAssertEqual(options.first?.isActive, true)
+        XCTAssertEqual(options.first?.isBuiltIn, true)
+    }
+
     func testAssistantUpdateCandidateUsesMLXArchiveChecksumWhenPackIdMatches() {
         let installedPack = AlphaInstalledModelPack(
             packId: "gemma-4-12b-mlx",

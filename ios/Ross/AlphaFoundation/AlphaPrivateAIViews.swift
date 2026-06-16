@@ -671,12 +671,25 @@ struct AlphaPrivateAIOfferCard: View {
     @Bindable var model: AlphaRossModel
     let offer: AlphaPackOffer
 
+    private var mobileAllowed: Bool {
+        model.persisted.settings.allowMobileDataForLargePacks || offer.tier == .quickStart
+    }
+
     private var latestJob: AlphaModelDownloadJob? {
         model.persisted.modelJobs.first { $0.tier == offer.tier }
     }
 
     private var installedPack: AlphaInstalledModelPack? {
         model.installedPack(for: offer.tier)
+    }
+
+    private var variantOptions: [AlphaAssistantVariantOption] {
+        alphaAssistantVariantOptions(
+            for: offer.tier,
+            installedPacks: model.privateAISnapshot.installedPacks,
+            activePack: model.activePack,
+            systemAssistantAvailable: systemAssistantAvailable
+        )
     }
 
     private var systemAssistantAvailable: Bool {
@@ -783,6 +796,20 @@ struct AlphaPrivateAIOfferCard: View {
         isActive || (isSettingUp && !prefersBuiltInActivation)
     }
 
+    private func activateVariant(_ option: AlphaAssistantVariantOption) {
+        guard !option.isActive else { return }
+        if option.runtimeMode == .appleFoundationModels {
+            Task {
+                await model.startPackDownload(
+                    for: offer.tier,
+                    mobileAllowed: mobileAllowed
+                )
+            }
+        } else if let pack = option.pack {
+            model.activateInstalledPack(pack)
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             VStack(alignment: .leading, spacing: 5) {
@@ -817,6 +844,27 @@ struct AlphaPrivateAIOfferCard: View {
                         font: .caption2.weight(.medium)
                     )
                     .padding(.top, 2)
+                }
+
+                if variantOptions.count > 1 {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(rossLocalized("assistant_available_runtimes"))
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(Color.rossInk.opacity(0.60))
+
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(variantOptions) { option in
+                                    AlphaAssistantVariantChip(
+                                        option: option,
+                                        action: { activateVariant(option) }
+                                    )
+                                }
+                            }
+                            .padding(.vertical, 2)
+                        }
+                    }
+                    .padding(.top, 4)
                 }
             }
 
@@ -863,12 +911,12 @@ struct AlphaPrivateAIOfferCard: View {
                     if activeButRuntimeUnavailable {
                         await model.repairAssistantPack(
                             for: offer.tier,
-                            mobileAllowed: model.persisted.settings.allowMobileDataForLargePacks || offer.tier == .quickStart
+                            mobileAllowed: mobileAllowed
                         )
                     } else if prefersBuiltInActivation {
                         await model.startPackDownload(
                             for: offer.tier,
-                            mobileAllowed: model.persisted.settings.allowMobileDataForLargePacks || offer.tier == .quickStart
+                            mobileAllowed: mobileAllowed
                         )
                     } else if let installedPack {
                         model.activateInstalledPack(installedPack)
@@ -877,7 +925,7 @@ struct AlphaPrivateAIOfferCard: View {
                     } else {
                         await model.startPackDownload(
                             for: offer.tier,
-                            mobileAllowed: model.persisted.settings.allowMobileDataForLargePacks || offer.tier == .quickStart
+                            mobileAllowed: mobileAllowed
                         )
                     }
                 }
@@ -887,6 +935,123 @@ struct AlphaPrivateAIOfferCard: View {
         }
         .padding(10)
         .modifier(AlphaPrivateAIOfferSurface(isActive: isActive))
+    }
+}
+
+struct AlphaAssistantVariantOption: Identifiable, Hashable, Sendable {
+    let pack: AlphaInstalledModelPack?
+    let runtimeMode: AlphaPackRuntimeMode
+    let isActive: Bool
+    let isBuiltIn: Bool
+
+    var id: String {
+        if let pack {
+            return pack.id.uuidString
+        }
+        return "system-\(runtimeMode.rawValue)"
+    }
+}
+
+func alphaAssistantVariantOptions(
+    for tier: AlphaCapabilityTier,
+    installedPacks: [AlphaInstalledModelPack],
+    activePack: AlphaInstalledModelPack?,
+    systemAssistantAvailable: Bool
+) -> [AlphaAssistantVariantOption] {
+    var options = installedPacks
+        .filter { $0.tier == tier }
+        .map { pack in
+            AlphaAssistantVariantOption(
+                pack: pack,
+                runtimeMode: pack.runtimeMode,
+                isActive: activePack?.id == pack.id,
+                isBuiltIn: pack.runtimeMode == .appleFoundationModels || pack.artifactKind == "system_model"
+            )
+        }
+
+    let hasSystemOption = options.contains { $0.isBuiltIn || $0.runtimeMode == .appleFoundationModels }
+    if systemAssistantAvailable && !hasSystemOption {
+        options.append(
+            AlphaAssistantVariantOption(
+                pack: nil,
+                runtimeMode: .appleFoundationModels,
+                isActive: activePack?.runtimeMode == .appleFoundationModels && activePack?.tier == tier,
+                isBuiltIn: true
+            )
+        )
+    }
+
+    func runtimeRank(_ runtimeMode: AlphaPackRuntimeMode) -> Int {
+        switch runtimeMode {
+        case .appleFoundationModels:
+            return 0
+        case .mlxSwiftLm:
+            return 1
+        case .llamaCppGguf:
+            return 2
+        case .mediapipeLlm:
+            return 3
+        case .deterministicDev, .unavailable:
+            return 4
+        }
+    }
+
+    return options.sorted { lhs, rhs in
+        if lhs.isActive != rhs.isActive {
+            return lhs.isActive && !rhs.isActive
+        }
+        let lhsRank = runtimeRank(lhs.runtimeMode)
+        let rhsRank = runtimeRank(rhs.runtimeMode)
+        if lhsRank != rhsRank {
+            return lhsRank < rhsRank
+        }
+        return lhs.id < rhs.id
+    }
+}
+
+private struct AlphaAssistantVariantChip: View {
+    let option: AlphaAssistantVariantOption
+    let action: () -> Void
+
+    private var tint: Color {
+        if option.isActive {
+            return Color.rossAccent
+        }
+        if option.isBuiltIn {
+            return Color.rossHighlight
+        }
+        return Color.rossInk.opacity(0.42)
+    }
+
+    private var iconName: String {
+        option.isBuiltIn ? "iphone" : "cpu"
+    }
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: iconName)
+                    .font(.caption2.weight(.semibold))
+                Text(option.runtimeMode.displayLabel)
+                    .font(.caption2.weight(.semibold))
+                if option.isActive {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.caption2.weight(.bold))
+                }
+            }
+            .foregroundStyle(option.isActive ? Color.rossAccent : Color.rossInk.opacity(0.70))
+            .padding(.horizontal, 9)
+            .padding(.vertical, 6)
+            .rossNativeGlassSurface(
+                tint: tint,
+                shape: Capsule(),
+                interactive: !option.isActive,
+                fallbackFillOpacity: option.isActive ? 0.84 : 0.66,
+                fallbackStrokeOpacity: option.isActive ? 0.48 : 0.30
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(option.isActive)
     }
 }
 
