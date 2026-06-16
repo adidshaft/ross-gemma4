@@ -13547,6 +13547,19 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(batchLimit, 24)
     }
 
+    func testStructuredDocumentBatchLimitUsesMidHighMLXBranch() {
+        let batchLimit = AlphaLocalPromptBudgetPlanner.structuredDocumentBatchLimit(
+            runtimeMode: .mlxSwiftLm,
+            capabilityTier: .caseAssociate,
+            task: .legalFieldExtraction,
+            baseBatchLimit: 18,
+            baseMaxInputChars: 61_600,
+            lastInvocation: nil
+        )
+
+        XCTAssertEqual(batchLimit, 24)
+    }
+
     func testStructuredDocumentBatchLimitWidensCaseMemoryPassesForCapableFoundationRuns() {
         let batchLimit = AlphaLocalPromptBudgetPlanner.structuredDocumentBatchLimit(
             runtimeMode: .appleFoundationModels,
@@ -13670,6 +13683,34 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(batchLimit, 29)
     }
 
+    func testStructuredDocumentBatchLimitWidensFurtherAfterFastMidHighMLXRun() {
+        let fastInvocation = AlphaLocalModelInvocation(
+            task: .legalFieldExtraction,
+            runtimeMode: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 18.1,
+            timeToFirstTokenMs: 1_150,
+            status: .complete
+        )
+
+        let batchLimit = AlphaLocalPromptBudgetPlanner.structuredDocumentBatchLimit(
+            runtimeMode: .mlxSwiftLm,
+            capabilityTier: .caseAssociate,
+            task: .legalFieldExtraction,
+            baseBatchLimit: 18,
+            baseMaxInputChars: 61_600,
+            lastInvocation: fastInvocation
+        )
+
+        XCTAssertEqual(batchLimit, 29)
+    }
+
     func testStructuredDocumentBatchLimitWidensFurtherAfterFastFoundationRun() {
         let fastInvocation = AlphaLocalModelInvocation(
             task: .legalFieldExtraction,
@@ -13765,6 +13806,34 @@ final class AlphaExtractionTests: XCTestCase {
         )
 
         XCTAssertEqual(batchLimit, 41)
+    }
+
+    func testStructuredDocumentBatchLimitWidensCaseMemoryAfterFastMidHighMLXRun() {
+        let fastInvocation = AlphaLocalModelInvocation(
+            task: .caseMemorySynthesis,
+            runtimeMode: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+            caseId: nil,
+            documentId: nil,
+            extractionRunId: nil,
+            capabilityTier: AlphaCapabilityTier.caseAssociate.rawValue,
+            inputSourceRefs: [],
+            promptHash: "prompt",
+            inputHash: "input",
+            estimatedOutputTokensPerSecond: 19,
+            timeToFirstTokenMs: 980,
+            status: .complete
+        )
+
+        let batchLimit = AlphaLocalPromptBudgetPlanner.structuredDocumentBatchLimit(
+            runtimeMode: .mlxSwiftLm,
+            capabilityTier: .caseAssociate,
+            task: .caseMemorySynthesis,
+            baseBatchLimit: 24,
+            baseMaxInputChars: 61_600,
+            lastInvocation: fastInvocation
+        )
+
+        XCTAssertEqual(batchLimit, 43)
     }
 
     func testStructuredDocumentBatchLimitWidensCaseMemoryAfterFastFoundationRun() {

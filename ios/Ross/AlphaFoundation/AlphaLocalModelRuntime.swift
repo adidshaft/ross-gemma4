@@ -787,6 +787,9 @@ enum AlphaLocalPromptBudgetPlanner {
             if baseMaxInputChars >= 68_000 {
                 return prefersWiderBatches ? 6 : 5
             }
+            if baseMaxInputChars >= 60_000 {
+                return prefersWiderBatches ? 6 : 5
+            }
             if baseMaxInputChars >= 52_000 {
                 return prefersWiderBatches ? 5 : 4
             }
@@ -1088,6 +1091,9 @@ enum AlphaLocalPromptBudgetPlanner {
         case .mlxSwiftLm:
             if baseMaxInputChars >= 68_000 {
                 return prefersWiderBatches ? 1.58 : 1.38
+            }
+            if baseMaxInputChars >= 60_000 {
+                return prefersWiderBatches ? 1.56 : 1.34
             }
             if baseMaxInputChars >= 52_000 {
                 return prefersWiderBatches ? 1.5 : 1.3
