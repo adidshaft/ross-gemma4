@@ -9840,13 +9840,16 @@ final class AlphaExtractionTests: XCTestCase {
             physicalMemoryBytes: 12 * 1_073_741_824
         )
 
-        XCTAssertEqual(options.count, 2)
+        XCTAssertEqual(options.count, 3)
         XCTAssertEqual(options.first?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(options.first?.isBuiltIn, false)
         XCTAssertEqual(options.first?.detailLabel, "~13 tok/s · 24,576 tokens")
-        XCTAssertEqual(options.last?.runtimeMode, .appleFoundationModels)
-        XCTAssertEqual(options.last?.isBuiltIn, true)
-        XCTAssertEqual(options.last?.detailLabel, "No download · 12,288 tokens")
+        XCTAssertEqual(options.dropFirst().first?.runtimeMode, .appleFoundationModels)
+        XCTAssertEqual(options.dropFirst().first?.isBuiltIn, true)
+        XCTAssertEqual(options.dropFirst().first?.detailLabel, "No download · 12,288 tokens")
+        XCTAssertEqual(options.last?.runtimeMode, .llamaCppGguf)
+        XCTAssertEqual(options.last?.isBuiltIn, false)
+        XCTAssertEqual(options.last?.detailLabel, "~11 tok/s · 28,672 tokens")
     }
 
     func testAssistantVariantOptionsPreferBuiltInWhenRuntimePreferenceIsCoreAI() {
@@ -9872,13 +9875,65 @@ final class AlphaExtractionTests: XCTestCase {
             physicalMemoryBytes: 12 * 1_073_741_824
         )
 
-        XCTAssertEqual(options.count, 2)
+        XCTAssertEqual(options.count, 3)
         XCTAssertEqual(options.first?.runtimeMode, .appleFoundationModels)
         XCTAssertEqual(options.first?.isBuiltIn, true)
         XCTAssertEqual(options.first?.detailLabel, "No download · 12,288 tokens")
-        XCTAssertEqual(options.last?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(options.dropFirst().first?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(options.dropFirst().first?.isBuiltIn, false)
+        XCTAssertEqual(options.dropFirst().first?.detailLabel, "~13 tok/s · 24,576 tokens")
+        XCTAssertEqual(options.last?.runtimeMode, .llamaCppGguf)
         XCTAssertEqual(options.last?.isBuiltIn, false)
-        XCTAssertEqual(options.last?.detailLabel, "~13 tok/s · 24,576 tokens")
+        XCTAssertEqual(options.last?.detailLabel, "~11 tok/s · 28,672 tokens")
+    }
+
+    func testAssistantVariantOptionsIncludeDownloadableRuntimesForFreshSetup() {
+        let options = alphaAssistantVariantOptions(
+            for: .caseAssociate,
+            installedPacks: [],
+            activePack: nil,
+            systemAssistantAvailable: false,
+            preferredRuntimeMode: .mlxSwiftLm,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824
+        )
+
+        XCTAssertEqual(options.map(\.runtimeMode), [.mlxSwiftLm, .llamaCppGguf])
+        XCTAssertEqual(options.first?.isSelected, true)
+        XCTAssertEqual(options.first?.isBuiltIn, false)
+        XCTAssertEqual(options.first?.detailLabel, "~13 tok/s · 24,576 tokens")
+        XCTAssertEqual(options.last?.isSelected, false)
+        XCTAssertEqual(options.last?.detailLabel, "~11 tok/s · 28,672 tokens")
+    }
+
+    func testAssistantVariantOptionsKeepInstalledSelectionAndOfferDownloadableAlternate() {
+        let mlxPack = AlphaInstalledModelPack(
+            packId: "case-mlx",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/case-mlx",
+            checksumSha256: String(repeating: "f", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: false
+        )
+
+        let options = alphaAssistantVariantOptions(
+            for: .caseAssociate,
+            installedPacks: [mlxPack],
+            activePack: nil,
+            systemAssistantAvailable: false,
+            preferredRuntimeMode: .mlxSwiftLm,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824
+        )
+
+        XCTAssertEqual(options.map(\.runtimeMode), [.mlxSwiftLm, .llamaCppGguf])
+        XCTAssertEqual(options.first?.pack?.packId, "case-mlx")
+        XCTAssertEqual(options.first?.isSelected, true)
+        XCTAssertNil(options.last?.pack)
+        XCTAssertEqual(options.last?.isSelected, false)
     }
 
     func testAssistantPreferredInstalledPackUsesPreferredRuntimeInsteadOfFirstStoredPack() {

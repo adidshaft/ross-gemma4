@@ -1268,6 +1268,43 @@ func alphaAssistantSetupPresentation(
     )
 }
 
+func alphaAssistantAvailableSetupRuntimeModes(
+    for tier: AlphaCapabilityTier,
+    cachedCatalogs: [AlphaAssistantCatalogDescriptor]? = nil,
+    cachedDownloads: [AlphaAssistantDownloadDescriptor]? = nil
+) -> [AlphaPackRuntimeMode] {
+    let normalizedTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
+    var descriptors: [AlphaAssistantCatalogDescriptor] = [
+        alphaDefaultAssistantCatalogDescriptor(for: normalizedTier)
+    ]
+
+    if let bundledMLXDescriptor = alphaBundledAssistantCatalogDescriptor(
+        for: normalizedTier,
+        preferredRuntimeMode: .mlxSwiftLm
+    ) {
+        descriptors.append(bundledMLXDescriptor)
+    }
+
+    if let cachedCatalogs {
+        descriptors.append(contentsOf: cachedCatalogs)
+    }
+
+    if let cachedDownloads {
+        descriptors.append(contentsOf: cachedDownloads.map(alphaAssistantCatalogDescriptor(from:)))
+    }
+
+    var seen = Set<AlphaPackRuntimeMode>()
+    return descriptors.compactMap { descriptor in
+        guard AlphaCapabilityTier.normalizedAssistantSelection(descriptor.tier) == normalizedTier,
+              !descriptor.developmentOnly,
+              alphaAssistantTierSupportsInstallerRuntime(normalizedTier, runtimeMode: descriptor.runtimeMode),
+              seen.insert(descriptor.runtimeMode).inserted else {
+            return nil
+        }
+        return descriptor.runtimeMode
+    }
+}
+
 private let alphaAssistantCatalogRefreshStaleInterval: TimeInterval = 86_400
 
 func alphaAssistantCatalogRefreshIsStale(

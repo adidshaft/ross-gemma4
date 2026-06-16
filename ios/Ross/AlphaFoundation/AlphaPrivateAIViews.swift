@@ -702,7 +702,9 @@ struct AlphaPrivateAIOfferCard: View {
             installedPacks: model.privateAISnapshot.installedPacks,
             activePack: model.activePack,
             systemAssistantAvailable: systemAssistantAvailable,
-            preferredRuntimeMode: setupPresentation?.runtimeMode
+            preferredRuntimeMode: setupPresentation?.runtimeMode,
+            cachedCatalogs: model.persisted.cachedAssistantCatalogs,
+            cachedDownloads: model.persisted.cachedAssistantDownloads
         )
     }
 
@@ -845,7 +847,7 @@ struct AlphaPrivateAIOfferCard: View {
     }
 
     private func activateVariant(_ option: AlphaAssistantVariantOption) {
-        guard !option.isActive else { return }
+        guard !option.isSelected else { return }
         if option.runtimeMode == .appleFoundationModels {
             Task {
                 await model.startPackDownload(
@@ -856,6 +858,8 @@ struct AlphaPrivateAIOfferCard: View {
             }
         } else if let pack = option.pack {
             model.activateInstalledPack(pack)
+        } else {
+            model.setAssistantSetupRuntimeOverride(option.runtimeMode, for: offer.tier)
         }
     }
 
@@ -1028,13 +1032,14 @@ struct AlphaAssistantVariantOption: Identifiable, Hashable, Sendable {
     let runtimeMode: AlphaPackRuntimeMode
     let isActive: Bool
     let isBuiltIn: Bool
+    let isSelected: Bool
     let detailLabel: String?
 
     var id: String {
         if let pack {
             return pack.id.uuidString
         }
-        return "system-\(runtimeMode.rawValue)"
+        return "\(isBuiltIn ? "system" : "setup")-\(runtimeMode.rawValue)"
     }
 }
 
@@ -1044,25 +1049,53 @@ func alphaAssistantVariantOptions(
     activePack: AlphaInstalledModelPack?,
     systemAssistantAvailable: Bool,
     preferredRuntimeMode: AlphaPackRuntimeMode? = nil,
+    cachedCatalogs: [AlphaAssistantCatalogDescriptor]? = nil,
+    cachedDownloads: [AlphaAssistantDownloadDescriptor]? = nil,
     isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
     physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory
 ) -> [AlphaAssistantVariantOption] {
+    let normalizedTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
     var options = installedPacks
-        .filter { AlphaCapabilityTier.assistantSelectionsMatch($0.tier, tier) }
+        .filter { AlphaCapabilityTier.assistantSelectionsMatch($0.tier, normalizedTier) }
         .map { pack in
-            AlphaAssistantVariantOption(
+            let isActive = activePack?.id == pack.id
+            return AlphaAssistantVariantOption(
                 pack: pack,
                 runtimeMode: pack.runtimeMode,
-                isActive: activePack?.id == pack.id,
+                isActive: isActive,
                 isBuiltIn: pack.runtimeMode == .appleFoundationModels || pack.artifactKind == "system_model",
+                isSelected: isActive || (activePack == nil && preferredRuntimeMode == pack.runtimeMode),
                 detailLabel: alphaAssistantVariantDetailLabel(
                     runtimeMode: pack.runtimeMode,
-                    tier: tier,
+                    tier: normalizedTier,
                     isPhoneFormFactor: isPhoneFormFactor,
                     physicalMemoryBytes: physicalMemoryBytes
                 )
             )
         }
+
+    let availableSetupRuntimeModes = alphaAssistantAvailableSetupRuntimeModes(
+        for: normalizedTier,
+        cachedCatalogs: cachedCatalogs,
+        cachedDownloads: cachedDownloads
+    )
+    for runtimeMode in availableSetupRuntimeModes where !options.contains(where: { $0.runtimeMode == runtimeMode }) {
+        options.append(
+            AlphaAssistantVariantOption(
+                pack: nil,
+                runtimeMode: runtimeMode,
+                isActive: false,
+                isBuiltIn: false,
+                isSelected: activePack == nil && preferredRuntimeMode == runtimeMode,
+                detailLabel: alphaAssistantVariantDetailLabel(
+                    runtimeMode: runtimeMode,
+                    tier: normalizedTier,
+                    isPhoneFormFactor: isPhoneFormFactor,
+                    physicalMemoryBytes: physicalMemoryBytes
+                )
+            )
+        )
+    }
 
     let hasSystemOption = options.contains { $0.isBuiltIn || $0.runtimeMode == .appleFoundationModels }
     if systemAssistantAvailable && !hasSystemOption {
@@ -1071,11 +1104,12 @@ func alphaAssistantVariantOptions(
                 pack: nil,
                 runtimeMode: .appleFoundationModels,
                 isActive: activePack?.runtimeMode == .appleFoundationModels &&
-                    AlphaCapabilityTier.assistantSelectionsMatch(activePack?.tier, tier),
+                    AlphaCapabilityTier.assistantSelectionsMatch(activePack?.tier, normalizedTier),
                 isBuiltIn: true,
+                isSelected: activePack == nil && preferredRuntimeMode == .appleFoundationModels,
                 detailLabel: alphaAssistantVariantDetailLabel(
                     runtimeMode: .appleFoundationModels,
-                    tier: tier,
+                    tier: normalizedTier,
                     isPhoneFormFactor: isPhoneFormFactor,
                     physicalMemoryBytes: physicalMemoryBytes
                 )
@@ -1101,6 +1135,9 @@ func alphaAssistantVariantOptions(
     return options.sorted { lhs, rhs in
         if lhs.isActive != rhs.isActive {
             return lhs.isActive && !rhs.isActive
+        }
+        if lhs.isSelected != rhs.isSelected {
+            return lhs.isSelected && !rhs.isSelected
         }
         let lhsMatchesPreferred = preferredRuntimeMode == lhs.runtimeMode
         let rhsMatchesPreferred = preferredRuntimeMode == rhs.runtimeMode
@@ -1196,7 +1233,7 @@ private struct AlphaAssistantVariantChip: View {
     let action: () -> Void
 
     private var tint: Color {
-        if option.isActive {
+        if option.isSelected {
             return Color.rossAccent
         }
         if option.isBuiltIn {
@@ -1218,7 +1255,7 @@ private struct AlphaAssistantVariantChip: View {
                     HStack(spacing: 5) {
                         Text(option.runtimeMode.displayLabel)
                             .font(.caption2.weight(.semibold))
-                        if option.isActive {
+                        if option.isSelected {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.caption2.weight(.bold))
                         }
@@ -1226,24 +1263,24 @@ private struct AlphaAssistantVariantChip: View {
                     if let detailLabel = option.detailLabel {
                         Text(detailLabel)
                             .font(.system(size: 10, weight: .medium, design: .rounded))
-                            .foregroundStyle(Color.rossInk.opacity(option.isActive ? 0.62 : 0.50))
+                            .foregroundStyle(Color.rossInk.opacity(option.isSelected ? 0.62 : 0.50))
                             .lineLimit(1)
                     }
                 }
             }
-            .foregroundStyle(option.isActive ? Color.rossAccent : Color.rossInk.opacity(0.70))
+            .foregroundStyle(option.isSelected ? Color.rossAccent : Color.rossInk.opacity(0.70))
             .padding(.horizontal, 9)
             .padding(.vertical, 6)
             .rossNativeGlassSurface(
                 tint: tint,
                 shape: Capsule(),
-                interactive: !option.isActive,
-                fallbackFillOpacity: option.isActive ? 0.84 : 0.66,
-                fallbackStrokeOpacity: option.isActive ? 0.48 : 0.30
+                interactive: !option.isSelected,
+                fallbackFillOpacity: option.isSelected ? 0.84 : 0.66,
+                fallbackStrokeOpacity: option.isSelected ? 0.48 : 0.30
             )
         }
         .buttonStyle(.plain)
-        .disabled(option.isActive)
+        .disabled(option.isSelected)
     }
 }
 
