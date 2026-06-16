@@ -366,28 +366,41 @@ extension AlphaRossModel {
         }
     }
 
-    func extractionUpgradeMessage(for document: AlphaCaseDocument) -> String? {
+    func extractionUpgradeTargetTier(for document: AlphaCaseDocument) -> AlphaCapabilityTier? {
         let mode = activeExtractionMode
         let unresolvedFindings = document.extractionFindings.filter { !$0.resolved }
         let hasQualityWarnings = unresolvedFindings.contains {
             $0.kind == .lowConfidenceOcr || $0.kind == .languageUncertain
         }
         let hasStructuredCoverageLimit = unresolvedFindings.contains { $0.kind == .unsupportedLayout }
-        if mode == .basic {
-            return alphaBetterExtractionStandardMessage()
+        if hasQualityWarnings {
+            return .seniorDraftingSupport
         }
-        if mode == .quickStart,
-           document.languageProfile?.primaryLanguage == .mixed || hasQualityWarnings {
-            return alphaBetterExtractionAdvancedMessage()
+        if mode == .basic {
+            return .caseAssociate
         }
         if mode == .quickStart, hasStructuredCoverageLimit {
-            return alphaBetterExtractionStandardMessage()
-        }
-        if mode == .caseAssociate,
-           hasQualityWarnings {
-            return alphaBetterExtractionAdvancedMessage()
+            return .caseAssociate
         }
         return nil
+    }
+
+    func extractionUpgradeMessage(for document: AlphaCaseDocument) -> String? {
+        switch extractionUpgradeTargetTier(for: document) {
+        case .caseAssociate:
+            return alphaBetterExtractionStandardMessage()
+        case .seniorDraftingSupport:
+            return alphaBetterExtractionAdvancedMessage()
+        default:
+            return nil
+        }
+    }
+
+    func openBetterExtractionSetup(for document: AlphaCaseDocument) {
+        if let targetTier = extractionUpgradeTargetTier(for: document) {
+            selectedTier = targetTier
+        }
+        path.append(.privateAISettings)
     }
 
     func acceptExtractedField(caseId: UUID, documentId: UUID, fieldId: UUID) {

@@ -5256,6 +5256,85 @@ final class AlphaExtractionTests: XCTestCase {
         ]
 
         XCTAssertEqual(model.extractionUpgradeMessage(for: document), alphaBetterExtractionStandardMessage())
+        XCTAssertEqual(model.extractionUpgradeTargetTier(for: document), .caseAssociate)
+    }
+
+    @MainActor
+    func testExtractionUpgradeMessagePromotesSeniorForQualityWarningsWithoutAssistant() {
+        let caseId = UUID()
+        let documentId = UUID()
+        let model = AlphaRossModel(previewState: .empty())
+
+        var document = AlphaCaseDocument(
+            id: documentId,
+            title: "Scanned Order",
+            fileName: "scanned-order.pdf",
+            kind: .pdf,
+            storedRelativePath: "tests/scanned-order.pdf",
+            importedAt: .now,
+            pageCount: 1,
+            ocrStatus: .ocrComplete,
+            indexingStatus: .indexed,
+            extractedText: "Scanned order text",
+            dominantSourceSnippet: nil,
+            lastIndexedAt: .now,
+            pages: [AlphaDocumentPage(pageNumber: 1, snippet: "Scanned order text", ocrConfidence: 0.42)]
+        )
+        document.extractionFindings = [
+            AlphaExtractionFinding(
+                caseId: caseId,
+                documentId: documentId,
+                kind: .lowConfidenceOcr,
+                message: "Low confidence scan",
+                sourceRefs: [],
+                severity: .warning
+            )
+        ]
+
+        XCTAssertEqual(model.extractionUpgradeTargetTier(for: document), .seniorDraftingSupport)
+        XCTAssertEqual(model.extractionUpgradeMessage(for: document), alphaBetterExtractionAdvancedMessage())
+    }
+
+    @MainActor
+    func testOpenBetterExtractionSetupPreselectsUpgradeTier() {
+        let caseId = UUID()
+        let documentId = UUID()
+        let activePack = installedPack(.quickStart)
+        let model = AlphaRossModel(previewState: .empty())
+        model.privateAISnapshot.activePack = activePack
+        model.privateAISnapshot.installedPacks = [activePack]
+        model.selectedTier = .quickStart
+
+        var document = AlphaCaseDocument(
+            id: documentId,
+            title: "Long Order",
+            fileName: "long-order.pdf",
+            kind: .pdf,
+            storedRelativePath: "tests/long-order.pdf",
+            importedAt: .now,
+            pageCount: 13,
+            ocrStatus: .nativeText,
+            indexingStatus: .indexed,
+            extractedText: "Long order text",
+            dominantSourceSnippet: nil,
+            lastIndexedAt: .now,
+            pages: (1...13).map { AlphaDocumentPage(pageNumber: $0, snippet: "Order page \($0)", ocrConfidence: 0.97) }
+        )
+        document.extractionFindings = [
+            AlphaExtractionFinding(
+                caseId: caseId,
+                documentId: documentId,
+                kind: .unsupportedLayout,
+                message: alphaFileReviewFocusedSourceSectionsWarning(focusedCount: 6, totalCount: 13),
+                sourceRefs: [],
+                severity: .warning
+            )
+        ]
+
+        model.openBetterExtractionSetup(for: document)
+
+        XCTAssertEqual(model.selectedTier, .caseAssociate)
+        XCTAssertEqual(model.path.last, .privateAISettings)
     }
 
     func testExtractedFieldsAlwaysRetainSourceRefs() async {

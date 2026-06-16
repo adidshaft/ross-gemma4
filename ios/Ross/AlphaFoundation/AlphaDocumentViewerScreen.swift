@@ -666,7 +666,7 @@ struct AlphaDocumentViewerScreen: View {
                                             .foregroundStyle(Color.rossAccent)
 
                                         Button(rossLocalized("document_run_better_extraction")) {
-                                            model.path.append(.privateAISettings)
+                                            model.openBetterExtractionSetup(for: document)
                                         }
                                         .rossGlassButtonStyle(tint: Color.rossAccent, cornerRadius: 16)
                                     }
