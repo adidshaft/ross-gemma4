@@ -9653,17 +9653,19 @@ final class AlphaExtractionTests: XCTestCase {
             for: .caseAssociate,
             installedPacks: [activePack, ggufPack],
             activePack: activePack,
-            systemAssistantAvailable: true
+            systemAssistantAvailable: true,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824
         )
 
         XCTAssertEqual(options.count, 3)
         XCTAssertEqual(options.first?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(options.first?.isActive, true)
-        XCTAssertEqual(options.first?.detailLabel, "Longer local context")
+        XCTAssertEqual(options.first?.detailLabel, "~13 tok/s · 24,576 tokens")
         XCTAssertTrue(options.contains(where: { $0.runtimeMode == .llamaCppGguf && !$0.isBuiltIn }))
-        XCTAssertTrue(options.contains(where: { $0.runtimeMode == .llamaCppGguf && $0.detailLabel == "Largest local context" }))
+        XCTAssertTrue(options.contains(where: { $0.runtimeMode == .llamaCppGguf && $0.detailLabel == "~11 tok/s · 28,672 tokens" }))
         XCTAssertTrue(options.contains(where: { $0.runtimeMode == .appleFoundationModels && $0.isBuiltIn }))
-        XCTAssertTrue(options.contains(where: { $0.runtimeMode == .appleFoundationModels && $0.detailLabel == "No download" }))
+        XCTAssertTrue(options.contains(where: { $0.runtimeMode == .appleFoundationModels && $0.detailLabel == "No download · 12,288 tokens" }))
     }
 
     func testAssistantVariantOptionsAvoidDuplicateBuiltInWhenAlreadyInstalled() {
@@ -9683,14 +9685,16 @@ final class AlphaExtractionTests: XCTestCase {
             for: .caseAssociate,
             installedPacks: [systemPack],
             activePack: systemPack,
-            systemAssistantAvailable: true
+            systemAssistantAvailable: true,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824
         )
 
         XCTAssertEqual(options.count, 1)
         XCTAssertEqual(options.first?.runtimeMode, .appleFoundationModels)
         XCTAssertEqual(options.first?.isActive, true)
         XCTAssertEqual(options.first?.isBuiltIn, true)
-        XCTAssertEqual(options.first?.detailLabel, "No download")
+        XCTAssertEqual(options.first?.detailLabel, "No download · 12,288 tokens")
     }
 
     func testAssistantVariantOptionsPreferMLXOverBuiltInWhenRuntimePreferenceIsMLX() {
@@ -9711,16 +9715,18 @@ final class AlphaExtractionTests: XCTestCase {
             installedPacks: [mlxPack],
             activePack: nil,
             systemAssistantAvailable: true,
-            preferredRuntimeMode: .mlxSwiftLm
+            preferredRuntimeMode: .mlxSwiftLm,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824
         )
 
         XCTAssertEqual(options.count, 2)
         XCTAssertEqual(options.first?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(options.first?.isBuiltIn, false)
-        XCTAssertEqual(options.first?.detailLabel, "Longer local context")
+        XCTAssertEqual(options.first?.detailLabel, "~13 tok/s · 24,576 tokens")
         XCTAssertEqual(options.last?.runtimeMode, .appleFoundationModels)
         XCTAssertEqual(options.last?.isBuiltIn, true)
-        XCTAssertEqual(options.last?.detailLabel, "No download")
+        XCTAssertEqual(options.last?.detailLabel, "No download · 12,288 tokens")
     }
 
     func testAssistantVariantOptionsPreferBuiltInWhenRuntimePreferenceIsCoreAI() {
@@ -9741,16 +9747,18 @@ final class AlphaExtractionTests: XCTestCase {
             installedPacks: [mlxPack],
             activePack: nil,
             systemAssistantAvailable: true,
-            preferredRuntimeMode: .appleFoundationModels
+            preferredRuntimeMode: .appleFoundationModels,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824
         )
 
         XCTAssertEqual(options.count, 2)
         XCTAssertEqual(options.first?.runtimeMode, .appleFoundationModels)
         XCTAssertEqual(options.first?.isBuiltIn, true)
-        XCTAssertEqual(options.first?.detailLabel, "No download")
+        XCTAssertEqual(options.first?.detailLabel, "No download · 12,288 tokens")
         XCTAssertEqual(options.last?.runtimeMode, .mlxSwiftLm)
         XCTAssertEqual(options.last?.isBuiltIn, false)
-        XCTAssertEqual(options.last?.detailLabel, "Longer local context")
+        XCTAssertEqual(options.last?.detailLabel, "~13 tok/s · 24,576 tokens")
     }
 
     func testAssistantPreferredInstalledPackUsesPreferredRuntimeInsteadOfFirstStoredPack() {

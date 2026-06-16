@@ -1121,27 +1121,52 @@ private func alphaAssistantVariantDetailLabel(
     isPhoneFormFactor: Bool,
     physicalMemoryBytes: UInt64
 ) -> String? {
-    switch runtimeMode {
-    case .appleFoundationModels:
-        return rossLocalized("assistant_meta_no_download")
-    case .mlxSwiftLm:
-        let contextTokens = AlphaMLXRuntimeProfile.contextWindowTokens(
+    if runtimeMode == .appleFoundationModels {
+        if let contextLabel = alphaAssistantSetupContextLabel(
             for: tier,
-            physicalMemory: physicalMemoryBytes
-        )
-        if contextTokens >= 24_576 {
-            return "Longer local context"
+            runtimeMode: runtimeMode,
+            physicalMemoryBytes: physicalMemoryBytes
+        ) {
+            return "\(rossLocalized("assistant_meta_no_download")) · \(contextLabel)"
         }
+        return rossLocalized("assistant_meta_no_download")
+    }
+
+    let hasDraftCompanion: Bool = switch runtimeMode {
+    case .mlxSwiftLm:
+        true
+    case .llamaCppGguf:
+        true
+    case .appleFoundationModels, .deterministicDev, .mediapipeLlm, .unavailable:
+        false
+    }
+
+    let speedLabel = alphaAssistantSetupSpeedLabel(
+        for: tier,
+        runtimeMode: runtimeMode,
+        physicalMemoryBytes: physicalMemoryBytes,
+        hasDraftCompanion: hasDraftCompanion
+    )
+    let contextLabel = alphaAssistantSetupContextLabel(
+        for: tier,
+        runtimeMode: runtimeMode,
+        physicalMemoryBytes: physicalMemoryBytes
+    )
+
+    if let speedLabel, let contextLabel {
+        return "\(speedLabel) · \(contextLabel)"
+    }
+    if let contextLabel {
+        return contextLabel
+    }
+
+    switch runtimeMode {
+    case .mlxSwiftLm:
         return isPhoneFormFactor ? "Fast on-device replies" : "Local MLX runtime"
     case .llamaCppGguf:
-        let contextTokens = AlphaLlamaRuntimeProfile.contextWindowTokens(
-            forModelPath: alphaDefaultAssistantDownloadDescriptor(for: tier).fileName,
-            physicalMemory: physicalMemoryBytes
-        )
-        if contextTokens >= 28_672 {
-            return "Largest local context"
-        }
         return "Broader device compatibility"
+    case .appleFoundationModels:
+        return rossLocalized("assistant_meta_no_download")
     case .deterministicDev:
         return "Developer runtime"
     case .mediapipeLlm:

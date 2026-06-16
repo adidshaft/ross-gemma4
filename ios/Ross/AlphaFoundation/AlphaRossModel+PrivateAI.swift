@@ -907,7 +907,7 @@ func alphaAssistantResolvedModelDetails(
     return nil
 }
 
-private func alphaAssistantSetupSpeedLabel(
+func alphaAssistantSetupSpeedLabel(
     for tier: AlphaCapabilityTier,
     runtimeMode: AlphaPackRuntimeMode,
     physicalMemoryBytes: UInt64,
@@ -964,7 +964,7 @@ private func alphaAssistantSetupSpeedLabel(
     return "~\(alphaAssistantTokenRateLabel(tokensPerSecond: baseSpeed))"
 }
 
-private func alphaAssistantSetupContextLabel(
+func alphaAssistantSetupContextLabel(
     for tier: AlphaCapabilityTier,
     runtimeMode: AlphaPackRuntimeMode,
     physicalMemoryBytes: UInt64
