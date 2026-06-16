@@ -576,6 +576,11 @@ internal class AlphaRossController(
     private val secretKeyProvider: AlphaSecretKeyProvider = AndroidKeystoreAlphaSecretKeyProvider(),
     private val askRuntimeProviderOverride: ((AlphaInstalledPack) -> AlphaLocalModelProvider?)? = null,
 ) {
+    private data class AlphaAskRuntimeSelection(
+        val pack: AlphaInstalledPack,
+        val provider: AlphaLocalModelProvider,
+    )
+
     private val gson: Gson = GsonBuilder().setPrettyPrinting().create()
     private val rootDir = File(context.filesDir, "ross-alpha")
     private val documentsDir = File(rootDir, "documents")
@@ -2187,27 +2192,11 @@ internal class AlphaRossController(
         scopeCaseId: String?,
         baseResult: AlphaAskResult,
     ) {
-        val pack = activePack() ?: return
+        val runtimeSelection = askRuntimeSelection() ?: return
+        val pack = runtimeSelection.pack
         val selectedDocuments = selectedAskDocuments(scopeCaseId)
         val sourcePack = askRuntimeSourcePack(question, scopeCaseId, selectedDocuments)
-        val provider = askRuntimeProviderOverride?.invoke(pack)
-            ?: AlphaLocalModelRuntime.resolveProvider(
-                activePack = pack,
-                requestedTier = pack.tier,
-                executor = {
-                    AlphaLocalModelOutput(
-                        rawText = "",
-                        parsedJson = null,
-                        schemaValid = false,
-                        warnings = listOf("Development local ask output is disabled."),
-                        sourceRefs = emptyList(),
-                        errorCategory = "development_artifact_blocked",
-                    )
-                },
-                context = context,
-                appPrivateRoot = rootDir,
-            )
-            ?: return
+        val provider = runtimeSelection.provider
         if (
             provider.runtimeMode == AlphaPackRuntimeMode.DeterministicDev ||
             !provider.isAvailable() ||
@@ -2247,7 +2236,7 @@ internal class AlphaRossController(
             maxOutputTokens = 1_024,
             languageProfile = null,
             documentClassification = null,
-            extractionMode = activeExtractionMode(),
+            extractionMode = AlphaExtractionMode.fromInstalledPack(pack),
             requireSourceRefs = sourcePack.isNotEmpty(),
         )
 
@@ -3177,18 +3166,54 @@ internal class AlphaRossController(
     }
 
     private fun canRunRealLocalAsk(): Boolean {
-        val pack = activePack() ?: return false
-        askRuntimeProviderOverride?.invoke(pack)?.let { provider ->
-            return provider.runtimeMode != AlphaPackRuntimeMode.DeterministicDev &&
+        val selection = askRuntimeSelection() ?: return false
+        return selection.provider.runtimeMode != AlphaPackRuntimeMode.DeterministicDev &&
+            selection.provider.isAvailable() &&
+            AlphaLocalModelTask.MatterQuestionAnswer in selection.provider.supportedTasks()
+    }
+
+    private fun askRuntimeSelection(): AlphaAskRuntimeSelection? {
+        val preferredPack = activePack()
+        val candidatePacks = persisted.installedPacks
+            .sortedWith(
+                compareByDescending<AlphaInstalledPack> { it.id == preferredPack?.id }
+                    .thenByDescending { it.tier.rank }
+                    .thenByDescending { it.installedAt }
+            )
+        for (pack in candidatePacks) {
+            val provider = askRuntimeProviderFor(pack) ?: continue
+            if (
+                provider.runtimeMode != AlphaPackRuntimeMode.DeterministicDev &&
                 provider.isAvailable() &&
                 AlphaLocalModelTask.MatterQuestionAnswer in provider.supportedTasks()
+            ) {
+                return AlphaAskRuntimeSelection(
+                    pack = pack,
+                    provider = provider,
+                )
+            }
         }
-        if (pack.developmentOnly && !alphaAllowsDevelopmentModelArtifacts()) return false
-        val health = activeRuntimeHealth() ?: return false
-        return health.available &&
-            health.runtimeMode != AlphaPackRuntimeMode.DeterministicDev &&
-            AlphaLocalModelTask.MatterQuestionAnswer in health.supportedTasks
+        return null
     }
+
+    private fun askRuntimeProviderFor(pack: AlphaInstalledPack): AlphaLocalModelProvider? =
+        askRuntimeProviderOverride?.invoke(pack)
+            ?: AlphaLocalModelRuntime.resolveProvider(
+                activePack = pack,
+                requestedTier = pack.tier,
+                executor = {
+                    AlphaLocalModelOutput(
+                        rawText = "",
+                        parsedJson = null,
+                        schemaValid = false,
+                        warnings = listOf("Development local ask output is disabled."),
+                        sourceRefs = emptyList(),
+                        errorCategory = "development_artifact_blocked",
+                    )
+                },
+                context = context,
+                appPrivateRoot = rootDir,
+            )
 
     private fun buildPendingLocalModelAskResult(
         question: String,
