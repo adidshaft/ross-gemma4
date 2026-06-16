@@ -1303,7 +1303,6 @@ func alphaShouldPrimeAssistantSetupCatalogs(
     freeStorageGB: Int = max(4, alphaAvailableStorageInGigabytes()),
     lastInvocation: AlphaLocalModelInvocation? = nil
 ) -> Bool {
-    _ = cachedDownloads
     if alphaAssistantCatalogRefreshIsStale(lastRefresh: lastCatalogRefresh) {
         return true
     }
@@ -1318,12 +1317,18 @@ func alphaShouldPrimeAssistantSetupCatalogs(
             lastInvocation: lastInvocation
         )
         guard preferredRuntime != .appleFoundationModels else { continue }
-        let hasPreferredCachedCatalog = (cachedCatalogs ?? []).contains { descriptor in
-            AlphaCapabilityTier.normalizedAssistantSelection(descriptor.tier) == effectiveTier &&
-                alphaAssistantCatalogDescriptorSupportsCurrentInstaller(descriptor) &&
-                descriptor.runtimeMode == preferredRuntime
-        }
-        if !hasPreferredCachedCatalog {
+        let preferredDescriptor = alphaCachedPreferredAssistantSetupDescriptor(
+            for: tier,
+            preferredRuntimeMode: preferredRuntime,
+            cachedCatalogs: cachedCatalogs,
+            cachedDownloads: cachedDownloads
+        )
+        let hasPreferredDescriptor = preferredDescriptor.map {
+            AlphaCapabilityTier.normalizedAssistantSelection($0.tier) == effectiveTier &&
+                alphaAssistantCatalogDescriptorSupportsCurrentInstaller($0) &&
+                $0.runtimeMode == preferredRuntime
+        } ?? false
+        if !hasPreferredDescriptor {
             return true
         }
     }

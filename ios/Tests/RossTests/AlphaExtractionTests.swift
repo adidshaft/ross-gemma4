@@ -6909,7 +6909,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(descriptors.first?.draftArtifact?.draftTokens, 6)
     }
 
-    func testShouldPrimeAssistantSetupCatalogsPrimesWhenOnlyBundledPreferredMLXDescriptorIsAvailable() {
+    func testShouldPrimeAssistantSetupCatalogsAcceptsBundledPreferredMLXDescriptorWhenCatalogIsFresh() {
         let shouldPrime = alphaShouldPrimeAssistantSetupCatalogs(
             visibleTiers: [.caseAssociate],
             installedPacks: [],
@@ -6925,12 +6925,13 @@ final class AlphaExtractionTests: XCTestCase {
                 )
             ],
             cachedDownloads: nil,
+            lastCatalogRefresh: Date(),
             isPhoneFormFactor: true,
             physicalMemoryBytes: 12 * 1_073_741_824,
             freeStorageGB: 24
         )
 
-        XCTAssertTrue(shouldPrime)
+        XCTAssertFalse(shouldPrime)
     }
 
     func testShouldPrimeAssistantSetupCatalogsSkipsWhenPreferredMLXDescriptorIsCached() {
@@ -7001,7 +7002,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertFalse(alphaAssistantCatalogRefreshIsStale(lastRefresh: recent, now: now))
     }
 
-    func testShouldPrimeAssistantSetupCatalogsPrimesWhenOnlyPreferredMLXDownloadIsCached() {
+    func testShouldPrimeAssistantSetupCatalogsAcceptsPreferredMLXDownloadWhenCatalogIsFresh() {
         let shouldPrime = alphaShouldPrimeAssistantSetupCatalogs(
             visibleTiers: [.caseAssociate],
             installedPacks: [],
@@ -7022,12 +7023,13 @@ final class AlphaExtractionTests: XCTestCase {
                     releaseReady: true
                 )
             ],
+            lastCatalogRefresh: Date(),
             isPhoneFormFactor: true,
             physicalMemoryBytes: 12 * 1_073_741_824,
             freeStorageGB: 24
         )
 
-        XCTAssertTrue(shouldPrime)
+        XCTAssertFalse(shouldPrime)
     }
 
     func testShouldPrimeAssistantSetupCatalogsAcceptsMLXOnlyCatalogForFreshProductionCaseAssociateSetup() {
