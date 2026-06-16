@@ -4275,6 +4275,7 @@ final class AlphaExtractionTests: XCTestCase {
 
     @MainActor
     func testAskResultPreservesModelInvocationForAnswerDetails() {
+        let selectedDocumentID = UUID()
         let invocation = AlphaLocalModelInvocation(
             task: .matterQuestionAnswer,
             runtimeMode: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
@@ -4300,7 +4301,11 @@ final class AlphaExtractionTests: XCTestCase {
             answerTitle: "Answered from your files",
             answerSections: ["The matter was adjourned."],
             sourceRefs: [],
-            modelInvocation: invocation
+            selectedDocumentIDs: [selectedDocumentID],
+            selectedDocumentTitles: ["Hearing note"],
+            modelInvocation: invocation,
+            upgradeTierHint: .caseAssociate,
+            upgradeRuntimeHint: .mlxSwiftLm
         )
         let caseMatter = AlphaCaseMatter(
             title: "Acme v. Beta",
@@ -4322,6 +4327,10 @@ final class AlphaExtractionTests: XCTestCase {
 
         XCTAssertEqual(result.modelInvocation, invocation)
         XCTAssertEqual(result.modelInvocation?.estimatedProcessedTokens, 168)
+        XCTAssertEqual(result.selectedDocumentIDs, [selectedDocumentID])
+        XCTAssertEqual(result.selectedDocumentTitles, ["Hearing note"])
+        XCTAssertEqual(result.upgradeTierHint, .caseAssociate)
+        XCTAssertEqual(result.upgradeRuntimeHint, .mlxSwiftLm)
         XCTAssertTrue(result.hasAnswerDetails)
     }
 
