@@ -5,7 +5,27 @@ import ZIPFoundation
 @testable import Ross
 
 final class AlphaExtractionTests: XCTestCase {
+    private var previousSupportRootOverride: String?
+
+    override func setUp() {
+        super.setUp()
+        previousSupportRootOverride = ProcessInfo.processInfo.environment["ROSS_ALPHA_SUPPORT_ROOT"]
+        let supportRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("RossAlphaTests-\(UUID().uuidString)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: supportRoot, withIntermediateDirectories: true)
+        setenv("ROSS_ALPHA_SUPPORT_ROOT", supportRoot.path, 1)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: supportRoot)
+        }
+    }
+
     override func tearDown() {
+        if let previousSupportRootOverride {
+            setenv("ROSS_ALPHA_SUPPORT_ROOT", previousSupportRootOverride, 1)
+        } else {
+            unsetenv("ROSS_ALPHA_SUPPORT_ROOT")
+        }
+        previousSupportRootOverride = nil
         rossSetBackendBaseURLOverride(nil)
         rossSaveLanguageSelection(code: "en")
         super.tearDown()
@@ -115,6 +135,12 @@ final class AlphaExtractionTests: XCTestCase {
 
     private func sha256Hex(_ data: Data) -> String {
         SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private func registerModelArtifactCleanup(for store: AlphaRossStore) {
+        addTeardownBlock {
+            await store.removeAllModelArtifacts()
+        }
     }
 
     @MainActor
@@ -8201,7 +8227,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         let store = AlphaRossStore()
         await store.removeAllModelArtifacts()
-        defer { Task { await store.removeAllModelArtifacts() } }
+        registerModelArtifactCleanup(for: store)
 
         var quickStartPack = try await installMLXPack(
             with: store,
@@ -8266,7 +8292,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         let store = AlphaRossStore()
         await store.removeAllModelArtifacts()
-        defer { Task { await store.removeAllModelArtifacts() } }
+        registerModelArtifactCleanup(for: store)
 
         var quickStartPack = try await installMLXPack(
             with: store,
@@ -8358,7 +8384,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         let store = AlphaRossStore()
         await store.removeAllModelArtifacts()
-        defer { Task { await store.removeAllModelArtifacts() } }
+        registerModelArtifactCleanup(for: store)
 
         var quickStartPack = try await installMLXPack(
             with: store,
@@ -8427,7 +8453,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         let store = AlphaRossStore()
         await store.removeAllModelArtifacts()
-        defer { Task { await store.removeAllModelArtifacts() } }
+        registerModelArtifactCleanup(for: store)
 
         _ = try await installMLXPack(
             with: store,
@@ -8484,7 +8510,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         let store = AlphaRossStore()
         await store.removeAllModelArtifacts()
-        defer { Task { await store.removeAllModelArtifacts() } }
+        registerModelArtifactCleanup(for: store)
 
         var quickStartPack = try await installMLXPack(
             with: store,
@@ -12024,7 +12050,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         let store = AlphaRossStore()
         await store.removeAllModelArtifacts()
-        defer { Task { await store.removeAllModelArtifacts() } }
+        registerModelArtifactCleanup(for: store)
 
         var mlxPack = try await installMLXPack(
             with: store,
@@ -12167,7 +12193,7 @@ final class AlphaExtractionTests: XCTestCase {
 
         let store = AlphaRossStore()
         await store.removeAllModelArtifacts()
-        defer { Task { await store.removeAllModelArtifacts() } }
+        registerModelArtifactCleanup(for: store)
 
         var mlxPack = try await installMLXPack(
             with: store,
