@@ -2383,51 +2383,10 @@ internal class AlphaRossController(
             }
         }
 
-        val sourceBlocks = mutableListOf<AlphaSourceTextBlock>()
-        for ((case, document) in candidateDocuments) {
-            val pages = document.pages.ifEmpty {
-                listOf(
-                    AlphaDocumentPage(
-                        pageNumber = 1,
-                        snippet = document.dominantSourceSnippet ?: alphaAskCompactSnippet(document.extractedText),
-                    )
-                )
-            }
-            val pageLimit = if (document.id in selectedIds) 3 else 2
-            for (page in pages.take(pageLimit)) {
-                val text = page.extractedText
-                    ?: page.snippet
-                    ?: document.dominantSourceSnippet
-                    ?: document.extractedText
-                    ?: "Imported source reference."
-                val cleanedText = text.trim()
-                if (cleanedText.isBlank()) continue
-                val sourceRef = AlphaSourceRef(
-                    caseId = case.id,
-                    documentId = document.id,
-                    documentTitle = document.title,
-                    pageNumber = page.pageNumber,
-                    textSnippet = page.anchorText ?: page.snippet ?: alphaAskCompactSnippet(cleanedText),
-                    ocrConfidence = page.ocrConfidence,
-                )
-                sourceBlocks += AlphaSourceTextBlock(
-                    sourceRef = sourceRef,
-                    text = cleanedText,
-                    pageNumber = page.pageNumber,
-                    languageHint = document.languageProfile
-                        ?.pageProfiles
-                        ?.firstOrNull { it.pageNumber == page.pageNumber }
-                        ?.language
-                        ?.name
-                        ?.lowercase(),
-                    ocrConfidence = page.ocrConfidence,
-                )
-            }
-        }
-        return AlphaAskRetrieval.rank(
+        return AlphaAskRetrieval.buildSourcePack(
             question = question,
-            blocks = sourceBlocks,
-            forceSelectedContext = selectedIds.isNotEmpty(),
+            candidateDocuments = candidateDocuments,
+            selectedDocumentIds = selectedIds,
         )
     }
 
