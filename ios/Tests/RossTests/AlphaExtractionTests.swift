@@ -7778,13 +7778,15 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertNil(presentation)
     }
 
-    func testAssistantSetupPresentationReturnsNilWhenBuiltInCoreAIIsAvailable() {
+    func testAssistantSetupPresentationUsesBuiltInCoreAIWhenAvailable() {
         let presentation = alphaAssistantSetupPresentation(
             for: .caseAssociate,
             systemAssistantAvailable: true
         )
 
-        XCTAssertNil(presentation)
+        XCTAssertEqual(presentation?.runtimeMode, .appleFoundationModels)
+        XCTAssertEqual(presentation?.totalDownloadBytes, 0)
+        XCTAssertEqual(presentation?.sizeLabel, rossLocalized("assistant_meta_no_download"))
     }
 
     func testAssistantCatalogRefreshTiersIncludeVisibleOptionsWithoutInstalledPacks() {

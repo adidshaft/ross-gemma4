@@ -443,8 +443,12 @@ func alphaAssistantSetupPresentation(
         systemAssistantAvailable: systemAssistantAvailable,
         lastInvocation: lastInvocation
     )
-    guard preferredRuntime != .appleFoundationModels else {
-        return nil
+    if preferredRuntime == .appleFoundationModels {
+        return AlphaAssistantSetupPresentation(
+            runtimeMode: .appleFoundationModels,
+            sizeLabel: rossLocalized("assistant_meta_no_download"),
+            totalDownloadBytes: 0
+        )
     }
 
     let defaultDescriptor = alphaDefaultAssistantCatalogDescriptor(for: tier)
