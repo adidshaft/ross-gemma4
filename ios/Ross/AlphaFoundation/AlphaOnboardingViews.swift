@@ -903,9 +903,18 @@ struct AlphaModelPickerRow: View {
         )
     }
 
+    private var showsBuiltInQuickAction: Bool {
+        builtInHint != nil
+    }
+
     private func selectRuntime(_ option: AlphaAssistantVariantOption) {
         guard !option.isSelected else { return }
         model.setAssistantSetupRuntimeOverride(option.runtimeMode, for: tier)
+    }
+
+    private func selectBuiltInRuntime() {
+        model.setAssistantSetupRuntimeOverride(.appleFoundationModels, for: tier)
+        onSelect()
     }
 
     var body: some View {
@@ -1006,10 +1015,25 @@ struct AlphaModelPickerRow: View {
             }
 
             if let builtInHint {
-                Text(builtInHint)
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(Color.rossInk.opacity(0.56))
-                    .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(builtInHint)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(Color.rossInk.opacity(0.56))
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if showsBuiltInQuickAction {
+                        HStack {
+                            Button {
+                                selectBuiltInRuntime()
+                            } label: {
+                                Label(alphaAssistantOfferAction(.useOnThisIPhone), systemImage: "iphone")
+                            }
+                            .rossSecondaryButtonStyle()
+
+                            Spacer(minLength: 0)
+                        }
+                    }
+                }
             }
 
             Button(action: onSelect) {

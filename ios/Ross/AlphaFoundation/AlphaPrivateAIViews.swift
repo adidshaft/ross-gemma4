@@ -792,6 +792,10 @@ struct AlphaPrivateAIOfferCard: View {
         )
     }
 
+    private var showsBuiltInQuickAction: Bool {
+        builtInAlternativeHint != nil
+    }
+
     private var isSettingUp: Bool {
         if installedPack != nil {
             return false
@@ -899,6 +903,16 @@ struct AlphaPrivateAIOfferCard: View {
         }
     }
 
+    private func activateBuiltInAlternative() {
+        Task {
+            await model.startPackDownload(
+                for: offer.tier,
+                mobileAllowed: mobileAllowed,
+                requestedRuntimeMode: .appleFoundationModels
+            )
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             VStack(alignment: .leading, spacing: 5) {
@@ -958,10 +972,25 @@ struct AlphaPrivateAIOfferCard: View {
                 }
 
                 if let builtInAlternativeHint {
-                    Text(builtInAlternativeHint)
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(Color.rossInk.opacity(0.56))
-                        .fixedSize(horizontal: false, vertical: true)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(builtInAlternativeHint)
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(Color.rossInk.opacity(0.56))
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        if showsBuiltInQuickAction {
+                            HStack {
+                                Button {
+                                    activateBuiltInAlternative()
+                                } label: {
+                                    Label(alphaAssistantOfferAction(.useOnThisIPhone), systemImage: "iphone")
+                                }
+                                .rossSecondaryButtonStyle()
+
+                                Spacer(minLength: 0)
+                            }
+                        }
+                    }
                 }
 
                 if variantOptions.count > 1 {
