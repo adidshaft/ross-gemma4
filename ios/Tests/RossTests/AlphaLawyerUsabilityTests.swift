@@ -4045,6 +4045,122 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         }
     }
 
+    #if canImport(FoundationModels)
+    @available(iOS 26.0, macOS 26.0, *)
+    func testAssistantModelUpdatesIgnoreDownloadedAlternatesWhenBuiltInRuntimeIsActive() async throws {
+        let previousDisableFlag = ProcessInfo.processInfo.environment["ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS"]
+        let previousSimulatorIdentifier = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"]
+        let previousAvailabilityProbe = AlphaFoundationModelsLocalProvider.modelAvailabilityProbe
+        setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", "1", 1)
+        setenv("SIMULATOR_MODEL_IDENTIFIER", "iPhone17,2", 1)
+        AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = { _ in true }
+        defer {
+            AlphaFoundationModelsLocalProvider.modelAvailabilityProbe = previousAvailabilityProbe
+            if let previousDisableFlag {
+                setenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS", previousDisableFlag, 1)
+            } else {
+                unsetenv("ROSS_DISABLE_DEVELOPMENT_MODEL_ARTIFACTS")
+            }
+            if let previousSimulatorIdentifier {
+                setenv("SIMULATOR_MODEL_IDENTIFIER", previousSimulatorIdentifier, 1)
+            } else {
+                unsetenv("SIMULATOR_MODEL_IDENTIFIER")
+            }
+        }
+
+        rossSetBackendBaseURLOverride("http://127.0.0.1:9")
+        defer { rossSetBackendBaseURLOverride(nil) }
+
+        try await withRestoredStore { store in
+            var state = AlphaPersistedState.seed()
+            state.installedPacks = [
+                AlphaInstalledModelPack(
+                    packId: "gemma-4-12b-it-mlx",
+                    tier: .caseAssociate,
+                    installPath: "model-packs/case_associate/gemma-4-12b-it-mlx",
+                    checksumSha256: String(repeating: "a", count: 64),
+                    artifactKind: "mlx_directory",
+                    runtimeMode: .mlxSwiftLm,
+                    developmentOnly: false,
+                    checksumVerified: true,
+                    isActive: false
+                ),
+                alphaSystemAssistantPack(for: .caseAssociate)
+            ]
+            state.modelUpdateCandidates = []
+            state.settings.activeTier = .caseAssociate
+            try await store.replace(with: state)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+            await MainActor.run {
+                model.checkForAssistantModelUpdates(force: true)
+            }
+
+            try await eventually(timeoutNanoseconds: 2_000_000_000) {
+                await MainActor.run {
+                    (model.persisted.modelUpdateCandidates ?? []).isEmpty
+                }
+            }
+        }
+    }
+    #endif
+
+    func testAssistantModelUpdatesOnlySurfaceTheActiveDownloadedRuntimePerTier() async throws {
+        rossSetBackendBaseURLOverride("http://127.0.0.1:9")
+        defer { rossSetBackendBaseURLOverride(nil) }
+
+        try await withRestoredStore { store in
+            var state = AlphaPersistedState.seed()
+            state.installedPacks = [
+                AlphaInstalledModelPack(
+                    packId: "gemma-4-12b-it-mlx",
+                    tier: .caseAssociate,
+                    installPath: "model-packs/case_associate/gemma-4-12b-it-mlx",
+                    checksumSha256: String(repeating: "a", count: 64),
+                    artifactKind: "mlx_directory",
+                    runtimeMode: .mlxSwiftLm,
+                    developmentOnly: false,
+                    checksumVerified: true,
+                    isActive: false
+                ),
+                AlphaInstalledModelPack(
+                    packId: "gemma-4-12b-q4-current",
+                    tier: .caseAssociate,
+                    installPath: "model-packs/case_associate/gemma-4-12b-q4-current.gguf",
+                    checksumSha256: String(repeating: "b", count: 64),
+                    artifactKind: "local_model_artifact",
+                    runtimeMode: .llamaCppGguf,
+                    developmentOnly: false,
+                    checksumVerified: true,
+                    isActive: true
+                )
+            ]
+            state.modelUpdateCandidates = []
+            state.settings.activeTier = .caseAssociate
+            try await store.replace(with: state)
+
+            let model = await MainActor.run {
+                AlphaRossModel(store: store, publicLawSearchAction: { _ in [] })
+            }
+            await model.loadIfNeeded()
+            await MainActor.run {
+                model.checkForAssistantModelUpdates(force: true)
+            }
+
+            try await eventually(timeoutNanoseconds: 2_000_000_000) {
+                await MainActor.run {
+                    let candidates = model.persisted.modelUpdateCandidates ?? []
+                    return candidates.count == 1 &&
+                        candidates.first?.tier == .caseAssociate &&
+                        candidates.first?.installedPackId == "gemma-4-12b-q4-current"
+                }
+            }
+        }
+    }
+
     func testRecoveredDownloadedPackRestoresManifestBackedAlternatePack() async throws {
         try await withRestoredStore { store in
             await store.removeAllModelArtifacts()
