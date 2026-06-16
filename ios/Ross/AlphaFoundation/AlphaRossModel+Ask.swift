@@ -1722,16 +1722,17 @@ extension AlphaRossModel {
             guard let activePack else { return nil }
             return alphaAssistantModelArtifacts[activePack.tier]?.displayName
         }()
+        let systemAssistantAvailable = systemAssistantHealth(for: requestedTier)?.available == true
         let runtimeSelectionReason = alphaAssistantRuntimeChoiceLabel(
             selectedRuntimeMode: provider.runtimeMode,
             tier: requestedTier,
-            systemAssistantAvailable: provider.runtimeMode == .appleFoundationModels ? runtimeHealth.available : nil,
+            systemAssistantAvailable: systemAssistantAvailable,
             lastInvocation: lastModelInvocation
         )
         let preferredRuntimeMode = alphaPreferredAssistantRuntimeMode(
             for: requestedTier,
             existingRuntimeMode: nil,
-            systemAssistantAvailable: provider.runtimeMode == .appleFoundationModels ? runtimeHealth.available : nil,
+            systemAssistantAvailable: systemAssistantAvailable,
             lastInvocation: lastModelInvocation
         )
         return AlphaModelInvocationStore.begin(

@@ -1126,6 +1126,18 @@ func alphaPreferredAssistantRuntimeMode(
         case .avoidSlow(.appleFoundationModels):
             break
         default:
+            let localPreferred = alphaPreferredAssistantRuntimeMode(
+                for: tier,
+                existingRuntimeMode: existingRuntimeMode == .appleFoundationModels ? nil : existingRuntimeMode,
+                isPhoneFormFactor: isPhoneFormFactor,
+                physicalMemoryBytes: physicalMemoryBytes,
+                freeStorageGB: freeStorageGB,
+                systemAssistantAvailable: false,
+                lastInvocation: lastInvocation
+            )
+            if localPreferred != .appleFoundationModels {
+                return localPreferred
+            }
             return .appleFoundationModels
         }
     }
@@ -1229,6 +1241,20 @@ func alphaAssistantRuntimeChoiceLabel(
         default:
             break
         }
+    }
+
+    if selectedRuntimeMode == .mlxSwiftLm,
+       prefersSystemAssistant,
+       alphaPreferredAssistantRuntimeMode(
+        for: tier,
+        existingRuntimeMode: .appleFoundationModels,
+        isPhoneFormFactor: isPhoneFormFactor,
+        physicalMemoryBytes: physicalMemoryBytes,
+        freeStorageGB: freeStorageGB,
+        systemAssistantAvailable: true,
+        lastInvocation: lastInvocation
+       ) == .mlxSwiftLm {
+        return "Accelerated MLX preferred on this iPhone"
     }
 
     if !isPhoneFormFactor && selectedRuntimeMode == .llamaCppGguf {

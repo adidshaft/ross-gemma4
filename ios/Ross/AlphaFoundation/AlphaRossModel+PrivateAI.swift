@@ -896,7 +896,11 @@ func alphaAssistantUpdateCandidate(
     availableDescriptor: AlphaAssistantCatalogDescriptor,
     existingDismissed: AlphaModelUpdateCandidate?,
     systemAssistantAvailable: Bool? = nil,
-    preferredRuntimeMode: AlphaPackRuntimeMode? = nil
+    preferredRuntimeMode: AlphaPackRuntimeMode? = nil,
+    isPhoneFormFactor: Bool = alphaAssistantUsesPhoneFormFactor(),
+    physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory,
+    freeStorageGB: Int = max(4, alphaAvailableStorageInGigabytes()),
+    lastInvocation: AlphaLocalModelInvocation? = nil
 ) -> AlphaModelUpdateCandidate? {
     guard !installedPack.developmentOnly,
           !installedPack.installPath.hasPrefix("system://") else {
@@ -906,7 +910,11 @@ func alphaAssistantUpdateCandidate(
     let preferredRuntime = preferredRuntimeMode ?? alphaPreferredAssistantRuntimeMode(
         for: installedPack.tier,
         existingRuntimeMode: installedPack.runtimeMode,
-        systemAssistantAvailable: systemAssistantAvailable
+        isPhoneFormFactor: isPhoneFormFactor,
+        physicalMemoryBytes: physicalMemoryBytes,
+        freeStorageGB: freeStorageGB,
+        systemAssistantAvailable: systemAssistantAvailable,
+        lastInvocation: lastInvocation
     )
     guard preferredRuntime != .appleFoundationModels else {
         return nil
@@ -1410,7 +1418,8 @@ extension AlphaRossModel {
             return alphaAssistantUpdateCandidate(
                 installedPack: pack,
                 availableDescriptor: fallbackDescriptor,
-                existingDismissed: dismissed
+                existingDismissed: dismissed,
+                lastInvocation: lastInvocation
             )
         }
 
@@ -1476,7 +1485,8 @@ extension AlphaRossModel {
                 return alphaAssistantUpdateCandidate(
                     installedPack: pack,
                     availableDescriptor: descriptor,
-                    existingDismissed: dismissed
+                    existingDismissed: dismissed,
+                    lastInvocation: lastInvocation
                 )
             }
 
@@ -2327,7 +2337,8 @@ extension AlphaRossModel {
         }
 
         upsertJob(job)
-        if systemAssistantReadyForActivation(for: tier),
+        if preferredRuntime == .appleFoundationModels,
+           systemAssistantReadyForActivation(for: tier),
            prepareSystemAssistantPack(for: tier, jobID: job.id) {
             return
         }
@@ -2367,7 +2378,8 @@ extension AlphaRossModel {
             persist()
         }
 
-        if !alphaAllowsDevelopmentModelArtifacts(),
+        if preferredRuntime == .appleFoundationModels,
+           !alphaAllowsDevelopmentModelArtifacts(),
            prepareSystemAssistantPack(for: tier, jobID: job.id) {
             return
         }

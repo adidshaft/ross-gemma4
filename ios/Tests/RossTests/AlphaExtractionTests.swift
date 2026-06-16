@@ -6209,11 +6209,24 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(runtime, .mlxSwiftLm)
     }
 
-    func testPreferredAssistantRuntimeModePrefersFoundationWhenSystemAssistantIsAvailable() {
+    func testPreferredAssistantRuntimeModePrefersMLXWhenSystemAssistantIsAvailableOnCapablePhone() {
         let runtime = alphaPreferredAssistantRuntimeMode(
             for: .caseAssociate,
             existingRuntimeMode: .mlxSwiftLm,
             isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24,
+            systemAssistantAvailable: true
+        )
+
+        XCTAssertEqual(runtime, .mlxSwiftLm)
+    }
+
+    func testPreferredAssistantRuntimeModePrefersFoundationWhenSystemAssistantIsAvailableOnNonPhone() {
+        let runtime = alphaPreferredAssistantRuntimeMode(
+            for: .caseAssociate,
+            existingRuntimeMode: .mlxSwiftLm,
+            isPhoneFormFactor: false,
             physicalMemoryBytes: 12 * 1_073_741_824,
             freeStorageGB: 24,
             systemAssistantAvailable: true
@@ -7323,11 +7336,24 @@ final class AlphaExtractionTests: XCTestCase {
         }
     }
 
-    func testAssistantRuntimeChoiceLabelExplainsSystemAssistantPreference() {
+    func testAssistantRuntimeChoiceLabelExplainsAcceleratedMLXPreferenceOnCapablePhone() {
+        let label = alphaAssistantRuntimeChoiceLabel(
+            selectedRuntimeMode: .mlxSwiftLm,
+            tier: .caseAssociate,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24,
+            systemAssistantAvailable: true
+        )
+
+        XCTAssertEqual(label, "Accelerated MLX preferred on this iPhone")
+    }
+
+    func testAssistantRuntimeChoiceLabelExplainsSystemAssistantPreferenceOnNonPhone() {
         let label = alphaAssistantRuntimeChoiceLabel(
             selectedRuntimeMode: .appleFoundationModels,
             tier: .caseAssociate,
-            isPhoneFormFactor: true,
+            isPhoneFormFactor: false,
             physicalMemoryBytes: 12 * 1_073_741_824,
             freeStorageGB: 24,
             systemAssistantAvailable: true
@@ -8131,7 +8157,7 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(candidate?.availablePackId, available.packId)
     }
 
-    func testAssistantUpdateCandidateSkipsDownloadPromptWhenFoundationIsPreferred() {
+    func testAssistantUpdateCandidateSkipsDownloadPromptWhenFoundationIsPreferredOnNonPhone() {
         let installedPack = AlphaInstalledModelPack(
             packId: "gemma-4-12b-q4-old",
             tier: .caseAssociate,
@@ -8158,9 +8184,49 @@ final class AlphaExtractionTests: XCTestCase {
                 installedPack: installedPack,
                 availableDescriptor: available,
                 existingDismissed: nil,
-                systemAssistantAvailable: true
+                systemAssistantAvailable: true,
+                isPhoneFormFactor: false,
+                physicalMemoryBytes: 12 * 1_073_741_824,
+                freeStorageGB: 24
             )
         )
+    }
+
+    func testAssistantUpdateCandidatePromptsForMLXWhenSystemAssistantIsAvailableOnCapablePhone() {
+        let installedPack = AlphaInstalledModelPack(
+            packId: "gemma-4-12b-q4-old",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/current.gguf",
+            checksumSha256: String(repeating: "d", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: true
+        )
+        let preferredMLXDescriptor = AlphaAssistantCatalogDescriptor(
+            tier: .caseAssociate,
+            packId: "gemma-4-12b-mlx",
+            sizeBytes: 6_200_000_000,
+            checksumSha256: String(repeating: "f", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false
+        )
+
+        let candidate = alphaAssistantUpdateCandidate(
+            installedPack: installedPack,
+            availableDescriptor: preferredMLXDescriptor,
+            existingDismissed: nil,
+            systemAssistantAvailable: true,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24
+        )
+
+        XCTAssertEqual(candidate?.installedPackId, installedPack.packId)
+        XCTAssertEqual(candidate?.availablePackId, preferredMLXDescriptor.packId)
+        XCTAssertEqual(candidate?.availableSizeBytes, preferredMLXDescriptor.sizeBytes)
     }
 
     func testAssistantDownloadDescriptorPrefersCompatibleBackendSessionArtifact() {
@@ -8615,9 +8681,27 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(presentation?.companionLabel, rossLocalized("assistant_meta_speed_companion"))
     }
 
-    func testAssistantSetupPresentationUsesBuiltInCoreAIWhenAvailable() {
+    func testAssistantSetupPresentationUsesMLXWhenSystemAssistantIsAvailableOnCapablePhone() {
         let presentation = alphaAssistantSetupPresentation(
             for: .caseAssociate,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24,
+            systemAssistantAvailable: true
+        )
+
+        XCTAssertEqual(presentation?.runtimeMode, .mlxSwiftLm)
+        XCTAssertEqual(presentation?.totalDownloadBytes, 13_380_656_577)
+        XCTAssertEqual(presentation?.sizeLabel, alphaAssistantStorageSizeLabel(13_380_656_577))
+        XCTAssertEqual(presentation?.companionLabel, rossLocalized("assistant_meta_speed_companion"))
+    }
+
+    func testAssistantSetupPresentationUsesBuiltInCoreAIWhenAvailableOnNonPhone() {
+        let presentation = alphaAssistantSetupPresentation(
+            for: .caseAssociate,
+            isPhoneFormFactor: false,
+            physicalMemoryBytes: 12 * 1_073_741_824,
+            freeStorageGB: 24,
             systemAssistantAvailable: true
         )
 
