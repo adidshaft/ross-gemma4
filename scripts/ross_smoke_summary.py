@@ -65,6 +65,28 @@ def runtime_identity_artifact_error(identity, expected_runtime):
     return None
 
 
+def runtime_identity_draft_artifact_error(identity, expected_runtime):
+    if identity.get("acceleration") != "draftModelSpeculative":
+        return None
+    if identity.get("draft_status") != "active":
+        return f"draft_status={summary_value(identity, 'draft_status')}"
+    if identity.get("draft_tokens") in (None, "nil"):
+        return f"draft_tokens={summary_value(identity, 'draft_tokens')}"
+    if identity.get("draft_model") in (None, "nil"):
+        return f"draft_model={summary_value(identity, 'draft_model')}"
+
+    draft_path_type = identity.get("draft_model_path_type")
+    expected_path_types = {
+        "gemma_local_runtime": {"file"},
+        "mlx_swift_lm": {"directory"},
+    }.get(expected_runtime)
+    if not expected_path_types:
+        return None
+    if draft_path_type not in expected_path_types:
+        return f"draft_model_path_type={summary_value(identity, 'draft_model_path_type')}"
+    return None
+
+
 def benchmark_summary_fields(identity, pass_fields, matrix_fields):
     if not matrix_fields:
         raise MissingBenchmarkMatrixError("missing_benchmark_matrix")

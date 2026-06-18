@@ -282,6 +282,7 @@ from ross_smoke_summary import (
     failure_summary_line,
     parse_fields,
     runtime_identity_artifact_error,
+    runtime_identity_draft_artifact_error,
 )
 
 (
@@ -380,18 +381,14 @@ def validate_identity_guard(identity, *, require_identity):
         draft_model_value = identity.get("draft_model")
         draft_model_path_type = identity.get("draft_model_path_type")
         draft_status = identity.get("draft_status")
-        if (
-            acceleration != "draftModelSpeculative"
-            or draft_tokens_value in (None, "nil")
-            or draft_model_value in (None, "nil")
-            or draft_model_path_type in (None, "nil", "missing")
-            or draft_status != "active"
-        ):
+        draft_artifact_error = runtime_identity_draft_artifact_error(identity, runtime)
+        if acceleration != "draftModelSpeculative" or draft_artifact_error:
             print(
                 "ROSS_SMOKE_GUARD_FAIL "
                 f"reason=draft_acceleration_inactive acceleration={acceleration} "
                 f"draft_tokens={draft_tokens_value} draft_model={draft_model_value} "
-                f"draft_model_path_type={draft_model_path_type} draft_status={draft_status}",
+                f"draft_model_path_type={draft_model_path_type} draft_status={draft_status} "
+                f"draft_artifact_error={draft_artifact_error or 'nil'}",
                 file=sys.stderr,
             )
             sys.exit(1)

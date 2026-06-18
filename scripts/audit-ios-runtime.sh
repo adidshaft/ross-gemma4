@@ -100,6 +100,11 @@ if ! grep -q "runtime_identity_artifact_error" scripts/ross_smoke_summary.py 2>/
     FAIL=1
 fi
 
+if ! grep -q "runtime_identity_draft_artifact_error" scripts/ross_smoke_summary.py 2>/dev/null; then
+    echo "❌ FAIL: shared smoke parser omits draft artifact identity validation."
+    FAIL=1
+fi
+
 for smoke_script in scripts/ios-simulator-local-model-smoke.sh scripts/ios-device-installed-pack-smoke.sh scripts/ios-device-gguf-smoke.sh; do
     if ! grep -q "runtime_identity_artifact_mismatch" "$smoke_script" 2>/dev/null; then
         echo "❌ FAIL: $smoke_script does not reject mismatched runtime artifact identity."
@@ -192,23 +197,18 @@ if ! grep -q "draft_acceleration_inactive" scripts/ios-simulator-local-model-smo
     FAIL=1
 fi
 
-if ! grep -q 'draft_status != "active"' scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
-    echo "❌ FAIL: simulator MTP guard does not require active draft status."
+if ! grep -q 'identity.get("draft_status") != "active"' scripts/ross_smoke_summary.py 2>/dev/null; then
+    echo "❌ FAIL: shared MTP guard does not require active draft status."
     FAIL=1
 fi
 
-if ! grep -q 'draft_model_path_type in (None, "nil", "missing")' scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
-    echo "❌ FAIL: simulator MTP guard does not require a present draft artifact path type."
+if ! grep -q "runtime_identity_draft_artifact_error" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: simulator MTP guard does not validate draft artifact path shape."
     FAIL=1
 fi
 
-if ! grep -q 'draft_status != "active"' scripts/ios-device-installed-pack-smoke.sh 2>/dev/null; then
-    echo "❌ FAIL: installed-pack MTP guard does not require active draft status."
-    FAIL=1
-fi
-
-if ! grep -q 'draft_model_path_type in (None, "nil", "missing")' scripts/ios-device-installed-pack-smoke.sh 2>/dev/null; then
-    echo "❌ FAIL: installed-pack MTP guard does not require a present draft artifact path type."
+if ! grep -q "runtime_identity_draft_artifact_error" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: installed-pack MTP guard does not validate draft artifact path shape."
     FAIL=1
 fi
 

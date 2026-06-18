@@ -7,6 +7,7 @@ from ross_smoke_summary import (
     failure_summary_line,
     parse_fields,
     runtime_identity_artifact_error,
+    runtime_identity_draft_artifact_error,
 )
 
 
@@ -117,6 +118,38 @@ class RossSmokeSummaryTests(unittest.TestCase):
                 "apple_foundation_models",
             ),
             "adapter_path_type=system",
+        )
+
+    def test_runtime_identity_draft_artifact_rules_are_lane_aware(self):
+        active_mtp = {
+            "acceleration": "draftModelSpeculative",
+            "draft_tokens": "2",
+            "draft_model": "mtp.gguf",
+            "draft_model_path_type": "file",
+            "draft_status": "active",
+        }
+        active_mlx = {
+            **active_mtp,
+            "draft_model": "mlx-draft",
+            "draft_model_path_type": "directory",
+        }
+
+        self.assertIsNone(runtime_identity_draft_artifact_error(active_mtp, "gemma_local_runtime"))
+        self.assertIsNone(runtime_identity_draft_artifact_error(active_mlx, "mlx_swift_lm"))
+        self.assertEqual(
+            runtime_identity_draft_artifact_error(active_mtp, "mlx_swift_lm"),
+            "draft_model_path_type=file",
+        )
+        self.assertEqual(
+            runtime_identity_draft_artifact_error(active_mlx, "gemma_local_runtime"),
+            "draft_model_path_type=directory",
+        )
+        self.assertEqual(
+            runtime_identity_draft_artifact_error(
+                {**active_mtp, "draft_status": "validator_rejected"},
+                "gemma_local_runtime",
+            ),
+            "draft_status=validator_rejected",
         )
 
     def test_failure_summary_preserves_identity_errors_and_stage_metrics(self):
