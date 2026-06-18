@@ -1297,6 +1297,21 @@ private func alphaCurrentLowPowerMode() -> Bool {
     #endif
 }
 
+func alphaCurrentThermalCondition() -> String {
+    switch ProcessInfo.processInfo.thermalState {
+    case .nominal:
+        "Nominal"
+    case .fair:
+        "Fair"
+    case .serious:
+        "Serious"
+    case .critical:
+        "Critical"
+    @unknown default:
+        "Unknown"
+    }
+}
+
 func alphaRecommendedOnDeviceTier(
     freeStorageGB: Int,
     physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory,
@@ -1650,6 +1665,54 @@ func alphaCurrentDeviceModelIdentifier(
         return UInt8(value)
     }
     return String(decoding: identifierBytes, as: UTF8.self)
+}
+
+struct AlphaPrivateAIDeviceProofProfile: Hashable, Sendable {
+    let deviceModelLabel: String
+    let systemVersionLabel: String
+    let memoryGB: Int
+    let freeStorageGB: Int
+    let lowPowerModeEnabled: Bool
+    let thermalCondition: String
+}
+
+func alphaCurrentOperatingSystemName() -> String {
+    #if os(iOS)
+    "iOS"
+    #elseif os(macOS)
+    "macOS"
+    #else
+    "Apple OS"
+    #endif
+}
+
+func alphaCurrentOperatingSystemLabel(
+    operatingSystemName: String = alphaCurrentOperatingSystemName(),
+    operatingSystemVersion: OperatingSystemVersion = ProcessInfo.processInfo.operatingSystemVersion
+) -> String {
+    "\(operatingSystemName) \(operatingSystemVersion.majorVersion).\(operatingSystemVersion.minorVersion).\(operatingSystemVersion.patchVersion)"
+}
+
+func alphaCurrentPrivateAIDeviceProofProfile(
+    environment: [String: String] = ProcessInfo.processInfo.environment,
+    operatingSystemName: String = alphaCurrentOperatingSystemName(),
+    operatingSystemVersion: OperatingSystemVersion = ProcessInfo.processInfo.operatingSystemVersion,
+    physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory,
+    freeStorageGB: Int = max(4, alphaAvailableStorageInGigabytes()),
+    lowPowerMode: Bool = alphaCurrentLowPowerMode(),
+    thermalCondition: String = alphaCurrentThermalCondition()
+) -> AlphaPrivateAIDeviceProofProfile {
+    AlphaPrivateAIDeviceProofProfile(
+        deviceModelLabel: alphaCurrentDeviceModelIdentifier(environment: environment),
+        systemVersionLabel: alphaCurrentOperatingSystemLabel(
+            operatingSystemName: operatingSystemName,
+            operatingSystemVersion: operatingSystemVersion
+        ),
+        memoryGB: max(2, Int(physicalMemoryBytes / 1_073_741_824)),
+        freeStorageGB: freeStorageGB,
+        lowPowerModeEnabled: lowPowerMode,
+        thermalCondition: thermalCondition
+    )
 }
 
 private func alphaAutomaticMLXDraftPack(
@@ -2833,6 +2896,7 @@ extension AlphaRossModel {
 
         let reports = matterBundleComparisonReports
         guard !reports.isEmpty else { return }
+        let deviceProofProfile = alphaCurrentPrivateAIDeviceProofProfile()
 
         matterBundleComparisonExportRunning = true
         matterBundleComparisonExportErrorMessage = nil
@@ -2845,7 +2909,8 @@ extension AlphaRossModel {
                     caseId: nil,
                     bodyLines: alphaMatterBundleComparisonExportBodyLines(
                         reports: reports,
-                        smokeReports: localInferenceSmokeReports
+                        smokeReports: localInferenceSmokeReports,
+                        deviceProofProfile: deviceProofProfile
                     )
                 )
                 persisted.exports.insert(report, at: 0)
@@ -3363,6 +3428,7 @@ extension AlphaRossModel {
 func alphaMatterBundleComparisonExportBodyLines(
     reports: [AlphaMatterBundleComparisonReport],
     smokeReports: [AlphaLocalInferenceSmokeReport] = [],
+    deviceProofProfile: AlphaPrivateAIDeviceProofProfile? = nil,
     generatedAt: Date = .now
 ) -> [String] {
     let latestReports = alphaMatterBundleLatestReportsByRuntime(reports)
@@ -3409,6 +3475,17 @@ func alphaMatterBundleComparisonExportBodyLines(
         lines.append("")
         lines.append(rossLocalized("private_assistant_runtime_summary_readout"))
         lines.append(contentsOf: decisionHints.map { "- \($0)" })
+    }
+
+    if let deviceProofProfile {
+        lines.append("")
+        lines.append(rossLocalized("private_assistant_device_profile_title"))
+        lines.append("  \(rossLocalized("private_assistant_device_model_label")): \(deviceProofProfile.deviceModelLabel)")
+        lines.append("  \(rossLocalized("private_assistant_device_system_label")): \(deviceProofProfile.systemVersionLabel)")
+        lines.append("  \(rossLocalized("private_assistant_device_memory_label")): \(deviceProofProfile.memoryGB) GB")
+        lines.append("  \(rossLocalized("private_assistant_device_storage_label")): \(deviceProofProfile.freeStorageGB) GB")
+        lines.append("  \(rossLocalized("private_assistant_device_low_power_label")): \(deviceProofProfile.lowPowerModeEnabled ? rossLocalized("yes") : rossLocalized("no"))")
+        lines.append("  \(rossLocalized("private_assistant_device_thermal_label")): \(deviceProofProfile.thermalCondition)")
     }
 
     if !coverageStatuses.isEmpty {

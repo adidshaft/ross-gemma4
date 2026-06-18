@@ -3052,6 +3052,62 @@ func rossLocalized(_ key: String, languageCode: String = rossSelectedLanguageCod
             "ta": "Comparison readout",
             "te": "Comparison readout"
         ],
+        "private_assistant_device_profile_title": [
+            "en": "Device proof profile",
+            "hi": "Device proof profile",
+            "bn": "Device proof profile",
+            "ta": "Device proof profile",
+            "te": "Device proof profile"
+        ],
+        "private_assistant_device_profile_note": [
+            "en": "Use this to confirm the saved note came from the intended iPhone memory class and OS version.",
+            "hi": "इससे confirm करें कि saved note intended iPhone memory class और OS version से आया है.",
+            "bn": "এটি দিয়ে confirm করুন যে saved note intended iPhone memory class এবং OS version থেকেই এসেছে.",
+            "ta": "saved note intended iPhone memory class மற்றும் OS version-இலிருந்துதான் வந்தது என்பதை இதனால் confirm செய்யவும்.",
+            "te": "saved note intended iPhone memory class మరియు OS version నుంచే వచ్చిందో దీతో confirm చేయండి."
+        ],
+        "private_assistant_device_model_label": [
+            "en": "Device model",
+            "hi": "Device model",
+            "bn": "Device model",
+            "ta": "Device model",
+            "te": "Device model"
+        ],
+        "private_assistant_device_system_label": [
+            "en": "System version",
+            "hi": "System version",
+            "bn": "System version",
+            "ta": "System version",
+            "te": "System version"
+        ],
+        "private_assistant_device_memory_label": [
+            "en": "Memory",
+            "hi": "Memory",
+            "bn": "Memory",
+            "ta": "Memory",
+            "te": "Memory"
+        ],
+        "private_assistant_device_storage_label": [
+            "en": "Free storage",
+            "hi": "Free storage",
+            "bn": "Free storage",
+            "ta": "Free storage",
+            "te": "Free storage"
+        ],
+        "private_assistant_device_low_power_label": [
+            "en": "Low Power Mode",
+            "hi": "Low Power Mode",
+            "bn": "Low Power Mode",
+            "ta": "Low Power Mode",
+            "te": "Low Power Mode"
+        ],
+        "private_assistant_device_thermal_label": [
+            "en": "Thermal state",
+            "hi": "Thermal state",
+            "bn": "Thermal state",
+            "ta": "Thermal state",
+            "te": "Thermal state"
+        ],
         "private_assistant_runtime_comparison_export_title": [
             "en": "Private assistant runtime comparison note",
             "hi": "Private assistant runtime comparison note",

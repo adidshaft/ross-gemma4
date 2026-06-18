@@ -472,6 +472,10 @@ private struct AlphaPrivateAIInternalDiagnostics: View {
         model.persisted.exports.first { $0.kind == AlphaRossModel.matterBundleComparisonExportKind }
     }
 
+    private var deviceProofProfile: AlphaPrivateAIDeviceProofProfile {
+        alphaCurrentPrivateAIDeviceProofProfile()
+    }
+
     private var comparisonTier: AlphaCapabilityTier? {
         model.activePack?.tier ?? model.persisted.settings.activeTier ?? model.selectedTier
     }
@@ -571,6 +575,9 @@ private struct AlphaPrivateAIInternalDiagnostics: View {
             } else {
                 AlphaSettingsValueRow(label: rossLocalized("status"), value: rossLocalized("assistant_check_after_setup"))
             }
+
+            Divider()
+            AlphaPrivateAIDeviceProofProfileSection(profile: deviceProofProfile)
 
             Button(model.localInferenceSmokeRunning ? rossLocalized("checking_private_assistant_sample_file") : rossLocalized("check_private_assistant_with_sample_file")) {
                 model.runLocalInferenceSmoke()
@@ -857,6 +864,33 @@ private struct AlphaMatterBundleComparisonReportCard: View {
             Text(report.message)
                 .font(.caption)
                 .foregroundStyle(Color.rossInk.opacity(0.68))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+private struct AlphaPrivateAIDeviceProofProfileSection: View {
+    let profile: AlphaPrivateAIDeviceProofProfile
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(rossLocalized("private_assistant_device_profile_title"))
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color.rossInk)
+
+            AlphaSettingsValueRow(label: rossLocalized("private_assistant_device_model_label"), value: profile.deviceModelLabel)
+            AlphaSettingsValueRow(label: rossLocalized("private_assistant_device_system_label"), value: profile.systemVersionLabel)
+            AlphaSettingsValueRow(label: rossLocalized("private_assistant_device_memory_label"), value: "\(profile.memoryGB) GB")
+            AlphaSettingsValueRow(label: rossLocalized("private_assistant_device_storage_label"), value: "\(profile.freeStorageGB) GB")
+            AlphaSettingsValueRow(
+                label: rossLocalized("private_assistant_device_low_power_label"),
+                value: profile.lowPowerModeEnabled ? rossLocalized("yes") : rossLocalized("no")
+            )
+            AlphaSettingsValueRow(label: rossLocalized("private_assistant_device_thermal_label"), value: profile.thermalCondition)
+
+            Text(rossLocalized("private_assistant_device_profile_note"))
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(Color.rossInk.opacity(0.60))
                 .fixedSize(horizontal: false, vertical: true)
         }
     }

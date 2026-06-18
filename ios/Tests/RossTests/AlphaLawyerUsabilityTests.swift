@@ -4684,6 +4684,25 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         )
     }
 
+    func testCurrentPrivateAIDeviceProofProfileUsesInjectedModelVersionAndMemory() {
+        let profile = alphaCurrentPrivateAIDeviceProofProfile(
+            environment: ["SIMULATOR_MODEL_IDENTIFIER": "iPhone17,2"],
+            operatingSystemName: "iOS",
+            operatingSystemVersion: OperatingSystemVersion(majorVersion: 26, minorVersion: 4, patchVersion: 1),
+            physicalMemoryBytes: 8 * 1_073_741_824,
+            freeStorageGB: 28,
+            lowPowerMode: false,
+            thermalCondition: "Nominal"
+        )
+
+        XCTAssertEqual(profile.deviceModelLabel, "iPhone17,2")
+        XCTAssertEqual(profile.systemVersionLabel, "iOS 26.4.1")
+        XCTAssertEqual(profile.memoryGB, 8)
+        XCTAssertEqual(profile.freeStorageGB, 28)
+        XCTAssertFalse(profile.lowPowerModeEnabled)
+        XCTAssertEqual(profile.thermalCondition, "Nominal")
+    }
+
     func testMatterBundleComparisonUnavailableReportUsesAssistantLanguage() async {
         rossSaveLanguageSelection(code: "hi")
         let model = await MainActor.run {
@@ -5016,15 +5035,28 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                 message: "GGUF sample check passed"
             )
         ]
+        let deviceProofProfile = AlphaPrivateAIDeviceProofProfile(
+            deviceModelLabel: "iPhone17,2",
+            systemVersionLabel: "iOS 26.4.1",
+            memoryGB: 8,
+            freeStorageGB: 28,
+            lowPowerModeEnabled: false,
+            thermalCondition: "Nominal"
+        )
 
         let lines = alphaMatterBundleComparisonExportBodyLines(
             reports: reports,
             smokeReports: smokeReports,
+            deviceProofProfile: deviceProofProfile,
             generatedAt: Date(timeIntervalSince1970: 1_718_000_000)
         )
         let joined = lines.joined(separator: "\n")
 
         XCTAssertTrue(joined.contains("Private assistant runtime comparison note"))
+        XCTAssertTrue(joined.contains("Device proof profile"))
+        XCTAssertTrue(joined.contains("Device model: iPhone17,2"))
+        XCTAssertTrue(joined.contains("System version: iOS 26.4.1"))
+        XCTAssertTrue(joined.contains("Memory: 8 GB"))
         XCTAssertTrue(joined.contains("Device-proof coverage"))
         XCTAssertTrue(joined.contains("Still needed before the device note is complete: CoreAI sample file and longer bundle, MLX sample file"))
         XCTAssertTrue(joined.contains("Sample file: Not run · Longer bundle: Completed"))
@@ -5135,6 +5167,7 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
             XCTAssertEqual(ledgerTitle, "Local export generated")
             XCTAssertNil(exportError)
             XCTAssertTrue(FileManager.default.fileExists(atPath: exportURL.path))
+            XCTAssertTrue(imported.document.extractedText?.contains("Device proof profile") == true)
             XCTAssertTrue(imported.document.extractedText?.contains("Device-proof coverage") == true)
             XCTAssertTrue(imported.document.extractedText?.contains("Next device steps") == true)
             XCTAssertTrue(imported.document.extractedText?.contains("Latest sample check by runtime") == true)
