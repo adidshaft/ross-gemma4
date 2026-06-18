@@ -264,10 +264,22 @@ struct RossLocalModelSmokeView: View {
             return
         }
 
+        let activePackHealth = AlphaLocalModelRuntime.runtimeHealth(
+            activePack: activePack,
+            requestedTier: activePack.tier,
+            runtimeEnvironment: runtimeEnvironment
+        )
         RossLocalModelSmokeView.log(
-            "ROSS_LOCAL_MODEL_SMOKE_HEALTH runtime=\(activePack.runtimeMode.rawValue) available=true model=\(URL(fileURLWithPath: activePack.installPath).lastPathComponent) checksum=\(activePack.checksumVerified)"
+            "ROSS_LOCAL_MODEL_SMOKE_HEALTH runtime=\(activePack.runtimeMode.rawValue) available=\(activePackHealth?.available == true) model=\(URL(fileURLWithPath: activePack.installPath).lastPathComponent) checksum=\(activePack.checksumVerified) error=\(activePackHealth?.lastErrorCategory ?? "nil")"
         )
         RossLocalModelSmokeView.log(rossLocalModelSmokeMemoryUsageLine(stage: "active_pack"))
+        guard activePackHealth?.available == true else {
+            status = RossLocalModelSmokeStatusCopy.unavailableAssistantStatus
+            RossLocalModelSmokeView.log(
+                "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(activePack.runtimeMode.rawValue) tier=\(activePack.tier.rawValue) profile=\(smokeProfile.rawValue) stage=active_pack error=\(activePackHealth?.lastErrorCategory ?? "runtime_unavailable")"
+            )
+            return
+        }
 
         RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE resolve_provider")
         guard let provider = AlphaLocalModelRuntime.resolveProvider(
@@ -288,8 +300,15 @@ struct RossLocalModelSmokeView: View {
             RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_FAIL provider_unavailable runtime=\(activePack.runtimeMode.rawValue)")
             return
         }
-        RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE provider_ready runtime=\(provider.runtimeMode.rawValue)")
         let providerHealth = provider.runtimeHealth()
+        guard providerHealth.available else {
+            status = RossLocalModelSmokeStatusCopy.unavailableAssistantStatus
+            RossLocalModelSmokeView.log(
+                "ROSS_LOCAL_MODEL_SMOKE_FAIL runtime=\(provider.runtimeMode.rawValue) tier=\(activePack.tier.rawValue) profile=\(smokeProfile.rawValue) stage=provider_health error=\(providerHealth.lastErrorCategory ?? "runtime_unavailable")"
+            )
+            return
+        }
+        RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE provider_ready runtime=\(provider.runtimeMode.rawValue)")
         RossLocalModelSmokeView.log(
             "ROSS_LOCAL_MODEL_SMOKE_RUNTIME context_tokens=\(providerHealth.estimatedContextTokens.map(String.init) ?? "nil") max_input_chars=\(providerHealth.maxInputChars.map(String.init) ?? "nil") acceleration=\(providerHealth.accelerationMode?.rawValue ?? "nil") draft_tokens=\(providerHealth.accelerationDraftTokens.map(String.init) ?? "nil") draft_model=\(providerHealth.draftModelPathLabel ?? "nil")"
         )

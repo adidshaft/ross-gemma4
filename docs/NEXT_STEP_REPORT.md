@@ -15,8 +15,10 @@ This is the current safe handoff point for the Ross Gemma 4 runtime and product-
   - `scripts/ios-device-installed-pack-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --smoke-profile quick --stage-timeout 30 --disable-draft`
   - now ends with `source_error=insufficient_device_memory` and `general_error=insufficient_device_memory`
   - the app stays alive long enough to report the failure instead of being jetsammed during MLX container load
-- one inconsistency remains for the next pass:
-  - the smoke still logs `ROSS_LOCAL_MODEL_SMOKE_HEALTH runtime=mlx_swift_lm available=true` and reaches `provider_ready` before the stage-level `insufficient_device_memory` failure, so the reporting path is not yet fully aligned with the new device-support guard
+- the smoke reporting path is now also aligned with the new guard:
+  - the same installed-pack smoke now logs `ROSS_LOCAL_MODEL_SMOKE_HEALTH runtime=mlx_swift_lm available=false ... error=insufficient_device_memory`
+  - it now stops at `ROSS_LOCAL_MODEL_SMOKE_FAIL ... stage=active_pack error=insufficient_device_memory`
+  - it no longer emits misleading `available=true` or `provider_ready` lines for that unsupported lane
 
 ## Latest MLX Runtime Checkpoint
 
@@ -54,10 +56,10 @@ Resume from the new physical-device checkpoint above, not from the older Gemma 4
 
 1. treat the shared-KV missing-key bug and the `per_layer_model_projection` shape bug as cleared checkpoints for the current repo state
 2. treat the old launch-time watchdog and the later MLX `signal 9` path on Aman’s phone as mitigated for the current product flow, because the app now refuses the unsupported lane instead of crashing
-3. focus the next pass on alignment rather than emergency stability:
-   - make the smoke/runtime-health reporting path agree with the new guard so `available=true` / `provider_ready` no longer appear before the `insufficient_device_memory` refusal
+3. treat the smoke/runtime-health reporting mismatch as cleared for the current repo state:
+   - the smoke path now agrees with the device-support guard and refuses the unsupported lane before `provider_ready`
 4. decide whether Quick Start on this device class should remain GGUF-only or whether a later MLX fallback/profile experiment is still worth pursuing behind a deliberate debug-only path
-5. only after the reporting path is clean should the next pass revisit any deeper MLX memory experiments on physical hardware
+5. only after that policy decision should the next pass revisit any deeper MLX memory experiments on physical hardware
 
 ## Current Stable State
 
