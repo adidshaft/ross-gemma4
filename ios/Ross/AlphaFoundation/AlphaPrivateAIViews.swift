@@ -2600,8 +2600,20 @@ func alphaAssistantVariantOptions(
     physicalMemoryBytes: UInt64 = ProcessInfo.processInfo.physicalMemory
 ) -> [AlphaAssistantVariantOption] {
     let normalizedTier = AlphaCapabilityTier.normalizedAssistantSelection(tier) ?? tier
+    func runtimeSupported(_ runtimeMode: AlphaPackRuntimeMode) -> Bool {
+        alphaAssistantRuntimeSupportedOnCurrentDevice(
+            runtimeMode: runtimeMode,
+            tier: normalizedTier,
+            isPhoneFormFactor: isPhoneFormFactor,
+            physicalMemoryBytes: physicalMemoryBytes,
+            systemAssistantAvailable: systemAssistantAvailable
+        )
+    }
     var options = installedPacks
-        .filter { AlphaCapabilityTier.assistantSelectionsMatch($0.tier, normalizedTier) }
+        .filter {
+            AlphaCapabilityTier.assistantSelectionsMatch($0.tier, normalizedTier) &&
+                runtimeSupported($0.runtimeMode)
+        }
         .map { pack in
             let isActive = activePack?.id == pack.id
             return AlphaAssistantVariantOption(
@@ -2625,6 +2637,7 @@ func alphaAssistantVariantOptions(
         cachedDownloads: cachedDownloads
     )
     for runtimeMode in availableSetupRuntimeModes where !options.contains(where: { $0.runtimeMode == runtimeMode }) {
+        guard runtimeSupported(runtimeMode) else { continue }
         options.append(
             AlphaAssistantVariantOption(
                 pack: nil,

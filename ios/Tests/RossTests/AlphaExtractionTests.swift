@@ -12002,6 +12002,59 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(options.last?.isSelected, false)
     }
 
+    func testAssistantVariantOptionsHideUnsupportedCaseAssociateGGUFOnBelow12GBPhone() {
+        let options = alphaAssistantVariantOptions(
+            for: .caseAssociate,
+            installedPacks: [],
+            activePack: nil,
+            systemAssistantAvailable: false,
+            preferredRuntimeMode: .mlxSwiftLm,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 8 * 1_073_741_824
+        )
+
+        XCTAssertEqual(options.map(\.runtimeMode), [.mlxSwiftLm])
+        XCTAssertEqual(options.first?.detailLabel, "~10 tok/s · 20,480 tokens · Companion")
+    }
+
+    func testAssistantVariantOptionsHideInstalledUnsupportedCaseAssociateGGUFOnBelow12GBPhone() {
+        let ggufPack = AlphaInstalledModelPack(
+            packId: "case-gguf",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/case-gguf.gguf",
+            checksumSha256: String(repeating: "d", count: 64),
+            artifactKind: "local_model_artifact",
+            runtimeMode: .llamaCppGguf,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: false
+        )
+        let mlxPack = AlphaInstalledModelPack(
+            packId: "case-mlx",
+            tier: .caseAssociate,
+            installPath: "model-packs/case_associate/case-mlx",
+            checksumSha256: String(repeating: "e", count: 64),
+            artifactKind: "mlx_directory",
+            runtimeMode: .mlxSwiftLm,
+            developmentOnly: false,
+            checksumVerified: true,
+            isActive: false
+        )
+
+        let options = alphaAssistantVariantOptions(
+            for: .caseAssociate,
+            installedPacks: [ggufPack, mlxPack],
+            activePack: nil,
+            systemAssistantAvailable: false,
+            preferredRuntimeMode: .mlxSwiftLm,
+            isPhoneFormFactor: true,
+            physicalMemoryBytes: 8 * 1_073_741_824
+        )
+
+        XCTAssertEqual(options.map(\.runtimeMode), [.mlxSwiftLm])
+        XCTAssertEqual(options.first?.pack?.packId, "case-mlx")
+    }
+
     func testAssistantPreferredInstalledPackUsesPreferredRuntimeInsteadOfFirstStoredPack() {
         let ggufPack = AlphaInstalledModelPack(
             packId: "case-gguf",
