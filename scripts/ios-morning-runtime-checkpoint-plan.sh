@@ -107,8 +107,7 @@ print_command \
   --tier "$tier" \
   --smoke-profile mtp_quick \
   --stage-timeout "$stage_timeout" \
-  --require-draft-acceleration \
-  --allow-device-proof-pack
+  --require-draft-acceleration
 
 print_command \
   "4. MLX identity and generation quick smoke if installed MLX artifact exists" \
