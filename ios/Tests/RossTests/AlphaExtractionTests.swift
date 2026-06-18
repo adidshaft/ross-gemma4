@@ -15916,6 +15916,129 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertFalse(RossLocalModelSmokeView.requiresDraftAcceleration([:]))
     }
 
+    func testRuntimeIdentityLineIncludesGGUFDraftBenchmarkFields() throws {
+        let modelURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ross identity gguf \(UUID().uuidString)")
+            .appendingPathExtension("gguf")
+        try Data("gguf".utf8).write(to: modelURL)
+        defer { try? FileManager.default.removeItem(at: modelURL) }
+
+        let activePack = installedPack(
+            .quickStart,
+            runtimeMode: .llamaCppGguf,
+            packId: "quick-gguf-mtp",
+            installPath: modelURL.path,
+            checksum: String(repeating: "a", count: 64),
+            artifactKind: "local_model_artifact",
+            developmentOnly: false
+        )
+        let provider = AlphaLlamaCppProvider(
+            capabilityTier: .quickStart,
+            modelPathLabel: modelURL.lastPathComponent,
+            modelPath: modelURL.path,
+            checksumVerified: true
+        )
+        let health = AlphaLocalRuntimeHealth(
+            runtimeMode: .llamaCppGguf,
+            available: true,
+            modelPathPresent: true,
+            modelPathLabel: modelURL.lastPathComponent,
+            checksumVerified: true,
+            supportedTasks: [.matterQuestionAnswer],
+            maxInputChars: 22_000,
+            estimatedContextTokens: 4_096,
+            accelerationMode: .draftModelSpeculative,
+            accelerationDraftTokens: 2,
+            draftModelPathLabel: "mtp-gemma-4-E4B-it.gguf",
+            lastErrorCategory: nil,
+            userFacingStatus: "Ready",
+            explicitOptInEnabled: true
+        )
+
+        let line = RossLocalModelSmokeView.runtimeIdentityLine(
+            activePack: activePack,
+            provider: provider,
+            providerHealth: health,
+            requestedRuntime: .llamaCppGguf
+        )
+
+        XCTAssertTrue(line.hasPrefix("provider=AlphaLlamaCppProvider "))
+        XCTAssertTrue(line.contains("requested_runtime=gemma_local_runtime"))
+        XCTAssertTrue(line.contains("actual_runtime=gemma_local_runtime"))
+        XCTAssertTrue(line.contains("pack_runtime=gemma_local_runtime"))
+        XCTAssertTrue(line.contains("model_format=local_model_artifact"))
+        XCTAssertTrue(line.contains("artifact_path_type=file"))
+        XCTAssertTrue(line.contains("artifact_path=ross_identity_gguf_"))
+        XCTAssertTrue(line.contains("acceleration=draftModelSpeculative"))
+        XCTAssertTrue(line.contains("draft_tokens=2"))
+        XCTAssertTrue(line.contains("draft_model=mtp-gemma-4-E4B-it.gguf"))
+        XCTAssertTrue(line.contains("context_tokens=4096"))
+        XCTAssertTrue(line.contains("gpu_offload=n_gpu_layers:"))
+        XCTAssertTrue(line.contains("fallback=none"))
+        XCTAssertTrue(line.contains("available=true"))
+        XCTAssertTrue(line.contains("error=nil"))
+    }
+
+    func testRuntimeIdentityLineIncludesMLXDirectoryFields() throws {
+        let directory = try makeMLXDirectoryFixture(named: "ross identity mlx \(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let activePack = installedPack(
+            .caseAssociate,
+            runtimeMode: .mlxSwiftLm,
+            packId: "case-mlx",
+            installPath: directory.path,
+            checksum: String(repeating: "b", count: 64),
+            artifactKind: "mlx_directory",
+            developmentOnly: false
+        )
+        let provider = AlphaMLXLocalProvider(
+            capabilityTier: .caseAssociate,
+            modelPathLabel: directory.lastPathComponent,
+            modelPath: directory.path,
+            checksumVerified: true
+        )
+        let health = AlphaLocalRuntimeHealth(
+            runtimeMode: .mlxSwiftLm,
+            available: true,
+            modelPathPresent: true,
+            modelPathLabel: directory.lastPathComponent,
+            checksumVerified: true,
+            supportedTasks: [.matterQuestionAnswer],
+            maxInputChars: 40_000,
+            estimatedContextTokens: 20_480,
+            accelerationMode: .standard,
+            accelerationDraftTokens: nil,
+            draftModelPathLabel: nil,
+            lastErrorCategory: nil,
+            userFacingStatus: "Ready",
+            explicitOptInEnabled: true
+        )
+
+        let line = RossLocalModelSmokeView.runtimeIdentityLine(
+            activePack: activePack,
+            provider: provider,
+            providerHealth: health,
+            requestedRuntime: .mlxSwiftLm
+        )
+
+        XCTAssertTrue(line.hasPrefix("provider=AlphaMLXLocalProvider "))
+        XCTAssertTrue(line.contains("requested_runtime=mlx_swift_lm"))
+        XCTAssertTrue(line.contains("actual_runtime=mlx_swift_lm"))
+        XCTAssertTrue(line.contains("pack_runtime=mlx_swift_lm"))
+        XCTAssertTrue(line.contains("model_format=mlx_directory"))
+        XCTAssertTrue(line.contains("artifact_path_type=directory"))
+        XCTAssertTrue(line.contains("artifact_path=ross_identity_mlx_"))
+        XCTAssertTrue(line.contains("acceleration=standard"))
+        XCTAssertTrue(line.contains("draft_tokens=nil"))
+        XCTAssertTrue(line.contains("draft_model=nil"))
+        XCTAssertTrue(line.contains("context_tokens=20480"))
+        XCTAssertTrue(line.contains("gpu_offload=mlx_default"))
+        XCTAssertTrue(line.contains("fallback=none"))
+        XCTAssertTrue(line.contains("available=true"))
+        XCTAssertTrue(line.contains("error=nil"))
+    }
+
     func testAssistantDownloadSmokeConfigParsesTierRuntimeAndFlags() {
         let config = RossAssistantDownloadSmokeConfig.fromEnvironment([
             "ROSS_ASSISTANT_DOWNLOAD_SMOKE_TIER": "caseAssociate",

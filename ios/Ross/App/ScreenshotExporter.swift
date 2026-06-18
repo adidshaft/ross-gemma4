@@ -704,6 +704,15 @@ struct RossLocalModelSmokeView: View {
         providerHealth: AlphaLocalRuntimeHealth,
         requestedRuntime: AlphaPackRuntimeMode?
     ) {
+        log("ROSS_RUNTIME_IDENTITY \(runtimeIdentityLine(activePack: activePack, provider: provider, providerHealth: providerHealth, requestedRuntime: requestedRuntime))")
+    }
+
+    nonisolated static func runtimeIdentityLine(
+        activePack: AlphaInstalledModelPack,
+        provider: any AlphaLocalModelProvider,
+        providerHealth: AlphaLocalRuntimeHealth,
+        requestedRuntime: AlphaPackRuntimeMode?
+    ) -> String {
         let artifactURL = URL(fileURLWithPath: activePack.installPath)
         let artifactPathType: String
         if (try? artifactURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
@@ -751,7 +760,7 @@ struct RossLocalModelSmokeView: View {
         let line = fields
             .map { "\($0.0)=\(stableSmokeValue($0.1))" }
             .joined(separator: " ")
-        log("ROSS_RUNTIME_IDENTITY \(line)")
+        return line
     }
 
     nonisolated private static func stableSmokeValue(_ value: String) -> String {
