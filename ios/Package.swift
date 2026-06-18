@@ -16,7 +16,10 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/mattt/llama.swift", .upToNextMajor(from: "2.9672.0")),
-        .package(url: "https://github.com/ml-explore/mlx-swift-lm", .upToNextMajor(from: "3.31.3")),
+        .package(
+            url: "https://github.com/ml-explore/mlx-swift-lm",
+            revision: "774607e8cdbc5ebdfeab1f9016ef9424a7ca23fc"
+        ),
         .package(url: "https://github.com/huggingface/swift-huggingface", from: "0.9.0"),
         .package(url: "https://github.com/huggingface/swift-transformers", from: "1.3.0"),
         .package(url: "https://github.com/weichsel/ZIPFoundation.git", from: "0.9.20")

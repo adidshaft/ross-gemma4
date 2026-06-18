@@ -216,8 +216,13 @@ struct RossLocalModelSmokeView: View {
     private func runSmoke() async {
         let model = AlphaRossModel()
         let smokeProfile = RossLocalModelSmokeProfile.fromEnvironment(ProcessInfo.processInfo.environment)
+        let runtimeEnvironment = AlphaLocalRuntimeEnvironment.fromEnvironment(ProcessInfo.processInfo.environment)
+        let debugModelPath = runtimeEnvironment.modelPath?.trimmingCharacters(in: .whitespacesAndNewlines)
+        RossLocalModelSmokeView.log(
+            "ROSS_LOCAL_MODEL_SMOKE_DEBUG env_real_inference=\(runtimeEnvironment.enableRealInference) runtime=\(runtimeEnvironment.runtimeModeOverride?.rawValue ?? "nil") tier=\(runtimeEnvironment.tierOverride?.rawValue ?? "nil") pack_id=\(runtimeEnvironment.packIDOverride ?? "nil") model_path_present=\(debugModelPath?.isEmpty == false) model_path_exists=\(debugModelPath.map { FileManager.default.fileExists(atPath: $0) } ?? false) draft_path_present=\(runtimeEnvironment.draftModelPath?.isEmpty == false)"
+        )
         let activePack: AlphaInstalledModelPack?
-        if let debugPack = debugLocalModelSmokePack() {
+        if let debugPack = debugLocalModelSmokePack(environment: runtimeEnvironment) {
             activePack = debugPack
             RossLocalModelSmokeView.log("ROSS_LOCAL_MODEL_SMOKE_STAGE using_debug_pack")
         } else {
@@ -730,9 +735,9 @@ struct RossLocalModelSmokeView: View {
             && text.contains("ధృవీక")
     }
 
-    private func debugLocalModelSmokePack() -> AlphaInstalledModelPack? {
+    private func debugLocalModelSmokePack(environment: AlphaLocalRuntimeEnvironment) -> AlphaInstalledModelPack? {
         alphaDebugLocalModelSmokePack(
-            environment: AlphaLocalRuntimeEnvironment.fromEnvironment(ProcessInfo.processInfo.environment)
+            environment: environment
         )
     }
 

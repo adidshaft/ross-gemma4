@@ -64,6 +64,56 @@ final class AlphaExtractionTests: XCTestCase {
         return directory
     }
 
+    private func makeGemma4SharedKVOverlayFixture(
+        named name: String = "ross-mlx-gemma4-shared-kv-\(UUID().uuidString)"
+    ) throws -> URL {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(name, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+        let config: [String: Any] = [
+            "model_type": "gemma4",
+            "text_config": [
+                "model_type": "gemma4_text",
+                "hidden_size": 16,
+                "num_hidden_layers": 4,
+                "num_key_value_heads": 2,
+                "head_dim": 4,
+                "global_head_dim": 8,
+                "num_kv_shared_layers": 2,
+                "attention_k_eq_v": false,
+                "layer_types": [
+                    "sliding_attention",
+                    "full_attention",
+                    "sliding_attention",
+                    "full_attention"
+                ]
+            ]
+        ]
+        let configData = try JSONSerialization.data(withJSONObject: config, options: [.sortedKeys])
+        try configData.write(to: directory.appendingPathComponent("config.json"))
+        try Data("{}".utf8).write(to: directory.appendingPathComponent("tokenizer.json"))
+        try Data("weights".utf8).write(to: directory.appendingPathComponent("model.safetensors"))
+
+        let weightMap: [String: String] = [
+            "language_model.model.layers.0.self_attn.k_proj.weight": "model.safetensors",
+            "language_model.model.layers.0.self_attn.v_proj.weight": "model.safetensors",
+            "language_model.model.layers.0.self_attn.k_norm.weight": "model.safetensors",
+            "language_model.model.layers.1.self_attn.k_proj.weight": "model.safetensors",
+            "language_model.model.layers.1.self_attn.v_proj.weight": "model.safetensors",
+            "language_model.model.layers.1.self_attn.k_norm.weight": "model.safetensors",
+            "language_model.model.layers.2.self_attn.q_proj.weight": "model.safetensors",
+            "language_model.model.layers.2.self_attn.o_proj.weight": "model.safetensors",
+            "language_model.model.layers.3.self_attn.q_proj.weight": "model.safetensors",
+            "language_model.model.layers.3.self_attn.o_proj.weight": "model.safetensors"
+        ]
+        let indexData = try JSONSerialization.data(
+            withJSONObject: ["weight_map": weightMap],
+            options: [.sortedKeys]
+        )
+        try indexData.write(to: directory.appendingPathComponent("model.safetensors.index.json"))
+        return directory
+    }
+
     @MainActor
     private func installMLXPack(
         with store: AlphaRossStore,
@@ -7040,6 +7090,29 @@ final class AlphaExtractionTests: XCTestCase {
         XCTAssertEqual(descriptors.first?.draftArtifact?.sizeBytes, 270_093_545)
         XCTAssertEqual(descriptors.first?.draftArtifact?.checksumSha256, "84994ca2a6ab4f39dcd5ebd29a42b21b10c69254a7456795fb2d1945b49ba3d8")
         XCTAssertEqual(descriptors.first?.draftArtifact?.draftTokens, 6)
+    }
+
+    func testGemma4SharedKVShimTensorShapesMatchMissingRuntimeWeights() throws {
+        let sourceDirectory = try makeGemma4SharedKVOverlayFixture()
+        defer { try? FileManager.default.removeItem(at: sourceDirectory) }
+
+        let shapes = AlphaMLXLocalProvider.gemma4SharedKVShimTensorShapes(for: sourceDirectory)
+
+        XCTAssertEqual(shapes["language_model.model.layers.2.self_attn.k_proj.weight"], [8, 16])
+        XCTAssertEqual(shapes["language_model.model.layers.2.self_attn.v_proj.weight"], [8, 16])
+        XCTAssertEqual(shapes["language_model.model.layers.2.self_attn.k_norm.weight"], [4])
+        XCTAssertEqual(shapes["language_model.model.layers.3.self_attn.k_proj.weight"], [16, 16])
+        XCTAssertEqual(shapes["language_model.model.layers.3.self_attn.v_proj.weight"], [16, 16])
+        XCTAssertEqual(shapes["language_model.model.layers.3.self_attn.k_norm.weight"], [8])
+    }
+
+    func testPreparedMLXRuntimeDirectoryLeavesNonGemma4DirectoryUnchanged() throws {
+        let sourceDirectory = try makeMLXDirectoryFixture(named: "ross-mlx-plain-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: sourceDirectory) }
+
+        let preparedDirectory = try AlphaMLXLocalProvider.preparedRuntimeDirectoryURL(for: sourceDirectory)
+
+        XCTAssertEqual(preparedDirectory.path, sourceDirectory.path)
     }
 
     func testPreferredAssistantDownloadFallbackUsesRossDirectoryDigestChecksumsForBundledDirectMLX() {

@@ -2,13 +2,40 @@
 
 This is the current safe handoff point for the Ross Gemma 4 runtime and product-quality pass as of June 18, 2026.
 
+## Latest MLX Runtime Checkpoint
+
+- Ross now carries a runtime-only shared-KV shim in `AlphaMLXLocalProvider`, so Gemma 4 QAT packs that omit shared-layer `k_proj` / `v_proj` / `k_norm` tensors can still load without mutating the installed pack directory
+- the iOS package graph is now temporarily pinned to `mlx-swift-lm` revision `774607e8cdbc5ebdfeab1f9016ef9424a7ca23fc`, which matches the upstream Gemma 4 E-series `per_layer_model_projection` quantization fix discussed in official PR `#320`
+- focused iOS tests still pass after that pin, and the iOS device build/install still succeeds on Aman's cabled iPhone (`3803F5B6-1666-56D3-A71A-62F131F6CE3B`)
+- the earlier Gemma 4 installed-pack runtime failures have now moved twice:
+  - first blocker removed: missing shared-KV tensor key `language_model.model.layers.24.self_attn.v_proj.weight`
+  - second blocker removed: mismatched `language_model.model.per_layer_model_projection.weight` shape (`actual [10752, 320]`, `expected [10752, 2560]`)
+- the current real-device blocker is now later in execution: the real manifest-backed production Quick Start MLX pack (`gemma-4-e4b-mlx`) reaches `provider_ready` and begins the source-grounded smoke stage, then the app is terminated by `signal 9`
+- that new blocker reproduced twice on the same phone with the same installed production pack:
+  - `scripts/ios-device-installed-pack-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --smoke-profile quick --stage-timeout 15`
+  - `scripts/ios-device-installed-pack-smoke.sh --device 3803F5B6-1666-56D3-A71A-62F131F6CE3B --tier quickStart --smoke-profile quick --stage-timeout 30`
+- both runs produced the same latest signal:
+  - `ROSS_LOCAL_MODEL_SMOKE_STAGE provider_ready runtime=mlx_swift_lm`
+  - `ROSS_LOCAL_MODEL_SMOKE_STAGE source timeout=...`
+  - `App terminated due to signal 9.`
+
+## Immediate Resume Target
+
+Resume from the new physical-device checkpoint above, not from the older Gemma 4 loader mismatches.
+
+1. treat the shared-KV missing-key bug and the `per_layer_model_projection` shape bug as cleared checkpoints for the current repo state
+2. focus the next investigation on why the real app is being killed during source-stage MLX generation on Aman's iPhone after `provider_ready`
+3. collect the termination reason if possible, because `signal 9` now looks more like runtime pressure or an OS kill than a loader contract mismatch
+4. compare whether the kill still happens with draft acceleration disabled, since the current smoke still reports `acceleration=draftModelSpeculative`
+5. only after that should the next pass decide whether the remaining issue belongs in Ross runtime policy, MLX generation settings, or another upstream runtime bug
+
 ## Current Stable State
 
 - the exposed assistant lineup is still the intended 3-pack Gemma 4 ladder
 - one of those three packs is `gemma-4-12b-it-GGUF`, which remains the Case Associate default
 - the iOS GGUF runner is now pinned to `llama.swift` `2.9672.0`, which resolves upstream `llama.cpp` Apple XCFramework `b9672`
 - `mlx-swift` remains at `0.31.4`
-- `mlx-swift-lm` remains at `3.31.3`
+- the active iOS package graph now temporarily pins `mlx-swift-lm` to revision `774607e8cdbc5ebdfeab1f9016ef9424a7ca23fc` on top of the prior `3.31.3` baseline while the upstream Gemma 4 E-series fix is still pending a normal release
 - CoreAI, MLX, and GGUF runtime selection logic is already present on iOS and has been improved further for modern iPhones
 - long-file ask handling on iOS now scales source chunk sizing with runtime budget instead of using only the old fixed chunk size
 - answer diagnostics stay hidden behind secondary actions instead of adding more up-front UI clutter

@@ -619,8 +619,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/ml-explore/mlx-swift-lm";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 3.31.3;
+				kind = revision;
+				revision = 774607e8cdbc5ebdfeab1f9016ef9424a7ca23fc;
 			};
 		};
 		BB11CC22DD33000000000022 /* XCRemoteSwiftPackageReference "swift-huggingface" */ = {

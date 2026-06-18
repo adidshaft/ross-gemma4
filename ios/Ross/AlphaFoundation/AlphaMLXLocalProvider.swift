@@ -1,6 +1,7 @@
 import Foundation
 #if canImport(MLXLLM) && canImport(MLXLMCommon) && canImport(HuggingFace) && canImport(Tokenizers)
 import HuggingFace
+import MLX
 import MLXLLM
 import MLXLMCommon
 import Tokenizers
@@ -25,6 +26,255 @@ private func alphaLocalModelSmokeTechnicalFailure(_ stage: String, mode: String,
     print(
         "ROSS_LOCAL_MODEL_SMOKE_TECHNICAL_FAILURE stage=\(stage) mode=\(mode) domain=\(nsError.domain) code=\(nsError.code) detail=\(message)"
     )
+}
+
+private struct AlphaGemma4SharedKVShimConfig {
+    let modelType: String
+    let hiddenSize: Int
+    let numHiddenLayers: Int
+    let numKeyValueHeads: Int
+    let numGlobalKeyValueHeads: Int?
+    let headDim: Int
+    let globalHeadDim: Int
+    let numKvSharedLayers: Int
+    let attentionKeqV: Bool
+    let layerTypes: [String]
+}
+
+private struct AlphaGemma4SharedKVShimPlan {
+    enum FillStyle {
+        case zeros
+        case ones
+    }
+
+    struct TensorSpec {
+        let shape: [Int]
+        let fillStyle: FillStyle
+    }
+
+    let tensors: [String: TensorSpec]
+}
+
+private func alphaGemma4SharedKVShimConfig(from directoryURL: URL) -> AlphaGemma4SharedKVShimConfig? {
+    guard
+        let data = try? Data(contentsOf: directoryURL.appendingPathComponent("config.json")),
+        let rawValue = try? JSONSerialization.jsonObject(with: data),
+        let json = rawValue as? [String: Any]
+    else {
+        return nil
+    }
+
+    let modelType = ((json["model_type"] as? String) ?? "").lowercased()
+    guard modelType == "gemma4" else {
+        return nil
+    }
+
+    let textConfig = (json["text_config"] as? [String: Any]) ?? json
+    let hiddenSize = textConfig["hidden_size"] as? Int ?? 0
+    let numHiddenLayers = textConfig["num_hidden_layers"] as? Int ?? 0
+    let numKeyValueHeads = textConfig["num_key_value_heads"] as? Int ?? 0
+    let numGlobalKeyValueHeads = textConfig["num_global_key_value_heads"] as? Int
+    let headDim = textConfig["head_dim"] as? Int ?? 0
+    let globalHeadDim = textConfig["global_head_dim"] as? Int ?? headDim
+    let numKvSharedLayers = textConfig["num_kv_shared_layers"] as? Int ?? 0
+    let attentionKeqV = textConfig["attention_k_eq_v"] as? Bool ?? false
+
+    guard
+        hiddenSize > 0,
+        numHiddenLayers > 0,
+        numKeyValueHeads > 0,
+        headDim > 0,
+        globalHeadDim > 0,
+        numKvSharedLayers > 0
+    else {
+        return nil
+    }
+
+    let layerTypes: [String]
+    if let explicitLayerTypes = textConfig["layer_types"] as? [String], !explicitLayerTypes.isEmpty {
+        layerTypes = explicitLayerTypes
+    } else {
+        let slidingWindowPattern = textConfig["sliding_window_pattern"] as? Int ?? 5
+        let pattern = (0 ..< max(slidingWindowPattern, 1)).map { index in
+            index == max(slidingWindowPattern, 1) - 1 ? "full_attention" : "sliding_attention"
+        }
+        var derivedLayerTypes: [String] = []
+        while derivedLayerTypes.count < numHiddenLayers {
+            derivedLayerTypes.append(contentsOf: pattern)
+        }
+        layerTypes = Array(derivedLayerTypes.prefix(numHiddenLayers))
+    }
+
+    guard layerTypes.count == numHiddenLayers else {
+        return nil
+    }
+
+    return AlphaGemma4SharedKVShimConfig(
+        modelType: modelType,
+        hiddenSize: hiddenSize,
+        numHiddenLayers: numHiddenLayers,
+        numKeyValueHeads: numKeyValueHeads,
+        numGlobalKeyValueHeads: numGlobalKeyValueHeads,
+        headDim: headDim,
+        globalHeadDim: globalHeadDim,
+        numKvSharedLayers: numKvSharedLayers,
+        attentionKeqV: attentionKeqV,
+        layerTypes: layerTypes
+    )
+}
+
+private func alphaGemma4SharedKVWeightMap(from directoryURL: URL) -> [String: String]? {
+    guard
+        let data = try? Data(contentsOf: directoryURL.appendingPathComponent("model.safetensors.index.json")),
+        let rawValue = try? JSONSerialization.jsonObject(with: data),
+        let json = rawValue as? [String: Any],
+        let weightMap = json["weight_map"] as? [String: String]
+    else {
+        return nil
+    }
+    return weightMap
+}
+
+private func alphaGemma4SharedKVShimPlan(for directoryURL: URL) -> AlphaGemma4SharedKVShimPlan? {
+    guard
+        let config = alphaGemma4SharedKVShimConfig(from: directoryURL),
+        let weightMap = alphaGemma4SharedKVWeightMap(from: directoryURL)
+    else {
+        return nil
+    }
+
+    let firstKvSharedLayerIdx = config.numHiddenLayers - config.numKvSharedLayers
+    guard firstKvSharedLayerIdx > 0, firstKvSharedLayerIdx < config.numHiddenLayers else {
+        return nil
+    }
+
+    var tensors: [String: AlphaGemma4SharedKVShimPlan.TensorSpec] = [:]
+    for layerIdx in firstKvSharedLayerIdx ..< config.numHiddenLayers {
+        let layerType = config.layerTypes[layerIdx]
+        let isSliding = layerType == "sliding_attention"
+        let effectiveHeadDim = isSliding ? config.headDim : config.globalHeadDim
+        let useKeqV = config.attentionKeqV && !isSliding
+        let numKVHeads = useKeqV ? (config.numGlobalKeyValueHeads ?? config.numKeyValueHeads) : config.numKeyValueHeads
+        let outputFeatures = max(numKVHeads * effectiveHeadDim, 1)
+        let prefix = "language_model.model.layers.\(layerIdx).self_attn"
+
+        if weightMap["\(prefix).k_proj.weight"] == nil {
+            tensors["\(prefix).k_proj.weight"] = .init(
+                shape: [outputFeatures, config.hiddenSize],
+                fillStyle: .zeros
+            )
+        }
+
+        if !useKeqV && weightMap["\(prefix).v_proj.weight"] == nil {
+            tensors["\(prefix).v_proj.weight"] = .init(
+                shape: [outputFeatures, config.hiddenSize],
+                fillStyle: .zeros
+            )
+        }
+
+        if weightMap["\(prefix).k_norm.weight"] == nil {
+            tensors["\(prefix).k_norm.weight"] = .init(
+                shape: [effectiveHeadDim],
+                fillStyle: .ones
+            )
+        }
+    }
+
+    guard !tensors.isEmpty else {
+        return nil
+    }
+
+    return AlphaGemma4SharedKVShimPlan(tensors: tensors)
+}
+
+private func alphaMirrorMLXRuntimeDirectory(
+    from sourceDirectory: URL,
+    to destinationDirectory: URL,
+    fileManager: FileManager = .default
+) throws {
+    guard let enumerator = fileManager.enumerator(
+        at: sourceDirectory,
+        includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey],
+        options: [],
+        errorHandler: nil
+    ) else {
+        return
+    }
+
+    for case let itemURL as URL in enumerator {
+        let relativePath = itemURL.path.replacingOccurrences(
+            of: sourceDirectory.path + "/",
+            with: ""
+        )
+        let destinationURL = destinationDirectory.appendingPathComponent(relativePath)
+        let values = try itemURL.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+
+        if values.isDirectory == true {
+            try fileManager.createDirectory(at: destinationURL, withIntermediateDirectories: true)
+            continue
+        }
+
+        try fileManager.createDirectory(
+            at: destinationURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        if values.isSymbolicLink == true {
+            let symbolicDestination = try fileManager.destinationOfSymbolicLink(atPath: itemURL.path)
+            try fileManager.createSymbolicLink(
+                atPath: destinationURL.path,
+                withDestinationPath: symbolicDestination
+            )
+        } else {
+            try fileManager.createSymbolicLink(at: destinationURL, withDestinationURL: itemURL)
+        }
+    }
+}
+
+private func alphaPreparedMLXRuntimeDirectory(
+    for sourceDirectory: URL,
+    fileManager: FileManager = .default
+) throws -> URL {
+    let overlayMarkerURL = sourceDirectory.appendingPathComponent("ross-mlx-runtime-overlay.json")
+    guard !fileManager.fileExists(atPath: overlayMarkerURL.path) else {
+        return sourceDirectory
+    }
+
+    guard let shimPlan = alphaGemma4SharedKVShimPlan(for: sourceDirectory) else {
+        return sourceDirectory
+    }
+
+    let overlaysRoot = alphaSupportRootURL()
+        .appendingPathComponent("MLXRuntimeOverlays", isDirectory: true)
+    try fileManager.createDirectory(at: overlaysRoot, withIntermediateDirectories: true)
+
+    let overlayDirectory = overlaysRoot.appendingPathComponent(UUID().uuidString, isDirectory: true)
+    try fileManager.createDirectory(at: overlayDirectory, withIntermediateDirectories: true)
+    do {
+        try alphaMirrorMLXRuntimeDirectory(from: sourceDirectory, to: overlayDirectory, fileManager: fileManager)
+        var arrays: [String: MLXArray] = [:]
+        for (key, tensor) in shimPlan.tensors {
+            switch tensor.fillStyle {
+            case .zeros:
+                arrays[key] = MLXArray.zeros(tensor.shape, dtype: .float16)
+            case .ones:
+                arrays[key] = MLXArray.ones(tensor.shape, dtype: .float16)
+            }
+        }
+        let shimURL = overlayDirectory.appendingPathComponent("ross-shared-kv-shim.safetensors")
+        try MLX.save(arrays: arrays, url: shimURL)
+        let markerData = try JSONSerialization.data(
+            withJSONObject: [
+                "source_path": sourceDirectory.path,
+                "shim_keys": Array(shimPlan.tensors.keys).sorted()
+            ],
+            options: [.sortedKeys]
+        )
+        try markerData.write(to: overlayDirectory.appendingPathComponent("ross-mlx-runtime-overlay.json"))
+        return overlayDirectory
+    } catch {
+        try? fileManager.removeItem(at: overlayDirectory)
+        throw error
+    }
 }
 
 enum AlphaMLXRuntimeProfile {
@@ -499,17 +749,26 @@ private actor AlphaMLXModelContainerCache {
     static let shared = AlphaMLXModelContainerCache()
 
     private var cachedContainers: [String: ModelContainer] = [:]
+    private var preparedDirectories: [String: URL] = [:]
 
     func container(for directory: URL) async throws -> ModelContainer {
-        if let cachedContainer = cachedContainers[directory.path] {
+        let preparedDirectory: URL
+        if let cachedPreparedDirectory = preparedDirectories[directory.path] {
+            preparedDirectory = cachedPreparedDirectory
+        } else {
+            preparedDirectory = try alphaPreparedMLXRuntimeDirectory(for: directory)
+            preparedDirectories[directory.path] = preparedDirectory
+        }
+
+        if let cachedContainer = cachedContainers[preparedDirectory.path] {
             return cachedContainer
         }
 
         let container = try await loadModelContainer(
-            from: directory,
+            from: preparedDirectory,
             using: AlphaMLXTokenizerLoader()
         )
-        cachedContainers[directory.path] = container
+        cachedContainers[preparedDirectory.path] = container
         return container
     }
 }
@@ -682,6 +941,18 @@ final class AlphaMLXLocalProvider: AlphaRealLocalModelProvider {
 
     func supportedTasks() -> Set<AlphaLocalModelTask> {
         Set(AlphaLocalModelTask.allCases)
+    }
+
+    static func preparedRuntimeDirectoryURL(
+        for directory: URL,
+        fileManager: FileManager = .default
+    ) throws -> URL {
+        try alphaPreparedMLXRuntimeDirectory(for: directory, fileManager: fileManager)
+    }
+
+    static func gemma4SharedKVShimTensorShapes(for directory: URL) -> [String: [Int]] {
+        let plan = alphaGemma4SharedKVShimPlan(for: directory)
+        return plan?.tensors.mapValues(\.shape) ?? [:]
     }
 
     func runtimeHealth() -> AlphaLocalRuntimeHealth {
