@@ -189,7 +189,8 @@ gguf_file_looks_usable() {
   local size
   size="$(file_size_bytes "$file")"
   [[ "$size" =~ ^[0-9]+$ ]] || return 1
-  [[ "$size" -gt 1000000 ]]
+  [[ "$size" -gt 1000000 ]] || return 1
+  [[ "$(LC_ALL=C dd if="$file" bs=4 count=1 2>/dev/null)" == "GGUF" ]]
 }
 
 case "$normalized_runtime" in
@@ -207,7 +208,7 @@ case "$normalized_runtime" in
       exit 2
     fi
     if ! gguf_file_looks_usable "$model_path"; then
-      echo "GGUF simulator smoke requires a real GGUF model file larger than 1 MB, got: $model_path" >&2
+      echo "GGUF simulator smoke requires a real GGUF model file with GGUF header and size larger than 1 MB, got: $model_path" >&2
       exit 2
     fi
     ;;
@@ -284,7 +285,7 @@ if [[ -n "$draft_model_path" ]]; then
         exit 2
       fi
       if ! gguf_file_looks_usable "$draft_model_path"; then
-        echo "GGUF/MTP simulator draft proof requires a real GGUF draft file larger than 1 MB, got: $draft_model_path" >&2
+        echo "GGUF/MTP simulator draft proof requires a real GGUF draft file with GGUF header and size larger than 1 MB, got: $draft_model_path" >&2
         exit 2
       fi
       ;;
