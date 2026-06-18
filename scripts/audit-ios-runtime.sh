@@ -134,6 +134,7 @@ if [ "$FAIL" -eq 1 ]; then
     echo "iOS runtime dependency audit: FAIL"
     exit 1
 else
+    scripts/test-ios-runtime-smoke-preflights.sh
     echo "iOS runtime dependency audit: PASS"
     echo "real local inference: GGUF ready; MLX/CoreAI/MTP require guarded validation"
     echo "benchmark guardrails: READY"
