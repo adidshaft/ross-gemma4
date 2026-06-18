@@ -139,7 +139,32 @@ run_expect_exit_1() {
   fi
 }
 
+run_expect_exit_2() {
+  local description="$1"
+  local expected="$2"
+  shift 2
+  set +e
+  PATH="$fake_bin:$PATH" FAKE_DEVICE_ROOT="$fake_device_root" "$@" >"$tmpdir/out.txt" 2>&1
+  local rc=$?
+  set -e
+  if [[ "$rc" -ne 2 ]]; then
+    echo "FAIL: $description expected exit 2, got $rc" >&2
+    cat "$tmpdir/out.txt" >&2 || true
+    return 1
+  fi
+  if ! grep -q "$expected" "$tmpdir/out.txt"; then
+    echo "FAIL: $description did not emit expected message: $expected" >&2
+    cat "$tmpdir/out.txt" >&2 || true
+    return 1
+  fi
+}
+
 base_command=("$DEVICE_SMOKE" --device fake-device --tier quickStart)
+
+run_expect_exit_2 \
+  "unsupported installed-pack smoke profile" \
+  "Unsupported smoke profile" \
+  "${base_command[@]}" --runtime gguf --smoke-profile typo
 
 write_manifest '{
   "packId": "tiny-gguf",

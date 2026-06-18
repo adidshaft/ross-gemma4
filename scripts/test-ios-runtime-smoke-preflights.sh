@@ -21,6 +21,10 @@ run_expect_exit_2() {
 tmpdir="$(mktemp -d /tmp/ross-runtime-preflight.XXXXXX)"
 trap 'rm -rf "$tmpdir" /tmp/ross-runtime-preflight.out' EXIT
 
+run_expect_exit_2 \
+  "unsupported simulator smoke profile" \
+  "$SIM_SMOKE" --runtime gguf --model "$tmpdir/main.gguf" --smoke-profile typo
+
 malformed_mlx="$tmpdir/malformed-mlx"
 mkdir -p "$malformed_mlx"
 printf '{}' >"$malformed_mlx/config.json"

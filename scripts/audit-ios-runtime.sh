@@ -147,6 +147,13 @@ if ! grep -q "identity_requested" scripts/ios-device-installed-pack-smoke.sh 2>/
     FAIL=1
 fi
 
+for smoke_script in scripts/ios-simulator-local-model-smoke.sh scripts/ios-device-installed-pack-smoke.sh; do
+    if ! grep -q "Unsupported smoke profile" "$smoke_script" 2>/dev/null; then
+        echo "❌ FAIL: $smoke_script does not reject unsupported smoke profiles before launch."
+        FAIL=1
+    fi
+done
+
 if ! grep -q "draftArtifact.relativePath" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null; then
     echo "❌ FAIL: installed-pack device smoke does not preflight required draft companion paths."
     FAIL=1

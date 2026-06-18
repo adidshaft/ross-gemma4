@@ -109,6 +109,16 @@ if [[ -z "$device_id" ]]; then
   exit 2
 fi
 
+case "$smoke_profile" in
+  full|quick|mtp|mtp-quick|mtp_quick)
+    ;;
+  *)
+    echo "Unsupported smoke profile: $smoke_profile" >&2
+    usage >&2
+    exit 2
+    ;;
+esac
+
 if ! command -v xcrun >/dev/null 2>&1; then
   echo "xcrun is required." >&2
   exit 2
