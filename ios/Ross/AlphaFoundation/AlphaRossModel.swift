@@ -107,6 +107,10 @@ struct AlphaMatterBundleComparisonReport: Codable, Hashable, Sendable {
     var selectedDocumentCount: Int
     var sourceBlockCount: Int
     var sourceRefsReturned: Int
+    var assistantDisplayName: String?
+    var runtimeSelectionReason: String?
+    var executionPathLabel: String?
+    var accelerationSummary: String?
     var answerHeadline: String?
     var answerPreview: String?
     var needsReviewWarning: String?

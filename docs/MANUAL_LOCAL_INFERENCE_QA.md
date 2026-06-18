@@ -143,6 +143,7 @@ Manual in-app flow:
    - source refs returned
    - first response
    - token speed
+   - runtime choice / execution path / acceleration detail shown for that run
 
 If the runtime is unavailable:
 

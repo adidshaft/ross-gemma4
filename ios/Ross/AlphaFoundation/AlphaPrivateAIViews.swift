@@ -743,6 +743,18 @@ private struct AlphaMatterBundleComparisonReportCard: View {
                 label: rossLocalized("schema_valid"),
                 value: report.schemaValid ? rossLocalized("yes") : rossLocalized("no")
             )
+            if let assistantDisplayName = report.assistantDisplayName, !assistantDisplayName.isEmpty {
+                AlphaSettingsValueRow(label: rossLocalized("assistant_used"), value: assistantDisplayName)
+            }
+            if let runtimeSelectionReason = report.runtimeSelectionReason, !runtimeSelectionReason.isEmpty {
+                AlphaSettingsValueRow(label: rossLocalized("runtime_choice"), value: runtimeSelectionReason)
+            }
+            if let executionPathLabel = report.executionPathLabel, !executionPathLabel.isEmpty {
+                AlphaSettingsValueRow(label: rossLocalized("execution_path"), value: executionPathLabel)
+            }
+            if let accelerationSummary = report.accelerationSummary, !accelerationSummary.isEmpty {
+                AlphaSettingsValueRow(label: rossLocalized("runtime_acceleration"), value: accelerationSummary)
+            }
             if let durationMs = report.durationMs {
                 AlphaSettingsValueRow(label: rossLocalized("approx_time"), value: alphaAssistantDurationLabel(milliseconds: durationMs))
             }
@@ -880,6 +892,10 @@ func alphaMatterBundleComparisonMetricsSummary(_ report: AlphaMatterBundleCompar
         String(format: rossLocalized("source_blocks_count"), report.sourceBlockCount),
         String(format: rossLocalized("source_refs_count"), report.sourceRefsReturned)
     ]
+    if let executionPathLabel = report.executionPathLabel?.trimmingCharacters(in: .whitespacesAndNewlines),
+       !executionPathLabel.isEmpty {
+        parts.append(executionPathLabel)
+    }
     if let timeToFirstTokenMs = report.timeToFirstTokenMs {
         parts.append("\(rossLocalized("runtime_first_response")): \(alphaAssistantFirstResponseLabel(milliseconds: timeToFirstTokenMs))")
     }

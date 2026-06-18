@@ -1211,6 +1211,14 @@ extension AlphaRossModel {
                     selectedDocumentCount: sample.selectedDocuments.count,
                     sourceBlockCount: sourcePack.count,
                     sourceRefsReturned: output.sourceRefs.count,
+                    assistantDisplayName: completedInvocation.assistantDisplayName,
+                    runtimeSelectionReason: completedInvocation.runtimeSelectionReason,
+                    executionPathLabel: completedInvocation.executionPathLabel,
+                    accelerationSummary: alphaAssistantAccelerationLabel(
+                        mode: completedInvocation.accelerationMode,
+                        draftTokens: completedInvocation.accelerationDraftTokens,
+                        draftLabel: completedInvocation.accelerationDraftModelLabel
+                    ),
                     answerHeadline: payload?.headline,
                     answerPreview: answerPreview,
                     needsReviewWarning: needsReviewWarning,

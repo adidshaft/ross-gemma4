@@ -4520,6 +4520,10 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
                     selectedDocumentCount: 3,
                     sourceBlockCount: 7 + index,
                     sourceRefsReturned: 3,
+                    assistantDisplayName: "Built-in CoreAI",
+                    runtimeSelectionReason: "CoreAI selected for instant setup",
+                    executionPathLabel: "CoreAI built-in model",
+                    accelerationSummary: nil,
                     answerHeadline: "headline \(index)",
                     answerPreview: "preview \(index)",
                     needsReviewWarning: nil,
@@ -4536,6 +4540,33 @@ final class AlphaLawyerUsabilityTests: XCTestCase {
         XCTAssertEqual(model.matterBundleComparisonReports.first?.message, "comparison 7")
         XCTAssertEqual(model.matterBundleComparisonReports.last?.message, "comparison 2")
         XCTAssertEqual(model.persisted.matterBundleComparisonReports?.count, AlphaRossModel.matterBundleComparisonHistoryLimit)
+    }
+
+    func testMatterBundleComparisonMetricsSummaryIncludesExecutionPathWhenPresent() {
+        let report = AlphaMatterBundleComparisonReport(
+            ran: true,
+            runtimeUsed: AlphaPackRuntimeMode.mlxSwiftLm.rawValue,
+            schemaValid: true,
+            selectedDocumentCount: 3,
+            sourceBlockCount: 8,
+            sourceRefsReturned: 3,
+            assistantDisplayName: "Gemma 4 12B QAT 4-bit (MLX)",
+            runtimeSelectionReason: "MLX preferred on this iPhone for longer local context and companion acceleration",
+            executionPathLabel: "MLX with draft acceleration",
+            accelerationSummary: "Draft model x4 (gemma-4-12B-it-qat-assistant-4bit)",
+            answerHeadline: "Key deadlines and retention risks",
+            answerPreview: "preview",
+            needsReviewWarning: nil,
+            durationMs: 1400,
+            timeToFirstTokenMs: 320,
+            estimatedOutputTokensPerSecond: 18.5,
+            message: "done"
+        )
+
+        let summary = alphaMatterBundleComparisonMetricsSummary(report)
+        XCTAssertTrue(summary.contains("Source blocks: 8"))
+        XCTAssertTrue(summary.contains("MLX with draft acceleration"))
+        XCTAssertTrue(summary.contains("First response"))
     }
 
     func testAssistantComparisonRuntimeOptionsOnlyKeepImmediatelyAvailableRuntimes() {
