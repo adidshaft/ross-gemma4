@@ -20,28 +20,63 @@ if git grep -qE "import SwiftGemmaRuntime|AlphaGemmaLocalModelProvider" ios/Ross
     FAIL=1
 fi
 
-if ! grep -q "protocol Gemma4Runtime" ios/Ross/AlphaFoundation/Gemma4Runtime.swift 2>/dev/null; then
-    echo "❌ FAIL: Gemma4Runtime abstraction missing."
+if ! grep -q "protocol AlphaRealLocalModelProvider" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null; then
+    echo "❌ FAIL: AlphaRealLocalModelProvider abstraction missing."
     FAIL=1
 fi
 
-if ! grep -q "Gemma4RuntimeStatus" ios/Ross/AlphaFoundation/Gemma4Runtime.swift 2>/dev/null; then
-    echo "❌ FAIL: Gemma4RuntimeStatus missing."
+if ! grep -q "AlphaLlamaCppProvider" ios/Ross/AlphaFoundation/AlphaLlamaCppProvider.swift 2>/dev/null; then
+    echo "❌ FAIL: GGUF llama.cpp provider missing."
     FAIL=1
 fi
 
-if ! grep -q "Gemma4DemoRuntime" ios/Ross/AlphaFoundation/Gemma4Runtime.swift 2>/dev/null; then
-    echo "❌ FAIL: Gemma4DemoRuntime missing."
+if ! grep -q "AlphaMLXLocalProvider" ios/Ross/AlphaFoundation/AlphaMLXLocalProvider.swift 2>/dev/null; then
+    echo "❌ FAIL: MLX provider missing."
     FAIL=1
 fi
 
-if ! grep -q "Gemma4UnavailableRuntime" ios/Ross/AlphaFoundation/Gemma4Runtime.swift 2>/dev/null; then
-    echo "❌ FAIL: Gemma4UnavailableRuntime missing."
+if ! grep -q "AlphaFoundationModelsLocalProvider" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null; then
+    echo "❌ FAIL: CoreAI/Foundation provider missing."
     FAIL=1
 fi
 
-if ! git grep -q "Demo Mode — model response simulated for walkthrough" ios/Ross/ 2>/dev/null; then
-    echo "❌ FAIL: Demo mode UI label missing."
+if ! grep -q "ROSS_RUNTIME_IDENTITY" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
+    echo "❌ FAIL: runtime identity smoke marker missing."
+    FAIL=1
+fi
+
+if ! grep -q "draft_status" ios/Ross/App/ScreenshotExporter.swift 2>/dev/null; then
+    echo "❌ FAIL: draft status missing from runtime identity marker."
+    FAIL=1
+fi
+
+if ! grep -q "runtime_identity_mismatch" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: simulator smoke runtime identity guard missing."
+    FAIL=1
+fi
+
+if ! grep -q "runtime_identity_mismatch" scripts/ios-device-installed-pack-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: installed-pack device smoke runtime identity guard missing."
+    FAIL=1
+fi
+
+if ! grep -q "runtime_pass_mismatch" scripts/ios-device-assistant-download-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: assistant-download smoke runtime pass guard missing."
+    FAIL=1
+fi
+
+if ! grep -q "missing_mlx_artifact" ios/Ross/AlphaFoundation/AlphaMLXLocalProvider.swift 2>/dev/null; then
+    echo "❌ FAIL: MLX missing-artifact error category missing."
+    FAIL=1
+fi
+
+if ! grep -q "missing_coreai_artifact" ios/Ross/AlphaFoundation/AlphaLocalModelRuntime.swift 2>/dev/null; then
+    echo "❌ FAIL: CoreAI missing-artifact error category missing."
+    FAIL=1
+fi
+
+if ! grep -q "draft_acceleration_inactive" scripts/ios-simulator-local-model-smoke.sh 2>/dev/null; then
+    echo "❌ FAIL: simulator MTP draft-acceleration guard missing."
     FAIL=1
 fi
 
@@ -60,7 +95,7 @@ if [ "$FAIL" -eq 1 ]; then
     exit 1
 else
     echo "iOS runtime dependency audit: PASS"
-    echo "real local inference: PENDING"
-    echo "demo runtime: READY"
+    echo "real local inference: GGUF ready; MLX/CoreAI/MTP require guarded validation"
+    echo "benchmark guardrails: READY"
     exit 0
 fi
