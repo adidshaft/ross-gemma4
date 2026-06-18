@@ -369,6 +369,37 @@ print("" if value is None else value)
 PY
 )"
 
+python3 - "$selected_runtime_raw" "$selected_artifact_kind" "$selected_relative_path" <<'PY'
+import sys
+
+runtime = (sys.argv[1] or "").strip()
+artifact_kind = (sys.argv[2] or "").strip()
+relative_path = (sys.argv[3] or "").strip()
+
+allowed_artifact_kinds = {
+    "gemma_local_runtime": {"local_model_artifact", "gguf", "gguf_model"},
+    "mlx_swift_lm": {"mlx_directory"},
+    "apple_foundation_models": {"system_model", "foundation_adapter", "coreai_adapter", "coreml_model"},
+}
+
+allowed = allowed_artifact_kinds.get(runtime)
+if allowed is not None and artifact_kind not in allowed:
+    print(
+        "Selected manifest has an incompatible artifact kind for the requested runtime: "
+        f"runtime={runtime} artifactKind={artifact_kind} relativePath={relative_path}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+if runtime == "mlx_swift_lm" and relative_path.lower().endswith((".gguf", ".bin")):
+    print(
+        "Selected MLX manifest points at a file-like model artifact instead of an MLX directory: "
+        f"relativePath={relative_path}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+PY
+
 device_model_path="$container_root/Library/Application Support/RossAlpha/$selected_relative_path"
 device_draft_path=""
 if [[ -n "$selected_draft_relative_path" ]]; then
